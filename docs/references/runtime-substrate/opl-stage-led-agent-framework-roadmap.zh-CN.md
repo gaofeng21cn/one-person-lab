@@ -14,6 +14,106 @@ Date: `2026-05-10`
 
 `MAS`、`MAG`、`RCA` 是运行在这个 family framework 上的独立 domain agents。它们可以被 OPL 托管、唤醒、排队、投影和恢复，也可以继续通过 Codex App 的单一 app skill 直接调用。OPL 不成为这些 domain 的领域大脑、truth owner、quality gate 或 artifact authority。
 
+理想目标是：OPL 提供统一 `domain-agent skeleton`，把所有智能体运行外围能力上收到 framework；MAS、MAG、RCA 按同一套 repo-source 目录、contract 和 lifecycle 接入，只提供领域 stage 定义、提示词、工具/Skill、知识面、质控 gate、artifact locator contract 与 domain truth authority。不同 domain 的业务内部不要求完全同构，但对 OPL 暴露的 skeleton、descriptor、sidecar、receipt schema、projection builder 和生命周期语义应同构。真实论文、基金、PPT、运行日志、receipt 实例和中间产物属于 workspace / runtime artifact root，不属于 domain repo 源码目录。
+
+## 总入口
+
+本文是接下来 OPL family agent framework 的总开发入口。任何涉及以下主题的实现、文档更新或退役清理，都应先从本文判断 owner、边界、优先级和验收门槛：
+
+- OPL 作为 Codex-first、stage-led 智能体框架的顶层设计。
+- Temporal / Hermes / local provider 的 runtime substrate 取舍。
+- `TypeScript`、`Python`、`Go`、`Rust` 在 framework 与 domain agent 中的分工。
+- MAS / MAG / RCA 的 stage/action/projection descriptor 接入、direct skill 等价和 OPL-hosted path。
+- MAS 已验证的 SQLite 持久化、file lifecycle、restore proof、artifact index、retention 和 lifecycle 管理经验如何上收到 OPL framework。
+- MAS / MAG / RCA 是否按统一 domain-agent skeleton 重组 repo-source 目录、contract 和 entry surface。
+- MDS / DeepScientist、Hermes-first、Gateway / compatibility vocabulary、旧 local runtime、旧 workspace-local scheduler 等过时面的退役纪律。
+
+配套入口：
+
+- Temporal provider 细化计划：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
+- MAS runtime 退役计划：`med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md`
+- Stage control plane adoption：`docs/references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md`
+- 跨仓当前状态：OPL / MAS / MAG / RCA / MDS 各自的 `docs/status.md`、`docs/project.md`、`docs/invariants.md`
+
+开发纪律：
+
+- 新增 framework-level runtime 能力默认先进入 OPL TypeScript control plane、shared contract、provider abstraction 或 App/CLI projection。
+- 新增 domain expertise、quality gate、truth reducer、artifact/package authority 默认留在对应 domain repo。
+- MAS 中已经证明可复用的 runtime 外围能力，应先拆成 `framework_generic` 与 `mas_domain_specific`；前者迁入 OPL framework，后者留在 MAS。
+- 已被退役或降级的旧面不得通过 compatibility alias、帮助文案、测试 fixture 或 product wording 重新变成默认路径。
+- 如果需要改变本文的 owner split 或语言/runtime 选择，必须同步更新上述配套入口，不能只改单个 repo 的局部文档。
+
+## 2026-05-11 当前落地评估
+
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，但还没有完成端到端生产闭环。当前状态是 `shared contract + local queue/attempt ledger + domain descriptor/adapters landed`，不是 `Temporal production provider + full real-paper stage execution soak landed`。
+
+已落地的 OPL 层 shared module / contract 面包括：
+
+- `python/opl-harness-shared`：覆盖 family action catalog、family orchestration、product-entry companions、runtime task companions、skill catalog、managed runtime、workspace boundary、editable bootstrap 与 shared release。
+- `contracts/family-orchestration/`：覆盖 family action catalog / graph、event envelope、checkpoint lineage、human gate、persistence policy、lifecycle ledger、owner route、product-entry manifest v2、runtime supervision 与 stage control plane。
+- `contracts/opl-gateway/`：覆盖 gateway、runtime manager、domain onboarding、public surface 与 routing vocabulary 合同。
+- OPL TypeScript root shared/control-plane surface：覆盖 family runtime、stage control、action catalog、handoff、product-entry、domain catalog、runtime manager、native helper、skill sync 与 runtime tray。
+
+这些统计应按目录和能力面维护，不应把某一次 `find` / `rg` 的文件数量写成长期事实；文件数会随测试、fixture、venv 或实现拆分口径漂移。
+
+跨 repo 消费状态：
+
+- `MAS` 和 `MAG` 已通过 `opl-harness-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL Python shared package。
+- `RCA` 已通过 `opl-gateway-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL JS shared package。
+- `MDS` 仍 pin 在较早的 `opl-harness-shared @ 8523f4ab76af486d44a1ccd3a88996ca860d2cc2`；这与它的 archive / diagnostic / upstream-intake 角色一致，不应被读成 active OPL domain adapter 已跟进。
+
+已落地的 framework 能力：
+
+- family action catalog、family stage control plane schema、family runtime supervision、persistence / lifecycle / owner-route schema 已在 OPL shared layer 冻结。
+- `opl actions list|inspect|export` 与 `opl stages list|inspect` 是只读 discovery / parity surface。
+- `opl family-runtime` 已有 typed queue、MAS/MAG/RCA pending task intake、guarded dispatch、retry/dead-letter / local inbox 信号和 stage attempt local ledger。
+- `opl family-runtime attempt create|list|inspect` 已能登记 provider-backed stage attempt 的本地 ledger / provider receipt / task binding metadata。
+- MAS/MAG/RCA 已各自声明 stage/action/projection descriptor，OPL 只消费 descriptor，不写 domain truth。
+
+尚未完成的生产闭环：
+
+- Temporal provider 仍是生产 substrate 候选和计划目标，尚未成为默认 landed provider。
+- Codex CLI stage activity runner、heartbeat、checkpoint、typed closeout ingestion、human-gate Signal/Query 仍未形成完整 provider-backed execution path。
+- OPL App 对 stage attempt、closeout receipt、consumed refs、rejected writes、route impact、human gate / dead-letter 的人用可视化仍是后续 visibility lane。
+- MAS 的真实 paper line 还没有完全证明 `stage entry packet -> Codex execution -> closeout packet -> router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak；MAG/RCA 也还需要 controlled stage attempt proof。
+- Hermes/local provider 仍作为迁移期实现信号和 legacy/optional provider 存在，active docs 和部分 domain code 中仍有旧 Hermes / Gateway / compatibility wording，需要按 retirement plan 清理。
+
+因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架已落地，domain adapters 已接入，生产级 provider-backed stage execution 和旧接口物理退役仍是下一阶段工作。
+
+## 执行语言与依赖结论
+
+从智能体框架本身出发，OPL framework/control plane 的主语言应统一到 `TypeScript`；domain agent 内部执行语言不强制统一。
+
+统一到 `TypeScript` 的范围：
+
+- OPL provider abstraction、Temporal workflow/activity/signal/query adapter、stage attempt ledger、typed family queue、human gate、approval/retry/dead-letter、App/API/MCP/CLI bridge。
+- family action catalog、stage control plane、handoff envelope、runtime manager、operator projection、domain descriptor validator。
+- 跨 repo shared JS package、OPL App / runtime tray / CLI 需要直接消费的 schema 和 projection。
+
+不强制统一的范围：
+
+- MAS 医学统计、数据分析、文献、引用、图表、稿件产物和 scientific stack 继续以 `Python` 为 domain owner surface。
+- MAG 申请书 authoring / quality / controller 仍可以保留 Python domain package；OPL 只要求它导出 machine-readable descriptor、receipt schema / refs、projection builder / refs 和 artifact locator contract。
+- RCA 长线保持 `TypeScript + Python`：TypeScript 承担 route/contract/service boundary，Python 承担 Office/PPT native helper、截图/导出、文档修复等 native helper。
+- `Go` 适合高并发服务或独立基础设施 daemon；当前 OPL 不需要把 stage orchestration 主体改成 Go。Temporal server 用 Go 实现不要求 OPL workflow/control plane 也用 Go。
+- `Rust` 适合 native helper、系统探测、索引器、打包、安全/性能关键工具；不适合作为快速演化的 agent orchestration 业务层默认语言。
+
+依赖策略：
+
+- 可以引入外部 runtime dependency；Temporal 是当前生产级 durable execution substrate 的优先候选。
+- 引入 Temporal 的目标是 durable workflow history、activity retry/timeout、heartbeat、signal/query、long-run recovery 和 human gate，不是把 domain truth 迁进 Temporal。
+- 不再把 Hermes-Agent 当作目标 session/wakeup substrate；它只保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。
+- 不引入新依赖只为“看起来像框架”；依赖必须能替代当前 OPL 自己难以可靠维护的 durable execution 能力，并能通过 fixture workflow、real domain soak 和 direct skill parity 验收。
+
+对比依据：
+
+| 选择 | 适合的位置 | 不作为 OPL 主控制面的原因 |
+| --- | --- | --- |
+| `TypeScript` | OPL control plane、CLI/API/MCP、App projection、JSON/schema、Temporal workflow adapter | 不负责医学统计和 native Office/PPT 细节。 |
+| `Python` | MAS/MAG domain logic、医学/基金/数据/文献/ML、快速工具原型 | 大型 App/API/control-plane 类型治理、前后端共享 contract 和长期 UI/runtime bridge 更容易松散。 |
+| `Go` | 高可靠服务端、轻量 daemon、并发 worker、单文件部署 | agent stage 语义、UI/API/schema 与 domain adapter 演化成本高；Temporal server 用 Go 不等于业务 workflow 必须用 Go。 |
+| `Rust` | native helper、indexer、system probe、性能/安全关键工具 | 开发成本高，不适合作为频繁演化的 stage orchestration 主语言。 |
+
 ## 外部工程经验
 
 成熟系统给出的共同方向很一致：
@@ -39,6 +139,110 @@ Date: `2026-05-10`
 - CrewAI: <https://docs.crewai.com/>
 - DeerFlow: <https://github.com/bytedance/deer-flow>
 
+## 依赖引入判断
+
+OPL 可以引入新的 runtime 依赖，但依赖必须替代 framework 层真实难题，而不是替代 domain agent 的思考能力。
+
+当前推荐是：
+
+| candidate | decision | reason |
+| --- | --- | --- |
+| `Temporal` | `adopt_as_provider_target` | 它解决长时间 stage attempt 的 durable workflow、activity retry、heartbeat、signal/query、history replay 和 worker crash recovery；这些能力由 OPL 自己维护成本高，且正好对应 OPL provider 层。 |
+| `OpenAI background mode` | `use_as_executor_pattern_not_provider` | 它证明长任务应 async/pollable，但只覆盖单次模型 response 的后台执行，不替代 family queue、human gate、domain sidecar dispatch 或 cross-domain attempt ledger。 |
+| `LangGraph` | `learn_checkpoint_pattern` | 它的 thread/checkpoint/human-in-the-loop 模式值得吸收；但 OPL 的执行原子是 Codex CLI + domain stage，不需要再把 stage 内部拆成 LangGraph node 作为默认 runtime。 |
+| `OpenAI Agents SDK` | `learn_handoff_guardrail_trace_pattern` | 它适合 code-first agent app 的 handoff、guardrail、trace；OPL 可吸收这些边界思想，但不把 MAS/MAG/RCA 重写成 SDK-native agents。 |
+| `Cloudflare Agents` | `watch_as_actor_runtime_pattern` | 它的 durable object / schedule / stateful agent 模式说明 actor identity 和 wakeup 很重要；但当前 OPL 本机和多仓 runtime 更贴近 Temporal + local provider，不优先迁到 Cloudflare edge runtime。 |
+| `Dify / AutoGen / CrewAI / DeerFlow` | `learn_workflow_and_team_pattern` | 它们展示 workflow、agent team、research flow 的组织方式；OPL 不应引入它们作为核心 runtime，避免把 Codex CLI 的强执行器能力降级成轻量 node 编排。 |
+
+依赖进入 `adopt_as_provider_target` 的门槛：
+
+- 能表达 OPL 的 `stage_attempt`、`activity`、`signal`、`query`、`retry/dead-letter`、`heartbeat/checkpoint` 和 `human gate`。
+- 能通过 fixture workflow、MAS real paper-line guarded soak、MAG/RCA controlled stage attempt 和 direct skill parity 验收。
+- 不要求 domain truth 迁移到 provider history。
+- 不要求 MAS/MAG/RCA 放弃 direct app skill path。
+- 能在本机开发、CI fixture 和未来 production provider 三种环境下稳定运行或清晰 fail-closed。
+
+因此，下一阶段允许正式引入 Temporal SDK 和本地 Temporal dev/test provider；不建议同时引入第二个 agent workflow 框架作为 OPL core runtime。
+
+## Framework 上收范围
+
+OPL 的长期职责不是只做“入口聚合”，而是成为完整的智能体运行框架。凡是 domain-neutral、可跨 MAS/MAG/RCA 复用、服务长时间自治和可恢复执行的外围能力，都应进入 OPL framework 或 OPL shared contract。
+
+应上收到 OPL 的能力：
+
+- `stage_attempt ledger`：attempt id、provider kind、workflow id、stage id、workspace locator、source fingerprint、retry budget、human gate refs、checkpoint refs、closeout refs。
+- `typed family queue`：domain sidecar export 的 pending task hydration、dedupe、lease、retry、dead-letter、notification 和 approval transport。
+- `checkpoint / closeout / receipt`：统一记录 Codex stage activity 的进度、结果、artifact delta refs、blocked reason、rejected writes 和 next owner。
+- `source_fingerprint / idempotency_key`：跨 provider、跨 domain 的重复启动防护。
+- `artifact index / file lifecycle / retention`：artifact locator、retention policy、safe cache cleanup、restore proof、migration ledger、artifact freshness projection。
+- `workspace lifecycle`：workspace registration、runtime state root、profile discovery、module install/update、restore/import/provenance references。
+- `human gate / resume token`：用户插入指令、approval、pause/resume/stop、milestone reactivation intake 的 provider-level signal 和 receipt。
+- `operator projection / workbench`：attention queue、running/recent items、attempt freshness、blocked reason、source refs、artifact locators、domain drilldown links。
+- `domain-agent skeleton validation`：统一检查 stage descriptor、action catalog、sidecar export/dispatch、skill refs、prompt refs、knowledge refs、quality gate refs 和 authority boundary。
+
+不得从 domain 迁出的内容：
+
+- MAS 的 study truth、clinical claim、evidence ledger、review ledger、publication gate、AI reviewer verdict、manuscript/package authority。
+- MAG 的 grant strategy、fundability judgment、specific aims、proposal quality gate、submission-ready export authority。
+- RCA 的 visual direction、creative artifact generation、review/export gate、canonical artifact authority。
+- 任何 domain-specific memory truth、domain quality verdict、domain final ready verdict。
+
+迁移原则：
+
+- MAS 现有 SQLite / file lifecycle 经验应作为 OPL framework 的参考实现和 parity oracle，而不是把 MAS runtime database 直接升格为 OPL truth。
+- OPL 持有的是 lifecycle metadata、attempt/control receipt ref、artifact locator 和 restore proof；domain 持有的是 artifact 内容、质量判断和业务真相。
+- 如果一个能力能服务 MAS/MAG/RCA 且不包含领域判断，它应进入 OPL shared module 或 provider layer。
+- 如果一个能力需要理解医学、基金或视觉创作语义，它只能留在 domain repo，并通过 descriptor、receipt refs、projection refs 和 artifact locator contract 暴露给 OPL。
+
+## Standard Domain-Agent Skeleton
+
+目标结构如下。它定义 OPL 需要发现和托管的标准边界，不要求每个 repo 内部文件名、语言和业务实现完全一致。
+
+```text
+domain-repo/
+  agent/
+    stages/
+    prompts/
+    skills/
+    knowledge/
+    quality_gates/
+  contracts/
+    domain_descriptor.json
+    stage_control_plane.json
+    action_catalog.json
+    sidecar_export.schema.json
+    sidecar_dispatch_receipt.schema.json
+  runtime/
+    sidecar/
+    projection_builders/
+    lifecycle_adapters/
+  docs/
+    project.md
+    status.md
+    invariants.md
+    decisions.md
+```
+
+标准含义：
+
+- `agent/stages/`：domain-owned stage definition，包含 stage goal、entry condition、success gate、stop rule、route-back 和 human gate policy。
+- `agent/prompts/`：stage prompt、role policy、review prompt、repair prompt；OPL 只索引 ref，不解释内容。
+- `agent/skills/`：Codex App direct skill 与 stage 内工具说明；必须能不经过 OPL 直接使用。
+- `agent/knowledge/`：domain memory、literature/reference context、failed path、reusable lesson 的读取/回写合同；跨 study 或跨 deliverable 的记忆写入必须有 proposal/receipt。
+- `agent/quality_gates/`：domain quality gate、AI reviewer、export gate、submission/package gate；OPL 只能读取 verdict refs。
+- `contracts/`：给 OPL 的 machine-readable boundary，不能用 Markdown 段落当机器接口；包括 artifact locator / artifact index / receipt schema / sidecar dispatch schema，不包括真实产物。
+- `runtime/sidecar/`：OPL provider 调用 domain 的唯一受控桥；必须 fail-closed 拒绝 forbidden writes。
+- `runtime/projection_builders/`：给 OPL App / CLI / workbench 生成只读投影的 repo-side builder，不保存运行实例。
+- `runtime/lifecycle_adapters/`：把 workspace artifact root、runtime receipts、retention / restore proof 映射成 OPL 可读 locator / proof refs 的 adapter。
+- workspace / runtime artifact root：保存 domain-owned truth、receipt 实例、中间产物和最终交付物；它由 domain agent 管辖，但不在 domain repo 源码 skeleton 内。OPL 只持 locator、freshness 和 proof refs。
+
+迁移目标：
+
+- MAS、MAG、RCA 都应逐步把现有入口、manifest、sidecar、stage descriptor、skill 和 projection 映射到这套 skeleton。
+- 已有实现可以先用 adapter / manifest projection 对齐，不要求一次性物理移动目录。
+- 物理目录重组只能在 direct skill path、OPL-hosted path、existing tests、restore/provenance proof 都稳定后执行。
+- 目录统一的目标是降低 OPL 托管成本和减少二次污染，不是把 domain repo 改成同一套业务代码。
+
 ## 目标架构
 
 ```text
@@ -58,8 +262,10 @@ OPL 负责：
 - stage descriptor discovery、stage lifecycle receipt 和 handoff envelope。
 - typed family queue、idempotency key、lease、retry、dead-letter。
 - human gate / approval transport、notification、wakeup。
-- durable session/runtime status、attempt ledger、trace projection。
+- durable session/runtime status、attempt ledger、checkpoint、trace projection。
+- artifact index、file lifecycle、retention、restore proof、migration ledger 和 workspace lifecycle metadata。
 - cross-domain progress、attention queue、artifact locator 和 operator dashboard。
+- 标准 domain-agent skeleton 的 discovery、validation、parity check 和 migration guidance。
 - parity helper、manifest validation、framework-level governance。
 
 ## Temporal-Backed Runtime Provider
@@ -112,8 +318,172 @@ Codex CLI 负责：
 5. Human gate 需要统一 approval request、decision receipt、resume token 和 route-back semantics。
 6. Observability 需要把 stage freshness、consumed refs、rejected writes、route impact、next owner 和 artifact proof 投影到 OPL App / CLI，而不制造第二 truth。
 7. Direct skill compatibility 需要被固定为开发纪律：domain skill 仍可直接被 Codex App 调用，OPL 消费的是同一 skill/action/stage catalog。
+8. MAS 已验证的 SQLite / file lifecycle / restore proof / retention 经验还没有完全上收成 OPL framework primitive。
+9. MAS/MAG/RCA 尚未按统一 domain-agent skeleton 完成 repo-source 目录和 contract 物理重组；当前主要仍是 descriptor/projection 对齐，真实运行产物继续留在 workspace / runtime artifact root。
+
+## 跨仓迁移与退役矩阵
+
+这张表只定义迁移纪律，不替代各仓 `status/project/invariants` 和具体 contract。
+
+| repo / surface | target role | move to OPL | retain in domain | retire / degrade rule |
+| --- | --- | --- | --- | --- |
+| `one-person-lab` | family agent framework | provider abstraction、Temporal workflow/activity/signal/query、typed queue、attempt ledger、human gate、operator projection、shared descriptor validation | 不持有任何 domain truth | Hermes-first、Gateway、old local-only runtime wording 进入 legacy/diagnostic/history；无 active caller 后删除 compatibility alias。 |
+| `one-person-lab` runtime/lifecycle layer | framework runtime substrate | SQLite/local provider patterns、file lifecycle、artifact index、retention、restore proof、migration ledger、workspace lifecycle、provider receipts | 不持有 domain artifact content 或 verdict | 以 MAS 现有经验为 reference implementation，抽象成 OPL shared contract/provider primitive。 |
+| `med-autoscience` | medical research domain agent | online wakeup、retry/dead-letter、stage attempt transport、provider readiness、operator workbench projection；framework-generic SQLite/file lifecycle lessons 上收到 OPL | study truth、publication gate、AI reviewer、evidence/review ledger、route decision、artifact/package authority、sidecar receipt refs | 按 `docs/program/opl_temporal_mas_runtime_retirement_program.md` 执行；Temporal/MAS paper soak 前不得删除 local diagnostics。 |
+| `med-autogrant` | grant domain agent | grant stage attempt transport、approval/retry/dead-letter、operator projection、standard skeleton adapter | fundability strategy、specific aims、proposal authoring、critique/revision、submission-ready export authority | 旧 local host-agent runtime、Gateway wording、Hermes proof lane 只能保留 provenance/proof；controlled stage attempt 与 skeleton parity 通过后继续物理清理。 |
+| `redcube-ai` | visual-deliverable domain agent | visual stage attempt transport、runtime wakeup、operator projection、provider receipt、standard skeleton adapter | visual direction、artifact creation、review/export gate、canonical artifact authority | 旧 Hermes route wording、historical Gateway file names、repo-local managed runtime pilot 只作 migration provenance；direct route / sidecar / stage descriptor parity 后删除默认残留。 |
+| `med-deepscientist` | archive / diagnostic / upstream-intake reference | 无 active provider / stage adapter 迁移 | legacy source、fixture、backend audit、parity oracle、explicit restore/import evidence | 不接入 OPL active domain list；只有 MAS 已具备 source provenance、restore/provenance replacement 和 behavior fixture 后再物理删除旧 daemon/WebUI/quest surface。 |
+
+退役顺序固定为：
+
+1. 先让 OPL provider-backed stage attempt 可运行。
+2. 再让 OPL framework primitives 承接 MAS 已验证的 lifecycle / artifact / retention / restore-proof 模式。
+3. 再让 domain sidecar / direct skill / stage descriptor / standard skeleton adapter 证明语义等价。
+4. 再做真实或 controlled soak。
+5. 最后删除旧 vocabulary、compatibility alias、旧 manager、重复 UI/manager surface 和非标准目录入口。
+
+任何清理如果会降低 direct skill path、domain diagnostics、restore/provenance 或真实 artifact gate 可解释性，应推迟到 provider soak 之后。
 
 ## 落地计划
+
+### Master P0. 基线冻结与总入口对齐
+
+目标：让所有 repo 都明确从本文进入 OPL stage-led framework 开发，不再产生平行总计划。
+
+交付：
+
+- OPL `docs/README*`、`docs/status.md`、`docs/architecture.md` 明确本文是 framework master entry。
+- MAS `opl_temporal_mas_runtime_retirement_program.md` 回指本文，并把 MAS 本地 scheduler / watchdog / MDS compatibility 清理列为 domain-side execution plan。
+- MAG/RCA/MDS `docs/status.md` / `project.md` / `invariants.md` 继续声明自己是 domain agent 或 archive/reference，不成为 OPL 内部模块。
+- 搜索 Hermes-first、Gateway、legacy local runtime、MDS/default backend、old manager wording，并分成 active / legacy / diagnostics / retired。
+
+验收：
+
+- 新增实现不能绕过本文另建“OPL 总计划”。
+- 文档中的目标状态和当前状态必须拆开，不能把 Temporal provider 写成已 fully landed。
+
+### Master P1. Temporal Provider Skeleton
+
+目标：让 `temporal` provider 从计划目标变成可运行 fixture workflow。
+
+交付：
+
+- OPL TypeScript 引入 Temporal SDK、dev/test entry 和 `StageAttemptWorkflow` fixture。
+- `CodexStageActivity` 与 `DomainSidecarDispatchActivity` 先用 fixture/domain dry-run，不直接写 domain truth。
+- `HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal`、`StageAttemptQuery` 形成最小合同。
+- provider receipt 写入现有 stage attempt ledger。
+
+验收：
+
+- workflow replay 不重复触发 domain work unit。
+- Activity retry 使用 source fingerprint / idempotency key。
+- Temporal failure / dead-letter 不被 domain 误读为 quality verdict。
+
+下一开发入口：
+
+- 主仓：`/Users/gaofeng/workspace/one-person-lab`
+- 主文档：本文
+- 细化文档：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
+- 首个代码 tranche：`Master P1. Temporal Provider Skeleton`
+- 同步子计划：MAS 只跟随 `/Users/gaofeng/workspace/med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md` 做 provider-ready contract / sidecar / guarded soak，不抢先物理删除本地诊断面。
+
+### Master P2. Codex Stage Activity Runner
+
+目标：把 Codex CLI 作为 stage 内默认 concrete executor 接入 provider。
+
+交付：
+
+- stage packet 输入：stage id、skill refs、prompt refs、workspace locator、context/knowledge refs、authority boundary。
+- stage closeout 输出：typed closeout、artifact delta refs、consumed refs、rejected writes、next owner、human gate / blocker。
+- heartbeat / checkpoint：记录 long-running Codex execution 的 progress、last artifact delta、current blocker。
+
+验收：
+
+- Codex activity runner 可 dry-run / fixture-run。
+- 没有 typed closeout 时 attempt 不得被标成 completed。
+- OPL 只保存 refs 和 receipt，不复制 domain truth。
+
+### Master P2b. Framework Lifecycle Primitives From MAS
+
+目标：把 MAS 已验证的 SQLite 持久化层、file lifecycle、artifact index、retention、restore proof 和 lifecycle 管理经验抽象为 OPL framework primitive。
+
+交付：
+
+- 定义 OPL-owned `lifecycle ledger`、`artifact index`、`retention policy`、`restore proof`、`migration ledger`、`workspace lifecycle metadata` 的 shared schema。
+- 从 MAS 现有实现中拆出 `framework_generic` pattern 与 `mas_domain_specific` truth 清单。
+- OPL local provider 使用 framework-generic schema；MAS/MAG/RCA 通过 sidecar/projection 暴露 domain-owned refs。
+- 明确 OPL 只能持有 locator、freshness、receipt、proof、migration state；不能复制 domain artifact content 或 domain verdict。
+
+验收：
+
+- MAS 现有 SQLite/file lifecycle 能力被映射为 OPL primitive 或 MAS-retained truth，没有灰色区域。
+- MAG/RCA 能复用同一 artifact index / retention / restore proof 合同，不需要复制 MAS 私有实现。
+- OPL cleanup / retention / restore 操作只能作用于 framework-owned cache、index、receipt 或 provider state；domain-owned artifact 删除必须回到 domain receipt。
+
+### Master P2c. Standard Domain-Agent Skeleton Rollout
+
+目标：让 MAS、MAG、RCA 按统一 skeleton 暴露 stage、prompt、skill、knowledge、quality gate、contract、sidecar、receipt schema / refs、projection builder / refs 和 artifact locator contract。
+
+交付：
+
+- 在 OPL 冻结 `standard_domain_agent_skeleton` contract：目录 role、required descriptors、optional adapters、migration status、parity proof。
+- MAS/MAG/RCA 各自生成 skeleton mapping：现有 repo-source 文件/manifest 到 `agent/`、`contracts/`、`runtime/`、`docs/` 的对应关系，以及 workspace artifact root / runtime artifact root 的 locator contract。
+- 先以 manifest/adapter 对齐，再分 repo 做物理目录重组计划。
+- OPL `opl agents inspect` / `opl stages inspect` 能展示 skeleton completeness、missing refs、nonstandard legacy surface 和 migration blockers。
+
+验收：
+
+- MAS、MAG、RCA 都能在不经过 OPL 的 direct skill path 下继续工作。
+- OPL-hosted path 和 direct skill path 读取同一 descriptor、skill refs、quality gate refs、sidecar receipt refs 和 artifact locator refs。
+- 任何物理目录移动前都有 path compatibility audit、restore/provenance proof、focused tests 和 rollback plan。
+- 目录重组不得把 domain truth 迁到 OPL，也不得把 OPL provider state 写回 workspace / runtime artifact root 中的 domain final artifacts。
+
+### Master P3. Human Gate、用户插入指令与 Resume
+
+目标：把用户修改要求、审批、暂停/恢复做成 provider-level signal，同时交给 domain-owned intake 执行。
+
+交付：
+
+- user instruction intake signal / receipt。
+- approval、pause/resume/stop signal。
+- milestone 后 reactivation handoff：MAS 投稿包后 10 条修改要求、MAG/RCA 返修要求都回到各自 domain revision stage。
+
+验收：
+
+- 用户插入要求不会新开第二条 truth line。
+- OPL 不直接 patch domain artifacts，只传递 signal 和 handoff envelope。
+
+### Master P4. Operator Visibility
+
+目标：让 OPL App / CLI 能看懂 stage attempt 卡在哪里。
+
+交付：
+
+- OPL App / CLI 显示 provider kind、attempt id、stage、activity、heartbeat、consumed refs、closeout refs、rejected writes、next owner、human gate、dead-letter reason。
+- 支持按 domain / workspace / stage / blocker / dead-letter 过滤。
+
+验收：
+
+- 用户能区分卡在 provider、Codex activity、domain gate、artifact downstream 还是 human gate。
+- UI 不把 provider completed 写成论文/基金/PPT ready。
+
+### Master P5. Domain Soak And Retirement
+
+目标：用真实或 controlled domain line 证明 OPL 托管不降级，然后清理旧路径。
+
+交付：
+
+- MAS：一条真实 paper line 做 read-only -> guarded apply soak，执行 MAS 本地 retirement program。
+- MAG：controlled grant stage attempt，验证 critique/revision/package handoff。
+- RCA：controlled visual stage attempt，验证 review/revision/export handoff。
+- MDS：保持 archive/reference，不接入 active OPL stage adapter。
+- 退役 Hermes-first wording、old Gateway vocabulary、旧 local runtime / manager alias、MDS default dependency、重复 UI/manager surface。
+
+验收：
+
+- direct skill path 与 OPL-hosted path 语义等价。
+- 清理旧面前必须证明无 default caller、无 public surface 依赖、无 fixture/provenance 必需，或已有 explicit diagnostic/history replacement。
+- 各 repo native verification green。
 
 ### Lane 1. Family Stage Descriptor Contract
 

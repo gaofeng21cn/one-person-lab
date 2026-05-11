@@ -43,21 +43,21 @@
 
 ## 2026-05-08
 
-### 决策：Hermes 恢复为 OPL family 默认在线 substrate
+### 历史决策：Hermes 恢复为 OPL family 默认在线 substrate
 
-状态：已被 2026-05-10 的 Temporal-backed provider 决策 supersede。保留本段用于解释 Hermes-first 回滚背景和迁移期实现口径，不作为后续目标 topology。
+状态：已被 2026-05-10 的 Temporal-backed provider 决策 supersede。保留本段只用于解释 Hermes-first 回滚背景和迁移期实现口径，不作为当前默认 topology、安装纪律或 readiness 目标。
 
 原因：最新核实显示，过去的问题不在于 Hermes 没有价值，而在于 OPL/MAS 只把它用成了 `every 5m` cron carrier。真正需要的是 24h 在线产品能力：常驻 gateway、cron/webhook wakeup、session store、delivery/notification、approval transport、memory/profile isolation。这个能力应由上游 `Hermes-Agent` 承担，`OPL` 在其上持有 typed family queue、跨仓 dispatch/control plane、Runtime Manager 和 Full App 包装；`MAS`、`MAG`、`RCA` 继续持有 domain truth、质量判断和 artifact/package/publication gate。
 
 影响：
 
-- `opl install` 默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；`--no-online-runtime` 只用于开发/离线诊断。
-- `Hermes-Agent` 是 Full OPL family readiness 的 required online substrate；Hermes 缺失或 gateway 未加载会使 Full readiness degraded / attention needed。
+- 历史上 `opl install` 曾计划默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；当前目标口径已改为 provider-backed family runtime，Temporal 是生产 substrate 候选，Hermes 只保留 legacy/optional provider 或显式 executor/proof lane。
+- 历史上 `Hermes-Agent` 曾被写成 Full OPL family readiness 的 required online substrate；当前 Full OPL readiness 应按已配置 family runtime provider ready 判断，不能再把 Hermes 写成目标必需项。
 - `Codex CLI` 仍是默认具体执行器；Hermes online substrate 不自动替换 domain-selected executor，也不成为 MAS/MAG/RCA truth owner。
 - 新增 `opl family-runtime` typed queue / bridge：队列位于 `${OPL_STATE_DIR}/family-runtime/queue.sqlite`，Hermes cron/webhook 负责唤醒，OPL tick 负责跨仓 dispatch 和本地 inbox/event 记录。
 - `opl family-runtime intake` 与 `opl family-runtime tick --hydrate` 会先读取 domain sidecar export 的 `pending_family_tasks[]`，按 dedupe key 入队，再在同一 tick 中派发已入队任务。Hermes cron 注册脚本必须使用 `opl family-runtime tick --source hermes-cron --hydrate`，否则只会消费已有队列而不会把 MAS/MAG/RCA read-model blocker 转成 executable task。
-- Full 首次安装包必须携带 Hermes payload、profile seed、CLI shim、LaunchAgent install/repair scripts、版本 manifest 与 checksum；标准 updater asset 可继续轻量。
-- `opl system initialize` 和 App 首启显示 Core ready、Domain modules ready、Hermes online runtime ready 三层状态；Full 完整通过要求三层都 ready。
+- 历史计划中 Full 首次安装包曾要求携带 Hermes payload、profile seed、CLI shim、LaunchAgent install/repair scripts、版本 manifest 与 checksum；当前 Full 包应携带已配置 family runtime provider 所需 payload，Temporal provider 落地后由 provider manifest/checksum 表达 readiness。
+- 历史计划中 `opl system initialize` 和 App 首启曾显示 Core ready、Domain modules ready、Hermes online runtime ready 三层状态；当前应显示 Core、Domain modules、family runtime provider readiness，不能把 Hermes 写成目标默认层。
 - 历史上“Hybrid optional Hermes provider adapter”的文档口径保留为 archive/decision history，不再作为当前安装或 readiness 行为。
 
 ### 历史决策：Hermes 从默认安装依赖降为显式可选 hosted/runtime provider adapter

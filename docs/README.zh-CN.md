@@ -45,6 +45,11 @@
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 
+2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
+[OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
+它持有当前 `TypeScript` 控制面决策、Temporal provider 计划、domain-agent 边界，以及
+Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
+
 ## 生命周期组合
 
 `docs/` 现在按生命周期状态管理，而不是继续平铺四层文件。

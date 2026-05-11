@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> 当前状态说明（`2026-05-08`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
+> 当前状态说明（`2026-05-10`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + provider-backed family runtime + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
 
 ## 目的
 
@@ -140,20 +140,22 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 - `Shared Runtime Contract` 是当前共享边界下的参考合同，不是默认产品入口
 - runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` 语义，而不是把它们误写成某个统一 runtime owner
 - 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 只保留为 MAS 声明的可选 companion diagnostic、intake 与 parity oracle 引用
-- 上游 `Hermes-Agent` 运行底座已成为 Full OPL online family runtime 的默认外部 substrate；它仍不持有 OPL session 入口、domain truth、质量裁决或 artifact authority
+- `Hermes-Agent` 只保留为迁移期 legacy/optional provider、显式 executor/proof lane 或 Codex CLI 备线，不再是默认长期在线 substrate
 
 ## 实现边界
 
 只要不改写上层合同，`Shared Runtime Contract` 后续可以由不同 deployment shape 实现：
 
 - 当前本地 `host-agent runtime`
-- future 上游 `Hermes-Agent`-backed managed runtime
+- 迁移期 `Hermes-Agent` legacy/optional provider bridge
+- future provider-backed managed runtime（优先生产候选是 Temporal-backed provider）
 - future platform-hosted execution plane
 
 从产品形态看，优选未来落地应是：
 
-- 本地开源版由 `OPL` 入口为用户 bootstrap 并管理受支持的外部 `Hermes` runtime
-- 未来托管版由平台内部运行外部 `Hermes` kernel，而 `OPL` 继续对外暴露产品入口
+- 本地开源版由 `OPL` 入口为用户 bootstrap 并管理受支持的 family runtime provider
+- 迁移期可继续管理外部 `Hermes` legacy provider
+- 未来托管版由平台内部运行受支持 provider substrate，而 `OPL` 继续对外暴露产品入口
 
 变化的应只是 runtime substrate 的承载方式，而不是：
 

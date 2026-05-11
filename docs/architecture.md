@@ -10,7 +10,7 @@
 
 当前仓库跟踪的产品链路是：
 
-`User / Codex / opl / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> selected domain capability surface -> domain runtime and deliverables`
+`User / Codex / opl / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> configured family runtime provider when durable orchestration is needed -> selected domain capability surface -> domain runtime and deliverables`
 
 显式长跑托管任务与 online management 的目标链路在这个主链路下增加 provider-backed family runtime substrate：
 
@@ -191,6 +191,24 @@
 - `MAS`、`MAG`、`RCA` 作为独立 `domain agent`，可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用
 - 两条入口的工作逻辑保持一致
 - 对 `MAS` 来说，OPL projection 只携带 evidence、provenance、状态和路由信号；ready、submission、publication、quality 等最终判断仍回到 MAS-owned durable surfaces
+
+## 当前实现边界与缺口
+
+当前 OPL 已经实现的是 family framework 的控制面骨架：
+
+- shared contract：`family-action-catalog`、`family-action-graph`、`family-stage-control-plane`、`family-runtime-supervision`、`family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`、`family-product-entry-manifest-v2`。
+- shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
+- local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
+- discovery：`opl actions` / `opl stages` 只读发现与 parity。
+
+当前尚未实现的是完整生产级 stage execution runtime：
+
+- Temporal-backed provider 仍未成为默认 landed provider。
+- 一次 domain stage attempt 尚未完整落成 Temporal Workflow / Activity / Signal / Query 形态。
+- `Codex CLI` stage activity runner、heartbeat / checkpoint、typed closeout ingestion、human gate signal、resume token 和 App 查询面仍需要实现。
+- OPL App / GUI 仍需把 stage attempt、closeout receipt、consumed refs、rejected writes、route impact 和 next owner 做成用户可见操作面。
+
+所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane landed`，不能描述为 `production Temporal-backed autonomous execution framework fully landed`。
 
 ## 默认执行策略
 
