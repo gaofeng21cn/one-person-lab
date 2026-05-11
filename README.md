@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/opl-banner.svg" alt="One Person Lab banner" width="100%" />
+  <img src="assets/branding/opl-banner.png" alt="One Person Lab banner" width="100%" />
 </p>
 
 <p align="center">
@@ -12,11 +12,11 @@
 <p align="center">Run expert work the way specialists actually deliver it: define the problem, prepare evidence, execute, review, revise, and ship auditable outcomes.</p>
 
 <p align="center">
-  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
+  <img src="assets/branding/opl-workbench-overview.png" alt="OPL workbench overview" width="100%" />
 </p>
 
 <p align="center">
-  <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
+  <img src="assets/branding/opl-architecture-plan.png" alt="OPL architecture and product plan" width="100%" />
 </p>
 
 ## Why One Person Lab
