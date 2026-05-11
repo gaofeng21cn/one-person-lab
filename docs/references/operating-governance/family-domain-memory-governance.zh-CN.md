@@ -130,11 +130,19 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 
 - 已完成：OPL 标准 `family_domain_memory_ref` / `family_domain_memory_writeback` 合同、stage `knowledge_refs` 和 `opl domain-memory list|inspect|migration-plan` 读模型已落地。
 - 已完成：MAS 已通过标准 `domain_memory_descriptor` 暴露 `mas_publication_route_memory`，当前 OPL live binding 可解析为 1 个 resolved descriptor。
-- 部分完成：MAG/RCA 已在各自 manifest / adoption contract 中暴露 domain-specific `domain_memory_descriptor_locator`，但尚未映射成 OPL 当前 `family_domain_memory_ref.v1` 标准 descriptor；因此 `opl domain-memory list` 当前会把 MAG/RCA 计为 missing descriptor，而不是 resolved memory。
+- 已完成于 domain 侧：MAG/RCA 已在各自 manifest / adoption contract 中暴露 domain-specific `domain_memory_descriptor_locator`，并补齐 migration plan、seed fixture locator、writeback proposal generator、accept/reject command、receipt locator 和 operator receipt projection；这些 surface 不保存真实 memory body 或 receipt 实例。
+- 部分完成于 family index：MAG/RCA 尚未映射成 OPL 当前 `family_domain_memory_ref.v1` 标准 descriptor；因此 2026-05-11 `opl domain-memory list --json` 仍显示 `resolved_memory_descriptor_count=1`、`missing_memory_descriptor_count=2`，只有 MAS resolved，MAG/RCA 仍 missing descriptor。
 - 部分完成：MAS/MAG/RCA 的政策文档已定义哪些经验适合进入 memory，哪些必须保留为强 contract。
-- 未完成：真实 reusable lessons 从历史 workspace/runtime 迁移到 domain-owned memory store 的 apply receipt。
+- 部分完成：MAS 已有 workspace apply closure；MAG/RCA 有 repo-source controlled proof surface；真实 reusable lessons 从历史 workspace/runtime 迁移到 domain-owned memory store 的 accepted/rejected apply receipt 仍未完成。
 - 已完成：stage attempt query/workbench 可展示 typed closeout 带回的 consumed memory refs、writeback receipt refs 与 rejected writes。
 - 未完成：stage entry 小集合 retrieval、typed closeout writeback apply，以及真实/controlled stage soak。
+
+下一步收口顺序：
+
+1. 在 MAG/RCA manifest adapter 中增加 OPL 标准 `family_domain_memory_ref.v1` projection，让 OPL family index 把三仓都解析为 resolved memory descriptor。
+2. 保持 memory 正文、accept/reject、fundability / visual quality 判断和 artifact authority 在 domain；OPL 只读 locator、proposal ref、receipt ref、freshness 和 rejected writeback reason。
+3. 用 MAS real paper line、MAG controlled grant stage、RCA controlled visual stage 分别产生至少一条 consumed-memory / writeback-receipt 证据。
+4. 再把 Aion workbench 的 memory refs 从“只显示 raw refs”提升到按 domain/stage 分组的 operator view；仍不复制 memory body。
 
 ## 下一阶段再做
 
