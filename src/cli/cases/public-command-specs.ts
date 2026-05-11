@@ -19,6 +19,7 @@ import {
 import {
   buildFamilyDomainMemoryInspect,
   buildFamilyDomainMemoryList,
+  buildFamilyDomainMemoryMigrationPlan,
 } from '../../family-domain-memory.ts';
 import {
   buildFamilyStageInspect,
@@ -562,6 +563,13 @@ export function buildPublicCommandSpecs(
       examples: ['opl domain-memory inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyDomainMemoryInspect(getContracts(), args),
+    },
+    'domain-memory migration-plan': {
+      usage: 'opl domain-memory migration-plan --domain <domain>',
+      summary: 'Project a domain-owned memory migration plan, seed corpus, and writeback receipt locator.',
+      examples: ['opl domain-memory migration-plan --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyDomainMemoryMigrationPlan(getContracts(), args),
     },
     'stages list': {
       usage: 'opl stages list',

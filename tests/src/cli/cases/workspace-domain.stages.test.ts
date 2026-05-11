@@ -188,6 +188,21 @@ function withDomainMemoryDescriptor(payload: JsonRecord, overrides: JsonRecord =
       ref_kind: 'surface_kind',
       ref: 'stage_recall_index',
     },
+    migration_plan_ref: {
+      ref_kind: 'human_doc',
+      ref: 'docs/policies/study-workflow/publication_route_memory_policy.md#migration-plan',
+      role: 'domain_owned_migration_plan',
+    },
+    seed_corpus_ref: {
+      ref_kind: 'workspace_locator',
+      ref: 'portfolio/research_memory/publication_route_memory/seeds',
+      role: 'domain_owned_seed_corpus',
+    },
+    writeback_receipt_locator_ref: {
+      ref_kind: 'workspace_locator',
+      ref: 'portfolio/research_memory/publication_route_memory/writeback_receipts',
+      role: 'domain_owned_router_receipts',
+    },
     provenance_refs: [
       {
         ref_kind: 'human_doc',
@@ -198,6 +213,11 @@ function withDomainMemoryDescriptor(payload: JsonRecord, overrides: JsonRecord =
     freshness: {
       status: 'policy_seed',
       refresh_policy: 'domain_manifest_rebuild_required_before_stage_attempt',
+    },
+    migration_readiness: {
+      status: 'migration_plan_ready_descriptor_only',
+      memory_body_migration: 'domain_owned_workspace_apply_required',
+      opl_apply_allowed: false,
     },
     status: 'active',
     authority_boundary: {
@@ -749,10 +769,41 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
     });
     assert.equal(inspect.family_domain_memory.descriptor_status, 'resolved');
     assert.equal(inspect.family_domain_memory.descriptor.memory_family, 'publication_route_memory');
+    assert.equal(
+      inspect.family_domain_memory.migration_plan.migration_plan_ref.ref,
+      'docs/policies/study-workflow/publication_route_memory_policy.md#migration-plan',
+    );
+    assert.equal(inspect.family_domain_memory.non_authority_flags.opl_applies_memory_migration, false);
     assert.equal(inspect.family_domain_memory.authority_boundary.domain_memory_owner, 'MedAutoScience');
     assert.equal(inspect.family_domain_memory.non_authority_flags.opl_owns_memory_content, false);
     assert.equal(inspect.family_domain_memory.non_authority_flags.opl_accepts_memory_writeback, false);
     assert.equal(inspect.family_domain_memory.non_authority_flags.opl_authorizes_quality_verdict, false);
+
+    const migrationPlan = runCli(['domain-memory', 'migration-plan', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.surface_kind,
+      'opl_family_domain_memory_migration_plan_projection',
+    );
+    assert.equal(migrationPlan.family_domain_memory_migration_plan.memory_ref_id, 'mas_publication_route_memory');
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.seed_corpus_ref.ref,
+      'portfolio/research_memory/publication_route_memory/seeds',
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.writeback_receipt_locator_ref.ref,
+      'portfolio/research_memory/publication_route_memory/writeback_receipts',
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.migration_readiness.status,
+      'migration_plan_ready_descriptor_only',
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.non_authority_flags.opl_accepts_memory_writeback,
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
