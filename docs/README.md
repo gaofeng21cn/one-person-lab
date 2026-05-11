@@ -44,12 +44,17 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+- [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
 
 For OPL framework development after the 2026-05-11 architecture reset, use
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 as the master entry. It owns the current TypeScript control-plane decision,
 Temporal provider plan, domain-agent boundary, and retirement discipline for
 Hermes-first / Gateway / legacy local-runtime surfaces.
+For MAS/MAG/RCA domain experience memory, route patterns, visual patterns, or
+template boundaries, read
+[Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md).
+That entry governs framework/domain ownership without moving domain content into OPL.
 
 ## Lifecycle Portfolio
 

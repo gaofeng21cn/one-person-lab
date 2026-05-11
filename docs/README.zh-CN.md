@@ -44,11 +44,15 @@
 - [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+- [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
 
 2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
 它持有当前 `TypeScript` 控制面决策、Temporal provider 计划、domain-agent 边界，以及
 Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
+涉及 MAS/MAG/RCA 的领域经验记忆、路线套路、视觉模式或模板边界时，先读
+[Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)；
+该入口只治理 framework 与 domain owner 边界，不把领域内容上收到 OPL。
 
 ## 生命周期组合
 

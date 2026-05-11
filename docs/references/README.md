@@ -101,6 +101,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 
 ## 6. Operating Governance References
 
+- [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md)
 - [Family domain quality projection contract](./operating-governance/family-domain-quality-projection-contract.md)
 - [Family incident learning loop](./operating-governance/family-incident-learning-loop.md)
 - [Family product operator projection](./operating-governance/family-product-operator-projection.md)
@@ -123,6 +124,7 @@ Retired prose files live in `docs/history/`. Machine-readable contracts, tests, 
 ## Usage Rules
 
 - After the 2026-05-11 architecture reset, use [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) as the master entry for OPL framework work, execution-language decisions, Temporal provider rollout, domain-agent boundary changes, and legacy-surface retirement.
+- For MAS/MAG/RCA publication routes, grant strategies, visual patterns, figure templates, prompt lessons, or reviewer lessons, use [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md) to decide whether the content belongs in natural-language memory, strong domain contracts, or a deferred framework lane.
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
 - `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
 - `four-repo-doc-intake-template.md` is the reusable central intake form for documenting scope, affected repositories, verification, and cleanup across a cross-repo docs round.
