@@ -172,7 +172,7 @@ export function buildProductEntrySessionPrompt(contracts: GatewayContracts) {
     ...workstreamLines,
     '',
     'Hard boundary rules:',
-    '- OPL is a gateway and federation shell. It is not the runtime truth owner of any domain.',
+    '- OPL is a Codex-first, stage-led family framework shell. It is not the runtime truth owner of any domain.',
     '- Keep work inside admitted domain boundaries and family boundaries. Do not invent admission or hosted readiness.',
     '- Codex is the default runtime substrate for this product-entry session.',
     '- Hermes remains available only when explicitly requested.',

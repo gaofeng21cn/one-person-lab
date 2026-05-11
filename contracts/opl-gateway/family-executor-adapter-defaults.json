@@ -137,9 +137,9 @@
     "activation_requires": "explicit_request_or_runtime_manager_handoff_config"
   },
   "topology_split": {
-    "opl_role": "top_level_gateway_and_federation_contract",
-    "runtime_substrate_role": "session_memory_scheduler_orchestration",
-    "executor_adapter_role": "domain_local_route_selection",
+    "opl_role": "codex_first_stage_led_family_framework_contract",
+    "runtime_substrate_role": "provider_backed_stage_attempt_orchestration",
+    "executor_adapter_role": "domain_owned_route_and_stage_selection",
     "concrete_executor_role": "task_local_autonomous_execution"
   },
   "allowed_non_default_route_labels": [
