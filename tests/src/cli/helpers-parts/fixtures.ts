@@ -6,7 +6,7 @@ import { contractsDir, familyManifestFixtureDir, repoRoot } from './constants.ts
 
 export function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-contract-fixture-'));
-  const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-gateway');
+  const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-framework');
   fs.mkdirSync(fixtureContractsRoot, { recursive: true });
   fs.cpSync(contractsDir, fixtureContractsRoot, {
     recursive: true,
@@ -153,4 +153,3 @@ export function readJsonFixture<T>(name: string) {
     fs.readFileSync(path.join(familyManifestFixtureDir, name), 'utf8'),
   ) as T;
 }
-

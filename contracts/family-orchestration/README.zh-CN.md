@@ -60,7 +60,7 @@
 
 ### control-plane-oriented
 
-- `../opl-gateway/family-runtime-online-substrate-contract.json`
+- `../opl-framework/family-runtime-online-substrate-contract.json`
   - 冻结 provider-backed family runtime 的 owner split、OPL typed family queue / dispatch bridge、stage attempt ledger 与 degraded diagnostics；Hermes 只保留为 `hermes_legacy` provider 语义
 - `family-runtime-supervision.schema.json`
   - 冻结共享的只读 wakeup / supervision projection，覆盖 adapter id、cadence、last success / tick、lease freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 authority boundary

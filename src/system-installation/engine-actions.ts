@@ -1,5 +1,5 @@
-import { GatewayContractError } from '../contracts.ts';
-import type { GatewayContracts } from '../types.ts';
+import { FrameworkContractError } from '../contracts.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';
 import { buildOplEnvironment } from './environment.ts';
@@ -12,7 +12,7 @@ function findEngineOrThrow(engineId: string) {
     return normalized;
   }
 
-  throw new GatewayContractError(
+  throw new FrameworkContractError(
     'cli_usage_error',
     'Unknown OPL engine id.',
     {
@@ -24,7 +24,7 @@ function findEngineOrThrow(engineId: string) {
 }
 
 export async function runOplEngineAction(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   action: OplEngineAction,
   engineId: string,
 ) {
@@ -50,7 +50,7 @@ export async function runOplEngineAction(
 
   const result = spec.executable();
   if (result.exitCode !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'build_command_failed',
       `Failed to run ${resolvedEngineId} ${action} command for OPL.`,
       {

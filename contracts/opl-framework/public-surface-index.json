@@ -1,0 +1,226 @@
+{
+  "version": "p19.stage-runtime",
+  "scope": "opl_framework_public_surface_index",
+  "description": "Machine-readable index of current OPL framework public surfaces and selected domain-agent entries. It does not implement retired gateway, federation, or routed-action compatibility layers.",
+  "non_goals": [
+    "domain_truth_registry",
+    "legacy_gateway_contract_hub",
+    "retired_route_schema_index",
+    "domain_artifact_gate"
+  ],
+  "ownership_rules": [
+    "OPL owns framework activation, stage runtime projection, and shared contract discovery",
+    "domain-agent entries remain independently usable without OPL",
+    "canonical domain truth remains inside MAS, MAG, and RCA",
+    "public surfaces must point to stable contract or semantic human_doc refs, not prose paths as machine interfaces"
+  ],
+  "surface_categories": [
+    {
+      "category_id": "opl_public_entry",
+      "owner_scope": "opl",
+      "description": "Top-level public navigation surfaces for the OPL framework."
+    },
+    {
+      "category_id": "opl_framework_contract",
+      "owner_scope": "opl",
+      "description": "Active framework, runtime, and stage contract surfaces."
+    },
+    {
+      "category_id": "domain_agent_entry",
+      "owner_scope": "domain",
+      "description": "Independent domain-agent public entries selected by OPL stages."
+    }
+  ],
+  "surfaces": [
+    {
+      "surface_id": "opl_public_readme",
+      "category_id": "opl_public_entry",
+      "surface_kind": "readme",
+      "boundary_role": "top_level_navigation",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "grant_ops",
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautogrant",
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:repository_home",
+          "language": "en"
+        },
+        {
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:repository_home_zh_cn",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_stage_runtime_framework",
+        "opl_domain_agent_catalog",
+        "mas_domain_agent_entry",
+        "mag_domain_agent_entry",
+        "rca_domain_agent_entry"
+      ],
+      "notes": [
+        "Public positioning for OPL as a Codex-first, stage-led framework."
+      ]
+    },
+    {
+      "surface_id": "opl_stage_runtime_framework",
+      "category_id": "opl_framework_contract",
+      "surface_kind": "framework_contract_set",
+      "boundary_role": "stage_runtime_framework",
+      "owner_scope": "opl",
+      "truth_mode": "framework_contract",
+      "workstream_ids": [
+        "grant_ops",
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautogrant",
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/runtime-manager-contract.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/family-runtime-attempt-contract.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json"
+        }
+      ],
+      "routes_to": [
+        "opl_domain_agent_catalog"
+      ],
+      "notes": [
+        "Defines provider-backed stage attempt runtime and OPL Runtime Manager boundaries."
+      ]
+    },
+    {
+      "surface_id": "opl_domain_agent_catalog",
+      "category_id": "opl_framework_contract",
+      "surface_kind": "domain_agent_catalog",
+      "boundary_role": "domain_agent_selection_catalog",
+      "owner_scope": "opl",
+      "truth_mode": "projection_index",
+      "workstream_ids": [
+        "grant_ops",
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautogrant",
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/workstreams.json"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/task-topology.json"
+        }
+      ],
+      "routes_to": [
+        "mas_domain_agent_entry",
+        "mag_domain_agent_entry",
+        "rca_domain_agent_entry"
+      ],
+      "notes": [
+        "Indexes selected domain agents without becoming a domain truth source."
+      ]
+    },
+    {
+      "surface_id": "mag_domain_agent_entry",
+      "category_id": "domain_agent_entry",
+      "surface_kind": "domain_agent_entry",
+      "boundary_role": "grant_authoring_domain_agent",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned",
+      "workstream_ids": [
+        "grant_ops"
+      ],
+      "domain_ids": [
+        "medautogrant"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json#medautogrant"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "MAG owns grant authoring truth, progress, quality, and artifacts."
+      ]
+    },
+    {
+      "surface_id": "mas_domain_agent_entry",
+      "category_id": "domain_agent_entry",
+      "surface_kind": "domain_agent_entry",
+      "boundary_role": "medical_research_domain_agent",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned",
+      "workstream_ids": [
+        "research_ops"
+      ],
+      "domain_ids": [
+        "medautoscience"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json#medautoscience"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "MAS owns study truth, runtime health, publication judgment, and artifacts."
+      ]
+    },
+    {
+      "surface_id": "rca_domain_agent_entry",
+      "category_id": "domain_agent_entry",
+      "surface_kind": "domain_agent_entry",
+      "boundary_role": "visual_deliverable_domain_agent",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned",
+      "workstream_ids": [
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json#redcube"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "RCA owns visual deliverable truth, review state, export authority, and artifacts."
+      ]
+    }
+  ]
+}

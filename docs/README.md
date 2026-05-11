@@ -131,7 +131,8 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - Public role, active boundary, and default reading order: [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md)
 - OPL-owned machine-readable product surfaces: [Contracts Overview](../contracts/README.md)
 - Linked domain capability surfaces: the admitted domain repositories plus `opl skill sync`
-- Legacy gateway/federation compatibility corpus: `contracts/opl-gateway/*.json` and [Gateway / Federation Compatibility Archive](./history/compatibility/gateway-federation/README.md)
+- Active framework contracts: `contracts/opl-framework/*.json`
+- Retired gateway/federation compatibility corpus: [Gateway / Federation Compatibility Archive](./history/compatibility/gateway-federation/README.md)
 - Reference-grade supporting material: [Reference Index](./references/README.md)
 - Historical and retired lanes: [History Archive](./history/README.md) and [Process History](./history/process/README.md)
 

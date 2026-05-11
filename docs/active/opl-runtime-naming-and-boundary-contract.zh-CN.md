@@ -2,7 +2,7 @@
 
 # OPL Runtime 命名与边界合同
 
-> 当前状态说明（`2026-05-09`）：本文作为 gateway/federation 命名阶段留下的共享边界参考保留。当前默认公开口径是 `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。除非当前核心文档显式提升，下文 `gateway / harness` 词汇均按内部兼容语言理解。
+> 当前状态说明（`2026-05-11`）：本文是 Codex-first、stage-led OPL framework 的活跃 runtime 命名边界。当前默认公开口径是 `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
 
 ## 目的
 
@@ -12,8 +12,8 @@
 - `Unified Harness Engineering Substrate`
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
-- `domain gateway`
-- `Domain Harness OS`
+- domain-agent entry
+- domain harness/controller
 - `execution plane`
 - `deployment shape`
 
@@ -46,30 +46,30 @@
 
 ```text
 Human / Agent
-  -> OPL Gateway / Federation
+  -> OPL Codex-first stage-led framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
-              -> Domain Gateway
-                  -> Domain Harness OS
+              -> Domain-agent entry
+                  -> Domain harness/controller
                       -> Execution Plane
                           -> Deployment Shape
 ```
 
 每一层回答不同问题：
 
-- `OPL session/runtime + activation`
-  - 默认 session/runtime 语义、显式 domain-agent activation、admission 语言与边界合同
+- `OPL Codex-first stage-led framework`
+  - 默认 session/runtime 语义、stage decomposition、显式 domain-agent activation、admission 语言与边界合同
 - `Unified Harness Engineering Substrate`
   - 跨域共享的上位 Harness Engineering 语言
 - `Shared Runtime Contract`
   - 跨域共享的长期在线运行合同
 - `Shared Domain Contract`
   - 跨域共享的正式行为合同
-- `Domain Gateway`
-  - 某个 domain 的正式入口、contract hydration、独立可消费界面
-- `Domain Harness OS`
-  - 某个 domain 的编排、治理、审阅、交付系统本体
+- `Domain-agent entry`
+  - 某个 domain agent 的稳定 app-skill、CLI、MCP 或 product-entry surface
+- `Domain harness/controller`
+  - 某个 domain agent 内部的编排、治理、审阅、交付系统本体
 - `Execution Plane`
   - 真正执行 session、quest、run、worktree、watch、resume 的运行层
 - `Deployment Shape`
@@ -81,13 +81,13 @@ Human / Agent
 | --- | --- | --- | --- |
 | `OPL session/runtime + activation` | Codex-default session/runtime、显式 domain-agent activation、边界冻结与 admission 语言 | `one-person-lab` | domain-local runtime owner |
 | `Unified Harness Engineering Substrate` | 多个 domain 共享的上位 Harness Engineering 语言 | 分层规则、共享原则、合同总名 | 共享执行内核 |
-| `Shared Runtime Contract` | 多个 domain 共享的长期在线运行合同 | `runtime profile`、`session substrate`、`gateway runtime status` | domain truth |
+| `Shared Runtime Contract` | 多个 domain 共享的长期在线运行合同 | `runtime profile`、`session substrate`、stage runtime status | domain truth |
 | `Shared Domain Contract` | 多个 domain 共享的正式行为合同 | formal-entry matrix、`per-run handle`、durable report、gate semantics | domain object model |
 | `Domain Agent Entry` | 某个 domain agent 的稳定 app skill、CLI、MCP 或 product-entry surface | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | execution engine |
 | `Domain-Owned Truth Surface` | 某个 domain agent 的执行、治理、审计与交付真相 | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | 顶层 OPL runtime |
 | `Execution Plane` | 实际驱动 quest、run、session、worktree、watch、resume 的运行层 | MAS monolith closeout 后由 `MedAutoScience` 自己持有的 runtime surface | 顶层公开产品面 |
 | `Host-Agent Runtime` | execution plane 的本地宿主部署形态，由本机 host agent 驱动 | 当前 `Codex-default host-agent runtime` | 托管 runtime |
-| `Managed Runtime` | execution plane 的平台托管部署形态，生命周期、调度、隔离和恢复由平台负责 | future `managed web runtime` | domain gateway |
+| `Managed Runtime` | execution plane 的平台托管部署形态，生命周期、调度、隔离和恢复由平台负责 | future `managed web runtime` | domain-agent entry |
 | `Managed Execution Plane` | 对内架构词，指平台统一托管的 execution plane 本身 | future shared managed execution layer | 当前已经实现的公开主线 |
 
 ## 当前四仓定位
@@ -174,11 +174,11 @@ Human / Agent
 
 迁移到 future `managed runtime` 时，下面这些东西不应被改写：
 
-- `OPL` 顶层 federation 语义
+- `OPL` 顶层 framework 语义
 - `Unified Harness Engineering Substrate` 的共享不变量
 - `Shared Runtime Contract` 的共享运行对象
 - `Shared Domain Contract` 的共享正式行为对象
-- `domain gateway` / `Domain Harness OS` 的边界
+- public domain-agent entry / domain harness-controller 的边界
 - `CLI / MCP / controller` 这类 formal-entry matrix 语义
 - `program_id / study_id / quest_id / active_run_id` 这类 execution handle 的语义边界
 - domain-owned audit、review、delivery 与 canonical truth 的归属
@@ -197,7 +197,7 @@ Human / Agent
 
 - 它是 `Shared Runtime Contract` 的实现方向
 - 它不是整个 `UHS`
-- 它不替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
+- 它不替代 `OPL` framework、public domain-agent entry 或 domain harness/controller
 
 ### 迁移后的主要收益
 
@@ -213,7 +213,7 @@ Human / Agent
 
 这类迁移不应被写成：
 
-- 取消 domain gateway
+- 取消 domain-agent entry
 - 把 `OPL` 提升成 runtime owner
 - 把多个 domain 压成同一个单体 runtime
 - 把当前公开真相误写成“已经有统一平台 runtime”

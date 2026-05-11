@@ -203,7 +203,7 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
         current_step_id="stabilize_user_product_loop",
         current_readiness_summary="gateway/runtime truth is frozen",
         north_star_topology={
-            "domain_gateway": "Example Domain",
+            "domain_agent_entry": "Example Domain",
             "default_runtime_owner": "domain_runtime_core",
             "source_provenance_role": "explicit_archive_import_reference",
             "monorepo_status": "post_gate_target",

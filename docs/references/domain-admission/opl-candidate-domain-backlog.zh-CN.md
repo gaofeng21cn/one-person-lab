@@ -34,7 +34,7 @@ Onboarding contract 负责定义正式收录门槛。
 
 ## 机器可读工件
 
-- [`../../contracts/opl-gateway/candidate-domain-backlog.json`](../../../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`../../contracts/opl-framework/candidate-domain-backlog.json`](../../../contracts/opl-framework/candidate-domain-backlog.json)
 
 这个工件让候选 workstream 保持可见，但不会假装它们的 domain boundary 已经存在。
 
@@ -134,7 +134,7 @@ routing readiness blocker 还必须证明报奖请求不会作为基金申请工
 
 - [OPL 任务版图](../../public/task-map.zh-CN.md)
 - [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Gateway Contracts](../../../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Framework Contracts](../../../contracts/opl-framework/README.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.zh-CN.md)
 
 ## 完成定义

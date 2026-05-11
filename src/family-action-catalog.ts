@@ -1,10 +1,10 @@
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type {
   DomainManifestCatalogEntry,
   NormalizedDomainManifest,
 } from './domain-manifest/types.ts';
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
@@ -257,7 +257,7 @@ function resolveCatalogFromEntry(entry: DomainManifestCatalogEntry) {
   return entry.status === 'resolved' ? entry.manifest?.family_action_catalog ?? null : null;
 }
 
-function buildActionIndex(contracts: GatewayContracts) {
+function buildActionIndex(contracts: FrameworkContracts) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const domains = catalog.projects.map((entry) => {
     const actionCatalog = resolveCatalogFromEntry(entry);
@@ -287,7 +287,7 @@ function buildActionIndex(contracts: GatewayContracts) {
   };
 }
 
-export function buildFamilyActionsList(contracts: GatewayContracts) {
+export function buildFamilyActionsList(contracts: FrameworkContracts) {
   const index = buildActionIndex(contracts);
   return {
     version: 'g2',
@@ -321,7 +321,7 @@ function normalizeDomainSelection(value: string) {
   return aliases[key] ?? key;
 }
 
-function findDomainEntry(contracts: GatewayContracts, domain: string) {
+function findDomainEntry(contracts: FrameworkContracts, domain: string) {
   const index = buildActionIndex(contracts);
   const normalized = normalizeDomainSelection(domain);
   const entry = index.domain_manifests.projects.find((candidate) => {
@@ -333,14 +333,14 @@ function findDomainEntry(contracts: GatewayContracts, domain: string) {
       || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized;
   });
   if (!entry) {
-    throw new GatewayContractError('cli_usage_error', `Unknown family action domain: ${domain}.`, {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family action domain: ${domain}.`, {
       domain,
       allowed_domains: index.domain_manifests.projects.map((project) => project.project_id),
     });
   }
   const catalog = resolveCatalogFromEntry(entry);
   if (!catalog) {
-    throw new GatewayContractError('missing_family_action_catalog', `Domain does not expose a family action catalog: ${domain}.`, {
+    throw new FrameworkContractError('missing_family_action_catalog', `Domain does not expose a family action catalog: ${domain}.`, {
       domain,
       manifest_status: entry.status,
     });
@@ -351,7 +351,7 @@ function findDomainEntry(contracts: GatewayContracts, domain: string) {
 function findAction(catalog: FamilyActionCatalog, actionId: string) {
   const action = catalog.actions.find((candidate) => candidate.action_id === actionId);
   if (!action) {
-    throw new GatewayContractError('cli_usage_error', `Unknown family action: ${actionId}.`, {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family action: ${actionId}.`, {
       action_id: actionId,
       allowed_actions: catalog.actions.map((candidate) => candidate.action_id),
     });
@@ -364,18 +364,18 @@ function parseOptionArgs(args: string[], required: string[]) {
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (!token.startsWith('--')) {
-      throw new GatewayContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
+      throw new FrameworkContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
     }
     const value = args[index + 1];
     if (!value || value.startsWith('--')) {
-      throw new GatewayContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
+      throw new FrameworkContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
     }
     parsed[token.slice(2)] = value;
     index += 1;
   }
   for (const field of required) {
     if (!parsed[field]) {
-      throw new GatewayContractError('cli_usage_error', `Missing required option: --${field}.`, {
+      throw new FrameworkContractError('cli_usage_error', `Missing required option: --${field}.`, {
         required: required.map((entry) => `--${entry}`),
       });
     }
@@ -383,7 +383,7 @@ function parseOptionArgs(args: string[], required: string[]) {
   return parsed;
 }
 
-export function buildFamilyActionInspect(contracts: GatewayContracts, args: string[]) {
+export function buildFamilyActionInspect(contracts: FrameworkContracts, args: string[]) {
   const parsed = parseOptionArgs(args, ['domain', 'action']);
   const { entry, catalog } = findDomainEntry(contracts, parsed.domain);
   const action = findAction(catalog, parsed.action);
@@ -407,7 +407,7 @@ function parseExportFormat(value: string): FamilyActionExportFormat {
   if (['cli', 'mcp', 'skill', 'openai', 'ai-sdk'].includes(value)) {
     return value as FamilyActionExportFormat;
   }
-  throw new GatewayContractError('cli_usage_error', `Unsupported family action export format: ${value}.`, {
+  throw new FrameworkContractError('cli_usage_error', `Unsupported family action export format: ${value}.`, {
     format: value,
     allowed_formats: ['cli', 'mcp', 'skill', 'openai', 'ai-sdk'],
   });
@@ -431,7 +431,7 @@ export function projectFamilyActionCatalog(catalog: FamilyActionCatalog, format:
   });
 }
 
-export function buildFamilyActionExport(contracts: GatewayContracts, args: string[]) {
+export function buildFamilyActionExport(contracts: FrameworkContracts, args: string[]) {
   const parsed = parseOptionArgs(args, ['domain', 'format']);
   const format = parseExportFormat(parsed.format);
   const { entry, catalog } = findDomainEntry(contracts, parsed.domain);

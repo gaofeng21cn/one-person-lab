@@ -14,7 +14,7 @@ Owner: `One Person Lab`
 
 这里的文件只解释历史设计意图和兼容合同来源。它们不能作为当前实现依据。
 
-机器可读兼容 surface 仍在 [`contracts/opl-gateway/`](../../../../contracts/opl-gateway/)。人读文档仍是人读文档；代码和测试应读取 contracts、schema、source、生成产物、CLI/API 行为或语义化 `human_doc:*` id。
+机器可读兼容 surface 仍在 [`contracts/opl-framework/`](../../../../contracts/opl-framework/)。人读文档仍是人读文档；代码和测试应读取 contracts、schema、source、生成产物、CLI/API 行为或语义化 `human_doc:*` id。
 
 ## 归档文件
 

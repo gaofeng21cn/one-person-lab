@@ -90,5 +90,5 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 
 - 顶层叙事：`README*`、`docs/README*` 与 `docs/public/`
 - 当前接口与合同入口：`contracts/README.md`、`docs/active/opl-public-surface-index*`、`docs/active/` 与 `docs/specs/` 下仍生效的 runtime / product-boundary 规格
-- 旧 gateway-first 语料：人读材料已经进入 `docs/history/compatibility/gateway-federation/`；机器可读兼容合同继续在 `contracts/opl-gateway/*`
+- 旧 gateway-first 语料：人读材料已经进入 `docs/history/compatibility/gateway-federation/`；机器可读兼容合同继续在 `contracts/opl-framework/*`
 - 参考与历史：`docs/references/`、`docs/history/` 与 `docs/docs_portfolio_consolidation.md`

@@ -68,7 +68,7 @@ Date: `2026-05-11`
 
 - `python/opl-harness-shared`：覆盖 family action catalog、family orchestration、product-entry companions、runtime task companions、skill catalog、managed runtime、workspace boundary、editable bootstrap 与 shared release。
 - `contracts/family-orchestration/`：覆盖 family action catalog / graph、event envelope、checkpoint lineage、human gate、persistence policy、lifecycle ledger、owner route、product-entry manifest v2、runtime supervision 与 stage control plane。
-- `contracts/opl-gateway/`：覆盖 gateway、runtime manager、domain onboarding、public surface 与 routing vocabulary 合同。
+- `contracts/opl-framework/`：覆盖 gateway、runtime manager、domain onboarding、public surface 与 routing vocabulary 合同。
 - OPL TypeScript root shared/control-plane surface：覆盖 family runtime、stage control、action catalog、handoff、product-entry、domain catalog、runtime manager、native helper、skill sync 与 runtime tray。
 
 这些统计应按目录和能力面维护，不应把某一次 `find` / `rg` 的文件数量写成长期事实；文件数会随测试、fixture、venv 或实现拆分口径漂移。
@@ -76,7 +76,7 @@ Date: `2026-05-11`
 跨 repo 消费状态：
 
 - `MAS` 和 `MAG` 已通过 `opl-harness-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL Python shared package。
-- `RCA` 已通过 `opl-gateway-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL JS shared package。
+- `RCA` 已通过 `opl-framework-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL JS shared package。
 - MAS/MAG/RCA 的 skeleton adapter 已进入各自 main，并通过 OPL 真实 manifest smoke 对齐：`aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。OPL 消费的 source fields 分别是 MAS `opl_domain_agent_skeleton_mapping`、MAG `domain_agent_skeleton_mapping`、RCA `domain_agent_skeleton_adapter`，且三者均带 artifact locator surface。
 - `MDS` 仍 pin 在较早的 `opl-harness-shared @ 8523f4ab76af486d44a1ccd3a88996ca860d2cc2`；这与它的 archive / diagnostic / upstream-intake 角色一致，不应被读成 active OPL domain adapter 已跟进。
 

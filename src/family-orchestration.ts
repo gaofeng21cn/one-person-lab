@@ -158,15 +158,15 @@ export interface BuildFamilyProductEntryPresetOrchestrationInput {
   direct_title: string;
   direct_surface_kind: string;
   direct_transition_event?: string | null;
-  federated_node_id?: string | null;
-  federated_title?: string | null;
-  federated_surface_kind?: string | null;
-  federated_transition_event?: string | null;
+  opl_hosted_node_id?: string | null;
+  opl_hosted_title?: string | null;
+  opl_hosted_surface_kind?: string | null;
+  opl_hosted_transition_event?: string | null;
   progress_node_id?: string | null;
   progress_title: string;
   progress_surface_kind: string;
   direct_progress_event?: string | null;
-  federated_progress_event?: string | null;
+  opl_hosted_progress_event?: string | null;
   review_gate_id: string;
   review_gate_title?: string | null;
   review_gate_status?: string | null;
@@ -184,14 +184,14 @@ export interface BuildFamilyProductEntryPresetOrchestrationInput {
 interface ResolvedFamilyProductEntryPreset {
   productEntryNodeId: string;
   directNodeId: string;
-  federatedNodeId: string;
+  OplHostedNodeId: string;
   progressNodeId: string;
   directTransitionEvent: string;
-  federatedTransitionEvent: string;
+  OplHostedTransitionEvent: string;
   directProgressEvent: string;
-  federatedProgressEvent: string;
-  federatedTitle: string | null;
-  federatedSurfaceKind: string | null;
+  OplHostedProgressEvent: string;
+  OplHostedTitle: string | null;
+  OplHostedSurfaceKind: string | null;
 }
 
 interface FamilyProductEntryPresetGraphParts {
@@ -646,24 +646,24 @@ export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEn
 function resolveFamilyProductEntryPreset(
   input: BuildFamilyProductEntryPresetOrchestrationInput,
 ): ResolvedFamilyProductEntryPreset {
-  const federatedTitle = optionalString(input.federated_title);
-  const federatedSurfaceKind = optionalString(input.federated_surface_kind);
+  const OplHostedTitle = optionalString(input.opl_hosted_title);
+  const OplHostedSurfaceKind = optionalString(input.opl_hosted_surface_kind);
 
-  if (Boolean(federatedTitle) !== Boolean(federatedSurfaceKind)) {
-    throw new Error('family orchestration federated step requires both title and surface_kind');
+  if (Boolean(OplHostedTitle) !== Boolean(OplHostedSurfaceKind)) {
+    throw new Error('family orchestration OplHosted step requires both title and surface_kind');
   }
 
   return {
     productEntryNodeId: optionalString(input.product_entry_node_id) ?? 'step:open_product_entry',
     directNodeId: optionalString(input.direct_node_id) ?? 'step:continue_current_loop',
-    federatedNodeId: optionalString(input.federated_node_id) ?? 'step:opl_bridge_handoff',
+    OplHostedNodeId: optionalString(input.opl_hosted_node_id) ?? 'step:opl_bridge_handoff',
     progressNodeId: optionalString(input.progress_node_id) ?? 'step:inspect_current_progress',
     directTransitionEvent: optionalString(input.direct_transition_event) ?? 'start_direct',
-    federatedTransitionEvent: optionalString(input.federated_transition_event) ?? 'enter_via_opl_bridge',
+    OplHostedTransitionEvent: optionalString(input.opl_hosted_transition_event) ?? 'enter_via_opl_bridge',
     directProgressEvent: optionalString(input.direct_progress_event) ?? 'session_started',
-    federatedProgressEvent: optionalString(input.federated_progress_event) ?? 'handoff_completed',
-    federatedTitle,
-    federatedSurfaceKind,
+    OplHostedProgressEvent: optionalString(input.opl_hosted_progress_event) ?? 'handoff_completed',
+    OplHostedTitle,
+    OplHostedSurfaceKind,
   };
 }
 
@@ -706,22 +706,22 @@ function buildFamilyProductEntryPresetGraphParts(
     },
   ];
   const checkpointNodes = [resolved.directNodeId];
-  const hasFederatedEntry = Boolean(resolved.federatedTitle && resolved.federatedSurfaceKind);
+  const hasOplHostedEntry = Boolean(resolved.OplHostedTitle && resolved.OplHostedSurfaceKind);
 
-  if (hasFederatedEntry) {
+  if (hasOplHostedEntry) {
     nodes.push({
-      node_id: resolved.federatedNodeId,
-      node_kind: 'federated_entry',
-      title: resolved.federatedTitle!,
-      surface_kind: resolved.federatedSurfaceKind!,
+      node_id: resolved.OplHostedNodeId,
+      node_kind: 'opl_hosted_entry',
+      title: resolved.OplHostedTitle!,
+      surface_kind: resolved.OplHostedSurfaceKind!,
       produces_checkpoint: true,
     });
     edges.push({
       from: resolved.productEntryNodeId,
-      to: resolved.federatedNodeId,
-      on: resolved.federatedTransitionEvent,
+      to: resolved.OplHostedNodeId,
+      on: resolved.OplHostedTransitionEvent,
     });
-    checkpointNodes.push(resolved.federatedNodeId);
+    checkpointNodes.push(resolved.OplHostedNodeId);
   }
 
   nodes.push({
@@ -736,11 +736,11 @@ function buildFamilyProductEntryPresetGraphParts(
     to: resolved.progressNodeId,
     on: resolved.directProgressEvent,
   });
-  if (hasFederatedEntry) {
+  if (hasOplHostedEntry) {
     edges.push({
-      from: resolved.federatedNodeId,
+      from: resolved.OplHostedNodeId,
       to: resolved.progressNodeId,
-      on: resolved.federatedProgressEvent,
+      on: resolved.OplHostedProgressEvent,
     });
   }
   checkpointNodes.push(resolved.progressNodeId);

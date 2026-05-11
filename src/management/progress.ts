@@ -1,5 +1,5 @@
 import { buildWorkspaceCatalog } from '../workspace-registry.ts';
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
 import { buildCurrentReadinessProjection } from './readiness.ts';
@@ -18,7 +18,7 @@ import type { DashboardOptions } from './types.ts';
 import { buildRuntimeStatus } from './workspace-runtime.ts';
 
 export async function buildProjectProgressBrief(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: DashboardOptions = {},
 ) {
   const workspacePath = normalizeWorkspacePath(options.workspacePath);

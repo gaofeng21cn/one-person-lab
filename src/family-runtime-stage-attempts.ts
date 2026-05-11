@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
 import {
   buildStageAttemptProviderReceipt,
@@ -118,7 +118,7 @@ function parseJsonList(value: string) {
 function normalizeStageId(stageId: string) {
   const normalized = stageId.trim();
   if (!normalized) {
-    throw new GatewayContractError('cli_usage_error', 'Stage attempt requires a non-empty stage id.', {
+    throw new FrameworkContractError('cli_usage_error', 'Stage attempt requires a non-empty stage id.', {
       required: ['--stage'],
     });
   }
@@ -381,7 +381,7 @@ export function inspectStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     | StageAttemptRow
     | undefined;
   if (!row) {
-    throw new GatewayContractError('cli_usage_error', 'Family runtime stage attempt not found.', {
+    throw new FrameworkContractError('cli_usage_error', 'Family runtime stage attempt not found.', {
       stage_attempt_id: stageAttemptId,
     });
   }

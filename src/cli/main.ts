@@ -1,4 +1,4 @@
-import { GatewayContractError, loadGatewayContracts } from '../contracts.ts';
+import { FrameworkContractError, loadFrameworkContracts } from '../contracts.ts';
 import { buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, formatHumanCommandHelp, formatHumanRootHelp, looksLikeNaturalLanguage, parseCliInput, printJson, resolveCommandSpec, runCodexPassthroughHandled, CODEX_COMMAND_HELP_PASSTHROUGH, NON_PASSTHROUGH_COMMAND_PREFIXES } from './modules/support.ts';
 import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
@@ -8,7 +8,7 @@ export async function main() {
   const shouldPrintHumanHelp = parsedInput.textOutput || (process.stdout.isTTY && !parsedInput.jsonOutput);
   let cachedContracts = null;
   const getContracts = () => {
-    cachedContracts ??= loadGatewayContracts(parsedInput.loadOptions);
+    cachedContracts ??= loadFrameworkContracts(parsedInput.loadOptions);
     return cachedContracts;
   };
 
@@ -51,7 +51,7 @@ export async function main() {
       return;
     }
 
-    throw new GatewayContractError('unknown_command', `Unknown command: ${command}.`, {
+    throw new FrameworkContractError('unknown_command', `Unknown command: ${command}.`, {
       command,
       commands: Object.keys(publicCommandSpecs),
       usage: 'opl help',
@@ -121,7 +121,7 @@ export async function main() {
 }
 
 export function handleCliMainError(error: unknown) {
-  if (error instanceof GatewayContractError) {
+  if (error instanceof FrameworkContractError) {
     printJson(error.toJSON(), process.stderr);
     process.exitCode = error.exitCode;
     return;
@@ -130,7 +130,7 @@ export function handleCliMainError(error: unknown) {
   const unexpected =
     error instanceof Error
       ? error.message
-      : 'Unexpected non-error failure while running the OPL gateway CLI.';
+      : 'Unexpected non-error failure while running the OPL framework CLI.';
   printJson(
     {
       version: 'g2',

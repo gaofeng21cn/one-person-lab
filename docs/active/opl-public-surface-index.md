@@ -13,8 +13,8 @@ The current mainline is:
 - `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
 
-`OPL` no longer treats the older gateway/federation corpus as its default public integration contract.
-That corpus is still repo-tracked for audit, compatibility checks, and schema archaeology, but it is no longer the first place to recover the current runtime model.
+`OPL` no longer carries the older gateway/federation/routed-action corpus as an active contract or example layer.
+That corpus is retained only under history/reference pages for provenance and design review.
 
 For repository-wide document lifecycle and reference handling, see [Docs Index](../README.md) and [Documentation Portfolio](../docs_portfolio_consolidation.md).
 
@@ -58,20 +58,16 @@ These remain active as shared boundary documents:
 
 They support the current runtime/activation model, but they do not reintroduce a gateway-first public storyline.
 
-## Legacy Compatibility Surfaces
+## Historical Provenance
 
-The following corpus is retained as legacy compatibility material from the earlier gateway-first phase:
+The earlier gateway-first phase is retained only as historical provenance:
 
 - [Gateway Federation](../history/compatibility/gateway-federation/gateway-federation.md)
 - [OPL Federation Contract](../history/compatibility/gateway-federation/opl-federation-contract.md)
 - [OPL Routed Action Gateway](../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
 - [OPL Gateway Contract Surface](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
-- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
-- [`../contracts/opl-gateway/public-surface-index.json`](../../contracts/opl-gateway/public-surface-index.json)
 
-These surfaces may still appear in tests, audit workflows, compatibility checks, and historical design reviews.
-They must not be used as the default implementation basis for today's `OPL`.
+These surfaces must not be used as active implementation, test, or machine-readable contract inputs for today's `OPL`.
 
 ## Reference-Grade Supporting Material
 
@@ -80,7 +76,7 @@ These surfaces continue to support review and traceability:
 - [Reference Index](../references/README.md)
 - [History Archive](../history/README.md)
 - [Ecosystem Status Matrix](../references/convergence-governance/ecosystem-status-matrix.md)
-- retained gateway/federation examples under `docs/references/examples-corpora/`, operating governance references under `docs/references/operating-governance/`, and retired compatibility material under `docs/history/compatibility/`
+- retired gateway/federation provenance under `docs/history/compatibility/`
 
 ## Reading Rule
 
@@ -88,7 +84,7 @@ Read this index as a **runtime/activation map**.
 
 - If you want the current `OPL` truth, start with the core maintainer working set and `Contracts Overview`.
 - If you want the current cross-repo integration unit, read the linked domain repositories and their app-skill surfaces.
-- If a document still centers `OPL Gateway`, `domain_gateway`, routed handoff payloads, or gateway-owned public-surface indexing, treat it as legacy compatibility material unless a newer core doc explicitly promotes it back.
+- If a document still centers `OPL Gateway`, `domain_gateway`, routed handoff payloads, or gateway-owned public-surface indexing, treat it as historical provenance.
 
 ## Completion Definition
 

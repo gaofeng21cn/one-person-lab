@@ -84,7 +84,7 @@
   },
   "user_interaction_contract": {
     "surface_kind": "user_interaction_contract",
-    "entry_owner": "opl_gateway_or_domain_gui",
+    "entry_owner": "opl_framework_or_domain_app",
     "user_interaction_mode": "natural_language_entry",
     "user_commands_required": false,
     "command_surfaces_for_agent_consumption_only": true,
@@ -99,7 +99,7 @@
     ]
   },
   "managed_runtime_contract": {
-    "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
+    "shared_contract_ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json",
     "runtime_owner": "mas_runtime_core",
     "domain_owner": "med-autoscience",
     "executor_owner": "codex_cli",
@@ -835,12 +835,12 @@
   },
   "phase5_platform_target": {
     "surface_kind": "phase5_platform_target",
-    "summary": "Phase 5 的目标是把 MAS 继续收敛到 federation/platform-ready 形态。",
+    "summary": "Phase 5 的目标是把 MAS 继续收敛到 stage-runtime/platform-ready 形态。",
     "sequence_scope": "monorepo_landing_readiness",
     "current_step_id": "stabilize_user_product_loop",
     "current_readiness_summary": "当前仍在推进 user product loop hardening。",
     "north_star_topology": {
-      "domain_gateway": "Med Auto Science",
+      "domain_agent_entry": "Med Auto Science",
       "outer_runtime_substrate_owner": "upstream Hermes-Agent",
       "controlled_research_backend": "MedDeepScientist",
       "monorepo_status": "post_gate_target"
@@ -862,7 +862,7 @@
         "step_id": "physical_monorepo_absorb",
         "title": "Physical monorepo absorb",
         "status": "blocked_post_gate",
-        "phase_id": "phase_5_federation_platform_maturation",
+        "phase_id": "phase_5_stage_runtime_maturation",
         "summary": "只有在前面几步都稳定通过后，核心模块才能进入物理 monorepo absorb。"
       }
     ],
@@ -876,7 +876,7 @@
       "phase_3_multi_workspace_host_clearance",
       "phase_4_backend_deconstruction"
     ],
-    "recommended_phase_command": "uv run python -m med_autoscience.cli mainline-phase --phase phase_5_federation_platform_maturation"
+    "recommended_phase_command": "uv run python -m med_autoscience.cli mainline-phase --phase phase_5_stage_runtime_maturation"
   },
   "product_entry_start": {
     "surface_kind": "product_entry_start",

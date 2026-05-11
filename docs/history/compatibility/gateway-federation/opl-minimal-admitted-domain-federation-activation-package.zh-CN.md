@@ -15,7 +15,7 @@
 它**不会**把 `OPL` 提升成 runtime owner。
 它也**只**适用于已 admitted domain。
 
-配套的 machine-readable 工件是 [`../../contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json`](../../../../contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json)。
+配套的 machine-readable 工件是 [`../../contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json`](../../../../contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json)。
 
 ## 为什么门槛现在满足
 
@@ -35,7 +35,7 @@
 
 - 只针对已 admitted domain 收紧顶层 federation wording
 - 把当前两条已 admitted domain surface 显式写成更强 federation 表达的依据
-- 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / gateway contract surface
+- 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / framework contract surface
 
 换句话说，这是一份 docs+contracts+tests activation package，不是 runtime package。
 

@@ -8,7 +8,7 @@ import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import { runRuntimeManagerAction } from '../runtime-manager.ts';
 import { runFamilyRuntime } from '../family-runtime.ts';
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
 import { registerOplFamilyCodexPlugins } from './codex-plugin-registry.ts';
@@ -261,7 +261,7 @@ function installOrOpenOplGui() {
 }
 
 export async function runOplTurnkeyInstall(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   input: OplTurnkeyInstallInput = {},
 ) {
   const modules = normalizeModuleSelection(input.modules);

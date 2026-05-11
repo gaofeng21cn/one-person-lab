@@ -3,12 +3,12 @@ import { inspectHermesRuntime } from '../hermes.ts';
 import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
 import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import { resolveCodexVersion } from './engine-helpers.ts';
 import { buildOplModules } from './modules.ts';
 
-export async function buildOplEnvironment(contracts: GatewayContracts) {
+export async function buildOplEnvironment(contracts: FrameworkContracts) {
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
   const codexDefaultProfile = readBundledCodexDefaultProfile();

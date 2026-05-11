@@ -10,7 +10,7 @@ It exists so that `OPL` can present a coherent system family without pretending 
 ## What It Is
 
 `Unified Harness Engineering Substrate` is the shared Harness Engineering umbrella language under `OPL`.
-It describes the reusable rules that multiple domain systems should inherit while keeping their own domain contracts, domain gateways, and `Domain Harness OS` implementations.
+It describes the reusable rules that multiple domain systems should inherit while keeping their own domain contracts, domain-agent entries, and internal harness/controller implementations.
 
 The more accurate current reading is:
 
@@ -30,9 +30,9 @@ The substrate is not:
 
 - a claim that every domain already uses one identical object model
 - a claim that every domain already runs on one shared code repository
-- a replacement for any domain gateway
+- a replacement for any domain-agent entry
 - a replacement for any `Domain Harness OS`
-- a license for `OPL` to bypass a domain gateway and touch domain-local harness execution directly
+- a license for `OPL` to bypass a public domain-agent entry and touch domain-local harness execution directly
 - a claim that `UHS` is just a wrapper around `Hermes` or any other runtime project
 
 ## Layering
@@ -41,29 +41,29 @@ The intended architecture stays:
 
 ```text
 Human / Agent
-  -> OPL Gateway / Federation
+  -> OPL Codex-first stage-led framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
-              -> Domain Gateway
-                  -> Domain Harness OS
+              -> Domain-agent entry
+                  -> Domain harness/controller
                       -> Execution Plane
                           -> Deployment Shape
 ```
 
 The layers mean different things:
 
-- `OPL Gateway / Federation`
-  - owns top-level task semantics, routing language, and cross-domain boundary contracts
+- `OPL Codex-first stage-led framework`
+  - owns top-level task semantics, stage decomposition, activation, and cross-domain boundary contracts
 - `Unified Harness Engineering Substrate`
   - owns the shared Harness Engineering umbrella language reused across domains
 - `Shared Runtime Contract`
   - owns the cross-domain contract for long-running runtime behavior
 - `Shared Domain Contract`
   - owns the cross-domain contract for formal product behavior
-- `Domain Gateway`
-  - owns domain-local task entry, routing, and contract hydration
-- `Domain Harness OS`
+- `Domain-agent entry`
+  - owns the public domain-local task entry and product-entry surface
+- `Domain harness/controller`
   - owns domain-local execution logic, audit surfaces, and delivery semantics
 - `Execution Plane`
   - owns the actual session, run, watch, resume, and delivery execution layer
@@ -86,7 +86,7 @@ The two contract families that now need the clearest alignment are:
 - `Shared Runtime Contract`
   - `runtime profile`
   - `session substrate`
-  - `gateway runtime status`
+  - stage runtime status
   - `memory provider hook`
   - `delivery / cron`
   - `approval / interrupt / resume`
@@ -96,14 +96,14 @@ The two contract families that now need the clearest alignment are:
   - the durable report surface
   - the audit trail surface
   - gate semantics
-  - the no-bypass rule to `Domain Gateway`
+  - the no-bypass rule to the public domain-agent entry
 
 ## Deployment Shapes
 
 At the current stage:
 
 - the active development host is Codex-only local sessions
-- the public OPL formal entry remains the local `TypeScript CLI`-first / gateway contract surface
+- the public OPL formal entry remains the local `TypeScript CLI`-first / framework contract surface
 
 That split matters: Codex names today's development host, not the identity of the substrate.
 The same substrate should remain compatible with:
@@ -131,15 +131,15 @@ It is to let the `OPL` ecosystem evolve toward a family of vertical online agent
 In that structure:
 
 - `OPL`
-  - remains the top-level `Gateway / Federation`
+  - remains the Codex-first, stage-led framework and activation layer
 - `UHS`
   - remains the shared Harness Engineering umbrella language
 - `Shared Runtime Contract`
-  - gradually owns shared runtime contracts such as `runtime profile`, `session substrate`, `gateway runtime status`, `memory hook`, `delivery / cron`, and `approval / interrupt`
+  - gradually owns shared runtime contracts such as `runtime profile`, `session substrate`, stage runtime status, `memory hook`, `delivery / cron`, and `approval / interrupt`
 - `Shared Domain Contract`
   - gradually owns shared cross-domain product-behavior contracts such as the formal-entry matrix, the `per-run handle`, the durable report surface, the audit trail, and gate semantics
-- each `Domain Harness OS`
-  - keeps its own formal entry, domain objects, gates, audit surfaces, delivery semantics, and canonical truth
+- each domain agent
+  - keeps its own formal entry, domain objects, gates, audit surfaces, delivery semantics, harness/controller boundary, and canonical truth
 
 That means the more honest direction is not “force all three domain repositories into one execution kernel now.”
 It is:
@@ -156,14 +156,14 @@ It does not mean a unified platform runtime already exists today, and it does no
 The current `OPL` family can be read as:
 
 - `Med Auto Science`
-  - medical `Research Foundry` `Domain Harness OS`
+  - medical research domain agent
 - `RedCube AI`
-  - visual-deliverable `Domain Harness OS`
+  - visual-deliverable domain agent
 - `Med Auto Grant`
-  - future medical `Grant Foundry` `Domain Harness OS` direction
+  - grant-authoring domain agent
 
-`OPL` itself is not one more `Domain Harness OS`.
-It remains the top-level gateway and federation layer above those domain systems.
+`OPL` itself is not one more domain agent.
+It remains the Codex-first, stage-led framework and activation layer above those domain systems.
 
 ## Practical Implication
 

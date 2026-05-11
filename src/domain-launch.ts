@@ -1,9 +1,9 @@
 import { spawn, spawnSync } from 'node:child_process';
 
-import { findDomainOrThrow, GatewayContractError } from './contracts.ts';
+import { findDomainOrThrow, FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 
 export type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';
 
@@ -22,7 +22,7 @@ function getDomainEntryShell() {
   return process.env.OPL_DOMAIN_ENTRY_SHELL?.trim() || '/bin/zsh';
 }
 
-function buildContractsContext(contracts: GatewayContracts) {
+function buildContractsContext(contracts: FrameworkContracts) {
   return {
     contracts_dir: contracts.contractsDir,
     contracts_root_source: contracts.contractsRootSource,
@@ -43,7 +43,7 @@ function selectStrategy(
   const available = availableStrategies(locator);
 
   if (available.length === 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'The requested project does not currently expose any launchable direct-entry locator.',
       {
@@ -57,7 +57,7 @@ function selectStrategy(
   }
 
   if (!available.includes(requested)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'The requested launch strategy is not available for the current direct-entry locator.',
       {
@@ -78,7 +78,7 @@ function runOpenUrl(url: string) {
   });
 
   if ((result.status ?? 1) !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'launcher_failed',
       'Failed to open the bound domain direct-entry URL.',
       {
@@ -116,11 +116,11 @@ function spawnShellCommand(command: string) {
 }
 
 export async function launchDomainEntry(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: LaunchDomainEntryOptions,
 ) {
   if (!options.projectId.trim()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'domain launch requires a non-empty project_id.',
       {
@@ -134,7 +134,7 @@ export async function launchDomainEntry(
   const binding = workspaceLocator.binding;
 
   if (!binding) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'No active or matching workspace binding exists for the requested project.',
       {

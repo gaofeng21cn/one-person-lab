@@ -15,19 +15,19 @@ function buildRetiredHostedRuntimeReadiness() {
   };
 }
 
-import { findDomainOrThrow, GatewayContractError } from '../contracts.ts';
+import { findDomainOrThrow, FrameworkContractError } from '../contracts.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../family-domain-catalog.ts';
 import { buildOplRuntimeEndpoints } from '../opl-runtime-paths/current.ts';
 import { readOplRuntimeModes } from '../runtime-modes.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../workspace-registry.ts';
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import type { DashboardOptions, StartSurfaceOptions } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
 import { buildCurrentDashboardSurfaceRefs } from './readiness.ts';
 import { buildRuntimeStatus, buildWorkspaceStatus } from './workspace-runtime.ts';
 
-export function buildProjectsOverview(contracts: GatewayContracts) {
+export function buildProjectsOverview(contracts: FrameworkContracts) {
   return {
     version: 'g2',
     contracts_context: {
@@ -61,11 +61,11 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
 }
 
 export function buildOplStart(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: StartSurfaceOptions,
 ) {
   if (!options.projectId) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'start requires a non-empty project_id.',
       {
@@ -79,7 +79,7 @@ export function buildOplStart(
   const entry = domainManifests.projects.find((candidate) => candidate.project_id === options.projectId);
 
   if (!entry) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'domain_not_found',
       'Requested project is not part of the admitted domain set.',
       {
@@ -89,7 +89,7 @@ export function buildOplStart(
   }
 
   if (entry.status !== 'resolved' || !entry.manifest?.product_entry_start) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'The requested project does not currently expose a resolved product_entry_start surface.',
       {
@@ -106,7 +106,7 @@ export function buildOplStart(
   const selectedMode = startSurface.modes.find((mode) => mode.mode_id === selectedModeId) ?? null;
 
   if (!selectedModeId || !selectedMode) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'The requested start mode is not available on the resolved product_entry_start surface.',
       {
@@ -143,7 +143,7 @@ export function buildOplStart(
 }
 
 export function buildOplDashboard(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: DashboardOptions = {},
 ) {
   const endpoints = buildOplRuntimeEndpoints(options.basePath);

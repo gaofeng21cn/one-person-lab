@@ -21,7 +21,7 @@
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
 - [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.zh-CN.md)
 
 这些 gateway-discovery surface 构成 routed-action planning 的冻结依赖基线。
 
@@ -117,7 +117,7 @@
 必需规则：
 
 - 只有在 `route_request` 返回 `status = routed` 后，这个操作才允许执行
-- 输出必须符合 [`../contracts/opl-gateway/handoff.schema.json`](../../../../contracts/opl-gateway/handoff.schema.json)
+- 输出必须符合 [`../contracts/opl-framework/handoff.schema.json`](../../../../contracts/opl-framework/handoff.schema.json)
 - 唯一允许的成功目标只能是 `domain_gateway`；这个操作当前只处于 planning 层，不得启动 domain runtime
 
 建议响应：
@@ -311,7 +311,7 @@ OPL Gateway -> Domain Harness OS
 
 这一层的 machine-readable schema 位于：
 
-- [`../contracts/opl-gateway/routed-actions.schema.json`](../../../../contracts/opl-gateway/routed-actions.schema.json)
+- [`../contracts/opl-framework/routed-actions.schema.json`](../../../../contracts/opl-framework/routed-actions.schema.json)
 
 在当前基线上，这份 schema 继续停留在 planning dependency 层。
 

@@ -40,7 +40,7 @@ export function defaultExitCode(code: ErrorCode): number {
   }
 }
 
-export class GatewayContractError extends Error {
+export class FrameworkContractError extends Error {
   readonly code: ErrorCode;
   readonly exitCode: number;
   readonly details?: Record<string, unknown>;
@@ -52,7 +52,7 @@ export class GatewayContractError extends Error {
     exitCode = defaultExitCode(code),
   ) {
     super(message);
-    this.name = 'GatewayContractError';
+    this.name = 'FrameworkContractError';
     this.code = code;
     this.exitCode = exitCode;
     this.details = details;
@@ -81,7 +81,7 @@ export function expectString(
   filePath: string,
 ): string {
   if (typeof value !== 'string' || value.length === 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       `Contract field "${field}" must be a non-empty string.`,
       { file: filePath, field },
@@ -97,7 +97,7 @@ export function expectStringArray(
   filePath: string,
 ): string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       `Contract field "${field}" must be a string array.`,
       { file: filePath, field },
@@ -113,7 +113,7 @@ export function expectBoolean(
   filePath: string,
 ): boolean {
   if (typeof value !== 'boolean') {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       `Contract field "${field}" must be a boolean.`,
       { file: filePath, field },

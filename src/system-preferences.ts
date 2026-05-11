@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type OplUpdateChannel = 'stable' | 'preview';
@@ -60,7 +60,7 @@ function canWriteDirectory(directoryPath: string) {
 function normalizeWorkspaceRootForWrite(inputPath: string) {
   const normalized = normalizeOptionalString(inputPath);
   if (!normalized) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'workspace root set requires a non-empty directory path.',
       {
@@ -72,7 +72,7 @@ function normalizeWorkspaceRootForWrite(inputPath: string) {
 
   const resolved = path.resolve(normalized);
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'workspace root set requires an existing directory.',
       {
@@ -102,7 +102,7 @@ function readWorkspaceRootFile(): OplWorkspaceRootFile | null {
           : nowIso(),
     };
   } catch (error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Existing workspace root state is invalid JSON or has an invalid shape.',
       {
@@ -186,7 +186,7 @@ function readUpdateChannelFile(): OplUpdateChannelFile | null {
           : nowIso(),
     };
   } catch (error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Existing OPL update channel state is invalid JSON or has an invalid shape.',
       {
@@ -251,7 +251,7 @@ function readDeveloperSupervisorConfigFile(): OplDeveloperSupervisorConfigFile |
       source: 'user_config',
     };
   } catch (error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Existing OPL developer supervisor state is invalid JSON or has an invalid shape.',
       {

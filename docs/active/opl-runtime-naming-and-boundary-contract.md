@@ -2,7 +2,7 @@
 
 # OPL Runtime Naming And Boundary Contract
 
-> Current-status note (`2026-05-09`): this document is retained as a shared-boundary reference from the gateway/federation naming phase. Current default public wording is `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references. Read `gateway / harness` wording below as internal compatibility language unless a current core doc explicitly promotes it.
+> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the Codex-first, stage-led OPL framework. Current default public wording is `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
 
 ## Purpose
 
@@ -12,8 +12,8 @@ This document freezes the core runtime-related naming in the `OPL` ecosystem so 
 - `Unified Harness Engineering Substrate`
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
-- `domain gateway`
-- `Domain Harness OS`
+- domain-agent entry
+- domain harness/controller
 - `execution plane`
 - `deployment shape`
 
@@ -46,30 +46,30 @@ The recommended long-term chain is:
 
 ```text
 Human / Agent
-  -> OPL Gateway / Federation
+  -> OPL Codex-first stage-led framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
-              -> Domain Gateway
-                  -> Domain Harness OS
+              -> Domain-agent entry
+                  -> Domain harness/controller
                       -> Execution Plane
                           -> Deployment Shape
 ```
 
 Each layer answers a different question:
 
-- `OPL Gateway / Federation`
-- default session/runtime semantics, explicit domain-agent activation, admission language, and boundary contracts
+- `OPL Codex-first stage-led framework`
+  - default session/runtime semantics, stage decomposition, explicit domain-agent activation, admission language, and boundary contracts
 - `Unified Harness Engineering Substrate`
   - the shared top-level Harness Engineering umbrella language across domains
 - `Shared Runtime Contract`
   - the shared cross-domain contract for long-running runtime behavior
 - `Shared Domain Contract`
   - the shared cross-domain contract for formal product behavior
-- `Domain Gateway`
-  - the stable formal entry and public contract surface for one domain
-- `Domain Harness OS`
-  - the orchestration, governance, review, and delivery system for one domain
+- `Domain-agent entry`
+  - the stable formal app-skill, CLI, MCP, or product-entry surface for one domain agent
+- `Domain harness/controller`
+  - the orchestration, governance, review, and delivery system inside one domain agent
 - `Execution Plane`
   - the layer that actually runs sessions, quests, runs, worktrees, watch, and resume
 - `Deployment Shape`
@@ -81,13 +81,13 @@ Each layer answers a different question:
 | --- | --- | --- | --- |
 | `OPL session/runtime + activation` | Codex-default session/runtime, explicit domain-agent activation, boundary freeze, and admission language | `one-person-lab` | domain-local runtime owner |
 | `Unified Harness Engineering Substrate` | shared top-level Harness Engineering umbrella language across domains | layering rules, shared principles, contract family name | shared execution core |
-| `Shared Runtime Contract` | shared cross-domain contract for long-running runtime behavior | `runtime profile`, `session substrate`, `gateway runtime status` | domain truth |
+| `Shared Runtime Contract` | shared cross-domain contract for long-running runtime behavior | `runtime profile`, `session substrate`, stage runtime status | domain truth |
 | `Shared Domain Contract` | shared cross-domain contract for formal product behavior | formal-entry matrix, the `per-run handle`, durable report, gate semantics | domain object model |
 | `Domain Agent Entry` | stable public app-skill, CLI, MCP, or product-entry surface for one domain agent | `MedAutoScience`, `MedAutoGrant`, `RedCube AI` | execution engine |
 | `Domain-Owned Truth Surface` | execution, governance, audit, and delivery truth for one domain agent | `MedAutoScience`, `MedAutoGrant`, `RedCube AI` | top-level OPL runtime |
 | `Execution Plane` | the runtime layer that drives quests, runs, sessions, worktrees, watch, and resume | MAS-owned runtime surfaces for `MedAutoScience` after monolith closeout | top-level public product surface |
 | `Host-Agent Runtime` | a local deployment shape for the execution plane driven by a host agent on the user's machine | current `Codex-default host-agent runtime` | managed runtime |
-| `Managed Runtime` | a platform-managed deployment shape for the execution plane where lifecycle, scheduling, isolation, and recovery are platform-owned | future `managed web runtime` | domain gateway |
+| `Managed Runtime` | a platform-managed deployment shape for the execution plane where lifecycle, scheduling, isolation, and recovery are platform-owned | future `managed web runtime` | domain-agent entry |
 | `Managed Execution Plane` | an internal architecture term for the platform-managed execution plane itself | a future shared managed execution layer | the already-implemented public mainline |
 
 ## Current Repository Roles
@@ -175,11 +175,11 @@ The more precise meaning is:
 
 When the ecosystem later moves to a future `managed runtime`, the following should not be rewritten:
 
-- top-level `OPL` federation semantics
+- top-level `OPL` framework semantics
 - the shared invariants in `Unified Harness Engineering Substrate`
 - the shared runtime objects in the `Shared Runtime Contract`
 - the shared formal behavior objects in the `Shared Domain Contract`
-- the boundary between `domain gateway` and `Domain Harness OS`
+- the boundary between public domain-agent entry and domain harness/controller
 - the formal-entry matrix semantics such as `CLI / MCP / controller`
 - the semantic boundary of execution handles such as `program_id / study_id / quest_id / active_run_id`
 - ownership of domain-owned audit, review, delivery, and canonical truth
@@ -198,7 +198,7 @@ If the ecosystem later adopts a `Hermes`-backed runtime substrate, the accurate 
 
 - it is an implementation direction for the `Shared Runtime Contract`
 - it is not the whole `UHS`
-- it does not replace the `OPL Gateway`, any `Domain Gateway`, or any `Domain Harness OS`
+- it does not replace the `OPL` framework, any public domain-agent entry, or any domain harness/controller
 
 ### Main benefits of the migration
 
@@ -214,7 +214,7 @@ If a future `managed runtime` becomes real, the main benefits should come from:
 
 This migration should not be described as:
 
-- removing domain gateways
+- removing domain-agent entries
 - turning `OPL` into the runtime owner
 - collapsing multiple domains into one monolithic runtime
 - claiming that the current public truth already includes a unified platform runtime

@@ -1,4 +1,4 @@
-import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('workspace-bind derives family direct-entry locators from structured project locators', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-state-'));
@@ -272,7 +272,7 @@ test('domain manifests executes manifest_command with a bash-compatible shell', 
   }
 });
 
-test('start returns the routed family start surface for a bound project', () => {
+test('start returns the selected domain-agent start surface for a bound project', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -418,7 +418,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_shell.opl_bridge.surface_kind,
-      'federated_product_entry',
+      'opl_hosted_product_entry',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.domain_agent_entry_spec.agent_id,
@@ -526,7 +526,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,
-      'repo_verified_product_entry_and_opl_federation',
+      'repo_verified_product_entry_and_opl_framework',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,

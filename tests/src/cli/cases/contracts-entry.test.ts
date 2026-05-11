@@ -1,18 +1,18 @@
 import { spawnSync } from 'node:child_process';
 
-import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
-test('loadGatewayContracts returns the frozen gateway registries', () => {
-  const contracts = loadGatewayContracts(repoRoot);
+test('loadFrameworkContracts returns the active framework registries', () => {
+  const contracts = loadFrameworkContracts(repoRoot);
 
   assert.equal(contracts.contractsRootSource, 'api');
-  assert.equal(contracts.workstreams.version, 'g1');
+  assert.equal(contracts.workstreams.version, 'g2');
   assert.equal(contracts.domains.version, 'g2');
-  assert.equal(contracts.routingVocabulary.version, 'g1');
-  assert.equal(contracts.taskTopology.scope, 'opl_task_topology');
+  assert.equal(contracts.routingVocabulary.version, 'g2');
+  assert.equal(contracts.taskTopology.scope, 'opl_stage_led_task_topology');
   assert.equal(
     contracts.publicSurfaceIndex.scope,
-    'opl_public_gateway_surface_index',
+    'opl_framework_public_surface_index',
   );
 });
 
@@ -63,15 +63,15 @@ test('stopCliPipeChild waits for spawned stdio children to exit', async () => {
   assert.notEqual(child.exitCode === null && child.signalCode === null, true);
 });
 
-test('loadGatewayContracts rejects missing files with a stable error', async (t) => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-missing-'));
-  const expectedContractsDir = path.join(tempRoot, 'contracts', 'opl-gateway');
+test('loadFrameworkContracts rejects missing files with a stable error', async (t) => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-missing-'));
+  const expectedContractsDir = path.join(tempRoot, 'contracts', 'opl-framework');
 
   await t.test('missing contracts directory', () => {
     assert.throws(
-      () => loadGatewayContracts(tempRoot),
+      () => loadFrameworkContracts(tempRoot),
       (error: unknown) => {
-        assert.ok(error instanceof GatewayContractError);
+        assert.ok(error instanceof FrameworkContractError);
         assert.equal(error.code, 'contract_file_missing');
         assert.equal(error.details?.contracts_dir, expectedContractsDir);
         assert.equal(error.details?.contracts_root_source, 'api');
@@ -81,8 +81,8 @@ test('loadGatewayContracts rejects missing files with a stable error', async (t)
   });
 });
 
-test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
-  const tempContracts = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-contracts-'));
+test('loadFrameworkContracts honors OPL_CONTRACTS_DIR when provided', () => {
+  const tempContracts = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-contracts-'));
   fs.cpSync(contractsDir, tempContracts, {
     recursive: true,
   });
@@ -152,9 +152,9 @@ test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', 
   }
 });
 
-test('validateGatewayContracts returns a stable summary for the required contract set', () => {
-  const validation = validateGatewayContracts(repoRoot);
-  const contracts = loadGatewayContracts(repoRoot);
+test('validateFrameworkContracts returns a stable summary for the required contract set', () => {
+  const validation = validateFrameworkContracts(repoRoot);
+  const contracts = loadFrameworkContracts(repoRoot);
 
   assert.deepEqual(validation, {
     status: 'valid',
@@ -164,7 +164,7 @@ test('validateGatewayContracts returns a stable summary for the required contrac
       {
         contract_id: 'workstreams',
         file: path.join(contractsDir, 'workstreams.json'),
-        schema_version: 'g1',
+        schema_version: contracts.workstreams.version,
         status: 'valid',
       },
       {
@@ -176,7 +176,7 @@ test('validateGatewayContracts returns a stable summary for the required contrac
       {
         contract_id: 'routing_vocabulary',
         file: path.join(contractsDir, 'routing-vocabulary.json'),
-        schema_version: 'g1',
+        schema_version: contracts.routingVocabulary.version,
         status: 'valid',
       },
       {
@@ -197,7 +197,7 @@ test('validateGatewayContracts returns a stable summary for the required contrac
 
 test('contract validate returns a stable machine-readable contract summary', () => {
   const output = runCli(['contract', 'validate']);
-  const contracts = loadGatewayContracts(repoRoot);
+  const contracts = loadFrameworkContracts(repoRoot);
 
   assert.deepEqual(output, {
     version: 'g2',
@@ -209,7 +209,7 @@ test('contract validate returns a stable machine-readable contract summary', () 
         {
           contract_id: 'workstreams',
           file: path.join(contractsDir, 'workstreams.json'),
-          schema_version: 'g1',
+          schema_version: contracts.workstreams.version,
           status: 'valid',
         },
         {
@@ -221,7 +221,7 @@ test('contract validate returns a stable machine-readable contract summary', () 
         {
           contract_id: 'routing_vocabulary',
           file: path.join(contractsDir, 'routing-vocabulary.json'),
-          schema_version: 'g1',
+          schema_version: contracts.routingVocabulary.version,
           status: 'valid',
         },
         {

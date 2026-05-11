@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { loadGatewayContracts, validateGatewayContracts } from '../../src/contracts.ts';
+import { loadFrameworkContracts, validateFrameworkContracts } from '../../src/contracts.ts';
 import { buildProductEntryHandoffEnvelope } from '../../src/product-entry-handoff-envelope.ts';
 import { buildProductEntrySessionPrompt } from '../../src/product-entry-parts/builders.ts';
 import {
@@ -14,7 +14,7 @@ import {
   runProductEntrySessions,
 } from '../../src/product-entry-runtime.ts';
 
-const contractsDir = path.join(process.cwd(), 'contracts', 'opl-gateway');
+const contractsDir = path.join(process.cwd(), 'contracts', 'opl-framework');
 const repoRoot = process.cwd();
 
 function createFakeBinaryFixture(binaryName: string, body: string) {
@@ -94,7 +94,7 @@ exit 1
         OPL_HERMES_BIN: hermesFixture.binaryPath,
         OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       },
-      () => buildProductEntryDoctor(validateGatewayContracts(contractsDir)),
+      () => buildProductEntryDoctor(validateFrameworkContracts(contractsDir)),
     );
 
     assert.equal(doctor.product_entry.entry_surface, 'opl_local_product_entry_shell');
@@ -114,7 +114,7 @@ exit 1
 });
 
 test('product-entry session prompt uses stage-led framework wording instead of retired gateway shell wording', () => {
-  const contracts = loadGatewayContracts();
+  const contracts = loadFrameworkContracts();
   const prompt = buildProductEntrySessionPrompt(contracts);
 
   assert.match(prompt, /Codex-first, stage-led family framework shell/);
@@ -186,7 +186,7 @@ test('product-entry handoff envelope leaf builds the current family handoff payl
           workspacePath: repoRoot,
           skills: [],
         },
-        loadGatewayContracts(contractsDir),
+        loadFrameworkContracts(contractsDir),
       ),
     );
 

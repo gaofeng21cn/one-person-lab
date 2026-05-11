@@ -1,4 +1,4 @@
-import { GatewayContractError } from '../contracts.ts';
+import { FrameworkContractError } from '../contracts.ts';
 
 export function normalizeHermesOutput(stdout: string, stderr = '') {
   return [stdout, stderr]
@@ -23,7 +23,7 @@ export function assertHermesSuccess(
     return;
   }
 
-  throw new GatewayContractError(
+  throw new FrameworkContractError(
     'hermes_command_failed',
     message,
     details,
@@ -40,7 +40,7 @@ export function assertCodexSuccess(
     return;
   }
 
-  throw new GatewayContractError(
+  throw new FrameworkContractError(
     'codex_command_failed',
     message,
     details,

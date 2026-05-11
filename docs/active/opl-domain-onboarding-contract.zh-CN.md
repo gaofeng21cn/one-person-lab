@@ -1,43 +1,37 @@
 [English](./opl-domain-onboarding-contract.md) | **中文**
 
-# OPL Domain Onboarding Contract
+# OPL Domain-Agent Admission Contract
 
-> 当前状态说明（`2026-05-07`）：本文是候选 domain onboarding review 的活跃人读支撑。当前已收录 domain 的活跃路径是 `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。下文 gateway / harness 词汇只作为边界审查兼容语言，不是当前公开第一主语。
+> 当前状态说明（`2026-05-11`）：本文是候选 domain-agent admission review 的活跃人读支撑。当前已收录 domain 的活跃路径是 `Codex-default session/runtime -> explicit OPL activation -> selected domain-agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。
 
 ## 目的
 
-本文保留 gateway 阶段形成的 domain-onboarding review contract，并把它作为当前候选 domain admission 的人读支撑。
+本文定义当前新 domain agent 被 OPL framework 收录前必须通过的审查合同。
 
-它的目标是定义：未来一个新 domain system 在什么条件下，才能被正式纳入 `OPL` federation，同时不模糊 ownership、routing 与 truth boundary。
+它的目标是定义：未来一个新 domain-agent system 在什么条件下，才能被 `OPL` stage-led framework 选择，同时不模糊 ownership、stage selection 与 truth boundary。
 
 目标不是先把 domain 名字挂上去，后面再慢慢补边界。
 目标是要求“先有显式边界材料，后有正式收录”。
 
-## 与 G1 / G2 / G3 的关系
+## 与活跃 Framework 合同的关系
 
-Domain onboarding 仍使用这些兼容性参考做历史边界审阅：
+Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
-- [OPL Federation Contract](../history/compatibility/gateway-federation/opl-federation-contract.zh-CN.md)
-- [OPL Gateway 契约面](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Routed Action Gateway](../history/compatibility/gateway-federation/opl-routed-action-gateway.zh-CN.md)
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.zh-CN.md)
-- 当前仓库中的机器可读合同面：[`../contracts/opl-gateway/README.zh-CN.md`](../../contracts/opl-gateway/README.zh-CN.md)
+- 当前仓库中的机器可读合同面：[`../contracts/opl-framework/README.zh-CN.md`](../../contracts/opl-framework/README.zh-CN.md)
 
-如果顶层 registry、discovery 与 routed-action 这几层还不稳定，domain onboarding 不应继续推进。
+如果 domain-agent identity、stage capability package、truth ownership 与 product entry surface 不稳定，admission 不应继续推进。
 
 ## 机器可读配套工件
 
-- [`../contracts/opl-gateway/domain-onboarding-readiness.schema.json`](../../contracts/opl-gateway/domain-onboarding-readiness.schema.json)
-- [`../examples/opl-gateway/domain-onboarding-readiness.json`](../../examples/opl-gateway/domain-onboarding-readiness.json)
-- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
+- [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
+- [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
 
-这个 schema 把 onboarding-readiness record 落成 non-executing contract surface。
-它不会自动收录 domain，也不会取代本文件中的 prose review gate。
-这条 example record 只是 illustrative 示例，不构成正式 domain 收录。
-Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.zh-CN.md)。
-`OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
-公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 boundary package 落地前，它们仍然只算 top-level signal / domain-direction evidence。
-这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain gateway，而 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops` 仍然需要完整 onboarding package 才能完成正式收录。
+这些合同把已收录 domain-agent catalog 与 stage topology 落成 non-executing framework surface。
+它们不会授予 OPL domain truth，也不会自动收录候选 workstream。
+公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 domain-agent boundary package 落地前，它们仍然只算 top-level signal。
+这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain-agent entry，而 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops` 仍然需要完整 admission package 才能完成正式收录。
 
 ## 执行模型审查配套文档
 
@@ -61,10 +55,10 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 
 - 它的 registry identity 是显式的
 - 它的 truth ownership 是显式的
-- 它的 public gateway / harness boundary 是显式的
+- 它的 public domain-agent entry 与内部 harness boundary 是显式的
 - 它的 review surface 是显式的
 - 它的 execution model 与 `OPL` 的 `Codex CLI + autonomous 模式 + 共享基座分层` 方向是显式对齐的
-- 顶层 discovery 与 routing 可以不靠 prose 猜测就指向它
+- 顶层 stage selection 可以不靠 prose 猜测就指向它
 
 `OPL` 不接受“先挂名，后补边界”的 onboarding。
 
@@ -84,20 +78,21 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 
 一个新 domain 必须提供完整 registry package。
 
-#### 必需的 domain registry entry
+#### 必需的 domain-agent registry entry
 
-该 domain entry 必须完整定义 `G1` domain fields：
+该 domain entry 必须完整定义活跃 domain-agent 字段：
 
 - `domain_id`
 - `label`
 - `project`
-- `role`
-- `gateway_surface`
-- `harness_surface`
+- `independent_domain_agent`
+- `single_app_skill`
+- `domain_truth_owner`
+- `opl_projection_role`
+- `runtime_dependency_boundary`
 - `standalone_allowed`
 - `owned_workstreams`
 - `non_opl_families`
-- `canonical_truth_owner`
 
 #### 必需的 workstream registry entry
 
@@ -115,11 +110,11 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 
 如果这个新 domain 接管的是一个已经定义过的 workstream，那么这次 ownership 变更也必须在 workstream registry 里显式表达出来。
 
-#### 必需的 routing vocabulary 影响说明
+#### 必需的 stage vocabulary 影响说明
 
 Onboarding package 还必须说明这个新 domain：
 
-- 是完全复用现有 routing vocabulary
+- 是完全复用现有 stage vocabulary
 - 还是需要新增 `intent_id`、`delivery_kind`、`review_kind` 或其他顶层 vocabulary entry
 
 任何 vocabulary 扩张，都不能只停留在 prose 里暗示。
@@ -130,11 +125,11 @@ Onboarding package 还必须说明这个新 domain：
 
 至少必须提供：
 
-- 一个公开的 domain README，或等价的 gateway 入口文档
-- 明确写清它是 `domain gateway`，其下还有自己的 `harness`
+- 一个公开的 domain README，或等价的 domain-agent entry 文档
+- 明确写清 public domain-agent entry 以及其下的 internal harness/controller boundary
 - 明确写清它保持独立可用，而不是 `OPL` 的内部模块
 - 说明它拥有的 workstream、deliverable object 与 review semantics
-- 说明它的 stable agent runtime / gateway / tool / controller surface，以及代码与 Agent 的分工边界
+- 说明它的 stable agent runtime / tool / controller surface，以及代码与 Agent 的分工边界
 - 提供足够公开 wording，让 `OPL` 顶层文档可以链接它，而不需要替它发明身份
 
 ## 3. Truth Ownership Declaration
@@ -145,7 +140,7 @@ Onboarding package 还必须说明这个新 domain：
 
 - 哪些 runtime truth 仍然留在 domain 内部
 - 哪些 run / delivery / audit / review record 归这个 domain 所有
-- 哪些内容 `OPL` 只允许做 index 或 routing
+- 哪些内容 `OPL` 只允许做 index、projection 或 stage selection
 - 哪些内容 `OPL` 绝不能宣称是 canonical truth
 
 只要 truth ownership 仍然模糊，这个 domain 就不能被正式收录。
@@ -159,7 +154,7 @@ Onboarding package 必须说明：
 - 有哪些 human review surface
 - 有哪些 publish 或 release gate
 - 有哪些 quality-regression 或同级别 review hook
-- 顶层 `OPL` discovery 与 routed handoff 如何引用这些 review semantics
+- 顶层 `OPL` stage selection 与 projection 如何引用这些 review semantics
 
 如果一个 domain 说不清工作如何被审阅，就还不具备正式联邦收录条件。
 
@@ -178,29 +173,29 @@ Onboarding package 必须说明：
 
 如果一个 domain 说不清执行模型如何与 `OPL` 的统一范式对齐，就还不具备正式联邦收录条件。
 
-## 6. Discovery Readiness Declaration
+## 6. Stage Selection Readiness Declaration
 
-一个新 domain 必须显式声明：未来 `G2` 只读 discovery 如何到达它的公开入口。
+一个新 domain 必须显式声明：OPL stage selection 如何到达它的公开入口。
 
 Onboarding package 必须说明：
 
-- discovery 最终指向哪个 `domain_gateway` surface
-- 哪些 workstream ID 会通过这个 gateway 入口变成可 discover 的对象
-- 哪些 wording 明确把 discovery 保持在只读 / public-entry 层，而不提前暗示 handoff readiness
+- stage selection 最终指向哪个 domain-agent entry surface
+- 哪些 workstream ID 会通过这个 entry 变成可选择对象
+- 哪些 wording 明确把 selection 保持在 framework 层，而不提前暗示 OPL 持有 domain truth
 
 仅有顶层信号或 domain-direction evidence，不足以满足这一 package。
 
-## 7. Routing Readiness Declaration
+## 7. Stage Execution Readiness Declaration
 
-一个新 domain 必须显式声明：当未来真的激活 `G3` routing 时，顶层路由如何只 targeting 这个 domain gateway。
+一个新 domain 必须显式声明：被选中的 stage 如何进入该 domain agent。
 
 Onboarding package 必须说明：
 
-- 哪个 `domain_gateway` surface 是唯一允许的 successful routing target
-- 哪些 workstream ID 会进入 routing-eligible 集合
-- 哪些显式 routing / handoff evidence 能把 no-bypass 规则继续保持为硬边界
+- 哪个 domain-agent entry 是唯一允许的 successful stage target
+- 哪些 workstream ID 会进入 stage-eligible 集合
+- 哪些显式 stage / handoff evidence 能把 no-bypass-to-internal-harness 规则继续保持为硬边界
 
-如果这份 package 不能把唯一成功目标保持在 `domain_gateway`，它就还不是 routing-ready。
+如果这份 package 不能把唯一成功目标保持在 public domain-agent entry，它就还不是 stage-execution-ready。
 公开 scaffold 或方向提示本身，也不足以满足这一 package。
 
 ## 8. Cross-Domain Wording Alignment
@@ -211,15 +206,15 @@ Onboarding package 必须说明：
 
 - 哪些 OPL public surface 承载这组 linked role wording
 - 哪些 domain public surface 承载匹配的 wording
-- 哪句边界声明用来防止 signal-only scaffold 被误读成 admission、discovery readiness、routing readiness 或 handoff readiness
+- 哪句边界声明用来防止 signal-only scaffold 被误读成 admission、stage-selection readiness、stage-execution readiness 或 handoff readiness
 
 如果这组 wording 不能被显式审查，这个 domain 就仍然位于 formal inclusion 之下。
 
 就当前 candidate path 而言，`IP Ops`、`Award Ops`、`Review Ops` 与 `Thesis Ops` 都仍然位于 formal inclusion 之下。
 `IP Ops` 会把 patent truth 与人工/法律审阅 gate 留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
 `Award Ops` 会把 award truth 与人工专家审阅 gate 留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
-`Review Ops` 会把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker，同时把 review truth 留在未来 domain 一侧、继续不具备 handoff-ready surface，任何未来 successful handoff 也仍只能是 `domain_gateway`-only / no-bypass。
-`Thesis Ops` 也会把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker；它继续区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production、继续不具备 handoff-ready surface，任何未来 successful handoff 也仍只能是 `domain_gateway`-only / no-bypass。
+`Review Ops` 会把 `execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker，同时把 review truth 留在未来 domain 一侧，并继续不具备 handoff-ready domain-agent entry。
+`Thesis Ops` 也会把 `execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker；它继续区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production，并继续不具备 handoff-ready domain-agent entry。
 
 ## 正式收录门槛
 
@@ -234,11 +229,11 @@ Onboarding package 必须说明：
 3. **Truth ownership explicit**  
    Canonical truth 仍留在 domain 内部，没有被悄悄上收给 `OPL`。
 
-4. **Discovery ready**  
-   `G2` discovery 能识别这个 domain、它拥有的 workstream，以及正确 entry surface。
+4. **Stage selection ready**
+   OPL stage selection 能识别这个 domain、它拥有的 workstream，以及正确 public entry surface。
 
-5. **Routing ready**  
-   `G3` routed action 语义能带着显式 evidence 把请求路由进这个 domain gateway，且不会绕过 domain gateway。
+5. **Stage execution ready**
+   Stage execution 能带着显式 evidence 进入 public domain-agent entry，且不会绕过 domain-owned harness/controller boundary。
 
 6. **Review ready**  
    这个 domain 暴露了显式 review semantics，而不只是执行入口。
@@ -257,9 +252,9 @@ Onboarding package 必须说明：
 
 - 在 boundary package 还不存在时，就先把 domain 名字加入 `OPL` 导航
 - 在 truth ownership 还是“以后再定”的情况下就收录 domain
-- 把现有 domain harness 误当成自动定义了一个新 domain gateway
+- 把现有 domain harness 误当成自动定义了一个新 domain-agent entry
 - 把 family 或 profile 名误当成已经自动定义了顶层 workstream
-- 在 discovery 与 routing surface 还没更新时，就宣称 domain 已正式 onboard
+- 在 stage selection 与 execution surface 还没更新时，就宣称 domain 已正式 onboard
 - 允许一个 domain 在 admission 时回避 `Agent-first` / 当前 `Auto-only` / 未来 `Human-in-the-loop` 分层问题，或把主流程写成 `fixed-code-first`
 
 ## 最小 Onboarding 审查问题
@@ -267,11 +262,11 @@ Onboarding package 必须说明：
 一个 domain 在正式收录前，顶层 review 至少要能清楚回答：
 
 - 它拥有哪个 workstream，或哪几个 workstream？
-- 它暴露什么 gateway surface？
-- 它下面是什么 harness surface？
+- 它暴露什么 public domain-agent entry？
+- 它下面是什么 harness/controller surface？
 - 哪些 truth 在这个 domain 内部保持 canonical？
 - 哪些 family 位于这个 domain 内，但不自动等于某个 OPL workstream？
-- `OPL` 如何 discover 并 route 到它？
+- `OPL` 如何在 stage 边界选择并进入它？
 - 它依赖什么 stable agent runtime surface？
 - 当前 `Auto-only` 仓如何与未来 `Human-in-the-loop` sibling 或 upper-layer product 保持兼容，而不是变成两套互不相干的系统？
 - 为什么这应被视作一个新 domain，而不是现有 domain 里的一个 family？

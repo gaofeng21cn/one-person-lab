@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 
 export type HermesBinarySource = 'env' | 'path';
 
@@ -87,7 +87,7 @@ export function resolveHermesBinary(): HermesBinaryInfo | null {
 
   if (envCandidate) {
     if (!isExecutableCandidate(envCandidate)) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'hermes_binary_not_found',
         'OPL_HERMES_BIN is set but does not point to a runnable Hermes binary.',
         {
@@ -118,7 +118,7 @@ function runBinary(
   });
 
   if (result.error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'hermes_command_failed',
       `Failed to launch Hermes for: hermes ${args.join(' ')}`,
       {
@@ -226,7 +226,7 @@ export function runHermesCommand(
   const hermesBinary = options.hermesBinary ?? resolveHermesBinary();
 
   if (!hermesBinary) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'hermes_binary_not_found',
       'Hermes binary is required only for explicitly selected Hermes-backed OPL Product Entry ask/chat commands.',
       {
@@ -381,7 +381,7 @@ export function parseHermesQuietChatOutput(output: string) {
     .trim();
 
   if (!sessionId) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'hermes_output_parse_failed',
       'Hermes quiet chat output did not include a session_id line.',
       {

@@ -21,7 +21,7 @@ This contract builds on:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.md)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
 
 These gateway-discovery surfaces provide the frozen dependency baseline for routed-action planning.
 
@@ -117,7 +117,7 @@ Purpose:
 Required rule:
 
 - this operation may run only after `route_request` returns `status = routed`
-- the output must conform to [`../contracts/opl-gateway/handoff.schema.json`](../../../../contracts/opl-gateway/handoff.schema.json)
+- the output must conform to [`../contracts/opl-framework/handoff.schema.json`](../../../../contracts/opl-framework/handoff.schema.json)
 - the only allowed successful target is `domain_gateway`; this operation is planning-only and may not launch a domain runtime
 
 Suggested response:
@@ -311,7 +311,7 @@ At this planning layer, domain gateways keep:
 
 The machine-readable schema for this layer lives at:
 
-- [`../contracts/opl-gateway/routed-actions.schema.json`](../../../../contracts/opl-gateway/routed-actions.schema.json)
+- [`../contracts/opl-framework/routed-actions.schema.json`](../../../../contracts/opl-framework/routed-actions.schema.json)
 
 At the current baseline, that schema stays in the planning dependency layer.
 

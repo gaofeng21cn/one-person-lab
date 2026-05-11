@@ -9,7 +9,7 @@ For current project rules and working entrypoints, start from:
 - `../../../AGENTS.md`
 - `../../README.md`
 - `../../opl-domain-onboarding-contract.md`
-- `../../../contracts/opl-gateway/README.md`
+- `../../../contracts/opl-framework/README.md`
 
 Historical mentions of OMX may remain only in files that are explicitly marked as history, migration context, or compatibility background. Do not recreate `docs/references/omx-longrun-prompt-playbook.md`, `docs/references/omx-stage-gated-longrun-guide.md`, or `docs/references/omx-worktree-operating-handbook.md` as current execution guidance.
 Current long-running task guidance belongs to the OPL stage-led agent framework and provider-backed runtime docs, not to OMX-era prompt or worktree playbooks.
