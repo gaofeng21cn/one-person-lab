@@ -1,4 +1,5 @@
 import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes-bridge.ts';
+import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 
 export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'hermes_legacy', 'temporal'] as const;
 
@@ -37,6 +38,11 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
 
 function temporalAddress() {
   return process.env.OPL_TEMPORAL_ADDRESS?.trim() || process.env.TEMPORAL_ADDRESS?.trim() || null;
+}
+
+function temporalWorkerConfigured() {
+  return process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
+    || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
 }
 
 export function isFamilyRuntimeProviderKind(value: string | undefined): value is FamilyRuntimeProviderKind {
@@ -78,22 +84,36 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
 
   if (kind === 'temporal') {
     const address = temporalAddress();
+    const workerReady = Boolean(address) && temporalWorkerConfigured();
     return {
       provider_kind: kind,
-      status: address ? 'ready' : 'provider_code_landed_unconfigured',
-      ready: Boolean(address),
-      degraded_reason: address ? null : 'temporal_runtime_not_configured',
+      status: workerReady ? 'ready' : 'provider_code_landed_unconfigured',
+      ready: workerReady,
+      degraded_reason: address
+        ? 'temporal_worker_not_confirmed'
+        : 'temporal_runtime_not_configured',
       capabilities: [
         'stage_attempt_workflow_provider_code',
         'codex_activity_provider_code',
         'human_gate_signal_provider_code',
         'query_projection_provider_code',
         'workflow_history_provider_code',
+        'worker_lifecycle_contract',
       ],
       details: {
         address,
-        adapter_mode: address ? 'configured_external_provider' : 'provider_code_landed_unconfigured',
-        required_env: ['OPL_TEMPORAL_ADDRESS'],
+        namespace: resolveTemporalNamespace(),
+        task_queue: resolveTemporalTaskQueue(),
+        worker_ready: workerReady,
+        worker_lifecycle: {
+          worker_required: true,
+          task_queue: resolveTemporalTaskQueue(),
+          default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+          lifecycle_owner: 'configured_family_runtime_provider',
+          opl_helper: 'runTemporalStageAttemptWorkerUntil',
+        },
+        adapter_mode: workerReady ? 'configured_external_provider' : 'provider_code_landed_unconfigured',
+        required_env: ['OPL_TEMPORAL_ADDRESS', 'OPL_TEMPORAL_WORKER_ENABLED=1|OPL_TEMPORAL_WORKER_STATUS=ready'],
         runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
       },
     };

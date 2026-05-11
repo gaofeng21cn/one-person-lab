@@ -32,6 +32,18 @@ function asStringList(value: unknown) {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry)) : [];
 }
 
+function asRecordList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null && !Array.isArray(entry))
+    : [];
+}
+
+function asRecord(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 function closeoutRefsFrom(value: Record<string, unknown>) {
   return [
     ...asStringList(value.closeout_refs),
@@ -56,6 +68,12 @@ export async function StageAttemptWorkflow(
     activity_events: [],
     checkpoint_refs: asStringList(input.checkpoint_refs),
     closeout_refs: [],
+    consumed_refs: [],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: null,
+    route_impact: {},
     human_gate_refs: [],
     signals: [],
     closeout_packet: null,
@@ -127,11 +145,18 @@ export async function StageAttemptWorkflow(
 
     const dispatchResult = await domainSidecarDispatchActivity(input);
     const closeoutRefs = closeoutRefsFrom(dispatchResult);
+    const routeImpact = asRecord(dispatchResult.route_impact);
     state = {
       ...state,
       status: 'completed',
       updated_at: nowIso(),
       closeout_refs: [...new Set([...state.closeout_refs, ...closeoutRefs])],
+      consumed_refs: asStringList(dispatchResult.consumed_refs),
+      consumed_memory_refs: asStringList(dispatchResult.consumed_memory_refs),
+      writeback_receipt_refs: asStringList(dispatchResult.writeback_receipt_refs),
+      rejected_writes: asRecordList(dispatchResult.rejected_writes),
+      next_owner: typeof dispatchResult.next_owner === 'string' ? dispatchResult.next_owner : null,
+      route_impact: routeImpact,
       closeout_packet: dispatchResult,
       activity_events: [
         ...state.activity_events,

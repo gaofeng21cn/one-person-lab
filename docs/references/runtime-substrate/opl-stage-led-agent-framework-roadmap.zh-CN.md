@@ -46,7 +46,7 @@ Date: `2026-05-11`
 
 ## 2026-05-11 当前落地评估
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal 的生产 provider 路径也已落地。当前仍没有完成端到端生产闭环：真实 Temporal server/worker 部署、真实 Codex long-running activity runner、domain soak 和旧面物理退役仍未完成。
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion 和 stage attempt workbench 的生产 provider 路径也已落地。当前仍没有完成端到端生产闭环：真实 Temporal server/worker residency proof、真实 Codex long-running activity runner、domain soak 和旧面物理退役仍未完成。
 
 分层完成度：
 
@@ -54,14 +54,14 @@ Date: `2026-05-11`
 | --- | --- | --- |
 | 定位 / owner split | `landed` | OPL 作为 Codex-first、stage-led family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
 | Shared contracts / schemas | `landed` | action catalog、stage control plane、runtime supervision、persistence / lifecycle / owner-route、standard skeleton 等 contract 已在 OPL shared layer 冻结。 |
-| Domain memory locator / receipt / migration plan | `contract_landed_projection_ready` | `family-domain-memory-ref`、`family-domain-memory-writeback`、stage `knowledge_refs` 与 `opl domain-memory list|inspect|migration-plan` 已冻结 locator、receipt、seed corpus 和 migration plan 级只读投影；真实 retrieval、writeback apply、memory body migration、App 展示和跨 domain soak 仍需 domain router/apply receipt 验证。 |
+| Domain memory locator / receipt / migration plan | `contract_landed_workbench_visible` | `family-domain-memory-ref`、`family-domain-memory-writeback`、stage `knowledge_refs` 与 `opl domain-memory list|inspect|migration-plan` 已冻结 locator、receipt、seed corpus 和 migration plan 级只读投影；stage attempt query/workbench 已能显示 consumed memory refs、writeback receipt refs 与 rejected writes；真实 retrieval、writeback apply、memory body migration 和跨 domain soak 仍需 domain router/apply receipt 验证。 |
 | Local queue / attempt ledger | `usable_dev_baseline` | `opl family-runtime` 已有 typed queue、pending task hydration、guarded dispatch、retry/dead-letter、local inbox 和 stage attempt ledger。 |
 | Domain descriptor / adapter | `landed_for_active_domains` | MAS/MAG/RCA 已在各自 main 暴露 stage/action/projection/skeleton adapter，OPL 当前真实 `opl agents list` 可校验三者 aligned。 |
 | Lifecycle primitives | `contract_and_locator_landed` | OPL 已有 locator-only lifecycle primitive；MAS 经验已被拆成 framework-generic / MAS-specific 方向，真实跨 domain cleanup/restore apply 仍需 soak。 |
-| Provider-backed execution | `temporal_provider_code_landed` | Temporal SDK、workflow/activity/signal/query、worker helper、CLI start/query/signal 和 provider receipt 已落地；真实 Temporal server/worker deployment、production retry 运行证据和 domain soak 仍未完成。 |
-| Codex stage activity runner | `activity_stub_landed` | Activity 现能接 stage packet / checkpoint refs 并写 provider receipt；真实 Codex CLI long-running process runner、token/cost/progress sampling 和 typed closeout ingestion 仍未落地。 |
-| Human gate / resume | `contract_shape_only` | human gate refs、signals、resume refs 已进入计划和部分 projection；真实用户插入指令 intake、approval/resume token 和 App 操作闭环仍未完成。 |
-| Operator visibility | `snapshot_and_aion_workbench_landed` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，Aion runtime workbench 已消费该只读面；stage attempt 的完整 workflow/activity/signal、dead-letter、人类 gate 操作面仍需继续做。 |
+| Provider-backed execution | `production_provider_minimal_loop_landed` | Temporal SDK、workflow/activity/signal/query、worker lifecycle contract、CLI start/query/signal、provider receipt 和 fail-closed readiness 已落地；真实 Temporal server/worker residency proof、production retry 运行证据和 domain soak 仍未完成。 |
+| Codex stage activity runner | `typed_closeout_ingestion_landed` | Activity 现能接 stage packet / checkpoint refs，并透传 typed closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact 和 next owner；真实 Codex CLI long-running process runner、token/cost/progress sampling 仍未落地。 |
+| Human gate / resume | `ledger_projection_landed` | human gate refs、user instruction signals、resume signals 已进入 attempt ledger/query/workbench；真实用户审批 UI、resume token 操作闭环仍未完成。 |
+| Operator visibility | `stage_attempt_workbench_core_landed` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter 与 human gate signals；Aion runtime workbench 可消费该只读面，后续仍需过滤、操作和真实 domain soak。 |
 | Real domain soak / retirement | `not_complete` | MAS real paper line guarded apply、MAG/RCA controlled attempts、旧 Hermes/Gateway/local-manager residue 物理退役仍是下一阶段。 |
 
 已落地的 OPL 层 shared module / contract 面包括：
@@ -385,7 +385,7 @@ Codex CLI 负责：
 
 ### Master P1. Temporal Provider Core
 
-状态：已落地 `temporal` provider core。OPL 已引入 Temporal TypeScript SDK，新增 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal` 和 worker helper；缺少 Temporal 地址时 start/query/signal 明确 fail-closed。
+状态：已落地 `temporal` provider core。OPL 已引入 Temporal TypeScript SDK，新增 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 start/query/signal 明确 fail-closed，provider readiness 也要求 worker 已显式确认。
 
 目标：把已落地的 provider core 从 repo/test 可用推进到真实 Temporal server/worker deployment，并用 domain soak 证明它能稳定托管 stage attempt。
 
@@ -393,8 +393,8 @@ Codex CLI 负责：
 
 - 已完成：`StageAttemptWorkflow`、`CodexStageActivity`、`DomainSidecarDispatchActivity`、`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal`、`StageAttemptQuery` 形成 OPL Temporal provider code。
 - 已完成：`opl family-runtime attempt start|query|signal` 可走 Temporal client；没有 `OPL_TEMPORAL_ADDRESS` / `TEMPORAL_ADDRESS` 时 fail-closed，不伪装为已执行。
-- 已完成：provider receipt 继续写入现有 stage attempt ledger。
-- 待完成：真实 Temporal server / worker deployment、worker restart/re-query proof、生产 activity retry 和真实 domain soak。
+- 已完成：provider receipt 继续写入现有 stage attempt ledger；provider status 暴露 worker lifecycle contract，不把仅配置地址误报成 Full ready。
+- 待完成：真实 Temporal server / worker residency proof、worker restart/re-query proof、生产 activity retry 和真实 domain soak。
 
 验收：
 
@@ -412,15 +412,15 @@ Codex CLI 负责：
 
 ### Master P2. Codex Stage Activity Runner
 
-状态：已落地 Temporal activity stub 和 provider receipt 投影；真实 Codex CLI long-running activity runner 仍是后续实现。
+状态：已落地 Temporal activity 与 local fixture 的 typed closeout ingestion；真实 Codex CLI long-running activity runner 仍是后续实现。
 
 目标：把 Codex CLI 作为 stage 内默认 concrete executor 接入 provider。
 
 交付：
 
 - 已完成：stage packet ref、workspace locator、authority boundary 可进入 fixture activity input。
-- 已完成：typed closeout packet 强制要求 `closeout_refs`，并投影 consumed refs、rejected writes、next owner、domain ready verdict。
-- 已完成：checkpoint refs、human gate signals 和 resume signals 进入 attempt ledger/query projection。
+- 已完成：typed closeout packet 强制要求 `closeout_refs`，并投影 consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、next owner、domain ready verdict。
+- 已完成：checkpoint refs、human gate signals、user instruction signals 和 resume signals 进入 attempt ledger/query/workbench projection。
 - 待完成：真实 Codex CLI activity heartbeat、long-running process supervision、token/cost/progress sampling。
 
 验收：
@@ -486,11 +486,13 @@ Codex CLI 负责：
 
 ### Master P4. Operator Visibility
 
+状态：已落地 stage attempt workbench 核心投影；真实操作闭环和跨 domain soak 仍待完成。
+
 目标：让 OPL App / CLI 能看懂 stage attempt 卡在哪里。
 
 交付：
 
-- OPL App / CLI 显示 provider kind、attempt id、stage、activity、heartbeat、consumed refs、closeout refs、rejected writes、next owner、human gate、dead-letter reason。
+- OPL App / CLI 显示 provider kind、attempt id、stage、activity、heartbeat、consumed refs、consumed memory refs、writeback receipt refs、closeout refs、rejected writes、route impact、next owner、human gate、dead-letter reason。
 - 支持按 domain / workspace / stage / blocker / dead-letter 过滤。
 
 验收：
