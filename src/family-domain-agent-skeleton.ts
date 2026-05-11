@@ -116,6 +116,14 @@ function inferArtifactBoundary(value: JsonRecord, artifactBoundary: JsonRecord, 
     artifactBoundary.artifact_roots_are_locators !== false
     && optionalString(artifactLocator.locator_model) !== 'repo_artifact_blobs'
     && artifactLocator.repo_tracks_real_artifacts !== true;
+  const hasLocatorSurface =
+    isRecord(value.artifact_locator_contract)
+    || isRecord(value.workspace_runtime_artifact_root_locator)
+    || readStringList(value.artifact_locator_ref).length > 0
+    || readStringList(value.workspace_artifact_locator_ref).length > 0
+    || readStringList(value.workspace_runtime_artifact_root_locator_ref).length > 0
+    || readStringList(artifactBoundary.workspace_artifact_locator_refs).length > 0
+    || readStringList(artifactBoundary.runtime_artifact_locator_refs).length > 0;
   const repoContainsRealArtifacts =
     artifactBoundary.repo_contains_real_artifacts === true
     || value.repo_tracks_real_workspace_artifacts === true
@@ -139,6 +147,7 @@ function inferArtifactBoundary(value: JsonRecord, artifactBoundary: JsonRecord, 
       ...readStringList(value.runtime_artifact_locator_ref),
       ...readStringList(value.controlled_stage_attempt_ref),
     ],
+    has_locator_surface: hasLocatorSurface,
   };
 }
 
@@ -185,6 +194,7 @@ export function normalizeStandardDomainAgentSkeleton(value: unknown) {
     },
     contracts: normalizeContractRefs(value),
     artifact_boundary: normalizedArtifactBoundary,
+    has_artifact_locator_surface: normalizedArtifactBoundary.has_locator_surface,
     authority_boundary: isRecord(value.authority_boundary)
       ? value.authority_boundary
       : {
@@ -219,6 +229,9 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
   }
   if (skeleton && !skeleton.artifact_boundary.artifact_roots_are_locators) {
     issues.push('artifact_roots_must_be_locators');
+  }
+  if (skeleton && !skeleton.has_artifact_locator_surface) {
+    issues.push('artifact_locator_surface_required');
   }
 
   const manifestBlocked = entry.status !== 'resolved';
