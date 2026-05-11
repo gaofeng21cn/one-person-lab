@@ -14,7 +14,9 @@ Every long-lived document must have four explicit signals:
 3. `state`: `active_truth`, `active_support`, `support_reference`, `dated_snapshot`, `superseded`, `retired`, or `tombstone`.
 4. `machine boundary`: whether code, tests, contracts, or runtime surfaces may consume it.
 
-`README*` and `docs/**` are human-readable surfaces. Machine-readable behavior must use `contracts/`, schemas, source files, generated artifacts, CLI/API behavior, or semantic ids such as `human_doc:*`; it must not pin prose docs paths as stable interfaces.
+`README*` and `docs/**` are human-readable surfaces. Machine-readable behavior must use `contracts/`, schemas, source files, generated artifacts, CLI/API behavior, or semantic ids such as `human_doc:*`; it must not pin prose docs paths, headings, sections, or wording as stable interfaces.
+
+Lifecycle decisions are content-level decisions. A document with a current-looking filename can still be historical if its body describes a superseded topology, old development plan, retired gateway/frontdoor/federation route, Hermes-first default, or MDS-default dependency. A document in `docs/references/` can still be active support if its body has a current owner, current purpose, current state, and explicit machine boundary. Maintainers should classify the content before moving, expanding, or deleting the file.
 
 The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). That rollout turns the MAS full-docs restructuring into an OPL-family standard: repositories must be role-equivalent in lifecycle governance, but they do not need identical directory names.
 
@@ -38,7 +40,7 @@ The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governan
 | `docs/public/` | Public product direction after install/start entry | Bilingual user-facing narrative, roadmap, task map, and operating model. |
 | `docs/specs/` | Active runtime / product-boundary specs | Only specs that still define current behavior or current target boundary. |
 | `docs/references/current-support/` | Current operational support references | Setup, GUI, release, quality, and install references. |
-| `docs/references/runtime-substrate/` | Runtime substrate and product-entry references | Hermes/Runtime Manager/product-entry migration and benchmark material. |
+| `docs/references/runtime-substrate/` | Runtime substrate, provider, executor, and product-entry references | Stage-led framework roadmap, Temporal/provider support, Runtime Manager target, and legacy Hermes/direct-entry migration material. |
 | `docs/references/convergence-governance/` | Cross-repo convergence and docs governance references | Family docs governance, convergence lessons, intake templates, and status matrices. |
 | `docs/references/domain-admission/` | Candidate and admitted-domain reference records | Domain backlog, tranche records, phase records, and onboarding-adjacent support. |
 | `docs/references/examples-corpora/` | Example corpora and operating records | Historical examples and reference corpora, not current behavior oracle. |
@@ -56,7 +58,7 @@ The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governan
 | `active_support` | Current human-readable support for active runtime/activation/shared-boundary docs. | `docs/active/`, `docs/public/`, `docs/specs/` | Keep aligned with core truth; do not use as machine authority. |
 | `support_reference` | Background, audit, method, or operating support that explains current work but does not own it. | `docs/references/` | Keep indexed by role; do not let it override active truth. |
 | `dated_snapshot` | A completed intake, closeout, activation package, or one-time board. | `docs/history/` | Preserve provenance; active owner remains elsewhere. |
-| `superseded` | A design or plan replaced by a newer current surface. | `docs/history/` | Add a pointer to the current owner surface. |
+| `superseded` | A design or plan replaced by a newer current surface. | Prefer `docs/history/`; temporary reference retention is allowed only when the index labels it as superseded and points to the current owner. | Add a pointer to the current owner surface; do not expand it as active planning. |
 | `retired` | A route that is no longer valid. | `docs/history/compatibility/`, `docs/history/frontdoor-legacy/`, `docs/history/omx/` | Keep as audit material only. |
 | `tombstone` | A short index telling readers not to revive a retired route. | Relevant `docs/history/**/README*` | Name the retired route and point to current truth. |
 
@@ -80,9 +82,12 @@ All other long-lived docs must live in `active/`, `public/`, `specs/`, `referenc
 1. Do not keep retired positioning in an active directory for path compatibility.
 2. If a machine surface points at a prose doc path, migrate it to a contract/schema/source path or `human_doc:*` semantic id first.
 3. Retired gateway/federation/routed-action/frontdoor wording may appear in active docs only as historical context with an explicit current-truth pointer.
-4. New docs must be admitted through their lifecycle role before expansion.
-5. Directories that accept recurring additions need a README or portfolio entry that says what belongs there and what should be archived.
-6. Historical docs may preserve old path examples as provenance, but active and reference indexes must point to current locations.
+4. Old development plans must be merged into the current owner surface or archived as dated snapshots; do not leave parallel plans that appear to be active only because their filenames still sound current.
+5. New docs must be admitted through their lifecycle role before expansion.
+6. Directories that accept recurring additions need a README or portfolio entry that says what belongs there and what should be archived.
+7. Historical docs may preserve old path examples as provenance, but active and reference indexes must point to current locations.
+8. Public README pages must be written for potential users first. Chinese README text should be plain Chinese except for product names, command names, API names, and terms that are intentionally kept in English.
+9. Do not add scripts or tests that assert narrative README/docs prose, headings, or status wording. Tests may validate contracts, schemas, CLI/API behavior, generated artifact structure, source paths, or `human_doc:*` ids.
 
 ## External Practice Map
 
@@ -111,9 +116,10 @@ When a domain repo cannot safely move historical docs because current-program, a
 
 Before moving or archiving a doc:
 
-1. Classify its `owner`, `purpose`, `state`, and `machine boundary`.
-2. Search inbound links with `rg`.
-3. Update active/reference links to the new location or current owner surface.
-4. Leave historical command snippets alone only when they are clearly provenance.
-5. Add or update a README/tombstone for the destination directory.
-6. Run `git diff --check` and the repo verification lane required by the change.
+1. Read the body, not just the path, and classify its `owner`, `purpose`, `state`, and `machine boundary`.
+2. Decide whether the live content should be merged into an active owner, reduced to a pointer, archived as a dated snapshot, or tombstoned.
+3. Search inbound links with `rg`.
+4. Update active/reference links to the new location or current owner surface.
+5. Leave historical command snippets alone only when they are clearly provenance.
+6. Add or update a README/tombstone for the destination directory.
+7. Run `git diff --check` and the repo verification lane required by the change.

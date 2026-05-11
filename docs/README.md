@@ -8,7 +8,9 @@ This guide is for readers who need the current product model, the active runtime
 
 ## Current Product Model
 
-The current public `OPL` model is:
+`OPL` is a complete Codex-first, stage-led family agent runtime framework for high-value knowledge work. Its default minimum execution unit inside a stage is `Codex CLI`; its orchestration unit is the domain `stage`; its product target is fully automated, auditable delivery through recoverable stage attempts, human gates, receipts, projections, and artifact lifecycle.
+
+The current public `OPL` resource model is:
 
 - `System`
 - `Engines`
@@ -19,7 +21,7 @@ The current public `OPL` model is:
 - `Progress`
 - `Artifacts`
 
-The canonical truth is the `Codex-default` session/runtime plus the explicit activation layer that sits above it.
+The canonical truth is the `Codex-default` session/runtime plus the explicit activation layer and provider-backed family runtime control plane that sit above it.
 Admitted domain repositories keep their own agent logic, runtime rules, progress truth, and deliverables.
 
 ## Start Here By Audience
@@ -43,6 +45,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Documentation Portfolio](./docs_portfolio_consolidation.md)
 - [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [Runtime Substrate References](./references/runtime-substrate/README.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
 
@@ -60,6 +63,7 @@ That entry governs framework/domain ownership without moving domain content into
 
 `docs/` is now managed by lifecycle state instead of a flat four-layer pile.
 Each long-lived document must have a clear `owner`, `purpose`, `state`, and `machine boundary`.
+Lifecycle is judged by content role, not by filename or old path. A file with an active-looking name can still be a superseded plan; a reference file can remain useful only as migration background; a history file can contain command examples that are provenance rather than current guidance.
 
 - `docs/` root keeps only the docs index, core five, and [Documentation Portfolio](./docs_portfolio_consolidation.md).
 - `docs/active/` keeps current human-readable runtime, activation, onboarding, and shared-boundary support.
@@ -69,12 +73,12 @@ Each long-lived document must have a clear `owner`, `purpose`, `state`, and `mac
 - `docs/history/` keeps dated snapshots, retired routes, compatibility archives, and tombstones.
 
 The live public model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md).
-The live interaction model is runtime-first and skill-first.
+The live interaction model is Codex-first, stage-led, runtime-first, and skill-first.
 Retired `gateway / federation / routed-action` corpus and old local Product API / UI-adapter material stay below the active layers.
 
 ## Public Support
 
-The repository home is the user quick-start and must stay install-first, bilingual, and easy to read.
+The repository home is for potential users first. It must stay install-first, bilingual, readable, and focused on what work OPL can help them start and deliver.
 Roadmap and operating-model documents explain product direction after the user knows how to start.
 
 - [Repository Home](../README.md)
@@ -102,6 +106,7 @@ References hold review, audit, rollout, benchmark, migration, examples, and oper
 They are repo-tracked support, not the default implementation basis.
 
 - [Reference Index](./references/README.md)
+- [Runtime Substrate Reference Index](./references/runtime-substrate/README.md)
 - [OPL Runtime Manager target](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Docker WebUI deployment reference](./references/current-support/opl-docker-webui-deployment.md)
@@ -134,6 +139,8 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 
 - Keep [Repository Home](../README.md) install-first, user-facing, and readable for potential users, clinicians, and other non-technical experts.
 - Keep active public docs bilingual.
+- Govern docs by content lifecycle, not mechanically by file name, directory name, or whether a stale inbound link still exists.
+- Archive or tombstone superseded plans once their decision has moved into the core five or the current framework roadmap.
 - Keep reference-grade docs explicit about compatibility vs current truth.
 - Keep history as tracked provenance and tombstone material.
 - Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.

@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A Codex-first, stage-led family agent framework for serious research, grant, and presentation work</strong></p>
-<p align="center">Start expert work, let Codex CLI execute domain stages, keep progress visible, and collect deliverables in one trusted place.</p>
+<p align="center"><strong>A complete Codex-first, stage-led agent runtime framework for high-value knowledge work</strong></p>
+<p align="center">Run large expert tasks as auditable stages, use Codex CLI as the minimum execution unit, and move from intent to deliverables with visible progress.</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
@@ -24,7 +24,7 @@
 - **Medical research**: move evidence organization, analysis, manuscript drafts, and deliverable packages forward.
 - **Grant applications**: shape a grant direction, structure a proposal, and prepare revision packages.
 - **Presentations and PPT**: prepare lectures, lab talks, defenses, and project reports.
-- **General long-running work**: keep discussion, file reading, document editing, progress, and deliverables in one place.
+- **General high-value knowledge work**: keep discussion, file reading, document editing, progress, and deliverables in one place.
 
 ## Fast Start
 
@@ -32,7 +32,7 @@ For macOS desktop users, download the App directly:
 
 [Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses Codex, the OPL family runtime provider, OPL modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and a configured family runtime provider ready. The production target is a Temporal-backed provider for durable stage attempts; the current Hermes/local provider path is a migration/legacy implementation signal until that target lands.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses Codex, the configured OPL family runtime provider, domain modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and a configured family runtime provider ready. The production target is a Temporal-backed provider for durable stage attempts; Hermes/local provider paths are migration or legacy signals until that target lands.
 
 If you prefer Terminal installation:
 
@@ -61,7 +61,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 - General work for discussion, planning, reading, and common tasks.
 - Workspace-based work for tasks that need a real directory and persistent file context.
 - Specialized product families for domain-specific expert workflows.
-- Stage-led execution: OPL treats a domain stage as the observable work unit and `Codex CLI` as the default concrete executor inside that stage.
+- Stage-led execution: OPL treats each domain stage as the observable work unit and `Codex CLI` as the default minimum execution unit inside that stage.
 - Progress and file views that stay attached to ongoing work.
 - Central management for Codex, the OPL family runtime provider, modules, skills, GUI, and health status.
 
@@ -90,14 +90,14 @@ opl help --text         # Human-readable help; use opl help --json for machine-r
 
 ### What this repository tracks
 
-This repository tracks the shared OPL workbench layer, not the specialized domain-agent implementations. It keeps the product family coherent by providing:
+This repository tracks the OPL framework layer, not the specialized domain-agent implementations. It keeps the product family coherent by providing:
 
 - A common place to start and resume expert work.
 - Module installation, skill sync, service setup, and health checks.
-- Workspace, session, progress, and artifact discovery surfaces.
+- Workspace, session, stage attempt, progress, and artifact discovery surfaces.
 - Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
-Architecturally, OPL is a Codex-first, stage-led family agent framework: OPL owns activation, typed family queue, durable session/runtime support, wakeup/retry/approval transport, shared discovery, and projection. Domain agents own their own stage semantics, prompts, skills, quality gates, truth reducers, and deliverable authority. This lets OPL support MAS/MAG/RCA without becoming their domain brain.
+Architecturally, OPL is a complete Codex-first, stage-led family agent runtime framework. It may use external providers, but its framework boundary is OPL-owned: activation, typed family queue, durable session/runtime support, stage attempt ledger, wakeup/retry/approval transport, shared discovery, and projection. Domain agents own their own stage semantics, prompts, skills, quality gates, truth reducers, and deliverable authority. This lets OPL support MAS/MAG/RCA and target fully automated delivery of high-value knowledge work without becoming their domain brain.
 
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by Codex and OPL. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
@@ -112,7 +112,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 ### Runtime notes
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
-- OPL's orchestration unit is the domain `stage`; stage descriptors, handoff envelopes, receipts, and projection metadata live at the family framework layer, while stage internals remain domain-owned and Codex-executed.
+- OPL's orchestration unit is the domain `stage`. Large tasks should advance through stages that resemble how a human expert would scope, prepare, execute, review, revise, and close out the work. Stage descriptors, handoff envelopes, receipts, and projection metadata live at the family framework layer, while stage internals remain domain-owned and Codex-executed.
 - OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
 - The OPL family runtime is becoming provider-backed. Temporal is the preferred production substrate candidate for durable stage-attempt workflows, activity retry/timeout, human-gate signals, status queries, and execution history. Hermes-Agent remains a legacy/optional provider or explicit executor/proof lane during migration; it is not the target long-term session/wakeup substrate once the Temporal provider lands.
 - `Codex CLI` remains the default concrete executor unless a route explicitly chooses another executor. A family runtime provider does not become MAS/MAG/RCA domain truth, quality authority, artifact authority, or publication/package gate.

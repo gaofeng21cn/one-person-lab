@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>一个 Codex-first、stage-led 的家族智能体框架，服务严肃研究、基金申请和汇报交付</strong></p>
-<p align="center">从一个可信入口发起专业工作，让 Codex CLI 在领域 stage 内执行，持续查看进展并收集交付物。</p>
+<p align="center"><strong>面向高价值知识工作的完整智能体运行框架</strong></p>
+<p align="center">以 Codex 优先、阶段推进为原则，把大型专业任务拆成可审计的阶段，由 Codex CLI 作为最小执行单元推进到交付。</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL 工作台概览" width="100%" />
@@ -24,7 +24,7 @@
 - **医学研究**：推进证据整理、数据分析、稿件草稿和交付包。
 - **基金申请**：判断申请方向，组织申请书结构，准备修订材料。
 - **汇报和 PPT**：准备讲课、组会、汇报、答辩和项目材料。
-- **长期通用工作**：把讨论、文件阅读、文档编辑、进度和交付物放在同一个地方。
+- **高价值知识工作**：把讨论、文件阅读、文档编辑、进度和交付物放在同一个地方。
 
 ## 最快用起来
 
@@ -32,7 +32,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、OPL family runtime provider、模块、skills、`officecli` 这类 companion CLI 工具和桌面工作台，不额外打开服务窗口。Full OPL readiness 需要 Core ready、Domain modules ready、已配置的 family runtime provider ready 三层都通过。生产目标是 Temporal-backed provider 承接 durable stage attempt；当前 Hermes/local provider 路径只作为迁移期 legacy 实现信号。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、已配置的 OPL 家族运行时提供者、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。完整就绪需要核心环境、领域模块、已配置的家族运行时提供者三层都通过。生产目标是由 Temporal 支撑的运行时提供者承接可恢复的阶段尝试；当前 Hermes/local provider 路径只作为迁移期或历史实现信号。
 
 如果你更习惯从终端安装：
 
@@ -61,9 +61,9 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 普通工作：讨论、阅读、规划和通用任务。
 - 基于目录的工作：需要真实文件目录和持续上下文的任务。
 - 专业产品家族：面向特定领域的专门工作流。
-- Stage-led 执行：OPL 把领域 stage 作为可观察、可编排的工作单元，把 `Codex CLI` 作为 stage 内默认 concrete executor。
+- 阶段推进执行：OPL 把领域阶段作为可观察、可编排的工作单元，把 `Codex CLI` 作为阶段内默认的最小执行单元。
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
-- 环境与模块管理：统一查看 Codex、OPL family runtime provider、模块、skills、GUI 和健康情况。
+- 环境与模块管理：统一查看 Codex、OPL 家族运行时提供者、模块、技能、图形界面和健康情况。
 
 ## 给 Agent 和技术操作者的快速入口
 
@@ -72,7 +72,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、已配置的 OPL family runtime provider、MAS/MAG/RCA、推荐 skills、`officecli` 这类必要 companion CLI 工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
 
 ### 安装后常用命令
 
@@ -89,14 +89,14 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 ### 这个仓库跟踪什么
 
-这个仓库跟踪 OPL 的共享工作台层，不是专业 domain agent 的实现仓。它负责让产品家族保持一致：
+这个仓库跟踪 OPL 的框架层，不是专业 domain agent 的实现仓。它负责让产品家族保持一致：
 
 - 提供发起和恢复专业工作的共同入口。
-- 提供模块安装、skill 同步、service 配置和健康检查面。
-- 提供工作空间、会话、进度与交付物的发现和组织能力。
+- 提供模块安装、技能同步、服务配置和健康检查面。
+- 提供工作空间、会话、阶段尝试、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-架构上，OPL 是 Codex-first、stage-led 的 family agent framework：OPL 持有 activation、typed family queue、durable session/runtime 支撑、wakeup/retry/approval transport、shared discovery 和 projection；各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。这样 OPL 能支撑 MAS/MAG/RCA，但不会变成它们的领域大脑。
+架构上，OPL 是 Codex 优先、阶段推进的完整家族智能体运行框架。它可以使用外部运行时提供者，但框架边界由 OPL 持有：activation、typed family queue、durable session/runtime 支撑、stage attempt ledger、wakeup/retry/approval transport、shared discovery 和 projection。各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。这样 OPL 能支撑 MAS/MAG/RCA，并以高价值知识工作的全自动交付为目标，但不会变成它们的领域大脑。
 
 在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 Codex 与 OPL 消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
@@ -110,8 +110,8 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 ### 运行说明
 
-- 默认前门是 `opl`、`opl exec` 和 `opl resume`。除非显式切换 runtime 或显式激活 domain agent，这几个入口都继承 Codex-default 语义。
-- OPL 的编排单元是 domain `stage`；stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给 Codex 执行。
+- 默认入口是 `opl`、`opl exec` 和 `opl resume`。除非显式切换运行时或显式激活 domain agent，这几个入口都继承 Codex 默认语义。
+- OPL 的编排单元是领域阶段。大型任务应按接近人类专家的方式推进：界定目标、准备材料、执行、审核、修订和收口。stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给 Codex 执行。
 - OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
 - OPL family runtime 正在收敛为 provider-backed。Temporal 是 durable stage-attempt workflow、activity retry/timeout、human-gate signal、status query 与 execution history 的首选生产 substrate 候选。Hermes-Agent 在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；Temporal provider 落地后，它不再是目标长期 session/wakeup substrate。
 - `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。family runtime provider 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。

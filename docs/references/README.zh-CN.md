@@ -59,22 +59,19 @@
 
 ## 三、运行时 / 底座 / 迁移参考
 
-- [Codex-default Host-Agent Runtime Contract](./runtime-substrate/host-agent-runtime-contract.md)
-- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)
-- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)
-- [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md)
-- [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)
-- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
-- [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)
-- [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)
-- [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)
-- [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)
-- [CrewAI 吸收说明](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)
-- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md)
-- [Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md)
-- [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md)
-- [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md)
-- [OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)
+当前 owner surfaces：
+
+- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)：完整 Codex-first、stage-led 智能体运行框架、domain-agent 边界、语言/runtime 取舍和旧面退役的总入口。
+- [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)：provider-backed 生产 substrate 候选的当前支撑计划。
+- [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)：Runtime Manager、provider readiness、native helper 和 state index 边界的当前支撑目标。
+- [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)、[Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md) 和 [CrewAI 吸收说明](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)：只有当正文仍与 roadmap 和核心五件套一致时，才作为 active support 参考。
+
+保留给迁移回顾和 tombstone 语境的 superseded / legacy references：
+
+- [Codex-default Host-Agent Runtime Contract](./runtime-substrate/host-agent-runtime-contract.md)：已被 stage-led framework 与 provider-backed runtime 口径取代。
+- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)：dated migration checklist；当前规划以 framework roadmap 为准。
+- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)、[Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)、[Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md) 和 [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md)：只作为 Hermes-first 或 Hermes 评估背景；Hermes 当前是 `hermes_legacy` / optional provider 或显式 executor/proof lane。
+- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md)、[Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md)、[OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)、[OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md) 和 [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md)：较早的 direct-entry、gateway、online-agent-platform 与迁移计划参考；复用任何 wording 前必须先回到当前 roadmap 判断。
 
 ## 四、Domain admission 参考
 

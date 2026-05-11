@@ -9,6 +9,7 @@
 
 这些设计与计划已经退出当前主线。
 它们只保留给历史审计、迁移回顾和语义追溯使用。
+不要把本目录中的 `frontdoor`、旧 Product API、hosted shell 或 desktop bootstrap wording 复用成当前 OPL 定位。当前 OPL 定位是核心五件套和 runtime-substrate roadmap 描述的完整 Codex-first、stage-led 智能体运行框架。
 
 本目录当前收纳的关键历史文件：
 
@@ -22,5 +23,6 @@
 - `docs/decisions.md`
 - `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`
 - `docs/history/process/plans/2026-04-20-opl-product-api-reset-implementation.md`
+- `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`
 
 如果需要追溯旧稿，请直接从 git history 或本目录下的历史文件进入，不再把它们当作当前实现依据。
