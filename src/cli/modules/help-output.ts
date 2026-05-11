@@ -148,6 +148,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl actions list',
         'opl agents list',
         'opl domain-memory list',
+        'opl domain-memory migration-plan --domain mas',
         'opl stages list',
         'opl modules',
         'opl module install --module medautoscience',
