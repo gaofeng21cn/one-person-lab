@@ -1,7 +1,6 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
-import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
@@ -26,6 +25,7 @@ import {
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
+import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
   buildPublicEngineActionPayload,
@@ -704,17 +704,15 @@ export function buildPublicCommandSpecs(
       group: 'session',
     }),
     'session resume': cloneCommandSpec(commandSpecs.resume, {
-      usage: 'opl session resume <session_id> [--executor codex]',
+      usage: 'opl session resume <session_id>',
       examples: [
         'opl session resume run_7e2a41a19175465f809c0a7f151278ee',
-        'opl session resume run_7e2a41a19175465f809c0a7f151278ee --executor codex',
       ],
-      summary: 'Session-scoped alias for opl resume; Codex remains the default executor.',
+      summary: 'Resume an OPL-managed session through the Codex product-entry runtime.',
       group: 'session',
-      handler: (args) => {
-        const parsed = parseResumeArgs(args, publicCommandSpecs['session resume']);
-        return runProductEntryResume(parsed.sessionId);
-      },
+      handler: (args) => runProductEntryResume(
+        parseResumeArgs(args, publicCommandSpecs['session resume']).sessionId,
+      ),
     }),
     'session logs': cloneCommandSpec(commandSpecs.logs, {
       usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',

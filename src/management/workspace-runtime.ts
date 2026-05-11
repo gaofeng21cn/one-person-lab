@@ -7,10 +7,7 @@ import {
   parseHermesSessionsTable,
   runHermesCommand,
 } from '../hermes.ts';
-import {
-  inspectFamilyRuntimeProviders,
-  resolveFamilyRuntimeProviderKind,
-} from '../family-runtime-providers.ts';
+import { inspectFamilyRuntimeProviders, resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
 import { buildSessionLedger } from '../session-ledger.ts';
 import {
   collectHermesProcessUsage,
@@ -46,7 +43,6 @@ function buildRecentSessions(limit = 5) {
   };
 }
 
-
 export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
   const absolutePath = normalizeWorkspacePath(options.workspacePath);
   const stats = fs.statSync(absolutePath);
@@ -74,8 +70,8 @@ export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
 }
 
 export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
-  const configuredProvider = resolveFamilyRuntimeProviderKind();
-  const familyRuntimeProviders = inspectFamilyRuntimeProviders(configuredProvider);
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const familyRuntimeProviders = inspectFamilyRuntimeProviders(providerKind);
   const hermes = inspectHermesRuntime();
   const statusResult = hermes.binary ? runHermesCommand(['status']) : null;
   const statusOutput = statusResult ? normalizeCommandOutput(statusResult.stdout, statusResult.stderr) : '';
@@ -91,7 +87,7 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
     version: 'g2',
     runtime_status: {
       runtime_substrate: 'provider_backed_family_runtime',
-      configured_provider: configuredProvider,
+      configured_provider: providerKind,
       family_runtime_providers: familyRuntimeProviders,
       hermes_legacy_diagnostics: {
         hermes,

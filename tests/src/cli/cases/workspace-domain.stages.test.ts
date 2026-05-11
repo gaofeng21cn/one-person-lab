@@ -415,15 +415,16 @@ test('standard domain-agent skeleton inspection requires repo-source dirs and ar
   }
 });
 
-test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-aliases-state-'));
+test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA surface', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-canonical-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const masManifest = {
     ...(fixtures.medautoscience as JsonRecord),
-    opl_domain_agent_skeleton_mapping: {
-      surface_kind: 'mas_opl_domain_agent_skeleton_mapping',
-      version: 'mas-opl-domain-agent-skeleton-mapping.v1',
+    standard_domain_agent_skeleton: {
+      surface_kind: 'standard_domain_agent_skeleton',
+      version: 'standard-domain-agent-skeleton.v1',
+      skeleton_id: 'mas.standard_domain_agent_skeleton.v1',
       target_domain_id: 'med-autoscience',
       mapping_mode: 'contract_only_no_physical_artifact_move',
       repo_tracks_real_workspace_artifacts: false,
@@ -449,8 +450,8 @@ test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', 
   };
   const magManifest = {
     ...(fixtures.medautogrant.product_entry_manifest as JsonRecord),
-    domain_agent_skeleton_mapping: {
-      surface_kind: 'standard_domain_agent_skeleton_mapping',
+    standard_domain_agent_skeleton: {
+      surface_kind: 'standard_domain_agent_skeleton',
       skeleton_id: 'mag.standard_domain_agent_skeleton.v1',
       repo_source_boundary: {
         agent: { source_refs: ['src/med_autogrant/domain_entry.py'] },
@@ -469,8 +470,8 @@ test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', 
   };
   const rcaManifest = {
     ...(fixtures.redcube as JsonRecord),
-    domain_agent_skeleton_adapter: {
-      surface_kind: 'domain_agent_skeleton_adapter',
+    standard_domain_agent_skeleton: {
+      surface_kind: 'standard_domain_agent_skeleton',
       adapter_id: 'rca.domain-agent.skeleton.adapter.v1',
       repo_source_boundary: {
         allowed_roots: [
@@ -544,9 +545,9 @@ test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', 
     assert.equal(list.family_agents.summary.aligned_count, 3);
     assert.equal(list.family_agents.summary.missing_count, 0);
     assert.equal(mas.family_agent.skeleton_status, 'aligned');
-    assert.equal(mas.family_agent.skeleton_source_field, 'opl_domain_agent_skeleton_mapping');
-    assert.equal(mag.family_agent.skeleton_source_field, 'domain_agent_skeleton_mapping');
-    assert.equal(rca.family_agent.skeleton_source_field, 'domain_agent_skeleton_adapter');
+    assert.equal(mas.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
+    assert.equal(mag.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
+    assert.equal(rca.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
     assert.deepEqual(rca.family_agent.declared_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
     assert.equal(rca.family_agent.artifact_boundary.artifact_roots_are_locators, true);
   } finally {
@@ -554,14 +555,14 @@ test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', 
   }
 });
 
-test('domain-agent skeleton alias remains drifted without an artifact locator surface', () => {
+test('domain-agent skeleton remains drifted without an artifact locator surface', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-missing-locator-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const manifest = {
     ...(fixtures.redcube as JsonRecord),
-    domain_agent_skeleton_adapter: {
-      surface_kind: 'domain_agent_skeleton_adapter',
+    standard_domain_agent_skeleton: {
+      surface_kind: 'standard_domain_agent_skeleton',
       adapter_id: 'rca.domain-agent.skeleton.adapter.v1',
       repo_source_boundary: {
         allowed_roots: [

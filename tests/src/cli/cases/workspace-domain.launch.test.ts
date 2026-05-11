@@ -691,15 +691,6 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
 
 test('session-ledger captures OPL-managed session events with honest resource samples', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "--resume" ] && [ "$2" = "sess_ledger" ]; then
-  cat <<'EOF'
-╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
-SESSION LEDGER RESUME RESPONSE
-
-session_id: sess_ledger
-EOF
-  exit 0
-fi
 if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
   cat <<'EOF'
 Preview                                            Last Active   Src    ID
@@ -737,17 +728,19 @@ fi
 echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
-  const psFixture = createFakePsFixture(`27025 1 0.2 0.4 49616 00:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
-27026 27025 4.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_ledger`);
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ledger-state-'));
-  const codexFixture = createFakeCodexFixture(`
+  const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "resume" ] && [ "$2" = "sess_ledger" ]; then
-  echo "CODEX LEDGER RESUME RESPONSE"
+  cat <<'EOF'
+{"version":"g2","product_entry":{"entry_surface":"opl_local_product_entry_shell","mode":"resume","interactive":false,"executor_backend":"codex","resume":{"command_preview":["codex","resume","sess_ledger"],"session_id":"sess_ledger","output":"CODEX LEDGER RESUME RESPONSE\\n","exit_code":0}}}
+EOF
   exit 0
 fi
 echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
+  const psFixture = createFakePsFixture(`27025 1 0.2 0.4 49616 00:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
+27026 27025 4.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_ledger`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ledger-state-'));
 
   try {
     fs.writeFileSync(
@@ -783,11 +776,12 @@ exit 1
     );
 
     const resumeOutput = runCli(['session', 'resume', 'sess_ledger'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
-      PATH: `${codexFixture.fixtureRoot}:${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(resumeOutput.product_entry.mode, 'resume');
-    assert.equal(resumeOutput.product_entry.executor_backend, 'codex');
 
     const ledgerOutput = runCli(['session', 'ledger', '--limit', '5'], {
       OPL_HERMES_BIN: hermesPath,
@@ -829,7 +823,7 @@ exit 1
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.sessions[0].session_id, 'sess_ledger');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

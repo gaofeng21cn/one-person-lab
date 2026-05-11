@@ -12,8 +12,6 @@ type CommandSpec = {
 
 type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';
 
-type ProductEntryExecutor = 'codex';
-
 type ProductEntryCliInput = {
   dryRun: boolean;
   goal: string;
@@ -25,7 +23,6 @@ type ProductEntryCliInput = {
   provider?: string;
   workspacePath?: string;
   skills: string[];
-  executor?: ProductEntryExecutor;
 };
 
 const PRODUCT_ENTRY_AGENT_HANDLE_MAP = {
@@ -138,7 +135,6 @@ type TurnkeyInstallCliInput = WebCliInput & {
 
 type ResumeCliInput = {
   sessionId: string;
-  executor: ProductEntryExecutor;
 };
 
 type SessionRuntimeCliInput = {
@@ -207,7 +203,6 @@ export type {
   LogsCliInput,
   ParsedCliInput,
   ProductEntryCliInput,
-  ProductEntryExecutor,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,

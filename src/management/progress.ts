@@ -43,7 +43,15 @@ export async function buildProjectProgressBrief(
     overview,
     manifest,
   });
-  const recentSession = runtimeStatus.recent_sessions.sessions[0] ?? null;
+  const recentLedgerSession = runtimeStatus.managed_session_ledger.sessions[0] ?? null;
+  const recentSession = recentLedgerSession
+    ? {
+        session_id: recentLedgerSession.session_id,
+        last_active: recentLedgerSession.last_recorded_at,
+        source: recentLedgerSession.source_surfaces[0] ?? 'opl_managed_session_ledger',
+        preview: recentLedgerSession.latest_goal_preview ?? '',
+      }
+    : null;
   const projectState =
     manifestEntry === null
       ? 'unbound'

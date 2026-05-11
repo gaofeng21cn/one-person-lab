@@ -11,7 +11,6 @@ import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type {
   ProductEntryCliInput,
   ProductEntryExecInput,
-  ProductEntryExecutor,
   ProductEntryMode,
   PreparedProductEntryAsk,
 } from './product-entry-parts/types.ts';
@@ -30,7 +29,6 @@ import {
 export type {
   ProductEntryCliInput,
   ProductEntryExecInput,
-  ProductEntryExecutor,
   ProductEntryMode,
   PreparedProductEntryAsk,
 };

@@ -27,10 +27,6 @@ export function buildContractsContext(contracts: FrameworkContracts) {
   };
 }
 
-export function resolveProductEntryExecutor(input: ProductEntryCliInput) {
-  return input.executor ?? 'codex';
-}
-
 export function buildPromptHeader(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
@@ -49,7 +45,7 @@ export function buildPromptHeader(
     '',
     'OPL stage-selection contract:',
     `- mode: ${mode}`,
-    `- requested_executor: ${resolveProductEntryExecutor(input)}`,
+    '- executor_backend: codex',
     `- goal: ${input.goal}`,
     `- intent: ${input.intent}`,
     `- target: ${input.target}`,

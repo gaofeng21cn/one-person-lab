@@ -15,8 +15,6 @@ export type ProductEntryMode =
   | 'sessions'
   | 'logs';
 
-export type ProductEntryExecutor = 'codex';
-
 export type ProductEntryCliInput = {
   dryRun: boolean;
   goal: string;
@@ -28,7 +26,6 @@ export type ProductEntryCliInput = {
   provider?: string;
   workspacePath?: string;
   skills: string[];
-  executor?: ProductEntryExecutor;
 };
 
 export type ProductEntryExecInput = {

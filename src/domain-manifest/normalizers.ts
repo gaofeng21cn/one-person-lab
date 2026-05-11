@@ -790,28 +790,18 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
   const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
   const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
-  const skeletonCandidateFields = [
-    'standard_domain_agent_skeleton',
-    'opl_domain_agent_skeleton_mapping',
-    'domain_agent_skeleton_mapping',
-    'domain_agent_skeleton_adapter',
-  ];
+  const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
     skeletonCandidateFields.find((field) => isRecord(manifest[field])) ?? null;
   const providerReadyContract = isRecord(manifest.opl_provider_ready_contract)
     ? manifest.opl_provider_ready_contract
     : null;
   const standardDomainAgentSkeletonSourceField =
-    directSkeletonSourceField
-    ?? (isRecord(providerReadyContract?.domain_agent_skeleton_mapping)
-      ? 'opl_provider_ready_contract.domain_agent_skeleton_mapping'
-      : null);
+    directSkeletonSourceField;
   const rawStandardDomainAgentSkeleton =
     directSkeletonSourceField
       ? manifest[directSkeletonSourceField] as JsonRecord
-      : standardDomainAgentSkeletonSourceField
-        ? providerReadyContract?.domain_agent_skeleton_mapping as JsonRecord
-        : null;
+      : null;
   const standardDomainAgentSkeleton = rawStandardDomainAgentSkeleton
     ? {
         ...rawStandardDomainAgentSkeleton,

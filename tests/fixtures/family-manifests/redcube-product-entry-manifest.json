@@ -440,7 +440,7 @@
     "runtime_owner": "upstream_hermes_agent",
     "domain_owner": "redcube_ai",
     "executor_owner": "codex_cli",
-    "substrate": "external_hermes_kernel",
+    "substrate": "codex_default_executor_with_provider_backed_family_runtime",
     "availability": "ready",
     "health_status": "healthy",
     "status_surface": {
