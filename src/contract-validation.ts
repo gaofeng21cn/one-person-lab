@@ -13,7 +13,6 @@ export type ErrorCode =
   | 'unknown_command'
   | 'hermes_binary_not_found'
   | 'hermes_command_failed'
-  | 'hermes_output_parse_failed'
   | 'codex_command_failed';
 
 export function defaultExitCode(code: ErrorCode): number {
@@ -34,7 +33,6 @@ export function defaultExitCode(code: ErrorCode): number {
     case 'missing_family_stage_control_plane':
     case 'hermes_binary_not_found':
     case 'hermes_command_failed':
-    case 'hermes_output_parse_failed':
     case 'codex_command_failed':
       return 4;
   }

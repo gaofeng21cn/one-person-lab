@@ -238,13 +238,6 @@ export function runHermesCommand(
   return runBinary(hermesBinary, args, options);
 }
 
-export function runHermesResume(
-  sessionId: string,
-  options: HermesCommandOptions = {},
-) {
-  return runHermesCommand(['--resume', sessionId], options);
-}
-
 export function buildHermesSessionsListArgs(
   options: HermesSessionsListOptions = {},
 ) {
@@ -346,32 +339,4 @@ export function buildHermesLogsArgs(
   }
 
   return args;
-}
-
-export function parseHermesQuietChatOutput(output: string) {
-  const sessionMatch = output.match(/session_id:\s*(\S+)/i);
-  const sessionId = sessionMatch?.[1] ?? null;
-  const response = output
-    .split(/\r?\n/)
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim().length > 0)
-    .filter((line) => !/^session_id:\s*\S+/i.test(line))
-    .filter((line) => !/^[╭╰]/.test(line))
-    .join('\n')
-    .trim();
-
-  if (!sessionId) {
-    throw new FrameworkContractError(
-      'hermes_output_parse_failed',
-      'Hermes quiet chat output did not include a session_id line.',
-      {
-        output,
-      },
-    );
-  }
-
-  return {
-    response,
-    sessionId,
-  };
 }
