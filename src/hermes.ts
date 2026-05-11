@@ -348,26 +348,6 @@ export function buildHermesLogsArgs(
   return args;
 }
 
-export function repairHermesGateway(commandOptions: HermesCommandOptions = {}) {
-  const installResult = runHermesCommand(['gateway', 'install'], commandOptions);
-  const statusResult = runHermesCommand(['gateway', 'status'], commandOptions);
-  const gatewayRawOutput = [statusResult.stdout, statusResult.stderr]
-    .filter((chunk) => chunk.trim().length > 0)
-    .join('\n')
-    .trim();
-
-  return {
-    installResult,
-    gatewayService: {
-      loaded:
-        statusResult.exitCode === 0
-        && /Gateway service is loaded/i.test(gatewayRawOutput),
-      raw_output: gatewayRawOutput,
-    },
-    statusResult,
-  };
-}
-
 export function parseHermesQuietChatOutput(output: string) {
   const sessionMatch = output.match(/session_id:\s*(\S+)/i);
   const sessionId = sessionMatch?.[1] ?? null;

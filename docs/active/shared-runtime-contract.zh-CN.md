@@ -17,7 +17,7 @@
 
 - `runtime profile`
 - `session substrate`
-- `gateway runtime status`
+- `provider bridge status`
 - `memory provider hook`
 - `delivery / cron`
 - `approval / interrupt / resume`
@@ -58,8 +58,8 @@
    - `resume_pointer`
    - `interrupt_reason`
 
-3. `gateway runtime status`
-   - `gateway_state`
+3. `provider bridge status`
+   - `bridge_state`
    - `active_runs`
    - `last_heartbeat`
    - `restart_requested`

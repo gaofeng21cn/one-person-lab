@@ -1,7 +1,7 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateFrameworkContracts } from '../../contracts.ts';
 import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
 import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-envelope.ts';
-import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
+import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
@@ -592,12 +592,6 @@ resume: {
         const parsed = parseSessionLedgerArgs(args, commandSpecs['session ledger']);
         return buildSessionLedger(parsed.limit);
       },
-    },
-    'runtime repair-gateway': {
-      usage: 'opl runtime repair-gateway',
-      summary: 'Repair the Hermes gateway only for an explicitly selected hermes_legacy provider.',
-      examples: ['opl runtime repair-gateway'],
-      handler: () => runProductEntryRepairHermesGateway(),
     },
     'domain select-entry': {
       usage: 'opl domain select-entry --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',

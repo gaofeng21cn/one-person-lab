@@ -46,6 +46,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   ['front', 'desk'].join(''),
   'ask',
   'chat',
+  'runtime',
   'shell',
 ]);
 

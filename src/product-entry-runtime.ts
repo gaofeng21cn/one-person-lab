@@ -13,7 +13,6 @@ import {
   inspectHermesRuntime,
   isInteractiveShell,
   parseHermesSessionsTable,
-  repairHermesGateway,
   runHermesLogs,
   runHermesResume,
   runHermesSessionsList,
@@ -225,45 +224,6 @@ export function runProductEntryLogs(options: HermesLogsOptions = {}) {
       session_id: options.sessionId ?? null,
       command_preview: buildHermesCliPreview(args),
       raw_output: normalizeHermesOutput(result.stdout, result.stderr),
-    },
-  };
-}
-
-export function runProductEntryRepairHermesGateway() {
-  const repaired = repairHermesGateway();
-
-  assertHermesSuccess(
-    repaired.installResult.exitCode,
-    'Hermes gateway install failed inside OPL Product Entry.',
-    {
-      args: buildHermesCliPreview(['gateway', 'install']),
-      stdout: repaired.installResult.stdout,
-      stderr: repaired.installResult.stderr,
-    },
-  );
-
-  assertHermesSuccess(
-    repaired.statusResult.exitCode,
-    'Hermes gateway status failed after OPL Product Entry repair.',
-    {
-      args: buildHermesCliPreview(['gateway', 'status']),
-      stdout: repaired.statusResult.stdout,
-      stderr: repaired.statusResult.stderr,
-    },
-  );
-
-  return {
-    version: 'g2',
-    product_entry: {
-      entry_surface: 'opl_local_product_entry_shell',
-      mode: 'repair_hermes_gateway',
-      install_command_preview: buildHermesCliPreview(['gateway', 'install']),
-      status_command_preview: buildHermesCliPreview(['gateway', 'status']),
-      install_output: normalizeHermesOutput(
-        repaired.installResult.stdout,
-        repaired.installResult.stderr,
-      ),
-      gateway_service: repaired.gatewayService,
     },
   };
 }

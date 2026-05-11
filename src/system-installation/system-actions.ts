@@ -5,8 +5,8 @@ import {
   writeOplDeveloperSupervisorConfig,
   writeOplUpdateChannel,
 } from '../system-preferences.ts';
-import { runProductEntryRepairHermesGateway } from '../product-entry-runtime.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
+import { ensureFamilyRuntimeProvider } from '../family-runtime-providers.ts';
 import type { FrameworkContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
@@ -258,15 +258,19 @@ export async function runOplSystemAction(
   input: OplSystemActionInput = {},
 ) {
   if (action === 'repair') {
-    const repairPayload = runProductEntryRepairHermesGateway();
+    const repairPayload = ensureFamilyRuntimeProvider('hermes_legacy', 'repair');
     return {
       version: 'g2',
       system_action: {
         action,
-        status: 'completed',
+        status: repairPayload.status === 'ready' ? 'completed' : 'manual_required',
         update_channel: readOplUpdateChannel().channel,
         workspace_root: readOplWorkspaceRoot(),
-        details: repairPayload.product_entry,
+        details: {
+          surface_kind: 'family_runtime_provider_repair',
+          command_preview: ['opl', 'family-runtime', 'repair', '--provider', 'hermes_legacy'],
+          provider: repairPayload,
+        },
       },
     };
   }

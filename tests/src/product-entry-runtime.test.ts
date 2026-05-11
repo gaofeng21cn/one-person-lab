@@ -10,7 +10,6 @@ import { buildProductEntrySessionPrompt } from '../../src/product-entry-parts/bu
 import {
   buildProductEntryDoctor,
   runProductEntryLogs,
-  runProductEntryRepairHermesGateway,
   runProductEntrySessions,
 } from '../../src/product-entry-runtime.ts';
 
@@ -161,10 +160,6 @@ exit 1
       assert.equal(logs.product_entry.mode, 'logs');
       assert.match(logs.product_entry.raw_output, /gateway ready/);
 
-      const repair = runProductEntryRepairHermesGateway();
-      assert.equal(repair.product_entry.mode, 'repair_hermes_gateway');
-      assert.match(repair.product_entry.install_output, /Service definition updated/);
-      assert.equal(repair.product_entry.gateway_service.loaded, true);
     });
   } finally {
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
