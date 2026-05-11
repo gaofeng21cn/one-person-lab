@@ -49,10 +49,14 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
 - `family-stage-control-plane.schema.json`
   - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, and authority boundary
+- `family-domain-memory-ref.schema.json`
+  - locator-only reference for domain-owned memory packs, including memory family, pack ref, stage applicability, retrieval/writeback/receipt/recall refs, freshness, and forbidden OPL authority
+- `family-domain-memory-writeback.schema.json`
+  - proposal / receipt shape for stage closeout writeback into a domain memory router; OPL carries proposal and receipt refs only, while the domain router accepts or rejects the write
 - `family-human-gate.schema.json`
   - shared human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - shared product-entry discovery surface that can point at graphs, action catalogs, gates, resume contracts, runtime continuity companions, repo-owned runtime control projections, and family persistence / lifecycle / owner-route refs
+  - shared product-entry discovery surface that can point at graphs, action catalogs, domain memory descriptors, gates, resume contracts, runtime continuity companions, repo-owned runtime control projections, and family persistence / lifecycle / owner-route refs
 
 ### Control-plane-oriented
 
@@ -102,7 +106,7 @@ The shared control surfaces are:
 - `family_owner_route`
   - records route epoch, source fingerprint, next owner, allowed actions, idempotency key, and handoff / projection refs
 
-`family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`.
+`family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`. Likewise, `domain_memory_descriptor` exposes locator / freshness / receipt refs only; it does not move memory content or writeback authority into `OPL`.
 
 ## Runtime Supervision Freeze
 
@@ -134,9 +138,29 @@ OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, p
 
 `family-stage-control-plane.schema.json` is the family stage descriptor companion raised from the MAS Stage-Led Autonomy experience. It is intentionally a descriptor and projection surface, not a workflow engine.
 
-The contract records stage goal, domain-owned stage refs, input/output refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, review verdicts, quality authority, and artifacts.
+The contract records stage goal, domain-owned stage refs, input/output refs, knowledge refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, memory content, review verdicts, quality authority, and artifacts.
 
 For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
+
+## Domain Memory Ref / Writeback Freeze
+
+`family-domain-memory-ref.schema.json` and `family-domain-memory-writeback.schema.json` add the memory-reference layer needed by the stage-led agent framework. They describe only domain-owned memory pack locators, freshness, stage targeting, proposal refs, and router receipt refs.
+
+`OPL` may:
+
+- discover and index domain memory refs;
+- carry `knowledge_refs` into stage-attempt packets;
+- project consumed refs, writeback proposal refs, and accepted/rejected receipt refs in operator workbenches;
+- check freshness and forbidden authority.
+
+`OPL` must not:
+
+- store or rewrite domain memory body text;
+- promote memory cards into evidence, review, grant, visual, or artifact truth;
+- accept or reject memory writebacks;
+- infer publication, fundability, visual-quality, or artifact-readiness verdicts from memory refs.
+
+MAS `publication_route_memory`, MAG grant strategy memory, and RCA visual pattern memory should expose locator/receipt refs through their domain manifests. Memory content, route judgment, quality gates, and artifact authority remain with the domain repository.
 
 ## What This Directory Does Not Freeze
 
@@ -174,6 +198,8 @@ This directory does not:
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
 - [`family-stage-control-plane.schema.json`](./family-stage-control-plane.schema.json)
+- [`family-domain-memory-ref.schema.json`](./family-domain-memory-ref.schema.json)
+- [`family-domain-memory-writeback.schema.json`](./family-domain-memory-writeback.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
 - [`family-runtime-supervision.schema.json`](./family-runtime-supervision.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)

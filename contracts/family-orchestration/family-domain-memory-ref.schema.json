@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-domain-memory-ref.schema.json",
+  "title": "OPL Family Domain Memory Reference",
+  "description": "Locator-only contract for domain-owned memory packs. OPL may discover, index, inject refs into stage attempts, and project freshness, but never owns memory content, domain truth, quality verdicts, or artifacts.",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "version",
+    "memory_ref_id",
+    "target_domain_id",
+    "owner",
+    "memory_family",
+    "memory_pack_ref",
+    "stage_applicability",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_domain_memory_ref"
+    },
+    "version": {
+      "const": "family-domain-memory-ref.v1"
+    },
+    "memory_ref_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "memory_family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "memory_pack_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "stage_applicability": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "retrieval_contract_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "writeback_contract_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "receipt_contract_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "recall_projection_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "provenance_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "draft",
+        "deprecated",
+        "missing",
+        "stale"
+      ]
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "opl_role",
+        "domain_memory_owner",
+        "forbidden_opl_authority"
+      ],
+      "properties": {
+        "opl_role": {
+          "enum": [
+            "locator_projection_owner",
+            "discovery_index_projection_only",
+            "stage_ref_injection_only"
+          ]
+        },
+        "domain_memory_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbidden_opl_authority": {
+          "type": "array",
+          "contains": {
+            "const": "memory_store_owner"
+          },
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_write_artifacts": {
+          "const": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "required": [
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "surface_kind": "family_domain_memory_ref",
+      "version": "family-domain-memory-ref.v1",
+      "memory_ref_id": "mas_publication_route_memory",
+      "target_domain_id": "med-autoscience",
+      "owner": "MedAutoScience",
+      "memory_family": "publication_route_memory",
+      "memory_pack_ref": {
+        "ref_kind": "repo_policy_and_workspace_locator",
+        "ref": "docs/policies/study-workflow/publication_route_memory_policy.md",
+        "role": "memory_policy_seed"
+      },
+      "stage_applicability": [
+        "scout",
+        "idea",
+        "decision",
+        "analysis-campaign",
+        "review"
+      ],
+      "retrieval_contract_ref": {
+        "ref_kind": "surface_kind",
+        "ref": "stage_knowledge_packet"
+      },
+      "writeback_contract_ref": {
+        "ref_kind": "surface_kind",
+        "ref": "stage_memory_closeout_packet"
+      },
+      "receipt_contract_ref": {
+        "ref_kind": "surface_kind",
+        "ref": "memory_write_router_receipt"
+      },
+      "recall_projection_ref": {
+        "ref_kind": "surface_kind",
+        "ref": "stage_recall_index"
+      },
+      "provenance_refs": [
+        {
+          "ref_kind": "human_doc",
+          "ref": "docs/policies/study-workflow/publication_route_memory_policy.md",
+          "role": "policy"
+        }
+      ],
+      "freshness": {
+        "status": "policy_seed",
+        "refresh_policy": "domain_manifest_rebuild_required_before_stage_attempt"
+      },
+      "status": "active",
+      "authority_boundary": {
+        "opl_role": "locator_projection_owner",
+        "domain_memory_owner": "MedAutoScience",
+        "forbidden_opl_authority": [
+          "memory_store_owner",
+          "domain_truth_owner",
+          "quality_verdict_owner",
+          "artifact_authority"
+        ],
+        "can_write_domain_truth": false,
+        "can_authorize_quality_verdict": false,
+        "can_write_artifacts": false
+      }
+    }
+  ]
+}
