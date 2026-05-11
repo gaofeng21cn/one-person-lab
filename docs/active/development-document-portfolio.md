@@ -12,7 +12,7 @@ OPL development documents should no longer be read as a queue where every old pl
 1. Build OPL as the complete Codex-first, stage-led agent framework.
 2. Migrate MAS/MAG/RCA into that framework as OPL-admitted domain agents while preserving direct skill path equivalence.
 3. Partition old and new functionality by content: lift framework-generic capability into OPL, keep domain truth inside each domain repo, and downgrade historical diagnostics or compatibility material.
-4. Retire old Hermes-first, Gateway/frontdoor, direct-entry, local-manager, and MDS-default routes after replacement evidence exists.
+4. Retire old Hermes-first, Gateway-era, direct-entry, local-manager, and MDS-default routes after replacement evidence exists.
 5. Use the App workbench and real domain soak to validate the target shape after migration.
 
 The rule is: keep useful content, merge it into the current owner surface, and stop treating old documents as active whole-document backlogs. Old routes remain provenance, migration references, or tombstones.
@@ -26,7 +26,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | `3` | `feature_partition_and_retirement` | This doc, [Documentation Portfolio](../docs_portfolio_consolidation.md), runtime-substrate index, domain owner docs | Classify old development content as retain, merge, lift, degrade, retire, or archive. | Old default dependencies, compatibility aliases, obsolete managers, and duplicate UI entries have replacement evidence and owner decisions. |
 | `4` | `opl_app_runtime_workbench` | [OPL Runtime Manager Target](../references/runtime-substrate/opl-runtime-manager-target.md), current-support / App references | Productize provider readiness, stage attempts, domain status, human gates, receipts, artifact refs, and source refs. | The App/workbench shows framework/provider state plus domain owner receipts without becoming a second truth source. |
 | `5` | `domain_soak_and_acceptance` | OPL roadmap plus MAS/MAG/RCA status/program/runtime owner docs | Run real or controlled domain soak on the migrated target shape. | MAS/MAG/RCA produce real progress delta, quality gate movement, human gate, stop-loss, or typed blocker. |
-| `6` | `new_domain_admission` | [Domain-Agent Admission Contract](./opl-domain-onboarding-contract.md), domain-admission references | Admit new domains only through the standard skeleton/descriptor/locator/authority boundary. | No new domain copies the old Gateway/frontdoor/direct-entry route. |
+| `6` | `new_domain_admission` | [Domain-Agent Admission Contract](./opl-domain-onboarding-contract.md), domain-admission references | Admit new domains only through the standard skeleton/descriptor/locator/authority boundary. | No new domain copies the old Gateway-era direct-entry route. |
 
 ## Portfolio Map
 
@@ -43,7 +43,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | `docs/public/*` | Public product-direction support | Keep public support. User-facing docs are not implementation backlogs. |
 | `docs/specs/2026-04-20-*`, `docs/specs/2026-04-21-*` | Retained path specs/references | Keep for path stability; current conclusions are absorbed into the core five, current development lines, and the framework roadmap. |
 | Runtime-substrate current docs | Provider, Runtime Manager, and framework references | Keep support references. Current machine behavior must still come from contracts, source, CLI/API, and runtime evidence. |
-| Runtime-substrate legacy docs | Hermes-first, direct-entry, Gateway/frontdoor, and online-platform migration material | Keep as legacy/provenance unless moved after link review. Do not expand as active planning. |
+| Runtime-substrate history docs | Hermes-first, direct-entry, Gateway-era, host-agent-only, managed-runtime checklist, MAS cutover, and online-platform migration material | Absorbed content lives in active owners; whole historical documents live in `docs/history/runtime-substrate/`. Do not expand them as active planning. |
 | `docs/references/current-support/*` | GUI, install, release, test, quality support | Keep current support, subordinate to source/contracts/CLI/API truth. |
 | `docs/references/operating-governance/*` | Governance, quality, operator, memory, audit, publish support | Keep governance support; legacy-derived gateway ids must be described as compatibility/audit context. |
 | `docs/references/convergence-governance/*` | Family convergence and external learning references | Keep support references; promote durable rules into active owner docs. |
@@ -57,13 +57,13 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | --- | --- |
 | Stage attempt, workflow/activity/signal/query, typed queue, wakeup, retry/dead-letter, human gate, provider receipt | OPL framework / Runtime Manager / Temporal provider docs / machine contracts |
 | Domain skeleton, stage descriptor, sidecar export/dispatch, artifact locator, projection builder, authority refs | OPL domain admission plus domain repo owner surfaces |
-| Product-entry taxonomy, handoff envelope, `frontdoor_surface` / `operator_loop_surface` split | Active contracts, public docs, domain admission; old direct-entry boards remain provenance |
+| Product-entry taxonomy, handoff envelope, entry surface / operator loop split | Active contracts, public docs, domain admission; old direct-entry boards remain provenance |
 | MAS paper truth, publication gate, evidence/review ledger, manuscript/package authority | MAS |
 | MAG grant strategy, fundability / proposal quality, specific aims authority | MAG |
 | RCA visual direction, visual artifacts, review/export gates | RCA |
 | MDS / DeepScientist backend facts | MAS provenance / parity oracle / explicit archive import, never OPL default runtime |
 | Hermes-first online substrate or Hermes Kernel as default product runtime | Legacy/optional/proof/evaluation reference; current default is provider-backed framework |
-| Gateway/frontdoor/federation/routed-action routes | History / compatibility / tombstone |
+| Gateway-era federation/routed-action routes | History / compatibility / tombstone |
 | Dated boards, activation packages, one-off closeouts | `docs/history/process/**` or corresponding references/history, with useful conclusions promoted to current owner docs |
 | External framework learning | References / convergence-governance; absorb vocabulary, contract patterns, provenance, and gate methods only |
 
@@ -81,10 +81,11 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | Old plan | Current handling |
 | --- | --- |
 | Hermes-first product-entry / kernel integration | No longer the target runtime mainline. Retained as historical decision and optional/proof background. |
-| Family lightweight direct-entry rollout board | No longer a whole active backlog. Retain entry taxonomy, handoff envelope, and frontdoor/operator split experience. |
+| Family lightweight direct-entry rollout board | No longer a whole active backlog. Retain entry taxonomy, handoff envelope, and entry/operator boundary lessons. |
 | OPL vertical online-agent platform roadmap | No longer the master roadmap. Useful content is absorbed by the stage-led framework and public roadmap. |
 | MAS top-level cutover board | No longer the current MAS migration order. MAS migration now follows OPL framework-first plus the MAS program portfolio. |
-| Host-agent runtime contract | No longer an independent target-runtime definition. Useful Codex-default wording is absorbed by runtime boundary and framework roadmap docs. |
+| Host-agent runtime contract | No longer an independent target-runtime definition. Useful Codex-default wording is absorbed by runtime boundary, domain onboarding, and framework roadmap docs; the whole document lives in `docs/history/runtime-substrate/`. |
+| Managed runtime migration checklist | No longer the active migration queue. R1-R8 readiness dimensions were absorbed into the runtime boundary; per-repository progress judgments remain historical snapshots. |
 | Product API / ACP native specs | Not implementation queues; retained as path-stable specs/references. |
 
 ## Verification

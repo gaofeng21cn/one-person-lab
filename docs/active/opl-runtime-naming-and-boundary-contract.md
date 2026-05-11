@@ -202,6 +202,23 @@ If the ecosystem later adopts a `Hermes`-backed runtime substrate, the accurate 
 - it is not the whole `UHS`
 - it does not replace the `OPL` framework, any public domain-agent entry, or any domain harness/controller
 
+### Managed Runtime Readiness Dimensions
+
+The useful content from the old `managed-runtime-migration-readiness-checklist` has been absorbed here. Future managed-runtime or runtime-provider migration reviews should use these eight dimensions instead of executing that old checklist as a whole document:
+
+| Dimension | Question | Current owner |
+| --- | --- | --- |
+| `R1 / naming and ontology` | Are federation, domain, execution plane, and deployment shape separated? | This document and the core five |
+| `R2 / formal entry` | Are `CLI`, `MCP`, `controller`, app skill, and product entry layered? | Domain onboarding contract and domain owner docs |
+| `R3 / execution handle` | Are run, quest, topic, draft, workspace, and program handles stable? | Domain owner docs and machine contracts |
+| `R4 / durable surface` | Are audit, review, delivery, status, and report surfaces durable? | Domain owner docs / artifacts / contracts |
+| `R5 / hosted-friendly contract extraction` | Can local/runtime surfaces be exported as a future-host-compatible contract bundle? | OPL framework plus domain repo |
+| `R6 / runtime protocol narrowness` | Is the execution plane reduced to a stable, auditable, verifiable protocol? | OPL Runtime Manager / provider contracts |
+| `R7 / external dependency clearance` | Are external runtime, workspace, and human-gate dependencies cleared before cutover? | Domain repo owner |
+| `R8 / platform-owned lifecycle` | Are session, watch, resume, replay, and sandbox lifecycle owned by the platform/provider? | Provider-backed framework / future managed runtime |
+
+The current migration order is only a content principle: freeze the OPL framework and provider-backed stage runtime first, migrate domain skeletons / handoff / receipts next, clear external dependencies and legacy residue after that, and validate the result with real domain soak. The per-repository progress judgments in the old checklist are dated snapshots, not current backlog.
+
 ### Main benefits of the migration
 
 If a future `managed runtime` becomes real, the main benefits should come from:
@@ -312,5 +329,5 @@ Describe it as:
 - [OPL Operating Model](../public/operating-model.md)
 - [Unified Harness Engineering Substrate](../public/unified-harness-engineering-substrate.md)
 - [Shared Foundation](./shared-foundation.md)
-- [Codex-default Host-Agent Runtime Contract](../references/runtime-substrate/host-agent-runtime-contract.md)
+- [Codex-default Host-Agent Runtime Contract historical draft](../history/runtime-substrate/host-agent-runtime-contract.md)
 - [Ecosystem Status Matrix](../references/convergence-governance/ecosystem-status-matrix.md)

@@ -70,10 +70,9 @@
 
 保留给迁移回顾和 tombstone 语境的 superseded / legacy references。复用任何内容前，先按 [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md) 判断内容块当前归属：
 
-- [Codex-default Host-Agent Runtime Contract](./runtime-substrate/host-agent-runtime-contract.md)：已被 stage-led framework 与 provider-backed runtime 口径取代。
-- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)：dated migration checklist；当前规划以 framework roadmap 为准。
-- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)、[Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)、[Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md) 和 [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md)：只作为 Hermes-first 或 Hermes 评估背景；Hermes 当前是 `hermes_legacy` / optional provider 或显式 executor/proof lane。
-- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md)、[Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md)、[OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)、[OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md) 和 [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md)：较早的 direct-entry、gateway、online-agent-platform 与迁移计划参考；复用任何 wording 前必须先回到当前 roadmap 判断。
+- [Runtime Substrate 历史归档](../history/runtime-substrate/README.zh-CN.md)：已吸收的早期 direct-entry、Hermes-first、host-agent-only、managed-runtime checklist、vertical online-agent platform 与 MAS cutover 整文档。
+- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)、[Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md) 和 [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)：只作为 Hermes 评估背景；Hermes 当前是 `hermes_legacy` / optional provider 或显式 executor/proof lane。
+- [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md)：较早的 managed runtime 三层参考；有效内容以 runtime 命名与边界合同为准。
 
 ## 四、Domain admission 参考
 
@@ -115,6 +114,7 @@
 ## 七、退役兼容与 frontdoor 参考
 
 - [Gateway / federation 兼容语料归档](../history/compatibility/gateway-federation/README.zh-CN.md)
+- [Runtime Substrate 历史归档](../history/runtime-substrate/README.zh-CN.md)
 - [Frontdoor 历史资料索引](../history/frontdoor-legacy/README.md)
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md)
 - [过程历史归档](../history/process/README.zh-CN.md)

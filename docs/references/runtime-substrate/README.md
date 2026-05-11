@@ -16,6 +16,8 @@ Current owner surfaces:
 
 Legacy references in this directory may still mention gateway-first, frontdoor, federation, host-agent, Hermes-first, or older direct-entry plans. Those references are retained for migration review and provenance. They must not override the roadmap, the core five docs, or current machine-readable contracts.
 
+After the 2026-05-11 content-level consolidation, early direct-entry, Hermes-first, host-agent-only, managed-runtime checklist, vertical online-agent platform, and MAS cutover whole documents were moved to [Runtime substrate history archive](../../history/runtime-substrate/README.md). This directory now keeps only current runtime/provider/executor support references and migration/evaluation references that still need to sit near the active roadmap.
+
 Before reusing content from this directory:
 
 1. Classify the paragraph by current content role.
