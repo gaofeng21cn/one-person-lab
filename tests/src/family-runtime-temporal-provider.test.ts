@@ -17,7 +17,10 @@ import {
   StageAttemptWorkflow,
   userInstructionSignal,
 } from '../../src/family-runtime-temporal-workflows.ts';
-import { buildTemporalWorkerReadiness } from '../../src/family-runtime-temporal-provider.ts';
+import {
+  buildTemporalWorkerReadiness,
+  resolveTemporalWorkerReadinessStatus,
+} from '../../src/family-runtime-temporal-provider.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -135,6 +138,29 @@ test('Temporal worker readiness helper reports live configured state without sta
   assert.equal(readiness.live_probe_started_worker, false);
   assert.equal(readiness.lifecycle.worker_helper, 'runTemporalStageAttemptWorkerUntil');
   assert.deepEqual(readiness.blockers, []);
+});
+
+test('Temporal worker lifecycle status distinguishes configured, server, and worker readiness gates', () => {
+  assert.equal(resolveTemporalWorkerReadinessStatus({
+    address: null,
+    serverReachable: false,
+    workerReady: false,
+  }), 'not_configured');
+  assert.equal(resolveTemporalWorkerReadinessStatus({
+    address: '127.0.0.1:7233',
+    serverReachable: false,
+    workerReady: false,
+  }), 'server_unreachable');
+  assert.equal(resolveTemporalWorkerReadinessStatus({
+    address: '127.0.0.1:7233',
+    serverReachable: true,
+    workerReady: false,
+  }), 'worker_not_ready');
+  assert.equal(resolveTemporalWorkerReadinessStatus({
+    address: '127.0.0.1:7233',
+    serverReachable: true,
+    workerReady: true,
+  }), 'ready');
 });
 
 test('Temporal StageAttemptWorkflow blocks provider completion when typed closeout is missing', async () => {

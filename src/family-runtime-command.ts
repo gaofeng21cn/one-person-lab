@@ -27,6 +27,11 @@ export type FamilyRuntimeCommandInput =
     mode: 'status' | 'doctor' | 'install' | 'repair';
     providerKind?: FamilyRuntimeProviderKind;
   }
+  | {
+    mode: 'worker_start' | 'worker_status' | 'worker_stop';
+    providerKind?: FamilyRuntimeProviderKind;
+    detach?: boolean;
+  }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
@@ -172,6 +177,40 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   }
   if (mode === 'doctor' || mode === 'install' || mode === 'repair') {
     return parseProviderOnlyArgs(mode, rest);
+  }
+  if (mode === 'worker') {
+    const action = rest[0];
+    if (action !== 'start' && action !== 'status' && action !== 'stop') {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime worker requires start, status, or stop.', {
+        usage: 'opl family-runtime worker start|status|stop [--provider temporal] [--foreground]',
+      });
+    }
+    let providerKind: FamilyRuntimeProviderKind | undefined;
+    let detach = true;
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--provider' && value) {
+        providerKind = assertProviderKind(value);
+        index += 1;
+      } else if (token === '--foreground') {
+        detach = false;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime worker ${action} option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime worker start|status|stop [--provider temporal] [--foreground]',
+        });
+      }
+    }
+    return {
+      mode: action === 'start'
+        ? 'worker_start'
+        : action === 'status'
+          ? 'worker_status'
+          : 'worker_stop',
+      providerKind,
+      detach,
+    };
   }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };
@@ -564,6 +603,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|worker start|worker status|worker stop|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }
