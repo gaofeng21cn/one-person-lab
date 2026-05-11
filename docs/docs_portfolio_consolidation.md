@@ -52,6 +52,88 @@ The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governan
 | `docs/history/process/` | Completed plans, superseded specs, and process drafts | Provenance only; not current implementation contract. |
 | `docs/history/omx/` | Retired OMX-era material | Tombstone only. |
 
+## Content-Level State Review 2026-05-11
+
+This review treats document bodies as the source for lifecycle placement. The
+current OPL owner split is:
+
+- `OPL`: Codex-first, stage-led framework owner for session/runtime,
+  activation, discovery, projection, typed queue, stage attempts, receipts,
+  recovery, shared contracts, and shared indexes.
+- `Codex CLI`: default minimum execution unit inside a stage unless an
+  explicit route selects another executor.
+- `MAS`, `MAG`, `RCA`: active domain-agent repos. They own domain truth,
+  quality verdicts, runtime details, artifact/package authority, and direct
+  app skill paths.
+- `MDS`: MAS-declared archive, backend-audit, source-provenance,
+  historical-fixture, explicit archive-import, upstream-intake, and parity
+  oracle reference only.
+- `Hermes-Agent`: external upstream runtime/project. In OPL prose it may only
+  appear as `hermes_legacy`, optional provider, explicit executor/proof lane,
+  migration context, or historical material unless a current core doc and
+  machine-readable contract promote a narrower role.
+- `Temporal`: production provider candidate for durable stage-attempt
+  substrate. Current docs must keep target state and landed state separate.
+
+### Current Owner Surfaces By Partition
+
+| Partition | Current owner surface | Current role | Absorbed / historical handling |
+| --- | --- | --- | --- |
+| Root README | `README.md`, `README.zh-CN.md` | User install/start entry and product-family overview | Technical details should point to docs index and core five; stale public links must be corrected immediately. |
+| Core five | `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md` | Active truth for role, boundary, state, hard constraints, and decisions | Reference docs stay subordinate to these files. |
+| Docs governance | `docs/docs_portfolio_consolidation.md` | Current documentation lifecycle owner | New long-lived docs must be admitted through this lifecycle map. |
+| `docs/active/` | `README*`, public surface index, domain onboarding, runtime naming, shared foundation/runtime/domain contracts | Active human-readable support for current runtime, activation, onboarding, and shared-boundary language | Gateway/federation/frontdoor material is referenced only as history or migration background. |
+| `docs/public/` | `README*`, roadmap, task map, operating model, UHS narrative | Public product-direction support after the repository home | UHS remains a support narrative; implementation authority lives in active contracts, the core five, and machine-readable contracts. |
+| `docs/specs/` | `README*` plus retained path-stable design docs | Path-stable spec/reference shelf for current or recently superseded runtime/product-boundary designs | The two April 2026 specs are retained in place for link stability; their active owner is now the core five plus the stage-led framework roadmap. |
+| `docs/references/current-support/` | `README*`, GUI/WebUI/install/release/skill/test support references | Current operational support references | Support commands and deployment notes must stay subordinate to CLI/API/contracts/source truth. |
+| `docs/references/runtime-substrate/` | `README*`, stage-led framework roadmap, Temporal provider plan, Runtime Manager target | Runtime/provider/executor support references | Older direct-entry, Hermes-first, host-agent, gateway, and online-platform plans are migration provenance unless explicitly restated by the roadmap and core five. |
+| `docs/references/operating-governance/` | `README*`, domain memory governance, quality/operator/incident references, surface matrices | Governance and reviewability support | Gateway-derived surface maps remain derived references over historical compatibility surfaces; current topology lives in the core five and active runtime docs. |
+| `docs/references/convergence-governance/` | Family docs lifecycle rollout, convergence lessons, intake templates, external-learning boards | Cross-repo governance and convergence support | Dated rollout boards stay support references; final current truth must be copied into core owner docs or active reference indexes. |
+| `docs/references/domain-admission/` | Candidate backlog and admission/phase records | Candidate-domain support and dated admission records | Candidate workstreams remain semantic signals until admission evidence lands. |
+| `docs/references/examples-corpora/` | Example corpora and operating records | Examples and evidence corpora | Gateway/routed examples are contract walkthroughs and evidence examples. |
+| `docs/history/` | `README*` and child tombstone indexes | Retired, completed, or superseded material | Historical command snippets and acceptance checklists remain provenance. |
+
+### Key Document Disposition Table
+
+| Document or group | Disposition | Current owner / next hop | Reason |
+| --- | --- | --- | --- |
+| `docs/project.md`, `docs/status.md`, `docs/architecture.md` | Keep as active truth | Core five | They already state Codex-first, stage-led OPL framework boundaries and domain-agent ownership. |
+| `docs/active/opl-public-surface-index*` | Keep active support | `docs/active/README*` and core five | It correctly tombstones gateway/federation/routed-action prose and points to current runtime/activation surfaces. |
+| `docs/active/opl-domain-onboarding-contract*` | Keep active support | Domain admission contract plus machine-readable OPL framework contracts | Admission remains active, but historical execution-model companions must stay marked as history. |
+| `docs/active/shared-*` and `opl-runtime-naming-and-boundary-contract*` | Keep active support | Shared-boundary owner docs | These define shared language as human-readable support. |
+| `docs/public/roadmap*`, `task-map*`, `operating-model*` | Keep public support | Public docs index | They describe product direction and task semantics after the install/start entry. |
+| `docs/public/unified-harness-engineering-substrate*` | Keep as support narrative | Shared runtime/domain contract docs | It is useful umbrella language, but implementation truth lives in active contracts, core five, and machine-readable contracts. |
+| `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` | Retain in place as `support_reference_retained_path` | Core five plus stage-led framework roadmap | Its resource model was absorbed; its Product API / local 8787 / frontdoor-era wording is historical design context. |
+| `docs/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md` | Retain in place as `support_reference_retained_path` | Core five plus stage-led framework roadmap | Its session-runtime-first pivot was absorbed; ACP/Product API wording is projection history. |
+| `docs/references/current-support/*` | Keep as current support | Current-support index | These docs explain GUI shell, Docker/WebUI, install, release, skill, quality, and test support; none owns runtime truth. |
+| `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` | Keep as master active support | Runtime-substrate index | It is the current framework roadmap and legacy-surface retirement entry. |
+| `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md` | Keep as active support plan | Stage-led roadmap | It is the Temporal provider technical lane; production Temporal autonomy requires soak evidence. |
+| Hermes/direct-entry/runtime-substrate legacy docs | Keep as superseded/migration references | Runtime-substrate index | They preserve evaluation and migration context only. |
+| `docs/references/operating-governance/family-domain-memory-governance.zh-CN.md` | Keep active support | Operating-governance index | It governs whether domain experience belongs in memory, contracts, or deferred framework work. |
+| `docs/references/operating-governance/opl-surface-{authority,lifecycle,review}-matrix*` | Keep as legacy-derived support references | Operating-governance index plus current framework contracts | Their machine artifacts still cover historical gateway-derived IDs; prose should present them as legacy-derived reviewability references. |
+| `docs/history/compatibility/gateway-federation/**` | Keep tombstoned | History compatibility index | Retired gateway/federation/routed-action corpus. |
+| `docs/history/frontdoor-legacy/**` | Keep tombstoned | Frontdoor legacy index | Retired frontdoor/Product API/bootstrap notes. |
+| `docs/history/process/**` | Keep as process archive | Process history index | Completed or superseded implementation plans and generated planning notes. |
+| `docs/history/omx/**` | Keep tombstoned | OMX history index | Retired OMX-era workflow material. |
+
+### Merge And Archive Rules From This Review
+
+1. If a retained reference contains a current invariant, copy that invariant
+   into the core five, active support owner, or machine-readable contract; do
+   keep the dated board as support or history.
+2. If a retained reference describes gateway/frontdoor/federation/Hermes-first
+   as the active path, prepend or update a lifecycle note that labels it
+   `superseded`, `legacy`, or `retired` and points to the current owner.
+3. If a file remains in `docs/specs/` only for inbound-link stability, its
+   header must say that explicitly and name the current owner surface.
+4. If operating-governance material still names `domain_gateway` or old
+   gateway IDs because a machine-readable compatibility artifact still uses
+   them, the prose should call that legacy-derived coverage and point to the
+   current topology owner.
+5. Physical moves should happen only after inbound prose links and
+   machine-readable `human_doc:*`/contract references are checked. Until then,
+   index-level lifecycle separation is preferred.
+
 ## Lifecycle States
 
 | State | Meaning | Allowed location | Update rule |
