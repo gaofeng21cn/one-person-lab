@@ -26,7 +26,7 @@ Current order:
 | `1` | `opl_framework_foundation` | OPL roadmap + Runtime Manager / provider contracts | complete Temporal/provider readiness, stage attempt ledger, workflow/activity/signal/query, typed queue, retry/dead-letter, human gate, receipt/projection, and shared lifecycle/index primitives |
 | `2` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | align domain-agent skeletons, stage descriptors, sidecar/receipts, artifact locators, projection builders, authority refs; prove direct skill and OPL-hosted paths share owner receipts |
 | `3` | `feature_partition_and_retirement` | OPL active docs + domain owner docs | lift framework-generic capabilities into OPL, keep domain-specific truth in domains, retire old Hermes/Gateway/frontdoor/local-manager/MDS-default surfaces |
-| `4` | `opl_app_runtime_workbench` | OPL App / Runtime Manager | show provider readiness, stage attempts, domain status, human gates, action receipts, artifact refs, and source refs without rewriting domain truth |
+| `4` | `opl_app_runtime_workbench` | OPL App / Runtime Manager | show provider readiness, stage attempts, domain status, human gates, action receipts, artifact refs, and source refs without rewriting domain truth; the stage-attempt workbench now exposes read-only grouping, filter keys, attention counters, and memory-ref counters for App panels |
 | `5` | `domain_soak_and_acceptance` | Domain repos + OPL provider | run real or controlled MAS/MAG/RCA soak after migration and prove progress delta, quality-gate movement, human gate, stop-loss, or typed blocker |
 | `6` | `new_domain_admission` | OPL domain admission + candidate domain repos | admit new domains only through skeleton/descriptor/locator/authority boundaries, not old gateway/frontdoor routes |
 
@@ -47,7 +47,7 @@ Current order:
 1. Framework-first: the full OPL agent framework is a prerequisite for domain migration and real domain soak.
 2. Migration before acceptance: real soak should validate the migrated target shape, not a path that is about to be retired.
 3. Cleanup is migration closeout: old default paths should not linger indefinitely; deletion requires no default caller, no fixture/provenance need, and replacement diagnostic/history link.
-4. App workbench follows the framework: the App displays framework/provider plus domain owner receipts; it is not a second truth source.
+4. App workbench follows the framework: the App displays framework/provider plus domain owner receipts and read-only stage-attempt grouping/filter metadata; it is not a second truth source or a domain action loop.
 5. Domain authority does not move out: OPL may hold refs, receipts, attempt history, projection, and lifecycle metadata; quality, domain truth, and final artifact authority stay in domains.
 
 ## Done Signals
@@ -57,7 +57,7 @@ Current order:
 | `opl_framework_foundation` | OPL provider/framework can stably carry stage attempts, queue/wakeup, retry/dead-letter, approval/human gate, receipts/projections, and shared lifecycle/index primitives. |
 | `domain_framework_migration` | MAS/MAG/RCA are admitted through shared skeleton/descriptor/locator/receipt surfaces; direct and OPL-hosted paths share domain owner receipts. |
 | `feature_partition_and_retirement` | old default dependencies, legacy compatibility, duplicate UI, and stale manager surfaces are classified, replaced, and retired; retained items have explicit owner and use. |
-| `opl_app_runtime_workbench` | OPL App shows provider, stage attempt, domain progress, human gate, artifact refs, source refs, and safe action receipts in one workbench. |
+| `opl_app_runtime_workbench` | OPL App can read provider, stage attempt, domain progress, human gate, artifact refs, source refs, safe action receipts, and stage-attempt grouping/filter summaries in one workbench. |
 | `domain_soak_and_acceptance` | MAS/MAG/RCA each produce real or controlled progress delta, quality-gate movement, human gate, stop-loss, or typed blocker in the migrated target shape. |
 
 ## Planning Doc Placement
