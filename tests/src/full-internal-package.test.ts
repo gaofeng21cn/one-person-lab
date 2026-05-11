@@ -24,7 +24,7 @@ function writeExecutable(filePath: string, content: string) {
   fs.chmodSync(filePath, 0o755);
 }
 
-test('full internal manifest declares default domain modules and Hermes online payload', () => {
+test('full internal manifest declares default domain modules and optional legacy provider payload', () => {
   const manifest = buildFullPackageManifest({
     version: '26.5.1',
     generatedAt: '2026-05-01T00:00:00.000Z',
@@ -61,9 +61,10 @@ test('full internal manifest declares default domain modules and Hermes online p
   assert.equal(manifest.components.mas.role, 'primary_domain_module');
   assert.equal(manifest.components.mas.monolith_runtime, true);
   assert.equal(Object.hasOwn(manifest.components, 'mds'), false);
-  assert.equal(manifest.components.hermes.required, true);
+  assert.equal(manifest.components.hermes.required, false);
   assert.equal(manifest.components.hermes.hermes, true);
-  assert.equal(manifest.components.hermes.role, 'default_online_runtime_substrate');
+  assert.equal(manifest.components.hermes.role, 'legacy_optional_provider_payload');
+  assert.equal(manifest.components.hermes.provider_kind, 'hermes_legacy');
   assert.equal(manifest.components.hermes.gateway_launchagent_label, 'ai.hermes.gateway');
   assert.equal(manifest.components.hermes.online_runtime_ready_check, 'opl family-runtime doctor');
   assert.equal(manifest.components.mag.required, true);
@@ -429,8 +430,10 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
         path.join(guiRoot, 'packaged-runtimes', 'opl-full-runtime', 'manifest', 'full-package-manifest.json'),
         'utf8',
       ),
-    ) as { components: { hermes: { required: boolean; gateway_launchagent_label: string } } };
-    assert.equal(manifest.components.hermes.required, true);
+    ) as { components: { hermes: { required: boolean; role: string; provider_kind: string; gateway_launchagent_label: string } } };
+    assert.equal(manifest.components.hermes.required, false);
+    assert.equal(manifest.components.hermes.role, 'legacy_optional_provider_payload');
+    assert.equal(manifest.components.hermes.provider_kind, 'hermes_legacy');
     assert.equal(manifest.components.hermes.gateway_launchagent_label, 'ai.hermes.gateway');
     for (const skillName of ['mas', 'mag', 'rca', 'officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
       assert.equal(
