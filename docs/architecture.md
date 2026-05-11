@@ -197,22 +197,23 @@
 
 ## 当前实现边界与缺口
 
-当前 OPL 已经实现的是 family framework 的控制面骨架：
+当前 OPL 已经实现的是 family framework 的控制面骨架与 repo/test 级最小 provider 闭环：
 
 - shared contract：`family-action-catalog`、`family-action-graph`、`family-stage-control-plane`、`family-runtime-supervision`、`family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`、`family-product-entry-manifest-v2`。
 - shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
 - local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
 - discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 MAS/MAG/RCA skeleton adapters 可被 OPL 真实 manifest discovery 校验为 aligned，且必须带 artifact locator surface。
+- provider execution：Temporal `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start|query|signal`、worker lifecycle status 和 fail-closed readiness 已落地到 repo/test 面；缺少 Temporal 地址时本机 worker readiness 明确报告 `not_configured`。
+- typed receipt / workbench：Codex stage activity 已有 dry-run receipt、typed closeout required-for-completion gate、consumed refs / memory refs / writeback receipt refs / rejected writes / route impact / next owner 投影；`opl runtime snapshot` 已输出只读 `stage_attempt_workbench`。
 
 当前尚未实现的是完整生产级 stage execution runtime：
 
-- Temporal-backed provider 仍未成为默认 landed provider。
-- 一次 domain stage attempt 尚未完整落成 Temporal Workflow / Activity / Signal / Query 形态。
-- `Codex CLI` stage activity runner、heartbeat / checkpoint、typed closeout ingestion、human gate signal、resume token 和 App 查询面仍需要实现。
-- OPL App / GUI 仍需把 stage attempt、closeout receipt、consumed refs、rejected writes、route impact 和 next owner 做成用户可见操作面。
-- MAS real paper line、MAG grant stage 和 RCA visual stage 仍需要真实或 controlled guarded apply soak，证明 OPL-hosted path 与 direct skill path 语义等价。
+- Temporal-backed provider 尚未成为默认生产 residency：真实 Temporal server / worker deployment、worker restart / re-query、长期 worker residency 和 production retry/dead-letter 运行证据仍未闭合。
+- `Codex CLI` stage activity runner 仍停在 dry-run / fixture-run 层；真实长时 Codex process supervision、heartbeat、checkpoint、progress / cost sampling 和 live typed closeout collection 仍需落地。
+- OPL App / GUI 已能消费 stage-attempt workbench 和 provider-level signal 传输，但仍需要真实 worker/domain 执行证明、domain/stage/blocker/memory refs 分组操作面，以及避免把 provider completion 写成 domain ready verdict 的持续 UI 验收。
+- MAS real paper line、MAG grant stage 和 RCA visual stage 仍需要真实或 controlled guarded apply soak，证明 OPL-hosted path 与 direct skill path 共享 domain owner receipts 且语义等价。
 
-所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane and domain skeleton discovery landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`。
+所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane, Temporal provider minimal loop, typed closeout gate, and domain skeleton discovery landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`。
 
 ## 默认执行策略
 
