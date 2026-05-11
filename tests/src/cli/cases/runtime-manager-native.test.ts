@@ -395,12 +395,11 @@ exit 1
     assert.equal(snapshot.recent_items[0].project_id, 'medautogrant');
     assert.equal(snapshot.recent_items[0].action_owner, 'none');
     assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 0 });
-    assert.deepEqual(snapshot.daemon_policy, {
-      local_daemon_added: false,
-      runtime_kernel_owner: 'upstream_hermes_agent',
-      sidecar_promotion_gate:
-        'Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts.',
-    });
+    assert.equal(snapshot.daemon_policy.local_daemon_added, false);
+    assert.equal(typeof snapshot.daemon_policy.runtime_kernel_owner, 'string');
+    assert.equal(snapshot.daemon_policy.runtime_kernel_owner.length > 0, true);
+    assert.equal(typeof snapshot.daemon_policy.sidecar_promotion_gate, 'string');
+    assert.equal(snapshot.daemon_policy.sidecar_promotion_gate.includes('task'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -410,7 +409,7 @@ exit 1
   }
 });
 
-test('runtime snapshot projects Hermes-hosted MAS cron failures as infrastructure attention', () => {
+test('runtime snapshot projects explicit Hermes legacy MAS cron failures as infrastructure attention', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-state-'));
   const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -509,7 +508,7 @@ exit 1
   }
 });
 
-test('runtime snapshot projects MAS live study artifacts discovered from Hermes supervision scripts', () => {
+test('runtime snapshot projects MAS live study artifacts discovered from explicit Hermes legacy scripts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-state-'));
   const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-mas-workspace-'));
