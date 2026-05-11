@@ -55,6 +55,12 @@ export type TemporalStageAttemptWorkflowState = {
   activity_events: Array<Record<string, unknown>>;
   checkpoint_refs: string[];
   closeout_refs: string[];
+  consumed_refs: string[];
+  consumed_memory_refs: string[];
+  writeback_receipt_refs: string[];
+  rejected_writes: Array<Record<string, unknown>>;
+  next_owner: string | null;
+  route_impact: Record<string, unknown>;
   human_gate_refs: string[];
   signals: TemporalStageAttemptSignalPayload[];
   closeout_packet: Record<string, unknown> | null;

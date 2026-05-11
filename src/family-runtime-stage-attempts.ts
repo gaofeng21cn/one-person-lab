@@ -140,6 +140,14 @@ function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
   };
 }
 
+function signalPayloadsByKind(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  signalKind: TemporalStageAttemptSignalKind,
+) {
+  return listStageAttemptSignals(db, stageAttemptId).filter((signal) => signal.signal_kind === signalKind);
+}
+
 function normalizeActivityEvent(value: Record<string, unknown>) {
   return {
     event_time: nowIso(),
@@ -658,16 +666,31 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         activity_events: attempt.activity_events,
         heartbeat: {
           last_updated_at: attempt.updated_at,
+          last_heartbeat_at: typeof attempt.provider_run.last_heartbeat_at === 'string'
+            ? attempt.provider_run.last_heartbeat_at
+            : null,
           checkpoint_refs: attempt.checkpoint_refs,
         },
         consumed_refs: Array.isArray(latestCloseout?.consumed_refs) ? latestCloseout.consumed_refs : [],
+        consumed_memory_refs: Array.isArray(latestCloseout?.consumed_memory_refs)
+          ? latestCloseout.consumed_memory_refs
+          : [],
+        writeback_receipt_refs: Array.isArray(latestCloseout?.writeback_receipt_refs)
+          ? latestCloseout.writeback_receipt_refs
+          : [],
         closeout_refs: attempt.closeout_refs,
         closeout_receipt_status: attempt.closeout_receipt_status,
         route_impact: attempt.route_impact,
         rejected_writes: Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [],
         next_owner: typeof latestCloseout?.next_owner === 'string' ? latestCloseout.next_owner : null,
         human_gate_refs: attempt.human_gate_refs,
+        user_instructions: signalPayloadsByKind(db, stageAttemptId, 'user_instruction'),
+        resume_signals: signalPayloadsByKind(db, stageAttemptId, 'resume'),
         dead_letter: attempt.status === 'dead_lettered' ? attempt.blocked_reason : null,
+        authority_boundary: {
+          opl: 'attempt_control_metadata_projection_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
       },
       completion_boundary: {
         provider_completion: attempt.status === 'completed' ? 'completed' : 'not_completed',

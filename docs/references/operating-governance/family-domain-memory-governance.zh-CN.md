@@ -124,7 +124,7 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - `now / next / defer` 的实施顺序；
 - 明确哪些已有 contract 不能被降级成 loose memory。
 
-机器面入口是 `contracts/family-orchestration/family-domain-memory-ref.schema.json`、`contracts/family-orchestration/family-domain-memory-writeback.schema.json`，以及 `family-stage-control-plane.schema.json` 中的可选 `knowledge_refs`。这些 surface 只冻结 locator、migration plan ref、seed corpus ref、proposal、receipt 和 projection，不承载 memory 正文。OPL CLI 只提供 `opl domain-memory list|inspect|migration-plan` 读模型，不提供 apply。
+机器面入口是 `contracts/family-orchestration/family-domain-memory-ref.schema.json`、`contracts/family-orchestration/family-domain-memory-writeback.schema.json`，以及 `family-stage-control-plane.schema.json` 中的可选 `knowledge_refs`。这些 surface 只冻结 locator、migration plan ref、seed corpus ref、proposal、receipt 和 projection，不承载 memory 正文。OPL CLI 只提供 `opl domain-memory list|inspect|migration-plan` 读模型，不提供 apply；stage attempt query/workbench 只显示 typed closeout 中的 consumed memory refs、writeback receipt refs 与 rejected writes，不接受或拒绝 memory writeback。
 
 当前完成度：
 
@@ -132,7 +132,8 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - 已完成：OPL 可索引 memory descriptor，并可投影 domain-owned migration plan、seed corpus 和 writeback receipt locator。
 - 部分完成：MAS/MAG/RCA 的政策文档已定义哪些经验适合进入 memory，哪些必须保留为强 contract。
 - 未完成：真实 reusable lessons 从历史 workspace/runtime 迁移到 domain-owned memory store 的 apply receipt。
-- 未完成：stage entry 小集合 retrieval、typed closeout writeback apply、App/workbench consumed memory / rejected writeback 展示，以及真实/controlled stage soak。
+- 已完成：stage attempt query/workbench 可展示 typed closeout 带回的 consumed memory refs、writeback receipt refs 与 rejected writes。
+- 未完成：stage entry 小集合 retrieval、typed closeout writeback apply，以及真实/controlled stage soak。
 
 ## 下一阶段再做
 

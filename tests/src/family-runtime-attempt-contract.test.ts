@@ -50,6 +50,10 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'provider_receipt',
     'provider_run',
     'activity_events',
+    'user_instruction_refs',
+    'resume_refs',
+    'consumed_memory_refs',
+    'writeback_receipt_refs',
     'route_impact',
     'closeout_receipt_status',
     'authority_boundary',
@@ -77,10 +81,27 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   ]);
   assert.equal((contract.typed_closeout_contract as Record<string, any>).required_for_completed_status, true);
   assert.equal((contract.typed_closeout_contract as Record<string, any>).free_text_closeout_accepted, false);
-  for (const trackedRef of ['closeout_refs', 'consumed_refs', 'rejected_writes', 'route_impact', 'next_owner']) {
+  for (const trackedRef of [
+    'closeout_refs',
+    'consumed_refs',
+    'consumed_memory_refs',
+    'writeback_receipt_refs',
+    'rejected_writes',
+    'route_impact',
+    'next_owner',
+  ]) {
     assert.ok(((contract.typed_closeout_contract as Record<string, any>).tracked_refs as string[]).includes(trackedRef));
   }
-  for (const field of ['provider_run', 'activity_events', 'closeout_receipt_status', 'route_impact']) {
+  for (const field of [
+    'provider_run',
+    'activity_events',
+    'user_instructions',
+    'resume_signals',
+    'consumed_memory_refs',
+    'writeback_receipt_refs',
+    'closeout_receipt_status',
+    'route_impact',
+  ]) {
     assert.ok((contract.operator_visibility_fields as string[]).includes(field));
   }
 });

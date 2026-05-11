@@ -30,6 +30,14 @@ type StageAttemptCloseoutRow = {
   created_at: string;
 };
 
+type StageAttemptSignalRow = {
+  stage_attempt_id: string;
+  signal_kind: string;
+  payload_json: string;
+  source: string;
+  created_at: string;
+};
+
 function parseRecord(value: string): JsonRecord {
   try {
     const parsed = JSON.parse(value) as unknown;
@@ -84,7 +92,31 @@ function closeoutByAttempt(db: DatabaseSync, attemptIds: string[]) {
   return byAttempt;
 }
 
-function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRecord | null) {
+function signalsByAttempt(db: DatabaseSync, attemptIds: string[]) {
+  const byAttempt = new Map<string, JsonRecord[]>();
+  if (attemptIds.length === 0) {
+    return byAttempt;
+  }
+  const rows = db.prepare(`
+    SELECT stage_attempt_id, signal_kind, payload_json, source, created_at
+    FROM stage_attempt_signals
+    WHERE stage_attempt_id IN (${attemptIds.map(() => '?').join(',')})
+    ORDER BY stage_attempt_id ASC, created_at ASC
+  `).all(...attemptIds) as StageAttemptSignalRow[];
+  for (const row of rows) {
+    const signals = byAttempt.get(row.stage_attempt_id) ?? [];
+    signals.push({
+      signal_kind: row.signal_kind,
+      payload: parseRecord(row.payload_json),
+      source: row.source,
+      created_at: row.created_at,
+    });
+    byAttempt.set(row.stage_attempt_id, signals);
+  }
+  return byAttempt;
+}
+
+function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRecord | null, signals: JsonRecord[]) {
   const providerRun = parseRecord(row.provider_run_json);
   const activityEvents = recordList(parseList(row.activity_events_json));
   const routeImpact = parseRecord(row.route_impact_json);
@@ -112,12 +144,16 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
     },
     checkpoint_refs: checkpointRefs,
     consumed_refs: Array.isArray(latestCloseout?.consumed_refs) ? latestCloseout.consumed_refs : [],
+    consumed_memory_refs: Array.isArray(latestCloseout?.consumed_memory_refs) ? latestCloseout.consumed_memory_refs : [],
+    writeback_receipt_refs: Array.isArray(latestCloseout?.writeback_receipt_refs) ? latestCloseout.writeback_receipt_refs : [],
     closeout_refs: closeoutRefs,
     closeout_receipt_status: row.closeout_receipt_status,
     rejected_writes: Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [],
     route_impact: routeImpact,
     next_owner: optionalString(latestCloseout?.next_owner) ?? optionalString(routeImpact.next_owner) ?? row.domain_id,
     human_gate_refs: humanGateRefs,
+    user_instructions: signals.filter((signal) => signal.signal_kind === 'user_instruction'),
+    resume_signals: signals.filter((signal) => signal.signal_kind === 'resume'),
     dead_letter: row.status === 'dead_lettered' ? row.blocked_reason : null,
     completion_boundary: {
       provider_completion: row.status === 'completed' ? 'completed' : 'not_completed',
@@ -175,7 +211,12 @@ export function buildStageAttemptWorkbench() {
       LIMIT 25
     `).all() as StageAttemptWorkbenchRow[];
     const latestCloseouts = closeoutByAttempt(db, rows.map((row) => row.stage_attempt_id));
-    const attempts = rows.map((row) => attemptProjection(row, latestCloseouts.get(row.stage_attempt_id) ?? null));
+    const signals = signalsByAttempt(db, rows.map((row) => row.stage_attempt_id));
+    const attempts = rows.map((row) => attemptProjection(
+      row,
+      latestCloseouts.get(row.stage_attempt_id) ?? null,
+      signals.get(row.stage_attempt_id) ?? [],
+    ));
     return {
       surface_kind: 'opl_stage_attempt_workbench',
       availability: 'available',
