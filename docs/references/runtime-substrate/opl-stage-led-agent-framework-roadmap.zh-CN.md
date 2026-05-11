@@ -33,6 +33,7 @@ Date: `2026-05-11`
 - Temporal provider 细化计划：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
 - MAS runtime 退役计划：`med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md`
 - Stage control plane adoption：`docs/references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md`
+- Domain memory 总入口：`docs/references/operating-governance/family-domain-memory-governance.zh-CN.md`
 - 跨仓当前状态：OPL / MAS / MAG / RCA / MDS 各自的 `docs/status.md`、`docs/project.md`、`docs/invariants.md`
 
 开发纪律：
