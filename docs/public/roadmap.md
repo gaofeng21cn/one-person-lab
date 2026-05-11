@@ -30,6 +30,8 @@ Current work on that route stays focused on four priorities:
 3. Treat `OPL Runtime Manager` as the product control plane and typed dispatch layer over the configured family runtime provider, not as a domain scheduler, domain truth owner, quality owner, artifact owner, or concrete executor owner.
 4. Keep public docs, contracts, and admitted-domain wording aligned with the real family topology.
 
+The current execution order lives in [OPL Current Development Lines](../active/current-development-lines.md): finish the OPL framework foundation first, then domain framework migration and legacy retirement, then OPL App Runtime Workbench productization, then real or controlled MAS/MAG/RCA domain soak.
+
 ## Near-Term Priorities
 
 - keep legacy gateway and federation wording available only as provenance/reference material while promoting the runtime/activation model to the mainline

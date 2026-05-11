@@ -30,6 +30,8 @@
 3. 把 `OPL Runtime Manager` 理解成已配置 family runtime provider 之上的产品控制面与 typed dispatch 层，不写成 domain scheduler、domain truth owner、quality owner、artifact owner 或 concrete executor owner。
 4. 保持 public docs、contracts 与 admitted-domain wording 持续对齐真实家族拓扑。
 
+当前执行顺序见 [OPL 当前开发线路](../active/current-development-lines.zh-CN.md)：先完成 OPL framework foundation，再做 domain framework migration 和旧面退役清理，随后产品化到 OPL App Runtime Workbench，最后做 MAS/MAG/RCA 的真实或 controlled domain soak。
+
 ## 近期重点
 
 - 保持旧 gateway / federation wording 只作为 provenance / reference material，同时把 runtime / activation 语义写成主线

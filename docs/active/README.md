@@ -19,6 +19,7 @@ Documents here support the current model, but they are not machine-readable auth
 
 ## Contents
 
+- `current-development-lines*`: current framework-first content-level development map.
 - `opl-public-surface-index*`: current public surface map.
 - `opl-domain-onboarding-contract*`: candidate-domain onboarding review support.
 - `opl-runtime-naming-and-boundary-contract*`: runtime naming and boundary support.
