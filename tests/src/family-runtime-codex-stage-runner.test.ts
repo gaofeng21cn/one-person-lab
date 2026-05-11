@@ -54,3 +54,47 @@ exit 64
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('Codex stage runner ignores invalid timeout env values', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-timeout-default"}\\n'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousTimeout = process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS = 'not-a-number';
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_live_runner_timeout_test',
+        stage_id: 'analysis-campaign',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+      },
+      stagePacketRef: 'packet:analysis',
+      runnerMode: 'codex_cli',
+    });
+
+    assert.equal(receipt.runner_status.timeout_ms, 600_000);
+    assert.equal(receipt.runner_status.exit_code, 0);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    if (previousTimeout === undefined) {
+      delete process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS = previousTimeout;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
