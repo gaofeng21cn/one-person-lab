@@ -38,45 +38,6 @@ run_codex() {
   exec codex "$@"
 }
 
-has_explicit_hermes_executor() {
-  local args=("$@")
-  local index
-  for ((index = 0; index < ${#args[@]}; index += 1)); do
-    if [[ "${args[index]}" == "--executor" && "${args[index + 1]:-}" == "hermes" ]]; then
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-strip_explicit_codex_executor() {
-  local args=("$@")
-  local output=()
-  local index
-
-  for ((index = 0; index < ${#args[@]}; index += 1)); do
-    if [[ "${args[index]}" == "--executor" && "${args[index + 1]:-}" == "codex" ]]; then
-      index=$((index + 1))
-      continue
-    fi
-
-    output+=("${args[index]}")
-  done
-
-  printf '%s\0' "${output[@]}"
-}
-
-read_null_terminated_args() {
-  local -n target_ref=$1
-  shift
-
-  target_ref=()
-  while IFS= read -r -d '' entry; do
-    target_ref+=("$entry")
-  done < <("$@")
-}
-
 maybe_sync_family_skills() {
   if [[ "${OPL_SKIP_SKILL_SYNC:-}" == "1" ]]; then
     return
@@ -97,13 +58,8 @@ case "$1" in
     run_codex exec "$@"
     ;;
   resume)
-    if has_explicit_hermes_executor "$@"; then
-      run_opl "$@"
-    fi
-    stripped_args=()
-    read_null_terminated_args stripped_args strip_explicit_codex_executor "$@"
     maybe_sync_family_skills
-    run_codex "${stripped_args[@]}"
+    run_codex "$@"
     ;;
   ask)
     shift
@@ -118,11 +74,6 @@ case "$1" in
     run_opl shell "$@"
     ;;
   session)
-    if [[ "${2:-}" == "resume" ]] && ! has_explicit_hermes_executor "${@:3}"; then
-      stripped_args=()
-      read_null_terminated_args stripped_args strip_explicit_codex_executor "${@:3}"
-      run_codex resume "${stripped_args[@]}"
-    fi
     run_opl "$@"
     ;;
   help|doctor|install|start|web|mcp-stdio|status|workspace|domain|actions|agents|domain-memory|stages|packages|contract|system|modules|module|engine|service|runtime|family-runtime|skill|quality)

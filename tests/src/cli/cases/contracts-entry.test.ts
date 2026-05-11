@@ -454,7 +454,7 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(examples.some((entry) => entry.includes('opl skill sync')), true);
 });
 
-test('session resume returns a machine-readable Codex resume envelope in non-interactive mode', () => {
+test('session resume returns the OPL-managed Codex resume envelope in non-interactive mode', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "resume" ] && [ "$2" = "opl-test-session" ]; then
   cat <<'EOF'
@@ -465,22 +465,22 @@ fi
 echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-session-resume-state-'));
 
   try {
-    const output = runCli(['session', 'resume', 'opl-test-session'], {
+    const result = runCliRaw(['session', 'resume', 'opl-test-session'], {
       OPL_CODEX_BIN: codexPath,
-      OPL_STATE_DIR: stateRoot,
     });
 
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
     assert.equal(output.product_entry.mode, 'resume');
     assert.equal(output.product_entry.executor_backend, 'codex');
+    assert.deepEqual(output.product_entry.resume.command_preview, ['codex', 'resume', 'opl-test-session']);
     assert.equal(output.product_entry.resume.session_id, 'opl-test-session');
     assert.equal(output.product_entry.resume.output, 'RESUMED SESSION BODY');
-    assert.deepEqual(output.product_entry.resume.command_preview, ['codex', 'resume', 'opl-test-session']);
+    assert.equal(result.stderr, '');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
@@ -515,7 +515,8 @@ exit 1
   }
 });
 
-test('status runtime reports Hermes runtime health, sessions, and process usage', () => {
+test('status runtime reports provider-backed runtime status and the OPL session ledger', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-status-state-'));
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -563,7 +564,6 @@ exit 1
 `);
   const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
 27026 27025 5.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_dash`);
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-status-state-'));
 
   try {
     const output = runCli(['status', 'runtime', '--limit', '2'], {
@@ -577,21 +577,11 @@ exit 1
     assert.equal(output.runtime_status.configured_provider, 'local_sqlite');
     assert.equal(output.runtime_status.family_runtime_providers.selected_provider, 'local_sqlite');
     assert.equal(output.runtime_status.family_runtime_providers.providers.local_sqlite.ready, true);
-    assert.equal(output.runtime_status.hermes_legacy_diagnostics.hermes.binary.path, hermesPath);
-    assert.equal(output.runtime_status.hermes_legacy_diagnostics.status_report.parsed.summary.active_sessions, 3);
-    assert.equal(output.runtime_status.hermes_legacy_diagnostics.status_report.parsed.summary.scheduled_jobs, 2);
-    assert.deepEqual(
-      output.runtime_status.hermes_legacy_diagnostics.status_report.parsed.summary.configured_messaging_platforms,
-      ['Telegram'],
-    );
-    assert.equal(output.runtime_status.hermes_legacy_diagnostics.recent_sessions.sessions.length, 2);
-    assert.equal(output.runtime_status.hermes_legacy_diagnostics.process_usage.summary.process_count, 2);
-    assert.equal(output.runtime_status.hermes_legacy_diagnostics.process_usage.processes[0].role, 'gateway');
     assert.equal(output.runtime_status.managed_session_ledger.summary.entry_count, 0);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

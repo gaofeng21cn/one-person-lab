@@ -6,7 +6,6 @@ import type {
   LaunchDomainCliInput,
   LogsCliInput,
   ProductEntryCliInput,
-  ProductEntryExecutor,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
@@ -16,7 +15,7 @@ import type {
   StartCliInput,
   WorkspaceStatusCliInput,
 } from './types.ts';
-import { buildUsageError, parseExecutorValue } from './runtime-helpers.ts';
+import { buildUsageError } from './runtime-helpers.ts';
 
 const PRODUCT_ENTRY_AGENT_HANDLE_MAP = {
   mas: {
@@ -142,9 +141,6 @@ function parseProductEntryArgs(
             .map((entry) => entry.trim())
             .filter(Boolean),
         );
-        break;
-      case '--executor':
-        parsed.executor = parseExecutorValue(token, value, spec);
         break;
       default:
         throw buildUsageError(`Unknown option for product entry: ${token}.`, spec, {
@@ -280,29 +276,14 @@ function parseResumeArgs(
     });
   }
 
-  let executor: ProductEntryExecutor = 'codex';
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    if (token !== '--executor') {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = rest[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError('resume requires a value for --executor.', spec, {
-        option: '--executor',
-      });
-    }
-
-    executor = parseExecutorValue(token, value, spec);
-    index += 1;
+  if (rest.length > 0) {
+    throw buildUsageError(`Unexpected positional argument: ${rest[0]}.`, spec, {
+      token: rest[0],
+    });
   }
 
   return {
     sessionId,
-    executor,
   };
 }
 

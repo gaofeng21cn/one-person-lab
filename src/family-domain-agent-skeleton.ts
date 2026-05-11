@@ -6,12 +6,7 @@ import type { FrameworkContracts } from './types.ts';
 type JsonRecord = Record<string, unknown>;
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
-const ACCEPTED_SKELETON_SURFACE_KINDS = new Set([
-  'standard_domain_agent_skeleton',
-  'standard_domain_agent_skeleton_mapping',
-  'mas_opl_domain_agent_skeleton_mapping',
-  'domain_agent_skeleton_adapter',
-]);
+const ACCEPTED_SKELETON_SURFACE_KINDS = new Set(['standard_domain_agent_skeleton']);
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -174,7 +169,7 @@ export function normalizeStandardDomainAgentSkeleton(value: unknown) {
   }
   const surfaceKind = optionalString(value.surface_kind);
   if (!surfaceKind || !ACCEPTED_SKELETON_SURFACE_KINDS.has(surfaceKind)) {
-    throw new Error('standard_domain_agent_skeleton.surface_kind must be a supported standard skeleton adapter.');
+    throw new Error('standard_domain_agent_skeleton.surface_kind must be standard_domain_agent_skeleton.');
   }
   const repoSourceBoundary = isRecord(value.repo_source_boundary) ? value.repo_source_boundary : {};
   const artifactBoundary = isRecord(value.artifact_boundary) ? value.artifact_boundary : {};

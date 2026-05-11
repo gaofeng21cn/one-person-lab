@@ -16,10 +16,8 @@ export {
 export {
   buildRetiredCommandError,
   buildUsageError,
-  parseExecutorValue,
   printJson,
   runCodexPassthroughHandled,
-  stripExplicitCodexExecutor,
 } from './runtime-helpers.ts';
 export {
   parseDashboardArgs,
