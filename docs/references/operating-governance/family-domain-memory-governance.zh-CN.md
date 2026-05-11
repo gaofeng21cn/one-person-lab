@@ -138,14 +138,14 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - 已完成于 family index：2026-05-11 `opl domain-memory list --json` 显示 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，MAS/MAG/RCA 三个 active domain 的 descriptor 均可解析。
 - 部分完成：MAS/MAG/RCA 的政策文档已定义哪些经验适合进入 memory，哪些必须保留为强 contract。
 - 部分完成：MAS 已有 workspace apply closure；MAG/RCA 有 repo-source controlled proof surface；真实 reusable lessons 从历史 workspace/runtime 迁移到 domain-owned memory store 的 accepted/rejected apply receipt 仍未完成。
-- 已完成：stage attempt query/workbench 可展示 typed closeout 带回的 consumed memory refs、writeback receipt refs 与 rejected writes。
+- 已完成：stage attempt query/workbench 可展示 typed closeout 带回的 consumed memory refs、writeback receipt refs 与 rejected writes；Aion workbench 已把 rejected writeback 作为独立 operator 状态轴展示，但仍只显示 refs/status/reason，不读取或复制 memory 正文。
 - 未完成：stage entry 小集合 retrieval、typed closeout writeback apply、历史 memory body migration，以及真实/controlled stage soak。
 
 下一步收口顺序：
 
 1. 保持 memory 正文、accept/reject、fundability / visual quality 判断和 artifact authority 在 domain；OPL 只读 locator、proposal ref、receipt ref、freshness 和 rejected writeback reason。
 2. 用 MAS real paper line、MAG controlled grant stage、RCA controlled visual stage 分别产生至少一条 consumed-memory / writeback-receipt 证据。
-3. 把 Aion workbench 的 memory refs 从“只显示 raw refs”提升到按 domain/stage 分组的 operator view；仍不复制 memory body。
+3. 把 Aion workbench 的 memory refs 从“显示 rejected writeback 状态轴和 raw refs”提升到按 domain/stage 分组的 operator view；仍不复制 memory body。
 4. 在真实 retrieval / writeback apply 后，再推进历史 workspace/runtime 经验迁移到 domain-owned memory store，并留下 accepted/rejected apply receipt。
 
 ## 下一阶段再做
