@@ -88,10 +88,11 @@ export function buildPublicCommandSpecs(
     action: 'install' | 'update' | 'reinstall' | 'remove',
     usage: string,
     example: string,
+    summary?: string,
   ): CommandSpec => {
     const spec: CommandSpec = {
       usage,
-      summary: `${action[0].toUpperCase()}${action.slice(1)} one OPL execution engine.`,
+      summary: summary ?? `${action[0].toUpperCase()}${action.slice(1)} one OPL execution engine.`,
       examples: [example],
       group: 'engine',
       handler: async (args) =>
@@ -309,23 +310,23 @@ export function buildPublicCommandSpecs(
 
   const engineInstallSpec = buildEngineActionSpec(
     'install',
-    'opl engine install --engine <codex|hermes>',
+    'opl engine install --engine codex',
     'opl engine install --engine codex',
   );
   const engineUpdateSpec = buildEngineActionSpec(
     'update',
-    'opl engine update --engine <codex|hermes>',
+    'opl engine update --engine codex',
     'opl engine update --engine codex',
   );
   const engineReinstallSpec = buildEngineActionSpec(
     'reinstall',
-    'opl engine reinstall --engine <codex|hermes>',
+    'opl engine reinstall --engine codex',
     'opl engine reinstall --engine codex',
   );
   const engineRemoveSpec = buildEngineActionSpec(
     'remove',
-    'opl engine remove --engine <codex|hermes>',
-    'opl engine remove --engine hermes',
+    'opl engine remove --engine codex',
+    'opl engine remove --engine codex',
   );
 
   const publicCommandSpecs: Record<string, CommandSpec> = {
@@ -403,7 +404,15 @@ export function buildPublicCommandSpecs(
       group: 'skill',
     }),
     exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
-    resume: cloneCommandSpec(commandSpecs.resume, { group: 'top_level' }),
+    resume: cloneCommandSpec(commandSpecs.resume, {
+      usage: 'opl resume [codex resume args...]',
+      summary: 'Resume a Codex session as a raw passthrough.',
+      examples: [
+        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
+        'opl resume --last',
+      ],
+      group: 'top_level',
+    }),
     'status workspace': cloneCommandSpec(commandSpecs['status workspace'], {
       usage: 'opl status workspace [--path <workspace_path>]',
       examples: ['opl status workspace', 'opl status workspace --path /Users/gaofeng/workspace/redcube-ai'],
@@ -420,7 +429,7 @@ export function buildPublicCommandSpecs(
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
-        'opl family-runtime tick --source hermes-cron --hydrate',
+        'opl family-runtime tick --source provider-cron --hydrate',
       ],
       group: 'runtime',
     }),
@@ -694,12 +703,12 @@ export function buildPublicCommandSpecs(
       group: 'session',
     }),
     'session resume': cloneCommandSpec(commandSpecs.resume, {
-      usage: 'opl session resume <session_id> [--executor <codex|hermes>]',
+      usage: 'opl session resume <session_id> [--executor codex]',
       examples: [
         'opl session resume run_7e2a41a19175465f809c0a7f151278ee',
-        'opl session resume run_7e2a41a19175465f809c0a7f151278ee --executor hermes',
+        'opl session resume run_7e2a41a19175465f809c0a7f151278ee --executor codex',
       ],
-      summary: 'Compatibility alias for opl resume; default route is raw codex resume.',
+      summary: 'Session-scoped alias for opl resume; Codex remains the default executor.',
       group: 'session',
     }),
     'session logs': cloneCommandSpec(commandSpecs.logs, {
