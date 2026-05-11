@@ -2,6 +2,7 @@ import type { FrameworkContracts } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { FrameworkContractError } from './contracts.ts';
+import type { FamilyDomainMemoryRef } from './family-domain-memory-contract.ts';
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -46,6 +47,7 @@ function parseOptionArgs(args: string[], required: string[]) {
 
 function buildMemoryIndexEntry(entry: DomainManifestCatalogEntry) {
   const descriptor = entry.status === 'resolved' ? entry.manifest?.domain_memory_descriptor ?? null : null;
+  const receiptProjection = descriptor ? buildReceiptProjection(descriptor) : null;
   return {
     project_id: entry.project_id,
     project: entry.project,
@@ -61,10 +63,46 @@ function buildMemoryIndexEntry(entry: DomainManifestCatalogEntry) {
     migration_plan_ref: descriptor?.migration_plan_ref ?? null,
     seed_corpus_ref: descriptor?.seed_corpus_ref ?? null,
     writeback_receipt_locator_ref: descriptor?.writeback_receipt_locator_ref ?? null,
+    writeback_contract_ref: descriptor?.writeback_contract_ref ?? null,
+    receipt_contract_ref: descriptor?.receipt_contract_ref ?? null,
+    receipt_projection: receiptProjection,
     freshness: descriptor?.freshness ?? null,
     migration_readiness: descriptor?.migration_readiness ?? null,
     ready: Boolean(descriptor),
     error: entry.error,
+  };
+}
+
+function buildReceiptProjection(descriptor: FamilyDomainMemoryRef) {
+  const authority = descriptor.authority_boundary ?? {};
+  const domainOwner = authority.domain_memory_owner ?? descriptor.owner;
+  return {
+    status: descriptor.receipt_projection?.status ?? 'descriptor_projection_only',
+    memory_locator_ref: descriptor.memory_pack_ref,
+    proposal_contract_ref: descriptor.writeback_contract_ref,
+    router_receipt_contract_ref: descriptor.receipt_contract_ref,
+    writeback_receipt_locator_ref: descriptor.writeback_receipt_locator_ref,
+    accepted_rejected_authority_owner: domainOwner,
+    router_receipt_owner: domainOwner,
+    opl_projection_role: 'descriptor_and_receipt_locator_projection_only',
+    readiness: {
+      descriptor_has_writeback_contract: Boolean(descriptor.writeback_contract_ref),
+      descriptor_has_receipt_contract: Boolean(descriptor.receipt_contract_ref),
+      descriptor_has_receipt_locator: Boolean(descriptor.writeback_receipt_locator_ref),
+      retrieval_apply_landed: false,
+      writeback_apply_landed: false,
+      memory_body_migration_landed: false,
+    },
+    authority_flags: {
+      can_accept_memory_write: false,
+      can_write_domain_truth: false,
+      can_own_memory_body: false,
+      can_authorize_quality_verdict: false,
+    },
+    notes: [
+      'Locator, proposal, router receipt, and accepted/rejected authority remain domain-owned.',
+      'OPL projects descriptor-level receipt readiness only; it does not apply writeback.',
+    ],
   };
 }
 
@@ -118,6 +156,7 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
   }
 
   const descriptor = entry.status === 'resolved' ? entry.manifest?.domain_memory_descriptor ?? null : null;
+  const receiptProjection = descriptor ? buildReceiptProjection(descriptor) : null;
   return {
     version: 'g2',
     family_domain_memory: {
@@ -127,11 +166,15 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
       target_domain_id: descriptor?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
       descriptor_status: descriptor ? 'resolved' : 'missing',
       descriptor,
+      receipt_projection: receiptProjection,
       migration_plan: descriptor
         ? {
             migration_plan_ref: descriptor.migration_plan_ref,
             seed_corpus_ref: descriptor.seed_corpus_ref,
             writeback_receipt_locator_ref: descriptor.writeback_receipt_locator_ref,
+            writeback_contract_ref: descriptor.writeback_contract_ref,
+            receipt_contract_ref: descriptor.receipt_contract_ref,
+            receipt_projection: receiptProjection,
             migration_readiness: descriptor.migration_readiness,
             current_state: descriptor.migration_readiness?.status ?? descriptor.freshness?.status ?? 'unknown',
             opl_role: 'migration_projection_only',
@@ -141,7 +184,9 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
       non_authority_flags: {
         opl_owns_memory_content: false,
         opl_accepts_memory_writeback: false,
+        opl_accepts_or_rejects_memory_writeback: false,
         opl_applies_memory_migration: false,
+        opl_applies_memory_writeback: false,
         opl_writes_domain_truth: false,
         opl_authorizes_quality_verdict: false,
       },
@@ -181,11 +226,14 @@ export function buildFamilyDomainMemoryMigrationPlan(contracts: FrameworkContrac
       writeback_contract_ref: descriptor.writeback_contract_ref,
       receipt_contract_ref: descriptor.receipt_contract_ref,
       recall_projection_ref: descriptor.recall_projection_ref,
+      receipt_projection: buildReceiptProjection(descriptor),
       authority_boundary: inspected.authority_boundary,
       non_authority_flags: {
         opl_owns_memory_content: false,
         opl_applies_memory_migration: false,
         opl_accepts_memory_writeback: false,
+        opl_accepts_or_rejects_memory_writeback: false,
+        opl_applies_memory_writeback: false,
         opl_writes_domain_truth: false,
         opl_authorizes_quality_verdict: false,
       },
