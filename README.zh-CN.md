@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/opl-banner.svg" alt="One Person Lab banner" width="100%" />
+  <img src="assets/branding/opl-banner.png" alt="One Person Lab banner" width="100%" />
 </p>
 
 <p align="center">
@@ -12,11 +12,11 @@
 <p align="center">让 AI 像人类专家一样推进专业任务：界定问题、准备证据、执行、审核、修订，并交付可审计成果。</p>
 
 <p align="center">
-  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL 工作台概览" width="100%" />
+  <img src="assets/branding/opl-workbench-overview.png" alt="OPL 工作台概览" width="100%" />
 </p>
 
 <p align="center">
-  <img src="assets/branding/opl-architecture-plan.svg" alt="OPL 架构与产品规划" width="100%" />
+  <img src="assets/branding/opl-architecture-plan.png" alt="OPL 架构与产品规划" width="100%" />
 </p>
 
 ## 为什么是 One Person Lab
