@@ -46,7 +46,7 @@ Date: `2026-05-11`
 
 ## 2026-05-11 当前落地评估
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion 和 stage attempt workbench 的生产 provider 路径也已落地。当前仍没有完成端到端生产闭环：真实 Temporal server/worker residency proof、真实 Codex long-running activity runner、provider-hosted domain soak、human gate/resume 操作闭环和旧面物理退役仍未完成。
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、dry-run Codex runner receipt 和 stage attempt workbench 的生产 provider 路径也已落地。当前仍没有完成端到端生产闭环：真实 Temporal server/worker residency proof、真实 Codex long-running live process runner、provider-hosted domain soak、human gate/resume 操作闭环和旧面物理退役仍未完成。
 
 2026-05-11 fresh CLI 读模型校准：
 
@@ -65,9 +65,9 @@ Date: `2026-05-11`
 | Domain descriptor / adapter | `landed_for_active_domains` | MAS/MAG/RCA 已在各自 main 暴露 stage/action/projection/skeleton adapter，OPL 当前真实 `opl agents list` 可校验三者 aligned。 |
 | Lifecycle primitives | `contract_and_locator_landed` | OPL 已有 locator-only lifecycle primitive；MAS 经验已被拆成 framework-generic / MAS-specific 方向，真实跨 domain cleanup/restore apply 仍需 soak。 |
 | Provider-backed execution | `production_provider_minimal_loop_landed` | Temporal SDK、workflow/activity/signal/query、worker lifecycle contract、CLI start/query/signal、provider receipt 和 fail-closed readiness 已落地；真实 Temporal server/worker residency proof、production retry 运行证据和 domain soak 仍未完成。 |
-| Codex stage activity runner | `typed_closeout_ingestion_landed` | Activity 现能接 stage packet / checkpoint refs，并透传 typed closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact 和 next owner；真实 Codex CLI long-running process runner、token/cost/progress sampling 仍未落地。 |
-| Human gate / resume | `ledger_projection_landed` | human gate refs、user instruction signals、resume signals 已进入 attempt ledger/query/workbench；真实用户审批 UI、resume token 操作闭环仍未完成。 |
-| Operator visibility | `stage_attempt_workbench_core_landed` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter 与 human gate signals；Aion runtime workbench 可消费该只读面，后续仍需过滤、操作和真实 domain soak。 |
+| Codex stage activity runner | `dry_run_receipt_and_typed_closeout_gate_landed` | Activity 现能接 stage packet / checkpoint refs，生成 dry-run Codex runner receipt，并透传 typed closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact 和 next owner；没有 typed closeout 的 domain dispatch 只能进入 checkpointed，不会被标成 completed；真实 Codex CLI long-running process runner、token/cost/progress sampling 仍未落地。 |
+| Human gate / resume | `ledger_projection_landed` | human gate refs、human gate ledger、user instruction ledger、resume ledger 已进入 attempt ledger/query/workbench；真实用户审批 UI、resume token 操作闭环仍未完成。 |
+| Operator visibility | `stage_attempt_workbench_core_landed` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter task ledger 与 human gate signals；Aion runtime workbench 可消费该只读面，后续仍需过滤、操作和真实 domain soak。 |
 | Real domain soak / retirement | `domain_side_proofs_partial_provider_soak_not_complete` | MAS real paper line guarded apply 仍未闭合；MAG/RCA 已有 domain-side controlled attempt / memory writeback proof surface，但 OPL/Temporal-hosted controlled soak 仍未形成完整 provider evidence；旧 Hermes/Gateway/local-manager residue 物理退役仍是下一阶段。 |
 
 已落地的 OPL 层 shared module / contract 面包括：
@@ -100,12 +100,12 @@ Date: `2026-05-11`
 尚未完成的生产闭环：
 
 - Temporal provider code 已落地，但还没有以真实 Temporal server/worker deployment 作为默认 Full online runtime，也没有完成 worker restart/re-query 的真实环境证明。
-- Codex CLI stage activity runner 仍是 activity stub；真实长时 Codex process supervision、token/cost/progress sampling 和 typed closeout ingestion 仍未形成完整 provider-backed execution path。
+- Codex CLI stage activity runner 仍停在 dry-run receipt / fixture-run 层；真实长时 Codex process supervision、token/cost/progress sampling 和 live typed closeout collection 仍未形成完整 provider-backed execution path。
 - OPL App 已有 stage attempt workbench 只读入口，并能展示 provider completion 与 domain ready verdict 边界；但 human gate 操作、resume token、dead-letter repair 和按 domain/stage/blocker 过滤仍是后续 visibility/operation lane。
 - MAS 的真实 paper line 还没有完全证明 `stage entry packet -> Codex execution -> closeout packet -> router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak；MAG/RCA 已有 domain-side controlled proof surface，但仍需 OPL/Temporal-hosted controlled attempt 证据。
 - Hermes/local provider 仍作为迁移期实现信号和 legacy/optional provider 存在，active docs 和部分 domain code 中仍有旧 Hermes / Gateway / compatibility wording，需要按 retirement plan 清理。
 
-因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架、local queue/attempt ledger、Temporal provider code、domain adapter discovery、standard skeleton validation、runtime snapshot 和 Aion stage attempt workbench 已落地；生产级真实 provider deployment、真实 Codex stage execution、human-gate/resume 操作闭环、真实 domain soak 和旧接口物理退役仍是下一阶段工作。
+因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架、local queue/attempt ledger、Temporal provider code、domain adapter discovery、standard skeleton validation、dry-run Codex runner receipt、typed closeout gate、runtime snapshot 和 Aion stage attempt workbench 已落地；生产级真实 provider deployment、真实 Codex stage execution、human-gate/resume 操作闭环、真实 domain soak 和旧接口物理退役仍是下一阶段工作。
 
 ## 离理想生产级框架还有多远
 
@@ -113,7 +113,7 @@ Date: `2026-05-11`
 
 | 目标项 | 当前距离 |
 | --- | --- |
-| OPL 作为完整智能体框架 | 控制面、合同、队列、attempt ledger、Temporal provider code、snapshot/workbench 已落地；还差真实 provider residency、Codex long-running runner、human gate 操作闭环和生产 soak。 |
+| OPL 作为完整智能体框架 | 控制面、合同、队列、attempt ledger、Temporal provider code、dry-run runner receipt、typed closeout gate、snapshot/workbench 已落地；还差真实 provider residency、Codex long-running live runner、human gate 操作闭环和生产 soak。 |
 | MAS/MAG/RCA 迁移到统一 skeleton | 已完成 manifest/adapter 同构和 OPL 发现校验；还差物理目录重组、path compatibility audit、direct skill / OPL-hosted parity 的持续回归，以及真实产物根 locator 的 restore/provenance proof。 |
 | Domain memory | MAS 标准 memory descriptor resolved；MAG/RCA domain-side apply/proof surface landed；还差 OPL 标准 descriptor adapter、真实 workspace/runtime memory body migration、accepted/rejected writeback receipt 和 operator UI 读模型。 |
 | Lifecycle primitives | OPL shared schema/locator 已有，MAS 经验已经分类为 framework_generic / mas_domain_specific；还差跨 domain cleanup/restore/retention 的 guarded apply proof。 |
@@ -440,7 +440,7 @@ Codex CLI 负责：
 
 ### Master P2. Codex Stage Activity Runner
 
-状态：已落地 Temporal activity 与 local fixture 的 typed closeout ingestion；真实 Codex CLI long-running activity runner 仍是后续实现。
+状态：已落地 Temporal activity、local fixture 的 typed closeout ingestion、dry-run runner receipt 和完成态 gate；真实 Codex CLI long-running activity runner 仍是后续实现。
 
 目标：把 Codex CLI 作为 stage 内默认 concrete executor 接入 provider。
 
@@ -448,8 +448,9 @@ Codex CLI 负责：
 
 - 已完成：stage packet ref、workspace locator、authority boundary 可进入 fixture activity input。
 - 已完成：typed closeout packet 强制要求 `closeout_refs`，并投影 consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、next owner、domain ready verdict。
-- 已完成：checkpoint refs、human gate signals、user instruction signals 和 resume signals 进入 attempt ledger/query/workbench projection。
-- 待完成：真实 Codex CLI activity heartbeat、long-running process supervision、token/cost/progress sampling。
+- 已完成：checkpoint refs、human gate ledger、user instruction ledger、resume ledger 和 dead-letter task ledger 进入 attempt ledger/query/workbench projection。
+- 已完成：缺少 typed closeout 的 domain dispatch 只进入 checkpointed，不能被标成 completed。
+- 待完成：真实 Codex CLI activity heartbeat、long-running process supervision、token/cost/progress sampling 和 live closeout collection。
 
 验收：
 
