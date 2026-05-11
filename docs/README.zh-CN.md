@@ -43,6 +43,7 @@
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
 - [文档组合治理](./docs_portfolio_consolidation.md)
+- [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
 - [OPL 当前开发线路](./active/current-development-lines.zh-CN.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.zh-CN.md)
 - [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
@@ -55,6 +56,7 @@
 2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
 [OPL 当前开发线路](./active/current-development-lines.zh-CN.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.zh-CN.md) 与
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
+跨仓内容级整理入口是 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)：OPL 持有 framework owner 口径，MAS/MAG/RCA 保留各自 domain truth，MDS 只保留 MAS 声明的 archive/reference/oracle 角色；整理时先按段落内容判断生命周期，再决定合并、调整或归档。
 前者给出 framework-first 执行顺序；开发文档组合整理负责判断旧开发文档内容应合并、保留、降级、退役还是归档；roadmap 持有当前 `TypeScript` 控制面决策、Temporal provider 计划、domain-agent 边界，以及
 Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 涉及 MAS/MAG/RCA 的领域经验记忆、路线套路、视觉模式或模板边界时，先读
@@ -151,5 +153,5 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - 历史继续作为仓库跟踪的 provenance 和 tombstone。
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。
-- 跨仓 docs 治理按 [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) 执行：OPL、MAS、MAG、RCA 保持生命周期角色等价，不强制目录名完全一致。
+- 跨仓 docs 治理按 [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md) 执行：OPL、MAS、MAG、RCA、MDS 保持生命周期角色等价，不强制目录名完全一致，也不把旧文档整篇当作当前 backlog。
 - 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。

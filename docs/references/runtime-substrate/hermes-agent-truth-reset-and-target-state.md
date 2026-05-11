@@ -20,9 +20,7 @@
 
 ### 2.1 OPL
 
-- `OPL` 当前仍是顶层 gateway / federation / shared-contract surface。
-- `OPL` 并没有自己的 runtime substrate。
-- `OPL` 当前最多只能定义“什么算真实的 runtime substrate 集成”，不能声称自己已经拥有 Hermes-Agent runtime。
+当前状态补充（2026-05-11）：本节保留的是 Hermes-first 重置时的历史判断。当前 `OPL` 已经收敛为 Codex-first、stage-led、provider-backed family agent framework owner，持有 stage attempt、typed queue、projection、shared contracts 和 provider abstraction；`gateway / federation` 只作为 legacy/provenance/compatibility vocabulary 阅读。`OPL` 仍不能声称自己已经拥有上游 `Hermes-Agent` runtime，也不把 Hermes 写成默认 session/wakeup substrate。
 
 ### 2.2 RedCube AI
 
@@ -32,10 +30,7 @@
 
 ### 2.3 Med Auto Science
 
-- 当前仍然能通过 `MedAutoScience -> controlled MedDeepScientist backend` 跑长时研究主线。
-- 当前仓内的 `Hermes` 主要是 repo-side seam / shim / contract owner。
-- 它已经帮助把 outer-loop contract、watch、supervision、durable surface、backend abstraction 收紧出来，但真实执行仍落在 `MedDeepScientist` backend。
-- 这同样不等于“已接入上游 Hermes-Agent”。
+当前状态补充（2026-05-11）：`Med Auto Science` 是独立医学科研 domain agent。外部 `MDS / DeepScientist` 已降为 MAS 显式声明的 archive / provenance / backend audit / explicit archive import / upstream intake / diagnostic / parity oracle reference。历史上对 `controlled MedDeepScientist backend`、repo-side Hermes seam / shim 和 outer-loop contract 的描述只保留为迁移来源；它不再定义 MAS 默认 runtime owner，也不等于“已接入上游 Hermes-Agent”。
 
 ### 2.4 Med Auto Grant
 

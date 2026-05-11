@@ -35,6 +35,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 - [Contract convergence v1 decision note](./convergence-governance/contract-convergence-v1-decision-note.md)
 - [Docs lifecycle management playbook](./convergence-governance/docs-lifecycle-management-playbook.zh-CN.md)
 - [Family docs lifecycle governance rollout, 2026-05-09](./convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
+- [OPL family content-level docs consolidation, 2026-05-11](./convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
 - [Series docs governance checklist](./convergence-governance/series-doc-governance-checklist.md)
 - [Four-repo doc intake template](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 execution board](./convergence-governance/contract-convergence-v1-execution-board.md)
@@ -126,7 +127,8 @@ Retired prose files live in `docs/history/`. Machine-readable contracts, tests, 
 - After the 2026-05-11 architecture reset, use [OPL development document portfolio](../active/development-document-portfolio.md) and [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) as the master entries for OPL framework work, execution-language decisions, Temporal provider rollout, domain-agent boundary changes, and legacy-surface retirement.
 - For MAS/MAG/RCA publication routes, grant strategies, visual patterns, figure templates, prompt lessons, or reviewer lessons, use [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md) to decide whether the content belongs in natural-language memory, strong domain contracts, or a deferred framework lane.
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
-- `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
+- `family-content-level-docs-consolidation-2026-05-11.zh-CN.md` is the current cross-repo owner map for OPL/MAS/MAG/RCA/MDS content-level docs cleanup.
+- `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the family series; the dated sync summary records one concrete cross-repo intake round.
 - `four-repo-doc-intake-template.md` is the reusable central intake form for documenting scope, affected repositories, verification, and cleanup across a cross-repo docs round.
 - New reference docs should be filed into the directory buckets above.
 - `docs/**` and `README*` are human-readable surfaces. Do not make scripts, contracts, tests, or runtime dashboards depend on their concrete paths; use stable contract files or semantic surface ids instead.

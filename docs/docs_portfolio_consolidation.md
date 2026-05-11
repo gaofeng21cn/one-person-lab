@@ -22,6 +22,14 @@ Entry pages should show the current state, hierarchy, old/new relationship, and 
 
 The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). That rollout turns the MAS full-docs restructuring into an OPL-family standard: repositories must be role-equivalent in lifecycle governance, but they do not need identical directory names.
 
+The 2026-05-11 content-level rollout extends that rule across the current
+OPL family. The execution order is framework-first: `OPL` owns the shared
+Codex-first, stage-led, provider-backed agent framework and docs lifecycle
+language; `MAS`, `MAG`, and `RCA` keep their domain truth while migrating their
+docs to content-level owner surfaces; `MDS` remains an archive/reference/oracle
+surface declared by MAS. The rollout entry is
+[OPL Family Content-Level Docs Consolidation 2026-05-11](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md).
+
 ## Reading Order
 
 1. `README.md` / `README.zh-CN.md`
@@ -197,8 +205,16 @@ Cross-repo docs治理 must follow role-equivalent lifecycle architecture:
 - `MAS` owns medical research runtime/program/capability truth and remains the reference implementation for deep docs lifecycle restructuring.
 - `MAG` owns grant truth; older path-stable specs may remain under `docs/specs/` while README/index layers separate active and historical records.
 - `RCA` owns visual-deliverable truth; product, runtime, delivery, source, references, program, policies, and history should be separate reader layers.
+- `MDS` is not an admitted OPL domain agent. It is a MAS-declared archive,
+  backend-audit, source-provenance, explicit archive-import, upstream-intake,
+  diagnostic, and parity-oracle reference.
 
 When a domain repo cannot safely move historical docs because current-program, audit, or old absolute-path evidence still points at them, the correct move is index-level lifecycle separation first, physical migration later.
+
+The current cross-repo rollout is content-level, not file-name-level. Workers
+must read document bodies, merge still-valid content into the active owner doc,
+adjust outdated sections in place when path stability matters, and archive only
+after inbound `human_doc:*`, contract, docs, and history references are checked.
 
 ## Root AGENTS Alignment
 

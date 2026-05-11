@@ -35,6 +35,7 @@
 - [Contract convergence v1 决策记录](./convergence-governance/contract-convergence-v1-decision-note.md)
 - [文档分层与生命周期管理 Playbook](./convergence-governance/docs-lifecycle-management-playbook.zh-CN.md)
 - [Family Docs 生命周期治理落地记录，2026-05-09](./convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
+- [OPL Family 内容级文档收敛，2026-05-11](./convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
 - [系列项目文档治理清单](./convergence-governance/series-doc-governance-checklist.md)
 - [四仓文档 intake 模板](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 执行看板](./convergence-governance/contract-convergence-v1-execution-board.md)
@@ -126,7 +127,8 @@
 - 2026-05-11 架构收敛后，OPL framework 工作、执行语言决策、Temporal provider 落地、domain-agent 边界调整与旧面退役清理，统一先读 [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md) 与 [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
 - 讨论 MAS/MAG/RCA 的论文套路、基金策略、视觉模式、图表模板、prompt 经验或 reviewer 经验应放进自然语言 memory、强 contract 还是暂缓时，统一先读 [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md)。
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
-- `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
+- `family-content-level-docs-consolidation-2026-05-11.zh-CN.md` 是当前 OPL/MAS/MAG/RCA/MDS 内容级文档整理的跨仓 owner map。
+- `series-doc-governance-checklist.md` 是当前仓与 family 系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
 - 新参考文档优先按上面的目录分区归档。
 - `docs/**` 与 `README*` 默认是人读材料。不要让脚本、合同、测试或 runtime dashboard 依赖它们的具体路径；需要跨层引用时使用稳定合同文件或语义 surface id。
