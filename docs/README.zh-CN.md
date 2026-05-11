@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | 用户 | [仓库首页](../README.zh-CN.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
-| 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.zh-CN.md)、[公开支撑文档](./public/README.zh-CN.md)、[参考级索引](./references/README.zh-CN.md)、`docs/specs/` 下的当前规格、[历史归档索引](./history/README.zh-CN.md) | 查看生命周期角色、活跃支撑、公开支撑、参考材料、规格和退役路线 |
+| 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.zh-CN.md)、[公开支撑文档](./public/README.zh-CN.md)、[规格索引](./specs/README.zh-CN.md)、[参考级索引](./references/README.zh-CN.md)、[历史归档索引](./history/README.zh-CN.md) | 查看生命周期角色、活跃支撑、公开支撑、保留规格、参考材料和退役路线 |
 
 ## 技术工作集
 
@@ -48,6 +48,7 @@
 - [Runtime Substrate 参考索引](./references/runtime-substrate/README.zh-CN.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
+- [规格索引](./specs/README.zh-CN.md)
 
 2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
@@ -66,7 +67,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - `docs/` 根目录只保留文档索引、核心五件套和 [文档组合治理](./docs_portfolio_consolidation.md)。
 - `docs/active/` 承接当前 runtime、activation、onboarding 和 shared-boundary 的人读支撑。
 - `docs/public/` 承接仓库首页之后的公开产品方向支撑。
-- `docs/specs/` 承接仍然活跃的 runtime / product-boundary 规格。
+- `docs/specs/` 承接仍然活跃或因路径稳定暂时保留的 runtime / product-boundary 规格，并写明当前 owner。
 - `docs/references/` 按用途承接支撑参考。
 - `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
 
@@ -106,6 +107,8 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - [Runtime Substrate 参考索引](./references/runtime-substrate/README.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+- [当前支撑参考索引](./references/current-support/README.zh-CN.md)
+- [Operating governance 参考索引](./references/operating-governance/README.zh-CN.md)
 - [Docker WebUI 部署参考](./references/current-support/opl-docker-webui-deployment.zh-CN.md)
 - [OPL GUI Shell Adapter 边界说明](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL Fresh Install 与 GUI 首启测试参考](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
@@ -129,6 +132,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - OPL 自己持有的机器可读产品资源： [合同目录说明](../contracts/README.md)
 - 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
 - 活跃 framework 合同：`contracts/opl-framework/*.json`
+- 路径稳定保留的 runtime / product-boundary 规格：[规格索引](./specs/README.zh-CN.md)
 - 已退役 gateway/federation 来源语料：[Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.zh-CN.md)
 - 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
 - 历史与退役路线： [历史归档索引](./history/README.zh-CN.md) 与 [过程历史归档](./history/process/README.zh-CN.md)

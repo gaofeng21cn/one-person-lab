@@ -14,7 +14,7 @@ If you need to understand what `OPL` is today, go back to:
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
 - [docs_portfolio_consolidation.md](../docs_portfolio_consolidation.md)
-- current runtime / product-boundary specs under [`docs/specs/`](../specs/)
+- current or path-stable retained runtime / product-boundary specs through the [Specs Index](../specs/README.md)
 
 ## Directory Buckets
 
@@ -49,6 +49,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 
 ## 2. Current Support
 
+- [Current support reference index](./current-support/README.md)
 - [OPL GUI shell adapter boundary](./current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL fresh install and GUI first-launch testing](./current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [Docker WebUI deployment reference](./current-support/opl-docker-webui-deployment.md)
@@ -98,6 +99,7 @@ Superseded or legacy references kept for migration review and tombstone context:
 
 ## 6. Operating Governance References
 
+- [Operating governance reference index](./operating-governance/README.md)
 - [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md)
 - [Family domain quality projection contract](./operating-governance/family-domain-quality-projection-contract.md)
 - [Family incident learning loop](./operating-governance/family-incident-learning-loop.md)

@@ -2,6 +2,10 @@
 
 # OPL Publish / Promotion Operating Surface
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.zh-CN.md`
+Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
+
 ## 目的
 
 这份文档冻结 `OPL` 顶层最小化的 publish / promotion operating surface。
@@ -10,10 +14,11 @@
 
 目标不是顶层 publish runtime。
 目标是一个薄的顶层 operating layer：只索引 publish outcome、promotion candidate 与 public-surface reference，而 publish truth 仍然留在 domain system 内部。
+本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 Codex-first、stage-led。
 
 ## 与前置 Gateway 层的关系
 
-这层 operating surface 建立在已冻结的几层之上：
+这层 operating surface 建立在保留的历史兼容层之上：
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.zh-CN.md)
 - [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
@@ -23,7 +28,7 @@
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - 当前机器可读合同目录：[`../../contracts/opl-framework/README.zh-CN.md`](../../../contracts/opl-framework/README.zh-CN.md)
 
-如果这些层还不稳定，这层 operating surface 就不应被视作已冻结。
+这些层是 provenance 与 compatibility input。当前 topology 与 owner boundary 仍以核心五件套、当前合同和 stage-led framework roadmap 为准。
 
 ## 与 P5.M1 的边界
 
@@ -179,9 +184,9 @@
 - distribution result
 - 已经完成 promotion 的证明
 
-### 后续动作仍然必须经过 `domain_gateway`
+### 后续动作仍然使用 `domain_gateway` 兼容值
 
-如果后续还需要执行 publish 或 promotion action，`OPL` 仍然必须 route 到 domain gateway。
+如果后续还需要执行 publish 或 promotion action，`OPL` 仍然必须 route 到 domain-owned capability entry；这里用保留兼容值 `domain_gateway` 表示。
 
 这一层可以索引 outcome 或 target surface。
 但不能直接 submit、export、release 或 post。

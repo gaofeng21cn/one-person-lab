@@ -2,12 +2,17 @@
 
 # OPL Gateway Example Corpus
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/README.md`
+Machine boundary: human-readable companion for example artifacts only.
+
 ## Purpose
 
-This document indexes the canonical machine-readable examples for the frozen `OPL Gateway` contract stack.
+This document indexes historical/legacy-derived machine-readable examples for the former `OPL Gateway` contract stack.
 
-Its goal is to make the current gateway surface easier to discover and reuse without turning examples into a runtime.
+Its goal is to keep the legacy gateway examples discoverable for review, migration, and schema archaeology without turning examples into a runtime or current topology.
 It is a companion index, not a new contract layer.
+The current OPL topology is Codex-first and stage-led; these examples are contract walkthroughs and evidence material.
 
 ## Non-Goals
 
@@ -47,7 +52,7 @@ Read the examples as **contract-level walkthroughs**, not executable workflows.
 This corpus is illustrative and non-governing.
 
 If an example references a domain outcome, that outcome remains domain-owned truth.
-`OPL` only carries the top-level routing, governance, and publish/promotion indexes defined by the frozen contracts.
+`OPL` only carries the top-level routing, governance, and publish/promotion indexes defined by the retained compatibility contracts.
 
 ## Governing Contracts
 

@@ -2,11 +2,17 @@
 
 # OPL Surface Lifecycle Map
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.zh-CN.md`
+Machine boundary: 只作为 derived JSON 工件的人读配套。
+
 ## 目的
 
-这份文档索引当前已冻结 `OPL Gateway` surface stack 的 derived machine-readable lifecycle map。
+这份文档索引历史/当前 OPL surface stack 的 derived machine-readable lifecycle map。
 
 它的作用是：把 contract、routing、operating、discoverability 与 acceptance surface 串成可遍历的关系图，同时不把这张 map 升格成 workflow engine、transition authority 或第二真相源。
+
+当前 OPL topology 是 Codex-first、stage-led。Legacy `gateway` id 只在 derived artifact 与 compatibility archive 仍需要它们做 traversal 和 reviewability 时保留。
 
 ## 机器可读工件
 
@@ -28,6 +34,7 @@
 `OPL` 可以在这里冻结依赖与遍历语言，但 transition execution、runtime writeback、review truth 与 publication truth 仍然留在 gateway 边界之下的人类 / domain-owned surface 中。
 因此，这张 map 可以服务于 review 与 acceptance alignment 的 discoverability，而不会升级成 workflow control plane 或共享 truth store。
 更完整的 ownership split 可参考[共享基础结构归属](../../active/shared-foundation-ownership.zh-CN.md)。
+当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 为准。
 
 ## Lifecycle 字段
 

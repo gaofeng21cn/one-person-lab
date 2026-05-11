@@ -2,11 +2,17 @@
 
 # OPL Surface Authority Matrix
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.md`
+Machine boundary: human-readable companion to the derived JSON artifact only.
+
 ## Purpose
 
-This document indexes the derived machine-readable authority matrix for the frozen `OPL Gateway` surface stack.
+This document indexes the derived machine-readable authority matrix for the historical/current OPL surface stack.
 
 Its job is to make routing, execution, truth, review, and publication ownership boundaries inspectable from one place without turning the matrix into an authorization engine, runtime control plane, or second source of truth.
+
+The current OPL topology is Codex-first and stage-led. Surface IDs that still contain `gateway` or `domain_gateway` are retained because the paired derived JSON artifact and historical compatibility corpus still use them for reviewability. Read them as legacy-derived reviewability vocabulary.
 
 ## Machine-Readable Artifact
 
@@ -27,6 +33,7 @@ This authority matrix sits in the shared-foundation boundary-language layer only
 `OPL` owns the top-level vocabulary that names route, execution, truth, review, and publication splits here, but the underlying authorities remain where the matrix says they remain: domain gateways, domain harnesses, and humans/private surfaces outside `OPL`.
 That makes the matrix an inspectable reference surface for ownership review, not a runtime control plane or shared truth store.
 For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
+For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
 
 ## Authority Fields
 
