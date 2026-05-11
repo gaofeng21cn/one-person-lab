@@ -27,24 +27,16 @@
 
 ## 机器可读配套工件
 
-- [`../contracts/opl-gateway/task-topology.json`](../../contracts/opl-gateway/task-topology.json)
-- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
+- [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 
 这些配套工件分别把：
 
 - 顶层 task topology materialize 成 machine-readable 的语义 surface
-- 当前 under-definition workstream 仍缺哪些 admission boundary material 写成 machine-readable backlog
+- stage selection 使用的已收录与候选 workstream catalog
 
 它们可以描述 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
-`Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain surface，而剩余 under-definition workstream 的 formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然要通过单独的 onboarding evidence 获得。
-
-在当前基线上，`candidate-domain definition` 由三部分共同构成：
-
-- `task-topology` 中的任务边界与交付对象
-- candidate-domain backlog 中仍缺的 boundary package
-- domain-onboarding contract 中的 formal admission rules
-
-因此，当前 definition path 就是上面这组三层组合。
+`Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain-agent entry，而剩余 under-definition workstream 的 formal 收录、stage-selection readiness 与 stage-execution readiness 仍然要通过单独的 admission evidence 获得。
 
 如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.zh-CN.md)。
 
@@ -102,10 +94,10 @@
 当前边界状态：
 
 - 当前生命周期状态：已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain surface
-- formal 映射：`grant_ops -> medautogrant` 已经在 `G1` workstream/domain registry 中冻结
+- formal 映射：`grant_ops -> medautogrant` 已经在活跃 workstream/domain-agent catalog 中冻结
 - 当前公开入口：顶层 domain entry 已经是 `MedAutoGrant`，基金方向判断、申请书写作、作者侧模拟评审与修订 truth 都继续由它持有
-- 路由规则：successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
-- 当前顶层处理方式：清楚的请求会通过已冻结 routing vocabulary 与 domain manifest surface 直接解析到 `medautogrant`
+- stage-entry 规则：successful handoff 只能 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- 当前顶层处理方式：清楚的请求会通过活跃 stage vocabulary 与 domain manifest surface 直接解析到 `medautogrant`
 
 ## IP Ops
 
@@ -133,9 +125,9 @@
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`IP Foundry` / 知产工坊，首个规划产品为 `Med Auto Patent`
-- formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
-- discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
-- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
 - truth boundary：专利 canonical truth 与人工/法律审阅 gate 必须由未来 IP Ops domain boundary 持有
 - 路由规则：清楚的专利请求可以返回 `unknown_domain`；不得作为基金申请工作路由到 `MedAutoGrant`
 
@@ -165,9 +157,9 @@
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`Award Foundry` / 报奖工坊，首个规划产品为 `Med Auto Award`
-- formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
-- discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
-- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
 - truth boundary：报奖 canonical truth 与人工专家审阅 gate 必须由未来 Award Ops domain boundary 持有
 - 路由规则：清楚的报奖请求可以返回 `unknown_domain`；不得作为基金申请工作路由到 `MedAutoGrant`
 
@@ -197,11 +189,11 @@
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`Thesis Foundry` / 学位论文工坊，首个规划产品为 `Med Auto Thesis`
-- formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
-- discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
-- 已跟踪的 blocker package：`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
 - truth boundary：Thesis-specific canonical truth 会随着未来 Thesis Ops domain boundary 一起冻结
-- 路由规则：任何未来的 successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
+- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止 direct harness bypass
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Review Ops
@@ -231,11 +223,11 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 
 - 当前生命周期状态：under-definition candidate workstream
 - 规划产品表达：`Review Foundry` / 评审工坊，首个规划产品为 `Med Auto Review`
-- formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
-- discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
-- 已跟踪的 blocker package：`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
 - truth boundary：review truth 会在 dedicated Review Ops boundary 冻结后继续保持为 domain-owned
-- 路由规则：任何未来的 successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
+- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止 direct harness bypass
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Presentation Ops

@@ -49,8 +49,8 @@ The acceptance checks below are grounded in:
 - [OPL Task Map](../../../public/task-map.md)
 - [OPL Routed-Safety Example Corpus](../../../references/examples-corpora/opl-routed-safety-example-corpus.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.md)
-- [`acceptance-matrix.json`](../../../../contracts/opl-gateway/acceptance-matrix.json)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
+- [`acceptance-matrix.json`](../../../../contracts/opl-framework/acceptance-matrix.json)
 
 ## Companion Reference Surfaces
 
@@ -70,10 +70,10 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
 
 `G1` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/workstreams.json` exists and is valid JSON.
-2. `contracts/opl-gateway/domains.json` exists and is valid JSON.
-3. `contracts/opl-gateway/routing-vocabulary.json` exists and is valid JSON.
-4. `contracts/opl-gateway/handoff.schema.json` exists and is valid JSON Schema JSON.
+1. `contracts/opl-framework/workstreams.json` exists and is valid JSON.
+2. `contracts/opl-framework/domains.json` exists and is valid JSON.
+3. `contracts/opl-framework/routing-vocabulary.json` exists and is valid JSON.
+4. `contracts/opl-framework/handoff.schema.json` exists and is valid JSON Schema JSON.
 5. The workstream registry explicitly encodes:
    - `research_ops -> medautoscience`
    - `presentation_ops -> redcube`
@@ -85,7 +85,7 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
 
 ### Verification
 
-- Parse all JSON / schema files under `contracts/opl-gateway/` with `json.load`.
+- Parse all JSON / schema files under `contracts/opl-framework/` with `json.load`.
 - Inspect `workstreams.json`, `domains.json`, `routing-vocabulary.json`, and `handoff.schema.json` for the required mapping and boundary fields.
 - Confirm contract README positions the directory as machine-readable contract materialization rather than runtime.
 
@@ -146,7 +146,7 @@ In the current `Phase 1`, this is a planning gate, not a runtime gate. The curre
 
 ### Verification
 
-- Parse `contracts/opl-gateway/routed-actions.schema.json`.
+- Parse `contracts/opl-framework/routed-actions.schema.json`.
 - Check `docs/opl-routed-action-gateway.md` and `.zh-CN.md` for all required operations and failure states.
 - Grep for planning-gate / planning-level-contract / planning-dependency wording and confirm that routed-action prose is still non-launcher.
 - Grep for no-bypass wording and confirm it is framed as a hard rule, not a preference.
@@ -157,8 +157,8 @@ In the current `Phase 1`, this is a planning gate, not a runtime gate. The curre
 
 The onboarding gate passes only when all of the following are true:
 
-1. `contracts/opl-gateway/domain-onboarding-readiness.schema.json` exists and is valid JSON Schema JSON.
-2. `examples/opl-gateway/domain-onboarding-readiness.json` exists and validates against that schema.
+1. `contracts/opl-framework/domain-onboarding-readiness.schema.json` exists and is valid JSON Schema JSON.
+2. `examples/opl-framework/domain-onboarding-readiness.json` exists and validates against that schema.
 3. The onboarding contract requires complete `G1` registry material for any new domain.
 4. The onboarding contract requires explicit public documentation surfaces.
 5. The onboarding contract requires explicit truth-ownership declaration.
@@ -182,7 +182,7 @@ The onboarding gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/domain-onboarding-readiness.schema.json` and validate `examples/opl-gateway/domain-onboarding-readiness.json` against it.
+- Parse `contracts/opl-framework/domain-onboarding-readiness.schema.json` and validate `examples/opl-framework/domain-onboarding-readiness.json` against it.
 - Check `docs/opl-domain-onboarding-contract.md` and `.zh-CN.md` for each required gate.
 - Confirm the onboarding gate stays downstream of G1/G2/G3 rather than replacing them.
 - Confirm the onboarding contract does not move canonical truth into `OPL`.
@@ -194,7 +194,7 @@ The onboarding gate passes only when all of the following are true:
 `P5.M1` passes only when all of the following are true:
 
 1. `docs/references/opl-governance-audit-operating-surface.md` and `.zh-CN.md` exist.
-2. `contracts/opl-gateway/governance-audit.schema.json` exists and is valid JSON Schema JSON.
+2. `contracts/opl-framework/governance-audit.schema.json` exists and is valid JSON Schema JSON.
 3. The governance / audit surface allows only these top-level record kinds:
    - `routing_audit`
    - `governance_decision`
@@ -208,7 +208,7 @@ The onboarding gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/governance-audit.schema.json`.
+- Parse `contracts/opl-framework/governance-audit.schema.json`.
 - Check `docs/references/opl-governance-audit-operating-surface.md` and `.zh-CN.md` for the allowed record kinds and the no-truth-shift wording.
 - Confirm the schema uses kind-specific discrimination and that `decision_source` excludes `opl_gateway`.
 - Confirm governance / audit wording stays downstream of routed action and does not create a new execution runtime.
@@ -220,7 +220,7 @@ The onboarding gate passes only when all of the following are true:
 `P5.M2` passes only when all of the following are true:
 
 1. `docs/references/opl-publish-promotion-operating-surface.md` and `.zh-CN.md` exist.
-2. `contracts/opl-gateway/publish-promotion.schema.json` exists and is valid JSON Schema JSON.
+2. `contracts/opl-framework/publish-promotion.schema.json` exists and is valid JSON Schema JSON.
 3. The publish / promotion surface explicitly begins only after a domain-owned publish / release / export / submission outcome already exists.
 4. The publish / promotion doc and schema allow only these top-level record kinds:
    - `publish_outcome_index`
@@ -233,7 +233,7 @@ The onboarding gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/publish-promotion.schema.json`.
+- Parse `contracts/opl-framework/publish-promotion.schema.json`.
 - Check `docs/references/opl-publish-promotion-operating-surface.md` and `.zh-CN.md` for the post-publish boundary and no-truth-shift wording.
 - Confirm the schema keeps kind-specific records explicit and keeps `domain_truth_refs` mandatory.
 - Confirm publish / promotion wording does not turn `OPL` into a venue-submission runtime or public-channel posting runtime.
@@ -274,7 +274,7 @@ The wording-consistency gate passes only when all of the following are true:
 `P7` passes only when all of the following are true:
 
 1. `docs/references/opl-gateway-example-corpus.md` and `.zh-CN.md` exist.
-2. `examples/opl-gateway/research-ops-submission.json` and `examples/opl-gateway/presentation-ops-publish.json` exist and are valid JSON.
+2. `examples/opl-framework/research-ops-submission.json` and `examples/opl-framework/presentation-ops-publish.json` exist and are valid JSON.
 3. The corpus docs explicitly keep the example set illustrative, non-governing, and non-executing.
 4. The research example explicitly preserves:
    - `research_ops -> medautoscience`
@@ -300,7 +300,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P8` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/public-surface-index.json` exists and is valid JSON.
+1. `contracts/opl-framework/public-surface-index.json` exists and is valid JSON.
 2. `docs/opl-public-surface-index.md` and `.zh-CN.md` exist.
 3. The public-surface index explicitly remains machine-readable and non-executing.
 4. The public-surface index explicitly distinguishes:
@@ -320,7 +320,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/public-surface-index.json`.
+- Parse `contracts/opl-framework/public-surface-index.json`.
 - Check structural integrity for category references, `routes_to` targets, and local `repo_path` refs.
 - Check `docs/opl-public-surface-index.md` and `.zh-CN.md` for no-runtime / no-truth-shift / no-internal-module wording.
 - Confirm `surfaces[*].surface_id` values remain unique, `opl_candidate_domain_backlog` resolves exactly once as a supporting/reference surface rather than as an admitted domain or execution surface, and `opl_operating_model` / `opl_shared_foundation` / `opl_shared_foundation_ownership` each resolve exactly once as OPL-owned contract/reference surfaces only.
@@ -334,7 +334,7 @@ The wording-consistency gate passes only when all of the following are true:
 `P10` passes only when all of the following are true:
 
 1. `docs/references/opl-routed-safety-example-corpus.md` and `.zh-CN.md` exist.
-2. `examples/opl-gateway/ambiguous-task-routing.json`, `unknown-domain-routing.json`, and `refusal-routing.json` exist and are valid JSON.
+2. `examples/opl-framework/ambiguous-task-routing.json`, `unknown-domain-routing.json`, and `refusal-routing.json` exist and are valid JSON.
 3. Each routed-safety example stays below the routed boundary:
    - no `build_handoff_payload`
    - no hidden best-effort reroute
@@ -359,14 +359,14 @@ The wording-consistency gate passes only when all of the following are true:
 
 1. `docs/references/opl-operating-example-corpus.md` and `.zh-CN.md` exist.
 2. The six standalone operating examples exist and are valid JSON:
-   - `examples/opl-gateway/governance-decision-record.json`
-   - `examples/opl-gateway/cross-domain-review-index.json`
-   - `examples/opl-gateway/publish-readiness-signal.json`
-   - `examples/opl-gateway/publish-outcome-index.json`
-   - `examples/opl-gateway/promotion-candidate-signal.json`
-   - `examples/opl-gateway/promotion-surface-index.json`
-3. The governance-side examples validate directly against `contracts/opl-gateway/governance-audit.schema.json`.
-4. The publish / promotion examples validate directly against `contracts/opl-gateway/publish-promotion.schema.json`.
+   - `examples/opl-framework/governance-decision-record.json`
+   - `examples/opl-framework/cross-domain-review-index.json`
+   - `examples/opl-framework/publish-readiness-signal.json`
+   - `examples/opl-framework/publish-outcome-index.json`
+   - `examples/opl-framework/promotion-candidate-signal.json`
+   - `examples/opl-framework/promotion-surface-index.json`
+3. The governance-side examples validate directly against `contracts/opl-framework/governance-audit.schema.json`.
+4. The publish / promotion examples validate directly against `contracts/opl-framework/publish-promotion.schema.json`.
 5. The operating-example corpus docs explicitly keep the examples illustrative, non-governing, and non-executing.
 6. The governance / audit and publish / promotion docs point to the operating-example corpus as the canonical standalone machine-readable example surface.
 7. The contract hub, public-surface index, and acceptance surfaces expose the operating-example corpus as a supporting surface rather than a runtime.
@@ -386,7 +386,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P13` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/operating-record-catalog.json` exists and is valid JSON.
+1. `contracts/opl-framework/operating-record-catalog.json` exists and is valid JSON.
 2. `docs/references/opl-operating-record-catalog.md` and `.zh-CN.md` exist.
 3. The catalog covers all frozen operating record kinds:
    - `routing_audit`
@@ -404,7 +404,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/operating-record-catalog.json` with `json.load`.
+- Parse `contracts/opl-framework/operating-record-catalog.json` with `json.load`.
 - Confirm the catalog covers exactly the frozen `P5.M1` / `P5.M2` record kinds.
 - Check that each `schema_ref` and `example_ref` resolves to an existing local artifact.
 - Check `docs/references/opl-operating-record-catalog.md` and `.zh-CN.md` for non-executing / no-truth-shift / domain_gateway-only wording.
@@ -416,7 +416,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P14` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/surface-lifecycle-map.json` exists and is valid JSON.
+1. `contracts/opl-framework/surface-lifecycle-map.json` exists and is valid JSON.
 2. `docs/references/opl-surface-lifecycle-map.md` and `.zh-CN.md` exist.
 3. The lifecycle map covers exactly these currently frozen surfaces:
    - `opl_operating_model`
@@ -439,7 +439,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `opl_gateway_acceptance_spec`
 4. Each lifecycle entry stays derived/reference-only and carries only surface-boundary fields such as `layer_id`, `control_mode`, `truth_mode`, `requires_surfaces`, `enables_surfaces`, `follow_on_route_surface`, and `governing_refs`.
 5. Every `requires_surfaces` and `enables_surfaces` target resolves to another known lifecycle entry.
-6. Every `surface_id` covered by the lifecycle map also exists inside `contracts/opl-gateway/public-surface-index.json`.
+6. Every `surface_id` covered by the lifecycle map also exists inside `contracts/opl-framework/public-surface-index.json`.
 7. Every `governing_ref` resolves to an existing local artifact.
 8. `follow_on_route_surface` is always either `null` or `domain_gateway`.
 9. The lifecycle map stays non-executing, does not become a workflow engine, does not become a transition authority, and does not become a second source of truth or runtime manifest.
@@ -447,7 +447,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/surface-lifecycle-map.json` with `json.load`.
+- Parse `contracts/opl-framework/surface-lifecycle-map.json` with `json.load`.
 - Confirm the lifecycle map covers exactly the frozen surface set above.
 - Check that each `requires_surfaces` / `enables_surfaces` target resolves inside the same map and that each `governing_ref` resolves locally.
 - Confirm `follow_on_route_surface in {null, domain_gateway}` for every entry.
@@ -459,7 +459,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P15` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/surface-authority-matrix.json` exists and is valid JSON.
+1. `contracts/opl-framework/surface-authority-matrix.json` exists and is valid JSON.
 2. `docs/references/opl-surface-authority-matrix.md` and `.zh-CN.md` exist.
 3. The authority matrix covers exactly these current authority-review surfaces:
    - `opl_operating_model`
@@ -485,7 +485,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `redcube_public_gateway`
 4. Each matrix entry stays derived/reference-only and carries only authority-boundary fields such as `owner_scope`, `surface_role`, `route_authority`, `execution_authority`, `truth_authority`, `review_authority`, `publication_authority`, `allowed_follow_on_surface`, `forbidden_actions`, and `governing_refs`.
 5. Every `governing_ref` resolves to an existing local artifact.
-6. Every `surface_id` covered by the authority matrix also exists inside `contracts/opl-gateway/public-surface-index.json`.
+6. Every `surface_id` covered by the authority matrix also exists inside `contracts/opl-framework/public-surface-index.json`.
 7. For every OPL-owned entry, `execution_authority`, `truth_authority`, `review_authority`, and `publication_authority` all remain `none`.
 8. Linked domain public-entry surfaces remain `owner_scope = domain` and keep domain-local routing/execution/truth/review/publication authority.
 9. `allowed_follow_on_surface` is always either `null` or `domain_gateway`.
@@ -493,7 +493,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/surface-authority-matrix.json` with `json.load`.
+- Parse `contracts/opl-framework/surface-authority-matrix.json` with `json.load`.
 - Confirm the authority matrix covers exactly the frozen surface set above.
 - Check that each `governing_ref` resolves locally and that each `surface_id` is present in the public-surface index.
 - Confirm every OPL-owned entry keeps `execution_authority = truth_authority = review_authority = publication_authority = none`.
@@ -506,7 +506,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P16` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/surface-review-matrix.json` exists and is valid JSON.
+1. `contracts/opl-framework/surface-review-matrix.json` exists and is valid JSON.
 2. `docs/references/opl-surface-review-matrix.md` and `.zh-CN.md` exist.
 3. The surface review matrix covers exactly these current human-review surfaces:
    - `opl_public_readme`
@@ -535,9 +535,9 @@ The wording-consistency gate passes only when all of the following are true:
    - `opl_candidate_domain_backlog`
    - `opl_gateway_acceptance_spec`
 4. Each review entry stays derived/reference-only and carries only review-boundary fields such as `owner_scope`, `surface_role`, `human_review_required`, `required_acceptance_gates`, `required_companion_surfaces`, `cross_domain_wording_check`, `publishability_stage`, and `governing_refs`.
-5. Every `required_acceptance_gate` resolves inside `contracts/opl-gateway/acceptance-matrix.json`.
-6. Every `required_companion_surface` resolves inside `contracts/opl-gateway/public-surface-index.json`.
-7. Every `surface_id` covered by the review matrix also exists inside `contracts/opl-gateway/public-surface-index.json`, and `review_entries[*].surface_id` values remain unique.
+5. Every `required_acceptance_gate` resolves inside `contracts/opl-framework/acceptance-matrix.json`.
+6. Every `required_companion_surface` resolves inside `contracts/opl-framework/public-surface-index.json`.
+7. Every `surface_id` covered by the review matrix also exists inside `contracts/opl-framework/public-surface-index.json`, and `review_entries[*].surface_id` values remain unique.
 8. Every `governing_ref` resolves to an existing local artifact.
 9. Every `human_review_required` value remains `true` for the covered OPL-owned surfaces.
 10. The review matrix stays non-executing, does not become an approval engine, does not become a publish controller or release engine, and does not transfer domain review or publication authority into `OPL`.
@@ -545,7 +545,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 ### Verification
 
-- Parse `contracts/opl-gateway/surface-review-matrix.json` with `json.load`.
+- Parse `contracts/opl-framework/surface-review-matrix.json` with `json.load`.
 - Confirm the review matrix covers exactly the frozen surface set above.
 - Check that each `required_acceptance_gate` resolves in the current acceptance matrix, each `required_companion_surface` resolves in the current public-surface index, each `review_entries[*].surface_id` remains unique, and each `governing_ref` resolves locally.
 - Confirm every covered OPL surface keeps `human_review_required = true`.
@@ -557,7 +557,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P17` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/task-topology.json` exists and is valid JSON.
+1. `contracts/opl-framework/task-topology.json` exists and is valid JSON.
 2. `docs/task-map.md` and `docs/task-map.zh-CN.md` both exist and link to the machine-readable task-topology artifact.
 3. The task-topology artifact covers exactly these workstreams:
    - `research_ops`
@@ -569,15 +569,15 @@ The wording-consistency gate passes only when all of the following are true:
 5. `presentation_ops` remains `registry_state = registered`, `routing_state = domain_gateway_ready`, `current_domain_id = redcube`, and `entry_surface = domain_gateway`.
 6. `ip_ops`, `award_ops`, `thesis_ops`, and `review_ops` all remain `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, and `entry_surface = null`.
 7. `presentation_ops` preserves `ppt_deck` as the direct map while keeping `xiaohongshu` in the same RedCube family/harness context without auto-equating it to `presentation_ops`.
-8. `contracts/opl-gateway/workstreams.json` and `domains.json` still register only the currently admitted workstreams/domains, and the task-topology artifact does not silently expand the G1 registry.
-9. `contracts/opl-gateway/public-surface-index.json` exposes `opl_task_map` as an `opl_public_entry` surface.
-10. `contracts/opl-gateway/surface-review-matrix.json` covers `opl_task_map` as a human-review surface without turning task topology into an approval, onboarding, discovery, or routing engine.
-11. `contracts/opl-gateway/candidate-domain-backlog.json` stays aligned to the same under-definition workstreams without inventing admitted domains or routed-ready entry surfaces.
+8. `contracts/opl-framework/workstreams.json` and `domains.json` still register only the currently admitted workstreams/domains, and the task-topology artifact does not silently expand the G1 registry.
+9. `contracts/opl-framework/public-surface-index.json` exposes `opl_task_map` as an `opl_public_entry` surface.
+10. `contracts/opl-framework/surface-review-matrix.json` covers `opl_task_map` as a human-review surface without turning task topology into an approval, onboarding, discovery, or routing engine.
+11. `contracts/opl-framework/candidate-domain-backlog.json` stays aligned to the same under-definition workstreams without inventing admitted domains or routed-ready entry surfaces.
 12. Contract README, public-surface index docs, task-map docs, candidate-backlog docs, and acceptance surfaces describe under-definition workstreams as semantic candidates only, not as admitted domains.
 
 ### Verification
 
-- Parse `contracts/opl-gateway/task-topology.json` with `json.load`.
+- Parse `contracts/opl-framework/task-topology.json` with `json.load`.
 - Confirm the exact workstream set above and the registered-vs-under-definition split.
 - Confirm `workstreams.json` still contains only `research_ops` and `presentation_ops`, and `domains.json` still contains only `medautoscience` and `redcube`.
 - Confirm `opl_task_map` resolves inside `public-surface-index.json` and `surface-review-matrix.json`.
@@ -590,7 +590,7 @@ The wording-consistency gate passes only when all of the following are true:
 
 `P18` passes only when all of the following are true:
 
-1. `contracts/opl-gateway/candidate-domain-backlog.json` exists and is valid JSON.
+1. `contracts/opl-framework/candidate-domain-backlog.json` exists and is valid JSON.
 2. `docs/references/opl-candidate-domain-backlog.md` and `docs/references/opl-candidate-domain-backlog.zh-CN.md` both exist and link to the machine-readable backlog artifact.
 3. The candidate-domain backlog covers exactly these under-definition workstreams:
    - `ip_ops`
@@ -629,12 +629,12 @@ The wording-consistency gate passes only when all of the following are true:
 17. `Review Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages across task-map / candidate-backlog / domain-onboarding wording, and any future successful target remains `domain_gateway`-only / no-bypass.
 18. No candidate entry or backlog rule collapses `Thesis Ops` or `Review Ops` into `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`; all admitted domains remain independent gateway-and-harness surfaces.
 19. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
-20. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
+20. `contracts/opl-framework/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
 21. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
 
 ### Verification
 
-- Parse `contracts/opl-gateway/candidate-domain-backlog.json` with `json.load`.
+- Parse `contracts/opl-framework/candidate-domain-backlog.json` with `json.load`.
 - Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
 - Confirm every candidate entry has the eight onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
 - Confirm no candidate entry carries placeholder future `domain_id`, `gateway_surface`, or `harness_surface` fields.
@@ -667,7 +667,7 @@ The wording-consistency gate passes only when all of the following are true:
 4. No G4 candidate index is described as a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
 5. G4 wording keeps canonical truth inside the owning domain and keeps `OPL` at the top-level gateway / federation layer rather than turning it into a monolithic runtime or shared truth owner.
 6. G4 wording does not collapse `MedAutoScience` or `RedCube AI` into internal `OPL` modules and does not weaken their independence as domain gateway / harness surfaces.
-7. `contracts/opl-gateway/acceptance-matrix.json` contains a dedicated gate that checks the rollout/spec boundary wording and forbids premature admission of any G4 candidate index.
+7. `contracts/opl-framework/acceptance-matrix.json` contains a dedicated gate that checks the rollout/spec boundary wording and forbids premature admission of any G4 candidate index.
 
 ### Verification
 
@@ -675,7 +675,7 @@ The wording-consistency gate passes only when all of the following are true:
 - Confirm the candidate set is exactly the four G4 indexes above, with roadmap-only / future-only / reference-only / non-admitting wording in both languages.
 - Confirm neither rollout doc upgrades any G4 candidate index into a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
 - Confirm G4 wording keeps canonical truth inside domains and preserves `MedAutoScience` / `RedCube AI` independence under the top-level `OPL` gateway.
-- Parse `contracts/opl-gateway/acceptance-matrix.json` and confirm the dedicated G4 gate covers the rollout/spec files and blocks premature admission wording.
+- Parse `contracts/opl-framework/acceptance-matrix.json` and confirm the dedicated G4 gate covers the rollout/spec files and blocks premature admission wording.
 
 ## Standard Verification Commands
 
@@ -684,7 +684,7 @@ git diff --check
 python3 - <<'PY'
 import json
 from pathlib import Path
-for path in sorted(list(Path('contracts/opl-gateway').glob('*.json')) + list(Path('examples/opl-gateway').glob('*.json'))):
+for path in sorted(list(Path('contracts/opl-framework').glob('*.json')) + list(Path('examples/opl-framework').glob('*.json'))):
     json.load(path.open())
     print('OK', path)
 PY
@@ -693,7 +693,7 @@ import json
 from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker, RefResolver
 
-contracts = Path('contracts/opl-gateway')
+contracts = Path('contracts/opl-framework')
 routed_schema_path = contracts / 'routed-actions.schema.json'
 handoff_schema_path = contracts / 'handoff.schema.json'
 gov_schema_path = contracts / 'governance-audit.schema.json'
@@ -722,11 +722,11 @@ gov = Draft202012Validator(gov_schema, format_checker=FormatChecker())
 pub = Draft202012Validator(pub_schema, format_checker=FormatChecker())
 
 for rel in [
-    'examples/opl-gateway/research-ops-submission.json',
-    'examples/opl-gateway/presentation-ops-publish.json',
-    'examples/opl-gateway/ambiguous-task-routing.json',
-    'examples/opl-gateway/unknown-domain-routing.json',
-    'examples/opl-gateway/refusal-routing.json',
+    'examples/opl-framework/research-ops-submission.json',
+    'examples/opl-framework/presentation-ops-publish.json',
+    'examples/opl-framework/ambiguous-task-routing.json',
+    'examples/opl-framework/unknown-domain-routing.json',
+    'examples/opl-framework/refusal-routing.json',
 ]:
     data = json.loads(Path(rel).read_text())
     routed.validate(data['route_request'])
@@ -739,17 +739,17 @@ for rel in [
     print('examples schema OK', rel)
 
 for rel in [
-    'examples/opl-gateway/governance-decision-record.json',
-    'examples/opl-gateway/cross-domain-review-index.json',
-    'examples/opl-gateway/publish-readiness-signal.json',
+    'examples/opl-framework/governance-decision-record.json',
+    'examples/opl-framework/cross-domain-review-index.json',
+    'examples/opl-framework/publish-readiness-signal.json',
 ]:
     gov.validate(json.loads(Path(rel).read_text()))
     print('governance example OK', rel)
 
 for rel in [
-    'examples/opl-gateway/publish-outcome-index.json',
-    'examples/opl-gateway/promotion-candidate-signal.json',
-    'examples/opl-gateway/promotion-surface-index.json',
+    'examples/opl-framework/publish-outcome-index.json',
+    'examples/opl-framework/promotion-candidate-signal.json',
+    'examples/opl-framework/promotion-surface-index.json',
 ]:
     pub.validate(json.loads(Path(rel).read_text()))
     print('publish example OK', rel)
@@ -759,9 +759,9 @@ import json
 from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
-schema = json.loads(Path('contracts/opl-gateway/domain-onboarding-readiness.schema.json').read_text())
+schema = json.loads(Path('contracts/opl-framework/domain-onboarding-readiness.schema.json').read_text())
 Draft202012Validator.check_schema(schema)
-example = json.loads(Path('examples/opl-gateway/domain-onboarding-readiness.json').read_text())
+example = json.loads(Path('examples/opl-framework/domain-onboarding-readiness.json').read_text())
 Draft202012Validator(schema, format_checker=FormatChecker()).validate(example)
 print('onboarding readiness schema OK')
 PY
@@ -769,7 +769,7 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-catalog = json.loads(Path('contracts/opl-gateway/operating-record-catalog.json').read_text())
+catalog = json.loads(Path('contracts/opl-framework/operating-record-catalog.json').read_text())
 expected = {
     'routing_audit',
     'governance_decision',
@@ -794,8 +794,8 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+lifecycle = json.loads(Path('contracts/opl-framework/surface-lifecycle-map.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 
 expected = {
     'opl_operating_model',
@@ -834,8 +834,8 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-matrix = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+matrix = json.loads(Path('contracts/opl-framework/surface-authority-matrix.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 
 expected = {
     'opl_operating_model',
@@ -887,9 +887,9 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
-acceptance = json.loads(Path('contracts/opl-gateway/acceptance-matrix.json').read_text())
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+review = json.loads(Path('contracts/opl-framework/surface-review-matrix.json').read_text())
+acceptance = json.loads(Path('contracts/opl-framework/acceptance-matrix.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 
 expected = {
     'opl_public_readme',
@@ -947,12 +947,12 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-task = json.loads(Path('contracts/opl-gateway/task-topology.json').read_text())
-backlog = json.loads(Path('contracts/opl-gateway/candidate-domain-backlog.json').read_text())
-public = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
-review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
-lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
-authority = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
+task = json.loads(Path('contracts/opl-framework/task-topology.json').read_text())
+backlog = json.loads(Path('contracts/opl-framework/candidate-domain-backlog.json').read_text())
+public = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
+review = json.loads(Path('contracts/opl-framework/surface-review-matrix.json').read_text())
+lifecycle = json.loads(Path('contracts/opl-framework/surface-lifecycle-map.json').read_text())
+authority = json.loads(Path('contracts/opl-framework/surface-authority-matrix.json').read_text())
 task_map_en = Path('docs/task-map.md').read_text()
 task_map_zh = Path('docs/task-map.zh-CN.md').read_text()
 backlog_doc_en = Path('docs/references/opl-candidate-domain-backlog.md').read_text()
@@ -1076,7 +1076,7 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 category_ids = {category['category_id'] for category in idx['surface_categories']}
 surface_ids = [surface['surface_id'] for surface in idx['surfaces']]
 surface_id_set = set(surface_ids)
@@ -1224,8 +1224,8 @@ files = [
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/references/opl-gateway-acceptance-test-spec.md'),
     Path('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md'),
-    Path('contracts/opl-gateway/README.md'),
-    Path('contracts/opl-gateway/README.zh-CN.md'),
+    Path('contracts/opl-framework/README.md'),
+    Path('contracts/opl-framework/README.zh-CN.md'),
 ]
 link_re = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
 for path in files:
@@ -1238,8 +1238,8 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"   ../README.md ../README.zh-CN.md   docs/gateway-federation.md docs/gateway-federation.zh-CN.md   docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md   docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md   docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md   docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md   docs/references/opl-candidate-domain-backlog.md docs/references/opl-candidate-domain-backlog.zh-CN.md   docs/references/opl-governance-audit-operating-surface.md docs/references/opl-governance-audit-operating-surface.zh-CN.md   docs/references/opl-publish-promotion-operating-surface.md docs/references/opl-publish-promotion-operating-surface.zh-CN.md   docs/references/opl-gateway-example-corpus.md docs/references/opl-gateway-example-corpus.zh-CN.md   docs/references/opl-routed-safety-example-corpus.md docs/references/opl-routed-safety-example-corpus.zh-CN.md   docs/references/opl-operating-example-corpus.md docs/references/opl-operating-example-corpus.zh-CN.md   docs/references/opl-operating-record-catalog.md docs/references/opl-operating-record-catalog.zh-CN.md   docs/operating-model.md docs/operating-model.zh-CN.md   docs/shared-foundation.md docs/shared-foundation.zh-CN.md   docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md   docs/references/opl-surface-lifecycle-map.md docs/references/opl-surface-lifecycle-map.zh-CN.md   docs/references/opl-surface-authority-matrix.md docs/references/opl-surface-authority-matrix.zh-CN.md   docs/references/opl-surface-review-matrix.md docs/references/opl-surface-review-matrix.zh-CN.md   docs/task-map.md docs/task-map.zh-CN.md   docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/roadmap.md docs/roadmap.zh-CN.md   contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
-rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discovery-ready|routed-action-ready|execution|truth-owner|approval|publish-control|release-control|shared asset index|shared memory index|shared domain registry|shared publication / delivery catalog"   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/references/opl-gateway-acceptance-test-spec.md docs/references/opl-gateway-acceptance-test-spec.zh-CN.md   contracts/opl-gateway/acceptance-matrix.json
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"   ../README.md ../README.zh-CN.md   docs/gateway-federation.md docs/gateway-federation.zh-CN.md   docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md   docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md   docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md   docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md   docs/references/opl-candidate-domain-backlog.md docs/references/opl-candidate-domain-backlog.zh-CN.md   docs/references/opl-governance-audit-operating-surface.md docs/references/opl-governance-audit-operating-surface.zh-CN.md   docs/references/opl-publish-promotion-operating-surface.md docs/references/opl-publish-promotion-operating-surface.zh-CN.md   docs/references/opl-gateway-example-corpus.md docs/references/opl-gateway-example-corpus.zh-CN.md   docs/references/opl-routed-safety-example-corpus.md docs/references/opl-routed-safety-example-corpus.zh-CN.md   docs/references/opl-operating-example-corpus.md docs/references/opl-operating-example-corpus.zh-CN.md   docs/references/opl-operating-record-catalog.md docs/references/opl-operating-record-catalog.zh-CN.md   docs/operating-model.md docs/operating-model.zh-CN.md   docs/shared-foundation.md docs/shared-foundation.zh-CN.md   docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md   docs/references/opl-surface-lifecycle-map.md docs/references/opl-surface-lifecycle-map.zh-CN.md   docs/references/opl-surface-authority-matrix.md docs/references/opl-surface-authority-matrix.zh-CN.md   docs/references/opl-surface-review-matrix.md docs/references/opl-surface-review-matrix.zh-CN.md   docs/task-map.md docs/task-map.zh-CN.md   docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/roadmap.md docs/roadmap.zh-CN.md   contracts/opl-framework/README.md contracts/opl-framework/README.zh-CN.md
+rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discovery-ready|routed-action-ready|execution|truth-owner|approval|publish-control|release-control|shared asset index|shared memory index|shared domain registry|shared publication / delivery catalog"   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/references/opl-gateway-acceptance-test-spec.md docs/references/opl-gateway-acceptance-test-spec.zh-CN.md   contracts/opl-framework/acceptance-matrix.json
 ```
 
 ## Completion Definition

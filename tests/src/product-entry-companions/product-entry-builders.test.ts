@@ -550,7 +550,7 @@ test('family product status builder projects manifest core into canonical produc
     },
     user_interaction_contract: {
       surface_kind: 'user_interaction_contract',
-      entry_owner: 'opl_gateway_or_domain_gui',
+      entry_owner: 'opl_framework_or_domain_app',
       user_interaction_mode: 'natural_language_entry',
       user_commands_required: false,
       command_surfaces_for_agent_consumption_only: true,
@@ -590,7 +590,7 @@ test('family product status builder projects manifest core into canonical produc
   assert.equal(product_entry.summary.operator_loop_command, 'redcube product invoke');
   assert.equal(manifest.schema_ref, 'contracts/schemas/v1/product-entry-manifest.schema.json');
   assert.equal(manifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
-  assert.equal(manifest.user_interaction_contract?.entry_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(manifest.user_interaction_contract?.entry_owner, 'opl_framework_or_domain_app');
   assert.equal(product_entry.schema_ref, 'contracts/schemas/v1/product-status.schema.json');
   assert.equal(product_entry.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
   assert.equal(product_entry.user_interaction_contract?.shared_downstream_entry, 'RedCubeDomainEntry');
@@ -666,8 +666,8 @@ test('product entry companion helpers build family product_entry directly from t
         entry_mode: 'direct',
       },
       opl_handoff_builder: {
-        command: 'redcube product federate --entry-mode opl_gateway',
-        entry_mode: 'opl_gateway',
+        command: 'redcube product federate --entry-mode opl_framework',
+        entry_mode: 'opl_framework',
       },
       opl_return_surface: {
         surface_kind: 'product_entry',
@@ -810,7 +810,7 @@ test('product entry companion helpers build family product_entry directly from t
     product_entry.entry_surfaces.session.command,
     'redcube product session --entry-session-id <entry-session-id>',
   );
-  assert.equal(product_entry.entry_surfaces.opl_handoff_builder?.entry_mode, 'opl_gateway');
+  assert.equal(product_entry.entry_surfaces.opl_handoff_builder?.entry_mode, 'opl_framework');
   assert.equal(product_entry.schema_ref, 'contracts/schemas/v1/product-status.schema.json');
 });
 

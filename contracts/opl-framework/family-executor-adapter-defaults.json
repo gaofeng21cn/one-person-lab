@@ -148,7 +148,7 @@
     "regression_oracle"
   ],
   "verification_refs": [
-    "contracts/opl-gateway/domain-onboarding-readiness.schema.json",
+    "contracts/opl-framework/domain-onboarding-readiness.schema.json",
     "human_doc:family_executor_adapter_defaults",
     "human_doc:four_repo_executor_follow_up_and_hermes_evaluation"
   ]

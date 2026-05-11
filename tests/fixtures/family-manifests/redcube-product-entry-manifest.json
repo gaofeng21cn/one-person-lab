@@ -22,7 +22,7 @@
     "shell_key": "product entry",
     "command": "redcube product status",
     "surface_kind": "product_entry_surface",
-    "summary": "当前 direct RedCube product entry，先暴露 direct / federated / session 三种 operator-facing 入口。"
+    "summary": "当前 direct RedCube product entry，先暴露 direct / OPL-hosted / session 三种 operator-facing 入口。"
   },
   "operator_loop_surface": {
     "shell_key": "direct",
@@ -54,7 +54,7 @@
     },
     "opl_bridge_handoff": {
       "command": "redcube product federate",
-      "surface_kind": "federated_product_entry",
+      "surface_kind": "opl_hosted_product_entry",
       "summary": "通过 family / OPL gateway 进入同一 downstream product entry。",
       "requires": [
         "entry_session_id",
@@ -66,7 +66,7 @@
   },
   "repo_mainline": {
     "program_id": "redcube-runtime-program",
-    "phase_id": "repo_verified_product_entry_and_opl_federation",
+    "phase_id": "repo_verified_product_entry_and_opl_framework",
     "phase_label": "Repo-Verified Product Entry And OPL Federation",
     "active_baton_id": "managed_product_entry_hardening",
     "active_baton_status": "closeout_completed"
@@ -325,7 +325,7 @@
       "current_source": "manifest",
       "entry_mode": "manifest_projection",
       "direct_surface_kind": "product_entry",
-      "federated_surface_kind": "federated_product_entry",
+      "opl_hosted_surface_kind": "opl_hosted_product_entry",
       "session_surface_kind": "product_entry_session",
       "downstream_entry_surface_kind": "domain_entry"
     }
@@ -342,7 +342,7 @@
     "product_entry_builder_command": "redcube product invoke",
     "supported_entry_modes": [
       "redcube_product_entry",
-      "opl_gateway"
+      "opl_framework"
     ],
     "product_entry_kind": "redcube_product_entry",
     "supported_commands": [
@@ -396,7 +396,7 @@
   },
   "user_interaction_contract": {
     "surface_kind": "user_interaction_contract",
-    "entry_owner": "opl_gateway_or_domain_gui",
+    "entry_owner": "opl_framework_or_domain_app",
     "user_interaction_mode": "natural_language_entry",
     "user_commands_required": false,
     "command_surfaces_for_agent_consumption_only": true,
@@ -412,7 +412,7 @@
     ]
   },
   "managed_runtime_contract": {
-    "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
+    "shared_contract_ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json",
     "runtime_owner": "upstream_hermes_agent",
     "domain_owner": "redcube_ai",
     "executor_owner": "codex_cli",
@@ -478,8 +478,8 @@
     },
     "opl_bridge": {
       "command": "redcube product federate",
-      "command_template": "redcube product federate --workspace-root /fixtures/redcube/workspace --entry-session-id <entry-session-id> --target-domain-id redcube_ai --entry-mode opl_gateway --return-surface-kind product_entry --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>",
-      "surface_kind": "federated_product_entry"
+      "command_template": "redcube product federate --workspace-root /fixtures/redcube/workspace --entry-session-id <entry-session-id> --target-domain-id redcube_ai --entry-mode opl_framework --return-surface-kind product_entry --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>",
+      "surface_kind": "opl_hosted_product_entry"
     },
     "session": {
       "command": "redcube product session",
@@ -583,7 +583,7 @@
       {
         "command": "product-federate",
         "owner": "redcube_ai",
-        "surface_kind": "federated_product_entry"
+        "surface_kind": "opl_hosted_product_entry"
       },
       {
         "command": "product-session",
@@ -628,7 +628,7 @@
         "mode_id": "opl_bridge_handoff",
         "title": "Internal OPL bridge handoff",
         "command": "redcube product federate",
-        "surface_kind": "federated_product_entry",
+        "surface_kind": "opl_hosted_product_entry",
         "summary": "Reserved for OPL shell / compatibility bridge callers while preserving the same downstream product entry contract.",
         "requires": [
           "entry_session_id",
@@ -771,9 +771,9 @@
         },
         {
           "node_id": "step:opl_bridge_handoff",
-          "node_kind": "federated_entry",
+          "node_kind": "opl_hosted_entry",
           "title": "Enter the same loop through internal OPL bridge handoff",
-          "surface_kind": "federated_product_entry",
+          "surface_kind": "opl_hosted_product_entry",
           "produces_checkpoint": true
         },
         {
@@ -899,7 +899,7 @@
   },
   "current_truth": {
     "product_entry_contract": "contracts/runtime-program/redcube-product-entry-mvp.json",
-    "federated_product_entry_contract": "contracts/runtime-program/opl-gateway-federated-product-entry.json",
+    "opl_hosted_product_entry_contract": "contracts/runtime-program/opl-framework-hosted-product-entry.json",
     "managed_product_entry_contract": "contracts/runtime-program/managed-product-entry-hardening.json"
   },
   "notes": [

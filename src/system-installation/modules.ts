@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GatewayContractError } from '../contracts.ts';
+import { FrameworkContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../full-internal-package.ts';
 import {
@@ -426,7 +426,7 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const canonical = aliases.get(normalized) ?? normalized;
   const spec = DOMAIN_MODULE_SPECS.find((entry) => entry.module_id === canonical);
   if (!spec) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Unknown OPL module id.',
       {
@@ -506,7 +506,7 @@ function installManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
 function copyManagedModuleFromPackagedRuntime(spec: DomainModuleSpec, sourcePath: string, checkoutPath: string) {
   const packagedGit = readPackagedModuleGitSnapshot(sourcePath, spec);
   if (!packagedGit) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Packaged module source is not a valid OPL Full runtime module.',
       {
@@ -572,7 +572,7 @@ function runModuleStep(
 
   const result = runCommand(commandPreview.command, commandPreview.args, checkoutPath);
   if (result.exitCode !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'build_command_failed',
       `Failed to run OPL module ${stepId}.`,
       {
@@ -764,7 +764,7 @@ export function runOplModuleAction(
     }
     case 'update': {
       if (!current.installed || current.health_status === 'missing') {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'cli_usage_error',
           'Module update requires an installed checkout.',
           {
@@ -784,7 +784,7 @@ export function runOplModuleAction(
         break;
       }
       if (current.git?.dirty) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'cli_usage_error',
           'Module update requires a clean checkout.',
           {
@@ -810,7 +810,7 @@ export function runOplModuleAction(
     }
     case 'reinstall': {
       if (current.install_origin !== 'managed_root' && current.install_origin !== 'missing' && current.install_origin !== 'invalid_checkout') {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'cli_usage_error',
           'Module reinstall is only available for OPL-managed installs.',
           {
@@ -828,7 +828,7 @@ export function runOplModuleAction(
     }
     case 'remove': {
       if (current.install_origin !== 'managed_root') {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'cli_usage_error',
           'Module remove is only available for OPL-managed installs.',
           {
@@ -862,7 +862,7 @@ export function runOplModuleExec(
   const spec = findModuleSpecOrThrow(moduleId);
   const current = inspectModule(spec);
   if (!current.installed || current.health_status === 'missing') {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Module exec requires an installed checkout.',
       {
@@ -874,7 +874,7 @@ export function runOplModuleExec(
     );
   }
   if (current.health_status === 'invalid_checkout') {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Module exec requires a valid git or packaged module checkout.',
       {
@@ -886,7 +886,7 @@ export function runOplModuleExec(
     );
   }
   if (spec.scope !== 'domain_module' || !spec.exec_command) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'This module does not expose an OPL module exec entry.',
       {
@@ -899,7 +899,7 @@ export function runOplModuleExec(
 
   const commandPreview = spec.exec_command(current.checkout_path, args);
   if (!commandPreview) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'This module does not expose an OPL module exec command.',
       {
@@ -923,7 +923,7 @@ export function runOplModuleExec(
   };
 
   if (result.exitCode !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'build_command_failed',
       'OPL module exec command failed.',
       execResult,

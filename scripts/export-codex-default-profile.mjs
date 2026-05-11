@@ -9,7 +9,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 function parseArgs(argv) {
   const parsed = {
-    out: path.join(repoRoot, 'contracts', 'opl-gateway', 'codex-default-profile.json'),
+    out: path.join(repoRoot, 'contracts', 'opl-framework', 'codex-default-profile.json'),
     generatedAt: new Date().toISOString(),
   };
 

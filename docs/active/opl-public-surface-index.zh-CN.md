@@ -13,8 +13,8 @@
 - `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
 
-`OPL` 已经不再把旧的 gateway/federation 语料当作默认公开集成合同。
-那批语料仍然保留在仓库里，供审计、兼容性检查和 schema 考古使用，但已经不是恢复当前 runtime 模型的第一入口。
+`OPL` 已经不再把旧的 gateway/federation/routed-action 语料作为活跃合同或样例层。
+那批语料只保留在 history/reference 页面中，用于 provenance 和设计复盘。
 
 如果要看仓库级文档生命周期与参考级处理规则，请继续看 [文档索引](../README.zh-CN.md) 和 [文档组合治理](../docs_portfolio_consolidation.md)。
 
@@ -56,20 +56,16 @@
 - [共享领域合同](./shared-domain-contract.zh-CN.md)
 - [OPL 运行时命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
 
-## 旧兼容语料
+## 历史来源材料
 
-下面这组内容保留为早期 gateway-first 阶段的兼容语料：
+早期 gateway-first 阶段只作为历史来源材料保留：
 
 - [Gateway 联邦](../history/compatibility/gateway-federation/gateway-federation.zh-CN.md)
 - [OPL 联邦合同](../history/compatibility/gateway-federation/opl-federation-contract.zh-CN.md)
 - [OPL Routed Action Gateway](../history/compatibility/gateway-federation/opl-routed-action-gateway.zh-CN.md)
 - [OPL Gateway 契约面](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Gateway 合同](../../contracts/opl-gateway/README.zh-CN.md)
-- [`../contracts/opl-gateway/public-surface-index.json`](../../contracts/opl-gateway/public-surface-index.json)
 
-这些 surface 仍可能出现在测试、审计流程、兼容性检查和历史设计复盘中。
-但它们不能再作为今天 `OPL` 的默认实现依据。
+这些 surface 不能再作为今天 `OPL` 的活跃实现、测试或机器可读合同输入。
 
 ## 参考级配套材料
 
@@ -78,7 +74,7 @@
 - [参考级索引](../references/README.zh-CN.md)
 - [历史归档索引](../history/README.zh-CN.md)
 - [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
-- `docs/references/examples-corpora/` 下的 gateway/federation 样例、`docs/references/operating-governance/` 下的 governance 参考，以及 `docs/history/compatibility/` 下的退役兼容语料
+- `docs/history/compatibility/` 下的退役 gateway/federation provenance
 
 ## 阅读规则
 
@@ -86,7 +82,7 @@
 
 - 如果你要恢复当前 `OPL` 真相，先读核心工作集和 [合同目录说明](../../contracts/README.md)。
 - 如果你要恢复当前跨仓集成单元，去读已收录 domain 仓及其 app skill surface。
-- 如果某份文档仍然把主语写成 `OPL Gateway`、`domain_gateway`、routed handoff payload 或 gateway-owned public-surface indexing，除非新的核心文档把它重新提升，否则都应按旧兼容语料理解。
+- 如果某份文档仍然把主语写成 `OPL Gateway`、`domain_gateway`、routed handoff payload 或 gateway-owned public-surface indexing，都应按历史来源材料理解。
 
 ## 完成定义
 

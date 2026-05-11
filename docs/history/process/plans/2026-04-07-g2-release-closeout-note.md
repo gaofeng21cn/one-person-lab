@@ -14,7 +14,7 @@
 
 ## 当前已完成边界
 
-截至 `2026-04-07`，`one-person-lab` 已具备可运行的本地 `TypeScript CLI`-first / gateway contract baseline。
+截至 `2026-04-07`，`one-person-lab` 已具备可运行的本地 `TypeScript CLI`-first / framework contract baseline。
 
 本轮 `G2 stable public baseline` 的完成边界是：
 
@@ -22,7 +22,7 @@
 - CLI 继续只读取已冻结 contracts，不接管 domain runtime truth
 - 顶层可稳定暴露 workstream / domain / surface discovery
 - 顶层可稳定暴露 boundary explanation 与只读 routing explanation
-- README、roadmap、gateway contracts、public surface index、gateway rollout 与四仓状态参考面已同步到同一日期锚点
+- README、roadmap、framework contracts、public surface index、gateway rollout 与四仓状态参考面已同步到同一日期锚点
 
 ## 当前明确不包含
 

@@ -401,7 +401,7 @@ def build_family_user_interaction_contract(
         if field not in shared_handoff_envelope:
             shared_handoff_envelope.append(field)
     return build_user_interaction_contract(
-        entry_owner=_non_empty_text(entry_owner) or "opl_gateway_or_domain_gui",
+        entry_owner=_non_empty_text(entry_owner) or "opl_framework_or_domain_app",
         user_interaction_mode=_non_empty_text(user_interaction_mode) or "natural_language_entry",
         user_commands_required=False if user_commands_required is None else _require_bool(
             user_commands_required,

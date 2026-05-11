@@ -10,7 +10,7 @@
 
 ## 机器可读工件
 
-- [`../../contracts/opl-gateway/surface-lifecycle-map.json`](../../../contracts/opl-gateway/surface-lifecycle-map.json)
+- [`../../contracts/opl-framework/surface-lifecycle-map.json`](../../../contracts/opl-framework/surface-lifecycle-map.json)
 
 ## 非目标
 
@@ -50,7 +50,7 @@
 - `opl_shared_foundation`
 - `opl_shared_foundation_ownership`
 
-### Core gateway contract surfaces
+### Core framework contract surfaces
 
 - `opl_gateway_contract_hub`
 - `opl_read_only_discovery_gateway`
@@ -105,7 +105,7 @@
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Public Surface Index](../../active/opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Contracts](../../../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Framework Contracts](../../../contracts/opl-framework/README.zh-CN.md)
 
 ## 完成定义
 

@@ -128,7 +128,8 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - 公开角色、活跃边界、默认阅读顺序： [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)
 - OPL 自己持有的机器可读产品资源： [合同目录说明](../contracts/README.md)
 - 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
-- 历史 gateway/federation 兼容语料：`contracts/opl-gateway/*.json` 与 [Gateway / Federation 兼容语料归档](./history/compatibility/gateway-federation/README.zh-CN.md)
+- 活跃 framework 合同：`contracts/opl-framework/*.json`
+- 已退役 gateway/federation 兼容语料：[Gateway / Federation 兼容语料归档](./history/compatibility/gateway-federation/README.zh-CN.md)
 - 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
 - 历史与退役路线： [历史归档索引](./history/README.zh-CN.md) 与 [过程历史归档](./history/process/README.zh-CN.md)
 

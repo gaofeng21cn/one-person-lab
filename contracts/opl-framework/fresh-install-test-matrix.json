@@ -73,8 +73,9 @@
         "domain_modules"
       ],
       "expected_online_management": {
-        "status": "missing",
-        "blocking": true
+        "status": "ready",
+        "blocking": false,
+        "full_online_blocking": false
       }
     },
     {
@@ -87,8 +88,9 @@
         "domain_modules"
       ],
       "expected_online_management": {
-        "status": "missing",
-        "blocking": true
+        "status": "ready",
+        "blocking": false,
+        "full_online_blocking": false
       }
     },
     {
@@ -102,8 +104,9 @@
         "domain_modules"
       ],
       "expected_online_management": {
-        "status": "missing",
-        "blocking": true
+        "status": "ready",
+        "blocking": false,
+        "full_online_blocking": false
       }
     },
     {
@@ -113,8 +116,9 @@
       "expected_phase": "review",
       "expected_blockers": [],
       "expected_online_management": {
-        "status": "missing",
-        "blocking": true
+        "status": "ready",
+        "blocking": false,
+        "full_online_blocking": false
       }
     },
     {

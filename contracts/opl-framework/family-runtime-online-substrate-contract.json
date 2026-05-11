@@ -1,7 +1,7 @@
 {
   "version": "v2",
   "contract_id": "opl_family_runtime_online_substrate_contract",
-  "contract_ref": "contracts/opl-gateway/family-runtime-online-substrate-contract.json",
+  "contract_ref": "contracts/opl-framework/family-runtime-online-substrate-contract.json",
   "provider_model": "provider_backed_stage_attempt_runtime",
   "scope": "OPL family provider-backed runtime substrate, typed queue, stage attempt ledger, dispatch, notification, approval, signal, and recovery bridge",
   "owner_split": {

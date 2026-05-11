@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
@@ -285,7 +285,7 @@ export function listTasks(db: DatabaseSync) {
 export function inspectTask(db: DatabaseSync, taskId: string) {
   const task = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow | undefined;
   if (!task) {
-    throw new GatewayContractError('cli_usage_error', 'Family runtime task not found.', {
+    throw new FrameworkContractError('cli_usage_error', 'Family runtime task not found.', {
       task_id: taskId,
     });
   }

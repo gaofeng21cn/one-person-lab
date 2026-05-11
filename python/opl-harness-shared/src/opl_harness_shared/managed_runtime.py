@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-MANAGED_RUNTIME_THREE_LAYER_CONTRACT_REF = "contracts/opl-gateway/managed-runtime-three-layer-contract.json"
+MANAGED_RUNTIME_THREE_LAYER_CONTRACT_REF = "contracts/opl-framework/managed-runtime-three-layer-contract.json"
 
 
 @dataclass(frozen=True)

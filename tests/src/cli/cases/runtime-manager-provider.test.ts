@@ -25,11 +25,11 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     ]);
     assert.equal(output.runtime_manager.provider_runtime.selected_provider, 'local_sqlite');
     assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
-    assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_runtime_manager_registration_registry');
+    assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_stage_runtime_registration_registry');
     assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
     assert.equal(
       output.runtime_manager.registration_registry.domains[0].expected_registration_surface.ref,
-      '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
     );
     assert.deepEqual(
       output.runtime_manager.registration_registry.domains[2].consumable_projection_refs.slice(-2),
@@ -52,7 +52,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       'opl-artifact-indexer',
     );
     const nativeHelperContract = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, 'contracts/opl-gateway/native-helper-contract.json'), 'utf8'),
+      fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/native-helper-contract.json'), 'utf8'),
     );
     assert.deepEqual(
       nativeHelperContract.helpers.map((helper: { helper_id: string }) => helper.helper_id),

@@ -76,7 +76,7 @@ function assertLayeredExecutorPolicy(surface: JsonObject) {
 }
 
 test('family executor defaults split canonical name, route status, and guardrails', () => {
-  const contract = readJson('contracts/opl-gateway/family-executor-adapter-defaults.json');
+  const contract = readJson('contracts/opl-framework/family-executor-adapter-defaults.json');
   const defaults = contract.defaults as JsonObject;
   const executorLabels = contract.executor_labels as JsonObject;
   const executorStatuses = contract.executor_statuses as JsonObject;
@@ -114,7 +114,7 @@ test('family executor defaults split canonical name, route status, and guardrail
 });
 
 test('domain onboarding schema example aligns execution model with split executor semantics', () => {
-  const schema = readJson('contracts/opl-gateway/domain-onboarding-readiness.schema.json');
+  const schema = readJson('contracts/opl-framework/domain-onboarding-readiness.schema.json');
   const defs = schema.$defs as JsonObject;
   const executionModelDeclaration = defs.executionModelDeclaration as JsonObject;
   const properties = executionModelDeclaration.properties as JsonObject;
@@ -206,7 +206,7 @@ test('domain onboarding schema example aligns execution model with split executo
 });
 
 test('family manifests use the same split executor declaration', () => {
-  const example = readJson('examples/opl-gateway/domain-onboarding-readiness.json');
+  const example = readJson('examples/opl-framework/domain-onboarding-readiness.json');
   const exampleExecutionModel = example.execution_model as JsonObject;
   const exampleFormalInclusionGate = example.formal_inclusion_gate as JsonObject;
   const exampleExecutionModelAligned = exampleFormalInclusionGate.execution_model_aligned as JsonObject;

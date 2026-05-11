@@ -1,4 +1,4 @@
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 import {
   buildCodexCliPreview,
   buildCodexExecArgs,
@@ -56,7 +56,7 @@ export {
 
 export function prepareProductEntryAsk(
   input: ProductEntryCliInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ): PreparedProductEntryAsk {
   const resolveInput = buildResolveRequestInput(input);
   const routing = resolveRequestSurface(resolveInput, contracts);
@@ -84,7 +84,7 @@ export function prepareProductEntryAsk(
 function buildPreviewPayload(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ) {
   const resolveInput = buildResolveRequestInput(input);
   const routing = resolveRequestSurface(resolveInput, contracts);
@@ -172,7 +172,7 @@ function buildPreviewPayload(
 
 export function runProductEntryAsk(
   input: ProductEntryCliInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ) {
   if (input.dryRun) {
     return buildPreviewPayload('ask', input, contracts);
@@ -366,7 +366,7 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
 }
 
 export function runProductEntrySession(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ) {
   if (isInteractiveShell()) {
     const productEntryResult = runCodexCommand([], {
@@ -403,7 +403,7 @@ export function runProductEntrySession(
 
 export function runProductEntryChat(
   input: ProductEntryCliInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ) {
   if (input.dryRun) {
     return buildPreviewPayload('chat', input, contracts);

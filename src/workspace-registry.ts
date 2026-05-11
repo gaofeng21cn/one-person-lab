@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 
 type BoundWorkspaceLocator = {
   surface_kind: string;
@@ -147,7 +147,7 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
       })),
     };
   } catch (error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Existing workspace registry file is invalid JSON or has an invalid shape.',
       {
@@ -163,7 +163,7 @@ function writeWorkspaceRegistryFile(payload: WorkspaceRegistryFile) {
   fs.writeFileSync(paths.workspace_registry_file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
-function allowedProjects(contracts: GatewayContracts) {
+function allowedProjects(contracts: FrameworkContracts) {
   return [
     {
       project_id: 'opl',
@@ -176,10 +176,10 @@ function allowedProjects(contracts: GatewayContracts) {
   ];
 }
 
-function findAllowedProject(contracts: GatewayContracts, projectId: string) {
+function findAllowedProject(contracts: FrameworkContracts, projectId: string) {
   const project = allowedProjects(contracts).find((entry) => entry.project_id === projectId);
   if (!project) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'domain_not_found',
       'Workspace registry only allows bindings for current OPL project surfaces.',
       {
@@ -195,7 +195,7 @@ function findAllowedProject(contracts: GatewayContracts, projectId: string) {
 function normalizeWorkspacePath(workspacePath: string) {
   const absolutePath = path.resolve(workspacePath);
   if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isDirectory()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Workspace registry commands require an existing workspace directory.',
       {
@@ -215,7 +215,7 @@ function normalizeExistingFilePath(filePath: string | undefined, field: string) 
 
   const absolutePath = path.resolve(normalized);
   if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       `Workspace registry locator field ${field} requires an existing file path.`,
       {
@@ -236,7 +236,7 @@ function normalizeExistingDirectoryPath(directoryPath: string | undefined, field
 
   const absolutePath = path.resolve(normalized);
   if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isDirectory()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       `Workspace registry locator field ${field} requires an existing directory.`,
       {
@@ -280,7 +280,7 @@ function validateProjectLocatorOptions(
     });
 
   if (unsupportedLocatorFields.length > 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'The requested workspace locator fields are not supported for this project surface.',
       {
@@ -519,7 +519,7 @@ function buildWorkspaceCatalogSummary(projects: ReturnType<typeof buildProjectCa
 }
 
 function buildWorkspaceCatalogPayload(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   registry: WorkspaceRegistryFile,
   action: WorkspaceCatalogAction,
   binding: WorkspaceBinding | null,
@@ -561,7 +561,7 @@ function findBindingOrThrow(
   );
 
   if (!binding) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'Workspace binding not found for the requested project and path.',
       {
@@ -584,12 +584,12 @@ function findBinding(
   ) ?? null;
 }
 
-export function buildWorkspaceCatalog(contracts: GatewayContracts) {
+export function buildWorkspaceCatalog(contracts: FrameworkContracts) {
   return buildWorkspaceCatalogPayload(contracts, readWorkspaceRegistryFile(), 'catalog', null);
 }
 
 export function bindWorkspace(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: WorkspaceRegistryOptions,
 ) {
   const registry = readWorkspaceRegistryFile();
@@ -646,7 +646,7 @@ export function bindWorkspace(
 }
 
 export function activateWorkspaceBinding(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: WorkspaceRegistryOptions,
 ) {
   const registry = readWorkspaceRegistryFile();
@@ -655,7 +655,7 @@ export function activateWorkspaceBinding(
   const binding = findBindingOrThrow(registry, options.projectId, absolutePath);
 
   if (binding.status === 'archived') {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Archived workspace bindings must be rebound before activation.',
       {
@@ -672,7 +672,7 @@ export function activateWorkspaceBinding(
 }
 
 export function archiveWorkspaceBinding(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: WorkspaceRegistryOptions,
 ) {
   const registry = readWorkspaceRegistryFile();

@@ -14,7 +14,7 @@ The current OPL mainline is:
 
 The files here may explain historical design intent and compatibility contract lineage. They must not be used as the current implementation basis.
 
-Machine-readable compatibility surfaces remain under [`contracts/opl-gateway/`](../../../../contracts/opl-gateway/). Human-readable docs remain human docs; code and tests must consume contracts, schemas, source, generated artifacts, CLI/API behavior, or semantic `human_doc:*` ids.
+Machine-readable compatibility surfaces remain under [`contracts/opl-framework/`](../../../../contracts/opl-framework/). Human-readable docs remain human docs; code and tests must consume contracts, schemas, source, generated artifacts, CLI/API behavior, or semantic `human_doc:*` ids.
 
 ## Archived files
 

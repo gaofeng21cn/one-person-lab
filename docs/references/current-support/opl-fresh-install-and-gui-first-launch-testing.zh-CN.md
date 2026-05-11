@@ -28,7 +28,7 @@ npm run fresh-install:smoke
 
 这条 lane 只覆盖 OPL 主仓 CLI clean-room 与合同矩阵。发布物级 GUI 首启证明仍归 `opl-aion-shell` 的干净 macOS VM workflow，不把桌面可视化首启塞进主仓 fast 或 integration lane。
 
-覆盖场景来自 `contracts/opl-gateway/fresh-install-test-matrix.json`：
+覆盖场景来自 `contracts/opl-framework/fresh-install-test-matrix.json`：
 
 - clean user + missing Codex
 - compatible Codex + missing modules

@@ -19,7 +19,7 @@ Its job is to record:
 - what `OPL` may still continue to do on its own
 - what the minimal stronger-federation follow-on would be once the thresholds are truly met
 
-The machine-readable companion is [`../../contracts/opl-gateway/phase-1-exit-activation-package.json`](../../../contracts/opl-gateway/phase-1-exit-activation-package.json).
+The machine-readable companion is [`../../contracts/opl-framework/phase-1-exit-activation-package.json`](../../../contracts/opl-framework/phase-1-exit-activation-package.json).
 
 ## Frozen `Phase 1` Completed Surface
 
@@ -31,7 +31,7 @@ The current `Phase 1` closeout is frozen as the following completed tranches:
 4. `Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening`
 5. `Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening`
 
-The resulting formal entry remains the current local `TypeScript CLI`-first / gateway contract surface.
+The resulting formal entry remains the current local `TypeScript CLI`-first / framework contract surface.
 That still means:
 
 - no mutation entry

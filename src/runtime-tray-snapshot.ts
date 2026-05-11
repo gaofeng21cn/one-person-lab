@@ -4,7 +4,7 @@ import * as path from 'path';
 import { inspectHermesRuntime } from './hermes.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';
 import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary, titleFromHermesCronJob } from './runtime-tray-display.ts';
 import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
@@ -794,7 +794,7 @@ function buildHermesCronProjection(): HermesCronProjection {
   };
 }
 
-export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
+export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;

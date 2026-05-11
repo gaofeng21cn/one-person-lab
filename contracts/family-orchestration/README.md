@@ -60,7 +60,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 
 ### Control-plane-oriented
 
-- `../opl-gateway/family-runtime-online-substrate-contract.json`
+- `../opl-framework/family-runtime-online-substrate-contract.json`
   - migration-period Hermes-first online substrate contract kept for compatibility/history; the active Full-readiness substrate is the configured family runtime provider, with Temporal as the production target
 - `family-runtime-supervision.schema.json`
   - shared read-only wakeup / supervision projection for adapter id, cadence, last success / tick, lease freshness, SLO state, repair command, safe reconcile hint, domain-owned source refs, and authority boundary

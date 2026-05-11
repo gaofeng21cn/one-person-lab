@@ -27,7 +27,7 @@ OMX 已退出当前 OPL 开发环境。旧的长跑提示词、stage gate、owne
 - `../architecture.md`
 - `../invariants.md`
 - `../../AGENTS.md`
-- `../../contracts/opl-gateway/README.zh-CN.md`
+- `../../contracts/opl-framework/README.zh-CN.md`
 
 ## 禁止复用
 

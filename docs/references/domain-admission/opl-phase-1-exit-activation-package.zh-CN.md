@@ -19,7 +19,7 @@
 - `OPL` 自己还能继续完成什么
 - 一旦门槛真实满足，最小的更强 federation follow-on 会是什么
 
-对应的 machine-readable companion 是 [`../../contracts/opl-gateway/phase-1-exit-activation-package.json`](../../../contracts/opl-gateway/phase-1-exit-activation-package.json)。
+对应的 machine-readable companion 是 [`../../contracts/opl-framework/phase-1-exit-activation-package.json`](../../../contracts/opl-framework/phase-1-exit-activation-package.json)。
 
 ## 已冻结的 `Phase 1` 完成面
 
@@ -31,7 +31,7 @@
 4. `Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening`
 5. `Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening`
 
-由此得到的 formal entry 仍然是当前本地 `TypeScript CLI`-first / gateway contract surface。
+由此得到的 formal entry 仍然是当前本地 `TypeScript CLI`-first / framework contract surface。
 这也继续意味着：
 
 - 不进入 mutation entry

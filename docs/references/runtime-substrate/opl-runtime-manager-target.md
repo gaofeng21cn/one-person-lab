@@ -28,7 +28,7 @@ Domain task hydration 是另一个显式授权面：domain sidecar export 可以
 
 1. `opl runtime manager`
    输出当前 owner split、provider readiness、domain registration registry、native helper lifecycle、native helper target、state index target 与 sidecar promotion gate。
-2. `contracts/opl-gateway/runtime-manager-contract.json`
+2. `contracts/opl-framework/runtime-manager-contract.json`
    冻结 Runtime Manager 的 machine-readable 合同，以及三类 domain registration surface 的必需字段。
 3. 核心 docs 对齐
    `project / architecture / invariants / decisions / status` 共同说明 Runtime Manager 是薄层，不是 kernel。
@@ -48,7 +48,7 @@ Domain task hydration 是另一个显式授权面：domain sidecar export 可以
 
 v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
-- `skill_catalog.domain_projection.opl_runtime_manager_registration`
+- `skill_catalog.domain_projection.opl_stage_runtime_registration`
 - `runtime_continuity` / runtime-control projection
 - `family_runtime_supervision` read-only projection：adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 read-only authority boundary
 - artifact / attention / runtime health index input
@@ -68,7 +68,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 - `opl-artifact-indexer`：workspace artifact discovery
 - `opl-state-indexer`：session / progress / artifact projection index 与 large JSON validation
 
-这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 family runtime provider。所有 helper 使用 `contracts/opl-gateway/native-helper-contract.json` 冻结 JSON stdin/stdout 边界，由 TypeScript / Python 调用方通过 contract 消费。
+这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 family runtime provider。所有 helper 使用 `contracts/opl-framework/native-helper-contract.json` 冻结 JSON stdin/stdout 边界，由 TypeScript / Python 调用方通过 contract 消费。
 
 当前 package lifecycle：
 

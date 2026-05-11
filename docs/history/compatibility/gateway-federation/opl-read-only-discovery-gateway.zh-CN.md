@@ -7,7 +7,7 @@
 这份文档冻结 `OPL Gateway` 的 `G2` 目标。
 
 `G2` 是 `OPL` 第一次成为真实入口表面，但仅限于只读 discovery。
-截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / gateway contract baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
+截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / framework contract baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
 
 目标不是 mutation domain state。
 目标是让人类和 Agent 能先问顶层 gateway：我该用哪个系统、这个 workstream 是什么、这个请求应该落到哪个 domain。
@@ -19,10 +19,10 @@
 也就是说，这个 discovery gateway 建立在下面这些东西之上：
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [workstream registry](../../../../contracts/opl-gateway/workstreams.json)
-- [domain registry](../../../../contracts/opl-gateway/domains.json)
-- [routing vocabulary](../../../../contracts/opl-gateway/routing-vocabulary.json)
-- 当前仓库中已落地的机器可读工件：[`../contracts/opl-gateway/README.zh-CN.md`](../../../../contracts/opl-gateway/README.zh-CN.md)
+- [workstream registry](../../../../contracts/opl-framework/workstreams.json)
+- [domain registry](../../../../contracts/opl-framework/domains.json)
+- [routing vocabulary](../../../../contracts/opl-framework/routing-vocabulary.json)
+- 当前仓库中已落地的机器可读工件：[`../contracts/opl-framework/README.zh-CN.md`](../../../../contracts/opl-framework/README.zh-CN.md)
 
 如果 `G1` 没冻结，`G2` 不应继续推进。
 
@@ -322,7 +322,7 @@
 ## Surface 形态
 
 当前 `Phase 1` 的交付目标，是继续用本地 `TypeScript CLI` 作为当前只读 gateway surface 的 discovery transport。
-在开发控制面上，当前活跃路径已经收口为 Codex-only：标准 Codex 会话直接承担规划、实现、验证与评审，并对冻结的 gateway contracts 负责。
+在开发控制面上，当前活跃路径已经收口为 Codex-only：标准 Codex 会话直接承担规划、实现、验证与评审，并对冻结的 framework contracts 负责。
 但这个开发宿主选择并不意味着 Codex 就是 `OPL` 的产品 runtime substrate owner；任何诚实的上游 `Hermes-Agent` rollout，仍必须先在某个 domain 仓里落地。
 历史上的 `Codex Host` / `OMX` 分工现在只保留在第三层历史迁移参考文档中，不再定义这份公开 gateway 文档的当前语义。
 在这条基线里，discovery contract 通过下面这些命令暴露：

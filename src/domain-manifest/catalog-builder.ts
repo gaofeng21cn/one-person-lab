@@ -1,8 +1,8 @@
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 import { getActiveWorkspaceBinding } from '../workspace-registry.ts';
 import { resolveBindingManifest } from './resolver.ts';
 
-export function buildDomainManifestCatalog(contracts: GatewayContracts) {
+export function buildDomainManifestCatalog(contracts: FrameworkContracts) {
   const projects = contracts.domains.domains.map((domain) => {
     const binding = getActiveWorkspaceBinding(domain.domain_id);
     if (!binding) {

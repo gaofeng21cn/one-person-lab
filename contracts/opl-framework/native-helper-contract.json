@@ -1,7 +1,7 @@
 {
   "version": "v1",
   "contract_id": "opl_native_helper_contract",
-  "contract_ref": "contracts/opl-gateway/native-helper-contract.json",
+  "contract_ref": "contracts/opl-framework/native-helper-contract.json",
   "scope": "opl_rust_native_helper_json_stdio_boundary",
   "language": "rust",
   "protocol": {

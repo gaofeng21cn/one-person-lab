@@ -7,7 +7,7 @@ export { default as os } from 'node:os';
 export { default as path } from 'node:path';
 export { PassThrough } from 'node:stream';
 
-export { GatewayContractError, loadGatewayContracts, validateGatewayContracts } from '../../../src/contracts.ts';
+export { FrameworkContractError, loadFrameworkContracts, validateFrameworkContracts } from '../../../src/contracts.ts';
 export { buildProjectProgressBrief } from '../../../src/management/progress.ts';
 export { explainDomainBoundary, resolveRequestSurface } from '../../../src/resolver.ts';
 

@@ -19,7 +19,7 @@ test('opl session runtime descriptor helper 输出稳定的 canonical surfaces�
       system: {
         id: 'opl-runtime-system',
         label: 'OPL Runtime System',
-        owner: 'opl_gateway',
+        owner: 'opl_framework',
         status: 'active',
         summary: 'Canonical runtime core for session interactions and projections.',
       },
@@ -88,7 +88,7 @@ test('opl session runtime catalog helper 在重复 runtime_id 上 fail-closed', 
       system: {
         id: 'opl-runtime-system',
         label: 'OPL Runtime System',
-        owner: 'opl_gateway',
+        owner: 'opl_framework',
         status: 'active',
         summary: 'Canonical runtime core.',
       },

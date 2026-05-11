@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const smokeScript = path.join(repoRoot, 'scripts', 'fresh-install-smoke.mjs');
-const matrixContractPath = path.join(repoRoot, 'contracts', 'opl-gateway', 'fresh-install-test-matrix.json');
-const codexDefaultProfilePath = path.join(repoRoot, 'contracts', 'opl-gateway', 'codex-default-profile.json');
+const matrixContractPath = path.join(repoRoot, 'contracts', 'opl-framework', 'fresh-install-test-matrix.json');
+const codexDefaultProfilePath = path.join(repoRoot, 'contracts', 'opl-framework', 'codex-default-profile.json');
 const installScript = path.join(repoRoot, 'install.sh');
 
 test('install bootstrap-only handles no forwarded args under nounset bash', () => {

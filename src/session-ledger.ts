@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import { collectHermesProcessUsage } from './runtime-observer.ts';
 
@@ -124,7 +124,7 @@ function readSessionLedgerFile(): SessionLedgerFile {
         entries: [],
       };
     } catch (recoveryError) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'contract_shape_invalid',
         'Existing session ledger file is invalid JSON or has an invalid shape.',
         {

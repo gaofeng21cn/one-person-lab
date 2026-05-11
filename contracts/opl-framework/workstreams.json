@@ -1,20 +1,20 @@
 {
-  "version": "g1",
+  "version": "g2",
   "workstreams": [
     {
       "workstream_id": "grant_ops",
       "label": "Grant Ops",
-      "status": "emerging",
+      "status": "active",
       "description": "Formal grant direction, proposal authoring, and proposal revision delivery.",
       "domain_id": "medautogrant",
-      "entry_mode": "domain_gateway",
+      "entry_mode": "domain_agent_entry",
       "primary_families": [],
       "top_level_intents": [
         "grant_direction_assessment",
         "proposal_authoring",
         "proposal_revision"
       ],
-      "notes": "Maps directly to MedAutoGrant."
+      "notes": "Selected through the MedAutoGrant domain-agent entry; MAG keeps grant truth and artifact authority."
     },
     {
       "workstream_id": "research_ops",
@@ -22,22 +22,22 @@
       "status": "active",
       "description": "Formal research work from data governance to manuscript and submission delivery.",
       "domain_id": "medautoscience",
-      "entry_mode": "domain_gateway",
+      "entry_mode": "domain_agent_entry",
       "primary_families": [],
       "top_level_intents": [
         "research_progression",
         "submission_delivery",
         "data_asset_governance"
       ],
-      "notes": "Maps directly to MedAutoScience."
+      "notes": "Selected through the MedAutoScience domain-agent entry; MAS keeps study, runtime, publication, and artifact authority."
     },
     {
       "workstream_id": "presentation_ops",
       "label": "Presentation Foundry",
-      "status": "emerging",
+      "status": "active",
       "description": "Formal lecture, report, and defense material delivery.",
       "domain_id": "redcube",
-      "entry_mode": "domain_gateway",
+      "entry_mode": "domain_agent_entry",
       "primary_families": [
         "ppt_deck"
       ],
@@ -46,7 +46,7 @@
         "lecture_materials",
         "defense_materials"
       ],
-      "notes": "ppt_deck maps directly; xiaohongshu routes to RedCube AI but does not automatically equal Presentation Foundry."
+      "notes": "Selected through the RedCube AI domain-agent entry; RCA keeps visual-deliverable truth and export authority."
     }
   ]
 }

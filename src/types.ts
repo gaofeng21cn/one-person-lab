@@ -144,13 +144,13 @@ export interface DomainsRegistry {
 
 export type ContractsRootSource = 'cwd' | 'env' | 'cli_flag' | 'api' | 'cli_entry';
 
-export interface GatewayContractsLoadOptions {
+export interface FrameworkContractsLoadOptions {
   searchFrom?: string;
   contractsDir?: string;
   source?: ContractsRootSource;
 }
 
-export interface GatewayContracts {
+export interface FrameworkContracts {
   contractsDir: string;
   contractsRootSource: ContractsRootSource;
   workstreams: WorkstreamsRegistry;
@@ -189,11 +189,11 @@ export interface ResolveRequestInput {
 
 export type ResolutionResult =
   | {
-      status: 'routed';
+      status: 'selected_domain_agent_entry';
       request_kind: string;
       workstream_id: string;
       domain_id: string;
-      entry_surface: 'domain_gateway';
+      entry_surface: 'domain_agent_entry';
       recommended_family: string | null;
       confidence: 'medium' | 'high';
       reason: string;

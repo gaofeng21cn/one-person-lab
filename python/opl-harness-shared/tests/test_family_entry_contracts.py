@@ -123,7 +123,7 @@ def test_family_entry_contract_helpers_build_and_validate_domain_agent_entry_spe
 
 def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> None:
     contract = build_user_interaction_contract(
-        entry_owner="opl_gateway_or_domain_gui",
+        entry_owner="opl_framework_or_domain_app",
         user_interaction_mode="natural_language_entry",
         user_commands_required=False,
         command_surfaces_for_agent_consumption_only=True,
@@ -151,7 +151,7 @@ def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() 
         contract,
         "product_entry_manifest.user_interaction_contract",
     )
-    assert validated["entry_owner"] == "opl_gateway_or_domain_gui"
+    assert validated["entry_owner"] == "opl_framework_or_domain_app"
     assert validated["user_interaction_mode"] == "natural_language_entry"
     assert validated["user_commands_required"] is False
     assert validated["command_surfaces_for_agent_consumption_only"] is True

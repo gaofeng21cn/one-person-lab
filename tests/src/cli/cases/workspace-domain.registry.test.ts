@@ -1,4 +1,4 @@
-import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('workspace registry commands bind activate and archive project workspaces with direct-entry locators', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-fixture-'));
@@ -268,7 +268,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcube.manifest.operator_loop_surface.continuation_command, 'redcube product session');
     assert.equal(redcube.manifest.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
     assert.equal(redcube.manifest.operator_loop_actions.continue_session.surface_kind, 'product_entry_session');
-    assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
+    assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_framework');
     assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
     assert.equal(redcube.manifest.product_entry_shell.session.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.shared_handoff.opl_return_surface.surface_kind, 'product_entry');
@@ -465,7 +465,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.domain_agent_entry_id, 'mag');
     assert.equal(grantEntry.domain_agent_entry_entry_command, 'product-status');
     assert.equal(grantEntry.domain_agent_entry_manifest_command, 'product-entry-manifest');
-    assert.equal(grantEntry.user_interaction_contract.entry_owner, 'opl_gateway_or_domain_gui');
+    assert.equal(grantEntry.user_interaction_contract.entry_owner, 'opl_framework_or_domain_app');
     assert.equal(grantEntry.automation.surface_kind, 'automation');
     assert.equal(grantEntry.automation_count, 2);
     assert.equal(
@@ -530,7 +530,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
     );
     assert.equal(recommendedEntry.product_entry_remaining_gaps_count, 2);
-    assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_federation');
+    assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_framework');
     assert.equal(recommendedEntry.product_entry_surface.command, 'redcube product status');
     assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
     assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
@@ -579,7 +579,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(recommendedEntry.domain_agent_entry_id, 'rca');
     assert.equal(recommendedEntry.domain_agent_entry_entry_command, 'redcube product status');
     assert.equal(recommendedEntry.domain_agent_entry_manifest_command, 'redcube product manifest');
-    assert.equal(recommendedEntry.user_interaction_contract.entry_owner, 'opl_gateway_or_domain_gui');
+    assert.equal(recommendedEntry.user_interaction_contract.entry_owner, 'opl_framework_or_domain_app');
     assert.equal(recommendedEntry.automation.surface_kind, 'automation');
     assert.equal(recommendedEntry.automation_count, 2);
     assert.equal(
@@ -590,7 +590,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       recommendedEntry.product_entry_overview.resume_surface.checkpoint_locator_field,
       'continuation_snapshot.latest_managed_run_id',
     );
-    assert.equal(recommendedEntry.product_entry_shell.opl_bridge.surface_kind, 'federated_product_entry');
+    assert.equal(recommendedEntry.product_entry_shell.opl_bridge.surface_kind, 'opl_hosted_product_entry');
     assert.equal(recommendedEntry.shared_handoff.opl_return_surface.target_domain_id, 'redcube_ai');
     assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
     assert.equal(recommendedEntry.family_action_graph_ref, '/family_orchestration/action_graph');

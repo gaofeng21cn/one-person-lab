@@ -118,4 +118,4 @@ harness 是内部执行底座，不是顶层产品面。
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
 - [OPL Public Surface Index](../../../active/opl-public-surface-index.zh-CN.md)
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.zh-CN.md)

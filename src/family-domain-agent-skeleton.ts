@@ -1,7 +1,7 @@
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -269,7 +269,7 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
   };
 }
 
-function findAgentEntry(contracts: GatewayContracts, domain: string) {
+function findAgentEntry(contracts: FrameworkContracts, domain: string) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const normalized = normalizeDomainSelection(domain);
   const entry = catalog.projects.find((candidate) =>
@@ -279,7 +279,7 @@ function findAgentEntry(contracts: GatewayContracts, domain: string) {
     || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized
   );
   if (!entry) {
-    throw new GatewayContractError('cli_usage_error', `Unknown family domain agent: ${domain}.`, {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family domain agent: ${domain}.`, {
       domain,
       allowed_domains: catalog.projects.map((project) => project.project_id),
     });
@@ -296,20 +296,20 @@ function parseInspectArgs(args: string[]) {
       domain = value;
       index += 1;
     } else {
-      throw new GatewayContractError('cli_usage_error', `Unknown agents inspect option: ${token}.`, {
+      throw new FrameworkContractError('cli_usage_error', `Unknown agents inspect option: ${token}.`, {
         usage: 'opl agents inspect --domain <domain>',
       });
     }
   }
   if (!domain) {
-    throw new GatewayContractError('cli_usage_error', 'agents inspect requires --domain.', {
+    throw new FrameworkContractError('cli_usage_error', 'agents inspect requires --domain.', {
       required: ['--domain'],
     });
   }
   return { domain };
 }
 
-export function buildFamilyAgentsList(contracts: GatewayContracts) {
+export function buildFamilyAgentsList(contracts: FrameworkContracts) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const agents = catalog.projects.map(buildStandardDomainAgentSkeletonInspection);
   return {
@@ -328,7 +328,7 @@ export function buildFamilyAgentsList(contracts: GatewayContracts) {
   };
 }
 
-export function buildFamilyAgentInspect(contracts: GatewayContracts, args: string[]) {
+export function buildFamilyAgentInspect(contracts: FrameworkContracts, args: string[]) {
   const { domain } = parseInspectArgs(args);
   const entry = findAgentEntry(contracts, domain);
   return {

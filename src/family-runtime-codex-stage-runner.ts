@@ -1,4 +1,4 @@
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -41,7 +41,7 @@ function readRecordList(value: unknown) {
 export function parseJsonObject(value: string, field: string): JsonRecord {
   const parsed = JSON.parse(value);
   if (!isRecord(parsed)) {
-    throw new GatewayContractError('cli_usage_error', `${field} must be a JSON object.`, {
+    throw new FrameworkContractError('cli_usage_error', `${field} must be a JSON object.`, {
       field,
     });
   }
@@ -50,7 +50,7 @@ export function parseJsonObject(value: string, field: string): JsonRecord {
 
 export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageCloseoutPacket {
   if (!isRecord(value)) {
-    throw new GatewayContractError('contract_shape_invalid', 'Stage closeout packet must be a JSON object.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage closeout packet must be a JSON object.', {
       surface_kind: null,
     });
   }
@@ -60,7 +60,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     && surfaceKind !== 'stage_memory_closeout_packet'
     && surfaceKind !== 'domain_stage_closeout_packet'
   ) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Stage closeout packet must declare a supported typed surface_kind.',
       {
@@ -81,7 +81,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     optionalString(value.packet_ref),
   ].filter((entry): entry is string => Boolean(entry));
   if (closeoutRefs.length === 0) {
-    throw new GatewayContractError('contract_shape_invalid', 'Typed stage closeout must include at least one closeout ref.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Typed stage closeout must include at least one closeout ref.', {
       required: ['closeout_refs|closeout_ref|receipt_ref|packet_ref'],
     });
   }

@@ -28,24 +28,16 @@ It preserves shared semantics while allowing different interfaces, model provide
 
 ## Machine-Readable Companions
 
-- [`../contracts/opl-gateway/task-topology.json`](../../contracts/opl-gateway/task-topology.json)
-- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
+- [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 
 These companions materialize:
 
 - the top-level task topology as a machine-readable semantic surface
-- the missing admission-boundary materials for the current under-definition workstreams
+- the admitted and candidate workstream catalog used by stage selection
 
 They may describe under-definition workstreams such as `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops`, while keeping them on an explicit candidate/onboarding path.
-`Grant Ops` is already registered to the admitted `MedAutoGrant` domain surface, while formal admission, `G2` discovery readiness, and `G3` routed-action readiness for the remaining under-definition workstreams still come from dedicated onboarding evidence.
-
-At the current baseline, `candidate-domain definition` is the composition of:
-
-- task boundaries and delivery objects in `task-topology`
-- missing boundary packages in the candidate-domain backlog
-- formal admission rules in the domain-onboarding contract
-
-The current definition path is therefore the three-layer composition above.
+`Grant Ops` is already registered to the admitted `MedAutoGrant` domain-agent entry, while formal admission, stage-selection readiness, and stage-execution readiness for the remaining under-definition workstreams still require dedicated admission evidence.
 
 For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md).
 
@@ -103,10 +95,10 @@ Typical delivery objects include:
 Current boundary status:
 
 - current lifecycle state: registered workstream mapped directly to the admitted `MedAutoGrant` domain surface
-- formal mapping: `grant_ops -> medautogrant` is already frozen in the `G1` workstream/domain registry
+- formal mapping: `grant_ops -> medautogrant` is frozen in the active workstream/domain-agent catalog
 - public entry: the top-level domain entry is `MedAutoGrant`, and grant-direction, proposal authoring, proposal-side reviewer simulation, and revision truth remain domain-owned there
-- routing rule: successful handoff remains `domain_gateway`-only, with no direct harness bypass
-- top-level handling: clear requests resolve to `medautogrant` through the frozen routing vocabulary and domain manifest surfaces
+- stage-entry rule: successful stage entry targets the public domain-agent entry, with no direct harness bypass
+- top-level handling: clear requests resolve to `medautogrant` through the active stage vocabulary and domain manifest surfaces
 
 ## IP Ops
 
@@ -134,9 +126,9 @@ Current boundary status:
 
 - current lifecycle state: under-definition candidate workstream
 - planned family/product wording: `IP Foundry` with `Med Auto Patent` as the first planned product
-- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
-- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
-- tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
+- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
+- tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
 - truth boundary: patent canonical truth and human/legal review gates must be owned by the future IP Ops domain boundary
 - routing rule: clear patent requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
 
@@ -166,9 +158,9 @@ Current boundary status:
 
 - current lifecycle state: under-definition candidate workstream
 - planned family/product wording: `Award Foundry` with `Med Auto Award` as the first planned product
-- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
-- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
-- tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
+- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
+- tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
 - truth boundary: award canonical truth and human expert review gates must be owned by the future Award Ops domain boundary
 - routing rule: clear award requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
 
@@ -198,11 +190,11 @@ Current boundary status:
 
 - current lifecycle state: under-definition candidate workstream
 - planned family/product wording: `Thesis Foundry` with `Med Auto Thesis` as the first planned product
-- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
-- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
-- tracked blocker packages: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
+- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
+- tracked blocker packages: `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
 - truth boundary: thesis-specific canonical truth will be frozen with the future Thesis Ops domain boundary
-- routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
+- stage-entry rule: any future successful handoff must target the public domain-agent entry, with no direct harness bypass
 - current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
 
 ## Review Ops
@@ -232,11 +224,11 @@ Current boundary status:
 
 - current lifecycle state: under-definition candidate workstream
 - planned family/product wording: `Review Foundry` with `Med Auto Review` as the first planned product
-- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
-- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
-- tracked blocker packages: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
+- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
+- tracked blocker packages: `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
 - truth boundary: review truth will remain domain-owned when a dedicated Review Ops boundary is frozen
-- routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
+- stage-entry rule: any future successful handoff must target the public domain-agent entry, with no direct harness bypass
 - current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
 
 ## Presentation Ops

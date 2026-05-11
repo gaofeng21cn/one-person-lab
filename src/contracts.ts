@@ -4,15 +4,15 @@ import path from 'node:path';
 import type {
   ContractValidationSummary,
   ContractsRootSource,
-  GatewayContracts,
-  GatewayContractsLoadOptions,
+  FrameworkContracts,
+  FrameworkContractsLoadOptions,
   PublicSurfaceIndexContract,
   RoutingVocabularyContract,
   TaskTopologyContract,
   WorkstreamsRegistry,
 } from './types.ts';
 import {
-  GatewayContractError,
+  FrameworkContractError,
   expectString,
   expectStringArray,
   isRecord,
@@ -20,7 +20,7 @@ import {
 } from './contract-validation.ts';
 import { validateDomainsRegistry } from './domain-contracts.ts';
 
-export { GatewayContractError } from './contract-validation.ts';
+export { FrameworkContractError } from './contract-validation.ts';
 
 const REQUIRED_CONTRACT_FILE_NAMES = [
   'workstreams.json',
@@ -30,7 +30,7 @@ const REQUIRED_CONTRACT_FILE_NAMES = [
   'public-surface-index.json',
 ] as const;
 
-type NormalizedGatewayContractsLoadOptions = {
+type NormalizedFrameworkContractsLoadOptions = {
   searchFrom: string | null;
   contractsDir: string | null;
   source: ContractsRootSource;
@@ -54,7 +54,7 @@ function parseJsonFile(filePath: string): unknown {
     raw = fs.readFileSync(filePath, 'utf8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'contract_file_missing',
         `Required contract file is missing: ${path.basename(filePath)}.`,
         { file: filePath },
@@ -66,7 +66,7 @@ function parseJsonFile(filePath: string): unknown {
   try {
     return JSON.parse(raw);
   } catch (error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_json_invalid',
       `Contract file contains invalid JSON: ${path.basename(filePath)}.`,
       {
@@ -83,7 +83,7 @@ function validateWorkstreamsRegistry(
   value: unknown,
 ): WorkstreamsRegistry {
   if (!isRecord(value)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'workstreams.json must contain an object root.',
       { file: filePath },
@@ -94,7 +94,7 @@ function validateWorkstreamsRegistry(
   const workstreams = value.workstreams;
 
   if (!Array.isArray(workstreams)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'workstreams.json must contain a workstreams array.',
       { file: filePath, field: 'workstreams' },
@@ -105,7 +105,7 @@ function validateWorkstreamsRegistry(
     version,
     workstreams: workstreams.map((entry, index) => {
       if (!isRecord(entry)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Each workstream entry must be an object.',
           { file: filePath, index },
@@ -140,7 +140,7 @@ function validateRoutingVocabulary(
   value: unknown,
 ): RoutingVocabularyContract {
   if (!isRecord(value)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'routing-vocabulary.json must contain an object root.',
       { file: filePath },
@@ -149,7 +149,7 @@ function validateRoutingVocabulary(
 
   const specialCasesRaw = value.special_cases;
   if (!Array.isArray(specialCasesRaw)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'routing-vocabulary.json must contain a special_cases array.',
       { file: filePath, field: 'special_cases' },
@@ -169,7 +169,7 @@ function validateRoutingVocabulary(
     routing_rules: expectStringArray(value.routing_rules, 'routing_rules', filePath),
     special_cases: specialCasesRaw.map((entry, index) => {
       if (!isRecord(entry)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Each special case entry must be an object.',
           { file: filePath, index },
@@ -198,7 +198,7 @@ function validateTaskTopology(
   value: unknown,
 ): TaskTopologyContract {
   if (!isRecord(value)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'task-topology.json must contain an object root.',
       { file: filePath },
@@ -207,7 +207,7 @@ function validateTaskTopology(
 
   const workstreamsRaw = value.workstreams;
   if (!Array.isArray(workstreamsRaw)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'task-topology.json must contain a workstreams array.',
       { file: filePath, field: 'workstreams' },
@@ -231,7 +231,7 @@ function validateTaskTopology(
     ),
     workstreams: workstreamsRaw.map((entry, index) => {
       if (!isRecord(entry)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Each task topology workstream entry must be an object.',
           { file: filePath, index },
@@ -240,7 +240,7 @@ function validateTaskTopology(
 
       const familyNotes = entry.family_boundary_notes;
       if (!Array.isArray(familyNotes)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'family_boundary_notes must be an array.',
           { file: filePath, index, field: 'family_boundary_notes' },
@@ -269,7 +269,7 @@ function validateTaskTopology(
           typeof entry.formal_domain_required === 'boolean'
             ? entry.formal_domain_required
             : (() => {
-                throw new GatewayContractError(
+                throw new FrameworkContractError(
                   'contract_shape_invalid',
                   'formal_domain_required must be a boolean.',
                   { file: filePath, index, field: 'formal_domain_required' },
@@ -292,7 +292,7 @@ function validateTaskTopology(
         ),
         family_boundary_notes: familyNotes.map((note, noteIndex) => {
           if (!isRecord(note)) {
-            throw new GatewayContractError(
+            throw new FrameworkContractError(
               'contract_shape_invalid',
               'Each family boundary note must be an object.',
               { file: filePath, index, noteIndex },
@@ -315,7 +315,7 @@ function validatePublicSurfaceIndex(
   value: unknown,
 ): PublicSurfaceIndexContract {
   if (!isRecord(value)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'public-surface-index.json must contain an object root.',
       { file: filePath },
@@ -324,7 +324,7 @@ function validatePublicSurfaceIndex(
 
   const categoriesRaw = value.surface_categories;
   if (!Array.isArray(categoriesRaw)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'public-surface-index.json must contain a surface_categories array.',
       { file: filePath, field: 'surface_categories' },
@@ -333,7 +333,7 @@ function validatePublicSurfaceIndex(
 
   const surfacesRaw = value.surfaces;
   if (!Array.isArray(surfacesRaw)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'public-surface-index.json must contain a surfaces array.',
       { file: filePath, field: 'surfaces' },
@@ -352,7 +352,7 @@ function validatePublicSurfaceIndex(
     ),
     surface_categories: categoriesRaw.map((entry, index) => {
       if (!isRecord(entry)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Each public surface category entry must be an object.',
           { file: filePath, index },
@@ -367,7 +367,7 @@ function validatePublicSurfaceIndex(
     }),
     surfaces: surfacesRaw.map((entry, index) => {
       if (!isRecord(entry)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Each public surface entry must be an object.',
           { file: filePath, index },
@@ -376,7 +376,7 @@ function validatePublicSurfaceIndex(
 
       const refsRaw = entry.refs;
       if (!Array.isArray(refsRaw)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'refs must be an array.',
           { file: filePath, index, field: 'refs' },
@@ -402,7 +402,7 @@ function validatePublicSurfaceIndex(
         domain_ids: expectStringArray(entry.domain_ids, 'domain_ids', filePath),
         refs: refsRaw.map((ref, refIndex) => {
           if (!isRecord(ref)) {
-            throw new GatewayContractError(
+            throw new FrameworkContractError(
               'contract_shape_invalid',
               'Each public surface ref must be an object.',
               { file: filePath, index, refIndex },
@@ -410,7 +410,7 @@ function validatePublicSurfaceIndex(
           }
 
           if (ref.language !== undefined && typeof ref.language !== 'string') {
-            throw new GatewayContractError(
+            throw new FrameworkContractError(
               'contract_shape_invalid',
               'Ref field "language" must be a string when provided.',
               { file: filePath, index, refIndex, field: 'language' },
@@ -457,7 +457,7 @@ function requireNonEmptyPath(
   detailKey: 'contracts_dir' | 'search_from',
 ): string {
   if (typeof value !== 'string' || value.length === 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       `${describeContractsRootSource(source)} must be a non-empty path.`,
       {
@@ -477,7 +477,7 @@ function resolveContractsDirFromSearchRoot(rootPath: string): string {
     return searchRoot;
   }
 
-  return path.join(searchRoot, 'contracts', 'opl-gateway');
+  return path.join(searchRoot, 'contracts', 'opl-framework');
 }
 
 function resolveContractsDirFromCliEntrypoint(): string | null {
@@ -488,7 +488,7 @@ function resolveContractsDirFromCliEntrypoint(): string | null {
 
   const cliEntryRealPath = fs.realpathSync.native(cliEntry);
   const projectRoot = path.resolve(path.dirname(cliEntryRealPath), '..');
-  const contractsRoot = path.join(projectRoot, 'contracts', 'opl-gateway');
+  const contractsRoot = path.join(projectRoot, 'contracts', 'opl-framework');
   return hasRequiredContractFiles(contractsRoot) ? contractsRoot : null;
 }
 
@@ -501,7 +501,7 @@ function resolveExplicitContractsDir(
   for (const fileName of REQUIRED_CONTRACT_FILE_NAMES) {
     const filePath = path.join(resolvedDir, fileName);
     if (!fs.existsSync(filePath)) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'contract_file_missing',
         `Explicit contracts directory is missing required contract file: ${fileName}.`,
         {
@@ -517,8 +517,8 @@ function resolveExplicitContractsDir(
 }
 
 function normalizeLoadOptions(
-  input?: string | GatewayContractsLoadOptions,
-): NormalizedGatewayContractsLoadOptions {
+  input?: string | FrameworkContractsLoadOptions,
+): NormalizedFrameworkContractsLoadOptions {
   if (typeof input === 'string') {
     return {
       searchFrom: requireNonEmptyPath(input, 'api', 'search_from'),
@@ -563,7 +563,7 @@ function normalizeLoadOptions(
 }
 
 function resolveContractsLocation(
-  input?: string | GatewayContractsLoadOptions,
+  input?: string | FrameworkContractsLoadOptions,
 ): ResolvedContractsLocation {
   const options = normalizeLoadOptions(input);
 
@@ -575,7 +575,7 @@ function resolveContractsLocation(
   }
 
   if (options.searchFrom === null) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'Contract root resolution requires either an explicit contracts directory or a search root.',
       { source: options.source },
@@ -608,9 +608,9 @@ function resolveContractsLocation(
 }
 
 function enrichContractLoadError(
-  error: GatewayContractError,
+  error: FrameworkContractError,
   location: ResolvedContractsLocation,
-): GatewayContractError {
+): FrameworkContractError {
   const rawDetails = error.details ?? {};
   const {
     source: legacySource,
@@ -619,7 +619,7 @@ function enrichContractLoadError(
     ...details
   } = rawDetails;
 
-  return new GatewayContractError(
+  return new FrameworkContractError(
     error.code,
     error.message,
     {
@@ -643,34 +643,34 @@ const REQUIRED_CONTRACT_FILES = [
   {
     contract_id: 'workstreams',
     file_name: 'workstreams.json',
-    schema_version: (contracts: GatewayContracts) => contracts.workstreams.version,
+    schema_version: (contracts: FrameworkContracts) => contracts.workstreams.version,
   },
   {
     contract_id: 'domains',
     file_name: 'domains.json',
-    schema_version: (contracts: GatewayContracts) => contracts.domains.version,
+    schema_version: (contracts: FrameworkContracts) => contracts.domains.version,
   },
   {
     contract_id: 'routing_vocabulary',
     file_name: 'routing-vocabulary.json',
-    schema_version: (contracts: GatewayContracts) => contracts.routingVocabulary.version,
+    schema_version: (contracts: FrameworkContracts) => contracts.routingVocabulary.version,
   },
   {
     contract_id: 'task_topology',
     file_name: 'task-topology.json',
-    schema_version: (contracts: GatewayContracts) => contracts.taskTopology.version,
+    schema_version: (contracts: FrameworkContracts) => contracts.taskTopology.version,
   },
   {
     contract_id: 'public_surface_index',
     file_name: 'public-surface-index.json',
-    schema_version: (contracts: GatewayContracts) => contracts.publicSurfaceIndex.version,
+    schema_version: (contracts: FrameworkContracts) => contracts.publicSurfaceIndex.version,
   },
 ] as const;
 
-export function validateGatewayContracts(
-  input?: string | GatewayContractsLoadOptions,
+export function validateFrameworkContracts(
+  input?: string | FrameworkContractsLoadOptions,
 ): ContractValidationSummary {
-  const contracts = loadGatewayContracts(input);
+  const contracts = loadFrameworkContracts(input);
 
   return {
     status: 'valid',
@@ -685,9 +685,9 @@ export function validateGatewayContracts(
   };
 }
 
-export function loadGatewayContracts(
-  input?: string | GatewayContractsLoadOptions,
-): GatewayContracts {
+export function loadFrameworkContracts(
+  input?: string | FrameworkContractsLoadOptions,
+): FrameworkContracts {
   const location = resolveContractsLocation(input);
   const { contractsDir, source } = location;
 
@@ -718,7 +718,7 @@ export function loadGatewayContracts(
     };
   } catch (error) {
     if (
-      error instanceof GatewayContractError
+      error instanceof FrameworkContractError
       && CONTRACT_LOAD_ERROR_CODES.has(error.code)
     ) {
       throw enrichContractLoadError(error, location);
@@ -729,7 +729,7 @@ export function loadGatewayContracts(
 }
 
 export function findWorkstreamOrThrow(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   workstreamId: string,
 ) {
   const workstream = contracts.workstreams.workstreams.find(
@@ -737,7 +737,7 @@ export function findWorkstreamOrThrow(
   );
 
   if (!workstream) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'workstream_not_found',
       `Unknown workstream: ${workstreamId}.`,
       { workstream_id: workstreamId },
@@ -747,13 +747,13 @@ export function findWorkstreamOrThrow(
   return workstream;
 }
 
-export function findDomainOrThrow(contracts: GatewayContracts, domainId: string) {
+export function findDomainOrThrow(contracts: FrameworkContracts, domainId: string) {
   const domain = contracts.domains.domains.find(
     (entry) => entry.domain_id === domainId,
   );
 
   if (!domain) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'domain_not_found',
       `Unknown domain: ${domainId}.`,
       { domain_id: domainId },
@@ -764,7 +764,7 @@ export function findDomainOrThrow(contracts: GatewayContracts, domainId: string)
 }
 
 export function findSurfaceOrThrow(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   surfaceId: string,
 ) {
   const surface = contracts.publicSurfaceIndex.surfaces.find(
@@ -772,7 +772,7 @@ export function findSurfaceOrThrow(
   );
 
   if (!surface) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       `Unknown surface: ${surfaceId}.`,
       { surface_id: surfaceId },

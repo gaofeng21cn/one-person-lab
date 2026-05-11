@@ -16,7 +16,7 @@ function readJson(relativePath: string) {
 }
 
 test('family runtime attempt contract documents attempt, retry, workspace, and reconciliation fields', () => {
-  const contract = readJson('contracts/opl-gateway/family-runtime-attempt-contract.json');
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   assert.equal(contract.provider_model, 'provider_backed_stage_attempt_runtime');
   assert.deepEqual(contract.allowed_providers, ['local_sqlite', 'hermes_legacy', 'temporal']);
@@ -86,7 +86,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
 });
 
 test('family runtime attempt contract keeps OPL runtime manager observability-only', () => {
-  const contract = readJson('contracts/opl-gateway/family-runtime-attempt-contract.json');
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   assert.equal(contract.observability_only, true);
   for (const nonGoal of [
@@ -101,7 +101,7 @@ test('family runtime attempt contract keeps OPL runtime manager observability-on
 });
 
 test('family runtime attempt contract rejects external required scheduler entries', () => {
-  const contract = readJson('contracts/opl-gateway/family-runtime-attempt-contract.json');
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   for (const unsupported of ['Linear', 'Symphony scheduler', 'external issue tracker']) {
     assert.ok((contract.unsupported_required_entries as string[]).includes(unsupported));
@@ -109,7 +109,7 @@ test('family runtime attempt contract rejects external required scheduler entrie
 });
 
 test('standard domain-agent skeleton contract keeps repo source separate from real artifacts', () => {
-  const contract = readJson('contracts/opl-gateway/standard-domain-agent-skeleton-contract.json');
+  const contract = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
 
   assert.deepEqual(contract.required_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
   assert.deepEqual(contract.forbidden_repo_source_dirs, ['artifacts']);
