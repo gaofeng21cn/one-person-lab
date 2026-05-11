@@ -8,7 +8,9 @@
 
 ## 当前产品模型
 
-当前公开的 `OPL` 产品模型统一为：
+`OPL` 是面向高价值知识工作的完整智能体运行框架。它以 Codex 优先、阶段推进为原则，阶段内默认最小执行单元是 `Codex CLI`，编排单元是领域阶段，产品目标是通过可恢复的阶段尝试、人工关口、收口凭据、进度投影和文件生命周期，推进到可审计的全自动交付。
+
+当前公开的 `OPL` 资源模型统一为：
 
 - `System`
 - `Engines`
@@ -19,7 +21,7 @@
 - `Progress`
 - `Artifacts`
 
-当前 canonical truth 是 `Codex-default` session/runtime 以及其上的 explicit activation layer。
+当前 canonical truth 是 `Codex-default` session/runtime，以及其上的 explicit activation layer 和 provider-backed family runtime control plane。
 各个领域仓继续持有自己的 agent logic、runtime rule、progress truth 和 deliverable。
 
 ## 按读者类型进入
@@ -43,6 +45,7 @@
 - [文档组合治理](./docs_portfolio_consolidation.md)
 - [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [Runtime Substrate 参考索引](./references/runtime-substrate/README.zh-CN.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
 
@@ -58,6 +61,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 
 `docs/` 现在按生命周期状态管理，而不是继续平铺四层文件。
 每份长期文档都必须说明 `owner`、`purpose`、`state` 和 `machine boundary`。
+生命周期按内容角色判断，不按文件名、目录名或旧链接机械判断。一个看起来仍在 active/reference 路径下的文件，如果内容是过时计划、旧 topology、旧入口或旧 provider 判断，就必须标成 superseded / retired / tombstone 语境，并指向当前 owner surface。
 
 - `docs/` 根目录只保留文档索引、核心五件套和 [文档组合治理](./docs_portfolio_consolidation.md)。
 - `docs/active/` 承接当前 runtime、activation、onboarding 和 shared-boundary 的人读支撑。
@@ -67,12 +71,12 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - `docs/history/` 承接 dated snapshot、退役路线、兼容性归档和 tombstone。
 
 当前活跃公开模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)。
-当前活跃交互模型是 runtime-first、skill-first。
+当前活跃交互模型是 Codex-first、stage-led、runtime-first、skill-first。
 已退役的 `gateway / federation / routed-action` 语料以及 `frontdoor` 时代材料，都应放在活跃层之下理解。
 
 ## 公开支撑
 
-仓库首页是用户快速启动入口，必须保持安装优先、双语、可读。路线图和运行模型在用户知道如何启动后，再解释产品方向。
+仓库首页首先面向潜在用户，必须保持安装优先、双语、可读，并直接说明用户可以开始和交付什么工作。路线图和运行模型在用户知道如何启动后，再解释产品方向。
 
 - [仓库首页](../README.zh-CN.md)
 - [路线图](./public/roadmap.zh-CN.md)
@@ -99,6 +103,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 它们继续被仓库跟踪，但不是当前默认实现依据。
 
 - [参考级索引](./references/README.zh-CN.md)
+- [Runtime Substrate 参考索引](./references/runtime-substrate/README.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Docker WebUI 部署参考](./references/current-support/opl-docker-webui-deployment.zh-CN.md)
@@ -131,6 +136,8 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 
 - 继续把 [仓库首页](../README.zh-CN.md) 保持成安装优先、用户视角、医生/专家和其他非技术读者可读的公开入口。
 - 活跃公开文档继续保持双语。
+- 文档治理按内容生命周期判断，不按文件名、目录名或旧链接机械判断。
+- 已被核心五件套或当前 framework roadmap 取代的一次性计划，应进入 history / tombstone 语境，不继续作为 active reference 扩写。
 - 参考文档必须把 compatibility surface 和 current truth 区分清楚。
 - 历史继续作为仓库跟踪的 provenance 和 tombstone。
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。

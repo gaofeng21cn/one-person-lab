@@ -59,22 +59,19 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 
 ## 3. Runtime / Substrate / Migration References
 
-- [Codex-default host-agent runtime contract](./runtime-substrate/host-agent-runtime-contract.md)
-- [Hermes-Agent truth reset and target state](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)
-- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)
-- [OPL managed runtime three-layer contract](./runtime-substrate/opl-managed-runtime-three-layer-contract.md)
-- [OPL Runtime Manager target](./runtime-substrate/opl-runtime-manager-target.md)
-- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
-- [Temporal family runtime provider plan](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)
-- [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)
-- [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)
-- [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)
-- [CrewAI absorb note](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)
-- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md)
-- [Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md)
-- [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md)
-- [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md)
-- [OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)
+Current owner surfaces:
+
+- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete Codex-first, stage-led agent runtime framework, domain-agent boundary, language/runtime choices, and legacy-surface retirement.
+- [Temporal family runtime provider plan](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the provider-backed production substrate candidate.
+- [OPL Runtime Manager target](./runtime-substrate/opl-runtime-manager-target.md): active support target for Runtime Manager, provider readiness, native helper, and state index boundaries.
+- [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md), [Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md), and [CrewAI absorb note](./runtime-substrate/family-orchestration-contract-absorb-crewai.md): active support references only where their body still aligns with the roadmap and core five.
+
+Superseded or legacy references kept for migration review and tombstone context:
+
+- [Codex-default host-agent runtime contract](./runtime-substrate/host-agent-runtime-contract.md): superseded by stage-led framework and provider-backed runtime language.
+- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md): dated migration checklist; use the framework roadmap for current planning.
+- [Hermes-Agent truth reset and target state](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md), [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md), [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md), and [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md): Hermes-first or Hermes-evaluation context only; Hermes is now `hermes_legacy` / optional provider or explicit executor/proof lane.
+- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md), [Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md), [OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md), [OPL managed runtime three-layer contract](./runtime-substrate/opl-managed-runtime-three-layer-contract.md), and [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md): older direct-entry, gateway, online-agent-platform, and migration planning references; read through the current roadmap before reusing any wording.
 
 ## 4. Domain Admission References
 

@@ -2,7 +2,8 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是一人课题组的 Codex-first、stage-led family agent framework：它提供 `Codex-default session runtime`、显式 `domain-agent activation` 层、provider-backed family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
+对外公开时，`One Person Lab` (`OPL`) 是面向高价值知识工作的完整智能体运行框架。它以 Codex 优先、阶段推进为核心原则：大型任务按接近人类专家实施的阶段推进，`Codex CLI` 是阶段内默认的最小执行单元，OPL 负责让这些阶段可发现、可恢复、可审计、可投影，并以全自动交付为目标逐步补齐生产级运行能力。
+OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Codex-default session runtime`、显式 `domain-agent activation` 层、provider-backed family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
 当前仓库跟踪：
 
 - `opl` / `opl exec` / `opl resume` 这组 CLI / shell 前门
@@ -35,6 +36,9 @@
 
 ## 项目目标
 
+- 把 `OPL` 建成完整的 Codex-first、stage-led 智能体运行框架，支撑高价值知识工作的全自动交付
+- 让大型任务按接近人类专家的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口，并把每个阶段变成可恢复、可审计、可追踪的工作单元
+- 把 `Codex CLI` 固定为阶段内默认最小执行单元，同时允许 provider 层承担 durable orchestration、retry、human gate、query 和 history
 - 给 `opl`、`opl exec`、`opl resume`、直接 `Codex` 使用和外部壳提供稳定一致的 Codex-default session/runtime 合同
 - 冻结 `OPL Runtime Manager` 的产品控制面合同，让 OPL 能管理 provider-backed family runtime，而不复制一套 domain scheduler/session/memory kernel
 - 把 MAS 已验证的 SQLite / file lifecycle / restore proof / retention / artifact index 经验上收成 OPL framework primitives，并让 MAG/RCA 等 domain agent 可复用
@@ -67,6 +71,7 @@
 - 这些 `domain agent` 通过本地 CLI、程序/脚本与 repo-tracked contract 暴露稳定 capability surface；它们既可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
 - `MAS`、`MAG`、`RCA` 可以作为运行在 OPL family framework 上的 domain agents 被托管、唤醒和投影，但不是 OPL 内部模块；direct Codex app skill 调用仍是一等入口
 - `gateway / harness` 继续作为各 domain 仓内部的边界层语言存在，但不再是顶层公开主语
+- `frontdoor`、gateway-first、federation-first、Hermes-first 和旧 Product API 计划只在 history、compatibility、diagnostic 或 superseded reference 语境中出现；active docs 不把这些路线写成当前产品入口或目标 topology
 
 ## 默认入口
 

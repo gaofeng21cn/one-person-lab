@@ -2,10 +2,11 @@
 
 ## 顶层定位
 
-- `OPL` 是顶层 `Codex-default session runtime` 与共享接口层。
-- `OPL` 的默认交互与具体执行 runtime 是 `Codex CLI`；Full online family runtime 的 readiness 对象是已配置的 provider-backed family runtime。Temporal-backed provider 是生产 substrate 候选，迁移期 Hermes/local provider 只能作为 legacy/optional provider。
+- `OPL` 是面向高价值知识工作的完整智能体运行框架。它以 `Codex-default session runtime` 为默认交互底座，以 stage-led family framework 承接长期自治、恢复、队列、human gate、trace、projection 与交付收口。
+- `OPL` 的默认交互与具体执行 runtime 是 `Codex CLI`；`Codex CLI` 是阶段内默认最小执行单元。Full online family runtime 的 readiness 对象是已配置的 provider-backed family runtime。Temporal-backed provider 是生产 substrate 候选，迁移期 Hermes/local provider 只能作为 legacy/optional provider。
 - `Codex CLI` 是 OPL 的受管 runtime dependency：OPL 必须检测实际命中的 binary、版本、最低版本策略和 PATH 候选；同版本兼容 wrapper / alias 归并到当前有效入口，低于当前最低版本或当前命中版本无法解析的 Codex CLI 只能进入 `attention_needed`，不得被报告为 ready。
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
+- 大型任务必须按 stage 作为可观察、可恢复、可审计的工作单元推进；不得把开放式知识工作降级成只靠硬编码步骤或固定脚本后处理的流程。
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层和 typed family queue owner，不得被写成 domain scheduler、domain truth owner、domain quality owner、domain artifact owner 或 concrete executor。
 - family runtime provider 负责 stage-attempt durability、wakeup、retry/dead-letter、human-gate transport、status query 与 execution history。Temporal provider 落地后，这些长期职责应由 Temporal-backed provider 承接；`Hermes-Agent` 只保留 legacy/optional provider 或显式 executor/proof lane，不得被写成 MAS/MAG/RCA domain truth、quality、artifact、publication gate 或默认 concrete executor owner，也不得被 fork/vendor 成 OPL 私有 runtime kernel。
 - OPL 应上收 domain-neutral 的智能体运行外围能力：stage attempt ledger、typed queue、checkpoint / closeout / receipt、source fingerprint / idempotency、artifact index、file lifecycle、retention、restore proof、migration ledger、workspace lifecycle、human gate / resume token 和 operator projection。任何上收都必须保留 domain truth owner 不变。
@@ -42,6 +43,8 @@
 - `docs/project.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`、`docs/status.md` 是 AI / 维护者核心工作集。
 - `docs/README*` 维护的四层文档体系继续有效：公开主线、公开合同配套、参考级配套、历史规格与计划。
 - 参考级与历史文档不得反向改写公开主线。
+- 文档生命周期治理按内容角色判断，不按文件名、目录名或旧链接机械判断。若一份文档内容已经是过时计划、旧 topology、旧入口或旧 provider 判断，即使它仍在 `docs/references/` 或被索引引用，也必须标注为 superseded / retired / tombstone 语境，并指向当前 owner surface。
+- 叙述性 `README*`、`docs/**` 与参考文档不得被脚本或测试固定措辞、标题、段落或具体 prose path；需要机器约束时使用 contract/schema/source surface、CLI/API 行为、生成 artifact 或 `human_doc:*` 语义标识。
 
 ## 合同面
 
