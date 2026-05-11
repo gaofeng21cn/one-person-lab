@@ -1,5 +1,7 @@
 # OPL 家族产品入口与 Domain Handoff 架构
 
+Lifecycle note 2026-05-11: 本文保留为早期 product-entry / domain handoff 架构参考。当前有效的 taxonomy、handoff envelope、frontdoor/operator 分层和 domain authority boundary 已经吸收到 `docs/active/development-document-portfolio.zh-CN.md`、`docs/active/current-development-lines.zh-CN.md`、domain admission contract、public docs 与 OPL stage-led framework roadmap。文中 Hermes Kernel、Gateway 和 direct-entry 目标链路不再作为当前默认 runtime 主线。
+
 ## 1. 要解决的问题
 
 `OPL` 的 direct product entry 问题并不是单仓问题，而是四仓共同问题。

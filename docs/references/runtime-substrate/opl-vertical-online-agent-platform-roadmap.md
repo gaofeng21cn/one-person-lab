@@ -2,6 +2,8 @@
 
 状态锚点：`2026-04-11`
 
+Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway / runtime-substrate 演进参考。当前总路线图已经收敛为 Codex-first、stage-led OPL framework：以 `Codex CLI` 为 stage 内默认执行单元，以 provider-backed stage attempt、typed queue、human gate、receipt/projection 和 domain-agent skeleton 为主线。当前 owner 入口是 `docs/active/development-document-portfolio.zh-CN.md`、`docs/active/current-development-lines.zh-CN.md` 和 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。
+
 ## 文档目的
 
 这份文档用于把 `OPL` 从当前“文档优先 + contract-first 的顶层 gateway 体系”继续推进到“垂类在线 agent 平台族”时，最关键的边界、阶段和落地顺序冻结下来。

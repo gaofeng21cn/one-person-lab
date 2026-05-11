@@ -2,6 +2,8 @@
 
 状态锚点：`2026-04-12`
 
+Lifecycle note 2026-05-11: 本文保留为早期 family direct-entry 推进板和 product-entry taxonomy provenance。当前不再按整份推进板执行；有效内容已经按内容块归入 OPL current development lines、development document portfolio、domain admission contract、public roadmap 和 runtime-substrate roadmap。Hermes-first / Gateway / frontdoor / direct-entry wording 只能作为迁移历史或旧面退役上下文使用。
+
 ## 文档目的
 
 这份板面用来回答一个管理问题：

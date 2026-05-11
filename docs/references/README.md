@@ -62,12 +62,13 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 
 Current owner surfaces:
 
+- [OPL development document portfolio](../active/development-document-portfolio.md): current entry for absorbing, retaining, downgrading, retiring, or archiving old runtime / product-entry / migration content.
 - [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete Codex-first, stage-led agent runtime framework, domain-agent boundary, language/runtime choices, and legacy-surface retirement.
 - [Temporal family runtime provider plan](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the provider-backed production substrate candidate.
 - [OPL Runtime Manager target](./runtime-substrate/opl-runtime-manager-target.md): active support target for Runtime Manager, provider readiness, native helper, and state index boundaries.
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md), [Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md), and [CrewAI absorb note](./runtime-substrate/family-orchestration-contract-absorb-crewai.md): active support references only where their body still aligns with the roadmap and core five.
 
-Superseded or legacy references kept for migration review and tombstone context:
+Superseded or legacy references kept for migration review and tombstone context. Before reusing any content, classify it with [OPL development document portfolio](../active/development-document-portfolio.md):
 
 - [Codex-default host-agent runtime contract](./runtime-substrate/host-agent-runtime-contract.md): superseded by stage-led framework and provider-backed runtime language.
 - [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md): dated migration checklist; use the framework roadmap for current planning.
@@ -122,7 +123,7 @@ Retired prose files live in `docs/history/`. Machine-readable contracts, tests, 
 
 ## Usage Rules
 
-- After the 2026-05-11 architecture reset, use [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) as the master entry for OPL framework work, execution-language decisions, Temporal provider rollout, domain-agent boundary changes, and legacy-surface retirement.
+- After the 2026-05-11 architecture reset, use [OPL development document portfolio](../active/development-document-portfolio.md) and [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) as the master entries for OPL framework work, execution-language decisions, Temporal provider rollout, domain-agent boundary changes, and legacy-surface retirement.
 - For MAS/MAG/RCA publication routes, grant strategies, visual patterns, figure templates, prompt lessons, or reviewer lessons, use [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md) to decide whether the content belongs in natural-language memory, strong domain contracts, or a deferred framework lane.
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
 - `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
