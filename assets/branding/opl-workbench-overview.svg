@@ -1,60 +1,114 @@
-<svg width="1600" height="1080" viewBox="0 0 1600 1080" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab stage-led workbench overview">
-  <title>One Person Lab stage-led workbench overview</title>
+<svg width="1600" height="1080" viewBox="0 0 1600 1080" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab expert-stage knowledge delivery framework">
+  <title>One Person Lab expert-stage knowledge delivery framework</title>
   <defs>
-    <linearGradient id="bg" x1="80" y1="60" x2="1520" y2="1040" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F8FCFF"/><stop offset="1" stop-color="#EEF8F7"/></linearGradient>
-    <filter id="shadow" x="0" y="0" width="1600" height="1080" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#173A5D" flood-opacity="0.12"/></filter>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2A6F9E"/></marker>
+    <linearGradient id="bg" x1="70" y1="40" x2="1530" y2="1040" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FCFF"/>
+      <stop offset="0.58" stop-color="#F2FAF5"/>
+      <stop offset="1" stop-color="#EEF6FF"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1600" height="1080" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="23" flood-color="#18364E" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#24718F"/>
+    </marker>
   </defs>
+
   <rect width="1600" height="1080" fill="url(#bg)"/>
-  <rect x="70" y="62" width="1460" height="956" rx="38" fill="#FFFFFF" fill-opacity="0.72" stroke="#D4E3F1" stroke-width="2"/>
-  <text x="800" y="124" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="42" font-weight="800">Stage-led Workbench for Codex Agents</text>
-  <text x="800" y="166" text-anchor="middle" fill="#506B83" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="21">Break expert work into stages, run Codex CLI attempts, and keep domain truth visible.</text>
+  <rect x="70" y="60" width="1460" height="960" rx="36" fill="#FFFFFF" fill-opacity="0.76" stroke="#D5E4EA" stroke-width="2"/>
+
+  <text x="800" y="122" text-anchor="middle" fill="#102A3A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="42" font-weight="800">Knowledge Delivery Needs Expert Stages</text>
+  <text x="800" y="165" text-anchor="middle" fill="#526B78" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="21">One Person Lab turns complex professional work into auditable stage-by-stage delivery.</text>
+
   <g filter="url(#shadow)">
-    <rect x="128" y="228" width="292" height="142" rx="30" fill="#0D2A45"/>
-    <text x="274" y="278" text-anchor="middle" fill="#EAF7FF" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Define Stage</text>
-    <text x="274" y="316" text-anchor="middle" fill="#BFD6EA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Human-expert style</text>
-    <text x="274" y="342" text-anchor="middle" fill="#BFD6EA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">task decomposition</text>
-    <rect x="486" y="228" width="292" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
-    <text x="632" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Queue Attempt</text>
-    <text x="632" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Typed queue routes</text>
-    <text x="632" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Codex CLI work units</text>
-    <rect x="844" y="228" width="292" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
-    <text x="990" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Capture Receipts</text>
-    <text x="990" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Stage attempts, status,</text>
-    <text x="990" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">handoff, and recovery data</text>
-    <rect x="1202" y="228" width="270" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
-    <text x="1337" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="800">Return Verdicts</text>
-    <text x="1337" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16">Domain agents own truth,</text>
-    <text x="1337" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16">quality, and artifacts</text>
+    <rect x="118" y="230" width="530" height="310" rx="30" fill="#F7FAFC" stroke="#D2DFE8" stroke-width="2"/>
+    <text x="383" y="285" text-anchor="middle" fill="#445B68" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800">Workflow-style Agents</text>
+    <text x="383" y="321" text-anchor="middle" fill="#738591" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Good at program automation</text>
+
+    <rect x="170" y="362" width="126" height="70" rx="18" fill="#FFFFFF" stroke="#C3D1DB" stroke-width="2"/>
+    <text x="233" y="405" text-anchor="middle" fill="#50656F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Tool call</text>
+    <rect x="340" y="362" width="126" height="70" rx="18" fill="#FFFFFF" stroke="#C3D1DB" stroke-width="2"/>
+    <text x="403" y="405" text-anchor="middle" fill="#50656F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Function I/O</text>
+    <rect x="510" y="362" width="86" height="70" rx="18" fill="#FFFFFF" stroke="#C3D1DB" stroke-width="2"/>
+    <text x="553" y="405" text-anchor="middle" fill="#50656F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Node</text>
+    <path d="M296 397H340" stroke="#93A7B3" stroke-width="4" marker-end="url(#arrow)"/>
+    <path d="M466 397H510" stroke="#93A7B3" stroke-width="4" marker-end="url(#arrow)"/>
+
+    <text x="170" y="485" fill="#71808A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">This breaks down when the product is a paper,</text>
+    <text x="170" y="514" fill="#71808A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">grant, patent, review, or expert presentation.</text>
   </g>
-  <path d="M420 299H486" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
-  <path d="M778 299H844" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
-  <path d="M1136 299H1202" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
-  <text x="800" y="460" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800">Domain Agents Hold Domain Truth</text>
+
   <g filter="url(#shadow)">
-    <rect x="150" y="508" width="390" height="196" rx="32" fill="#F1F8FF" stroke="#BBD2EC" stroke-width="2"/>
-    <circle cx="214" cy="572" r="28" fill="#2A6F9E"/><path d="M201 572H227M214 559V585" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
-    <text x="260" y="566" fill="#123A5A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Med Auto Science</text>
-    <text x="190" y="626" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Owns study truth, evidence quality,</text>
-    <text x="190" y="654" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">manuscripts, and research artifacts.</text>
-    <rect x="606" y="508" width="390" height="196" rx="32" fill="#FFF8EB" stroke="#E3C27B" stroke-width="2"/>
-    <circle cx="670" cy="572" r="28" fill="#D89C27"/><path d="M656 574L668 586L690 556" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="716" y="566" fill="#5D4210" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Med Auto Grant</text>
-    <text x="646" y="626" fill="#715928" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Owns grant truth, review verdicts,</text>
-    <text x="646" y="654" fill="#715928" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">proposal drafts, and export artifacts.</text>
-    <rect x="1062" y="508" width="390" height="196" rx="32" fill="#ECFAF8" stroke="#AADAD6" stroke-width="2"/>
-    <circle cx="1126" cy="572" r="28" fill="#27958E"/><path d="M1110 586L1126 558L1142 586H1110Z" fill="#FFFFFF"/>
-    <text x="1172" y="566" fill="#125854" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">RedCube AI</text>
-    <text x="1102" y="626" fill="#426F6B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Owns deck truth, layout quality,</text>
-    <text x="1102" y="654" fill="#426F6B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">visual artifacts, and review loops.</text>
+    <rect x="952" y="230" width="530" height="310" rx="30" fill="#ECFAF8" stroke="#AADAD6" stroke-width="2"/>
+    <text x="1217" y="285" text-anchor="middle" fill="#0D4F4E" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800">One Person Lab</text>
+    <text x="1217" y="321" text-anchor="middle" fill="#426E6A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Built around expert delivery stages</text>
+
+    <rect x="1006" y="362" width="132" height="70" rx="18" fill="#FFFFFF" stroke="#A8D4CE" stroke-width="2"/>
+    <text x="1072" y="391" text-anchor="middle" fill="#175E5A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">Scope</text>
+    <text x="1072" y="415" text-anchor="middle" fill="#5B7B78" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="13">the problem</text>
+    <rect x="1176" y="362" width="132" height="70" rx="18" fill="#FFFFFF" stroke="#A8D4CE" stroke-width="2"/>
+    <text x="1242" y="391" text-anchor="middle" fill="#175E5A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">Prepare</text>
+    <text x="1242" y="415" text-anchor="middle" fill="#5B7B78" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="13">evidence</text>
+    <rect x="1346" y="362" width="84" height="70" rx="18" fill="#FFFFFF" stroke="#A8D4CE" stroke-width="2"/>
+    <text x="1388" y="391" text-anchor="middle" fill="#175E5A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">Execute</text>
+    <text x="1388" y="415" text-anchor="middle" fill="#5B7B78" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="13">deep work</text>
+    <path d="M1138 397H1176" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+    <path d="M1308 397H1346" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+
+    <text x="1006" y="485" fill="#426E6A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Each stage carries goals, source refs, quality</text>
+    <text x="1006" y="514" fill="#426E6A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">criteria, receipts, handoff, and owner boundary.</text>
   </g>
-  <text x="800" y="792" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800">Runtime Surfaces</text>
+
+  <path d="M680 385C764 318 836 318 920 385" stroke="#24718F" stroke-width="5" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <text x="800" y="328" text-anchor="middle" fill="#24718F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18" font-weight="800">Change the unit of work</text>
+
+  <text x="800" y="620" text-anchor="middle" fill="#102A3A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800">The OPL Delivery Loop</text>
+  <g filter="url(#shadow)">
+    <rect x="150" y="680" width="185" height="116" rx="26" fill="#0D2A45"/>
+    <text x="242" y="724" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800">Define</text>
+    <text x="242" y="756" text-anchor="middle" fill="#C8DEEA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15">goal and scope</text>
+
+    <rect x="386" y="680" width="185" height="116" rx="26" fill="#F3F9FF" stroke="#BBD2EC" stroke-width="2"/>
+    <text x="478" y="724" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800">Ground</text>
+    <text x="478" y="756" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15">evidence and files</text>
+
+    <rect x="622" y="680" width="185" height="116" rx="26" fill="#F4FBF6" stroke="#AED7B5" stroke-width="2"/>
+    <text x="714" y="724" text-anchor="middle" fill="#1C6736" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800">Execute</text>
+    <text x="714" y="756" text-anchor="middle" fill="#4B765A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15">expert work</text>
+
+    <rect x="858" y="680" width="185" height="116" rx="26" fill="#FFF8EB" stroke="#E3C27B" stroke-width="2"/>
+    <text x="950" y="724" text-anchor="middle" fill="#6B4B10" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800">Review</text>
+    <text x="950" y="756" text-anchor="middle" fill="#765E2A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15">quality gate</text>
+
+    <rect x="1094" y="680" width="185" height="116" rx="26" fill="#F7F4FF" stroke="#CBBEEB" stroke-width="2"/>
+    <text x="1186" y="724" text-anchor="middle" fill="#493A72" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800">Revise</text>
+    <text x="1186" y="756" text-anchor="middle" fill="#655783" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15">until acceptable</text>
+
+    <rect x="1330" y="680" width="120" height="116" rx="26" fill="#EAF8F6" stroke="#AADAD6" stroke-width="2"/>
+    <text x="1390" y="724" text-anchor="middle" fill="#125854" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800">Ship</text>
+    <text x="1390" y="756" text-anchor="middle" fill="#426F6B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="15">deliverable</text>
+  </g>
+
+  <path d="M335 738H386" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M571 738H622" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M807 738H858" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1043 738H1094" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1279 738H1330" stroke="#24718F" stroke-width="4" marker-end="url(#arrow)"/>
+
   <g font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">
-    <rect x="176" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="281" y="883" text-anchor="middle" fill="#315B7B">Stage attempts</text>
-    <rect x="424" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="529" y="883" text-anchor="middle" fill="#315B7B">Typed queue</text>
-    <rect x="672" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="777" y="883" text-anchor="middle" fill="#315B7B">Receipts</text>
-    <rect x="920" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="1025" y="883" text-anchor="middle" fill="#315B7B">Recovery</text>
-    <rect x="1168" y="838" width="256" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="1296" y="883" text-anchor="middle" fill="#315B7B">Provider-backed runtime</text>
+    <rect x="182" y="870" width="190" height="66" rx="20" fill="#FFFFFF" stroke="#CAD8E6"/>
+    <text x="277" y="910" text-anchor="middle" fill="#315B7B">Research</text>
+    <rect x="414" y="870" width="190" height="66" rx="20" fill="#FFFFFF" stroke="#CAD8E6"/>
+    <text x="509" y="910" text-anchor="middle" fill="#315B7B">Grants</text>
+    <rect x="646" y="870" width="190" height="66" rx="20" fill="#FFFFFF" stroke="#CAD8E6"/>
+    <text x="741" y="910" text-anchor="middle" fill="#315B7B">Presentations</text>
+    <rect x="878" y="870" width="190" height="66" rx="20" fill="#FFFFFF" stroke="#CAD8E6"/>
+    <text x="973" y="910" text-anchor="middle" fill="#315B7B">Patents</text>
+    <rect x="1110" y="870" width="190" height="66" rx="20" fill="#FFFFFF" stroke="#CAD8E6"/>
+    <text x="1205" y="910" text-anchor="middle" fill="#315B7B">Awards</text>
+    <rect x="1342" y="870" width="76" height="66" rx="20" fill="#FFFFFF" stroke="#CAD8E6"/>
+    <text x="1380" y="910" text-anchor="middle" fill="#315B7B">More</text>
   </g>
-  <text x="800" y="978" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Built for serious long-running work that needs expert-style stages, visible attempts, and recoverable execution.</text>
+
+  <text x="800" y="985" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">OPL is the framework layer that makes professional AI work visible, recoverable, auditable, and repeatable.</text>
 </svg>

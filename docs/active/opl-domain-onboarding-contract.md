@@ -37,11 +37,12 @@ This rule now applies to the remaining candidate workstreams only: `Grant Ops` h
 
 When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, start with the current Codex-default executor and provider-backed stage-runtime wording:
 
-- [Codex-default Host-Agent Runtime Contract](../references/runtime-substrate/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default executor wording
+- [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md) — current Codex-default executor, provider-backed stage runtime, and host-agent / managed-runtime deployment-shape wording
 - [Family Executor Adapter Defaults](../references/runtime-substrate/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family executor naming, default mode, default model, and Hermes-Agent experimental boundary
 
 If historical migration context is still needed during review, use these historical references separately:
 
+- [Codex-default Host-Agent Runtime Contract](../history/runtime-substrate/host-agent-runtime-contract.md) — historical local host-agent runtime contract; current useful wording has been absorbed into the runtime naming and boundary contract
 - [Development Operating Model](../history/frontdoor-legacy/development-operating-model.md) — Chinese-only internal reference for historical `Codex Host` / `OMX` migration discipline; not a current execution guide
 - [Runtime Alignment Taskboard](../history/frontdoor-legacy/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist
 - [OMX historical archive](../history/omx/README.md) — Chinese-only tombstone for retired OMX-era workflow material
@@ -131,6 +132,36 @@ At minimum, the onboarding package must provide:
 - an explanation of the workstream(s), deliverable objects, and review semantics the domain owns
 - an explanation of its stable agent runtime / tool / controller surface and the code-versus-Agent responsibility split
 - enough public wording for `OPL` docs to link to the domain without inventing its identity
+
+The public surface must also absorb the still-valid content from the old product-entry and direct-entry plans without inheriting their Hermes-first or Gateway-first route.
+
+Every domain onboarding package must explicitly distinguish three entry types:
+
+| Entry type | Frozen meaning | OPL review focus |
+| --- | --- | --- |
+| `operator_entry` | commands, scripts, diagnostics, or operations entrypoints for engineers | May exist, but must not be presented as a normal user product entry. |
+| `agent_entry` | CLI, MCP, controller, or app-skill callable surfaces for Codex or another host agent | Must be structured, auditable, and fail-closed; it cannot be just a prompt. |
+| `product_entry` | launch, recovery, session, routing, and interaction entrypoint for an end user | Must state whether it is mature today; future hosted/web targets cannot be written as current reality. |
+
+If the domain exposes `frontdoor_surface`, `operator_loop_surface`, or equivalent fields, the package must state:
+
+- whether `frontdoor_surface` is a real user entry or only a product-entry shell;
+- whether `operator_loop_surface` still owns the real runtime / controller loop;
+- how the direct domain path and OPL-hosted path share owner receipts, artifact locators, and return surfaces;
+- which entries are historical, diagnostic, or compatibility routes rather than defaults.
+
+The `OPL -> domain` handoff envelope must at minimum express:
+
+- `target_domain_id`
+- `task_intent`
+- `entry_mode`
+- `workspace_locator`
+- `runtime_session_contract`
+- `return_surface_contract`
+- `domain_truth_authority_refs`
+- `artifact_locator_refs`
+
+These fields route stage selection and handoff to the correct domain-agent entry. They do not move domain truth, quality verdicts, artifact authority, or user-facing delivery ownership into OPL.
 
 ## 3. Truth Ownership Declaration
 

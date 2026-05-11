@@ -66,7 +66,7 @@
 - [OPL Governance / Audit Operating Surface](../references/operating-governance/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](../references/operating-governance/opl-publish-promotion-operating-surface.zh-CN.md)
 - [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
-- [OPL 垂类在线 Agent 平台演进蓝图](../references/runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)
+- [Runtime Substrate 历史归档](../history/runtime-substrate/README.zh-CN.md)
 - [OPL Gateway Example Corpus](../references/examples-corpora/opl-gateway-example-corpus.zh-CN.md)
 
 ## 判断标准

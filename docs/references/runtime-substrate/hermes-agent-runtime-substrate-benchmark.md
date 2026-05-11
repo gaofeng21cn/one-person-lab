@@ -26,9 +26,11 @@
 - `contracts/README.md`
 - `contracts/opl-framework/README.zh-CN.md`
 
-当前围绕“如何把这些 substrate 判断继续推成 `OPL` 的垂类在线 agent 平台演进路线”的阶段化落地蓝图，见：
+历史上围绕“如何把这些 substrate 判断继续推成 `OPL` 的垂类在线 agent 平台演进路线”的阶段化落地蓝图，已迁入历史归档；当前路线以 stage-led framework roadmap 和 Temporal provider 计划为准：
 
-- `docs/references/opl-vertical-online-agent-platform-roadmap.md`
+- `docs/history/runtime-substrate/opl-vertical-online-agent-platform-roadmap.md`
+- `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`
+- `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
 
 ## 对标范围
 

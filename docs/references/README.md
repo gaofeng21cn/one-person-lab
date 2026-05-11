@@ -70,10 +70,9 @@ Current owner surfaces:
 
 Superseded or legacy references kept for migration review and tombstone context. Before reusing any content, classify it with [OPL development document portfolio](../active/development-document-portfolio.md):
 
-- [Codex-default host-agent runtime contract](./runtime-substrate/host-agent-runtime-contract.md): superseded by stage-led framework and provider-backed runtime language.
-- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md): dated migration checklist; use the framework roadmap for current planning.
-- [Hermes-Agent truth reset and target state](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md), [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md), [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md), and [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md): Hermes-first or Hermes-evaluation context only; Hermes is now `hermes_legacy` / optional provider or explicit executor/proof lane.
-- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md), [Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md), [OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md), [OPL managed runtime three-layer contract](./runtime-substrate/opl-managed-runtime-three-layer-contract.md), and [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md): older direct-entry, gateway, online-agent-platform, and migration planning references; read through the current roadmap before reusing any wording.
+- [Runtime substrate history archive](../history/runtime-substrate/README.md): absorbed early direct-entry, Hermes-first, host-agent-only, managed-runtime checklist, vertical online-agent platform, and MAS cutover whole documents.
+- [Hermes-Agent truth reset and target state](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md), [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md), and [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md): Hermes evaluation context only; Hermes is now `hermes_legacy` / optional provider or explicit executor/proof lane.
+- [OPL managed runtime three-layer contract](./runtime-substrate/opl-managed-runtime-three-layer-contract.md): older managed-runtime layering reference; current useful content lives in the runtime naming and boundary contract.
 
 ## 4. Domain Admission References
 
@@ -115,6 +114,7 @@ Superseded or legacy references kept for migration review and tombstone context.
 ## 7. Retired Compatibility And Frontdoor References
 
 - [Gateway / federation compatibility archive](../history/compatibility/gateway-federation/README.md)
+- [Runtime substrate history archive](../history/runtime-substrate/README.md)
 - [Frontdoor legacy archive](../history/frontdoor-legacy/README.md)
 - [OMX historical archive](../history/omx/README.md)
 - [Process history archive](../history/process/README.md)

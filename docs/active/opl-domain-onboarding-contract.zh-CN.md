@@ -37,11 +37,12 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
 当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，应先看当前 Codex-default executor 与 provider-backed stage-runtime 口径：
 
-- [Codex-default Host-Agent Runtime 合同](../references/runtime-substrate/host-agent-runtime-contract.md) — 当前本地默认 executor 口径（中文内部参考）
+- [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md) — 当前 Codex-default executor、provider-backed stage runtime、host-agent / managed runtime deployment-shape 口径
 - [家族 Executor Adapter 默认口径](../references/runtime-substrate/family-executor-adapter-defaults.md) — 当前家族执行器命名、默认模式、默认模型与 `Hermes-Agent` 实验边界（中文内部参考）
 
 如果审查时仍需要追溯历史迁移上下文，再单独参考下面这些历史材料：
 
+- [Codex-default Host-Agent Runtime 合同](../history/runtime-substrate/host-agent-runtime-contract.md) — 历史本地 host-agent runtime 合同，当前有效内容已吸收到 runtime 命名与边界合同
 - [四仓统一开发运行合同](../history/frontdoor-legacy/development-operating-model.md) — 历史 `Codex Host` / `OMX` 迁移纪律；不是当前执行手册（中文内部参考）
 - [四仓统一对齐检查表与任务板](../history/frontdoor-legacy/runtime-alignment-taskboard.md) — 已退役四仓收口清单的历史参考
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md) — 已退役 OMX 时代工作流材料的墓碑页（中文历史参考）
@@ -131,6 +132,36 @@ Onboarding package 还必须说明这个新 domain：
 - 说明它拥有的 workstream、deliverable object 与 review semantics
 - 说明它的 stable agent runtime / tool / controller surface，以及代码与 Agent 的分工边界
 - 提供足够公开 wording，让 `OPL` 顶层文档可以链接它，而不需要替它发明身份
+
+公开面还必须吸收旧 product-entry / direct-entry 计划中仍有效的内容，但不能继承旧 Hermes-first 或 Gateway-first 路线。
+
+每个 domain onboarding package 都必须显式区分三类入口：
+
+| 入口类型 | 固定含义 | OPL 审查重点 |
+| --- | --- | --- |
+| `operator_entry` | 面向工程操作者的命令、脚本、调试或运维入口 | 可以存在，但不能伪装成普通用户产品入口。 |
+| `agent_entry` | 面向 Codex 或其他 host-agent 的 CLI、MCP、controller 或 app skill callable surface | 必须结构化、可审计、可失败；不能只是一段 prompt。 |
+| `product_entry` | 面向最终用户的启动、恢复、会话、路由与交互入口 | 必须清楚说明当前是否已经成熟；不允许把未来 hosted/web 目标写成当前现实。 |
+
+如果 domain 已经暴露 `frontdoor_surface`、`operator_loop_surface` 或等价字段，必须同时说明：
+
+- `frontdoor_surface` 是否是真正的用户入口，还是只是一层 product-entry shell；
+- `operator_loop_surface` 是否仍承担真实 runtime / controller loop；
+- direct domain path 与 OPL-hosted path 如何共享 owner receipts、artifact locator 和 return surface；
+- 哪些入口只是 historical / diagnostic / compatibility route，不能作为默认路线。
+
+`OPL -> domain` handoff envelope 至少要能表达：
+
+- `target_domain_id`
+- `task_intent`
+- `entry_mode`
+- `workspace_locator`
+- `runtime_session_contract`
+- `return_surface_contract`
+- `domain_truth_authority_refs`
+- `artifact_locator_refs`
+
+这些字段只把 stage selection 和 handoff 送到正确 domain-agent entry；它们不会把 domain truth、quality verdict、artifact authority 或 user-facing delivery ownership 迁入 OPL。
 
 ## 3. Truth Ownership Declaration
 

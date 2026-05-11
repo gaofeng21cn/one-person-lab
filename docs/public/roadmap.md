@@ -66,7 +66,7 @@ Use these reference surfaces when you need deeper context:
 - [OPL Governance / Audit Operating Surface](../references/operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../references/operating-governance/opl-publish-promotion-operating-surface.md)
 - [Ecosystem Status Matrix](../references/convergence-governance/ecosystem-status-matrix.md)
-- [OPL Vertical Online Agent Platform Roadmap](../references/runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)
+- [Runtime substrate history archive](../history/runtime-substrate/README.md)
 - [OPL Gateway Example Corpus](../references/examples-corpora/opl-gateway-example-corpus.md)
 
 ## Evaluation Criteria

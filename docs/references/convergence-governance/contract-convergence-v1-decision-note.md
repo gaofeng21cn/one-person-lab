@@ -125,14 +125,15 @@
 
 ## 与现有参考文档的关系
 
-这份文档当前主要补充和澄清两类尚未正式 absorb 的统一口径：
+这份文档当前主要补充和澄清两类历史上尚未正式 absorb 的统一口径；2026-05-11 后，有效内容已经吸收到 active owner：
 
-- `docs/references/host-agent-runtime-contract.md`
-- `docs/references/development-operating-model.md`
+- `docs/history/runtime-substrate/host-agent-runtime-contract.md`
+- `docs/history/frontdoor-legacy/development-operating-model.md`
+- 当前 owner：`docs/active/opl-runtime-naming-and-boundary-contract.zh-CN.md`、`docs/active/opl-domain-onboarding-contract.zh-CN.md`
 
 需要特别注意的是：
 
-- 这两份旧参考文档仍可继续描述已经 absorb 的既有边界
+- 这两份旧参考文档只保留 provenance；不要按整份文档继续推进
 - 但凡涉及 formal entry matrix、`CLI-first / MCP-capable`、`Auto-only` 与未来 `HITL` 分层路径时，应优先以本决策记录为准
 - 等剩余业务仓停车后，再把这些新结论正式吸收到对应仓的合同层与公开文档层
 

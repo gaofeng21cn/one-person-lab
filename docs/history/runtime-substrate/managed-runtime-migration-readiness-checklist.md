@@ -2,6 +2,8 @@
 
 状态锚点：`2026-04-11`
 
+Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 host-agent -> managed runtime readiness snapshot；R1-R8 readiness 维度已经吸收到 `docs/active/opl-runtime-naming-and-boundary-contract.zh-CN.md`。逐仓 blocker 和推进顺序是 dated snapshot，不再作为当前迁移队列执行。
+
 ## 文档目的
 
 这份文档把 `OPL` 当前已经冻结的 runtime 命名与边界，进一步压成一张可执行的迁移准备清单。

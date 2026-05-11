@@ -201,6 +201,23 @@ Human / Agent
 - 它不是整个 `UHS`
 - 它不替代 `OPL` framework、public domain-agent entry 或 domain harness/controller
 
+### Managed runtime readiness 维度
+
+旧 `managed-runtime-migration-readiness-checklist` 中仍有效的内容已经吸收到这里。后续判断某个 domain 或 family runtime 是否准备进入 managed/runtime-provider 迁移时，使用下面八个维度，而不是继续执行旧清单整文档：
+
+| 维度 | 要回答的问题 | 当前归属 |
+| --- | --- | --- |
+| `R1 / 命名与 ontology` | federation、domain、execution plane、deployment shape 是否已经分开 | 本文与核心五件套 |
+| `R2 / formal entry` | `CLI`、`MCP`、`controller`、app skill、product entry 是否有层级 | domain onboarding contract 与 domain owner docs |
+| `R3 / execution handle` | run、quest、topic、draft、workspace、program 等句柄边界是否稳定 | domain owner docs 与 machine contracts |
+| `R4 / durable surface` | audit、review、delivery、status、report 是否有持久 surface | domain owner docs / artifacts / contracts |
+| `R5 / hosted-friendly contract extraction` | local/runtime surface 是否能抽成未来 host 必须兼容的 contract bundle | OPL framework + domain repo |
+| `R6 / runtime protocol narrowness` | execution plane 是否压到稳定、可审计、可验证的最小协议面 | OPL Runtime Manager / provider contracts |
+| `R7 / external dependency clearance` | cutover 前依赖的 external runtime、workspace、human gate 是否已清掉 | domain repo owner |
+| `R8 / platform-owned lifecycle` | session、watch、resume、replay、sandbox 是否已经由平台/provider 承担 | provider-backed framework / future managed runtime |
+
+当前迁移顺序只保留为内容原则：先冻结 OPL framework 与 provider-backed stage runtime，再做 domain skeleton / handoff / receipt 迁移，随后清 external dependency 和旧面 residue，最后用真实 domain soak 验证。旧清单中的按仓进度判断已经是 dated snapshot，不再作为当前 backlog。
+
 ### 迁移后的主要收益
 
 若 future `managed runtime` 成立，收益应主要来自：
@@ -311,5 +328,5 @@ MedAutoScience == MedDeepScientist
 - [OPL 运行模型](../public/operating-model.zh-CN.md)
 - [Unified Harness Engineering Substrate](../public/unified-harness-engineering-substrate.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
-- [Codex-default Host-Agent Runtime 合同](../references/runtime-substrate/host-agent-runtime-contract.md)
+- [Codex-default Host-Agent Runtime 合同历史稿](../history/runtime-substrate/host-agent-runtime-contract.md)
 - [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
