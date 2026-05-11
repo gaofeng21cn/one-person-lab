@@ -82,6 +82,30 @@ test('family-runtime local provider status does not inspect a bad Hermes binary 
   }
 });
 
+test('family-runtime temporal provider reports landed code separately from live runtime readiness', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-provider-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+    const provider = output.family_runtime.provider_runtime.providers.temporal;
+
+    assert.equal(output.family_runtime.configured_provider, 'temporal');
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
+    assert.equal(provider.status, 'provider_code_landed_unconfigured');
+    assert.equal(provider.ready, false);
+    assert.equal(provider.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(provider.details.adapter_mode, 'provider_code_landed_unconfigured');
+    assert.equal(provider.capabilities.includes('stage_attempt_workflow_provider_code'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('bin/opl routes family-runtime commands into the OPL CLI instead of Codex passthrough', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-entry-'));
   try {

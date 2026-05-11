@@ -775,6 +775,34 @@ test('runtime manager reconcile treats missing selected Hermes legacy provider a
   }
 });
 
+test('runtime manager reports temporal provider code landed when live runtime is not configured', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-temporal-state-'));
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      PATH: '',
+    });
+    const reconcile = output.runtime_manager.reconcile;
+
+    assert.equal(output.runtime_manager.status, 'provider_code_landed_unconfigured');
+    assert.equal(reconcile.checked_surfaces.provider_runtime, 'provider_code_landed_unconfigured');
+    const provider = output.runtime_manager.provider_runtime.providers.temporal;
+    assert.equal(provider.status, 'provider_code_landed_unconfigured');
+    assert.equal(provider.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(
+      provider.details.adapter_mode,
+      'provider_code_landed_unconfigured',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime manager action dry-run plans repairs without mutating native index files', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then

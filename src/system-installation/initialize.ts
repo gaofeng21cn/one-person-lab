@@ -91,7 +91,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const domainReady = defaultModuleReady === defaultModuleTotal;
   const onlineManagementStatus = providerReady
     ? 'ready'
-    : familyRuntimeProvider.provider_kind === 'temporal' && familyRuntimeProvider.status === 'contract_ready'
+    : familyRuntimeProvider.provider_kind === 'temporal'
+      && familyRuntimeProvider.status === 'provider_code_landed_unconfigured'
       ? 'initializing'
       : buildOnlineManagementStatus(hermes);
   const launchReady = coreReady && domainReady;

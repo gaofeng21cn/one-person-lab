@@ -231,8 +231,8 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
       layer_role: 'product_control_plane_over_provider_backed_family_runtime',
       status: provider.ready
         ? 'ready'
-        : provider.status === 'contract_ready'
-          ? 'provider_contract_ready'
+        : provider.status === 'provider_code_landed_unconfigured'
+          ? 'provider_code_landed_unconfigured'
           : 'provider_attention_needed',
       owner_split: {
         product_control_plane_owner: 'one-person-lab',
@@ -652,8 +652,8 @@ function buildRuntimeManagerReconcile(
     checked_surfaces: {
       provider_runtime: provider.ready
         ? 'ready'
-        : provider.status === 'contract_ready'
-          ? 'provider_contract_ready'
+        : provider.status === 'provider_code_landed_unconfigured'
+          ? 'provider_code_landed_unconfigured'
           : 'provider_attention_needed',
       hermes_legacy_runtime: hermesReady
         ? 'ready'
