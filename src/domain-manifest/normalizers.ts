@@ -788,6 +788,9 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     : null;
   const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
   const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
+  const standardDomainAgentSkeleton = isRecord(manifest.standard_domain_agent_skeleton)
+    ? manifest.standard_domain_agent_skeleton
+    : null;
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
   const sessionContinuity = normalizeSessionContinuity(manifest.session_continuity, {
@@ -932,6 +935,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
       : null,
     family_action_catalog: familyActionCatalog,
     family_stage_control_plane: familyStageControlPlane,
+    standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
     runtime_control: runtimeControl,

@@ -8,6 +8,17 @@ import {
   resolveFamilyRuntimeProviderKind,
   type FamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import {
+  buildCodexStageActivityInput,
+  normalizeTypedStageCloseoutPacket,
+  type TypedStageCloseoutPacket,
+} from './family-runtime-codex-stage-runner.ts';
+import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
+import {
+  buildTemporalStageAttemptWorkflowContract,
+  buildTemporalStageAttemptWorkflowInput,
+  type TemporalStageAttemptSignalKind,
+} from './family-runtime-temporal.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -54,6 +65,22 @@ type StageAttemptRow = {
   provider_receipt_json: string;
   created_at: string;
   updated_at: string;
+};
+
+type StageAttemptSignalRow = {
+  signal_id: string;
+  stage_attempt_id: string;
+  signal_kind: TemporalStageAttemptSignalKind;
+  payload_json: string;
+  source: string;
+  created_at: string;
+};
+
+type StageAttemptCloseoutRow = {
+  closeout_id: string;
+  stage_attempt_id: string;
+  packet_json: string;
+  created_at: string;
 };
 
 function nowIso() {
@@ -121,6 +148,22 @@ export function createStageAttemptTable(db: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS idx_stage_attempts_domain_stage ON stage_attempts(domain_id, stage_id, updated_at);
     CREATE INDEX IF NOT EXISTS idx_stage_attempts_task_id ON stage_attempts(task_id);
     CREATE INDEX IF NOT EXISTS idx_stage_attempts_status ON stage_attempts(status, updated_at);
+    CREATE TABLE IF NOT EXISTS stage_attempt_signals (
+      signal_id TEXT PRIMARY KEY,
+      stage_attempt_id TEXT NOT NULL,
+      signal_kind TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      source TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_stage_attempt_signals_attempt ON stage_attempt_signals(stage_attempt_id, created_at);
+    CREATE TABLE IF NOT EXISTS stage_attempt_closeouts (
+      closeout_id TEXT PRIMARY KEY,
+      stage_attempt_id TEXT NOT NULL,
+      packet_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_stage_attempt_closeouts_attempt ON stage_attempt_closeouts(stage_attempt_id, created_at);
   `);
 }
 
@@ -235,6 +278,242 @@ export function inspectStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     });
   }
   return stageAttemptToPayload(row);
+}
+
+function signalToPayload(row: StageAttemptSignalRow) {
+  return {
+    signal_id: row.signal_id,
+    stage_attempt_id: row.stage_attempt_id,
+    signal_kind: row.signal_kind,
+    payload: parseJsonObject(row.payload_json),
+    source: row.source,
+    created_at: row.created_at,
+  };
+}
+
+function closeoutToPayload(row: StageAttemptCloseoutRow) {
+  return {
+    closeout_id: row.closeout_id,
+    stage_attempt_id: row.stage_attempt_id,
+    packet: parseJsonObject(row.packet_json),
+    created_at: row.created_at,
+  };
+}
+
+export function listStageAttemptSignals(db: DatabaseSync, stageAttemptId: string) {
+  return (db.prepare(`
+    SELECT * FROM stage_attempt_signals WHERE stage_attempt_id = ? ORDER BY created_at ASC
+  `).all(stageAttemptId) as StageAttemptSignalRow[]).map(signalToPayload);
+}
+
+export function listStageAttemptCloseouts(db: DatabaseSync, stageAttemptId: string) {
+  return (db.prepare(`
+    SELECT * FROM stage_attempt_closeouts WHERE stage_attempt_id = ? ORDER BY created_at ASC
+  `).all(stageAttemptId) as StageAttemptCloseoutRow[]).map(closeoutToPayload);
+}
+
+export function signalStageAttempt(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+    signalKind: TemporalStageAttemptSignalKind;
+    payload: Record<string, unknown>;
+    source?: string;
+  },
+) {
+  const attempt = inspectStageAttempt(db, input.stageAttemptId);
+  const createdAt = nowIso();
+  const signal = {
+    signal_id: stableId('sig', [input.stageAttemptId, input.signalKind, input.payload, createdAt]),
+    stage_attempt_id: input.stageAttemptId,
+    signal_kind: input.signalKind,
+    payload_json: JSON.stringify(input.payload),
+    source: input.source?.trim() || 'opl-cli',
+    created_at: createdAt,
+  };
+  db.prepare(`
+    INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at)
+    VALUES (@signal_id, @stage_attempt_id, @signal_kind, @payload_json, @source, @created_at)
+  `).run(signal);
+
+  if (input.signalKind === 'human_gate') {
+    const currentHumanGateRefs = Array.isArray(attempt.human_gate_refs)
+      ? attempt.human_gate_refs.filter((entry): entry is string => typeof entry === 'string')
+      : [];
+    const humanGateRef = typeof input.payload.human_gate_ref === 'string'
+      ? input.payload.human_gate_ref
+      : signal.signal_id;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'human_gate', human_gate_refs_json = ?, blocked_reason = ?, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(
+      JSON.stringify([...new Set([...currentHumanGateRefs, humanGateRef])]),
+      typeof input.payload.reason === 'string' ? input.payload.reason : 'human_gate_signal_received',
+      createdAt,
+      input.stageAttemptId,
+    );
+  } else if (input.signalKind === 'resume') {
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = CASE WHEN status IN ('human_gate', 'blocked', 'failed') THEN 'queued' ELSE status END,
+        blocked_reason = NULL, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(createdAt, input.stageAttemptId);
+  }
+
+  return {
+    attempt: inspectStageAttempt(db, input.stageAttemptId),
+    signal: signalToPayload(signal as StageAttemptSignalRow),
+  };
+}
+
+export function ingestStageAttemptCloseout(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+    packet: TypedStageCloseoutPacket | Record<string, unknown>;
+  },
+) {
+  const attempt = inspectStageAttempt(db, input.stageAttemptId);
+  const packet = normalizeTypedStageCloseoutPacket(input.packet);
+  const createdAt = nowIso();
+  const closeoutId = packet.closeout_id
+    ?? stableId('closeout', [input.stageAttemptId, packet.surface_kind, packet.closeout_refs]);
+  db.prepare(`
+    INSERT OR IGNORE INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(closeoutId, input.stageAttemptId, JSON.stringify(packet), createdAt);
+  const persistedCloseouts = db.prepare(
+    'SELECT COUNT(*) AS count FROM stage_attempt_closeouts WHERE closeout_id = ?',
+  ).get(closeoutId) as { count: number };
+  const existingCloseoutRefs = Array.isArray(attempt.closeout_refs)
+    ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const humanGateRefs = Array.isArray(attempt.human_gate_refs)
+    ? attempt.human_gate_refs.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  db.prepare(`
+    UPDATE stage_attempts
+    SET status = 'completed', closeout_refs_json = ?, human_gate_refs_json = ?, blocked_reason = NULL, updated_at = ?
+    WHERE stage_attempt_id = ?
+  `).run(
+    JSON.stringify([...new Set([...existingCloseoutRefs, ...packet.closeout_refs])]),
+    JSON.stringify(humanGateRefs),
+    createdAt,
+    input.stageAttemptId,
+  );
+  return {
+    attempt: inspectStageAttempt(db, input.stageAttemptId),
+    closeout: {
+      closeout_id: closeoutId,
+      stage_attempt_id: input.stageAttemptId,
+      packet,
+      created_at: createdAt,
+      persisted_count: persistedCloseouts.count,
+    },
+  };
+}
+
+export function runStageAttemptFixtureActivity(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+    stagePacketRef?: string | null;
+    checkpointRefs?: string[];
+    closeoutPacket?: Record<string, unknown>;
+  },
+) {
+  const attempt = inspectStageAttempt(db, input.stageAttemptId);
+  const startedAt = nowIso();
+  const checkpointRefs = normalizeJsonList(input.checkpointRefs);
+  db.prepare(`
+    UPDATE stage_attempts
+    SET status = ?, attempt_count = attempt_count + 1, checkpoint_refs_json = ?, updated_at = ?
+    WHERE stage_attempt_id = ?
+  `).run(
+    checkpointRefs.length > 0 ? 'checkpointed' : 'running',
+    JSON.stringify(checkpointRefs),
+    startedAt,
+    input.stageAttemptId,
+  );
+  const runningAttempt = inspectStageAttempt(db, input.stageAttemptId);
+  const activity = buildCodexStageActivityInput({
+    attempt: runningAttempt,
+    stagePacketRef: input.stagePacketRef,
+  });
+  const closeout = input.closeoutPacket
+    ? ingestStageAttemptCloseout(db, {
+        stageAttemptId: input.stageAttemptId,
+        packet: input.closeoutPacket,
+      })
+    : null;
+  const finalAttempt = inspectStageAttempt(db, input.stageAttemptId);
+  return {
+    provider_fixture_run: {
+      provider_completion: closeout ? 'completed' : 'checkpointed',
+      domain_ready_verdict: closeout?.closeout.packet.domain_ready_verdict ?? null,
+      started_at: startedAt,
+    },
+    activity,
+    attempt_before: attempt,
+    attempt: finalAttempt,
+    closeout,
+  };
+}
+
+export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
+  const attempt = inspectStageAttempt(db, stageAttemptId);
+  const closeouts = listStageAttemptCloseouts(db, stageAttemptId);
+  const latestCloseout = closeouts.at(-1)?.packet as Record<string, unknown> | undefined;
+  const closeoutRefs = Array.isArray(attempt.closeout_refs)
+    ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  return {
+    stage_attempt_query: {
+      surface_kind: 'stage_attempt_query',
+      attempt,
+      workflow_contract:
+        attempt.provider_kind === 'temporal'
+          ? buildTemporalStageAttemptWorkflowContract()
+          : null,
+      workflow_input:
+        attempt.provider_kind === 'temporal'
+          ? buildTemporalStageAttemptWorkflowInput(attempt)
+          : null,
+      codex_stage_activity: buildCodexStageActivityInput({ attempt }),
+      lifecycle_primitives: buildFamilyRuntimeLifecyclePrimitives({
+        workspaceLocator: attempt.workspace_locator,
+        artifactRefs: closeoutRefs,
+      }),
+      operator_visibility: {
+        provider_kind: attempt.provider_kind,
+        attempt_id: attempt.stage_attempt_id,
+        stage_id: attempt.stage_id,
+        status: attempt.status,
+        heartbeat: {
+          last_updated_at: attempt.updated_at,
+          checkpoint_refs: attempt.checkpoint_refs,
+        },
+        consumed_refs: Array.isArray(latestCloseout?.consumed_refs) ? latestCloseout.consumed_refs : [],
+        closeout_refs: attempt.closeout_refs,
+        rejected_writes: Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [],
+        next_owner: typeof latestCloseout?.next_owner === 'string' ? latestCloseout.next_owner : null,
+        human_gate_refs: attempt.human_gate_refs,
+        dead_letter: attempt.status === 'dead_lettered' ? attempt.blocked_reason : null,
+      },
+      completion_boundary: {
+        provider_completion: attempt.status === 'completed' ? 'completed' : 'not_completed',
+        domain_ready_verdict:
+          typeof latestCloseout?.domain_ready_verdict === 'string'
+            ? latestCloseout.domain_ready_verdict
+            : null,
+        provider_completion_is_domain_ready: false,
+      },
+      signals: listStageAttemptSignals(db, stageAttemptId),
+      closeouts,
+    },
+  };
 }
 
 export function updateStageAttemptsForTask(

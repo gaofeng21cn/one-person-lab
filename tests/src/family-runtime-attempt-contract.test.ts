@@ -59,9 +59,19 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'failure_reason',
     'reconciliation_status',
     'last_observed_projection',
+    'operator_visibility',
+    'completion_boundary',
   ]) {
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
+  assert.equal((contract.provider_lifecycle_contract as Record<string, any>).temporal.workflow_name, 'StageAttemptWorkflow');
+  assert.deepEqual((contract.provider_lifecycle_contract as Record<string, any>).temporal.signals, [
+    'HumanGateSignal',
+    'UserInstructionSignal',
+    'ResumeSignal',
+  ]);
+  assert.equal((contract.typed_closeout_contract as Record<string, any>).required_for_completed_status, true);
+  assert.equal((contract.typed_closeout_contract as Record<string, any>).free_text_closeout_accepted, false);
 });
 
 test('family runtime attempt contract keeps OPL runtime manager observability-only', () => {
@@ -85,4 +95,14 @@ test('family runtime attempt contract rejects external required scheduler entrie
   for (const unsupported of ['Linear', 'Symphony scheduler', 'external issue tracker']) {
     assert.ok((contract.unsupported_required_entries as string[]).includes(unsupported));
   }
+});
+
+test('standard domain-agent skeleton contract keeps repo source separate from real artifacts', () => {
+  const contract = readJson('contracts/opl-gateway/standard-domain-agent-skeleton-contract.json');
+
+  assert.deepEqual(contract.required_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
+  assert.deepEqual(contract.forbidden_repo_source_dirs, ['artifacts']);
+  assert.equal((contract.artifact_boundary as Record<string, unknown>).repo_contains_real_artifacts, false);
+  assert.equal((contract.artifact_boundary as Record<string, unknown>).artifact_roots_are_locators, true);
+  assert.ok(((contract.artifact_boundary as Record<string, string[]>).opl_forbidden_content).includes('quality_verdict'));
 });

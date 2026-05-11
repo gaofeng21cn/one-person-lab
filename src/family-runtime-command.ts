@@ -6,6 +6,7 @@ import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   type FamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import type { TemporalStageAttemptSignalKind } from './family-runtime-temporal.ts';
 
 export const FAMILY_RUNTIME_DOMAIN_IDS = ['medautoscience', 'medautogrant', 'redcube'] as const;
 
@@ -32,6 +33,21 @@ export type FamilyRuntimeCommandInput =
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
   | { mode: 'attempt_inspect'; stageAttemptId: string }
+  | { mode: 'attempt_query'; stageAttemptId: string }
+  | {
+    mode: 'attempt_signal';
+    stageAttemptId: string;
+    signalKind: TemporalStageAttemptSignalKind;
+    payload: Record<string, unknown>;
+    source?: string;
+  }
+  | {
+    mode: 'attempt_fixture_run';
+    stageAttemptId: string;
+    stagePacketRef?: string;
+    checkpointRefs?: string[];
+    closeoutPacket?: Record<string, unknown>;
+  }
   | {
     mode: 'attempt_create';
     input: {
@@ -118,6 +134,16 @@ function assertProviderKind(value: string | undefined): FamilyRuntimeProviderKin
   });
 }
 
+function assertSignalKind(value: string | undefined): TemporalStageAttemptSignalKind {
+  if (value === 'human_gate' || value === 'user_instruction' || value === 'resume') {
+    return value;
+  }
+  throw new GatewayContractError('cli_usage_error', 'Unsupported family-runtime attempt signal kind.', {
+    signal_kind: value ?? null,
+    allowed_signal_kinds: ['human_gate', 'user_instruction', 'resume'],
+  });
+}
+
 function parseProviderOnlyArgs(mode: 'status' | 'doctor' | 'install' | 'repair', args: string[]) {
   let providerKind: FamilyRuntimeProviderKind | undefined;
   for (let index = 0; index < args.length; index += 1) {
@@ -178,6 +204,103 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       });
     }
     return { mode: 'attempt_inspect', stageAttemptId };
+  }
+  if (mode === 'attempt' && rest[0] === 'query') {
+    const stageAttemptId = rest[1];
+    if (!stageAttemptId || rest.length > 2) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt query requires one attempt id.', {
+        usage: 'opl family-runtime attempt query <stage_attempt_id>',
+      });
+    }
+    return { mode: 'attempt_query', stageAttemptId };
+  }
+  if (mode === 'attempt' && rest[0] === 'signal') {
+    const stageAttemptId = rest[1];
+    if (!stageAttemptId) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt signal requires one attempt id.', {
+        usage: 'opl family-runtime attempt signal <stage_attempt_id> --kind human_gate|user_instruction|resume --payload <json>',
+      });
+    }
+    let signalKind: TemporalStageAttemptSignalKind | undefined;
+    let payload: string | undefined;
+    let payloadFile: string | undefined;
+    let source: string | undefined;
+    for (let index = 2; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--kind' && value) {
+        signalKind = assertSignalKind(value);
+        index += 1;
+      } else if (token === '--payload' && value) {
+        payload = value;
+        index += 1;
+      } else if (token === '--payload-file' && value) {
+        payloadFile = value;
+        index += 1;
+      } else if (token === '--source' && value) {
+        source = value;
+        index += 1;
+      } else {
+        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime attempt signal option: ${token}.`, {
+          option: token,
+        });
+      }
+    }
+    if (!signalKind) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt signal requires --kind.', {
+        required: ['--kind'],
+      });
+    }
+    return {
+      mode: 'attempt_signal',
+      stageAttemptId,
+      signalKind,
+      payload: parsePayloadArg(payload, payloadFile),
+      source,
+    };
+  }
+  if (mode === 'attempt' && rest[0] === 'fixture-run') {
+    const stageAttemptId = rest[1];
+    if (!stageAttemptId) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt fixture-run requires one attempt id.', {
+        usage: 'opl family-runtime attempt fixture-run <stage_attempt_id> [--closeout-packet <json>]',
+      });
+    }
+    let stagePacketRef: string | undefined;
+    let closeoutPacket: string | undefined;
+    let closeoutPacketFile: string | undefined;
+    const checkpointRefs: string[] = [];
+    for (let index = 2; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--stage-packet-ref' && value) {
+        stagePacketRef = value;
+        index += 1;
+      } else if (token === '--checkpoint-ref' && value) {
+        checkpointRefs.push(value);
+        index += 1;
+      } else if (token === '--closeout-packet' && value) {
+        closeoutPacket = value;
+        index += 1;
+      } else if (token === '--closeout-packet-file' && value) {
+        closeoutPacketFile = value;
+        index += 1;
+      } else {
+        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime attempt fixture-run option: ${token}.`, {
+          option: token,
+        });
+      }
+    }
+    return {
+      mode: 'attempt_fixture_run',
+      stageAttemptId,
+      stagePacketRef,
+      checkpointRefs,
+      closeoutPacket:
+        closeoutPacket || closeoutPacketFile
+          ? parsePayloadArg(closeoutPacket, closeoutPacketFile)
+          : undefined,
+    };
   }
   if (mode === 'attempt' && rest[0] === 'create') {
     let domainId: FamilyRuntimeDomainId | undefined;
@@ -421,6 +544,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new GatewayContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }

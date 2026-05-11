@@ -65,7 +65,64 @@
     "owner_repo",
     "failure_reason",
     "reconciliation_status",
-    "last_observed_projection"
+    "last_observed_projection",
+    "operator_visibility",
+    "completion_boundary"
+  ],
+  "provider_lifecycle_contract": {
+    "temporal": {
+      "workflow_name": "StageAttemptWorkflow",
+      "activity_names": [
+        "CodexStageActivity",
+        "DomainSidecarDispatchActivity"
+      ],
+      "signals": [
+        "HumanGateSignal",
+        "UserInstructionSignal",
+        "ResumeSignal"
+      ],
+      "queries": [
+        "StageAttemptQuery"
+      ],
+      "fixture_mode_allowed_without_temporal_server": true
+    },
+    "local_sqlite": {
+      "role": "development_and_offline_provider",
+      "stores": [
+        "attempt_ledger",
+        "signals",
+        "typed_closeout_receipts"
+      ]
+    }
+  },
+  "typed_closeout_contract": {
+    "accepted_surface_kinds": [
+      "stage_attempt_closeout_packet",
+      "stage_memory_closeout_packet",
+      "domain_stage_closeout_packet"
+    ],
+    "required_for_completed_status": true,
+    "free_text_closeout_accepted": false,
+    "tracked_refs": [
+      "closeout_refs",
+      "consumed_refs",
+      "rejected_writes",
+      "next_owner",
+      "domain_ready_verdict"
+    ]
+  },
+  "operator_visibility_fields": [
+    "provider_kind",
+    "attempt_id",
+    "stage_id",
+    "status",
+    "heartbeat",
+    "consumed_refs",
+    "closeout_refs",
+    "rejected_writes",
+    "next_owner",
+    "human_gate_refs",
+    "dead_letter"
   ],
   "reconciliation_statuses": [
     "fresh",

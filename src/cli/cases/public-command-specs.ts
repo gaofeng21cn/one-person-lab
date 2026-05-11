@@ -13,6 +13,10 @@ import {
   buildFamilyActionsList,
 } from '../../family-action-catalog.ts';
 import {
+  buildFamilyAgentInspect,
+  buildFamilyAgentsList,
+} from '../../family-domain-agent-skeleton.ts';
+import {
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
@@ -520,6 +524,23 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildFamilyActionExport(getContracts(), args),
+    },
+    'agents list': {
+      usage: 'opl agents list',
+      summary: 'List standard domain-agent skeleton completeness for bound MAS, MAG, and RCA manifests.',
+      examples: ['opl agents list'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents list']);
+        return buildFamilyAgentsList(getContracts());
+      },
+    },
+    'agents inspect': {
+      usage: 'opl agents inspect --domain <domain>',
+      summary: 'Inspect one standard domain-agent skeleton mapping without reading real artifact contents.',
+      examples: ['opl agents inspect --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyAgentInspect(getContracts(), args),
     },
     'stages list': {
       usage: 'opl stages list',

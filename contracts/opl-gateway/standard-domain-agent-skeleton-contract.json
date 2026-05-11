@@ -1,0 +1,53 @@
+{
+  "contract_kind": "opl_standard_domain_agent_skeleton_contract.v1",
+  "owner": "one-person-lab",
+  "scope": "repo-source skeleton and locator-only artifact boundary for OPL-hosted domain agents",
+  "required_repo_source_dirs": [
+    "agent",
+    "contracts",
+    "runtime",
+    "docs"
+  ],
+  "forbidden_repo_source_dirs": [
+    "artifacts"
+  ],
+  "repo_source_boundary": {
+    "agent": "stage descriptors, prompt refs, skill refs, knowledge refs, and domain entry metadata",
+    "contracts": "machine-readable descriptor, sidecar, quality gate, receipt, and artifact locator contracts",
+    "runtime": "sidecar, projection builder, lifecycle adapter, and dispatch helpers only",
+    "docs": "human-readable governance, status, roadmap, and migration notes"
+  },
+  "artifact_boundary": {
+    "repo_contains_real_artifacts": false,
+    "artifact_roots_are_locators": true,
+    "real_artifact_owners": [
+      "domain_workspace",
+      "domain_runtime_artifact_root"
+    ],
+    "opl_allowed_content": [
+      "locator_refs",
+      "freshness",
+      "receipt_refs",
+      "restore_proof_refs",
+      "migration_state"
+    ],
+    "opl_forbidden_content": [
+      "domain_truth",
+      "quality_verdict",
+      "canonical_artifact_blob",
+      "publication_or_export_gate"
+    ]
+  },
+  "required_projection_fields": [
+    "descriptor_refs",
+    "sidecar_refs",
+    "quality_gate_refs",
+    "workspace_artifact_locator_refs",
+    "runtime_artifact_locator_refs",
+    "authority_boundary"
+  ],
+  "authority_boundary": {
+    "opl": "framework_transport_and_projection_only",
+    "domain_agent": "truth_quality_artifact_owner"
+  }
+}
