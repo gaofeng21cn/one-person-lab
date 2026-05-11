@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向高价值知识工作的 Codex-first、stage-led 完整智能体运行框架</strong></p>
-<p align="center">让 AI 像人类专家一样推进专业任务：按专家阶段组织大型任务，以 Codex CLI 作为阶段内默认最小执行单元，并交付可审计成果。</p>
+<p align="center"><strong>面向高价值知识工作的完整智能体运行框架</strong></p>
+<p align="center">让 AI 像人类专家一样推进专业任务：界定问题、准备证据、执行、审核、修订，并交付可审计成果。</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL 工作台概览" width="100%" />
@@ -40,7 +40,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex / Codex CLI、已配置的 OPL 家族运行时提供者、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。完整就绪需要核心环境、领域模块、已配置的家族运行时提供者三层都通过。生产目标是由 Temporal 支撑的运行时提供者承接可恢复的阶段尝试；当前 Hermes/local provider 路径只作为迁移期或历史实现信号。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置默认执行器、已配置的 OPL 家族运行时提供者、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。完整就绪需要核心环境、领域模块、已配置的家族运行时提供者三层都通过。生产目标是由 Temporal 支撑的运行时提供者承接可恢复的阶段尝试；当前 Hermes/local provider 路径只作为迁移期或历史实现信号。
 
 如果你更习惯从终端安装：
 
@@ -69,9 +69,9 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 普通工作：讨论、阅读、规划和通用任务。
 - 基于目录的工作：需要真实文件目录和持续上下文的任务。
 - 专业产品家族：面向特定领域的专门工作流。
-- 阶段推进执行：OPL 把领域阶段作为可观察、可编排的工作单元，把 `Codex CLI` 作为阶段内默认最小执行单元，并把目标、证据、审核、回执、恢复和权威边界都挂到阶段上。
+- 阶段推进执行：OPL 把领域阶段作为可观察、可编排的工作单元，并把目标、证据、审核、回执、恢复和权威边界都挂到阶段上。
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
-- 环境与模块管理：统一查看 Codex CLI 默认执行器、OPL 家族运行时提供者、模块、技能、图形界面和健康情况。
+- 环境与模块管理：统一查看默认执行器、OPL 家族运行时提供者、模块、技能、图形界面和健康情况。
 
 ## 给 Agent 和技术操作者的快速入口
 
