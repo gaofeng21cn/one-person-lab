@@ -108,7 +108,7 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 - `family_owner_route`
   - 记录 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs
 
-`family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。同理，`domain_memory_descriptor` 只暴露 locator / freshness / receipt refs，不把 memory content 或 writeback authority 移入 `OPL`。
+`family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。stage attempt query 现在也会投影 locator-only lifecycle primitive：workspace/runtime/artifact roots、已索引的 closeout 或 consumed refs、已声明的 restore refs 以及 cleanup gate。这个投影严格只读；`OPL` 可以索引 refs 并显示缺失的 restore proof，但不能 apply retention、删除 artifact、恢复 workspace 内容或写入 domain truth。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。同理，`domain_memory_descriptor` 只暴露 locator / freshness / receipt refs，不把 memory content 或 writeback authority 移入 `OPL`。
 
 ## Runtime Supervision Freeze
 
