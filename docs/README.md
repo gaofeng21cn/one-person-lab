@@ -30,7 +30,7 @@ Admitted domain repositories keep their own agent logic, runtime rules, progress
 | --- | --- | --- |
 | Users | [Repository Home](../README.md) | Install OPL, start the GUI or web entry, and choose Codex or a domain agent for work |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Recover the active boundary, the runtime model, and the admitted-domain split |
-| Developers and maintainers | [Documentation Portfolio](./docs_portfolio_consolidation.md), [Active Docs](./active/README.md), [Public Docs](./public/README.md), [Reference Index](./references/README.md), current specs under `docs/specs/`, [History Archive](./history/README.md) | Inspect lifecycle roles, active support docs, public support docs, references, specs, and retired lanes |
+| Developers and maintainers | [Documentation Portfolio](./docs_portfolio_consolidation.md), [Active Docs](./active/README.md), [Public Docs](./public/README.md), [Specs Index](./specs/README.md), [Reference Index](./references/README.md), [History Archive](./history/README.md) | Inspect lifecycle roles, active support docs, public support docs, retained specs, references, and retired lanes |
 
 ## Fast Technical Working Set
 
@@ -48,6 +48,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Runtime Substrate References](./references/runtime-substrate/README.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
+- [Specs Index](./specs/README.md)
 
 For OPL framework development after the 2026-05-11 architecture reset, use
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
@@ -68,7 +69,7 @@ Lifecycle is judged by content role, not by filename or old path. A file with an
 - `docs/` root keeps only the docs index, core five, and [Documentation Portfolio](./docs_portfolio_consolidation.md).
 - `docs/active/` keeps current human-readable runtime, activation, onboarding, and shared-boundary support.
 - `docs/public/` keeps public product-direction support read after the repository home.
-- `docs/specs/` keeps active runtime / product-boundary specs.
+- `docs/specs/` keeps active or path-stable retained runtime / product-boundary specs with explicit current owners.
 - `docs/references/` keeps support references grouped by purpose.
 - `docs/history/` keeps dated snapshots, retired paths, provenance archives, and tombstones.
 
@@ -109,6 +110,8 @@ They are repo-tracked support, not the default implementation basis.
 - [Runtime Substrate Reference Index](./references/runtime-substrate/README.md)
 - [OPL Runtime Manager target](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+- [Current support references](./references/current-support/README.md)
+- [Operating governance references](./references/operating-governance/README.md)
 - [Docker WebUI deployment reference](./references/current-support/opl-docker-webui-deployment.md)
 - [OPL GUI shell adapter boundary](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL fresh install and GUI first-launch testing](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
@@ -132,6 +135,7 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - OPL-owned machine-readable product surfaces: [Contracts Overview](../contracts/README.md)
 - Linked domain capability surfaces: the admitted domain repositories plus `opl skill sync`
 - Active framework contracts: `contracts/opl-framework/*.json`
+- Path-stable retained runtime / product-boundary specs: [Specs Index](./specs/README.md)
 - Retired gateway/federation provenance corpus: [Gateway / Federation Provenance Archive](./history/compatibility/gateway-federation/README.md)
 - Reference-grade supporting material: [Reference Index](./references/README.md)
 - Historical and retired lanes: [History Archive](./history/README.md) and [Process History](./history/process/README.md)

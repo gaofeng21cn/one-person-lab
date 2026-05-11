@@ -14,7 +14,7 @@
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
 - [docs_portfolio_consolidation.md](../docs_portfolio_consolidation.md)
-- [`docs/specs/`](../specs/) 下当前仍生效的 runtime / product-boundary 规格
+- 通过[规格索引](../specs/README.zh-CN.md)查看当前仍生效或因路径稳定暂时保留的 runtime / product-boundary 规格
 
 ## 目录分区
 
@@ -49,6 +49,7 @@
 
 ## 二、当前支撑参考
 
+- [当前支撑参考索引](./current-support/README.zh-CN.md)
 - [OPL GUI Shell Adapter 边界说明](./current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL Fresh Install 与 GUI 首启测试参考](./current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [Docker WebUI 部署参考](./current-support/opl-docker-webui-deployment.zh-CN.md)
@@ -98,6 +99,7 @@
 
 ## 六、Operating governance 参考
 
+- [Operating governance 参考索引](./operating-governance/README.zh-CN.md)
 - [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md)
 - [Family domain quality projection contract](./operating-governance/family-domain-quality-projection-contract.md)
 - [Family incident learning loop](./operating-governance/family-incident-learning-loop.md)

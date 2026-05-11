@@ -1,6 +1,11 @@
 # OPL ACP-native Session Runtime 与 Shell Projection 边界设计
 
+Owner: `One Person Lab`
+State: `support_reference_retained_path`
+Machine boundary: 本文是人读设计记录；机器可读行为必须使用 contracts、source、CLI/API 行为、runtime ledger、生成产物或 `human_doc:*` 语义 id。
+
 状态锚点：`2026-04-21`
+当前状态说明（2026-05-11）：本文的 session-runtime-first pivot 已经被核心五件套、`docs/active/` 与 runtime-substrate roadmap 吸收。本文保留用于解释 Product API / ACP / GUI shell 作为 runtime projection 的历史形成过程。`Product API`、`opl web`、`ACP bridge` 和 `AionUI` 相关段落按 projection support 或历史设计背景复用；当前 owner 是 `docs/project.md`、`docs/status.md`、`docs/architecture.md` 与 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。
 
 ## 背景
 
@@ -121,7 +126,7 @@
 具体执行器继续按当前家族共识保持：
 
 - `Codex CLI` 是默认执行器
-- `Hermes-Agent` 是长期在线与备选执行路线
+- `Hermes-Agent` 是迁移期 legacy/optional provider 或显式 executor/proof lane；当前长期在线生产目标以 provider-backed runtime 和 Temporal 候选为准
 
 这层负责真正执行 prompt、命令与工具调用。
 
@@ -332,4 +337,3 @@
 - `AionUI` 是第一外部壳，不是 runtime owner
 - `Product API` 仍然存在，但角色已经变成 projection surface
 - `MAS`、`MAG`、`RCA` 继续保持 domain-owned truth 与松耦合接入
-

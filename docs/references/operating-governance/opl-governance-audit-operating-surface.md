@@ -2,18 +2,23 @@
 
 # OPL Governance / Audit Operating Surface
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.md`
+Machine boundary: human-readable support only; machine-readable behavior must use contracts, schemas, source, CLI/API behavior, generated artifacts, or semantic `human_doc:*` ids.
+
 ## Purpose
 
 This document freezes the minimum top-level governance / audit operating surface for `OPL`.
 
-Its goal is to define what `OPL` may legitimately track above domain gateways once routing, onboarding, and acceptance are already frozen.
+Its goal is to define what `OPL` may legitimately index after routing, onboarding, and acceptance evidence exists.
 
 The target is not a monolithic runtime.
 The target is a thin top-level operating layer that records governance signals, routing audit traces, and readiness indexes while domain systems continue to own runtime truth.
+Legacy `gateway` wording in this document is retained for compatibility with the historical surface IDs and example corpus. Current topology is Codex-first and stage-led.
 
 ## Relationship To Earlier Gateway Layers
 
-This operating surface is downstream of the already frozen layers:
+This operating surface is downstream of retained historical compatibility layers:
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
 - [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
@@ -22,7 +27,7 @@ This operating surface is downstream of the already frozen layers:
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - the machine-readable contracts in [`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
 
-If those layers are not stable, this operating surface should not be treated as frozen.
+Those layers are provenance and compatibility inputs. Current topology and owner boundaries remain governed by the core five, current contracts, and the stage-led framework roadmap.
 
 ## Core Promise
 
@@ -149,9 +154,9 @@ Every top-level governance / audit record must point back to domain-owned truth 
 
 This prevents `OPL` from being misread as the canonical owner of runtime or publish state.
 
-### Domain entry is always `domain_gateway`
+### Domain entry compatibility value remains `domain_gateway`
 
-This operating surface may reference a domain gateway, but it must not target a harness executor directly.
+This operating surface may reference the retained compatibility value `domain_gateway` for reviewability. In current prose, read this as domain-owned capability entry under the Codex-first, stage-led topology.
 
 ### Publish readiness is not publish truth
 

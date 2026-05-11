@@ -2,11 +2,17 @@
 
 # OPL Surface Lifecycle Map
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.md`
+Machine boundary: human-readable companion to the derived JSON artifact only.
+
 ## Purpose
 
-This document indexes the derived machine-readable lifecycle map for the frozen `OPL Gateway` surface stack.
+This document indexes the derived machine-readable lifecycle map for the historical/current OPL surface stack.
 
 Its job is to make contract, routing, operating, discoverability, and acceptance surfaces traversable from one place without turning the map into a workflow engine, transition authority, or second source of truth.
+
+The current OPL topology is Codex-first and stage-led. Legacy `gateway` IDs remain here only where the derived artifact and compatibility archive still need them for traversal and reviewability.
 
 ## Machine-Readable Artifact
 
@@ -28,6 +34,7 @@ This lifecycle map sits in the shared-foundation reference layer only.
 `OPL` may freeze dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth still remain with human/domain-owned surfaces below the gateway boundary.
 That keeps the map discoverable for review and acceptance alignment without turning it into a workflow control plane or shared truth store.
 For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
+For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
 
 ## Lifecycle Fields
 

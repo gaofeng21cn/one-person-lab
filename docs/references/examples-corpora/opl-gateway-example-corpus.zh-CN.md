@@ -2,12 +2,17 @@
 
 # OPL Gateway Example Corpus
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/README.zh-CN.md`
+Machine boundary: 只作为 example artifact 的人读配套。
+
 ## 目的
 
-这份文档索引当前已冻结 `OPL Gateway` 合同体系的 canonical machine-readable examples。
+这份文档索引早期 `OPL Gateway` 合同体系留下的 historical / legacy-derived machine-readable examples。
 
-它的目标是：在不把 example 做成 runtime 的前提下，让当前 gateway surface 更容易被发现和复用。
+它的目标是：在不把 example 做成 runtime 或当前 topology 的前提下，让 legacy gateway examples 可以继续用于 review、migration 与 schema archaeology。
 它是一个配套索引，而不是新的 contract layer。
+当前 OPL topology 是 Codex-first、stage-led；这些 examples 是合同 walkthrough 和 evidence material。
 
 ## 非目标
 
@@ -47,7 +52,7 @@
 这组 corpus 是 illustrative、non-governing 的配套参考。
 
 只要 example 引用了某个 domain outcome，该 outcome 仍然是 domain-owned truth。
-`OPL` 只携带已冻结合同中定义的顶层 routing、governance 与 publish/promotion index。
+`OPL` 只携带保留兼容合同中定义的顶层 routing、governance 与 publish/promotion index。
 
 ## 上位合同
 

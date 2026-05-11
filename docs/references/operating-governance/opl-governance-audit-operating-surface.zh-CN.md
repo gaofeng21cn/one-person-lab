@@ -2,18 +2,23 @@
 
 # OPL Governance / Audit Operating Surface
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.zh-CN.md`
+Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
+
 ## 目的
 
 这份文档冻结 `OPL` 顶层最小化的 governance / audit operating surface。
 
-它的目标是定义：在 routing、onboarding 与 acceptance 已经冻结之后，`OPL` 在 domain gateway 之上还能合法持有哪些 operating record。
+它的目标是定义：在 routing、onboarding 与 acceptance evidence 已经存在之后，`OPL` 还能合法索引哪些 operating record。
 
 目标不是单体 runtime。
 目标是一个薄的顶层 operating layer：只记录 governance signal、routing audit trace 与 readiness index，而 runtime truth 仍然留在 domain system 内部。
+本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 Codex-first、stage-led。
 
 ## 与前置 Gateway 层的关系
 
-这层 operating surface 建立在已冻结的几层之上：
+这层 operating surface 建立在保留的历史兼容层之上：
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.zh-CN.md)
 - [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
@@ -22,7 +27,7 @@
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.zh-CN.md)
 - 当前机器可读合同目录：[`../../contracts/opl-framework/README.zh-CN.md`](../../../contracts/opl-framework/README.zh-CN.md)
 
-如果这些层还不稳定，这层 operating surface 就不应被视作已冻结。
+这些层是 provenance 与 compatibility input。当前 topology 与 owner boundary 仍以核心五件套、当前合同和 stage-led framework roadmap 为准。
 
 ## 核心承诺
 
@@ -149,9 +154,9 @@
 
 这样才能防止外界把 `OPL` 误读成 runtime 或 publish state 的 canonical owner。
 
-### Domain entry 永远是 `domain_gateway`
+### Domain entry 兼容值仍为 `domain_gateway`
 
-这一层可以引用 domain gateway，但不能直接 target harness executor。
+这一层可以引用保留兼容值 `domain_gateway` 以支持 reviewability。在当前 prose 中，应把它理解成 Codex-first、stage-led topology 下的 domain-owned capability entry。
 
 ### Publish readiness 不等于 publish truth
 
