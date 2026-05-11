@@ -144,7 +144,7 @@
     },
     "user_interaction_contract": {
       "surface_kind": "user_interaction_contract",
-      "entry_owner": "opl_gateway_or_domain_gui",
+      "entry_owner": "opl_framework_or_domain_app",
       "user_interaction_mode": "natural_language_entry",
       "user_commands_required": false,
       "command_surfaces_for_agent_consumption_only": true,
@@ -159,7 +159,7 @@
       ]
     },
     "managed_runtime_contract": {
-      "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
+      "shared_contract_ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json",
       "runtime_owner": "upstream_hermes_agent",
       "domain_owner": "med-autogrant",
       "executor_owner": "med-autogrant",

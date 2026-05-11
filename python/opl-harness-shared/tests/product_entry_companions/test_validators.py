@@ -94,7 +94,7 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
         },
         "user_interaction_contract": {
             "surface_kind": "user_interaction_contract",
-            "entry_owner": "opl_gateway_or_domain_gui",
+            "entry_owner": "opl_framework_or_domain_app",
             "user_interaction_mode": "natural_language_entry",
             "user_commands_required": False,
             "command_surfaces_for_agent_consumption_only": True,
@@ -261,7 +261,7 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
     )
     assert validated_product_entry["surface_kind"] == "product_entry_surface"
     assert validated_product_entry["product_entry_manifest"]["surface_kind"] == "product_entry_manifest"
-    assert validated_product_entry["user_interaction_contract"]["entry_owner"] == "opl_gateway_or_domain_gui"
+    assert validated_product_entry["user_interaction_contract"]["entry_owner"] == "opl_framework_or_domain_app"
 
 
 def test_product_entry_companion_validators_fail_closed_on_missing_required_shared_fields() -> None:
@@ -335,7 +335,7 @@ def test_product_entry_companion_validators_fail_closed_on_missing_required_shar
         },
         "user_interaction_contract": {
             "surface_kind": "user_interaction_contract",
-            "entry_owner": "opl_gateway_or_domain_gui",
+            "entry_owner": "opl_framework_or_domain_app",
             "user_interaction_mode": "natural_language_entry",
             "user_commands_required": False,
             "command_surfaces_for_agent_consumption_only": True,

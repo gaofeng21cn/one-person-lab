@@ -118,4 +118,4 @@ The next concrete layer after this conceptual boundary document is:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Public Surface Index](../../../active/opl-public-surface-index.md)
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.md)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)

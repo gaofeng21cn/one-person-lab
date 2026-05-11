@@ -1,4 +1,4 @@
-import { GatewayContractError } from '../../contracts.ts';
+import { FrameworkContractError } from '../../contracts.ts';
 import { runCodexPassthrough } from '../../codex.ts';
 import type { CommandSpec, ProductEntryExecutor } from './types.ts';
 
@@ -10,8 +10,8 @@ function buildUsageError(
   message: string,
   spec?: Pick<CommandSpec, 'usage' | 'examples'>,
   details: Record<string, unknown> = {},
-): GatewayContractError {
-  return new GatewayContractError('cli_usage_error', message, {
+): FrameworkContractError {
+  return new FrameworkContractError('cli_usage_error', message, {
     ...details,
     ...(spec ? { usage: spec.usage, examples: spec.examples } : {}),
   });

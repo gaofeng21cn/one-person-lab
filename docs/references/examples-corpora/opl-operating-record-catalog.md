@@ -10,7 +10,7 @@ Its job is to make operating-stage semantics, schema ownership, canonical exampl
 
 ## Machine-Readable Artifact
 
-- [`../../contracts/opl-gateway/operating-record-catalog.json`](../../../contracts/opl-gateway/operating-record-catalog.json)
+- [`../../contracts/opl-framework/operating-record-catalog.json`](../../../contracts/opl-framework/operating-record-catalog.json)
 
 ## Non-Goals
 
@@ -65,7 +65,7 @@ If a follow-on action exists, it still routes through `domain_gateway` only.
 - [OPL Publish / Promotion Operating Surface](../operating-governance/opl-publish-promotion-operating-surface.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Surface Lifecycle Map](../operating-governance/opl-surface-lifecycle-map.md)
-- [OPL Gateway Contracts](../../../contracts/opl-gateway/README.md)
+- [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 
 ## Completion Definition

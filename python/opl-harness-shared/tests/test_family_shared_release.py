@@ -140,7 +140,7 @@ def test_inspect_current_repo_family_shared_alignment_resolves_owner_repo(tmp_pa
         json.dumps(
             {
                 "dependencies": {
-                    "opl-gateway-shared": f"git+https://github.com/gaofeng21cn/one-person-lab.git#{RELEASED_OWNER_COMMIT}"
+                    "opl-framework-shared": f"git+https://github.com/gaofeng21cn/one-person-lab.git#{RELEASED_OWNER_COMMIT}"
                 }
             }
         ),
@@ -152,7 +152,7 @@ def test_inspect_current_repo_family_shared_alignment_resolves_owner_repo(tmp_pa
                 "packages": {
                     "packages/redcube-gateway": {
                         "dependencies": {
-                            "opl-gateway-shared": f"git+https://github.com/gaofeng21cn/one-person-lab.git#{RELEASED_OWNER_COMMIT}"
+                            "opl-framework-shared": f"git+https://github.com/gaofeng21cn/one-person-lab.git#{RELEASED_OWNER_COMMIT}"
                         }
                     }
                 }

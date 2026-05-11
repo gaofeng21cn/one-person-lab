@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { GatewayContractError } from '../contracts.ts';
+import { FrameworkContractError } from '../contracts.ts';
 import {
   buildHermesSessionsListArgs,
   inspectHermesRuntime,
@@ -25,7 +25,7 @@ function buildRecentSessions(limit = 5) {
   const result = runHermesCommand(buildHermesSessionsListArgs({ limit }));
 
   if (result.exitCode !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'hermes_command_failed',
       'Hermes sessions list failed inside OPL runtime-status.',
       {
@@ -48,7 +48,7 @@ export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
   const stats = fs.statSync(absolutePath);
 
   if (!stats.isDirectory()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'workspace-status currently supports directories only.',
       {

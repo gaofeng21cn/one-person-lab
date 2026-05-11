@@ -216,9 +216,9 @@ function normalizeRuntimeControl(
       direct_entry_command:
         optionalString(value.direct_entry_command)
         ?? optionalString(sourceLinkage.direct_entry_command),
-      federated_entry_command:
-        optionalString(value.federated_entry_command)
-        ?? optionalString(sourceLinkage.federated_entry_command),
+      opl_hosted_entry_command:
+        optionalString(value.opl_hosted_entry_command)
+        ?? optionalString(sourceLinkage.opl_hosted_entry_command),
       control_surfaces: {
         resume: normalizeRuntimeControlSurfaceDescriptor(
           {
@@ -304,7 +304,7 @@ function normalizeRuntimeControl(
         optionalString(researchGateSurface.approval_gate_field),
       ].filter((entry): entry is string => Boolean(entry)),
       direct_entry_command: optionalString(value.direct_entry_command),
-      federated_entry_command: optionalString(value.federated_entry_command),
+      opl_hosted_entry_command: optionalString(value.opl_hosted_entry_command),
       control_surfaces: {
         resume: normalizeRuntimeControlSurfaceDescriptor(
           {
@@ -471,7 +471,7 @@ function normalizeRuntimeControl(
     direct_entry_command:
       optionalString(value.direct_entry_command)
       ?? optionalString((isRecord(value.direct_entry) ? value.direct_entry : {}).command),
-    federated_entry_command: optionalString(value.federated_entry_command),
+    opl_hosted_entry_command: optionalString(value.opl_hosted_entry_command),
     control_surfaces: {
       resume: resumeSurface,
       interrupt: interruptSurface,

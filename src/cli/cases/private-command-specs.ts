@@ -1,4 +1,4 @@
-import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
+import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateFrameworkContracts } from '../../contracts.ts';
 import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
 import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
@@ -17,13 +17,13 @@ import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts'
 import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
-import type { GatewayContracts } from '../../types.ts';
+import type { FrameworkContracts } from '../../types.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
   parsedInput: ParsedCliInput,
-  getContracts: () => GatewayContracts,
+  getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     help: {
@@ -46,7 +46,7 @@ export function buildInternalCommandSpecs(
 
         const helpSpec = commandSpecs[helpTarget];
         if (!helpSpec) {
-          throw new GatewayContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
+          throw new FrameworkContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
             command: helpTarget,
             commands: Object.keys(commandSpecs),
             usage: 'opl help',
@@ -128,7 +128,7 @@ export function buildInternalCommandSpecs(
     },
     'list-surfaces': {
       usage: 'opl list-surfaces',
-      summary: 'List public gateway surface summaries.',
+      summary: 'List current OPL framework and domain-agent surface summaries.',
       examples: ['opl list-surfaces'],
       handler: () => {
         const contracts = getContracts();
@@ -145,7 +145,7 @@ export function buildInternalCommandSpecs(
     'get-surface': {
       usage: 'opl get-surface <surface_id>',
       summary: 'Show the full registered meaning for one public surface.',
-      examples: ['opl get-surface opl_gateway_contract_hub'],
+      examples: ['opl get-surface opl_framework_contract_hub'],
       handler: (args) => {
         const [surfaceId] = args;
         if (!surfaceId) {
@@ -162,11 +162,11 @@ export function buildInternalCommandSpecs(
     },
     'validate-contracts': {
       usage: 'opl validate-contracts',
-      summary: 'Validate the required OPL gateway contract set and emit a machine-readable summary.',
+      summary: 'Validate the required OPL framework contract set and emit a machine-readable summary.',
       examples: ['opl validate-contracts'],
       handler: () => ({
         version: 'g2',
-        validation: validateGatewayContracts(parsedInput.loadOptions),
+        validation: validateFrameworkContracts(parsedInput.loadOptions),
       }),
     },
     doctor: {
@@ -175,7 +175,7 @@ export function buildInternalCommandSpecs(
         'Check whether the local OPL product-entry shell and Hermes kernel are ready for direct use.',
       examples: ['opl doctor', 'OPL_HERMES_BIN=/path/to/hermes opl doctor'],
       handler: () => {
-        const validation = validateGatewayContracts(parsedInput.loadOptions);
+        const validation = validateFrameworkContracts(parsedInput.loadOptions);
         return buildProductEntryDoctor(validation);
       },
     },

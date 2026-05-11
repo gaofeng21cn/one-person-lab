@@ -25,7 +25,7 @@ For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any route
 
 ### 1. Research submission flow
 
-- File: [`../../examples/opl-gateway/research-ops-submission.json`](../../../examples/opl-gateway/research-ops-submission.json)
+- File: [`../../examples/opl-framework/research-ops-submission.json`](../../../examples/opl-framework/research-ops-submission.json)
 - Shows how a `research_ops` request composes:
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -34,7 +34,7 @@ For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any route
 
 ### 2. Presentation publish / promotion flow
 
-- File: [`../../examples/opl-gateway/presentation-ops-publish.json`](../../../examples/opl-gateway/presentation-ops-publish.json)
+- File: [`../../examples/opl-framework/presentation-ops-publish.json`](../../../examples/opl-framework/presentation-ops-publish.json)
 - Shows how a `presentation_ops` request composes:
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -56,7 +56,7 @@ If an example references a domain outcome, that outcome remains domain-owned tru
 - [OPL Governance / Audit Operating Surface](../operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../operating-governance/opl-publish-promotion-operating-surface.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](../../../contracts/opl-gateway/README.md)
+- [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 
 ## Related Companion
 

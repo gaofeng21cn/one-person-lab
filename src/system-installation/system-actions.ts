@@ -7,7 +7,7 @@ import {
 } from '../system-preferences.ts';
 import { runProductEntryRepairHermesGateway } from '../product-entry-runtime.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
 import { buildOplEnvironment } from './environment.ts';
@@ -47,7 +47,7 @@ function buildSkippedUpdate(
 }
 
 async function maybeUpdateCodex(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
 ): Promise<SystemUpdateTargetResult> {
   const codex = environment.core_engines.codex;
@@ -69,7 +69,7 @@ async function maybeUpdateCodex(
 }
 
 async function maybeUpdateHermes(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
 ): Promise<SystemUpdateTargetResult> {
   const hermes = environment.core_engines.hermes;
@@ -202,7 +202,7 @@ function summarizeTargets(targets: SystemUpdateTargetResult[]) {
   };
 }
 
-async function runOplSystemUpdate(contracts: GatewayContracts) {
+async function runOplSystemUpdate(contracts: FrameworkContracts) {
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const initialModules = buildOplModules().modules.modules;
   const targets: SystemUpdateTargetResult[] = [
@@ -229,7 +229,7 @@ async function runOplSystemUpdate(contracts: GatewayContracts) {
   };
 }
 
-async function runOplSystemModuleReconcile(contracts: GatewayContracts) {
+async function runOplSystemModuleReconcile(contracts: FrameworkContracts) {
   const initialModules = buildOplModules().modules.modules;
   const targets = initialModules.map((module) => maybeReconcileModule(module));
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
@@ -253,7 +253,7 @@ async function runOplSystemModuleReconcile(contracts: GatewayContracts) {
 }
 
 export async function runOplSystemAction(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   action: OplSystemAction,
   input: OplSystemActionInput = {},
 ) {

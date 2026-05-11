@@ -18,7 +18,7 @@ import {
   parseCodexExecOutput,
   runCodexCommandStreaming,
 } from './codex.ts';
-import { loadGatewayContracts } from './contracts.ts';
+import { loadFrameworkContracts } from './contracts.ts';
 import { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';
 import { buildWorkspaceCatalog } from './workspace-registry.ts';
 
@@ -608,7 +608,7 @@ function createJsonRpcInitializeResult(): Record<string, unknown> {
 }
 
 export function createAcpStdioBridgeState(): AcpStdioBridgeState {
-  loadGatewayContracts();
+  loadFrameworkContracts();
   return {
     initialized: false,
     supportedCommands: [...SUPPORTED_COMMANDS],
@@ -713,7 +713,7 @@ export async function handleAcpStdioRequest(
           id: typeof request.id === 'string' ? request.id : null,
           command,
           ok: true,
-          result: toRecord(translateWorkspaceListPayload(buildWorkspaceCatalog(loadGatewayContracts()))) ?? {},
+          result: toRecord(translateWorkspaceListPayload(buildWorkspaceCatalog(loadFrameworkContracts()))) ?? {},
         };
       case 'prompt': {
         requireInitialized(state, request);

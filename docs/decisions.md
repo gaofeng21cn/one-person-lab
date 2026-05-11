@@ -227,7 +227,7 @@
 影响：
 
 - 新增 `opl runtime manager` 作为 Runtime Manager 的机器可读 projection
-- 新增 `contracts/opl-gateway/runtime-manager-contract.json` 冻结 owner split、responsibilities、non-goals、native helper target 与 state index target
+- 新增 `contracts/opl-framework/runtime-manager-contract.json` 冻结 owner split、responsibilities、non-goals、native helper target 与 state index target
 - `opl runtime manager` 可以发现并调用可选 Rust native helper，把 `opl_runtime_manager_native_state_projection` 持久化到 OPL 本地 state；缺少 helper 时只报告 repair hint，不把 helper 伪装成 runtime kernel
 - Rust native helper 现在作为 OPL package lifecycle 的一等面分发：npm package 包含 Cargo workspace 和 doctor/repair 脚本，`native:repair` 负责重建 helper 后输出 lifecycle doctor JSON
 - native helper lifecycle 继续收紧为生产门禁：CI 跑 build/typecheck、fast、regression、integration、fresh-install、native、lint 与 structure；native lane 覆盖 doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke
@@ -259,7 +259,7 @@
 
 ### 决策：gateway-first 合同语料退到 reference / compatibility 层
 
-原因：当前 `OPL` 的一等主线已经明确是 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。继续把 `gateway-federation`、`opl-federation-contract`、`opl-routed-action-gateway` 与 `contracts/opl-gateway/*` 这批旧语料写成默认公开集成合同，只会制造第二真相。
+原因：当前 `OPL` 的一等主线已经明确是 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。继续把 `gateway-federation`、`opl-federation-contract`、`opl-routed-action-gateway` 与 `contracts/opl-framework/*` 这批旧语料写成默认公开集成合同，只会制造第二真相。
 
 影响：
 

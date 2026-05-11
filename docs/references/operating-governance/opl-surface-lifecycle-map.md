@@ -10,7 +10,7 @@ Its job is to make contract, routing, operating, discoverability, and acceptance
 
 ## Machine-Readable Artifact
 
-- [`../../contracts/opl-gateway/surface-lifecycle-map.json`](../../../contracts/opl-gateway/surface-lifecycle-map.json)
+- [`../../contracts/opl-framework/surface-lifecycle-map.json`](../../../contracts/opl-framework/surface-lifecycle-map.json)
 
 ## Non-Goals
 
@@ -50,7 +50,7 @@ Each entry stays derived/reference-only and carries only:
 - `opl_shared_foundation`
 - `opl_shared_foundation_ownership`
 
-### Core gateway contract surfaces
+### Core framework contract surfaces
 
 - `opl_gateway_contract_hub`
 - `opl_read_only_discovery_gateway`
@@ -105,7 +105,7 @@ If the surface is `opl_candidate_domain_backlog`, the dependency chain remains b
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](../../active/opl-public-surface-index.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](../../../contracts/opl-gateway/README.md)
+- [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 
 ## Completion Definition
 

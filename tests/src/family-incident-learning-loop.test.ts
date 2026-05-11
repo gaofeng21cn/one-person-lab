@@ -16,7 +16,7 @@ function readJson(relativePath: string) {
 }
 
 test('family incident learning loop defines repeated failure taxonomy', () => {
-  const contract = readJson('contracts/opl-gateway/family-incident-learning-loop.json');
+  const contract = readJson('contracts/opl-framework/family-incident-learning-loop.json');
 
   for (const kind of [
     'stalled_run',
@@ -33,7 +33,7 @@ test('family incident learning loop defines repeated failure taxonomy', () => {
 });
 
 test('family incident learning loop requires durable follow-up assets', () => {
-  const contract = readJson('contracts/opl-gateway/family-incident-learning-loop.json');
+  const contract = readJson('contracts/opl-framework/family-incident-learning-loop.json');
 
   for (const asset of ['guard', 'test', 'contract', 'runbook', 'taxonomy_update', 'operator_projection']) {
     assert.ok((contract.allowed_follow_up_assets as string[]).includes(asset));
@@ -44,7 +44,7 @@ test('family incident learning loop requires durable follow-up assets', () => {
 });
 
 test('family incident learning loop blocks chat-only or OPL-only closure', () => {
-  const contract = readJson('contracts/opl-gateway/family-incident-learning-loop.json');
+  const contract = readJson('contracts/opl-framework/family-incident-learning-loop.json');
 
   assert.ok((contract.closure_rules as string[]).includes('source_refs_required'));
   assert.ok((contract.closure_rules as string[]).includes('follow_up_asset_required'));

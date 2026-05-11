@@ -1,4 +1,4 @@
-import type { GatewayContractsLoadOptions } from '../../types.ts';
+import type { FrameworkContractsLoadOptions } from '../../types.ts';
 
 type CommandHandler = (args: string[]) => unknown | Promise<unknown>;
 
@@ -54,7 +54,7 @@ type ParsedCliInput = {
   textOutput: boolean;
   command: string | null;
   args: string[];
-  loadOptions?: GatewayContractsLoadOptions;
+  loadOptions?: FrameworkContractsLoadOptions;
 };
 
 type SessionsCliInput = {

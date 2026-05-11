@@ -24,7 +24,7 @@
 - `docs/unified-harness-engineering-substrate.zh-CN.md`
 - `AGENTS.md`
 - `contracts/README.md`
-- `contracts/opl-gateway/README.zh-CN.md`
+- `contracts/opl-framework/README.zh-CN.md`
 
 当前围绕“如何把这些 substrate 判断继续推成 `OPL` 的垂类在线 agent 平台演进路线”的阶段化落地蓝图，见：
 
@@ -295,7 +295,7 @@
 `Hermes Agent` 一次接很多消息平台，这对通用产品合理。
 
 `OPL` 不应在当前阶段把这件事当主线。
-值得吸收的是 gateway contract，而不是立刻扩平台矩阵。
+值得吸收的是 framework contract，而不是立刻扩平台矩阵。
 
 当前更合理的顺序是：
 

@@ -1,7 +1,7 @@
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
@@ -114,7 +114,7 @@ export function buildFamilyStageListEntry(
   };
 }
 
-function buildStageIndex(contracts: GatewayContracts) {
+function buildStageIndex(contracts: FrameworkContracts) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const domains = catalog.projects.map((entry) => {
     const plane = resolvePlaneFromEntry(entry);
@@ -144,7 +144,7 @@ function buildStageIndex(contracts: GatewayContracts) {
   };
 }
 
-export function buildFamilyStagesList(contracts: GatewayContracts) {
+export function buildFamilyStagesList(contracts: FrameworkContracts) {
   const index = buildStageIndex(contracts);
   return {
     version: 'g2',
@@ -161,7 +161,7 @@ export function buildFamilyStagesList(contracts: GatewayContracts) {
   };
 }
 
-function findDomainEntry(contracts: GatewayContracts, domain: string) {
+function findDomainEntry(contracts: FrameworkContracts, domain: string) {
   const index = buildStageIndex(contracts);
   const normalized = normalizeDomainSelection(domain);
   const entry = index.domain_manifests.projects.find((candidate) => {
@@ -173,14 +173,14 @@ function findDomainEntry(contracts: GatewayContracts, domain: string) {
       || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized;
   });
   if (!entry) {
-    throw new GatewayContractError('cli_usage_error', `Unknown family stage domain: ${domain}.`, {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family stage domain: ${domain}.`, {
       domain,
       allowed_domains: index.domain_manifests.projects.map((project) => project.project_id),
     });
   }
   const plane = resolvePlaneFromEntry(entry);
   if (!plane) {
-    throw new GatewayContractError('missing_family_stage_control_plane', `Domain does not expose a family stage control plane: ${domain}.`, {
+    throw new FrameworkContractError('missing_family_stage_control_plane', `Domain does not expose a family stage control plane: ${domain}.`, {
       domain,
       manifest_status: entry.status,
     });
@@ -191,7 +191,7 @@ function findDomainEntry(contracts: GatewayContracts, domain: string) {
 function findStage(plane: FamilyStageControlPlane, stageId: string) {
   const stage = plane.stages.find((candidate) => candidate.stage_id === stageId);
   if (!stage) {
-    throw new GatewayContractError('cli_usage_error', `Unknown family stage: ${stageId}.`, {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family stage: ${stageId}.`, {
       stage_id: stageId,
       allowed_stages: plane.stages.map((candidate) => candidate.stage_id),
     });
@@ -204,18 +204,18 @@ function parseOptionArgs(args: string[], required: string[]) {
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (!token.startsWith('--')) {
-      throw new GatewayContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
+      throw new FrameworkContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
     }
     const value = args[index + 1];
     if (!value || value.startsWith('--')) {
-      throw new GatewayContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
+      throw new FrameworkContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
     }
     parsed[token.slice(2)] = value;
     index += 1;
   }
   for (const field of required) {
     if (!parsed[field]) {
-      throw new GatewayContractError('cli_usage_error', `Missing required option: --${field}.`, {
+      throw new FrameworkContractError('cli_usage_error', `Missing required option: --${field}.`, {
         required: required.map((entry) => `--${entry}`),
       });
     }
@@ -223,7 +223,7 @@ function parseOptionArgs(args: string[], required: string[]) {
   return parsed;
 }
 
-export function buildFamilyStageInspect(contracts: GatewayContracts, args: string[]) {
+export function buildFamilyStageInspect(contracts: FrameworkContracts, args: string[]) {
   const parsed = parseOptionArgs(args, ['domain', 'stage']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   const stage = findStage(plane, parsed.stage);

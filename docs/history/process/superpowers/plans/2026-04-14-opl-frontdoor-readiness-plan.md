@@ -76,7 +76,7 @@ Expected: FAIL because `frontdoor-readiness` command and API do not exist yet.
 frontdoor_readiness: `${apiBase}/frontdoor-readiness`,
 
 // Historical: src/management.ts. Current implementation uses src/management/* leaf surfaces.
-export async function buildFrontdoorReadiness(contracts: GatewayContracts, options: DashboardOptions = {}) {
+export async function buildFrontdoorReadiness(contracts: FrameworkContracts, options: DashboardOptions = {}) {
   const endpoints = buildFrontdoorEndpoints(options.basePath);
   const service = (await getFrontdoorServiceStatus(contracts)).frontdoor_service;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
@@ -125,8 +125,8 @@ Expected: PASS.
 - Modify: `docs/README.md`
 - Modify: `docs/README.zh-CN.md`
 - Modify: `docs/references/opl-frontdoor-delivery-board.md`
-- Modify: `contracts/opl-gateway/README.md`
-- Modify: `contracts/opl-gateway/README.zh-CN.md`
+- Modify: `contracts/opl-framework/README.md`
+- Modify: `contracts/opl-framework/README.zh-CN.md`
 
 - [ ] **Step 1: Update repo-tracked truth surfaces**
 
@@ -146,6 +146,6 @@ Expected: no output
 - [ ] **Step 3: Commit the slice**
 
 ```bash
-git add src/frontdoor-paths.ts src/management/* src/frontdoor-service.ts src/cli.ts src/web-frontdoor.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.zh-CN.md docs/references/opl-frontdoor-delivery-board.md contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md docs/history/process/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md
+git add src/frontdoor-paths.ts src/management/* src/frontdoor-service.ts src/cli.ts src/web-frontdoor.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.zh-CN.md docs/references/opl-frontdoor-delivery-board.md contracts/opl-framework/README.md contracts/opl-framework/README.zh-CN.md docs/history/process/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md
 git commit -m "Add frontdoor readiness surface for operator triage"
 ```

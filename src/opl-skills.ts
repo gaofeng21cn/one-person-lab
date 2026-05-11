@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
 import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
@@ -147,7 +147,7 @@ function normalizeDomainSelection(domains: string[] | undefined) {
     const key = domain.trim().toLowerCase();
     const resolved = DOMAIN_ALIAS_MAP.get(key);
     if (!resolved) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'cli_usage_error',
         `Unknown skill pack domain: ${domain}.`,
         {
@@ -389,7 +389,7 @@ function runInstaller(
   });
 
   if (result.error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'build_command_failed',
       `Failed to launch skill pack installer for ${inspected.domain_id}.`,
       {
@@ -402,7 +402,7 @@ function runInstaller(
   }
 
   if ((result.status ?? 1) !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'build_command_failed',
       `Skill pack installer failed for ${inspected.domain_id}.`,
       {
@@ -439,7 +439,7 @@ export function syncFamilySkillPackFromRepoRoot(
 ) {
   const spec = FAMILY_SKILL_PACK_SPECS.find((entry) => entry.domain_id === domainId);
   if (!spec) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       `Unknown skill pack domain: ${domainId}.`,
       {

@@ -161,9 +161,9 @@ function writeDomainFixtures(
 }
 
 function writeMasFixture(repoPath: string) {
-  fs.mkdirSync(path.join(repoPath, 'contracts', 'opl-gateway'), { recursive: true });
+  fs.mkdirSync(path.join(repoPath, 'contracts', 'opl-framework'), { recursive: true });
   fs.writeFileSync(path.join(repoPath, 'contracts', 'surface.json'), '{"ok":true}\n');
-  fs.writeFileSync(path.join(repoPath, 'contracts', 'opl-gateway', 'native-helper-contract.json'), `${JSON.stringify({
+  fs.writeFileSync(path.join(repoPath, 'contracts', 'opl-framework', 'native-helper-contract.json'), `${JSON.stringify({
     schema_version: 1,
     surface_kind: 'opl_native_helper_consumption_contract',
     contract_id: 'mas.opl_native_helper.consumption.v1',
@@ -178,8 +178,8 @@ function writeMasFixture(repoPath: string) {
       '/runtime_inventory',
     ],
     indexable_product_entry_surface_refs: [
-      '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration/domain_entry_surface',
-      '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration/registration_surface',
+      '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration/domain_entry_surface',
+      '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration/registration_surface',
       '/artifact_inventory/artifact_surface',
       '/automation/automations/0',
     ],
@@ -214,17 +214,17 @@ function writeMagFixture(
     'domain_entry_contract',
     'runtime_control.semantic_closure',
     'skill_catalog.domain_projection.runtime_continuity',
-    'skill_catalog.domain_projection.opl_runtime_manager_registration',
+    'skill_catalog.domain_projection.opl_stage_runtime_registration',
   ];
   const consumesMagSurfaces = [
     'runtime_control',
     'runtime_continuity',
-    'opl_runtime_manager_registration',
+    'opl_stage_runtime_registration',
     'native_helper_consumption',
   ];
   if (!options.omitMagProofProjection) {
     managerConsumedProjection.push(
-      'skill_catalog.domain_projection.opl_runtime_manager_registration.native_helper_consumption.proof_surface',
+      'skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface',
     );
     consumesMagSurfaces.push('native_helper_consumption.proof_surface');
   }

@@ -20,7 +20,7 @@ class ManagedRuntimeContractTest(unittest.TestCase):
     def test_bundled_contract_matches_root_contract(self) -> None:
         bundled = read_bundled_managed_runtime_three_layer_contract()
         root_contract = json.loads(
-            (REPO_ROOT / "contracts" / "opl-gateway" / "managed-runtime-three-layer-contract.json").read_text(
+            (REPO_ROOT / "contracts" / "opl-framework" / "managed-runtime-three-layer-contract.json").read_text(
                 encoding="utf-8"
             )
         )

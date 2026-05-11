@@ -10,7 +10,7 @@
 
 ## 机器可读工件
 
-- [`../../contracts/opl-gateway/surface-authority-matrix.json`](../../../contracts/opl-gateway/surface-authority-matrix.json)
+- [`../../contracts/opl-framework/surface-authority-matrix.json`](../../../contracts/opl-framework/surface-authority-matrix.json)
 
 ## 非目标
 
@@ -104,7 +104,7 @@
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Public Surface Index](../../active/opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Contracts](../../../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Framework Contracts](../../../contracts/opl-framework/README.zh-CN.md)
 
 ## 完成定义
 

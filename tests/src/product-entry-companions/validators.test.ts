@@ -113,7 +113,7 @@ test('product entry companion validators normalize shared family payloads', () =
     },
     user_interaction_contract: {
       surface_kind: 'user_interaction_contract',
-      entry_owner: 'opl_gateway_or_domain_gui',
+      entry_owner: 'opl_framework_or_domain_app',
       user_interaction_mode: 'natural_language_entry',
       user_commands_required: false,
       command_surfaces_for_agent_consumption_only: true,
@@ -285,7 +285,7 @@ test('product entry companion validators normalize shared family payloads', () =
   });
   assert.equal(validatedProductEntry.surface_kind, 'product_entry_surface');
   assert.equal(validatedProductEntry.product_entry_manifest.surface_kind, 'product_entry_manifest');
-  assert.equal(validatedProductEntry.user_interaction_contract?.entry_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(validatedProductEntry.user_interaction_contract?.entry_owner, 'opl_framework_or_domain_app');
 });
 
 test('runtime continuity validation accepts MAS, MAG, and RCA manifest fixtures', () => {
@@ -377,7 +377,7 @@ test('product entry companion validators fail closed on missing required shared 
     },
     user_interaction_contract: {
       surface_kind: 'user_interaction_contract',
-      entry_owner: 'opl_gateway_or_domain_gui',
+      entry_owner: 'opl_framework_or_domain_app',
       user_interaction_mode: 'natural_language_entry',
       user_commands_required: false,
       command_surfaces_for_agent_consumption_only: true,

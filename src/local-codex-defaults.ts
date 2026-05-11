@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 
 export type LocalCodexDefaults = {
   config_path: string;
@@ -79,7 +79,7 @@ function parseTomlValue(rawValue: string) {
     try {
       return JSON.parse(trimmed) as string;
     } catch (error) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'contract_shape_invalid',
         'Local Codex config contains an invalid quoted string literal.',
         {
@@ -113,7 +113,7 @@ export function resolveBundledCodexDefaultProfilePath() {
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
     'contracts',
-    'opl-gateway',
+    'opl-framework',
     'codex-default-profile.json',
   );
 }
@@ -124,7 +124,7 @@ function readRequiredProfileString(
 ): string {
   const value = normalizeOptionalString(typeof profile[key] === 'string' ? profile[key] : undefined);
   if (!value) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       `Bundled Codex default profile is missing ${key}.`,
       {
@@ -142,7 +142,7 @@ export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
   const parsed = JSON.parse(raw) as Record<string, unknown>;
   const serialized = JSON.stringify(parsed);
   if (serialized.includes('experimental_bearer_token')) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Bundled Codex default profile must not contain bearer tokens.',
       {
@@ -192,7 +192,7 @@ function readCompleteExistingCodexDefaultsForBootstrap(configPath: string): Loca
     return readLocalCodexDefaults();
   } catch (error) {
     if (
-      error instanceof GatewayContractError
+      error instanceof FrameworkContractError
       && error.code === 'contract_shape_invalid'
       && error.message === 'Local Codex config is missing the default model entry.'
     ) {
@@ -291,7 +291,7 @@ export function buildCodexDefaultProfileFromLocalConfig(
 ): CodexDefaultProfile {
   const defaults = readLocalCodexDefaults();
   if (!defaults.model_provider || !defaults.provider_base_url) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Local Codex config cannot be exported as an OPL default profile without model_provider and base_url.',
       {
@@ -418,7 +418,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
 export function readLocalCodexDefaults(): LocalCodexDefaults {
   const configPath = resolveLocalCodexConfigPath();
   if (!fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'Local Codex config was not found. Configure Codex first so OPL can inherit the local default model profile.',
       {
@@ -471,7 +471,7 @@ export function readLocalCodexDefaults(): LocalCodexDefaults {
 
   const model = normalizeOptionalString(rootValues.get('model'));
   if (!model) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Local Codex config is missing the default model entry.',
       {

@@ -1,4 +1,4 @@
-import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
+import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
@@ -24,7 +24,7 @@ import {
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
-import type { GatewayContracts } from '../../types.ts';
+import type { FrameworkContracts } from '../../types.ts';
 import {
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
@@ -49,7 +49,7 @@ async function readStdinText() {
 
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
-  getContracts: () => GatewayContracts,
+  getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
   const buildNoArgSpec = (
     base: Omit<CommandSpec, 'handler'>,
@@ -341,7 +341,7 @@ export function buildPublicCommandSpecs(
         const helpTarget = args.join(' ');
         const helpSpec = publicCommandSpecs[helpTarget];
         if (!helpSpec) {
-          throw new GatewayContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
+          throw new FrameworkContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
             command: helpTarget,
             commands: Object.keys(publicCommandSpecs),
             usage: 'opl help',
@@ -638,7 +638,7 @@ export function buildPublicCommandSpecs(
     }),
     'contract surface': cloneCommandSpec(commandSpecs['get-surface'], {
       usage: 'opl contract surface <surface_id>',
-      examples: ['opl contract surface opl_gateway_contract_hub'],
+      examples: ['opl contract surface opl_framework_contract_hub'],
       group: 'contract',
       handler: (args) => {
         const [surfaceId] = args;

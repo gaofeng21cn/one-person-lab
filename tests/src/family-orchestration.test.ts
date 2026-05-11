@@ -579,7 +579,7 @@ test('buildFamilyProductEntryOrchestration passes through project_profile_compan
   );
 });
 
-test('buildFamilyProductEntryPresetOrchestration materializes the canonical product_entry-direct-federated-progress graph preset', () => {
+test('buildFamilyProductEntryPresetOrchestration materializes the canonical product_entry-direct-opl_hosted-progress graph preset', () => {
   const orchestration = buildFamilyProductEntryPresetOrchestration({
     graph_id: 'redcube_product_entry_product_entry_graph',
     target_domain_id: 'redcube_ai',
@@ -589,8 +589,8 @@ test('buildFamilyProductEntryPresetOrchestration materializes the canonical prod
     product_entry_surface_kind: 'product_entry_surface',
     direct_title: 'Start or continue the direct product loop',
     direct_surface_kind: 'product_entry',
-    federated_title: 'Enter the same loop through internal OPL bridge',
-    federated_surface_kind: 'federated_product_entry',
+    opl_hosted_title: 'Enter the same loop through internal OPL bridge',
+    opl_hosted_surface_kind: 'opl_hosted_product_entry',
     progress_title: 'Inspect current product-entry progress',
     progress_surface_kind: 'product_entry_session',
     review_gate_id: 'redcube_operator_review_gate',

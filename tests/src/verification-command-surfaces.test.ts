@@ -63,10 +63,10 @@ test('tracked files do not contain Google API key literals', () => {
 
 test('repo-tracked verification command surfaces reference valid npm scripts and local test files', () => {
   const files = [
-    'contracts/opl-gateway/phase-1-exit-activation-package.json',
-    'contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json',
-    'contracts/opl-gateway/phase-2-central-reference-sync-board.json',
-    'contracts/opl-gateway/phase-2-admitted-domain-delta-intake-refresh.json',
+    'contracts/opl-framework/runtime-manager-contract.json',
+    'contracts/opl-framework/family-runtime-attempt-contract.json',
+    'contracts/opl-framework/family-runtime-online-substrate-contract.json',
+    'contracts/opl-framework/fresh-install-test-matrix.json',
   ];
 
   const npmRunPattern = /npm run ([a-z0-9:-]+)/gi;
@@ -93,11 +93,11 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
-test('machine-readable gateway contracts do not pin human docs paths', () => {
+test('machine-readable framework contracts do not pin human docs paths', () => {
   const pinnedHumanDocPathPattern =
     /\b(?:README(?:\.zh-CN)?\.md|AGENTS\.md|docs\/[A-Za-z0-9_./-]+\.md(?:#[A-Za-z0-9_-]+)?|contracts\/[A-Za-z0-9_./-]+\.md)\b/g;
 
-  for (const relativePath of listJsonFiles('contracts/opl-gateway')) {
+  for (const relativePath of listJsonFiles('contracts/opl-framework')) {
     const content = read(relativePath);
     const pinnedPaths = content.match(pinnedHumanDocPathPattern) ?? [];
 
@@ -190,7 +190,7 @@ test('package.json exposes the fresh-install smoke lane', () => {
     true,
   );
   assert.equal(
-    fs.existsSync(path.join(repoRoot, 'contracts/opl-gateway/fresh-install-test-matrix.json')),
+    fs.existsSync(path.join(repoRoot, 'contracts/opl-framework/fresh-install-test-matrix.json')),
     true,
   );
 });

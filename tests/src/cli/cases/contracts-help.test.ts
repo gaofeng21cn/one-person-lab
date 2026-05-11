@@ -1,4 +1,4 @@
-import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('logs returns a structured wrapper over Hermes log output', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
@@ -249,7 +249,7 @@ test('list-workstreams returns admitted workstream summaries', () => {
       {
         workstream_id: 'grant_ops',
         label: 'Grant Ops',
-        status: 'emerging',
+        status: 'active',
         domain_id: 'medautogrant',
       },
       {
@@ -261,7 +261,7 @@ test('list-workstreams returns admitted workstream summaries', () => {
       {
         workstream_id: 'presentation_ops',
         label: 'Presentation Foundry',
-        status: 'emerging',
+        status: 'active',
         domain_id: 'redcube',
       },
     ],
@@ -350,13 +350,13 @@ test('contract domains returns the registered domain-agent summaries', () => {
   });
 });
 
-test('contract surfaces returns the public gateway surface summaries', () => {
+test('contract surfaces returns the public framework surface summaries', () => {
   const output = runCli(['contract', 'surfaces']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
   assert.ok(Array.isArray(output.surfaces));
-  assert.ok(output.surfaces.length > 10);
+  assert.equal(output.surfaces.length, 6);
   assert.deepEqual(output.surfaces[0], {
     surface_id: 'opl_public_readme',
     category_id: 'opl_public_entry',
@@ -371,8 +371,8 @@ test('contract surfaces returns the public gateway surface summaries', () => {
         surface_kind: string;
         owner_scope: string;
       }) =>
-        surface.surface_id === 'redcube_public_gateway'
-        && surface.category_id === 'domain_public_entry'
+        surface.surface_id === 'rca_domain_agent_entry'
+        && surface.category_id === 'domain_agent_entry'
         && surface.owner_scope === 'domain',
     ),
   );
@@ -389,45 +389,45 @@ test('contract domain returns the full registered domain meaning', () => {
 });
 
 test('contract surface returns the full registered public surface meaning', () => {
-  const output = runCli(['contract', 'surface', 'opl_gateway_contract_hub']);
+  const output = runCli(['contract', 'surface', 'opl_stage_runtime_framework']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
-  assert.equal(output.surface.surface_id, 'opl_gateway_contract_hub');
-  assert.equal(output.surface.category_id, 'opl_contract_surface');
-  assert.match(output.surface.boundary_role, /contract_hub|machine_readable_contract_hub/);
+  assert.equal(output.surface.surface_id, 'opl_stage_runtime_framework');
+  assert.equal(output.surface.category_id, 'opl_framework_contract');
+  assert.equal(output.surface.boundary_role, 'stage_runtime_framework');
 });
 
-test('resolveRequestSurface routes research delivery to medautoscience', () => {
+test('resolveRequestSurface selects research delivery to medautoscience', () => {
   const resolution = resolveRequestSurface(
     {
       intent: 'submission_delivery',
       target: 'publication',
       goal: 'Prepare the manuscript package for journal review.',
     },
-    loadGatewayContracts(repoRoot),
+    loadFrameworkContracts(repoRoot),
   );
 
-  assert.equal(resolution.status, 'routed');
+  assert.equal(resolution.status, 'selected_domain_agent_entry');
   assert.equal(resolution.workstream_id, 'research_ops');
   assert.equal(resolution.domain_id, 'medautoscience');
 });
 
-test('resolveRequestSurface routes presentation delivery to redcube', () => {
+test('resolveRequestSurface selects presentation delivery to redcube', () => {
   const resolution = resolveRequestSurface(
     {
       intent: 'presentation_delivery',
       target: 'deliverable',
       goal: 'Prepare a defense-ready slide deck for a thesis committee.',
     },
-    loadGatewayContracts(repoRoot),
+    loadFrameworkContracts(repoRoot),
   );
 
-  assert.equal(resolution.status, 'routed');
+  assert.equal(resolution.status, 'selected_domain_agent_entry');
   assert.equal(resolution.request_kind, 'discover');
   assert.equal(resolution.workstream_id, 'presentation_ops');
   assert.equal(resolution.domain_id, 'redcube');
-  assert.equal(resolution.entry_surface, 'domain_gateway');
+  assert.equal(resolution.entry_surface, 'domain_agent_entry');
   assert.equal(resolution.recommended_family, 'ppt_deck');
 });
 
@@ -447,7 +447,7 @@ test('resolveRequestSurface keeps ppt_deck mapped to presentation_ops', () => {
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'routed');
+  assert.equal(output.resolution.status, 'selected_domain_agent_entry');
   assert.equal(output.resolution.workstream_id, 'presentation_ops');
   assert.equal(output.resolution.domain_id, 'redcube');
 });
@@ -510,7 +510,7 @@ test('resolveRequestSurface keeps award requests off the MedAutoGrant route', ()
   assert.match(output.resolution.reason, /under definition/i);
 });
 
-test('resolveRequestSurface routes grant work to medautogrant', () => {
+test('resolveRequestSurface selects grant work to medautogrant', () => {
   const output = runCli([
     'domain',
     'resolve-request',
@@ -523,10 +523,10 @@ test('resolveRequestSurface routes grant work to medautogrant', () => {
   ]);
 
   assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'routed');
+  assert.equal(output.resolution.status, 'selected_domain_agent_entry');
   assert.equal(output.resolution.domain_id, 'medautogrant');
   assert.equal(output.resolution.workstream_id, 'grant_ops');
-  assert.equal(output.resolution.entry_surface, 'domain_gateway');
+  assert.equal(output.resolution.entry_surface, 'domain_agent_entry');
 });
 
 test('resolveRequestSurface returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
@@ -569,10 +569,10 @@ test('explainDomainBoundary explains admitted presentation routing', () => {
       target: 'deliverable',
       goal: 'Prepare a defense-ready slide deck for a thesis committee.',
     },
-    loadGatewayContracts(repoRoot),
+    loadFrameworkContracts(repoRoot),
   );
 
-  assert.equal(explanation.boundary_status, 'routed');
+  assert.equal(explanation.boundary_status, 'selected_domain_agent_entry');
   assert.equal(explanation.resolved_domain, 'redcube');
   assert.equal(explanation.resolved_workstream_id, 'presentation_ops');
   assert.equal(explanation.rejected_domains[0]?.domain_id, 'medautoscience');

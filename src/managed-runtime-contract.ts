@@ -85,7 +85,7 @@ function arraysEqual(left: string[], right: string[]) {
 }
 
 export function readBundledManagedRuntimeThreeLayerContract(): ManagedRuntimeThreeLayerContract {
-  const filePath = new URL('../contracts/opl-gateway/managed-runtime-three-layer-contract.json', import.meta.url);
+  const filePath = new URL('../contracts/opl-framework/managed-runtime-three-layer-contract.json', import.meta.url);
   const payload = JSON.parse(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
   return {
     contract_ref: requireString(payload.contract_ref, 'contract_ref'),
@@ -103,7 +103,7 @@ export function readBundledManagedRuntimeThreeLayerContract(): ManagedRuntimeThr
 }
 
 export function readManagedRuntimeThreeLayerContract(repoRoot: string): ManagedRuntimeThreeLayerContract {
-  const filePath = path.join(repoRoot, 'contracts', 'opl-gateway', 'managed-runtime-three-layer-contract.json');
+  const filePath = path.join(repoRoot, 'contracts', 'opl-framework', 'managed-runtime-three-layer-contract.json');
   const payload = JSON.parse(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
   return {
     contract_ref: requireString(payload.contract_ref, 'contract_ref'),

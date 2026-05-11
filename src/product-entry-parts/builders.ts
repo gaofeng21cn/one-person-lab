@@ -2,7 +2,7 @@ import { findDomainOrThrow } from '../contracts.ts';
 import { buildHandoffBundle } from '../handoff-bundle.ts';
 import type {
   BoundaryExplanation,
-  GatewayContracts,
+  FrameworkContracts,
   ResolutionResult,
   ResolveRequestInput,
 } from '../types.ts';
@@ -42,7 +42,7 @@ export function buildResolveRequestInput(input: ProductEntryCliInput): ResolveRe
   };
 }
 
-export function buildContractsContext(contracts: GatewayContracts) {
+export function buildContractsContext(contracts: FrameworkContracts) {
   return {
     contracts_dir: contracts.contractsDir,
     contracts_root_source: contracts.contractsRootSource,
@@ -58,7 +58,7 @@ export function buildPromptHeader(
   input: ProductEntryCliInput,
   resolution: ResolutionResult,
   boundary: BoundaryExplanation,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ) {
   const domainId = 'domain_id' in resolution ? resolution.domain_id : null;
   const domain =
@@ -151,7 +151,7 @@ export function buildChatSeedArgs(
   return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
 }
 
-export function buildProductEntrySessionPrompt(contracts: GatewayContracts) {
+export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
   const domainLines = contracts.domains.domains.map((domain) => {
     const workstreams = domain.owned_workstreams.join(', ');
     return `- ${domain.domain_id}: ${domain.independent_domain_agent.agent_id} app skill ${domain.single_app_skill.skill_id} -> workstreams: ${workstreams}`;
@@ -202,7 +202,7 @@ export function buildHandoffBundleInput(
 }
 
 export function buildProductEntryHandoffBundle(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
   routing: ResolutionResult,

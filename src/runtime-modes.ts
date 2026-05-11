@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type OplAgentMode = 'codex' | 'hermes';
@@ -57,7 +57,7 @@ export function writeOplRuntimeModes(input: Partial<{
   execution_mode: OplAgentMode;
 }>): OplRuntimeModes {
   if (input.interaction_mode !== undefined && !isOplAgentMode(input.interaction_mode)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'OPL interaction_mode must be codex or hermes.',
       {
@@ -68,7 +68,7 @@ export function writeOplRuntimeModes(input: Partial<{
   }
 
   if (input.execution_mode !== undefined && !isOplAgentMode(input.execution_mode)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'OPL execution_mode must be codex or hermes.',
       {

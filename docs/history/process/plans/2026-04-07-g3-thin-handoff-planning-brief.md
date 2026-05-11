@@ -18,7 +18,7 @@
 
 ## freeze closeout 当时的阶段硬边界
 
-- 当时仓库仍停留在 `CLI-first / gateway contract baseline + planning freeze`。
+- 当时仓库仍停留在 `CLI-first / framework contract baseline + planning freeze`。
 - 当时不实现真正的 `G3 mutation/routed-action runtime`。
 - 当时不把 `OPL` 升格为统一 runtime owner。
 - 当时不抽共享执行内核。
@@ -112,7 +112,7 @@ OPL Gateway -> Domain Harness OS
 ## 与现有 surface 的关系
 
 - `docs/opl-routed-action-gateway*.md`：继续承担长程 `G3` contract prose，但在当前阶段只能被解释为 planning-level contract。
-- `contracts/opl-gateway/routed-actions.schema.json`：当前作为 `thin handoff planning` 的 schema dependency，不等于 routed-action runtime 已激活。
+- `contracts/opl-framework/routed-actions.schema.json`：当前作为 `thin handoff planning` 的 schema dependency，不等于 routed-action runtime 已激活。
 - `docs/references/opl-gateway-acceptance-test-spec*.md`：当前只应把 `G3` 写成 contract / planning gate，不应写成已落地 runtime。
 - `docs/references/opl-gateway-rollout*.md`：需要显式写明当前只到 `thin handoff planning` 预冻结。
 

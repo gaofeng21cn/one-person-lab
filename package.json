@@ -1,5 +1,5 @@
 {
-  "name": "opl-gateway-shared",
+  "name": "opl-framework-shared",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,7 +22,7 @@
   "files": [
     "bin/opl",
     "dist",
-    "contracts/opl-gateway",
+    "contracts/opl-framework",
     "Cargo.toml",
     "Cargo.lock",
     "native/opl-native-helper/Cargo.toml",

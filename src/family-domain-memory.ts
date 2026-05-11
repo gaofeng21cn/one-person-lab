@@ -1,7 +1,7 @@
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -25,18 +25,18 @@ function parseOptionArgs(args: string[], required: string[]) {
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (!token.startsWith('--')) {
-      throw new GatewayContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
+      throw new FrameworkContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
     }
     const value = args[index + 1];
     if (!value || value.startsWith('--')) {
-      throw new GatewayContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
+      throw new FrameworkContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
     }
     parsed[token.slice(2)] = value;
     index += 1;
   }
   for (const field of required) {
     if (!parsed[field]) {
-      throw new GatewayContractError('cli_usage_error', `Missing required option: --${field}.`, {
+      throw new FrameworkContractError('cli_usage_error', `Missing required option: --${field}.`, {
         required: required.map((entry) => `--${entry}`),
       });
     }
@@ -64,7 +64,7 @@ function buildMemoryIndexEntry(entry: DomainManifestCatalogEntry) {
   };
 }
 
-function buildMemoryIndex(contracts: GatewayContracts) {
+function buildMemoryIndex(contracts: FrameworkContracts) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const memories = catalog.projects.map(buildMemoryIndexEntry);
   return {
@@ -73,7 +73,7 @@ function buildMemoryIndex(contracts: GatewayContracts) {
   };
 }
 
-export function buildFamilyDomainMemoryList(contracts: GatewayContracts) {
+export function buildFamilyDomainMemoryList(contracts: FrameworkContracts) {
   const index = buildMemoryIndex(contracts);
   return {
     version: 'g2',
@@ -93,7 +93,7 @@ export function buildFamilyDomainMemoryList(contracts: GatewayContracts) {
   };
 }
 
-export function buildFamilyDomainMemoryInspect(contracts: GatewayContracts, args: string[]) {
+export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, args: string[]) {
   const parsed = parseOptionArgs(args, ['domain']);
   const normalized = normalizeDomainSelection(parsed.domain);
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
@@ -107,7 +107,7 @@ export function buildFamilyDomainMemoryInspect(contracts: GatewayContracts, args
       || descriptor?.target_domain_id === normalized;
   });
   if (!entry) {
-    throw new GatewayContractError('cli_usage_error', `Unknown family domain memory domain: ${parsed.domain}.`, {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family domain memory domain: ${parsed.domain}.`, {
       domain: parsed.domain,
       allowed_domains: catalog.projects.map((project) => project.project_id),
     });

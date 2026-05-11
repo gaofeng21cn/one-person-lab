@@ -2,7 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 
 export type CodexBinarySource = 'env' | 'path';
 
@@ -102,7 +102,7 @@ export function resolveCodexBinary(): CodexBinaryInfo | null {
 
   if (envCandidate) {
     if (!isExecutableCandidate(envCandidate)) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'surface_not_found',
         'OPL_CODEX_BIN is set but does not point to a runnable Codex binary.',
         {
@@ -162,7 +162,7 @@ export function runCodexCommand(
   const codexBinary = resolveCodexBinary();
 
   if (!codexBinary) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'Codex binary is required for Codex-backed OPL ask execution.',
       {
@@ -178,7 +178,7 @@ export function runCodexCommand(
   });
 
   if (result.error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'codex_command_failed',
       `Failed to launch Codex for: codex ${args.join(' ')}`,
       {
@@ -203,7 +203,7 @@ export async function runCodexCommandStreaming(
   const codexBinary = resolveCodexBinary();
 
   if (!codexBinary) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'Codex binary is required for Codex-backed OPL ask execution.',
       {
@@ -237,7 +237,7 @@ export async function runCodexCommandStreaming(
 
     child.once('error', (error) => {
       reject(
-        new GatewayContractError(
+        new FrameworkContractError(
           'codex_command_failed',
           `Failed to launch Codex for: codex ${args.join(' ')}`,
           {
@@ -267,7 +267,7 @@ export function runCodexPassthrough(args: string[]): CodexPassthroughResult {
   const codexBinary = resolveCodexBinary();
 
   if (!codexBinary) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'surface_not_found',
       'Codex binary is required for OPL Codex passthrough execution.',
       {
@@ -282,7 +282,7 @@ export function runCodexPassthrough(args: string[]): CodexPassthroughResult {
   });
 
   if (result.error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'codex_command_failed',
       `Failed to launch Codex for: codex ${args.join(' ')}`,
       {

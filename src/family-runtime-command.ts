@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   type FamilyRuntimeProviderKind,
@@ -95,7 +95,7 @@ export const DOMAIN_ADAPTERS: Record<FamilyRuntimeDomainId, {
 function parsePayload(value: string): Record<string, unknown> {
   const parsed = JSON.parse(value);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new GatewayContractError('cli_usage_error', 'Task payload must be a JSON object.', {
+    throw new FrameworkContractError('cli_usage_error', 'Task payload must be a JSON object.', {
       payload: value,
     });
   }
@@ -104,7 +104,7 @@ function parsePayload(value: string): Record<string, unknown> {
 
 function parsePayloadArg(value: string | undefined, payloadFile: string | undefined) {
   if (value && payloadFile) {
-    throw new GatewayContractError('cli_usage_error', 'Use either --payload or --payload-file, not both.', {
+    throw new FrameworkContractError('cli_usage_error', 'Use either --payload or --payload-file, not both.', {
       options: ['--payload', '--payload-file'],
     });
   }
@@ -121,7 +121,7 @@ function assertDomainId(value: string | undefined): FamilyRuntimeDomainId {
   if (FAMILY_RUNTIME_DOMAIN_IDS.includes(value as FamilyRuntimeDomainId)) {
     return value as FamilyRuntimeDomainId;
   }
-  throw new GatewayContractError('cli_usage_error', 'Unsupported family-runtime domain id.', {
+  throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime domain id.', {
     domain_id: value ?? null,
     allowed_domain_ids: [...FAMILY_RUNTIME_DOMAIN_IDS],
   });
@@ -131,7 +131,7 @@ function assertProviderKind(value: string | undefined): FamilyRuntimeProviderKin
   if (FAMILY_RUNTIME_PROVIDER_KINDS.includes(value as FamilyRuntimeProviderKind)) {
     return value as FamilyRuntimeProviderKind;
   }
-  throw new GatewayContractError('cli_usage_error', 'Unsupported family-runtime provider kind.', {
+  throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime provider kind.', {
     provider_kind: value ?? null,
     allowed_provider_kinds: [...FAMILY_RUNTIME_PROVIDER_KINDS],
   });
@@ -141,7 +141,7 @@ function assertSignalKind(value: string | undefined): TemporalStageAttemptSignal
   if (value === 'human_gate' || value === 'user_instruction' || value === 'resume') {
     return value;
   }
-  throw new GatewayContractError('cli_usage_error', 'Unsupported family-runtime attempt signal kind.', {
+  throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime attempt signal kind.', {
     signal_kind: value ?? null,
     allowed_signal_kinds: ['human_gate', 'user_instruction', 'resume'],
   });
@@ -156,7 +156,7 @@ function parseProviderOnlyArgs(mode: 'status' | 'doctor' | 'install' | 'repair',
       providerKind = assertProviderKind(value);
       index += 1;
     } else {
-      throw new GatewayContractError('cli_usage_error', `family-runtime ${mode} accepts only --provider.`, {
+      throw new FrameworkContractError('cli_usage_error', `family-runtime ${mode} accepts only --provider.`, {
         extra_args: args,
         usage: `opl family-runtime ${mode} [--provider local_sqlite|hermes_legacy|temporal]`,
       });
@@ -185,7 +185,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'queue' && rest[0] === 'inspect') {
     const taskId = rest[1];
     if (!taskId || rest.length > 2) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime queue inspect requires one task id.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime queue inspect requires one task id.', {
         usage: 'opl family-runtime queue inspect <task_id>',
       });
     }
@@ -193,7 +193,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   }
   if (mode === 'attempt' && rest[0] === 'list') {
     if (rest.length > 1) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt list accepts no extra arguments.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt list accepts no extra arguments.', {
         extra_args: rest.slice(1),
       });
     }
@@ -202,7 +202,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'attempt' && rest[0] === 'inspect') {
     const stageAttemptId = rest[1];
     if (!stageAttemptId || rest.length > 2) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt inspect requires one attempt id.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt inspect requires one attempt id.', {
         usage: 'opl family-runtime attempt inspect <stage_attempt_id>',
       });
     }
@@ -211,7 +211,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'attempt' && rest[0] === 'start') {
     const stageAttemptId = rest[1];
     if (!stageAttemptId || rest.length > 2) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt start requires one attempt id.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt start requires one attempt id.', {
         usage: 'opl family-runtime attempt start <stage_attempt_id>',
       });
     }
@@ -220,7 +220,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'attempt' && rest[0] === 'query') {
     const stageAttemptId = rest[1];
     if (!stageAttemptId || rest.length > 2) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt query requires one attempt id.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt query requires one attempt id.', {
         usage: 'opl family-runtime attempt query <stage_attempt_id>',
       });
     }
@@ -229,7 +229,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'attempt' && rest[0] === 'signal') {
     const stageAttemptId = rest[1];
     if (!stageAttemptId) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt signal requires one attempt id.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt signal requires one attempt id.', {
         usage: 'opl family-runtime attempt signal <stage_attempt_id> --kind human_gate|user_instruction|resume --payload <json>',
       });
     }
@@ -253,13 +253,13 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         source = value;
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime attempt signal option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt signal option: ${token}.`, {
           option: token,
         });
       }
     }
     if (!signalKind) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt signal requires --kind.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt signal requires --kind.', {
         required: ['--kind'],
       });
     }
@@ -274,7 +274,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'attempt' && rest[0] === 'fixture-run') {
     const stageAttemptId = rest[1];
     if (!stageAttemptId) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt fixture-run requires one attempt id.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt fixture-run requires one attempt id.', {
         usage: 'opl family-runtime attempt fixture-run <stage_attempt_id> [--closeout-packet <json>]',
       });
     }
@@ -298,7 +298,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         closeoutPacketFile = value;
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime attempt fixture-run option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt fixture-run option: ${token}.`, {
           option: token,
         });
       }
@@ -381,20 +381,20 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         blockedReason = value;
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime attempt create option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt create option: ${token}.`, {
           option: token,
         });
       }
     }
     if (!domainId || !stageId) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'cli_usage_error',
         'family-runtime attempt create requires --domain and --stage.',
         { required: ['--domain', '--stage'] },
       );
     }
     if (!workspaceLocator && !workspaceLocatorFile) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'cli_usage_error',
         'family-runtime attempt create requires --workspace-locator or --workspace-locator-file.',
         { required: ['--workspace-locator', '--workspace-locator-file'] },
@@ -436,13 +436,13 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         limit = Number.parseInt(value, 10);
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime tick option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime tick option: ${token}.`, {
           option: token,
         });
       }
     }
     if (!Number.isInteger(limit) || limit <= 0) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime tick --limit must be a positive integer.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime tick --limit must be a positive integer.', {
         limit,
       });
     }
@@ -461,7 +461,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         source = value;
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime intake option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime intake option: ${token}.`, {
           option: token,
         });
       }
@@ -485,13 +485,13 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         reason = value;
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime approve option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime approve option: ${token}.`, {
           option: token,
         });
       }
     }
     if (!taskId) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime approve requires --task <task_id>.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime approve requires --task <task_id>.', {
         usage: 'opl family-runtime approve --task <task_id> --decision approve',
       });
     }
@@ -533,20 +533,20 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         source = value;
         index += 1;
       } else {
-        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime enqueue option: ${token}.`, {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime enqueue option: ${token}.`, {
           option: token,
         });
       }
     }
     if (!domainId || !taskKind) {
-      throw new GatewayContractError(
+      throw new FrameworkContractError(
         'cli_usage_error',
         'family-runtime enqueue requires --domain and --task-kind.',
         { required: ['--domain', '--task-kind'] },
       );
     }
     if (!Number.isInteger(priority)) {
-      throw new GatewayContractError('cli_usage_error', 'family-runtime enqueue --priority must be an integer.', {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime enqueue --priority must be an integer.', {
         priority,
       });
     }
@@ -563,7 +563,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       },
     };
   }
-  throw new GatewayContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
+  throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
     usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }

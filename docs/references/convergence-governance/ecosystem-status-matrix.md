@@ -1,6 +1,6 @@
 # OPL 生态四仓统一状态总表
 
-> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。当前活跃入口以 Codex-only 文档为准（`README*`、`docs/README*`、`contracts/opl-gateway/README*`）。
+> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。当前活跃入口以 Codex-only 文档为准（`README*`、`docs/README*`、`contracts/opl-framework/README*`）。
 
 状态锚点：`2026-04-11`
 
@@ -124,7 +124,7 @@
 
 ### 顶层 OPL
 
-`OPL` 当前 repo-tracked formal entry 仍是本地 `TypeScript CLI + gateway contract baseline`。
+`OPL` 当前 repo-tracked formal entry 仍是本地 `TypeScript CLI + framework contract baseline`。
 它是顶层 `Gateway` 的 formal entry，不等于 domain runtime owner 入口。
 当前顶层 baton 同时继承并保持可追溯的前序锚点：
 

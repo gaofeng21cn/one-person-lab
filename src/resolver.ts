@@ -1,7 +1,7 @@
 import { findDomainOrThrow, findWorkstreamOrThrow } from './contracts.ts';
 import type {
   BoundaryExplanation,
-  GatewayContracts,
+  FrameworkContracts,
   ResolveRequestInput,
   ResolutionResult,
 } from './types.ts';
@@ -106,7 +106,7 @@ function requestKind(input: ResolveRequestInput): string {
 
 export function resolveRequestSurface(
   input: ResolveRequestInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ): ResolutionResult {
   const text = normalizedText(input);
   const preferredFamily = input.preferredFamily?.toLowerCase() ?? null;
@@ -122,11 +122,11 @@ export function resolveRequestSurface(
   if (explicitMas) {
     const workstream = findWorkstreamOrThrow(contracts, 'research_ops');
     return {
-      status: 'routed',
+      status: 'selected_domain_agent_entry',
       request_kind: requestKind(input),
       workstream_id: workstream.workstream_id,
       domain_id: workstream.domain_id,
-      entry_surface: 'domain_gateway',
+      entry_surface: 'domain_agent_entry',
       recommended_family: null,
       confidence: 'high',
       reason:
@@ -142,11 +142,11 @@ export function resolveRequestSurface(
   if (explicitMag) {
     const workstream = findWorkstreamOrThrow(contracts, 'grant_ops');
     return {
-      status: 'routed',
+      status: 'selected_domain_agent_entry',
       request_kind: requestKind(input),
       workstream_id: workstream.workstream_id,
       domain_id: workstream.domain_id,
-      entry_surface: 'domain_gateway',
+      entry_surface: 'domain_agent_entry',
       recommended_family: null,
       confidence: 'high',
       reason:
@@ -162,11 +162,11 @@ export function resolveRequestSurface(
   if (explicitRca) {
     const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
     return {
-      status: 'routed',
+      status: 'selected_domain_agent_entry',
       request_kind: requestKind(input),
       workstream_id: workstream.workstream_id,
       domain_id: workstream.domain_id,
-      entry_surface: 'domain_gateway',
+      entry_surface: 'domain_agent_entry',
       recommended_family: 'ppt_deck',
       confidence: 'high',
       reason:
@@ -182,11 +182,11 @@ export function resolveRequestSurface(
   if (preferredFamily === 'ppt_deck') {
     const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
     return {
-      status: 'routed',
+      status: 'selected_domain_agent_entry',
       request_kind: requestKind(input),
       workstream_id: workstream.workstream_id,
       domain_id: workstream.domain_id,
-      entry_surface: 'domain_gateway',
+      entry_surface: 'domain_agent_entry',
       recommended_family: 'ppt_deck',
       confidence: 'high',
       reason:
@@ -224,11 +224,11 @@ export function resolveRequestSurface(
     if (candidateWorkstream === 'grant_ops') {
       const workstream = findWorkstreamOrThrow(contracts, 'grant_ops');
       return {
-        status: 'routed',
+        status: 'selected_domain_agent_entry',
         request_kind: requestKind(input),
         workstream_id: workstream.workstream_id,
         domain_id: workstream.domain_id,
-        entry_surface: 'domain_gateway',
+        entry_surface: 'domain_agent_entry',
         recommended_family: null,
         confidence: 'high',
         reason:
@@ -278,11 +278,11 @@ export function resolveRequestSurface(
   if (research) {
     const workstream = findWorkstreamOrThrow(contracts, 'research_ops');
     return {
-      status: 'routed',
+      status: 'selected_domain_agent_entry',
       request_kind: requestKind(input),
       workstream_id: workstream.workstream_id,
       domain_id: workstream.domain_id,
-      entry_surface: 'domain_gateway',
+      entry_surface: 'domain_agent_entry',
       recommended_family: null,
       confidence: 'high',
       reason:
@@ -298,11 +298,11 @@ export function resolveRequestSurface(
   if (presentation) {
     const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
     return {
-      status: 'routed',
+      status: 'selected_domain_agent_entry',
       request_kind: requestKind(input),
       workstream_id: workstream.workstream_id,
       domain_id: workstream.domain_id,
-      entry_surface: 'domain_gateway',
+      entry_surface: 'domain_agent_entry',
       recommended_family: preferredFamily ?? 'ppt_deck',
       confidence: preferredFamily ? 'high' : 'medium',
       reason:
@@ -349,13 +349,13 @@ export function resolveRequestSurface(
 
 export function explainDomainBoundary(
   input: ResolveRequestInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ): BoundaryExplanation {
   const resolution = resolveRequestSurface(input, contracts);
   const summary = input.goal;
 
   switch (resolution.status) {
-    case 'routed':
+    case 'selected_domain_agent_entry':
       if (resolution.workstream_id === 'grant_ops') {
         return {
           request_summary: summary,
@@ -487,14 +487,14 @@ export function explainDomainBoundary(
 }
 
 export function describeWorkstreamBoundary(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   workstreamId: string,
 ) {
   return findWorkstreamOrThrow(contracts, workstreamId);
 }
 
 export function describeDomainBoundary(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   domainId: string,
 ) {
   return findDomainOrThrow(contracts, domainId);

@@ -10,7 +10,7 @@
 ## 它是什么
 
 `Unified Harness Engineering Substrate` 是 `OPL` 之下共享的 Harness Engineering 上位语言。
-它定义的是多个 domain system 共同继承的一组稳定约束，而不是取代它们各自的 domain contract、domain gateway 与 `Domain Harness OS`。
+它定义的是多个 domain system 共同继承的一组稳定约束，而不是取代它们各自的 domain contract、domain-agent entry 与内部 harness/controller 实现。
 
 当前更准确的理解是：
 
@@ -30,9 +30,9 @@
 
 - “所有 domain 已经共享完全一致对象模型”的声明
 - “所有 domain 已经落在同一个公共代码仓”的声明
-- 任何一个 domain gateway 的替代品
+- 任何一个 domain-agent entry 的替代品
 - 任何一个 `Domain Harness OS` 的替代品
-- `OPL` 可以绕过 domain gateway、直接触碰 domain-local harness 执行面的许可
+- `OPL` 可以绕过 public domain-agent entry、直接触碰 domain-local harness 执行面的许可
 - `Hermes` 或其他 runtime 项目的简单套壳说法
 
 ## 分层关系
@@ -41,29 +41,29 @@
 
 ```text
 Human / Agent
-  -> OPL Gateway / Federation
+  -> OPL Codex-first stage-led framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
-              -> Domain Gateway
-                  -> Domain Harness OS
+              -> Domain-agent entry
+                  -> Domain harness/controller
                       -> Execution Plane
                           -> Deployment Shape
 ```
 
 每一层负责不同的事情：
 
-- `OPL Gateway / Federation`
-  - 负责顶层任务语义、路由语言与跨域边界合同
+- `OPL Codex-first stage-led framework`
+  - 负责顶层任务语义、stage decomposition、activation 与跨域边界合同
 - `Unified Harness Engineering Substrate`
   - 负责多个 domain 共享的 Harness Engineering 上位语言
 - `Shared Runtime Contract`
   - 负责跨 domain 共享的长期在线运行合同
 - `Shared Domain Contract`
   - 负责跨 domain 共享的正式行为合同
-- `Domain Gateway`
-  - 负责 domain-local 的任务入口、路由与合同 hydration
-- `Domain Harness OS`
+- `Domain-agent entry`
+  - 负责 public domain-local task entry 与 product-entry surface
+- `Domain harness/controller`
   - 负责 domain-local 的执行逻辑、审计面与交付语义
 - `Execution Plane`
   - 负责实际驱动 session、run、watch、resume 与 delivery 的运行层
@@ -86,7 +86,7 @@ Human / Agent
 - `Shared Runtime Contract`
   - `runtime profile`
   - `session substrate`
-  - `gateway runtime status`
+  - stage runtime status
   - `memory provider hook`
   - `delivery / cron`
   - `approval / interrupt / resume`
@@ -96,14 +96,14 @@ Human / Agent
   - durable report
   - audit trail
   - gate semantics
-  - no-bypass to `domain_gateway`
+  - no-bypass to public domain-agent entry
 
 ## 部署形态
 
 在当前阶段：
 
 - 活跃开发宿主是 Codex-only 本地会话
-- 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / gateway contract surface
+- 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / framework contract surface
 
 这个区分很重要：Codex 说的是今天的开发宿主，不是 substrate 的本体定义。
 在后续阶段，同一套 substrate 也应兼容：
@@ -130,15 +130,15 @@ Human / Agent
 在这个理想结构里：
 
 - `OPL`
-  - 继续负责顶层 `Gateway / Federation`
+  - 继续负责 Codex-first、stage-led framework 与 activation layer
 - `UHS`
   - 继续作为共享 Harness Engineering 的上位语言
 - `Shared Runtime Contract`
-  - 逐步承接 `runtime profile`、`session substrate`、`gateway runtime status`、`memory hook`、`delivery / cron`、`approval / interrupt` 这类共享运行合同
+  - 逐步承接 `runtime profile`、`session substrate`、stage runtime status、`memory hook`、`delivery / cron`、`approval / interrupt` 这类共享运行合同
 - `Shared Domain Contract`
   - 逐步承接 formal-entry matrix、`per-run handle`、durable report、audit trail、gate semantics 等跨 domain 正式行为合同
-- 各 `Domain Harness OS`
-  - 继续持有自己的 formal entry、domain object、gate、audit、delivery 与 canonical truth
+- 各 domain agent
+  - 继续持有自己的 formal entry、domain object、gate、audit、delivery、harness/controller boundary 与 canonical truth
 
 因此，后续更合理的方向不是“直接把三个业务仓改造成同一种执行内核”，而是：
 
@@ -154,14 +154,14 @@ Human / Agent
 当前 `OPL` 体系可以理解成：
 
 - `Med Auto Science`
-  - 医学 `Research Foundry` 的 `Domain Harness OS`
+  - 医学研究 domain agent
 - `RedCube AI`
-  - 视觉交付的 `Domain Harness OS`
+  - 视觉交付 domain agent
 - `Med Auto Grant`
-  - 未来医学 `Grant Foundry` 的 `Domain Harness OS` 方向
+  - 基金写作 domain agent
 
-`OPL` 本身不是再额外多出来的一个 `Domain Harness OS`。
-它仍然是位于这些 domain system 之上的顶层 gateway 与 federation layer。
+`OPL` 本身不是再额外多出来的一个 domain agent。
+它仍然是位于这些 domain system 之上的 Codex-first、stage-led framework 与 activation layer。
 
 ## 现实意义
 

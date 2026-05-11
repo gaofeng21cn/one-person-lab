@@ -79,7 +79,7 @@ export interface NormalizedRuntimeControl {
   restore_point: string | null;
   control_gate_ids: string[];
   direct_entry_command: string | null;
-  federated_entry_command: string | null;
+  opl_hosted_entry_command: string | null;
   control_surfaces: {
     resume: NormalizedTaskSurfaceDescriptor | null;
     interrupt: NormalizedTaskSurfaceDescriptor | null;

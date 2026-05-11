@@ -16,7 +16,7 @@ function readJson(relativePath: string) {
 }
 
 test('family domain quality projection contract requires evidence, review, gate, and proof fields', () => {
-  const contract = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json');
+  const contract = readJson('contracts/opl-framework/family-domain-quality-projection-contract.json');
 
   for (const field of [
     'quality_gate_status',
@@ -32,7 +32,7 @@ test('family domain quality projection contract requires evidence, review, gate,
 });
 
 test('family domain quality projection contract maps quality authority to MAS, MAG, and RCA surfaces', () => {
-  const mappings = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json').domain_mappings as Record<string, string[]>;
+  const mappings = readJson('contracts/opl-framework/family-domain-quality-projection-contract.json').domain_mappings as Record<string, string[]>;
 
   assert.ok(mappings['med-autoscience'].includes('study_charter'));
   assert.ok(mappings['med-autoscience'].includes('evidence_ledger'));
@@ -48,7 +48,7 @@ test('family domain quality projection contract maps quality authority to MAS, M
 });
 
 test('family domain quality projection contract forbids generic or claim-only quality authority', () => {
-  const forbidden = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json').forbidden_quality_authorities as string[];
+  const forbidden = readJson('contracts/opl-framework/family-domain-quality-projection-contract.json').forbidden_quality_authorities as string[];
 
   assert.ok(forbidden.includes('generic persona QA'));
   assert.ok(forbidden.includes('claim-only ready'));
