@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-domain-memory-writeback.schema.json",
+  "title": "OPL Family Domain Memory Writeback",
+  "description": "Proposal and receipt contract for domain-owned memory writeback. OPL may carry proposal and receipt refs; the domain router accepts or rejects the write.",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "version",
+    "writeback_id",
+    "target_domain_id",
+    "owner",
+    "source_stage_attempt_ref",
+    "memory_ref",
+    "proposal",
+    "domain_router_receipt",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_domain_memory_writeback"
+    },
+    "version": {
+      "const": "family-domain-memory-writeback.v1"
+    },
+    "writeback_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_stage_attempt_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "memory_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "proposal": {
+      "type": "object",
+      "required": [
+        "proposal_ref",
+        "proposal_kind",
+        "summary",
+        "source_refs"
+      ],
+      "properties": {
+        "proposal_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "proposal_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "domain_router_receipt": {
+      "type": "object",
+      "required": [
+        "receipt_ref",
+        "router_owner",
+        "decision"
+      ],
+      "properties": {
+        "receipt_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "router_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "routed",
+            "needs_human_gate"
+          ]
+        },
+        "rejected_reason": {
+          "type": "string"
+        },
+        "next_owner": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rejected_writes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "opl_role",
+        "domain_router_owner",
+        "forbidden_opl_authority"
+      ],
+      "properties": {
+        "opl_role": {
+          "enum": [
+            "proposal_transport_and_receipt_projection_only",
+            "receipt_projection_only"
+          ]
+        },
+        "domain_router_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbidden_opl_authority": {
+          "type": "array",
+          "contains": {
+            "const": "memory_store_owner"
+          },
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "can_accept_memory_write": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "required": [
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "surface_kind": "family_domain_memory_writeback",
+      "version": "family-domain-memory-writeback.v1",
+      "writeback_id": "mas_publication_route_memory_review_20260511",
+      "target_domain_id": "med-autoscience",
+      "owner": "MedAutoScience",
+      "source_stage_attempt_ref": {
+        "ref_kind": "stage_attempt_id",
+        "ref": "attempt-review-001"
+      },
+      "memory_ref": {
+        "ref_kind": "domain_memory_ref_id",
+        "ref": "mas_publication_route_memory"
+      },
+      "proposal": {
+        "proposal_ref": {
+          "ref_kind": "surface_kind",
+          "ref": "stage_memory_closeout_packet"
+        },
+        "proposal_kind": "reusable_lesson",
+        "summary": "Reviewer-route lesson proposed by a MAS-owned stage closeout packet.",
+        "source_refs": [
+          {
+            "ref_kind": "surface_kind",
+            "ref": "stage_memory_closeout_packet",
+            "role": "proposal_source"
+          }
+        ]
+      },
+      "domain_router_receipt": {
+        "receipt_ref": {
+          "ref_kind": "surface_kind",
+          "ref": "memory_write_router_receipt"
+        },
+        "router_owner": "MedAutoScience",
+        "decision": "routed",
+        "next_owner": "MedAutoScience"
+      },
+      "rejected_writes": [],
+      "authority_boundary": {
+        "opl_role": "proposal_transport_and_receipt_projection_only",
+        "domain_router_owner": "MedAutoScience",
+        "forbidden_opl_authority": [
+          "memory_store_owner",
+          "domain_truth_owner",
+          "quality_verdict_owner",
+          "artifact_authority"
+        ],
+        "can_accept_memory_write": false,
+        "can_write_domain_truth": false,
+        "can_authorize_quality_verdict": false
+      }
+    }
+  ]
+}

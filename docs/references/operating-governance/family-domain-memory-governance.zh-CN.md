@@ -110,27 +110,29 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 
 ## 现在适合落地
 
-当前 OPL framework 仍在完善，因此现在应落地的是低风险、能指导迁移和后续开发的治理面：
+当前 OPL framework 仍在完善，因此现在应落地的是低风险、能指导迁移和后续开发的治理面，以及 locator / receipt 级 machine-readable contract：
 
 - repo-tracked 人读总入口和 domain policy；
 - domain skeleton 中 `agent/knowledge` / `knowledge_refs` 的 owner 语义；
 - memory card 的自然语言优先形状；
 - stage-specific retrieval / closeout writeback 的边界；
+- OPL 统一 `domain_memory_ref` / `knowledge_ref` descriptor；
+- domain-owned memory pack locator；
+- closeout writeback proposal 与 acceptance/rejection receipt；
+- freshness / deprecation / provenance projection；
 - `now / next / defer` 的实施顺序；
 - 明确哪些已有 contract 不能被降级成 loose memory。
 
-这已经能支持接下来的迁移：后续开发者先知道“什么内容应该沉淀为经验记忆”，再把 retrieval / closeout / index 接到 OPL framework。
+机器面入口是 `contracts/family-orchestration/family-domain-memory-ref.schema.json`、`contracts/family-orchestration/family-domain-memory-writeback.schema.json`，以及 `family-stage-control-plane.schema.json` 中的可选 `knowledge_refs`。这些 surface 只冻结 locator、proposal、receipt 和 projection，不承载 memory 正文。
 
 ## 下一阶段再做
 
-等 OPL provider-backed stage runner、closeout packet、human gate / resume 和 operator workbench 更稳定后，再考虑：
+等 OPL provider-backed stage runner、closeout packet、human gate / resume 和 operator workbench 更稳定后，再做真实执行闭环：
 
-- OPL 统一 `domain_memory_ref` / `knowledge_ref` descriptor；
-- domain-owned memory pack locator；
 - stage packet 的小集合 retrieval；
-- closeout writeback proposal 与 acceptance/rejection receipt；
-- freshness / deprecation / provenance projection；
 - App/workbench 中按 domain/stage 展示 consumed memory refs 和 rejected writebacks。
+- domain router receipt 到 workspace/runtime artifact root 的真实写回 proof；
+- stale/deprecated memory ref 的 operator action 和 human gate。
 
 这些都应保持 content owner 在 domain repo，OPL 只持 locator、receipt 和 projection。
 

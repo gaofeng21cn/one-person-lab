@@ -49,10 +49,14 @@
   - 冻结共享的 callable-action catalog，覆盖 action id、owner、effect、input/output schema refs、source command、supported surfaces、human gates、workspace locator fields 与 authority boundary
 - `family-stage-control-plane.schema.json`
   - 冻结共享的 stage descriptor companion，覆盖 stage goal、domain stage refs、skill / prompt / evaluation refs、handoff refs 与 authority boundary
+- `family-domain-memory-ref.schema.json`
+  - 冻结 domain-owned memory pack 的 locator-only 引用，覆盖 memory family、pack ref、stage applicability、retrieval/writeback/receipt/recall refs、freshness 与 OPL forbidden authority
+- `family-domain-memory-writeback.schema.json`
+  - 冻结 stage closeout 到 domain memory router 的 proposal / receipt 形状；OPL 只投影 proposal 与 receipt refs，accept/reject 由 domain router 决定
 - `family-human-gate.schema.json`
   - 冻结共享的 human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - 冻结共享的 product-entry discovery surface，可指向 graph、action catalog、gate、resume contract、runtime continuity companion、repo-owned runtime control projection，以及 family persistence / lifecycle / owner-route refs
+  - 冻结共享的 product-entry discovery surface，可指向 graph、action catalog、domain memory descriptor、gate、resume contract、runtime continuity companion、repo-owned runtime control projection，以及 family persistence / lifecycle / owner-route refs
 
 ### control-plane-oriented
 
@@ -104,7 +108,7 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 - `family_owner_route`
   - 记录 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs
 
-`family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。
+`family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。同理，`domain_memory_descriptor` 只暴露 locator / freshness / receipt refs，不把 memory content 或 writeback authority 移入 `OPL`。
 
 ## Runtime Supervision Freeze
 
@@ -136,9 +140,29 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 
 `family-stage-control-plane.schema.json` 是从 MAS Stage-Led Autonomy 经验上升出来的 family stage descriptor companion。它只做 descriptor 和 projection，不是 workflow engine。
 
-这个 contract 记录 stage goal、domain-owned stage refs、输入/输出 refs、skill refs、prompt refs、evaluation refs、handoff metadata、allowed action refs 与 authority boundary。`OPL` 持有 schema、manifest discovery、parity check 和只读 `opl stages list|inspect` 命令。各 domain 仓继续持有实际 route contract、stage execution、review verdict、quality authority 与 artifacts。
+这个 contract 记录 stage goal、domain-owned stage refs、输入/输出 refs、knowledge refs、skill refs、prompt refs、evaluation refs、handoff metadata、allowed action refs 与 authority boundary。`OPL` 持有 schema、manifest discovery、parity check 和只读 `opl stages list|inspect` 命令。各 domain 仓继续持有实际 route contract、stage execution、memory content、review verdict、quality authority 与 artifacts。
 
 对 `MAS` 来说，这意味着在既有 `scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` route contract 之上做 inventory 与 descriptor projection，不重命名或替换这些 route。对 `RCA` 和 `MAG` 来说，第一轮吸收应保持为现有视觉交付与基金写作 surface 上的轻量 stage-pack projection。
+
+## Domain Memory Ref / Writeback Freeze
+
+`family-domain-memory-ref.schema.json` 与 `family-domain-memory-writeback.schema.json` 补齐的是 stage-led agent framework 需要的记忆引用层。它们只描述 domain-owned memory pack 的 locator、freshness、stage targeting、proposal ref 和 router receipt ref。
+
+`OPL` 可以做：
+
+- discover / index domain memory refs；
+- 在 stage attempt packet 中携带 `knowledge_refs`；
+- 在 operator workbench 中展示 consumed refs、writeback proposal refs、accepted/rejected receipt refs；
+- 检查 freshness 和 forbidden authority。
+
+`OPL` 不可以做：
+
+- 存储或改写 domain memory 正文；
+- 把 memory card 提升为 evidence / review / grant / visual truth；
+- 接受或拒绝 memory writeback；
+- 依据 memory ref 生成 publication、fundability、visual quality 或 artifact readiness verdict。
+
+MAS 的 `publication_route_memory`、MAG 的 grant strategy memory、RCA 的 visual pattern memory 都应通过各自 domain manifest 暴露 locator/receipt refs；正文、路由判断、质量 gate 和 artifact authority 保持在 domain 仓。
 
 ## 这个目录不冻结什么
 
@@ -174,6 +198,8 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
 - [`family-stage-control-plane.schema.json`](./family-stage-control-plane.schema.json)
+- [`family-domain-memory-ref.schema.json`](./family-domain-memory-ref.schema.json)
+- [`family-domain-memory-writeback.schema.json`](./family-domain-memory-writeback.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
 - [`family-runtime-supervision.schema.json`](./family-runtime-supervision.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)

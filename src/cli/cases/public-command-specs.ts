@@ -17,6 +17,10 @@ import {
   buildFamilyAgentsList,
 } from '../../family-domain-agent-skeleton.ts';
 import {
+  buildFamilyDomainMemoryInspect,
+  buildFamilyDomainMemoryList,
+} from '../../family-domain-memory.ts';
+import {
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
@@ -541,6 +545,23 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyAgentInspect(getContracts(), args),
+    },
+    'domain-memory list': {
+      usage: 'opl domain-memory list',
+      summary: 'List domain-owned memory locator descriptors resolved from bound manifests.',
+      examples: ['opl domain-memory list'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['domain-memory list']);
+        return buildFamilyDomainMemoryList(getContracts());
+      },
+    },
+    'domain-memory inspect': {
+      usage: 'opl domain-memory inspect --domain <domain>',
+      summary: 'Inspect one domain-owned memory locator and its OPL non-authority boundary.',
+      examples: ['opl domain-memory inspect --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyDomainMemoryInspect(getContracts(), args),
     },
     'stages list': {
       usage: 'opl stages list',
