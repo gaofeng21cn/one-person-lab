@@ -63,6 +63,8 @@ export type FamilyRuntimeCommandInput =
       closeoutRefs?: string[];
       humanGateRefs?: string[];
       blockedReason?: string;
+      newAttempt?: boolean;
+      start?: boolean;
     };
   }
   | { mode: 'approve'; taskId: string; decision: 'approve' | 'deny'; reason?: string };
@@ -314,13 +316,19 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     let executorKind: string | undefined;
     let taskId: string | undefined;
     let blockedReason: string | undefined;
+    let newAttempt = false;
+    let start = false;
     const checkpointRefs: string[] = [];
     const closeoutRefs: string[] = [];
     const humanGateRefs: string[] = [];
     for (let index = 1; index < rest.length; index += 1) {
       const token = rest[index];
       const value = rest[index + 1];
-      if (token === '--domain' && value) {
+      if (token === '--new-attempt') {
+        newAttempt = true;
+      } else if (token === '--start') {
+        start = true;
+      } else if (token === '--domain' && value) {
         domainId = assertDomainId(value);
         index += 1;
       } else if (token === '--stage' && value) {
@@ -397,6 +405,8 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         closeoutRefs,
         humanGateRefs,
         blockedReason,
+        newAttempt,
+        start,
       },
     };
   }
