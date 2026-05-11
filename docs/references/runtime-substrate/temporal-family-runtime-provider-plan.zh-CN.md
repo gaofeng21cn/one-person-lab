@@ -78,15 +78,15 @@ Provider 层不持有：
 
 ### P1. Temporal Stage Workflow Core
 
-状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal` 和 worker helper；缺少 Temporal 地址时 CLI 明确 fail-closed。尚未完成的是生产 Temporal server/worker deployment、worker restart/re-query 证明、真实 activity retry 运行证据和 domain soak。
+状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。尚未完成的是生产 Temporal server/worker residency proof、worker restart/re-query 证明、真实 activity retry 运行证据和 domain soak。
 
 交付：
 
 - 已完成：`StageAttemptWorkflow` 输入 domain/stage/workspace/source fingerprint，输出 provider state / attempt receipt，并保留 provider completion 与 domain ready verdict 边界。
-- 已完成：`CodexStageActivity` 与 `DomainSidecarDispatchActivity` 作为 Temporal activity stub，记录 checkpoint / closeout refs 和 authority boundary。
+- 已完成：`CodexStageActivity` 与 `DomainSidecarDispatchActivity` 作为 Temporal activity，记录 checkpoint / closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact 和 authority boundary。
 - 已完成：`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal` 进入同一 workflow signal surface。
 - 已完成：`StageAttemptQuery` 返回 attempt status、freshness、next owner、blocked reason、refs。
-- 待完成：真实 Codex CLI long-running activity runner、domain sidecar live dispatch、worker restart / replay proof 和生产 retry/dead-letter 运行证据。
+- 待完成：真实 Codex CLI long-running activity runner、domain sidecar live dispatch、worker restart / replay proof、长期 worker residency 和生产 retry/dead-letter 运行证据。
 
 验收：
 
@@ -122,11 +122,11 @@ Provider 层不持有：
 
 ### P4. Visibility And Operator Console
 
-状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，Aion Runtime Attempt Workbench 已消费该只读投影。仍待完成的是同一 stage attempt ledger 的完整 workflow/activity/signal、dead-letter、人类 gate 操作面。
+状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，可展示 provider run/activity/heartbeat、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影。仍待完成的是同一 stage attempt ledger 的过滤、操作、人类 gate 操作面和真实 domain soak。
 
 交付：
 
-- OPL App / CLI 显示 provider kind、attempt id、workflow status、activity status、signal history、query freshness、dead-letter reason。
+- OPL App / CLI 显示 provider kind、attempt id、workflow status、activity status、signal history、query freshness、closeout/consumed memory/rejected writeback refs、dead-letter reason。
 - 对 Hermes/local/Temporal provider 使用同一投影结构。
 - 对 domain truth 只显示 source refs，不复制 truth。
 

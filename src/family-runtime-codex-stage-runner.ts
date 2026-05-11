@@ -7,6 +7,8 @@ export type TypedStageCloseoutPacket = {
   closeout_id?: string;
   closeout_refs: string[];
   consumed_refs: string[];
+  consumed_memory_refs: string[];
+  writeback_receipt_refs: string[];
   rejected_writes: JsonRecord[];
   next_owner: string | null;
   domain_ready_verdict: string | null;
@@ -91,6 +93,8 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
     closeout_refs: [...new Set(closeoutRefs)],
     consumed_refs: readStringList(value.consumed_refs),
+    consumed_memory_refs: readStringList(value.consumed_memory_refs),
+    writeback_receipt_refs: readStringList(value.writeback_receipt_refs),
     rejected_writes: readRecordList(value.rejected_writes),
     next_owner: optionalString(value.next_owner),
     domain_ready_verdict: optionalString(value.domain_ready_verdict),

@@ -9,6 +9,7 @@ import { FrameworkContractError } from './contracts.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
+  DEFAULT_TEMPORAL_TASK_QUEUE,
   resolveTemporalAddress,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
@@ -174,6 +175,28 @@ export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>
   } finally {
     await nativeConnection.close();
   }
+}
+
+export function buildTemporalWorkerLifecycleContract() {
+  return {
+    surface_kind: 'temporal_worker_lifecycle_contract',
+    provider_kind: 'temporal',
+    workflow_name: 'StageAttemptWorkflow',
+    task_queue: resolveTemporalTaskQueue(),
+    default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+    namespace: resolveTemporalNamespace(),
+    worker_helper: 'runTemporalStageAttemptWorkerUntil',
+    fail_closed_when_unconfigured: true,
+    required_env: ['OPL_TEMPORAL_ADDRESS'],
+    activities: [
+      'codexStageActivity',
+      'domainSidecarDispatchActivity',
+    ],
+    authority_boundary: {
+      opl: 'worker_lifecycle_and_activity_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
 }
 
 export function buildTemporalStageAttemptWorkflowInputForTest(
