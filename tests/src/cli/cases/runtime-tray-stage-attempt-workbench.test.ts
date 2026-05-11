@@ -1,4 +1,6 @@
-import { assert, createFamilyContractsFixtureRoot, fs, os, path, runCli, test } from '../helpers.ts';
+import { spawnSync } from 'node:child_process';
+
+import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('runtime snapshot projects stage attempt workbench without owning domain verdicts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-state-'));
@@ -63,6 +65,105 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].rejected_writes[0].reason, 'domain_truth_write_forbidden');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].route_impact.decision, 'bounded_repair');
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'stage_attempt_workbench'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot projects human gate, resume, user instruction, and dead-letter ledgers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-ledger-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/rca"}',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_DISABLE_HERMES_ONLINE: '1',
+    });
+    const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'human_gate',
+      '--payload',
+      '{"human_gate_ref":"gate:review","reason":"operator_review"}',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_DISABLE_HERMES_ONLINE: '1',
+    });
+    runCli([
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'user_instruction',
+      '--payload',
+      '{"instruction_ref":"user:review-note"}',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_DISABLE_HERMES_ONLINE: '1',
+    });
+    runCli([
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'resume',
+      '--payload',
+      '{"resume_token":"resume:review"}',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_DISABLE_HERMES_ONLINE: '1',
+    });
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(attemptId)});
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const projected = output.runtime_tray_snapshot.stage_attempt_workbench.attempts[0];
+
+    assert.equal(projected.human_gate_ledger[0].payload.reason, 'operator_review');
+    assert.equal(projected.user_instruction_ledger[0].payload.instruction_ref, 'user:review-note');
+    assert.equal(projected.resume_ledger[0].payload.resume_token, 'resume:review');
+    assert.equal(projected.dead_letter.reason, 'retry_budget_exhausted');
+    assert.equal(output.runtime_tray_snapshot.stage_attempt_workbench.summary.dead_letter_count, 1);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

@@ -1,9 +1,13 @@
 import { heartbeat } from '@temporalio/activity';
 
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
-import { normalizeTypedStageCloseoutPacket } from './family-runtime-codex-stage-runner.ts';
+import {
+  buildCodexStageRunnerReceipt,
+  normalizeTypedStageCloseoutPacket,
+} from './family-runtime-codex-stage-runner.ts';
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
+  const observedAt = new Date().toISOString();
   heartbeat({
     stage_attempt_id: input.stage_attempt_id,
     stage_id: input.stage_id,
@@ -18,6 +22,12 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     executor_kind: input.executor_kind,
     checkpoint_refs: input.checkpoint_refs ?? [],
     stage_packet_ref: input.stage_packet_ref ?? null,
+    ...buildCodexStageRunnerReceipt({
+      attempt: input as unknown as Record<string, unknown>,
+      stagePacketRef: input.stage_packet_ref,
+      runnerMode: input.codex_stage_runner?.runner_mode,
+      observedAt,
+    }),
     authority_boundary: {
       opl: 'activity_packet_and_receipt_transport_only',
       domain: 'truth_quality_artifact_gate_owner',

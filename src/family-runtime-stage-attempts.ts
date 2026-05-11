@@ -148,6 +148,24 @@ function signalPayloadsByKind(
   return listStageAttemptSignals(db, stageAttemptId).filter((signal) => signal.signal_kind === signalKind);
 }
 
+function taskDeadLetterForAttempt(db: DatabaseSync, attempt: ReturnType<typeof stageAttemptToPayload>) {
+  if (attempt.status !== 'dead_lettered') {
+    return null;
+  }
+  const taskId = typeof attempt.task_id === 'string' ? attempt.task_id : null;
+  const task = taskId
+    ? db.prepare(`
+      SELECT task_id, domain_id, task_kind, status, attempts, max_attempts, last_error, dead_letter_reason, updated_at
+      FROM tasks
+      WHERE task_id = ?
+    `).get(taskId) as Record<string, unknown> | undefined
+    : undefined;
+  return {
+    reason: attempt.blocked_reason ?? (typeof task?.dead_letter_reason === 'string' ? task.dead_letter_reason : null),
+    task: task ?? null,
+  };
+}
+
 function normalizeActivityEvent(value: Record<string, unknown>) {
   return {
     event_time: nowIso(),
@@ -636,6 +654,9 @@ export function runStageAttemptFixtureActivity(
 export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
   const attempt = inspectStageAttempt(db, stageAttemptId);
   const closeouts = listStageAttemptCloseouts(db, stageAttemptId);
+  const humanGateLedger = signalPayloadsByKind(db, stageAttemptId, 'human_gate');
+  const userInstructionLedger = signalPayloadsByKind(db, stageAttemptId, 'user_instruction');
+  const resumeLedger = signalPayloadsByKind(db, stageAttemptId, 'resume');
   const latestCloseout = closeouts.at(-1)?.packet as Record<string, unknown> | undefined;
   const closeoutRefs = Array.isArray(attempt.closeout_refs)
     ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
@@ -684,9 +705,12 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         rejected_writes: Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [],
         next_owner: typeof latestCloseout?.next_owner === 'string' ? latestCloseout.next_owner : null,
         human_gate_refs: attempt.human_gate_refs,
-        user_instructions: signalPayloadsByKind(db, stageAttemptId, 'user_instruction'),
-        resume_signals: signalPayloadsByKind(db, stageAttemptId, 'resume'),
-        dead_letter: attempt.status === 'dead_lettered' ? attempt.blocked_reason : null,
+        human_gate_ledger: humanGateLedger,
+        user_instruction_ledger: userInstructionLedger,
+        resume_ledger: resumeLedger,
+        user_instructions: userInstructionLedger,
+        resume_signals: resumeLedger,
+        dead_letter: taskDeadLetterForAttempt(db, attempt),
         authority_boundary: {
           opl: 'attempt_control_metadata_projection_only',
           domain: 'truth_quality_artifact_gate_owner',
@@ -725,6 +749,7 @@ export function updateStageAttemptsForTask(
   }
   const updatedAt = nowIso();
   const attempts = rows.map((row) => {
+    const status = input.status === 'completed' ? 'checkpointed' : input.status;
     const checkpointRefs = input.checkpointRefs ?? parseJsonList(row.checkpoint_refs_json).filter(
       (entry): entry is string => typeof entry === 'string',
     );
@@ -736,22 +761,24 @@ export function updateStageAttemptsForTask(
     );
     const providerRun = {
       ...parseJsonObject(row.provider_run_json),
-      provider_status: input.status,
+      provider_status: status,
       last_heartbeat_at: updatedAt,
-      ...(input.status === 'completed' ? { completed_at: updatedAt } : {}),
     };
     const activityEvents = input.activityEvent
       ? appendActivityEventToRow(row, input.activityEvent)
       : parseJsonList(row.activity_events_json);
+    const closeoutReceiptStatus = input.status === 'completed' && closeoutRefs.length > 0
+      ? 'domain_sidecar_receipt_ref_only'
+      : null;
     db.prepare(`
       UPDATE stage_attempts
       SET status = ?, attempt_count = ?, checkpoint_refs_json = ?, closeout_refs_json = ?,
         human_gate_refs_json = ?, blocked_reason = ?, provider_run_json = ?, activity_events_json = ?,
-        closeout_receipt_status = CASE WHEN ? = 'completed' AND closeout_receipt_status IS NULL THEN 'domain_sidecar_receipt_ref_only' ELSE closeout_receipt_status END,
+        closeout_receipt_status = CASE WHEN ? IS NOT NULL AND closeout_receipt_status IS NULL THEN ? ELSE closeout_receipt_status END,
         updated_at = ?
       WHERE stage_attempt_id = ?
     `).run(
-      input.status,
+      status,
       input.incrementAttempt ? row.attempt_count + 1 : row.attempt_count,
       JSON.stringify(checkpointRefs),
       JSON.stringify(closeoutRefs),
@@ -759,7 +786,8 @@ export function updateStageAttemptsForTask(
       input.blockedReason === undefined ? row.blocked_reason : input.blockedReason,
       JSON.stringify(providerRun),
       JSON.stringify(activityEvents),
-      input.status,
+      closeoutReceiptStatus,
+      closeoutReceiptStatus,
       updatedAt,
       row.stage_attempt_id,
     );

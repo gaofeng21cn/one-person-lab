@@ -51,6 +51,43 @@ function requireTemporalAddress() {
   return address;
 }
 
+export function buildTemporalWorkerReadiness(input: {
+  address?: string | null;
+  namespace?: string | null;
+  taskQueue?: string | null;
+  workerEnabled?: string | null;
+  workerStatus?: string | null;
+} = {}) {
+  const address = input.address ?? resolveTemporalAddress();
+  const namespace = input.namespace ?? resolveTemporalNamespace();
+  const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
+  const workerEnabled = input.workerEnabled ?? process.env.OPL_TEMPORAL_WORKER_ENABLED ?? null;
+  const workerStatus = input.workerStatus ?? process.env.OPL_TEMPORAL_WORKER_STATUS ?? null;
+  const workerReady = Boolean(address)
+    && (workerEnabled?.trim() === '1' || workerStatus?.trim() === 'ready');
+  const blockers = [
+    ...(!address ? ['temporal_runtime_not_configured'] : []),
+    ...(address && !workerReady ? ['temporal_worker_not_confirmed'] : []),
+  ];
+  return {
+    surface_kind: 'temporal_worker_readiness',
+    provider_kind: 'temporal',
+    readiness_status: workerReady ? 'ready' : address ? 'worker_not_confirmed' : 'not_configured',
+    worker_ready: workerReady,
+    address,
+    namespace,
+    task_queue: taskQueue,
+    default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+    live_probe_started_worker: false,
+    blockers,
+    lifecycle: buildTemporalWorkerLifecycleContract(),
+    authority_boundary: {
+      opl: 'worker_lifecycle_readiness_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+}
+
 async function withTemporalClient<T>(fn: (client: Client, connection: Connection) => Promise<T>) {
   const connection = await Connection.connect({ address: requireTemporalAddress() });
   try {

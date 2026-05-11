@@ -98,6 +98,12 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--payload',
       '{"human_gate_ref":"gate:analysis-review","reason":"needs_human_review"}',
     ], familyRuntimeEnv(stateRoot));
+    const humanGateQuery = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      attemptId,
+    ], familyRuntimeEnv(stateRoot));
     const resumed = runCli([
       'family-runtime',
       'attempt',
@@ -145,6 +151,10 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     );
     assert.equal(humanGate.family_runtime_stage_attempt_signal.attempt.status, 'human_gate');
     assert.deepEqual(humanGate.family_runtime_stage_attempt_signal.attempt.human_gate_refs, ['gate:analysis-review']);
+    assert.equal(
+      humanGateQuery.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.human_gate_ledger[0].payload.reason,
+      'needs_human_review',
+    );
     assert.equal(resumed.family_runtime_stage_attempt_signal.attempt.status, 'queued');
     assert.equal(userInstruction.family_runtime_stage_attempt_signal.signal.signal_kind, 'user_instruction');
     assert.equal(fixtureRun.family_runtime_stage_attempt_fixture_run.provider_fixture_run.provider_completion, 'completed');
@@ -178,6 +188,18 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     assert.ok(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.activity_events.length >= 2);
     assert.equal(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 3);
     assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.human_gate_ledger.length,
+      1,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.user_instruction_ledger[0].payload.instruction_ref,
+      'user:revision-10',
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.resume_ledger[0].payload.reason,
+      'operator_resume',
+    );
+    assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.rejected_writes[0].reason,
       'domain_truth_write_forbidden',
     );
@@ -196,6 +218,66 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.domain_ready_verdict,
       'domain_gate_pending',
     );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt query exposes task dead-letter ledger on linked attempts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-dead-letter-'));
+  try {
+    const task = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'redcube',
+      '--task-kind',
+      'render/recover',
+      '--payload',
+      '{"workspace_root":"/tmp/rca"}',
+    ], familyRuntimeEnv(stateRoot));
+    const taskId = task.family_runtime_enqueue.task.task_id;
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/rca"}',
+      '--task',
+      taskId,
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare("UPDATE tasks SET status = 'dead_letter', attempts = 3, dead_letter_reason = 'retry_budget_exhausted', last_error = 'planned failure' WHERE task_id = ?").run(${JSON.stringify(taskId)});
+db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(attemptId)});
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+    const visibility = query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility;
+
+    assert.equal(visibility.dead_letter.reason, 'retry_budget_exhausted');
+    assert.equal(visibility.dead_letter.task.status, 'dead_letter');
+    assert.equal(visibility.dead_letter.task.last_error, 'planned failure');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

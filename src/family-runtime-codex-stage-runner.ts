@@ -16,6 +16,8 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
+export type CodexStageRunnerMode = 'dry_run' | 'live_dry_run';
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -38,6 +40,69 @@ function readRecordList(value: unknown) {
     return [];
   }
   return value.filter(isRecord);
+}
+
+function stageIdFromAttempt(attempt: JsonRecord) {
+  return optionalString(attempt.stage_id) ?? 'stage';
+}
+
+function checkpointRefsFromAttempt(attempt: JsonRecord) {
+  return readStringList(attempt.checkpoint_refs);
+}
+
+export function normalizeCodexStageRunnerMode(value?: string | null): CodexStageRunnerMode {
+  const normalized = value?.trim().replace(/-/g, '_');
+  return normalized === 'live_dry_run' ? 'live_dry_run' : 'dry_run';
+}
+
+export function buildCodexStageRunnerReceipt(input: {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  runnerMode?: string | null;
+  observedAt?: string | null;
+}) {
+  const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
+  const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
+  const stagePacketRef = input.stagePacketRef ?? null;
+  const observedAt = input.observedAt ?? null;
+  return {
+    runner_status: {
+      runner_kind: 'codex_cli_stage_runner',
+      runner_mode: runnerMode,
+      live_process_started: false,
+      dry_run_transport: true,
+      command_preview: [
+        process.env.OPL_CODEX_BIN?.trim() || 'codex',
+        'exec',
+        '--json',
+        ...(stagePacketRef ? ['--stage-packet-ref', stagePacketRef] : []),
+      ],
+      typed_closeout_required_for_completion: true,
+      free_text_closeout_accepted: false,
+    },
+    heartbeat_summary: {
+      heartbeat_status: 'recorded',
+      last_heartbeat_at: observedAt,
+      checkpoint_count: checkpointRefs.length,
+      checkpoint_refs: checkpointRefs,
+    },
+    progress_summary: {
+      progress_status: checkpointRefs.length > 0 ? 'checkpointed' : 'running',
+      stage_id: stageIdFromAttempt(input.attempt),
+      stage_packet_ref: stagePacketRef,
+      completed_requires_typed_closeout: true,
+    },
+    cost_summary: {
+      cost_status: 'not_measured_dry_run',
+      estimated_cost_usd: 0,
+      token_usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+      },
+      billing_boundary: 'codex_cli_activity_runner_reports_only_observed_or_declared_usage',
+    },
+  };
 }
 
 export function parseJsonObject(value: string, field: string): JsonRecord {
@@ -112,11 +177,17 @@ export function buildCodexStageActivityInput(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
 }) {
+  const runnerReceipt = buildCodexStageRunnerReceipt({
+    attempt: input.attempt,
+    stagePacketRef: input.stagePacketRef,
+    runnerMode: process.env.OPL_CODEX_STAGE_RUNNER_MODE,
+  });
   return {
     activity_kind: 'codex_stage_activity',
     executor: 'codex_cli',
     attempt: input.attempt,
     stage_packet_ref: input.stagePacketRef ?? null,
+    ...runnerReceipt,
     expected_closeout: {
       typed_packet_required_for_completion: true,
       free_text_closeout_accepted: false,
