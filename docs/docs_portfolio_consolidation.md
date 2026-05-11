@@ -1,7 +1,7 @@
 # OPL Documentation Portfolio Consolidation
 
 Status: `active docs governance`
-Date: `2026-05-09`
+Date: `2026-05-11`
 Owner: `One Person Lab`
 
 ## Summary
@@ -17,6 +17,8 @@ Every long-lived document must have four explicit signals:
 `README*` and `docs/**` are human-readable surfaces. Machine-readable behavior must use `contracts/`, schemas, source files, generated artifacts, CLI/API behavior, or semantic ids such as `human_doc:*`; it must not pin prose docs paths, headings, sections, or wording as stable interfaces.
 
 Lifecycle decisions are content-level decisions. A document with a current-looking filename can still be historical if its body describes a superseded topology, old development plan, retired gateway/frontdoor/federation route, Hermes-first default, or MDS-default dependency. A document in `docs/references/` can still be active support if its body has a current owner, current purpose, current state, and explicit machine boundary. Maintainers should classify the content before moving, expanding, or deleting the file.
+
+Entry pages should show the current state, hierarchy, old/new relationship, and next reading step before listing supporting material. Old plans, closeout notes, compatibility records, and dated calibrations remain useful as provenance; place them after the current framework roadmap, core five, active specs, and active support docs.
 
 The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). That rollout turns the MAS full-docs restructuring into an OPL-family standard: repositories must be role-equivalent in lifecycle governance, but they do not need identical directory names.
 
@@ -111,6 +113,10 @@ Cross-repo docs治理 must follow role-equivalent lifecycle architecture:
 - `RCA` owns visual-deliverable truth; product, runtime, delivery, source, references, program, policies, and history should be separate reader layers.
 
 When a domain repo cannot safely move historical docs because current-program, audit, or old absolute-path evidence still points at them, the correct move is index-level lifecycle separation first, physical migration later.
+
+## Root AGENTS Alignment
+
+Root `AGENTS.md` remains a work-method file. It may summarize the active owner split and docs reading order, while project truth stays in `README*`, the core five, active docs, contracts, schemas, source, and generated artifacts. When root `AGENTS.md` wording drifts from this portfolio or the core docs, update it to match the current owner split and keep it as routing guidance.
 
 ## Archive Rule
 

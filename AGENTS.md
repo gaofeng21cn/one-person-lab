@@ -8,8 +8,9 @@
 
 - `AGENTS.md` 只约束工作方式，不承载项目知识细节。
 - 项目知识默认从 `README*`、`docs/README*`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md` 读取。
-- `OPL` 是 one-person lab 的 `Codex-default session/runtime`、显式 activation 层，以及跨仓 shared modules / contracts / indexes 的归属层；它不是任何单一 domain 仓的别名，也不接管 domain truth。
-- 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。`MDS` 已随 MAS monolith closeout 降为 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference；它不作为 OPL 默认 active domain agent、默认安装依赖或默认 OPL-managed domain module。
+- `OPL` 是 Codex-first、stage-led 的完整智能体运行框架：以 `Codex CLI` 为 stage 内默认最小执行单元，以接近人类专家实施方式的 `Stage` 组织大型任务，并提供 stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等 framework 能力。
+- 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。这些仓持有各自的 domain truth、quality verdict、runtime owner、artifact authority 与直接 app skill 路径；OPL 持有 framework-level runtime / activation / discovery / projection。
+- `MDS` 已随 MAS monolith closeout 降为 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference。
 
 ## 开发原则
 
@@ -32,6 +33,8 @@
 - `docs/status.md`：当前 admitted domains、活跃主线、下一步和验证口径。
 - `docs/docs_portfolio_consolidation.md` 是当前文档组合治理入口；维护者应先读核心五件套，再按该文件判断新增、更新、归档或 tombstone。
 - 每份长期文档都必须能说明 `owner`、`purpose`、`state`、`machine boundary`；缺少任一信号时，先补入口或归位，再继续扩写。
+- 文档治理按内容生命周期判断，文件名和目录名只作为辅助信号；同一文档内的当前事实、活跃计划、支撑参考与历史叙事应分别归入当前 owner doc、active/support 层或 history/tombstone 语境。
+- 入口文档应优先让读者一眼看清当前状态、层次、新旧关系和下一跳；旧计划、旧路线和已完成 closeout 进入 provenance / history 层。
 - `docs/active/`：当前 runtime、activation、shared-boundary 与 onboarding 支持文档。
 - `docs/public/`：当前公开叙事、roadmap、task map 与 operating model。
 - `docs/specs/`：当前仍生效的 runtime / product-boundary 规格。
