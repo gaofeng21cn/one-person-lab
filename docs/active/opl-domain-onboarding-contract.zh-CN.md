@@ -2,7 +2,7 @@
 
 # OPL Domain-Agent Admission Contract
 
-> 当前状态说明（`2026-05-11`）：本文是候选 domain-agent admission review 的活跃人读支撑。当前已收录 domain 的活跃路径是 `Codex-default session/runtime -> explicit OPL activation -> selected domain-agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。
+> 当前状态说明（`2026-05-11`）：本文是候选 domain-agent admission review 的活跃人读支撑。当前已收录 domain 同时保留 direct Codex/domain-skill activation 与 durable OPL stage-attempt hosting：`Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。
 
 ## 目的
 
@@ -35,9 +35,9 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
 ## 执行模型审查配套文档
 
-当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，应先看当前 Codex-only 执行口径：
+当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，应先看当前 Codex-default executor 与 provider-backed stage-runtime 口径：
 
-- [Codex-default Host-Agent Runtime 合同](../references/runtime-substrate/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
+- [Codex-default Host-Agent Runtime 合同](../references/runtime-substrate/host-agent-runtime-contract.md) — 当前本地默认 executor 口径（中文内部参考）
 - [家族 Executor Adapter 默认口径](../references/runtime-substrate/family-executor-adapter-defaults.md) — 当前家族执行器命名、默认模式、默认模型与 `Hermes-Agent` 实验边界（中文内部参考）
 
 如果审查时仍需要追溯历史迁移上下文，再单独参考下面这些历史材料：
@@ -46,7 +46,7 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 - [四仓统一对齐检查表与任务板](../history/frontdoor-legacy/runtime-alignment-taskboard.md) — 已退役四仓收口清单的历史参考
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md) — 已退役 OMX 时代工作流材料的墓碑页（中文历史参考）
 
-当前活跃执行入口仍是 Codex-only；这些配套文档只用于帮助审查当前 execution-model wording，并把它与保留下来的历史迁移边界分开。
+当前活跃执行路径在 concrete executor 层保持 Codex-default，在 framework runtime 层对齐 provider-backed stage runtime；这些配套文档只用于帮助审查当前 execution-model wording，并把它与保留下来的历史迁移边界分开。
 它们**不会**把 `OPL` 变成候选 domain 的 runtime owner。
 
 ## 核心承诺

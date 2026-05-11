@@ -4,22 +4,24 @@
 
 ## 当前角色
 
-`OPL` 是 one-person research lab 的 Codex-default session/runtime 层、显式 activation 层，以及 family-level shared modules / contracts / indexes 的归属层。
-当前路线图服务家族级边界语言、产品入口与 admitted-domain 协同，domain truth 继续由各个 domain 仓直接持有。
+`OPL` 是 one-person research lab 的 Codex-first、stage-led 智能体运行框架。
+它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力；domain truth 继续由各个 domain 仓直接持有。
 
 今天的公开 `OPL` 表面已经收口到这几层：
 
-- `Codex CLI` 作为 `opl`、`opl exec` 与 `opl resume` 的默认 executor 路径
-- 显式 `OPL` activation 承担 family-level 语义、domain discovery 与 runtime switch
+- `Codex CLI` 作为 `opl`、`opl exec` 与 `opl resume` 的默认具体 executor 路径
+- 显式 `OPL` activation 承担 family-level 语义、domain discovery、stage selection 与 runtime switch
+- provider-backed stage runtime 承担 queue、wakeup、attempt、receipt、approval、retry/dead-letter 与 projection
 - `MedAutoScience`、`MedAutoGrant`、`RedCube AI` 之上的 shared modules、contracts 与 indexes
 - `OPL Runtime Manager` 作为已配置 family runtime provider 之上的产品控制面
 - Rust native helper / index 工作只承担 native assistance 与 indexed discovery，不持有 domain truth 或 executor ownership
 
 ## 活跃路线
 
-当前活跃路线收口为：
+当前活跃路线有两条等价入口：
 
-`Codex-default session/runtime -> explicit OPL activation / typed family queue -> configured family runtime provider -> selected domain agent entry`
+- direct path：`Codex-default executor -> explicit OPL activation -> selected domain agent entry`
+- durable path：`Codex-default executor -> explicit OPL activation / typed family queue -> configured family runtime provider when durable orchestration is needed -> selected domain agent entry`
 
 这条路线现在聚焦四件事：
 
@@ -32,7 +34,7 @@
 
 - 保持旧 gateway / federation wording 只作为 provenance / reference material，同时把 runtime / activation 语义写成主线
 - 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
-- 保持 upstream `Hermes-Agent` online substrate ownership 以及 `OPL Runtime Manager` 产品控制面语义的诚实表达
+- 保持 provider-backed stage runtime 的诚实表达：Temporal 是生产 substrate 候选，`Hermes-Agent` 只作为迁移/proof 语境保留
 - 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime truth 演进
 - 保持 candidate domain 沿定义、审查与 onboarding 路径推进
 
@@ -69,7 +71,7 @@
 
 这份路线图健康时，读者会立刻理解：
 
-- `OPL` 是整个 family 的 Codex-default session/runtime 层、显式 activation 层，以及 shared modules / contracts / indexes owner
+- `OPL` 是整个 family 的 Codex-first、stage-led framework owner，持有 activation、stage attempt、queue/wakeup、receipt、recovery、projection 与 shared modules / contracts / indexes
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
 - Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness 和 `stage_attempt_workbench` 投影；真实 server/worker residency proof 与 domain soak 仍是下一阶段

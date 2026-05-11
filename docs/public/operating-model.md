@@ -7,7 +7,7 @@
 The core judgment of `OPL` is not “how to make one Agent finish one task once.”
 It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-That is why `OPL` should be understood as the Codex-default session/runtime layer, explicit activation layer, and owner of shared modules, contracts, and indexes for continuous lab work.
+That is why `OPL` should be understood as a Codex-first, stage-led agent runtime framework for continuous lab work. It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes.
 
 ## Top-Level Chain
 
@@ -15,10 +15,11 @@ The intended chain is:
 
 ```text
 Human / Agent
-  -> Codex-default session/runtime
+  -> Codex-default executor
       -> explicit OPL activation
-          -> selected domain agent entry
-              -> domain-owned harness / review surfaces / deliveries / audit truth
+          -> provider-backed stage runtime
+              -> selected domain agent entry
+                  -> domain-owned truth / review surfaces / deliveries / audit truth
 ```
 
 Today, the clearest mapped domains are:
@@ -49,16 +50,17 @@ The Agent is primarily responsible for:
 
 ### OPL Activation And Shared Foundation
 
-The top-level `OPL` layer is responsible for:
+The top-level `OPL` framework layer is responsible for:
 
 - expressing top-level task semantics
 - activating work into the correct domain surface only when explicitly requested
+- owning stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared runtime/index primitives
 - defining shared foundation expectations across domains
 - owning shared-foundation control language without taking over domain-owned canonical truth
 - keeping cross-domain identity, governance, and delivery language aligned
 - maintaining family-level shared modules, contracts, and indexes
 
-The current repository is the documentation-first public surface for this role.
+The current repository is the public framework and product surface for this role, with some provider/runtime pieces still moving from contract and test evidence toward production residency.
 
 ### Domain Agent, Entry, And Harness
 

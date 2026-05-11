@@ -8,8 +8,10 @@ This document maps the current authoritative public surfaces for `OPL`.
 
 The current mainline is:
 
-- `Codex-default session/runtime`
+- `Codex-default concrete executor`
 - `explicit activation layer`
+- `provider-backed stage runtime`
+- `stage attempt / typed family queue / wakeup / receipt / recovery / projection`
 - `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
 
@@ -90,7 +92,7 @@ Read this index as a **runtime/activation map**.
 
 This surface index is acceptable only when:
 
-- it makes the current `Codex-default runtime + activation + shared modules/contracts/indexes + skill sync` mainline obvious
+- it makes the current `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` mainline obvious
 - it distinguishes OPL-owned runtime/activation surfaces from repo-owned domain capability surfaces
 - it clearly marks legacy gateway/federation material as reference or provenance content
 - it keeps domain runtime truth, progress truth, and artifact truth owned by the corresponding domain repositories

@@ -102,18 +102,19 @@ The two contract families that now need the clearest alignment are:
 
 At the current stage:
 
-- the active development host is Codex-only local sessions
+- the active concrete executor is the Codex-default local execution path, with `Codex CLI` as the minimum execution unit inside a stage
 - the public OPL formal entry remains the local `TypeScript CLI`-first / framework contract surface
+- provider-backed stage runtime is the target durable substrate for long-running attempts, recovery, human gates, and projection, with the Temporal-backed provider as the current production substrate candidate
 
-That split matters: Codex names today's development host, not the identity of the substrate.
+That split matters: Codex names the default concrete executor, not the identity of the substrate.
 The same substrate should remain compatible with:
 
 - future managed web runtimes
 - future platform-hosted execution surfaces
 
-If the ecosystem later proves a true upstream `Hermes-Agent` integration inside a domain repository, the accurate place for that choice is:
+If the ecosystem retains upstream `Hermes-Agent` integration evidence inside a domain repository, the accurate place for that choice is:
 
-- an implementation mode for the `Shared Runtime Contract`
+- a legacy/optional provider, executor/proof lane, or technical reference
 
 not:
 
