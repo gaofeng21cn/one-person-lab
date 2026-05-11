@@ -101,6 +101,9 @@ test('family-runtime temporal provider reports landed code separately from live 
     assert.equal(provider.degraded_reason, 'temporal_runtime_not_configured');
     assert.equal(provider.details.adapter_mode, 'provider_code_landed_unconfigured');
     assert.equal(provider.capabilities.includes('stage_attempt_workflow_provider_code'), true);
+    assert.equal(provider.details.worker_readiness.surface_kind, 'temporal_worker_readiness');
+    assert.equal(provider.details.worker_readiness.readiness_status, 'not_configured');
+    assert.deepEqual(provider.details.worker_readiness.blockers, ['temporal_runtime_not_configured']);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -219,7 +222,7 @@ test('family-runtime approval pauses dispatch until approved', () => {
   }
 });
 
-test('family-runtime stage attempt ledger tracks task dispatch lifecycle and closeout refs', () => {
+test('family-runtime stage attempt ledger keeps provider dispatch separate until typed closeout', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-'));
   const dispatch = createDispatchFixture('echo \'{"accepted":true,"closeout_refs":["studies/DM002/stage_closeout/latest.json"]}\'');
   try {
@@ -267,14 +270,93 @@ test('family-runtime stage attempt ledger tracks task dispatch lifecycle and clo
     const task = runCli(['family-runtime', 'queue', 'inspect', taskId], familyRuntimeEnv(stateRoot));
 
     assert.equal(created.family_runtime_stage_attempt.attempt.status, 'queued');
-    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].status, 'completed');
-    assert.equal(inspected.family_runtime_stage_attempt.attempt.status, 'completed');
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].status, 'checkpointed');
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.status, 'checkpointed');
     assert.equal(inspected.family_runtime_stage_attempt.attempt.attempt_count, 1);
     assert.deepEqual(inspected.family_runtime_stage_attempt.attempt.closeout_refs, [
       'studies/DM002/stage_closeout/latest.json',
     ]);
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_receipt_status, 'domain_sidecar_receipt_ref_only');
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.provider_run.provider_status, 'checkpointed');
+    assert.equal(
+      inspected.family_runtime_stage_attempt.attempt.activity_events.at(-1).activity_status,
+      'checkpointed',
+    );
     assert.equal(task.family_runtime_task.stage_attempts.length, 1);
     assert.equal(task.family_runtime_task.stage_attempts[0].stage_id, 'scout');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime dispatch ingests typed closeout packet before marking attempt completed', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-typed-dispatch-'));
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{
+  "accepted": true,
+  "closeout_packet": {
+    "surface_kind": "stage_attempt_closeout_packet",
+    "closeout_refs": ["receipt:typed-dispatch-closeout"],
+    "consumed_refs": ["evidence:dispatch"],
+    "consumed_memory_refs": ["memory:route-policy"],
+    "writeback_receipt_refs": ["memory-writeback:receipt-typed"],
+    "rejected_writes": [{"reason": "domain_truth_write_forbidden"}],
+    "next_owner": "med-autoscience",
+    "domain_ready_verdict": "domain_gate_pending",
+    "route_impact": {"decision": "continue_review"}
+  }
+}
+JSON
+`);
+  try {
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'stage/write',
+      '--payload',
+      '{"study_id":"DM002"}',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    }));
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'write',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--task',
+      taskId,
+    ], familyRuntimeEnv(stateRoot));
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    }));
+    const query = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], familyRuntimeEnv(stateRoot));
+    const visibility = query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility;
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].status, 'completed');
+    assert.equal(visibility.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(visibility.provider_run.provider_status, 'completed');
+    assert.deepEqual(visibility.consumed_memory_refs, ['memory:route-policy']);
+    assert.deepEqual(visibility.writeback_receipt_refs, ['memory-writeback:receipt-typed']);
+    assert.equal(visibility.route_impact.decision, 'continue_review');
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion, 'completed');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });

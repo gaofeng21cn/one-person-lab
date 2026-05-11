@@ -1,5 +1,6 @@
 import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes-bridge.ts';
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
+import { buildTemporalWorkerReadiness } from './family-runtime-temporal-provider.ts';
 
 export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'hermes_legacy', 'temporal'] as const;
 
@@ -85,6 +86,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
   if (kind === 'temporal') {
     const address = temporalAddress();
     const workerReady = Boolean(address) && temporalWorkerConfigured();
+    const workerReadiness = buildTemporalWorkerReadiness();
     return {
       provider_kind: kind,
       status: workerReady ? 'ready' : 'provider_code_landed_unconfigured',
@@ -105,6 +107,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         namespace: resolveTemporalNamespace(),
         task_queue: resolveTemporalTaskQueue(),
         worker_ready: workerReady,
+        worker_readiness: workerReadiness,
         worker_lifecycle: {
           worker_required: true,
           task_queue: resolveTemporalTaskQueue(),

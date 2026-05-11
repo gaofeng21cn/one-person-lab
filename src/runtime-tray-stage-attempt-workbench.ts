@@ -124,6 +124,9 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
   const checkpointRefs = stringList(parseList(row.checkpoint_refs_json));
   const closeoutRefs = stringList(parseList(row.closeout_refs_json));
   const humanGateRefs = stringList(parseList(row.human_gate_refs_json));
+  const humanGateLedger = signals.filter((signal) => signal.signal_kind === 'human_gate');
+  const userInstructionLedger = signals.filter((signal) => signal.signal_kind === 'user_instruction');
+  const resumeLedger = signals.filter((signal) => signal.signal_kind === 'resume');
   const domainReadyVerdict = optionalString(latestCloseout?.domain_ready_verdict)
     ?? optionalString(routeImpact.domain_ready_verdict);
 
@@ -152,9 +155,17 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
     route_impact: routeImpact,
     next_owner: optionalString(latestCloseout?.next_owner) ?? optionalString(routeImpact.next_owner) ?? row.domain_id,
     human_gate_refs: humanGateRefs,
-    user_instructions: signals.filter((signal) => signal.signal_kind === 'user_instruction'),
-    resume_signals: signals.filter((signal) => signal.signal_kind === 'resume'),
-    dead_letter: row.status === 'dead_lettered' ? row.blocked_reason : null,
+    human_gate_ledger: humanGateLedger,
+    user_instruction_ledger: userInstructionLedger,
+    resume_ledger: resumeLedger,
+    user_instructions: userInstructionLedger,
+    resume_signals: resumeLedger,
+    dead_letter: row.status === 'dead_lettered'
+      ? {
+        reason: row.blocked_reason,
+        task: null,
+      }
+      : null,
     completion_boundary: {
       provider_completion: row.status === 'completed' ? 'completed' : 'not_completed',
       domain_ready_verdict: domainReadyVerdict,

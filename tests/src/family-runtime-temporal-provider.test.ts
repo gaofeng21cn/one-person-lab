@@ -17,6 +17,7 @@ import {
   StageAttemptWorkflow,
   userInstructionSignal,
 } from '../../src/family-runtime-temporal-workflows.ts';
+import { buildTemporalWorkerReadiness } from '../../src/family-runtime-temporal-provider.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -102,6 +103,14 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
     assert.equal(result.finalState.rejected_writes[0].reason, 'domain_router_rejected');
     assert.equal(result.finalState.next_owner, 'med-autoscience');
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'codex_stage_activity'));
+    const codexCompletion = result.finalState.activity_events.find(
+      (event) => event.activity_kind === 'codex_stage_activity' && event.activity_status === 'completed',
+    ) as Record<string, any> | undefined;
+    assert.equal(codexCompletion?.runner_status.runner_mode, 'dry_run');
+    assert.equal(codexCompletion?.runner_status.live_process_started, false);
+    assert.equal(codexCompletion?.heartbeat_summary.checkpoint_count, 1);
+    assert.equal(codexCompletion?.progress_summary.progress_status, 'checkpointed');
+    assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, 0);
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_sidecar_dispatch_activity'));
     assert.equal(result.queriedState.signals.length, 2);
     assert.deepEqual(result.queriedState.human_gate_refs, ['gate:operator-review']);
@@ -109,4 +118,21 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
   } finally {
     await testEnv.teardown();
   }
+});
+
+test('Temporal worker readiness helper reports live configured state without starting a worker', () => {
+  const readiness = buildTemporalWorkerReadiness({
+    address: '127.0.0.1:7233',
+    workerEnabled: '1',
+    workerStatus: 'ready',
+    namespace: 'opl-test',
+    taskQueue: 'opl-stage-attempts-test',
+  });
+
+  assert.equal(readiness.surface_kind, 'temporal_worker_readiness');
+  assert.equal(readiness.readiness_status, 'ready');
+  assert.equal(readiness.worker_ready, true);
+  assert.equal(readiness.live_probe_started_worker, false);
+  assert.equal(readiness.lifecycle.worker_helper, 'runTemporalStageAttemptWorkerUntil');
+  assert.deepEqual(readiness.blockers, []);
 });

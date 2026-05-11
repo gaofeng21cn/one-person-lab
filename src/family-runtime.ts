@@ -26,6 +26,7 @@ import {
   createStageAttempt,
   inspectStageAttempt,
   ingestStageAttemptCloseout,
+  listStageAttemptsForTask,
   listStageAttempts,
   queryStageAttempt,
   runStageAttemptFixtureActivity,
@@ -257,6 +258,12 @@ function parseDispatchOutput(stdout: string) {
   }
 }
 
+function recordFrom(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 function toPendingTaskInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
@@ -473,16 +480,23 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     const closeoutRefs = Array.isArray(output.closeout_refs)
       ? output.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
       : undefined;
-    const stageAttempts = updateStageAttemptsForTask(db, {
+    const typedCloseoutPacket = recordFrom(output.closeout_packet);
+    const checkpointedStageAttempts = updateStageAttemptsForTask(db, {
       taskId: row.task_id,
       status: 'completed',
       closeoutRefs,
       activityEvent: {
         activity_kind: 'domain_sidecar_dispatch_activity',
-        activity_status: 'completed',
+        activity_status: typedCloseoutPacket ? 'typed_closeout_received' : 'checkpointed',
         closeout_refs: closeoutRefs ?? [],
       },
     });
+    const stageAttempts = typedCloseoutPacket
+      ? listStageAttemptsForTask(db, row.task_id).map((attempt) => ingestStageAttemptCloseout(db, {
+          stageAttemptId: attempt.stage_attempt_id,
+          packet: typedCloseoutPacket,
+        }).attempt)
+      : checkpointedStageAttempts;
     return { task_id: row.task_id, status: 'succeeded', command_preview: command, output, stage_attempts: stageAttempts };
   }
 
