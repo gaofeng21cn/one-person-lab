@@ -3,6 +3,8 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import { cliPath, repoRoot } from './constants.ts';
 
+const CLI_TEST_MAX_BUFFER = 16 * 1024 * 1024;
+
 export function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliInCwd(args, repoRoot, envOverrides);
 }
@@ -22,6 +24,7 @@ export function runCliInCwd(
     {
       cwd,
       encoding: 'utf8',
+      maxBuffer: CLI_TEST_MAX_BUFFER,
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
@@ -45,6 +48,7 @@ export function runCliRawInCwd(
     {
       cwd,
       encoding: 'utf8',
+      maxBuffer: CLI_TEST_MAX_BUFFER,
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
@@ -69,6 +73,7 @@ export function runCliViaEntryPathInCwd(
     {
       cwd,
       encoding: 'utf8',
+      maxBuffer: CLI_TEST_MAX_BUFFER,
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
@@ -150,4 +155,3 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
     });
   });
 }
-
