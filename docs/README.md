@@ -30,7 +30,7 @@ Admitted domain repositories keep their own agent logic, runtime rules, progress
 | --- | --- | --- |
 | Users | [Repository Home](../README.md) | Install OPL, start the GUI or web entry, and choose Codex or a domain agent for work |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Recover the active boundary, the runtime model, and the admitted-domain split |
-| Developers and maintainers | [Documentation Portfolio](./docs_portfolio_consolidation.md), [Active Docs](./active/README.md), [Public Docs](./public/README.md), [Specs Index](./specs/README.md), [Reference Index](./references/README.md), [History Archive](./history/README.md) | Inspect lifecycle roles, active support docs, public support docs, retained specs, references, and retired lanes |
+| Developers and maintainers | [Documentation Portfolio](./docs_portfolio_consolidation.md), [Active Docs](./active/README.md), [Public Docs](./public/README.md), [Specs Index](./specs/README.md), [Reference Index](./references/README.md), [History Archive](./history/README.md) | Inspect lifecycle roles, active support docs, public support docs, the current spec entry, references, and retired lanes |
 
 ## Fast Technical Working Set
 
@@ -73,7 +73,7 @@ Lifecycle is judged by content role, not by filename or old path. A file with an
 - `docs/` root keeps only the docs index, core five, and [Documentation Portfolio](./docs_portfolio_consolidation.md).
 - `docs/active/` keeps current human-readable runtime, activation, onboarding, and shared-boundary support.
 - `docs/public/` keeps public product-direction support read after the repository home.
-- `docs/specs/` keeps active or path-stable retained runtime / product-boundary specs with explicit current owners.
+- `docs/specs/` only keeps active runtime / product-boundary specs; when it is empty, spec truth has converged into the core five, `docs/active/`, the runtime-substrate roadmap, and machine-readable contracts.
 - `docs/references/` keeps support references grouped by purpose.
 - `docs/history/` keeps dated snapshots, retired paths, provenance archives, and tombstones.
 
@@ -140,7 +140,7 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - OPL-owned machine-readable product surfaces: [Contracts Overview](../contracts/README.md)
 - Linked domain capability surfaces: the admitted domain repositories plus `opl skill sync`
 - Active framework contracts: `contracts/opl-framework/*.json`
-- Path-stable retained runtime / product-boundary specs: [Specs Index](./specs/README.md)
+- Current runtime / product-boundary spec entry: [Specs Index](./specs/README.md)
 - Retired gateway/federation provenance corpus: [Gateway / Federation Provenance Archive](./history/compatibility/gateway-federation/README.md)
 - Reference-grade supporting material: [Reference Index](./references/README.md)
 - Historical and retired lanes: [History Archive](./history/README.md) and [Process History](./history/process/README.md)

@@ -1,5 +1,11 @@
 # OPL 托管运行时三层合同
 
+Status: `support_reference_updated`
+Owner: `One Person Lab`
+Machine boundary: 本文是人读边界参考；机器可读事实必须使用 `contracts/`、source code、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 或 App/workbench projection。
+
+当前状态说明（2026-05-11）：本文保留“三层 owner split”作为有效内容，但旧版 `runtime_owner = upstream_hermes_agent` 映射已经过时。当前 OPL 目标是 provider-backed runtime；Temporal-backed provider 是生产候选，`Hermes-Agent` 只保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。最新落地顺序见 [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) 与 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+
 这份参考文档冻结 `OPL` 已准入 domain 现在必须共用的最小 machine-readable contract。
 
 它不宣称“共享 runtime 代码包已经完成”，只冻结不该再漂移的 owner 与 surface 形状：
@@ -31,20 +37,29 @@
 ## 当前已准入 domain 的统一落点
 
 - `med-autoscience`
-  - `runtime_owner = upstream_hermes_agent`
+  - `runtime_owner = opl_family_runtime_provider`
+  - `provider_target = temporal`
+  - `legacy_provider = hermes_legacy`
   - `domain_owner = med-autoscience`
-  - `executor_owner = med_deepscientist`
+  - `executor_owner = codex_cli_via_mas_domain_entry`
 - `redcube-ai`
-  - `runtime_owner = upstream_hermes_agent`
+  - `runtime_owner = opl_family_runtime_provider`
+  - `provider_target = temporal`
+  - `legacy_provider = hermes_legacy`
   - `domain_owner = redcube_ai`
   - `executor_owner = codex_cli`
 - `med-autogrant`
-  - `runtime_owner = upstream_hermes_agent`
+  - `runtime_owner = opl_family_runtime_provider`
+  - `provider_target = temporal`
+  - `legacy_provider = hermes_legacy`
   - `domain_owner = med-autogrant`
-  - `executor_owner = med-autogrant`
+  - `executor_owner = codex_cli_or_domain_declared_executor`
+
+这里的 `runtime_owner` 表示 OPL family provider / attempt ledger / readiness / projection owner，不表示 OPL 接管 domain truth。这里的 `executor_owner` 表示 stage 内具体执行承载；默认仍是 `Codex CLI`，domain 可以在自己的合同内声明更具体的 executor。
 
 ## 非目标
 
 - 不是 runtime control plane
 - 不是共享 truth store
 - 也不等于三个 domain 已经共用同一套 executor 实现
+- 不把 `Hermes-Agent` 恢复为默认目标 runtime substrate

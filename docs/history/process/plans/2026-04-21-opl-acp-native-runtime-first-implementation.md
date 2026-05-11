@@ -31,7 +31,7 @@
 - 修改：`docs/README.zh-CN.md`
 - 修改：`docs/roadmap.md`
 - 修改：`docs/roadmap.zh-CN.md`
-- 新增：`docs/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md`
+- 历史新增目标：`docs/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md`；当前归档路径：`docs/history/process/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md`
 - 归档：`docs/history/process/plans/2026-04-21-opl-acp-native-runtime-first-implementation.md`
 
 验收：

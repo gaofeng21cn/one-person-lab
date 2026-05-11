@@ -1,5 +1,11 @@
 # OPL Managed Runtime Three-Layer Contract
 
+Status: `support_reference_updated`
+Owner: `One Person Lab`
+Machine boundary: human-readable boundary reference only. Machine-readable truth must use `contracts/`, source code, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, or App/workbench projections.
+
+Current status note (2026-05-11): this document keeps the three-layer owner split as useful content, but the old `runtime_owner = upstream_hermes_agent` mapping is obsolete. The current OPL target is provider-backed runtime; the Temporal-backed provider is the production candidate, while `Hermes-Agent` remains only a `hermes_legacy` provider, explicit executor/proof lane, Codex CLI backup, or optional install module. The current implementation order lives in [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) and [Temporal Family Runtime Provider plan](./temporal-family-runtime-provider-plan.zh-CN.md).
+
 This reference freezes the smallest shared machine-readable contract we want every admitted domain to converge on for managed runtime ownership.
 
 It does not claim a shared runtime codebase already exists.
@@ -32,20 +38,29 @@ This contract keeps the boundary explicit:
 ## Current admitted-domain alignment
 
 - `med-autoscience`
-  - `runtime_owner = upstream_hermes_agent`
+  - `runtime_owner = opl_family_runtime_provider`
+  - `provider_target = temporal`
+  - `legacy_provider = hermes_legacy`
   - `domain_owner = med-autoscience`
-  - `executor_owner = med_deepscientist`
+  - `executor_owner = codex_cli_via_mas_domain_entry`
 - `redcube-ai`
-  - `runtime_owner = upstream_hermes_agent`
+  - `runtime_owner = opl_family_runtime_provider`
+  - `provider_target = temporal`
+  - `legacy_provider = hermes_legacy`
   - `domain_owner = redcube_ai`
   - `executor_owner = codex_cli`
 - `med-autogrant`
-  - `runtime_owner = upstream_hermes_agent`
+  - `runtime_owner = opl_family_runtime_provider`
+  - `provider_target = temporal`
+  - `legacy_provider = hermes_legacy`
   - `domain_owner = med-autogrant`
-  - `executor_owner = med-autogrant`
+  - `executor_owner = codex_cli_or_domain_declared_executor`
+
+Here, `runtime_owner` means the OPL family provider / attempt ledger / readiness / projection owner; it does not mean OPL owns domain truth. `executor_owner` means the concrete stage executor carrier; the default remains `Codex CLI`, while each domain may declare a more specific executor in its own contract.
 
 ## Non-goals
 
 - not a runtime control plane
 - not a shared truth store
 - not a claim that all domains already share one executor implementation
+- not a path to revive `Hermes-Agent` as the default target runtime substrate

@@ -1,12 +1,12 @@
 # OPL Product API 与 Domain Agent 边界设计
 
 Owner: `One Person Lab`
-State: `support_reference_retained_path`
+State: `history_process_spec_archived`
 Machine boundary: 本文是人读设计记录；机器可读行为必须使用 contracts、source、CLI/API 行为、runtime ledger、生成产物或 `human_doc:*` 语义 id。
 
 当前状态说明（2026-05-11）：本文标题中的 `Product API` 是 2026-04-20 资源模型冻结时的历史命名。本文正文中的八类资源模型已经被 `README*`、核心五件套、`docs/active/` 与当前合同吸收；历史 `Product API`、本地 8787 service、`frontdoor` 与 `opl web` 语义按历史设计背景阅读。当前 owner 是 `docs/project.md`、`docs/status.md`、`docs/architecture.md` 与 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。
 
-保留理由：已有历史链接和资源模型背景仍指向本文件；在完成安全迁移前，本文件保留在 `docs/specs/`，但只作为 path-stable support reference。
+归档理由：资源模型、domain-agent 边界和旧公开语义退役结论已经合入当前 owner；整篇设计只保留为历史形成过程和 provenance，不再作为活跃规格或实现队列。
 
 ## 背景
 

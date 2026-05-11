@@ -85,7 +85,7 @@ current OPL owner split is:
 | Docs governance | `docs/docs_portfolio_consolidation.md` | Current documentation lifecycle owner | New long-lived docs must be admitted through this lifecycle map. |
 | `docs/active/` | `README*`, current development lines, development-document portfolio, public surface index, domain onboarding, runtime naming, shared foundation/runtime/domain contracts | Active human-readable support for current runtime, activation, onboarding, shared-boundary language, and development-document disposition | Gateway/federation/frontdoor material is referenced only as history or migration background. |
 | `docs/public/` | `README*`, roadmap, task map, operating model, UHS narrative | Public product-direction support after the repository home | UHS remains a support narrative; implementation authority lives in active contracts, the core five, and machine-readable contracts. |
-| `docs/specs/` | `README*` plus retained path-stable design docs | Path-stable spec/reference shelf for current or recently superseded runtime/product-boundary designs | The two April 2026 specs are retained in place for link stability; their active owner is now the core five plus the stage-led framework roadmap. |
+| `docs/specs/` | `README*` | Active spec index | The two April 2026 Product API / ACP specs have moved to `docs/history/process/specs/`; when this index is empty, current runtime/product-boundary truth lives in the core five, `docs/active/`, runtime-substrate roadmap, and machine-readable contracts. |
 | `docs/references/current-support/` | `README*`, GUI/WebUI/install/release/skill/test support references | Current operational support references | Support commands and deployment notes must stay subordinate to CLI/API/contracts/source truth. |
 | `docs/references/runtime-substrate/` | `README*`, stage-led framework roadmap, Temporal provider plan, Runtime Manager target | Runtime/provider/executor support references | Older direct-entry, Hermes-first, host-agent, gateway, and online-platform whole plans have moved to `docs/history/runtime-substrate/`; current references stay subordinate to roadmap and core five. |
 | `docs/references/operating-governance/` | `README*`, domain memory governance, quality/operator/incident references, surface matrices | Governance and reviewability support | Gateway-derived surface maps remain derived references over historical compatibility surfaces; current topology lives in the core five and active runtime docs. |
@@ -106,8 +106,8 @@ current OPL owner split is:
 | `docs/active/shared-*` and `opl-runtime-naming-and-boundary-contract*` | Keep active support | Shared-boundary owner docs | These define shared language as human-readable support. |
 | `docs/public/roadmap*`, `task-map*`, `operating-model*` | Keep public support | Public docs index | They describe product direction and task semantics after the install/start entry. |
 | `docs/public/unified-harness-engineering-substrate*` | Keep as support narrative | Shared runtime/domain contract docs | It is useful umbrella language, but implementation truth lives in active contracts, core five, and machine-readable contracts. |
-| `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` | Retain in place as `support_reference_retained_path` | Core five plus stage-led framework roadmap | Its resource model was absorbed; its Product API / local 8787 / frontdoor-era wording is historical design context. |
-| `docs/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md` | Retain in place as `support_reference_retained_path` | Core five plus stage-led framework roadmap | Its session-runtime-first pivot was absorbed; ACP/Product API wording is projection history. |
+| `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` | Archived as historical process spec | Core five plus stage-led framework roadmap | Its resource model was absorbed; its Product API / local 8787 / frontdoor-era wording is historical design context. |
+| `docs/history/process/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md` | Archived as historical process spec | Core five plus stage-led framework roadmap | Its session-runtime-first pivot was absorbed; ACP/Product API wording is projection history. |
 | `docs/references/current-support/*` | Keep as current support | Current-support index | These docs explain GUI shell, Docker/WebUI, install, release, skill, quality, and test support; none owns runtime truth. |
 | `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` | Keep as master active support | Runtime-substrate index | It is the current framework roadmap and legacy-surface retirement entry. |
 | `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md` | Keep as active support plan | Stage-led roadmap | It is the Temporal provider technical lane; production Temporal autonomy requires soak evidence. |
@@ -127,8 +127,9 @@ current OPL owner split is:
 2. If a retained reference describes gateway/frontdoor/federation/Hermes-first
    as the active path, prepend or update a lifecycle note that labels it
    `superseded`, `legacy`, or `retired` and points to the current owner.
-3. If a file remains in `docs/specs/` only for inbound-link stability, its
-   header must say that explicitly and name the current owner surface.
+3. If a file seems to remain in `docs/specs/` only for inbound-link stability,
+   move it to `docs/history/process/specs/` after updating inbound prose links
+   and name the current owner surface in the archive header.
 4. If operating-governance material still names `domain_gateway` or old
    gateway IDs because a machine-readable compatibility artifact still uses
    them, the prose should call that legacy-derived coverage and point to the

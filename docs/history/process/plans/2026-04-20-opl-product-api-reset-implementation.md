@@ -22,7 +22,7 @@
 - Modify: `docs/architecture.md`
 - Modify: `docs/decisions.md`
 - Modify: `docs/invariants.md`
-- Modify: `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`
+- Historical modify target: `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`; archived current path: `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`
 
 - [ ] 让 `README*` 只面向潜在使用者，统一讲清 `OPL` 的产品定位、使用方式、产品家族与交付逻辑。
 - [ ] 让核心五件套统一使用新的 `Product API` 叙事，明确 `OPL` 负责 shared runtime 与 API，domain 仓负责 agent entry 与领域逻辑。

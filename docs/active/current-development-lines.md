@@ -66,7 +66,7 @@ Current order:
 - `docs/active/development-document-portfolio*`: development-document portfolio entry; read it before absorbing, retaining, downgrading, retiring, or archiving old development content.
 - `docs/references/runtime-substrate/`: runtime/provider/executor references, roadmap, Temporal provider support plan, and legacy migration material.
 - `docs/public/`: public roadmap and product direction.
-- `docs/specs/`: path-stable runtime/product-boundary specs.
+- `docs/specs/`: active runtime/product-boundary spec entry; when empty, use the core five, `docs/active/`, the runtime-substrate roadmap, and machine-readable contracts.
 - `docs/history/`: retired routes, old plans, dated snapshots, compatibility / frontdoor / gateway archives.
 
 If content still decides what happens next or what counts as done, keep it in `docs/active/` or the current roadmap owner. If it is background or comparison, use `docs/references/`. If it only preserves historical context, use `docs/history/`.

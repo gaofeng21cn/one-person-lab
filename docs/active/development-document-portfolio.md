@@ -41,7 +41,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | `docs/active/opl-runtime-naming-and-boundary-contract*` | Runtime naming and boundary support | Keep active. It owns Codex-default, provider-backed, managed-runtime, and MDS retirement terminology. |
 | `docs/active/shared-*` | Shared foundation/runtime/domain support | Keep active. These docs define shared language without moving domain truth into OPL. |
 | `docs/public/*` | Public product-direction support | Keep public support. User-facing docs are not implementation backlogs. |
-| `docs/specs/2026-04-20-*`, `docs/specs/2026-04-21-*` | Retained path specs/references | Keep for path stability; current conclusions are absorbed into the core five, current development lines, and the framework roadmap. |
+| `docs/history/process/specs/2026-04-20-*`, `docs/history/process/specs/2026-04-21-*` | Archived Product API / ACP spec history | The eight-resource product model, session-runtime-first pivot, shell/projection boundary, and domain-truth boundary were absorbed into the core five, current development lines, domain onboarding, and the framework roadmap; the whole documents are no longer active specs. |
 | Runtime-substrate current docs | Provider, Runtime Manager, and framework references | Keep support references. Current machine behavior must still come from contracts, source, CLI/API, and runtime evidence. |
 | Runtime-substrate history docs | Hermes-first, direct-entry, Gateway-era, host-agent-only, managed-runtime checklist, MAS cutover, and online-platform migration material | Absorbed content lives in active owners; whole historical documents live in `docs/history/runtime-substrate/`. Do not expand them as active planning. |
 | `docs/references/current-support/*` | GUI, install, release, test, quality support | Keep current support, subordinate to source/contracts/CLI/API truth. |
@@ -86,7 +86,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | MAS top-level cutover board | No longer the current MAS migration order. MAS migration now follows OPL framework-first plus the MAS program portfolio. |
 | Host-agent runtime contract | No longer an independent target-runtime definition. Useful Codex-default wording is absorbed by runtime boundary, domain onboarding, and framework roadmap docs; the whole document lives in `docs/history/runtime-substrate/`. |
 | Managed runtime migration checklist | No longer the active migration queue. R1-R8 readiness dimensions were absorbed into the runtime boundary; per-repository progress judgments remain historical snapshots. |
-| Product API / ACP native specs | Not implementation queues; retained as path-stable specs/references. |
+| Product API / ACP native specs | Not implementation queues; archived under `docs/history/process/specs/` as historical formation context only. |
 
 ## Verification
 

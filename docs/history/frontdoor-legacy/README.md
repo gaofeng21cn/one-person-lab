@@ -21,8 +21,10 @@
 - `docs/status.md`
 - `docs/architecture.md`
 - `docs/decisions.md`
-- `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`
-- `docs/history/process/plans/2026-04-20-opl-product-api-reset-implementation.md`
+- `docs/active/current-development-lines.zh-CN.md`
+- `docs/active/development-document-portfolio.zh-CN.md`
 - `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`
+
+已归档的 Product API 过渡规格在 `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`；它只解释 `frontdoor -> Product API -> session/runtime framework` 的历史形成过程。
 
 如果需要追溯旧稿，请直接从 git history 或本目录下的历史文件进入，不再把它们当作当前实现依据。

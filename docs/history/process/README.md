@@ -14,15 +14,15 @@ Current truth lives in:
 - [Architecture](../../architecture.md)
 - [Invariants](../../invariants.md)
 - [Decisions](../../decisions.md)
-- [Active Specs](../../specs/)
+- [Active Specs](../../specs/); if there are no active specs, use the core five and `docs/active/`
 
 ## Archived Buckets
 
 - [Plans](./plans/) keeps completed implementation plans and closeout briefs.
-- [Specs](./specs/) keeps superseded design specs that no longer define the active product boundary.
+- [Specs](./specs/) keeps superseded design specs that no longer define the active product boundary, including Product API / ACP-native formation context.
 - [Superpowers](./superpowers/) keeps generated planning/spec artifacts from previous worker flows.
 
 ## Boundary
 
-The only active design specs kept outside this archive are the current runtime/product-boundary specs under `docs/specs/`.
+The only active design specs kept outside this archive are the current runtime/product-boundary specs under `docs/specs/`. If that index is empty, current spec truth has converged into the core five, `docs/active/`, the runtime-substrate roadmap, and machine-readable contracts.
 New one-off planning notes should go here once they are completed, superseded, or no longer needed as active working material.
