@@ -218,6 +218,10 @@ function withDomainMemoryDescriptor(payload: JsonRecord, overrides: JsonRecord =
       memory_body_migration: 'domain_owned_workspace_apply_required',
       opl_apply_allowed: false,
     },
+    receipt_projection: {
+      status: 'descriptor_receipt_projection_ready',
+      scope: 'locator_proposal_router_receipt_projection_only',
+    },
     status: 'active',
     authority_boundary: {
       opl_role: 'locator_projection_owner',
@@ -228,6 +232,7 @@ function withDomainMemoryDescriptor(payload: JsonRecord, overrides: JsonRecord =
         'quality_verdict_owner',
         'artifact_authority',
       ],
+      can_accept_memory_write: false,
       can_write_domain_truth: false,
       can_authorize_quality_verdict: false,
       can_write_artifacts: false,
@@ -717,6 +722,7 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
         'quality_verdict_owner',
         'artifact_authority',
       ],
+      can_accept_memory_write: false,
       can_write_domain_truth: false,
       can_authorize_quality_verdict: false,
       can_write_artifacts: false,
@@ -761,6 +767,18 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
     });
     assert.equal(list.family_domain_memory.summary.resolved_memory_descriptor_count, 2);
     assert.equal(list.family_domain_memory.summary.missing_memory_descriptor_count, 1);
+    const listedMas = list.family_domain_memory.memories.find((entry: { project_id: string }) => (
+      entry.project_id === 'medautoscience'
+    ));
+    assert.equal(
+      listedMas.writeback_receipt_locator_ref.ref,
+      'portfolio/research_memory/publication_route_memory/writeback_receipts',
+    );
+    assert.equal(listedMas.writeback_contract_ref.ref, 'stage_memory_closeout_packet');
+    assert.equal(listedMas.receipt_contract_ref.ref, 'memory_write_router_receipt');
+    assert.equal(listedMas.receipt_projection.accepted_rejected_authority_owner, 'MedAutoScience');
+    assert.equal(listedMas.receipt_projection.authority_flags.can_accept_memory_write, false);
+    assert.equal(listedMas.receipt_projection.readiness.writeback_apply_landed, false);
 
     const inspect = runCli(['domain-memory', 'inspect', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -776,7 +794,25 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
     assert.equal(inspect.family_domain_memory.authority_boundary.domain_memory_owner, 'MedAutoScience');
     assert.equal(inspect.family_domain_memory.non_authority_flags.opl_owns_memory_content, false);
     assert.equal(inspect.family_domain_memory.non_authority_flags.opl_accepts_memory_writeback, false);
+    assert.equal(inspect.family_domain_memory.non_authority_flags.opl_accepts_or_rejects_memory_writeback, false);
+    assert.equal(inspect.family_domain_memory.non_authority_flags.opl_applies_memory_writeback, false);
     assert.equal(inspect.family_domain_memory.non_authority_flags.opl_authorizes_quality_verdict, false);
+    assert.equal(
+      inspect.family_domain_memory.receipt_projection.proposal_contract_ref.ref,
+      'stage_memory_closeout_packet',
+    );
+    assert.equal(
+      inspect.family_domain_memory.receipt_projection.router_receipt_contract_ref.ref,
+      'memory_write_router_receipt',
+    );
+    assert.equal(
+      inspect.family_domain_memory.receipt_projection.writeback_receipt_locator_ref.ref,
+      'portfolio/research_memory/publication_route_memory/writeback_receipts',
+    );
+    assert.equal(
+      inspect.family_domain_memory.receipt_projection.readiness.memory_body_migration_landed,
+      false,
+    );
 
     const migrationPlan = runCli(['domain-memory', 'migration-plan', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -801,6 +837,26 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
     );
     assert.equal(
       migrationPlan.family_domain_memory_migration_plan.non_authority_flags.opl_accepts_memory_writeback,
+      false,
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.non_authority_flags.opl_accepts_or_rejects_memory_writeback,
+      false,
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.writeback_contract_ref.ref,
+      'stage_memory_closeout_packet',
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.receipt_contract_ref.ref,
+      'memory_write_router_receipt',
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.receipt_projection.accepted_rejected_authority_owner,
+      'MedAutoScience',
+    );
+    assert.equal(
+      migrationPlan.family_domain_memory_migration_plan.receipt_projection.authority_flags.can_write_domain_truth,
       false,
     );
   } finally {
