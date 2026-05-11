@@ -58,6 +58,7 @@ export type RuntimeTrayItem = {
   family_stage_control_plane?: JsonRecord | null;
   family_stage_workbench?: JsonRecord | null;
   study_workbench?: JsonRecord | null;
+  stage_attempt_workbench?: JsonRecord | null;
 };
 
 export type MasWorkspaceProjectionRef = {

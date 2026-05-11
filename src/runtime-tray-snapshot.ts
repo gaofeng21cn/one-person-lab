@@ -11,6 +11,7 @@ import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
 import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, RuntimeTrayHealthStatus, RuntimeTrayItem, RuntimeTrayLane, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
 import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
+import { buildStageAttemptWorkbench } from './runtime-tray-stage-attempt-workbench.ts';
 
 type HermesCronJob = {
   id?: unknown;
@@ -797,6 +798,7 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const stageAttemptWorkbench = buildStageAttemptWorkbench();
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
@@ -847,10 +849,12 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
       attention_items: attentionItems,
       recent_items: recentItems,
       action_counts: actionCounts,
+      stage_attempt_workbench: stageAttemptWorkbench,
       source_refs: uniqueByRef([
         sourceRef('/domain_manifests', 'domain_manifest_catalog'),
         sourceRef('/runtime_manager/owner_split', 'runtime_owner_split'),
         sourceRef('/runtime_manager/future_sidecar_migration', 'daemon_policy'),
+        sourceRef('/stage_attempt_workbench', 'stage_attempt_workbench'),
         ...masStudyProjection.source_refs,
         ...hermesCronProjection.source_refs,
       ]),
