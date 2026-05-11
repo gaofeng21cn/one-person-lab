@@ -199,7 +199,7 @@
 - shared contract：`family-action-catalog`、`family-action-graph`、`family-stage-control-plane`、`family-runtime-supervision`、`family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`、`family-product-entry-manifest-v2`。
 - shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
 - local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
-- discovery：`opl actions` / `opl stages` 只读发现与 parity。
+- discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 MAS/MAG/RCA skeleton adapters 可被 OPL 真实 manifest discovery 校验为 aligned，且必须带 artifact locator surface。
 
 当前尚未实现的是完整生产级 stage execution runtime：
 
@@ -207,8 +207,9 @@
 - 一次 domain stage attempt 尚未完整落成 Temporal Workflow / Activity / Signal / Query 形态。
 - `Codex CLI` stage activity runner、heartbeat / checkpoint、typed closeout ingestion、human gate signal、resume token 和 App 查询面仍需要实现。
 - OPL App / GUI 仍需把 stage attempt、closeout receipt、consumed refs、rejected writes、route impact 和 next owner 做成用户可见操作面。
+- MAS real paper line、MAG grant stage 和 RCA visual stage 仍需要真实或 controlled guarded apply soak，证明 OPL-hosted path 与 direct skill path 语义等价。
 
-所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane landed`，不能描述为 `production Temporal-backed autonomous execution framework fully landed`。
+所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane and domain skeleton discovery landed`，不能描述为 `production Temporal-backed autonomous execution framework fully landed`。
 
 ## 默认执行策略
 

@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `development_reference`
 State: `active_support`
 Machine boundary: this is a human-readable development roadmap. Machine-readable truth must live in `contracts/`, source code, CLI/API behavior, runtime ledgers, or domain-owned manifests.
-Date: `2026-05-10`
+Date: `2026-05-11`
 
 ## 结论
 
@@ -45,7 +45,22 @@ Date: `2026-05-10`
 
 ## 2026-05-11 当前落地评估
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，但还没有完成端到端生产闭环。当前状态是 `shared contract + local queue/attempt ledger + domain descriptor/adapters landed`，不是 `Temporal production provider + full real-paper stage execution soak landed`。
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；但还没有完成端到端生产闭环。当前状态是 `shared contract + local queue/attempt ledger + domain descriptor/adapters aligned + skeleton discovery landed`，不是 `Temporal production provider + full real-paper stage execution soak landed`。
+
+分层完成度：
+
+| layer | 当前状态 | 说明 |
+| --- | --- | --- |
+| 定位 / owner split | `landed` | OPL 作为 Codex-first、stage-led family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
+| Shared contracts / schemas | `landed` | action catalog、stage control plane、runtime supervision、persistence / lifecycle / owner-route、standard skeleton 等 contract 已在 OPL shared layer 冻结。 |
+| Local queue / attempt ledger | `usable_dev_baseline` | `opl family-runtime` 已有 typed queue、pending task hydration、guarded dispatch、retry/dead-letter、local inbox 和 stage attempt ledger。 |
+| Domain descriptor / adapter | `landed_for_active_domains` | MAS/MAG/RCA 已在各自 main 暴露 stage/action/projection/skeleton adapter，OPL 当前真实 `opl agents list` 可校验三者 aligned。 |
+| Lifecycle primitives | `contract_and_locator_landed` | OPL 已有 locator-only lifecycle primitive；MAS 经验已被拆成 framework-generic / MAS-specific 方向，真实跨 domain cleanup/restore apply 仍需 soak。 |
+| Provider-backed execution | `partial_fixture_only` | provider contract、fixture query/signal/fixture-run 已有；真实 Temporal worker/server 和 production activity retry 尚未落地。 |
+| Codex stage activity runner | `partial_fixture_only` | stage packet / closeout refs 可进入 fixture path；真实 Codex CLI long-running runner、heartbeat/checkpoint、token/cost/progress sampling 仍未落地。 |
+| Human gate / resume | `contract_shape_only` | human gate refs、signals、resume refs 已进入计划和部分 projection；真实用户插入指令 intake、approval/resume token 和 App 操作闭环仍未完成。 |
+| Operator visibility | `partial_projection_only` | runtime snapshot/workbench/CLI projection 已有；stage attempt closeout、consumed refs、rejected writes、route impact、next owner、dead-letter 的 App 操作面仍需实现。 |
+| Real domain soak / retirement | `not_complete` | MAS real paper line guarded apply、MAG/RCA controlled attempts、旧 Hermes/Gateway/local-manager residue 物理退役仍是下一阶段。 |
 
 已落地的 OPL 层 shared module / contract 面包括：
 
@@ -60,12 +75,14 @@ Date: `2026-05-10`
 
 - `MAS` 和 `MAG` 已通过 `opl-harness-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL Python shared package。
 - `RCA` 已通过 `opl-gateway-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL JS shared package。
+- MAS/MAG/RCA 的 skeleton adapter 已进入各自 main，并通过 OPL 真实 manifest smoke 对齐：`aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。OPL 消费的 source fields 分别是 MAS `opl_domain_agent_skeleton_mapping`、MAG `domain_agent_skeleton_mapping`、RCA `domain_agent_skeleton_adapter`，且三者均带 artifact locator surface。
 - `MDS` 仍 pin 在较早的 `opl-harness-shared @ 8523f4ab76af486d44a1ccd3a88996ca860d2cc2`；这与它的 archive / diagnostic / upstream-intake 角色一致，不应被读成 active OPL domain adapter 已跟进。
 
 已落地的 framework 能力：
 
 - family action catalog、family stage control plane schema、family runtime supervision、persistence / lifecycle / owner-route schema 已在 OPL shared layer 冻结。
 - `opl actions list|inspect|export` 与 `opl stages list|inspect` 是只读 discovery / parity surface。
+- `opl agents list|inspect` 已能读取标准字段和三仓 adapter alias，并强制 artifact locator surface；缺少 locator 的 skeleton 仍保持 `drift_detected`，不会被 OPL 误判为可托管。
 - `opl family-runtime` 已有 typed queue、MAS/MAG/RCA pending task intake、guarded dispatch、retry/dead-letter / local inbox 信号和 stage attempt local ledger。
 - `opl family-runtime attempt create|list|inspect` 已能登记 provider-backed stage attempt 的本地 ledger / provider receipt / task binding metadata。
 - MAS/MAG/RCA 已各自声明 stage/action/projection descriptor，OPL 只消费 descriptor，不写 domain truth。
@@ -78,7 +95,7 @@ Date: `2026-05-10`
 - MAS 的真实 paper line 还没有完全证明 `stage entry packet -> Codex execution -> closeout packet -> router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak；MAG/RCA 也还需要 controlled stage attempt proof。
 - Hermes/local provider 仍作为迁移期实现信号和 legacy/optional provider 存在，active docs 和部分 domain code 中仍有旧 Hermes / Gateway / compatibility wording，需要按 retirement plan 清理。
 
-因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架已落地，domain adapters 已接入，生产级 provider-backed stage execution 和旧接口物理退役仍是下一阶段工作。
+因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架、local queue/attempt ledger、domain adapter discovery 和 standard skeleton validation 已落地；生产级 provider-backed stage execution、human-gate/resume 操作闭环、App 级 stage visibility、真实 domain soak 和旧接口物理退役仍是下一阶段工作。
 
 ## 执行语言与依赖结论
 
@@ -410,7 +427,7 @@ Codex CLI 负责：
 
 ### Master P2b. Framework Lifecycle Primitives From MAS
 
-状态：已落地 locator-only lifecycle primitive contract；MAS/MAG/RCA domain-side inventory/adapter 已由并行 lane 提交，真实跨仓吸收和 soak 仍需主线合并验证。
+状态：已落地 locator-only lifecycle primitive contract；MAS/MAG/RCA domain-side inventory/adapter 已进入各自 main，并可由 OPL manifest discovery 消费。真实跨 domain cleanup / restore apply、retention receipt 和 long-run soak 仍未完成。
 
 目标：把 MAS 已验证的 SQLite 持久化层、file lifecycle、artifact index、retention、restore proof 和 lifecycle 管理经验抽象为 OPL framework primitive。
 
@@ -429,14 +446,15 @@ Codex CLI 负责：
 
 ### Master P2c. Standard Domain-Agent Skeleton Rollout
 
-状态：OPL 已落地 `standard-domain-agent-skeleton-contract.json`、manifest normalizer 和 `opl agents list|inspect`；MAS/MAG/RCA adapter 已由并行 lane 提交，待吸收到各自 main 后做跨仓验证。
+状态：OPL 已落地 `standard-domain-agent-skeleton-contract.json`、alias-aware manifest normalizer 和 `opl agents list|inspect`；MAS/MAG/RCA adapter 已进入各自 main。当前真实 manifest smoke 显示三仓 skeleton 均 aligned，且都通过 artifact locator surface 证明真实 artifact 不进入 domain repo source skeleton。
 
 目标：让 MAS、MAG、RCA 按统一 skeleton 暴露 stage、prompt、skill、knowledge、quality gate、contract、sidecar、receipt schema / refs、projection builder / refs 和 artifact locator contract。
 
 交付：
 
 - 已完成：在 OPL 冻结 `standard_domain_agent_skeleton` contract：repo-source 只允许 `agent/`、`contracts/`、`runtime/`、`docs/`，真实 artifact 只能通过 locator 暴露。
-- 进行中：MAS/MAG/RCA 各自生成 skeleton mapping：现有 repo-source 文件/manifest 到 `agent/`、`contracts/`、`runtime/`、`docs/` 的对应关系，以及 workspace artifact root / runtime artifact root 的 locator contract。
+- 已完成：MAS/MAG/RCA 各自生成 skeleton mapping：现有 repo-source 文件/manifest 到 `agent/`、`contracts/`、`runtime/`、`docs/` 的对应关系，以及 workspace artifact root / runtime artifact root 的 locator contract。
+- 已完成：OPL normalizer 消费 MAS `opl_domain_agent_skeleton_mapping`、MAG `domain_agent_skeleton_mapping`、RCA `domain_agent_skeleton_adapter`；缺少 artifact locator surface 时保持 `drift_detected`。
 - 先以 manifest/adapter 对齐，再分 repo 做物理目录重组计划。
 - 已完成：OPL `opl agents inspect` / `opl stages inspect` 能展示 skeleton completeness、missing refs、nonstandard legacy surface 和 migration blockers。
 
