@@ -368,7 +368,6 @@ exit 1
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -929,6 +928,7 @@ exit 1
     const output = runCli(['runtime', 'manager', 'action', '--apply'], {
       OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       OPL_NATIVE_HELPER_BIN_DIR: path.join(fixtureRoot, 'missing-native-bin'),
     });
     const action = output.runtime_manager_action;
