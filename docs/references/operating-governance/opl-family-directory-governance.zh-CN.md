@@ -40,3 +40,20 @@ OPL family 仓库不应 track 下列本地或生成态路径：
 Hygiene audit 只检查明确的路径段和 root 文件，不做字符串子串匹配。`src/cli/modules/*` 这类源码模块目录属于正常 source tree，不应被 `modules` 字样或 package/module 语义误拦。
 
 如果未来出现 repo-specific 例外，例外必须在对应仓库的 hygiene 测试中显式列出，并写明 owner、purpose、state 和退役条件。
+
+## 2026-05-12 目录标准化状态
+
+当前 OPL 读模型已经证明 MAS / MAG / RCA 三个 active domain 在 descriptor 层完成 admission：`opl agents list --json` 显示 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`，`opl stages list --json` 显示 `resolved_planes_count=3`、`stages_count=18`，`opl domain-memory list --json` 显示 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。
+
+这表示标准 skeleton、stage plane、artifact locator boundary 与 domain memory descriptor 都已能被 OPL 发现和校验；它不表示三仓 repo-source 的物理目录已经完成重组，也不表示真实 workspace/runtime artifact、receipt instance 或 memory body 可以进入开发仓。
+
+标准 domain repo 的目标 repo-source 边界保持为：
+
+- `agent/`：stage 定义、prompt、skill、knowledge refs 与 quality gate refs。
+- `contracts/`：domain descriptor、stage/action/sidecar/receipt schema 与 artifact locator contract。
+- `runtime/`：sidecar、projection builder、lifecycle adapter；只放源码和 builder，不放运行态 receipt 实例。
+- `docs/`：项目、状态、架构、不变量、决策、policy 与 reference。
+
+真实论文、基金、PPT/PDF/PNG、运行日志、memory body、proposal instance、receipt instance、中间产物和最终交付物继续只属于 workspace / runtime artifact root，并通过 locator、receipt ref、restore proof 或 provenance proof 被 OPL 读取。
+
+物理目录移动前必须逐仓满足五个门槛：direct skill path 可用、OPL-hosted path 可用、restore/provenance proof 可回放、no-forbidden-write proof 明确、focused repo-native tests 通过。未满足这些门槛时，只允许维护 descriptor / manifest / adapter 层对齐，不做大规模搬目录。

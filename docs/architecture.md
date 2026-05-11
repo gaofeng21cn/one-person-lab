@@ -204,7 +204,7 @@
 - shared contract：`family-action-catalog`、`family-action-graph`、`family-stage-control-plane`、`family-runtime-supervision`、`family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`、`family-product-entry-manifest-v2`。
 - shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
 - local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
-- discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 OPL 已能校验 standard skeleton descriptor 并要求 artifact locator surface，MAG/RCA 为 aligned，MAS 当前仍缺 standard skeleton descriptor 但 stage / domain-memory descriptor 已 resolved。
+- discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 OPL 已能校验 standard skeleton descriptor 并要求 artifact locator surface，MAS/MAG/RCA 均为 descriptor-level aligned，stage 与 domain-memory descriptor 也均 resolved。
 - provider execution：Temporal `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start|query|signal`、worker lifecycle status 和 fail-closed readiness 已落地到 repo/test 面；缺少 Temporal 地址时本机 worker readiness 明确报告 `not_configured`。
 - typed receipt / workbench：Codex stage activity 已有 dry-run / live-dry-run / `codex_cli` runner repo/test harness、typed closeout required-for-completion gate、consumed refs / memory refs / writeback receipt refs / rejected writes / route impact / next owner 投影；`opl runtime snapshot` 已输出只读 `stage_attempt_workbench`。
 

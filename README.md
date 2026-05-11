@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A stage-led agent framework for high-value knowledge delivery</strong></p>
-<p align="center">Run expert work the way specialists actually deliver it: define the problem, prepare evidence, execute, review, revise, and ship auditable outcomes.</p>
+<p align="center"><strong>OPL Framework + One Person Lab App + Foundry Agents</strong></p>
+<p align="center">Develop knowledge agents with the framework, then run medical research, grants, presentations, and more from one workbench.</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.png" alt="OPL workbench overview" width="100%" />
@@ -22,6 +22,16 @@ Most agent frameworks are workflow systems: they break work into program nodes, 
 One Person Lab uses expert stages as the core unit. A stage carries a goal, source material, quality criteria, handoff, receipt, and owner boundary. Inside each stage, a domain agent can read, reason, write, compute, review, and revise before returning a domain-owned verdict. OPL keeps the work visible, recoverable, auditable, and ready for the next stage.
 
 That is why OPL is designed for papers, grants, presentations, patents, awards, reviews, and other professional outcomes where a simple workflow graph is not enough.
+
+## Three Product Layers
+
+One Person Lab is organized and shipped through three layers:
+
+- **OPL Framework**: the agent development and runtime framework for developers and technical operators. It owns the CLI, stage control, activation, typed queue, provider-backed runtime, contracts, module discovery, skill sync, recovery, and audit surfaces.
+- **One Person Lab App**: the desktop workbench for end users. It presents OPL Framework and installed domain agents as a usable product experience; it does not own domain truth or duplicate runtime implementation.
+- **Foundry Agents**: MAS, MAG, RCA, and future Patent/Award/Thesis/Review agents built on OPL Framework. They can be hosted by the App and still keep direct Codex/app-skill entry; domain judgment, quality verdicts, and deliverable authority remain in each agent repo.
+
+Development and execution stay integrated inside OPL Framework. The user-facing One Person Lab product line is delivered through the App and Foundry agents. Agents should publish as OPL-compatible packages/repos instead of embedding their own copy of the OPL runtime.
 
 <p align="center">
   <img src="assets/branding/opl-architecture-plan.png" alt="OPL architecture and product plan" width="100%" />
@@ -52,9 +62,9 @@ After installation, open `One Person Lab.app` and start general work, medical re
 
 Need Docker, Linux, or server deployment? See the [Docker and browser deployment reference](./docs/references/current-support/opl-docker-webui-deployment.md).
 
-## Current Product Families
+## Current Foundry Lines
 
-| Product family | Current product | Best for | Typical deliverables |
+| Foundry line | Current domain agent | Best for | Typical deliverables |
 | --- | --- | --- | --- |
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, manuscript preparation, deep analysis | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision work | Proposals, outlines, revision packs |
@@ -109,7 +119,7 @@ Architecturally, OPL is a complete stage-led family agent runtime framework for 
 
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by OPL and the operator environment. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
-The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, the current family runtime provider payload, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and operator environment.
+One Person Lab App is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as the OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, the current family runtime provider payload, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and operator environment.
 
 ### How to read this repository
 

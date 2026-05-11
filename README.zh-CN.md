@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向高价值知识工作的完整智能体运行框架</strong></p>
-<p align="center">让 AI 像人类专家一样推进专业任务：界定问题、准备证据、执行、审核、修订，并交付可审计成果。</p>
+<p align="center"><strong>OPL Framework + One Person Lab App + Foundry Agents</strong></p>
+<p align="center">用完整智能体框架开发知识智能体，用桌面工作台运行医学研究、基金、汇报和更多专业产品。</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.png" alt="OPL 工作台概览" width="100%" />
@@ -22,6 +22,16 @@
 One Person Lab 把“专家阶段”作为核心运行单元。每个 stage 都带着目标、材料、质量标准、交接、回执和权威边界；stage 内部由领域智能体完成阅读、推理、写作、计算、审核和修订，再返回该领域持有的判断和交付物。OPL 负责让这些阶段可见、可恢复、可审计，并能继续推进。
 
 这就是 OPL 更适合高价值知识工作的原因：它不是把专业任务压平成机械流程图，而是把人类专家服务的交付逻辑产品化。
+
+## 三层产品关系
+
+One Person Lab 当前按三层理解和交付：
+
+- **OPL Framework**：给开发者和技术操作者使用的智能体开发与运行框架，负责 CLI、stage control、activation、typed queue、provider-backed runtime、contracts、模块发现、技能同步和恢复/审计能力。
+- **One Person Lab App**：给普通用户使用的桌面工作台，负责把 OPL Framework 和已安装的领域智能体呈现成可直接使用的产品体验；App 不持有领域 truth，也不复制运行时实现。
+- **Foundry Agents**：MAS、MAG、RCA 以及后续 Patent/Award/Thesis/Review 等基于 OPL Framework 开发的领域智能体。它们可以被 OPL App 托管运行，也保留 direct Codex/app-skill 入口；领域判断、质量裁决和交付物权威继续归各自 agent 仓。
+
+因此，开发和运行在 OPL Framework 内保持集成，面向用户的“一人实验室”作为 One Person Lab App 与 Foundry 产品线交付；领域智能体以 OPL-compatible package / repo 的方式发布，而不是每个 agent 内嵌一份 OPL runtime。
 
 <p align="center">
   <img src="assets/branding/opl-architecture-plan.png" alt="OPL 架构与产品规划" width="100%" />
@@ -52,9 +62,9 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 需要 Docker、Linux 或服务器部署时，跳转到 [Docker 与浏览器部署参考](./docs/references/current-support/opl-docker-webui-deployment.md)。
 
-## 当前产品家族
+## 当前 Foundry 产品线
 
-| 产品家族 | 当前产品 | 适合什么工作 | 典型交付物 |
+| Foundry 产品线 | 当前领域智能体 | 适合什么工作 | 典型交付物 |
 | --- | --- | --- | --- |
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | 医学研究、证据整理、稿件准备、深度分析 | 分析包、证据包、稿件 |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、修订工作 | 申请书、提纲、修订包 |
@@ -108,7 +118,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 OPL 与操作者环境消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、当前 family runtime provider payload、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和操作者环境共同消费的共享合同与产品表面。
+One Person Lab App 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、当前 family runtime provider payload、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和操作者环境共同消费的共享合同与产品表面。
 
 ### 这个仓库怎么读
 
