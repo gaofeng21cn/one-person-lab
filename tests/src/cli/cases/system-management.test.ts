@@ -174,7 +174,7 @@ exit 1
     assert.equal(output.system.core_engines.hermes.update_summary, null);
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
     assert.equal(output.system.core_engines.hermes.health_status, 'ready');
-    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'hermes_legacy');
+    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
     assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'ready');
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
     assert.equal(output.system.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
