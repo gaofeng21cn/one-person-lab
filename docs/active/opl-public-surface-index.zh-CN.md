@@ -8,8 +8,10 @@
 
 当前主线是：
 
-- `Codex-default session/runtime`
+- `Codex-default concrete executor`
 - `explicit activation layer`
+- `provider-backed stage runtime`
+- `stage attempt / typed family queue / wakeup / receipt / recovery / projection`
 - `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
 
@@ -88,7 +90,7 @@
 
 只有当下面这些条件都成立时，这份 public surface index 才算合格：
 
-- 它把当前 `Codex-default runtime + activation + shared modules/contracts/indexes + skill sync` 主线讲清楚
+- 它把当前 `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` 主线讲清楚
 - 它区分 OPL-owned 的 runtime/activation surface 与 repo-owned 的 domain capability surface
 - 它明确标出旧 gateway/federation 语料已经退到 reference/provenance 层
 - 它继续把 domain runtime truth、progress truth 与 artifact truth 放在对应 domain 仓自己名下

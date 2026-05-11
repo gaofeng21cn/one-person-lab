@@ -87,7 +87,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 
 ## 活跃支撑
 
-这些人读文档支撑当前 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery` 主线。
+这些人读文档支撑当前 `Codex-default executor + explicit activation layer + provider-backed stage runtime + family skill sync/discovery` 主线。
 
 - [项目概览](./project.md)
 - [当前状态](./status.md)

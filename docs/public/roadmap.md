@@ -4,22 +4,24 @@
 
 ## Current Role
 
-`OPL` is the Codex-default session/runtime layer, the explicit activation layer, and the owner of family-level shared modules, contracts, and indexes for a one-person research lab.
-Its current roadmap keeps the family-level boundary language stable while domain repositories continue to own their domain truth.
+`OPL` is the Codex-first, stage-led agent runtime framework for a one-person research lab.
+It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes while domain repositories continue to own their domain truth.
 
 Today the public `OPL` surface centers on:
 
-- `Codex CLI` as the default executor path for `opl`, `opl exec`, and `opl resume`
-- explicit `OPL` activation for family-level semantics, domain discovery, and runtime switching
+- `Codex CLI` as the default concrete executor path for `opl`, `opl exec`, and `opl resume`
+- explicit `OPL` activation for family-level semantics, domain discovery, stage selection, and runtime switching
+- provider-backed stage runtime for queue, wakeup, attempt, receipt, approval, retry/dead-letter, and projection
 - shared modules, contracts, and indexes above `MedAutoScience`, `MedAutoGrant`, and `RedCube AI`
 - `OPL Runtime Manager` as the product control plane over the configured family runtime provider
 - Rust native helper / index work limited to native assistance and indexed discovery, not domain truth or execution ownership
 
 ## Active Route
 
-The active route for `OPL` is:
+The active route for `OPL` has two equivalent entry paths:
 
-`Codex-default session/runtime -> explicit OPL activation / typed family queue -> configured family runtime provider -> selected domain agent entry`
+- direct path: `Codex-default executor -> explicit OPL activation -> selected domain agent entry`
+- durable path: `Codex-default executor -> explicit OPL activation / typed family queue -> configured family runtime provider when durable orchestration is needed -> selected domain agent entry`
 
 Current work on that route stays focused on four priorities:
 
@@ -32,7 +34,7 @@ Current work on that route stays focused on four priorities:
 
 - keep legacy gateway and federation wording available only as provenance/reference material while promoting the runtime/activation model to the mainline
 - keep `Unified Harness Engineering Substrate`, `Shared Runtime Contract`, and `Shared Domain Contract` scoped as shared-above-domain surfaces
-- keep external-kernel packaging honest around upstream `Hermes-Agent` online substrate ownership and `OPL Runtime Manager` as product control plane
+- keep provider-backed stage runtime honest, with Temporal as the production substrate candidate and `Hermes-Agent` retained only as migration/proof context
 - keep future hosted and desktop entry work anchored to the same runtime truth that drives the Codex-default executor path
 - keep candidate domains moving through explicit definition and onboarding lanes
 
@@ -69,7 +71,7 @@ Use these reference surfaces when you need deeper context:
 
 The roadmap is healthy when readers can immediately understand:
 
-- `OPL` is the Codex-default session/runtime layer, explicit activation layer, and shared modules/contracts/indexes owner for the family
+- `OPL` is the Codex-first, stage-led framework owner for activation, stage attempts, queue/wakeup, receipts, recovery, projection, and shared modules/contracts/indexes
 - admitted domains keep their own authority under that shell
 - the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
 - the Temporal production provider now has a minimal verifiable loop: workflow/activity/signal/query, worker lifecycle contract, typed closeout ingestion, fail-closed readiness, and `stage_attempt_workbench` projection; real server/worker residency proof and domain soak remain next-stage work

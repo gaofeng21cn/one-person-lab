@@ -2,13 +2,13 @@
 
 # OPL Runtime Naming And Boundary Contract
 
-> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the Codex-first, stage-led OPL framework. Current default public wording is `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
+> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the Codex-first, stage-led OPL framework. Current default public wording is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
 
 ## Purpose
 
 This document freezes the core runtime-related naming in the `OPL` ecosystem so the following layers stop being blurred together:
 
-- top-level `Codex-default session/runtime` and explicit activation
+- top-level `Codex-default executor`, explicit activation, and provider-backed stage runtime
 - `Unified Harness Engineering Substrate`
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
@@ -20,7 +20,7 @@ This document freezes the core runtime-related naming in the `OPL` ecosystem so 
 It answers three questions:
 
 1. Which layer each current repository actually belongs to.
-2. How `Codex-default host-agent runtime` relates to a future `managed runtime`.
+2. How retained `host-agent runtime` deployment-shape vocabulary relates to provider-backed stage runtime and a future `managed runtime`.
 3. How a domain that has retired an external companion, such as `MedAutoScience` after the MAS monolith closeout, should describe the remaining provenance/audit/parity references without reviving a second public owner.
 
 ## Scope
@@ -79,7 +79,7 @@ Each layer answers a different question:
 
 | Term | Frozen meaning | Current or future example | Explicitly not |
 | --- | --- | --- | --- |
-| `OPL session/runtime + activation` | Codex-default session/runtime, explicit domain-agent activation, boundary freeze, and admission language | `one-person-lab` | domain-local runtime owner |
+| `OPL framework runtime + activation` | Codex-default executor, explicit domain-agent activation, provider-backed stage runtime, boundary freeze, and admission language | `one-person-lab` | domain-local runtime owner |
 | `Unified Harness Engineering Substrate` | shared top-level Harness Engineering umbrella language across domains | layering rules, shared principles, contract family name | shared execution core |
 | `Shared Runtime Contract` | shared cross-domain contract for long-running runtime behavior | `runtime profile`, `session substrate`, stage runtime status | domain truth |
 | `Shared Domain Contract` | shared cross-domain contract for formal product behavior | formal-entry matrix, the `per-run handle`, durable report, gate semantics | domain object model |
@@ -108,6 +108,8 @@ The more accurate wording today is:
 - it is not the system identity or public entrypoint of `MedAutoScience`
 
 ## `Codex-default host-agent runtime` And `managed runtime`
+
+`Host-agent runtime` is retained deployment-shape vocabulary. Current target runtime wording is `Codex CLI concrete executor + provider-backed stage runtime`; this section explains the older local-vs-managed deployment axis without replacing the current target path.
 
 ### What the current reality is
 

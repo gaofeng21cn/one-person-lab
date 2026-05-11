@@ -90,7 +90,7 @@ Roadmap and operating-model documents explain product direction after the user k
 
 ## Active Support
 
-These human-readable documents support the current `OPL` mainline: `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`.
+These human-readable documents support the current `OPL` mainline: `Codex-default executor + explicit activation layer + provider-backed stage runtime + family skill sync/discovery`.
 
 - [Project](./project.md)
 - [Status](./status.md)

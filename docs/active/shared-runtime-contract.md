@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> Current-status note (`2026-05-11`): this document is retained as a shared-boundary reference. The current public OPL mainline is `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`; `MedDeepScientist` is no longer a default OPL-installed MAS runtime dependency and appears only through MAS-declared optional backend-audit / source-provenance / historical-fixture / explicit archive-import / upstream-intake / parity-oracle refs. Lower-level domain execution wording should be read as `harness / controller` internal boundaries, not as the default public product model.
+> Current-status note (`2026-05-11`): this document is retained as a shared-boundary reference for the Codex-first, stage-led OPL framework. The current public OPL mainline is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected MAS/MAG/RCA domain agent`; `MedDeepScientist` is no longer a default OPL-installed MAS runtime dependency and appears only through MAS-declared optional backend-audit / source-provenance / historical-fixture / explicit archive-import / upstream-intake / parity-oracle refs. Lower-level domain execution wording should be read as `harness / controller` internal boundaries, not as the default public product model.
 
 ## Purpose
 
@@ -119,16 +119,17 @@ The current split is:
 
 ## Relationship To Hermes-Agent
 
-What the upstream `Hermes-Agent` contributes most convincingly today is a mature runtime substrate implementation.
+What the upstream `Hermes-Agent` contributes most usefully today is migration-period runtime implementation experience and optional proof-provider context.
 
 The more accurate statement is therefore:
 
-- an upstream `Hermes-Agent`-backed runtime substrate is a preferred future implementation direction for the `Shared Runtime Contract`
+- the production substrate candidate for the OPL framework is provider-backed stage runtime, with Temporal-backed provider work as the current target path
+- `Hermes-Agent` remains a legacy/optional provider, executor/proof lane, or technical reference during migration
 - `Hermes-Agent` is not the whole `UHS`
 - `Hermes-Agent` does not replace the OPL session/runtime entry, any domain-agent entry, or any domain-owned truth surface
-- the preferred integration mode is `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed prerequisite install
+- any integration mode must keep OPL as framework/control-plane owner and domain repositories as truth owners
 
-In short, `Hermes` is better suited to own “how the system keeps running” than “what counts as a gate, an audit trail, or domain truth.”
+In short, `Hermes` is not the current target owner of “how the system keeps running.” It is retained as migration/proof context while OPL's provider-backed stage runtime matures.
 
 ## Current Truth
 
@@ -140,20 +141,22 @@ As of the current public mainline, the true state remains:
 - the `Shared Runtime Contract` is a reference contract under the current shared-boundary layer, not the default product entry
 - the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` semantics without turning them into one runtime owner
 - the active four-repository public line is `one-person-lab + MAS + MAG + RCA`; `MDS` is retained only as MAS-declared optional companion provenance/audit, explicit archive-import, intake, and parity-oracle refs
-- an upstream `Hermes-Agent` runtime substrate remains an opt-in or future implementation direction for this contract, not the default OPL public fact
+- `Hermes-Agent` remains an opt-in legacy/proof provider or technical reference, not the default OPL public fact
 
 ## Implementation Boundary
 
 As long as the upper-layer contracts stay intact, the `Shared Runtime Contract` can later be implemented through different deployment shapes:
 
-- the current local `host-agent runtime`
-- a future upstream `Hermes-Agent`-backed managed runtime
+- the current local Codex-default executor path
+- the target provider-backed stage runtime, including the Temporal-backed provider path
+- legacy/optional proof providers such as `Hermes-Agent`
 - a future platform-hosted execution plane
 
-In product terms, that preferred future shape means:
+In product terms, the target shape means:
 
-- a local open-source `OPL` entry can bootstrap and manage a supported external `Hermes` runtime for the user
-- a future hosted `OPL` product can run the external `Hermes` kernel inside the platform
+- a local open-source `OPL` entry can run with Codex-default execution and explicit domain activation
+- configured family runtime providers can host stage attempts, wakeups, receipts, approvals, retries, dead letters, and projections
+- a future hosted `OPL` product can run a supported provider inside the platform without taking over domain truth
 
 What may change is the runtime substrate implementation, not:
 

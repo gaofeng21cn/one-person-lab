@@ -15,7 +15,7 @@
 - `Presentation Ops`
 
 这个拆分定义的是顶层任务语义。
-在运行时，这些语义通过 Codex-default session/runtime 路径、按需显式进入 `OPL` activation，并路由到选定的 domain capability surface，同时保留清楚的 ownership 与 handoff 边界。
+在运行时，这些语义通过 Codex-default executor 路径、按需显式进入 `OPL` activation，由 provider-backed stage runtime 承载可恢复的阶段尝试，再路由到选定的 domain capability surface，同时保留清楚的 ownership 与 handoff 边界。
 
 在执行层面，这些 workstream 也共享同一条目标原则：
 

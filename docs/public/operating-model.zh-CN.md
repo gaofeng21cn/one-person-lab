@@ -6,7 +6,7 @@
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
 
-所以，`OPL` 更准确的理解是面向持续实验室工作的 Codex-default session/runtime 层、显式 activation 层，以及 shared modules / contracts / indexes 的归属层。
+所以，`OPL` 更准确的理解是面向持续实验室工作的 Codex-first、stage-led 智能体运行框架。它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力。
 
 ## 顶层链路
 
@@ -14,10 +14,11 @@
 
 ```text
 Human / Agent
-  -> Codex-default session/runtime
+  -> Codex-default executor
       -> explicit OPL activation
-          -> selected domain agent entry
-              -> domain-owned harness / review surfaces / deliveries / audit truth
+          -> provider-backed stage runtime
+              -> selected domain agent entry
+                  -> domain-owned truth / review surfaces / deliveries / audit truth
 ```
 
 当前最清楚的三条映射是：
@@ -46,18 +47,19 @@ Agent 主要负责：
 - 组织中间产物和正式产物
 - 把关键执行过程写回可审计表面
 
-### OPL Activation 与共享基础结构
+### OPL Framework 与共享基础结构
 
-顶层 `OPL` 层负责：
+顶层 `OPL` framework 层负责：
 
 - 表达顶层任务语义
 - 只在显式请求时把任务 activation 到正确的 domain surface
+- 持有 stage attempt、typed queue、wakeup、receipt、recovery、projection 与 shared runtime/index primitives
 - 定义跨 domain 的共享基础结构要求
 - 拥有 shared-foundation 的顶层控制语言，但不接管各 domain 的 canonical truth
 - 让跨 domain 的身份、治理与交付语言保持一致
 - 维护 family-level shared modules、contracts 与 indexes
 
-当前仓库承担的是这个角色的文档优先公开说明面。
+当前仓库承担的是这个角色的公开 framework 与产品面；其中部分 provider/runtime 能力仍处在从合同与测试证据走向生产常驻的阶段。
 
 ### Domain Agent、Entry 与 Harness
 

@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> 当前状态说明（`2026-05-11`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + provider-backed family runtime + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下层 domain 执行词汇按 `harness / controller` 内部边界理解，不作为当前默认公开产品模型。
+> 当前状态说明（`2026-05-11`）：本文作为 Codex-first、stage-led OPL framework 的共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected MAS/MAG/RCA domain agent`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下层 domain 执行词汇按 `harness / controller` 内部边界理解，不作为当前默认公开产品模型。
 
 ## 目的
 
@@ -119,16 +119,17 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 ## 与 Hermes-Agent 的关系
 
-上游 `Hermes-Agent` 当前最值得吸收的，是它在 runtime substrate 上已经比较成熟的工程实现。
+上游 `Hermes-Agent` 当前最值得吸收的，是迁移期 runtime 工程经验和可选 proof-provider 语境。
 
 因此，更准确的表达是：
 
-- 上游 `Hermes-Agent` 支撑的 runtime substrate，是 `Shared Runtime Contract` 的优选未来实现方向
+- OPL framework 的生产 substrate 候选是 provider-backed stage runtime，当前目标路径是 Temporal-backed provider
+- `Hermes-Agent` 在迁移期保留为 legacy/optional provider、executor/proof lane 或技术参考
 - `Hermes-Agent` 不是整个 `UHS`
 - `Hermes-Agent` 也不会替代 OPL session/runtime 入口、任何 domain-agent entry 或 domain-owned truth surface
-- 优选的集成方式是 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把手工安装前置给用户
+- 任何集成方式都必须保持 OPL 作为 framework/control-plane owner，并保持 domain 仓作为 truth owner
 
-也就是说，`Hermes` 更适合承接“怎么稳定地跑”，而不是“什么才算过 gate、交付、审计、domain truth”。
+也就是说，`Hermes` 当前不是“怎么稳定地跑”的目标 owner。它作为迁移/proof 语境保留，直到 OPL provider-backed stage runtime 成熟。
 
 ## 当前真实状态
 
@@ -146,16 +147,16 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 只要不改写上层合同，`Shared Runtime Contract` 后续可以由不同 deployment shape 实现：
 
-- 当前本地 `host-agent runtime`
-- 迁移期 `Hermes-Agent` legacy/optional provider bridge
-- future provider-backed managed runtime（优先生产候选是 Temporal-backed provider）
+- 当前本地 Codex-default executor 路径
+- 目标 provider-backed stage runtime，包括 Temporal-backed provider 路径
+- `Hermes-Agent` 这类 legacy/optional proof provider
 - future platform-hosted execution plane
 
-从产品形态看，优选未来落地应是：
+从产品形态看，目标形态是：
 
-- 本地开源版由 `OPL` 入口为用户 bootstrap 并管理受支持的 family runtime provider
-- 迁移期可继续管理外部 `Hermes` legacy provider
-- 未来托管版由平台内部运行受支持 provider substrate，而 `OPL` 继续对外暴露产品入口
+- 本地开源版可以用 Codex-default execution 与显式 domain activation 运行
+- 已配置 family runtime provider 承载 stage attempt、wakeup、receipt、approval、retry、dead-letter 和 projection
+- 未来托管版可以在平台内运行受支持 provider，同时不接管 domain truth
 
 变化的应只是 runtime substrate 的承载方式，而不是：
 

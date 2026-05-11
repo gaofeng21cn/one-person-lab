@@ -15,7 +15,7 @@
 - `Presentation Ops`
 
 This split defines top-level task semantics.
-At runtime, those semantics route through the Codex-default session/runtime path, explicit `OPL` activation when needed, and the selected domain capability surface with explicit ownership and handoff boundaries.
+At runtime, those semantics route through the Codex-default executor path, explicit `OPL` activation when needed, provider-backed stage runtime for durable attempts, and the selected domain capability surface with explicit ownership and handoff boundaries.
 
 At the operating level, these workstreams also share one target doctrine:
 

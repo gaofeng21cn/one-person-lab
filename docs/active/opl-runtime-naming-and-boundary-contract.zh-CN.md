@@ -2,13 +2,13 @@
 
 # OPL Runtime 命名与边界合同
 
-> 当前状态说明（`2026-05-11`）：本文是 Codex-first、stage-led OPL framework 的活跃 runtime 命名边界。当前默认公开口径是 `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
+> 当前状态说明（`2026-05-11`）：本文是 Codex-first、stage-led OPL framework 的活跃 runtime 命名边界。当前默认公开口径是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
 
 ## 目的
 
 这份文档用于冻结 `OPL` 体系下与 runtime 相关的核心命名，避免把下面几层继续混写成一团：
 
-- 顶层 `Codex-default session/runtime` 与 explicit activation
+- 顶层 `Codex-default executor`、explicit activation 与 provider-backed stage runtime
 - `Unified Harness Engineering Substrate`
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
@@ -20,7 +20,7 @@
 它同时回答三个问题：
 
 1. 四仓当前各自到底处在哪一层。
-2. `Codex-default host-agent runtime` 与未来 `managed runtime` 的关系是什么。
+2. 保留下来的 `host-agent runtime` 部署形态词汇与 provider-backed stage runtime、未来 `managed runtime` 的关系是什么。
 3. `MedAutoScience` 这类已经退役外部 companion 的 domain，应如何描述剩余 provenance / audit / parity reference，而不重新制造第二个公开 owner。
 
 ## 适用范围
@@ -79,7 +79,7 @@ Human / Agent
 
 | 术语 | 固定定义 | 当前或未来例子 | 明确不是什么 |
 | --- | --- | --- | --- |
-| `OPL session/runtime + activation` | Codex-default session/runtime、显式 domain-agent activation、边界冻结与 admission 语言 | `one-person-lab` | domain-local runtime owner |
+| `OPL framework runtime + activation` | Codex-default executor、显式 domain-agent activation、provider-backed stage runtime、边界冻结与 admission 语言 | `one-person-lab` | domain-local runtime owner |
 | `Unified Harness Engineering Substrate` | 多个 domain 共享的上位 Harness Engineering 语言 | 分层规则、共享原则、合同总名 | 共享执行内核 |
 | `Shared Runtime Contract` | 多个 domain 共享的长期在线运行合同 | `runtime profile`、`session substrate`、stage runtime status | domain truth |
 | `Shared Domain Contract` | 多个 domain 共享的正式行为合同 | formal-entry matrix、`per-run handle`、durable report、gate semantics | domain object model |
@@ -108,6 +108,8 @@ Human / Agent
 - 它也不是 `MedAutoScience` 的系统本体或公开入口
 
 ## `Codex-default host-agent runtime` 与 `managed runtime`
+
+`Host-agent runtime` 是保留下来的 deployment-shape 词汇。当前目标 runtime 口径是 `Codex CLI concrete executor + provider-backed stage runtime`；本节只解释较早的本地部署形态与 future managed 形态，不替代当前目标路径。
 
 ### 当前到底是什么
 

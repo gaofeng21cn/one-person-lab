@@ -2,7 +2,7 @@
 
 # OPL Domain-Agent Admission Contract
 
-> Current-status note (`2026-05-11`): this document is active human-readable support for candidate domain-agent admission review. The active admitted-domain path is `Codex-default session/runtime -> explicit OPL activation -> selected domain-agent entry`, with `MAS`, `MAG`, and `RCA` exposed as independent domain agents.
+> Current-status note (`2026-05-11`): this document is active human-readable support for candidate domain-agent admission review. The active admitted-domain paths are direct Codex/domain-skill activation and durable OPL stage-attempt hosting: `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`, with `MAS`, `MAG`, and `RCA` exposed as independent domain agents.
 
 ## Purpose
 
@@ -35,9 +35,9 @@ This rule now applies to the remaining candidate workstreams only: `Grant Ops` h
 
 ## Execution-Model Review Companions
 
-When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, start with the current Codex-only execution wording:
+When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, start with the current Codex-default executor and provider-backed stage-runtime wording:
 
-- [Codex-default Host-Agent Runtime Contract](../references/runtime-substrate/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
+- [Codex-default Host-Agent Runtime Contract](../references/runtime-substrate/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default executor wording
 - [Family Executor Adapter Defaults](../references/runtime-substrate/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family executor naming, default mode, default model, and Hermes-Agent experimental boundary
 
 If historical migration context is still needed during review, use these historical references separately:
@@ -46,7 +46,7 @@ If historical migration context is still needed during review, use these histori
 - [Runtime Alignment Taskboard](../history/frontdoor-legacy/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist
 - [OMX historical archive](../history/omx/README.md) — Chinese-only tombstone for retired OMX-era workflow material
 
-The active execution path remains Codex-only; these companions help reviewers keep current execution-model wording separate from retained historical migration boundaries during onboarding.
+The active execution path remains Codex-default at the concrete executor layer and provider-backed at the framework runtime layer. These companions help reviewers keep current execution-model wording separate from retained historical migration boundaries during onboarding.
 They do **not** turn `OPL` into the runtime owner of a candidate domain.
 
 ## Core Promise
