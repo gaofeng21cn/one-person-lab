@@ -7,6 +7,10 @@ import {
   parseHermesSessionsTable,
   runHermesCommand,
 } from '../hermes.ts';
+import {
+  inspectFamilyRuntimeProviders,
+  resolveFamilyRuntimeProviderKind,
+} from '../family-runtime-providers.ts';
 import { buildSessionLedger } from '../session-ledger.ts';
 import {
   collectHermesProcessUsage,
@@ -70,6 +74,8 @@ export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
 }
 
 export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
+  const configuredProvider = resolveFamilyRuntimeProviderKind();
+  const familyRuntimeProviders = inspectFamilyRuntimeProviders(configuredProvider);
   const hermes = inspectHermesRuntime();
   const statusResult = hermes.binary ? runHermesCommand(['status']) : null;
   const statusOutput = statusResult ? normalizeCommandOutput(statusResult.stdout, statusResult.stderr) : '';
@@ -84,7 +90,19 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
   return {
     version: 'g2',
     runtime_status: {
-      runtime_substrate: 'external_hermes_kernel',
+      runtime_substrate: 'provider_backed_family_runtime',
+      configured_provider: configuredProvider,
+      family_runtime_providers: familyRuntimeProviders,
+      hermes_legacy_diagnostics: {
+        hermes,
+        status_report: {
+          command_preview: ['hermes', 'status'],
+          raw_output: statusOutput,
+          parsed: parsedStatus,
+        },
+        recent_sessions: recentSessions,
+        process_usage: processUsage,
+      },
       hermes,
       status_report: {
         command_preview: ['hermes', 'status'],
@@ -95,11 +113,11 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
       process_usage: processUsage,
       managed_session_ledger: ledger,
       notes: [
-        'Process usage remains runtime-level visibility.',
+        'Runtime status is provider-backed; Hermes fields are legacy diagnostics unless the configured provider is hermes_legacy.',
+        'Process usage remains runtime-level diagnostic visibility.',
         'The managed session ledger adds OPL-owned event attribution, but does not claim kernel-global exact per-session billing.',
-        'Workspace and project orchestration still sit above the external Hermes kernel.',
+        'Workspace and project orchestration sit above the configured family runtime provider.',
       ],
     },
   };
 }
-

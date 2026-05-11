@@ -14,12 +14,10 @@ import {
   isInteractiveShell,
   parseHermesSessionsTable,
   runHermesLogs,
-  runHermesResume,
   runHermesSessionsList,
 } from './hermes.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type { ContractValidationSummary } from './types.ts';
-import type { ProductEntryExecutor } from './product-entry-parts/types.ts';
 import {
   assertCodexSuccess,
   assertHermesSuccess,
@@ -61,70 +59,16 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
 
 export function runProductEntryResume(
   sessionId: string,
-  executor: ProductEntryExecutor = 'codex',
 ) {
-  if (executor === 'codex') {
-    const codexArgs = ['resume', sessionId];
-    if (isInteractiveShell()) {
-      const resumeResult = runCodexCommand(codexArgs, {
-        inheritStdio: true,
-      });
-
-      assertCodexSuccess(
-        resumeResult.exitCode,
-        'Codex resume failed inside OPL Product Entry.',
-        {
-          session_id: sessionId,
-        },
-      );
-
-      return {
-        __handled: true as const,
-      };
-    }
-
-    const resumeResult = runCodexCommand(codexArgs);
-    assertCodexSuccess(
-      resumeResult.exitCode,
-      'Codex resume failed inside OPL Product Entry.',
-      {
-        session_id: sessionId,
-        stdout: resumeResult.stdout,
-        stderr: resumeResult.stderr,
-      },
-    );
-
-    recordSessionLedgerEntry({
-      sessionId,
-      mode: 'resume',
-      sourceSurface: 'opl_local_product_entry_shell',
-    });
-
-    return {
-      version: 'g2',
-      product_entry: {
-        entry_surface: 'opl_local_product_entry_shell',
-        mode: 'resume',
-        interactive: false,
-        executor_backend: 'codex',
-        resume: {
-          command_preview: ['codex', ...codexArgs],
-          session_id: sessionId,
-          output: normalizeCodexOutput(resumeResult.stdout, resumeResult.stderr),
-          exit_code: resumeResult.exitCode,
-        },
-      },
-    };
-  }
-
+  const codexArgs = ['resume', sessionId];
   if (isInteractiveShell()) {
-    const resumeResult = runHermesResume(sessionId, {
+    const resumeResult = runCodexCommand(codexArgs, {
       inheritStdio: true,
     });
 
-    assertHermesSuccess(
+    assertCodexSuccess(
       resumeResult.exitCode,
-      'Hermes resume failed inside OPL Product Entry.',
+      'Codex resume failed inside OPL Product Entry.',
       {
         session_id: sessionId,
       },
@@ -135,11 +79,10 @@ export function runProductEntryResume(
     };
   }
 
-  const resumeResult = runHermesResume(sessionId);
-
-  assertHermesSuccess(
+  const resumeResult = runCodexCommand(codexArgs);
+  assertCodexSuccess(
     resumeResult.exitCode,
-    'Hermes resume failed inside OPL Product Entry.',
+    'Codex resume failed inside OPL Product Entry.',
     {
       session_id: sessionId,
       stdout: resumeResult.stdout,
@@ -158,11 +101,11 @@ export function runProductEntryResume(
       entry_surface: 'opl_local_product_entry_shell',
       mode: 'resume',
       interactive: false,
-      executor_backend: 'hermes',
+      executor_backend: 'codex',
       resume: {
-        command_preview: buildHermesCliPreview(['--resume', sessionId]),
+        command_preview: ['codex', ...codexArgs],
         session_id: sessionId,
-        output: normalizeHermesOutput(resumeResult.stdout, resumeResult.stderr),
+        output: normalizeCodexOutput(resumeResult.stdout, resumeResult.stderr),
         exit_code: resumeResult.exitCode,
       },
     },

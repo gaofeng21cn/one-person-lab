@@ -15,7 +15,7 @@ export type ProductEntryMode =
   | 'sessions'
   | 'logs';
 
-export type ProductEntryExecutor = 'codex' | 'hermes';
+export type ProductEntryExecutor = 'codex';
 
 export type ProductEntryCliInput = {
   dryRun: boolean;

@@ -70,7 +70,7 @@ export function buildHandoffBundle(
         binding_id: workspaceLocator.binding?.binding_id ?? null,
       },
       runtime_session_contract: {
-        runtime_substrate: 'external_hermes_kernel',
+        runtime_substrate: 'codex_default_executor_with_provider_backed_family_runtime',
         source_surface: 'opl_local_product_entry_shell',
         session_id: options.sessionId ?? null,
         resume_mode: options.sessionId ? 'session_id_ready' : 'session_id_pending',

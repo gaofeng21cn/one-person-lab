@@ -16,7 +16,6 @@ export {
 export {
   buildRetiredCommandError,
   buildUsageError,
-  hasExplicitHermesExecutor,
   parseExecutorValue,
   printJson,
   runCodexPassthroughHandled,

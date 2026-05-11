@@ -6,31 +6,7 @@ import type {
   FrameworkContracts,
   ResolutionResult,
 } from '../types.ts';
-import type {
-  ProductEntryCliInput,
-  ProductEntryExecutor,
-  ProductEntryMode,
-} from './types.ts';
-
-export function appendHermesOptions(
-  args: string[],
-  input: Pick<ProductEntryCliInput, 'model' | 'provider' | 'skills'>,
-) {
-  if (input.model) {
-    args.push('--model', input.model);
-  }
-
-  if (input.provider) {
-    args.push('--provider', input.provider);
-  }
-
-  if (input.skills.length > 0) {
-    args.push('--skills', input.skills.join(','));
-  }
-
-  args.push('--source', 'opl-product-entry');
-  return args;
-}
+import type { ProductEntryCliInput, ProductEntryMode } from './types.ts';
 
 export function buildDomainAgentSelectionInput(
   input: ProductEntryCliInput,
@@ -51,7 +27,7 @@ export function buildContractsContext(contracts: FrameworkContracts) {
   };
 }
 
-export function resolveProductEntryExecutor(input: ProductEntryCliInput): ProductEntryExecutor {
+export function resolveProductEntryExecutor(input: ProductEntryCliInput) {
   return input.executor ?? 'codex';
 }
 
@@ -120,9 +96,7 @@ export function buildPromptHeader(
   lines.push(
     '- If a domain-agent entry is selected, continue within that domain boundary. If it is unknown or ambiguous, help the user clarify without inventing admission or handoff readiness.',
   );
-  lines.push(
-    '- Runtime substrate follows the requested executor; Hermes is used only when explicitly selected.',
-  );
+  lines.push('- Runtime substrate follows the Codex-default OPL Product Entry path.');
   lines.push('');
   lines.push('User request:');
   lines.push(input.goal);
@@ -137,20 +111,6 @@ export function buildPromptHeader(
   }
 
   return lines.join('\n');
-}
-
-export function buildAskArgs(
-  input: ProductEntryCliInput,
-  prompt: string,
-) {
-  return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
-}
-
-export function buildChatSeedArgs(
-  input: ProductEntryCliInput,
-  prompt: string,
-) {
-  return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
 }
 
 export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
@@ -176,8 +136,7 @@ export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
     'Hard boundary rules:',
     '- OPL is a Codex-first, stage-led family framework shell. It is not the runtime truth owner of any domain.',
     '- Keep work inside admitted domain boundaries and family boundaries. Do not invent admission or hosted readiness.',
-    '- Codex is the default runtime substrate for this product-entry session.',
-    '- Hermes remains available only when explicitly requested.',
+    '- Codex CLI is the default concrete executor for this product-entry session.',
     '',
     'Task:',
     '- Greet briefly and keep momentum.',
