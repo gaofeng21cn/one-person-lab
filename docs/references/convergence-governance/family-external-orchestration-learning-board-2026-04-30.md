@@ -9,6 +9,7 @@
 - `MAS` intake：`med-autoscience/docs/program/external_agent_orchestration_learning_intake_2026_04_30.md`
 - `openai/symphony@58cf97d`
 - `msitarzewski/agency-agents@783f6a7`
+- `Biajin-PKU/research-harness@006ab44`
 - `MAS` 后续落地面：work-unit attempt registry、Medical Quality OS、incident loop、product-entry projection
 
 ## Family Learning Logic
@@ -29,6 +30,7 @@
 - `adopt_domain_template`：保留给 domain repo 自己医学化、基金化或视觉交付化落地，例如 MAS evidence ledger、MAG fundability gate、RCA render/export proof。
 - `watch_only`：继续观察但不进入实现，例如外部 runtime 的新授权模型或 hosted worker isolation 机制。
 - `reject`：不吸收，例如 Linear 必需入口、Symphony scheduler owner、NEXUS/generic persona library、marketing lifecycle。
+- `reject_as_dependency`：不作为依赖、runner、database、web 或 hosted surface 引入；只允许保留 provenance 和 contract-language 学习记录。
 - `saturated`：已有 `OPL` / `MAS` / `MAG` / `RCA` 等价合同，后续只追加 provenance，不再重复实现。
 
 ## Current Source Classifications
@@ -36,6 +38,7 @@
 | Source | Classification | OPL family use | Boundary |
 | --- | --- | --- | --- |
 | `Ageniti/Ageniti@db92c0a` | `adopt_family_contract` | 借鉴 action contract 到 CLI / HTTP / MCP / OpenAI / React 多 surface 派生、side-effect / idempotency / confirmation / visibility 元数据、统一 envelope 与 streaming event 语义，用于补强 OPL family 对 domain capability surface 的 machine-readable 描述。 | 不把 Ageniti 作为默认 runtime、scheduler、memory、hosted execution 或 domain authority；`@ageniti/core` 仍处 `0.x` 早期阶段，只允许作为 optional prototype / domain template 观察，不进入 OPL core dependency。 |
+| `Biajin-PKU/research-harness@006ab44` | `limited adopt_family_contract + adopt_domain_template + reject_as_dependency` | OPL 只吸收 domain-neutral 语言：stage boundary gate、provenance receipt、primitive/action registry、typed artifact refs、resume/checkpoint 和 human review checkpoint，映射到已有 stage control plane、action catalog、attempt ledger、handoff 与 operator projection。 | MAS 可把 literature review、claim/evidence、citation/number verification、adversarial review 等作为 domain template 参考；MAG/RCA 只借 stage-gated artifact proof 形式。拒绝引入 RH 代码、Python package、SQLite `pool.db` schema、auto-runner、HTTP API、web dashboard 或 MCP server 作为 OPL 依赖；PolyForm Noncommercial license 进一步要求只保留学习记录，不复制实现。 |
 
 ## Adopted Family Defaults
 

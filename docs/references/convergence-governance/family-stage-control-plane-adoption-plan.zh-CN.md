@@ -70,6 +70,10 @@ Date: `2026-05-10`
 
 新增的 `family-stage-control-plane` companion 是窄 schema，不是完整流程引擎。它只声明 stage descriptor、skill/prompt/evaluation refs、handoff refs 与 authority boundary，并通过 manifest discovery 暴露。`opl stages list|inspect` 只做只读发现与 parity，不执行 stage，也不给 domain quality verdict。
 
+## Research Harness 学习记录
+
+`Biajin-PKU/research-harness@006ab44` 的有用部分是把研究工作表达为 typed primitive registry、stage boundary gate、provenance trail、typed artifact 和 human checkpoint；这些概念只进入 OPL 的 shared contract vocabulary。OPL 可吸收 primitive/action registry、provenance receipt、gate descriptor、checkpoint/resume 和 artifact ref 语言；MAS 可参考其文献、claim/evidence、number verification 与 adversarial review 模板；OPL 不吸收 RH 的研究判断、auto-runner、SQLite `pool.db`、HTTP API、web dashboard、MCP server 或 Python package 依赖。
+
 ## MAS 吸收路径
 
 `MAS` 是这个方向的参考实现候选，但它不能按 RCA / MAG 的方式直接新起一套 stage sequence。MAS 内部已经有 stage / route / progress / gate / delivery 等多层阶段语义，本计划不要求先修改 MAS 原有 stage，也不要求用下面的抽象名称替换现有 `scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` 等 route contract。
