@@ -128,8 +128,9 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 
 当前完成度：
 
-- 已完成：MAS/MAG/RCA 都已暴露 domain-owned memory descriptor locator。
-- 已完成：OPL 可索引 memory descriptor，并可投影 domain-owned migration plan、seed corpus 和 writeback receipt locator。
+- 已完成：OPL 标准 `family_domain_memory_ref` / `family_domain_memory_writeback` 合同、stage `knowledge_refs` 和 `opl domain-memory list|inspect|migration-plan` 读模型已落地。
+- 已完成：MAS 已通过标准 `domain_memory_descriptor` 暴露 `mas_publication_route_memory`，当前 OPL live binding 可解析为 1 个 resolved descriptor。
+- 部分完成：MAG/RCA 已在各自 manifest / adoption contract 中暴露 domain-specific `domain_memory_descriptor_locator`，但尚未映射成 OPL 当前 `family_domain_memory_ref.v1` 标准 descriptor；因此 `opl domain-memory list` 当前会把 MAG/RCA 计为 missing descriptor，而不是 resolved memory。
 - 部分完成：MAS/MAG/RCA 的政策文档已定义哪些经验适合进入 memory，哪些必须保留为强 contract。
 - 未完成：真实 reusable lessons 从历史 workspace/runtime 迁移到 domain-owned memory store 的 apply receipt。
 - 未完成：stage entry 小集合 retrieval、typed closeout writeback apply、App/workbench consumed memory / rejected writeback 展示，以及真实/controlled stage soak。
