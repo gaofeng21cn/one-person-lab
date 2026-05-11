@@ -402,6 +402,145 @@ test('standard domain-agent skeleton inspection requires repo-source dirs and ar
   }
 });
 
+test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-aliases-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = {
+    ...(fixtures.medautoscience as JsonRecord),
+    opl_domain_agent_skeleton_mapping: {
+      surface_kind: 'mas_opl_domain_agent_skeleton_mapping',
+      version: 'mas-opl-domain-agent-skeleton-mapping.v1',
+      target_domain_id: 'med-autoscience',
+      mapping_mode: 'contract_only_no_physical_artifact_move',
+      repo_tracks_real_workspace_artifacts: false,
+      skeleton: {
+        'agent/stages': ['templates/agent_entry_modes.yaml'],
+        'agent/prompts': ['MAS app skill command contracts'],
+        'agent/skills': ['medautosci sidecar export --format json'],
+        'agent/knowledge': ['stage_knowledge_packet'],
+        'agent/quality_gates': ['publication_eval/latest.json'],
+        'contracts/runtime/sidecar': ['mas_family_sidecar_export'],
+        'contracts/runtime/projection_builders': ['product-entry manifest provider-ready contract'],
+        'contracts/runtime/lifecycle_adapters': ['workspace_runtime_artifact_root_locator'],
+      },
+    },
+    workspace_runtime_artifact_root_locator: {
+      surface_kind: 'workspace_runtime_artifact_root_locator',
+      repo_root_tracks_real_artifacts: false,
+      locators: {
+        study_artifact_root: 'studies/<study_id>/artifacts',
+        dispatch_receipts: 'artifacts/runtime/opl_family_sidecar/dispatch_receipts',
+      },
+    },
+  };
+  const magManifest = {
+    ...(fixtures.medautogrant.product_entry_manifest as JsonRecord),
+    domain_agent_skeleton_mapping: {
+      surface_kind: 'standard_domain_agent_skeleton_mapping',
+      skeleton_id: 'mag.standard_domain_agent_skeleton.v1',
+      repo_source_boundary: {
+        agent: { source_refs: ['src/med_autogrant/domain_entry.py'] },
+        contracts: { source_refs: ['contracts/runtime-program/current-program.json'] },
+        runtime: { source_refs: ['src/med_autogrant/product_entry_parts/sidecar.py'] },
+        docs: { source_refs: ['docs/status.md'] },
+      },
+      artifact_locator_ref: '/product_entry_manifest/artifact_locator_contract',
+      controlled_stage_attempt_ref: '/product_entry_manifest/controlled_stage_attempt_projection',
+      artifact_locator_contract: {
+        surface_kind: 'domain_artifact_locator_contract',
+        locator_model: 'workspace_runtime_artifact_root_refs_only',
+        repo_tracks_artifact_blobs: false,
+      },
+    },
+  };
+  const rcaManifest = {
+    ...(fixtures.redcube as JsonRecord),
+    domain_agent_skeleton_adapter: {
+      surface_kind: 'domain_agent_skeleton_adapter',
+      adapter_id: 'rca.domain-agent.skeleton.adapter.v1',
+      repo_source_boundary: {
+        allowed_roots: [
+          { boundary_id: 'agent', repo_refs: ['packages/redcube-gateway/src/actions/family-action-catalog.ts'] },
+          { boundary_id: 'contracts', repo_refs: ['contracts/runtime-program/current-program.json'] },
+          { boundary_id: 'runtime', repo_refs: ['packages/redcube-gateway/src/actions/product-sidecar.ts'] },
+          { boundary_id: 'docs', repo_refs: ['docs/status.md'] },
+        ],
+        repo_tracks_runtime_artifact_blobs: false,
+        repo_tracks_receipt_instances: false,
+      },
+      artifact_locator_contract: {
+        surface_kind: 'artifact_locator_contract',
+        locator_model: 'workspace_runtime_artifact_root_refs_only',
+        repo_source_boundary: {
+          repo_tracks_visual_or_export_artifact_blobs: false,
+        },
+      },
+    },
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand({ product_entry_manifest: magManifest }),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(rcaManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const list = runCli(['agents', 'list'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const mas = runCli(['agents', 'inspect', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const mag = runCli(['agents', 'inspect', '--domain', 'mag'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const rca = runCli(['agents', 'inspect', '--domain', 'rca'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(list.family_agents.summary.aligned_count, 3);
+    assert.equal(list.family_agents.summary.missing_count, 0);
+    assert.equal(mas.family_agent.skeleton_status, 'aligned');
+    assert.equal(mas.family_agent.skeleton_source_field, 'opl_domain_agent_skeleton_mapping');
+    assert.equal(mag.family_agent.skeleton_source_field, 'domain_agent_skeleton_mapping');
+    assert.equal(rca.family_agent.skeleton_source_field, 'domain_agent_skeleton_adapter');
+    assert.deepEqual(rca.family_agent.declared_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
+    assert.equal(rca.family_agent.artifact_boundary.artifact_roots_are_locators, true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family stage control plane resolves real MAS RCA MAG manifests when local checkouts are present', { skip: process.env.OPL_REAL_STAGE_SMOKE !== '1' }, () => {
   const roots = {
     mas: process.env.OPL_REAL_MAS_REPO ?? '/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-stage-control-deep-adapter',

@@ -788,8 +788,44 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     : null;
   const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
   const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
-  const standardDomainAgentSkeleton = isRecord(manifest.standard_domain_agent_skeleton)
-    ? manifest.standard_domain_agent_skeleton
+  const skeletonCandidateFields = [
+    'standard_domain_agent_skeleton',
+    'opl_domain_agent_skeleton_mapping',
+    'domain_agent_skeleton_mapping',
+    'domain_agent_skeleton_adapter',
+  ];
+  const directSkeletonSourceField =
+    skeletonCandidateFields.find((field) => isRecord(manifest[field])) ?? null;
+  const providerReadyContract = isRecord(manifest.opl_provider_ready_contract)
+    ? manifest.opl_provider_ready_contract
+    : null;
+  const standardDomainAgentSkeletonSourceField =
+    directSkeletonSourceField
+    ?? (isRecord(providerReadyContract?.domain_agent_skeleton_mapping)
+      ? 'opl_provider_ready_contract.domain_agent_skeleton_mapping'
+      : null);
+  const rawStandardDomainAgentSkeleton =
+    directSkeletonSourceField
+      ? manifest[directSkeletonSourceField] as JsonRecord
+      : standardDomainAgentSkeletonSourceField
+        ? providerReadyContract?.domain_agent_skeleton_mapping as JsonRecord
+        : null;
+  const standardDomainAgentSkeleton = rawStandardDomainAgentSkeleton
+    ? {
+        ...rawStandardDomainAgentSkeleton,
+        ...(isRecord(manifest.artifact_locator_contract)
+          ? { artifact_locator_contract: manifest.artifact_locator_contract }
+          : {}),
+        ...(isRecord(manifest.workspace_runtime_artifact_root_locator)
+          ? { workspace_runtime_artifact_root_locator: manifest.workspace_runtime_artifact_root_locator }
+          : {}),
+        ...(isRecord(providerReadyContract?.workspace_runtime_artifact_root_locator)
+          ? { workspace_runtime_artifact_root_locator: providerReadyContract?.workspace_runtime_artifact_root_locator }
+          : {}),
+        ...(isRecord(manifest.controlled_stage_attempt_projection)
+          ? { controlled_stage_attempt_projection: manifest.controlled_stage_attempt_projection }
+          : {}),
+      }
     : null;
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
@@ -936,6 +972,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     family_action_catalog: familyActionCatalog,
     family_stage_control_plane: familyStageControlPlane,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
+    standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
     runtime_control: runtimeControl,

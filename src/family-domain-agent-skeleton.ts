@@ -6,6 +6,12 @@ import type { GatewayContracts } from './types.ts';
 type JsonRecord = Record<string, unknown>;
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
+const ACCEPTED_SKELETON_SURFACE_KINDS = new Set([
+  'standard_domain_agent_skeleton',
+  'standard_domain_agent_skeleton_mapping',
+  'mas_opl_domain_agent_skeleton_mapping',
+  'domain_agent_skeleton_adapter',
+]);
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -22,6 +28,118 @@ function readStringList(value: unknown) {
   return value
     .map((entry) => optionalString(entry))
     .filter((entry): entry is string => Boolean(entry));
+}
+
+function truthyFalse(value: unknown) {
+  return value === false;
+}
+
+function readRepoSourceDirs(boundary: JsonRecord, skeleton: JsonRecord) {
+  const requiredDirs = readStringList(boundary.required_dirs);
+  if (requiredDirs.length > 0) {
+    return requiredDirs;
+  }
+
+  const magStyleDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => isRecord(boundary[dir]));
+  if (magStyleDirs.length > 0) {
+    return magStyleDirs;
+  }
+
+  const allowedRoots = readStringList(boundary.allowed_roots);
+  if (allowedRoots.length > 0) {
+    return allowedRoots;
+  }
+
+  if (Array.isArray(boundary.allowed_roots)) {
+    return boundary.allowed_roots
+      .map((root) => isRecord(root) ? optionalString(root.boundary_id) : optionalString(root))
+      .filter((entry): entry is string => Boolean(entry));
+  }
+
+  if (isRecord(skeleton.skeleton)) {
+    const dirs = new Set<string>();
+    for (const key of Object.keys(skeleton.skeleton)) {
+      const [dir] = key.split('/');
+      if (dir === 'agent') {
+        dirs.add(dir);
+      } else if (key.startsWith('contracts/')) {
+        dirs.add('contracts');
+        if (key.startsWith('contracts/runtime/')) {
+          dirs.add('runtime');
+        }
+      } else if (key.startsWith('runtime/')) {
+        dirs.add('runtime');
+      }
+    }
+    if (dirs.size > 0) {
+      dirs.add('docs');
+      return REQUIRED_REPO_SOURCE_DIRS.filter((dir) => dirs.has(dir));
+    }
+  }
+
+  return [];
+}
+
+function normalizeContractRefs(value: JsonRecord) {
+  const contracts = isRecord(value.contracts) ? value.contracts : {};
+  const runtimeDeclarations = isRecord(value.runtime_declarations)
+    ? value.runtime_declarations
+    : isRecord(value.runtime_declaration)
+      ? value.runtime_declaration
+      : {};
+  return {
+    descriptor_refs: [
+      ...readStringList(contracts.descriptor_refs),
+      ...readStringList(value.source_refs).map((ref) => ref),
+      ...readStringList(value.artifact_locator_ref),
+      ...readStringList(value.controlled_stage_attempt_ref),
+    ],
+    sidecar_refs: [
+      ...readStringList(contracts.sidecar_refs),
+      ...readStringList(runtimeDeclarations.sidecar_ref),
+      ...readStringList(runtimeDeclarations.sidecar_adapter_ref),
+    ],
+    quality_gate_refs: readStringList(contracts.quality_gate_refs),
+  };
+}
+
+function inferArtifactBoundary(value: JsonRecord, artifactBoundary: JsonRecord, repoSourceBoundary: JsonRecord) {
+  const artifactLocator = isRecord(value.artifact_locator_contract)
+    ? value.artifact_locator_contract
+    : isRecord(value.workspace_runtime_artifact_root_locator)
+      ? value.workspace_runtime_artifact_root_locator
+      : {};
+  const locatorRepoBoundary = isRecord(artifactLocator.repo_source_boundary)
+    ? artifactLocator.repo_source_boundary
+    : {};
+  const artifactRootsAreLocators =
+    artifactBoundary.artifact_roots_are_locators !== false
+    && optionalString(artifactLocator.locator_model) !== 'repo_artifact_blobs'
+    && artifactLocator.repo_tracks_real_artifacts !== true;
+  const repoContainsRealArtifacts =
+    artifactBoundary.repo_contains_real_artifacts === true
+    || value.repo_tracks_real_workspace_artifacts === true
+    || repoSourceBoundary.repo_tracks_runtime_artifact_blobs === true
+    || repoSourceBoundary.repo_tracks_receipt_instances === true
+    || artifactLocator.repo_tracks_artifact_blobs === true
+    || artifactLocator.repo_tracks_real_artifacts === true
+    || locatorRepoBoundary.repo_tracks_visual_or_export_artifact_blobs === true;
+
+  return {
+    repo_contains_real_artifacts: repoContainsRealArtifacts,
+    artifact_roots_are_locators: artifactRootsAreLocators,
+    workspace_artifact_locator_refs: [
+      ...readStringList(artifactBoundary.workspace_artifact_locator_refs),
+      ...readStringList(value.artifact_locator_ref),
+      ...readStringList(value.workspace_artifact_locator_ref),
+      ...readStringList(value.workspace_runtime_artifact_root_locator_ref),
+    ],
+    runtime_artifact_locator_refs: [
+      ...readStringList(artifactBoundary.runtime_artifact_locator_refs),
+      ...readStringList(value.runtime_artifact_locator_ref),
+      ...readStringList(value.controlled_stage_attempt_ref),
+    ],
+  };
 }
 
 function normalizeDomainSelection(value: string) {
@@ -46,31 +164,27 @@ export function normalizeStandardDomainAgentSkeleton(value: unknown) {
     return null;
   }
   const surfaceKind = optionalString(value.surface_kind);
-  if (surfaceKind !== 'standard_domain_agent_skeleton') {
-    throw new Error('standard_domain_agent_skeleton.surface_kind must be standard_domain_agent_skeleton.');
+  if (!surfaceKind || !ACCEPTED_SKELETON_SURFACE_KINDS.has(surfaceKind)) {
+    throw new Error('standard_domain_agent_skeleton.surface_kind must be a supported standard skeleton adapter.');
   }
   const repoSourceBoundary = isRecord(value.repo_source_boundary) ? value.repo_source_boundary : {};
   const artifactBoundary = isRecord(value.artifact_boundary) ? value.artifact_boundary : {};
+  const normalizedArtifactBoundary = inferArtifactBoundary(value, artifactBoundary, repoSourceBoundary);
   return {
     surface_kind: 'standard_domain_agent_skeleton',
     version: optionalString(value.version) ?? 'standard-domain-agent-skeleton.v1',
-    agent_id: optionalString(value.agent_id),
+    source_surface_kind: surfaceKind,
+    agent_id:
+      optionalString(value.agent_id)
+      ?? optionalString(value.skeleton_id)
+      ?? optionalString(value.adapter_id),
     repo_source_boundary: {
-      required_dirs: readStringList(repoSourceBoundary.required_dirs),
+      required_dirs: readRepoSourceDirs(repoSourceBoundary, value),
       optional_dirs: readStringList(repoSourceBoundary.optional_dirs),
       forbidden_dirs: readStringList(repoSourceBoundary.forbidden_dirs),
     },
-    contracts: {
-      descriptor_refs: readStringList((isRecord(value.contracts) ? value.contracts : {}).descriptor_refs),
-      sidecar_refs: readStringList((isRecord(value.contracts) ? value.contracts : {}).sidecar_refs),
-      quality_gate_refs: readStringList((isRecord(value.contracts) ? value.contracts : {}).quality_gate_refs),
-    },
-    artifact_boundary: {
-      repo_contains_real_artifacts: artifactBoundary.repo_contains_real_artifacts === true,
-      artifact_roots_are_locators: artifactBoundary.artifact_roots_are_locators !== false,
-      workspace_artifact_locator_refs: readStringList(artifactBoundary.workspace_artifact_locator_refs),
-      runtime_artifact_locator_refs: readStringList(artifactBoundary.runtime_artifact_locator_refs),
-    },
+    contracts: normalizeContractRefs(value),
+    artifact_boundary: normalizedArtifactBoundary,
     authority_boundary: isRecord(value.authority_boundary)
       ? value.authority_boundary
       : {
@@ -97,7 +211,7 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
       issues.push(`missing_repo_source_dir:${dir}`);
     }
   }
-  if (repoSourceDirs.includes('artifacts') || skeleton?.repo_source_boundary.forbidden_dirs.includes('artifacts') === false) {
+  if (repoSourceDirs.includes('artifacts')) {
     issues.push('repo_source_skeleton_must_not_include_real_artifacts_dir');
   }
   if (skeleton?.artifact_boundary.repo_contains_real_artifacts) {
@@ -123,6 +237,8 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     target_domain_id: entry.manifest?.target_domain_id ?? null,
     manifest_status: entry.status,
     skeleton_status: skeletonStatus,
+    skeleton_source_field: skeleton ? entry.manifest?.standard_domain_agent_skeleton_source_field ?? null : null,
+    skeleton_source_surface_kind: skeleton?.source_surface_kind ?? null,
     agent_id:
       skeleton?.agent_id
       ?? entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id
