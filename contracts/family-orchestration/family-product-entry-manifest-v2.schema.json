@@ -1274,7 +1274,7 @@
         "supported_protocols": [
           "MCP"
         ],
-        "internal_surface": "gateway"
+        "internal_surface": "RedCubeDomainEntry"
       },
       "workspace_locator": {
         "workspace_root": "/workspace/redcube-ai"
@@ -1561,7 +1561,7 @@
           "current_source": "manifest",
           "entry_mode": "manifest_projection",
           "direct_surface_kind": "product_entry",
-          "federated_surface_kind": "federated_product_entry",
+          "opl_hosted_surface_kind": "opl_hosted_product_entry",
           "session_surface_kind": "product_entry_session"
         }
       },

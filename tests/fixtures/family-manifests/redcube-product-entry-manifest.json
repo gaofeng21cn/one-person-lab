@@ -10,7 +10,7 @@
     "supported_protocols": [
       "MCP"
     ],
-    "internal_surface": "gateway"
+    "internal_surface": "RedCubeDomainEntry"
   },
   "workspace_locator": {
     "workspace_surface_kind": "redcube_workspace",

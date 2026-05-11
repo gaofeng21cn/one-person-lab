@@ -51,7 +51,7 @@ test('product entry companion validators normalize shared family payloads', () =
     formal_entry: {
       default: 'CLI',
       supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
+      internal_surface: 'RedCubeDomainEntry',
     },
     workspace_locator: {
       workspace_surface_kind: 'redcube_workspace',
@@ -315,7 +315,7 @@ test('product entry companion validators fail closed on missing required shared 
     formal_entry: {
       default: 'CLI',
       supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
+      internal_surface: 'RedCubeDomainEntry',
     },
     workspace_locator: {
       workspace_surface_kind: 'redcube_workspace',
