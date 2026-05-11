@@ -43,6 +43,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
 - [Documentation Portfolio](./docs_portfolio_consolidation.md)
+- [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
 - [OPL Current Development Lines](./active/current-development-lines.md)
 - [OPL Development Document Portfolio](./active/development-document-portfolio.md)
 - [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
@@ -56,6 +57,10 @@ For OPL framework development after the 2026-05-11 architecture reset, use
 [OPL Current Development Lines](./active/current-development-lines.md),
 [OPL Development Document Portfolio](./active/development-document-portfolio.md), and
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
+The family content-level consolidation entry records how the same rule applies
+across `OPL`, `MAS`, `MAG`, `RCA`, and `MDS`: keep OPL as framework owner,
+keep domain truth in domain repos, and classify old material by paragraph-level
+content before moving or archiving files.
 The first gives the framework-first execution order. The portfolio classifies old development content as merge, retain, downgrade, retire, or archive. The roadmap owns the current TypeScript control-plane decision,
 Temporal provider plan, domain-agent boundary, and retirement discipline for
 Hermes-first / Gateway / legacy local-runtime surfaces.
@@ -155,5 +160,5 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - Keep history as tracked provenance and tombstone material.
 - Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.
 - New or moved documents must follow [Documentation Portfolio](./docs_portfolio_consolidation.md) before they become long-lived surfaces.
-- Cross-repo docs governance follows the [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md): keep lifecycle roles equivalent across OPL, MAS, MAG, and RCA without forcing identical directory names.
+- Cross-repo docs governance follows the [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) and the [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md): keep lifecycle roles equivalent across OPL, MAS, MAG, RCA, and MDS without forcing identical directory names or treating whole old documents as active backlogs.
 - When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.
