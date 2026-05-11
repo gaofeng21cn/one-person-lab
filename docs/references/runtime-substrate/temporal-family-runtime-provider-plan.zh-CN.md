@@ -86,7 +86,8 @@ Provider 层不持有：
 - 已完成：`CodexStageActivity` 与 `DomainSidecarDispatchActivity` 作为 Temporal activity，记录 checkpoint / closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact 和 authority boundary。
 - 已完成：`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal` 进入同一 workflow signal surface。
 - 已完成：`StageAttemptQuery` 返回 attempt status、freshness、next owner、blocked reason、refs。
-- 待完成：真实 Codex CLI long-running activity runner、domain sidecar live dispatch、worker restart / replay proof、长期 worker residency 和生产 retry/dead-letter 运行证据。
+- 已完成：Codex activity runner 的 repo/test harness，覆盖 `dry_run`、`live_dry_run` 与 `codex_cli` process supervision、stdout summary、timeout、checkpoint heartbeat 和 typed closeout completion gate。
+- 待完成：真实长时 domain activity soak、domain sidecar live dispatch、worker restart / replay proof、长期 worker residency、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
 
 验收：
 
@@ -122,7 +123,7 @@ Provider 层不持有：
 
 ### P4. Visibility And Operator Console
 
-状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，可展示 provider run/activity/heartbeat、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影。仍待完成的是同一 stage attempt ledger 的过滤、操作、人类 gate 操作面和真实 domain soak。
+状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，可展示 provider run/activity/heartbeat、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影，并已通过白名单 bridge 支持 provider-level human gate / resume / dead-letter repair signal。仍待完成的是按 domain/stage/blocker/memory refs 的操作体验、真实 worker/domain 执行证明和真实 domain soak。
 
 交付：
 

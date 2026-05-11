@@ -15,10 +15,6 @@
   <img src="assets/branding/opl-workbench-overview.png" alt="OPL workbench overview" width="100%" />
 </p>
 
-<p align="center">
-  <img src="assets/branding/opl-architecture-plan.png" alt="OPL architecture and product plan" width="100%" />
-</p>
-
 ## Why One Person Lab
 
 Most agent frameworks are workflow systems: they break work into program nodes, tool calls, function inputs, and activity outputs. That model is useful for software-like automation, but it is a poor fit for high-value knowledge delivery, where the hard part is not calling the next tool. The hard part is knowing what stage the work is in, what evidence is sufficient, how quality should be judged, and what can safely move forward.
@@ -26,6 +22,10 @@ Most agent frameworks are workflow systems: they break work into program nodes, 
 One Person Lab uses expert stages as the core unit. A stage carries a goal, source material, quality criteria, handoff, receipt, and owner boundary. Inside each stage, a domain agent can read, reason, write, compute, review, and revise before returning a domain-owned verdict. OPL keeps the work visible, recoverable, auditable, and ready for the next stage.
 
 That is why OPL is designed for papers, grants, presentations, patents, awards, reviews, and other professional outcomes where a simple workflow graph is not enough.
+
+<p align="center">
+  <img src="assets/branding/opl-architecture-plan.png" alt="OPL architecture and product plan" width="100%" />
+</p>
 
 ## What New Users Can Do First
 
