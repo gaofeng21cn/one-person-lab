@@ -63,6 +63,7 @@ Current order:
 ## Planning Doc Placement
 
 - `docs/active/`: current execution maps and runtime/activation/shared-boundary support docs.
+- `docs/active/development-document-portfolio*`: development-document portfolio entry; read it before absorbing, retaining, downgrading, retiring, or archiving old development content.
 - `docs/references/runtime-substrate/`: runtime/provider/executor references, roadmap, Temporal provider support plan, and legacy migration material.
 - `docs/public/`: public roadmap and product direction.
 - `docs/specs/`: path-stable runtime/product-boundary specs.

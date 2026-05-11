@@ -1,5 +1,7 @@
 # MAS 顶层切换板
 
+Lifecycle note 2026-05-11: 本文保留为早期 `OPL -> MAS` 顶层切换和 Hermes-first/runtime cutover provenance。当前 MAS 迁移顺序以 OPL framework-first 主线为准：先完成 OPL stage-led framework，再迁移 MAS domain-agent skeleton / sidecar / receipt / artifact locator / authority refs，随后退役旧默认面，最后做真实 paper-line soak。当前 owner 入口是 `docs/active/development-document-portfolio.zh-CN.md`、`docs/active/current-development-lines.zh-CN.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`，以及 MAS 仓内的 `docs/program/current_development_lines.md` / `docs/program/program_portfolio_consolidation.md`。
+
 ## 1. 目的
 
 这份板面只负责冻结 `OPL -> Med Auto Science` 的顶层协作边界。

@@ -62,12 +62,13 @@
 
 当前 owner surfaces：
 
+- [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md)：旧 runtime / product-entry / migration 文档按内容吸收、保留、降级、退役或归档的当前入口。
 - [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)：完整 Codex-first、stage-led 智能体运行框架、domain-agent 边界、语言/runtime 取舍和旧面退役的总入口。
 - [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)：provider-backed 生产 substrate 候选的当前支撑计划。
 - [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)：Runtime Manager、provider readiness、native helper 和 state index 边界的当前支撑目标。
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)、[Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md) 和 [CrewAI 吸收说明](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)：只有当正文仍与 roadmap 和核心五件套一致时，才作为 active support 参考。
 
-保留给迁移回顾和 tombstone 语境的 superseded / legacy references：
+保留给迁移回顾和 tombstone 语境的 superseded / legacy references。复用任何内容前，先按 [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md) 判断内容块当前归属：
 
 - [Codex-default Host-Agent Runtime Contract](./runtime-substrate/host-agent-runtime-contract.md)：已被 stage-led framework 与 provider-backed runtime 口径取代。
 - [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)：dated migration checklist；当前规划以 framework roadmap 为准。
@@ -122,7 +123,7 @@
 
 ## 使用规则
 
-- 2026-05-11 架构收敛后，OPL framework 工作、执行语言决策、Temporal provider 落地、domain-agent 边界调整与旧面退役清理，统一先读 [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
+- 2026-05-11 架构收敛后，OPL framework 工作、执行语言决策、Temporal provider 落地、domain-agent 边界调整与旧面退役清理，统一先读 [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md) 与 [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
 - 讨论 MAS/MAG/RCA 的论文套路、基金策略、视觉模式、图表模板、prompt 经验或 reviewer 经验应放进自然语言 memory、强 contract 还是暂缓时，统一先读 [Family domain memory governance](./operating-governance/family-domain-memory-governance.zh-CN.md)。
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
 - `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。

@@ -1,5 +1,7 @@
 # OPL 产品入口与 Hermes Kernel Integration 决策
 
+Lifecycle note 2026-05-11: 本文保留为 Hermes-first product-entry 决策背景和 migration provenance。当前 OPL 目标已调整为 provider-backed、Codex-first、stage-led framework；Temporal 是 production provider candidate，Hermes-Agent 只作为 `hermes_legacy`、optional provider、显式 executor/proof lane 或历史评估材料。当前 owner 入口是 `docs/active/development-document-portfolio.zh-CN.md`、`docs/active/current-development-lines.zh-CN.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` 和 `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`。
+
 ## 1. 这份决策要解决什么问题
 
 当前 `OPL` 最大的产品形态缺口，不是某个单点功能缺失，而是：

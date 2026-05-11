@@ -63,6 +63,7 @@ OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的
 ## 规划文档落点
 
 - `docs/active/`：当前执行地图、runtime/activation/shared-boundary 支撑文档。
+- `docs/active/development-document-portfolio*`：开发文档组合整理入口；旧开发文档按内容块吸收、保留、降级、退役或归档时先读这里。
 - `docs/references/runtime-substrate/`：runtime/provider/executor 参考、roadmap、Temporal provider 支撑计划、legacy migration material。
 - `docs/public/`：面向用户和外部读者的公开路线图与产品方向。
 - `docs/specs/`：仍稳定保留的 runtime/product-boundary 规格。

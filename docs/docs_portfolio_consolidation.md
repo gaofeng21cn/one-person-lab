@@ -27,7 +27,7 @@ The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governan
 1. `README.md` / `README.zh-CN.md`
 2. `docs/README.md` / `docs/README.zh-CN.md`
 3. Core five: `project.md`, `status.md`, `architecture.md`, `invariants.md`, `decisions.md`
-4. Active current docs: `docs/active/`
+4. Active current docs: `docs/active/`, especially `current-development-lines*` and `development-document-portfolio*`
 5. Current public narrative: `docs/public/`
 6. Active specs: `docs/specs/`
 7. Support references: `docs/references/`
@@ -38,7 +38,7 @@ The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governan
 | Directory | Role | Active rule |
 | --- | --- | --- |
 | `docs/` root | Technical entry and current core truth | Only README, core five, docs governance, and first-level lifecycle directories. |
-| `docs/active/` | Current runtime, activation, shared-boundary, and onboarding support docs | Active support for current implementation; still human-readable, not machine authority. |
+| `docs/active/` | Current runtime, activation, shared-boundary, onboarding, current development lines, and development-document portfolio support docs | Active support for current implementation and content-level development-document disposition; still human-readable, not machine authority. |
 | `docs/public/` | Public product direction after install/start entry | Bilingual user-facing narrative, roadmap, task map, and operating model. |
 | `docs/specs/` | Active runtime / product-boundary specs | Only specs that still define current behavior or current target boundary. |
 | `docs/references/current-support/` | Current operational support references | Setup, GUI, release, quality, and install references. |
@@ -82,7 +82,7 @@ current OPL owner split is:
 | Root README | `README.md`, `README.zh-CN.md` | User install/start entry and product-family overview | Technical details should point to docs index and core five; stale public links must be corrected immediately. |
 | Core five | `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md` | Active truth for role, boundary, state, hard constraints, and decisions | Reference docs stay subordinate to these files. |
 | Docs governance | `docs/docs_portfolio_consolidation.md` | Current documentation lifecycle owner | New long-lived docs must be admitted through this lifecycle map. |
-| `docs/active/` | `README*`, public surface index, domain onboarding, runtime naming, shared foundation/runtime/domain contracts | Active human-readable support for current runtime, activation, onboarding, and shared-boundary language | Gateway/federation/frontdoor material is referenced only as history or migration background. |
+| `docs/active/` | `README*`, current development lines, development-document portfolio, public surface index, domain onboarding, runtime naming, shared foundation/runtime/domain contracts | Active human-readable support for current runtime, activation, onboarding, shared-boundary language, and development-document disposition | Gateway/federation/frontdoor material is referenced only as history or migration background. |
 | `docs/public/` | `README*`, roadmap, task map, operating model, UHS narrative | Public product-direction support after the repository home | UHS remains a support narrative; implementation authority lives in active contracts, the core five, and machine-readable contracts. |
 | `docs/specs/` | `README*` plus retained path-stable design docs | Path-stable spec/reference shelf for current or recently superseded runtime/product-boundary designs | The two April 2026 specs are retained in place for link stability; their active owner is now the core five plus the stage-led framework roadmap. |
 | `docs/references/current-support/` | `README*`, GUI/WebUI/install/release/skill/test support references | Current operational support references | Support commands and deployment notes must stay subordinate to CLI/API/contracts/source truth. |
@@ -98,6 +98,8 @@ current OPL owner split is:
 | Document or group | Disposition | Current owner / next hop | Reason |
 | --- | --- | --- | --- |
 | `docs/project.md`, `docs/status.md`, `docs/architecture.md` | Keep as active truth | Core five | They already state Codex-first, stage-led OPL framework boundaries and domain-agent ownership. |
+| `docs/active/current-development-lines*` | Keep as active support | Active docs index plus stage-led framework roadmap | It defines the framework-first content-level execution order. |
+| `docs/active/development-document-portfolio*` | Keep as active support | Active docs index plus docs portfolio | It classifies old development content by current role: merge, retain, downgrade, retire, or archive. |
 | `docs/active/opl-public-surface-index*` | Keep active support | `docs/active/README*` and core five | It correctly tombstones gateway/federation/routed-action prose and points to current runtime/activation surfaces. |
 | `docs/active/opl-domain-onboarding-contract*` | Keep active support | Domain admission contract plus machine-readable OPL framework contracts | Admission remains active, but historical execution-model companions must stay marked as history. |
 | `docs/active/shared-*` and `opl-runtime-naming-and-boundary-contract*` | Keep active support | Shared-boundary owner docs | These define shared language as human-readable support. |
