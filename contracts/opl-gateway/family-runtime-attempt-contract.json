@@ -40,6 +40,7 @@
   "required_ledger_fields": [
     "stage_attempt_id",
     "provider_kind",
+    "idempotency_key",
     "workflow_id",
     "domain_id",
     "stage_id",
@@ -55,6 +56,10 @@
     "task_id",
     "blocked_reason",
     "provider_receipt",
+    "provider_run",
+    "activity_events",
+    "route_impact",
+    "closeout_receipt_status",
     "authority_boundary"
   ],
   "required_projection_fields": [
@@ -91,6 +96,8 @@
       "stores": [
         "attempt_ledger",
         "signals",
+        "provider_run_receipts",
+        "activity_events",
         "typed_closeout_receipts"
       ]
     }
@@ -107,6 +114,7 @@
       "closeout_refs",
       "consumed_refs",
       "rejected_writes",
+      "route_impact",
       "next_owner",
       "domain_ready_verdict"
     ]
@@ -116,9 +124,13 @@
     "attempt_id",
     "stage_id",
     "status",
+    "provider_run",
+    "activity_events",
     "heartbeat",
     "consumed_refs",
     "closeout_refs",
+    "closeout_receipt_status",
+    "route_impact",
     "rejected_writes",
     "next_owner",
     "human_gate_refs",

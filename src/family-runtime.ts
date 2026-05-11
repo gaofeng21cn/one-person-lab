@@ -420,6 +420,10 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     taskId: row.task_id,
     status: 'running',
     incrementAttempt: true,
+    activityEvent: {
+      activity_kind: 'domain_sidecar_dispatch_activity',
+      activity_status: 'running',
+    },
   });
 
   const dispatchPath = writeDispatchTask(paths, { ...row, attempts: attempt });
@@ -464,6 +468,11 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
       taskId: row.task_id,
       status: 'completed',
       closeoutRefs,
+      activityEvent: {
+        activity_kind: 'domain_sidecar_dispatch_activity',
+        activity_status: 'completed',
+        closeout_refs: closeoutRefs ?? [],
+      },
     });
     return { task_id: row.task_id, status: 'succeeded', command_preview: command, output, stage_attempts: stageAttempts };
   }
@@ -500,6 +509,11 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     taskId: row.task_id,
     status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
     blockedReason: nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : errorMessage,
+    activityEvent: {
+      activity_kind: 'domain_sidecar_dispatch_activity',
+      activity_status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
+      error: errorMessage,
+    },
   });
   return {
     task_id: row.task_id,
@@ -674,14 +688,25 @@ export function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_create') {
-      const attempt = createStageAttempt(db, parsed.input);
+      if (parsed.input.start) {
+        throw new GatewayContractError(
+          'contract_shape_invalid',
+          'family-runtime attempt create --start requires the Temporal provider start path; this interface is registered but not executed by local ledger.',
+          {
+            provider_kind: parsed.input.providerKind ?? resolveFamilyRuntimeProviderKind(),
+          },
+        );
+      }
+      const result = createStageAttempt(db, parsed.input);
+      const { attempt } = result;
       insertEvent(db, {
         taskId: attempt.task_id,
         domainId: parsed.input.domainId,
-        eventType: 'stage_attempt_created',
+        eventType: result.idempotent_noop ? 'stage_attempt_idempotent_noop' : 'stage_attempt_created',
         source: 'opl-cli',
         payload: {
           stage_attempt_id: attempt.stage_attempt_id,
+          idempotency_key: attempt.idempotency_key,
           provider_kind: attempt.provider_kind,
           stage_id: attempt.stage_id,
           task_id: attempt.task_id,
@@ -691,7 +716,8 @@ export function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_stage_attempt: {
           surface_id: 'opl_family_runtime_stage_attempt',
-          created: true,
+          created: result.created,
+          idempotent_noop: result.idempotent_noop,
           attempt,
         },
       };
