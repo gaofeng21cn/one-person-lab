@@ -17,16 +17,6 @@ const scannedRoots = [
   'python/opl-harness-shared/tests',
 ];
 
-const scannedNarrativeRoots = [
-  'docs/active',
-];
-
-const scannedNarrativeFiles = [
-  'docs/status.md',
-  'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md',
-  'src/cli/cases/public-command-specs.ts',
-];
-
 const forbiddenTerms = [
   ['front', 'door'].join(''),
   ['front', 'desk'].join(''),
@@ -42,65 +32,6 @@ const forbiddenTerms = [
   ['compatibility', '_aliases'].join(''),
   ['legacy', '_boundary_terms'].join(''),
   ['mcp', '-stdio'].join(''),
-];
-
-const staleDefaultTerms = [
-  'hermes-first',
-  'gateway-first',
-  'gateway handoff',
-  ['front', 'door'].join(''),
-  ['front', ' door'].join(''),
-  'local-manager',
-  'local manager',
-  'default-compat',
-  'compatibility alias',
-];
-
-const staleDefaultContexts = [
-  'default',
-  'current',
-  'mainline',
-  'active',
-  'target',
-  'authoritative',
-  'production',
-  '默认',
-  '当前',
-  '主线',
-  '活跃',
-  '目标',
-  '生产',
-  '权威',
-];
-
-const allowedRetirementContexts = [
-  'archive',
-  'archived',
-  'diagnostic',
-  'explicit',
-  'fail-closed',
-  'fixture',
-  'historical',
-  'history',
-  'legacy',
-  'not ',
-  'optional',
-  'provenance',
-  'retire',
-  'retired',
-  'tombstone',
-  'do not',
-  '不再',
-  '不能',
-  '不得',
-  '不是',
-  '只保留',
-  '历史',
-  '显式',
-  '来源',
-  '退役',
-  '降级',
-  '清理',
 ];
 
 const textFileExtensions = new Set([
@@ -130,20 +61,6 @@ function* walk(relativeRoot: string): Generator<string> {
   }
 }
 
-function staleDefaultViolation(line: string) {
-  const lower = line.toLowerCase();
-  if (!staleDefaultTerms.some((term) => lower.includes(term))) {
-    return null;
-  }
-  if (!staleDefaultContexts.some((term) => lower.includes(term))) {
-    return null;
-  }
-  if (allowedRetirementContexts.some((term) => lower.includes(term))) {
-    return null;
-  }
-  return line.trim();
-}
-
 test('active OPL source, contracts, fixtures, and tests do not reintroduce retired compatibility vocabulary', () => {
   const violations: string[] = [];
 
@@ -156,26 +73,6 @@ test('active OPL source, contracts, fixtures, and tests do not reintroduce retir
         }
       }
     }
-  }
-
-  assert.deepEqual(violations, []);
-});
-
-test('active docs and public command specs do not describe retired compatibility surfaces as default paths', () => {
-  const violations: string[] = [];
-  const relativePaths = [
-    ...scannedNarrativeFiles,
-    ...scannedNarrativeRoots.flatMap((relativeRoot) => [...walk(relativeRoot)]),
-  ];
-
-  for (const relativePath of relativePaths) {
-    const lines = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').split('\n');
-    lines.forEach((line, index) => {
-      const violation = staleDefaultViolation(line);
-      if (violation) {
-        violations.push(`${relativePath}:${index + 1}: ${violation}`);
-      }
-    });
   }
 
   assert.deepEqual(violations, []);

@@ -165,9 +165,10 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
       },
       hermes: {
         ...normalizeComponent(components.hermes),
-        role: 'default_online_runtime_substrate',
-        required: true,
+        role: 'legacy_optional_provider_payload',
+        required: false,
         hermes: true,
+        provider_kind: 'hermes_legacy',
         gateway_launchagent_label: 'ai.hermes.gateway',
         online_runtime_ready_check: 'opl family-runtime doctor',
         payloads: [

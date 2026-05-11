@@ -13,7 +13,7 @@ test('opl session runtime descriptor helper 输出稳定的 canonical surfaces�
     runtime_id: 'runtime-core-main',
     summary: 'Runtime core descriptor for opl shell, Codex explicit use, and ACP bridge.',
     default_executor: 'codex',
-    fallback_executors: ['acp_executor', 'hermes_agent'],
+    fallback_executors: ['acp_executor'],
     interaction_surfaces: ['opl_shell', 'acp_shell', 'codex_explicit'],
     resources: {
       system: {
@@ -53,7 +53,7 @@ test('opl session runtime descriptor helper 输出稳定的 canonical surfaces�
     descriptor.interaction_surfaces.map((surface) => surface.surface_id),
     ['opl_shell', 'codex_explicit', 'acp_shell'],
   );
-  assert.deepEqual(descriptor.executor_policy.fallback_executors, ['acp_executor', 'hermes_agent']);
+  assert.deepEqual(descriptor.executor_policy.fallback_executors, ['acp_executor']);
   assert.deepEqual(descriptor.resources.engines.map((engine) => engine.id), ['engine-a', 'engine-z']);
 });
 
