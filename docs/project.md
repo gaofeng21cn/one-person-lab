@@ -2,8 +2,8 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是面向高价值知识工作的完整智能体运行框架。它以 Codex 优先、阶段推进为核心原则：大型任务按接近人类专家实施的阶段推进，`Codex CLI` 是阶段内默认的最小执行单元，OPL 负责让这些阶段可发现、可恢复、可审计、可投影，并以全自动交付为目标逐步补齐生产级运行能力。
-OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Codex-default session runtime`、显式 `domain-agent activation` 层、provider-backed family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
+对外公开时，`One Person Lab` (`OPL`) 同时包含三个清晰层次：`OPL Framework`、`One Person Lab App` 和 `Foundry Agents`。其中 `OPL Framework` 是面向高价值知识工作的完整智能体开发与运行框架。它以 Codex 优先、阶段推进为核心原则：大型任务按接近人类专家实施的阶段推进，`Codex CLI` 是阶段内默认的最小执行单元，OPL 负责让这些阶段可发现、可恢复、可审计、可投影，并以全自动交付为目标逐步补齐生产级运行能力。
+OPL Framework 可以使用外部运行时 provider，但框架边界由本仓持有：`Codex-default session runtime`、显式 `domain-agent activation` 层、provider-backed family runtime control plane，以及 One Person Lab App / 其他 shell 背后的 shared projection/contract 层。
 当前仓库跟踪：
 
 - `opl` / `opl exec` / `opl resume` 这组 CLI / shell 前门
@@ -16,27 +16,27 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的模块、机器可读合同与可发现索引
-- OPL-branded AionUI GUI/WebUI 使用的 runtime/release surface
+- One Person Lab App / OPL-branded AionUI GUI/WebUI 使用的 runtime/release surface
 
-图形界面外壳继续放在独立的界面仓中维护。
-各个领域仓继续作为独立 `domain agent` 仓，持有自己的 stage 语义、prompt、skill、领域逻辑、质量 gate、truth reducer、运行规则与交付物真相。
+One Person Lab App 继续放在独立的界面仓中维护，作为普通用户使用 OPL Framework 与 Foundry Agents 的工作台产品。
+各个领域仓继续作为独立 `domain agent` / `Foundry Agent` 仓，持有自己的 stage 语义、prompt、skill、领域逻辑、质量 gate、truth reducer、运行规则与交付物真相。
 
 ## 当前产品层级
 
 `OPL` 当前对外使用三层结构组织产品认知：
 
-1. 默认运行时层
-   `OPL` 以 `Codex-default session runtime` 组织 `system / engines / modules / agents / workspaces / sessions / progress / artifacts` 这组顶层产品资源。
-2. 显式激活与在线控制面
-   `OPL` 负责 family skill pack 注册与同步、typed family queue、shared dispatch、family-level shared surfaces，以及把调用映射到各个 admitted domain 仓的稳定 capability surface；family runtime provider 提供 24h durable stage-attempt substrate。
-3. 可选外壳与投影层
-   GUI shell 与其他兼容层继续围绕同一套 runtime/activation truth 做展示与投影，而不是重新定义默认交互合同。
+1. `OPL Framework`
+   开发者和技术操作者使用的智能体开发与运行框架。它持有 CLI、Codex-default session runtime、activation layer、stage control plane、typed family queue、provider-backed runtime、shared contracts/indexes、模块发现、skill sync、恢复和审计 surface。
+2. `One Person Lab App`
+   普通用户使用的工作台产品。它消费 OPL Framework 的 runtime/activation truth，把通用工作和 Foundry Agents 呈现为可直接使用的桌面体验；它不持有 domain truth，也不复制 runtime/provider 实现。
+3. `Foundry Agents`
+   MAS/MAG/RCA 以及后续 Patent/Award/Thesis/Review 等基于 OPL Framework 开发的领域智能体。它们以 OPL-compatible package / repo 暴露 descriptor、skill、stage、quality gate、artifact locator 和 projection，可被 App 托管运行，也保留 direct Codex/app-skill 入口。
 
 其中 `OPL Runtime Manager` 位于默认运行时层与显式激活层之间。它是产品级管理/投影层，不是新的 domain runtime kernel：默认具体 executor 仍归 `Codex` 或 domain route；Temporal-backed provider 的目标职责是 durable workflow、activity retry/timeout、signal/query、history 与恢复；Hermes-Agent 在迁移期只保留 legacy/optional provider 或 executor/proof lane。`OPL Runtime Manager` 负责把 provider profile、typed family queue、domain task registration、诊断、恢复入口、可选 native helper 与高频状态索引统一投影进 `sessions / progress / artifacts / attention queue`。
 
 ## 项目目标
 
-- 把 `OPL` 建成完整的 Codex-first、stage-led 智能体运行框架，支撑高价值知识工作的全自动交付
+- 把 `OPL Framework` 建成完整的 Codex-first、stage-led 智能体开发与运行框架，支撑高价值知识工作的全自动交付
 - 让大型任务按接近人类专家的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口，并把每个阶段变成可恢复、可审计、可追踪的工作单元
 - 把 `Codex CLI` 固定为阶段内默认最小执行单元，同时允许 provider 层承担 durable orchestration、retry、human gate、query 和 history
 - 给 `opl`、`opl exec`、`opl resume`、直接 `Codex` 使用和外部壳提供稳定一致的 Codex-default session/runtime 合同
@@ -48,8 +48,8 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 - 把 domain app 以可同步的 skill pack 与稳定 contract 接入统一 activation layer
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
 - 维护 family-level shared modules、shared contracts 与 shared indexes
-- 让 OPL-branded AionUI GUI/WebUI 作为用户可见外壳，复用同一套 runtime/activation truth
-- 明确 `OPL` 与各个独立 `domain agent` 仓的边界
+- 让 One Person Lab App 作为用户可见工作台，复用同一套 runtime/activation truth
+- 明确 `OPL Framework`、One Person Lab App 与各个独立 `domain agent` / `Foundry Agent` 仓的边界
 - 保持公开文档、网关合同与已收录领域状态一致
 
 ## 作用边界
@@ -67,10 +67,10 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 - family runtime provider 缺失或未 ready 表示 Full OPL readiness degraded；本地 CLI/status/manifest 可以继续报告诊断，但完整在线能力未通过
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代各个领域仓的智能体逻辑
-- 外部界面仓负责 GUI 外壳；当前仓库只跟踪产品运行时与接口真相
+- 外部界面仓负责 One Person Lab App 外壳；当前仓库只跟踪 framework runtime、release distribution surface 与接口真相
 - `Med Auto Science`、`Med Auto Grant`、`RedCube AI` 等仓继续是独立 `domain agent`
 - 这些 `domain agent` 通过本地 CLI、程序/脚本与 repo-tracked contract 暴露稳定 capability surface；它们既可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
-- `MAS`、`MAG`、`RCA` 可以作为运行在 OPL family framework 上的 domain agents 被托管、唤醒和投影，但不是 OPL 内部模块；direct Codex app skill 调用仍是一等入口
+- `MAS`、`MAG`、`RCA` 可以作为运行在 OPL Framework 上的 Foundry Agents 被托管、唤醒和投影，但不是 OPL 内部模块；direct Codex app skill 调用仍是一等入口
 - `harness / controller` 继续作为各 domain 仓内部的边界层语言存在，但不再是顶层公开主语
 - `frontdoor`、gateway-first、federation-first、Hermes-first 和旧 Product API 计划只在 history、compatibility、diagnostic 或 superseded reference 语境中出现；active docs 不把这些路线写成当前产品入口或目标 topology
 
