@@ -15,7 +15,7 @@ export interface AcpSessionSeedView {
   entry_surface: string | null;
   entry_mode: string | null;
   session_id: string | null;
-  routing_status: string | null;
+  stage_selection_status: string | null;
   handoff_prompt_preview: string | null;
   task_acceptance: AcpTaskAcceptanceView | null;
 }

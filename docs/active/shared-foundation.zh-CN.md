@@ -2,9 +2,9 @@
 
 # 共享基础结构
 
-> 当前状态说明（`2026-04-25`）：本文是共享基础结构参考，早于当前公开主语收口。下文 `domain gateway / harness` 按内部兼容语言理解；当前公开文档应把 `MAS`、`MAG`、`RCA` 写成可由 OPL activation 或 Codex/app-skill direct entry 调用的独立 domain agents。
+> 当前状态说明（`2026-05-11`）：本文已经使用当前 OPL 活跃口径。下层 domain 执行语言按 `domain harness / controller` 理解；当前公开文档把 `MAS`、`MAG`、`RCA` 写成可由 OPL activation 或 Codex/app-skill direct entry 调用的独立 domain agents。
 
-`OPL` 之所以能把多个工作流纳入同一体系，不只是因为它们都能让 Agent 参与，而是因为它们通过 federation model 复用同一套基础层。
+`OPL` 之所以能把多个工作流纳入同一体系，不只是因为它们都能让 Agent 参与，而是因为它们通过 stage-led framework model 复用同一套基础层。
 
 共享基础结构的含义是：不同 domain agent 使用兼容的资产、记忆、治理、交付与执行语言。
 `OPL` 负责共享语言与索引层，而具体对象的 canonical truth 继续留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
@@ -85,14 +85,14 @@
 它关注：
 
 - 稳定入口
-- route / controller
+- stage selector / controller
 - 执行可见性
 - 审计回写
 
 这一层让人类只看关键输出，不必盯住底层执行细节。
 它也意味着 `OPL` 默认采用 `Agent-first`，并把代码的职责收口到稳定结构、工具与 gate 上。
 
-## 联邦消费方式
+## Framework 消费方式
 
 在理想的 `OPL` 结构里：
 

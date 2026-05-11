@@ -1,8 +1,8 @@
 {
   "version": "2026-04-13",
   "contract_id": "opl_family_executor_adapter_defaults",
-  "scope": "family_executor_adapter_default_route",
-  "description": "Machine-readable freeze for the OPL family default executor-adapter route and its non-negotiable guardrails. This contract does not select a runtime substrate owner and does not collapse domain authority into OPL.",
+  "scope": "family_executor_adapter_default_stage_selection",
+  "description": "Machine-readable freeze for the OPL family default executor-adapter stage-selection semantics and its non-negotiable guardrails. This contract does not select a runtime substrate owner and does not collapse domain authority into OPL.",
   "non_goals": [
     "runtime_substrate_replacement",
     "domain_object_model_unification",
@@ -52,9 +52,9 @@
       "concrete_executor_implementation_owned_here": false,
       "domain_truth_owned_here": false
     },
-    "route_level_structured_call_routing": {
-      "owner": "domain_route_contract",
-      "scope": "domain-owned schema and route-level structured_call selection",
+    "stage_level_structured_call_selection": {
+      "owner": "domain_stage_contract",
+      "scope": "domain-owned schema and stage-level structured_call selection",
       "execution_shape": "structured_call",
       "may_accept_request_explicit_executor": true
     }
@@ -96,9 +96,9 @@
     "simple_llm_backend_forbidden": true,
     "openai_compatible_gateway_backend_forbidden": true,
     "domain_repo_provider_catalog_forbidden": true,
-    "migration_bridge_label_required_for_non_default_routes": true,
-    "experimental_label_required_for_non_default_routes": true,
-    "regression_oracle_label_required_for_non_default_routes": true,
+    "migration_bridge_label_required_for_non_default_stage_selections": true,
+    "experimental_label_required_for_non_default_stage_selections": true,
+    "regression_oracle_label_required_for_non_default_stage_selections": true,
     "domain_runtime_authority_stays_domain_owned": true
   },
   "ownership_boundaries": {
@@ -139,16 +139,17 @@
   "topology_split": {
     "opl_role": "codex_first_stage_led_family_framework_contract",
     "runtime_substrate_role": "provider_backed_stage_attempt_orchestration",
-    "executor_adapter_role": "domain_owned_route_and_stage_selection",
+    "executor_adapter_role": "domain_owned_stage_selection",
     "concrete_executor_role": "task_local_autonomous_execution"
   },
-  "allowed_non_default_route_labels": [
+  "allowed_non_default_stage_selection_labels": [
     "migration_bridge",
     "experimental",
     "regression_oracle"
   ],
   "verification_refs": [
-    "contracts/opl-framework/domain-onboarding-readiness.schema.json",
+    "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
+    "contracts/opl-framework/stage-selection-vocabulary.json",
     "human_doc:family_executor_adapter_defaults",
     "human_doc:four_repo_executor_follow_up_and_hermes_evaluation"
   ]

@@ -294,13 +294,13 @@ Do not describe the system as if:
 - `OPL` is the runtime owner
 - `Managed Runtime` only means “a longer-running Codex”
 - `MedDeepScientist` is the system identity of `MedAutoScience`
-- monorepo ingest means the boundary between domain gateway and execution engine disappears
+- monorepo ingest means the boundary between domain harness/controller and execution engine disappears
 - a future `managed runtime` is already part of current repo-tracked reality
 
 Describe it as:
 
-- `OPL` owns federation language
-- each domain repository owns `domain gateway + Domain Harness OS`
+- `OPL` owns stage-led framework language
+- each domain repository owns `domain harness / controller + Domain Harness OS`
 - execution engines own the execution plane
 - `host-agent runtime` and `managed runtime` are two deployment shapes of the execution plane
 - a future migration changes how the execution plane is hosted, not the domain contract

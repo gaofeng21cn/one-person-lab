@@ -20,7 +20,7 @@ test('translateSessionCreatePayload 提取 session seed 与 task acceptance', ()
         product_entry: {
           entry_surface: 'opl_session_api',
           mode: 'ask',
-          routing: {
+          stage_selection: {
             status: 'resolved',
           },
           handoff_prompt_preview: 'Focus on runtime bridge foundation.',

@@ -2,9 +2,9 @@ import { findDomainOrThrow } from '../contracts.ts';
 import { buildHandoffBundle } from '../handoff-bundle.ts';
 import type {
   BoundaryExplanation,
+  DomainAgentSelectionInput,
   FrameworkContracts,
   ResolutionResult,
-  ResolveRequestInput,
 } from '../types.ts';
 import type {
   ProductEntryCliInput,
@@ -32,7 +32,9 @@ export function appendHermesOptions(
   return args;
 }
 
-export function buildResolveRequestInput(input: ProductEntryCliInput): ResolveRequestInput {
+export function buildDomainAgentSelectionInput(
+  input: ProductEntryCliInput,
+): DomainAgentSelectionInput {
   return {
     intent: input.intent,
     target: input.target,
@@ -69,14 +71,14 @@ export function buildPromptHeader(
   const lines = [
     'You are continuing a session that started from the One Person Lab (OPL) Product Entry.',
     '',
-    'OPL routing contract:',
+    'OPL stage-selection contract:',
     `- mode: ${mode}`,
     `- requested_executor: ${resolveProductEntryExecutor(input)}`,
     `- goal: ${input.goal}`,
     `- intent: ${input.intent}`,
     `- target: ${input.target}`,
     `- request_kind: ${input.requestKind ?? 'product_entry'}`,
-    `- routing_status: ${resolution.status}`,
+    `- stage_selection_status: ${resolution.status}`,
     `- boundary_status: ${boundary.boundary_status}`,
     `- workspace_locator: ${input.workspacePath ?? 'not_provided'}`,
   ];
@@ -106,17 +108,17 @@ export function buildPromptHeader(
     lines.push(`- requested_skills: ${input.skills.join(', ')}`);
   }
 
-  lines.push(`- routing_reason: ${resolution.reason}`);
+  lines.push(`- selection_reason: ${resolution.reason}`);
   lines.push(`- boundary_reason: ${boundary.reason}`);
-  lines.push(`- routing_evidence: ${resolution.routing_evidence.join(' | ')}`);
+  lines.push(`- selection_evidence: ${resolution.selection_evidence.join(' | ')}`);
   lines.push(`- boundary_evidence: ${boundary.boundary_evidence.join(' | ')}`);
   lines.push('');
   lines.push('Hard boundary rules:');
   lines.push(
-    '- Respect the OPL routing result. Do not claim that OPL itself owns domain runtime truth or domain publication truth.',
+    '- Respect the OPL stage-selection result. Do not claim that OPL itself owns domain runtime truth or domain publication truth.',
   );
   lines.push(
-    '- If the request is routed, continue within that domain boundary. If it is unknown or ambiguous, help the user clarify without inventing admission or handoff readiness.',
+    '- If a domain-agent entry is selected, continue within that domain boundary. If it is unknown or ambiguous, help the user clarify without inventing admission or handoff readiness.',
   );
   lines.push(
     '- Runtime substrate follows the requested executor; Hermes is used only when explicitly selected.',
@@ -127,7 +129,7 @@ export function buildPromptHeader(
   lines.push('');
 
   if (mode === 'ask') {
-    lines.push('Task: answer the user directly, practically, and within the routing boundary above.');
+    lines.push('Task: answer the user directly, practically, and within the selected domain boundary above.');
   } else {
     lines.push(
       'Task: acknowledge the OPL handoff briefly, then continue the conversation as the active session for this request.',
@@ -163,7 +165,7 @@ export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
 
   return [
     'You are the One Person Lab (OPL) Product Entry.',
-    'Your role is to be the default natural-language entry for OPL and route requests to the correct domain or family boundary.',
+    'Your role is to be the default natural-language entry for OPL and select stage entries to the correct domain or family boundary.',
     '',
     'Current admitted domains:',
     ...domainLines,
@@ -188,7 +190,7 @@ export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
 export function buildHandoffBundleInput(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
-  routing: ResolutionResult,
+  stageSelection: ResolutionResult,
   boundary: BoundaryExplanation,
 ) {
   return {
@@ -196,7 +198,7 @@ export function buildHandoffBundleInput(
     goal: input.goal,
     intent: input.intent,
     workspacePath: input.workspacePath,
-    routing,
+    stageSelection,
     boundary,
   };
 }
@@ -205,12 +207,12 @@ export function buildProductEntryHandoffBundle(
   contracts: FrameworkContracts,
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
-  routing: ResolutionResult,
+  stageSelection: ResolutionResult,
   boundary: BoundaryExplanation,
   sessionId?: string,
 ) {
   return buildHandoffBundle(contracts, {
-    ...buildHandoffBundleInput(mode, input, routing, boundary),
+    ...buildHandoffBundleInput(mode, input, stageSelection, boundary),
     sessionId,
   });
 }

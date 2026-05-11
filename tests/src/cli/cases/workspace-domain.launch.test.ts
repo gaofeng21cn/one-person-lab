@@ -393,7 +393,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.return_surface_contract.opl.resume_command, 'opl session resume <session_id>');
     assert.equal(
       output.handoff_bundle.return_surface_contract.opl.logs_command,
-      'opl session logs gateway --session <session_id>',
+      'opl session logs runtime --session <session_id>',
     );
     assert.equal(output.handoff_bundle.return_surface_contract.opl.dashboard_command, 'opl status dashboard');
     assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai product-entry');

@@ -12,7 +12,7 @@
       "med-autogrant",
       "redcube-ai"
     ],
-    "concrete_executor_owner": "route_selected_by_domain_contract"
+    "concrete_executor_owner": "stage_selected_by_domain_contract"
   },
   "provider_runtime": {
     "provider_model": "provider_backed_stage_attempt_runtime",

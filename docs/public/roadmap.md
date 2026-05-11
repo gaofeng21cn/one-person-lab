@@ -30,7 +30,7 @@ Current work on that route stays focused on four priorities:
 
 ## Near-Term Priorities
 
-- keep legacy gateway and federation wording available only as compatibility/reference material while promoting the runtime/activation model to the mainline
+- keep legacy gateway and federation wording available only as provenance/reference material while promoting the runtime/activation model to the mainline
 - keep `Unified Harness Engineering Substrate`, `Shared Runtime Contract`, and `Shared Domain Contract` scoped as shared-above-domain surfaces
 - keep external-kernel packaging honest around upstream `Hermes-Agent` online substrate ownership and `OPL Runtime Manager` as product control plane
 - keep future hosted and desktop entry work anchored to the same runtime truth that drives the Codex-default executor path
@@ -72,6 +72,6 @@ The roadmap is healthy when readers can immediately understand:
 - `OPL` is the Codex-default session/runtime layer, explicit activation layer, and shared modules/contracts/indexes owner for the family
 - admitted domains keep their own authority under that shell
 - the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
-- legacy `OPL Gateway`, `opl web`, `Product API`, and AionUI-first-shell material is read as compatibility or reference context unless a current core document promotes it
+- legacy `OPL Gateway`, `opl web`, `Product API`, and AionUI-first-shell material is read as provenance or reference context unless a current core document promotes it
 - future hosted and desktop work continues the same runtime/activation truth surfaces
 - new workstreams are entering as explicit domain surfaces with clear boundaries

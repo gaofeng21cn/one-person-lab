@@ -27,7 +27,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 
 ## How To Read This Directory
 
-- `workstreams.json`, `domains.json`, `routing-vocabulary.json`, `task-topology.json`, and `public-surface-index.json` define the active stage-led framework selection surface.
+- `workstreams.json`, `domains.json`, `stage-selection-vocabulary.json`, `task-topology.json`, and `public-surface-index.json` define the active stage-led framework selection surface.
 - `family-runtime-online-substrate-contract.json`, `family-runtime-attempt-contract.json`, `standard-domain-agent-skeleton-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active provider-backed runtime/control-plane contracts.
 - `family-executor-adapter-defaults.json` remains useful as a shared executor contract.
 - retired gateway, federation, routed-action, onboarding, acceptance, governance, and example corpora live outside this active contract root.
@@ -36,7 +36,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 
 - `workstreams.json`
 - `domains.json`
-- `routing-vocabulary.json`
+- `stage-selection-vocabulary.json`
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`

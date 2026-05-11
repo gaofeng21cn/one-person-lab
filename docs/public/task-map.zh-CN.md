@@ -258,9 +258,9 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - `lecture_student`、`lecture_peer`、`executive_briefing`、`defense_deck` 这类差异应由 `profile pack` 控制
 - `xiaohongshu` 虽然共享同一 RedCube harness，但在 OPL 顶层继续保留独立的视觉 family 语义
 
-## 这些工作流为什么属于同一个 OPL Federation
+## 这些工作流为什么属于同一个 OPL stage-led framework
 
-这些工作流之所以能放进同一个 `OPL federation`，是因为它们共享：
+这些工作流之所以能放进同一个 `OPL stage-led framework`，是因为它们共享：
 
 - 同一批数据与图表
 - 同一批文献与外部证据

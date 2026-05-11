@@ -1,4 +1,4 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('logs returns a structured wrapper over Hermes log output', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
@@ -398,8 +398,8 @@ test('contract surface returns the full registered public surface meaning', () =
   assert.equal(output.surface.boundary_role, 'stage_runtime_framework');
 });
 
-test('resolveRequestSurface selects research delivery to medautoscience', () => {
-  const resolution = resolveRequestSurface(
+test('selectDomainAgentEntry selects research delivery to medautoscience', () => {
+  const resolution = selectDomainAgentEntry(
     {
       intent: 'submission_delivery',
       target: 'publication',
@@ -413,8 +413,8 @@ test('resolveRequestSurface selects research delivery to medautoscience', () => 
   assert.equal(resolution.domain_id, 'medautoscience');
 });
 
-test('resolveRequestSurface selects presentation delivery to redcube', () => {
-  const resolution = resolveRequestSurface(
+test('selectDomainAgentEntry selects presentation delivery to redcube', () => {
+  const resolution = selectDomainAgentEntry(
     {
       intent: 'presentation_delivery',
       target: 'deliverable',
@@ -431,10 +431,10 @@ test('resolveRequestSurface selects presentation delivery to redcube', () => {
   assert.equal(resolution.recommended_family, 'ppt_deck');
 });
 
-test('resolveRequestSurface keeps ppt_deck mapped to presentation_ops', () => {
+test('selectDomainAgentEntry keeps ppt_deck mapped to presentation_ops', () => {
   const output = runCli([
     'domain',
-    'resolve-request',
+    'select-entry',
     '--intent',
     'presentation_delivery',
     '--target',
@@ -452,10 +452,10 @@ test('resolveRequestSurface keeps ppt_deck mapped to presentation_ops', () => {
   assert.equal(output.resolution.domain_id, 'redcube');
 });
 
-test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', () => {
+test('selectDomainAgentEntry keeps xiaohongshu at the redcube family boundary', () => {
   const output = runCli([
     'domain',
-    'resolve-request',
+    'select-entry',
     '--intent',
     'create',
     '--target',
@@ -472,10 +472,10 @@ test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', (
   assert.equal(output.resolution.workstream_id, null);
 });
 
-test('resolveRequestSurface keeps patent requests on the IP Ops candidate lane', () => {
+test('selectDomainAgentEntry keeps patent requests on the IP Ops candidate lane', () => {
   const output = runCli([
     'domain',
-    'resolve-request',
+    'select-entry',
     '--intent',
     'create',
     '--target',
@@ -491,10 +491,10 @@ test('resolveRequestSurface keeps patent requests on the IP Ops candidate lane',
   assert.match(output.resolution.reason, /under definition/i);
 });
 
-test('resolveRequestSurface keeps award requests off the MedAutoGrant route', () => {
+test('selectDomainAgentEntry keeps award requests off the MedAutoGrant route', () => {
   const output = runCli([
     'domain',
-    'resolve-request',
+    'select-entry',
     '--intent',
     'create',
     '--target',
@@ -510,10 +510,10 @@ test('resolveRequestSurface keeps award requests off the MedAutoGrant route', ()
   assert.match(output.resolution.reason, /under definition/i);
 });
 
-test('resolveRequestSurface selects grant work to medautogrant', () => {
+test('selectDomainAgentEntry selects grant work to medautogrant', () => {
   const output = runCli([
     'domain',
-    'resolve-request',
+    'select-entry',
     '--intent',
     'plan',
     '--target',
@@ -529,10 +529,10 @@ test('resolveRequestSurface selects grant work to medautogrant', () => {
   assert.equal(output.resolution.entry_surface, 'domain_agent_entry');
 });
 
-test('resolveRequestSurface returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
+test('selectDomainAgentEntry returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
   const output = runCli([
     'domain',
-    'resolve-request',
+    'select-entry',
     '--intent',
     'create',
     '--target',
@@ -555,14 +555,14 @@ test('resolveRequestSurface returns ambiguous_task with explicit boundary eviden
     'Is the primary goal a formal research deliverable or a presentation deliverable?',
     'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
   ]);
-  assert.deepEqual(output.resolution.routing_evidence, [
+  assert.deepEqual(output.resolution.selection_evidence, [
     'research delivery semantics',
     'presentation delivery semantics',
     'missing primary deliverable',
   ]);
 });
 
-test('explainDomainBoundary explains admitted presentation routing', () => {
+test('explainDomainBoundary explains admitted presentation stage selection', () => {
   const explanation = explainDomainBoundary(
     {
       intent: 'presentation_delivery',
@@ -626,7 +626,7 @@ test('help returns command discovery and runnable examples', () => {
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    ['contract workstreams', 'contract workstream', 'contract domains', 'contract domain', 'contract surfaces', 'contract surface', 'domain resolve-request', 'domain explain-boundary', 'runtime manager', 'runtime index'].every((command) =>
+    ['contract workstreams', 'contract workstream', 'contract domains', 'contract domain', 'contract surfaces', 'contract surface', 'domain select-entry', 'domain explain-boundary', 'runtime manager', 'runtime index'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );

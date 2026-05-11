@@ -70,7 +70,7 @@ Lifecycle is judged by content role, not by filename or old path. A file with an
 - `docs/public/` keeps public product-direction support read after the repository home.
 - `docs/specs/` keeps active runtime / product-boundary specs.
 - `docs/references/` keeps support references grouped by purpose.
-- `docs/history/` keeps dated snapshots, retired routes, compatibility archives, and tombstones.
+- `docs/history/` keeps dated snapshots, retired paths, provenance archives, and tombstones.
 
 The live public model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md).
 The live interaction model is Codex-first, stage-led, runtime-first, and skill-first.
@@ -100,7 +100,7 @@ These human-readable documents support the current `OPL` mainline: `Codex-defaul
 - [OPL Public Surface Index](./active/opl-public-surface-index.md)
 - [Active Docs Index](./active/README.md)
 
-## References And Compatibility
+## References And History
 
 References hold review, audit, rollout, benchmark, migration, examples, and operating-governance material.
 They are repo-tracked support, not the default implementation basis.
@@ -116,7 +116,7 @@ They are repo-tracked support, not the default implementation basis.
 - [OPL release and Packages modular distribution reference](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [OPL test lane governance reference](./references/current-support/opl-test-lane-governance.zh-CN.md)
 - [Shared Foundation](./active/shared-foundation.md), [Shared Foundation Ownership](./active/shared-foundation-ownership.md), [Shared Runtime Contract](./active/shared-runtime-contract.md), [Shared Domain Contract](./active/shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./active/opl-runtime-naming-and-boundary-contract.md) are active support docs.
-- Retired `gateway / federation / routed-action` material lives in [Gateway / Federation Compatibility Archive](./history/compatibility/gateway-federation/README.md).
+- Retired `gateway / federation / routed-action` material lives in [Gateway / Federation Provenance Archive](./history/compatibility/gateway-federation/README.md).
 - Retired frontdoor-era material lives in [Frontdoor Legacy Notes](./history/frontdoor-legacy/README.md).
 
 ## History
@@ -132,7 +132,7 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - OPL-owned machine-readable product surfaces: [Contracts Overview](../contracts/README.md)
 - Linked domain capability surfaces: the admitted domain repositories plus `opl skill sync`
 - Active framework contracts: `contracts/opl-framework/*.json`
-- Retired gateway/federation compatibility corpus: [Gateway / Federation Compatibility Archive](./history/compatibility/gateway-federation/README.md)
+- Retired gateway/federation provenance corpus: [Gateway / Federation Provenance Archive](./history/compatibility/gateway-federation/README.md)
 - Reference-grade supporting material: [Reference Index](./references/README.md)
 - Historical and retired lanes: [History Archive](./history/README.md) and [Process History](./history/process/README.md)
 
@@ -142,7 +142,7 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - Keep active public docs bilingual.
 - Govern docs by content lifecycle, not mechanically by file name, directory name, or whether a stale inbound link still exists.
 - Archive or tombstone superseded plans once their decision has moved into the core five or the current framework roadmap.
-- Keep reference-grade docs explicit about compatibility vs current truth.
+- Keep reference-grade docs explicit about provenance vs current truth.
 - Keep history as tracked provenance and tombstone material.
 - Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.
 - New or moved documents must follow [Documentation Portfolio](./docs_portfolio_consolidation.md) before they become long-lived surfaces.

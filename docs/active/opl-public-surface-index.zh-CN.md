@@ -90,5 +90,5 @@
 
 - 它把当前 `Codex-default runtime + activation + shared modules/contracts/indexes + skill sync` 主线讲清楚
 - 它区分 OPL-owned 的 runtime/activation surface 与 repo-owned 的 domain capability surface
-- 它明确标出旧 gateway/federation 语料已经退到 reference/compatibility 层
+- 它明确标出旧 gateway/federation 语料已经退到 reference/provenance 层
 - 它继续把 domain runtime truth、progress truth 与 artifact truth 放在对应 domain 仓自己名下

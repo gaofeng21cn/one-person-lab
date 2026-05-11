@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('loadFrameworkContracts returns the active framework registries', () => {
   const contracts = loadFrameworkContracts(repoRoot);
@@ -8,7 +8,7 @@ test('loadFrameworkContracts returns the active framework registries', () => {
   assert.equal(contracts.contractsRootSource, 'api');
   assert.equal(contracts.workstreams.version, 'g2');
   assert.equal(contracts.domains.version, 'g2');
-  assert.equal(contracts.routingVocabulary.version, 'g2');
+  assert.equal(contracts.stageSelectionVocabulary.version, 'g2');
   assert.equal(contracts.taskTopology.scope, 'opl_stage_led_task_topology');
   assert.equal(
     contracts.publicSurfaceIndex.scope,
@@ -174,9 +174,9 @@ test('validateFrameworkContracts returns a stable summary for the required contr
         status: 'valid',
       },
       {
-        contract_id: 'routing_vocabulary',
-        file: path.join(contractsDir, 'routing-vocabulary.json'),
-        schema_version: contracts.routingVocabulary.version,
+        contract_id: 'stage_selection_vocabulary',
+        file: path.join(contractsDir, 'stage-selection-vocabulary.json'),
+        schema_version: contracts.stageSelectionVocabulary.version,
         status: 'valid',
       },
       {
@@ -219,9 +219,9 @@ test('contract validate returns a stable machine-readable contract summary', () 
           status: 'valid',
         },
         {
-          contract_id: 'routing_vocabulary',
-          file: path.join(contractsDir, 'routing-vocabulary.json'),
-          schema_version: contracts.routingVocabulary.version,
+          contract_id: 'stage_selection_vocabulary',
+          file: path.join(contractsDir, 'stage-selection-vocabulary.json'),
+          schema_version: contracts.stageSelectionVocabulary.version,
           status: 'valid',
         },
         {
@@ -339,7 +339,7 @@ test('workspace projects returns the current OPL family project surfaces', () =>
   assert.equal(output.version, 'g2');
   assert.equal(output.projects.length, 4);
   assert.equal(output.projects[0].project_id, 'opl');
-  assert.equal(output.projects[0].scope, 'family_gateway');
+  assert.equal(output.projects[0].scope, 'opl_framework');
   assert.equal(output.projects[0].direct_entry_surface, 'opl');
   assert.equal(output.projects[1].project_id, 'medautogrant');
   assert.equal(output.projects[2].project_id, 'medautoscience');
@@ -390,7 +390,7 @@ exit 1
   }
 });
 
-test('natural-language fallback is a raw Codex passthrough unless the request enters explicit OPL routing', () => {
+test('natural-language fallback is a raw Codex passthrough unless the request enters explicit OPL stage selection', () => {
   const capturePath = path.join(os.tmpdir(), `opl-natural-fallback-args-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}

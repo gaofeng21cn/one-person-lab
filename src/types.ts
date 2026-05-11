@@ -45,7 +45,7 @@ export interface DomainContract {
   non_opl_families: string[];
 }
 
-export interface RoutingSpecialCase {
+export interface StageSelectionSpecialCase {
   family: string;
   direct_workstream?: string;
   domain_id: string;
@@ -53,7 +53,7 @@ export interface RoutingSpecialCase {
   notes: string;
 }
 
-export interface RoutingVocabularyContract {
+export interface StageSelectionVocabularyContract {
   version: string;
   intent_id: string[];
   workstream_id: string[];
@@ -63,8 +63,8 @@ export interface RoutingVocabularyContract {
   delivery_kind: string[];
   review_kind: string[];
   entry_mode: string[];
-  routing_rules: string[];
-  special_cases: RoutingSpecialCase[];
+  selection_rules: string[];
+  special_cases: StageSelectionSpecialCase[];
 }
 
 export interface TaskTopologyWorkstream {
@@ -72,7 +72,7 @@ export interface TaskTopologyWorkstream {
   label: string;
   boundary_state: string;
   registry_state: string;
-  routing_state: string;
+  selection_state: string;
   current_domain_id: string | null;
   entry_surface: string | null;
   formal_domain_required: boolean;
@@ -155,7 +155,7 @@ export interface FrameworkContracts {
   contractsRootSource: ContractsRootSource;
   workstreams: WorkstreamsRegistry;
   domains: DomainsRegistry;
-  routingVocabulary: RoutingVocabularyContract;
+  stageSelectionVocabulary: StageSelectionVocabularyContract;
   taskTopology: TaskTopologyContract;
   publicSurfaceIndex: PublicSurfaceIndexContract;
 }
@@ -164,7 +164,7 @@ export interface ContractValidationEntry {
   contract_id:
     | 'workstreams'
     | 'domains'
-    | 'routing_vocabulary'
+    | 'stage_selection_vocabulary'
     | 'task_topology'
     | 'public_surface_index';
   file: string;
@@ -179,7 +179,7 @@ export interface ContractValidationSummary {
   validated_contracts: ContractValidationEntry[];
 }
 
-export interface ResolveRequestInput {
+export interface DomainAgentSelectionInput {
   intent: string;
   target: string;
   goal: string;
@@ -197,7 +197,7 @@ export type ResolutionResult =
       recommended_family: string | null;
       confidence: 'medium' | 'high';
       reason: string;
-      routing_evidence: string[];
+      selection_evidence: string[];
     }
   | {
       status: 'domain_boundary';
@@ -206,14 +206,14 @@ export type ResolutionResult =
       workstream_id: null;
       recommended_family: string | null;
       reason: string;
-      routing_evidence: string[];
+      selection_evidence: string[];
     }
   | {
       status: 'unknown_domain';
       request_kind: string;
       candidate_workstream_id: string;
       reason: string;
-      routing_evidence: string[];
+      selection_evidence: string[];
     }
   | {
       status: 'ambiguous_task';
@@ -221,7 +221,7 @@ export type ResolutionResult =
       candidate_workstreams: string[];
       candidate_domains: string[];
       reason: string;
-      routing_evidence: string[];
+      selection_evidence: string[];
       required_clarification: string[];
     };
 
@@ -241,3 +241,5 @@ export interface BoundaryExplanation {
     reason: string;
   }>;
 }
+
+export type ResolveRequestInput = DomainAgentSelectionInput;

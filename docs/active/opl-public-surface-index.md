@@ -92,5 +92,5 @@ This surface index is acceptable only when:
 
 - it makes the current `Codex-default runtime + activation + shared modules/contracts/indexes + skill sync` mainline obvious
 - it distinguishes OPL-owned runtime/activation surfaces from repo-owned domain capability surfaces
-- it clearly marks legacy gateway/federation material as reference or compatibility content
+- it clearly marks legacy gateway/federation material as reference or provenance content
 - it keeps domain runtime truth, progress truth, and artifact truth owned by the corresponding domain repositories

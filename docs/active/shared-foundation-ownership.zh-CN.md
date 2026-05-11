@@ -2,7 +2,7 @@
 
 # 共享基础结构归属
 
-> 当前状态说明（`2026-04-25`）：本文作为 shared-foundation ownership 参考保留。下文 `domain gateway / harness` 按兼容语言理解；当前公开模型使用独立 domain agents（`MAS`、`MAG`、`RCA`）与各自 domain-owned truth surfaces。
+> 当前状态说明（`2026-05-11`）：本文作为 shared-foundation ownership 参考保留，并使用当前 OPL 活跃口径。下层执行语言按 `domain harness / controller` 理解；当前公开模型使用独立 domain agents（`MAS`、`MAG`、`RCA`）与各自 domain-owned truth surfaces。
 
 ## 目的
 
@@ -93,7 +93,7 @@
 3. `OPL` 把请求通过 activation 或 routing 交给正确的 domain-agent entry，并带过去的是引用，不是顶层 truth 替换。
 4. 目标 domain 再去解析自己真正拥有的具体对象。
 5. 该 domain 把自己的 runtime truth、review truth 与 delivery truth 写回到 domain-owned surface。
-6. `OPL` 可以保留顶层引用、摘要或可审计的 routing signal，但不接管 domain 的 canonical object truth。
+6. `OPL` 可以保留顶层引用、摘要或可审计的 stage-selection signal，但不接管 domain 的 canonical object truth。
 
 例如：
 

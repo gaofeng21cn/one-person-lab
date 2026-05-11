@@ -38,7 +38,7 @@ export function buildProjectsOverview(contracts: FrameworkContracts) {
       {
         project_id: 'opl',
         project: 'one-person-lab',
-        scope: 'family_gateway',
+        scope: 'opl_framework',
         direct_entry_surface: 'opl',
         active_binding: getActiveWorkspaceBinding('opl'),
         owned_workstreams: contracts.workstreams.workstreams.map((workstream) => workstream.workstream_id),

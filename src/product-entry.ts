@@ -12,7 +12,7 @@ import {
   runHermesCommand,
   runHermesResume,
 } from './hermes.ts';
-import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
+import { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type {
   ProductEntryCliInput,
@@ -28,7 +28,7 @@ import {
   buildProductEntrySessionPrompt,
   buildProductEntryHandoffBundle,
   buildPromptHeader,
-  buildResolveRequestInput,
+  buildDomainAgentSelectionInput,
   resolveProductEntryExecutor,
 } from './product-entry-parts/builders.ts';
 import {
@@ -58,22 +58,22 @@ export function prepareProductEntryAsk(
   input: ProductEntryCliInput,
   contracts: FrameworkContracts,
 ): PreparedProductEntryAsk {
-  const resolveInput = buildResolveRequestInput(input);
-  const routing = resolveRequestSurface(resolveInput, contracts);
-  const boundary = explainDomainBoundary(resolveInput, contracts);
-  const handoffPrompt = buildPromptHeader('ask', input, routing, boundary, contracts);
+  const selectionInput = buildDomainAgentSelectionInput(input);
+  const stageSelection = selectDomainAgentEntry(selectionInput, contracts);
+  const boundary = explainDomainBoundary(selectionInput, contracts);
+  const handoffPrompt = buildPromptHeader('ask', input, stageSelection, boundary, contracts);
   const args = buildAskArgs(input, handoffPrompt);
   const handoffBundle = buildProductEntryHandoffBundle(
     contracts,
     'ask',
     input,
-    routing,
+    stageSelection,
     boundary,
   );
 
   return {
-    resolveInput,
-    routing,
+    selectionInput,
+    stageSelection,
     boundary,
     handoffPrompt,
     args,
@@ -86,15 +86,15 @@ function buildPreviewPayload(
   input: ProductEntryCliInput,
   contracts: FrameworkContracts,
 ) {
-  const resolveInput = buildResolveRequestInput(input);
-  const routing = resolveRequestSurface(resolveInput, contracts);
-  const boundary = explainDomainBoundary(resolveInput, contracts);
-  const handoffPrompt = buildPromptHeader(mode, input, routing, boundary, contracts);
+  const selectionInput = buildDomainAgentSelectionInput(input);
+  const stageSelection = selectDomainAgentEntry(selectionInput, contracts);
+  const boundary = explainDomainBoundary(selectionInput, contracts);
+  const handoffPrompt = buildPromptHeader(mode, input, stageSelection, boundary, contracts);
   const handoffBundle = buildProductEntryHandoffBundle(
     contracts,
     mode,
     input,
-    routing,
+    stageSelection,
     boundary,
   );
 
@@ -108,8 +108,8 @@ function buildPreviewPayload(
         mode,
         dry_run: true,
         executor_backend: executor,
-        input: resolveInput,
-        routing,
+        input: selectionInput,
+        stage_selection: stageSelection,
         boundary,
         ...handoffBundle,
         handoff_prompt_preview: handoffPrompt,
@@ -142,8 +142,8 @@ function buildPreviewPayload(
       mode,
       dry_run: true,
       executor_backend: executor,
-      input: resolveInput,
-      routing,
+      input: selectionInput,
+      stage_selection: stageSelection,
       boundary,
       ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
@@ -205,7 +205,7 @@ export function runProductEntryAsk(
       contracts,
       'ask',
       input,
-      preparedAsk.routing,
+      preparedAsk.stageSelection,
       preparedAsk.boundary,
       parsed.threadId ?? undefined,
     );
@@ -215,8 +215,8 @@ export function runProductEntryAsk(
         sessionId: parsed.threadId,
         mode: 'ask',
         sourceSurface: 'opl_local_product_entry_shell',
-        domainId: 'domain_id' in preparedAsk.routing ? preparedAsk.routing.domain_id : null,
-        workstreamId: 'workstream_id' in preparedAsk.routing ? preparedAsk.routing.workstream_id : null,
+        domainId: 'domain_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.domain_id : null,
+        workstreamId: 'workstream_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.workstream_id : null,
         goalPreview: input.goal,
         workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
       });
@@ -230,8 +230,8 @@ export function runProductEntryAsk(
         mode: 'ask',
         dry_run: false,
         executor_backend: 'codex',
-        input: preparedAsk.resolveInput,
-        routing: preparedAsk.routing,
+        input: preparedAsk.selectionInput,
+        stage_selection: preparedAsk.stageSelection,
         boundary: preparedAsk.boundary,
         ...handoffBundle,
         handoff_prompt_preview: preparedAsk.handoffPrompt,
@@ -262,7 +262,7 @@ export function runProductEntryAsk(
     contracts,
     'ask',
     input,
-    preparedAsk.routing,
+    preparedAsk.stageSelection,
     preparedAsk.boundary,
     parsed.sessionId,
   );
@@ -270,8 +270,8 @@ export function runProductEntryAsk(
     sessionId: parsed.sessionId,
     mode: 'ask',
     sourceSurface: 'opl_local_product_entry_shell',
-    domainId: 'domain_id' in preparedAsk.routing ? preparedAsk.routing.domain_id : null,
-    workstreamId: 'workstream_id' in preparedAsk.routing ? preparedAsk.routing.workstream_id : null,
+    domainId: 'domain_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.domain_id : null,
+    workstreamId: 'workstream_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.workstream_id : null,
     goalPreview: input.goal,
     workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
   });
@@ -284,8 +284,8 @@ export function runProductEntryAsk(
       mode: 'ask',
       dry_run: false,
       executor_backend: 'hermes',
-      input: preparedAsk.resolveInput,
-      routing: preparedAsk.routing,
+      input: preparedAsk.selectionInput,
+      stage_selection: preparedAsk.stageSelection,
       boundary: preparedAsk.boundary,
       ...handoffBundle,
       handoff_prompt_preview: preparedAsk.handoffPrompt,
@@ -410,17 +410,17 @@ export function runProductEntryChat(
   }
 
   const executor = resolveProductEntryExecutor(input);
-  const resolveInput = buildResolveRequestInput(input);
-  const routing = resolveRequestSurface(resolveInput, contracts);
-  const boundary = explainDomainBoundary(resolveInput, contracts);
-  const handoffPrompt = buildPromptHeader('chat', input, routing, boundary, contracts);
+  const selectionInput = buildDomainAgentSelectionInput(input);
+  const stageSelection = selectDomainAgentEntry(selectionInput, contracts);
+  const boundary = explainDomainBoundary(selectionInput, contracts);
+  const handoffPrompt = buildPromptHeader('chat', input, stageSelection, boundary, contracts);
 
   if (executor === 'codex') {
     const handoffBundle = buildProductEntryHandoffBundle(
       contracts,
       'chat',
       input,
-      routing,
+      stageSelection,
       boundary,
     );
 
@@ -430,9 +430,9 @@ export function runProductEntryChat(
       });
       assertCodexSuccess(
         productEntryResult.exitCode,
-        'Codex entry session failed after OPL Product Entry chat routing.',
+        'Codex entry session failed after OPL Product Entry chat stage selection.',
         {
-          routing_status: routing.status,
+          stage_selection_status: stageSelection.status,
         },
       );
 
@@ -450,8 +450,8 @@ export function runProductEntryChat(
         dry_run: false,
         interactive: false,
         executor_backend: 'codex',
-        input: resolveInput,
-        routing,
+        input: selectionInput,
+        stage_selection: stageSelection,
         boundary,
         ...handoffBundle,
         handoff_prompt_preview: handoffPrompt,
@@ -487,7 +487,7 @@ export function runProductEntryChat(
     contracts,
     'chat',
     input,
-    routing,
+    stageSelection,
     boundary,
     parsed.sessionId,
   );
@@ -495,8 +495,8 @@ export function runProductEntryChat(
     sessionId: parsed.sessionId,
     mode: 'chat',
     sourceSurface: 'opl_local_product_entry_shell',
-    domainId: 'domain_id' in routing ? routing.domain_id : null,
-    workstreamId: 'workstream_id' in routing ? routing.workstream_id : null,
+    domainId: 'domain_id' in stageSelection ? stageSelection.domain_id : null,
+    workstreamId: 'workstream_id' in stageSelection ? stageSelection.workstream_id : null,
     goalPreview: input.goal,
     workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
   });
@@ -505,7 +505,7 @@ export function runProductEntryChat(
     process.stdout.write(
       [
         'OPL Product Entry handoff seeded into Hermes.',
-        `Routing status: ${routing.status}`,
+        `Stage selection status: ${stageSelection.status}`,
         `Hermes session: ${parsed.sessionId}`,
         parsed.response ? `Seed response: ${parsed.response}` : null,
         '',
@@ -552,8 +552,8 @@ export function runProductEntryChat(
       dry_run: false,
       interactive: false,
       executor_backend: 'hermes',
-      input: resolveInput,
-      routing,
+      input: selectionInput,
+      stage_selection: stageSelection,
       boundary,
       ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,

@@ -68,7 +68,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - `docs/public/` 承接仓库首页之后的公开产品方向支撑。
 - `docs/specs/` 承接仍然活跃的 runtime / product-boundary 规格。
 - `docs/references/` 按用途承接支撑参考。
-- `docs/history/` 承接 dated snapshot、退役路线、兼容性归档和 tombstone。
+- `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
 
 当前活跃公开模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)。
 当前活跃交互模型是 Codex-first、stage-led、runtime-first、skill-first。
@@ -97,7 +97,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - [OPL 公开界面索引](./active/opl-public-surface-index.zh-CN.md)
 - [活跃支撑文档索引](./active/README.zh-CN.md)
 
-## 参考与兼容
+## 参考与历史
 
 参考文档承接审核、验收、推进板、基准、迁移说明、样例和 operating-governance 材料。
 它们继续被仓库跟踪，但不是当前默认实现依据。
@@ -113,7 +113,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - [OPL Release 与 Packages 模块化分发参考](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [OPL 测试 Lane 治理参考](./references/current-support/opl-test-lane-governance.zh-CN.md)
 - [共享基础结构](./active/shared-foundation.zh-CN.md)、[共享基础结构归属](./active/shared-foundation-ownership.zh-CN.md)、[共享运行时合同](./active/shared-runtime-contract.zh-CN.md)、[共享领域合同](./active/shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./active/opl-runtime-naming-and-boundary-contract.zh-CN.md) 是活跃支撑文档。
-- 已退役的 `gateway / federation / routed-action` 语料进入 [Gateway / Federation 兼容语料归档](./history/compatibility/gateway-federation/README.zh-CN.md)。
+- 已退役的 `gateway / federation / routed-action` 语料进入 [Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.zh-CN.md)。
 - 已退役的 `frontdoor` 时代材料进入 [Frontdoor 历史资料](./history/frontdoor-legacy/README.md)。
 
 ## 历史
@@ -129,7 +129,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - OPL 自己持有的机器可读产品资源： [合同目录说明](../contracts/README.md)
 - 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
 - 活跃 framework 合同：`contracts/opl-framework/*.json`
-- 已退役 gateway/federation 兼容语料：[Gateway / Federation 兼容语料归档](./history/compatibility/gateway-federation/README.zh-CN.md)
+- 已退役 gateway/federation 来源语料：[Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.zh-CN.md)
 - 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
 - 历史与退役路线： [历史归档索引](./history/README.zh-CN.md) 与 [过程历史归档](./history/process/README.zh-CN.md)
 
@@ -139,7 +139,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - 活跃公开文档继续保持双语。
 - 文档治理按内容生命周期判断，不按文件名、目录名或旧链接机械判断。
 - 已被核心五件套或当前 framework roadmap 取代的一次性计划，应进入 history / tombstone 语境，不继续作为 active reference 扩写。
-- 参考文档必须把 compatibility surface 和 current truth 区分清楚。
+- 参考文档必须把 provenance surface 和 current truth 区分清楚。
 - 历史继续作为仓库跟踪的 provenance 和 tombstone。
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。

@@ -1,8 +1,8 @@
 import type { HandoffBundleResult } from '../handoff-bundle-types.ts';
 import type {
   BoundaryExplanation,
+  DomainAgentSelectionInput,
   ResolutionResult,
-  ResolveRequestInput,
 } from '../types.ts';
 
 export type ProductEntryMode =
@@ -42,8 +42,8 @@ export type ProductEntryExecInput = {
 };
 
 export type PreparedProductEntryAsk = {
-  resolveInput: ResolveRequestInput;
-  routing: ResolutionResult;
+  selectionInput: DomainAgentSelectionInput;
+  stageSelection: ResolutionResult;
   boundary: BoundaryExplanation;
   handoffPrompt: string;
   args: string[];

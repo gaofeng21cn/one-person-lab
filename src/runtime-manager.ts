@@ -12,17 +12,17 @@ const ADMITTED_DOMAIN_OWNERS = [
   {
     domain_id: 'medautoscience',
     domain_owner: 'med-autoscience',
-    executor_owner: 'codex_cli_or_route_selected_executor',
+    executor_owner: 'codex_cli_or_stage_selected_executor',
   },
   {
     domain_id: 'medautogrant',
     domain_owner: 'med-autogrant',
-    executor_owner: 'codex_cli_or_route_selected_executor',
+    executor_owner: 'codex_cli_or_stage_selected_executor',
   },
   {
     domain_id: 'redcube',
     domain_owner: 'redcube-ai',
-    executor_owner: 'codex_cli_or_route_selected_executor',
+    executor_owner: 'codex_cli_or_stage_selected_executor',
   },
 ] as const;
 
@@ -238,7 +238,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         product_control_plane_owner: 'one-person-lab',
         online_runtime_substrate_owner: 'provider_backed_family_runtime',
         domain_truth_owners: ADMITTED_DOMAIN_OWNERS,
-        concrete_executor_owner: 'route_selected_by_domain_contract',
+        concrete_executor_owner: 'stage_selected_by_domain_contract',
       },
       responsibilities: [
         'select_supported_family_runtime_provider',

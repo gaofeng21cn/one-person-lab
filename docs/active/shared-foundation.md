@@ -2,9 +2,9 @@
 
 # Shared Foundation
 
-> Current-status note (`2026-04-25`): this shared-foundation reference predates the current public wording. Read `domain gateway / harness` below as internal compatibility language; current public docs should describe `MAS`, `MAG`, and `RCA` as independent domain agents reached through OPL activation or direct Codex/app-skill entry.
+> Current-status note (`2026-05-11`): this shared-foundation reference now uses the active OPL wording. Read lower-level domain execution language as `domain harness / controller`; current public docs describe `MAS`, `MAG`, and `RCA` as independent domain agents reached through OPL activation or direct Codex/app-skill entry.
 
-`OPL` groups multiple workstreams into one system not simply because they all involve Agents, but because they reuse the same foundational layers through a federation model.
+`OPL` groups multiple workstreams into one system not simply because they all involve Agents, but because they reuse the same foundational layers through a stage-led framework model.
 
 The shared foundation means different domain agents speak compatible asset, memory, governance, delivery, and execution language.
 `OPL` owns the shared language and indexing layer, while canonical truth for concrete objects stays with domain-owned surfaces or with human/private materials that remain below domain admission.
@@ -85,14 +85,14 @@ The `Agent Execution Layer` makes Agent work controllable and reviewable.
 It focuses on:
 
 - stable entry surfaces
-- routes or controllers
+- stage selectors or controllers
 - execution visibility
 - audit writeback
 
 This layer lets humans review key outputs instead of babysitting low-level execution.
 It also means `OPL` defaults to an `Agent-first` execution model and keeps code focused on stable structure, tools, and gates.
 
-## Federation Consumption Model
+## Framework Consumption Model
 
 In the intended `OPL` structure:
 
