@@ -1,5 +1,5 @@
-<svg width="1600" height="420" viewBox="0 0 1600 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab banner">
-  <title>One Person Lab banner</title>
+<svg width="1600" height="420" viewBox="0 0 1600 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab Codex-first agent framework">
+  <title>One Person Lab Codex-first agent framework</title>
   <defs>
     <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="420" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#F7FBFF"/>
@@ -33,21 +33,21 @@
     <rect x="368" y="842" width="288" height="40" rx="20" fill="#0E385D" fill-opacity="0.25"/>
   </g>
   <text x="448" y="126" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="700" letter-spacing="3">ONE PERSON LAB</text>
-  <text x="448" y="186" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="48" font-weight="800">One workbench for serious expert work</text>
-  <text x="450" y="232" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">Plan long-running research, grants, and presentations with domain agents,</text>
-  <text x="450" y="264" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">trusted progress, and organized deliverables.</text>
+  <text x="448" y="186" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="48" font-weight="800">Codex-first agent runtime framework</text>
+  <text x="450" y="232" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">Stage-led execution for long-running expert work, with Codex CLI</text>
+  <text x="450" y="264" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">as the smallest execution unit and domain agents owning truth.</text>
   <g font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17" font-weight="700">
-    <rect x="450" y="304" width="166" height="44" rx="22" fill="#EAF3FF" stroke="#BBD2EC"/>
-    <text x="533" y="332" text-anchor="middle" fill="#174A73">Research</text>
-    <rect x="632" y="304" width="136" height="44" rx="22" fill="#FFF4DD" stroke="#E3C27B"/>
-    <text x="700" y="332" text-anchor="middle" fill="#8A6415">Grants</text>
-    <rect x="784" y="304" width="178" height="44" rx="22" fill="#E8FAF8" stroke="#AADAD6"/>
-    <text x="873" y="332" text-anchor="middle" fill="#247A75">Presentations</text>
-    <rect x="978" y="304" width="162" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1059" y="332" text-anchor="middle" fill="#3E5D78">Progress</text>
-    <rect x="1156" y="304" width="132" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1222" y="332" text-anchor="middle" fill="#3E5D78">Files</text>
-    <rect x="1304" y="304" width="164" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1386" y="332" text-anchor="middle" fill="#3E5D78">Recovery</text>
+    <rect x="450" y="304" width="132" height="44" rx="22" fill="#EAF3FF" stroke="#BBD2EC"/>
+    <text x="516" y="332" text-anchor="middle" fill="#174A73">Stages</text>
+    <rect x="598" y="304" width="176" height="44" rx="22" fill="#FFF4DD" stroke="#E3C27B"/>
+    <text x="686" y="332" text-anchor="middle" fill="#8A6415">Codex CLI</text>
+    <rect x="790" y="304" width="194" height="44" rx="22" fill="#E8FAF8" stroke="#AADAD6"/>
+    <text x="887" y="332" text-anchor="middle" fill="#247A75">Typed Queue</text>
+    <rect x="1000" y="304" width="164" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1082" y="332" text-anchor="middle" fill="#3E5D78">Receipts</text>
+    <rect x="1180" y="304" width="164" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1262" y="332" text-anchor="middle" fill="#3E5D78">Recovery</text>
+    <rect x="1360" y="304" width="108" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1414" y="332" text-anchor="middle" fill="#3E5D78">Truth</text>
   </g>
 </svg>
