@@ -726,11 +726,11 @@
         "command": "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml"
       },
       {
-        "check_id": "external_runtime_contract_ready",
-        "title": "External Runtime Contract Ready",
+        "check_id": "provider_runtime_contract_ready",
+        "title": "Provider Runtime Contract Ready",
         "status": "pass",
         "blocking": true,
-        "summary": "external Hermes runtime contract 已 ready。",
+        "summary": "explicit optional Hermes legacy provider contract 已 ready。",
         "command": "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml"
       }
     ]
@@ -758,7 +758,7 @@
       {
         "guardrail_id": "workspace_supervision_gap",
         "trigger": "workspace-cockpit attention queue / study-progress supervisor freshness",
-        "symptom": "Hermes-hosted supervision 未在线或 freshness 已漂移。",
+        "symptom": "MAS workspace supervision 未在线或 freshness 已漂移；Hermes 仅在显式选择 legacy provider 时参与。",
         "recommended_command": "uv run python -m med_autoscience.cli watch --runtime-root /fixtures/med-autoscience/runtime --profile /fixtures/med-autoscience/profile.local.toml --ensure-study-runtimes --apply"
       }
     ],
@@ -777,13 +777,13 @@
   },
   "phase3_clearance_lane": {
     "surface_kind": "phase3_host_clearance_lane",
-    "summary": "Phase 3 把 external runtime、Hermes-hosted workspace supervision 和 study recovery proof 扩到更多 workspace/host。",
-    "recommended_step_id": "external_runtime_contract",
+    "summary": "Phase 3 把 provider-backed runtime readiness、MAS workspace supervision 和 study recovery proof 扩到更多 workspace/host；Hermes 仅作为 explicit optional legacy provider proof lane。",
+    "recommended_step_id": "provider_runtime_contract",
     "recommended_command": "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml",
     "clearance_targets": [
       {
-        "target_id": "external_runtime_contract",
-        "title": "Check external Hermes runtime contract",
+        "target_id": "provider_runtime_contract",
+        "title": "Check provider runtime contract",
         "commands": [
           "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml",
           "uv run python -m med_autoscience.cli hermes-runtime-check --profile /fixtures/med-autoscience/profile.local.toml"
@@ -792,8 +792,8 @@
     ],
     "clearance_loop": [
       {
-        "step_id": "external_runtime_contract",
-        "title": "先确认 external Hermes runtime contract ready",
+        "step_id": "provider_runtime_contract",
+        "title": "先确认 provider runtime contract ready",
         "surface_kind": "doctor_runtime_contract",
         "command": "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml"
       }
@@ -841,7 +841,7 @@
     "current_readiness_summary": "当前仍在推进 user product loop hardening。",
     "north_star_topology": {
       "domain_agent_entry": "Med Auto Science",
-      "outer_runtime_substrate_owner": "upstream Hermes-Agent",
+      "outer_runtime_substrate_owner": "provider-backed family runtime",
       "controlled_research_backend": "MedDeepScientist",
       "monorepo_status": "post_gate_target"
     },

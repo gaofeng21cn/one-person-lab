@@ -119,12 +119,12 @@ test('product entry program companions normalize preflight and detailed readines
   const clearanceLane = buildClearanceLane({
     surface_kind: 'phase3_host_clearance_lane',
     summary: 'Clear more hosts and workspaces.',
-    recommended_step_id: 'external_runtime_contract',
+    recommended_step_id: 'provider_runtime_contract',
     recommended_command: 'uv run python -m med_autoscience.cli doctor --profile <profile>',
     clearance_targets: [
       buildClearanceTarget({
-        target_id: 'external_runtime_contract',
-        title: 'Check external Hermes runtime contract',
+        target_id: 'provider_runtime_contract',
+        title: 'Check provider runtime contract',
         commands: [
           'uv run python -m med_autoscience.cli doctor --profile <profile>',
           'uv run python -m med_autoscience.cli hermes-runtime-check --profile <profile>',
@@ -147,7 +147,7 @@ test('product entry program companions normalize preflight and detailed readines
     recommended_phase_command: 'uv run python -m med_autoscience.cli mainline-phase --phase phase_3_multi_workspace_host_clearance',
   });
   assert.equal(clearanceLane.surface_kind, 'phase3_host_clearance_lane');
-  assert.equal(clearanceLane.clearance_targets[0].target_id, 'external_runtime_contract');
+  assert.equal(clearanceLane.clearance_targets[0].target_id, 'provider_runtime_contract');
   assert.equal(clearanceLane.proof_surfaces[0].ref, 'studies/<study_id>/artifacts/runtime_watch/latest.json');
 
   const sourceProvenance = buildSourceProvenanceSurface({
