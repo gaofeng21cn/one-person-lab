@@ -12,7 +12,7 @@ type CommandSpec = {
 
 type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';
 
-type ProductEntryExecutor = 'codex' | 'hermes';
+type ProductEntryExecutor = 'codex';
 
 type ProductEntryCliInput = {
   dryRun: boolean;

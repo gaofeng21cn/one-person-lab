@@ -18,7 +18,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -172,8 +172,8 @@ export function buildInternalCommandSpecs(
     doctor: {
       usage: 'opl doctor',
       summary:
-        'Check whether the local OPL product-entry shell and Hermes kernel are ready for direct use.',
-      examples: ['opl doctor', 'OPL_HERMES_BIN=/path/to/hermes opl doctor'],
+        'Check whether the local OPL product-entry shell and configured family runtime provider are ready for direct use.',
+      examples: ['opl doctor', 'OPL_FAMILY_RUNTIME_PROVIDER=local_sqlite opl doctor'],
       handler: () => {
         const validation = validateFrameworkContracts(parsedInput.loadOptions);
         return buildProductEntryDoctor(validation);
@@ -196,7 +196,7 @@ export function buildInternalCommandSpecs(
     },
     'status runtime': {
       usage: 'opl status runtime [--limit <n>]',
-      summary: 'Show Hermes runtime health, recent sessions, and runtime-level process resource usage.',
+      summary: 'Show configured family runtime provider status and the OPL-managed session ledger.',
       examples: ['opl status runtime', 'opl status runtime --limit 10'],
       handler: (args) => {
         const parsed = parseRuntimeStatusArgs(args, commandSpecs['status runtime']);
@@ -438,21 +438,13 @@ export function buildInternalCommandSpecs(
   handler: (args) => runCodexPassthroughHandled(['exec', ...args]),
 },
 resume: {
-  usage: 'opl resume [codex resume args...] [--executor hermes]',
-  summary: 'Resume a Codex session as a raw passthrough; use --executor hermes for explicit Hermes sessions.',
+  usage: 'opl resume [codex resume args...]',
+  summary: 'Resume a Codex session as a raw passthrough.',
   examples: [
     'opl resume run_7e2a41a19175465f809c0a7f151278ee',
     'opl resume --last',
-    'opl resume run_7e2a41a19175465f809c0a7f151278ee --executor hermes',
   ],
-  handler: (args) => {
-    if (!hasExplicitHermesExecutor(args)) {
-      return runCodexPassthroughHandled(['resume', ...stripExplicitCodexExecutor(args)]);
-    }
-
-    const parsed = parseResumeArgs(args, commandSpecs.resume);
-    return runProductEntryResume(parsed.sessionId, parsed.executor);
-  },
+  handler: (args) => runCodexPassthroughHandled(['resume', ...stripExplicitCodexExecutor(args)]),
 },
     sessions: {
       usage: 'opl session list [--limit <n>] [--source <source>]',

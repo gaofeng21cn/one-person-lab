@@ -38,8 +38,8 @@ function parseExecutorValue(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): ProductEntryExecutor {
-  if (value !== 'codex' && value !== 'hermes') {
-    throw buildUsageError('Option --executor requires codex or hermes.', spec, {
+  if (value !== 'codex') {
+    throw buildUsageError('Option --executor only accepts codex.', spec, {
       option,
       value,
     });
@@ -54,11 +54,6 @@ function runCodexPassthroughHandled(args: string[]) {
   return {
     __handled: true as const,
   };
-}
-
-function hasExplicitHermesExecutor(args: string[]) {
-  const executorIndex = args.indexOf('--executor');
-  return executorIndex >= 0 && args[executorIndex + 1] === 'hermes';
 }
 
 function stripExplicitCodexExecutor(args: string[]) {
@@ -79,7 +74,6 @@ function stripExplicitCodexExecutor(args: string[]) {
 export {
   buildRetiredCommandError,
   buildUsageError,
-  hasExplicitHermesExecutor,
   parseExecutorValue,
   printJson,
   runCodexPassthroughHandled,

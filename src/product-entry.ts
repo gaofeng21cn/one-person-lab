@@ -5,13 +5,7 @@ import {
   parseCodexExecOutput,
   runCodexCommand,
 } from './codex.ts';
-import {
-  buildHermesCliPreview,
-  isInteractiveShell,
-  parseHermesQuietChatOutput,
-  runHermesCommand,
-  runHermesResume,
-} from './hermes.ts';
+import { isInteractiveShell } from './hermes.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type {
@@ -22,20 +16,15 @@ import type {
   PreparedProductEntryAsk,
 } from './product-entry-parts/types.ts';
 import {
-  buildAskArgs,
-  buildChatSeedArgs,
   buildContractsContext,
   buildProductEntrySessionPrompt,
   buildProductEntryHandoffBundle,
   buildPromptHeader,
   buildDomainAgentSelectionInput,
-  resolveProductEntryExecutor,
 } from './product-entry-parts/builders.ts';
 import {
   assertCodexSuccess,
-  assertHermesSuccess,
   normalizeCodexOutput,
-  normalizeHermesOutput,
 } from './product-entry-parts/output.ts';
 
 export type {
@@ -61,7 +50,12 @@ export function prepareProductEntryAsk(
   const stageSelection = selectDomainAgentEntry(selectionInput, contracts);
   const boundary = explainDomainBoundary(selectionInput, contracts);
   const handoffPrompt = buildPromptHeader('ask', input, stageSelection, boundary, contracts);
-  const args = buildAskArgs(input, handoffPrompt);
+  const args = buildCodexExecArgs(handoffPrompt, {
+    cwd: input.workspacePath,
+    json: true,
+    model: input.model,
+    provider: input.provider,
+  });
   const handoffBundle = buildProductEntryHandoffBundle(
     contracts,
     'ask',
@@ -98,7 +92,6 @@ function buildPreviewPayload(
   );
 
   if (mode === 'ask') {
-    const executor = resolveProductEntryExecutor(input);
     return {
       version: 'g2',
       contracts_context: buildContractsContext(contracts),
@@ -106,33 +99,24 @@ function buildPreviewPayload(
         entry_surface: 'opl_local_product_entry_shell',
         mode,
         dry_run: true,
-        executor_backend: executor,
+        executor_backend: 'codex',
         input: selectionInput,
         stage_selection: stageSelection,
         boundary,
         ...handoffBundle,
         handoff_prompt_preview: handoffPrompt,
-        ...(executor === 'codex'
-          ? {
-              codex: {
-                command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
-                  cwd: input.workspacePath,
-                  json: true,
-                  model: input.model,
-                  provider: input.provider,
-                })),
-              },
-            }
-          : {
-              hermes: {
-                command_preview: buildHermesCliPreview(buildAskArgs(input, handoffPrompt)),
-              },
-            }),
+        codex: {
+          command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
+            cwd: input.workspacePath,
+            json: true,
+            model: input.model,
+            provider: input.provider,
+          })),
+        },
       },
     };
   }
 
-  const executor = resolveProductEntryExecutor(input);
   return {
     version: 'g2',
     contracts_context: buildContractsContext(contracts),
@@ -140,31 +124,22 @@ function buildPreviewPayload(
       entry_surface: 'opl_local_product_entry_shell',
       mode,
       dry_run: true,
-      executor_backend: executor,
+      executor_backend: 'codex',
       input: selectionInput,
       stage_selection: stageSelection,
       boundary,
       ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
-      ...(executor === 'codex'
-        ? {
-            codex: {
-              command_preview: ['codex'],
-              resume_command_preview: ['codex', 'resume', '<thread_id>'],
-              one_shot_command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
-                cwd: input.workspacePath,
-                json: true,
-                model: input.model,
-                provider: input.provider,
-              })),
-            },
-          }
-        : {
-            hermes: {
-              seed_command_preview: buildHermesCliPreview(buildChatSeedArgs(input, handoffPrompt)),
-              resume_command_preview: ['hermes', '--resume', '<session_id>'],
-            },
-          }),
+      codex: {
+        command_preview: ['codex'],
+        resume_command_preview: ['codex', 'resume', '<thread_id>'],
+        one_shot_command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
+          cwd: input.workspacePath,
+          json: true,
+          model: input.model,
+          provider: input.provider,
+        })),
+      },
     },
   };
 }
@@ -178,102 +153,40 @@ export function runProductEntryAsk(
   }
 
   const preparedAsk = prepareProductEntryAsk(input, contracts);
-  const executor = resolveProductEntryExecutor(input);
+  const codexArgs = preparedAsk.args;
+  const codexResult = runCodexCommand(codexArgs);
 
-  if (executor === 'codex') {
-    const codexArgs = buildCodexExecArgs(preparedAsk.handoffPrompt, {
-      cwd: input.workspacePath,
-      json: true,
-      model: input.model,
-      provider: input.provider,
-    });
-    const codexResult = runCodexCommand(codexArgs);
-
-    assertCodexSuccess(
-      codexResult.exitCode,
-      'Codex ask query failed inside OPL Product Entry.',
-      {
-        args: buildCodexCliPreview(codexArgs),
-        stdout: codexResult.stdout,
-        stderr: codexResult.stderr,
-      },
-    );
-
-    const parsed = parseCodexExecOutput(codexResult.stdout);
-    const handoffBundle = buildProductEntryHandoffBundle(
-      contracts,
-      'ask',
-      input,
-      preparedAsk.stageSelection,
-      preparedAsk.boundary,
-      parsed.threadId ?? undefined,
-    );
-
-    if (parsed.threadId) {
-      recordSessionLedgerEntry({
-        sessionId: parsed.threadId,
-        mode: 'ask',
-        sourceSurface: 'opl_local_product_entry_shell',
-        domainId: 'domain_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.domain_id : null,
-        workstreamId: 'workstream_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.workstream_id : null,
-        goalPreview: input.goal,
-        workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
-      });
-    }
-
-    return {
-      version: 'g2',
-      contracts_context: buildContractsContext(contracts),
-      product_entry: {
-        entry_surface: 'opl_local_product_entry_shell',
-        mode: 'ask',
-        dry_run: false,
-        executor_backend: 'codex',
-        input: preparedAsk.selectionInput,
-        stage_selection: preparedAsk.stageSelection,
-        boundary: preparedAsk.boundary,
-        ...handoffBundle,
-        handoff_prompt_preview: preparedAsk.handoffPrompt,
-        codex: {
-          command_preview: buildCodexCliPreview(codexArgs),
-          response: parsed.finalMessage,
-          session_id: parsed.threadId,
-          exit_code: codexResult.exitCode,
-        },
-      },
-    };
-  }
-
-  const hermesResult = runHermesCommand(preparedAsk.args);
-
-  assertHermesSuccess(
-    hermesResult.exitCode,
-    'Hermes ask query failed inside OPL Product Entry.',
+  assertCodexSuccess(
+    codexResult.exitCode,
+    'Codex ask query failed inside OPL Product Entry.',
     {
-      args: buildHermesCliPreview(preparedAsk.args),
-      stdout: hermesResult.stdout,
-      stderr: hermesResult.stderr,
+      args: buildCodexCliPreview(codexArgs),
+      stdout: codexResult.stdout,
+      stderr: codexResult.stderr,
     },
   );
 
-  const parsed = parseHermesQuietChatOutput(hermesResult.stdout);
+  const parsed = parseCodexExecOutput(codexResult.stdout);
   const handoffBundle = buildProductEntryHandoffBundle(
     contracts,
     'ask',
     input,
     preparedAsk.stageSelection,
     preparedAsk.boundary,
-    parsed.sessionId,
+    parsed.threadId ?? undefined,
   );
-  recordSessionLedgerEntry({
-    sessionId: parsed.sessionId,
-    mode: 'ask',
-    sourceSurface: 'opl_local_product_entry_shell',
-    domainId: 'domain_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.domain_id : null,
-    workstreamId: 'workstream_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.workstream_id : null,
-    goalPreview: input.goal,
-    workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
-  });
+
+  if (parsed.threadId) {
+    recordSessionLedgerEntry({
+      sessionId: parsed.threadId,
+      mode: 'ask',
+      sourceSurface: 'opl_local_product_entry_shell',
+      domainId: 'domain_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.domain_id : null,
+      workstreamId: 'workstream_id' in preparedAsk.stageSelection ? preparedAsk.stageSelection.workstream_id : null,
+      goalPreview: input.goal,
+      workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
+    });
+  }
 
   return {
     version: 'g2',
@@ -282,17 +195,17 @@ export function runProductEntryAsk(
       entry_surface: 'opl_local_product_entry_shell',
       mode: 'ask',
       dry_run: false,
-      executor_backend: 'hermes',
+      executor_backend: 'codex',
       input: preparedAsk.selectionInput,
       stage_selection: preparedAsk.stageSelection,
       boundary: preparedAsk.boundary,
       ...handoffBundle,
       handoff_prompt_preview: preparedAsk.handoffPrompt,
-      hermes: {
-        command_preview: buildHermesCliPreview(preparedAsk.args),
-        response: parsed.response,
-        session_id: parsed.sessionId,
-        exit_code: hermesResult.exitCode,
+      codex: {
+        command_preview: buildCodexCliPreview(codexArgs),
+        response: parsed.finalMessage,
+        session_id: parsed.threadId,
+        exit_code: codexResult.exitCode,
       },
     },
   };
@@ -408,120 +321,27 @@ export function runProductEntryChat(
     return buildPreviewPayload('chat', input, contracts);
   }
 
-  const executor = resolveProductEntryExecutor(input);
   const selectionInput = buildDomainAgentSelectionInput(input);
   const stageSelection = selectDomainAgentEntry(selectionInput, contracts);
   const boundary = explainDomainBoundary(selectionInput, contracts);
   const handoffPrompt = buildPromptHeader('chat', input, stageSelection, boundary, contracts);
-
-  if (executor === 'codex') {
-    const handoffBundle = buildProductEntryHandoffBundle(
-      contracts,
-      'chat',
-      input,
-      stageSelection,
-      boundary,
-    );
-
-    if (isInteractiveShell()) {
-      const productEntryResult = runCodexCommand([handoffPrompt], {
-        inheritStdio: true,
-      });
-      assertCodexSuccess(
-        productEntryResult.exitCode,
-        'Codex entry session failed after OPL Product Entry chat stage selection.',
-        {
-          stage_selection_status: stageSelection.status,
-        },
-      );
-
-      return {
-        __handled: true as const,
-      };
-    }
-
-    return {
-      version: 'g2',
-      contracts_context: buildContractsContext(contracts),
-      product_entry: {
-        entry_surface: 'opl_local_product_entry_shell',
-        mode: 'chat',
-        dry_run: false,
-        interactive: false,
-        executor_backend: 'codex',
-        input: selectionInput,
-        stage_selection: stageSelection,
-        boundary,
-        ...handoffBundle,
-        handoff_prompt_preview: handoffPrompt,
-        codex: {
-          command_preview: ['codex'],
-          resume_command_preview: ['codex', 'resume', '<thread_id>'],
-          one_shot_command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
-            cwd: input.workspacePath,
-            json: true,
-            model: input.model,
-            provider: input.provider,
-          })),
-        },
-      },
-    };
-  }
-
-  const seedArgs = buildChatSeedArgs(input, handoffPrompt);
-  const seedResult = runHermesCommand(seedArgs);
-
-  assertHermesSuccess(
-    seedResult.exitCode,
-    'Hermes chat seeding failed inside OPL Product Entry.',
-    {
-      args: buildHermesCliPreview(seedArgs),
-      stdout: seedResult.stdout,
-      stderr: seedResult.stderr,
-    },
-  );
-
-  const parsed = parseHermesQuietChatOutput(seedResult.stdout);
   const handoffBundle = buildProductEntryHandoffBundle(
     contracts,
     'chat',
     input,
     stageSelection,
     boundary,
-    parsed.sessionId,
   );
-  recordSessionLedgerEntry({
-    sessionId: parsed.sessionId,
-    mode: 'chat',
-    sourceSurface: 'opl_local_product_entry_shell',
-    domainId: 'domain_id' in stageSelection ? stageSelection.domain_id : null,
-    workstreamId: 'workstream_id' in stageSelection ? stageSelection.workstream_id : null,
-    goalPreview: input.goal,
-    workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
-  });
 
   if (isInteractiveShell()) {
-    process.stdout.write(
-      [
-        'OPL Product Entry handoff seeded into Hermes.',
-        `Stage selection status: ${stageSelection.status}`,
-        `Hermes session: ${parsed.sessionId}`,
-        parsed.response ? `Seed response: ${parsed.response}` : null,
-        '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    );
-
-    const resumeResult = runHermesResume(parsed.sessionId, {
+    const productEntryResult = runCodexCommand([handoffPrompt], {
       inheritStdio: true,
     });
-
-    assertHermesSuccess(
-      resumeResult.exitCode,
-      'Hermes resume failed after OPL Product Entry seeded the session.',
+    assertCodexSuccess(
+      productEntryResult.exitCode,
+      'Codex entry session failed after OPL Product Entry chat stage selection.',
       {
-        session_id: parsed.sessionId,
+        stage_selection_status: stageSelection.status,
       },
     );
 
@@ -529,18 +349,6 @@ export function runProductEntryChat(
       __handled: true as const,
     };
   }
-
-  const resumeResult = runHermesResume(parsed.sessionId);
-
-  assertHermesSuccess(
-    resumeResult.exitCode,
-    'Hermes resume failed after OPL Product Entry seeded the session.',
-    {
-      session_id: parsed.sessionId,
-      stdout: resumeResult.stdout,
-      stderr: resumeResult.stderr,
-    },
-  );
 
   return {
     version: 'g2',
@@ -550,23 +358,21 @@ export function runProductEntryChat(
       mode: 'chat',
       dry_run: false,
       interactive: false,
-      executor_backend: 'hermes',
+      executor_backend: 'codex',
       input: selectionInput,
       stage_selection: stageSelection,
       boundary,
       ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
-      seed: {
-        command_preview: buildHermesCliPreview(seedArgs),
-        response: parsed.response,
-        session_id: parsed.sessionId,
-        exit_code: seedResult.exitCode,
-      },
-      resume: {
-        command_preview: buildHermesCliPreview(['--resume', parsed.sessionId]),
-        session_id: parsed.sessionId,
-        output: normalizeHermesOutput(resumeResult.stdout, resumeResult.stderr),
-        exit_code: resumeResult.exitCode,
+      codex: {
+        command_preview: ['codex'],
+        resume_command_preview: ['codex', 'resume', '<thread_id>'],
+        one_shot_command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
+          cwd: input.workspacePath,
+          json: true,
+          model: input.model,
+          provider: input.provider,
+        })),
       },
     },
   };

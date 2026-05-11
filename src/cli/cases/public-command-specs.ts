@@ -1,6 +1,7 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
+import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
@@ -36,7 +37,7 @@ import {
   buildPublicSystemPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseDeveloperSupervisorArgs, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseDeveloperSupervisorArgs, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseResumeArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 async function readStdinText() {
@@ -710,6 +711,10 @@ export function buildPublicCommandSpecs(
       ],
       summary: 'Session-scoped alias for opl resume; Codex remains the default executor.',
       group: 'session',
+      handler: (args) => {
+        const parsed = parseResumeArgs(args, publicCommandSpecs['session resume']);
+        return runProductEntryResume(parsed.sessionId);
+      },
     }),
     'session logs': cloneCommandSpec(commandSpecs.logs, {
       usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
