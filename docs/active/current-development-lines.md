@@ -9,6 +9,8 @@ Machine boundary: this is a human-readable execution map. Machine truth remains 
 
 OPL development is framework-first. Do not make a single domain delivery soak the primary acceptance path before the framework and domain migration are in place.
 
+Current calibration on 2026-05-12: the framework control plane, shared contracts, local queue / attempt ledger, Temporal provider code, typed closeout gate, domain skeleton discovery, stage plane discovery, domain-memory descriptor index, runtime snapshot, and Aion stage-attempt workbench have landed as readable/testable surfaces. Fresh CLI checks show `opl agents list --json` at `aligned_count=3`, `missing_count=0`, `drift_detected_count=0`; `opl stages list --json` at `resolved_planes_count=3`, `stages_count=18`; and `opl domain-memory list --json` at `resolved_memory_descriptor_count=3`, `missing_memory_descriptor_count=0`. This means MAS/MAG/RCA descriptor-level migration is complete, while production residency, real long-running stage activity soak, workspace/runtime memory apply receipts, provider-hosted paper/grant/visual soaks, physical skeleton layout, and physical retirement of old default surfaces remain open.
+
 Current order:
 
 1. Finish OPL as the full agent framework: stage attempts, provider runtime, typed queue, wakeup, retry/dead-letter, approval/human gate, receipts/projections, and shared lifecycle/index primitives.
@@ -24,7 +26,7 @@ Current order:
 | order | line | current owner | what is active now |
 | --- | --- | --- | --- |
 | `1` | `opl_framework_foundation` | OPL roadmap + Runtime Manager / provider contracts | complete Temporal/provider readiness, stage attempt ledger, workflow/activity/signal/query, typed queue, retry/dead-letter, human gate, receipt/projection, and shared lifecycle/index primitives |
-| `2` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | align domain-agent skeletons, stage descriptors, sidecar/receipts, artifact locators, projection builders, authority refs; prove direct skill and OPL-hosted paths share owner receipts |
+| `2` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | descriptor / manifest alignment is complete across the three active domains; next work is workspace/runtime receipt parity, provider-hosted soak, physical skeleton layout audit, path compatibility audit, and continuous proof that direct skill and OPL-hosted paths share owner receipts |
 | `3` | `feature_partition_and_retirement` | OPL active docs + domain owner docs | lift framework-generic capabilities into OPL, keep domain-specific truth in domains, retire old Hermes/Gateway/frontdoor/local-manager/MDS-default surfaces |
 | `4` | `opl_app_runtime_workbench` | OPL App / Runtime Manager | show provider readiness, stage attempts, domain status, human gates, action receipts, artifact refs, and source refs without rewriting domain truth; the stage-attempt workbench now exposes read-only grouping, filter keys, attention counters, and memory-ref counters for App panels |
 | `5` | `domain_soak_and_acceptance` | Domain repos + OPL provider | run real or controlled MAS/MAG/RCA soak after migration and prove progress delta, quality-gate movement, human gate, stop-loss, or typed blocker |
@@ -55,7 +57,7 @@ Current order:
 | line | done signal |
 | --- | --- |
 | `opl_framework_foundation` | OPL provider/framework can stably carry stage attempts, queue/wakeup, retry/dead-letter, approval/human gate, receipts/projections, and shared lifecycle/index primitives. |
-| `domain_framework_migration` | MAS/MAG/RCA are admitted through shared skeleton/descriptor/locator/receipt surfaces; direct and OPL-hosted paths share domain owner receipts. |
+| `domain_framework_migration` | MAS/MAG/RCA are admitted through shared skeleton/descriptor/locator/receipt surfaces; repo-source layout and real workspace/runtime receipt proofs are complete; direct and OPL-hosted paths share domain owner receipts. |
 | `feature_partition_and_retirement` | old default dependencies, legacy compatibility, duplicate UI, and stale manager surfaces are classified, replaced, and retired; retained items have explicit owner and use. |
 | `opl_app_runtime_workbench` | OPL App can read provider, stage attempt, domain progress, human gate, artifact refs, source refs, safe action receipts, and stage-attempt grouping/filter summaries in one workbench. |
 | `domain_soak_and_acceptance` | MAS/MAG/RCA each produce real or controlled progress delta, quality-gate movement, human gate, stop-loss, or typed blocker in the migrated target shape. |
