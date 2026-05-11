@@ -19,7 +19,11 @@ import {
 import {
   createStageAttempt,
   inspectStageAttempt,
+  ingestStageAttemptCloseout,
   listStageAttempts,
+  queryStageAttempt,
+  runStageAttemptFixtureActivity,
+  signalStageAttempt,
   stageAttemptSummary,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
@@ -708,6 +712,56 @@ export function runFamilyRuntime(args: string[]) {
         family_runtime_stage_attempt: {
           surface_id: 'opl_family_runtime_stage_attempt',
           attempt: inspectStageAttempt(db, parsed.stageAttemptId),
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_query') {
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt_query: {
+          surface_id: 'opl_family_runtime_stage_attempt_query',
+          ...queryStageAttempt(db, parsed.stageAttemptId),
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_signal') {
+      const result = signalStageAttempt(db, parsed);
+      insertEvent(db, {
+        taskId: result.attempt.task_id,
+        domainId: result.attempt.domain_id,
+        eventType: 'stage_attempt_signal_received',
+        source: parsed.source ?? 'opl-cli',
+        payload: {
+          stage_attempt_id: parsed.stageAttemptId,
+          signal_kind: parsed.signalKind,
+          signal_id: result.signal.signal_id,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt_signal: {
+          surface_id: 'opl_family_runtime_stage_attempt_signal',
+          ...result,
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_fixture_run') {
+      const result = runStageAttemptFixtureActivity(db, parsed);
+      insertEvent(db, {
+        taskId: result.attempt.task_id,
+        domainId: result.attempt.domain_id,
+        eventType: 'stage_attempt_fixture_activity_ran',
+        source: 'opl-cli',
+        payload: {
+          stage_attempt_id: parsed.stageAttemptId,
+          provider_completion: result.provider_fixture_run.provider_completion,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt_fixture_run: {
+          surface_id: 'opl_family_runtime_stage_attempt_fixture_run',
+          ...result,
         },
       };
     }

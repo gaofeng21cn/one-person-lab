@@ -110,6 +110,47 @@ function withFamilyStageControlPlane(payload: JsonRecord, plane: JsonRecord) {
   return attachPlane(payload);
 }
 
+function withStandardSkeleton(payload: JsonRecord, overrides: JsonRecord = {}) {
+  const skeleton = {
+    surface_kind: 'standard_domain_agent_skeleton',
+    version: 'standard-domain-agent-skeleton.v1',
+    agent_id: 'mas',
+    repo_source_boundary: {
+      required_dirs: ['agent', 'contracts', 'runtime', 'docs'],
+      forbidden_dirs: ['artifacts'],
+    },
+    contracts: {
+      descriptor_refs: ['contracts/domain-agent.json'],
+      sidecar_refs: ['runtime/sidecar.py'],
+      quality_gate_refs: ['contracts/quality-gates.json'],
+    },
+    artifact_boundary: {
+      repo_contains_real_artifacts: false,
+      artifact_roots_are_locators: true,
+      workspace_artifact_locator_refs: ['workspace:/artifacts'],
+      runtime_artifact_locator_refs: ['runtime:/receipts'],
+    },
+    authority_boundary: {
+      opl: 'framework_transport_and_projection_only',
+      domain: 'truth_quality_artifact_owner',
+    },
+    ...overrides,
+  };
+  if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
+    return {
+      ...payload,
+      product_entry_manifest: {
+        ...(payload.product_entry_manifest as JsonRecord),
+        standard_domain_agent_skeleton: skeleton,
+      },
+    };
+  }
+  return {
+    ...payload,
+    standard_domain_agent_skeleton: skeleton,
+  };
+}
+
 test('family stage control plane is resolved from domain manifests as read-only stage descriptors', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stages-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -288,6 +329,74 @@ test('family stage parity detects allowed action refs missing from the action ca
     });
     assert.equal(inspect.family_stage.parity.status, 'drift_detected');
     assert.match(inspect.family_stage.parity.issues[0], /missing_action/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('standard domain-agent skeleton inspection requires repo-source dirs and artifact locator boundaries', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agents-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const alignedManifest = withStandardSkeleton(fixtures.medautoscience);
+  const driftManifest = withStandardSkeleton(fixtures.redcube, {
+    agent_id: 'rca',
+    repo_source_boundary: {
+      required_dirs: ['agent', 'contracts', 'runtime', 'docs', 'artifacts'],
+      forbidden_dirs: [],
+    },
+    artifact_boundary: {
+      repo_contains_real_artifacts: true,
+      artifact_roots_are_locators: false,
+      workspace_artifact_locator_refs: [],
+      runtime_artifact_locator_refs: [],
+    },
+  });
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(alignedManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(driftManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const list = runCli(['agents', 'list'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const inspect = runCli(['agents', 'inspect', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const drift = runCli(['agents', 'inspect', '--domain', 'redcube'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(list.family_agents.summary.aligned_count, 1);
+    assert.equal(list.family_agents.summary.drift_detected_count, 1);
+    assert.equal(inspect.family_agent.skeleton_status, 'aligned');
+    assert.deepEqual(inspect.family_agent.required_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
+    assert.equal(inspect.family_agent.artifact_boundary.repo_contains_real_artifacts, false);
+    assert.equal(drift.family_agent.skeleton_status, 'drift_detected');
+    assert.ok(drift.family_agent.issues.includes('repo_source_skeleton_must_not_include_real_artifacts_dir'));
+    assert.ok(drift.family_agent.issues.includes('domain_repo_must_not_contain_real_artifacts'));
+    assert.ok(drift.family_agent.issues.includes('artifact_roots_must_be_locators'));
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

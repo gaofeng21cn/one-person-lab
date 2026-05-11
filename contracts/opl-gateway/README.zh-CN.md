@@ -28,7 +28,7 @@
 ## 这个目录应该怎么读
 
 - `workstreams.json`、`domains.json`、`routing-vocabulary.json`、`handoff.schema.json`、`routed-actions.schema.json` 和 `public-surface-index.json` 都按旧的 gateway-first 语料理解。
-- `family-runtime-online-substrate-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime 主线的活跃机器合同。
+- `family-runtime-online-substrate-contract.json`、`family-runtime-attempt-contract.json`、`standard-domain-agent-skeleton-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime 主线的活跃机器合同。
 - `family-executor-adapter-defaults.json` 继续作为共享 executor 兼容工件使用。
 - onboarding、backlog、acceptance、example 和 operating-record 相关文件继续作为 reference-grade 审计材料存在。
 
@@ -46,6 +46,8 @@
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`
 - `family-runtime-online-substrate-contract.json`
+- `family-runtime-attempt-contract.json`
+- `standard-domain-agent-skeleton-contract.json`
 - `governance-audit.schema.json`
 - `publish-promotion.schema.json`
 - `acceptance-matrix.json`
@@ -62,5 +64,5 @@
 ## 阅读规则
 
 - gateway-first 文件除非新的核心文档明确重新提升，否则按旧兼容语料理解
-- Runtime Manager 与 family runtime 合同按 provider-backed family runtime 主线活跃依据读取
+- Runtime Manager、family runtime attempt 与 standard domain-agent skeleton 合同按 provider-backed family runtime 主线活跃依据读取
 - domain truth 继续归对应 domain 仓所有，而不是归这个目录所有

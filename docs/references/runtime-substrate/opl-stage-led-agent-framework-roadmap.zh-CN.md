@@ -364,14 +364,16 @@ Codex CLI 负责：
 
 ### Master P1. Temporal Provider Skeleton
 
-目标：让 `temporal` provider 从计划目标变成可运行 fixture workflow。
+状态：已落地 `temporal` provider 的 machine-readable workflow/signal/query contract 与 local fixture-run/query/signal 入口；尚未接入真实 Temporal worker/server。
+
+目标：让 `temporal` provider 从计划目标变成可运行 fixture workflow，再升级到真实 worker。
 
 交付：
 
-- OPL TypeScript 引入 Temporal SDK、dev/test entry 和 `StageAttemptWorkflow` fixture。
-- `CodexStageActivity` 与 `DomainSidecarDispatchActivity` 先用 fixture/domain dry-run，不直接写 domain truth。
-- `HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal`、`StageAttemptQuery` 形成最小合同。
-- provider receipt 写入现有 stage attempt ledger。
+- 已完成：`StageAttemptWorkflow`、`CodexStageActivity`、`DomainSidecarDispatchActivity`、`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal`、`StageAttemptQuery` 形成 OPL contract。
+- 已完成：`opl family-runtime attempt query|signal|fixture-run` 可在 local ledger 中模拟 provider lifecycle，并区分 provider completion 与 domain ready verdict。
+- 已完成：provider receipt 继续写入现有 stage attempt ledger。
+- 待完成：引入 Temporal SDK、dev/test worker entry、workflow replay 和真实 activity retry。
 
 验收：
 
@@ -389,13 +391,16 @@ Codex CLI 负责：
 
 ### Master P2. Codex Stage Activity Runner
 
+状态：已落地 fixture runner contract，真实 Codex CLI long-running activity runner 仍是后续实现。
+
 目标：把 Codex CLI 作为 stage 内默认 concrete executor 接入 provider。
 
 交付：
 
-- stage packet 输入：stage id、skill refs、prompt refs、workspace locator、context/knowledge refs、authority boundary。
-- stage closeout 输出：typed closeout、artifact delta refs、consumed refs、rejected writes、next owner、human gate / blocker。
-- heartbeat / checkpoint：记录 long-running Codex execution 的 progress、last artifact delta、current blocker。
+- 已完成：stage packet ref、workspace locator、authority boundary 可进入 fixture activity input。
+- 已完成：typed closeout packet 强制要求 `closeout_refs`，并投影 consumed refs、rejected writes、next owner、domain ready verdict。
+- 已完成：checkpoint refs、human gate signals 和 resume signals 进入 attempt ledger/query projection。
+- 待完成：真实 Codex CLI activity heartbeat、long-running process supervision、token/cost/progress sampling。
 
 验收：
 
@@ -404,6 +409,8 @@ Codex CLI 负责：
 - OPL 只保存 refs 和 receipt，不复制 domain truth。
 
 ### Master P2b. Framework Lifecycle Primitives From MAS
+
+状态：已落地 locator-only lifecycle primitive contract；MAS/MAG/RCA domain-side inventory/adapter 已由并行 lane 提交，真实跨仓吸收和 soak 仍需主线合并验证。
 
 目标：把 MAS 已验证的 SQLite 持久化层、file lifecycle、artifact index、retention、restore proof 和 lifecycle 管理经验抽象为 OPL framework primitive。
 
@@ -422,14 +429,16 @@ Codex CLI 负责：
 
 ### Master P2c. Standard Domain-Agent Skeleton Rollout
 
+状态：OPL 已落地 `standard-domain-agent-skeleton-contract.json`、manifest normalizer 和 `opl agents list|inspect`；MAS/MAG/RCA adapter 已由并行 lane 提交，待吸收到各自 main 后做跨仓验证。
+
 目标：让 MAS、MAG、RCA 按统一 skeleton 暴露 stage、prompt、skill、knowledge、quality gate、contract、sidecar、receipt schema / refs、projection builder / refs 和 artifact locator contract。
 
 交付：
 
-- 在 OPL 冻结 `standard_domain_agent_skeleton` contract：目录 role、required descriptors、optional adapters、migration status、parity proof。
-- MAS/MAG/RCA 各自生成 skeleton mapping：现有 repo-source 文件/manifest 到 `agent/`、`contracts/`、`runtime/`、`docs/` 的对应关系，以及 workspace artifact root / runtime artifact root 的 locator contract。
+- 已完成：在 OPL 冻结 `standard_domain_agent_skeleton` contract：repo-source 只允许 `agent/`、`contracts/`、`runtime/`、`docs/`，真实 artifact 只能通过 locator 暴露。
+- 进行中：MAS/MAG/RCA 各自生成 skeleton mapping：现有 repo-source 文件/manifest 到 `agent/`、`contracts/`、`runtime/`、`docs/` 的对应关系，以及 workspace artifact root / runtime artifact root 的 locator contract。
 - 先以 manifest/adapter 对齐，再分 repo 做物理目录重组计划。
-- OPL `opl agents inspect` / `opl stages inspect` 能展示 skeleton completeness、missing refs、nonstandard legacy surface 和 migration blockers。
+- 已完成：OPL `opl agents inspect` / `opl stages inspect` 能展示 skeleton completeness、missing refs、nonstandard legacy surface 和 migration blockers。
 
 验收：
 
