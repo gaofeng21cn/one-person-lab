@@ -655,6 +655,20 @@ test('help returns command discovery and runnable examples', () => {
       'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
     ),
   );
+  const commandText = JSON.stringify(output.help.commands);
+  assert.doesNotMatch(commandText, /--executor hermes/);
+  assert.doesNotMatch(commandText, /<codex\|hermes>/);
+  assert.doesNotMatch(commandText, /hermes-cron/);
+  assert.doesNotMatch(commandText, /Compatibility alias/);
+  assert.ok(
+    output.help.commands.some(
+      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
+        entry.command === 'session resume'
+        && entry.usage === 'opl session resume <session_id> [--executor codex]'
+        && entry.examples.every((example) => !example.includes('hermes'))
+        && /Codex remains the default executor/.test(entry.summary),
+    ),
+  );
 });
 
 test('root --help returns the same machine-readable help payload', () => {

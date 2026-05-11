@@ -70,6 +70,7 @@ The earlier gateway-first phase is retained only as historical provenance:
 - [OPL Gateway Contract Surface](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
 
 These surfaces must not be used as active implementation, test, or machine-readable contract inputs for today's `OPL`.
+The landed cleanup line is narrower than physical deletion: current public help and active wording no longer advertise Hermes executor, Gateway cron, frontdoor/local-manager, or compatibility aliases as the normal path. Legacy `hermes_legacy` provider diagnostics, historical provenance, and test fixtures may still retain old names when their purpose is explicit.
 
 ## Reference-Grade Supporting Material
 
@@ -95,4 +96,5 @@ This surface index is acceptable only when:
 - it makes the current `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` mainline obvious
 - it distinguishes OPL-owned runtime/activation surfaces from repo-owned domain capability surfaces
 - it clearly marks legacy gateway/federation material as reference or provenance content
+- it keeps retained legacy names scoped to `hermes_legacy` provider diagnostics, provenance, or test fixtures
 - it keeps domain runtime truth, progress truth, and artifact truth owned by the corresponding domain repositories
