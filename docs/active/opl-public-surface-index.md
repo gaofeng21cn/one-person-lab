@@ -35,7 +35,7 @@ These documents define the current `OPL` mainline:
 - [Contracts Overview](../../contracts/README.md)
 
 These surfaces explain the default entry (`opl`, `opl exec`, `opl resume`), the current resource model (`workspaces / sessions / progress / artifacts`), and the rule that explicit domain activation or executor switching is opt-in.
-They also keep `OPL Runtime Manager` scoped as the product control plane over the configured provider-backed family runtime, with typed family queue, bridge diagnostics, and Rust native helper / index work limited to native assistance and indexed discovery. Temporal-backed provider is the production substrate candidate; `Hermes-Agent` remains a migration-period legacy/optional provider or explicit executor/proof lane.
+They also keep `OPL Runtime Manager` scoped as the product control plane over the configured provider-backed family runtime, with typed family queue, bridge diagnostics, and Rust native helper / index work limited to native assistance and indexed discovery. Temporal-backed provider is the production substrate candidate; `Hermes-Agent` remains only a migration-period `hermes_legacy` provider, diagnostics/provenance/test fixture, or optional install module. Ordinary Product Entry and session resume no longer expose a Hermes executor path.
 
 ### 2. Linked domain capability surfaces
 
