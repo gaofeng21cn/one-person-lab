@@ -19,6 +19,7 @@ import {
 import {
   queryTemporalStageAttemptWorkflow,
   signalTemporalStageAttemptWorkflow,
+  buildTemporalWorkerLifecycleContract,
   startTemporalStageAttemptWorkflow,
 } from './family-runtime-temporal-provider.ts';
 import {
@@ -88,6 +89,9 @@ function buildStatusPayload(
       provider_runtime: {
         ...providerRuntime,
         selected: provider,
+        temporal_worker_lifecycle: selectedProvider === 'temporal'
+          ? buildTemporalWorkerLifecycleContract()
+          : null,
       },
       opl_owner: {
         queue: 'typed_family_queue',

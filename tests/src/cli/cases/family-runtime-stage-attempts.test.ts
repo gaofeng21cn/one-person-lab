@@ -389,3 +389,78 @@ test('family-runtime temporal attempt start refuses non-temporal attempts', () =
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime attempt fixture-run ingests typed memory closeout refs and signal history', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-memory-closeout-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts"}',
+      '--source-fingerprint',
+      'sha256:review-memory',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'user_instruction',
+      '--payload',
+      '{"instruction_ref":"user:revision-10","instruction_count":10}',
+      '--source',
+      'operator',
+    ], familyRuntimeEnv(stateRoot));
+    runCli([
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'resume',
+      '--payload',
+      '{"resume_token":"resume:review-memory","reason":"operator_resume"}',
+      '--source',
+      'operator',
+    ], familyRuntimeEnv(stateRoot));
+
+    const fixtureRun = runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--checkpoint-ref',
+      'checkpoint:review-midpoint',
+      '--closeout-packet',
+      '{"surface_kind":"stage_memory_closeout_packet","closeout_refs":["receipt:review-closeout"],"consumed_refs":["evidence:review-ledger"],"consumed_memory_refs":["memory:route-policy","memory:reviewer-style"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"target":"memory","reason":"domain_router_rejected"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"route":"review","impact":"needs_revision"}}',
+    ], familyRuntimeEnv(stateRoot));
+    const queryAfter = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+    const visibility = queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility;
+
+    assert.equal(fixtureRun.family_runtime_stage_attempt_fixture_run.attempt.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.deepEqual(visibility.consumed_memory_refs, ['memory:route-policy', 'memory:reviewer-style']);
+    assert.deepEqual(visibility.writeback_receipt_refs, ['memory-writeback:receipt-1']);
+    assert.equal(visibility.rejected_writes[0].reason, 'domain_router_rejected');
+    assert.equal(visibility.route_impact.impact, 'needs_revision');
+    assert.equal(visibility.user_instructions.length, 1);
+    assert.equal(visibility.resume_signals.length, 1);
+    assert.equal(visibility.resume_signals[0].payload.resume_token, 'resume:review-memory');
+    assert.equal(
+      visibility.authority_boundary.domain,
+      'truth_quality_artifact_gate_owner',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

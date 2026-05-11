@@ -1,6 +1,7 @@
 import { heartbeat } from '@temporalio/activity';
 
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
+import { normalizeTypedStageCloseoutPacket } from './family-runtime-codex-stage-runner.ts';
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
   heartbeat({
@@ -29,19 +30,24 @@ export async function domainSidecarDispatchActivity(input: TemporalStageAttemptW
     stage_attempt_id: input.stage_attempt_id,
     stage_id: input.stage_id,
   });
+  const closeout = input.closeout_packet
+    ? normalizeTypedStageCloseoutPacket(input.closeout_packet)
+    : null;
   return {
     surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
     activity_kind: 'domain_sidecar_dispatch_activity',
     activity_status: 'completed',
     stage_attempt_id: input.stage_attempt_id,
     domain_id: input.domain_id,
-    closeout_refs: input.closeout_packet && Array.isArray(input.closeout_packet.closeout_refs)
-      ? input.closeout_packet.closeout_refs
-      : [`temporal://${input.workflow_id}/domain-sidecar-dispatch`],
-    consumed_refs: [],
-    rejected_writes: [],
-    next_owner: input.domain_id,
-    domain_ready_verdict: 'domain_gate_pending',
+    closeout_refs: closeout?.closeout_refs ?? [`temporal://${input.workflow_id}/domain-sidecar-dispatch`],
+    consumed_refs: closeout?.consumed_refs ?? [],
+    consumed_memory_refs: closeout?.consumed_memory_refs ?? [],
+    writeback_receipt_refs: closeout?.writeback_receipt_refs ?? [],
+    rejected_writes: closeout?.rejected_writes ?? [],
+    next_owner: closeout?.next_owner ?? input.domain_id,
+    domain_ready_verdict: closeout?.domain_ready_verdict ?? 'domain_gate_pending',
+    route_impact: closeout?.route_impact ?? {},
+    closeout_packet_surface_kind: closeout?.surface_kind ?? null,
     authority_boundary: {
       opl: 'sidecar_transport_only',
       domain: 'sidecar_dispatch_and_receipt_owner',

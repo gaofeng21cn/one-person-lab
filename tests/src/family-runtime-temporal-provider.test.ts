@@ -39,7 +39,15 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
     stage_packet_ref: 'packet:analysis',
     checkpoint_refs: ['checkpoint:seed'],
     closeout_packet: {
+      surface_kind: 'stage_memory_closeout_packet',
       closeout_refs: ['receipt:domain-closeout'],
+      consumed_refs: ['evidence:table1'],
+      consumed_memory_refs: ['memory:route-policy'],
+      writeback_receipt_refs: ['memory-writeback:receipt-1'],
+      rejected_writes: [{ reason: 'domain_router_rejected' }],
+      next_owner: 'med-autoscience',
+      domain_ready_verdict: 'domain_gate_pending',
+      route_impact: { route: 'review', next_owner: 'med-autoscience' },
     },
   };
 }
@@ -88,6 +96,11 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
     assert.equal(result.finalState.completion_boundary.provider_completion_is_domain_ready, false);
     assert.equal(result.finalState.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
     assert.deepEqual(result.finalState.closeout_refs, ['receipt:domain-closeout']);
+    assert.deepEqual(result.finalState.consumed_refs, ['evidence:table1']);
+    assert.deepEqual(result.finalState.consumed_memory_refs, ['memory:route-policy']);
+    assert.deepEqual(result.finalState.writeback_receipt_refs, ['memory-writeback:receipt-1']);
+    assert.equal(result.finalState.rejected_writes[0].reason, 'domain_router_rejected');
+    assert.equal(result.finalState.next_owner, 'med-autoscience');
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'codex_stage_activity'));
     assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_sidecar_dispatch_activity'));
     assert.equal(result.queriedState.signals.length, 2);
