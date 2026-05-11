@@ -20,8 +20,12 @@ export interface FamilyDomainMemoryRef {
   writeback_contract_ref: FamilyMemoryRefValue | null;
   receipt_contract_ref: FamilyMemoryRefValue | null;
   recall_projection_ref: FamilyMemoryRefValue | null;
+  migration_plan_ref: FamilyMemoryRefValue | null;
+  seed_corpus_ref: FamilyMemoryRefValue | null;
+  writeback_receipt_locator_ref: FamilyMemoryRefValue | null;
   provenance_refs: FamilyMemoryRefValue[];
   freshness: JsonRecord | null;
+  migration_readiness: JsonRecord | null;
   status: string | null;
   authority_boundary: JsonRecord;
 }
@@ -128,8 +132,15 @@ export function normalizeFamilyDomainMemoryRef(
     writeback_contract_ref: normalizeRef(value.writeback_contract_ref, `${field}.writeback_contract_ref`),
     receipt_contract_ref: normalizeRef(value.receipt_contract_ref, `${field}.receipt_contract_ref`),
     recall_projection_ref: normalizeRef(value.recall_projection_ref, `${field}.recall_projection_ref`),
+    migration_plan_ref: normalizeRef(value.migration_plan_ref, `${field}.migration_plan_ref`),
+    seed_corpus_ref: normalizeRef(value.seed_corpus_ref, `${field}.seed_corpus_ref`),
+    writeback_receipt_locator_ref: normalizeRef(
+      value.writeback_receipt_locator_ref,
+      `${field}.writeback_receipt_locator_ref`,
+    ),
     provenance_refs: normalizeRefs(value.provenance_refs, `${field}.provenance_refs`),
     freshness: isRecord(value.freshness) ? value.freshness : null,
+    migration_readiness: isRecord(value.migration_readiness) ? value.migration_readiness : null,
     status: optionalString(value.status),
     authority_boundary: authorityBoundary,
   };
