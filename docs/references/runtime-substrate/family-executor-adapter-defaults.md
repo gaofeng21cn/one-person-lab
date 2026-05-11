@@ -1,5 +1,11 @@
 # 家族 Executor Adapter 默认口径
 
+Status: `support_reference_updated`
+Owner: `One Person Lab`
+Machine boundary: 本文是人读 executor 边界参考；机器可读默认值以 `contracts/opl-framework/family-executor-adapter-defaults.json`、`contracts/opl-framework/domain-onboarding-readiness.schema.json`、source code 与 CLI/API 行为为准。
+
+当前状态说明（2026-05-11）：本文保留 `Codex CLI` 默认执行器与 `Hermes-Agent` 实验执行路线的边界。旧 `frontdoor`、`product frontdoor`、`federated product entry` 和 MDS 默认执行语境只按历史/compatibility 背景阅读；当前 OPL 主线是 Codex-first、stage-led、provider-backed framework。
+
 ## 目的
 
 这份参考文档只做一件事：把 `OPL` 家族当前统一的 `executor-adapter` 默认口径冻结清楚，避免后续再把 runtime substrate、domain authority 与具体执行器混成一层。
@@ -33,7 +39,7 @@
 
 当前共享合同把 executor 配置拆成三层，不再把用户入口、默认执行器和 route 级结构化调用揉成一层：
 
-- `user_interaction_shell`：用户可见的自然语言 / session 外壳，可以由 `OPL` frontdoor 或 domain frontdoor 承担；这一层不选择 effective default executor，也不持有 domain truth。
+- `user_interaction_shell`：用户可见的自然语言 / session 外壳，可以由 OPL-branded shell / GUI / App workbench 或 domain direct skill entry 承担；这一层不选择 effective default executor，也不持有 domain truth。旧 `frontdoor` 词只保留在历史/compatibility 语境。
 - `effective_default_executor`：family-level 默认执行器解析语义，归 `OPL` family runtime config / handoff default 管；默认 backend 仍是 `codex_cli`，这一层不持有 `RedCube AI` 等 domain truth，也不持有具体 executor 实现。
 - `route_level_structured_call_routing`：domain 自己的 schema、route 和 structured call 选择；它可以接收 request-scoped explicit executor，但 route truth 和 domain truth 仍归 domain 仓。
 
@@ -85,15 +91,16 @@ Effective default executor 的解析顺序固定为：
 
 ## 三仓当前映射
 
-- `Med Auto Science / MedDeepScientist`
-  - 当前最成熟的参考实现
-  - 已经以 `Codex CLI` 的 `autonomous` 模式作为真实可证实的底层执行器
+- `Med Auto Science`
+  - 当前最成熟的医学研究 domain-agent 参考实现
+  - 以 `Codex CLI` 的 `autonomous` 模式作为默认底层执行器
+  - `MedDeepScientist / MDS` 只作为 MAS 声明的 source provenance、historical fixture、backend audit、explicit archive import、upstream learning 与 parity oracle reference，不再作为 OPL 默认 executor owner
 - `RedCube AI`
   - `Codex CLI` 默认路线已经吸收回 `main`
-  - 当前 repo-tracked truth 已同时包含 upstream runtime-owner cutover 与 repo-verified `product frontdoor / federated product entry / session continuity`
+  - 当前 repo-tracked truth 以 visual-deliverable domain agent、product-entry/session continuity 和 OPL-consumable descriptor/projection 为准；历史 `product frontdoor / federated product entry` 只按 compatibility/provenance 背景阅读
   - 现有 Hermes `/v1/runs` relay 继续只算迁移桥
 - `Med Auto Grant`
-  - 真实上游 `Hermes-Agent` runtime substrate 已可运行
+  - 历史 Hermes proof lane 可作为迁移/回归参考
   - `critique` route 已 landed 到 `Codex CLI`
   - docs / contract 已与默认模型策略一起收口
 

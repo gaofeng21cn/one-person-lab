@@ -1,5 +1,5 @@
-<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab Codex-first stage-led knowledge delivery architecture">
-  <title>One Person Lab Codex-first stage-led knowledge delivery architecture</title>
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab Codex-first high-value knowledge delivery architecture">
+  <title>One Person Lab Codex-first high-value knowledge delivery architecture</title>
   <defs>
     <linearGradient id="bg" x1="70" y1="40" x2="1530" y2="940" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#F8FCFF"/>
@@ -17,13 +17,13 @@
   <rect width="1600" height="980" fill="url(#bg)"/>
   <rect x="70" y="58" width="1460" height="864" rx="36" fill="#FFFFFF" fill-opacity="0.76" stroke="#D4E3F1" stroke-width="2"/>
 
-  <text x="800" y="120" text-anchor="middle" fill="#102A3A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="40" font-weight="800">Codex-first Stage-led Architecture</text>
-  <text x="800" y="160" text-anchor="middle" fill="#506B83" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="20">OPL uses Codex CLI inside expert stages while separating framework orchestration from domain truth.</text>
+  <text x="800" y="120" text-anchor="middle" fill="#102A3A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="40" font-weight="800">High-Value Knowledge Delivery Architecture</text>
+  <text x="800" y="160" text-anchor="middle" fill="#506B83" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="20">OPL separates framework orchestration from domain truth so expert work can scale without losing quality ownership.</text>
 
   <g filter="url(#shadow)">
     <rect x="150" y="220" width="1300" height="104" rx="30" fill="#0D2A45"/>
     <text x="800" y="262" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800">One Person Lab Platform</text>
-    <text x="800" y="294" text-anchor="middle" fill="#CDE2F5" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Codex activation, workspace, sessions, stages, progress, artifacts, modules, skills, and product surface</text>
+    <text x="800" y="294" text-anchor="middle" fill="#CDE2F5" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Workspace, sessions, stages, progress, artifacts, modules, skills, and usage-based product surface</text>
   </g>
 
   <path d="M800 324V370" stroke="#24718F" stroke-width="5" marker-end="url(#arrow)"/>
@@ -31,7 +31,7 @@
   <g filter="url(#shadow)">
     <rect x="190" y="370" width="1220" height="138" rx="32" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
     <text x="800" y="416" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800">Stage-Led Framework Layer</text>
-    <text x="800" y="452" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Codex CLI work units · stage descriptors · typed queue · attempts · handoff · receipts · recovery · projection</text>
+    <text x="800" y="452" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Stage descriptors · typed queue · attempts · handoff · receipts · human gates · recovery · projection</text>
     <text x="800" y="482" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">The framework owns orchestration metadata; domain agents own professional judgment and deliverables.</text>
   </g>
 
@@ -67,5 +67,5 @@
     <text x="800" y="839" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Visible attempts · auditable receipts · recoverable execution · source refs · domain-owned final authority</text>
   </g>
 
-  <text x="800" y="905" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Codex CLI is the default minimum executor; providers add durable stage runtime without taking domain authority.</text>
+  <text x="800" y="905" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Concrete executors and runtime providers are implementation choices; OPL's brand value is the expert-stage framework for serious knowledge outcomes.</text>
 </svg>

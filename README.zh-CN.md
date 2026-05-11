@@ -40,7 +40,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、已配置的 OPL 家族运行时提供者、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。完整就绪需要核心环境、领域模块、已配置的家族运行时提供者三层都通过。生产目标是由 Temporal 支撑的运行时提供者承接可恢复的阶段尝试；当前 Hermes/local provider 路径只作为迁移期或历史实现信号。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置默认执行器、已配置的 OPL 家族运行时提供者、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。完整就绪需要核心环境、领域模块、已配置的家族运行时提供者三层都通过。生产目标是由 Temporal 支撑的运行时提供者承接可恢复的阶段尝试；当前 Hermes/local provider 路径只作为迁移期或历史实现信号。
 
 如果你更习惯从终端安装：
 
@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 专业产品家族：面向特定领域的专门工作流。
 - 阶段推进执行：OPL 把领域阶段作为可观察、可编排的工作单元，并把目标、证据、审核、回执、恢复和权威边界都挂到阶段上。
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
-- 环境与模块管理：统一查看 Codex、OPL 家族运行时提供者、模块、技能、图形界面和健康情况。
+- 环境与模块管理：统一查看默认执行器、OPL 家族运行时提供者、模块、技能、图形界面和健康情况。
 
 ## 给 Agent 和技术操作者的快速入口
 
@@ -80,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。当前默认执行器是 Codex CLI。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
 
 ### 安装后常用命令
 
