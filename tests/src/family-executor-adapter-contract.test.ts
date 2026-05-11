@@ -82,6 +82,7 @@ test('family executor defaults split canonical name, route status, and guardrail
   const executorStatuses = contract.executor_statuses as JsonObject;
   const executionShapes = contract.execution_shapes as JsonObject;
   const guardrails = contract.guardrails as JsonObject;
+  const topologySplit = contract.topology_split as JsonObject;
 
   assert.equal(defaults.default_executor_name, 'codex_cli');
   assert.equal(defaults.default_executor_mode, 'autonomous');
@@ -99,6 +100,12 @@ test('family executor defaults split canonical name, route status, and guardrail
   assert.equal(guardrails.simple_llm_backend_forbidden, true);
   assert.equal(guardrails.openai_compatible_gateway_backend_forbidden, true);
   assert.equal(guardrails.domain_repo_provider_catalog_forbidden, true);
+  assert.deepEqual(topologySplit, {
+    opl_role: 'codex_first_stage_led_family_framework_contract',
+    runtime_substrate_role: 'provider_backed_stage_attempt_orchestration',
+    executor_adapter_role: 'domain_owned_route_and_stage_selection',
+    concrete_executor_role: 'task_local_autonomous_execution',
+  });
   assertLayeredExecutorPolicy(contract);
   assert.ok(!('default_executor' in defaults));
   assert.ok(!('hermes_native_requires_full_agent_loop' in guardrails));

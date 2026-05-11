@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { loadGatewayContracts, validateGatewayContracts } from '../../src/contracts.ts';
 import { buildProductEntryHandoffEnvelope } from '../../src/product-entry-handoff-envelope.ts';
+import { buildProductEntrySessionPrompt } from '../../src/product-entry-parts/builders.ts';
 import {
   buildProductEntryDoctor,
   runProductEntryLogs,
@@ -110,6 +111,14 @@ exit 1
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('product-entry session prompt uses stage-led framework wording instead of retired gateway shell wording', () => {
+  const contracts = loadGatewayContracts();
+  const prompt = buildProductEntrySessionPrompt(contracts);
+
+  assert.match(prompt, /Codex-first, stage-led family framework shell/);
+  assert.doesNotMatch(prompt, /gateway and federation shell/);
 });
 
 test('product-entry runtime leaf wraps Hermes operational surfaces directly', () => {
