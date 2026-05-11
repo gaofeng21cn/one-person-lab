@@ -1,6 +1,12 @@
 # OPL Product API 与 Domain Agent 边界设计
 
-> 当前状态说明（2026-05-06）：本文标题中的 `Product API` 是 2026-04-20 资源模型冻结时的历史命名。当前公开主线已经收口为 `Codex-default session/runtime + explicit activation layer + domain agent entry`；本规格仍可作为 `system / engines / modules / agents / workspaces / sessions / progress / artifacts` 产品资源边界的背景材料阅读，但不得被解释为恢复本地 8787 Product API service 或 `opl web` 用户入口。
+Owner: `One Person Lab`
+State: `support_reference_retained_path`
+Machine boundary: 本文是人读设计记录；机器可读行为必须使用 contracts、source、CLI/API 行为、runtime ledger、生成产物或 `human_doc:*` 语义 id。
+
+当前状态说明（2026-05-11）：本文标题中的 `Product API` 是 2026-04-20 资源模型冻结时的历史命名。本文正文中的八类资源模型已经被 `README*`、核心五件套、`docs/active/` 与当前合同吸收；历史 `Product API`、本地 8787 service、`frontdoor` 与 `opl web` 语义按历史设计背景阅读。当前 owner 是 `docs/project.md`、`docs/status.md`、`docs/architecture.md` 与 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。
+
+保留理由：已有历史链接和资源模型背景仍指向本文件；在完成安全迁移前，本文件保留在 `docs/specs/`，但只作为 path-stable support reference。
 
 ## 背景
 
@@ -10,7 +16,7 @@
 - 旧 GUI 备线路线已退役，不再作为当前备选或 benchmark
 - `OPL` 主仓负责共享运行时真相、智能体注册表、工作空间 / 会话 / 文件 / 系统接口
 - `Codex` 是默认交互与执行宿主
-- `Hermes-Agent` 是备用执行器与长期在线网关
+- `Hermes-Agent` 在当前 owner surface 中只保留为迁移期 legacy/optional provider 或显式 executor/proof lane；本文后续旧说法按历史背景理解
 - `MAS`、`MAG`、`RCA` 等领域仓是可被 `Codex` 直接调用的专用智能体仓
 
 当前的主要问题已经从“界面长什么样”切换成“`OPL` 应该向 GUI 暴露什么样的产品接口”。历史 `frontdoor` 体系把多种阶段性语义揉在了一起：

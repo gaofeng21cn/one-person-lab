@@ -2,11 +2,17 @@
 
 # OPL Surface Authority Matrix
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.zh-CN.md`
+Machine boundary: 只作为 derived JSON 工件的人读配套。
+
 ## 目的
 
-这份文档索引当前已冻结 `OPL Gateway` surface stack 的 derived machine-readable authority matrix。
+这份文档索引历史/当前 OPL surface stack 的 derived machine-readable authority matrix。
 
 它的作用是：把 routing、execution、truth、review 与 publication ownership boundary 集中暴露出来，同时不把这张 matrix 升格成 authorization engine、runtime control plane 或第二真相源。
+
+当前 OPL topology 是 Codex-first、stage-led。仍包含 `gateway` 或 `domain_gateway` 的 surface id 是因为配套 derived JSON 工件和历史兼容语料仍用这些 id 做 reviewability。请按 legacy-derived reviewability vocabulary 阅读。
 
 ## 机器可读工件
 
@@ -27,6 +33,7 @@
 `OPL` 在这里拥有的是命名 route、execution、truth、review 与 publication 分工的顶层词汇；但底层 authority 仍然留在 matrix 已明确标出的 domain gateway、domain harness 与 `OPL` 之外的人类 / private surface 中。
 因此，这张 matrix 只是供 ownership review 使用的 inspectable reference surface，而不是 runtime control plane 或共享 truth store。
 更完整的 ownership split 可参考[共享基础结构归属](../../active/shared-foundation-ownership.zh-CN.md)。
+当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 为准。
 
 ## Authority 字段
 

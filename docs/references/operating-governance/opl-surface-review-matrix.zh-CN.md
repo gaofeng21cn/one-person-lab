@@ -2,11 +2,17 @@
 
 # OPL Surface Review Matrix
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.zh-CN.md`
+Machine boundary: 只作为 derived JSON 工件的人读配套。
+
 ## 目的
 
-这份文档索引当前已冻结 `OPL Gateway` public / contract / supporting surfaces 的 derived machine-readable review matrix。
+这份文档索引历史/当前 OPL public / contract / supporting surfaces 的 derived machine-readable review matrix。
 
 它的作用是：把 human-review obligation、acceptance coverage、配套 review surface，以及 publishability-stage boundary 集中暴露出来，同时不把这张 matrix 升格成 approval engine、publish controller、release engine 或第二真相源。
+
+当前 OPL topology 是 Codex-first、stage-led。仍包含 gateway 词汇的 surface id 是 derived matrix 和历史语料的兼容/reviewability vocabulary。
 
 ## 机器可读工件
 
@@ -28,6 +34,7 @@
 `OPL` 可以在这里索引 human-review 义务与 companion-surface 关系，但 domain review truth、publication truth，以及最终的 continue/stop/reframe authority 仍然留在人类与 domain-owned surface 手中。
 因此，这张 matrix 能服务于 discoverability 与 acceptance alignment，而不会升级成 approval control plane 或共享 truth store。
 更完整的 ownership split 可参考[共享基础结构归属](../../active/shared-foundation-ownership.zh-CN.md)。
+当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 为准。
 
 ## Review 字段
 

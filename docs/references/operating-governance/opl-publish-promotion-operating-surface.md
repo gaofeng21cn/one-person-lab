@@ -2,6 +2,10 @@
 
 # OPL Publish / Promotion Operating Surface
 
+State: `support_reference_legacy_derived`
+Current owner: `docs/references/operating-governance/README.md`
+Machine boundary: human-readable support only; machine-readable behavior must use contracts, schemas, source, CLI/API behavior, generated artifacts, or semantic `human_doc:*` ids.
+
 ## Purpose
 
 This document freezes the minimum top-level publish / promotion operating surface for `OPL`.
@@ -10,10 +14,11 @@ Its goal is to define what `OPL` may legitimately index after domain-owned publi
 
 The target is not a top-level publish runtime.
 The target is a thin top-level operating layer that indexes publish outcomes, promotion candidates, and public-surface references while domain systems continue to own publish truth.
+Legacy `gateway` wording in this document is retained for compatibility with historical surface IDs and example corpora. Current topology is Codex-first and stage-led.
 
 ## Relationship To Earlier Gateway Layers
 
-This operating surface is downstream of the already frozen layers:
+This operating surface is downstream of retained historical compatibility layers:
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
 - [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
@@ -23,7 +28,7 @@ This operating surface is downstream of the already frozen layers:
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - the machine-readable contracts in [`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
 
-If those layers are not stable, this operating surface should not be treated as frozen.
+Those layers are provenance and compatibility inputs. Current topology and owner boundaries remain governed by the core five, current contracts, and the stage-led framework roadmap.
 
 ## Boundary From P5.M1
 
@@ -179,9 +184,9 @@ It must not be used as:
 - a distribution result
 - proof that promotion already happened
 
-### Follow-on actions still route through `domain_gateway`
+### Follow-on actions still use the `domain_gateway` compatibility value
 
-If any follow-on publish or promotion action is needed, `OPL` must still route through the domain gateway.
+If any follow-on publish or promotion action is needed, `OPL` must still route through the domain-owned capability entry represented here by the retained `domain_gateway` compatibility value.
 
 This operating surface may index the outcome or the target surface.
 It must not submit, export, release, or post directly.
