@@ -19,6 +19,7 @@ Owner: `One Person Lab`
 
 ## 内容
 
+- `current-development-lines*`：当前 framework-first 内容级开发线路图。
 - `opl-public-surface-index*`：当前公开 surface 地图。
 - `opl-domain-onboarding-contract*`：候选 domain onboarding 审阅支撑。
 - `opl-runtime-naming-and-boundary-contract*`：runtime 命名与边界支撑。

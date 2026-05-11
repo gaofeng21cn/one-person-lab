@@ -8,6 +8,7 @@ This directory contains runtime, provider, executor, product-entry, and migratio
 
 Current owner surfaces:
 
+- [OPL current development lines](../../active/current-development-lines.md): framework-first content-level execution map.
 - [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete Codex-first, stage-led agent runtime framework.
 - [Temporal family runtime provider plan](./temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the production provider candidate.
 - [OPL Runtime Manager target](./opl-runtime-manager-target.md): active support target for provider readiness, native helper, and state index boundaries.

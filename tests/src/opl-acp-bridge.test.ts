@@ -31,8 +31,8 @@ test('translateSessionCreatePayload 提取 session seed 与 task acceptance', ()
             task_id: 'task-001',
             status: 'accepted',
             stage: 'queued',
-            summary: '请求已受理，准备提交给 Hermes。',
-            executor_backend: 'hermes',
+            summary: '请求已受理，准备进入 Codex stage attempt。',
+            executor_backend: 'codex',
             session_id: null,
           },
         },
@@ -53,7 +53,7 @@ test('translateSessionResumePayload 提取 resume 视图', () => {
     session_resume: {
       surface_id: 'opl_session_resume',
       resume: {
-        command_preview: ['hermes', '--resume', 'sess-r-1'],
+        command_preview: ['codex', 'resume', 'thread-r-1'],
         session_id: 'sess-r-1',
         output: 'resume output',
         exit_code: 0,
@@ -64,7 +64,7 @@ test('translateSessionResumePayload 提取 resume 视图', () => {
   assert.equal(view.surface_id, 'opl_session_resume');
   assert.equal(view.session_id, 'sess-r-1');
   assert.equal(view.output, 'resume output');
-  assert.deepEqual(view.command_preview, ['hermes', '--resume', 'sess-r-1']);
+  assert.deepEqual(view.command_preview, ['codex', 'resume', 'thread-r-1']);
 });
 
 test('translateSessionLogsPayload 与 translateProgressPayload 提取 update/event 视图', () => {
