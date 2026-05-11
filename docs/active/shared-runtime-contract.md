@@ -98,14 +98,14 @@ To avoid coupling the family runtime layer to one orchestration framework, the m
 4. `family persistence policy`
    - shared control surface that separates domain-owned file authority from SQLite sidecar indexes, projection caches, and historical/provenance references
 5. `family lifecycle ledger`
-   - shared receipt surface for dry-run / apply / verify lifecycle actions, manifest refs, checksums, and restore proof
+   - shared receipt surface for dry-run / apply / verify lifecycle actions, manifest refs, checksums, and restore proof; stage attempt query projects locator-only lifecycle refs and keeps retention / restore application domain-owned
 6. `family owner route`
    - shared owner-route surface for route epochs, source fingerprints, next owner, allowed actions, idempotency keys, and handoff / projection refs
 
 These schemas live in `contracts/family-orchestration/`.
 They freeze interoperability surfaces that multiple domain runtimes can adopt while still keeping runtime ownership and durable truth local to each domain repository.
 
-The persistence / lifecycle / owner-route surfaces are control-plane discovery contracts. They do not make `OPL` a domain runtime owner, memory store, scheduler, publication-quality judge, or artifact authority.
+The persistence / lifecycle / owner-route surfaces are control-plane discovery contracts. They do not make `OPL` a domain runtime owner, memory store, scheduler, publication-quality judge, cleanup executor, restore executor, or artifact authority.
 
 ## Relationship To CrewAI
 

@@ -106,7 +106,7 @@ The shared control surfaces are:
 - `family_owner_route`
   - records route epoch, source fingerprint, next owner, allowed actions, idempotency key, and handoff / projection refs
 
-`family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`. Likewise, `domain_memory_descriptor` exposes locator / freshness / receipt refs only; it does not move memory content or writeback authority into `OPL`.
+`family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. Stage attempt query now also projects a locator-only lifecycle primitive: workspace/runtime/artifact roots, indexed closeout or consumed refs, declared restore refs, and the cleanup gate. That projection is intentionally read-only; `OPL` may index refs and show missing restore proof, but it cannot apply retention, delete artifacts, restore workspace contents, or write domain truth. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`. Likewise, `domain_memory_descriptor` exposes locator / freshness / receipt refs only; it does not move memory content or writeback authority into `OPL`.
 
 ## Runtime Supervision Freeze
 
