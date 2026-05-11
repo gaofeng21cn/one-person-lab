@@ -78,20 +78,20 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 <details>
   <summary><strong>展开技术入口</strong></summary>
 
-### 交给 Codex Agent 的一句话
+### 交给技术操作者的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。当前默认执行器是 Codex CLI。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保当前默认执行器、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。当前打包默认执行器是 Codex CLI。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
 
 ### 安装后常用命令
 
 ```bash
-opl system initialize   # 检查 Codex 策略、family runtime provider、模块、skills、GUI 和工作目录状态
+opl system initialize   # 检查执行器策略、family runtime provider、模块、skills、GUI 和工作目录状态
 opl family-runtime status
 opl family-runtime repair
 opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator '{"workspace_root":"/path/to/workspace"}'
 opl family-runtime attempt list
 opl modules             # 查看 MAS/MAG/RCA 模块，以及 MAS 声明的可选 companion diagnostic
-opl skill sync          # 把 OPL 家族 skills 同步到 Codex 可见路径
+opl skill sync          # 把 OPL 家族 skills 同步到 agent 可见路径
 opl help --text         # 人类可读帮助；机器读取使用 opl help --json
 ```
 
@@ -104,11 +104,11 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 提供工作空间、会话、阶段尝试、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-架构上，OPL 是面向高价值知识交付的 Codex-first、stage-led 完整家族智能体运行框架。它可以使用外部运行时提供者和具体执行器，但 `Codex CLI` 是 stage 内默认最小执行单元，OPL 持有的框架边界是 activation、typed family queue、durable session/runtime 支撑、stage attempt ledger、wakeup/retry/approval transport、shared discovery 和 projection。各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。这样 OPL 能支撑 MAS/MAG/RCA，并以高价值知识工作的全自动交付为目标，但不会变成它们的领域大脑。
+架构上，OPL 是面向高价值知识交付的阶段推进式完整家族智能体运行框架。它可以使用外部运行时提供者和具体执行器，但这些是实现选择；OPL 持有的框架边界是 activation、typed family queue、durable session/runtime 支撑、stage attempt ledger、wakeup/retry/approval transport、shared discovery 和 projection。各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。这样 OPL 能支撑 MAS/MAG/RCA，并以高价值知识工作的全自动交付为目标，但不会变成它们的领域大脑。
 
-在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 Codex 与 OPL 消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
+在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 OPL 与操作者环境消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、当前 family runtime provider payload、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、当前 family runtime provider payload、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和操作者环境共同消费的共享合同与产品表面。
 
 ### 这个仓库怎么读
 
@@ -118,8 +118,8 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 ### 运行说明
 
-- 默认入口是 `opl`、`opl exec` 和 `opl resume`。除非显式切换运行时或显式激活 domain agent，这几个入口都继承 Codex 默认语义。
-- OPL 的编排单元是领域阶段。大型任务应按接近人类专家的方式推进：界定目标、准备材料、执行、审核、修订和收口。stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给 Codex 执行。
+- 默认入口是 `opl`、`opl exec` 和 `opl resume`。除非显式切换运行时或显式激活 domain agent，这几个入口都使用已配置默认执行器语义。
+- OPL 的编排单元是领域阶段。大型任务应按接近人类专家的方式推进：界定目标、准备材料、执行、审核、修订和收口。stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给已选执行器执行。
 - OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
 - OPL family runtime 正在收敛为 provider-backed。Temporal 是 durable stage-attempt workflow、activity retry/timeout、human-gate signal、status query 与 execution history 的首选生产 substrate 候选。Hermes-Agent 在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；Temporal provider 落地后，它不再是目标长期 session/wakeup substrate。
 - `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。family runtime provider 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。
@@ -128,7 +128,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。
-- `Med Auto Science` 对 OPL/Codex 只暴露一个 MAS domain app skill。OPL 同步并消费这个 skill 以及 MAS-owned projection 作为共享工作台 surface；医学科研 runtime、controller truth、质量 authority 和 publication gate 继续由 MAS 持有。
+- `Med Auto Science` 对 OPL 和操作者环境只暴露一个 MAS domain app skill。OPL 同步并消费这个 skill 以及 MAS-owned projection 作为共享工作台 surface；医学科研 runtime、controller truth、质量 authority 和 publication gate 继续由 MAS 持有。
 - [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) 不再是 OPL 默认安装的 MAS 运行依赖。`Med Auto Science` 仍可显式暴露可选 backend audit、legacy restore/import diagnostic、upstream intake 和 parity oracle 引用；OPL 只把它们作为 MAS 声明的 companion diagnostic 消费，不把 MDS 写成顶层 domain agent 或默认模块。
 - 当任务需要顶层 session/runtime 路径、共享 `workspaces / sessions / progress / artifacts` surface 或显式 domain activation 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该仓自己的 CLI/脚本/contract 边界执行。
 
