@@ -414,6 +414,64 @@ exit 0
   }
 });
 
+test('installed opl launcher routes family discovery commands to OPL instead of Codex passthrough', () => {
+  const commandMatrix = [
+    {
+      args: ['agents', 'list'],
+      assertPayload: (payload: Record<string, unknown>) => {
+        assert.equal(
+          (payload.family_agents as { surface_kind: string }).surface_kind,
+          'opl_standard_domain_agent_skeleton_index',
+        );
+      },
+    },
+    {
+      args: ['domain-memory', 'list'],
+      assertPayload: (payload: Record<string, unknown>) => {
+        assert.equal(
+          (payload.family_domain_memory as { surface_kind: string }).surface_kind,
+          'opl_family_domain_memory_index',
+        );
+      },
+    },
+    {
+      args: ['stages', 'list'],
+      assertPayload: (payload: Record<string, unknown>) => {
+        assert.equal(
+          (payload.family_stages as { surface_kind: string }).surface_kind,
+          'opl_family_stage_control_plane_index',
+        );
+      },
+    },
+  ];
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-family-discovery-capture-${process.pid}.txt`);
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-family-discovery-state-'));
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN CODEX"
+exit 0
+`);
+
+  try {
+    for (const command of commandMatrix) {
+      fs.rmSync(capturePath, { force: true });
+      const result = runEntryPathRaw(binPath, command.args, {
+        OPL_CODEX_BIN: codexPath,
+        OPL_SKIP_SKILL_SYNC: '1',
+        OPL_STATE_DIR: stateDir,
+      });
+
+      command.assertPayload(JSON.parse(result.stdout));
+      assert.equal(result.stderr, '');
+      assert.equal(fs.existsSync(capturePath), false);
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
 test('installed opl launcher routes removed commands into CLI failures without Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-retired-capture-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
