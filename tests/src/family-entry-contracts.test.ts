@@ -113,7 +113,7 @@ test('family entry contract helpers build and validate domain agent entry specs'
   assert.deepEqual(validated.locator_schema.optional_fields, ['study_id']);
 });
 
-test('family entry contract helpers build and validate gateway interaction payloads', () => {
+test('family entry contract helpers build and validate domain app interaction payloads', () => {
   const contract = buildUserInteractionContract({
     entry_owner: 'opl_framework_or_domain_app',
     user_interaction_mode: 'natural_language_entry',

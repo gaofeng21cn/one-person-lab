@@ -245,7 +245,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
     formal_entry: {
       default: 'CLI',
       supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
+      internal_surface: 'RedCubeDomainEntry',
     },
     workspace_locator: {
       workspace_surface_kind: 'redcube_workspace',
@@ -458,7 +458,7 @@ test('family product status builder projects manifest core into canonical produc
     formal_entry: {
       default: 'CLI',
       supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
+      internal_surface: 'RedCubeDomainEntry',
     },
     workspace_locator: {
       workspace_surface_kind: 'redcube_workspace',
@@ -640,7 +640,7 @@ test('product entry companion helpers build family product_entry directly from t
     formal_entry: {
       default: 'CLI',
       supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
+      internal_surface: 'RedCubeDomainEntry',
     },
     workspace_locator: {
       workspace_surface_kind: 'redcube_workspace',
@@ -813,4 +813,3 @@ test('product entry companion helpers build family product_entry directly from t
   assert.equal(product_entry.entry_surfaces.opl_handoff_builder?.entry_mode, 'opl_framework');
   assert.equal(product_entry.schema_ref, 'contracts/schemas/v1/product-status.schema.json');
 });
-
