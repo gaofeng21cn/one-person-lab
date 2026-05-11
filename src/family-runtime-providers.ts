@@ -6,7 +6,7 @@ export type FamilyRuntimeProviderKind = typeof FAMILY_RUNTIME_PROVIDER_KINDS[num
 
 export type FamilyRuntimeProviderInspection = {
   provider_kind: FamilyRuntimeProviderKind;
-  status: 'ready' | 'attention_needed' | 'contract_ready';
+  status: 'ready' | 'attention_needed' | 'provider_code_landed_unconfigured';
   ready: boolean;
   degraded_reason: string | null;
   capabilities: string[];
@@ -80,19 +80,19 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
     const address = temporalAddress();
     return {
       provider_kind: kind,
-      status: address ? 'ready' : 'contract_ready',
+      status: address ? 'ready' : 'provider_code_landed_unconfigured',
       ready: Boolean(address),
       degraded_reason: address ? null : 'temporal_runtime_not_configured',
       capabilities: [
-        'stage_attempt_workflow_contract',
-        'codex_activity_contract',
-        'human_gate_signal_contract',
-        'query_projection_contract',
-        'workflow_history_contract',
+        'stage_attempt_workflow_provider_code',
+        'codex_activity_provider_code',
+        'human_gate_signal_provider_code',
+        'query_projection_provider_code',
+        'workflow_history_provider_code',
       ],
       details: {
         address,
-        adapter_mode: address ? 'configured_external_provider' : 'skeleton_contract_ready',
+        adapter_mode: address ? 'configured_external_provider' : 'provider_code_landed_unconfigured',
         required_env: ['OPL_TEMPORAL_ADDRESS'],
         runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
       },
@@ -191,7 +191,7 @@ export function buildStageAttemptProviderReceipt(input: {
     stage_attempt_id: input.stageAttemptId,
     receipt_status:
       input.providerKind === 'temporal' && !provider.ready
-        ? 'skeleton_contract_ready'
+        ? 'provider_code_landed_unconfigured'
         : 'materialized',
     provider_ready: provider.ready,
     provider_status: provider.status,
