@@ -399,11 +399,11 @@
 
 ### 决策：统一 runtime substrate，不强制统一具体执行器
 
-原因：`Hermes-Agent` 更适合承担长期在线 runtime substrate，`Codex CLI` 当前仍是家族默认执行器，默认模式是 `autonomous`。
+状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production target 口径吸收。当前读法是：已配置的 family runtime provider 承担长期在线 substrate；Temporal-backed provider 是生产目标；`Hermes-Agent` 只保留 legacy/optional provider 或显式 executor/proof lane。`Codex CLI` 当前仍是家族默认具体执行器，默认模式是 `autonomous`。
 
 影响：
 
-- `Hermes Kernel` 统一负责 session、memory、scheduler、interrupt / resume、online-management gateway 等 substrate 能力
+- family runtime provider 统一负责 session、memory、scheduler、interrupt / resume、online-management gateway 等 substrate 能力；历史 `Hermes Kernel` 说法只作为迁移期背景
 - `OPL` 与各领域仓继续负责 gateway、authority、object contract、audit truth
 - 具体任务执行继续通过领域内部的执行路径完成
 

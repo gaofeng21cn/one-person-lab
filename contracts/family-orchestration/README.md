@@ -108,7 +108,7 @@ The shared control surfaces are:
 
 `family-runtime-supervision.schema.json` freezes the shared family-level runtime wakeup / supervision projection. It lets `MAS`, `MAG`, `RCA`, and future admitted domains expose one read-only surface for adapter id, cadence, latest tick, latest success, lease freshness, SLO state, repair command, safe reconcile hint, and domain-owned source references.
 
-This surface is not a domain scheduler contract. Hermes provides the OPL-managed online wakeup substrate; `OPL` may discover, export, compare, enqueue, tick, and project the surface for parity and operator visibility, but it must not become the domain scheduler, session store, memory owner, quality verdict owner, or artifact authority. `repair_command` and `safe_reconcile_hint` are route hints back to the domain-owned repair / supervision surface.
+This surface is not a domain scheduler contract. The configured family runtime provider supplies the OPL-managed online wakeup / queue / attempt substrate; `OPL` may discover, export, compare, enqueue, tick, and project the surface for parity and operator visibility, but it must not become the domain scheduler, session store, memory owner, quality verdict owner, or artifact authority. `repair_command` and `safe_reconcile_hint` are route hints back to the domain-owned repair / supervision surface.
 
 ## Action Catalog Freeze
 
