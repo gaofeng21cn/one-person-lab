@@ -249,10 +249,9 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     removeTemporalWorkerState(paths);
   }
   return {
-    surface_kind: 'temporal_worker_lifecycle_status',
-    provider_kind: 'temporal',
-    lifecycle_status: readiness.readiness_status,
     ...readiness,
+    surface_kind: 'temporal_worker_lifecycle_status',
+    lifecycle_status: readiness.readiness_status,
   };
 }
 

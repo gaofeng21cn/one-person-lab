@@ -43,6 +43,9 @@ exit 64
     assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
     assert.equal(receipt.progress_summary.thread_id, 'thread-live-runner');
     assert.deepEqual(receipt.heartbeat_summary.checkpoint_refs, ['checkpoint:seed']);
+    if (!('process_output_summary' in receipt)) {
+      throw new Error('codex_cli runner receipt must include process_output_summary.');
+    }
     assert.equal(receipt.process_output_summary.exit_code, 0);
     assert.equal(receipt.process_output_summary.final_message_chars > 0, true);
   } finally {
