@@ -62,6 +62,15 @@
     "recall_projection_ref": {
       "$ref": "#/$defs/ref"
     },
+    "migration_plan_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "seed_corpus_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "writeback_receipt_locator_ref": {
+      "$ref": "#/$defs/ref"
+    },
     "provenance_refs": {
       "type": "array",
       "items": {
@@ -69,6 +78,10 @@
       }
     },
     "freshness": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "migration_readiness": {
       "type": "object",
       "additionalProperties": true
     },
@@ -185,6 +198,21 @@
         "ref_kind": "surface_kind",
         "ref": "stage_recall_index"
       },
+      "migration_plan_ref": {
+        "ref_kind": "human_doc",
+        "ref": "docs/policies/study-workflow/publication_route_memory_policy.md#migration-plan",
+        "role": "domain_owned_migration_plan"
+      },
+      "seed_corpus_ref": {
+        "ref_kind": "workspace_locator",
+        "ref": "portfolio/research_memory/publication_route_memory/seeds",
+        "role": "domain_owned_seed_corpus"
+      },
+      "writeback_receipt_locator_ref": {
+        "ref_kind": "workspace_locator",
+        "ref": "portfolio/research_memory/publication_route_memory/writeback_receipts",
+        "role": "domain_owned_router_receipts"
+      },
       "provenance_refs": [
         {
           "ref_kind": "human_doc",
@@ -195,6 +223,11 @@
       "freshness": {
         "status": "policy_seed",
         "refresh_policy": "domain_manifest_rebuild_required_before_stage_attempt"
+      },
+      "migration_readiness": {
+        "status": "migration_plan_ready_descriptor_only",
+        "memory_body_migration": "domain_owned_workspace_apply_required",
+        "opl_apply_allowed": false
       },
       "status": "active",
       "authority_boundary": {

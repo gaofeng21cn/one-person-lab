@@ -829,6 +829,10 @@ test('family domain memory contracts freeze locator and writeback receipt author
   );
   assert.ok((memoryRefSchema.required as string[]).includes('memory_pack_ref'));
   assert.ok((memoryRefSchema.required as string[]).includes('stage_applicability'));
+  assert.equal(Boolean((memoryRefSchema.properties as Json).migration_plan_ref), true);
+  assert.equal(Boolean((memoryRefSchema.properties as Json).seed_corpus_ref), true);
+  assert.equal(Boolean((memoryRefSchema.properties as Json).writeback_receipt_locator_ref), true);
+  assert.equal(Boolean((memoryRefSchema.properties as Json).migration_readiness), true);
   assert.equal(
     (((memoryRefSchema.properties as Json).authority_boundary as Json).properties as Json).opl_role !== undefined,
     true,
@@ -844,6 +848,10 @@ test('family domain memory contracts freeze locator and writeback receipt author
   assert.equal((memoryRefExample.authority_boundary as Json).can_write_domain_truth, false);
   assert.equal((memoryRefExample.authority_boundary as Json).can_authorize_quality_verdict, false);
   assert.equal((memoryRefExample.authority_boundary as Json).can_write_artifacts, false);
+  assert.equal((memoryRefExample.migration_plan_ref as Json).role, 'domain_owned_migration_plan');
+  assert.equal((memoryRefExample.seed_corpus_ref as Json).role, 'domain_owned_seed_corpus');
+  assert.equal((memoryRefExample.writeback_receipt_locator_ref as Json).role, 'domain_owned_router_receipts');
+  assert.equal((memoryRefExample.migration_readiness as Json).opl_apply_allowed, false);
 
   assert.deepEqual(
     (writebackSchema.properties as Json).surface_kind,
