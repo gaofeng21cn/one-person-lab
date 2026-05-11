@@ -584,6 +584,7 @@ exit 1
     const output = runCli(['family-runtime', 'repair'], {
       OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermes.hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
 
     assert.equal(output.family_runtime_provider.provider_kind, 'hermes_legacy');
@@ -655,12 +656,14 @@ exit 1
     runCli(['family-runtime', 'repair'], {
       OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermes.hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     fs.rmSync(gatewayState, { force: true });
 
     const stopped = runCli(['family-runtime', 'status'], {
       OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermes.hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     assert.equal(stopped.family_runtime.readiness.full_online_ready, false);
     assert.equal(stopped.family_runtime.provider_runtime.selected.details.bridge.gateway_ready, false);
@@ -672,10 +675,12 @@ exit 1
     const repaired = runCli(['family-runtime', 'repair'], {
       OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermes.hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const ready = runCli(['family-runtime', 'status'], {
       OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermes.hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
 
     assert.equal(repaired.family_runtime_provider.provider_kind, 'hermes_legacy');
