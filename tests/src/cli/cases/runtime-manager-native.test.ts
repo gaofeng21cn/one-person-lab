@@ -912,7 +912,7 @@ exit 1
         entry.status,
       ]),
       [
-        ['repair_hermes_gateway', 'completed'],
+        ['repair_hermes_legacy_provider', 'completed'],
         ['repair_native_helpers', 'completed'],
         ['refresh_native_indexes', 'completed'],
       ],
@@ -926,7 +926,7 @@ exit 1
   }
 });
 
-test('runtime manager action marks Hermes gateway repair as blocking online runtime repair', () => {
+test('runtime manager action marks Hermes legacy provider repair as blocking online runtime repair', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-online-action-'));
   const gatewayState = path.join(fixtureRoot, 'gateway-ready');
   const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
@@ -962,10 +962,10 @@ exit 1
     const action = output.runtime_manager_action;
 
     const plannedHermesRepair = action.planned_actions.find(
-      (entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway',
+      (entry: { action_id: string }) => entry.action_id === 'repair_hermes_legacy_provider',
     );
     const executedHermesRepair = action.executed_actions.find(
-      (entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway',
+      (entry: { action_id: string }) => entry.action_id === 'repair_hermes_legacy_provider',
     );
 
     assert.ok(plannedHermesRepair);
@@ -978,7 +978,7 @@ exit 1
     assert.equal(executedHermesRepair.action_lane, 'online_runtime');
     assert.equal(executedHermesRepair.capability, 'online_family_runtime');
     assert.equal(
-      action.non_blocking_actions.some((entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway'),
+      action.non_blocking_actions.some((entry: { action_id: string }) => entry.action_id === 'repair_hermes_legacy_provider'),
       false,
     );
     assert.deepEqual(

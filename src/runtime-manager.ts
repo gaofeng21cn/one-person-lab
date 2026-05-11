@@ -2,11 +2,11 @@ import { inspectHermesRuntime } from './hermes.ts';
 import {
   inspectFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
+  ensureFamilyRuntimeProvider,
   resolveFamilyRuntimeProviderKind,
   type FamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
-import { runProductEntryRepairHermesGateway } from './product-entry-runtime.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -194,7 +194,7 @@ function isNativeHelperAction(actionId: string) {
 }
 
 function isOnlineRuntimeAction(actionId: string) {
-  return actionId === 'repair_hermes_gateway'
+  return actionId === 'repair_hermes_legacy_provider'
     || actionId === 'install_hermes_online_runtime'
     || actionId === 'configure_temporal_provider';
 }
@@ -407,8 +407,8 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   let after: ReturnType<typeof buildRuntimeManager> | null = null;
 
   for (const action of actionableActions) {
-    if (action.action_id === 'repair_hermes_gateway') {
-      executedActions.push(runHermesGatewayAction());
+    if (action.action_id === 'repair_hermes_legacy_provider') {
+      executedActions.push(runHermesLegacyProviderAction());
       continue;
     }
 
@@ -548,30 +548,34 @@ function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntim
   };
 }
 
-function runHermesGatewayAction() {
+function runHermesLegacyProviderAction() {
   try {
-    const repair = runProductEntryRepairHermesGateway();
+    const repair = ensureFamilyRuntimeProvider('hermes_legacy', 'repair');
+    if (repair.provider_kind !== 'hermes_legacy' || !('bridge' in repair)) {
+      throw new Error('Expected hermes_legacy provider repair payload.');
+    }
+    const bridge = repair.bridge;
     return {
-      action_id: 'repair_hermes_gateway',
-      status: repair.product_entry.gateway_service.loaded ? 'completed' : 'failed',
+      action_id: 'repair_hermes_legacy_provider',
+      status: bridge.gateway_ready && bridge.cron_registered && bridge.webhook_registered ? 'completed' : 'failed',
       blocking: true,
       action_lane: 'online_runtime',
       capability: 'online_family_runtime',
-      command_preview: repair.product_entry.install_command_preview,
+      command_preview: ['opl', 'family-runtime', 'repair', '--provider', 'hermes_legacy'],
       note:
-        'Hermes gateway repair is only used when the hermes_legacy provider is selected.',
-      details: repair.product_entry,
+        'Hermes legacy provider repair is only used when the hermes_legacy provider is selected.',
+      details: repair,
     };
   } catch (error) {
     return {
-      action_id: 'repair_hermes_gateway',
+      action_id: 'repair_hermes_legacy_provider',
       status: 'failed',
       blocking: true,
       action_lane: 'online_runtime',
       capability: 'online_family_runtime',
-      command_preview: ['hermes', 'gateway', 'install'],
+      command_preview: ['opl', 'family-runtime', 'repair', '--provider', 'hermes_legacy'],
       note:
-        'Hermes gateway repair failed; hermes_legacy provider readiness remains degraded.',
+        'Hermes legacy provider repair failed; provider readiness remains degraded.',
       details: {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -603,12 +607,12 @@ function buildRuntimeManagerReconcile(
     });
   } else if (provider.provider_kind === 'hermes_legacy' && hermesInstalled && !hermes.gateway_service.loaded) {
     recommendedActions.push({
-      action_id: 'repair_hermes_gateway',
+      action_id: 'repair_hermes_legacy_provider',
       priority: 'p0_online_runtime',
       blocking: true,
       action_lane: 'online_runtime',
       capability: 'online_family_runtime',
-      command: 'opl runtime repair-gateway',
+      command: 'opl family-runtime repair --provider hermes_legacy',
       reason:
         'Hermes legacy provider is selected and Hermes-Agent is installed, but the gateway service is not loaded.',
     });

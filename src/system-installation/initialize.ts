@@ -151,10 +151,10 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       action: 'install',
     },
   });
-  const repairHermesGatewayAction = buildInitializeActionDescriptor({
-    action_id: 'repair_hermes_gateway',
-    label: 'Repair online task management',
-    description: 'Install or reload the Hermes gateway service in the background and verify that online task management is loaded.',
+  const repairHermesLegacyProviderAction = buildInitializeActionDescriptor({
+    action_id: 'repair_hermes_legacy_provider',
+    label: 'Repair Hermes legacy provider',
+    description: 'Run the family-runtime provider repair path for the selected hermes_legacy bridge.',
     section_id: 'environment',
     endpoint: endpoints.system_action,
     method: 'POST',
@@ -266,7 +266,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       action: providerReady
         ? openEnvironmentAction
         : familyRuntimeProvider.provider_kind === 'hermes_legacy'
-          ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+          ? (hermes.installed ? repairHermesLegacyProviderAction : installHermesAction)
           : reviewFamilyRuntimeProviderAction,
     },
     {
@@ -355,7 +355,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
             ? configureCodexAction
             : !providerReady
               ? (familyRuntimeProvider.provider_kind === 'hermes_legacy'
-                ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+                ? (hermes.installed ? repairHermesLegacyProviderAction : installHermesAction)
                 : reviewFamilyRuntimeProviderAction)
               : openEnvironmentAction)
         : setupPhase === 'modules'
@@ -410,7 +410,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
         repair_action: providerReady
           ? openEnvironmentAction
           : familyRuntimeProvider.provider_kind === 'hermes_legacy'
-            ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+            ? (hermes.installed ? repairHermesLegacyProviderAction : installHermesAction)
             : reviewFamilyRuntimeProviderAction,
         service_status: {
           engine_id: familyRuntimeProvider.provider_kind,

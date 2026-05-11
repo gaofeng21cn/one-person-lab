@@ -338,7 +338,7 @@ export async function runOplTurnkeyInstall(
       ? await runFamilyRuntime(['status'])
       : await runFamilyRuntime(['install']);
     const onlineManagementRepair = runtimeManagerAction.runtime_manager_action.executed_actions.find(
-      (action) => action.action_id === 'repair_hermes_gateway',
+      (action) => action.action_id === 'repair_hermes_legacy_provider',
     );
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('runtime_manager_repair_completed', {

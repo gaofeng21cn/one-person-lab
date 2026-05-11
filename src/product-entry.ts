@@ -49,7 +49,6 @@ export { buildProductEntryHandoffEnvelope } from './product-entry-handoff-envelo
 export {
   buildProductEntryDoctor,
   runProductEntryLogs,
-  runProductEntryRepairHermesGateway,
   runProductEntryResume,
   runProductEntrySessions,
 } from './product-entry-runtime.ts';

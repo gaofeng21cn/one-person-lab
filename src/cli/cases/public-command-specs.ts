@@ -717,11 +717,6 @@ export function buildPublicCommandSpecs(
       examples: ['opl session ledger', 'opl session ledger --limit 5'],
       group: 'session',
     }),
-    'runtime repair-gateway': cloneCommandSpec(commandSpecs['runtime repair-gateway'], {
-      usage: 'opl runtime repair-gateway',
-      examples: ['opl runtime repair-gateway'],
-      group: 'runtime',
-    }),
     'runtime manager': cloneCommandSpec(commandSpecs['runtime manager'], {
       usage: 'opl runtime manager',
       examples: ['opl runtime manager'],

@@ -649,7 +649,7 @@ exit 1
       output.system_initialize.online_management.capability_summary,
       /hermes_legacy/i,
     );
-    assert.equal(output.system_initialize.online_management.repair_action.action_id, 'repair_hermes_gateway');
+    assert.equal(output.system_initialize.online_management.repair_action.action_id, 'repair_hermes_legacy_provider');
     assert.deepEqual(output.system_initialize.online_management.repair_action.payload_template, { action: 'repair' });
     assert.equal(output.system_initialize.online_management.service_status.engine_id, 'hermes_legacy');
     assert.equal(output.system_initialize.online_management.service_status.installed, true);
@@ -663,7 +663,7 @@ exit 1
     assert.equal(onlineManagementItem.required, true);
     assert.equal(onlineManagementItem.blocking, true);
     assert.match(onlineManagementItem.detail_summary, /hermes_legacy/i);
-    assert.equal(output.system_initialize.recommended_next_action.action_id, 'repair_hermes_gateway');
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'repair_hermes_legacy_provider');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });

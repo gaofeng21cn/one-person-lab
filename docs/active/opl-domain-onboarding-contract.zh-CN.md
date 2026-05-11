@@ -156,7 +156,7 @@ Onboarding package 必须说明：
 - 有哪些 quality-regression 或同级别 review hook
 - 顶层 `OPL` stage selection 与 projection 如何引用这些 review semantics
 
-如果一个 domain 说不清工作如何被审阅，就还不具备正式联邦收录条件。
+如果一个 domain 说不清工作如何被审阅，就还不具备正式 domain-agent 收录条件。
 
 ## 5. Execution Model Declaration
 
@@ -171,7 +171,7 @@ Onboarding package 必须说明：
 - 代码承担哪些 stable object / controller / tool / gate / review 责任
 - 哪些部分绝不能被描述成 `fixed-code-first` 主流程，只让 Agent 做少量 prompt 补位
 
-如果一个 domain 说不清执行模型如何与 `OPL` 的统一范式对齐，就还不具备正式联邦收录条件。
+如果一个 domain 说不清执行模型如何与 `OPL` 的统一范式对齐，就还不具备正式 domain-agent 收录条件。
 
 ## 6. Stage Selection Readiness Declaration
 

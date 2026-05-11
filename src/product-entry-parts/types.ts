@@ -13,8 +13,7 @@ export type ProductEntryMode =
   | 'session_seed'
   | 'resume'
   | 'sessions'
-  | 'logs'
-  | 'repair_hermes_gateway';
+  | 'logs';
 
 export type ProductEntryExecutor = 'codex' | 'hermes';
 

@@ -156,7 +156,7 @@ The onboarding package must identify:
 - what quality-regression or comparable review hooks exist
 - how top-level `OPL` stage selection and projection refer to those review semantics
 
-If a domain cannot explain how work is reviewed, it is not ready for official federation admission.
+If a domain cannot explain how work is reviewed, it is not ready for official domain-agent admission.
 
 ## 5. Execution Model Declaration
 
@@ -171,7 +171,7 @@ The onboarding package must identify:
 - which stable object / controller / tool / gate / review responsibilities stay in code
 - which parts must not be described as a `fixed-code-first` mainline with the Agent reduced to prompt fill-ins
 
-If a domain cannot explain how its execution model aligns with `OPL`'s shared operating pattern, it is not ready for official federation admission.
+If a domain cannot explain how its execution model aligns with `OPL`'s shared operating pattern, it is not ready for official domain-agent admission.
 
 ## 6. Stage Selection Readiness Declaration
 

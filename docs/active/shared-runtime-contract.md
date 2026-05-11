@@ -17,7 +17,7 @@ The `Shared Runtime Contract` owns the shared runtime objects and behavior surfa
 
 - `runtime profile`
 - `session substrate`
-- `gateway runtime status`
+- `provider bridge status`
 - `memory provider hook`
 - `delivery / cron`
 - `approval / interrupt / resume`
@@ -58,8 +58,8 @@ The first object set to keep explicit is:
    - `resume_pointer`
    - `interrupt_reason`
 
-3. `gateway runtime status`
-   - `gateway_state`
+3. `provider bridge status`
+   - `bridge_state`
    - `active_runs`
    - `last_heartbeat`
    - `restart_requested`

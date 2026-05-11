@@ -28,7 +28,7 @@ exit 1
   }
 });
 
-test('runtime repair-gateway is scoped to the explicit hermes_legacy provider repair path', () => {
+test('retired runtime repair-gateway command fails closed in favor of family-runtime repair', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
   cat <<'EOF'
@@ -50,17 +50,13 @@ exit 1
 `);
 
   try {
-    const output = runCli(['runtime', 'repair-gateway'], {
+    const { status, payload } = runCliFailure(['runtime', 'repair-gateway'], {
       OPL_HERMES_BIN: hermesPath,
     });
 
-    assert.equal(output.product_entry.mode, 'repair_hermes_gateway');
-    assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.match(output.product_entry.install_output, /Service definition updated/);
-    assert.equal(output.product_entry.gateway_service.loaded, true);
-    const help = runCli(['help', 'runtime', 'repair-gateway']);
-    assert.match(help.help.summary, /hermes_legacy provider/);
-    assert.doesNotMatch(help.help.summary, /default Hermes gateway/);
+    assert.equal(status, 2);
+    assert.equal(payload.error.code, 'unknown_command');
+    assert.match(payload.error.message, /Unknown command: runtime/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
