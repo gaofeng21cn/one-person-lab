@@ -204,7 +204,7 @@
 - shared contract：`family-action-catalog`、`family-action-graph`、`family-stage-control-plane`、`family-runtime-supervision`、`family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`、`family-product-entry-manifest-v2`。
 - shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
 - local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
-- discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 MAS/MAG/RCA skeleton adapters 可被 OPL 真实 manifest discovery 校验为 aligned，且必须带 artifact locator surface。
+- discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 OPL 已能校验 standard skeleton descriptor 并要求 artifact locator surface，MAG/RCA 为 aligned，MAS 当前仍缺 standard skeleton descriptor 但 stage / domain-memory descriptor 已 resolved。
 - provider execution：Temporal `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start|query|signal`、worker lifecycle status 和 fail-closed readiness 已落地到 repo/test 面；缺少 Temporal 地址时本机 worker readiness 明确报告 `not_configured`。
 - typed receipt / workbench：Codex stage activity 已有 dry-run / live-dry-run / `codex_cli` runner repo/test harness、typed closeout required-for-completion gate、consumed refs / memory refs / writeback receipt refs / rejected writes / route impact / next owner 投影；`opl runtime snapshot` 已输出只读 `stage_attempt_workbench`。
 
@@ -215,7 +215,7 @@
 - OPL App / GUI 已能消费 stage-attempt workbench 和 provider-level signal 传输，但仍需要真实 worker/domain 执行证明、domain/stage/blocker/memory refs 分组操作面，以及避免把 provider completion 写成 domain ready verdict 的持续 UI 验收。
 - MAS real paper line、MAG grant stage 和 RCA visual stage 仍需要真实或 controlled guarded apply soak，证明 OPL-hosted path 与 direct skill path 共享 domain owner receipts 且语义等价。
 
-所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane, Temporal provider minimal loop, Codex runner repo/test harness, typed closeout gate, and domain skeleton discovery landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`。
+所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane, Temporal provider minimal loop, Codex runner repo/test harness, typed closeout gate, and domain skeleton discovery / validation landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`；当前 standard skeleton 家族对齐也不能写成三仓全部 aligned，因为 MAS skeleton descriptor 仍缺失。
 
 ## 默认执行策略
 
