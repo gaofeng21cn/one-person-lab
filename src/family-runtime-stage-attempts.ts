@@ -140,6 +140,12 @@ function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
   };
 }
 
+function stringListFrom(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
 function signalPayloadsByKind(
   db: DatabaseSync,
   stageAttemptId: string,
@@ -658,9 +664,9 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
   const userInstructionLedger = signalPayloadsByKind(db, stageAttemptId, 'user_instruction');
   const resumeLedger = signalPayloadsByKind(db, stageAttemptId, 'resume');
   const latestCloseout = closeouts.at(-1)?.packet as Record<string, unknown> | undefined;
-  const closeoutRefs = Array.isArray(attempt.closeout_refs)
-    ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
-    : [];
+  const closeoutRefs = stringListFrom(attempt.closeout_refs);
+  const consumedRefs = stringListFrom(latestCloseout?.consumed_refs);
+  const writebackReceiptRefs = stringListFrom(latestCloseout?.writeback_receipt_refs);
   return {
     stage_attempt_query: {
       surface_kind: 'stage_attempt_query',
@@ -676,7 +682,11 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       codex_stage_activity: buildCodexStageActivityInput({ attempt }),
       lifecycle_primitives: buildFamilyRuntimeLifecyclePrimitives({
         workspaceLocator: attempt.workspace_locator,
-        artifactRefs: closeoutRefs,
+        artifactRefs: [
+          ...closeoutRefs,
+          ...consumedRefs,
+          ...writebackReceiptRefs,
+        ],
       }),
       operator_visibility: {
         provider_kind: attempt.provider_kind,
@@ -692,13 +702,11 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
             : null,
           checkpoint_refs: attempt.checkpoint_refs,
         },
-        consumed_refs: Array.isArray(latestCloseout?.consumed_refs) ? latestCloseout.consumed_refs : [],
+        consumed_refs: consumedRefs,
         consumed_memory_refs: Array.isArray(latestCloseout?.consumed_memory_refs)
           ? latestCloseout.consumed_memory_refs
           : [],
-        writeback_receipt_refs: Array.isArray(latestCloseout?.writeback_receipt_refs)
-          ? latestCloseout.writeback_receipt_refs
-          : [],
+        writeback_receipt_refs: writebackReceiptRefs,
         closeout_refs: attempt.closeout_refs,
         closeout_receipt_status: attempt.closeout_receipt_status,
         route_impact: attempt.route_impact,

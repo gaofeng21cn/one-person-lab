@@ -77,7 +77,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--provider',
       'local_sqlite',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts"}',
+      '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts","restore_refs":["restore:mas-runtime-loop"]}',
       '--source-fingerprint',
       'sha256:analysis',
     ], familyRuntimeEnv(stateRoot));
@@ -134,7 +134,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--checkpoint-ref',
       'checkpoint:analysis-slice-1',
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","reason":"weak_primary_endpoint","next_owner":"med-autoscience"}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"writeback_receipt_refs":["memory-writeback:receipt-analysis"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","reason":"weak_primary_endpoint","next_owner":"med-autoscience"}}',
     ], familyRuntimeEnv(stateRoot));
     const queryAfter = runCli([
       'family-runtime',
@@ -208,8 +208,39 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       workspace_root: '/tmp/mas',
       runtime_root: '/tmp/mas/runtime',
       artifact_root: '/tmp/mas/artifacts',
+      indexed_refs: [
+        'receipt:analysis-closeout',
+        'evidence:table1',
+        'memory-writeback:receipt-analysis',
+      ],
+      indexed_ref_count: 3,
       content_policy: 'locator_only_no_artifact_content',
     });
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.retention_policy.opl_can_apply_retention,
+      false,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.restore_proof.restore_gate_status,
+      'restore_refs_declared',
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.restore_proof.required_refs,
+      [
+        'restore:mas-runtime-loop',
+        'receipt:analysis-closeout',
+        'evidence:table1',
+        'memory-writeback:receipt-analysis',
+      ],
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.restore_proof.opl_cleanup_allowed,
+      false,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.authority_boundary.domain,
+      'artifact_content_retention_restore_authority',
+    );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion,
       'completed',
