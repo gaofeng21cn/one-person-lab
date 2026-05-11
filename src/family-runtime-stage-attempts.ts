@@ -534,10 +534,39 @@ export function ingestStageAttemptCloseout(
   const createdAt = nowIso();
   const closeoutId = packet.closeout_id
     ?? stableId('closeout', [input.stageAttemptId, packet.surface_kind, packet.closeout_refs]);
+  const packetJson = JSON.stringify(packet);
+  const existingCloseout = db.prepare(`
+    SELECT * FROM stage_attempt_closeouts WHERE closeout_id = ?
+  `).get(closeoutId) as StageAttemptCloseoutRow | undefined;
+  if (existingCloseout) {
+    if (existingCloseout.stage_attempt_id !== input.stageAttemptId || existingCloseout.packet_json !== packetJson) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Stage closeout id already exists with a different typed closeout packet.',
+        {
+          closeout_id: closeoutId,
+          stage_attempt_id: input.stageAttemptId,
+          existing_stage_attempt_id: existingCloseout.stage_attempt_id,
+          required: ['unique closeout_id per typed packet'],
+        },
+      );
+    }
+    return {
+      attempt,
+      closeout: {
+        closeout_id: closeoutId,
+        stage_attempt_id: input.stageAttemptId,
+        packet,
+        created_at: existingCloseout.created_at,
+        persisted_count: 1,
+        idempotent_noop: true,
+      },
+    };
+  }
   db.prepare(`
     INSERT OR IGNORE INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)
     VALUES (?, ?, ?, ?)
-  `).run(closeoutId, input.stageAttemptId, JSON.stringify(packet), createdAt);
+  `).run(closeoutId, input.stageAttemptId, packetJson, createdAt);
   const persistedCloseouts = db.prepare(
     'SELECT COUNT(*) AS count FROM stage_attempt_closeouts WHERE closeout_id = ?',
   ).get(closeoutId) as { count: number };
@@ -586,6 +615,7 @@ export function ingestStageAttemptCloseout(
       packet,
       created_at: createdAt,
       persisted_count: persistedCloseouts.count,
+      idempotent_noop: false,
     },
   };
 }
