@@ -253,6 +253,8 @@ export function buildInternalCommandSpecs(
         'opl family-runtime install --provider hermes_legacy',
         'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
         'opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator \'{"workspace_root":"/tmp/mas"}\'',
+        'opl family-runtime attempt create --domain medautoscience --stage scout --provider temporal --workspace-locator \'{"workspace_root":"/tmp/mas"}\' --start',
+        'opl family-runtime attempt start <stage_attempt_id>',
         'opl family-runtime attempt list',
         'opl family-runtime attempt query <stage_attempt_id>',
         'opl family-runtime attempt signal <stage_attempt_id> --kind resume --payload \'{"reason":"operator_resume"}\'',

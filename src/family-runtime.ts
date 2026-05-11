@@ -17,6 +17,11 @@ import {
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import {
+  queryTemporalStageAttemptWorkflow,
+  signalTemporalStageAttemptWorkflow,
+  startTemporalStageAttemptWorkflow,
+} from './family-runtime-temporal-provider.ts';
+import {
   createStageAttempt,
   inspectStageAttempt,
   ingestStageAttemptCloseout,
@@ -604,7 +609,7 @@ function approveTask(
   );
 }
 
-export function runFamilyRuntime(args: string[]) {
+export async function runFamilyRuntime(args: string[]) {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
@@ -688,21 +693,19 @@ export function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_create') {
-      if (parsed.input.start) {
-        throw new GatewayContractError(
-          'contract_shape_invalid',
-          'family-runtime attempt create --start requires the Temporal provider start path; this interface is registered but not executed by local ledger.',
-          {
-            provider_kind: parsed.input.providerKind ?? resolveFamilyRuntimeProviderKind(),
-          },
-        );
-      }
       const result = createStageAttempt(db, parsed.input);
       const { attempt } = result;
+      const temporal_start = parsed.input.start
+        ? await startTemporalStageAttemptWorkflow(attempt)
+        : null;
       insertEvent(db, {
         taskId: attempt.task_id,
         domainId: parsed.input.domainId,
-        eventType: result.idempotent_noop ? 'stage_attempt_idempotent_noop' : 'stage_attempt_created',
+        eventType: parsed.input.start
+          ? 'stage_attempt_temporal_started'
+          : result.idempotent_noop
+            ? 'stage_attempt_idempotent_noop'
+            : 'stage_attempt_created',
         source: 'opl-cli',
         payload: {
           stage_attempt_id: attempt.stage_attempt_id,
@@ -710,6 +713,7 @@ export function runFamilyRuntime(args: string[]) {
           provider_kind: attempt.provider_kind,
           stage_id: attempt.stage_id,
           task_id: attempt.task_id,
+          temporal_start,
         },
       });
       return {
@@ -719,6 +723,30 @@ export function runFamilyRuntime(args: string[]) {
           created: result.created,
           idempotent_noop: result.idempotent_noop,
           attempt,
+          temporal_start,
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_start') {
+      const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      const temporal_start = await startTemporalStageAttemptWorkflow(attempt);
+      insertEvent(db, {
+        taskId: attempt.task_id,
+        domainId: attempt.domain_id,
+        eventType: 'stage_attempt_temporal_started',
+        source: 'opl-cli',
+        payload: {
+          stage_attempt_id: attempt.stage_attempt_id,
+          provider_kind: attempt.provider_kind,
+          temporal_start,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt_start: {
+          surface_id: 'opl_family_runtime_stage_attempt_start',
+          attempt,
+          temporal_start,
         },
       };
     }
@@ -742,16 +770,30 @@ export function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_query') {
+      const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
+      const attempt = localQuery.stage_attempt_query.attempt;
+      const temporal_query = attempt.provider_kind === 'temporal'
+        ? await queryTemporalStageAttemptWorkflow(attempt)
+        : null;
       return {
         version: 'g2',
         family_runtime_stage_attempt_query: {
           surface_id: 'opl_family_runtime_stage_attempt_query',
-          ...queryStageAttempt(db, parsed.stageAttemptId),
+          ...localQuery,
+          temporal_query,
         },
       };
     }
     if (parsed.mode === 'attempt_signal') {
       const result = signalStageAttempt(db, parsed);
+      const temporal_signal = result.attempt.provider_kind === 'temporal'
+        ? await signalTemporalStageAttemptWorkflow({
+            attempt: result.attempt,
+            signalKind: parsed.signalKind,
+            payload: parsed.payload,
+            source: parsed.source,
+          })
+        : null;
       insertEvent(db, {
         taskId: result.attempt.task_id,
         domainId: result.attempt.domain_id,
@@ -761,6 +803,7 @@ export function runFamilyRuntime(args: string[]) {
           stage_attempt_id: parsed.stageAttemptId,
           signal_kind: parsed.signalKind,
           signal_id: result.signal.signal_id,
+          temporal_signal,
         },
       });
       return {
@@ -768,6 +811,7 @@ export function runFamilyRuntime(args: string[]) {
         family_runtime_stage_attempt_signal: {
           surface_id: 'opl_family_runtime_stage_attempt_signal',
           ...result,
+          temporal_signal,
         },
       };
     }

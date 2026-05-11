@@ -75,7 +75,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--stage',
       'analysis-campaign',
       '--provider',
-      'temporal',
+      'local_sqlite',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts"}',
       '--source-fingerprint',
@@ -137,11 +137,8 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       attemptId,
     ], familyRuntimeEnv(stateRoot));
 
-    assert.equal(
-      queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.workflow_contract.workflow_name,
-      'StageAttemptWorkflow',
-    );
-    assert.equal(queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.workflow_input.stage_id, 'analysis-campaign');
+    assert.equal(queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.workflow_contract, null);
+    assert.equal(queryBefore.family_runtime_stage_attempt_query.temporal_query, null);
     assert.equal(
       queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion_is_domain_ready,
       false,
@@ -176,7 +173,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.provider_run.provider_kind,
-      'temporal',
+      'local_sqlite',
     );
     assert.ok(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.activity_events.length >= 2);
     assert.equal(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 3);
@@ -246,6 +243,148 @@ test('family-runtime attempt fixture-run rejects missing typed closeout refs wit
     assert.equal(output.error.code, 'contract_shape_invalid');
     assert.equal(inspected.family_runtime_stage_attempt.attempt.status, 'running');
     assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_receipt_status, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt start fails closed when Temporal address is not configured', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-start-missing-'));
+  try {
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'scout',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--start',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_STATE_DIR: stateRoot,
+        OPL_DISABLE_HERMES_ONLINE: '1',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      },
+    });
+    const output = JSON.parse(result.stdout || result.stderr);
+    const attempts = runCli(['family-runtime', 'attempt', 'list'], familyRuntimeEnv(stateRoot));
+
+    assert.notEqual(result.status, 0);
+    assert.equal(output.error.code, 'contract_shape_invalid');
+    assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
+    assert.equal(attempts.family_runtime_stage_attempts.summary.total, 1);
+    assert.equal(attempts.family_runtime_stage_attempts.attempts[0].provider_kind, 'temporal');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt query and signal fail closed when Temporal address is not configured', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-query-missing-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    for (const args of [
+      ['family-runtime', 'attempt', 'query', attemptId],
+      [
+        'family-runtime',
+        'attempt',
+        'signal',
+        attemptId,
+        '--kind',
+        'resume',
+        '--payload',
+        '{"reason":"operator_resume"}',
+      ],
+    ]) {
+      const result = spawnSync(process.execPath, [
+        '--experimental-strip-types',
+        path.join(repoRoot, 'src', 'cli.ts'),
+        ...args,
+      ], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          OPL_STATE_DIR: stateRoot,
+          OPL_DISABLE_HERMES_ONLINE: '1',
+          OPL_TEMPORAL_ADDRESS: '',
+          TEMPORAL_ADDRESS: '',
+        },
+      });
+      const output = JSON.parse(result.stdout || result.stderr);
+
+      assert.notEqual(result.status, 0);
+      assert.equal(output.error.code, 'contract_shape_invalid');
+      assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
+    }
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt start refuses non-temporal attempts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-start-provider-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/rca"}',
+    ], familyRuntimeEnv(stateRoot));
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'attempt',
+      'start',
+      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...familyRuntimeEnv(stateRoot),
+      },
+    });
+    const output = JSON.parse(result.stdout || result.stderr);
+
+    assert.notEqual(result.status, 0);
+    assert.equal(output.error.code, 'cli_usage_error');
+    assert.match(output.error.message, /temporal stage attempt/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

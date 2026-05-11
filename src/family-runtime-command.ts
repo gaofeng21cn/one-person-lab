@@ -33,6 +33,7 @@ export type FamilyRuntimeCommandInput =
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
   | { mode: 'attempt_inspect'; stageAttemptId: string }
+  | { mode: 'attempt_start'; stageAttemptId: string }
   | { mode: 'attempt_query'; stageAttemptId: string }
   | {
     mode: 'attempt_signal';
@@ -206,6 +207,15 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       });
     }
     return { mode: 'attempt_inspect', stageAttemptId };
+  }
+  if (mode === 'attempt' && rest[0] === 'start') {
+    const stageAttemptId = rest[1];
+    if (!stageAttemptId || rest.length > 2) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt start requires one attempt id.', {
+        usage: 'opl family-runtime attempt start <stage_attempt_id>',
+      });
+    }
+    return { mode: 'attempt_start', stageAttemptId };
   }
   if (mode === 'attempt' && rest[0] === 'query') {
     const stageAttemptId = rest[1];
@@ -554,6 +564,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new GatewayContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }
