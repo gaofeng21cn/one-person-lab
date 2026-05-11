@@ -112,11 +112,12 @@ exit 1
   }
 });
 
-test('product-entry session prompt uses stage-led framework wording instead of retired gateway shell wording', () => {
+test('product-entry session prompt carries runtime-owner and executor contract without retired gateway shell wording', () => {
   const contracts = loadFrameworkContracts();
   const prompt = buildProductEntrySessionPrompt(contracts);
 
-  assert.match(prompt, /Codex-first, stage-led family framework shell/);
+  assert.match(prompt, /not the runtime truth owner of any domain/);
+  assert.match(prompt, /Codex CLI is the default concrete executor/);
   assert.doesNotMatch(prompt, /gateway and federation shell/);
 });
 
