@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> 当前状态说明（`2026-05-10`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + provider-backed family runtime + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
+> 当前状态说明（`2026-05-11`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + provider-backed family runtime + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下层 domain 执行词汇按 `harness / controller` 内部边界理解，不作为当前默认公开产品模型。
 
 ## 目的
 

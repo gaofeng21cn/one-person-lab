@@ -131,7 +131,7 @@ export function resolveRequestSurface(
       confidence: 'high',
       reason:
         'The explicit @mas handle pins the request to Research Foundry inside the MedAutoScience domain-agent entry.',
-      routing_evidence: [
+      selection_evidence: [
         'preferred_family_alias=mas',
         'explicit agent handle',
         'research_ops registered ownership',
@@ -151,7 +151,7 @@ export function resolveRequestSurface(
       confidence: 'high',
       reason:
         'The explicit @mag handle pins the request to Grant Foundry inside the MedAutoGrant domain-agent entry.',
-      routing_evidence: [
+      selection_evidence: [
         'preferred_family_alias=mag',
         'explicit agent handle',
         'grant_ops registered ownership',
@@ -171,7 +171,7 @@ export function resolveRequestSurface(
       confidence: 'high',
       reason:
         'The explicit @rca handle pins the request to Presentation Foundry inside the RedCube domain-agent entry.',
-      routing_evidence: [
+      selection_evidence: [
         'preferred_family_alias=rca',
         'explicit agent handle',
         'presentation_ops registered ownership',
@@ -191,7 +191,7 @@ export function resolveRequestSurface(
       confidence: 'high',
       reason:
         'ppt_deck is a direct top-level family map to Presentation Foundry and must stay inside the RedCube domain-agent entry.',
-      routing_evidence: [
+      selection_evidence: [
         'preferred_family=ppt_deck',
         'ppt_deck direct map to presentation_ops',
         'domain-agent entry only',
@@ -200,7 +200,7 @@ export function resolveRequestSurface(
   }
 
   if (xiaohongshu && !presentation) {
-    const specialCase = contracts.routingVocabulary.special_cases.find(
+    const specialCase = contracts.stageSelectionVocabulary.special_cases.find(
       (entry) => entry.family === 'xiaohongshu',
     );
 
@@ -212,7 +212,7 @@ export function resolveRequestSurface(
       recommended_family: 'xiaohongshu',
       reason:
         'xiaohongshu stays at the RedCube family boundary and is not automatically equal to Presentation Foundry without explicit presentation-delivery semantics.',
-      routing_evidence: [
+      selection_evidence: [
         'preferred_family=xiaohongshu',
         'redcube family boundary',
         'presentation_ops auto-mapping withheld',
@@ -233,7 +233,7 @@ export function resolveRequestSurface(
         confidence: 'high',
         reason:
           'The requested output is a formal grant-authoring delivery owned by Grant Ops inside the MedAutoGrant domain-agent entry.',
-        routing_evidence: [
+        selection_evidence: [
           'grant delivery semantics',
           'grant_ops registered ownership',
           'domain-agent entry only',
@@ -247,7 +247,7 @@ export function resolveRequestSurface(
       candidate_workstream_id: candidateWorkstream,
       reason:
         `${candidateWorkstream} semantics are recognizable, but that workstream remains under definition and has no admitted domain-agent entry yet.`,
-      routing_evidence: [
+      selection_evidence: [
         `candidate_workstream=${candidateWorkstream}`,
         'under_definition workstream',
         'no registered domain owner',
@@ -263,7 +263,7 @@ export function resolveRequestSurface(
       candidate_domains: ['medautoscience', 'redcube'],
       reason:
         'The request mixes research-submission and presentation-delivery semantics without a single primary deliverable.',
-      routing_evidence: [
+      selection_evidence: [
         'research delivery semantics',
         'presentation delivery semantics',
         'missing primary deliverable',
@@ -287,7 +287,7 @@ export function resolveRequestSurface(
       confidence: 'high',
       reason:
         'The requested output is a formal research delivery owned by Research Foundry inside the MedAutoScience domain-agent entry.',
-      routing_evidence: [
+      selection_evidence: [
         'research delivery semantics',
         'research_ops registered ownership',
         'domain-agent entry only',
@@ -307,7 +307,7 @@ export function resolveRequestSurface(
       confidence: preferredFamily ? 'high' : 'medium',
       reason:
         'The requested output is a visual deliverable owned by Presentation Foundry inside the RedCube domain-agent entry.',
-      routing_evidence: [
+      selection_evidence: [
         'presentation delivery semantics',
         'presentation_ops registered ownership',
         'visual deliverable boundary',
@@ -324,7 +324,7 @@ export function resolveRequestSurface(
       recommended_family: 'xiaohongshu',
       reason:
         'xiaohongshu stays discoverable through RedCube AI, but it does not automatically become Presentation Foundry.',
-      routing_evidence: [
+      selection_evidence: [
         'xiaohongshu family signal',
         'redcube ownership',
         'presentation_ops auto-mapping withheld',
@@ -338,8 +338,8 @@ export function resolveRequestSurface(
     candidate_workstreams: [],
     candidate_domains: [],
     reason:
-      'The request does not contain enough top-level routing evidence to resolve a workstream or domain safely.',
-    routing_evidence: ['insufficient routing evidence'],
+      'The request does not contain enough top-level stage-selection evidence to resolve a workstream or domain safely.',
+    selection_evidence: ['insufficient stage-selection evidence'],
     required_clarification: [
       'What is the primary deliverable you want OPL to route?',
       'Should OPL prefer a research deliverable, a presentation deliverable, or another explicit family boundary?',
@@ -360,7 +360,7 @@ export function explainDomainBoundary(
         return {
           request_summary: summary,
           boundary_status: resolution.status,
-          boundary_evidence: resolution.routing_evidence,
+          boundary_evidence: resolution.selection_evidence,
           resolved_domain: 'medautogrant',
           resolved_workstream_id: 'grant_ops',
           reason:
@@ -384,7 +384,7 @@ export function explainDomainBoundary(
         return {
           request_summary: summary,
           boundary_status: resolution.status,
-          boundary_evidence: resolution.routing_evidence,
+          boundary_evidence: resolution.selection_evidence,
           resolved_domain: 'medautoscience',
           resolved_workstream_id: 'research_ops',
           reason:
@@ -402,7 +402,7 @@ export function explainDomainBoundary(
       return {
         request_summary: summary,
         boundary_status: resolution.status,
-        boundary_evidence: resolution.routing_evidence,
+        boundary_evidence: resolution.selection_evidence,
         resolved_domain: 'redcube',
         resolved_workstream_id: 'presentation_ops',
         reason:
@@ -420,7 +420,7 @@ export function explainDomainBoundary(
       return {
         request_summary: summary,
         boundary_status: resolution.status,
-        boundary_evidence: resolution.routing_evidence,
+        boundary_evidence: resolution.selection_evidence,
         resolved_domain: resolution.domain_id,
         resolved_workstream_id: null,
         reason:
@@ -438,7 +438,7 @@ export function explainDomainBoundary(
       return {
         request_summary: summary,
         boundary_status: resolution.status,
-        boundary_evidence: resolution.routing_evidence,
+        boundary_evidence: resolution.selection_evidence,
         resolved_domain: null,
         resolved_workstream_id: null,
         candidate_workstream_id: resolution.candidate_workstream_id,
@@ -462,7 +462,7 @@ export function explainDomainBoundary(
       return {
         request_summary: summary,
         boundary_status: resolution.status,
-        boundary_evidence: resolution.routing_evidence,
+        boundary_evidence: resolution.selection_evidence,
         resolved_domain: null,
         resolved_workstream_id: null,
         candidate_workstreams: resolution.candidate_workstreams,
@@ -499,3 +499,5 @@ export function describeDomainBoundary(
 ) {
   return findDomainOrThrow(contracts, domainId);
 }
+
+export { resolveRequestSurface as selectDomainAgentEntry };

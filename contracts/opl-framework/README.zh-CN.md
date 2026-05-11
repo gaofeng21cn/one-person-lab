@@ -27,7 +27,7 @@
 
 ## 这个目录应该怎么读
 
-- `workstreams.json`、`domains.json`、`routing-vocabulary.json`、`task-topology.json` 和 `public-surface-index.json` 定义当前活跃的 stage-led framework 选择面。
+- `workstreams.json`、`domains.json`、`stage-selection-vocabulary.json`、`task-topology.json` 和 `public-surface-index.json` 定义当前活跃的 stage-led framework 选择面。
 - `family-runtime-online-substrate-contract.json`、`family-runtime-attempt-contract.json`、`standard-domain-agent-skeleton-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime 主线的活跃机器合同。
 - `family-executor-adapter-defaults.json` 继续作为共享 executor 合同使用。
 - 已退役的 gateway、federation、routed-action、onboarding、acceptance、governance 与 example corpora 不再保留在这个活跃 contract root 中。
@@ -36,7 +36,7 @@
 
 - `workstreams.json`
 - `domains.json`
-- `routing-vocabulary.json`
+- `stage-selection-vocabulary.json`
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`

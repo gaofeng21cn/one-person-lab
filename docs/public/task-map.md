@@ -130,7 +130,7 @@ Current boundary status:
 - stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
 - tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
 - truth boundary: patent canonical truth and human/legal review gates must be owned by the future IP Ops domain boundary
-- routing rule: clear patent requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
+- stage-selection rule: clear patent requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
 
 ## Award Ops
 
@@ -162,7 +162,7 @@ Current boundary status:
 - stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
 - tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
 - truth boundary: award canonical truth and human expert review gates must be owned by the future Award Ops domain boundary
-- routing rule: clear award requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
+- stage-selection rule: clear award requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
 
 ## Thesis Ops
 
@@ -261,7 +261,7 @@ Within that surface:
 
 ## How These Workstreams Reuse One Another
 
-These workstreams belong in one `OPL` federation because they share:
+These workstreams belong in one `OPL` stage-led framework because they share:
 
 - the same datasets and figures
 - the same references and external evidence

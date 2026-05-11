@@ -52,7 +52,7 @@
     "stage_runtime_projection",
     "direct_domain_skill"
   ],
-  "routing_rules": [
+  "selection_rules": [
     "select by explicit domain-agent handle first",
     "select by workstream semantics second",
     "select by family/profile preference third",

@@ -2,7 +2,7 @@
 
 # Shared Domain Contract
 
-> Current-status note (`2026-05-09`): this document is retained as a shared-boundary reference. The active public domain-agent set is `MAS`, `MAG`, and `RCA`; after the MAS monolith closeout, `MDS` appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references. Older `Domain Gateway` / `Domain Harness OS` wording below is compatibility language for internal boundaries, while current public docs should use independent `domain agent` and app-skill wording.
+> Current-status note (`2026-05-11`): this document is retained as a shared-boundary reference. The active public domain-agent set is `MAS`, `MAG`, and `RCA`; after the MAS monolith closeout, `MDS` appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references. Lower-level execution wording should be read as `domain harness / controller` internal boundaries, while current public docs should use independent `domain agent` and app-skill wording.
 
 ## Purpose
 
@@ -59,7 +59,7 @@ The first objects and rules to keep aligned are:
 
 7. AI-first quality boundary
    - creative authorship, scientific judgment, reviewer judgment, and deliverable-quality judgment remain domain-owned AI artifact responsibilities
-   - shared contracts, graphs, gates, indexes, scorecards, and projections may carry evidence, provenance, status, and routing signals only
+   - shared contracts, graphs, gates, indexes, scorecards, and projections may carry evidence, provenance, status, and selection signals only
    - `OPL` must not promote a projection-only or scorecard-only signal into a domain-ready verdict
 
 8. operating posture

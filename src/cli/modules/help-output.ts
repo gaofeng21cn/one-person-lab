@@ -165,7 +165,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl exec "Plan a medical grant proposal revision loop."',
         'opl resume --last',
         'opl contract validate',
-        'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+        'opl domain select-entry --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
         'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
       ],
     },

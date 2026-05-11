@@ -81,7 +81,7 @@ Agent 主要负责：
 在这个模型里，代码的主要职责是提供：
 
 - 稳定对象模型
-- route / controller
+- stage selector / controller
 - 工具封装
 - gate 规则
 - 审计落盘
@@ -155,7 +155,7 @@ Rust native helper / index-only 工作可以支持 native assistance 与 indexed
 - 独立使用的稳定入口
 - domain-specific 的校验、治理与交付合同
 - 独立发布与维护边界
-- 某个工作流可以独立演进而不拖垮整个 federation 的能力
+- 某个工作流可以独立演进而不拖垮整个 stage-led framework 的能力
 
 所以正确方向是：
 

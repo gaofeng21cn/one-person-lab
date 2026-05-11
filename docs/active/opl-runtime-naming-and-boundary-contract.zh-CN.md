@@ -293,13 +293,13 @@ MedAutoScience == MedDeepScientist
 - `OPL` 是 runtime owner
 - `Managed Runtime` 只是“更会长跑的 Codex”
 - `MedDeepScientist` 是 `MedAutoScience` 的系统本体
-- monorepo ingest 等于 domain gateway 与 execution engine 边界消失
+- monorepo ingest 等于 domain harness/controller 与 execution engine 边界消失
 - future `managed runtime` 已经是当前 repo-tracked reality
 
 应该把系统写成：
 
-- `OPL` 负责 federation 语言
-- domain repo 负责 `domain gateway + Domain Harness OS`
+- `OPL` 负责 stage-led framework 语言
+- domain repo 负责 `domain harness / controller + Domain Harness OS`
 - execution engine 负责 execution plane
 - `host-agent runtime` 与 `managed runtime` 是 execution plane 的两种 deployment shape
 - future migration 只改 execution plane 的托管方式，不改写 domain contract

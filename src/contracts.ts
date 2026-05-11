@@ -7,7 +7,7 @@ import type {
   FrameworkContracts,
   FrameworkContractsLoadOptions,
   PublicSurfaceIndexContract,
-  RoutingVocabularyContract,
+  StageSelectionVocabularyContract,
   TaskTopologyContract,
   WorkstreamsRegistry,
 } from './types.ts';
@@ -25,7 +25,7 @@ export { FrameworkContractError } from './contract-validation.ts';
 const REQUIRED_CONTRACT_FILE_NAMES = [
   'workstreams.json',
   'domains.json',
-  'routing-vocabulary.json',
+  'stage-selection-vocabulary.json',
   'task-topology.json',
   'public-surface-index.json',
 ] as const;
@@ -135,14 +135,14 @@ function validateWorkstreamsRegistry(
   };
 }
 
-function validateRoutingVocabulary(
+function validateStageSelectionVocabulary(
   filePath: string,
   value: unknown,
-): RoutingVocabularyContract {
+): StageSelectionVocabularyContract {
   if (!isRecord(value)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'routing-vocabulary.json must contain an object root.',
+      'stage-selection-vocabulary.json must contain an object root.',
       { file: filePath },
     );
   }
@@ -151,7 +151,7 @@ function validateRoutingVocabulary(
   if (!Array.isArray(specialCasesRaw)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'routing-vocabulary.json must contain a special_cases array.',
+      'stage-selection-vocabulary.json must contain a special_cases array.',
       { file: filePath, field: 'special_cases' },
     );
   }
@@ -166,7 +166,11 @@ function validateRoutingVocabulary(
     delivery_kind: expectStringArray(value.delivery_kind, 'delivery_kind', filePath),
     review_kind: expectStringArray(value.review_kind, 'review_kind', filePath),
     entry_mode: expectStringArray(value.entry_mode, 'entry_mode', filePath),
-    routing_rules: expectStringArray(value.routing_rules, 'routing_rules', filePath),
+    selection_rules: expectStringArray(
+      value.selection_rules,
+      'selection_rules',
+      filePath,
+    ),
     special_cases: specialCasesRaw.map((entry, index) => {
       if (!isRecord(entry)) {
         throw new FrameworkContractError(
@@ -256,7 +260,11 @@ function validateTaskTopology(
           filePath,
         ),
         registry_state: expectString(entry.registry_state, 'registry_state', filePath),
-        routing_state: expectString(entry.routing_state, 'routing_state', filePath),
+        selection_state: expectString(
+          entry.selection_state,
+          'selection_state',
+          filePath,
+        ),
         current_domain_id:
           entry.current_domain_id === null
             ? null
@@ -651,9 +659,10 @@ const REQUIRED_CONTRACT_FILES = [
     schema_version: (contracts: FrameworkContracts) => contracts.domains.version,
   },
   {
-    contract_id: 'routing_vocabulary',
-    file_name: 'routing-vocabulary.json',
-    schema_version: (contracts: FrameworkContracts) => contracts.routingVocabulary.version,
+    contract_id: 'stage_selection_vocabulary',
+    file_name: 'stage-selection-vocabulary.json',
+    schema_version: (contracts: FrameworkContracts) =>
+      contracts.stageSelectionVocabulary.version,
   },
   {
     contract_id: 'task_topology',
@@ -703,9 +712,9 @@ export function loadFrameworkContracts(
         path.join(contractsDir, 'domains.json'),
         parseJsonFile(path.join(contractsDir, 'domains.json')),
       ),
-      routingVocabulary: validateRoutingVocabulary(
-        path.join(contractsDir, 'routing-vocabulary.json'),
-        parseJsonFile(path.join(contractsDir, 'routing-vocabulary.json')),
+      stageSelectionVocabulary: validateStageSelectionVocabulary(
+        path.join(contractsDir, 'stage-selection-vocabulary.json'),
+        parseJsonFile(path.join(contractsDir, 'stage-selection-vocabulary.json')),
       ),
       taskTopology: validateTaskTopology(
         path.join(contractsDir, 'task-topology.json'),

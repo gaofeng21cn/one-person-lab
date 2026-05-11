@@ -103,7 +103,7 @@ export function translateSessionCreatePayload(payload: unknown): AcpSessionSeedV
     entry_surface: optionalString(productEntry.entry_surface),
     entry_mode: optionalString(productEntry.mode),
     session_id: readSessionId(productEntry),
-    routing_status: isRecord(productEntry.routing) ? optionalString(productEntry.routing.status) : null,
+    stage_selection_status: isRecord(productEntry.stage_selection) ? optionalString(productEntry.stage_selection.status) : null,
     handoff_prompt_preview: optionalString(productEntry.handoff_prompt_preview),
     task_acceptance: readTaskAcceptance(productEntry.task),
   };

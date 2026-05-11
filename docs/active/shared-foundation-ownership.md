@@ -2,7 +2,7 @@
 
 # Shared Foundation Ownership
 
-> Current-status note (`2026-04-25`): this document is retained as a shared-foundation ownership reference. Read `domain gateway / harness` below as compatibility language; the current public model uses independent domain agents (`MAS`, `MAG`, `RCA`) with domain-owned truth surfaces.
+> Current-status note (`2026-05-11`): this document is retained as a shared-foundation ownership reference using the active OPL wording. Read lower-level execution language as `domain harness / controller`; the current public model uses independent domain agents (`MAS`, `MAG`, `RCA`) with domain-owned truth surfaces.
 
 ## Purpose
 
@@ -93,7 +93,7 @@ The intended flow is:
 3. `OPL` activates or routes the request into the correct domain-agent entry with references, not with top-level truth replacement.
 4. The target domain resolves the concrete objects it actually owns.
 5. The domain writes back its own runtime truth, review truth, and delivery truth to domain-owned surfaces.
-6. `OPL` may retain top-level references, summaries, or auditable routing signals, but not the domain's canonical object truth.
+6. `OPL` may retain top-level references, summaries, or auditable selection signals, but not the domain's canonical object truth.
 
 For example:
 

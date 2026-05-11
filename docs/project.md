@@ -71,7 +71,7 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 - `Med Auto Science`、`Med Auto Grant`、`RedCube AI` 等仓继续是独立 `domain agent`
 - 这些 `domain agent` 通过本地 CLI、程序/脚本与 repo-tracked contract 暴露稳定 capability surface；它们既可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
 - `MAS`、`MAG`、`RCA` 可以作为运行在 OPL family framework 上的 domain agents 被托管、唤醒和投影，但不是 OPL 内部模块；direct Codex app skill 调用仍是一等入口
-- `gateway / harness` 继续作为各 domain 仓内部的边界层语言存在，但不再是顶层公开主语
+- `harness / controller` 继续作为各 domain 仓内部的边界层语言存在，但不再是顶层公开主语
 - `frontdoor`、gateway-first、federation-first、Hermes-first 和旧 Product API 计划只在 history、compatibility、diagnostic 或 superseded reference 语境中出现；active docs 不把这些路线写成当前产品入口或目标 topology
 
 ## 默认入口
@@ -90,5 +90,5 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 
 - 顶层叙事：`README*`、`docs/README*` 与 `docs/public/`
 - 当前接口与合同入口：`contracts/README.md`、`docs/active/opl-public-surface-index*`、`docs/active/` 与 `docs/specs/` 下仍生效的 runtime / product-boundary 规格
-- 旧 gateway-first 语料：人读材料已经进入 `docs/history/compatibility/gateway-federation/`；机器可读兼容合同继续在 `contracts/opl-framework/*`
+- 旧 gateway-first 语料：人读材料已经进入 `docs/history/compatibility/gateway-federation/`；活跃机器可读合同只保留当前 stage-led framework、runtime 与 domain-agent catalog surface
 - 参考与历史：`docs/references/`、`docs/history/` 与 `docs/docs_portfolio_consolidation.md`

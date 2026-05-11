@@ -82,7 +82,7 @@ The primary workstream driver reads state, calls stable domain-owned tools, orga
 In that model, code mainly exists to provide:
 
 - stable object models
-- routes or controllers
+- stage selectors or controllers
 - tool wrappers
 - gate rules
 - audit persistence
@@ -156,7 +156,7 @@ Even with shared `OPL` activation, domain-owned entries should remain because th
 - a standalone surface for independent use
 - domain-specific validation, governance, and delivery contracts
 - independent release and maintenance boundaries
-- a place where one workstream can evolve without destabilizing the whole federation
+- a place where one workstream can evolve without destabilizing the whole stage-led framework
 
 That means the right direction is:
 

@@ -1,19 +1,19 @@
 import {
   buildContractsContext,
   buildProductEntryHandoffBundle,
-  buildResolveRequestInput,
+  buildDomainAgentSelectionInput,
 } from './product-entry-parts/builders.ts';
 import type { ProductEntryCliInput } from './product-entry-parts/types.ts';
-import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
+import { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
 import type { FrameworkContracts } from './types.ts';
 
 export function buildProductEntryHandoffEnvelope(
   input: ProductEntryCliInput,
   contracts: FrameworkContracts,
 ) {
-  const resolveInput = buildResolveRequestInput(input);
-  const routing = resolveRequestSurface(resolveInput, contracts);
-  const boundary = explainDomainBoundary(resolveInput, contracts);
+  const selectionInput = buildDomainAgentSelectionInput(input);
+  const stageSelection = selectDomainAgentEntry(selectionInput, contracts);
+  const boundary = explainDomainBoundary(selectionInput, contracts);
 
   return {
     version: 'g2',
@@ -22,7 +22,7 @@ export function buildProductEntryHandoffEnvelope(
       contracts,
       'ask',
       input,
-      routing,
+      stageSelection,
       boundary,
     ),
   };

@@ -30,7 +30,7 @@
 
 ## 近期重点
 
-- 保持旧 gateway / federation wording 只作为 compatibility / reference material，同时把 runtime / activation 语义写成主线
+- 保持旧 gateway / federation wording 只作为 provenance / reference material，同时把 runtime / activation 语义写成主线
 - 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
 - 保持 upstream `Hermes-Agent` online substrate ownership 以及 `OPL Runtime Manager` 产品控制面语义的诚实表达
 - 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime truth 演进
@@ -72,6 +72,6 @@
 - `OPL` 是整个 family 的 Codex-default session/runtime 层、显式 activation 层，以及 shared modules / contracts / indexes owner
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
-- 旧 `OPL Gateway`、`opl web`、`Product API` 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 compatibility 或 reference context 阅读
+- 旧 `OPL Gateway`、`opl web`、`Product API` 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance 或 reference context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

@@ -196,9 +196,9 @@
         "concrete_executor_implementation_owned_here": false,
         "domain_truth_owned_here": false
       },
-      "route_level_structured_call_routing": {
-        "owner": "domain_route_contract",
-        "scope": "domain-owned schema and route-level structured_call selection",
+      "stage_level_structured_call_selection": {
+        "owner": "domain_stage_contract",
+        "scope": "domain-owned schema and stage-level structured_call selection",
         "execution_shape": "structured_call",
         "may_accept_request_explicit_executor": true
       }

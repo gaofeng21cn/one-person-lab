@@ -15,7 +15,7 @@ import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts';
 import { buildSessionLedger } from '../../session-ledger.ts';
-import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
+import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
@@ -463,7 +463,7 @@ resume: {
     logs: {
       usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
       summary: 'Wrap Hermes log access in an OPL product-entry envelope for debugging and operations.',
-      examples: ['opl session logs gateway', 'opl session logs gateway --lines 50', 'opl session logs worker --level info --component runtime'],
+      examples: ['opl session logs runtime', 'opl session logs runtime --lines 50', 'opl session logs worker --level info --component runtime'],
       handler: (args) => runProductEntryLogs(parseLogsArgs(args, commandSpecs.logs)),
     },
     'workspace list': {
@@ -599,17 +599,17 @@ resume: {
       examples: ['opl runtime repair-gateway'],
       handler: () => runProductEntryRepairHermesGateway(),
     },
-    'domain resolve-request': {
-      usage: 'opl domain resolve-request --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
+    'domain select-entry': {
+      usage: 'opl domain select-entry --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       summary: 'Resolve a top-level request to an admitted workstream, domain boundary, or ambiguity envelope.',
       examples: [
-        'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+        'opl domain select-entry --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
       ],
       handler: (args) => {
         const contracts = getContracts();
         return withContractsContext(contracts, {
-          resolution: resolveRequestSurface(
-            parseKeyValueArgs(args, commandSpecs['domain resolve-request']),
+          resolution: selectDomainAgentEntry(
+            parseKeyValueArgs(args, commandSpecs['domain select-entry']),
             contracts,
           ),
         });

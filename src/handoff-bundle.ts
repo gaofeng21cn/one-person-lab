@@ -11,15 +11,15 @@ type BuildHandoffBundleOptions = {
   goal: string;
   intent: string;
   workspacePath?: string;
-  routing: ResolutionResult;
+  stageSelection: ResolutionResult;
   boundary: BoundaryExplanation;
   sessionId?: string | null;
   basePath?: string;
 };
 
-function resolveRoutedDomainId(routing: ResolutionResult) {
-  if ('domain_id' in routing && typeof routing.domain_id === 'string') {
-    return routing.domain_id;
+function resolveSelectedDomainId(stageSelection: ResolutionResult) {
+  if ('domain_id' in stageSelection && typeof stageSelection.domain_id === 'string') {
+    return stageSelection.domain_id;
   }
 
   return null;
@@ -29,7 +29,7 @@ export function buildHandoffBundle(
   contracts: FrameworkContracts,
   options: BuildHandoffBundleOptions,
 ): HandoffBundleResult {
-  const targetDomainId = resolveRoutedDomainId(options.routing);
+  const targetDomainId = resolveSelectedDomainId(options.stageSelection);
   const domain = targetDomainId ? findDomainOrThrow(contracts, targetDomainId) : null;
   const workspaceLocator = targetDomainId
     ? resolveWorkspaceLocator(targetDomainId, options.workspacePath)
@@ -60,7 +60,7 @@ export function buildHandoffBundle(
       task_intent: options.intent,
       entry_mode: 'product_entry_handoff',
       request_goal: options.goal,
-      routing_status: options.routing.status,
+      stage_selection_status: options.stageSelection.status,
       boundary_status: options.boundary.boundary_status,
       workspace_locator: {
         project_id: workspaceLocator.project_id,
@@ -78,7 +78,7 @@ export function buildHandoffBundle(
       return_surface_contract: {
         opl: {
           resume_command: 'opl session resume <session_id>',
-          logs_command: 'opl session logs gateway --session <session_id>',
+          logs_command: 'opl session logs runtime --session <session_id>',
           dashboard_command: 'opl status dashboard',
           resume_endpoint: endpoints.resume,
           logs_endpoint: endpoints.logs,
@@ -146,8 +146,8 @@ export function buildHandoffBundle(
         : null,
       notes: [
         'This handoff bundle freezes the family-level transfer from OPL product entry into a domain direct entry or domain-agent entry.',
-        'A domain direct-entry locator is only included when the workspace registry has one configured for the routed project.',
-        'When a routed domain publishes a machine-readable manifest, the same bundle also carries the routed direct-entry surface plus recommended shell and command so callers do not have to guess the next step.',
+        'A domain direct-entry locator is only included when the workspace registry has one configured for the selected project.',
+        'When a selected domain publishes a machine-readable manifest, the same bundle also carries the selected direct-entry surface plus recommended shell and command so callers do not have to guess the next step.',
       ],
     },
   };

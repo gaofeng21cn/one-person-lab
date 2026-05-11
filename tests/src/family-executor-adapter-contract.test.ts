@@ -18,7 +18,7 @@ function assertLayeredExecutorPolicy(surface: JsonObject) {
   const layered = surface.layered_executor_semantics as JsonObject;
   const userShell = layered.user_interaction_shell as JsonObject;
   const effectiveDefault = layered.effective_default_executor as JsonObject;
-  const routeLevel = layered.route_level_structured_call_routing as JsonObject;
+  const stageLevel = layered.stage_level_structured_call_selection as JsonObject;
   const resolution = surface.effective_default_executor_resolution as JsonObject[];
   const ownership = surface.ownership_boundaries as JsonObject;
   const standalone = surface.standalone_domain_behavior as JsonObject;
@@ -32,9 +32,9 @@ function assertLayeredExecutorPolicy(surface: JsonObject) {
   assert.equal(effectiveDefault.default_backend, 'codex_cli');
   assert.equal(effectiveDefault.concrete_executor_implementation_owned_here, false);
   assert.equal(effectiveDefault.domain_truth_owned_here, false);
-  assert.equal(routeLevel.owner, 'domain_route_contract');
-  assert.equal(routeLevel.execution_shape, 'structured_call');
-  assert.equal(routeLevel.may_accept_request_explicit_executor, true);
+  assert.equal(stageLevel.owner, 'domain_stage_contract');
+  assert.equal(stageLevel.execution_shape, 'structured_call');
+  assert.equal(stageLevel.may_accept_request_explicit_executor, true);
   assert.deepEqual(
     resolution.map((entry) => entry.source),
     [
@@ -75,7 +75,7 @@ function assertLayeredExecutorPolicy(surface: JsonObject) {
   }
 }
 
-test('family executor defaults split canonical name, route status, and guardrails', () => {
+test('family executor defaults split canonical name, stage-selection status, and guardrails', () => {
   const contract = readJson('contracts/opl-framework/family-executor-adapter-defaults.json');
   const defaults = contract.defaults as JsonObject;
   const executorLabels = contract.executor_labels as JsonObject;
@@ -103,7 +103,7 @@ test('family executor defaults split canonical name, route status, and guardrail
   assert.deepEqual(topologySplit, {
     opl_role: 'codex_first_stage_led_family_framework_contract',
     runtime_substrate_role: 'provider_backed_stage_attempt_orchestration',
-    executor_adapter_role: 'domain_owned_route_and_stage_selection',
+    executor_adapter_role: 'domain_owned_stage_selection',
     concrete_executor_role: 'task_local_autonomous_execution',
   });
   assertLayeredExecutorPolicy(contract);
@@ -113,134 +113,39 @@ test('family executor defaults split canonical name, route status, and guardrail
   assert.ok(!((contract.canonical_executor_backends as string[]).includes('openai_compatible_gateway')));
 });
 
-test('domain onboarding schema example aligns execution model with split executor semantics', () => {
-  const schema = readJson('contracts/opl-framework/domain-onboarding-readiness.schema.json');
-  const defs = schema.$defs as JsonObject;
-  const executionModelDeclaration = defs.executionModelDeclaration as JsonObject;
-  const properties = executionModelDeclaration.properties as JsonObject;
-  const requiredFields = executionModelDeclaration.required as string[];
-  const examples = schema.examples as JsonObject[];
-  const firstExample = examples[0] as JsonObject;
-  const executionModel = firstExample.execution_model as JsonObject;
-  const formalInclusionGate = firstExample.formal_inclusion_gate as JsonObject;
-  const executionModelAligned = formalInclusionGate.execution_model_aligned as JsonObject;
-  const evidenceRefs = executionModelAligned.evidence_refs as string[];
+test('active framework contracts carry executor semantics through stage selection', () => {
+  const executorDefaults = readJson('contracts/opl-framework/family-executor-adapter-defaults.json');
+  const skeleton = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
+  const vocabulary = readJson('contracts/opl-framework/stage-selection-vocabulary.json');
+  const stageRules = vocabulary.selection_rules as string[];
+  const verificationRefs = executorDefaults.verification_refs as string[];
 
-  assert.ok(requiredFields.includes('default_executor_name'));
-  assert.ok(requiredFields.includes('default_executor_mode'));
-  assert.ok(requiredFields.includes('canonical_executor_backends'));
-  assert.ok(requiredFields.includes('execution_shapes'));
-  assert.ok(requiredFields.includes('layered_executor_semantics'));
-  assert.ok(requiredFields.includes('effective_default_executor_resolution'));
-  assert.ok(requiredFields.includes('executor_labels'));
-  assert.ok(requiredFields.includes('executor_statuses'));
-  assert.ok(requiredFields.includes('ownership_boundaries'));
-  assert.ok(requiredFields.includes('standalone_domain_behavior'));
-  assert.ok(requiredFields.includes('runtime_profile_catalog_boundary'));
-  assert.ok(requiredFields.includes('configuration_examples'));
-  assert.ok(requiredFields.includes('hermes_agent_requires_full_agent_loop'));
-  assert.ok(requiredFields.includes('simple_llm_backend_forbidden'));
-  assert.ok(requiredFields.includes('openai_compatible_gateway_backend_forbidden'));
-  assert.ok(requiredFields.includes('domain_repo_provider_catalog_forbidden'));
-  assert.ok(!requiredFields.includes('default_executor'));
-  assert.ok(!requiredFields.includes('hermes_native_requires_full_agent_loop'));
-  assert.deepEqual(properties.default_executor_name, { const: 'codex_cli' });
-  assert.deepEqual(properties.default_executor_mode, { const: 'autonomous' });
-  assert.equal((properties.canonical_executor_backends as JsonObject).type, 'array');
-  assert.equal(Object.prototype.hasOwnProperty.call(properties, retiredAliasField), false);
-  assert.equal((properties.execution_shapes as JsonObject).type, 'object');
-  assert.equal((properties.executor_labels as JsonObject).type, 'object');
-  assert.equal((properties.executor_statuses as JsonObject).type, 'object');
-  assert.equal((properties.hermes_agent_requires_full_agent_loop as JsonObject).const, true);
-  assert.equal((properties.simple_llm_backend_forbidden as JsonObject).const, true);
-  assert.equal((properties.openai_compatible_gateway_backend_forbidden as JsonObject).const, true);
-  assert.equal((properties.domain_repo_provider_catalog_forbidden as JsonObject).const, true);
-  for (const field of [
-    'layered_executor_semantics',
-    'effective_default_executor_resolution',
-    'ownership_boundaries',
-    'standalone_domain_behavior',
-    'runtime_profile_catalog_boundary',
-    'configuration_examples',
-  ]) {
-    assert.deepEqual((properties[field] as JsonObject).const, executionModel[field]);
-  }
-  assert.equal(executionModel.default_executor_name, 'codex_cli');
-  assert.equal(executionModel.default_executor_mode, 'autonomous');
-  assert.deepEqual(executionModel.canonical_executor_backends, ['codex_cli', 'hermes_agent']);
-  assert.equal(Object.prototype.hasOwnProperty.call(executionModel, retiredAliasField), false);
-  assert.deepEqual(((executionModel.execution_shapes as JsonObject).structured_call as JsonObject).allowed_backends, [
-    'codex_cli',
-    'hermes_agent',
+  assert.equal(skeleton.contract_kind, 'opl_standard_domain_agent_skeleton_contract.v1');
+  assert.deepEqual(skeleton.required_projection_fields, [
+    'descriptor_refs',
+    'sidecar_refs',
+    'quality_gate_refs',
+    'workspace_artifact_locator_refs',
+    'runtime_artifact_locator_refs',
+    'authority_boundary',
   ]);
-  assert.deepEqual(((executionModel.execution_shapes as JsonObject).agent_loop as JsonObject).allowed_backends, [
-    'codex_cli',
-    'hermes_agent',
-  ]);
-  assert.deepEqual(executionModel.executor_labels, {
-    codex_cli: 'Codex CLI',
-    hermes_agent: 'Hermes-Agent',
+  assert.deepEqual(skeleton.authority_boundary, {
+    opl: 'framework_transport_and_projection_only',
+    domain_agent: 'truth_quality_artifact_owner',
   });
-  assert.deepEqual(executionModel.executor_statuses, {
-    codex_cli: 'default',
-    hermes_agent: 'experimental',
-  });
-  assert.equal(executionModel.hermes_agent_requires_full_agent_loop, true);
-  assert.equal(executionModel.simple_llm_backend_forbidden, true);
-  assert.equal(executionModel.openai_compatible_gateway_backend_forbidden, true);
-  assertLayeredExecutorPolicy(executionModel);
-  assert.ok(!('default_executor' in executionModel));
-  assert.ok(!('hermes_native_requires_full_agent_loop' in executionModel));
-  assert.ok(evidenceRefs.includes('default_executor_name=codex_cli'));
-  assert.ok(evidenceRefs.includes('default_executor_mode=autonomous'));
-  assert.ok(evidenceRefs.includes('canonical_executor_backends=codex_cli,hermes_agent'));
-  assert.ok(evidenceRefs.includes('execution_shapes=structured_call,agent_loop'));
-  assert.ok(evidenceRefs.includes('executor_layers=user_interaction_shell,effective_default_executor,route_level_structured_call_routing'));
-  assert.ok(evidenceRefs.includes('effective_default_executor_resolution=request_explicit_executor,opl_runtime_manager_or_handoff_default_executor,domain_local_user_config,domain_built_in_default_codex_cli'));
-  assert.ok(evidenceRefs.includes('standalone_without_opl_config=use_domain_defaults'));
-  assert.ok(evidenceRefs.includes('executor_status.hermes_agent=experimental'));
-  assert.ok(evidenceRefs.includes('simple_llm_backend=forbidden'));
-  assert.ok(evidenceRefs.includes('openai_compatible_gateway_backend=forbidden'));
-  assert.ok(evidenceRefs.includes('domain_repo_provider_catalog=forbidden'));
-  assert.ok(evidenceRefs.includes('configuration_examples=not_default_active'));
+  assert.ok(stageRules.includes('select by explicit domain-agent handle first'));
+  assert.ok(stageRules.includes('OPL opens a stage-led framework handoff and does not become domain truth owner'));
+  assert.ok(stageRules.includes('the selected domain agent owns quality, artifact, and publication or export authority'));
+  assert.ok(verificationRefs.includes('contracts/opl-framework/standard-domain-agent-skeleton-contract.json'));
+  assert.ok(verificationRefs.includes('contracts/opl-framework/stage-selection-vocabulary.json'));
+  assert.ok(!verificationRefs.includes('contracts/opl-framework/domain-onboarding-readiness.schema.json'));
 });
 
 test('family manifests use the same split executor declaration', () => {
-  const example = readJson('examples/opl-framework/domain-onboarding-readiness.json');
-  const exampleExecutionModel = example.execution_model as JsonObject;
-  const exampleFormalInclusionGate = example.formal_inclusion_gate as JsonObject;
-  const exampleExecutionModelAligned = exampleFormalInclusionGate.execution_model_aligned as JsonObject;
-  const exampleEvidenceRefs = exampleExecutionModelAligned.evidence_refs as string[];
   const medAutoScienceFixture = readJson(
     'tests/fixtures/family-manifests/med-autoscience-product-entry-manifest.json',
   );
   const executorDefaults = medAutoScienceFixture.executor_defaults as JsonObject;
-
-  assert.equal(exampleExecutionModel.default_executor_name, 'codex_cli');
-  assert.equal(exampleExecutionModel.default_executor_mode, 'autonomous');
-  assert.deepEqual(exampleExecutionModel.canonical_executor_backends, ['codex_cli', 'hermes_agent']);
-  assert.equal(Object.prototype.hasOwnProperty.call(exampleExecutionModel, retiredAliasField), false);
-  assert.deepEqual(((exampleExecutionModel.execution_shapes as JsonObject).structured_call as JsonObject).allowed_backends, [
-    'codex_cli',
-    'hermes_agent',
-  ]);
-  assert.deepEqual(((exampleExecutionModel.execution_shapes as JsonObject).agent_loop as JsonObject).allowed_backends, [
-    'codex_cli',
-    'hermes_agent',
-  ]);
-  assert.deepEqual(exampleExecutionModel.executor_labels, {
-    codex_cli: 'Codex CLI',
-    hermes_agent: 'Hermes-Agent',
-  });
-  assert.deepEqual(exampleExecutionModel.executor_statuses, {
-    codex_cli: 'default',
-    hermes_agent: 'experimental',
-  });
-  assert.equal(exampleExecutionModel.hermes_agent_requires_full_agent_loop, true);
-  assert.equal(exampleExecutionModel.simple_llm_backend_forbidden, true);
-  assert.equal(exampleExecutionModel.openai_compatible_gateway_backend_forbidden, true);
-  assertLayeredExecutorPolicy(exampleExecutionModel);
-  assert.ok(exampleEvidenceRefs.includes('executor_status.hermes_agent=experimental'));
 
   assert.equal(executorDefaults.default_executor_name, 'codex_cli');
   assert.equal(executorDefaults.default_executor_mode, 'autonomous');

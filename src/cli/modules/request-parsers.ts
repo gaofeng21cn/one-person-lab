@@ -62,7 +62,7 @@ function parseKeyValueArgs(
 
   if (!parsed.intent || !parsed.target || !parsed.goal) {
     throw buildUsageError(
-      'domain resolve-request and domain explain-boundary require --intent, --target, and --goal.',
+      'domain select-entry and domain explain-boundary require --intent, --target, and --goal.',
       spec,
       { required: ['--intent', '--target', '--goal'] },
     );
@@ -212,7 +212,7 @@ function normalizeProductEntryGoalWithAgentHandle(
 
   if (preferredFamily) {
     throw buildUsageError(
-      'Use either an @agent handle or --preferred-family for product-entry routing, not both.',
+      'Use either an @agent handle or --preferred-family for product-entry stage selection, not both.',
       spec,
       {
         preferred_family: preferredFamily,

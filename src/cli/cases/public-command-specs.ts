@@ -487,11 +487,11 @@ export function buildPublicCommandSpecs(
       examples: ['opl domain launch --project redcube --dry-run'],
       group: 'domain',
     }),
-    'domain resolve-request': cloneCommandSpec(commandSpecs['domain resolve-request'], {
+    'domain select-entry': cloneCommandSpec(commandSpecs['domain select-entry'], {
       usage:
-        'opl domain resolve-request --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
+        'opl domain select-entry --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       examples: [
-        'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+        'opl domain select-entry --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
       ],
       group: 'domain',
     }),
@@ -704,7 +704,7 @@ export function buildPublicCommandSpecs(
     }),
     'session logs': cloneCommandSpec(commandSpecs.logs, {
       usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
-      examples: ['opl session logs gateway', 'opl session logs worker --level info --component runtime'],
+      examples: ['opl session logs runtime', 'opl session logs worker --level info --component runtime'],
       group: 'session',
     }),
     'session runtime': cloneCommandSpec(commandSpecs['session runtime'], {
