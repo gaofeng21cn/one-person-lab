@@ -29,6 +29,8 @@ export interface CodexStreamingCommandOptions {
   onStdoutLine?: (line: string) => void;
   onStderrLine?: (line: string) => void;
   onStdoutEvent?: (event: CodexExecEvent) => void;
+  onProcessStarted?: (pid: number | null) => void;
+  timeoutMs?: number;
 }
 
 export interface CodexExecOptions {
@@ -221,6 +223,24 @@ export async function runCodexCommandStreaming(
 
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
+    let completed = false;
+    let timeout: NodeJS.Timeout | null = null;
+
+    options.onProcessStarted?.(typeof child.pid === 'number' ? child.pid : null);
+    if (options.timeoutMs && options.timeoutMs > 0) {
+      timeout = setTimeout(() => {
+        timedOut = true;
+        child.kill('SIGTERM');
+      }, options.timeoutMs);
+    }
+
+    const clearProcessTimeout = () => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+    };
 
     const flushStdout = attachLineBuffer(child.stdout, (line) => {
       stdout += `${line}\n`;
@@ -236,6 +256,11 @@ export async function runCodexCommandStreaming(
     });
 
     child.once('error', (error) => {
+      if (completed) {
+        return;
+      }
+      completed = true;
+      clearProcessTimeout();
       reject(
         new FrameworkContractError(
           'codex_command_failed',
@@ -250,12 +275,19 @@ export async function runCodexCommandStreaming(
     });
 
     child.once('close', (code) => {
+      if (completed) {
+        return;
+      }
+      completed = true;
+      clearProcessTimeout();
       flushStdout();
       flushStderr();
       resolve({
-        exitCode: code ?? 1,
+        exitCode: timedOut ? 124 : code ?? 1,
         stdout,
-        stderr,
+        stderr: timedOut
+          ? `${stderr}${stderr.endsWith('\n') || stderr.length === 0 ? '' : '\n'}Codex command timed out.\n`
+          : stderr,
       });
     });
 

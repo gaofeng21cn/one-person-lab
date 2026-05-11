@@ -136,3 +136,42 @@ test('Temporal worker readiness helper reports live configured state without sta
   assert.equal(readiness.lifecycle.worker_helper, 'runTemporalStageAttemptWorkerUntil');
   assert.deepEqual(readiness.blockers, []);
 });
+
+test('Temporal StageAttemptWorkflow blocks provider completion when typed closeout is missing', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-blocked-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+
+    const result = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+        }],
+        taskQueue,
+        workflowId: `wf-temporal-blocked-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
+    assert.equal(result.completion_boundary.domain_ready_verdict, null);
+    assert.deepEqual(result.closeout_refs, []);
+    const dispatchEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'domain_sidecar_dispatch_activity',
+    );
+    assert.equal(dispatchEvent?.activity_status, 'blocked');
+    assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_packet_required');
+  } finally {
+    await testEnv.teardown();
+  }
+});
