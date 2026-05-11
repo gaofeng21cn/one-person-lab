@@ -132,6 +132,15 @@ function costSummaryFrom(output: string, runnerMode: CodexStageRunnerMode) {
   };
 }
 
+function normalizeTimeoutMs(value: unknown, fallback: number) {
+  const numeric = typeof value === 'number'
+    ? value
+    : typeof value === 'string'
+      ? Number.parseInt(value, 10)
+      : Number.NaN;
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
 export function buildCodexStageRunnerReceipt(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
@@ -205,7 +214,9 @@ export async function runCodexStageRunner(input: {
   });
   const runnerEvents: RunnerEventSummary[] = [];
   let processId: number | null = null;
-  const timeoutMs = input.timeoutMs ?? Number.parseInt(process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS ?? '600000', 10);
+  const timeoutMs = input.timeoutMs != null
+    ? normalizeTimeoutMs(input.timeoutMs, 600_000)
+    : normalizeTimeoutMs(process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS, 600_000);
   const result = await runCodexCommandStreaming(args, {
     timeoutMs,
     onProcessStarted(pid) {
