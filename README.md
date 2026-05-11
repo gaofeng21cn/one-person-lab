@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A stage-led agent framework for high-value knowledge delivery</strong></p>
-<p align="center">Run expert work the way specialists actually deliver it: define the problem, prepare evidence, execute, review, revise, and ship auditable outcomes.</p>
+<p align="center"><strong>A Codex-first, stage-led complete agent runtime framework for high-value knowledge work</strong></p>
+<p align="center">Run expert work the way specialists actually deliver it: organize large tasks as expert stages, use Codex CLI as the default minimum execution unit inside each stage, and ship auditable outcomes.</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
@@ -40,7 +40,7 @@ For macOS desktop users, download the App directly:
 
 [Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses the execution engine, the configured OPL family runtime provider, domain modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and a configured family runtime provider ready. The production target is a Temporal-backed provider for durable stage attempts; Hermes/local provider paths are migration or legacy signals until that target lands.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses Codex / Codex CLI, the configured OPL family runtime provider, domain modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and a configured family runtime provider ready. The production target is a Temporal-backed provider for durable stage attempts; Hermes/local provider paths are migration or legacy signals until that target lands.
 
 If you prefer Terminal installation:
 
@@ -69,9 +69,9 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 - General work for discussion, planning, reading, and common tasks.
 - Workspace-based work for tasks that need a real directory and persistent file context.
 - Specialized product families for domain-specific expert workflows.
-- Stage-led execution: OPL treats each domain stage as the observable work unit, with goals, evidence, review, receipts, recovery, and owner boundaries attached to the stage.
+- Stage-led execution: OPL treats each domain stage as the observable work unit, uses `Codex CLI` as the default minimum execution unit inside a stage, and attaches goals, evidence, review, receipts, recovery, and owner boundaries to that stage.
 - Progress and file views that stay attached to ongoing work.
-- Central management for the default executor, the OPL family runtime provider, modules, skills, GUI, and health status.
+- Central management for the Codex CLI default executor, the OPL family runtime provider, modules, skills, GUI, and health status.
 
 ## For Agents And Technical Operators
 
@@ -105,7 +105,7 @@ This repository tracks the OPL framework layer, not the specialized domain-agent
 - Workspace, session, stage attempt, progress, and artifact discovery surfaces.
 - Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
-Architecturally, OPL is a complete stage-led family agent runtime framework for high-value knowledge delivery. It may use external providers and concrete executors, but its framework boundary is OPL-owned: activation, typed family queue, durable session/runtime support, stage attempt ledger, wakeup/retry/approval transport, shared discovery, and projection. Domain agents own their own stage semantics, prompts, skills, quality gates, truth reducers, and deliverable authority. This lets OPL support MAS/MAG/RCA and target fully automated delivery of high-value knowledge work without becoming their domain brain.
+Architecturally, OPL is a complete Codex-first, stage-led family agent runtime framework for high-value knowledge delivery. It may use external runtime providers and concrete executors, but `Codex CLI` is the default minimum execution unit inside a stage, and the framework boundary is OPL-owned: activation, typed family queue, durable session/runtime support, stage attempt ledger, wakeup/retry/approval transport, shared discovery, and projection. Domain agents own their own stage semantics, prompts, skills, quality gates, truth reducers, and deliverable authority. This lets OPL support MAS/MAG/RCA and target fully automated delivery of high-value knowledge work without becoming their domain brain.
 
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by Codex and OPL. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
@@ -115,7 +115,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 
 1. Users should start with this README and the App / `opl install` path above.
 2. Technical planning, architecture decisions, and direction sync continue through the [documentation index](./docs/README.md), then [project overview](./docs/project.md), [current status](./docs/status.md), [architecture](./docs/architecture.md), [invariants](./docs/invariants.md), and [decisions](./docs/decisions.md).
-3. Developers and maintainers should continue with the [contracts directory guide](./contracts/README.md), [reference index](./docs/references/README.md), current specs under `docs/specs/`, and archived process material through the [history index](./docs/history/README.md).
+3. Developers and maintainers should continue with the [contracts directory guide](./contracts/README.md), [reference index](./docs/references/README.md), the active [specs index](./docs/specs/README.md), and archived process material through the [history index](./docs/history/README.md).
 
 ### Runtime notes
 
