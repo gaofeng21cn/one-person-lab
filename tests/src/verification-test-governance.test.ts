@@ -15,6 +15,8 @@ const structuralGatePatterns = [
   /OPL_QUALITY_DETAILS_COMPARE_REF/,
   /compare_ref="\$\{OPL_QUALITY_DETAILS_COMPARE_REF:-origin\/main\}"/,
   /sentrux gate \./,
+  /Sentrux baseline regression reported structural drift/,
+  /line budget and explicit Sentrux rules remain blocking/,
   /sentrux check \./,
   /quality details --root \./,
   /--compare-ref "\$compare_ref"/,
