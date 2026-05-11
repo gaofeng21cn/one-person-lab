@@ -33,6 +33,7 @@
 - `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
 - `opl module exec` 负责把自动化 CLI 调用绑定到 OPL module registry 解析出的当前 checkout；domain CLI 从 repo checkout 内启动，避免把用户 PATH 上的旧全局 tool 当作执行真相
 - `Codex CLI` 是默认 concrete executor；family runtime provider 负责 stage-attempt durability / wakeup / approval / retry / query transport，具体 executor 仍由 Codex default 或 domain stage 选择
+- `OPL Product Entry` 的普通 ask/chat/resume 路径只使用 Codex-default executor；`opl session list/logs` 和 runtime status 中的 Hermes 输出是 `hermes_legacy` diagnostics，不是默认 executor 或 runtime truth
 - `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface
 - MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，包括 `mas_opl_runtime_workbench_projection` 的 App drilldown/read-only workbench 投影，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
 
@@ -91,6 +92,7 @@
 - domain task registration contract 的 hydration；当前 MAS 通过 `pending_family_tasks[]` 把非终局、非 hard human gate 的 autonomy blocker 交给 OPL queue
 - family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
+- `opl status runtime` 顶层报告 provider-backed family runtime；Hermes status、recent sessions 与 process usage 只作为 `hermes_legacy` diagnostics 镜像保留
 - `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
 - 可选 Rust `OPL native helper` 的 registry，例如 system probe、native doctor、runtime watch、artifact indexer、state indexer
 - Rust helper 的 package lifecycle：`native:build`、`native:doctor`、`native:repair`、`native:test`，以及随 npm package 分发的 Cargo workspace 与 helper 脚本
