@@ -462,6 +462,7 @@ export interface NormalizedDomainManifest {
   family_action_catalog: FamilyActionCatalog | null;
   family_stage_control_plane: FamilyStageControlPlane | null;
   standard_domain_agent_skeleton: JsonRecord | null;
+  standard_domain_agent_skeleton_source_field: string | null;
   runtime_inventory: NormalizedRuntimeInventory | null;
   task_lifecycle: NormalizedTaskLifecycle | null;
   runtime_control: NormalizedRuntimeControl | null;
