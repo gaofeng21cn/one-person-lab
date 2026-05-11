@@ -1,4 +1,11 @@
 import { FrameworkContractError } from './contracts.ts';
+import {
+  buildCodexCliPreview,
+  buildCodexExecArgs,
+  parseCodexExecOutput,
+  runCodexCommandStreaming,
+  type CodexExecEvent,
+} from './codex.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -16,7 +23,12 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
-export type CodexStageRunnerMode = 'dry_run' | 'live_dry_run';
+export type CodexStageRunnerMode = 'dry_run' | 'live_dry_run' | 'codex_cli';
+
+type RunnerEventSummary = {
+  event_kind: string;
+  value: string | null;
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -52,7 +64,72 @@ function checkpointRefsFromAttempt(attempt: JsonRecord) {
 
 export function normalizeCodexStageRunnerMode(value?: string | null): CodexStageRunnerMode {
   const normalized = value?.trim().replace(/-/g, '_');
+  if (normalized === 'codex_cli') {
+    return 'codex_cli';
+  }
   return normalized === 'live_dry_run' ? 'live_dry_run' : 'dry_run';
+}
+
+function workspaceRootFromAttempt(attempt: JsonRecord) {
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return optionalString(workspaceLocator.workspace_root) ?? optionalString(workspaceLocator.repo_root);
+}
+
+function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
+  const stageId = stageIdFromAttempt(input.attempt);
+  const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
+  const stagePacketRef = input.stagePacketRef ?? null;
+  return [
+    'You are running an OPL provider-backed stage attempt.',
+    `Stage attempt id: ${attemptId}`,
+    `Stage id: ${stageId}`,
+    stagePacketRef ? `Stage packet ref: ${stagePacketRef}` : 'Stage packet ref: unavailable',
+    'Execute only within the domain-owned stage packet and skill boundary.',
+    'Return progress through structured events when available.',
+    'Do not claim provider completion without a typed closeout packet from the domain sidecar.',
+  ].join('\n');
+}
+
+function eventSummary(event: CodexExecEvent): RunnerEventSummary {
+  if (event.type === 'thread.started') {
+    return { event_kind: event.type, value: event.threadId };
+  }
+  if (event.type === 'agent_message') {
+    return { event_kind: event.type, value: event.text.slice(0, 240) };
+  }
+  if (event.type === 'command_execution') {
+    return {
+      event_kind: event.type,
+      value: [event.status, event.title, event.output].filter(Boolean).join(' | ').slice(0, 240),
+    };
+  }
+  return { event_kind: event.type, value: null };
+}
+
+function costSummaryFrom(output: string, runnerMode: CodexStageRunnerMode) {
+  const usageLines = output
+    .split(/\r?\n/)
+    .map((line) => {
+      try {
+        return JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    })
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry));
+  const tokenUsage = usageLines
+    .map((entry) => (isRecord(entry.token_usage) ? entry.token_usage : null))
+    .find((entry): entry is JsonRecord => Boolean(entry));
+  return {
+    cost_status: runnerMode === 'codex_cli' ? 'observed_or_unreported' : 'not_measured_dry_run',
+    estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : 0,
+    token_usage: {
+      input_tokens: typeof tokenUsage?.input_tokens === 'number' ? tokenUsage.input_tokens : 0,
+      output_tokens: typeof tokenUsage?.output_tokens === 'number' ? tokenUsage.output_tokens : 0,
+      total_tokens: typeof tokenUsage?.total_tokens === 'number' ? tokenUsage.total_tokens : 0,
+    },
+    billing_boundary: 'codex_cli_activity_runner_reports_only_observed_or_declared_usage',
+  };
 }
 
 export function buildCodexStageRunnerReceipt(input: {
@@ -60,23 +137,35 @@ export function buildCodexStageRunnerReceipt(input: {
   stagePacketRef?: string | null;
   runnerMode?: string | null;
   observedAt?: string | null;
+  liveProcessStarted?: boolean;
+  processId?: number | null;
+  exitCode?: number | null;
+  stdoutBytes?: number;
+  stderrBytes?: number;
+  runnerEvents?: RunnerEventSummary[];
+  threadId?: string | null;
+  timeoutMs?: number | null;
 }) {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
   const stagePacketRef = input.stagePacketRef ?? null;
   const observedAt = input.observedAt ?? null;
+  const args = buildCodexExecArgs(runnerPromptFor({ attempt: input.attempt, stagePacketRef }), {
+    cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
+    json: true,
+  });
   return {
     runner_status: {
       runner_kind: 'codex_cli_stage_runner',
       runner_mode: runnerMode,
-      live_process_started: false,
-      dry_run_transport: true,
-      command_preview: [
-        process.env.OPL_CODEX_BIN?.trim() || 'codex',
-        'exec',
-        '--json',
-        ...(stagePacketRef ? ['--stage-packet-ref', stagePacketRef] : []),
-      ],
+      live_process_started: Boolean(input.liveProcessStarted),
+      dry_run_transport: runnerMode !== 'codex_cli',
+      process_id: input.processId ?? null,
+      exit_code: input.exitCode ?? null,
+      stdout_bytes: input.stdoutBytes ?? 0,
+      stderr_bytes: input.stderrBytes ?? 0,
+      timeout_ms: input.timeoutMs ?? null,
+      command_preview: buildCodexCliPreview(args),
       typed_closeout_required_for_completion: true,
       free_text_closeout_accepted: false,
     },
@@ -91,16 +180,60 @@ export function buildCodexStageRunnerReceipt(input: {
       stage_id: stageIdFromAttempt(input.attempt),
       stage_packet_ref: stagePacketRef,
       completed_requires_typed_closeout: true,
+      thread_id: input.threadId ?? null,
+      runner_events: input.runnerEvents ?? [],
     },
-    cost_summary: {
-      cost_status: 'not_measured_dry_run',
-      estimated_cost_usd: 0,
-      token_usage: {
-        input_tokens: 0,
-        output_tokens: 0,
-        total_tokens: 0,
-      },
-      billing_boundary: 'codex_cli_activity_runner_reports_only_observed_or_declared_usage',
+    cost_summary: costSummaryFrom('', runnerMode),
+  };
+}
+
+export async function runCodexStageRunner(input: {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  runnerMode?: string | null;
+  observedAt?: string | null;
+  timeoutMs?: number | null;
+}) {
+  const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
+  if (runnerMode !== 'codex_cli') {
+    return buildCodexStageRunnerReceipt(input);
+  }
+
+  const args = buildCodexExecArgs(runnerPromptFor(input), {
+    cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
+    json: true,
+  });
+  const runnerEvents: RunnerEventSummary[] = [];
+  let processId: number | null = null;
+  const timeoutMs = input.timeoutMs ?? Number.parseInt(process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS ?? '600000', 10);
+  const result = await runCodexCommandStreaming(args, {
+    timeoutMs,
+    onProcessStarted(pid) {
+      processId = pid;
+    },
+    onStdoutEvent(event) {
+      runnerEvents.push(eventSummary(event));
+    },
+  });
+  const parsed = parseCodexExecOutput(result.stdout);
+  return {
+    ...buildCodexStageRunnerReceipt({
+      ...input,
+      runnerMode,
+      liveProcessStarted: true,
+      processId,
+      exitCode: result.exitCode,
+      stdoutBytes: Buffer.byteLength(result.stdout, 'utf8'),
+      stderrBytes: Buffer.byteLength(result.stderr, 'utf8'),
+      runnerEvents,
+      threadId: parsed.threadId,
+      timeoutMs,
+    }),
+    cost_summary: costSummaryFrom(result.stdout, runnerMode),
+    process_output_summary: {
+      exit_code: result.exitCode,
+      final_message_chars: parsed.finalMessage.length,
+      stderr_tail: result.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
     },
   };
 }

@@ -146,9 +146,13 @@ export async function StageAttemptWorkflow(
     const dispatchResult = await domainSidecarDispatchActivity(input);
     const closeoutRefs = closeoutRefsFrom(dispatchResult);
     const routeImpact = asRecord(dispatchResult.route_impact);
+    const dispatchBlockedReason = typeof dispatchResult.blocked_reason === 'string'
+      ? dispatchResult.blocked_reason
+      : null;
+    const providerCompleted = closeoutRefs.length > 0 && !dispatchBlockedReason;
     state = {
       ...state,
-      status: 'completed',
+      status: providerCompleted ? 'completed' : 'blocked',
       updated_at: nowIso(),
       closeout_refs: [...new Set([...state.closeout_refs, ...closeoutRefs])],
       consumed_refs: asStringList(dispatchResult.consumed_refs),
@@ -167,8 +171,8 @@ export async function StageAttemptWorkflow(
         },
       ],
       completion_boundary: {
-        provider_completion: 'completed',
-        domain_ready_verdict: typeof dispatchResult.domain_ready_verdict === 'string'
+        provider_completion: providerCompleted ? 'completed' : 'not_completed',
+        domain_ready_verdict: providerCompleted && typeof dispatchResult.domain_ready_verdict === 'string'
           ? dispatchResult.domain_ready_verdict
           : null,
         provider_completion_is_domain_ready: false,

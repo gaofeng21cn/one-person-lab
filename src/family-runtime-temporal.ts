@@ -41,7 +41,8 @@ export type TemporalStageAttemptWorkflowInput = {
   checkpoint_refs?: string[];
   closeout_packet?: Record<string, unknown> | null;
   codex_stage_runner?: {
-    runner_mode?: 'dry_run' | 'live_dry_run';
+    runner_mode?: 'dry_run' | 'live_dry_run' | 'codex_cli';
+    timeout_ms?: number;
   };
 };
 
@@ -52,7 +53,7 @@ export type TemporalStageAttemptWorkflowState = {
   workflow_id: string;
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
-  status: 'registered' | 'running' | 'checkpointed' | 'human_gate' | 'completed' | 'failed';
+  status: 'registered' | 'running' | 'checkpointed' | 'blocked' | 'human_gate' | 'completed' | 'failed';
   started_at: string;
   updated_at: string;
   activity_events: Array<Record<string, unknown>>;
