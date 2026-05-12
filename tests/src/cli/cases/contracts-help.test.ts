@@ -288,6 +288,9 @@ test('contract domains returns the registered domain-agent summaries', () => {
         domain_id: 'medautogrant',
         independent_domain_agent: 'mag',
         single_app_skill: 'mag',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        embeds_opl_runtime: false,
         domain_truth_owner: [
           'grant_run_truth',
           'grant_workspace_state',
@@ -307,6 +310,9 @@ test('contract domains returns the registered domain-agent summaries', () => {
         domain_id: 'medautoscience',
         independent_domain_agent: 'mas',
         single_app_skill: 'mas',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        embeds_opl_runtime: false,
         domain_truth_owner: [
           'study_truth',
           'runtime_health',
@@ -327,6 +333,9 @@ test('contract domains returns the registered domain-agent summaries', () => {
         domain_id: 'redcube',
         independent_domain_agent: 'rca',
         single_app_skill: 'rca',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        embeds_opl_runtime: false,
         domain_truth_owner: [
           'deliverable_run_truth',
           'review_state',
