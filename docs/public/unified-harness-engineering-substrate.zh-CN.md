@@ -131,7 +131,7 @@ Human / Agent
 在这个理想结构里：
 
 - `OPL`
-  - 继续负责 stage-led、Agent executor-based framework 与 activation layer
+  - 继续负责 stage-led、以 Agent executor 为最小执行单位的 framework 与 activation layer
 - `UHS`
   - 继续作为共享 Harness Engineering 的上位语言
 - `Shared Runtime Contract`
@@ -162,7 +162,7 @@ Human / Agent
   - 基金写作 domain agent
 
 `OPL` 本身不是再额外多出来的一个 domain agent。
-它仍然是位于这些 domain system 之上的 stage-led、Agent executor-based framework 与 activation layer。
+它仍然是位于这些 domain system 之上的 stage-led、以 Agent executor 为最小执行单位的 framework 与 activation layer。
 
 ## 现实意义
 

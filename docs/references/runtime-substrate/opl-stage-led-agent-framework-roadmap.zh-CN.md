@@ -8,7 +8,7 @@ Date: `2026-05-12`
 
 ## 结论
 
-`OPL` 的目标定位应统一为 stage-led、Agent executor-based family agent framework。
+`OPL` 的目标定位应统一为 stage-led、以 Agent executor 为最小执行单位的 family agent framework。
 
 它对标的是 DeerFlow、Dify、LangGraph、AutoGen、CrewAI、Temporal 这类 agent / workflow framework 的工程层能力，但核心差异是：OPL 不把单个 LLM 调用或轻量 agent node 当成主要原子步骤，而是把 `Codex CLI` 作为默认强执行器，把 domain `stage` 作为可观察、可恢复、可审计的语义工作单元。
 
@@ -20,7 +20,7 @@ Date: `2026-05-12`
 
 本文是接下来 OPL family agent framework 的总开发入口。任何涉及以下主题的实现、文档更新或退役清理，都应先从本文判断 owner、边界、优先级和验收门槛：
 
-- OPL 作为 stage-led、Agent executor-based 智能体框架的顶层设计。
+- OPL 作为 stage-led、以 Agent executor 为最小执行单位的智能体框架的顶层设计。
 - Temporal / Hermes / local provider 的 runtime substrate 取舍，其中 Temporal 是 production online OPL 的必需 substrate，Hermes/local 只保留 legacy/proof/dev/CI/offline diagnostic 角色。
 - `TypeScript`、`Python`、`Go`、`Rust` 在 framework 与 domain agent 中的分工。
 - MAS / MAG / RCA 的 stage/action/projection descriptor 接入、direct skill 等价和 OPL-hosted path。
@@ -62,11 +62,20 @@ Date: `2026-05-12`
 - 三篇 projection 均为 read-only：`writes_performed=false`，`writes_real_workspace=false`，并显式拒绝 OPL 写 `publication_eval/latest.json`、`controller_decisions/latest.json`、`current_package`、publication quality verdict 或 memory body。
 - 这证明 OPL 可以消费 MAS owner closeout refs 和 route-memory receipt refs；Temporal worker residency 代码路径已由 `opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker proof 覆盖。尚未证明的是 Codex 长任务 activity、provider-hosted guarded apply 或 MAS owner chain 在生产运行中闭合。
 
+2026-05-12 Agent Executor Adapter closeout 校准：
+
+- OPL 已持有统一 executor registry / request / receipt 边界，当前可选 executor kind 包括 `codex_cli`、`hermes_agent` 与 `claude_code`；默认选择顺序保持显式输入优先，未显式选择时仍回到 `codex_cli`。
+- `opl exec`、executor doctor/run 入口、Product Entry、Temporal stage activity、Codex stage runner 和 family-runtime runner 均按 OPL executor/receipt 边界解释；显式选择非默认 executor 时不得静默 fallback 到 Codex。
+- Hermes-Agent 与 Claude Code 只作为显式 opt-in adapter；v1 验收是可接入、可运行、可回执、可审计、fail-closed，不承诺 reasoning、工具语义、resume、质量或输出效果与 Codex CLI 等价。
+- MAG/RCA 只消费 OPL executor receipt / proof refs；MAS 只声明 executor requirement、接收 OPL typed closeout / domain-task receipt。三仓均不成为 generic executor owner。
+- OPL App / TUI 是前端、工作台和 read-model：可以展示 receipt 或承载显式 executor 选择，但无显式选择时仍保持 Codex CLI 默认交互语义。
+- 旧 Hermes/Gateway/local-manager/default-compat active/default caller 已移走；保留名称只允许出现在 explicit adapter、diagnostic、fixture、provenance、history 或 `retire_after_parity` 语境。该 closeout 不等于真实 production-hosted soak 已完成。
+
 分层完成度：
 
 | layer | 当前状态 | 说明 |
 | --- | --- | --- |
-| 定位 / owner split | `landed` | OPL 作为 stage-led、Agent executor-based family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
+| 定位 / owner split | `landed` | OPL 作为 stage-led、以 Agent executor 为最小执行单位的 family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
 | Shared contracts / schemas | `landed` | action catalog、stage control plane、runtime supervision、persistence / lifecycle / owner-route、standard skeleton 等 contract 已在 OPL shared layer 冻结。 |
 | Domain memory locator / receipt / migration plan | `family_index_resolved_all_active_domains_descriptor_only` | `family-domain-memory-ref`、`family-domain-memory-writeback`、stage `knowledge_refs` 与 `opl domain-memory list|inspect|migration-plan` 已冻结 locator、receipt、seed corpus 和 migration plan 级只读投影；MAS/MAG/RCA 当前均已按标准 descriptor 被 OPL 解析；stage attempt query/workbench 已能显示 consumed memory refs、writeback receipt refs 与 rejected writes；真实 retrieval、writeback apply、memory body migration 和跨 domain soak 仍需 domain router/apply receipt 验证。 |
 | Local queue / attempt ledger | `usable_dev_baseline` | `opl family-runtime` 已有 typed queue、pending task hydration、guarded dispatch、retry/dead-letter、local inbox 和 stage attempt ledger。 |
@@ -76,7 +85,7 @@ Date: `2026-05-12`
 | Codex stage activity runner | `live_runner_repo_test_harness_landed_mas_soak_priority` | Activity 现能接 stage packet / checkpoint refs，支持 `dry_run`、`live_dry_run` 与 `codex_cli` runner mode；`codex_cli` path 已有进程启动、stdout event summary、timeout、process output summary、checkpoint heartbeat 和 typed closeout completion gate 的 repo/test harness。没有 typed closeout 的 domain dispatch 只能进入 checkpointed，不会被标成 completed；typed closeout ledger 已对 `closeout_id` 重放做幂等处理，并对冲突 packet fail-closed。当前优先把这些能力用于 MAS 三篇真实 paper line 的 provider-hosted read-only / guarded apply soak；MAG/RCA provider-hosted receipt evidence 延后。 |
 | Human gate / resume | `ledger_and_aion_signal_transport_landed` | human gate refs、human gate ledger、user instruction ledger、resume ledger 已进入 attempt ledger/query/workbench；Aion workbench 可通过白名单 bridge 发送 provider-level human gate / resume / dead-letter repair signal，且 human gate payload 必须精确绑定当前 attempt id；Temporal worker signal/query 代码路径已由 live proof 覆盖，真实 MAS domain owner-chain 执行证明仍未完成。 |
 | Operator visibility | `stage_attempt_ops_workbench_landed_descriptor_level` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter task ledger 与 human gate signals；Aion runtime workbench 已接入 signal 操作，并拆出 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 五个 operator 状态轴；后续仍需按 domain/stage/blocker/memory refs 过滤和真实 domain soak。 |
-| Real domain soak / retirement | `mas_three_paper_readonly_closeout_landed_provider_guarded_apply_pending` | MAS DM002/DM003/Obesity 三条真实 paper line 已有 read-only typed closeout projection 和 no-forbidden-write proof；DM002 已有 publication-route memory consumed/writeback receipt refs。尚未完成真实 provider-hosted guarded apply、Temporal worker 长驻、Codex 长时 activity 与 MAS owner receipt 连续证据。MAG/RCA 已有 domain-side controlled attempt / memory writeback proof surface，但 OPL/Temporal-hosted controlled soak 本轮延后；旧 Hermes/Gateway/frontdoor/local-manager residue 的 active-path wording 可先通过 public/help/doc scan 收口，物理退役必须等 MAS paper-line proof 与 no-default-caller 证据通过后继续。 |
+| Real domain soak / retirement | `agent_executor_adapter_landed_production_soak_pending` | 统一 Agent Executor Adapter、receipt/fail-closed、默认 Codex caller、Hermes/Claude opt-in adapter、MAG/RCA OPL receipt consumption、MAS requirement/receipt boundary 和 App/TUI read-model 边界已落地。MAS DM002/DM003/Obesity 三条真实 paper line 已有 read-only typed closeout projection 和 no-forbidden-write proof；DM002 已有 publication-route memory consumed/writeback receipt refs。尚未完成真实 provider-hosted guarded apply、外部 production Temporal worker 长驻、Codex 长时 activity 与 MAS owner receipt 连续证据。MAG/RCA 已有 domain-side controlled attempt / memory writeback proof surface，但 OPL/Temporal-hosted controlled soak 本轮延后；旧 Hermes/Gateway/frontdoor/local-manager 默认 caller 已移走，保留项只按 explicit adapter、diagnostic、fixture、provenance、history 或 `retire_after_parity` 读取。 |
 
 已落地的 OPL 层 shared module / contract 面包括：
 
@@ -111,9 +120,9 @@ Date: `2026-05-12`
 - Codex CLI stage activity runner 已从 dry-run receipt / fixture-run 推进到 `codex_cli` live process supervision 的 repo/test harness：能 spawn Codex CLI、记录 runner events、timeout、process output summary、checkpoint heartbeat，并要求 typed closeout 才能完成 attempt。尚未完成的是生产级长时 domain activity soak、真实 token/cost/progress 观测校准，以及真实 domain sidecar / Codex activity 产出 owner receipt 的连续 evidence。
 - OPL App 已有 stage attempt workbench，并能展示 provider completion 与 domain ready verdict 边界；human gate、resume、dead-letter repair 的 provider-level signal 操作已接入白名单 bridge，其中 human gate signal payload 已限制为当前 attempt id。按 domain/stage/blocker/memory refs 过滤和真实 MAS domain owner-chain 执行证明仍是后续 visibility/operation lane。
 - MAS 的真实 paper line 已经完成 read-only closeout projection：DM002/DM003/Obesity 都能输出 OPL-ingestable typed closeout packet，DM002 还带 publication-route memory consumed/writeback receipt refs。尚未完全证明的是 `provider-backed attempt -> Codex/domain activity -> closeout packet -> MAS router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak。MAG/RCA 已有 domain-side controlled proof surface，但 OPL/Temporal-hosted controlled attempt 证据本轮延后。
-- Hermes/local provider 仍作为迁移期实现信号和 legacy/optional provider 存在，active docs 和部分 domain code 中仍有旧 Hermes / Gateway / compatibility wording，需要按 retirement plan 清理。OPL 侧本轮 closeout 的安全边界是文档、public help、residue scan 和 no-default-caller guardrail；不改 production runtime core。
+- Hermes/local provider 仍作为迁移期实现信号、legacy/optional provider、explicit executor/proof lane 或 diagnostic/provenance 存在。默认 caller 和 active-path wording 已完成收口；剩余旧名若保留，必须能解释为 adapter、diagnostic、fixture、provenance、history 或 `retire_after_parity`，不能重新成为默认 runtime、默认 executor 或 readiness blocker。
 
-因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架、local queue/attempt ledger、Temporal provider code、domain adapter discovery、standard skeleton validation 机制、domain memory 3/0 标准索引、Codex stage runner repo/test harness、typed closeout gate、runtime snapshot 和 Aion stage attempt signal workbench 已落地；standard skeleton 当前已三仓 aligned，但仍停在 manifest/adapter 层。生产级真实 provider deployment、真实长时 domain stage execution / soak、真实 domain memory apply、三仓物理目录标准化和旧接口物理退役仍是下一阶段工作。
+因此，对外和开发文档应把“Agent Executor Adapter 计划已落地”和“生产级 domain soak 未闭合”分开写。准确口径是：OPL family framework 的控制面骨架、local queue/attempt ledger、Temporal provider code、domain adapter discovery、standard skeleton validation 机制、domain memory 3/0 标准索引、Codex stage runner repo/test harness、Agent Executor Adapter、typed receipt/fail-closed gate、runtime snapshot 和 Aion stage attempt signal workbench 已落地；standard skeleton 当前已三仓 aligned，但仍停在 manifest/adapter 层。剩余验收是外部 production provider deployment、真实长时 domain stage execution / soak、真实 domain memory apply、三仓物理目录标准化，以及旧接口在无 active caller 之后的物理删除或 history/tombstone 归档。
 
 ## 离理想生产级框架还有多远
 
@@ -126,7 +135,7 @@ Date: `2026-05-12`
 | Domain memory | MAS/MAG/RCA 标准 memory descriptor 均 resolved；MAS 已有 publication-route workspace apply closure，DM002 read-only proof 已显示 consumed memory ref 与 MAS-owned writeback receipt refs。还差真实 provider-hosted stage entry retrieval、workspace/runtime memory body migration、三仓 accepted/rejected writeback receipt 泛化和按 domain/stage 分组的 operator view。 |
 | Lifecycle primitives | OPL shared schema/locator 已有，MAS 经验已经分类为 framework_generic / mas_domain_specific；还差跨 domain cleanup/restore/retention 的 guarded apply proof。 |
 | Operator product experience | CLI/App 已能读 stage attempt workbench，Aion 已能发送 human gate / resume / dead-letter repair signal；Temporal worker/signal/query 代码路径已有 live proof，还差 provider deployment readiness、真实 MAS domain 执行证明、domain drilldown 与 memory refs 分组操作面。 |
-| 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 Codex-first/provider-backed/stage-led；public help / command spec 已不再把 Hermes executor、Gateway cron 或 compatibility alias 放在普通默认示例里。本轮补充 active-path residue scan / no-default-caller evidence，确保当前 docs/help 不把 legacy operator path 重新展示为默认路径。还差无 active caller 后的物理删除和 history/tombstone 归档。 |
+| 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 stage-led / Agent executor / Codex CLI 默认执行器 / provider-backed；public help / command spec 已不再把 Hermes executor、Gateway cron 或 compatibility alias 放在普通默认示例里。active-path residue scan / no-default-caller evidence 已完成当前收口；保留旧名只允许作为 explicit adapter、diagnostic、fixture、provenance、history 或 `retire_after_parity`。还差无 active caller 后的物理删除和 history/tombstone 归档。 |
 
 下一步不应再新增平行总计划。直接按以下闭环推进：
 
@@ -135,7 +144,7 @@ Date: `2026-05-12`
 3. `Codex activity runner production soak`：先用 MAS stage attempt 校准 Codex CLI long-running activity、heartbeat、checkpoint、progress/cost sampling、typed closeout ingestion 和 domain owner receipt；MAG/RCA controlled soak 后移。
 4. `Domain memory apply proof`：保持 memory body 和 accept/reject 在 domain，本轮先证明 MAS publication-route memory consumed/writeback receipt；MAG/RCA 之后做 controlled grant / visual memory proof。
 5. `Directory standardization`：在 direct skill path、OPL-hosted path、restore/provenance proof、no-forbidden-write proof 和 focused tests 都通过后，逐仓做 repo-source 物理目录重组；重组只移动 repo-source schema/adapter/builder/prompt/skill/knowledge refs，不移动 workspace/runtime artifacts、memory body 或 receipt instances。
-6. `Retirement cleanup`：当前已先清理可安全落地的 active-path wording / public-help residue，并以 focused scan 证明 retained legacy wording 只存在于 explicit adapter、diagnostic、fixture、provenance 或 history 语境；物理删除旧 vocabulary、legacy manager 和非标准 skeleton 入口仍需等上述 parity/soak 和 no-active-caller 证据通过。
+6. `Retirement cleanup`：当前已清理 active/default caller、public-help residue 和可安全落地的 active-path wording，并以 focused scan 证明 retained legacy wording 只存在于 explicit adapter、diagnostic、fixture、provenance、history 或 `retire_after_parity` 语境；物理删除旧 vocabulary、legacy manager 和非标准 skeleton 入口仍需等上述 parity/soak 和 no-active-caller 证据通过。
 
 ## 执行语言与依赖结论
 

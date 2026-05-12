@@ -7,7 +7,7 @@
 The core judgment of `OPL` is not “how to make one Agent finish one task once.”
 It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-That is why `OPL` should be understood as a stage-led, Agent executor-based agent runtime framework for continuous lab work. It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes.
+That is why `OPL` should be understood as a stage-led runtime framework with Agent executors as the minimum execution unit for continuous lab work. It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes.
 
 ## Top-Level Chain
 
@@ -125,9 +125,9 @@ On that path:
 - each independent domain-agent repository continues to own its product entry, domain workflow, and delivery truth
 
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
-The full direction is not implemented yet, but it is the right structure to keep tightening toward.
+The framework/control-plane, executor adapter, provider code path, receipt/projection, and domain descriptor layers have landed; external production provider residency and real domain soak remain separate acceptance work.
 
-When `Hermes-Agent` appears in this context, it refers to the upstream external runtime project/service only. It remains a migration-period legacy/optional provider or explicit executor/proof lane, not the target default substrate once the Temporal-backed provider lands.
+When `Hermes-Agent` appears in this context, it refers to the upstream external runtime project/service only. It is now retained only as a legacy/optional provider, explicit executor/proof lane, diagnostic/provenance surface, or optional install module. The Temporal-backed provider is the required production online runtime substrate, while real production soak remains a separate acceptance gate.
 `OPL Runtime Manager` may adapt product-managed runtime operations over a configured family runtime provider, but it must not be described as a scheduler, session store, memory owner, domain truth owner, or concrete executor owner.
 Rust native helper / index-only work may support native assistance and indexed discovery, but it must not become the owner of domain execution or truth.
 

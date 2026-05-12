@@ -14,7 +14,7 @@ Its goal is to define what `OPL` may legitimately index after routing, onboardin
 
 The target is not a monolithic runtime.
 The target is a thin top-level operating layer that records governance signals, routing audit traces, and readiness indexes while domain systems continue to own runtime truth.
-Legacy `gateway` wording in this document is retained for compatibility with the historical surface IDs and example corpus. Current topology is Codex-first and stage-led.
+Legacy `gateway` wording in this document is retained for compatibility with the historical surface IDs and example corpus. Current topology is stage-led with Agent executors as the minimum execution unit.
 
 ## Relationship To Earlier Gateway Layers
 
@@ -156,7 +156,7 @@ This prevents `OPL` from being misread as the canonical owner of runtime or publ
 
 ### Domain entry compatibility value remains `domain_gateway`
 
-This operating surface may reference the retained compatibility value `domain_gateway` for reviewability. In current prose, read this as domain-owned capability entry under the Codex-first, stage-led topology.
+This operating surface may reference the retained compatibility value `domain_gateway` for reviewability. In current prose, read this as domain-owned capability entry under the stage-led topology where Agent executors are the minimum execution unit.
 
 ### Publish readiness is not publish truth
 

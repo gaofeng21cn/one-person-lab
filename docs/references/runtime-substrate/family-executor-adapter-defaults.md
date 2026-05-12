@@ -4,7 +4,7 @@ Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: 本文是人读 executor 边界参考；机器可读默认值以 `contracts/opl-framework/family-executor-adapter-defaults.json`、`contracts/opl-framework/domain-onboarding-readiness.schema.json`、source code 与 CLI/API 行为为准。
 
-当前状态说明（2026-05-11）：本文保留 `Codex CLI` 默认执行器与 `Hermes-Agent` 实验执行路线的边界。旧 `frontdoor`、`product frontdoor`、`federated product entry` 和 MDS 默认执行语境只按历史/compatibility 背景阅读；当前 OPL 主线是 stage-led、Agent executor-based、provider-backed framework。
+当前状态说明（2026-05-11）：本文保留 `Codex CLI` 默认执行器与 `Hermes-Agent` 实验执行路线的边界。旧 `frontdoor`、`product frontdoor`、`federated product entry` 和 MDS 默认执行语境只按历史/compatibility 背景阅读；当前 OPL 主线是 stage-led、provider-backed，并以 Agent executor 为最小执行单位的 framework。
 
 ## 目的
 

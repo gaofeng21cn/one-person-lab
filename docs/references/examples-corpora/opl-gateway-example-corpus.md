@@ -12,7 +12,7 @@ This document indexes historical/legacy-derived machine-readable examples for th
 
 Its goal is to keep the legacy gateway examples discoverable for review, migration, and schema archaeology without turning examples into a runtime or current topology.
 It is a companion index, not a new contract layer.
-The current OPL topology is Codex-first and stage-led; these examples are contract walkthroughs and evidence material.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit; these examples are contract walkthroughs and evidence material.
 
 ## Non-Goals
 

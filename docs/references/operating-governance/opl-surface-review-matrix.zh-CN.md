@@ -12,7 +12,7 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 
 它的作用是：把 human-review obligation、acceptance coverage、配套 review surface，以及 publishability-stage boundary 集中暴露出来，同时不把这张 matrix 升格成 approval engine、publish controller、release engine 或第二真相源。
 
-当前 OPL topology 是 Codex-first、stage-led。仍包含 gateway 词汇的 surface id 是 derived matrix 和历史语料的兼容/reviewability vocabulary。
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。仍包含 gateway 词汇的 surface id 是 derived matrix 和历史语料的兼容/reviewability vocabulary。
 
 ## 机器可读工件
 

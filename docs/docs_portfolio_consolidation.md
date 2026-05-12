@@ -24,8 +24,8 @@ The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governan
 
 The 2026-05-11 content-level rollout extends that rule across the current
 OPL family. The execution order is framework-first: `OPL` owns the shared
-Codex-first, stage-led, provider-backed agent framework and docs lifecycle
-language; `MAS`, `MAG`, and `RCA` keep their domain truth while migrating their
+stage-led, provider-backed agent framework language and docs lifecycle rules,
+with Agent executors as the minimum execution unit; `MAS`, `MAG`, and `RCA` keep their domain truth while migrating their
 docs to content-level owner surfaces; `MDS` remains an archive/reference/oracle
 surface declared by MAS. The rollout entry is
 [OPL Family Content-Level Docs Consolidation 2026-05-11](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md).
@@ -66,7 +66,7 @@ surface declared by MAS. The rollout entry is
 This review treats document bodies as the source for lifecycle placement. The
 current OPL owner split is:
 
-- `OPL`: Codex-first, stage-led framework owner for session/runtime,
+- `OPL`: framework owner for session/runtime in a stage-led model where Agent executors are the minimum execution unit,
   activation, discovery, projection, typed queue, stage attempts, receipts,
   recovery, shared contracts, and shared indexes.
 - `Codex CLI`: default minimum execution unit inside a stage unless an
@@ -106,7 +106,7 @@ current OPL owner split is:
 
 | Document or group | Disposition | Current owner / next hop | Reason |
 | --- | --- | --- | --- |
-| `docs/project.md`, `docs/status.md`, `docs/architecture.md` | Keep as active truth | Core five | They already state Codex-first, stage-led OPL framework boundaries and domain-agent ownership. |
+| `docs/project.md`, `docs/status.md`, `docs/architecture.md` | Keep as active truth | Core five | They already state the stage-led OPL framework boundary, Agent executors as the minimum execution unit, and domain-agent ownership. |
 | `docs/active/current-development-lines*` | Keep as active support | Active docs index plus stage-led framework roadmap | It defines the framework-first content-level execution order. |
 | `docs/active/development-document-portfolio*` | Keep as active support | Active docs index plus docs portfolio | It classifies old development content by current role: merge, retain, downgrade, retire, or archive. |
 | `docs/active/opl-public-surface-index*` | Keep active support | `docs/active/README*` and core five | It correctly tombstones gateway/federation/routed-action prose and points to current runtime/activation surfaces. |

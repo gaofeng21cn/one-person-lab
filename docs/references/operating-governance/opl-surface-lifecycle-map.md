@@ -12,7 +12,7 @@ This document indexes the derived machine-readable lifecycle map for the histori
 
 Its job is to make contract, routing, operating, discoverability, and acceptance surfaces traversable from one place without turning the map into a workflow engine, transition authority, or second source of truth.
 
-The current OPL topology is Codex-first and stage-led. Legacy `gateway` IDs remain here only where the derived artifact and compatibility archive still need them for traversal and reviewability.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit. Legacy `gateway` IDs remain here only where the derived artifact and compatibility archive still need them for traversal and reviewability.
 
 ## Machine-Readable Artifact
 

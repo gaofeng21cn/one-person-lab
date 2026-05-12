@@ -9,7 +9,7 @@
 
 这些设计与计划已经退出当前主线。
 它们只保留给历史审计、迁移回顾和语义追溯使用。
-不要把本目录中的 `frontdoor`、旧 Product API、hosted shell 或 desktop bootstrap wording 复用成当前 OPL 定位。当前 OPL 定位是核心五件套和 runtime-substrate roadmap 描述的完整 Codex-first、stage-led 智能体运行框架。
+不要把本目录中的 `frontdoor`、旧 Product API、hosted shell 或 desktop bootstrap wording 复用成当前 OPL 定位。当前 OPL 定位是核心五件套和 runtime-substrate roadmap 描述的完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。
 
 本目录当前收纳的关键历史文件：
 

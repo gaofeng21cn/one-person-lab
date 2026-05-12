@@ -20,7 +20,7 @@
 
 ### 2.1 OPL
 
-当前状态补充（2026-05-11）：本节保留的是 Hermes-first 重置时的历史判断。当前 `OPL` 已经收敛为 stage-led、Agent executor-based、provider-backed family agent framework owner，持有 stage attempt、typed queue、projection、shared contracts 和 provider abstraction；`gateway / federation` 只作为 legacy/provenance/compatibility vocabulary 阅读。`OPL` 仍不能声称自己已经拥有上游 `Hermes-Agent` runtime，也不把 Hermes 写成默认 session/wakeup substrate。
+当前状态补充（2026-05-11）：本节保留的是 Hermes-first 重置时的历史判断。当前 `OPL` 已经收敛为 stage-led、provider-backed，并以 Agent executor 为最小执行单位的 family agent framework owner，持有 stage attempt、typed queue、projection、shared contracts 和 provider abstraction；`gateway / federation` 只作为 legacy/provenance/compatibility vocabulary 阅读。`OPL` 仍不能声称自己已经拥有上游 `Hermes-Agent` runtime，也不把 Hermes 写成默认 session/wakeup substrate。
 
 ### 2.2 RedCube AI
 

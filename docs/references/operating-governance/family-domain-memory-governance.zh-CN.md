@@ -18,7 +18,7 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - 探索性经验先以自然语言 memory card 沉淀，只加最小 metadata 方便检索、溯源、freshness 和 stage targeting。
 - 已成熟且承担执行安全、质量下限、artifact 构建或 gate 判定的内容继续保持强 schema / contract / code owner。
 
-这条规则服务 Codex-first、stage-led 的框架原则：framework 让经验在正确 stage 被找得到，Codex CLI 在 stage 内做上下文判断，domain gate 决定是否成立。
+这条规则服务 stage-led、以 Agent executor 为最小执行单位的框架原则：framework 让经验在正确 stage 被找得到，Codex CLI 在 stage 内做上下文判断，domain gate 决定是否成立。
 
 ## 总入口
 
