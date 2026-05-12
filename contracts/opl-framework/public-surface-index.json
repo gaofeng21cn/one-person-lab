@@ -161,6 +161,44 @@
       ]
     },
     {
+      "surface_id": "opl_framework_locator",
+      "category_id": "opl_framework_contract",
+      "surface_kind": "framework_dependency_locator",
+      "boundary_role": "agent_runtime_dependency_locator",
+      "owner_scope": "opl",
+      "truth_mode": "framework_locator",
+      "workstream_ids": [
+        "grant_ops",
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautogrant",
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl framework locate"
+        },
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/public-surface-index.json#opl_framework_locator"
+        }
+      ],
+      "routes_to": [
+        "opl_stage_runtime_framework",
+        "mag_foundry_agent_package",
+        "mas_foundry_agent_package",
+        "rca_foundry_agent_package"
+      ],
+      "notes": [
+        "OPL-compatible agents locate their external OPL Framework runtime dependency through this surface before invoking framework-owned runtime, contract, package, or projection calls.",
+        "This locator does not discover domain agents, does not require One Person Lab App, and does not authorize Foundry Agents to embed or fork OPL runtime truth."
+      ]
+    },
+    {
       "surface_id": "opl_domain_agent_catalog",
       "category_id": "opl_framework_contract",
       "surface_kind": "domain_agent_catalog",

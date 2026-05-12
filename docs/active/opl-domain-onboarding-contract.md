@@ -22,11 +22,14 @@ Domain-agent admission is reviewed against the active framework contract set:
 
 If the domain-agent identity, stage capability package, truth ownership, and product entry surfaces are not stable, admission should not proceed.
 
+For runtime dependencies, a candidate domain agent must treat `OPL Framework` as an external dependency environment: use `opl framework locate` / `opl_framework_locator` to resolve the framework root, CLI, contracts, state dir, and modules root before calling OPL-owned runtime, contract, or projection surfaces. It must not vendor or fork an OPL runtime, and it must not treat `One Person Lab App` as a required runtime entry; the App is only an optional workbench and projection consumer.
+
 ## Machine-Readable Companion
 
 - [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
+- [`../contracts/opl-framework/public-surface-index.json#opl_framework_locator`](../../contracts/opl-framework/public-surface-index.json)
 
 These contracts materialize the admitted domain-agent catalog and stage topology as non-executing framework surfaces.
 They do not grant OPL domain truth, and they do not admit candidate workstreams automatically.

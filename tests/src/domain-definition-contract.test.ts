@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const domainsPath = path.join(repoRoot, 'contracts', 'opl-framework', 'domains.json');
+const publicSurfaceIndexPath = path.join(repoRoot, 'contracts', 'opl-framework', 'public-surface-index.json');
 const retiredBoundaryTermsField = ['legacy', 'boundary', 'terms'].join('_');
 
 type DomainDefinition = {
@@ -41,6 +42,23 @@ function readDomainsContract() {
   return JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
     version: string;
     domains: DomainDefinition[];
+  };
+}
+
+function readPublicSurfaceIndex() {
+  return JSON.parse(fs.readFileSync(publicSurfaceIndexPath, 'utf8')) as {
+    version: string;
+    surfaces: Array<{
+      surface_id: string;
+      category_id: string;
+      surface_kind: string;
+      boundary_role: string;
+      owner_scope: string;
+      truth_mode: string;
+      routes_to: string[];
+      refs: Array<{ ref_kind: string; ref: string }>;
+      notes: string[];
+    }>;
   };
 }
 
@@ -175,5 +193,37 @@ test('domains.json g2 publishes Foundry Agents as OPL-compatible packages withou
         embeds_opl_runtime: false,
       },
     ],
+  );
+});
+
+test('public-surface-index publishes the OPL Framework locator as the agent dependency environment surface', () => {
+  const payload = readPublicSurfaceIndex();
+  const locator = payload.surfaces.find((surface) => surface.surface_id === 'opl_framework_locator');
+
+  assert.ok(locator);
+  assert.equal(locator.category_id, 'opl_framework_contract');
+  assert.equal(locator.surface_kind, 'framework_dependency_locator');
+  assert.equal(locator.boundary_role, 'agent_runtime_dependency_locator');
+  assert.equal(locator.owner_scope, 'opl');
+  assert.equal(locator.truth_mode, 'framework_locator');
+  assert.deepEqual(locator.routes_to, [
+    'opl_stage_runtime_framework',
+    'mag_foundry_agent_package',
+    'mas_foundry_agent_package',
+    'rca_foundry_agent_package',
+  ]);
+  assert.deepEqual(locator.refs, [
+    {
+      ref_kind: 'machine_cli',
+      ref: 'opl framework locate',
+    },
+    {
+      ref_kind: 'machine_contract',
+      ref: 'contracts/opl-framework/public-surface-index.json#opl_framework_locator',
+    },
+  ]);
+  assert.equal(
+    locator.notes.some((note) => note.includes('OPL-compatible agents locate their external OPL Framework runtime dependency')),
+    true,
   );
 });

@@ -22,11 +22,14 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
 如果 domain-agent identity、stage capability package、truth ownership 与 product entry surface 不稳定，admission 不应继续推进。
 
+对运行依赖来说，候选 domain-agent 必须把 `OPL Framework` 当作外部依赖环境：通过 `opl framework locate` / `opl_framework_locator` 定位 framework root、CLI、contracts、state dir 与 modules root，再调用 OPL-owned runtime / contract / projection surface。它不得 vendor 或 fork 一份 OPL runtime，也不能把 `One Person Lab App` 当成运行必需入口；App 只可作为可选工作台和 projection consumer。
+
 ## 机器可读配套工件
 
 - [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
+- [`../contracts/opl-framework/public-surface-index.json#opl_framework_locator`](../../contracts/opl-framework/public-surface-index.json)
 
 这些合同把已收录 domain-agent catalog 与 stage topology 落成 non-executing framework surface。
 它们不会授予 OPL domain truth，也不会自动收录候选 workstream。

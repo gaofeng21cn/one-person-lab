@@ -9,6 +9,8 @@ export type ErrorCode =
   | 'surface_not_found'
   | 'missing_family_action_catalog'
   | 'missing_family_stage_control_plane'
+  | 'framework_locator_invalid_root'
+  | 'framework_locator_not_found'
   | 'cli_usage_error'
   | 'unknown_command'
   | 'hermes_binary_not_found'
@@ -31,6 +33,8 @@ export function defaultExitCode(code: ErrorCode): number {
     case 'surface_not_found':
     case 'missing_family_action_catalog':
     case 'missing_family_stage_control_plane':
+    case 'framework_locator_invalid_root':
+    case 'framework_locator_not_found':
     case 'hermes_binary_not_found':
     case 'hermes_command_failed':
     case 'codex_command_failed':
