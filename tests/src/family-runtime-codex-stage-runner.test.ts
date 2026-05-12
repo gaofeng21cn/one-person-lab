@@ -111,6 +111,53 @@ exit 64
   }
 });
 
+test('Codex stage runner records timeout and process output summary when live process exceeds budget', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-timeout"}\\n'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_live_runner_timeout_budget_test',
+        stage_id: 'analysis-campaign',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:timeout-seed'],
+      },
+      stagePacketRef: 'packet:analysis',
+      runnerMode: 'codex_cli',
+      observedAt: '2026-05-11T00:00:00.000Z',
+      timeoutMs: 100,
+    });
+
+    assert.equal(receipt.runner_status.live_process_started, true);
+    assert.equal(receipt.runner_status.exit_code, 124);
+    assert.equal(receipt.runner_status.timeout_ms, 100);
+    assert.equal(receipt.heartbeat_summary.checkpoint_refs[0], 'checkpoint:timeout-seed');
+    if (!('process_output_summary' in receipt)) {
+      throw new Error('codex_cli timeout receipt must include process_output_summary.');
+    }
+    assert.equal(receipt.process_output_summary.exit_code, 124);
+    assert.ok(receipt.process_output_summary.stderr_tail.includes('Codex command timed out.'));
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');
   try {
