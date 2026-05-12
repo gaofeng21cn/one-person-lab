@@ -46,13 +46,21 @@ Date: `2026-05-12`
 
 ## 2026-05-12 当前落地评估
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface；stage、domain-memory descriptor 与 standard domain-agent skeleton discovery / validation 当前均已在 MAS/MAG/RCA 三仓 resolved/aligned。Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench 和 Aion 白名单 signal bridge 均已落地。typed closeout ledger 已具备严格幂等 / fail-closed 规则：同一 `closeout_id` 的同一 packet 重放是 no-op，冲突 packet 不会污染 closeout refs 或 activity ledger；Aion workbench 也已把 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 拆成独立 operator 状态轴，并加严 human gate signal payload 必须绑定当前 `stage_attempt_id`。2026-05-12 新增的 OPL proof tests 进一步覆盖了 Codex live runner timeout / checkpoint heartbeat / process output summary，以及 Temporal worker resident state re-query / restart already-ready / stop 后 worker-not-ready projection。当前 production closure 的优先级已调整为先跑 MAS 三篇真实 paper line，MAG/RCA controlled soak 暂缓且只要求 descriptor/index 不退化。
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface；stage、domain-memory descriptor 与 standard domain-agent skeleton discovery / validation 当前均已在 MAS/MAG/RCA 三仓 resolved/aligned。Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench 和 Aion 白名单 signal bridge 均已落地。typed closeout ledger 已具备严格幂等 / fail-closed 规则：同一 `closeout_id` 的同一 packet 重放是 no-op，冲突 packet 不会污染 closeout refs 或 activity ledger；Aion workbench 也已把 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 拆成独立 operator 状态轴，并加严 human gate signal payload 必须绑定当前 `stage_attempt_id`。2026-05-12 新增的 OPL proof tests 进一步覆盖了 Codex live runner timeout / checkpoint heartbeat / process output summary，以及 Temporal worker resident state re-query / restart already-ready / stop 后 worker-not-ready projection。当前 production closure 的优先级已调整为先验证 MAS 三篇真实 paper line，MAG/RCA controlled soak 暂缓且只要求 descriptor/index 不退化。
 
 2026-05-12 fresh CLI 读模型校准：
 
 - `node dist/cli.js agents list --json`：`total_projects_count=3`、`aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。MAS/MAG/RCA 当前 skeleton 均 aligned 且带 artifact locator surface；这表示 descriptor-level admission surface 已齐，不表示物理目录已重组或 production soak 已完成。
 - `node dist/cli.js stages list --json`：`resolved_planes_count=3`、`stages_count=18`。MAS/MAG/RCA 各 6 个 stage plane 已能被 OPL 只读发现。
 - `node dist/cli.js domain-memory list --json`：`resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。MAS 的 `mas_publication_route_memory`、MAG 的 `mag_grant_strategy_memory`、RCA 的 `rca_visual_pattern_memory` 均已按标准 `family_domain_memory_ref.v1` 被解析；OPL 只读取 locator / freshness / migration plan / seed corpus / receipt locator，不读取 memory 正文。
+
+2026-05-12 MAS paper-line read-only proof 校准：
+
+- MAS closeout projection 已覆盖 DM002、DM003、Obesity 三篇真实 workspace。
+- DM002 closeout verdict 为 `ai_reviewer_re_eval`，consumed memory ref 为 `publication_route_memory_seed__negative_result_stoploss`，并带两个 MAS-owned writeback receipt refs。
+- DM003 与 Obesity closeout verdict 为 `artifact_delta`。
+- 三篇 projection 均为 read-only：`writes_performed=false`，`writes_real_workspace=false`，并显式拒绝 OPL 写 `publication_eval/latest.json`、`controller_decisions/latest.json`、`current_package`、publication quality verdict 或 memory body。
+- 这证明 OPL 可以消费 MAS owner closeout refs 和 route-memory receipt refs；它还没有证明真实 Temporal worker 长驻、Codex 长任务 activity、provider-hosted guarded apply 或 MAS owner chain 在生产运行中闭合。
 
 分层完成度：
 
@@ -68,7 +76,7 @@ Date: `2026-05-12`
 | Codex stage activity runner | `live_runner_repo_test_harness_landed_mas_soak_priority` | Activity 现能接 stage packet / checkpoint refs，支持 `dry_run`、`live_dry_run` 与 `codex_cli` runner mode；`codex_cli` path 已有进程启动、stdout event summary、timeout、process output summary、checkpoint heartbeat 和 typed closeout completion gate 的 repo/test harness。没有 typed closeout 的 domain dispatch 只能进入 checkpointed，不会被标成 completed；typed closeout ledger 已对 `closeout_id` 重放做幂等处理，并对冲突 packet fail-closed。当前优先把这些能力用于 MAS 三篇真实 paper line 的 provider-hosted read-only / guarded apply soak；MAG/RCA provider-hosted receipt evidence 延后。 |
 | Human gate / resume | `ledger_and_aion_signal_transport_landed` | human gate refs、human gate ledger、user instruction ledger、resume ledger 已进入 attempt ledger/query/workbench；Aion workbench 可通过白名单 bridge 发送 provider-level human gate / resume / dead-letter repair signal，且 human gate payload 必须精确绑定当前 attempt id；真实 worker/domain 执行证明仍未完成。 |
 | Operator visibility | `stage_attempt_ops_workbench_landed_descriptor_level` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter task ledger 与 human gate signals；Aion runtime workbench 已接入 signal 操作，并拆出 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 五个 operator 状态轴；后续仍需按 domain/stage/blocker/memory refs 过滤和真实 domain soak。 |
-| Real domain soak / retirement | `mas_real_paper_priority_provider_soak_not_complete` | 当前验收重心是 MAS DM002/DM003/Obesity 三条真实 paper line。MAG/RCA 已有 domain-side controlled attempt / memory writeback proof surface，但 OPL/Temporal-hosted controlled soak 本轮延后；旧 Hermes/Gateway/local-manager residue 物理退役必须等 MAS paper-line proof 与 no-default-caller 证据通过后继续。 |
+| Real domain soak / retirement | `mas_three_paper_readonly_closeout_landed_provider_guarded_apply_pending` | MAS DM002/DM003/Obesity 三条真实 paper line 已有 read-only typed closeout projection 和 no-forbidden-write proof；DM002 已有 publication-route memory consumed/writeback receipt refs。尚未完成真实 provider-hosted guarded apply、Temporal worker 长驻、Codex 长时 activity 与 MAS owner receipt 连续证据。MAG/RCA 已有 domain-side controlled attempt / memory writeback proof surface，但 OPL/Temporal-hosted controlled soak 本轮延后；旧 Hermes/Gateway/local-manager residue 物理退役必须等 MAS paper-line proof 与 no-default-caller 证据通过后继续。 |
 
 已落地的 OPL 层 shared module / contract 面包括：
 
@@ -102,7 +110,7 @@ Date: `2026-05-12`
 - Temporal provider code 已落地，但还没有以真实 Temporal server/worker deployment 作为默认 Full online runtime，也没有完成 worker restart/re-query 的真实环境证明。
 - Codex CLI stage activity runner 已从 dry-run receipt / fixture-run 推进到 `codex_cli` live process supervision 的 repo/test harness：能 spawn Codex CLI、记录 runner events、timeout、process output summary、checkpoint heartbeat，并要求 typed closeout 才能完成 attempt。尚未完成的是生产级长时 domain activity soak、真实 token/cost/progress 观测校准，以及真实 domain sidecar / Codex activity 产出 owner receipt 的连续 evidence。
 - OPL App 已有 stage attempt workbench，并能展示 provider completion 与 domain ready verdict 边界；human gate、resume、dead-letter repair 的 provider-level signal 操作已接入白名单 bridge，其中 human gate signal payload 已限制为当前 attempt id。按 domain/stage/blocker/memory refs 过滤、真实 worker/domain 执行证明仍是后续 visibility/operation lane。
-- MAS 的真实 paper line 还没有完全证明 `stage entry packet -> Codex execution -> closeout packet -> router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak；当前下一步优先 DM002/DM003/Obesity 三篇。MAG/RCA 已有 domain-side controlled proof surface，但 OPL/Temporal-hosted controlled attempt 证据本轮延后。
+- MAS 的真实 paper line 已经完成 read-only closeout projection：DM002/DM003/Obesity 都能输出 OPL-ingestable typed closeout packet，DM002 还带 publication-route memory consumed/writeback receipt refs。尚未完全证明的是 `provider-backed attempt -> Codex/domain activity -> closeout packet -> MAS router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak。MAG/RCA 已有 domain-side controlled proof surface，但 OPL/Temporal-hosted controlled attempt 证据本轮延后。
 - Hermes/local provider 仍作为迁移期实现信号和 legacy/optional provider 存在，active docs 和部分 domain code 中仍有旧 Hermes / Gateway / compatibility wording，需要按 retirement plan 清理。
 
 因此，对外和开发文档应避免写成“计划已经全部落地”。准确口径是：OPL family framework 的控制面骨架、local queue/attempt ledger、Temporal provider code、domain adapter discovery、standard skeleton validation 机制、domain memory 3/0 标准索引、Codex stage runner repo/test harness、typed closeout gate、runtime snapshot 和 Aion stage attempt signal workbench 已落地；standard skeleton 当前已三仓 aligned，但仍停在 manifest/adapter 层。生产级真实 provider deployment、真实长时 domain stage execution / soak、真实 domain memory apply、三仓物理目录标准化和旧接口物理退役仍是下一阶段工作。
@@ -113,9 +121,9 @@ Date: `2026-05-12`
 
 | 目标项 | 当前距离 |
 | --- | --- |
-| OPL 作为完整智能体框架 | 控制面、合同、队列、attempt ledger、Temporal provider code、Codex runner repo/test harness、typed closeout gate、snapshot/workbench 已落地；还差真实 provider residency、长时 domain activity soak、human gate/resume 进入 domain owner chain 的运行证明和生产 cutover。 |
+| OPL 作为完整智能体框架 | 控制面、合同、队列、attempt ledger、Temporal provider code、Codex runner repo/test harness、typed closeout gate、snapshot/workbench 已落地；MAS 三篇真实 paper line 已证明 read-only typed closeout 可被 OPL 消费。还差真实 provider residency、长时 domain activity soak、human gate/resume 进入 domain owner chain 的运行证明和生产 cutover。 |
 | MAS/MAG/RCA 迁移到统一 skeleton | 已完成 OPL skeleton validation 机制和三仓 manifest/adapter 校验；下一步是逐仓 physical skeleton layout audit、path compatibility audit、direct skill / OPL-hosted parity 的持续回归，以及真实产物根 locator 的 restore/provenance proof。 |
-| Domain memory | MAS/MAG/RCA 标准 memory descriptor 均 resolved；还差真实 workspace/runtime memory body migration、accepted/rejected writeback receipt、stage entry 小集合 retrieval 和按 domain/stage 分组的 operator view。 |
+| Domain memory | MAS/MAG/RCA 标准 memory descriptor 均 resolved；MAS 已有 publication-route workspace apply closure，DM002 read-only proof 已显示 consumed memory ref 与 MAS-owned writeback receipt refs。还差真实 provider-hosted stage entry retrieval、workspace/runtime memory body migration、三仓 accepted/rejected writeback receipt 泛化和按 domain/stage 分组的 operator view。 |
 | Lifecycle primitives | OPL shared schema/locator 已有，MAS 经验已经分类为 framework_generic / mas_domain_specific；还差跨 domain cleanup/restore/retention 的 guarded apply proof。 |
 | Operator product experience | CLI/App 已能读 stage attempt workbench，Aion 已能发送 human gate / resume / dead-letter repair signal；还差真实 worker/domain 执行证明、provider deployment readiness、domain drilldown 与 memory refs 分组操作面。 |
 | 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 Codex-first/provider-backed/stage-led；public help / command spec 已不再把 Hermes executor、Gateway cron 或 compatibility alias 放在普通默认示例里。还差无 active caller 后的物理删除和 history/tombstone 归档。 |
@@ -123,7 +131,7 @@ Date: `2026-05-12`
 下一步不应再新增平行总计划。直接按以下闭环推进：
 
 1. `OPL production residency`：真实 Temporal server/worker 启动、readiness、restart/re-query、retry/dead-letter、worker lifecycle proof。
-2. `MAS paper-line production soak`：优先 DM002/DM003/Obesity 三篇真实论文，证明 read-only closeout projection、MAS sidecar / owner receipt、artifact delta 或 typed blocker 能被 OPL/Aion 看到且不越权写 MAS truth。
+2. `MAS paper-line production soak`：以 DM002/DM003/Obesity 的 read-only closeout projection 为基线，继续证明 MAS sidecar / owner receipt、artifact delta 或 typed blocker 能经 provider-backed attempt 被 OPL/Aion 看到且不越权写 MAS truth；guarded apply 只能由 MAS owner gate 放行。
 3. `Codex activity runner production soak`：先用 MAS stage attempt 校准 Codex CLI long-running activity、heartbeat、checkpoint、progress/cost sampling、typed closeout ingestion 和 domain owner receipt；MAG/RCA controlled soak 后移。
 4. `Domain memory apply proof`：保持 memory body 和 accept/reject 在 domain，本轮先证明 MAS publication-route memory consumed/writeback receipt；MAG/RCA 之后做 controlled grant / visual memory proof。
 5. `Directory standardization`：在 direct skill path、OPL-hosted path、restore/provenance proof、no-forbidden-write proof 和 focused tests 都通过后，逐仓做 repo-source 物理目录重组；重组只移动 repo-source schema/adapter/builder/prompt/skill/knowledge refs，不移动 workspace/runtime artifacts、memory body 或 receipt instances。
