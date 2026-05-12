@@ -1,6 +1,7 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
+import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
@@ -356,6 +357,19 @@ export function buildPublicCommandSpecs(
     },
     web: retiredWebSpec,
     install: installSpec,
+    'framework locate': {
+      usage: 'opl framework locate',
+      summary: 'Locate the OPL Framework runtime dependency for an OPL-compatible agent.',
+      examples: [
+        'opl framework locate',
+        'OPL_FRAMEWORK_ROOT=/Users/gaofeng/workspace/one-person-lab opl framework locate',
+      ],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['framework locate']);
+        return buildOplFrameworkLocator();
+      },
+    },
     'packages manifest': packagesManifestSpec,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),

@@ -25,6 +25,7 @@ function looksLikeNaturalLanguage(command: string, args: string[]) {
 
 const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   top_level: '直接产品入口与前台运行入口。',
+  framework: '定位和解释 OPL Framework 自身的运行依赖环境。',
   skill: '同步 family domain plugin，并查看当前 Codex skill pack 安装状态。',
   status: '读取 family、workspace、runtime 和 dashboard 状态。',
   system: '查看与维护 OPL 的系统状态、初始化和更新通道。',
@@ -46,6 +47,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   ['front', 'desk'].join(''),
   'ask',
   'chat',
+  'framework',
   'runtime',
   'shell',
 ]);
@@ -136,6 +138,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl install',
+        'opl framework locate',
         'opl family-runtime status',
         'opl family-runtime repair',
         'opl install --modules mas,mag,rca',
