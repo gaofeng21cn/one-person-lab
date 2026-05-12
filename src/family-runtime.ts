@@ -749,7 +749,10 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_residency_proof: {
           surface_id: 'opl_family_runtime_residency_proof',
-          ...await buildTemporalResidencyProof(db, paths, { live: parsed.live }),
+          ...await buildTemporalResidencyProof(db, paths, {
+            live: parsed.live,
+            production: parsed.production,
+          }),
         },
       };
     }

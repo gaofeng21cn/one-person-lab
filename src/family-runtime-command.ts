@@ -32,7 +32,7 @@ export type FamilyRuntimeCommandInput =
     providerKind?: FamilyRuntimeProviderKind;
     detach?: boolean;
   }
-  | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean }
+  | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
@@ -216,6 +216,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'residency' && rest[0] === 'proof') {
     let providerKind: FamilyRuntimeProviderKind | undefined;
     let live = false;
+    let production = false;
     for (let index = 1; index < rest.length; index += 1) {
       const token = rest[index];
       const value = rest[index + 1];
@@ -224,14 +225,21 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         index += 1;
       } else if (token === '--live') {
         live = true;
+      } else if (token === '--production') {
+        production = true;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime residency proof option: ${token}.`, {
           option: token,
-          usage: 'opl family-runtime residency proof --provider temporal [--live]',
+          usage: 'opl family-runtime residency proof --provider temporal [--live|--production]',
         });
       }
     }
-    return { mode: 'residency_proof', providerKind, live };
+    if (live && production) {
+      throw new FrameworkContractError('cli_usage_error', 'Use only one Temporal residency proof mode.', {
+        mutually_exclusive: ['--live', '--production'],
+      });
+    }
+    return { mode: 'residency_proof', providerKind, live, production };
   }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };

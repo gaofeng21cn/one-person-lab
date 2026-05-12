@@ -76,7 +76,7 @@
 - `OPL` 是整个 family 的 stage-led、Agent executor-based framework owner，持有 activation、stage attempt、queue/wakeup、receipt、recovery、projection 与 shared modules / contracts / indexes
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
-- Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness、`stage_attempt_workbench` 投影，以及 repo-native Temporal test server + real worker residency proof；外部 production service provisioning/readiness 与 domain soak 仍是下一阶段验收
+- Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness、`stage_attempt_workbench` 投影，以及 repo-native Temporal test server + real worker residency proof；外部 production service / managed worker 的 `--production` proof 入口已 fail-closed 落地，真实 domain soak 仍是下一阶段验收
 - 旧 `OPL Gateway`、`opl web`、`Product API` 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance 或 reference context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

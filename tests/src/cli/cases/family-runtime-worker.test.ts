@@ -250,6 +250,72 @@ test('family-runtime residency proof reports Temporal live-evidence gaps fail-cl
   }
 });
 
+test('family-runtime residency proof --production requires external Temporal readiness', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-residency-gap-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'residency', 'proof', '--provider', 'temporal', '--production'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+    const proof = output.family_runtime_residency_proof;
+    const production = proof.production_residency_proof;
+
+    assert.equal(proof.proof_mode, 'external_temporal_service_worker');
+    assert.equal(proof.closeout_status, 'production_residency_needs_live_evidence');
+    assert.equal(production.surface_kind, 'opl_temporal_external_production_residency_proof');
+    assert.equal(production.closeout_status, 'production_residency_blocked');
+    assert.deepEqual(production.blockers, ['temporal_runtime_not_configured']);
+    assert.deepEqual(production.checks, {
+      external_temporal_server_reachable: false,
+      managed_worker_ready: false,
+      worker_completed_attempt: false,
+      worker_restart_requery: false,
+      signal_history_preserved: false,
+      typed_closeout_required_for_completed: false,
+      missing_closeout_blocks_completion: false,
+      retry_or_dead_letter_boundary_observed: false,
+      domain_truth_boundary_preserved: true,
+    });
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime residency proof rejects conflicting live and production modes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-residency-conflict-'));
+  try {
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'residency',
+      'proof',
+      '--provider',
+      'temporal',
+      '--live',
+      '--production',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...familyRuntimeEnv(stateRoot),
+      },
+    });
+    const payload = JSON.parse(result.stderr);
+
+    assert.equal(result.status, 2);
+    assert.equal(payload.error.code, 'cli_usage_error');
+    assert.deepEqual(payload.error.details.mutually_exclusive, ['--live', '--production']);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime residency proof --live runs Temporal test server and real workers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-live-residency-proof-'));
   try {
