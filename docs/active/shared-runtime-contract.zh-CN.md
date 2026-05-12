@@ -123,13 +123,13 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 因此，更准确的表达是：
 
-- OPL framework 的生产 substrate 候选是 provider-backed stage runtime，当前目标路径是 Temporal-backed provider
+- OPL framework 的 production online substrate 是 provider-backed stage runtime，当前必需路径是 Temporal-backed provider
 - `Hermes-Agent` 在迁移期保留为 legacy/optional provider、executor/proof lane 或技术参考
 - `Hermes-Agent` 不是整个 `UHS`
 - `Hermes-Agent` 也不会替代 OPL session/runtime 入口、任何 domain-agent entry 或 domain-owned truth surface
 - 任何集成方式都必须保持 OPL 作为 framework/control-plane owner，并保持 domain 仓作为 truth owner
 
-也就是说，`Hermes` 当前不是“怎么稳定地跑”的目标 owner。它作为迁移/proof 语境保留，直到 OPL provider-backed stage runtime 成熟。
+也就是说，`Hermes` 当前不是“怎么稳定地跑”的目标 owner。它作为迁移/proof 语境保留；OPL provider-backed stage runtime 的生产在线能力由 Temporal-backed provider 承担并按必需依赖维护。
 
 ## 当前真实状态
 

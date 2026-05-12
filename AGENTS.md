@@ -20,7 +20,7 @@
 - repo-tracked 源码与测试默认都应保持文件边界清晰，优先控制在 `1000` 行以内；超过 `1500` 行应视为明确的拆分信号，而不是继续堆叠实现。
 - 新增能力或继续重构时，优先采用稳定薄入口加 `parts/`、`cases/`、`modules/` 等子模块拆分；不要把新逻辑继续堆回单个超长文件。
 - 若文档提到 `Hermes-Agent`，必须明确它指的是上游外部 runtime 项目 / 服务；仓内自写的 shim、pilot、helper 或过渡 scaffold，不得写成“已接入 Hermes-Agent”。
-- Temporal-backed provider 是当前长期在线 / durable orchestration 生产 substrate 候选；`Hermes-Agent` 不再作为目标 24h session/wakeup substrate，但作为可选 Agent executor adapter、显式 proof lane、diagnostic 或历史参考保留。文档和合同必须区分 target state、landed state、executor adapter 与 retained provenance。
+- Temporal-backed provider 是 OPL production online runtime 的必需 substrate；`Hermes-Agent` 不再作为目标 24h session/wakeup substrate，但作为可选 Agent executor adapter、显式 proof lane、diagnostic 或历史参考保留。文档和合同必须区分 required production substrate、landed state、executor adapter 与 retained provenance；local provider 只能写成 dev/CI/offline diagnostic baseline，不能写成 Full online readiness 的替代品。
 - 一旦 target topology 已明确，新增投入默认服务目标形态；旧路线只允许作为迁移桥、兼容层或回归对照存在，不继续深磨。
 - 不做降级处理、兜底补丁、启发式修补或“先糊住再说”式实现。
 

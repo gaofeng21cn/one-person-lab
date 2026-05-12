@@ -10,11 +10,11 @@ Master entry: OPL family agent framework 的总开发入口是 `docs/references/
 
 ## 结论
 
-OPL family runtime 的生产目标应从 Hermes-first online substrate 调整为 provider-backed runtime，其中 `temporal` 是优先生产候选。
+OPL family runtime 的生产在线架构已经从 Hermes-first online substrate 校准为 Temporal-backed production runtime。`temporal` 是 production online OPL 的必需 substrate，不是可选候选；它应像 `Codex CLI` 一样被安装、检测、修复、监控和持续维护。
 
 Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 stage 内默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
 
-Hermes-Agent 的新定位是：迁移期 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。Temporal provider 落地并通过 soak 后，Hermes 不再作为目标 session/wakeup substrate。
+Hermes-Agent 的新定位是：迁移期 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate，local provider 只作为 dev/CI/offline diagnostic baseline。
 
 ## 顶层设计
 
@@ -22,9 +22,9 @@ Hermes-Agent 的新定位是：迁移期 `hermes_legacy` provider、显式 execu
 User / Codex App / OPL GUI / CLI
   -> OPL stage control plane
   -> family runtime provider abstraction
-      -> local_sqlite provider (dev/offline)
+      -> local_sqlite provider (dev/CI/offline diagnostic)
       -> hermes_legacy provider (migration/proof)
-      -> temporal provider (production target)
+      -> temporal provider (production required)
   -> domain handoff envelope
   -> Codex CLI activity inside domain stage
   -> domain-owned closeout / quality gate / artifact authority
@@ -65,7 +65,7 @@ Provider 层不持有：
 
 交付：
 
-- 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`。
+- 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 只服务 dev/CI/offline diagnostic baseline，`hermes_legacy` 只服务 legacy/proof/diagnostic adapter。
 - 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 与 repo-native live residency proof 已落地；`opl family-runtime residency proof --provider temporal --production` 已作为外部 production service / managed worker 验收入口落地，未配置、不可达或 worker 未 ready 时 fail-closed。真实 MAS domain soak 仍属 P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
@@ -78,7 +78,7 @@ Provider 层不持有：
 
 ### P1. Temporal Stage Workflow Core
 
-状态：已落地到 repo/test 可用实现，并补齐外部 production proof 入口。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，`opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof，以及 `--production` 对外部 Temporal service / managed worker 的 fail-closed 验收入口。尚未完成的是把外部 production service 长时托管真实 MAS paper line、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
+状态：已落地到 repo/test 可用实现，并补齐外部 production proof 入口。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed 为 production required dependency blocker，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，`opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof，以及 `--production` 对外部 Temporal service / managed worker 的 fail-closed 验收入口。尚未完成的是把外部 production service 长时托管真实 MAS paper line、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
 
 交付：
 
@@ -153,7 +153,7 @@ Provider 层不持有：
 
 - Hermes-first 文档、contracts、install/readiness 文案改为 `hermes_legacy`。
 - Hermes executor proof 与 optional module 留在显式 lane。
-- Full readiness 目标从 Hermes readiness 转为 provider readiness，Temporal 是 production provider。
+- Full readiness 目标从 Hermes readiness 转为 Temporal provider readiness，Temporal 是 production required provider。
 - Active-path residue scan 覆盖 public docs、active docs、runtime-substrate / operator-governance references 和 CLI root help，防止默认路径重新出现 Hermes/Gateway/frontdoor/local-manager wording。
 
 验收：
@@ -175,7 +175,7 @@ Provider 层不持有：
 
 - `hermes_legacy` provider：迁移期兼容与回归基线。
 - Hermes executor/proof lane：用于评估非 Codex executor 或 structured agent loop。
-- Local provider：开发、离线诊断、fixture 和 fail-closed baseline。
+- Local provider：开发、CI、离线诊断、fixture 和 fail-closed baseline；不能替代 production online readiness。
 
 不得退役：
 

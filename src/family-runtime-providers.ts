@@ -26,7 +26,7 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
   if (kind === 'temporal') {
     return {
       provider_kind: kind,
-      provider_role: 'production_substrate_candidate',
+      provider_role: 'production_required_substrate',
       deep_inspection: 'selected_provider_only',
     };
   }

@@ -355,7 +355,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
           'Only promote beyond provider adapters if supported providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
       },
       notes: [
-        'Family runtime is provider-backed; local_sqlite is the local ledger provider, hermes_legacy is the migration bridge, and temporal is the production durable workflow candidate.',
+        'Family runtime is Temporal-backed in production; local_sqlite is the dev/CI/offline local ledger provider, hermes_legacy is the migration bridge, and temporal is the required production durable workflow provider.',
         'OPL Runtime Manager is the product control plane, typed queue, stage attempt ledger, domain dispatch, and projection layer.',
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],

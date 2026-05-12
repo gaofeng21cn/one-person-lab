@@ -21,7 +21,7 @@
   ],
   "provider_semantics": {
     "local_sqlite": {
-      "role": "local queue, receipt, and stage attempt ledger provider for development, direct skill calls, and guarded local operation",
+      "role": "local queue, receipt, and stage attempt ledger provider for development, CI, offline diagnostics, direct skill calls, and guarded local operation; not a production online readiness substitute",
       "durable_online_wakeup": false,
       "external_runtime_required": false
     },
@@ -37,9 +37,10 @@
       }
     },
     "temporal": {
-      "role": "production durable stage-attempt workflow provider candidate",
+      "role": "required production durable stage-attempt workflow provider",
       "durable_online_wakeup": true,
       "external_runtime_required": true,
+      "production_required": true,
       "workflow_mapping": {
         "workflow": "stage_attempt",
         "activity": "codex_cli_stage_execution_or_domain_sidecar_dispatch",
@@ -115,6 +116,8 @@
     "OPL cannot clear domain quality gates",
     "OPL cannot override artifact or publication authority",
     "Provider receipt cannot become MAS/MAG/RCA truth owner",
-    "Hermes legacy bridge cannot be described as the default production substrate"
+    "Hermes legacy bridge cannot be described as the default production substrate",
+    "Local sqlite provider cannot be described as production online ready",
+    "Temporal unavailable must be reported as a required dependency blocker for Full online readiness"
   ]
 }

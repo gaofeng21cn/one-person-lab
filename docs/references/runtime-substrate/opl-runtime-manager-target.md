@@ -4,7 +4,7 @@
 
 `OPL Runtime Manager` 是 OPL 的产品级 runtime 管理与投影层。
 它不替代 family runtime provider，也不把 OPL 改写成自有长期在线 runtime kernel。
-目标形态是 provider-backed family runtime：Temporal-backed provider 是生产 substrate 候选，负责 durable stage attempt、retry/timeout、signal/query 与 workflow history；Hermes/local provider 只作为迁移期 legacy/optional provider 或 executor/proof lane 保留。OPL 管理产品级安装、检查、typed queue 和投影，不拥有 provider system service lifecycle。
+目标形态是 provider-backed family runtime：Temporal-backed provider 是 production online runtime 的必需 substrate，负责 durable stage attempt、retry/timeout、signal/query 与 workflow history；Hermes/local provider 只作为迁移期 legacy/optional provider 或 executor/proof lane 保留。OPL 管理产品级安装、检查、typed queue 和投影，不拥有 domain truth 或 concrete executor authority；Temporal service / worker lifecycle 作为 OPL 平台依赖被安装、检测、修复和监控。
 
 目标链路是：
 
@@ -13,7 +13,7 @@
 ## Owner Split
 
 - `OPL`：产品入口、bootstrap、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及 provider readiness 的触发、检查和报告
-- `Temporal-backed provider`：目标生产 substrate；承接 stage attempt workflow、Codex/domain dispatch activity、retry/timeout、human gate signal、progress query、workflow history 与 replay/audit
+- `Temporal-backed provider`：production online runtime 的必需 substrate；承接 stage attempt workflow、Codex/domain dispatch activity、retry/timeout、human gate signal、progress query、workflow history 与 replay/audit
 - `Hermes-Agent`：迁移期 legacy/optional provider、显式 executor/proof lane 或 explicit Codex CLI-compatible executor adapter；不再是 Temporal provider 落地后的目标 session/wakeup substrate
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`

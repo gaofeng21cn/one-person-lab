@@ -4,7 +4,7 @@ Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: human-readable boundary reference only. Machine-readable truth must use `contracts/`, source code, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, or App/workbench projections.
 
-Current status note (2026-05-11): this document keeps the three-layer owner split as useful content, but the old `runtime_owner = upstream_hermes_agent` mapping is obsolete. The current OPL target is provider-backed runtime; the Temporal-backed provider is the production candidate, while `Hermes-Agent` remains only a `hermes_legacy` provider, explicit executor/proof lane, Codex CLI backup, or optional install module. The current implementation order lives in [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) and [Temporal Family Runtime Provider plan](./temporal-family-runtime-provider-plan.zh-CN.md).
+Current status note (2026-05-11): this document keeps the three-layer owner split as useful content, but the old `runtime_owner = upstream_hermes_agent` mapping is obsolete. The current OPL production online path is provider-backed runtime; the Temporal-backed provider is the required substrate, while `Hermes-Agent` remains only a `hermes_legacy` provider, explicit executor/proof lane, Codex CLI backup, or optional install module. The current implementation order lives in [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) and [Temporal Family Runtime Provider plan](./temporal-family-runtime-provider-plan.zh-CN.md).
 
 This reference freezes the smallest shared machine-readable contract we want every admitted domain to converge on for managed runtime ownership.
 

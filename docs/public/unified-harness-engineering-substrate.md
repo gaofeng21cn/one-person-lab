@@ -104,7 +104,7 @@ At the current stage:
 
 - the active concrete executor is the Codex-default local execution path, with `Codex CLI` as the minimum execution unit inside a stage
 - the public OPL formal entry remains the local `TypeScript CLI`-first / framework contract surface
-- provider-backed stage runtime is the target durable substrate for long-running attempts, recovery, human gates, and projection, with the Temporal-backed provider as the current production substrate candidate
+- provider-backed stage runtime is the production online carrier for long-running attempts, recovery, human gates, and projection, with the Temporal-backed provider as the required substrate
 
 That split matters: Codex names the default concrete executor, not the identity of the substrate.
 The same substrate should remain compatible with:

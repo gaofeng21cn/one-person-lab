@@ -400,7 +400,7 @@ function buildFullPackageReleaseNotesSection(version, manifest = null) {
   return [
     'Full first-install package',
     `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, the configured family runtime provider payload, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
-    '- Full OPL readiness is provider-backed. Temporal is the production durable stage-attempt provider candidate; Hermes-Agent remains a hermes_legacy provider or explicit executor/proof lane during migration.',
+    '- Full OPL readiness is Temporal-backed. Temporal is the required production durable stage-attempt provider; Hermes-Agent remains a hermes_legacy provider or explicit executor/proof lane during migration.',
     '- MDS remains retired and is not bundled as a default module or MAS runtime dependency.',
     '- Full is a first-install download, not a separate update channel. App auto-update still follows the standard latest*.yml metadata and standard One Person Lab package.',
     ...(bundledModuleNotes.length > 0 ? ['', 'Bundled module versions', ...bundledModuleNotes] : []),

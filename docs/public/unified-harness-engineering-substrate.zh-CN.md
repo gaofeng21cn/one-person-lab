@@ -104,7 +104,7 @@ Human / Agent
 
 - 活跃具体执行器是 Codex-default 本地执行路径，stage 内默认最小执行单元是 `Codex CLI`
 - 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / framework contract surface
-- provider-backed stage runtime 是长期在线、恢复、human gate 和 projection 的目标承载层，Temporal-backed provider 是当前生产 substrate 候选
+- provider-backed stage runtime 是长期在线、恢复、human gate 和 projection 的 production online 承载层，Temporal-backed provider 是必需 substrate
 
 这个区分很重要：Codex 说的是默认具体执行器，不是 substrate 的本体定义。
 在后续阶段，同一套 substrate 也应兼容：
