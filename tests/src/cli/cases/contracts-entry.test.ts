@@ -846,7 +846,12 @@ exit 1
     );
     assert.deepEqual(
       output.runtime_manager.native_helper_target.lifecycle.prebuild.restore_order,
-      ['OPL_NATIVE_HELPER_PREBUILD_ROOT', 'package native-helper-prebuilds', 'local Cargo build fallback'],
+      [
+        'OPL_NATIVE_HELPER_PREBUILD_ROOT',
+        'package native-helper-prebuilds',
+        'GHCR one-person-lab-native-helper OCI archive',
+        'local Cargo build fallback',
+      ],
     );
     assert.match(
       output.runtime_manager.native_helper_target.lifecycle.cache.cache_dir,

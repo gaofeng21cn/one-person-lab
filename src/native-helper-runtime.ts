@@ -356,6 +356,7 @@ export function buildNativeHelperLifecycle(): NativeHelperLifecycle {
       restore_order: [
         'OPL_NATIVE_HELPER_PREBUILD_ROOT',
         'package native-helper-prebuilds',
+        'GHCR one-person-lab-native-helper OCI archive',
         'local Cargo build fallback',
       ],
     },

@@ -137,6 +137,108 @@ test('native helper prebuild script restores release archive assets before insta
   }
 });
 
+test('native helper prebuild script restores GHCR OCI archive assets before installing', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-oci-'));
+  const sourceDir = path.join(fixtureRoot, 'source');
+  const packRoot = path.join(fixtureRoot, 'pack-root');
+  const installRoot = path.join(fixtureRoot, 'install-root');
+  const stateDir = path.join(fixtureRoot, 'state');
+  const curlLog = path.join(fixtureRoot, 'curl-log.jsonl');
+  const fakeBin = path.join(fixtureRoot, 'bin');
+  fs.mkdirSync(sourceDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  for (const binary of helperBinaries) {
+    fs.writeFileSync(path.join(sourceDir, binary), `#!/bin/sh\necho ${binary}\n`, { mode: 0o755 });
+  }
+
+  try {
+    const pack = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'pack',
+      '--source-dir',
+      sourceDir,
+      '--prebuild-root',
+      packRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(pack.status, 0, pack.stderr);
+
+    const archive = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'archive',
+      '--prebuild-root',
+      packRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(archive.status, 0, archive.stderr);
+    const archiveOutput = JSON.parse(archive.stdout) as { archive_file: string; sha256: string; bytes: number };
+    const manifest = {
+      schemaVersion: 2,
+      mediaType: 'application/vnd.oci.image.manifest.v1+json',
+      layers: [
+        {
+          mediaType: 'application/vnd.onepersonlab.native-helper.v1+gzip',
+          digest: `sha256:${archiveOutput.sha256}`,
+          size: archiveOutput.bytes,
+        },
+      ],
+    };
+    const fakeCurl = path.join(fakeBin, 'curl');
+    fs.writeFileSync(
+      fakeCurl,
+      [
+        '#!/usr/bin/env node',
+        "const fs = require('fs');",
+        "const args = process.argv.slice(2);",
+        `fs.appendFileSync(${JSON.stringify(curlLog)}, JSON.stringify(args) + '\\n');`,
+        "const url = args.find((arg) => arg.startsWith('http://') || arg.startsWith('https://')) || '';",
+        "if (url.includes('/token?')) { process.stdout.write(JSON.stringify({ token: 'fixture-token' })); process.exit(0); }",
+        "if (url.includes('/manifests/')) { process.stdout.write(JSON.stringify(" + JSON.stringify(manifest) + ")); process.exit(0); }",
+        "if (url.includes('/blobs/')) {",
+        "  const outIndex = args.indexOf('-o');",
+        "  if (outIndex < 0) process.exit(2);",
+        `  fs.copyFileSync(${JSON.stringify(archiveOutput.archive_file)}, args[outIndex + 1]);`,
+        "  process.exit(0);",
+        "}",
+        "process.exit(22);",
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+
+    const install = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'install',
+      '--prebuild-root',
+      installRoot,
+      '--state-dir',
+      stateDir,
+      '--oci-image',
+      'ghcr.io/gaofeng21cn/one-person-lab-native-helper',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(install.status, 0, install.stderr);
+    const installOutput = JSON.parse(install.stdout);
+    assert.equal(installOutput.status, 'installed');
+    assert.equal(installOutput.restore_attempts[0].status, 'restored_oci_archive');
+    assert.equal(installOutput.restore_attempts[0].tag, `${targetTriple}-${crateVersion}`);
+    assert.equal(fs.existsSync(path.join(installOutput.cache_dir, 'opl-state-indexer')), true);
+    assert.match(fs.readFileSync(curlLog, 'utf8'), /one-person-lab-native-helper/);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('native helper prebuild script rejects binaries that do not match the manifest', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-invalid-'));
   const sourceDir = path.join(fixtureRoot, 'source');
