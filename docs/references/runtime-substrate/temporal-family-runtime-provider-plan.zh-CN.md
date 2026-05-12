@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `development_plan`
 State: `active_support`
 Machine boundary: 本文是人工可读开发计划。机器真相必须落在 `contracts/`、source code、CLI/API 行为、runtime ledger 或 domain-owned manifests。
-Date: `2026-05-10`
+Date: `2026-05-12`
 
 Master entry: OPL family agent framework 的总开发入口是 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。本文只承接其中 `Master P1-P5` 的 Temporal provider 技术细化：provider skeleton、Codex stage activity、human-gate signal/query、visibility、domain soak 和 Hermes downgrade。跨仓定位、执行语言、依赖取舍、domain-agent 边界和旧面退役纪律以总入口为准。
 
@@ -78,7 +78,7 @@ Provider 层不持有：
 
 ### P1. Temporal Stage Workflow Core
 
-状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。尚未完成的是生产 Temporal server/worker residency proof、worker restart/re-query 证明、真实 activity retry 运行证据和 domain soak。
+状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，以及 Codex live runner timeout / checkpoint heartbeat / process output summary proof test。尚未完成的是生产 Temporal server 长驻 deployment、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
 
 交付：
 
@@ -87,7 +87,7 @@ Provider 层不持有：
 - 已完成：`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal` 进入同一 workflow signal surface。
 - 已完成：`StageAttemptQuery` 返回 attempt status、freshness、next owner、blocked reason、refs。
 - 已完成：Codex activity runner 的 repo/test harness，覆盖 `dry_run`、`live_dry_run` 与 `codex_cli` process supervision、stdout summary、timeout、checkpoint heartbeat 和 typed closeout completion gate。
-- 待完成：真实长时 domain activity soak、domain sidecar live dispatch、worker restart / replay proof、长期 worker residency、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
+- 待完成：真实长时 domain activity soak、domain sidecar live dispatch、长期 worker residency、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
 
 验收：
 
@@ -99,16 +99,20 @@ Provider 层不持有：
 
 交付：
 
-- 选一条 MAS real paper line 做 guarded apply 或 read-only soak。
+- 当前优先级从“三仓泛化证明”收敛为 MAS real paper line。MAG/RCA controlled attempts 暂缓，但 descriptor/index 不得退化。
+- 用 DM002、DM003、Obesity 三篇 active paper line 做 read-only closeout projection，并在 MAS owner gate 允许时做 guarded apply。
 - 将 `stage_knowledge_packet -> Codex activity -> stage_memory_closeout_packet -> router receipt -> progress delta / human gate / stop-loss` 作为 provider attempt trace 展示。
 - 失败时落到 typed blocker、dead-letter 或 human gate，不伪造阳性结论。
 
 验收：
 
-- 至少一条真实 paper line 能在 OPL App / CLI 看见 provider attempt、consumed refs、closeout refs、router receipt、next owner。
+- 三篇真实 paper line 至少各有一个 OPL-ingestable typed closeout packet，指向 MAS-owned evidence refs；可接受结果包括 artifact delta、publication gate replay、AI reviewer update、route decision、human gate、stop-loss 或 typed blocker。
+- 至少一篇 paper line 证明 publication-route memory 被 stage entry 消费，并由 MAS router 产出 accepted/rejected writeback receipt ref。
 - MAS `publication_eval`、`controller_decisions`、`current_package` 等 truth surface 仍只由 MAS owner 写。
 
 ### P3. MAG/RCA Controlled Attempts
+
+状态：本轮延后。OPL 仍保持 MAG/RCA descriptor、stage plane、domain-memory descriptor 和 direct skill / OPL discovery 不退化；controlled grant / visual provider soak 等 MAS paper-line 优先闭合后再做。
 
 交付：
 
