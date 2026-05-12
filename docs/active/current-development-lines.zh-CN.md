@@ -7,17 +7,17 @@ Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts
 
 ## 当前结论
 
-OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的真实交付 soak 当主线验收。
+OPL 当前开发仍按 framework-first 执行，但最近一轮验收主线已经从“三仓同时证明泛化”收敛到“先证明 OPL 能真实托管 MAS，并把正在跑的论文推进下去”。MAG/RCA controlled soak 暂缓；它们的 descriptor / index / direct skill parity 不能退化，但不作为本轮 production closure 的阻塞项。
 
 2026-05-12 当前校准：framework control plane、shared contracts、local queue / attempt ledger、Temporal provider code、typed closeout gate、domain skeleton discovery、stage plane discovery、domain-memory descriptor index、runtime snapshot 和 Aion stage-attempt workbench 已经落地到可读/可测 surface。实测 `opl agents list --json` 为 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`；`opl stages list --json` 为 `resolved_planes_count=3`、`stages_count=18`；`opl domain-memory list --json` 为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。这说明 MAS/MAG/RCA 的 descriptor-level migration 已经完成。agents 读模型现在已拆出 `descriptor_readiness`、`physical_skeleton_layout_audit` 和 `production_closure_gaps`，physical skeleton audit / gap projection 已经成为 OPL 侧可读 surface，不再只是文档推断；应等待平台成熟后再做的是真实 Temporal residency、长时 domain soak、memory body apply receipt、物理 skeleton 重组和旧面物理删除。
 
 当前顺序是：
 
 1. 先把 OPL 做成完整智能体框架：stage attempt、provider runtime、typed queue、wakeup、retry/dead-letter、approval/human gate、receipt/projection、shared lifecycle/index primitive。
-2. 再把 MAS/MAG/RCA 迁移为 OPL-admitted domain agents：统一 skeleton、stage descriptor、sidecar export/dispatch、owner receipt、artifact locator、projection builder、authority refs，并保持 direct skill path 等价。
-3. 同步把新旧功能逐块分类、迁移、分层或沉淀：domain truth 留在 domain；framework-generic lifecycle/index/restore/retention 上收到 OPL；local diagnostics 和 evidence surfaces 显式降级。
-4. 旧 Hermes/Gateway/frontdoor/local-manager/default-compat wording 和重复 UI / runtime 入口，在替代证据存在后退役清理。
-5. 最后用 MAS paper line、MAG grant stage、RCA visual stage 和 OPL App workbench 做真实 E2E / domain soak，验证目标形态。
+2. 立刻用 MAS 的真实论文线验证这个框架：三篇 active paper line 先做 read-only closeout projection，再由 MAS owner gate 决定 guarded apply；有效结果可以是 artifact delta、publication gate replay、AI reviewer update、route decision、human gate、stop-loss 或 typed blocker。
+3. 再把 MAS/MAG/RCA 迁移为 OPL-admitted domain agents：统一 skeleton、stage descriptor、sidecar export/dispatch、owner receipt、artifact locator、projection builder、authority refs，并保持 direct skill path 等价。MAG/RCA 本轮只保持 descriptor/index 不回退。
+4. 同步把新旧功能逐块分类、迁移、分层或沉淀：domain truth 留在 domain；framework-generic lifecycle/index/restore/retention 上收到 OPL；local diagnostics 和 evidence surfaces 显式降级。
+5. 旧 Hermes/Gateway/frontdoor/local-manager/default-compat wording 和重复 UI / runtime 入口，在替代证据存在后退役清理。
 
 这里的“最后测试”指真实 provider/domain/app 验收。每个代码、contract、provider、projection 或 cleanup 步骤仍必须跑对应 focused tests 和 repo-native verification。
 
@@ -28,11 +28,12 @@ OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的
 | 顺序 | 线路 | 当前 owner | 当前实际要做 |
 | --- | --- | --- | --- |
 | `1` | `opl_framework_foundation` | OPL roadmap + Runtime Manager / provider contracts | 完成 Temporal/provider readiness、stage attempt ledger、workflow/activity/signal/query、typed queue、retry/dead-letter、human gate、receipt/projection 和 shared lifecycle/index primitive。 |
-| `2` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | descriptor / manifest 层已经三仓 aligned；OPL agents 读模型已暴露 physical skeleton audit / gap projection；下一步是 path compatibility audit，以及 direct skill path 与 OPL-hosted path 的持续同源 owner receipt 证明；workspace/runtime receipt parity 和 provider-hosted soak 仍属于 production closure。 |
-| `3` | `feature_partition_and_retirement` | OPL active docs + domain owner docs | 把 framework-generic 能力上收到 OPL，把 domain-specific truth 留在 domain；退役 Hermes/Gateway/frontdoor/local-manager/MDS-default 等旧默认面。 |
-| `4` | `opl_app_runtime_workbench` | OPL App / Runtime Manager | 展示 provider readiness、stage attempt、domain status、human gate、action receipt、artifact refs 和 source refs；不重写 domain truth；stage-attempt workbench 当前已提供只读分组、过滤键、attention counters 和 memory-ref counters，供 App 面板筛选。 |
-| `5` | `domain_soak_and_acceptance` | Domain repos + OPL provider | 在迁移后目标形态下做 MAS/MAG/RCA 真实或 controlled soak，证明 progress delta、quality gate movement、human gate、stop-loss 或 typed blocker。 |
-| `6` | `new_domain_admission` | OPL domain admission + candidate domain repos | 新 domain 只按 skeleton/descriptor/locator/authority boundary 接入，不复制旧 gateway/frontdoor 路线。 |
+| `2` | `mas_paper_autonomy_acceptance` | OPL provider + MAS owner surfaces | 当前主验收线。用 MAS 三篇真实 paper line 证明 OPL provider-backed attempt 能进入 MAS sidecar / typed closeout / MAS owner receipt / progress delta 或 typed blocker；OPL 只保存 provider/control metadata 和 refs，不写 publication truth、artifact authority、memory body 或 `current_package`。 |
+| `3` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | descriptor / manifest 层已经三仓 aligned；OPL agents 读模型已暴露 physical skeleton audit / gap projection；下一步是 path compatibility audit，以及 direct skill path 与 OPL-hosted path 的持续同源 owner receipt 证明。workspace/runtime receipt parity 和 provider-hosted soak 仍属于 production closure；MAG/RCA controlled soak 暂缓，descriptor/index 不退化。 |
+| `4` | `feature_partition_and_retirement` | OPL active docs + domain owner docs | 把 framework-generic 能力上收到 OPL，把 domain-specific truth 留在 domain；退役 Hermes/Gateway/frontdoor/local-manager/MDS-default 等旧默认面。 |
+| `5` | `opl_app_runtime_workbench` | OPL App / Runtime Manager | 展示 provider readiness、stage attempt、domain status、human gate、action receipt、artifact refs 和 source refs；不重写 domain truth；stage-attempt workbench 当前已提供只读分组、过滤键、attention counters 和 memory-ref counters，供 App 面板筛选。 |
+| `6` | `domain_soak_and_acceptance` | Domain repos + OPL provider | MAS 先完成真实论文线 read-only / guarded apply 证据；MAG/RCA 之后再做 controlled grant / visual stage attempt 泛化证明。 |
+| `7` | `new_domain_admission` | OPL domain admission + candidate domain repos | 新 domain 只按 skeleton/descriptor/locator/authority boundary 接入，不复制旧 gateway/frontdoor 路线。 |
 
 ## 合并与退役规则
 
@@ -59,6 +60,7 @@ OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的
 | 线路 | 完成信号 |
 | --- | --- |
 | `opl_framework_foundation` | OPL provider/framework 能稳定承载 stage attempt、queue/wakeup、retry/dead-letter、approval/human gate、receipt/projection 和 shared lifecycle/index primitive。 |
+| `mas_paper_autonomy_acceptance` | 三篇 MAS 真实 paper line 至少各有 OPL-ingestable typed closeout packet 和 MAS-owned evidence ref；其中至少一篇证明 publication-route memory consumed/writeback receipt；OPL 没有写 MAS truth、publication verdict、artifact authority、memory body 或 receipt instance。 |
 | `domain_framework_migration` | MAS/MAG/RCA 通过统一 skeleton/descriptor/locator/receipt 接入；repo-source layout 与真实 workspace/runtime receipt 证明完成；direct path 与 OPL-hosted path 共享 domain owner receipts。 |
 | `feature_partition_and_retirement` | 旧默认依赖、legacy compat、重复 UI、过时 manager surface 完成分类、替代和退役；保留项都有明确 owner 和用途。 |
 | `opl_app_runtime_workbench` | OPL App 能从一个工作台读取 provider、stage attempt、domain progress、human gate、artifact refs、source refs、safe action receipts 和 stage-attempt 分组/过滤摘要。 |
