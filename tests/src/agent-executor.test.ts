@@ -212,7 +212,9 @@ test('claude_code execution uses configured binary without Codex fallback', () =
 test('claude_code execution honors request timeout and fails closed without Codex fallback', () => {
   const fake = makeExecutable(
     'claude',
-    '#!/bin/sh\nsleep 2\nprintf "late\\n"\n',
+    `#!${process.execPath}
+setTimeout(() => process.stdout.write("late\\n"), 2000);
+`,
   );
   try {
     assert.throws(
