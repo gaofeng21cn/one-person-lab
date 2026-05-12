@@ -32,6 +32,7 @@ export type FamilyRuntimeCommandInput =
     providerKind?: FamilyRuntimeProviderKind;
     detach?: boolean;
   }
+  | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
@@ -211,6 +212,26 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       providerKind,
       detach,
     };
+  }
+  if (mode === 'residency' && rest[0] === 'proof') {
+    let providerKind: FamilyRuntimeProviderKind | undefined;
+    let live = false;
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--provider' && value) {
+        providerKind = assertProviderKind(value);
+        index += 1;
+      } else if (token === '--live') {
+        live = true;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime residency proof option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime residency proof --provider temporal [--live]',
+        });
+      }
+    }
+    return { mode: 'residency_proof', providerKind, live };
   }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };

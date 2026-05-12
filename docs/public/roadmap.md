@@ -76,7 +76,7 @@ The roadmap is healthy when readers can immediately understand:
 - `OPL` is the Codex-first, stage-led framework owner for activation, stage attempts, queue/wakeup, receipts, recovery, projection, and shared modules/contracts/indexes
 - admitted domains keep their own authority under that shell
 - the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
-- the Temporal production provider now has a minimal verifiable loop: workflow/activity/signal/query, worker lifecycle contract, typed closeout ingestion, fail-closed readiness, and `stage_attempt_workbench` projection; real server/worker residency proof and domain soak remain next-stage work
+- the Temporal production provider now has a minimal verifiable loop: workflow/activity/signal/query, worker lifecycle contract, typed closeout ingestion, fail-closed readiness, `stage_attempt_workbench` projection, and repo-native Temporal test-server plus real-worker residency proof; external production service provisioning/readiness and domain soak remain next-stage acceptance work
 - legacy `OPL Gateway`, `opl web`, `Product API`, and AionUI-first-shell material is read as provenance or reference context unless a current core document promotes it
 - future hosted and desktop work continues the same runtime/activation truth surfaces
 - new workstreams are entering as explicit domain surfaces with clear boundaries
