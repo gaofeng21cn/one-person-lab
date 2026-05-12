@@ -250,7 +250,7 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|worker start|worker status|worker stop|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export [options]',
       summary:
         'Manage the provider-backed OPL family runtime queue, stage attempts, notifications, approvals, and events.',
       examples: [
@@ -265,6 +265,9 @@ export function buildInternalCommandSpecs(
         'opl family-runtime attempt query <stage_attempt_id>',
         'opl family-runtime attempt signal <stage_attempt_id> --kind resume --payload \'{"reason":"operator_resume"}\'',
         'opl family-runtime attempt fixture-run <stage_attempt_id> --closeout-packet \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:demo"]}\'',
+        'opl family-runtime service start --provider temporal',
+        'opl family-runtime service status --provider temporal',
+        'opl family-runtime worker start --provider temporal',
         'opl family-runtime residency proof --provider temporal [--live|--production]',
         'opl family-runtime tick --source hermes-cron --hydrate',
         'opl family-runtime queue list',
