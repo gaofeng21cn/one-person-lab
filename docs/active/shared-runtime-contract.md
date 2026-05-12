@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> Current-status note (`2026-05-11`): this document is retained as a shared-boundary reference for the Codex-first, stage-led OPL framework. The current public OPL mainline is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected MAS/MAG/RCA domain agent`; `MedDeepScientist` is no longer a default OPL-installed MAS runtime dependency and appears only through MAS-declared optional backend-audit / source-provenance / historical-fixture / explicit archive-import / upstream-intake / parity-oracle refs. Lower-level domain execution wording should be read as `harness / controller` internal boundaries, not as the default public product model.
+> Current-status note (`2026-05-11`): this document is retained as a shared-boundary reference for the stage-led, Agent executor-based OPL framework. The current public OPL mainline is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected MAS/MAG/RCA domain agent`; `MedDeepScientist` is no longer a default OPL-installed MAS runtime dependency and appears only through MAS-declared optional backend-audit / source-provenance / historical-fixture / explicit archive-import / upstream-intake / parity-oracle refs. Lower-level domain execution wording should be read as `harness / controller` internal boundaries, not as the default public product model.
 
 ## Purpose
 

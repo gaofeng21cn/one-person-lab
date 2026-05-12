@@ -130,7 +130,7 @@ export function buildProductEntrySessionPrompt(contracts: FrameworkContracts) {
     ...workstreamLines,
     '',
     'Hard boundary rules:',
-    '- OPL is a Codex-first, stage-led family framework shell. It is not the runtime truth owner of any domain.',
+    '- OPL is a stage-led, Agent executor-based family framework shell. It is not the runtime truth owner of any domain.',
     '- Keep work inside admitted domain boundaries and family boundaries. Do not invent admission or hosted readiness.',
     '- Codex CLI is the default concrete executor for this product-entry session.',
     '',

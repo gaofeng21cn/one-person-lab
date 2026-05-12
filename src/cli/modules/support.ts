@@ -21,6 +21,9 @@ export {
 } from './runtime-helpers.ts';
 export {
   parseDashboardArgs,
+  parseExecutorExecArgs,
+  parseExecutorOption,
+  parseExecutorRequestPath,
   parseKeyValueArgs,
   parseLaunchDomainArgs,
   parseLogsArgs,

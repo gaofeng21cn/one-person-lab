@@ -8,7 +8,7 @@ This guide is for readers who need the current product model, the active runtime
 
 ## Current Product Model
 
-`OPL` is a complete Codex-first, stage-led family agent runtime framework for high-value knowledge work. Its default minimum execution unit inside a stage is `Codex CLI`; its orchestration unit is the domain `stage`; its product target is fully automated, auditable delivery through recoverable stage attempts, human gates, receipts, projections, and artifact lifecycle.
+`OPL` is a complete stage-led, Agent executor-based family agent runtime framework for high-value knowledge work. Its default minimum execution unit inside a stage is `Codex CLI`; its orchestration unit is the domain `stage`; its product target is fully automated, auditable delivery through recoverable stage attempts, human gates, receipts, projections, and artifact lifecycle.
 
 The current public `OPL` resource model is:
 
@@ -83,7 +83,7 @@ Lifecycle is judged by content role, not by filename or old path. A file with an
 - `docs/history/` keeps dated snapshots, retired paths, provenance archives, and tombstones.
 
 The live public model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md).
-The live interaction model is Codex-first, stage-led, runtime-first, and skill-first.
+The live interaction model is stage-led, Agent executor-based, runtime-first, and skill-first.
 Retired `gateway / federation / routed-action` corpus and old local Product API / UI-adapter material stay below the active layers.
 
 ## Public Support

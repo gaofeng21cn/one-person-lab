@@ -6,6 +6,12 @@ import {
   runCodexCommandStreaming,
   type CodexExecEvent,
 } from './codex.ts';
+import {
+  AGENT_EXECUTOR_KINDS,
+  runAgentExecutor,
+  type AgentExecutionReceipt,
+  type AgentExecutorKind,
+} from './agent-executor.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -141,6 +147,65 @@ function normalizeTimeoutMs(value: unknown, fallback: number) {
   return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
 }
 
+function normalizeAgentExecutorStageMode(value?: string | null): AgentExecutorKind | null {
+  const normalized = value?.trim().replace(/-/g, '_');
+  if (AGENT_EXECUTOR_KINDS.includes(normalized as AgentExecutorKind)) {
+    return normalized as AgentExecutorKind;
+  }
+  return null;
+}
+
+function buildAgentStageRunnerReceipt(input: {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  runnerMode: AgentExecutorKind;
+  observedAt?: string | null;
+  agentExecutionReceipt: AgentExecutionReceipt;
+}) {
+  const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
+  return {
+    runner_status: {
+      runner_kind: 'agent_executor_stage_runner',
+      runner_mode: input.runnerMode,
+      executor_kind: input.agentExecutionReceipt.executor_kind,
+      live_process_started: true,
+      dry_run_transport: false,
+      process_id: null,
+      exit_code: input.agentExecutionReceipt.exit_code,
+      stdout_bytes: Buffer.byteLength(input.agentExecutionReceipt.stdout_preview, 'utf8'),
+      stderr_bytes: Buffer.byteLength(input.agentExecutionReceipt.stderr_preview, 'utf8'),
+      timeout_ms: null,
+      typed_closeout_required_for_completion: true,
+      free_text_closeout_accepted: false,
+    },
+    heartbeat_summary: {
+      heartbeat_status: 'recorded',
+      last_heartbeat_at: input.observedAt ?? null,
+      checkpoint_count: checkpointRefs.length,
+      checkpoint_refs: checkpointRefs,
+    },
+    progress_summary: {
+      progress_status: input.agentExecutionReceipt.closeout_packet ? 'checkpointed' : 'running',
+      stage_id: stageIdFromAttempt(input.attempt),
+      stage_packet_ref: input.stagePacketRef ?? null,
+      completed_requires_typed_closeout: true,
+      thread_id: input.agentExecutionReceipt.session_id,
+      runner_events: input.agentExecutionReceipt.event_summary,
+    },
+    cost_summary: {
+      cost_status: 'not_measured_agent_executor_receipt',
+      estimated_cost_usd: 0,
+      token_usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+      },
+      billing_boundary: 'agent_executor_adapter_reports_only_declared_or_observed_usage',
+    },
+    agent_execution_receipt: input.agentExecutionReceipt,
+  };
+}
+
 export function buildCodexStageRunnerReceipt(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
@@ -247,6 +312,40 @@ export async function runCodexStageRunner(input: {
       stderr_tail: result.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
     },
   };
+}
+
+export async function runAgentStageRunner(input: {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  runnerMode?: string | null;
+  observedAt?: string | null;
+  timeoutMs?: number | null;
+  env?: Record<string, string | undefined>;
+}) {
+  const executorKind = normalizeAgentExecutorStageMode(input.runnerMode)
+    ?? normalizeAgentExecutorStageMode(optionalString(input.attempt.executor_kind));
+  if (!executorKind || executorKind === 'codex_cli') {
+    return await runCodexStageRunner(input);
+  }
+  const receipt = runAgentExecutor({
+    executor_kind: executorKind,
+    mode: 'stage_activity',
+    prompt: runnerPromptFor(input),
+    cwd: workspaceRootFromAttempt(input.attempt),
+    timeout_ms: input.timeoutMs,
+    context_refs: [
+      ...(input.stagePacketRef ? [input.stagePacketRef] : []),
+      ...checkpointRefsFromAttempt(input.attempt),
+    ],
+    env: input.env,
+  });
+  return buildAgentStageRunnerReceipt({
+    attempt: input.attempt,
+    stagePacketRef: input.stagePacketRef,
+    runnerMode: executorKind,
+    observedAt: input.observedAt,
+    agentExecutionReceipt: receipt,
+  });
 }
 
 export function parseJsonObject(value: string, field: string): JsonRecord {

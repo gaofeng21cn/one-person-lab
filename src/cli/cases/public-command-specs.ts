@@ -405,6 +405,8 @@ export function buildPublicCommandSpecs(
       group: 'skill',
     }),
     exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
+    'executor doctor': cloneCommandSpec(commandSpecs['executor doctor'], { group: 'runtime' }),
+    'executor run': cloneCommandSpec(commandSpecs['executor run'], { group: 'runtime' }),
     resume: cloneCommandSpec(commandSpecs.resume, {
       usage: 'opl resume [codex resume args...]',
       summary: 'Resume a Codex session as a raw passthrough.',
