@@ -40,6 +40,22 @@
 | `Ageniti/Ageniti@db92c0a` | `adopt_family_contract` | 借鉴 action contract 到 CLI / HTTP / MCP / OpenAI / React 多 surface 派生、side-effect / idempotency / confirmation / visibility 元数据、统一 envelope 与 streaming event 语义，用于补强 OPL family 对 domain capability surface 的 machine-readable 描述。 | 不把 Ageniti 作为默认 runtime、scheduler、memory、hosted execution 或 domain authority；`@ageniti/core` 仍处 `0.x` 早期阶段，只允许作为 optional prototype / domain template 观察，不进入 OPL core dependency。 |
 | `Biajin-PKU/research-harness@006ab44` | `limited adopt_family_contract + adopt_domain_template + reject_as_dependency` | OPL 只吸收 domain-neutral 语言：stage boundary gate、provenance receipt、primitive/action registry、typed artifact refs、resume/checkpoint 和 human review checkpoint，映射到已有 stage control plane、action catalog、attempt ledger、handoff 与 operator projection。 | MAS 可把 literature review、claim/evidence、citation/number verification、adversarial review 等作为 domain template 参考；MAG/RCA 只借 stage-gated artifact proof 形式。拒绝引入 RH 代码、Python package、SQLite `pool.db` schema、auto-runner、HTTP API、web dashboard 或 MCP server 作为 OPL 依赖；PolyForm Noncommercial license 进一步要求只保留学习记录，不复制实现。 |
 
+## Research Harness Closeout Calibration 2026-05-12
+
+`Biajin-PKU/research-harness` 当前仍保持在 `006ab44`，最新公开 release 是 `v0.4.0`。本次复核没有发现需要改变 owner split 的新事实：新增的 agent-first workbench、Cursor surface 和 Docling parser 都属于 RH 自身的 research product/runtime 体验，不改变 OPL 只吸收 shared contract vocabulary、typed artifact / provenance / stage gate pattern 的边界。
+
+因此 RH 对 OPL 的本阶段吸收状态标记为 `saturated_for_opl_framework_core`：
+
+- 已吸收进 OPL：standard domain agent skeleton / locator normalization、stage descriptor / gate vocabulary、typed attempt / closeout / projection 语义，以及 operator 能区分 provider completion、domain verdict、human gate、dead letter、rejected writeback 的投影口径。
+- 已留给 domain repo：MAS 的 literature review、gap ranking、adversarial research review、paper writing gate、numeric trace / claim-evidence verification 继续属于 MAS-owned publication/reporting contract；MAG/RCA 只借 stage-gated proof 形式。
+- 明确不吸收进 OPL：RH runtime、runner、SQLite schema、HTTP/API/Web/MCP server、研究领域判断、citation/number quality verdict、文献检索策略和 paper-ready verdict。
+- 当前 OPL 读模型证据：`opl agents list --json` 为 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`physical_skeleton_audit_pending_count=3`、`production_closure_gap_count=15`；`opl stages list --json` 为 `resolved_planes_count=3`、`stages_count=18`；`opl domain-memory list --json` 为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。
+
+后续只有两类变化需要重新打开 RH 学习 lane：
+
+1. RH 新 release 提供了可抽象成 OPL-neutral machine contract 的新证据，例如更强的 typed receipt schema、stage-gate replay contract 或 human review resume envelope。
+2. MAS/MAG/RCA 需要把 RH 的 domain template 转成各自 repo-owned quality/reporting contract；这类工作只在 domain repo 内实现，OPL 只消费 descriptor、locator、receipt 和 projection。
+
 ## Adopted Family Defaults
 
 - `OPL` 持有 family-level shared modules、contracts、indexes、activation、projection。

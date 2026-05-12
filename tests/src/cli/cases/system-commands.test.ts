@@ -164,7 +164,30 @@ exit 1
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
-    assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+    assert.equal(output.dashboard.runtime_status.configured_provider, 'local_sqlite');
+    assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 0);
+    assert.equal(
+      output.dashboard.runtime_status.hermes_legacy_diagnostics.recent_sessions.sessions.length,
+      0,
+    );
+    assert.equal(output.dashboard.runtime_status.hermes_legacy_diagnostics.hermes.inspection_mode, 'shallow_optional');
+
+    const explicitHermesLegacyDashboard = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_HERMES_BIN: hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+    assert.equal(explicitHermesLegacyDashboard.dashboard.runtime_status.configured_provider, 'hermes_legacy');
+    assert.equal(explicitHermesLegacyDashboard.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+    assert.equal(
+      explicitHermesLegacyDashboard.dashboard.runtime_status.hermes_legacy_diagnostics.recent_sessions.sessions.length,
+      1,
+    );
+    assert.equal(
+      explicitHermesLegacyDashboard.dashboard.runtime_status.hermes_legacy_diagnostics.hermes.inspection_mode,
+      'deep_selected',
+    );
     assert.equal('rollout_board_refs' in output.dashboard.gui_runtime, false);
     assert.deepEqual(output.dashboard.gui_runtime.rollout_board_surfaces, [
       {
