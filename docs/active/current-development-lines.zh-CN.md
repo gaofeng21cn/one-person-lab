@@ -9,7 +9,7 @@ Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts
 
 OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的真实交付 soak 当主线验收。
 
-2026-05-12 当前校准：framework control plane、shared contracts、local queue / attempt ledger、Temporal provider code、typed closeout gate、domain skeleton discovery、stage plane discovery、domain-memory descriptor index、runtime snapshot 和 Aion stage-attempt workbench 已经落地到可读/可测 surface。实测 `opl agents list --json` 为 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`；`opl stages list --json` 为 `resolved_planes_count=3`、`stages_count=18`；`opl domain-memory list --json` 为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。这说明 MAS/MAG/RCA 的 descriptor-level migration 已经完成，但 production residency、真实长时 stage activity soak、workspace/runtime memory apply receipt、provider-hosted paper/grant/visual soak、physical skeleton layout 和旧默认面物理退役仍未闭合。
+2026-05-12 当前校准：framework control plane、shared contracts、local queue / attempt ledger、Temporal provider code、typed closeout gate、domain skeleton discovery、stage plane discovery、domain-memory descriptor index、runtime snapshot 和 Aion stage-attempt workbench 已经落地到可读/可测 surface。实测 `opl agents list --json` 为 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`；`opl stages list --json` 为 `resolved_planes_count=3`、`stages_count=18`；`opl domain-memory list --json` 为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。这说明 MAS/MAG/RCA 的 descriptor-level migration 已经完成。agents 读模型现在已拆出 `descriptor_readiness`、`physical_skeleton_layout_audit` 和 `production_closure_gaps`，physical skeleton audit / gap projection 已经成为 OPL 侧可读 surface，不再只是文档推断；应等待平台成熟后再做的是真实 Temporal residency、长时 domain soak、memory body apply receipt、物理 skeleton 重组和旧面物理删除。
 
 当前顺序是：
 
@@ -21,12 +21,14 @@ OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的
 
 这里的“最后测试”指真实 provider/domain/app 验收。每个代码、contract、provider、projection 或 cleanup 步骤仍必须跑对应 focused tests 和 repo-native verification。
 
+结构质量 gate 现在按执行层级拆分语义。`sentrux gate .` 的 baseline drift 是 advisory：它仍应输出 OPL quality details 供排查，但不会单独让结构 lane 失败。line budget 和显式 `sentrux check .` rules 仍是 blocking。文档和状态更新必须保留这个分层，不能把所有 Sentrux 输出都写成同一种失败。
+
 ## 内容线路
 
 | 顺序 | 线路 | 当前 owner | 当前实际要做 |
 | --- | --- | --- | --- |
 | `1` | `opl_framework_foundation` | OPL roadmap + Runtime Manager / provider contracts | 完成 Temporal/provider readiness、stage attempt ledger、workflow/activity/signal/query、typed queue、retry/dead-letter、human gate、receipt/projection 和 shared lifecycle/index primitive。 |
-| `2` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | descriptor / manifest 层已经三仓 aligned；下一步是 workspace/runtime receipt parity、provider-hosted soak、physical skeleton layout audit、path compatibility audit，以及 direct skill path 与 OPL-hosted path 的持续同源 owner receipt 证明。 |
+| `2` | `domain_framework_migration` | OPL + MAS/MAG/RCA domain repos | descriptor / manifest 层已经三仓 aligned；OPL agents 读模型已暴露 physical skeleton audit / gap projection；下一步是 path compatibility audit，以及 direct skill path 与 OPL-hosted path 的持续同源 owner receipt 证明；workspace/runtime receipt parity 和 provider-hosted soak 仍属于 production closure。 |
 | `3` | `feature_partition_and_retirement` | OPL active docs + domain owner docs | 把 framework-generic 能力上收到 OPL，把 domain-specific truth 留在 domain；退役 Hermes/Gateway/frontdoor/local-manager/MDS-default 等旧默认面。 |
 | `4` | `opl_app_runtime_workbench` | OPL App / Runtime Manager | 展示 provider readiness、stage attempt、domain status、human gate、action receipt、artifact refs 和 source refs；不重写 domain truth；stage-attempt workbench 当前已提供只读分组、过滤键、attention counters 和 memory-ref counters，供 App 面板筛选。 |
 | `5` | `domain_soak_and_acceptance` | Domain repos + OPL provider | 在迁移后目标形态下做 MAS/MAG/RCA 真实或 controlled soak，证明 progress delta、quality gate movement、human gate、stop-loss 或 typed blocker。 |
