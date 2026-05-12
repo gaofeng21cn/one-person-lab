@@ -37,6 +37,7 @@ import {
   stageAttemptSummary,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
+import { buildTemporalResidencyProof } from './family-runtime-residency-proof.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
   QUEUE_SCHEMA_VERSION,
@@ -733,6 +734,22 @@ export async function runFamilyRuntime(args: string[]) {
           surface_id: 'opl_family_runtime_worker',
           action: 'stop',
           ...result,
+        },
+      };
+    }
+    if (parsed.mode === 'residency_proof') {
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
+      if (providerKind !== 'temporal') {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime residency proof currently supports only --provider temporal.', {
+          provider_kind: providerKind,
+          allowed_provider_kinds: ['temporal'],
+        });
+      }
+      return {
+        version: 'g2',
+        family_runtime_residency_proof: {
+          surface_id: 'opl_family_runtime_residency_proof',
+          ...await buildTemporalResidencyProof(db, paths, { live: parsed.live }),
         },
       };
     }

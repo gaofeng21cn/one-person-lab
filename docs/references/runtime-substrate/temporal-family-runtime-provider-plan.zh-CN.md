@@ -66,7 +66,7 @@ Provider 层不持有：
 交付：
 
 - 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`。
-- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 已落地，真实 server/worker deployment 与 domain soak 仍属 P1/P2 后续证据。
+- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 与 repo-native live residency proof 已落地，外部 production server/worker provisioning 与 domain soak 仍属 P1/P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
 
@@ -78,7 +78,7 @@ Provider 层不持有：
 
 ### P1. Temporal Stage Workflow Core
 
-状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，以及 Codex live runner timeout / checkpoint heartbeat / process output summary proof test。尚未完成的是生产 Temporal server 长驻 deployment、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
+状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper 和 worker lifecycle contract；缺少 Temporal 地址时 CLI 明确 fail-closed，provider readiness 需要 Temporal 地址与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，以及 `opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof。尚未完成的是外部 production Temporal service provisioning/readiness、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
 
 交付：
 
@@ -87,7 +87,8 @@ Provider 层不持有：
 - 已完成：`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal` 进入同一 workflow signal surface。
 - 已完成：`StageAttemptQuery` 返回 attempt status、freshness、next owner、blocked reason、refs。
 - 已完成：Codex activity runner 的 repo/test harness，覆盖 `dry_run`、`live_dry_run` 与 `codex_cli` process supervision、stdout summary、timeout、checkpoint heartbeat 和 typed closeout completion gate。
-- 待完成：真实长时 domain activity soak、domain sidecar live dispatch、长期 worker residency、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
+- 已完成：repo-native Temporal live residency proof 可启动 Temporal test server 与真实 worker，跑通 completed attempt、human/user/resume signals、worker restart 后 re-query、missing-closeout blocked 和 domain-truth boundary。
+- 待完成：真实长时 domain activity soak、domain sidecar live dispatch、外部 production Temporal service provisioning/readiness、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
 
 验收：
 
@@ -110,7 +111,7 @@ Provider 层不持有：
 
 - Read-only 验收已满足：三篇真实 paper line 至少各有一个 OPL-ingestable typed closeout packet，指向 MAS-owned evidence refs；可接受结果包括 artifact delta、publication gate replay、AI reviewer update、route decision、human gate、stop-loss 或 typed blocker。
 - Read-only memory proof 已满足：至少一篇 paper line 证明 publication-route memory 被 stage entry 消费，并由 MAS router 产出 accepted/rejected writeback receipt ref。
-- Production 验收仍待完成：真实 Temporal/provider attempt 需要留下 workflow/activity query、MAS sidecar dispatch receipt、typed closeout、MAS owner receipt、progress delta / human gate / stop-loss / typed blocker，以及 no-forbidden-write proof。
+- Production 验收仍待完成：真实 MAS provider-hosted attempt 需要留下 workflow/activity query、MAS sidecar dispatch receipt、typed closeout、MAS owner receipt、progress delta / human gate / stop-loss / typed blocker，以及 no-forbidden-write proof。
 - MAS `publication_eval`、`controller_decisions`、`current_package` 等 truth surface 仍只由 MAS owner 写。
 
 ### P3. MAG/RCA Controlled Attempts
@@ -130,7 +131,7 @@ Provider 层不持有：
 
 ### P4. Visibility And Operator Console
 
-状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，可展示 provider run/activity/heartbeat、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影，并已通过白名单 bridge 支持 provider-level human gate / resume / dead-letter repair signal。仍待完成的是按 domain/stage/blocker/memory refs 的操作体验、真实 worker/domain 执行证明和真实 domain soak。
+状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，可展示 provider run/activity/heartbeat、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影，并已通过白名单 bridge 支持 provider-level human gate / resume / dead-letter repair signal。Temporal worker/domain 代码路径已由 live residency proof 覆盖；仍待完成的是按 domain/stage/blocker/memory refs 的操作体验和真实 MAS domain soak。
 
 交付：
 

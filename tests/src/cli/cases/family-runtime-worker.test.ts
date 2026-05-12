@@ -223,3 +223,69 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime residency proof reports Temporal live-evidence gaps fail-closed', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-residency-proof-gap-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'residency', 'proof', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+    const proof = output.family_runtime_residency_proof;
+
+    assert.equal(proof.surface_kind, 'opl_temporal_production_residency_proof');
+    assert.equal(proof.closeout_status, 'production_residency_needs_live_evidence');
+    assert.equal(proof.proofs.lifecycle.proof_status, 'needs_live_residency');
+    assert.equal(proof.proofs.lifecycle.lifecycle_status, 'not_configured');
+    assert.equal(proof.proofs.typed_closeout_required.proof_status, 'needs_more_evidence');
+    assert.equal(
+      proof.authority_boundary.domain,
+      'truth_quality_artifact_gate_owner',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime residency proof --live runs Temporal test server and real workers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-live-residency-proof-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'residency', 'proof', '--provider', 'temporal', '--live'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+    const proof = output.family_runtime_residency_proof;
+    const live = proof.live_residency_proof;
+
+    assert.equal(proof.proof_mode, 'temporal_live_test_server_worker');
+    assert.equal(proof.closeout_status, 'production_residency_code_path_proven');
+    assert.equal(live.surface_kind, 'opl_temporal_residency_live_proof');
+    assert.equal(live.proof_environment, 'temporal_test_server_and_real_worker');
+    assert.equal(live.closeout_status, 'production_residency_code_path_proven');
+    assert.deepEqual(live.checks, {
+      temporal_test_server_started: true,
+      worker_completed_attempt: true,
+      worker_restart_requery: true,
+      signal_history_preserved: true,
+      typed_closeout_required_for_completed: true,
+      missing_closeout_blocks_completion: true,
+      domain_truth_boundary_preserved: true,
+    });
+    assert.equal(live.completed_attempt.status, 'completed');
+    assert.equal(live.completed_attempt.signal_count, 3);
+    assert.deepEqual(live.completed_attempt.closeout_refs, ['receipt:temporal-residency-domain-closeout']);
+    assert.equal(live.restarted_worker_requery.requery_status, 'stage_attempt_query_available_after_worker_restart');
+    assert.equal(live.blocked_attempt.status, 'blocked');
+    assert.equal(live.blocked_attempt.provider_completion, 'not_completed');
+    assert.equal(live.blocked_attempt.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(live.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
