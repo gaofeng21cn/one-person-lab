@@ -5,6 +5,14 @@
       "domain_id": "medautogrant",
       "label": "MedAutoGrant",
       "project": "med-autogrant",
+      "product_layer": "foundry_agent",
+      "foundry_agent_package": {
+        "package_kind": "opl_compatible_package",
+        "built_on": "opl_framework",
+        "app_surface": "one_person_lab_app",
+        "direct_skill_entry": true,
+        "embeds_opl_runtime": false
+      },
       "independent_domain_agent": {
         "agent_id": "mag",
         "status": "active",
@@ -47,6 +55,14 @@
       "domain_id": "medautoscience",
       "label": "MedAutoScience",
       "project": "med-autoscience",
+      "product_layer": "foundry_agent",
+      "foundry_agent_package": {
+        "package_kind": "opl_compatible_package",
+        "built_on": "opl_framework",
+        "app_surface": "one_person_lab_app",
+        "direct_skill_entry": true,
+        "embeds_opl_runtime": false
+      },
       "independent_domain_agent": {
         "agent_id": "mas",
         "status": "active",
@@ -97,6 +113,14 @@
       "domain_id": "redcube",
       "label": "RedCube AI",
       "project": "redcube-ai",
+      "product_layer": "foundry_agent",
+      "foundry_agent_package": {
+        "package_kind": "opl_compatible_package",
+        "built_on": "opl_framework",
+        "app_surface": "one_person_lab_app",
+        "direct_skill_entry": true,
+        "embeds_opl_runtime": false
+      },
       "independent_domain_agent": {
         "agent_id": "rca",
         "status": "active",

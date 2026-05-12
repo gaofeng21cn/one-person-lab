@@ -11,6 +11,14 @@ const retiredBoundaryTermsField = ['legacy', 'boundary', 'terms'].join('_');
 
 type DomainDefinition = {
   domain_id: string;
+  product_layer?: string;
+  foundry_agent_package?: {
+    package_kind?: string;
+    built_on?: string;
+    app_surface?: string;
+    direct_skill_entry?: boolean;
+    embeds_opl_runtime?: boolean;
+  };
   independent_domain_agent?: {
     agent_id?: string;
     opl_top_level_domain_agent?: boolean;
@@ -55,6 +63,14 @@ test('domains.json g2 keeps retired boundary terms out of active domain fields',
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'canonical_truth_owner'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'role'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(domain, retiredBoundaryTermsField), false);
+    assert.equal(domain.product_layer, 'foundry_agent');
+    assert.deepEqual(domain.foundry_agent_package, {
+      package_kind: 'opl_compatible_package',
+      built_on: 'opl_framework',
+      app_surface: 'one_person_lab_app',
+      direct_skill_entry: true,
+      embeds_opl_runtime: false,
+    });
     assert.equal(typeof domain.independent_domain_agent?.agent_id, 'string');
     assert.equal(domain.independent_domain_agent?.opl_top_level_domain_agent, true);
     assert.equal(typeof domain.single_app_skill?.skill_id, 'string');
@@ -115,4 +131,49 @@ test('domains.json g2 publishes current single app skill entry commands', () => 
     entry_command: 'redcube product status',
     manifest_command: 'redcube product manifest',
   });
+});
+
+test('domains.json g2 publishes Foundry Agents as OPL-compatible packages without embedded OPL runtime', () => {
+  const payload = readDomainsContract();
+
+  assert.deepEqual(
+    payload.domains.map((domain) => ({
+      domain_id: domain.domain_id,
+      product_layer: domain.product_layer,
+      package_kind: domain.foundry_agent_package?.package_kind,
+      built_on: domain.foundry_agent_package?.built_on,
+      app_surface: domain.foundry_agent_package?.app_surface,
+      direct_skill_entry: domain.foundry_agent_package?.direct_skill_entry,
+      embeds_opl_runtime: domain.foundry_agent_package?.embeds_opl_runtime,
+    })),
+    [
+      {
+        domain_id: 'medautogrant',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        built_on: 'opl_framework',
+        app_surface: 'one_person_lab_app',
+        direct_skill_entry: true,
+        embeds_opl_runtime: false,
+      },
+      {
+        domain_id: 'medautoscience',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        built_on: 'opl_framework',
+        app_surface: 'one_person_lab_app',
+        direct_skill_entry: true,
+        embeds_opl_runtime: false,
+      },
+      {
+        domain_id: 'redcube',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        built_on: 'opl_framework',
+        app_surface: 'one_person_lab_app',
+        direct_skill_entry: true,
+        embeds_opl_runtime: false,
+      },
+    ],
+  );
 });

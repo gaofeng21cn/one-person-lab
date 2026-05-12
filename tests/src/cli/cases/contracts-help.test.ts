@@ -352,12 +352,14 @@ test('contract surfaces returns the public framework surface summaries', () => {
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
   assert.ok(Array.isArray(output.surfaces));
-  assert.equal(output.surfaces.length, 6);
+  assert.equal(output.surfaces.length, 10);
   assert.deepEqual(output.surfaces[0], {
     surface_id: 'opl_public_readme',
     category_id: 'opl_public_entry',
     surface_kind: 'readme',
+    boundary_role: 'top_level_navigation',
     owner_scope: 'opl',
+    truth_mode: 'none',
   });
   assert.ok(
     output.surfaces.some(
@@ -370,6 +372,32 @@ test('contract surfaces returns the public framework surface summaries', () => {
         surface.surface_id === 'rca_domain_agent_entry'
         && surface.category_id === 'domain_agent_entry'
         && surface.owner_scope === 'domain',
+    ),
+  );
+  assert.ok(
+    output.surfaces.some(
+      (surface: {
+        surface_id: string;
+        category_id: string;
+        surface_kind: string;
+        owner_scope: string;
+      }) =>
+        surface.surface_id === 'one_person_lab_app_workbench'
+        && surface.category_id === 'one_person_lab_app'
+        && surface.owner_scope === 'app',
+    ),
+  );
+  assert.ok(
+    output.surfaces.some(
+      (surface: {
+        surface_id: string;
+        category_id: string;
+        surface_kind: string;
+        owner_scope: string;
+      }) =>
+        surface.surface_id === 'mas_foundry_agent_package'
+        && surface.category_id === 'foundry_agent_package'
+        && surface.surface_kind === 'opl_compatible_package',
     ),
   );
 });
@@ -385,13 +413,20 @@ test('contract domain returns the full registered domain meaning', () => {
 });
 
 test('contract surface returns the full registered public surface meaning', () => {
-  const output = runCli(['contract', 'surface', 'opl_stage_runtime_framework']);
+  const output = runCli(['contract', 'surface', 'one_person_lab_app_workbench']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
-  assert.equal(output.surface.surface_id, 'opl_stage_runtime_framework');
-  assert.equal(output.surface.category_id, 'opl_framework_contract');
-  assert.equal(output.surface.boundary_role, 'stage_runtime_framework');
+  assert.equal(output.surface.surface_id, 'one_person_lab_app_workbench');
+  assert.equal(output.surface.category_id, 'one_person_lab_app');
+  assert.equal(output.surface.boundary_role, 'app_consumer_workbench');
+  assert.equal(output.surface.truth_mode, 'projection_consumer');
+  assert.deepEqual(output.surface.routes_to, [
+    'opl_stage_runtime_framework',
+    'mag_foundry_agent_package',
+    'mas_foundry_agent_package',
+    'rca_foundry_agent_package',
+  ]);
 });
 
 test('selectDomainAgentEntry selects research delivery to medautoscience', () => {

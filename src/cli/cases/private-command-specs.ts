@@ -99,6 +99,9 @@ export function buildInternalCommandSpecs(
         return withContractsContext(contracts, {
           domains: contracts.domains.domains.map((domain) => ({
             domain_id: domain.domain_id,
+            product_layer: domain.product_layer,
+            package_kind: domain.foundry_agent_package.package_kind,
+            embeds_opl_runtime: domain.foundry_agent_package.embeds_opl_runtime,
             independent_domain_agent: domain.independent_domain_agent.agent_id,
             single_app_skill: domain.single_app_skill.skill_id,
             domain_truth_owner: domain.domain_truth_owner,
@@ -137,7 +140,9 @@ export function buildInternalCommandSpecs(
             surface_id: surface.surface_id,
             category_id: surface.category_id,
             surface_kind: surface.surface_kind,
+            boundary_role: surface.boundary_role,
             owner_scope: surface.owner_scope,
+            truth_mode: surface.truth_mode,
           })),
         });
       },

@@ -5,12 +5,13 @@ This directory preserves the active `OPL Framework` runtime and family control-p
 It is repo-tracked because the current framework needs stable machine-readable inputs for:
 
 - stage-led task selection
-- admitted domain-agent catalog projection
+- product-layer ownership for `OPL Framework`, `One Person Lab App`, and `Foundry Agents`
+- admitted domain-agent / Foundry package catalog projection
 - provider-backed runtime attempts
 - Runtime Manager readiness and state projection
 - optional native-helper lifecycle checks
 
-The current product model is `OPL Framework -> One Person Lab App / CLI -> Foundry Agents`. The execution chain remains `Codex-default executor + explicit OPL activation + configured family runtime provider + family skill sync/discovery`.
+The current product model is `OPL Framework -> One Person Lab App / CLI -> Foundry Agents`. The execution chain remains `Codex CLI first-class executor + explicit OPL activation + configured family runtime provider + family skill sync/discovery`.
 
 ## Current Truth Lives Elsewhere
 
@@ -27,7 +28,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 
 ## How To Read This Directory
 
-- `workstreams.json`, `domains.json`, `stage-selection-vocabulary.json`, `task-topology.json`, and `public-surface-index.json` define the active stage-led framework selection surface.
+- `workstreams.json`, `domains.json`, `stage-selection-vocabulary.json`, `task-topology.json`, and `public-surface-index.json` define the active stage-led framework selection surface and the Framework / App / Foundry product-layer owner split.
 - `family-runtime-online-substrate-contract.json`, `family-runtime-attempt-contract.json`, `standard-domain-agent-skeleton-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active provider-backed runtime/control-plane contracts.
 - `family-executor-adapter-defaults.json` remains useful as a shared executor contract.
 - retired gateway, federation, routed-action, onboarding, acceptance, governance, and example corpora live outside this active contract root.
@@ -53,3 +54,4 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - treat Runtime Manager, family runtime attempt, and standard domain-agent skeleton contracts as active for the provider-backed family runtime line
 - keep domain truth owned by the linked domain repositories, not by this directory
 - Foundry Agents should declare and adapt to these framework contracts instead of vendoring or forking their own OPL runtime truth
+- treat One Person Lab App as a projection consumer and workbench surface, not as a runtime provider or domain authority

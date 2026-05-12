@@ -42,9 +42,17 @@ export function validateDomainsRegistry(
       }
 
       const independentDomainAgent = entry.independent_domain_agent;
+      const foundryAgentPackage = entry.foundry_agent_package;
       const singleAppSkill = entry.single_app_skill;
       const runtimeDependencyBoundary = entry.runtime_dependency_boundary;
 
+      if (!isRecord(foundryAgentPackage)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Domain field "foundry_agent_package" must be an object.',
+          { file: filePath, field: 'foundry_agent_package' },
+        );
+      }
       if (!isRecord(independentDomainAgent)) {
         throw new FrameworkContractError(
           'contract_shape_invalid',
@@ -82,6 +90,34 @@ export function validateDomainsRegistry(
         domain_id: expectString(entry.domain_id, 'domain_id', filePath),
         label: expectString(entry.label, 'label', filePath),
         project: expectString(entry.project, 'project', filePath),
+        product_layer: expectString(entry.product_layer, 'product_layer', filePath),
+        foundry_agent_package: {
+          package_kind: expectString(
+            foundryAgentPackage.package_kind,
+            'foundry_agent_package.package_kind',
+            filePath,
+          ),
+          built_on: expectString(
+            foundryAgentPackage.built_on,
+            'foundry_agent_package.built_on',
+            filePath,
+          ),
+          app_surface: expectString(
+            foundryAgentPackage.app_surface,
+            'foundry_agent_package.app_surface',
+            filePath,
+          ),
+          direct_skill_entry: expectBoolean(
+            foundryAgentPackage.direct_skill_entry,
+            'foundry_agent_package.direct_skill_entry',
+            filePath,
+          ),
+          embeds_opl_runtime: expectBoolean(
+            foundryAgentPackage.embeds_opl_runtime,
+            'foundry_agent_package.embeds_opl_runtime',
+            filePath,
+          ),
+        },
         independent_domain_agent: {
           agent_id: expectString(
             independentDomainAgent.agent_id,

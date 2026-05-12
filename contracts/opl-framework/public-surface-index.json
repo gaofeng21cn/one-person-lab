@@ -10,6 +10,8 @@
   ],
   "ownership_rules": [
     "OPL owns framework activation, stage runtime projection, and shared contract discovery",
+    "One Person Lab App consumes OPL framework and domain projections without owning runtime or domain truth",
+    "Foundry Agents publish OPL-compatible package descriptors while keeping direct skill entry and domain authority",
     "domain-agent entries remain independently usable without OPL",
     "canonical domain truth remains inside MAS, MAG, and RCA",
     "public surfaces must point to stable contract or semantic human_doc refs, not prose paths as machine interfaces"
@@ -24,6 +26,16 @@
       "category_id": "opl_framework_contract",
       "owner_scope": "opl",
       "description": "Active framework, runtime, and stage contract surfaces."
+    },
+    {
+      "category_id": "one_person_lab_app",
+      "owner_scope": "app",
+      "description": "Consumer workbench surfaces for ordinary users and agent developers; these surfaces do not own runtime or domain truth."
+    },
+    {
+      "category_id": "foundry_agent_package",
+      "owner_scope": "domain",
+      "description": "OPL-compatible domain-agent package surfaces built on OPL Framework while retaining domain-owned authority and direct skill entry."
     },
     {
       "category_id": "domain_agent_entry",
@@ -69,7 +81,45 @@
         "rca_domain_agent_entry"
       ],
       "notes": [
-        "Public positioning for OPL as a Codex-first, stage-led framework."
+        "Public positioning for OPL as a stage-led framework, app workbench, and Foundry Agent product family."
+      ]
+    },
+    {
+      "surface_id": "one_person_lab_app_workbench",
+      "category_id": "one_person_lab_app",
+      "surface_kind": "desktop_app_workbench",
+      "boundary_role": "app_consumer_workbench",
+      "owner_scope": "app",
+      "truth_mode": "projection_consumer",
+      "workstream_ids": [
+        "grant_ops",
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautogrant",
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/public-surface-index.json#one_person_lab_app_workbench"
+        },
+        {
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:one_person_lab_app_product_layer"
+        }
+      ],
+      "routes_to": [
+        "opl_stage_runtime_framework",
+        "mag_foundry_agent_package",
+        "mas_foundry_agent_package",
+        "rca_foundry_agent_package"
+      ],
+      "notes": [
+        "Represents the app as the user-facing workbench for OPL Framework and installed Foundry Agents.",
+        "The app consumes framework and domain projections; it does not own domain truth, runtime provider truth, quality verdicts, or artifact authority."
       ]
     },
     {
@@ -148,6 +198,87 @@
       ],
       "notes": [
         "Indexes selected domain agents without becoming a domain truth source."
+      ]
+    },
+    {
+      "surface_id": "mag_foundry_agent_package",
+      "category_id": "foundry_agent_package",
+      "surface_kind": "opl_compatible_package",
+      "boundary_role": "grant_foundry_agent_package",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned_package_descriptor",
+      "workstream_ids": [
+        "grant_ops"
+      ],
+      "domain_ids": [
+        "medautogrant"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json#medautogrant"
+        }
+      ],
+      "routes_to": [
+        "mag_domain_agent_entry"
+      ],
+      "notes": [
+        "MAG is published as an OPL-compatible Foundry Agent package with direct app skill entry and domain-owned grant authority.",
+        "The package declares compatibility with OPL Framework; it does not vendor or fork an OPL runtime."
+      ]
+    },
+    {
+      "surface_id": "mas_foundry_agent_package",
+      "category_id": "foundry_agent_package",
+      "surface_kind": "opl_compatible_package",
+      "boundary_role": "research_foundry_agent_package",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned_package_descriptor",
+      "workstream_ids": [
+        "research_ops"
+      ],
+      "domain_ids": [
+        "medautoscience"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json#medautoscience"
+        }
+      ],
+      "routes_to": [
+        "mas_domain_agent_entry"
+      ],
+      "notes": [
+        "MAS is published as an OPL-compatible Foundry Agent package with direct app skill entry and domain-owned medical research authority.",
+        "The package declares compatibility with OPL Framework; it does not vendor or fork an OPL runtime."
+      ]
+    },
+    {
+      "surface_id": "rca_foundry_agent_package",
+      "category_id": "foundry_agent_package",
+      "surface_kind": "opl_compatible_package",
+      "boundary_role": "presentation_foundry_agent_package",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned_package_descriptor",
+      "workstream_ids": [
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domains.json#redcube"
+        }
+      ],
+      "routes_to": [
+        "rca_domain_agent_entry"
+      ],
+      "notes": [
+        "RCA is published as an OPL-compatible Foundry Agent package with direct app skill entry and domain-owned visual deliverable authority.",
+        "The package declares compatibility with OPL Framework; it does not vendor or fork an OPL runtime."
       ]
     },
     {
