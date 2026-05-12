@@ -5,6 +5,7 @@ import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryResume, ru
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
+import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../agent-executor.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
 import { runFamilyRuntime } from '../../family-runtime.ts';
@@ -18,7 +19,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -431,17 +432,55 @@ export function buildInternalCommandSpecs(
       },
     },
     exec: {
-  usage:
-    'opl exec [codex exec args...]',
-  summary:
-    'Run codex exec as a raw passthrough.',
-  examples: [
-    'opl exec "Plan a medical grant proposal revision loop."',
-    'opl exec --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
-    'opl exec --model gpt-5.4 "Summarize current workspace status."',
-  ],
-  handler: (args) => runCodexPassthroughHandled(['exec', ...args]),
-},
+      usage:
+        'opl exec [--executor <codex_cli|hermes_agent|claude_code>] [--cd <path>] [--model <model>] [--provider <provider>] <prompt...>',
+      summary:
+        'Run an OPL agent executor. Codex CLI remains the default; non-default executors require explicit selection.',
+      examples: [
+        'opl exec "Plan a medical grant proposal revision loop."',
+        'opl exec --executor claude_code --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
+        'opl exec --model gpt-5.4 "Summarize current workspace status."',
+      ],
+      handler: (args) => {
+        const parsed = parseExecutorExecArgs(args, commandSpecs.exec);
+        if (!parsed.executorKind && !process.env.OPL_EXECUTOR_KIND?.trim()) {
+          return runCodexPassthroughHandled(['exec', ...args]);
+        }
+        return {
+          version: 'g2',
+          agent_execution_receipt: runAgentExecutor({
+            executor_kind: parsed.executorKind,
+            prompt: parsed.prompt,
+            cwd: parsed.cwd,
+            model: parsed.model,
+            provider: parsed.provider,
+            json: true,
+          }),
+        };
+      },
+    },
+    'executor doctor': {
+      usage: 'opl executor doctor [--executor <codex_cli|hermes_agent|claude_code>]',
+      summary: 'Inspect one OPL agent executor adapter without running a task.',
+      examples: [
+        'opl executor doctor',
+        'opl executor doctor --executor hermes_agent',
+        'opl executor doctor --executor claude_code',
+      ],
+      handler: (args) => runAgentExecutorDoctor({
+        executorKind: parseExecutorOption(args, commandSpecs['executor doctor']),
+      }),
+    },
+    'executor run': {
+      usage: 'opl executor run --request <request.json>',
+      summary: 'Run an OPL AgentExecutionRequest JSON file and return an AgentExecutionReceipt.',
+      examples: [
+        'opl executor run --request /tmp/agent-execution-request.json',
+      ],
+      handler: (args) => runAgentExecutorRequestFile(
+        parseExecutorRequestPath(args, commandSpecs['executor run']),
+      ),
+    },
 resume: {
   usage: 'opl resume [codex resume args...]',
   summary: 'Resume a Codex session as a raw passthrough.',

@@ -4,7 +4,7 @@
 
 ## 当前角色
 
-`OPL` 是 one-person research lab 的 Codex-first、stage-led 智能体运行框架。
+`OPL` 是 one-person research lab 的 stage-led、Agent executor-based 智能体运行框架。
 它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力；domain truth 继续由各个 domain 仓直接持有。
 
 今天的公开 `OPL` 表面已经收口到这几层：
@@ -73,7 +73,7 @@
 
 这份路线图健康时，读者会立刻理解：
 
-- `OPL` 是整个 family 的 Codex-first、stage-led framework owner，持有 activation、stage attempt、queue/wakeup、receipt、recovery、projection 与 shared modules / contracts / indexes
+- `OPL` 是整个 family 的 stage-led、Agent executor-based framework owner，持有 activation、stage attempt、queue/wakeup、receipt、recovery、projection 与 shared modules / contracts / indexes
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
 - Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness 和 `stage_attempt_workbench` 投影；真实 server/worker residency proof 与 domain soak 仍是下一阶段

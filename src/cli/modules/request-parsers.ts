@@ -1,5 +1,6 @@
 import type { ResolveRequestInput } from '../../types.ts';
 import type {
+  AgentExecutorCliInput,
   CommandSpec,
   DashboardCliInput,
   DomainLaunchStrategy,
@@ -736,8 +737,95 @@ function parseSkillPackArgs(
   return parsed;
 }
 
+function parseExecutorOption(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (args.length === 0) {
+    return undefined;
+  }
+  if (args.length !== 2 || args[0] !== '--executor') {
+    throw buildUsageError('executor doctor accepts only --executor <kind>.', spec, {
+      received: args,
+    });
+  }
+  return args[1];
+}
+
+function parseExecutorRequestPath(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (args.length !== 2 || args[0] !== '--request') {
+    throw buildUsageError('executor run requires --request <request.json>.', spec, {
+      required: ['--request'],
+    });
+  }
+  return args[1];
+}
+
+function parseExecutorExecArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): AgentExecutorCliInput {
+  const promptParts: string[] = [];
+  const parsed: Omit<AgentExecutorCliInput, 'prompt'> = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      promptParts.push(token);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--executor':
+        parsed.executorKind = value;
+        break;
+      case '--cd':
+        parsed.cwd = value;
+        break;
+      case '--model':
+        parsed.model = value;
+        break;
+      case '--provider':
+        parsed.provider = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for executor command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  const prompt = promptParts.join(' ').trim();
+  if (!prompt) {
+    throw buildUsageError('opl exec requires a prompt.', spec, {
+      required: ['<prompt...>'],
+    });
+  }
+
+  return {
+    ...parsed,
+    prompt,
+  };
+}
+
 export {
   parseDashboardArgs,
+  parseExecutorExecArgs,
+  parseExecutorOption,
+  parseExecutorRequestPath,
   parseKeyValueArgs,
   parseLaunchDomainArgs,
   parseLogsArgs,

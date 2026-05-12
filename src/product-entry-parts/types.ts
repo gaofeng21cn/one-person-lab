@@ -31,6 +31,7 @@ export type ProductEntryCliInput = {
 export type ProductEntryExecInput = {
   dryRun: boolean;
   prompt: string;
+  executorKind?: string;
   model?: string;
   provider?: string;
   workspacePath?: string;

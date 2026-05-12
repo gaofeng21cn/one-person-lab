@@ -332,7 +332,7 @@ exit 0
   }
 });
 
-test('installed opl launcher bypasses Node for raw Codex exec paths', () => {
+test('installed opl launcher keeps default exec on raw Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-exec-args-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
@@ -355,6 +355,57 @@ exit 0
       '--model',
       'gpt-5.4',
       'hello',
+    ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('installed opl launcher supports explicit non-default executor selection', () => {
+  const fakeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-claude-'));
+  const claudePath = path.join(fakeRoot, 'claude');
+  fs.writeFileSync(
+    claudePath,
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:launcher-claude"]}\\n\'\n',
+    { mode: 0o755 },
+  );
+
+  try {
+    const result = runEntryPathRaw(binPath, ['exec', '--executor', 'claude_code', 'hello'], {
+      OPL_CLAUDE_CODE_BIN: claudePath,
+      OPL_SKIP_SKILL_SYNC: '1',
+    });
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.agent_execution_receipt.executor_kind, 'claude_code');
+    assert.equal(payload.agent_execution_receipt.closeout_packet.closeout_refs[0], 'receipt:launcher-claude');
+    assert.equal(payload.agent_execution_receipt.proof.fallback_allowed, false);
+  } finally {
+    fs.rmSync(fakeRoot, { recursive: true, force: true });
+  }
+});
+
+test('installed opl launcher keeps resume on raw Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-resume-args-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "LAUNCHER RAW RESUME"
+exit 0
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, ['resume', '--last', 'continue'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+    });
+
+    assert.equal(result.stdout, 'LAUNCHER RAW RESUME\n');
+    assert.equal(result.stderr, '');
+    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
+      'resume',
+      '--last',
+      'continue',
     ]);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
