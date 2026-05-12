@@ -3,7 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
-import { inspectTemporalWorkerLifecycle } from './family-runtime-temporal-provider.ts';
+import {
+  inspectTemporalWorkerLifecycle,
+  runTemporalProductionResidencyProof,
+} from './family-runtime-temporal-provider.ts';
 import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 
@@ -31,10 +34,11 @@ async function runTemporalLiveResidencyProof() {
 export async function buildTemporalResidencyProof(
   db: DatabaseSync,
   paths: RuntimePaths,
-  input: { live?: boolean } = {},
+  input: { live?: boolean; production?: boolean } = {},
 ) {
   const worker = await inspectTemporalWorkerLifecycle(paths);
   const liveProof = input.live ? await runTemporalLiveResidencyProof() : null;
+  const productionProof = input.production ? await runTemporalProductionResidencyProof(paths) : null;
   const attemptSummary = stageAttemptSummary(db);
   const temporalAttemptsTotal = countStageAttemptsWhere(db, "WHERE provider_kind = 'temporal'");
   const temporalTypedCloseoutAccepted = countStageAttemptsWhere(
@@ -95,15 +99,24 @@ export async function buildTemporalResidencyProof(
     surface_kind: 'opl_temporal_production_residency_proof',
     provider_kind: 'temporal',
     closeout_status:
-      liveProof?.closeout_status === 'production_residency_code_path_proven'
-        ? 'production_residency_code_path_proven'
-        : lifecycleProof.proof_status === 'proven'
-      && closeoutRequiredProof.proof_status === 'proven'
-      && attemptProof.retry_dead_letter_blocked.proof_status === 'proven'
+      productionProof?.closeout_status === 'production_residency_proven'
         ? 'production_residency_proven'
-        : 'production_residency_needs_live_evidence',
-    proof_mode: input.live ? 'temporal_live_test_server_worker' : 'configured_runtime_ledger_projection',
+        : productionProof
+          ? 'production_residency_needs_live_evidence'
+          : liveProof?.closeout_status === 'production_residency_code_path_proven'
+            ? 'production_residency_code_path_proven'
+            : (lifecycleProof.proof_status === 'proven'
+              && closeoutRequiredProof.proof_status === 'proven'
+              && attemptProof.retry_dead_letter_blocked.proof_status === 'proven')
+              ? 'production_residency_proven'
+              : 'production_residency_needs_live_evidence',
+    proof_mode: input.production
+      ? 'external_temporal_service_worker'
+      : input.live
+        ? 'temporal_live_test_server_worker'
+        : 'configured_runtime_ledger_projection',
     live_residency_proof: liveProof,
+    production_residency_proof: productionProof,
     temporal_worker_lifecycle: worker,
     proofs: {
       lifecycle: lifecycleProof,

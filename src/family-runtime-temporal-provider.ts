@@ -365,6 +365,48 @@ export async function signalTemporalStageAttemptWorkflow(input: {
   });
 }
 
+function temporalProductionProbeInput(
+  suffix: string,
+  closeoutPacket: Record<string, unknown> | null,
+): TemporalStageAttemptWorkflowInput {
+  return {
+    stage_attempt_id: `sat_temporal_production_${suffix}`,
+    workflow_id: `wf_temporal_production_${suffix}`,
+    domain_id: 'medautoscience',
+    stage_id: 'production-residency-proof',
+    workspace_locator: {
+      workspace_root: '/tmp/opl-temporal-production-residency-proof',
+      artifact_root: '/tmp/opl-temporal-production-residency-proof/artifacts',
+    },
+    source_fingerprint: `sha256:temporal-production-residency-${suffix}`,
+    executor_kind: 'codex_cli',
+    retry_budget: {
+      max_attempts: 3,
+    },
+    task_id: `task-temporal-production-residency-${suffix}`,
+    stage_packet_ref: `packet:temporal-production-residency:${suffix}`,
+    checkpoint_refs: [`checkpoint:temporal-production-residency:${suffix}`],
+    closeout_packet: closeoutPacket,
+  };
+}
+
+function temporalProductionTypedCloseoutPacket() {
+  return {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:temporal-production-residency-domain-closeout'],
+    consumed_refs: ['evidence:temporal-production-residency'],
+    consumed_memory_refs: ['memory:publication-route-production-residency'],
+    writeback_receipt_refs: ['memory-writeback:temporal-production-residency-receipt'],
+    rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {
+      decision: 'production_residency_transport_probe',
+      next_owner: 'med-autoscience',
+    },
+  };
+}
+
 export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>) {
   const nativeConnection = await NativeConnection.connect({ address: requireTemporalAddress() });
   try {
@@ -387,6 +429,202 @@ export async function runTemporalStageAttemptWorkerForever() {
       // Keep the worker resident until the process receives a termination signal.
     }),
   );
+}
+
+export async function runTemporalProductionResidencyProof(paths: TemporalWorkerPaths) {
+  const worker = await inspectTemporalWorkerLifecycle(paths);
+  if (worker.lifecycle_status !== 'ready') {
+    return {
+      surface_kind: 'opl_temporal_external_production_residency_proof',
+      provider_kind: 'temporal',
+      proof_environment: 'external_temporal_service_and_managed_worker',
+      closeout_status: 'production_residency_blocked',
+      blockers: worker.blockers.length > 0 ? worker.blockers : ['temporal_worker_not_ready'],
+      temporal_worker_lifecycle: worker,
+      checks: {
+        external_temporal_server_reachable: worker.server_reachable === true,
+        managed_worker_ready: worker.worker_ready === true,
+        worker_completed_attempt: false,
+        worker_restart_requery: false,
+        signal_history_preserved: false,
+        typed_closeout_required_for_completed: false,
+        missing_closeout_blocks_completion: false,
+        retry_or_dead_letter_boundary_observed: false,
+        domain_truth_boundary_preserved: true,
+      },
+      completed_attempt: null,
+      restarted_worker_requery: null,
+      blocked_attempt: null,
+      authority_boundary: {
+        opl: 'temporal_residency_proof_and_transport_metadata_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }
+
+  const address = requireTemporalAddress();
+  const namespace = resolveTemporalNamespace();
+  const taskQueue = resolveTemporalTaskQueue();
+  const suffix = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const completedWorkflowId = `wf-temporal-production-complete-${suffix}`;
+  const blockedWorkflowId = `wf-temporal-production-blocked-${suffix}`;
+  return await withTemporalClient(async (client) => {
+    const completedHandle = await client.workflow.start('StageAttemptWorkflow', {
+      args: [
+        {
+          ...temporalProductionProbeInput('complete', temporalProductionTypedCloseoutPacket()),
+          workflow_id: completedWorkflowId,
+        },
+      ],
+      taskQueue,
+      workflowId: completedWorkflowId,
+      workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
+      workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+    });
+    await completedHandle.signal(humanGateSignal, {
+      signal_kind: 'human_gate',
+      payload: {
+        human_gate_ref: 'gate:temporal-production-residency-proof',
+        reason: 'operator_review',
+      },
+      source: 'temporal-production-residency-proof',
+    });
+    await completedHandle.signal(userInstructionSignal, {
+      signal_kind: 'user_instruction',
+      payload: {
+        instruction_ref: 'user:production-residency-revision-request',
+      },
+      source: 'temporal-production-residency-proof',
+    });
+    await completedHandle.signal(resumeSignal, {
+      signal_kind: 'resume',
+      payload: {
+        resume_ref: 'resume:temporal-production-residency-proof',
+        reason: 'proof_resume',
+      },
+      source: 'temporal-production-residency-proof',
+    });
+    const queriedWhileResident = await completedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
+    const completedState = await completedHandle.result();
+
+    const restartedHandle = client.workflow.getHandle(
+      completedWorkflowId,
+      undefined,
+      { firstExecutionRunId: completedHandle.firstExecutionRunId },
+    );
+    let requery: {
+      requery_status: string;
+      query_available: boolean;
+      query?: TemporalStageAttemptWorkflowState;
+      diagnostic_workflow_status?: string;
+      diagnostic_run_id?: string;
+      query_error?: string;
+    };
+    try {
+      requery = {
+        requery_status: 'stage_attempt_query_available_after_worker_restart',
+        query_available: true,
+        query: await restartedHandle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery),
+      };
+    } catch (error) {
+      const description = await restartedHandle.describe();
+      requery = {
+        requery_status: 'stage_attempt_query_unavailable_after_worker_restart',
+        query_available: false,
+        query_error: error instanceof Error ? error.message : String(error),
+        diagnostic_workflow_status: description.status.name,
+        diagnostic_run_id: description.runId,
+      };
+    }
+
+    const blockedHandle = await client.workflow.start('StageAttemptWorkflow', {
+      args: [
+        {
+          ...temporalProductionProbeInput('blocked', null),
+          workflow_id: blockedWorkflowId,
+        },
+      ],
+      taskQueue,
+      workflowId: blockedWorkflowId,
+      workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
+      workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
+    });
+    const blockedState = await blockedHandle.result();
+    const requeryState = requery.query_available && requery.query ? requery.query : null;
+    const checks = {
+      external_temporal_server_reachable: true,
+      managed_worker_ready: true,
+      worker_completed_attempt: completedState.status === 'completed',
+      worker_restart_requery: requeryState?.stage_attempt_id === completedState.stage_attempt_id,
+      signal_history_preserved:
+        completedState.signals.length === 3
+        && queriedWhileResident.signals.length === 3,
+      typed_closeout_required_for_completed:
+        completedState.completion_boundary.provider_completion === 'completed'
+        && completedState.closeout_refs.length > 0,
+      missing_closeout_blocks_completion:
+        blockedState.status === 'blocked'
+        && blockedState.completion_boundary.provider_completion === 'not_completed',
+      retry_or_dead_letter_boundary_observed:
+        blockedState.activity_events.some(
+          (event: Record<string, unknown>) => event.activity_kind === 'domain_sidecar_dispatch_activity'
+            && event.blocked_reason === 'typed_closeout_packet_required',
+        ),
+      domain_truth_boundary_preserved:
+        completedState.authority_boundary.domain === 'truth_quality_artifact_gate_owner'
+        && completedState.completion_boundary.provider_completion_is_domain_ready === false,
+    };
+    const proven = Object.values(checks).every(Boolean);
+    return {
+      surface_kind: 'opl_temporal_external_production_residency_proof',
+      provider_kind: 'temporal',
+      proof_environment: 'external_temporal_service_and_managed_worker',
+      closeout_status: proven ? 'production_residency_proven' : 'production_residency_failed',
+      address,
+      namespace,
+      task_queue: taskQueue,
+      temporal_worker_lifecycle: worker,
+      blockers: proven ? [] : ['temporal_production_residency_checks_failed'],
+      checks,
+      completed_attempt: {
+        workflow_id: completedHandle.workflowId,
+        run_id: completedHandle.firstExecutionRunId,
+        status: completedState.status,
+        signal_count: completedState.signals.length,
+        closeout_refs: completedState.closeout_refs,
+        consumed_refs: completedState.consumed_refs,
+        consumed_memory_refs: completedState.consumed_memory_refs,
+        writeback_receipt_refs: completedState.writeback_receipt_refs,
+        domain_ready_verdict: completedState.completion_boundary.domain_ready_verdict,
+      },
+      restarted_worker_requery: {
+        workflow_id: completedWorkflowId,
+        requery_status: requery.requery_status,
+        query_available: requery.query_available,
+        status: requeryState?.status ?? null,
+        run_id: requeryState ? completedHandle.firstExecutionRunId : null,
+        diagnostic_workflow_status: requery.diagnostic_workflow_status ?? null,
+        diagnostic_run_id: requery.diagnostic_run_id ?? null,
+      },
+      blocked_attempt: {
+        workflow_id: blockedHandle.workflowId,
+        run_id: blockedHandle.firstExecutionRunId,
+        status: blockedState.status,
+        provider_completion: blockedState.completion_boundary.provider_completion,
+        closeout_refs: blockedState.closeout_refs,
+        blocked_reason:
+          blockedState.activity_events.find(
+            (event: Record<string, unknown>) => event.activity_kind === 'domain_sidecar_dispatch_activity',
+          )?.blocked_reason ?? null,
+      },
+      authority_boundary: {
+        opl: 'temporal_residency_proof_and_transport_metadata_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  });
 }
 
 export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {

@@ -265,7 +265,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime attempt query <stage_attempt_id>',
         'opl family-runtime attempt signal <stage_attempt_id> --kind resume --payload \'{"reason":"operator_resume"}\'',
         'opl family-runtime attempt fixture-run <stage_attempt_id> --closeout-packet \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:demo"]}\'',
-        'opl family-runtime residency proof --provider temporal',
+        'opl family-runtime residency proof --provider temporal [--live|--production]',
         'opl family-runtime tick --source hermes-cron --hydrate',
         'opl family-runtime queue list',
       ],
