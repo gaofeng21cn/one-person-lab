@@ -1,7 +1,7 @@
 {
   "version": "p19.stage-runtime",
   "scope": "opl_stage_led_task_topology",
-  "description": "Machine-readable top-level task topology for OPL as a Codex-first, stage-led agent runtime framework. It lists admitted workstreams and under-definition candidates without recreating the retired gateway, federation, or routed-action interfaces.",
+  "description": "Machine-readable top-level task topology for OPL as a stage-led, Agent executor-based agent runtime framework. It lists admitted workstreams and under-definition candidates without recreating the retired gateway, federation, or routed-action interfaces.",
   "non_goals": [
     "domain_truth_registry",
     "publication_or_export_gate",

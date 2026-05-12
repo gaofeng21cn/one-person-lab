@@ -8,7 +8,7 @@ Date: `2026-05-12`
 
 ## 结论
 
-`OPL` 的目标定位应统一为 Codex-first、stage-led family agent framework。
+`OPL` 的目标定位应统一为 stage-led、Agent executor-based family agent framework。
 
 它对标的是 DeerFlow、Dify、LangGraph、AutoGen、CrewAI、Temporal 这类 agent / workflow framework 的工程层能力，但核心差异是：OPL 不把单个 LLM 调用或轻量 agent node 当成主要原子步骤，而是把 `Codex CLI` 作为默认强执行器，把 domain `stage` 作为可观察、可恢复、可审计的语义工作单元。
 
@@ -20,7 +20,7 @@ Date: `2026-05-12`
 
 本文是接下来 OPL family agent framework 的总开发入口。任何涉及以下主题的实现、文档更新或退役清理，都应先从本文判断 owner、边界、优先级和验收门槛：
 
-- OPL 作为 Codex-first、stage-led 智能体框架的顶层设计。
+- OPL 作为 stage-led、Agent executor-based 智能体框架的顶层设计。
 - Temporal / Hermes / local provider 的 runtime substrate 取舍。
 - `TypeScript`、`Python`、`Go`、`Rust` 在 framework 与 domain agent 中的分工。
 - MAS / MAG / RCA 的 stage/action/projection descriptor 接入、direct skill 等价和 OPL-hosted path。
@@ -66,7 +66,7 @@ Date: `2026-05-12`
 
 | layer | 当前状态 | 说明 |
 | --- | --- | --- |
-| 定位 / owner split | `landed` | OPL 作为 Codex-first、stage-led family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
+| 定位 / owner split | `landed` | OPL 作为 stage-led、Agent executor-based family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
 | Shared contracts / schemas | `landed` | action catalog、stage control plane、runtime supervision、persistence / lifecycle / owner-route、standard skeleton 等 contract 已在 OPL shared layer 冻结。 |
 | Domain memory locator / receipt / migration plan | `family_index_resolved_all_active_domains_descriptor_only` | `family-domain-memory-ref`、`family-domain-memory-writeback`、stage `knowledge_refs` 与 `opl domain-memory list|inspect|migration-plan` 已冻结 locator、receipt、seed corpus 和 migration plan 级只读投影；MAS/MAG/RCA 当前均已按标准 descriptor 被 OPL 解析；stage attempt query/workbench 已能显示 consumed memory refs、writeback receipt refs 与 rejected writes；真实 retrieval、writeback apply、memory body migration 和跨 domain soak 仍需 domain router/apply receipt 验证。 |
 | Local queue / attempt ledger | `usable_dev_baseline` | `opl family-runtime` 已有 typed queue、pending task hydration、guarded dispatch、retry/dead-letter、local inbox 和 stage attempt ledger。 |
@@ -126,7 +126,7 @@ Date: `2026-05-12`
 | Domain memory | MAS/MAG/RCA 标准 memory descriptor 均 resolved；MAS 已有 publication-route workspace apply closure，DM002 read-only proof 已显示 consumed memory ref 与 MAS-owned writeback receipt refs。还差真实 provider-hosted stage entry retrieval、workspace/runtime memory body migration、三仓 accepted/rejected writeback receipt 泛化和按 domain/stage 分组的 operator view。 |
 | Lifecycle primitives | OPL shared schema/locator 已有，MAS 经验已经分类为 framework_generic / mas_domain_specific；还差跨 domain cleanup/restore/retention 的 guarded apply proof。 |
 | Operator product experience | CLI/App 已能读 stage attempt workbench，Aion 已能发送 human gate / resume / dead-letter repair signal；Temporal worker/signal/query 代码路径已有 live proof，还差 provider deployment readiness、真实 MAS domain 执行证明、domain drilldown 与 memory refs 分组操作面。 |
-| 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 Codex-first/provider-backed/stage-led；public help / command spec 已不再把 Hermes executor、Gateway cron 或 compatibility alias 放在普通默认示例里。还差无 active caller 后的物理删除和 history/tombstone 归档。 |
+| 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 stage-led/provider-backed/Agent executor-based；public help / command spec 已不再把 Hermes executor、Gateway cron 或 compatibility alias 放在普通默认示例里。还差无 active caller 后的物理删除和 history/tombstone 归档。 |
 
 下一步不应再新增平行总计划。直接按以下闭环推进：
 

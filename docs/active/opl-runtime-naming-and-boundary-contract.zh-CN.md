@@ -2,7 +2,7 @@
 
 # OPL Runtime 命名与边界合同
 
-> 当前状态说明（`2026-05-11`）：本文是 Codex-first、stage-led OPL framework 的活跃 runtime 命名边界。当前默认公开口径是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
+> 当前状态说明（`2026-05-11`）：本文是 stage-led、Agent executor-based OPL framework 的活跃 runtime 命名边界。当前默认公开口径是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
 
 ## 目的
 
@@ -46,7 +46,7 @@
 
 ```text
 Human / Agent
-  -> OPL Codex-first stage-led framework
+  -> OPL stage-led Agent executor framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
@@ -58,7 +58,7 @@ Human / Agent
 
 每一层回答不同问题：
 
-- `OPL Codex-first stage-led framework`
+- `OPL stage-led Agent executor framework`
   - 默认 session/runtime 语义、stage decomposition、显式 domain-agent activation、admission 语言与边界合同
 - `Unified Harness Engineering Substrate`
   - 跨域共享的上位 Harness Engineering 语言

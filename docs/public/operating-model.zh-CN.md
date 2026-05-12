@@ -6,7 +6,7 @@
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
 
-所以，`OPL` 更准确的理解是面向持续实验室工作的 Codex-first、stage-led 智能体运行框架。它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力。
+所以，`OPL` 更准确的理解是面向持续实验室工作的 stage-led、Agent executor-based 智能体运行框架。它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力。
 
 ## 顶层链路
 

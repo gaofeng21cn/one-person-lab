@@ -7,7 +7,7 @@
 The core judgment of `OPL` is not “how to make one Agent finish one task once.”
 It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-That is why `OPL` should be understood as a Codex-first, stage-led agent runtime framework for continuous lab work. It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes.
+That is why `OPL` should be understood as a stage-led, Agent executor-based agent runtime framework for continuous lab work. It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes.
 
 ## Top-Level Chain
 

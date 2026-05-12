@@ -189,7 +189,16 @@ type SkillPacksCliInput = {
   superpowersProfile?: 'keep' | 'lite' | 'full';
 };
 
+type AgentExecutorCliInput = {
+  executorKind?: string;
+  cwd?: string;
+  model?: string;
+  provider?: string;
+  prompt: string;
+};
+
 export type {
+  AgentExecutorCliInput,
   CommandHandler,
   CommandSpec,
   DashboardCliInput,

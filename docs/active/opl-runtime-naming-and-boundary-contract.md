@@ -2,7 +2,7 @@
 
 # OPL Runtime Naming And Boundary Contract
 
-> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the Codex-first, stage-led OPL framework. Current default public wording is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
+> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the stage-led, Agent executor-based OPL framework. Current default public wording is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
 
 ## Purpose
 
@@ -46,7 +46,7 @@ The recommended long-term chain is:
 
 ```text
 Human / Agent
-  -> OPL Codex-first stage-led framework
+  -> OPL stage-led Agent executor framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
@@ -58,7 +58,7 @@ Human / Agent
 
 Each layer answers a different question:
 
-- `OPL Codex-first stage-led framework`
+- `OPL stage-led Agent executor framework`
   - default session/runtime semantics, stage decomposition, explicit domain-agent activation, admission language, and boundary contracts
 - `Unified Harness Engineering Substrate`
   - the shared top-level Harness Engineering umbrella language across domains

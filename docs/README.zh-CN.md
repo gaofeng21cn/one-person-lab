@@ -8,7 +8,7 @@
 
 ## 当前产品模型
 
-`OPL` 是面向高价值知识工作的完整智能体运行框架。它以 Codex 优先、阶段推进为原则，阶段内默认最小执行单元是 `Codex CLI`，编排单元是领域阶段，产品目标是通过可恢复的阶段尝试、人工关口、收口凭据、进度投影和文件生命周期，推进到可审计的全自动交付。
+`OPL` 是面向高价值知识工作的完整智能体运行框架。它以 阶段推进为原则，并以 Agent executor 为最小执行单位，阶段内默认最小执行单元是 `Codex CLI`，编排单元是领域阶段，产品目标是通过可恢复的阶段尝试、人工关口、收口凭据、进度投影和文件生命周期，推进到可审计的全自动交付。
 
 当前公开的 `OPL` 资源模型统一为：
 
@@ -77,7 +77,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
 
 当前活跃公开模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)。
-当前活跃交互模型是 Codex-first、stage-led、runtime-first、skill-first。
+当前活跃交互模型是 stage-led、Agent executor-based、runtime-first、skill-first。
 已退役的 `gateway / federation / routed-action` 语料以及 `frontdoor` 时代材料，都应放在活跃层之下理解。
 
 ## 公开支撑

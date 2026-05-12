@@ -286,6 +286,9 @@ test('contract domains returns the registered domain-agent summaries', () => {
     domains: [
       {
         domain_id: 'medautogrant',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        embeds_opl_runtime: false,
         independent_domain_agent: 'mag',
         single_app_skill: 'mag',
         product_layer: 'foundry_agent',
@@ -308,6 +311,9 @@ test('contract domains returns the registered domain-agent summaries', () => {
       },
       {
         domain_id: 'medautoscience',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        embeds_opl_runtime: false,
         independent_domain_agent: 'mas',
         single_app_skill: 'mas',
         product_layer: 'foundry_agent',
@@ -331,6 +337,9 @@ test('contract domains returns the registered domain-agent summaries', () => {
       },
       {
         domain_id: 'redcube',
+        product_layer: 'foundry_agent',
+        package_kind: 'opl_compatible_package',
+        embeds_opl_runtime: false,
         independent_domain_agent: 'rca',
         single_app_skill: 'rca',
         product_layer: 'foundry_agent',
@@ -700,7 +709,31 @@ test('help returns command discovery and runnable examples', () => {
     ),
   );
   const commandText = JSON.stringify(output.help.commands);
-  assert.doesNotMatch(commandText, /--executor\b/);
+  assert.match(commandText, /--executor\b/);
+  assert.ok(
+    output.help.commands.some(
+      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
+        entry.command === 'exec'
+        && /--executor <codex_cli\|hermes_agent\|claude_code>/.test(entry.usage)
+        && entry.examples.some((example) => example.includes('--executor claude_code'))
+        && /Codex CLI remains the default/.test(entry.summary),
+    ),
+  );
+  assert.ok(
+    output.help.commands.some(
+      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
+        entry.command === 'executor doctor'
+        && /--executor <codex_cli\|hermes_agent\|claude_code>/.test(entry.usage)
+        && entry.examples.some((example) => example.includes('--executor hermes_agent')),
+    ),
+  );
+  assert.ok(
+    output.help.commands.some(
+      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
+        entry.command === 'executor run'
+        && entry.usage === 'opl executor run --request <request.json>',
+    ),
+  );
   assert.doesNotMatch(commandText, /<codex\|hermes>/);
   assert.doesNotMatch(commandText, /hermes-cron/);
   assert.doesNotMatch(commandText, /Compatibility alias/);

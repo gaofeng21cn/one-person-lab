@@ -3,7 +3,7 @@ import { heartbeat } from '@temporalio/activity';
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
   normalizeTypedStageCloseoutPacket,
-  runCodexStageRunner,
+  runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
@@ -22,7 +22,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     executor_kind: input.executor_kind,
     checkpoint_refs: input.checkpoint_refs ?? [],
     stage_packet_ref: input.stage_packet_ref ?? null,
-    ...await runCodexStageRunner({
+    ...await runAgentStageRunner({
       attempt: input as unknown as Record<string, unknown>,
       stagePacketRef: input.stage_packet_ref,
       runnerMode: input.codex_stage_runner?.runner_mode,
