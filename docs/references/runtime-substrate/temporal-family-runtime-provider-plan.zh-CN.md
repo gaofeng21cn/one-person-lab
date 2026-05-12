@@ -97,17 +97,20 @@ Provider 层不持有：
 
 ### P2. MAS Paper-Line Pilot
 
+状态：read-only pilot proof 已落地，production provider-hosted guarded apply 未完成。2026-05-12 fresh MAS closeout projection 覆盖 DM002、DM003、Obesity 三篇真实 paper line：DM002 为 `ai_reviewer_re_eval`，DM003 与 Obesity 为 `artifact_delta`，三篇均 `writes_performed=false`。DM002 同时显示 publication-route memory consumed ref 和 MAS-owned writeback receipt refs。该证据证明 MAS 可以给 OPL 提供 typed closeout / owner refs；它不等于 Temporal worker 已长驻，也不等于 Codex activity 已在生产 provider 中完成 guarded apply。
+
 交付：
 
 - 当前优先级从“三仓泛化证明”收敛为 MAS real paper line。MAG/RCA controlled attempts 暂缓，但 descriptor/index 不得退化。
-- 用 DM002、DM003、Obesity 三篇 active paper line 做 read-only closeout projection，并在 MAS owner gate 允许时做 guarded apply。
+- 已用 DM002、DM003、Obesity 三篇 active paper line 做 read-only closeout projection；下一步只在 MAS owner gate 允许时做 provider-hosted guarded apply。
 - 将 `stage_knowledge_packet -> Codex activity -> stage_memory_closeout_packet -> router receipt -> progress delta / human gate / stop-loss` 作为 provider attempt trace 展示。
 - 失败时落到 typed blocker、dead-letter 或 human gate，不伪造阳性结论。
 
 验收：
 
-- 三篇真实 paper line 至少各有一个 OPL-ingestable typed closeout packet，指向 MAS-owned evidence refs；可接受结果包括 artifact delta、publication gate replay、AI reviewer update、route decision、human gate、stop-loss 或 typed blocker。
-- 至少一篇 paper line 证明 publication-route memory 被 stage entry 消费，并由 MAS router 产出 accepted/rejected writeback receipt ref。
+- Read-only 验收已满足：三篇真实 paper line 至少各有一个 OPL-ingestable typed closeout packet，指向 MAS-owned evidence refs；可接受结果包括 artifact delta、publication gate replay、AI reviewer update、route decision、human gate、stop-loss 或 typed blocker。
+- Read-only memory proof 已满足：至少一篇 paper line 证明 publication-route memory 被 stage entry 消费，并由 MAS router 产出 accepted/rejected writeback receipt ref。
+- Production 验收仍待完成：真实 Temporal/provider attempt 需要留下 workflow/activity query、MAS sidecar dispatch receipt、typed closeout、MAS owner receipt、progress delta / human gate / stop-loss / typed blocker，以及 no-forbidden-write proof。
 - MAS `publication_eval`、`controller_decisions`、`current_package` 等 truth surface 仍只由 MAS owner 写。
 
 ### P3. MAG/RCA Controlled Attempts
