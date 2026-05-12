@@ -136,6 +136,11 @@ test('Temporal worker readiness helper reports live configured state without sta
   assert.equal(readiness.readiness_status, 'ready');
   assert.equal(readiness.worker_ready, true);
   assert.equal(readiness.live_probe_started_worker, false);
+  assert.equal(readiness.repair_action.action_id, 'none');
+  assert.equal(
+    readiness.repair_action.next_command,
+    'opl family-runtime residency proof --provider temporal --production',
+  );
   assert.equal(readiness.lifecycle.worker_helper, 'runTemporalStageAttemptWorkerUntil');
   assert.deepEqual(readiness.blockers, []);
 });
