@@ -7,6 +7,38 @@ type JsonRecord = Record<string, unknown>;
 
 const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
 const ACCEPTED_SKELETON_SURFACE_KINDS = new Set(['standard_domain_agent_skeleton']);
+const PRODUCTION_CLOSURE_GAPS = [
+  {
+    gap_id: 'temporal_server_worker_residency_proof',
+    closure_status: 'requires_platform_maturity',
+    owner: 'opl_provider_runtime',
+    waits_for: 'real_temporal_server_worker_residency',
+  },
+  {
+    gap_id: 'provider_hosted_domain_soak',
+    closure_status: 'requires_platform_maturity',
+    owner: 'opl_provider_runtime_and_domain_agents',
+    waits_for: 'long_running_mas_mag_rca_provider_hosted_activity',
+  },
+  {
+    gap_id: 'workspace_runtime_memory_apply_receipt',
+    closure_status: 'requires_platform_maturity',
+    owner: 'domain_agents',
+    waits_for: 'domain_owned_memory_body_apply_and_writeback_receipts',
+  },
+  {
+    gap_id: 'physical_repo_skeleton_reorganization',
+    closure_status: 'requires_platform_maturity',
+    owner: 'domain_repos',
+    waits_for: 'direct_skill_and_opl_hosted_path_parity_plus_restore_provenance_proof',
+  },
+  {
+    gap_id: 'legacy_surface_physical_retirement',
+    closure_status: 'requires_platform_maturity',
+    owner: 'opl_and_domain_repos',
+    waits_for: 'no_active_default_path_depends_on_legacy_surface',
+  },
+] as const;
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -163,6 +195,86 @@ function normalizeDomainSelection(value: string) {
   return aliases[key] ?? key;
 }
 
+function buildDescriptorReadiness(skeletonStatus: string, skeleton: ReturnType<typeof normalizeStandardDomainAgentSkeleton>) {
+  const status =
+    skeletonStatus === 'aligned'
+      ? 'descriptor_aligned'
+      : skeletonStatus === 'blocked'
+        ? 'blocked_by_manifest_status'
+        : skeletonStatus === 'missing'
+          ? 'descriptor_missing'
+          : 'descriptor_drift_detected';
+  return {
+    surface_kind: 'opl_domain_agent_descriptor_readiness',
+    status,
+    descriptor_scope: 'manifest_declared_standard_domain_agent_skeleton',
+    artifact_locator_surface_declared: skeleton?.has_artifact_locator_surface ?? false,
+    repo_source_dirs_declared: skeleton?.repo_source_boundary.required_dirs ?? [],
+    authority_boundary: {
+      opl_role: 'descriptor_discovery_and_projection_only',
+      domain_role: 'truth_quality_artifact_owner',
+    },
+  };
+}
+
+function buildPhysicalSkeletonLayoutAudit(args: {
+  manifestBlocked: boolean;
+  skeletonStatus: string;
+  skeleton: ReturnType<typeof normalizeStandardDomainAgentSkeleton>;
+  repoSourceDirs: string[];
+  issues: string[];
+}) {
+  const missingDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !args.repoSourceDirs.includes(dir));
+  const forbiddenDirs = args.repoSourceDirs.filter((dir) => dir === 'artifacts');
+  const artifactBoundary = args.skeleton?.artifact_boundary ?? null;
+  const status =
+    args.manifestBlocked
+      ? 'blocked_by_manifest_status'
+      : !args.skeleton
+        ? 'descriptor_missing'
+        : args.skeletonStatus === 'aligned'
+          ? 'descriptor_aligned_physical_layout_pending'
+          : 'descriptor_drift_blocks_physical_layout_audit';
+
+  return {
+    surface_kind: 'opl_physical_skeleton_layout_audit',
+    status,
+    audit_mode: 'descriptor_declared_layout_only',
+    scope: 'repo_source_boundary_required_dirs_and_artifact_locator_contracts',
+    required_dirs: [...REQUIRED_REPO_SOURCE_DIRS],
+    declared_dirs: args.repoSourceDirs,
+    missing_declared_dirs: missingDirs,
+    forbidden_declared_dirs: forbiddenDirs,
+    artifact_layout_status:
+      artifactBoundary === null
+        ? 'not_declared'
+        : artifactBoundary.repo_contains_real_artifacts || !artifactBoundary.artifact_roots_are_locators
+          ? 'drift_detected'
+          : 'locator_surface_declared',
+    issues: args.issues,
+    next_evidence_required: [
+      'path_compatibility_audit',
+      'direct_skill_path_parity',
+      'opl_hosted_path_parity',
+      'restore_provenance_proof',
+      'no_forbidden_artifact_blob_proof',
+    ],
+    authority_boundary: {
+      opl_role: 'read_only_layout_audit',
+      domain_role: 'repo_layout_owner',
+      artifact_authority: 'domain_owned_workspace_runtime_artifact_locator',
+    },
+  };
+}
+
+function buildProductionClosureGaps() {
+  return PRODUCTION_CLOSURE_GAPS.map((gap) => ({
+    ...gap,
+    projection_status: 'tracked_now',
+    descriptor_alignment_closes_gap: false,
+  }));
+}
+
 export function normalizeStandardDomainAgentSkeleton(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -238,6 +350,15 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
         : skeleton
           ? 'drift_detected'
           : 'missing';
+  const descriptorReadiness = buildDescriptorReadiness(skeletonStatus, skeleton);
+  const physicalSkeletonLayoutAudit = buildPhysicalSkeletonLayoutAudit({
+    manifestBlocked,
+    skeletonStatus,
+    skeleton,
+    repoSourceDirs,
+    issues,
+  });
+  const productionClosureGaps = buildProductionClosureGaps();
 
   return {
     project_id: entry.project_id,
@@ -254,6 +375,9 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     required_repo_source_dirs: [...REQUIRED_REPO_SOURCE_DIRS],
     declared_repo_source_dirs: repoSourceDirs,
     missing_repo_source_dirs: REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !repoSourceDirs.includes(dir)),
+    descriptor_readiness: descriptorReadiness,
+    physical_skeleton_layout_audit: physicalSkeletonLayoutAudit,
+    production_closure_gaps: productionClosureGaps,
     artifact_boundary: skeleton?.artifact_boundary ?? null,
     contract_refs: skeleton?.contracts ?? null,
     issues,
@@ -317,6 +441,16 @@ export function buildFamilyAgentsList(contracts: FrameworkContracts) {
         missing_count: agents.filter((agent) => agent.skeleton_status === 'missing').length,
         drift_detected_count: agents.filter((agent) => agent.skeleton_status === 'drift_detected').length,
         blocked_count: agents.filter((agent) => agent.skeleton_status === 'blocked').length,
+        descriptor_aligned_count: agents.filter((agent) =>
+          agent.descriptor_readiness.status === 'descriptor_aligned'
+        ).length,
+        physical_skeleton_audit_pending_count: agents.filter((agent) =>
+          agent.physical_skeleton_layout_audit.status === 'descriptor_aligned_physical_layout_pending'
+        ).length,
+        production_closure_gap_count: agents.reduce(
+          (total, agent) => total + agent.production_closure_gaps.length,
+          0,
+        ),
       },
       agents,
     },
