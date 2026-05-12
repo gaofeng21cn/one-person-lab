@@ -67,19 +67,19 @@ const domains = [
       projection_kind: 'runtime_program_projection',
       declaration_file: 'contracts/runtime-program/current-program.json',
       registration_summary_paths: [
-        ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
-        ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
+        ['runtime_owner', 'stage_led_framework_boundary', 'framework_consumed_projection'],
+        ['ideal_target', 'opl_stage_led_framework', 'consumes_mag_surfaces'],
       ],
       proof_surface_ref: 'skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface',
       proof_summary_paths: [
-        ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
-        ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
+        ['runtime_owner', 'stage_led_framework_boundary', 'framework_consumed_projection'],
+        ['ideal_target', 'opl_stage_led_framework', 'consumes_mag_surfaces'],
       ],
       authority_summary_paths: {
         domain_truth_owner: ['ideal_target', 'authoring_truth_owner'],
-        domain_owned_truth_refs: ['runtime_owner', 'runtime_manager_boundary', 'mag_owned_truth'],
-        manager_non_goals: ['runtime_owner', 'runtime_manager_boundary', 'manager_non_goals'],
-        does_not_own: ['ideal_target', 'opl_runtime_manager', 'does_not_own'],
+        domain_owned_truth_refs: ['runtime_owner', 'stage_led_framework_boundary', 'mag_owned_truth'],
+        manager_non_goals: ['runtime_owner', 'stage_led_framework_boundary', 'framework_non_goals'],
+        does_not_own: ['ideal_target', 'opl_stage_led_framework', 'does_not_own'],
       },
       json_equals: [
         { group: 'registration', path: ['program_id'], value: 'med-autogrant-mainline' },
@@ -88,37 +88,37 @@ const domains = [
       array_includes: [
         {
           group: 'registration',
-          path: ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
+          path: ['runtime_owner', 'stage_led_framework_boundary', 'framework_consumed_projection'],
           values: ['skill_catalog.domain_projection.opl_stage_runtime_registration'],
         },
         {
           group: 'proof',
-          path: ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
+          path: ['runtime_owner', 'stage_led_framework_boundary', 'framework_consumed_projection'],
           values: ['skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface'],
         },
         {
           group: 'registration',
-          path: ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
+          path: ['ideal_target', 'opl_stage_led_framework', 'consumes_mag_surfaces'],
           values: ['opl_stage_runtime_registration', 'native_helper_consumption'],
         },
         {
           group: 'proof',
-          path: ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
+          path: ['ideal_target', 'opl_stage_led_framework', 'consumes_mag_surfaces'],
           values: ['native_helper_consumption.proof_surface'],
         },
         {
           group: 'authority',
-          path: ['runtime_owner', 'runtime_manager_boundary', 'mag_owned_truth'],
+          path: ['runtime_owner', 'stage_led_framework_boundary', 'mag_owned_truth'],
           values: ['author-side route truth', 'submission-ready export gate'],
         },
         {
           group: 'authority',
-          path: ['runtime_owner', 'runtime_manager_boundary', 'manager_non_goals'],
+          path: ['runtime_owner', 'stage_led_framework_boundary', 'framework_non_goals'],
           values: ['grant-domain truth owner', 'concrete authoring executor'],
         },
         {
           group: 'authority',
-          path: ['ideal_target', 'opl_runtime_manager', 'does_not_own'],
+          path: ['ideal_target', 'opl_stage_led_framework', 'does_not_own'],
           values: ['grant authoring truth', 'route truth', 'submission-ready export gate'],
         },
       ],
@@ -610,21 +610,21 @@ function writeFixtureNativeHelperProjection(domain, repoPath) {
   fs.writeFileSync(currentProgramPath, `${JSON.stringify({
     program_id: 'med-autogrant-mainline',
     runtime_owner: {
-      runtime_manager_boundary: {
-        manager: 'OPL Runtime Manager',
+      stage_led_framework_boundary: {
+        framework: 'OPL stage-led runtime framework',
         mag_owned_truth: [
           'grant_run_id/workspace_id/draft_id/program_id identity boundary',
           'author-side route truth',
           'submission-ready export gate',
         ],
-        manager_consumed_projection: [
+        framework_consumed_projection: [
           'domain_entry_contract',
           'runtime_control.semantic_closure',
           'skill_catalog.domain_projection.runtime_continuity',
           'skill_catalog.domain_projection.opl_stage_runtime_registration',
           'skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface',
         ],
-        manager_non_goals: [
+        framework_non_goals: [
           'grant-domain truth owner',
           'concrete authoring executor',
         ],
@@ -632,7 +632,7 @@ function writeFixtureNativeHelperProjection(domain, repoPath) {
     },
     ideal_target: {
       authoring_truth_owner: 'Med Auto Grant',
-      opl_runtime_manager: {
+      opl_stage_led_framework: {
         consumes_mag_surfaces: [
           'runtime_control',
           'runtime_continuity',

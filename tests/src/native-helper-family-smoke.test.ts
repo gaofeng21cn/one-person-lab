@@ -232,15 +232,15 @@ function writeMagFixture(
   fs.writeFileSync(path.join(repoPath, 'contracts', 'runtime-program', 'current-program.json'), `${JSON.stringify({
     program_id: 'med-autogrant-mainline',
     runtime_owner: {
-      runtime_manager_boundary: {
-        manager: 'OPL Runtime Manager',
+      stage_led_framework_boundary: {
+        framework: 'OPL stage-led runtime framework',
         mag_owned_truth: [
           'grant_run_id/workspace_id/draft_id/program_id identity boundary',
           'author-side route truth',
           'submission-ready export gate',
         ],
-        manager_consumed_projection: managerConsumedProjection,
-        manager_non_goals: [
+        framework_consumed_projection: managerConsumedProjection,
+        framework_non_goals: [
           'grant-domain truth owner',
           'concrete authoring executor',
         ],
@@ -248,7 +248,7 @@ function writeMagFixture(
     },
     ideal_target: {
       authoring_truth_owner: 'Med Auto Grant',
-      opl_runtime_manager: {
+      opl_stage_led_framework: {
         consumes_mag_surfaces: consumesMagSurfaces,
         does_not_own: [
           'grant authoring truth',
