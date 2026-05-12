@@ -4,7 +4,7 @@
 
 ### 决策：产品认知固定为 OPL Framework、One Person Lab App 与 Foundry Agents 三层
 
-原因：OPL 已经从入口聚合和工作台投影演进为完整的 Codex-first、stage-led 智能体框架。如果继续把框架开发、运行托管、普通用户 App 和 MAS/MAG/RCA 这类领域产品都用同一个不分层的 `OPL` 叙事表达，开发者用户和纯使用者都会难以判断自己应该进入哪一层。更清晰的产品结构是：OPL Framework 负责开发与运行框架；One Person Lab App 负责普通用户使用体验；Foundry Agents 负责医学研究、基金、汇报等领域交付。
+原因：OPL 已经从入口聚合和工作台投影演进为完整的 stage-led 智能体框架。如果继续把框架开发、运行托管、普通用户 App 和 MAS/MAG/RCA 这类领域产品都用同一个不分层的 `OPL` 叙事表达，开发者用户和纯使用者都会难以判断自己应该进入哪一层。更清晰的产品结构是：OPL Framework 负责开发与运行框架；One Person Lab App 负责普通用户使用体验；Foundry Agents 负责医学研究、基金、汇报等领域交付。
 
 影响：
 
@@ -18,37 +18,37 @@
 
 ## 2026-05-10
 
-### 决策：Temporal 成为 OPL family runtime provider 的生产 substrate 候选，Hermes-first 口径进入迁移/legacy 状态
+### 决策：Temporal 成为 OPL family runtime provider 的生产 substrate 候选，Hermes-first 口径退出目标在线底座
 
-原因：OPL 当前目标已经从“找一个长期在线会话宿主”收敛为“以 domain stage 为语义单元、以 Codex CLI 为默认执行器的 durable family agent framework”。这类框架需要的是可恢复 stage attempt、activity retry/timeout、human gate signal、status query、workflow history、idempotent dispatch、dead-letter 和 operator projection。Temporal 的 Workflow / Activity / Signal / Query / History 模型比 Hermes-first session substrate 更贴合这条生产可靠性需求；Hermes 仍可作为迁移期 provider、executor/proof lane 或可选安装模块，但不应继续承担目标长期 session/wakeup substrate 的默认口径。
+原因：OPL 当前目标已经从“找一个长期在线会话宿主”收敛为“以 domain stage 为语义单元、以 Agent executor 为最小执行单位的 durable family agent framework”。这类框架需要的是可恢复 stage attempt、activity retry/timeout、human gate signal、status query、workflow history、idempotent dispatch、dead-letter 和 operator projection。Temporal 的 Workflow / Activity / Signal / Query / History 模型比 Hermes-first session substrate 更贴合这条生产可靠性需求；Hermes 不再承担目标长期 session/wakeup substrate 的默认口径，但仍可作为显式 provider、Agent executor adapter、proof lane 或可选安装模块接入。
 
 影响：
 
 - `OPL Runtime Manager` 的目标表述从 Hermes-first 改为 provider-backed family runtime；provider 枚举按 `local_sqlite | hermes_legacy | temporal` 方向冻结。
-- Temporal provider 的语义映射固定为：Workflow = `stage_attempt`，Activity = `Codex CLI` stage execution / domain sidecar dispatch，Signal = human gate / user modification intake / resume，Query = App/CLI progress projection，History = durable replay/audit。
-- `Codex CLI` 仍是 stage 内默认 concrete executor；Temporal 只负责 durable orchestration substrate，不生成 domain idea，不判断 publication/fundability/visual quality。
-- `Hermes-Agent` 降级为 legacy/optional provider、explicit executor/proof lane 或 Codex CLI fallback module；Temporal provider 落地后，Full readiness 不再要求 Hermes 作为目标 substrate。
+- Temporal provider 的语义映射固定为：Workflow = `stage_attempt`，Activity = selected Agent executor stage execution / domain sidecar dispatch，Signal = human gate / user modification intake / resume，Query = App/CLI progress projection，History = durable replay/audit。
+- `Codex CLI` 是当前第一公民 concrete executor；Temporal 只负责 durable orchestration substrate，不生成 domain idea，不判断 publication/fundability/visual quality。
+- `Hermes-Agent` 迁移后的角色是可选 Agent executor adapter、显式 proof lane 或可选安装模块；Temporal provider 落地后，Full readiness 不再要求 Hermes 作为目标 session/wakeup substrate。接入只承诺连接、生命周期、回执与审计面成立，不承诺行为或效果与 `Codex CLI` 等价。
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority；OPL 只持有 provider abstraction、stage attempt ledger、queue、human gate transport、retry/dead-letter、observability 和 projection。
 - 2026-05-08 的 Hermes-first 决策保留为历史与迁移背景，但被本决策 supersede；后续新增投入默认服务 Temporal-backed provider lane。
 
-### 决策：OPL 定位为完整 Codex-first、stage-led family agent runtime framework
+### 决策：OPL 定位为完整 stage-led family agent runtime framework，Codex CLI 是当前第一公民 executor
 
-原因：`MAS`、`MAG`、`RCA` 的共同需求不是让 OPL 变成一个领域大脑，而是需要长期自治、状态恢复、唤醒、队列、human gate、trace、projection 和跨域可见性这类 agent framework 能力。与以 LLM 调用或 agent node 为原子单位的通用框架不同，OPL family 的默认执行器是更强的 `Codex CLI`，更合理的语义单元是 domain stage：一个 stage 冻结目标、输入、skill/prompt、评价方法、handoff、receipt 和 authority boundary，stage 内部让 Codex 与 domain skill 自主完成专家工作。
+原因：`MAS`、`MAG`、`RCA` 的共同需求不是让 OPL 变成一个领域大脑，而是需要长期自治、状态恢复、唤醒、队列、human gate、trace、projection 和跨域可见性这类 agent framework 能力。与以 LLM 调用或 agent node 为原子单位的通用框架不同，OPL family 的执行原子是 Agent executor，当前第一公民 executor 是 `Codex CLI`，更合理的语义单元是 domain stage：一个 stage 冻结目标、输入、skill/prompt、评价方法、handoff、receipt 和 authority boundary，stage 内部让被选中的 executor 与 domain skill 自主完成专家工作。
 
 这次定位同时明确：OPL 不是只做入口聚合、工作台投影或共享合同目录，而是完整的智能体运行框架。它可以使用 Temporal、Hermes legacy、local provider 或未来其他外部 substrate，但阶段生命周期、队列、attempt ledger、human gate、恢复、投影、artifact/file lifecycle 和 operator visibility 的 framework 边界归 OPL；provider 只承担可替换的运行 substrate。OPL 的产品目标是让医学研究、基金写作、视觉交付和后续高价值知识工作尽可能自动推进到可审计交付。
 
 影响：
 
-- `OPL` 的当前身份统一写成完整 Codex-first、stage-led family agent runtime framework，而不是 MAS/MAG/RCA 的领域模块集合、入口聚合层或单纯 runtime support layer。
+- `OPL` 的当前身份统一写成完整 stage-led family agent runtime framework，而不是 MAS/MAG/RCA 的领域模块集合、入口聚合层或单纯 runtime support layer。
 - `OPL` 持有 activation、typed family queue、durable runtime/session support、wakeup/retry/dead-letter、approval transport、stage descriptor、handoff envelope、receipt、projection、trace 和 parity helper。
 - `MAS`、`MAG`、`RCA` 持有各自 stage semantics、prompt/skill、quality gate、truth reducer、artifact/package authority、publication / submission / deliverable verdict。
 - 直接 Codex App skill 调用保持一等入口；OPL 可以托管和唤醒 domain agent，但不要求所有调用都先经过 OPL。
-- 大型任务默认按接近人类专家实施的 stage 推进；`Codex CLI` 是 stage 内默认最小执行单元。
+- 大型任务默认按接近人类专家实施的 stage 推进；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor。
 - 后续流程优化优先改 domain stage pack、prompt、skill、quality gate 和 framework descriptor；不得把领域判断重新写回 OPL 机械脚本。
 
 ### 决策：将 MAS stage 控制面经验提升为 OPL family 设计方向
 
-原因：`MAS` 的论文生产、`RCA` 的视觉交付和 `MAG` 的基金写作都属于开放专家工作流。把这些流程写成大段硬编码脚本会限制 `Codex CLI` 的自主拆解、创作、审核和修订能力，也会让程序承担不该承担的领域质量判断。更稳妥的 family 原则是用 `stage` 描述专家工作阶段：每个 stage 冻结目标、输入输出、skill、prompt、评价方法、handoff、receipt 与 authority boundary；stage 内部的执行由 `Codex CLI` 和 domain-owned AI workflow 自主推进。
+原因：`MAS` 的论文生产、`RCA` 的视觉交付和 `MAG` 的基金写作都属于开放专家工作流。把这些流程写成大段硬编码脚本会限制 Agent executor 的自主拆解、创作、审核和修订能力，也会让程序承担不该承担的领域质量判断。更稳妥的 family 原则是用 `stage` 描述专家工作阶段：每个 stage 冻结目标、输入输出、skill、prompt、评价方法、handoff、receipt 与 authority boundary；stage 内部的执行由被选中的 Agent executor 和 domain-owned AI workflow 自主推进。
 
 影响：
 
@@ -57,7 +57,7 @@
 - `MAS` 作为深 adapter 候选，必须先盘点现有 `scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` 等 route contract，以及 controller / runtime / quality / delivery / read-model surface；OPL 文档里的 study intake、evidence preparation、analysis / argument、manuscript authoring 与 publication gate 只作为 family 抽象维度，不替换 MAS 实际 stage 名称、数量或 route id。
 - `RCA` 作为轻 adapter 优先候选，把 source intake、communication strategy、visual direction、artifact creation、review / revision 与 package / handoff 映射成 stage，但视觉质量 verdict、deliverable authority 与最终审美判断仍归 RCA。
 - `MAG` 把 call intake、fundability strategy、specific aims、proposal authoring、review / rebuttal 与 package gate 映射成 grant stage pack，但 fundability verdict、评审结论与提交可行性仍归 MAG。
-- `OPL` 的角色保持 discovery、index、projection、parity 与 typed queue dispatch；不得把 stage 控制面写成替代 `Codex CLI` 或 domain quality gate 的固定脚本引擎。
+- `OPL` 的角色保持 discovery、index、projection、parity 与 typed queue dispatch；不得把 stage 控制面写成替代 Agent executor 或 domain quality gate 的固定脚本引擎。
 - 当前落地面是参考计划 [OPL Family stage control plane adoption plan](./references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md)、最小 `family-stage-control-plane` schema、manifest normalizer / parity helper 与只读 `opl stages list|inspect`；它不是 workflow runtime。MAS 第一阶段是 inventory 和映射，不是 stage 重构。
 
 ## 2026-05-08
@@ -70,9 +70,9 @@
 
 影响：
 
-- 历史上 `opl install` 曾计划默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；当前目标口径已改为 provider-backed family runtime，Temporal 是生产 substrate 候选，Hermes 只保留 legacy/optional provider 或显式 executor/proof lane。
+- 历史上 `opl install` 曾计划默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；当前目标口径已改为 provider-backed family runtime，Temporal 是生产 substrate 候选，Hermes 只保留为可选 Agent executor adapter、显式 proof lane 或诊断/历史语境。
 - 历史上 `Hermes-Agent` 曾被写成 Full OPL family readiness 的 required online substrate；当前 Full OPL readiness 应按已配置 family runtime provider ready 判断，不能再把 Hermes 写成目标必需项。
-- `Codex CLI` 仍是默认具体执行器；Hermes online substrate 不自动替换 domain-selected executor，也不成为 MAS/MAG/RCA truth owner。
+- `Codex CLI` 仍是默认且第一公民的具体执行器；Hermes online substrate 不自动替换 domain-selected executor，也不成为 MAS/MAG/RCA truth owner。
 - 新增 `opl family-runtime` typed queue / bridge：队列位于 `${OPL_STATE_DIR}/family-runtime/queue.sqlite`，Hermes cron/webhook 负责唤醒，OPL tick 负责跨仓 dispatch 和本地 inbox/event 记录。
 - `opl family-runtime intake` 与 `opl family-runtime tick --hydrate` 会先读取 domain sidecar export 的 `pending_family_tasks[]`，按 dedupe key 入队，再在同一 tick 中派发已入队任务。Hermes cron 注册脚本必须使用 `opl family-runtime tick --source hermes-cron --hydrate`，否则只会消费已有队列而不会把 MAS/MAG/RCA read-model blocker 转成 executable task。
 - 历史计划中 Full 首次安装包曾要求携带 Hermes payload、profile seed、CLI shim、LaunchAgent install/repair scripts、版本 manifest 与 checksum；当前 Full 包应携带已配置 family runtime provider 所需 payload，Temporal provider 落地后由 provider manifest/checksum 表达 readiness。
@@ -252,7 +252,7 @@
 - prebuild/cache 策略先按 manifest 和 `OPL_STATE_DIR` cache 落地，目标是让 fresh install 优先恢复匹配平台的 helper binary，只有缺失或无效时才走本地 Cargo build
 - native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
 - `opl runtime snapshot` 可以为桌面托盘和 App Runtime Workbench 投影 `attention_items`、`running_items`、`recent_items` 与 MAS study drilldown/read-only workbench 数据，但只读取 domain-owned durable surfaces；为了托盘状态显示或 App drilldown 不新增本地 daemon，也不把 MAS `mas_opl_runtime_workbench_projection` 升级为 OPL-owned study truth
-- family runtime provider 继续是外部 online runtime substrate owner；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影。Temporal 是目标生产 provider，Hermes 是迁移期 legacy/optional provider
+- family runtime provider 继续是外部 online runtime substrate owner；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影。Temporal 是目标生产 provider，Hermes 只在显式 provider / Agent executor adapter 或诊断语境中出现
 - `domain task registration hydration` 是 Runtime Manager 的一等职责：OPL 读取 domain-owned sidecar export 中显式授权的 `pending_family_tasks[]`，写入 OPL typed queue，并保持 retry / dead-letter / notification / approval 语义；OPL 不从 read-only projection 自行推断医学、基金或视觉交付任务。
 - provider system service lifecycle 由 provider-specific installer/gateway command 管理；OPL 只触发、检查和报告 readiness
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
@@ -415,7 +415,7 @@
 
 ### 决策：统一 runtime substrate，不强制统一具体执行器
 
-状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production target 口径吸收。当前读法是：已配置的 family runtime provider 承担长期在线 substrate；Temporal-backed provider 是生产目标；`Hermes-Agent` 只保留 legacy/optional provider 或显式 executor/proof lane。`Codex CLI` 当前仍是家族默认具体执行器，默认模式是 `autonomous`。
+状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production target 口径吸收。当前读法是：已配置的 family runtime provider 承担长期在线 substrate；Temporal-backed provider 是生产目标；`Hermes-Agent` 保留为可选 Agent executor adapter 或显式 proof lane。`Codex CLI` 当前仍是家族默认且第一公民的具体执行器，默认模式是 `autonomous`。
 
 影响：
 
@@ -423,13 +423,13 @@
 - `OPL` 与各领域仓继续负责 gateway、authority、object contract、audit truth
 - 具体任务执行继续通过领域内部的执行路径完成
 
-### 决策：家族默认执行器正式名称冻结为 `Codex CLI`
+### 决策：家族第一公民执行器正式名称冻结为 `Codex CLI`
 
 原因：这是当前最成熟、质量最可控、并且已经在医学研究线证明可行的默认路线；把正式名称、默认模式与路线状态分开表达，更适合跨仓共享合同长期维护。
 
 影响：
 
-- 家族默认执行器正式名称统一写作 `Codex CLI`
+- 家族第一公民执行器正式名称统一写作 `Codex CLI`
 - 家族默认执行模式统一写作 `autonomous`
-- `Hermes-Agent` 继续保留正式名称，当前路线状态统一写作 `experimental`
+- `Hermes-Agent` 继续保留正式名称，当前路线状态统一写作 `optional_executor_adapter / experimental`
 - 默认模型与默认 reasoning effort 继续继承本机 `Codex` 默认配置

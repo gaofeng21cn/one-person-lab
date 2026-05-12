@@ -14,6 +14,14 @@ export interface DomainContract {
   domain_id: string;
   label: string;
   project: string;
+  product_layer: string;
+  foundry_agent_package: {
+    package_kind: string;
+    built_on: string;
+    app_surface: string;
+    direct_skill_entry: boolean;
+    embeds_opl_runtime: boolean;
+  };
   independent_domain_agent: {
     agent_id: string;
     status: string;

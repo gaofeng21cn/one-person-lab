@@ -50,7 +50,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置默认执行器、已配置的 OPL 家族运行时提供者、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。完整就绪需要核心环境、领域模块、已配置的家族运行时提供者三层都通过。生产目标是由 Temporal 支撑的运行时提供者承接可恢复的阶段尝试；当前 Hermes/local provider 路径只作为迁移期或历史实现信号。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置执行引擎、领域模块、技能、`officecli` 这类配套命令行工具和桌面工作台，不额外打开服务窗口。它会把专业阶段、进度和文件组织在同一个工作台里。
 
 如果你更习惯从终端安装：
 
@@ -90,7 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给技术操作者的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保当前默认执行器、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。当前打包默认执行器是 Codex CLI。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保当前第一公民执行器、已配置的 OPL 家族运行时提供者、MAS/MAG/RCA、推荐技能、`officecli` 这类必要配套命令行工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。当前打包第一公民执行器是 Codex CLI。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent、Claude Code 等同类工具是可显式选择的 Agent executor adapter，必须通过回执和审计面证明接入。
 
 ### 安装后常用命令
 
@@ -114,7 +114,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 提供工作空间、会话、阶段尝试、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-架构上，OPL 是面向高价值知识交付的阶段推进式完整家族智能体运行框架。它可以使用外部运行时提供者和具体执行器，但这些是实现选择；OPL 持有的框架边界是 activation、typed family queue、durable session/runtime 支撑、stage attempt ledger、wakeup/retry/approval transport、shared discovery 和 projection。各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。这样 OPL 能支撑 MAS/MAG/RCA，并以高价值知识工作的全自动交付为目标，但不会变成它们的领域大脑。
+架构上，OPL 是面向高价值知识交付的阶段推进式完整家族智能体运行框架。它以 Agent executor 为最小执行单位；当前第一公民 executor 是 Codex CLI，Hermes-Agent、Claude Code 等同类工具可以作为显式交互/执行适配器接入。OPL 持有的框架边界是 activation、typed family queue、durable session/runtime 支撑、stage attempt ledger、wakeup/retry/approval transport、shared discovery 和 projection。各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。
 
 在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 OPL 与操作者环境消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
@@ -129,10 +129,10 @@ One Person Lab App 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aio
 ### 运行说明
 
 - 默认入口是 `opl`、`opl exec` 和 `opl resume`。除非显式切换运行时或显式激活 domain agent，这几个入口都使用已配置默认执行器语义。
-- OPL 的编排单元是领域阶段。大型任务应按接近人类专家的方式推进：界定目标、准备材料、执行、审核、修订和收口。stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给已选执行器执行。
-- OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
-- OPL family runtime 正在收敛为 provider-backed。Temporal 是 durable stage-attempt workflow、activity retry/timeout、human-gate signal、status query 与 execution history 的首选生产 substrate 候选。Hermes-Agent 在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；Temporal provider 落地后，它不再是目标长期 session/wakeup substrate。
-- `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。family runtime provider 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。
+- OPL 的编排单元是领域阶段。大型任务应按接近人类专家的方式推进：界定目标、准备材料、执行、审核、修订和收口。stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给已选 Agent executor 执行。
+- OPL 会把 `Codex CLI` 作为当前第一公民受管执行器检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
+- OPL family runtime 正在收敛为 provider-backed。Temporal 是 durable stage-attempt workflow、activity retry/timeout、human-gate signal、status query 与 execution history 的首选生产 substrate 候选。Hermes-Agent 不再是目标长期 session/wakeup substrate，但可以作为显式选择的 Agent executor adapter / proof lane 保留。
+- `Codex CLI` 仍是默认且第一公民的具体执行器。其他 executor adapter 当前只承诺能接入、能被生命周期管理、能产出回执并可审计；OPL 不承诺它们的行为或效果与 Codex CLI 等价。family runtime provider 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。
 - 使用 `opl family-runtime status|doctor|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|queue list|approve|notify list|events export` 操作 OPL family runtime bridge 与 stage attempt ledger。`opl install --no-online-runtime` 与 provider-disable 环境开关只用于开发/离线诊断，并输出 degraded Full readiness。
 - 首次启动需要 Core ready、Domain modules ready、已配置的 family runtime provider ready 三层都通过，Full readiness 才算完整。迁移期本地 CLI/status/manifest 仍可能暴露 Hermes/local provider 状态作为 legacy readiness signal。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
