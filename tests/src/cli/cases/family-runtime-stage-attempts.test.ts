@@ -347,6 +347,87 @@ test('family-runtime lifecycle guarded apply separates OPL ledger apply from dom
   }
 });
 
+test('family-runtime controlled apply contract returns MAG/RCA domain receipt requirements without domain writes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-controlled-apply-'));
+  try {
+    const mag = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'specific-aims',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mag',
+        controlled_stage_attempt: {
+          action_kind: 'grant_stage_attempt_apply',
+          contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
+        },
+      }),
+      '--source-fingerprint',
+      'sha256:mag-controlled-apply',
+    ], familyRuntimeEnv(stateRoot));
+    const rca = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'visual-review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/rca',
+        controlled_soak_no_regression_attempt: {
+          surface_kind: 'controlled_soak_no_regression_attempt',
+          no_regression_evidence_refs: ['rca:no-regression:visual-stage-1'],
+        },
+      }),
+      '--source-fingerprint',
+      'sha256:rca-controlled-apply',
+    ], familyRuntimeEnv(stateRoot));
+
+    const magQuery = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      mag.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], familyRuntimeEnv(stateRoot));
+    const rcaQuery = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      rca.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], familyRuntimeEnv(stateRoot));
+    const magContract = magQuery.family_runtime_stage_attempt_query.stage_attempt_query.controlled_apply_contract;
+    const rcaContract = rcaQuery.family_runtime_stage_attempt_query.stage_attempt_query.controlled_apply_contract;
+
+    assert.equal(magContract.surface_kind, 'family_runtime_controlled_apply_contract');
+    assert.equal(magContract.contract_id, 'opl_temporal_controlled_stage_attempt_apply_contract');
+    assert.equal(magContract.contract_open, true);
+    assert.equal(magContract.apply_status, 'blocked_domain_receipt_required');
+    assert.equal(
+      magContract.typed_blockers[0].blocker_id,
+      'opl_temporal_controlled_stage_attempt_apply_contract:domain_receipt_or_no_regression_evidence_required',
+    );
+    assert.equal(magContract.no_forbidden_write_proof.opl_writes_domain_truth, false);
+    assert.equal(magContract.no_forbidden_write_proof.opl_writes_domain_artifact, false);
+    assert.equal(magContract.no_forbidden_write_proof.opl_writes_domain_memory_body, false);
+    assert.equal(rcaContract.contract_id, 'opl_temporal_controlled_visual_stage_attempt_apply_contract');
+    assert.equal(rcaContract.apply_status, 'no_regression_evidence_observed');
+    assert.deepEqual(rcaContract.no_regression_evidence_refs, ['rca:no-regression:visual-stage-1']);
+    assert.deepEqual(rcaContract.typed_blockers, []);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime attempt query exposes task dead-letter ledger on linked attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-dead-letter-'));
   try {

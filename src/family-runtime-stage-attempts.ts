@@ -13,6 +13,7 @@ import {
   normalizeTypedStageCloseoutPacket,
   type TypedStageCloseoutPacket,
 } from './family-runtime-codex-stage-runner.ts';
+import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import {
   buildTemporalStageAttemptWorkflowContract,
@@ -717,6 +718,11 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
           ...consumedRefs,
           ...writebackReceiptRefs,
         ],
+      }),
+      controlled_apply_contract: buildFamilyRuntimeControlledApplyContract({
+        domainId: attempt.domain_id,
+        stageId: attempt.stage_id,
+        workspaceLocator: attempt.workspace_locator,
       }),
       operator_visibility: {
         provider_kind: attempt.provider_kind,
