@@ -15,6 +15,8 @@ const helperBinaries = [
   'opl-artifact-indexer',
   'opl-state-indexer',
 ];
+const defaultOciImage = 'ghcr.io/gaofeng21cn/one-person-lab-native-helper';
+const nativeHelperLayerMediaType = 'application/vnd.onepersonlab.native-helper.v1+gzip';
 
 const args = process.argv.slice(2);
 const command = args[0] && !args[0].startsWith('--') ? args[0] : 'install';
@@ -80,6 +82,13 @@ function installPrebuild() {
   let check = checkPrebuild();
   if (check.status !== 'available') {
     const restore = restoreReleaseArchive();
+    if (restore) {
+      restoreAttempts.push(restore);
+      check = checkPrebuild();
+    }
+  }
+  if (check.status !== 'available') {
+    const restore = restoreOciArchive();
     if (restore) {
       restoreAttempts.push(restore);
       check = checkPrebuild();
@@ -299,6 +308,83 @@ function resolveReleaseArchiveUrl() {
   return `${base.replace(/\/$/, '')}/${archiveFileName()}`;
 }
 
+function restoreOciArchive() {
+  const imageRef = resolveOciImageRef();
+  if (!imageRef) {
+    return null;
+  }
+  if (imageRef.registry !== 'ghcr.io') {
+    return {
+      status: 'oci_registry_unsupported',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      error: `unsupported native helper OCI registry: ${imageRef.registry}`,
+    };
+  }
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-oci-'));
+  try {
+    const tokenResult = fetchGhcrToken(imageRef);
+    if (tokenResult.status !== 'ok') {
+      return tokenResult;
+    }
+    const manifestResult = fetchOciManifest(imageRef, tokenResult.token);
+    if (manifestResult.status !== 'ok') {
+      return manifestResult;
+    }
+    const layer = selectNativeHelperLayer(manifestResult.manifest);
+    if (!layer) {
+      return {
+        status: 'oci_native_helper_layer_missing',
+        image: imageRef.image,
+        tag: imageRef.tag,
+        error: 'native helper archive layer was not present in OCI manifest',
+      };
+    }
+
+    const archivePath = path.join(tempRoot, archiveFileName());
+    const blobResult = fetchOciBlob(imageRef, tokenResult.token, layer.digest, archivePath);
+    if (blobResult.status !== 'ok') {
+      return blobResult;
+    }
+    const digestStatus = verifyOciDigest(archivePath, layer.digest);
+    if (digestStatus.status !== 'ok') {
+      return digestStatus;
+    }
+
+    fs.rmSync(prebuildDir(), { recursive: true, force: true });
+    fs.mkdirSync(prebuildDir(), { recursive: true });
+    const result = spawnSync('tar', tarArgs(['-xzf', archivePath, '-C', prebuildDir()]), {
+      encoding: 'utf8',
+    });
+    if (result.status !== 0) {
+      return {
+        status: 'oci_archive_extract_failed',
+        image: imageRef.image,
+        tag: imageRef.tag,
+        digest: layer.digest,
+        error: result.stderr.trim() || `tar exited with status ${result.status}`,
+      };
+    }
+    return {
+      status: 'restored_oci_archive',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      digest: layer.digest,
+      prebuild_dir: prebuildDir(),
+    };
+  } catch (error) {
+    return {
+      status: 'oci_archive_restore_failed',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
 function archivePathFromUrl(archiveUrl, tempRoot) {
   if (archiveUrl.startsWith('file://')) {
     return fileURLToPath(archiveUrl);
@@ -314,6 +400,153 @@ function archivePathFromUrl(archiveUrl, tempRoot) {
     return target;
   }
   return path.resolve(archiveUrl);
+}
+
+function resolveOciImageRef() {
+  const configured = options['oci-image'] ?? process.env.OPL_NATIVE_HELPER_PREBUILD_OCI_IMAGE ?? defaultOciImage;
+  if (!configured || ['0', 'false', 'off', 'none'].includes(String(configured).trim().toLowerCase())) {
+    return null;
+  }
+  const raw = String(configured).trim();
+  const [registry, ...repositoryParts] = raw.split('/');
+  if (!registry || repositoryParts.length === 0) {
+    throw new Error(`Invalid native helper OCI image: ${raw}`);
+  }
+  let repository = repositoryParts.join('/');
+  let tag = options['oci-tag'] ?? process.env.OPL_NATIVE_HELPER_PREBUILD_OCI_TAG ?? `${targetTriple}-${crateVersion}`;
+  const tagSeparator = repository.lastIndexOf(':');
+  if (tagSeparator > repository.lastIndexOf('/')) {
+    tag = repository.slice(tagSeparator + 1);
+    repository = repository.slice(0, tagSeparator);
+  }
+  return {
+    image: `${registry}/${repository}`,
+    registry,
+    repository,
+    tag,
+  };
+}
+
+function fetchGhcrToken(imageRef) {
+  const scope = `repository:${imageRef.repository}:pull`;
+  const tokenUrl = `https://${imageRef.registry}/token?service=${encodeURIComponent(imageRef.registry)}&scope=${encodeURIComponent(scope)}`;
+  const result = spawnSync('curl', ['-fsSL', tokenUrl], {
+    encoding: 'utf8',
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    return {
+      status: 'oci_token_fetch_failed',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      error: result.stderr.trim() || `curl exited with status ${result.status}`,
+    };
+  }
+  try {
+    const payload = JSON.parse(result.stdout);
+    const token = typeof payload.token === 'string' ? payload.token : '';
+    if (!token) {
+      throw new Error('missing token field');
+    }
+    return {
+      status: 'ok',
+      token,
+    };
+  } catch (error) {
+    return {
+      status: 'oci_token_parse_failed',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function fetchOciManifest(imageRef, token) {
+  const manifestUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/manifests/${imageRef.tag}`;
+  const result = spawnSync('curl', [
+    '-fsSL',
+    '-H',
+    `Authorization: Bearer ${token}`,
+    '-H',
+    'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+    manifestUrl,
+  ], {
+    encoding: 'utf8',
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    return {
+      status: 'oci_manifest_fetch_failed',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      error: result.stderr.trim() || `curl exited with status ${result.status}`,
+    };
+  }
+  try {
+    return {
+      status: 'ok',
+      manifest: JSON.parse(result.stdout),
+    };
+  } catch (error) {
+    return {
+      status: 'oci_manifest_parse_failed',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function selectNativeHelperLayer(manifest) {
+  const layers = Array.isArray(manifest?.layers) ? manifest.layers : [];
+  return layers.find((layer) => layer?.mediaType === nativeHelperLayerMediaType)
+    ?? layers.find((layer) => String(layer?.annotations?.['org.opencontainers.image.title'] ?? '').endsWith(archiveFileName()))
+    ?? null;
+}
+
+function fetchOciBlob(imageRef, token, digest, target) {
+  const blobUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/blobs/${digest}`;
+  const result = spawnSync('curl', [
+    '-fsSL',
+    '-H',
+    `Authorization: Bearer ${token}`,
+    blobUrl,
+    '-o',
+    target,
+  ], {
+    encoding: 'utf8',
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    return {
+      status: 'oci_blob_fetch_failed',
+      image: imageRef.image,
+      tag: imageRef.tag,
+      digest,
+      error: result.stderr.trim() || `curl exited with status ${result.status}`,
+    };
+  }
+  return {
+    status: 'ok',
+  };
+}
+
+function verifyOciDigest(filePath, digest) {
+  if (!String(digest).startsWith('sha256:')) {
+    return { status: 'ok' };
+  }
+  const expected = digest.slice('sha256:'.length);
+  const bytes = fs.readFileSync(filePath);
+  const actual = crypto.createHash('sha256').update(bytes).digest('hex');
+  if (actual !== expected) {
+    return {
+      status: 'oci_blob_digest_mismatch',
+      digest,
+      error: `expected ${expected}, found ${actual}`,
+    };
+  }
+  return { status: 'ok' };
 }
 
 function tarArgs(args) {
