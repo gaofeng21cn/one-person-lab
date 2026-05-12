@@ -53,6 +53,47 @@ type TemporalWorkerState = {
 
 type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
 
+function buildTemporalWorkerRepairAction(input: {
+  readinessStatus: TemporalWorkerReadinessStatus;
+  address?: string | null;
+  namespace?: string | null;
+  taskQueue?: string | null;
+}) {
+  const repairCommands = {
+    configure_temporal_address:
+      'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
+    verify_temporal_server:
+      'opl family-runtime worker status --provider temporal',
+    start_managed_worker:
+      'opl family-runtime worker start --provider temporal',
+    rerun_production_proof:
+      'opl family-runtime residency proof --provider temporal --production',
+  };
+  const actionByStatus: Record<TemporalWorkerReadinessStatus, string> = {
+    not_configured: 'configure_temporal_service',
+    server_unreachable: 'repair_temporal_service',
+    worker_not_ready: 'start_temporal_worker',
+    ready: 'none',
+  };
+  const nextCommandByStatus: Record<TemporalWorkerReadinessStatus, string | null> = {
+    not_configured: repairCommands.configure_temporal_address,
+    server_unreachable: repairCommands.verify_temporal_server,
+    worker_not_ready: repairCommands.start_managed_worker,
+    ready: repairCommands.rerun_production_proof,
+  };
+  return {
+    surface_kind: 'temporal_worker_repair_action',
+    provider_kind: 'temporal',
+    action_id: actionByStatus[input.readinessStatus],
+    required_env: ['OPL_TEMPORAL_ADDRESS'],
+    current_address: input.address ?? null,
+    namespace: input.namespace ?? null,
+    task_queue: input.taskQueue ?? null,
+    next_command: nextCommandByStatus[input.readinessStatus],
+    repair_commands: repairCommands,
+  };
+}
+
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
@@ -198,6 +239,12 @@ export function buildTemporalWorkerReadiness(input: {
     ...(address && serverReachable === false ? ['temporal_server_unreachable'] : []),
     ...(address && serverReachable !== false && !workerReady ? ['temporal_worker_not_ready'] : []),
   ];
+  const repairAction = buildTemporalWorkerRepairAction({
+    readinessStatus,
+    address,
+    namespace,
+    taskQueue,
+  });
   return {
     surface_kind: 'temporal_worker_readiness',
     provider_kind: 'temporal',
@@ -213,6 +260,7 @@ export function buildTemporalWorkerReadiness(input: {
     managed_worker_pid: input.managedWorkerPid ?? null,
     managed_worker_state_path: input.managedWorkerStatePath ?? null,
     blockers,
+    repair_action: repairAction,
     lifecycle: buildTemporalWorkerLifecycleContract(),
     authority_boundary: {
       opl: 'worker_lifecycle_readiness_projection_only',
@@ -434,13 +482,33 @@ export async function runTemporalStageAttemptWorkerForever() {
 export async function runTemporalProductionResidencyProof(paths: TemporalWorkerPaths) {
   const worker = await inspectTemporalWorkerLifecycle(paths);
   if (worker.lifecycle_status !== 'ready') {
+    const blockers = worker.blockers.length > 0 ? worker.blockers : ['temporal_worker_not_ready'];
     return {
       surface_kind: 'opl_temporal_external_production_residency_proof',
       provider_kind: 'temporal',
       proof_environment: 'external_temporal_service_and_managed_worker',
       closeout_status: 'production_residency_blocked',
-      blockers: worker.blockers.length > 0 ? worker.blockers : ['temporal_worker_not_ready'],
+      blocker: {
+        blocker_kind: 'platform_dependency',
+        blocker_status: worker.lifecycle_status,
+        blocker_ids: blockers,
+        owner: 'operator',
+        required_before: 'production_residency_proof',
+        repair_action: worker.repair_action,
+      },
+      blockers,
       temporal_worker_lifecycle: worker,
+      runtime_snapshot: {
+        provider_kind: 'temporal',
+        address: worker.address,
+        namespace: worker.namespace,
+        task_queue: worker.task_queue,
+        lifecycle_status: worker.lifecycle_status,
+        server_reachable: worker.server_reachable,
+        worker_ready: worker.worker_ready,
+        managed_worker_pid: worker.managed_worker_pid,
+        managed_worker_state_path: worker.managed_worker_state_path,
+      },
       checks: {
         external_temporal_server_reachable: worker.server_reachable === true,
         managed_worker_ready: worker.worker_ready === true,
@@ -455,6 +523,13 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       completed_attempt: null,
       restarted_worker_requery: null,
       blocked_attempt: null,
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_blocker',
+        receipt_status: 'blocked',
+        provider_kind: 'temporal',
+        blocker_ids: blockers,
+        repair_action_id: worker.repair_action.action_id,
+      },
       authority_boundary: {
         opl: 'temporal_residency_proof_and_transport_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -586,6 +661,17 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
       task_queue: taskQueue,
       temporal_worker_lifecycle: worker,
       blockers: proven ? [] : ['temporal_production_residency_checks_failed'],
+      runtime_snapshot: {
+        provider_kind: 'temporal',
+        address,
+        namespace,
+        task_queue: taskQueue,
+        lifecycle_status: worker.lifecycle_status,
+        server_reachable: worker.server_reachable,
+        worker_ready: worker.worker_ready,
+        managed_worker_pid: worker.managed_worker_pid,
+        managed_worker_state_path: worker.managed_worker_state_path,
+      },
       checks,
       completed_attempt: {
         workflow_id: completedHandle.workflowId,
@@ -617,6 +703,14 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
           blockedState.activity_events.find(
             (event: Record<string, unknown>) => event.activity_kind === 'domain_sidecar_dispatch_activity',
           )?.blocked_reason ?? null,
+      },
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_proof',
+        receipt_status: proven ? 'proven' : 'failed',
+        provider_kind: 'temporal',
+        completed_workflow_id: completedHandle.workflowId,
+        blocked_workflow_id: blockedHandle.workflowId,
+        repair_action_id: 'none',
       },
       authority_boundary: {
         opl: 'temporal_residency_proof_and_transport_metadata_only',

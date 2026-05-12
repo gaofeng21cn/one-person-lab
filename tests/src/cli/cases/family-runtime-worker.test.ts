@@ -268,6 +268,25 @@ test('family-runtime residency proof --production requires external Temporal rea
     assert.equal(production.surface_kind, 'opl_temporal_external_production_residency_proof');
     assert.equal(production.closeout_status, 'production_residency_blocked');
     assert.deepEqual(production.blockers, ['temporal_runtime_not_configured']);
+    assert.equal(production.blocker.blocker_kind, 'platform_dependency');
+    assert.equal(production.blocker.blocker_status, 'not_configured');
+    assert.deepEqual(production.blocker.blocker_ids, ['temporal_runtime_not_configured']);
+    assert.equal(production.blocker.owner, 'operator');
+    assert.equal(production.blocker.repair_action.action_id, 'configure_temporal_service');
+    assert.equal(
+      production.blocker.repair_action.next_command,
+      'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
+    );
+    assert.equal(production.runtime_snapshot.lifecycle_status, 'not_configured');
+    assert.equal(production.runtime_snapshot.server_reachable, false);
+    assert.equal(production.runtime_snapshot.worker_ready, false);
+    assert.deepEqual(production.proof_receipt, {
+      receipt_kind: 'temporal_production_residency_blocker',
+      receipt_status: 'blocked',
+      provider_kind: 'temporal',
+      blocker_ids: ['temporal_runtime_not_configured'],
+      repair_action_id: 'configure_temporal_service',
+    });
     assert.deepEqual(production.checks, {
       external_temporal_server_reachable: false,
       managed_worker_ready: false,
