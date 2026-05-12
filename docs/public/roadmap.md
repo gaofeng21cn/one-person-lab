@@ -30,13 +30,14 @@ Current work on that route stays focused on four priorities:
 3. Treat `OPL Runtime Manager` as the product control plane and typed dispatch layer over the configured family runtime provider, not as a domain scheduler, domain truth owner, quality owner, artifact owner, or concrete executor owner.
 4. Keep public docs, contracts, and admitted-domain wording aligned with the real family topology.
 
-The current execution order lives in [OPL Current Development Lines](../active/current-development-lines.md): finish the OPL framework foundation first, then domain framework migration and legacy retirement, then OPL App Runtime Workbench productization, then real or controlled MAS/MAG/RCA domain soak.
+The current execution order lives in [OPL Current Development Lines](../active/current-development-lines.md): finish the OPL framework foundation first, use real MAS paper lines as the first production-closure acceptance path, keep MAS/MAG/RCA descriptor migration and direct-skill parity from regressing, retire legacy operator wording with no-default-caller evidence, productize the OPL App Runtime Workbench, then run MAG/RCA controlled soaks and broader domain acceptance after the MAS owner-chain proof is stable.
 
 ## Near-Term Priorities
 
 - keep legacy gateway and federation wording available only as provenance/reference material while promoting the runtime/activation model to the mainline
 - keep `Unified Harness Engineering Substrate`, `Shared Runtime Contract`, and `Shared Domain Contract` scoped as shared-above-domain surfaces
 - keep provider-backed stage runtime honest, with Temporal as the production substrate candidate and `Hermes-Agent` retained only as migration/proof context
+- keep public help, current docs, and operator-facing guidance free of default Hermes/Gateway/frontdoor/local-manager wording; retained names must be explicit legacy/provenance/diagnostic/history/fixture references
 - keep future hosted and desktop entry work anchored to the same runtime truth that drives the Codex-default executor path
 - keep candidate domains moving through explicit definition and onboarding lanes
 
@@ -60,14 +61,12 @@ The root roadmap keeps only the current family route and the reading path for ac
 
 Use these reference surfaces when you need deeper context:
 
-- [OPL Gateway Rollout](../history/compatibility/gateway-federation/opl-gateway-rollout.md)
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)
-- [OPL Gateway Acceptance Test Spec](../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](../references/operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../references/operating-governance/opl-publish-promotion-operating-surface.md)
 - [Ecosystem Status Matrix](../references/convergence-governance/ecosystem-status-matrix.md)
 - [Runtime substrate history archive](../history/runtime-substrate/README.md)
-- [OPL Gateway Example Corpus](../references/examples-corpora/opl-gateway-example-corpus.md)
+- Legacy Gateway/Federation archives under `docs/history/compatibility/` only when a provenance or diagnostic question explicitly requires them
 
 ## Evaluation Criteria
 
@@ -77,6 +76,7 @@ The roadmap is healthy when readers can immediately understand:
 - admitted domains keep their own authority under that shell
 - the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
 - the Temporal production provider now has a minimal verifiable loop: workflow/activity/signal/query, worker lifecycle contract, typed closeout ingestion, fail-closed readiness, `stage_attempt_workbench` projection, and repo-native Temporal test-server plus real-worker residency proof; external production service provisioning/readiness and domain soak remain next-stage acceptance work
-- legacy `OPL Gateway`, `opl web`, `Product API`, and AionUI-first-shell material is read as provenance or reference context unless a current core document promotes it
+- MAS paper-line read-only closeout proof has landed, while provider-hosted guarded apply and long-running MAS owner-chain proof remain the next production-closure gates
+- legacy `OPL Gateway`, `opl web`, `Product API`, Hermes default, local-manager, and AionUI-first-shell material is read as provenance, diagnostic, history, or fixture context unless a current core document promotes it
 - future hosted and desktop work continues the same runtime/activation truth surfaces
 - new workstreams are entering as explicit domain surfaces with clear boundaries

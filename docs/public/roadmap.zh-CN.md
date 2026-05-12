@@ -30,13 +30,14 @@
 3. 把 `OPL Runtime Manager` 理解成已配置 family runtime provider 之上的产品控制面与 typed dispatch 层，不写成 domain scheduler、domain truth owner、quality owner、artifact owner 或 concrete executor owner。
 4. 保持 public docs、contracts 与 admitted-domain wording 持续对齐真实家族拓扑。
 
-当前执行顺序见 [OPL 当前开发线路](../active/current-development-lines.zh-CN.md)：先完成 OPL framework foundation，再做 domain framework migration 和旧面退役清理，随后产品化到 OPL App Runtime Workbench，最后做 MAS/MAG/RCA 的真实或 controlled domain soak。
+当前执行顺序见 [OPL 当前开发线路](../active/current-development-lines.zh-CN.md)：先完成 OPL framework foundation，再用 MAS 真实 paper line 作为第一条 production-closure 验收路径，同时保持 MAS/MAG/RCA descriptor migration 与 direct-skill parity 不退化；旧 operator wording 需要 no-default-caller 证据后退役，随后产品化到 OPL App Runtime Workbench，最后在 MAS owner-chain 证明稳定后推进 MAG/RCA controlled soak 和更宽的 domain acceptance。
 
 ## 近期重点
 
 - 保持旧 gateway / federation wording 只作为 provenance / reference material，同时把 runtime / activation 语义写成主线
 - 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
 - 保持 provider-backed stage runtime 的诚实表达：Temporal 是生产 substrate 候选，`Hermes-Agent` 只作为迁移/proof 语境保留
+- 保持 public help、当前文档与 operator-facing guidance 不再展示默认 Hermes/Gateway/frontdoor/local-manager wording；保留旧名时必须显式属于 legacy/provenance/diagnostic/history/fixture
 - 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime truth 演进
 - 保持 candidate domain 沿定义、审查与 onboarding 路径推进
 
@@ -60,14 +61,12 @@
 
 需要更深背景时，进入这些参考面：
 
-- [OPL Gateway 落地路线](../history/compatibility/gateway-federation/opl-gateway-rollout.zh-CN.md)
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](../references/operating-governance/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](../references/operating-governance/opl-publish-promotion-operating-surface.zh-CN.md)
 - [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
 - [Runtime Substrate 历史归档](../history/runtime-substrate/README.zh-CN.md)
-- [OPL Gateway Example Corpus](../references/examples-corpora/opl-gateway-example-corpus.zh-CN.md)
+- 只有明确需要 provenance 或 diagnostic 时，才进入 `docs/history/compatibility/` 下的 Legacy Gateway/Federation archive
 
 ## 判断标准
 
@@ -77,6 +76,7 @@
 - admitted domain 在这个壳层之下继续持有各自 authority
 - 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
 - Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness、`stage_attempt_workbench` 投影，以及 repo-native Temporal test server + real worker residency proof；外部 production service / managed worker 的 `--production` proof 入口已 fail-closed 落地，真实 domain soak 仍是下一阶段验收
-- 旧 `OPL Gateway`、`opl web`、`Product API` 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance 或 reference context 阅读
+- MAS paper-line read-only closeout proof 已落地；provider-hosted guarded apply 和长时 MAS owner-chain proof 仍是下一步 production-closure gate
+- 旧 `OPL Gateway`、`opl web`、`Product API`、Hermes default、local-manager 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance、diagnostic、history 或 fixture context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

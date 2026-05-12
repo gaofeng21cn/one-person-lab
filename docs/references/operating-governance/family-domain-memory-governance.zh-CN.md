@@ -134,6 +134,7 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 - `opl domain-memory list --json` 当前仍为 `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`，说明 MAS/MAG/RCA 三个 active domain 的 memory descriptor 都能被 OPL family index 解析。
 - MAS 的真实 paper-line read-only closeout projection 已出现一条 publication-route memory 消费链：DM002 consumed `publication_route_memory_seed__negative_result_stoploss`，并带回 MAS workspace/runtime 下的 writeback receipt refs。
 - 这条证据只证明 MAS-owned memory refs 能进入 stage closeout 并被 OPL/Aion 以 ref-only 方式展示；它不表示 OPL 拥有 memory body、可以 accept/reject writeback，或 MAG/RCA 的真实 runtime memory apply 已完成。
+- 本轮 OPL operator closeout 的边界是 residue scan 与 no-default-caller evidence：默认 help、当前 roadmap、active public surface 和 operator-facing 文档不得把旧 Hermes/Gateway/frontdoor/local-manager/default-compat 路径写成 memory retrieval、writeback apply 或 runtime owner。保留旧名只能用于 `hermes_legacy` diagnostic、历史 provenance、fixture/test 或明确 legacy migration 语境。
 
 当前完成度：
 
@@ -152,8 +153,9 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 1. 保持 memory 正文、accept/reject、fundability / visual quality 判断和 artifact authority 在 domain；OPL 只读 locator、proposal ref、receipt ref、freshness 和 rejected writeback reason。
 2. 先把 MAS DM002 的 read-only consumed-memory / writeback-receipt 证据推进到 provider-hosted guarded apply proof；再用 MAG controlled grant stage、RCA controlled visual stage 分别产生至少一条 consumed-memory / writeback-receipt 证据。
 3. 把 Aion workbench 的 memory refs 从“显示 rejected writeback 状态轴和 raw refs”提升到按 domain/stage 分组的 operator view；仍不复制 memory body。
-4. 在真实 retrieval / writeback apply 后，再推进历史 workspace/runtime 经验迁移到 domain-owned memory store，并留下 accepted/rejected apply receipt。
-5. 只有当三仓都能生成 receipt instance 且 OPL/Aion 只显示 refs/projection 时，才允许把 domain memory lane 标记为 `apply_landed`；否则继续保持 `descriptor_projection_only` 或 `mas_readonly_proof_landed`。
+4. 持续运行 active-path residue scan，确保默认文档/help 不把 legacy operator path 重新写成 retrieval/apply/runtime owner。
+5. 在真实 retrieval / writeback apply 后，再推进历史 workspace/runtime 经验迁移到 domain-owned memory store，并留下 accepted/rejected apply receipt。
+6. 只有当三仓都能生成 receipt instance 且 OPL/Aion 只显示 refs/projection 时，才允许把 domain memory lane 标记为 `apply_landed`；否则继续保持 `descriptor_projection_only` 或 `mas_readonly_proof_landed`。
 
 ## 下一阶段再做
 
