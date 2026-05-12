@@ -386,6 +386,36 @@ test('installed opl launcher supports explicit non-default executor selection', 
   }
 });
 
+test('installed opl launcher routes executor diagnostics to OPL instead of Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-executor-capture-${process.pid}.txt`);
+  const fakeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-executor-doctor-'));
+  const claudePath = path.join(fakeRoot, 'claude');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN CODEX"
+exit 0
+`);
+  fs.writeFileSync(claudePath, '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+
+  try {
+    const result = runEntryPathRaw(binPath, ['executor', 'doctor', '--executor', 'claude_code'], {
+      OPL_CLAUDE_CODE_BIN: claudePath,
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+    });
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.executor_doctor.executor_kind, 'claude_code');
+    assert.equal(payload.executor_doctor.ready, true);
+    assert.equal(result.stderr, '');
+    assert.equal(fs.existsSync(capturePath), false);
+  } finally {
+    fs.rmSync(fakeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
 test('installed opl launcher keeps resume on raw Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-resume-args-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`

@@ -15,7 +15,10 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
   const codexBinary = resolveCodexVersion();
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeProvider = inspectFamilyRuntimeProvider(providerKind);
-  const hermes = inspectHermesRuntime();
+  const hermes = inspectHermesRuntime({
+    deep: providerKind === 'hermes_legacy',
+    reason: `Hermes legacy diagnostics were not deep-inspected because ${providerKind} is the selected family runtime provider.`,
+  });
   const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildOplModules().modules;
   const moduleSummary = modulesPayload.summary;
@@ -85,6 +88,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
           gateway_loaded: hermes.gateway_service.loaded,
           gateway_status_raw: hermes.gateway_service.raw_output,
           health_status: hermesHealthStatus,
+          inspection_mode: hermes.inspection_mode,
           issues: hermes.issues,
         },
         family_runtime_provider: {

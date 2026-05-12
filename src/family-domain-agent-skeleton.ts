@@ -9,10 +9,10 @@ const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as c
 const ACCEPTED_SKELETON_SURFACE_KINDS = new Set(['standard_domain_agent_skeleton']);
 const PRODUCTION_CLOSURE_GAPS = [
   {
-    gap_id: 'temporal_server_worker_residency_proof',
+    gap_id: 'external_temporal_production_residency_proof',
     closure_status: 'requires_platform_maturity',
     owner: 'opl_provider_runtime',
-    waits_for: 'real_temporal_server_worker_residency',
+    waits_for: 'configured_external_temporal_service_and_managed_worker',
   },
   {
     gap_id: 'provider_hosted_domain_soak',

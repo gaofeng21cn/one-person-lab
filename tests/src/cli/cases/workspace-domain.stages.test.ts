@@ -558,7 +558,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
     assert.deepEqual(
       mas.family_agent.production_closure_gaps.map((gap: { gap_id: string }) => gap.gap_id),
       [
-        'temporal_server_worker_residency_proof',
+        'external_temporal_production_residency_proof',
         'provider_hosted_domain_soak',
         'workspace_runtime_memory_apply_receipt',
         'physical_repo_skeleton_reorganization',

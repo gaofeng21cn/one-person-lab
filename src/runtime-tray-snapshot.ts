@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { inspectHermesRuntime } from './hermes.ts';
+import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { FrameworkContracts } from './types.ts';
@@ -69,6 +70,12 @@ const ATTENTION_STATUS_MARKERS = [
   'review',
   'stale',
 ];
+
+function runtimeOwnerForCurrentProvider() {
+  return resolveFamilyRuntimeProviderKind() === 'hermes_legacy'
+    ? 'upstream_hermes_agent'
+    : 'provider_backed_family_runtime';
+}
 
 function normalizeSourceRef(
   ref: NormalizedSurfaceRef | null | undefined,
@@ -237,7 +244,7 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
     updated_at: updatedAt,
     command,
     workspace_path: entry.workspace_path,
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: manifest.runtime_inventory?.domain_owner ?? entry.project,
     source_refs: sourceRefs,
     ...action,
@@ -293,7 +300,7 @@ function buildAttentionItemForUnresolved(entry: DomainManifestCatalogEntry): Run
     updated_at: null,
     command: entry.manifest_command,
     workspace_path: entry.workspace_path,
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: entry.project,
     source_refs: [sourceRef('/domain_manifests/projects', 'domain_manifest_catalog', entry.project)],
     ...actionContext(
@@ -440,7 +447,10 @@ function masWorkspaceRefsFromDomainManifests(entries: DomainManifestCatalogEntry
     .filter((entry): entry is MasWorkspaceProjectionRef => Boolean(entry));
 }
 
-function masWorkspaceRefsFromHermesCronJobs() {
+function masWorkspaceRefsFromHermesCronJobs(enabled: boolean) {
+  if (!enabled) {
+    return [];
+  }
   const hermesHome = hermesHomeRoot();
   const { jobsPath, jobs } = readHermesCronJobs();
   return jobs
@@ -668,7 +678,7 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     updated_at: firstString(statusSummary?.generated_at, supervision?.recorded_at, controllerDecision?.emitted_at),
     command: primaryCommand,
     workspace_path: workspace.workspace_root,
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: 'med-autoscience',
     source_refs: sourceRefs,
     ...action,
@@ -685,10 +695,13 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
   };
 }
 
-function buildMasStudyProjection(domainManifests: { projects: DomainManifestCatalogEntry[] }) {
+function buildMasStudyProjection(
+  domainManifests: { projects: DomainManifestCatalogEntry[] },
+  options: { includeHermesCronJobs: boolean },
+) {
   const workspaces = uniqueMasWorkspaces([
     ...masWorkspaceRefsFromDomainManifests(domainManifests.projects),
-    ...masWorkspaceRefsFromHermesCronJobs(),
+    ...masWorkspaceRefsFromHermesCronJobs(options.includeHermesCronJobs),
   ]);
   const portalProjections = workspaces.map((workspace) => buildMasPortalItems(workspace));
   const portalWorkspaceRoots = new Set(portalProjections.flatMap((projection) => [...projection.portal_workspace_roots]));
@@ -714,7 +727,10 @@ function buildMasStudyProjection(domainManifests: { projects: DomainManifestCata
   };
 }
 
-function buildHermesCronProjection(): HermesCronProjection {
+function buildHermesCronProjection(enabled: boolean): HermesCronProjection {
+  if (!enabled) {
+    return { items: [], source_refs: [] };
+  }
   const hermesHome = hermesHomeRoot();
   const { jobsPath, jobs } = readHermesCronJobs();
   const items = jobs
@@ -795,22 +811,30 @@ function buildHermesCronProjection(): HermesCronProjection {
 }
 
 export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
-  const hermes = inspectHermesRuntime();
-  const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const hermesDeepInspection = providerKind === 'hermes_legacy';
+  const hermes = inspectHermesRuntime({
+    deep: hermesDeepInspection,
+    reason: `Runtime tray did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
+  });
+  const hermesReady = Boolean(hermesDeepInspection && hermes.binary && hermes.version && hermes.gateway_service.loaded);
+  const providerReady = hermesDeepInspection ? hermesReady : inspectFamilyRuntimeProvider(providerKind).ready;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const stageAttemptWorkbench = buildStageAttemptWorkbench();
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
-  const masStudyProjection = buildMasStudyProjection(domainManifests);
-  const hermesCronProjection = buildHermesCronProjection();
+  const masStudyProjection = buildMasStudyProjection(domainManifests, {
+    includeHermesCronJobs: hermesDeepInspection,
+  });
+  const hermesCronProjection = buildHermesCronProjection(hermesDeepInspection);
   const items = [...domainItems, ...masStudyProjection.items, ...hermesCronProjection.items];
   const runningItems = items.filter((entry) => entry.lane === 'running').sort(sortItems);
   const attentionItems = items.filter((entry) => entry.lane === 'attention').sort(sortItems);
   const recentItems = items.filter((entry) => entry.lane === 'recent').sort(sortItems);
   const actionCounts = actionCountsForItems(items);
   const healthStatus: RuntimeTrayHealthStatus =
-    !hermesReady
+    !providerReady
       ? 'offline'
       : actionCounts.user > 0
         ? 'needs_attention'
@@ -834,8 +858,9 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         label: healthLabels[healthStatus],
         summary:
           healthStatus === 'offline'
-            ? 'Hermes-Agent 运行底座未就绪；OPL 没有启动替代守护进程。'
+            ? 'Family runtime provider 未就绪；OPL 没有启动替代守护进程。'
             : `${runningItems.length} 个运行中，${actionCounts.opl} 个处理中项目，${actionCounts.infrastructure} 个后台恢复项，${actionCounts.user} 个用户处理项，${recentItems.length} 个近期项目。`,
+        provider_kind: providerKind,
         hermes_ready: hermesReady,
         hermes_runtime: {
           binary: hermes.binary,
@@ -860,9 +885,9 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       ]),
       daemon_policy: {
         local_daemon_added: false,
-        runtime_kernel_owner: 'upstream_hermes_agent',
+        runtime_kernel_owner: 'provider_backed_family_runtime',
         sidecar_promotion_gate:
-          'Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts.',
+          'Only promote beyond provider adapters if configured providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
       },
       non_goals: [
         'does_not_schedule_tasks',

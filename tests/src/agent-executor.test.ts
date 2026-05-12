@@ -122,6 +122,49 @@ process.stdin.on('end', () => {
   }
 });
 
+test('hermes_agent execution accepts log output before the final receipt line', () => {
+  const helper = makeExecutable(
+    'hermes-helper',
+    `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on('end', () => {
+  process.stdout.write('  ┊ 🔎 find pyproject.toml\\n');
+  process.stdout.write(JSON.stringify({
+    surface_kind: 'opl_agent_execution_receipt',
+    executor_kind: 'hermes_agent',
+    mode: 'agent_loop',
+    cwd: process.cwd(),
+    prompt_preview: 'logged helper',
+    session_id: 'hermes-session-logged',
+    event_summary: [
+      { event_kind: 'tool_start', value: 'find' },
+      { event_kind: 'tool_complete', value: 'ok' }
+    ],
+    stdout_preview: 'ok',
+    stderr_preview: '',
+    exit_code: 0,
+    closeout_packet: null,
+    capabilities: ['full_agent_loop_receipt', 'tool_event_proof'],
+    proof: { full_agent_loop_proved: true, tool_call_count: 1, event_count: 2 }
+  }) + '\\n');
+});
+`,
+  );
+  try {
+    const receipt = runAgentExecutor({
+      executor_kind: 'hermes_agent',
+      prompt: 'Return a receipt after logs.',
+      cwd: repoRoot,
+      env: { OPL_HERMES_AGENT_EXECUTOR_BIN: helper.file },
+    });
+
+    assert.equal(receipt.session_id, 'hermes-session-logged');
+    assert.equal(receipt.event_summary.length, 2);
+  } finally {
+    fs.rmSync(helper.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('hermes_agent execution fails closed when the helper does not return a JSON receipt', () => {
   const helper = makeExecutable(
     'hermes-helper',

@@ -29,10 +29,14 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
   const codex = resolveCodexBinary();
   const providerKind = resolveFamilyRuntimeProviderKind();
   const provider = inspectFamilyRuntimeProvider(providerKind);
-  const hermes = inspectHermesRuntime();
+  const hermes = inspectHermesRuntime({
+    deep: providerKind === 'hermes_legacy',
+    reason: `Product Entry did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
+  });
   const localEntryReady = Boolean(codex);
   const onlineRuntimeReady = provider.ready;
   const ready = localEntryReady && onlineRuntimeReady;
+  const hermesIssues = providerKind === 'hermes_legacy' ? hermes.issues : [];
 
   return {
     version: 'g2',
@@ -47,7 +51,7 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
       messaging_gateway_ready: providerKind === 'hermes_legacy' ? hermes.gateway_service.loaded : provider.ready,
       family_runtime_provider: provider,
       hermes,
-      issues: provider.degraded_reason ? [provider.degraded_reason, ...hermes.issues] : hermes.issues,
+      issues: provider.degraded_reason ? [provider.degraded_reason, ...hermesIssues] : hermesIssues,
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
         'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',

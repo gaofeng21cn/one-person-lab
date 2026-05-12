@@ -110,6 +110,7 @@ exit 1
             update_summary: string | null;
             gateway_loaded: boolean;
             health_status: string;
+            inspection_mode: string;
           };
           family_runtime_provider: {
             provider_kind: string;
@@ -168,12 +169,13 @@ exit 1
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.deepEqual(output.system.core_engines.codex.diagnostics, []);
     assert.equal(output.system.core_engines.hermes.installed, true);
-    assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
-    assert.equal(output.system.core_engines.hermes.version_raw_output, 'Hermes 1.2.3');
+    assert.equal(output.system.core_engines.hermes.version, null);
+    assert.equal(output.system.core_engines.hermes.version_raw_output, null);
     assert.equal(output.system.core_engines.hermes.update_available, false);
     assert.equal(output.system.core_engines.hermes.update_summary, null);
-    assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
-    assert.equal(output.system.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.system.core_engines.hermes.gateway_loaded, false);
+    assert.equal(output.system.core_engines.hermes.health_status, 'attention_needed');
+    assert.equal(output.system.core_engines.hermes.inspection_mode, 'shallow_optional');
     assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
     assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'ready');
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');

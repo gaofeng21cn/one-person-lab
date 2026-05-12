@@ -24,6 +24,7 @@ export interface HermesRuntimeInspection {
   update_summary: string | null;
   gateway_service: HermesGatewayServiceStatus;
   issues: string[];
+  inspection_mode: 'shallow_optional' | 'deep_selected';
 }
 
 export interface HermesCommandOptions {
@@ -48,6 +49,11 @@ export interface HermesSessionSummary {
   last_active: string;
   source: string;
   session_id: string;
+}
+
+export interface HermesRuntimeInspectionOptions {
+  deep?: boolean;
+  reason?: string;
 }
 
 export interface HermesLogsOptions {
@@ -152,7 +158,7 @@ function parseHermesVersionLine(versionOutput: string | null): string | null {
   return versionLine || null;
 }
 
-export function inspectHermesRuntime(): HermesRuntimeInspection {
+export function inspectHermesRuntime(options: HermesRuntimeInspectionOptions = {}): HermesRuntimeInspection {
   const binary = resolveHermesBinary();
 
   if (!binary) {
@@ -169,6 +175,26 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
       issues: [
         'Hermes binary not found. Set OPL_HERMES_BIN or install `hermes` into PATH.',
       ],
+      inspection_mode: options.deep === false ? 'shallow_optional' : 'deep_selected',
+    };
+  }
+
+  if (options.deep === false) {
+    return {
+      binary,
+      version: null,
+      version_raw_output: null,
+      update_available: false,
+      update_summary: null,
+      gateway_service: {
+        loaded: false,
+        raw_output: '',
+      },
+      issues: [
+        options.reason
+          ?? 'Hermes deep inspection skipped because Hermes is optional unless hermes_legacy provider or an explicit Hermes diagnostic is selected.',
+      ],
+      inspection_mode: 'shallow_optional',
     };
   }
 
@@ -208,6 +234,7 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
       raw_output: gatewayRawOutput,
     },
     issues,
+    inspection_mode: 'deep_selected',
   };
 }
 

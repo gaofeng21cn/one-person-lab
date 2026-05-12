@@ -32,7 +32,7 @@ export function paperAutonomyProjection(
     surface_kind: 'opl_mas_paper_autonomy_task_projection',
     domain_truth_owner: 'med-autoscience',
     queue_owner: 'one-person-lab',
-    online_runtime_substrate_owner: 'upstream_hermes_agent',
+    online_runtime_substrate_owner: 'provider_backed_family_runtime',
     task_kind: task.task_kind,
     study_id: typeof payload.study_id === 'string' ? payload.study_id : null,
     next_owner: typeof repairWorkUnit.owner === 'string' ? repairWorkUnit.owner : null,
