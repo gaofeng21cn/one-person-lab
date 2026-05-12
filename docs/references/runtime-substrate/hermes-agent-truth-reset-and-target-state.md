@@ -1,6 +1,6 @@
 # Hermes-Agent 真相重置与目标形态说明
 
-> 2026-05-10 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的新目标是 provider-backed runtime，其中 Temporal-backed provider 是生产 substrate 候选。`Hermes-Agent` 在新目标下退为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块；Temporal provider 落地后，它不再是目标 session/wakeup substrate。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+> 2026-05-10 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。`Hermes-Agent` 在新目标下退为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块；Temporal provider 落地后，它不再是目标 session/wakeup substrate。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
 
 ## 1. 为什么要做这份重置
 
@@ -60,7 +60,7 @@
 
 ## 4. 历史 Hermes-first 理想形态
 
-本节记录 2026-05-10 之前的 Hermes-first 迁移判断，已经被 provider-backed / Temporal target 决策 supersede。当前有效目标不再是让 Hermes-Agent 成为四仓统一默认 substrate，而是让 OPL family runtime 先形成 provider abstraction，并把 Temporal-backed provider 作为生产 substrate 候选；Hermes-Agent 保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。
+本节记录 2026-05-10 之前的 Hermes-first 迁移判断，已经被 provider-backed / Temporal-required production substrate 决策 supersede。当前有效目标不再是让 Hermes-Agent 成为四仓统一默认 substrate，而是让 OPL family runtime 以 Temporal-backed provider 作为 production online runtime 的必需 substrate；Hermes-Agent 保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。
 
 ### 4.1 OPL 的历史 Hermes-first 理想形态
 

@@ -81,8 +81,8 @@ current OPL owner split is:
   appear as `hermes_legacy`, optional provider, explicit executor/proof lane,
   migration context, or historical material unless a current core doc and
   machine-readable contract promote a narrower role.
-- `Temporal`: production provider candidate for durable stage-attempt
-  substrate. Current docs must keep target state and landed state separate.
+- `Temporal`: required production provider for durable stage-attempt
+  substrate. Current docs must keep required target state and landed state separate.
 
 ### Current Owner Surfaces By Partition
 

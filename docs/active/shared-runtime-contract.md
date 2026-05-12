@@ -123,7 +123,7 @@ What the upstream `Hermes-Agent` contributes most usefully today is migration-pe
 
 The more accurate statement is therefore:
 
-- the production substrate candidate for the OPL framework is provider-backed stage runtime, with Temporal-backed provider work as the current target path
+- the production online substrate for the OPL framework is provider-backed stage runtime, with the Temporal-backed provider as the required path
 - `Hermes-Agent` remains a legacy/optional provider, executor/proof lane, or technical reference during migration
 - `Hermes-Agent` is not the whole `UHS`
 - `Hermes-Agent` does not replace the OPL session/runtime entry, any domain-agent entry, or any domain-owned truth surface

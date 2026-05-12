@@ -6,9 +6,9 @@
 
 这里吸收的是 `CrewAI` 一类编排框架里最值得复用的思想，但吸收方式是 contract-first，而不是把 `CrewAI` 直接引入为 family runtime dependency，也不是改写现有 owner split：
 
-- 已配置的 OPL family runtime provider 是 Full readiness 的 online runtime substrate；Temporal-backed provider 是 durable orchestration 的生产目标，`Hermes-Agent` 只作为迁移期 legacy/optional provider 或显式 executor/proof lane
+- Temporal-backed provider 是 Full readiness 的 online runtime substrate，也是 durable orchestration 的生产必需 provider；`Hermes-Agent` 只作为迁移期 legacy/optional provider 或显式 executor/proof lane，local provider 只用于 dev/CI/offline diagnostics
 - `Codex CLI` 继续是默认具体执行器正式名称，`autonomous` 继续是默认路线模式，除非 domain route 显式选择其他 executor
-- `one-person-lab` 持有 Hermes 之上的 typed family queue 与产品控制面，不复制 runtime kernel
+- `one-person-lab` 持有 Temporal-backed family runtime provider 之上的 typed family queue 与产品控制面，不复制 runtime kernel
 - 各 domain 仓继续持有 durable truth、audit truth 与 review truth
 
 这里也吸收 `Ageniti` 最有价值的思想：用一个 app action 定义派生 CLI、MCP、Skill、OpenAI、AI SDK 与 product-entry descriptor。OPL family 采用的是这个 contract 模式，不把 `@ageniti/core` 引入为 runtime dependency。
