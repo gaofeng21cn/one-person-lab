@@ -218,15 +218,23 @@ function parseOptionalCloseout(stdout: string): JsonRecord | null {
 }
 
 function parseReceiptPayload(stdout: string, executorKind: AgentExecutorKind) {
-  try {
-    return JSON.parse(stdout || '{}') as unknown;
-  } catch (error) {
-    throw new FrameworkContractError('contract_shape_invalid', `${executorKind} executor did not return a JSON receipt.`, {
-      executor_kind: executorKind,
-      stderr_preview: error instanceof Error ? error.message : String(error),
-      fallback_allowed: false,
-    });
+  let parseError: string | null = null;
+  for (const line of stdout.split(/\r?\n/).filter(Boolean).reverse()) {
+    try {
+      const parsed = JSON.parse(line) as unknown;
+      if (isRecord(parsed) && parsed.surface_kind === 'opl_agent_execution_receipt') {
+        return parsed;
+      }
+    } catch (error) {
+      parseError ??= error instanceof Error ? error.message : String(error);
+    }
   }
+  throw new FrameworkContractError('contract_shape_invalid', `${executorKind} executor did not return a JSON receipt.`, {
+    executor_kind: executorKind,
+    stdout_preview: preview(stdout),
+    stderr_preview: parseError,
+    fallback_allowed: false,
+  });
 }
 
 function assertExternalProcessCompleted(input: {
@@ -248,6 +256,30 @@ function assertExternalProcessCompleted(input: {
       cause: input.error.message,
       timeout_ms: input.timedOut ? input.timeoutMs ?? null : null,
       timed_out: input.timedOut,
+      fallback_allowed: false,
+    },
+  );
+}
+
+function assertExternalExitSucceeded(input: {
+  executorKind: AgentExecutorKind;
+  status: number | null;
+  signal: NodeJS.Signals | null;
+  stdout: string;
+  stderr: string;
+}) {
+  if (input.status === 0) {
+    return;
+  }
+  throw new FrameworkContractError(
+    'launcher_failed',
+    `${input.executorKind} executor exited without a valid receipt.`,
+    {
+      executor_kind: input.executorKind,
+      exit_code: input.status,
+      signal: input.signal,
+      stdout_preview: preview(input.stdout),
+      stderr_preview: preview(input.stderr),
       fallback_allowed: false,
     },
   );
@@ -347,6 +379,13 @@ function runExternalExecutor(request: AgentExecutionRequest, executorKind: Agent
       error: result.error,
       timedOut: Boolean(result.error && 'code' in result.error && result.error.code === 'ETIMEDOUT'),
       timeoutMs: timeout,
+    });
+    assertExternalExitSucceeded({
+      executorKind,
+      status: result.status,
+      signal: result.signal,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr ?? '',
     });
     const receiptPayload = parseReceiptPayload(result.stdout, executorKind);
     const receipt = normalizeReceipt(receiptPayload, {

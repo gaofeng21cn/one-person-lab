@@ -59,6 +59,7 @@ exit 1
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_HERMES_BIN: hermesPath,
       HERMES_HOME: hermesHome,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
 
@@ -154,6 +155,7 @@ exit 1
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_HERMES_BIN: hermesPath,
       HERMES_HOME: hermesHome,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
     const item = snapshot.running_items.find((entry: { study_id?: string }) => entry.study_id === '002-dm-china-us-mortality-attribution');

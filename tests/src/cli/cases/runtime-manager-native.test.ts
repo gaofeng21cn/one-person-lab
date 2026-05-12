@@ -379,9 +379,10 @@ exit 1
     assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
     assert.equal(snapshot.runtime_health.label, '需用户处理');
+    assert.equal(snapshot.runtime_health.provider_kind, 'local_sqlite');
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
-    assert.equal(snapshot.running_items[0].runtime_owner, 'upstream_hermes_agent');
+    assert.equal(snapshot.running_items[0].runtime_owner, 'provider_backed_family_runtime');
     assert.equal(snapshot.running_items[0].action_owner, 'none');
     assert.equal(snapshot.running_items[0].requires_user_action, false);
     assert.equal(snapshot.running_items[0].action_kind, 'running');
@@ -396,8 +397,7 @@ exit 1
     assert.equal(snapshot.recent_items[0].action_owner, 'none');
     assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 0 });
     assert.equal(snapshot.daemon_policy.local_daemon_added, false);
-    assert.equal(typeof snapshot.daemon_policy.runtime_kernel_owner, 'string');
-    assert.equal(snapshot.daemon_policy.runtime_kernel_owner.length > 0, true);
+    assert.equal(snapshot.daemon_policy.runtime_kernel_owner, 'provider_backed_family_runtime');
     assert.equal(typeof snapshot.daemon_policy.sidecar_promotion_gate, 'string');
     assert.equal(snapshot.daemon_policy.sidecar_promotion_gate.includes('task'), true);
   } finally {
@@ -480,6 +480,7 @@ exit 1
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_HERMES_BIN: hermesPath,
       HERMES_HOME: hermesHome,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
 
@@ -673,6 +674,7 @@ exit 1
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_HERMES_BIN: hermesPath,
       HERMES_HOME: hermesHome,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];

@@ -72,12 +72,16 @@ export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
 export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeProviders = inspectFamilyRuntimeProviders(providerKind);
-  const hermes = inspectHermesRuntime();
-  const statusResult = hermes.binary ? runHermesCommand(['status']) : null;
+  const hermesDeepInspection = providerKind === 'hermes_legacy';
+  const hermes = inspectHermesRuntime({
+    deep: hermesDeepInspection,
+    reason: `Runtime status did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
+  });
+  const statusResult = hermesDeepInspection && hermes.binary ? runHermesCommand(['status']) : null;
   const statusOutput = statusResult ? normalizeCommandOutput(statusResult.stdout, statusResult.stderr) : '';
   const parsedStatus = statusOutput ? parseHermesStatusOutput(statusOutput) : null;
   const processUsage = collectHermesProcessUsage();
-  const recentSessions = hermes.binary ? buildRecentSessions(options.sessionsLimit ?? 5) : {
+  const recentSessions = hermesDeepInspection && hermes.binary ? buildRecentSessions(options.sessionsLimit ?? 5) : {
     command_preview: ['hermes', 'sessions', 'list', '--limit', String(options.sessionsLimit ?? 5)],
     sessions: [],
   };

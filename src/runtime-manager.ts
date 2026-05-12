@@ -695,5 +695,6 @@ function inspectHermesRuntimeForProvider(providerKind: FamilyRuntimeProviderKind
     issues: [
       `Hermes legacy runtime was not inspected because ${providerKind} is the selected family runtime provider.`,
     ],
+    inspection_mode: 'shallow_optional' as const,
   };
 }

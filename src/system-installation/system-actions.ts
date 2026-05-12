@@ -72,6 +72,9 @@ async function maybeUpdateHermes(
   contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
 ): Promise<SystemUpdateTargetResult> {
+  if (environment.core_engines.family_runtime_provider.provider_kind !== 'hermes_legacy') {
+    return buildSkippedUpdate('engine', 'hermes', 'hermes_legacy_provider_not_selected');
+  }
   const hermes = environment.core_engines.hermes;
   if (!hermes.installed) {
     return buildSkippedUpdate('engine', 'hermes', 'hermes_missing');

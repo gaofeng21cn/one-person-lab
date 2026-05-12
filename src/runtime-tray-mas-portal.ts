@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { pathToFileURL } from 'url';
+import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import { actionContext, noActionContext, runningActionContext } from './runtime-tray-action.ts';
 import { humanizeStatusLabel, localizeRuntimeDisplayList } from './runtime-tray-display.ts';
 import {
@@ -40,6 +41,12 @@ function relativeOrAbsolutePath(root: string, ref: string | null) {
     return null;
   }
   return path.isAbsolute(ref) ? ref : path.join(root, ref);
+}
+
+function runtimeOwnerForCurrentProvider() {
+  return resolveFamilyRuntimeProviderKind() === 'hermes_legacy'
+    ? 'upstream_hermes_agent'
+    : 'provider_backed_family_runtime';
 }
 
 function commandForMasStudy(profileRef: string | null, studyId: string, command: 'study-progress' | 'study-runtime-status') {
@@ -280,7 +287,7 @@ function buildMasWorkbenchStudyItem(
     updated_at: firstString(study.last_seen_at, freshness?.latest_event_at),
     command: recommendedCommands[0]?.command ?? null,
     workspace_path: firstString(nestedRecord(projection, 'workspace')?.workspace_root) ?? workspace.workspace_root,
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: 'med-autoscience',
     source_refs: uniqueByRef([
       ...workspace.source_refs,
@@ -355,7 +362,7 @@ function buildMasPortalStudyItem(
     updated_at: firstString(portalFreshness?.latest_event_at),
     command: recommendedCommands[0]?.command ?? null,
     workspace_path: workspace.workspace_root,
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: 'med-autoscience',
     source_refs: uniqueByRef([
       ...workspace.source_refs,
@@ -413,7 +420,7 @@ function buildMasPortalWorkspaceAttentionItem(
     updated_at: firstString(portalFreshness?.latest_event_at),
     command: recommendedCommand,
     workspace_path: workspace.workspace_root,
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: runtimeOwnerForCurrentProvider(),
     domain_owner: 'med-autoscience',
     source_refs: uniqueByRef([
       ...workspace.source_refs,

@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import { assert, createCodexConfigFixture, createFakeCodexFixture, createFakeHermesFixture, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 
-test('system exposes Hermes update availability separately from readiness', () => {
+test('system exposes Hermes update availability only for explicitly selected Hermes legacy provider', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-update-home-'));
   const hermesFixture = createFakeHermesFixture(`
 if [[ "$1" == "version" ]]; then
@@ -27,6 +27,7 @@ exit 1
       {
         HOME: homeRoot,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       },
     ) as {
       system: {
@@ -342,13 +343,14 @@ EOF
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
     assert.equal(output.system_action.details.summary.total_targets_count, 6);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 2);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 4);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 1);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 5);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
-    assert.equal(targets.get('engine:hermes')?.status, 'completed');
-    assert.equal(fs.existsSync(hermesUpdateMarker), true);
+    assert.equal(targets.get('engine:hermes')?.status, 'skipped');
+    assert.equal(targets.get('engine:hermes')?.reason, 'hermes_legacy_provider_not_selected');
+    assert.equal(fs.existsSync(hermesUpdateMarker), false);
     assert.equal(targets.get('module:medautoscience')?.status, 'completed');
     assert.equal(targets.get('module:medautogrant')?.status, 'skipped');
     assert.equal(targets.get('module:medautogrant')?.reason, 'dirty_checkout');
