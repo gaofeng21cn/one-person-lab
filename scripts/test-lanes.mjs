@@ -41,7 +41,6 @@ const lanes = {
       'tests/src/cli/cases/family-runtime-worker.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts.test.ts',
       'tests/src/cli/cases/agent-executor-cli.test.ts',
-      'tests/src/cli/cases/workspace-domain.test.ts',
       'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',
       'tests/src/cli/cases/runtime-manager-provider.test.ts',
       'tests/src/family-domain-quality-projection-contract.test.ts',

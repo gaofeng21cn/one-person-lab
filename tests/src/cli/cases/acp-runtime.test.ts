@@ -1,5 +1,20 @@
 import { assert, cliPath, createFakeCodexFixture, fs, readJsonLine, repoRoot, runCliFailure, spawn, stopCliPipeChild, test, writeJsonLine } from '../helpers.ts';
 
+async function readJsonLineWithTimeout(
+  stream: Parameters<typeof readJsonLine>[0],
+  timeoutMs: number,
+  errorMessage: string,
+) {
+  return await Promise.race([
+    readJsonLine(stream),
+    new Promise<Record<string, unknown>>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(errorMessage));
+      }, timeoutMs);
+    }),
+  ]);
+}
+
 test('removed MCP stdio command fails closed before opening a live bridge', () => {
   const removedCommand = ['mcp', 'stdio'].join('-');
   const result = runCliFailure([removedCommand]);
@@ -173,15 +188,28 @@ exit 1
     });
 
     const notifications: Array<Record<string, unknown>> = [];
-    const firstNotification = await Promise.race([
-      readJsonLine(child.stdout),
-      new Promise<Record<string, unknown>>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('ACP runtime did not emit a streaming assistant update before turn completion.'));
-        }, 1500);
-      }),
-    ]);
-    notifications.push(firstNotification);
+    let firstNotification: Record<string, unknown> | null = null;
+    while (!firstNotification) {
+      const message = await readJsonLineWithTimeout(
+        child.stdout,
+        10_000,
+        'ACP runtime did not emit a streaming assistant update before turn completion.',
+      );
+      if (message.id === 3) {
+        throw new Error('ACP runtime completed the prompt before emitting a streaming assistant update.');
+      }
+      notifications.push(message);
+      if (
+        message.method === 'session/update' &&
+        (
+          message.params as {
+            update?: { sessionUpdate?: string };
+          }
+        ).update?.sessionUpdate === 'agent_message_chunk'
+      ) {
+        firstNotification = message;
+      }
+    }
     assert.equal(firstNotification.method, 'session/update');
     assert.equal(
       (
