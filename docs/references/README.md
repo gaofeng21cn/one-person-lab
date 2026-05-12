@@ -36,6 +36,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 - [Docs lifecycle management playbook](./convergence-governance/docs-lifecycle-management-playbook.zh-CN.md)
 - [Family docs lifecycle governance rollout, 2026-05-09](./convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL family content-level docs consolidation, 2026-05-11](./convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
+- [OPL product-layer and Foundry Agent rollout, 2026-05-12](./convergence-governance/opl-product-layer-foundry-agent-rollout-2026-05-12.zh-CN.md)
 - [Series docs governance checklist](./convergence-governance/series-doc-governance-checklist.md)
 - [Four-repo doc intake template](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 execution board](./convergence-governance/contract-convergence-v1-execution-board.md)
