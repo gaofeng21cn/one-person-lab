@@ -8,8 +8,6 @@ fi
 
 parallel_lanes=(
   "test:fast"
-  "test:regression"
-  "test:integration"
   "test:fresh-install"
   "test:structure"
   "typecheck"
@@ -17,6 +15,8 @@ parallel_lanes=(
 )
 
 serial_lanes=(
+  "test:regression"
+  "test:integration"
   "test:artifact"
   "test:native"
 )
