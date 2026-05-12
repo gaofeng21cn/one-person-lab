@@ -31,6 +31,7 @@ Date: `2026-05-12`
 配套入口：
 
 - Temporal provider 细化计划：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
+- Production closure gap matrix：`docs/active/production-framework-closure-gap-matrix.zh-CN.md`
 - MAS runtime 退役计划：`med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md`
 - Stage control plane adoption：`docs/references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md`
 - Domain memory 总入口：`docs/references/operating-governance/family-domain-memory-governance.zh-CN.md`

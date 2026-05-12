@@ -20,6 +20,7 @@ Owner: `One Person Lab`
 ## 内容
 
 - `current-development-lines*`：当前 framework-first 内容级开发线路图。
+- `production-framework-closure-gap-matrix.zh-CN.md`：当前 OPL 距离完整生产级智能体框架的 production closure 差距矩阵。
 - `development-document-portfolio*`：当前开发文档组合整理入口；按内容判断旧文档应吸收、保留、降级、退役还是归档。
 - `opl-public-surface-index*`：当前公开 surface 地图。
 - `opl-domain-onboarding-contract*`：候选 domain onboarding 审阅支撑。
