@@ -147,11 +147,14 @@ Provider 层不持有：
 
 ### P5. Hermes Retirement / Downgrade
 
+状态：OPL 侧 operator closeout 先落在文档、public help、residue scan 与 no-default-caller evidence。当前默认执行语义保持 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`。默认用户入口、当前 roadmap、active public surface 和 operator-facing guidance 不再把 Hermes/Gateway/frontdoor/local-manager/default-compat 写成默认 runtime、默认 executor、Full readiness blocker 或 domain owner。生产 runtime core 与 provider 实现不在本轮改动范围内；物理删除旧实现面继续等待 MAS paper-line guarded apply、direct-skill parity、fixture/provenance 需求和无 active caller 证据。
+
 交付：
 
 - Hermes-first 文档、contracts、install/readiness 文案改为 `hermes_legacy`。
 - Hermes executor proof 与 optional module 留在显式 lane。
 - Full readiness 目标从 Hermes readiness 转为 provider readiness，Temporal 是 production provider。
+- Active-path residue scan 覆盖 public docs、active docs、runtime-substrate / operator-governance references 和 CLI root help，防止默认路径重新出现 Hermes/Gateway/frontdoor/local-manager wording。
 
 验收：
 
@@ -163,7 +166,7 @@ Provider 层不持有：
 
 应退役或降级：
 
-- Hermes-first default online substrate wording。
+- 退役 Hermes-first default online substrate wording。
 - 把 Hermes gateway readiness 写成 Full OPL 未来唯一 readiness 的文案。
 - 把 Hermes session/memory/scheduler 当作 OPL 未来 domain runtime owner 的解释。
 - 任何绕过 stage output / domain closeout 直接生成 winning path、quality verdict 或 artifact authority 的旧机械分流。

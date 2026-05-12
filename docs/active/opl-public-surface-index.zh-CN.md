@@ -50,7 +50,7 @@
 
 ### 3. 共享基础结构配套界面
 
-下面这些文档仍然活跃，但它们服务的是 shared-foundation 边界，而不是重新把公开主线拉回 gateway-first：
+下面这些文档仍然活跃，但它们服务的是 shared-foundation 边界，而不是重新把公开主线拉回已退役的 gateway-first 路线：
 
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
