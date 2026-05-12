@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import net from 'node:net';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +26,11 @@ import {
   stageAttemptQuery,
   userInstructionSignal,
 } from './family-runtime-temporal-workflows.ts';
+import {
+  inspectTemporalServiceLifecycle,
+  probeTemporalServer,
+  resolveTemporalAddressForPaths,
+} from './family-runtime-temporal-service.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
@@ -60,6 +64,8 @@ function buildTemporalWorkerRepairAction(input: {
   taskQueue?: string | null;
 }) {
   const repairCommands = {
+    start_local_temporal_service:
+      'opl family-runtime service start --provider temporal',
     configure_temporal_address:
       'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
     verify_temporal_server:
@@ -76,8 +82,8 @@ function buildTemporalWorkerRepairAction(input: {
     ready: 'none',
   };
   const nextCommandByStatus: Record<TemporalWorkerReadinessStatus, string | null> = {
-    not_configured: repairCommands.configure_temporal_address,
-    server_unreachable: repairCommands.verify_temporal_server,
+    not_configured: repairCommands.start_local_temporal_service,
+    server_unreachable: repairCommands.start_local_temporal_service,
     worker_not_ready: repairCommands.start_managed_worker,
     ready: repairCommands.rerun_production_proof,
   };
@@ -85,7 +91,7 @@ function buildTemporalWorkerRepairAction(input: {
     surface_kind: 'temporal_worker_repair_action',
     provider_kind: 'temporal',
     action_id: actionByStatus[input.readinessStatus],
-    required_env: ['OPL_TEMPORAL_ADDRESS'],
+    required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state'],
     current_address: input.address ?? null,
     namespace: input.namespace ?? null,
     task_queue: input.taskQueue ?? null,
@@ -159,38 +165,6 @@ function processIsAlive(pid: number) {
   }
 }
 
-function parseTemporalAddress(address: string) {
-  const [host, portRaw] = address.split(':');
-  const port = Number.parseInt(portRaw ?? '', 10);
-  if (!host || !Number.isInteger(port) || port <= 0 || port > 65535) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Temporal address must use host:port.', {
-      address,
-      required_env: ['OPL_TEMPORAL_ADDRESS'],
-    });
-  }
-  return { host, port };
-}
-
-async function probeTemporalServer(address: string, timeoutMs = 500) {
-  return await new Promise<boolean>((resolve) => {
-    const { host, port } = parseTemporalAddress(address);
-    const socket = net.createConnection({ host, port });
-    let settled = false;
-    const finish = (reachable: boolean) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      socket.destroy();
-      resolve(reachable);
-    };
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => finish(true));
-    socket.once('timeout', () => finish(false));
-    socket.once('error', () => finish(false));
-  });
-}
-
 export function resolveTemporalWorkerReadinessStatus(input: {
   address?: string | null;
   serverReachable?: boolean | null;
@@ -210,6 +184,7 @@ export function resolveTemporalWorkerReadinessStatus(input: {
 
 export function buildTemporalWorkerReadiness(input: {
   address?: string | null;
+  addressSource?: string | null;
   namespace?: string | null;
   taskQueue?: string | null;
   workerEnabled?: string | null;
@@ -219,8 +194,10 @@ export function buildTemporalWorkerReadiness(input: {
   unreachableReason?: string | null;
   managedWorkerPid?: number | null;
   managedWorkerStatePath?: string | null;
+  temporalServiceLifecycle?: Record<string, unknown> | null;
 } = {}) {
   const address = input.address ?? resolveTemporalAddress();
+  const addressSource = input.addressSource ?? (address ? 'environment' : 'not_configured');
   const namespace = input.namespace ?? resolveTemporalNamespace();
   const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
   const workerEnabled = input.workerEnabled ?? process.env.OPL_TEMPORAL_WORKER_ENABLED ?? null;
@@ -252,6 +229,7 @@ export function buildTemporalWorkerReadiness(input: {
     worker_ready: workerReady,
     server_reachable: serverReachable,
     address,
+    address_source: addressSource,
     namespace,
     task_queue: taskQueue,
     default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
@@ -259,6 +237,7 @@ export function buildTemporalWorkerReadiness(input: {
     unreachable_reason: input.unreachableReason ?? null,
     managed_worker_pid: input.managedWorkerPid ?? null,
     managed_worker_state_path: input.managedWorkerStatePath ?? null,
+    temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,
     blockers,
     repair_action: repairAction,
     lifecycle: buildTemporalWorkerLifecycleContract(),
@@ -270,7 +249,8 @@ export function buildTemporalWorkerReadiness(input: {
 }
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
-  const address = resolveTemporalAddress();
+  const service = await inspectTemporalServiceLifecycle(paths);
+  const { address, addressSource } = resolveTemporalAddressForPaths(paths);
   const namespace = resolveTemporalNamespace();
   const taskQueue = resolveTemporalTaskQueue();
   const state = readTemporalWorkerState(paths);
@@ -285,6 +265,7 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
   const workerReady = Boolean(serverReachable && (pidAlive || envWorkerReady));
   const readiness = buildTemporalWorkerReadiness({
     address,
+    addressSource,
     namespace,
     taskQueue,
     workerEnabled: envWorkerReady ? '1' : null,
@@ -292,6 +273,7 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     serverReachable,
     managedWorkerPid: pidAlive && state ? state.pid : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),
+    temporalServiceLifecycle: service,
   });
   if (state && !pidAlive && state.status === 'ready') {
     removeTemporalWorkerState(paths);
@@ -303,8 +285,11 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
   };
 }
 
-async function withTemporalClient<T>(fn: (client: Client, connection: Connection) => Promise<T>) {
-  const connection = await Connection.connect({ address: requireTemporalAddress() });
+async function withTemporalClient<T>(
+  fn: (client: Client, connection: Connection) => Promise<T>,
+  addressOverride?: string | null,
+) {
+  const connection = await Connection.connect({ address: addressOverride || requireTemporalAddress() });
   try {
     return await fn(new Client({ connection, namespace: resolveTemporalNamespace() }), connection);
   } finally {
@@ -481,12 +466,15 @@ export async function runTemporalStageAttemptWorkerForever() {
 
 export async function runTemporalProductionResidencyProof(paths: TemporalWorkerPaths) {
   const worker = await inspectTemporalWorkerLifecycle(paths);
+  const proofEnvironment = worker.address_source === 'managed_local_service_state'
+    ? 'local_temporal_service_and_managed_worker'
+    : 'external_temporal_service_and_managed_worker';
   if (worker.lifecycle_status !== 'ready') {
     const blockers = worker.blockers.length > 0 ? worker.blockers : ['temporal_worker_not_ready'];
     return {
       surface_kind: 'opl_temporal_external_production_residency_proof',
       provider_kind: 'temporal',
-      proof_environment: 'external_temporal_service_and_managed_worker',
+      proof_environment: proofEnvironment,
       closeout_status: 'production_residency_blocked',
       blocker: {
         blocker_kind: 'platform_dependency',
@@ -503,11 +491,13 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         address: worker.address,
         namespace: worker.namespace,
         task_queue: worker.task_queue,
+        address_source: worker.address_source,
         lifecycle_status: worker.lifecycle_status,
         server_reachable: worker.server_reachable,
         worker_ready: worker.worker_ready,
         managed_worker_pid: worker.managed_worker_pid,
         managed_worker_state_path: worker.managed_worker_state_path,
+        temporal_service_lifecycle: worker.temporal_service_lifecycle,
       },
       checks: {
         external_temporal_server_reachable: worker.server_reachable === true,
@@ -538,13 +528,14 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
     };
   }
 
-  const address = requireTemporalAddress();
+  const address = worker.address || requireTemporalAddress();
   const namespace = resolveTemporalNamespace();
   const taskQueue = resolveTemporalTaskQueue();
   const suffix = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   const completedWorkflowId = `wf-temporal-production-complete-${suffix}`;
   const blockedWorkflowId = `wf-temporal-production-blocked-${suffix}`;
-  return await withTemporalClient(async (client) => {
+  try {
+    return await withTemporalClient(async (client) => {
     const completedHandle = await client.workflow.start('StageAttemptWorkflow', {
       args: [
         {
@@ -654,7 +645,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
     return {
       surface_kind: 'opl_temporal_external_production_residency_proof',
       provider_kind: 'temporal',
-      proof_environment: 'external_temporal_service_and_managed_worker',
+      proof_environment: proofEnvironment,
       closeout_status: proven ? 'production_residency_proven' : 'production_residency_failed',
       address,
       namespace,
@@ -666,11 +657,13 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         address,
         namespace,
         task_queue: taskQueue,
+        address_source: worker.address_source,
         lifecycle_status: worker.lifecycle_status,
         server_reachable: worker.server_reachable,
         worker_ready: worker.worker_ready,
         managed_worker_pid: worker.managed_worker_pid,
         managed_worker_state_path: worker.managed_worker_state_path,
+        temporal_service_lifecycle: worker.temporal_service_lifecycle,
       },
       checks,
       completed_attempt: {
@@ -718,11 +711,80 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         provider_completion_is_domain_ready: false,
       },
     };
-  });
+    });
+  } catch (error) {
+    const blockerIds = ['temporal_worker_transport_probe_failed'];
+    return {
+      surface_kind: 'opl_temporal_external_production_residency_proof',
+      provider_kind: 'temporal',
+      proof_environment: proofEnvironment,
+      closeout_status: 'production_residency_blocked',
+      blocker: {
+        blocker_kind: 'platform_dependency',
+        blocker_status: 'worker_transport_probe_failed',
+        blocker_ids: blockerIds,
+        owner: 'operator',
+        required_before: 'production_residency_proof',
+        repair_action: worker.repair_action,
+        error_message: error instanceof Error ? error.message : String(error),
+      },
+      blockers: blockerIds,
+      temporal_worker_lifecycle: worker,
+      runtime_snapshot: {
+        provider_kind: 'temporal',
+        address,
+        namespace,
+        task_queue: taskQueue,
+        address_source: worker.address_source,
+        lifecycle_status: worker.lifecycle_status,
+        server_reachable: worker.server_reachable,
+        worker_ready: worker.worker_ready,
+        managed_worker_pid: worker.managed_worker_pid,
+        managed_worker_state_path: worker.managed_worker_state_path,
+        temporal_service_lifecycle: worker.temporal_service_lifecycle,
+      },
+      checks: {
+        external_temporal_server_reachable: worker.server_reachable === true,
+        managed_worker_ready: worker.worker_ready === true,
+        worker_completed_attempt: false,
+        worker_restart_requery: false,
+        signal_history_preserved: false,
+        typed_closeout_required_for_completed: false,
+        missing_closeout_blocks_completion: false,
+        retry_or_dead_letter_boundary_observed: false,
+        domain_truth_boundary_preserved: true,
+      },
+      completed_attempt: null,
+      restarted_worker_requery: null,
+      blocked_attempt: null,
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_blocker',
+        receipt_status: 'blocked',
+        provider_kind: 'temporal',
+        blocker_ids: blockerIds,
+        repair_action_id: worker.repair_action.action_id,
+      },
+      authority_boundary: {
+        opl: 'temporal_residency_proof_and_transport_metadata_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+  }
 }
 
 export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
-  const address = requireTemporalAddress();
+  const { address } = resolveTemporalAddressForPaths(paths);
+  if (!address) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal worker foreground requires OPL_TEMPORAL_ADDRESS, TEMPORAL_ADDRESS, or managed local service state.',
+      {
+        required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state'],
+        provider_kind: 'temporal',
+      },
+    );
+  }
   writeTemporalWorkerState(paths, {
     provider_kind: 'temporal',
     pid: process.pid,
@@ -804,6 +866,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
       stdio: 'ignore',
       env: {
         ...process.env,
+        OPL_TEMPORAL_ADDRESS: status.address ?? process.env.OPL_TEMPORAL_ADDRESS,
         OPL_TEMPORAL_WORKER_STATUS: 'ready',
       },
     },

@@ -15,6 +15,7 @@ import {
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
 } from '../../../../src/family-runtime-temporal-provider.ts';
+import { startTemporalServiceLifecycle } from '../../../../src/family-runtime-temporal-service.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -40,6 +41,65 @@ test('family-runtime worker parser exposes temporal lifecycle status command', (
     assert.equal(output.family_runtime_worker.lifecycle_status, 'not_configured');
     assert.deepEqual(output.family_runtime_worker.blockers, ['temporal_runtime_not_configured']);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime service parser exposes local Temporal lifecycle status command', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-service-status-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'service', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+
+    assert.equal(output.family_runtime_service.surface_id, 'opl_family_runtime_service');
+    assert.equal(output.family_runtime_service.action, 'status');
+    assert.equal(output.family_runtime_service.service_status, 'not_configured');
+    assert.deepEqual(output.family_runtime_service.blockers, ['temporal_local_service_not_managed']);
+    assert.equal(
+      output.family_runtime_service.repair_action.next_command,
+      'opl family-runtime service start --provider temporal',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime service start fails closed when no local Temporal launcher is available', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-service-start-missing-'));
+  const previousCommand = process.env.OPL_TEMPORAL_SERVICE_START_COMMAND;
+  const previousPath = process.env.PATH;
+  try {
+    delete process.env.OPL_TEMPORAL_SERVICE_START_COMMAND;
+    process.env.PATH = '';
+
+    await assert.rejects(
+      () => startTemporalServiceLifecycle({ root: path.join(stateRoot, 'family-runtime') }),
+      (error: any) => {
+        assert.equal(error.code, 'contract_shape_invalid');
+        assert.equal(error.details.service_status, 'launcher_missing');
+        assert.deepEqual(error.details.required_launcher, [
+          'temporal CLI on PATH',
+          'OPL_TEMPORAL_SERVICE_START_COMMAND',
+        ]);
+        return true;
+      },
+    );
+  } finally {
+    if (previousCommand === undefined) {
+      delete process.env.OPL_TEMPORAL_SERVICE_START_COMMAND;
+    } else {
+      process.env.OPL_TEMPORAL_SERVICE_START_COMMAND = previousCommand;
+    }
+    if (previousPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = previousPath;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
@@ -224,6 +284,57 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
   }
 });
 
+test('Temporal worker status consumes managed local service state without env address', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-service-worker-status-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  try {
+    assert.equal(typeof child.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: child.pid,
+      address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'test temporal service',
+    }, null, 2)}\n`);
+
+    const output = runCli(
+      ['family-runtime', 'worker', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+        OPL_TEMPORAL_WORKER_STATUS: '',
+      }),
+    );
+    const worker = output.family_runtime_worker;
+
+    assert.equal(worker.lifecycle_status, 'worker_not_ready');
+    assert.equal(worker.server_reachable, true);
+    assert.equal(worker.address, address);
+    assert.equal(worker.address_source, 'managed_local_service_state');
+    assert.equal(worker.temporal_service_lifecycle.service_status, 'running');
+    assert.equal(worker.temporal_service_lifecycle.managed_service_pid, child.pid);
+    assert.deepEqual(worker.blockers, ['temporal_worker_not_ready']);
+  } finally {
+    process.kill(child.pid!, 'SIGTERM');
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime residency proof reports Temporal live-evidence gaps fail-closed', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-residency-proof-gap-'));
   try {
@@ -275,7 +386,7 @@ test('family-runtime residency proof --production requires external Temporal rea
     assert.equal(production.blocker.repair_action.action_id, 'configure_temporal_service');
     assert.equal(
       production.blocker.repair_action.next_command,
-      'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
+      'opl family-runtime service start --provider temporal',
     );
     assert.equal(production.runtime_snapshot.lifecycle_status, 'not_configured');
     assert.equal(production.runtime_snapshot.server_reachable, false);
@@ -299,6 +410,68 @@ test('family-runtime residency proof --production requires external Temporal rea
       domain_truth_boundary_preserved: true,
     });
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime residency proof --production reads managed local Temporal service state', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-service-proof-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const service = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  const worker = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  service.unref();
+  worker.unref();
+  try {
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: service.pid,
+      address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'test temporal service',
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: worker.pid,
+      address,
+      namespace: 'default',
+      task_queue: 'opl-stage-attempts',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+    }, null, 2)}\n`);
+
+    const output = runCli(
+      ['family-runtime', 'residency', 'proof', '--provider', 'temporal', '--production'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      }),
+    );
+    const production = output.family_runtime_residency_proof.production_residency_proof;
+
+    assert.equal(production.proof_environment, 'local_temporal_service_and_managed_worker');
+    assert.equal(production.closeout_status, 'production_residency_blocked');
+    assert.equal(production.blocker.blocker_status, 'worker_transport_probe_failed');
+    assert.equal(production.runtime_snapshot.address_source, 'managed_local_service_state');
+    assert.equal(production.runtime_snapshot.temporal_service_lifecycle.service_status, 'running');
+    assert.equal(production.runtime_snapshot.temporal_service_lifecycle.managed_service_pid, service.pid);
+    assert.equal(production.runtime_snapshot.server_reachable, true);
+    assert.equal(production.runtime_snapshot.worker_ready, true);
+  } finally {
+    process.kill(service.pid!, 'SIGTERM');
+    process.kill(worker.pid!, 'SIGTERM');
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

@@ -25,6 +25,7 @@ import {
   startTemporalStageAttemptWorkflow,
   stopTemporalWorkerLifecycle,
 } from './family-runtime-temporal-provider.ts';
+import { runTemporalServiceCommand } from './family-runtime-temporal-service-command.ts';
 import {
   createStageAttempt,
   inspectStageAttempt,
@@ -682,6 +683,15 @@ export async function runFamilyRuntime(args: string[]) {
           ...(await inspectTemporalWorkerLifecycle(paths)),
         },
       };
+    }
+    if (parsed.mode === 'service_status') {
+      return await runTemporalServiceCommand(db, paths, parsed);
+    }
+    if (parsed.mode === 'service_start') {
+      return await runTemporalServiceCommand(db, paths, parsed);
+    }
+    if (parsed.mode === 'service_stop') {
+      return await runTemporalServiceCommand(db, paths, parsed);
     }
     if (parsed.mode === 'worker_start') {
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);

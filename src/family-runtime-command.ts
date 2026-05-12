@@ -32,6 +32,11 @@ export type FamilyRuntimeCommandInput =
     providerKind?: FamilyRuntimeProviderKind;
     detach?: boolean;
   }
+  | {
+    mode: 'service_start' | 'service_status' | 'service_stop';
+    providerKind?: FamilyRuntimeProviderKind;
+    detach?: boolean;
+  }
   | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
@@ -209,6 +214,40 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         : action === 'status'
           ? 'worker_status'
           : 'worker_stop',
+      providerKind,
+      detach,
+    };
+  }
+  if (mode === 'service') {
+    const action = rest[0];
+    if (action !== 'start' && action !== 'status' && action !== 'stop') {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime service requires start, status, or stop.', {
+        usage: 'opl family-runtime service start|status|stop [--provider temporal] [--foreground]',
+      });
+    }
+    let providerKind: FamilyRuntimeProviderKind | undefined;
+    let detach = true;
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--provider' && value) {
+        providerKind = assertProviderKind(value);
+        index += 1;
+      } else if (token === '--foreground') {
+        detach = false;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime service ${action} option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime service start|status|stop [--provider temporal] [--foreground]',
+        });
+      }
+    }
+    return {
+      mode: action === 'start'
+        ? 'service_start'
+        : action === 'status'
+          ? 'service_status'
+          : 'service_stop',
       providerKind,
       detach,
     };
@@ -632,6 +671,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|worker start|worker status|worker stop|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }
