@@ -2,7 +2,7 @@
 
 Status: `active_support`
 Owner: `One Person Lab`
-Purpose: define the framework-first content-level development map after OPL became the stage-led, Agent executor-based family agent framework.
+Purpose: define the framework-first content-level development map after OPL became the stage-led family agent framework with Agent executors as the minimum execution unit.
 Machine boundary: this is a human-readable execution map. Machine truth remains in `contracts/`, source code, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, and real workspace / app evidence.
 
 ## Current Conclusion

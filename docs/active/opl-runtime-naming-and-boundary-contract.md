@@ -2,7 +2,7 @@
 
 # OPL Runtime Naming And Boundary Contract
 
-> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the stage-led, Agent executor-based OPL framework. Current default public wording is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
+> Current-status note (`2026-05-11`): this document is the active runtime naming boundary for the stage-led OPL framework with Agent executors as the minimum execution unit. Current default public wording is `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references.
 
 ## Purpose
 

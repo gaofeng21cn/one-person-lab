@@ -77,7 +77,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
 
 当前活跃公开模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)。
-当前活跃交互模型是 stage-led、Agent executor-based、runtime-first、skill-first。
+当前活跃交互模型是 stage-led、以 Agent executor 为最小执行单位、runtime-first、skill-first。
 已退役的 `gateway / federation / routed-action` 语料以及 `frontdoor` 时代材料，都应放在活跃层之下理解。
 
 ## 公开支撑

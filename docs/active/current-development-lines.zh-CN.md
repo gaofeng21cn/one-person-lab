@@ -2,7 +2,7 @@
 
 Status: `active_support`
 Owner: `One Person Lab`
-Purpose: 在 OPL 已定位为 stage-led、Agent executor-based 完整智能体框架之后，给出当前 framework-first 的内容级开发线路。
+Purpose: 在 OPL 已定位为 stage-led、以 Agent executor 为最小执行单位的完整智能体框架之后，给出当前 framework-first 的内容级开发线路。
 Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / app evidence。
 
 ## 当前结论

@@ -65,7 +65,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 Current owner surfaces:
 
 - [OPL development document portfolio](../active/development-document-portfolio.md): current entry for absorbing, retaining, downgrading, retiring, or archiving old runtime / product-entry / migration content.
-- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete Codex-first, stage-led agent runtime framework, domain-agent boundary, language/runtime choices, and legacy-surface retirement.
+- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete stage-led runtime framework with Agent executors as the minimum execution unit, domain-agent boundary, language/runtime choices, and legacy-surface retirement.
 - [Temporal family runtime provider plan](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the required provider-backed production online substrate.
 - [OPL Runtime Manager target](./runtime-substrate/opl-runtime-manager-target.md): active support target for Runtime Manager, provider readiness, native helper, and state index boundaries.
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md), [Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md), and [CrewAI absorb note](./runtime-substrate/family-orchestration-contract-absorb-crewai.md): active support references only where their body still aligns with the roadmap and core five.

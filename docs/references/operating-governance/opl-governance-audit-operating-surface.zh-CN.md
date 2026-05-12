@@ -14,7 +14,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 目标不是单体 runtime。
 目标是一个薄的顶层 operating layer：只记录 governance signal、routing audit trace 与 readiness index，而 runtime truth 仍然留在 domain system 内部。
-本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 Codex-first、stage-led。
+本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
 
 ## 与前置 Gateway 层的关系
 
@@ -156,7 +156,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 ### Domain entry 兼容值仍为 `domain_gateway`
 
-这一层可以引用保留兼容值 `domain_gateway` 以支持 reviewability。在当前 prose 中，应把它理解成 Codex-first、stage-led topology 下的 domain-owned capability entry。
+这一层可以引用保留兼容值 `domain_gateway` 以支持 reviewability。在当前 prose 中，应把它理解成 stage-led、以 Agent executor 为最小执行单位的 topology 下的 domain-owned capability entry。
 
 ### Publish readiness 不等于 publish truth
 

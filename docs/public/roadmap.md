@@ -4,7 +4,7 @@
 
 ## Current Role
 
-`OPL` is the stage-led, Agent executor-based agent runtime framework for a one-person research lab.
+`OPL` is the stage-led runtime framework with Agent executors as the minimum execution unit for a one-person research lab.
 It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes while domain repositories continue to own their domain truth.
 
 Today the public `OPL` surface centers on:
@@ -72,7 +72,7 @@ Use these reference surfaces when you need deeper context:
 
 The roadmap is healthy when readers can immediately understand:
 
-- `OPL` is the stage-led, Agent executor-based framework owner for activation, stage attempts, queue/wakeup, receipts, recovery, projection, and shared modules/contracts/indexes
+- `OPL` owns activation, stage attempts, queue/wakeup, receipts, recovery, projection, and shared modules/contracts/indexes in a stage-led framework where Agent executors are the minimum execution unit
 - admitted domains keep their own authority under that shell
 - the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
 - the Temporal production provider now has a minimal verifiable loop: workflow/activity/signal/query, worker lifecycle contract, typed closeout ingestion, fail-closed readiness, `stage_attempt_workbench` projection, and repo-native Temporal test-server plus real-worker residency proof; external production service provisioning/readiness and domain soak remain next-stage acceptance work

@@ -12,7 +12,7 @@ This document indexes the derived machine-readable review matrix for historical/
 
 Its job is to make human-review obligations, acceptance coverage, companion review surfaces, and publishability-stage boundaries inspectable from one place without turning the matrix into an approval engine, publish controller, release engine, or second source of truth.
 
-The current OPL topology is Codex-first and stage-led. Surface IDs that still contain gateway vocabulary are retained as compatibility/reviewability vocabulary for the derived matrix and historical corpus.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain gateway vocabulary are retained as compatibility/reviewability vocabulary for the derived matrix and historical corpus.
 
 ## Machine-Readable Artifact
 

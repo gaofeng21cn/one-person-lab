@@ -65,7 +65,7 @@
 当前 owner surfaces：
 
 - [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md)：旧 runtime / product-entry / migration 文档按内容吸收、保留、降级、退役或归档的当前入口。
-- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)：完整 Codex-first、stage-led 智能体运行框架、domain-agent 边界、语言/runtime 取舍和旧面退役的总入口。
+- [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)：完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架、domain-agent 边界、语言/runtime 取舍和旧面退役的总入口。
 - [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)：provider-backed production online runtime 必需 substrate 的当前支撑计划。
 - [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)：Runtime Manager、provider readiness、native helper 和 state index 边界的当前支撑目标。
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)、[Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md) 和 [CrewAI 吸收说明](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)：只有当正文仍与 roadmap 和核心五件套一致时，才作为 active support 参考。

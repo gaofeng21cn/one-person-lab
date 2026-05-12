@@ -2,7 +2,7 @@
 
 Owner: `One Person Lab`
 Purpose: `development_plan`
-State: `active_support`
+State: `active_support; repo implementation landed; production soak pending`
 Machine boundary: 本文是人工可读开发计划。机器真相必须落在 `contracts/`、source code、CLI/API 行为、runtime ledger 或 domain-owned manifests。
 Date: `2026-05-12`
 
@@ -15,6 +15,8 @@ OPL family runtime 的生产在线架构已经从 Hermes-first online substrate 
 Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 stage 内默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
 
 Hermes-Agent 的新定位是：迁移期 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate，local provider 只作为 dev/CI/offline diagnostic baseline。
+
+2026-05-12 closeout：Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof 和 Agent Executor Adapter 接入链路已经落地。剩余验收集中在外部 production Temporal service / managed worker 的长时 residency、真实 domain stage activity soak、provider-hosted guarded apply 和真实 cost/progress 校准。
 
 ## 顶层设计
 

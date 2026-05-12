@@ -12,7 +12,7 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 
 优先级固定为：
 
-1. `OPL` 先完成 family-level 智能体框架口径：Codex-first、stage-led、provider-backed，`Codex CLI` 是 stage 内默认最小执行单元。
+1. `OPL` 先完成 family-level 智能体框架口径：stage-led、provider-backed，并以 Agent executor 为最小执行单位，`Codex CLI` 是 stage 内默认最小执行单元。
 2. `MAS`、`MAG`、`RCA` 作为 admitted domain agents 迁入这套框架，同时保留各自 domain truth、quality verdict、runtime/detail owner、artifact authority 与 direct skill path。
 3. `MDS` 只作为 MAS 声明的 archive / provenance / backend audit / explicit archive import / upstream intake / diagnostic / parity oracle reference。
 4. 旧 `Hermes-first`、`Gateway`、`frontdoor`、`federation`、`MDS default`、旧 local manager 与重复 UI/runtime 入口完成替代证据后退役或归档。

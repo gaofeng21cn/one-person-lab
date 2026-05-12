@@ -14,7 +14,7 @@ Its goal is to define what `OPL` may legitimately index after domain-owned publi
 
 The target is not a top-level publish runtime.
 The target is a thin top-level operating layer that indexes publish outcomes, promotion candidates, and public-surface references while domain systems continue to own publish truth.
-Legacy `gateway` wording in this document is retained for compatibility with historical surface IDs and example corpora. Current topology is Codex-first and stage-led.
+Legacy `gateway` wording in this document is retained for compatibility with historical surface IDs and example corpora. Current topology is stage-led with Agent executors as the minimum execution unit.
 
 ## Relationship To Earlier Gateway Layers
 

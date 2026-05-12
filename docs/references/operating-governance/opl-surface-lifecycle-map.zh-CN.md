@@ -12,7 +12,7 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 
 它的作用是：把 contract、routing、operating、discoverability 与 acceptance surface 串成可遍历的关系图，同时不把这张 map 升格成 workflow engine、transition authority 或第二真相源。
 
-当前 OPL topology 是 Codex-first、stage-led。Legacy `gateway` id 只在 derived artifact 与 compatibility archive 仍需要它们做 traversal 和 reviewability 时保留。
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。Legacy `gateway` id 只在 derived artifact 与 compatibility archive 仍需要它们做 traversal 和 reviewability 时保留。
 
 ## 机器可读工件
 

@@ -6,7 +6,7 @@
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
 
-所以，`OPL` 更准确的理解是面向持续实验室工作的 stage-led、Agent executor-based 智能体运行框架。它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力。
+所以，`OPL` 更准确的理解是面向持续实验室工作的 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力。
 
 ## 顶层链路
 
@@ -124,9 +124,9 @@ Agent 主要负责：
 - 各个独立 `domain agent` 仓继续承接自己的产品入口、domain workflow 与交付真相
 
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
-这条方向当前还没有全部实现，但现在应该按这个结构推进。
+当前已经落地的是这条结构的 framework/control-plane、executor adapter、provider code path、receipt/projection 和 domain descriptor 层；尚未闭合的是外部 production provider 长时运行和真实 domain soak。
 
-当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。它在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；一旦 Temporal-backed provider 落地，它不再是目标默认 substrate。
+当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。它现在只保留为 legacy/optional provider、显式 executor/proof lane、diagnostic/provenance 或可选安装模块；Temporal-backed provider 已是 production online runtime 的必需 substrate，真实 production soak 仍单独验收。
 `OPL Runtime Manager` 可以在已配置 family runtime provider 之上适配 product-managed runtime operations，但不能写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
 Rust native helper / index-only 工作可以支持 native assistance 与 indexed discovery，但不能成为 domain execution 或 truth 的 owner。
 

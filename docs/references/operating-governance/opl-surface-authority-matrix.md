@@ -12,7 +12,7 @@ This document indexes the derived machine-readable authority matrix for the hist
 
 Its job is to make routing, execution, truth, review, and publication ownership boundaries inspectable from one place without turning the matrix into an authorization engine, runtime control plane, or second source of truth.
 
-The current OPL topology is Codex-first and stage-led. Surface IDs that still contain `gateway` or `domain_gateway` are retained because the paired derived JSON artifact and historical compatibility corpus still use them for reviewability. Read them as legacy-derived reviewability vocabulary.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain `gateway` or `domain_gateway` are retained because the paired derived JSON artifact and historical compatibility corpus still use them for reviewability. Read them as legacy-derived reviewability vocabulary.
 
 ## Machine-Readable Artifact
 

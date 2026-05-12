@@ -132,7 +132,7 @@ It is to let the `OPL` ecosystem evolve toward a family of vertical online agent
 In that structure:
 
 - `OPL`
-  - remains the stage-led, Agent executor-based framework and activation layer
+  - remains the stage-led framework with Agent executors as the minimum execution unit and activation layer
 - `UHS`
   - remains the shared Harness Engineering umbrella language
 - `Shared Runtime Contract`
@@ -164,7 +164,7 @@ The current `OPL` family can be read as:
   - grant-authoring domain agent
 
 `OPL` itself is not one more domain agent.
-It remains the stage-led, Agent executor-based framework and activation layer above those domain systems.
+It remains the stage-led framework with Agent executors as the minimum execution unit and activation layer above those domain systems.
 
 ## Practical Implication
 

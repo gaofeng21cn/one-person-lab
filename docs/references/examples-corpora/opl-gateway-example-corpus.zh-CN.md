@@ -12,7 +12,7 @@ Machine boundary: 只作为 example artifact 的人读配套。
 
 它的目标是：在不把 example 做成 runtime 或当前 topology 的前提下，让 legacy gateway examples 可以继续用于 review、migration 与 schema archaeology。
 它是一个配套索引，而不是新的 contract layer。
-当前 OPL topology 是 Codex-first、stage-led；这些 examples 是合同 walkthrough 和 evidence material。
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位；这些 examples 是合同 walkthrough 和 evidence material。
 
 ## 非目标
 

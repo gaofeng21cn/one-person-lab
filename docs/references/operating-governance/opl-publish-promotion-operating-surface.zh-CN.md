@@ -14,7 +14,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 目标不是顶层 publish runtime。
 目标是一个薄的顶层 operating layer：只索引 publish outcome、promotion candidate 与 public-surface reference，而 publish truth 仍然留在 domain system 内部。
-本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 Codex-first、stage-led。
+本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
 
 ## 与前置 Gateway 层的关系
 
