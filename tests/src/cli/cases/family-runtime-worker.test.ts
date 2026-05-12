@@ -1,7 +1,20 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  assert,
+  fs,
+  os,
+  path,
+  repoRoot,
+  runCli,
+  test,
+} from '../helpers.ts';
+import {
+  inspectTemporalWorkerLifecycle,
+  startTemporalWorkerLifecycle,
+  stopTemporalWorkerLifecycle,
+} from '../../../../src/family-runtime-temporal-provider.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -134,5 +147,79 @@ test('family-runtime worker start fails closed when Temporal is not configured o
   } finally {
     fs.rmSync(missingStateRoot, { recursive: true, force: true });
     fs.rmSync(unreachableStateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker lifecycle re-query proves resident state and stop transition', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-requery-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  try {
+    assert.equal(typeof child.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: child.pid,
+      address,
+      namespace: 'opl-worker-requery-test',
+      task_queue: 'opl-worker-requery',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+    }, null, 2)}\n`);
+
+    process.env.OPL_TEMPORAL_ADDRESS = address;
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-requery-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-requery';
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+
+    const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
+    const restart = await startTemporalWorkerLifecycle({ root: workerRoot });
+    const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(requery.lifecycle_status, 'ready');
+    assert.equal(requery.managed_worker_pid, child.pid);
+    assert.equal(restart.start_status, 'already_ready');
+    assert.equal(restart.status.managed_worker_pid, child.pid);
+    assert.equal(stop.stop_status, 'stopped');
+    assert.equal(stop.before.lifecycle_status, 'ready');
+    assert.equal(stop.status.lifecycle_status, 'worker_not_ready');
+    assert.deepEqual(stop.status.blockers, ['temporal_worker_not_ready']);
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
