@@ -463,6 +463,7 @@ test('family-runtime residency proof --production reads managed local Temporal s
     assert.equal(production.proof_environment, 'local_temporal_service_and_managed_worker');
     assert.equal(production.closeout_status, 'production_residency_blocked');
     assert.equal(production.blocker.blocker_status, 'worker_transport_probe_failed');
+    assert.ok(!production.blocker.error_message.includes('requires OPL_TEMPORAL_ADDRESS'));
     assert.equal(production.runtime_snapshot.address_source, 'managed_local_service_state');
     assert.equal(production.runtime_snapshot.temporal_service_lifecycle.service_status, 'running');
     assert.equal(production.runtime_snapshot.temporal_service_lifecycle.managed_service_pid, service.pid);

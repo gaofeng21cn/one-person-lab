@@ -711,7 +711,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         provider_completion_is_domain_ready: false,
       },
     };
-    });
+    }, address);
   } catch (error) {
     const blockerIds = ['temporal_worker_transport_probe_failed'];
     return {
