@@ -544,8 +544,27 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
 
     assert.equal(list.family_agents.summary.aligned_count, 3);
     assert.equal(list.family_agents.summary.missing_count, 0);
+    assert.equal(list.family_agents.summary.descriptor_aligned_count, 3);
+    assert.equal(list.family_agents.summary.physical_skeleton_audit_pending_count, 3);
+    assert.equal(list.family_agents.summary.production_closure_gap_count, 15);
     assert.equal(mas.family_agent.skeleton_status, 'aligned');
     assert.equal(mas.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
+    assert.equal(mas.family_agent.descriptor_readiness.status, 'descriptor_aligned');
+    assert.equal(mas.family_agent.physical_skeleton_layout_audit.status, 'descriptor_aligned_physical_layout_pending');
+    assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.required_dirs, ['agent', 'contracts', 'runtime', 'docs']);
+    assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.missing_declared_dirs, []);
+    assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.forbidden_declared_dirs, []);
+    assert.equal(mas.family_agent.physical_skeleton_layout_audit.authority_boundary.opl_role, 'read_only_layout_audit');
+    assert.deepEqual(
+      mas.family_agent.production_closure_gaps.map((gap: { gap_id: string }) => gap.gap_id),
+      [
+        'temporal_server_worker_residency_proof',
+        'provider_hosted_domain_soak',
+        'workspace_runtime_memory_apply_receipt',
+        'physical_repo_skeleton_reorganization',
+        'legacy_surface_physical_retirement',
+      ],
+    );
     assert.equal(mag.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
     assert.equal(rca.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
     assert.deepEqual(rca.family_agent.declared_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
