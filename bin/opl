@@ -55,6 +55,14 @@ case "$1" in
   exec)
     shift
     maybe_sync_family_skills
+    if [[ -n "${OPL_EXECUTOR_KIND:-}" ]]; then
+      run_opl exec "$@"
+    fi
+    for arg in "$@"; do
+      if [[ "$arg" == "--executor" ]]; then
+        run_opl exec "$@"
+      fi
+    done
     run_codex exec "$@"
     ;;
   resume)

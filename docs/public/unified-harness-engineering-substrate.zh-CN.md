@@ -41,7 +41,7 @@
 
 ```text
 Human / Agent
-  -> OPL Codex-first stage-led framework
+  -> OPL stage-led Agent executor framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
@@ -53,7 +53,7 @@ Human / Agent
 
 每一层负责不同的事情：
 
-- `OPL Codex-first stage-led framework`
+- `OPL stage-led Agent executor framework`
   - 负责顶层任务语义、stage decomposition、activation 与跨域边界合同
 - `Unified Harness Engineering Substrate`
   - 负责多个 domain 共享的 Harness Engineering 上位语言
@@ -131,7 +131,7 @@ Human / Agent
 在这个理想结构里：
 
 - `OPL`
-  - 继续负责 Codex-first、stage-led framework 与 activation layer
+  - 继续负责 stage-led、Agent executor-based framework 与 activation layer
 - `UHS`
   - 继续作为共享 Harness Engineering 的上位语言
 - `Shared Runtime Contract`
@@ -162,7 +162,7 @@ Human / Agent
   - 基金写作 domain agent
 
 `OPL` 本身不是再额外多出来的一个 domain agent。
-它仍然是位于这些 domain system 之上的 Codex-first、stage-led framework 与 activation layer。
+它仍然是位于这些 domain system 之上的 stage-led、Agent executor-based framework 与 activation layer。
 
 ## 现实意义
 

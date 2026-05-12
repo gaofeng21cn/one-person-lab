@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import { runCodexStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+import { runAgentStageRunner, runCodexStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+import type { AgentExecutionReceipt } from '../../src/agent-executor.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
 import {
   createStageAttempt,
@@ -13,6 +16,27 @@ import {
   inspectStageAttempt,
   listStageAttemptCloseouts,
 } from '../../src/family-runtime-stage-attempts.ts';
+
+type AgentStageRunnerReceipt = {
+  runner_status: {
+    runner_kind: 'agent_executor_stage_runner';
+    executor_kind: string;
+    typed_closeout_required_for_completion: boolean;
+  };
+  agent_execution_receipt: AgentExecutionReceipt;
+};
+
+function requireAgentStageRunnerReceipt(receipt: Awaited<ReturnType<typeof runAgentStageRunner>>) {
+  assert.equal(receipt.runner_status.runner_kind, 'agent_executor_stage_runner');
+  assert.ok('agent_execution_receipt' in receipt, 'agent stage runner receipt must include executor receipt.');
+  return receipt as AgentStageRunnerReceipt;
+}
+
+function requireCloseoutRefs(receipt: AgentExecutionReceipt) {
+  const closeoutRefs = receipt.closeout_packet?.closeout_refs;
+  assert.ok(Array.isArray(closeoutRefs), 'agent execution receipt must include closeout refs.');
+  return closeoutRefs;
+}
 
 test('Codex stage runner supervises a live Codex CLI process without accepting free-text completion', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
@@ -63,6 +87,42 @@ exit 64
     } else {
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent stage runner records a selected non-default executor receipt without Codex fallback', async () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-claude-stage-runner-'));
+  const claudePath = path.join(fixtureRoot, 'claude');
+  fs.writeFileSync(
+    claudePath,
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:stage-claude"]}\\n\'\n',
+    { mode: 0o755 },
+  );
+  try {
+    const receipt = await runAgentStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_claude_runner_test',
+        stage_id: 'analysis-campaign',
+        executor_kind: 'claude_code',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+      },
+      stagePacketRef: 'packet:analysis',
+      runnerMode: 'claude_code',
+      env: {
+        OPL_CLAUDE_CODE_BIN: claudePath,
+        PATH: '',
+      },
+    });
+
+    const agentReceipt = requireAgentStageRunnerReceipt(receipt);
+    assert.equal(agentReceipt.runner_status.executor_kind, 'claude_code');
+    assert.equal(agentReceipt.agent_execution_receipt.executor_kind, 'claude_code');
+    assert.equal(requireCloseoutRefs(agentReceipt.agent_execution_receipt)[0], 'receipt:stage-claude');
+    assert.equal(agentReceipt.runner_status.typed_closeout_required_for_completion, true);
+  } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

@@ -5,6 +5,7 @@ import {
   parseCodexExecOutput,
   runCodexCommand,
 } from './codex.ts';
+import { runAgentExecutor } from './agent-executor.ts';
 import { isInteractiveShell } from './hermes.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
@@ -225,9 +226,10 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
         entry_surface: 'opl_local_product_entry_shell',
         mode: 'exec',
         dry_run: true,
-        executor_backend: 'codex',
+        executor_backend: input.executorKind ?? 'codex_cli',
         input: {
           prompt: input.prompt,
+          executor_kind: input.executorKind ?? 'codex_cli',
           workspace_path: input.workspacePath ?? null,
           model: input.model ?? null,
           provider: input.provider ?? null,
@@ -239,37 +241,53 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
     };
   }
 
-  const codexResult = runCodexCommand(codexArgs);
-  assertCodexSuccess(
-    codexResult.exitCode,
-    'Codex exec command failed inside OPL Product Entry.',
-    {
-      args: buildCodexCliPreview(codexArgs),
-      stdout: codexResult.stdout,
-      stderr: codexResult.stderr,
-    },
-  );
+  const receipt = runAgentExecutor({
+    executor_kind: input.executorKind,
+    mode: 'structured_call',
+    prompt: input.prompt,
+    cwd: input.workspacePath,
+    model: input.model,
+    provider: input.provider,
+    json,
+  });
+  if (receipt.executor_kind === 'codex_cli') {
+    assertCodexSuccess(
+      receipt.exit_code,
+      'Codex exec command failed inside OPL Product Entry.',
+      {
+        args: receipt.proof?.command_preview ?? buildCodexCliPreview(codexArgs),
+        stdout: receipt.stdout_preview,
+        stderr: receipt.stderr_preview,
+      },
+    );
+  }
+  const parsed = receipt.executor_kind === 'codex_cli' && json
+    ? parseCodexExecOutput(receipt.stdout_preview)
+    : null;
 
-  const parsed = json ? parseCodexExecOutput(codexResult.stdout) : null;
   return {
     version: 'g2',
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
       mode: 'exec',
       dry_run: false,
-      executor_backend: 'codex',
+      executor_backend: receipt.executor_kind,
       input: {
         prompt: input.prompt,
+        executor_kind: input.executorKind ?? 'codex_cli',
         workspace_path: input.workspacePath ?? null,
         model: input.model ?? null,
         provider: input.provider ?? null,
       },
+      agent_execution_receipt: receipt,
       codex: {
-        command_preview: buildCodexCliPreview(codexArgs),
-        session_id: parsed?.threadId ?? null,
+        command_preview: Array.isArray(receipt.proof?.command_preview)
+          ? receipt.proof.command_preview
+          : buildCodexCliPreview(codexArgs),
+        session_id: parsed?.threadId ?? receipt.session_id,
         response: parsed?.finalMessage ?? '',
-        raw_output: normalizeCodexOutput(codexResult.stdout, codexResult.stderr),
-        exit_code: codexResult.exitCode,
+        raw_output: normalizeCodexOutput(receipt.stdout_preview, receipt.stderr_preview),
+        exit_code: receipt.exit_code,
       },
     },
   };

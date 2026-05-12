@@ -41,7 +41,7 @@ The intended architecture stays:
 
 ```text
 Human / Agent
-  -> OPL Codex-first stage-led framework
+  -> OPL stage-led Agent executor framework
       -> Unified Harness Engineering Substrate
           -> Shared Runtime Contract
           -> Shared Domain Contract
@@ -53,7 +53,7 @@ Human / Agent
 
 The layers mean different things:
 
-- `OPL Codex-first stage-led framework`
+- `OPL stage-led Agent executor framework`
   - owns top-level task semantics, stage decomposition, activation, and cross-domain boundary contracts
 - `Unified Harness Engineering Substrate`
   - owns the shared Harness Engineering umbrella language reused across domains
@@ -132,7 +132,7 @@ It is to let the `OPL` ecosystem evolve toward a family of vertical online agent
 In that structure:
 
 - `OPL`
-  - remains the Codex-first, stage-led framework and activation layer
+  - remains the stage-led, Agent executor-based framework and activation layer
 - `UHS`
   - remains the shared Harness Engineering umbrella language
 - `Shared Runtime Contract`
@@ -164,7 +164,7 @@ The current `OPL` family can be read as:
   - grant-authoring domain agent
 
 `OPL` itself is not one more domain agent.
-It remains the Codex-first, stage-led framework and activation layer above those domain systems.
+It remains the stage-led, Agent executor-based framework and activation layer above those domain systems.
 
 ## Practical Implication
 

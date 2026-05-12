@@ -9,7 +9,7 @@ Machine boundary: human-readable development portfolio only. Machine-readable tr
 
 OPL development documents should no longer be read as a queue where every old plan must be executed end to end. The current mainline is framework-first:
 
-1. Build OPL as the complete Codex-first, stage-led agent framework.
+1. Build OPL as the complete stage-led, Agent executor-based agent framework.
 2. Migrate MAS/MAG/RCA into that framework as OPL-admitted domain agents while preserving direct skill path equivalence.
 3. Partition old and new functionality by content: lift framework-generic capability into OPL, keep domain truth inside each domain repo, and downgrade historical diagnostics or compatibility material.
 4. Retire old Hermes-first, Gateway-era, direct-entry, local-manager, and MDS-default routes after replacement evidence exists.

@@ -20,21 +20,36 @@
   },
   "canonical_executor_backends": [
     "codex_cli",
-    "hermes_agent"
+    "hermes_agent",
+    "claude_code"
   ],
+  "executor_registry": {
+    "surface_kind": "opl_agent_executor_registry",
+    "request_contract": "AgentExecutionRequest",
+    "receipt_contract": "AgentExecutionReceipt",
+    "default_resolution_order": [
+      "cli_flag",
+      "stage_attempt_input",
+      "OPL_EXECUTOR_KIND",
+      "codex_cli"
+    ],
+    "non_default_equivalence": "connectivity_lifecycle_receipt_audit_only"
+  },
   "execution_shapes": {
     "structured_call": {
       "summary": "single structured input/output call under a domain-owned schema",
       "allowed_backends": [
         "codex_cli",
-        "hermes_agent"
+        "hermes_agent",
+        "claude_code"
       ]
     },
     "agent_loop": {
       "summary": "multi-step agent run with events, tool use, repair, and review-loop proof",
       "allowed_backends": [
         "codex_cli",
-        "hermes_agent"
+        "hermes_agent",
+        "claude_code"
       ]
     }
   },
@@ -42,8 +57,25 @@
     "user_interaction_shell": {
       "owner": "opl_or_domain_product_entry",
       "scope": "user-facing natural-language or session shell",
+      "surfaces": [
+        "opl",
+        "opl_tui",
+        "opl_app",
+        "opl_acp_stdio",
+        "domain_direct_skill_entry"
+      ],
       "selects_effective_default_executor": false,
-      "holds_domain_truth": false
+      "holds_domain_truth": false,
+      "adapter_changes_default_interaction_semantics": false
+    },
+    "frontend_executor_policy": {
+      "owner": "opl_tui_or_opl_app_frontend",
+      "scope": "user-facing frontend behavior for TUI, App, and ACP shells",
+      "default_behavior": "preserve_existing_codex_cli_interaction",
+      "may_pass_explicit_executor_selection": true,
+      "may_resolve_implicit_default_executor": false,
+      "may_silently_substitute_non_default_executor": false,
+      "non_default_selection_requires_user_or_stage_explicit_signal": true
     },
     "effective_default_executor": {
       "owner": "opl_family_runtime_config",
@@ -84,15 +116,19 @@
   ],
   "executor_labels": {
     "codex_cli": "Codex CLI",
-    "hermes_agent": "Hermes-Agent"
+    "hermes_agent": "Hermes-Agent",
+    "claude_code": "Claude Code"
   },
   "executor_statuses": {
     "codex_cli": "default",
-    "hermes_agent": "experimental"
+    "hermes_agent": "experimental",
+    "claude_code": "experimental"
   },
   "guardrails": {
     "chat_completion_only_executor_forbidden": true,
     "hermes_agent_requires_full_agent_loop": true,
+    "non_default_executor_requires_explicit_selection": true,
+    "non_default_executor_forbids_silent_codex_fallback": true,
     "simple_llm_backend_forbidden": true,
     "openai_compatible_gateway_backend_forbidden": true,
     "domain_repo_provider_catalog_forbidden": true,
@@ -137,7 +173,7 @@
     "activation_requires": "explicit_request_or_runtime_manager_handoff_config"
   },
   "topology_split": {
-    "opl_role": "codex_first_stage_led_family_framework_contract",
+    "opl_role": "stage_led_agent_executor_family_framework_contract",
     "runtime_substrate_role": "provider_backed_stage_attempt_orchestration",
     "executor_adapter_role": "domain_owned_stage_selection",
     "concrete_executor_role": "task_local_autonomous_execution"
