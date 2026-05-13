@@ -26,9 +26,7 @@ export type {
 export { buildProductEntryHandoffEnvelope } from './product-entry-handoff-envelope.ts';
 export {
   buildProductEntryDoctor,
-  runProductEntryLogs,
   runProductEntryResume,
-  runProductEntrySessions,
 } from './product-entry-runtime.ts';
 
 export function runProductEntryExec(input: ProductEntryExecInput) {

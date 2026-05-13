@@ -183,11 +183,11 @@
     },
     "runtime_inventory": {
       "surface_kind": "runtime_inventory",
-      "summary": "MAG 当前通过 upstream Hermes substrate 与 repo-tracked authoring shells 持续推进 grant loop。",
-      "runtime_owner": "upstream_hermes_agent",
+      "summary": "MAG 当前通过 OPL stage-led provider handoff 与 repo-tracked authoring shells 持续推进 grant loop。",
+      "runtime_owner": "configured_family_runtime_provider",
       "domain_owner": "med-autogrant",
       "executor_owner": "med-autogrant",
-      "substrate": "external_hermes_substrate",
+      "substrate": "opl_stage_led_provider",
       "availability": "ready",
       "health_status": "healthy",
       "status_surface": {

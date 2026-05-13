@@ -747,11 +747,6 @@ export function buildPublicCommandSpecs(
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,
     'engine remove': engineRemoveSpec,
-    'session list': cloneCommandSpec(commandSpecs.sessions, {
-      usage: 'opl session list [--limit <n>] [--source <source>]',
-      examples: ['opl session list', 'opl session list --limit 10'],
-      group: 'session',
-    }),
     'session resume': cloneCommandSpec(commandSpecs.resume, {
       usage: 'opl session resume <session_id>',
       examples: [
@@ -762,11 +757,6 @@ export function buildPublicCommandSpecs(
       handler: (args) => runProductEntryResume(
         parseResumeArgs(args, publicCommandSpecs['session resume']).sessionId,
       ),
-    }),
-    'session logs': cloneCommandSpec(commandSpecs.logs, {
-      usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
-      examples: ['opl session logs runtime', 'opl session logs worker --level info --component runtime'],
-      group: 'session',
     }),
     'session runtime': cloneCommandSpec(commandSpecs['session runtime'], {
       usage: 'opl session runtime --acp',

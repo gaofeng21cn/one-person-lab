@@ -54,25 +54,11 @@ type ParsedCliInput = {
   loadOptions?: FrameworkContractsLoadOptions;
 };
 
-type SessionsCliInput = {
-  limit?: number;
-  source?: string;
-};
-
 type LaunchDomainCliInput = {
   projectId?: string;
   workspacePath?: string;
   strategy?: DomainLaunchStrategy;
   dryRun?: boolean;
-};
-
-type LogsCliInput = {
-  logName?: string;
-  lines?: number;
-  since?: string;
-  level?: string;
-  component?: string;
-  sessionId?: string;
 };
 
 type WorkspaceStatusCliInput = {
@@ -209,7 +195,6 @@ export type {
   OplModuleCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,
-  LogsCliInput,
   ParsedCliInput,
   ProductEntryCliInput,
   ResumeCliInput,
@@ -217,7 +202,6 @@ export type {
   RuntimeStatusCliInput,
   SessionLedgerCliInput,
   SessionRuntimeCliInput,
-  SessionsCliInput,
   StartCliInput,
   SkillPacksCliInput,
   SystemConfigureCodexCliInput,

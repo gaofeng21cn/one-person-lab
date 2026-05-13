@@ -394,10 +394,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       'codex_default_executor_with_provider_backed_family_runtime',
     );
     assert.equal(output.handoff_bundle.return_surface_contract.opl.resume_command, 'opl session resume <session_id>');
-    assert.equal(
-      output.handoff_bundle.return_surface_contract.opl.logs_command,
-      'opl session logs runtime --session <session_id>',
-    );
+    assert.equal(output.handoff_bundle.return_surface_contract.opl.runtime_status_command, 'opl status runtime --limit 10');
     assert.equal(output.handoff_bundle.return_surface_contract.opl.dashboard_command, 'opl status dashboard');
     assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai product-entry');
     assert.equal(

@@ -5,24 +5,14 @@ import {
 } from './codex.ts';
 import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
-  buildHermesCliPreview,
-  buildHermesLogsArgs,
-  buildHermesSessionsListArgs,
-  type HermesLogsOptions,
-  type HermesSessionsListOptions,
   inspectHermesRuntime,
   isInteractiveShell,
-  parseHermesSessionsTable,
-  runHermesLogs,
-  runHermesSessionsList,
 } from './hermes.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type { ContractValidationSummary } from './types.ts';
 import {
   assertCodexSuccess,
-  assertHermesSuccess,
   normalizeCodexOutput,
-  normalizeHermesOutput,
 } from './product-entry-parts/output.ts';
 
 export function buildProductEntryDoctor(validation: ContractValidationSummary) {
@@ -112,65 +102,6 @@ export function runProductEntryResume(
         output: normalizeCodexOutput(resumeResult.stdout, resumeResult.stderr),
         exit_code: resumeResult.exitCode,
       },
-    },
-  };
-}
-
-export function runProductEntrySessions(options: HermesSessionsListOptions = {}) {
-  const args = buildHermesSessionsListArgs(options);
-  const result = runHermesSessionsList(options);
-
-  assertHermesSuccess(
-    result.exitCode,
-    'Hermes sessions list failed inside OPL Product Entry.',
-    {
-      args: buildHermesCliPreview(args),
-      stdout: result.stdout,
-      stderr: result.stderr,
-    },
-  );
-
-  return {
-    version: 'g2',
-    product_entry: {
-      entry_surface: 'opl_local_product_entry_shell',
-      mode: 'sessions',
-      command_preview: buildHermesCliPreview(args),
-      limit: options.limit ?? null,
-      source_filter: options.source ?? null,
-      sessions: parseHermesSessionsTable(result.stdout),
-      raw_output: normalizeHermesOutput(result.stdout, result.stderr),
-    },
-  };
-}
-
-export function runProductEntryLogs(options: HermesLogsOptions = {}) {
-  const args = buildHermesLogsArgs(options);
-  const result = runHermesLogs(options);
-
-  assertHermesSuccess(
-    result.exitCode,
-    'Hermes logs failed inside OPL Product Entry.',
-    {
-      args: buildHermesCliPreview(args),
-      stdout: result.stdout,
-      stderr: result.stderr,
-    },
-  );
-
-  return {
-    version: 'g2',
-    product_entry: {
-      entry_surface: 'opl_local_product_entry_shell',
-      mode: 'logs',
-      log_name: options.logName ?? null,
-      lines: options.lines ?? null,
-      since: options.since ?? null,
-      level: options.level ?? null,
-      component: options.component ?? null,
-      session_id: options.sessionId ?? null,
-      command_preview: buildHermesCliPreview(args),
-      raw_output: normalizeHermesOutput(result.stdout, result.stderr),
     },
   };
 }

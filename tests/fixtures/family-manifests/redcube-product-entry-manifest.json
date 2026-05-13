@@ -55,7 +55,7 @@
     "opl_bridge_handoff": {
       "command": "redcube product federate",
       "surface_kind": "opl_hosted_product_entry",
-      "summary": "通过 family / OPL gateway 进入同一 downstream product entry。",
+      "summary": "通过 OPL-hosted handoff 进入同一 downstream product entry。",
       "requires": [
         "entry_session_id",
         "overlay",
