@@ -38,7 +38,7 @@ type TypedBlocker = {
   error_message?: string | null;
 };
 
-const PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS = 2_000;
+const PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS = 30_000;
 
 function processIsAlive(pid: number) {
   try {
