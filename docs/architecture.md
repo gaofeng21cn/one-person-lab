@@ -150,6 +150,34 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `mas_opl_runtime_workbench_projection` 是 MAS 输出给 OPL App 的 read-only study workbench 投影；OPL runtime snapshot 可以把它映射为 study drilldown、links、terminal read-only status 和 action transport metadata，但 action receipt、terminal attach owner、study truth、publication verdict、quality verdict 与 artifact authority 继续由 MAS 持有
 - `MDS` 不再作为 MAS 默认运行依赖参与 OPL 安装；MAS 只可把它显式暴露为 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle companion，不作为这一层的 OPL 顶层 domain agent
 
+#### Unified Domain-Agent Descriptor
+
+`Unified Domain-Agent Descriptor` 是 OPL 对已收录 domain agent 的统一只读发现入口。它不新建一套 domain contract，也不把自然语言经验正文或 stage 内判断移入 OPL；它把现有 domain-owned manifest surface 聚合成一个可给 CLI、App、维护者和后续 admission gate 使用的 read model。
+
+当前机器入口是：
+
+- `opl agents descriptors --json`：列出 MAS/MAG/RCA 的统一 descriptor index。
+- `opl agents descriptor --domain mas --json`：检查单个 domain agent 的 entry、standard skeleton、action catalog、stage control plane、domain memory descriptor、skill catalog、runtime/session/progress/artifact refs 与 authority boundary。
+
+它聚合的字段包括：
+
+- `domain_agent_entry_spec`
+- `standard_domain_agent_skeleton`
+- `family_action_catalog`
+- `family_stage_control_plane`
+- `domain_memory_descriptor`
+- `skill_catalog`
+- `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
+- `descriptor_refs`、`readiness`、`parity`、`non_authority_flags`
+
+边界如下：
+
+- OPL 持有 descriptor discovery、projection、transport 和 runtime lifecycle metadata。
+- Domain agent 持有 domain truth、memory body、quality verdict、publication / fundability / visual judgment、artifact authority 与写回接受/拒绝。
+- 给 Agent 理解的长正文继续按 Markdown-first 管理：例如 MAS publication-route memory 正文在 MAS policy / memory Markdown 里；OPL descriptor 只引用 `memory_pack_ref`、freshness、receipt locator 和 forbidden-authority flags。
+
+这个设计对应成熟系统的常见分层：工具、插件、CRD 或 MCP surface 用 machine-readable descriptor 做发现、schema、权限和状态；Skill / domain knowledge / operating guidance 用 Markdown 或自然语言材料给 Agent 读取。OPL 的 descriptor 因此是总入口和索引，不是 recipe engine。
+
 #### Family Action Catalog
 
 `Family Action Catalog` 是这一层新增的 machine-readable callable-action surface。它服务的目标是让 `MAS`、`MAG`、`RCA` 在各自仓内声明一次 action metadata，再派生 CLI、MCP descriptor、Skill command contract、product-entry manifest、OpenAI tool 与 AI SDK tool descriptor。
@@ -211,6 +239,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
 - local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
 - discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 OPL 已能校验 standard skeleton descriptor 并要求 artifact locator surface，MAS/MAG/RCA 均为 descriptor-level aligned，stage 与 domain-memory descriptor 也均 resolved。
+- unified descriptor：`opl agents descriptors` / `opl agents descriptor --domain <domain>` 已把 entry、skeleton、stage、action、memory、skill、runtime/session/progress/artifact refs 聚合成统一 read model；它只携带 refs/status/parity/authority boundary，不承载 domain memory 正文或 domain verdict。
 - provider execution：Temporal `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start|query|signal`、worker lifecycle status 和 fail-closed readiness 已落地到 repo/test 面；缺少 Temporal 地址时本机 worker readiness 明确报告 `not_configured`。
 - typed receipt / workbench：Codex stage activity 已有 dry-run / live-dry-run / `codex_cli` runner repo/test harness、typed closeout required-for-completion gate、consumed refs / memory refs / writeback receipt refs / rejected writes / route impact / next owner 投影；`opl runtime snapshot` 已输出只读 `stage_attempt_workbench`。
 

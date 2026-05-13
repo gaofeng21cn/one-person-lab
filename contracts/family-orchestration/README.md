@@ -93,6 +93,23 @@ This means `OPL` can keep consuming one family contract for session / progress /
 
 For `MAS` v2, the consumable projection anchors are domain-owned `study_charter`, `evidence_ledger`, `review_ledger`, `publication_eval/latest.json`, AI reviewer artifacts, and `StudyTruthKernel` / `RuntimeHealthKernel` or truth health reducers / runtime health reducers. OPL only consumes projections, does not issue MAS ready verdicts, and does not hold publication judgment.
 
+## Unified Domain-Agent Descriptor Read Model
+
+`opl agents descriptors --json` and `opl agents descriptor --domain <domain> --json` are the unified machine-readable entry points for admitted domain agents. They do not add another schema family; they aggregate the manifest surfaces already frozen in this directory and in `contracts/opl-framework/standard-domain-agent-skeleton-contract.json`:
+
+- `domain_agent_entry_spec`
+- `standard_domain_agent_skeleton`
+- `family_action_catalog`
+- `family_stage_control_plane`
+- `domain_memory_descriptor`
+- `skill_catalog`
+- `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
+- `descriptor_refs`, parity, readiness, and authority boundaries
+
+This read model is for CLI/App discovery, maintainer inspection, admission gates, and operator drilldown. It carries only refs, status, locators, parity, and forbidden-authority flags. It does not carry memory body text, long prompt/skill bodies, domain route judgments, quality verdicts, publication/fundability/visual verdicts, or artifact authority.
+
+For MAS, this means `mas_publication_route_memory` can be discovered as a `domain_memory_descriptor` through the unified descriptor, while the actual paper-route memory body remains Markdown-first in MAS. OPL only routes operators and agents to the right refs.
+
 ## Persistence / Lifecycle / Owner-Route Freeze
 
 The family-level persistence and lifecycle surfaces are shared control-plane contracts only. They let domain repositories expose durable state roles, lifecycle receipts, and next-owner routing in one shape without moving domain truth into `OPL`.
