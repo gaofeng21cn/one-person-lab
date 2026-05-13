@@ -57,8 +57,94 @@ function readStringList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function uniqueStrings(values: string[]) {
+  return [...new Set(values)];
+}
+
 function truthyFalse(value: unknown) {
   return value === false;
+}
+
+function readPhysicalRootEvidenceRefs(value: unknown) {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  return [
+    optionalString(value.anchor_ref),
+    ...readStringList(value.entrypoint_refs),
+    ...readStringList(value.source_refs),
+    ...readStringList(value.repo_refs),
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function normalizePhysicalSkeletonEvidence(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const sourceRefs = [
+    ...readStringList(value.source_refs),
+    ...readStringList(value.evidence_refs),
+    ...readStringList(value.layout_refs),
+  ];
+
+  if (Array.isArray(value.physical_roots)) {
+    sourceRefs.push(...value.physical_roots.flatMap(readPhysicalRootEvidenceRefs));
+  }
+
+  if (Array.isArray(value.root_status)) {
+    sourceRefs.push(...value.root_status.flatMap(readPhysicalRootEvidenceRefs));
+  }
+
+  if (isRecord(value.roots)) {
+    sourceRefs.push(...Object.values(value.roots).flatMap(readPhysicalRootEvidenceRefs));
+  }
+
+  if (Array.isArray(value.slots)) {
+    sourceRefs.push(...value.slots.flatMap((slot) => {
+      if (!isRecord(slot)) {
+        return [];
+      }
+      return [
+        optionalString(slot.anchor_ref),
+        ...readStringList(slot.repo_paths),
+        ...readStringList(slot.source_refs),
+      ].filter((entry): entry is string => Boolean(entry));
+    }));
+  }
+
+  const evidenceRefs = uniqueStrings(sourceRefs);
+  if (evidenceRefs.length === 0) {
+    return null;
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'physical_skeleton_evidence',
+    status:
+      optionalString(value.status)
+      ?? optionalString(value.state)
+      ?? optionalString(value.layout_state)
+      ?? 'evidence_refs_observed',
+    evidence_refs: evidenceRefs,
+    moves_workspace_artifacts: value.moves_workspace_artifacts === true,
+    moves_runtime_receipt_instances: value.moves_runtime_receipt_instances === true,
+    moves_memory_body: value.moves_memory_body === true,
+    forbidden_moves: [
+      ...readStringList(value.forbidden_moves),
+      ...(value.moves_workspace_artifacts === false ? ['workspace_runtime_artifacts'] : []),
+      ...(value.moves_runtime_receipt_instances === false ? ['receipt_instances'] : []),
+      ...(value.moves_memory_body === false ? ['memory_content_body'] : []),
+    ],
+  };
+}
+
+function findPhysicalSkeletonEvidence(skeleton: JsonRecord | null) {
+  if (!skeleton) {
+    return null;
+  }
+  return normalizePhysicalSkeletonEvidence(skeleton.physical_skeleton_follow_through)
+    ?? normalizePhysicalSkeletonEvidence(skeleton.physical_skeleton_layout_audit);
 }
 
 function readRepoSourceDirs(boundary: JsonRecord, skeleton: JsonRecord) {
@@ -227,11 +313,14 @@ function buildPhysicalSkeletonLayoutAudit(args: {
   const missingDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !args.repoSourceDirs.includes(dir));
   const forbiddenDirs = args.repoSourceDirs.filter((dir) => dir === 'artifacts');
   const artifactBoundary = args.skeleton?.artifact_boundary ?? null;
+  const physicalEvidence = findPhysicalSkeletonEvidence(args.skeleton);
   const status =
     args.manifestBlocked
       ? 'blocked_by_manifest_status'
       : !args.skeleton
         ? 'descriptor_missing'
+        : args.skeletonStatus === 'aligned' && physicalEvidence
+          ? 'repo_source_anchor_evidence_observed'
         : args.skeletonStatus === 'aligned'
           ? 'descriptor_aligned_physical_layout_pending'
           : 'descriptor_drift_blocks_physical_layout_audit';
@@ -245,6 +334,17 @@ function buildPhysicalSkeletonLayoutAudit(args: {
     declared_dirs: args.repoSourceDirs,
     missing_declared_dirs: missingDirs,
     forbidden_declared_dirs: forbiddenDirs,
+    evidence_refs: physicalEvidence?.evidence_refs ?? [],
+    evidence_status: physicalEvidence?.status ?? null,
+    evidence_surface_kind: physicalEvidence?.surface_kind ?? null,
+    evidence_forbidden_moves: physicalEvidence?.forbidden_moves ?? [],
+    repository_boundary: physicalEvidence
+      ? {
+          moves_workspace_artifacts: physicalEvidence.moves_workspace_artifacts,
+          moves_runtime_receipt_instances: physicalEvidence.moves_runtime_receipt_instances,
+          moves_memory_body: physicalEvidence.moves_memory_body,
+        }
+      : null,
     artifact_layout_status:
       artifactBoundary === null
         ? 'not_declared'
@@ -267,11 +367,16 @@ function buildPhysicalSkeletonLayoutAudit(args: {
   };
 }
 
-function buildProductionClosureGaps() {
+function buildProductionClosureGaps(args: { physicalEvidenceObserved: boolean }) {
   return PRODUCTION_CLOSURE_GAPS.map((gap) => ({
     ...gap,
-    projection_status: 'tracked_now',
+    projection_status:
+      gap.gap_id === 'physical_repo_skeleton_reorganization' && args.physicalEvidenceObserved
+        ? 'evidence_refs_observed'
+        : 'tracked_now',
     descriptor_alignment_closes_gap: false,
+    evidence_ref_based_status:
+      gap.gap_id === 'physical_repo_skeleton_reorganization' && args.physicalEvidenceObserved,
   }));
 }
 
@@ -308,6 +413,12 @@ export function normalizeStandardDomainAgentSkeleton(value: unknown) {
           opl: 'framework_transport_and_projection_only',
           domain: 'truth_quality_artifact_owner',
         },
+    physical_skeleton_follow_through: isRecord(value.physical_skeleton_follow_through)
+      ? value.physical_skeleton_follow_through
+      : null,
+    physical_skeleton_layout_audit: isRecord(value.physical_skeleton_layout_audit)
+      ? value.physical_skeleton_layout_audit
+      : null,
   };
 }
 
@@ -358,7 +469,9 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     repoSourceDirs,
     issues,
   });
-  const productionClosureGaps = buildProductionClosureGaps();
+  const productionClosureGaps = buildProductionClosureGaps({
+    physicalEvidenceObserved: physicalSkeletonLayoutAudit.status === 'repo_source_anchor_evidence_observed',
+  });
 
   return {
     project_id: entry.project_id,
@@ -377,6 +490,16 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     missing_repo_source_dirs: REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !repoSourceDirs.includes(dir)),
     descriptor_readiness: descriptorReadiness,
     physical_skeleton_layout_audit: physicalSkeletonLayoutAudit,
+    physical_skeleton_evidence: physicalSkeletonLayoutAudit.status === 'repo_source_anchor_evidence_observed'
+      ? {
+          surface_kind: 'opl_physical_skeleton_evidence_refs_projection',
+          status: physicalSkeletonLayoutAudit.status,
+          evidence_refs: physicalSkeletonLayoutAudit.evidence_refs,
+          evidence_surface_kind: physicalSkeletonLayoutAudit.evidence_surface_kind,
+          evidence_status: physicalSkeletonLayoutAudit.evidence_status,
+          repository_boundary: physicalSkeletonLayoutAudit.repository_boundary,
+        }
+      : null,
     production_closure_gaps: productionClosureGaps,
     artifact_boundary: skeleton?.artifact_boundary ?? null,
     contract_refs: skeleton?.contracts ?? null,
@@ -446,6 +569,9 @@ export function buildFamilyAgentsList(contracts: FrameworkContracts) {
         ).length,
         physical_skeleton_audit_pending_count: agents.filter((agent) =>
           agent.physical_skeleton_layout_audit.status === 'descriptor_aligned_physical_layout_pending'
+        ).length,
+        physical_skeleton_evidence_observed_count: agents.filter((agent) =>
+          agent.physical_skeleton_layout_audit.status === 'repo_source_anchor_evidence_observed'
         ).length,
         production_closure_gap_count: agents.reduce(
           (total, agent) => total + agent.production_closure_gaps.length,

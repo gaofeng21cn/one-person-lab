@@ -472,6 +472,7 @@ export interface NormalizedDomainManifest {
   controlled_soak_no_regression_attempt: JsonRecord | null;
   lifecycle_apply_requests: JsonRecord[];
   lifecycle_guarded_apply_proof: JsonRecord | null;
+  physical_skeleton_follow_through: JsonRecord | null;
   legacy_retirement_tombstone_proof: JsonRecord | null;
   runtime_residue_retirement: JsonRecord | null;
   runtime_inventory: NormalizedRuntimeInventory | null;

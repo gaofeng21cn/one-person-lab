@@ -818,6 +818,9 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
         ...(isRecord(manifest.controlled_stage_attempt_projection)
           ? { controlled_stage_attempt_projection: manifest.controlled_stage_attempt_projection }
           : {}),
+        ...(isRecord(manifest.physical_skeleton_follow_through)
+          ? { physical_skeleton_follow_through: manifest.physical_skeleton_follow_through }
+          : {}),
       }
     : null;
   const functionalClosureSurfaces = normalizeFunctionalClosureSurfaces(manifest);
