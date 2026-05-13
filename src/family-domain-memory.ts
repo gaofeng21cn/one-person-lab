@@ -106,8 +106,16 @@ function buildReceiptProjection(descriptor: FamilyDomainMemoryRef) {
   };
 }
 
-function buildMemoryIndex(contracts: FrameworkContracts) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
+type ManifestCatalogOptions = {
+  manifestCommandTimeoutMs?: number;
+  domainManifests?: DomainManifestCatalog;
+};
+
+function buildMemoryIndex(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
+  const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
+  }).domain_manifests;
   const memories = catalog.projects.map(buildMemoryIndexEntry);
   return {
     domain_manifests: catalog,
@@ -115,8 +123,8 @@ function buildMemoryIndex(contracts: FrameworkContracts) {
   };
 }
 
-export function buildFamilyDomainMemoryList(contracts: FrameworkContracts) {
-  const index = buildMemoryIndex(contracts);
+export function buildFamilyDomainMemoryList(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
+  const index = buildMemoryIndex(contracts, options);
   return {
     version: 'g2',
     family_domain_memory: {

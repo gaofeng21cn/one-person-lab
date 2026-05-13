@@ -3,14 +3,18 @@ import path from 'node:path';
 
 import { FrameworkContractError } from './contracts.ts';
 import {
+  FAMILY_RUNTIME_DOMAIN_IDS,
   FAMILY_RUNTIME_PROVIDER_KINDS,
+  TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS,
+  type FamilyRuntimeDomainId,
   type FamilyRuntimeProviderKind,
-} from './family-runtime-providers.ts';
-import type { TemporalStageAttemptSignalKind } from './family-runtime-temporal.ts';
+  type TemporalStageAttemptSignalKind,
+} from './family-runtime-types.ts';
 
-export const FAMILY_RUNTIME_DOMAIN_IDS = ['medautoscience', 'medautogrant', 'redcube'] as const;
-
-export type FamilyRuntimeDomainId = typeof FAMILY_RUNTIME_DOMAIN_IDS[number];
+export {
+  FAMILY_RUNTIME_DOMAIN_IDS,
+  type FamilyRuntimeDomainId,
+} from './family-runtime-types.ts';
 
 export type EnqueueInput = {
   domainId: FamilyRuntimeDomainId;
@@ -149,12 +153,12 @@ function assertProviderKind(value: string | undefined): FamilyRuntimeProviderKin
 }
 
 function assertSignalKind(value: string | undefined): TemporalStageAttemptSignalKind {
-  if (value === 'human_gate' || value === 'user_instruction' || value === 'resume') {
-    return value;
+  if (TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS.includes(value as TemporalStageAttemptSignalKind)) {
+    return value as TemporalStageAttemptSignalKind;
   }
   throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime attempt signal kind.', {
     signal_kind: value ?? null,
-    allowed_signal_kinds: ['human_gate', 'user_instruction', 'resume'],
+    allowed_signal_kinds: [...TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS],
   });
 }
 

@@ -4,10 +4,13 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
-import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
+import { stableId } from './family-runtime-ids.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
-import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
+import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
+import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
+
+export { stableId } from './family-runtime-ids.ts';
 
 export const QUEUE_SCHEMA_VERSION = 2;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -69,15 +72,6 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
-export function stableId(prefix: string, parts: unknown[]) {
-  const digest = crypto
-    .createHash('sha256')
-    .update(JSON.stringify(parts))
-    .digest('hex')
-    .slice(0, 24);
-  return `${prefix}_${digest}`;
-}
-
 function randomId(prefix: string) {
   return `${prefix}_${crypto.randomUUID()}`;
 }
@@ -90,6 +84,8 @@ export function familyRuntimePaths() {
     root,
     queue_db: path.join(root, 'queue.sqlite'),
     dispatch_dir: path.join(root, 'dispatch'),
+    proof_dir: path.join(root, 'proofs'),
+    latest_temporal_production_proof: path.join(root, 'proofs', 'latest-temporal-production-proof.json'),
   };
 }
 
@@ -97,6 +93,7 @@ export function openQueueDb() {
   const paths = familyRuntimePaths();
   fs.mkdirSync(paths.root, { recursive: true });
   fs.mkdirSync(paths.dispatch_dir, { recursive: true });
+  fs.mkdirSync(paths.proof_dir, { recursive: true });
   const db = new DatabaseSync(paths.queue_db);
   db.exec(`
     PRAGMA journal_mode = WAL;

@@ -200,6 +200,7 @@ export type DomainManifestStatus =
   | 'not_bound'
   | 'manifest_not_configured'
   | 'command_failed'
+  | 'command_timeout'
   | 'invalid_json'
   | 'invalid_manifest'
   | 'resolved';
@@ -500,5 +501,6 @@ export interface DomainManifestCatalogEntry {
     message: string;
     stdout: string | null;
     stderr: string | null;
+    timeout_ms?: number | null;
   } | null;
 }

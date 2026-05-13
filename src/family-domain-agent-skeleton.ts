@@ -380,6 +380,20 @@ function buildProductionClosureGaps(args: { physicalEvidenceObserved: boolean })
   }));
 }
 
+function buildPhysicalSkeletonEvidence(physicalSkeletonLayoutAudit: ReturnType<typeof buildPhysicalSkeletonLayoutAudit>) {
+  if (physicalSkeletonLayoutAudit.status !== 'repo_source_anchor_evidence_observed') {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_physical_skeleton_evidence_refs_projection',
+    status: physicalSkeletonLayoutAudit.status,
+    evidence_refs: physicalSkeletonLayoutAudit.evidence_refs,
+    evidence_surface_kind: physicalSkeletonLayoutAudit.evidence_surface_kind,
+    evidence_status: physicalSkeletonLayoutAudit.evidence_status,
+    repository_boundary: physicalSkeletonLayoutAudit.repository_boundary,
+  };
+}
+
 export function normalizeStandardDomainAgentSkeleton(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -490,16 +504,7 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     missing_repo_source_dirs: REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !repoSourceDirs.includes(dir)),
     descriptor_readiness: descriptorReadiness,
     physical_skeleton_layout_audit: physicalSkeletonLayoutAudit,
-    physical_skeleton_evidence: physicalSkeletonLayoutAudit.status === 'repo_source_anchor_evidence_observed'
-      ? {
-          surface_kind: 'opl_physical_skeleton_evidence_refs_projection',
-          status: physicalSkeletonLayoutAudit.status,
-          evidence_refs: physicalSkeletonLayoutAudit.evidence_refs,
-          evidence_surface_kind: physicalSkeletonLayoutAudit.evidence_surface_kind,
-          evidence_status: physicalSkeletonLayoutAudit.evidence_status,
-          repository_boundary: physicalSkeletonLayoutAudit.repository_boundary,
-        }
-      : null,
+    physical_skeleton_evidence: buildPhysicalSkeletonEvidence(physicalSkeletonLayoutAudit),
     production_closure_gaps: productionClosureGaps,
     artifact_boundary: skeleton?.artifact_boundary ?? null,
     contract_refs: skeleton?.contracts ?? null,
@@ -510,6 +515,12 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     },
   };
 }
+
+type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
+type ManifestCatalogOptions = {
+  manifestCommandTimeoutMs?: number;
+  domainManifests?: DomainManifestCatalog;
+};
 
 function findAgentEntry(contracts: FrameworkContracts, domain: string) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
@@ -551,8 +562,10 @@ function parseInspectArgs(args: string[]) {
   return { domain };
 }
 
-export function buildFamilyAgentsList(contracts: FrameworkContracts) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+export function buildFamilyAgentsList(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
+  const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
+  }).domain_manifests;
   const agents = catalog.projects.map(buildStandardDomainAgentSkeletonInspection);
   return {
     version: 'g2',

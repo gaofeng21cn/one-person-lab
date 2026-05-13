@@ -343,6 +343,39 @@ test('domain manifests reports invalid json when a bound manifest command is mal
   }
 });
 
+test('domain manifests times out stalled manifest commands fail-closed', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-timeout-state-'));
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      `${process.execPath} -e "setTimeout(() => {}, 5000)"`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '100',
+    });
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 1);
+    assert.equal(medautoscience.status, 'command_timeout');
+    assert.equal(medautoscience.error.code, 'command_timeout');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
   const resolvedManifest = loadFamilyManifestFixtures().redcube;

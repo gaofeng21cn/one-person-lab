@@ -1,12 +1,10 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
 import {
   DOMAIN_ADAPTERS,
-  FAMILY_RUNTIME_DOMAIN_IDS,
   parseFamilyRuntimeCommand,
   type EnqueueInput,
   type FamilyRuntimeDomainId,
@@ -30,16 +28,21 @@ import { runTemporalServiceCommand } from './family-runtime-temporal-service-com
 import {
   createStageAttempt,
   inspectStageAttempt,
+  inspectStageAttemptWithCurrentProviderReadiness,
   ingestStageAttemptCloseout,
   listStageAttemptsForTask,
   listStageAttempts,
+  listStageAttemptsWithCurrentProviderReadiness,
   queryStageAttempt,
   runStageAttemptFixtureActivity,
   signalStageAttempt,
   stageAttemptSummary,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
+import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
+import { closeoutPacketFromSidecarOutput } from './family-runtime-sidecar-closeout.ts';
 import { buildTemporalResidencyProof } from './family-runtime-residency-proof.ts';
+import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
   QUEUE_SCHEMA_VERSION,
@@ -58,6 +61,9 @@ import {
   type FamilyRuntimeTaskRow,
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
+import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
+import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 
 async function buildStatusPayload(
   db: DatabaseSync,
@@ -65,7 +71,9 @@ async function buildStatusPayload(
   requestedProvider = resolveFamilyRuntimeProviderKind(),
 ) {
   const selectedProvider = resolveFamilyRuntimeProviderKind(requestedProvider);
-  const providerRuntime = await inspectFamilyRuntimeProvidersWithLifecycle(selectedProvider, paths);
+  const providerRuntime = await inspectFamilyRuntimeProvidersWithLifecycle(selectedProvider, paths, {
+    managedProviderProjection: readMasManagedProviderProjection(),
+  });
   const provider = providerRuntime.providers[selectedProvider]
     ?? (() => {
       throw new FrameworkContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
@@ -203,31 +211,6 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   };
 }
 
-function writeDispatchTask(paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
-  const payload = JSON.parse(row.payload_json);
-  const taskPayload = taskToPayload(row);
-  const dispatchPath = path.join(paths.dispatch_dir, `${row.task_id}.json`);
-  fs.writeFileSync(
-    dispatchPath,
-    JSON.stringify({
-      task_id: row.task_id,
-      domain_id: row.domain_id,
-      task_kind: row.task_kind,
-      payload,
-      paper_autonomy: taskPayload.paper_autonomy,
-      attempts: row.attempts,
-      source: 'opl_family_runtime',
-      authority_boundary: {
-        provider: 'stage_attempt_transport_and_control_metadata_only',
-        opl: 'typed_queue_and_dispatch_only',
-        domain: 'truth_quality_artifact_gate_owner',
-      },
-    }, null, 2),
-    'utf8',
-  );
-  return dispatchPath;
-}
-
 function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
   const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
   if (override) {
@@ -235,21 +218,6 @@ function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
   }
 
   return [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'];
-}
-
-function exportCommandForDomain(domainId: FamilyRuntimeDomainId) {
-  const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_EXPORT`]?.trim();
-  if (override) {
-    return override.split(/\s+/);
-  }
-  if (domainId === 'medautoscience') {
-    const profile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
-    if (!profile) {
-      return null;
-    }
-    return ['medautosci', 'sidecar', 'export', '--profile', profile, '--format', 'json'];
-  }
-  return null;
 }
 
 function parseDispatchOutput(stdout: string) {
@@ -264,126 +232,22 @@ function parseDispatchOutput(stdout: string) {
   }
 }
 
-function recordFrom(value: unknown) {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function toPendingTaskInputs(
-  domainId: FamilyRuntimeDomainId,
-  output: Record<string, unknown>,
-  source: string,
+function persistTemporalProductionProof(
+  paths: ReturnType<typeof familyRuntimePaths>,
+  proof: Awaited<ReturnType<typeof buildTemporalResidencyProof>>,
 ) {
-  const tasks = Array.isArray(output.pending_family_tasks) ? output.pending_family_tasks : [];
-  const inputs: EnqueueInput[] = [];
-  const blocked: Array<{ reason: string; task: unknown }> = [];
-  for (const task of tasks) {
-    if (!task || typeof task !== 'object' || Array.isArray(task)) {
-      blocked.push({ reason: 'invalid_pending_task', task });
-      continue;
-    }
-    const item = task as Record<string, unknown>;
-    const exportedDomain = typeof item.domain_id === 'string' ? item.domain_id : domainId;
-    const taskKind = typeof item.task_kind === 'string' ? item.task_kind.trim() : '';
-    const payload = item.payload && typeof item.payload === 'object' && !Array.isArray(item.payload)
-      ? item.payload as Record<string, unknown>
-      : {};
-    if (!FAMILY_RUNTIME_DOMAIN_IDS.includes(exportedDomain as FamilyRuntimeDomainId) || !taskKind) {
-      blocked.push({ reason: 'invalid_domain_or_task_kind', task });
-      continue;
-    }
-    if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
-      blocked.push({ reason: 'domain_forbidden_write', task });
-      continue;
-    }
-    inputs.push({
-      domainId: exportedDomain as FamilyRuntimeDomainId,
-      taskKind,
-      payload: {
-        ...payload,
-        ...(Array.isArray(item.source_refs) ? { source_refs: item.source_refs } : {}),
-        ...(typeof item.dispatch_owner === 'string' ? { dispatch_owner: item.dispatch_owner } : {}),
-        ...(typeof item.profile_name === 'string' ? { profile_name: item.profile_name } : {}),
-      },
-      dedupeKey: typeof item.dedupe_key === 'string' ? item.dedupe_key : undefined,
-      priority: Number.isInteger(item.priority) ? item.priority as number : 0,
-      source: typeof item.source === 'string' ? item.source : source,
-      requiresApproval: item.requires_approval === true,
-    });
+  if (proof.provider_kind !== 'temporal' || proof.proof_mode !== 'external_temporal_service_worker') {
+    return null;
   }
-  return { inputs, blocked };
-}
-
-function hydrateDomainTasks(
-  db: DatabaseSync,
-  input: { domainId?: FamilyRuntimeDomainId; source: string },
-) {
-  const domains = input.domainId ? [input.domainId] : [...FAMILY_RUNTIME_DOMAIN_IDS];
-  const exports = [];
-  let enqueuedCount = 0;
-  let idempotentNoopCount = 0;
-  let blockedCount = 0;
-  for (const domainId of domains) {
-    const command = exportCommandForDomain(domainId);
-    if (!command) {
-      exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
-      continue;
-    }
-    const result = spawnSync(command[0], command.slice(1), {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-      env: process.env,
-    });
-    const stdout = result.stdout ?? '';
-    const stderr = result.stderr ?? '';
-    const exitCode = result.status ?? (result.error ? 127 : 1);
-    if (exitCode !== 0) {
-      blockedCount += 1;
-      exports.push({
-        domain_id: domainId,
-        status: 'failed',
-        command_preview: command,
-        error: result.error?.message || stderr || stdout || `Domain export exited ${exitCode}.`,
-      });
-      continue;
-    }
-    const output = parseDispatchOutput(stdout);
-    const { inputs, blocked } = toPendingTaskInputs(domainId, output, input.source);
-    blockedCount += blocked.length;
-    const acceptedTasks = [];
-    for (const taskInput of inputs) {
-      const resultPayload = enqueueTask(db, taskInput);
-      acceptedTasks.push(resultPayload);
-      if (resultPayload.accepted) {
-        enqueuedCount += 1;
-      } else if (resultPayload.idempotent_noop) {
-        idempotentNoopCount += 1;
-      }
-    }
-    exports.push({
-      domain_id: domainId,
-      status: 'completed',
-      command_preview: command,
-      exported_count: inputs.length + blocked.length,
-      enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
-      idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
-      blocked_count: blocked.length,
-      blocked,
-    });
-  }
-  insertEvent(db, {
-    eventType: 'domain_intake_completed',
-    source: input.source,
-    payload: { enqueued_count: enqueuedCount, idempotent_noop_count: idempotentNoopCount, blocked_count: blockedCount },
-  });
-  return {
-    source: input.source,
-    enqueued_count: enqueuedCount,
-    idempotent_noop_count: idempotentNoopCount,
-    blocked_count: blockedCount,
-    exports,
-  };
+  fs.mkdirSync(paths.proof_dir, { recursive: true });
+  fs.writeFileSync(paths.latest_temporal_production_proof, `${JSON.stringify({
+    version: 'g2',
+    family_runtime_residency_proof: {
+      surface_id: 'opl_family_runtime_residency_proof',
+      ...proof,
+    },
+  }, null, 2)}\n`, 'utf8');
+  return paths.latest_temporal_production_proof;
 }
 
 function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
@@ -421,6 +285,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     });
     return { task_id: row.task_id, status: 'blocked', reason: 'domain_forbidden_write', stage_attempts: stageAttempts };
   }
+  ensureProviderHostedStageAttempt(db, row, payload);
 
   const leaseOwner = `opl-family-runtime:${process.pid}`;
   const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -448,7 +313,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     },
   });
 
-  const dispatchPath = writeDispatchTask(paths, { ...row, attempts: attempt });
+  const dispatchPath = writeFamilyRuntimeDispatchTask(paths, { ...row, attempts: attempt });
   const command = commandForDomain(row.domain_id, dispatchPath);
   const result = spawnSync(command[0], command.slice(1), {
     cwd: process.cwd(),
@@ -486,7 +351,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     const closeoutRefs = Array.isArray(output.closeout_refs)
       ? output.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
       : undefined;
-    const typedCloseoutPacket = recordFrom(output.closeout_packet);
+    const typedCloseoutPacket = closeoutPacketFromSidecarOutput(output);
     const checkpointedStageAttempts = updateStageAttemptsForTask(db, {
       taskId: row.task_id,
       status: 'completed',
@@ -562,7 +427,7 @@ function runTick(
   hydrate: boolean,
 ) {
   const hydration = hydrate
-    ? hydrateDomainTasks(db, { source: `${source}:hydrate` })
+    ? hydrateDomainTasks(db, paths, { source: `${source}:hydrate` }, enqueueTask)
     : { source, enqueued_count: 0, idempotent_noop_count: 0, blocked_count: 0, exports: [] };
   const rows = db.prepare(`
     SELECT * FROM tasks
@@ -756,14 +621,28 @@ export async function runFamilyRuntime(args: string[]) {
           allowed_provider_kinds: ['temporal'],
         });
       }
+      const proof = await buildTemporalResidencyProof(db, paths, {
+        live: parsed.live,
+        production: parsed.production,
+      });
+      const persistedProofRef = persistTemporalProductionProof(paths, proof);
+      insertEvent(db, {
+        eventType: 'temporal_residency_proof',
+        source: 'opl-cli',
+        payload: {
+          provider_kind: 'temporal',
+          proof_mode: proof.proof_mode,
+          closeout_status: proof.closeout_status,
+          proof_receipt: residencyProofReceipt(proof),
+          persisted_proof_ref: persistedProofRef,
+        },
+      });
       return {
         version: 'g2',
         family_runtime_residency_proof: {
           surface_id: 'opl_family_runtime_residency_proof',
-          ...await buildTemporalResidencyProof(db, paths, {
-            live: parsed.live,
-            production: parsed.production,
-          }),
+          persisted_proof_ref: persistedProofRef,
+          ...proof,
         },
       };
     }
@@ -791,7 +670,7 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_intake: {
           surface_id: 'opl_family_runtime_intake',
-          ...hydrateDomainTasks(db, { domainId: parsed.domainId, source: parsed.source ?? 'manual' }),
+          ...hydrateDomainTasks(db, paths, { domainId: parsed.domainId, source: parsed.source ?? 'manual' }, enqueueTask),
           queue: queueSummary(db),
         },
       };
@@ -879,7 +758,9 @@ export async function runFamilyRuntime(args: string[]) {
         family_runtime_stage_attempts: {
           surface_id: 'opl_family_runtime_stage_attempts',
           summary: stageAttemptSummary(db),
-          attempts: listStageAttempts(db),
+          attempts: await listStageAttemptsWithCurrentProviderReadiness(db, paths, {
+            managedProviderProjection: readMasManagedProviderProjection(),
+          }),
         },
       };
     }
@@ -888,7 +769,9 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_stage_attempt: {
           surface_id: 'opl_family_runtime_stage_attempt',
-          attempt: inspectStageAttempt(db, parsed.stageAttemptId),
+          attempt: await inspectStageAttemptWithCurrentProviderReadiness(db, parsed.stageAttemptId, paths, {
+            managedProviderProjection: readMasManagedProviderProjection(),
+          }),
         },
       };
     }

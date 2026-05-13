@@ -89,25 +89,48 @@ function findProjection(payload: unknown, key: string): JsonRecord | null {
   return null;
 }
 
-function normalizeManagedTemporalProjection(projection: JsonRecord, source: JsonRecord) {
-  const serviceReady = statusIsReady(projection.service_status)
+function serviceReady(projection: JsonRecord) {
+  return statusIsReady(projection.service_status)
     || statusIsReady(projection.service_readiness)
     || projection.service_ready === true
     || projection.managed_service_ready === true;
-  const workerReady = statusIsReady(projection.worker_status)
+}
+
+function workerReady(projection: JsonRecord) {
+  return statusIsReady(projection.worker_status)
     || statusIsReady(projection.worker_readiness)
     || projection.worker_ready === true
     || projection.managed_worker_ready === true;
-  const projectionReady = statusIsReady(projection.projection_status)
-    || statusIsReady(projection.status)
-    || projection.ready === true;
-  if (!(serviceReady && workerReady && (projectionReady || projection.projection_status === undefined))) {
-    return null;
-  }
+}
 
+function projectionReady(projection: JsonRecord) {
+  return statusIsReady(projection.projection_status)
+    || statusIsReady(projection.status)
+    || projection.ready === true
+    || projection.projection_status === undefined;
+}
+
+function managedTemporalProjectionReady(projection: JsonRecord) {
+  return serviceReady(projection) && workerReady(projection) && projectionReady(projection);
+}
+
+function normalizedManagedTemporalAuthorityBoundary(projection: JsonRecord) {
   const authorityBoundary = isRecord(projection.authority_boundary)
     ? projection.authority_boundary
     : {};
+  return {
+    opl_role: 'projection_consumer_only',
+    domain_truth: 'domain_owned',
+    paper_closure_authority: 'mas_only',
+    ...authorityBoundary,
+  };
+}
+
+function normalizeManagedTemporalProjection(projection: JsonRecord, source: JsonRecord) {
+  if (!managedTemporalProjectionReady(projection)) {
+    return null;
+  }
+
   return {
     ...projection,
     surface_kind: optionalString(projection.surface_kind) ?? 'managed_temporal_state_consistency',
@@ -127,12 +150,7 @@ function normalizeManagedTemporalProjection(projection: JsonRecord, source: Json
     source_refs: stringList(projection.source_refs),
     provider_proof_ref: optionalString(projection.provider_proof_ref),
     source_manifest: source,
-    authority_boundary: {
-      opl_role: 'projection_consumer_only',
-      domain_truth: 'domain_owned',
-      paper_closure_authority: 'mas_only',
-      ...authorityBoundary,
-    },
+    authority_boundary: normalizedManagedTemporalAuthorityBoundary(projection),
   };
 }
 

@@ -55,6 +55,7 @@ import {
 } from './shared-utils.ts';
 
 type JsonRecord = Record<string, unknown>;
+type NormalizedProductEntryStatus = NormalizedDomainManifest['product_entry_status'];
 
 function normalizeRuntimeInventory(value: unknown): NormalizedRuntimeInventory | null {
   if (!isRecord(value)) {
@@ -103,6 +104,52 @@ function normalizeTaskLifecycle(value: unknown): NormalizedTaskLifecycle | null 
     checkpoint_summary: normalizeCheckpointSummary(value.checkpoint_summary, 'task_lifecycle.checkpoint_summary'),
     human_gate_ids: readStringList(value.human_gate_ids, 'task_lifecycle.human_gate_ids'),
     domain_projection: isRecord(value.domain_projection) ? value.domain_projection : null,
+  };
+}
+
+function normalizeProductEntryStatus(
+  value: unknown,
+  remainingGaps: string[],
+): NormalizedProductEntryStatus {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    summary: optionalString(value.summary),
+    next_focus: readStringList(value.next_focus),
+    remaining_gaps_count:
+      typeof value.remaining_gaps_count === 'number'
+        ? value.remaining_gaps_count
+        : remainingGaps.length,
+  };
+}
+
+function buildStandardDomainAgentSkeletonCandidate(
+  manifest: JsonRecord,
+  sourceField: string | null,
+  providerReadyContract: JsonRecord | null,
+) {
+  if (!sourceField) {
+    return null;
+  }
+  const rawSkeleton = manifest[sourceField] as JsonRecord;
+  return {
+    ...rawSkeleton,
+    ...(isRecord(manifest.artifact_locator_contract)
+      ? { artifact_locator_contract: manifest.artifact_locator_contract }
+      : {}),
+    ...(isRecord(manifest.workspace_runtime_artifact_root_locator)
+      ? { workspace_runtime_artifact_root_locator: manifest.workspace_runtime_artifact_root_locator }
+      : {}),
+    ...(isRecord(providerReadyContract?.workspace_runtime_artifact_root_locator)
+      ? { workspace_runtime_artifact_root_locator: providerReadyContract?.workspace_runtime_artifact_root_locator }
+      : {}),
+    ...(isRecord(manifest.controlled_stage_attempt_projection)
+      ? { controlled_stage_attempt_projection: manifest.controlled_stage_attempt_projection }
+      : {}),
+    ...(isRecord(manifest.physical_skeleton_follow_through)
+      ? { physical_skeleton_follow_through: manifest.physical_skeleton_follow_through }
+      : {}),
   };
 }
 
@@ -799,63 +846,26 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     : null;
   const standardDomainAgentSkeletonSourceField =
     directSkeletonSourceField;
-  const rawStandardDomainAgentSkeleton =
-    directSkeletonSourceField
-      ? manifest[directSkeletonSourceField] as JsonRecord
-      : null;
-  const standardDomainAgentSkeleton = rawStandardDomainAgentSkeleton
-    ? {
-        ...rawStandardDomainAgentSkeleton,
-        ...(isRecord(manifest.artifact_locator_contract)
-          ? { artifact_locator_contract: manifest.artifact_locator_contract }
-          : {}),
-        ...(isRecord(manifest.workspace_runtime_artifact_root_locator)
-          ? { workspace_runtime_artifact_root_locator: manifest.workspace_runtime_artifact_root_locator }
-          : {}),
-        ...(isRecord(providerReadyContract?.workspace_runtime_artifact_root_locator)
-          ? { workspace_runtime_artifact_root_locator: providerReadyContract?.workspace_runtime_artifact_root_locator }
-          : {}),
-        ...(isRecord(manifest.controlled_stage_attempt_projection)
-          ? { controlled_stage_attempt_projection: manifest.controlled_stage_attempt_projection }
-          : {}),
-        ...(isRecord(manifest.physical_skeleton_follow_through)
-          ? { physical_skeleton_follow_through: manifest.physical_skeleton_follow_through }
-          : {}),
-      }
-    : null;
+  const standardDomainAgentSkeleton = buildStandardDomainAgentSkeletonCandidate(
+    manifest,
+    directSkeletonSourceField,
+    providerReadyContract,
+  );
   const functionalClosureSurfaces = normalizeFunctionalClosureSurfaces(manifest);
   const remainingGaps = readStringList(manifest.remaining_gaps);
-  const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
+  const productEntryStatus = normalizeProductEntryStatus(manifest.product_entry_status, remainingGaps);
   const sessionContinuity = normalizeSessionContinuity(manifest.session_continuity, {
     domainAgentId: domainEntryContract?.domain_agent_entry_spec?.agent_id ?? null,
     runtimeInventory,
     taskLifecycle,
     productEntryOverview,
-    productEntryStatus: rawProductEntryStatus
-      ? {
-          summary: optionalString(rawProductEntryStatus.summary),
-          next_focus: readStringList(rawProductEntryStatus.next_focus),
-          remaining_gaps_count:
-            typeof rawProductEntryStatus.remaining_gaps_count === 'number'
-              ? rawProductEntryStatus.remaining_gaps_count
-              : remainingGaps.length,
-        }
-      : null,
+    productEntryStatus,
   });
   const progressProjection = normalizeProgressProjection(manifest.progress_projection, {
     runtimeInventory,
     taskLifecycle,
     productEntryOverview,
-    productEntryStatus: rawProductEntryStatus
-      ? {
-          summary: optionalString(rawProductEntryStatus.summary),
-          next_focus: readStringList(rawProductEntryStatus.next_focus),
-          remaining_gaps_count:
-            typeof rawProductEntryStatus.remaining_gaps_count === 'number'
-              ? rawProductEntryStatus.remaining_gaps_count
-              : remainingGaps.length,
-        }
-      : null,
+    productEntryStatus,
   });
   const artifactInventory = normalizeArtifactInventory(manifest.artifact_inventory, {
     progressProjection,
@@ -916,16 +926,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     runtime: isRecord(manifest.runtime) ? manifest.runtime : null,
     managed_runtime_contract: normalizeManagedRuntimeContract(manifest.managed_runtime_contract),
     repo_mainline: isRecord(manifest.repo_mainline) ? manifest.repo_mainline : null,
-    product_entry_status: rawProductEntryStatus
-      ? {
-          summary: optionalString(rawProductEntryStatus.summary),
-          next_focus: readStringList(rawProductEntryStatus.next_focus),
-          remaining_gaps_count:
-            typeof rawProductEntryStatus.remaining_gaps_count === 'number'
-              ? rawProductEntryStatus.remaining_gaps_count
-              : remainingGaps.length,
-        }
-      : null,
+    product_entry_status: productEntryStatus,
     product_entry_surface: productEntrySurface,
     operator_loop_surface: operatorLoopSurface,
     operator_loop_actions: operatorLoopActions,

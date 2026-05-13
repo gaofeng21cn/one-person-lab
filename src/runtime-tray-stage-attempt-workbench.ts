@@ -1,41 +1,30 @@
 import * as fs from 'fs';
 import { DatabaseSync } from 'node:sqlite';
 
+import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
+import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
+import {
+  inspectFamilyRuntimeProviderWithLifecycle,
+  isFamilyRuntimeProviderKind,
+} from './family-runtime-providers.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
+import {
+  latestStageAttemptCloseoutPacketsByAttempt,
+  listStageAttemptRows,
+  stageAttemptSignalsByAttempt,
+} from './family-runtime-stage-attempt-ledger.ts';
+import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { fileSourceRef, optionalString } from './runtime-tray-snapshot-utils.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 
-type StageAttemptWorkbenchRow = {
-  stage_attempt_id: string;
-  provider_kind: string;
-  workflow_id: string;
-  domain_id: string;
-  stage_id: string;
-  status: string;
-  checkpoint_refs_json: string;
-  closeout_refs_json: string;
-  human_gate_refs_json: string;
-  blocked_reason: string | null;
-  provider_run_json: string;
-  activity_events_json: string;
-  route_impact_json: string;
-  closeout_receipt_status: string | null;
-  updated_at: string;
-  created_at: string;
+type ProviderReadinessOptions = {
+  managedProviderProjection?: {
+    managed_temporal_state_consistency?: Record<string, unknown> | null;
+  } | null;
 };
 
-type StageAttemptCloseoutRow = {
-  stage_attempt_id: string;
-  packet_json: string;
-  created_at: string;
-};
-
-type StageAttemptSignalRow = {
-  stage_attempt_id: string;
-  signal_kind: string;
-  payload_json: string;
-  source: string;
-  created_at: string;
+type StageAttemptWorkbenchRow = ReturnType<typeof listStageAttemptRows>[number] & {
+  domain_id: FamilyRuntimeDomainId;
 };
 
 type StageAttemptProjection = ReturnType<typeof attemptProjection>;
@@ -85,51 +74,56 @@ function sourceRefs(queueDb: string): RuntimeTraySourceRef[] {
   ];
 }
 
-function closeoutByAttempt(db: DatabaseSync, attemptIds: string[]) {
-  if (attemptIds.length === 0) {
-    return new Map<string, JsonRecord>();
-  }
-  const rows = db.prepare(`
-    SELECT stage_attempt_id, packet_json, created_at
-    FROM stage_attempt_closeouts
-    WHERE stage_attempt_id IN (${attemptIds.map(() => '?').join(',')})
-    ORDER BY stage_attempt_id ASC, created_at ASC
-  `).all(...attemptIds) as StageAttemptCloseoutRow[];
-  const byAttempt = new Map<string, JsonRecord>();
-  for (const row of rows) {
-    byAttempt.set(row.stage_attempt_id, parseRecord(row.packet_json));
-  }
-  return byAttempt;
+function providerKindForRow(row: StageAttemptWorkbenchRow): FamilyRuntimeProviderKind | null {
+  return isFamilyRuntimeProviderKind(row.provider_kind) ? row.provider_kind : null;
 }
 
-function signalsByAttempt(db: DatabaseSync, attemptIds: string[]) {
-  const byAttempt = new Map<string, JsonRecord[]>();
-  if (attemptIds.length === 0) {
-    return byAttempt;
+function currentProviderReadinessProjection(
+  providerKind: FamilyRuntimeProviderKind | null,
+  provider: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>> | null,
+) {
+  if (!providerKind || !provider) {
+    return null;
   }
-  const rows = db.prepare(`
-    SELECT stage_attempt_id, signal_kind, payload_json, source, created_at
-    FROM stage_attempt_signals
-    WHERE stage_attempt_id IN (${attemptIds.map(() => '?').join(',')})
-    ORDER BY stage_attempt_id ASC, created_at ASC
-  `).all(...attemptIds) as StageAttemptSignalRow[];
-  for (const row of rows) {
-    const signals = byAttempt.get(row.stage_attempt_id) ?? [];
-    signals.push({
-      signal_kind: row.signal_kind,
-      payload: parseRecord(row.payload_json),
-      source: row.source,
-      created_at: row.created_at,
-    });
-    byAttempt.set(row.stage_attempt_id, signals);
-  }
-  return byAttempt;
+  return {
+    surface_kind: 'stage_attempt_current_provider_readiness',
+    provider_kind: providerKind,
+    provider_ready: provider.ready,
+    status: provider.status,
+    degraded_reason: provider.degraded_reason,
+    capabilities: provider.capabilities,
+    details: provider.details,
+    provider_receipt_is_creation_time_snapshot: true,
+    authority_boundary: {
+      opl: 'current_provider_lifecycle_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
 }
 
-function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRecord | null, signals: JsonRecord[]) {
+async function currentProviderReadinessByKind(
+  rows: StageAttemptWorkbenchRow[],
+  paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+  options: ProviderReadinessOptions,
+) {
+  const providerKinds = [...new Set(rows.map(providerKindForRow).filter((kind): kind is FamilyRuntimeProviderKind => Boolean(kind)))];
+  const entries = await Promise.all(providerKinds.map(async (providerKind) => [
+    providerKind,
+    await inspectFamilyRuntimeProviderWithLifecycle(providerKind, paths, options),
+  ] as const));
+  return new Map(entries);
+}
+
+function attemptProjection(
+  row: StageAttemptWorkbenchRow,
+  latestCloseout: JsonRecord | null,
+  signals: JsonRecord[],
+  providerReadiness: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>> | null,
+) {
   const providerRun = parseRecord(row.provider_run_json);
   const activityEvents = recordList(parseList(row.activity_events_json));
   const routeImpact = parseRecord(row.route_impact_json);
+  const workspaceLocator = parseRecord(row.workspace_locator_json);
   const activity = latestActivity(activityEvents);
   const checkpointRefs = stringList(parseList(row.checkpoint_refs_json));
   const closeoutRefs = stringList(parseList(row.closeout_refs_json));
@@ -139,9 +133,23 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
   const resumeLedger = signals.filter((signal) => signal.signal_kind === 'resume');
   const domainReadyVerdict = optionalString(latestCloseout?.domain_ready_verdict)
     ?? optionalString(routeImpact.domain_ready_verdict);
-  const consumedMemoryRefs = Array.isArray(latestCloseout?.consumed_memory_refs) ? latestCloseout.consumed_memory_refs : [];
-  const writebackReceiptRefs = Array.isArray(latestCloseout?.writeback_receipt_refs) ? latestCloseout.writeback_receipt_refs : [];
+  const consumedRefs = stringList(Array.isArray(latestCloseout?.consumed_refs) ? latestCloseout.consumed_refs : []);
+  const consumedMemoryRefs = stringList(Array.isArray(latestCloseout?.consumed_memory_refs) ? latestCloseout.consumed_memory_refs : []);
+  const writebackReceiptRefs = stringList(Array.isArray(latestCloseout?.writeback_receipt_refs) ? latestCloseout.writeback_receipt_refs : []);
   const rejectedWrites = Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [];
+  const controlledApplyContract = buildFamilyRuntimeControlledApplyContract({
+    domainId: row.domain_id,
+    stageId: row.stage_id,
+    workspaceLocator,
+  });
+  const lifecyclePrimitives = buildFamilyRuntimeLifecyclePrimitives({
+    workspaceLocator,
+    artifactRefs: [
+      ...closeoutRefs,
+      ...consumedRefs,
+      ...writebackReceiptRefs,
+    ],
+  });
   const isHumanGate = attemptHasHumanGate(row, humanGateRefs, humanGateLedger);
   const isDeadLetter = row.status === 'dead_lettered';
   const isBlocked = Boolean(row.blocked_reason);
@@ -159,6 +167,7 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
     domain_id: row.domain_id,
     stage_id: row.stage_id,
     workflow_id: row.workflow_id,
+    workspace_locator: workspaceLocator,
     workflow_status: optionalString(providerRun.provider_status) ?? row.status,
     activity_status: optionalString(activity?.activity_status),
     activity_kind: optionalString(activity?.activity_kind),
@@ -169,7 +178,7 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
       checkpoint_refs: checkpointRefs,
     },
     checkpoint_refs: checkpointRefs,
-    consumed_refs: Array.isArray(latestCloseout?.consumed_refs) ? latestCloseout.consumed_refs : [],
+    consumed_refs: consumedRefs,
     consumed_memory_refs: consumedMemoryRefs,
     writeback_receipt_refs: writebackReceiptRefs,
     closeout_refs: closeoutRefs,
@@ -194,6 +203,9 @@ function attemptProjection(row: StageAttemptWorkbenchRow, latestCloseout: JsonRe
       domain_ready_verdict: domainReadyVerdict,
       provider_completion_is_domain_ready: false,
     },
+    controlled_apply_contract: controlledApplyContract,
+    lifecycle_primitives: lifecyclePrimitives,
+    current_provider_readiness: currentProviderReadinessProjection(providerKindForRow(row), providerReadiness),
     filter_keys: {
       domain_id: row.domain_id,
       stage_id: row.stage_id,
@@ -385,7 +397,7 @@ const EMPTY_WORKBENCH_METADATA = {
   },
 };
 
-export function buildStageAttemptWorkbench() {
+export async function buildStageAttemptWorkbench(options: ProviderReadinessOptions = {}) {
   const paths = familyRuntimePaths();
   const queueDb = paths.queue_db;
   if (!fs.existsSync(queueDb)) {
@@ -405,22 +417,20 @@ export function buildStageAttemptWorkbench() {
 
   const db = new DatabaseSync(queueDb, { readOnly: true });
   try {
-    const rows = db.prepare(`
-      SELECT stage_attempt_id, provider_kind, workflow_id, domain_id, stage_id, status,
-        checkpoint_refs_json, closeout_refs_json, human_gate_refs_json, blocked_reason,
-        provider_run_json, activity_events_json, route_impact_json, closeout_receipt_status,
-        updated_at, created_at
-      FROM stage_attempts
-      ORDER BY updated_at DESC, created_at DESC
-      LIMIT 25
-    `).all() as StageAttemptWorkbenchRow[];
-    const latestCloseouts = closeoutByAttempt(db, rows.map((row) => row.stage_attempt_id));
-    const signals = signalsByAttempt(db, rows.map((row) => row.stage_attempt_id));
-    const attempts = rows.map((row) => attemptProjection(
-      row,
-      latestCloseouts.get(row.stage_attempt_id) ?? null,
-      signals.get(row.stage_attempt_id) ?? [],
-    ));
+    const rows = listStageAttemptRows(db, 25) as StageAttemptWorkbenchRow[];
+    const attemptIds = rows.map((row) => row.stage_attempt_id);
+    const latestCloseouts = latestStageAttemptCloseoutPacketsByAttempt(db, attemptIds);
+    const signals = stageAttemptSignalsByAttempt(db, attemptIds);
+    const providerReadiness = await currentProviderReadinessByKind(rows, paths, options);
+    const attempts = rows.map((row) => {
+      const providerKind = providerKindForRow(row);
+      return attemptProjection(
+        row,
+        latestCloseouts.get(row.stage_attempt_id) ?? null,
+        signals.get(row.stage_attempt_id) ?? [],
+        providerKind ? providerReadiness.get(providerKind) ?? null : null,
+      );
+    });
     const metadata = workbenchMetadata(attempts);
     return {
       surface_kind: 'opl_stage_attempt_workbench',
