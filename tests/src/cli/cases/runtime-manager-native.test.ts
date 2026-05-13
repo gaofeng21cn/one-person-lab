@@ -289,6 +289,34 @@ exit 1
     headline: 'MAS study runtime is actively processing the current study.',
     attention_items: [],
     human_gate_ids: [],
+    domain_projection: {
+      ...((runningManifest.progress_projection as Record<string, unknown>)?.domain_projection as Record<string, unknown> ?? {}),
+      managed_temporal_state_consistency: {
+        surface_kind: 'managed_temporal_state_consistency',
+        projection_status: 'ready',
+        provider_kind: 'temporal',
+        service_status: 'ready',
+        worker_status: 'ready',
+        address: 'mas-managed-temporal.example.test:7233',
+        namespace: 'default',
+        task_queue: 'opl-stage-attempts',
+        source_refs: ['mas://runtime/managed_temporal_state_consistency/latest.json'],
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          paper_closure_authority: 'mas_only',
+        },
+      },
+      legacy_retirement_tombstone_proof: {
+        surface_kind: 'legacy_retirement_tombstone_proof',
+        status: 'no_active_default_caller_proven',
+        active_default_callers: [],
+        source_refs: ['mas://runtime/legacy_retirement_tombstone_proof/latest.json'],
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          paper_closure_authority: 'mas_only',
+        },
+      },
+    },
   };
   runningManifest.product_entry_start = {
     ...(runningManifest.product_entry_start as Record<string, unknown>),
@@ -396,6 +424,33 @@ exit 1
     assert.equal(snapshot.recent_items[0].project_id, 'medautogrant');
     assert.equal(snapshot.recent_items[0].action_owner, 'none');
     assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 0 });
+    assert.equal(
+      snapshot.managed_domain_provider_states.surface_kind,
+      'opl_runtime_tray_managed_domain_provider_states',
+    );
+    assert.equal(snapshot.managed_domain_provider_states.role, 'app_status_read_model_only');
+    assert.equal(snapshot.managed_domain_provider_states.medautoscience.role, 'read_only_status_projection');
+    assert.equal(
+      snapshot.managed_domain_provider_states.medautoscience.managed_temporal_state_consistency.address,
+      'mas-managed-temporal.example.test:7233',
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.medautoscience.legacy_retirement_tombstone_proof.status,
+      'no_active_default_caller_proven',
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.medautoscience.authority_boundary.can_write_domain_truth,
+      false,
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.medautoscience.authority_boundary.can_authorize_publication_quality,
+      false,
+    );
+    assert.equal(snapshot.managed_domain_provider_states.authority_boundary.can_authorize_submission_readiness, false);
+    assert.equal(
+      snapshot.source_refs.some((ref: { role: string }) => ref.role === 'managed_domain_provider_projection'),
+      true,
+    );
     assert.equal(snapshot.daemon_policy.local_daemon_added, false);
     assert.equal(snapshot.daemon_policy.runtime_kernel_owner, 'provider_backed_family_runtime');
     assert.equal(typeof snapshot.daemon_policy.sidecar_promotion_gate, 'string');

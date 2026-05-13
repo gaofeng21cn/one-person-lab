@@ -10,7 +10,8 @@ export type MasManagedProviderProjection = {
   surface_kind: 'opl_mas_managed_provider_projection';
   role: 'read_only_status_projection';
   managed_temporal_state_consistency: JsonRecord | null;
-  source_status: 'available';
+  legacy_retirement_tombstone_proof: JsonRecord | null;
+  source_status: 'available' | 'not_configured';
   source_refs: JsonRecord[];
   authority_boundary: {
     opl: 'status_projection_only';
@@ -59,22 +60,23 @@ function nestedRecord(value: unknown, path: string[]) {
   return isRecord(cursor) ? cursor : null;
 }
 
-function findManagedTemporalProjection(payload: unknown): JsonRecord | null {
-  const direct = nestedRecord(payload, ['managed_temporal_state_consistency']);
+function findProjection(payload: unknown, key: string): JsonRecord | null {
+  const direct = nestedRecord(payload, [key]);
   if (direct) {
     return direct;
   }
 
   const paths = [
-    ['domain_projection', 'managed_temporal_state_consistency'],
-    ['progress_projection', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['runtime_inventory', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['runtime_control', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['session_continuity', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['product_entry_manifest', 'progress_projection', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['product_entry_manifest', 'runtime_inventory', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['product_entry_manifest', 'runtime_control', 'domain_projection', 'managed_temporal_state_consistency'],
-    ['product_entry_manifest', 'session_continuity', 'domain_projection', 'managed_temporal_state_consistency'],
+    ['domain_projection', key],
+    ['progress_projection', 'domain_projection', key],
+    ['runtime_inventory', 'domain_projection', key],
+    ['runtime_control', 'domain_projection', key],
+    ['session_continuity', 'domain_projection', key],
+    ['product_entry_manifest', 'domain_projection', key],
+    ['product_entry_manifest', 'progress_projection', 'domain_projection', key],
+    ['product_entry_manifest', 'runtime_inventory', 'domain_projection', key],
+    ['product_entry_manifest', 'runtime_control', 'domain_projection', key],
+    ['product_entry_manifest', 'session_continuity', 'domain_projection', key],
   ];
 
   for (const path of paths) {
@@ -134,13 +136,39 @@ function normalizeManagedTemporalProjection(projection: JsonRecord, source: Json
   };
 }
 
+function normalizeLegacyRetirementTombstoneProof(projection: JsonRecord, source: JsonRecord) {
+  const authorityBoundary = isRecord(projection.authority_boundary)
+    ? projection.authority_boundary
+    : {};
+  return {
+    ...projection,
+    surface_kind: optionalString(projection.surface_kind) ?? 'legacy_retirement_tombstone_proof',
+    status: optionalString(projection.status) ?? 'unknown',
+    active_default_callers: Array.isArray(projection.active_default_callers)
+      ? projection.active_default_callers
+      : [],
+    source_refs: stringList(projection.source_refs),
+    source_manifest: source,
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      domain_truth: 'domain_owned',
+      paper_closure_authority: 'mas_only',
+      ...authorityBoundary,
+    },
+  };
+}
+
 function projectionFromPayload(payload: unknown, source: JsonRecord): MasManagedProviderProjection | null {
-  const managedTemporal = findManagedTemporalProjection(payload);
+  const managedTemporal = findProjection(payload, 'managed_temporal_state_consistency');
+  const legacyTombstone = findProjection(payload, 'legacy_retirement_tombstone_proof');
   const normalizedManagedTemporal = managedTemporal
     ? normalizeManagedTemporalProjection(managedTemporal, source)
     : null;
+  const normalizedLegacyTombstone = legacyTombstone
+    ? normalizeLegacyRetirementTombstoneProof(legacyTombstone, source)
+    : null;
 
-  if (!normalizedManagedTemporal) {
+  if (!normalizedManagedTemporal && !normalizedLegacyTombstone) {
     return null;
   }
 
@@ -148,6 +176,7 @@ function projectionFromPayload(payload: unknown, source: JsonRecord): MasManaged
     surface_kind: 'opl_mas_managed_provider_projection',
     role: 'read_only_status_projection',
     managed_temporal_state_consistency: normalizedManagedTemporal,
+    legacy_retirement_tombstone_proof: normalizedLegacyTombstone,
     source_status: 'available',
     source_refs: [source],
     authority_boundary: {
@@ -176,7 +205,7 @@ function projectionFromManifest() {
     binding_id: entry.binding_id,
     workspace_path: entry.workspace_path,
     manifest_command: entry.manifest_command,
-    projection_ref: '/progress_projection/domain_projection/managed_temporal_state_consistency',
+    projection_ref: '/progress_projection/domain_projection',
   });
 }
 
@@ -195,10 +224,11 @@ function projectionFromSidecar() {
     return null;
   }
   try {
-    return projectionFromPayload(JSON.parse(result.stdout ?? '') as unknown, {
+    const parsed = JSON.parse(result.stdout ?? '') as unknown;
+    return projectionFromPayload(parsed, {
       surface_kind: 'mas_family_sidecar_export_projection_ref',
       command_preview: command,
-      projection_ref: '/managed_temporal_state_consistency',
+      projection_ref: '/',
     });
   } catch {
     return null;
