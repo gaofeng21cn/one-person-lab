@@ -11,6 +11,7 @@ Current owner surfaces:
 - [OPL current development lines](../../active/current-development-lines.md): framework-first content-level execution map.
 - [OPL development document portfolio](../../active/development-document-portfolio.md): classifies old runtime / product-entry / migration content as merge, retain, downgrade, retire, or archive.
 - [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete stage-led runtime framework with Agent executors as the minimum execution unit.
+- [OPL and Foundry Agents ideal state](./opl-family-agent-ideal-state.zh-CN.md): north-star target boundary for OPL Framework, Foundry Agents, workspace/runtime artifact roots, and the One Person Lab App.
 - [Temporal family runtime provider plan](./temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the production provider candidate.
 - [OPL Runtime Manager target](./opl-runtime-manager-target.md): active support target for provider readiness, native helper, and state index boundaries.
 
