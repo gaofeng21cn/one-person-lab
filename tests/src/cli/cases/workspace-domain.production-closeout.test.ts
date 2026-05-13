@@ -676,6 +676,7 @@ test('framework production-closeout times out stalled domain manifests as typed 
     const startedAt = Date.now();
     const closeout = runCli(['framework', 'production-closeout'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '100',
     }).production_functional_closeout;
     const elapsedMs = Date.now() - startedAt;
     const mas = closeout.domains.find((entry: { project_id: string }) =>
@@ -684,7 +685,7 @@ test('framework production-closeout times out stalled domain manifests as typed 
 
     assert.equal(mas.manifest_status, 'command_timeout');
     assert.equal(mas.manifest_error.code, 'command_timeout');
-    assert.equal(mas.manifest_error.timeout_ms, 2000);
+    assert.equal(mas.manifest_error.timeout_ms, 100);
     assert.match(mas.manifest_error.manifest_command, /setTimeout/);
     assert.equal(mas.manifest_error.repair_command, 'OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS=10000 opl framework production-closeout');
     assert.match(mas.manifest_error.next_action, /Increase OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS/);
@@ -699,11 +700,11 @@ test('framework production-closeout times out stalled domain manifests as typed 
     );
     assert.equal(timeoutBlocker.blocker_kind, 'domain_manifest_timeout');
     assert.equal(timeoutBlocker.repair_command, 'OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS=10000 opl framework production-closeout');
-    assert.equal(timeoutBlocker.timeout_ms, 2000);
+    assert.equal(timeoutBlocker.timeout_ms, 100);
     assert.match(timeoutBlocker.manifest_command, /setTimeout/);
     assert.match(timeoutBlocker.next_action, /Increase OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS/);
     assert.equal(closeout.authority_boundary.opl_writes_domain_truth, false);
-    assert.equal(elapsedMs < 4000, true);
+    assert.equal(elapsedMs < 2000, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
