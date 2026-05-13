@@ -151,6 +151,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl system reconcile-modules',
         'opl actions list',
         'opl agents list',
+        'opl agents descriptors',
+        'opl agents descriptor --domain mas',
         'opl domain-memory list',
         'opl domain-memory migration-plan --domain mas',
         'opl stages list',
