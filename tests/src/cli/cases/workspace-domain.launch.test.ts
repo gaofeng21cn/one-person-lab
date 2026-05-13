@@ -376,6 +376,48 @@ test('domain manifests times out stalled manifest commands fail-closed', () => {
   }
 });
 
+test('domain manifests default timeout tolerates slow but valid manifest commands', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-slow-state-'));
+  const manifestPath = path.join(stateRoot, 'slow-manifest.json');
+  const slowManifestCommandPath = path.join(stateRoot, 'slow-manifest-command.cjs');
+
+  try {
+    fs.writeFileSync(manifestPath, `${JSON.stringify(loadFamilyManifestFixtures().medautoscience)}\n`, 'utf8');
+    fs.writeFileSync(
+      slowManifestCommandPath,
+      `const fs = require('node:fs');\n`
+        + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 11000);\n`,
+      'utf8',
+    );
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      `${process.execPath} ${shellSingleQuote(slowManifestCommandPath)}`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 1);
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.manifest_kind, 'med_autoscience_product_entry_manifest');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
   const resolvedManifest = loadFamilyManifestFixtures().redcube;
