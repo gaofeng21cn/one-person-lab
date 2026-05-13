@@ -428,14 +428,13 @@ exit 1
   }
 });
 
-test('top-level @agent aliases are retired in favor of skill sync plus plain Codex entry', () => {
+test('top-level @agent aliases are not registered as command surfaces', () => {
   const { status, payload } = runCliFailure(['@mas', 'tighten the manuscript argument around invasive phenotype findings']);
 
   assert.equal(status, 2);
   assert.equal(payload.version, 'g2');
-  assert.equal(payload.error.code, 'cli_usage_error');
-  assert.match(payload.error.message, /Command "opl @mas" has been retired/);
-  assert.match(payload.error.message, /opl skill sync/);
+  assert.equal(payload.error.code, 'unknown_command');
+  assert.match(payload.error.message, /Unknown command: @mas/);
 });
 
 test('help no longer advertises retired ask chat shell aliases', () => {
@@ -479,37 +478,6 @@ exit 1
     assert.equal(output.product_entry.resume.session_id, 'opl-test-session');
     assert.equal(output.product_entry.resume.output, 'RESUMED SESSION BODY');
     assert.equal(result.stderr, '');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('sessions parses the Hermes recent-session table into a product-entry surface', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
-  cat <<'EOF'
-Preview                                            Last Active   Src    ID
-───────────────────────────────────────────────────────────────────────────────────────────────
-Execute the following RedCube service entry enve   10m ago       api_server run_7e2a41
-Medical grant revision session                     2m ago        cli    sess_abcd
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(['session', 'list', '--limit', '2'], {
-      OPL_HERMES_BIN: hermesPath,
-    });
-
-    assert.equal(output.product_entry.mode, 'sessions');
-    assert.equal(output.product_entry.sessions.length, 2);
-    assert.equal(output.product_entry.sessions[0].session_id, 'run_7e2a41');
-    assert.equal(output.product_entry.sessions[0].source, 'api_server');
-    assert.equal(output.product_entry.sessions[1].session_id, 'sess_abcd');
-    assert.equal(output.product_entry.sessions[1].preview, 'Medical grant revision session');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

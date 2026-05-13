@@ -43,7 +43,7 @@ import {
   buildPublicSystemPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseDeveloperSupervisorArgs, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseResumeArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseDeveloperSupervisorArgs, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseResumeArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 async function readStdinText() {
@@ -127,20 +127,6 @@ export function buildPublicCommandSpecs(
     handler: async (args) => buildPublicTurnkeyInstallPayload(
       await runOplTurnkeyInstall(getContracts(), parseTurnkeyInstallArgs(args, installSpec)),
     ),
-  };
-
-  const retiredWebSpec: CommandSpec = {
-    usage: 'opl web --help',
-    summary: 'Retired local Product API web adapter surface; use the OPL desktop GUI / AionUI shell path.',
-    examples: ['opl system initialize'],
-    group: 'legacy',
-    handler: () => {
-      throw buildRetiredCommandError(
-        'web',
-        'Use the OPL desktop GUI / AionUI shell path, or inspect current readiness with `opl system initialize`.',
-        retiredWebSpec,
-      );
-    },
   };
 
   const systemSpec = buildNoArgSpec(
@@ -360,7 +346,6 @@ export function buildPublicCommandSpecs(
         return buildCommandHelp(helpTarget, helpSpec);
       },
     },
-    web: retiredWebSpec,
     install: installSpec,
     'framework locate': {
       usage: 'opl framework locate',
