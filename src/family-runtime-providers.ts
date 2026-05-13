@@ -2,6 +2,7 @@ import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { buildTemporalWorkerReadiness, inspectTemporalWorkerLifecycle } from './family-runtime-temporal-provider.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
+import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 
 export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'hermes_legacy', 'temporal'] as const;
 
@@ -45,6 +46,34 @@ function temporalAddress() {
 function temporalWorkerConfigured() {
   return process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>) {
+  const address = optionalString(projection.address);
+  const namespace = optionalString(projection.namespace) ?? resolveTemporalNamespace();
+  const taskQueue = optionalString(projection.task_queue) ?? resolveTemporalTaskQueue();
+  return {
+    ...buildTemporalWorkerReadiness({
+      address,
+      addressSource: 'mas_managed_temporal_state_consistency_projection',
+      namespace,
+      taskQueue,
+      workerEnabled: '1',
+      workerStatus: 'ready',
+      serverReachable: true,
+    }),
+    surface_kind: 'temporal_worker_lifecycle_status',
+    lifecycle_status: 'ready',
+    authority_boundary: {
+      opl: 'managed_temporal_state_projection_consumer_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      paper_closure_authority: 'mas_only',
+    },
+  };
 }
 
 export function isFamilyRuntimeProviderKind(value: string | undefined): value is FamilyRuntimeProviderKind {
@@ -158,7 +187,14 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
     return inspectFamilyRuntimeProvider(kind);
   }
   const workerReadiness = await inspectTemporalWorkerLifecycle(paths);
-  const workerReady = workerReadiness.worker_ready === true;
+  const managedProviderProjection = workerReadiness.worker_ready === true
+    ? null
+    : readMasManagedProviderProjection();
+  const managedTemporalProjection = managedProviderProjection?.managed_temporal_state_consistency ?? null;
+  const effectiveWorkerReadiness = managedTemporalProjection
+    ? buildManagedTemporalWorkerReadiness(managedTemporalProjection)
+    : workerReadiness;
+  const workerReady = effectiveWorkerReadiness.worker_ready === true;
   const degradedReason = workerReadiness.blockers[0] ?? null;
   return {
     provider_kind: kind,
@@ -172,22 +208,31 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       'query_projection_provider_code',
       'workflow_history_provider_code',
       'worker_lifecycle_contract',
+      ...(managedTemporalProjection ? ['mas_managed_temporal_state_consistency_projection'] : []),
     ],
     details: {
-      address: workerReadiness.address,
-      address_source: workerReadiness.address_source,
-      namespace: workerReadiness.namespace,
-      task_queue: workerReadiness.task_queue,
+      address: effectiveWorkerReadiness.address,
+      address_source: effectiveWorkerReadiness.address_source,
+      namespace: effectiveWorkerReadiness.namespace,
+      task_queue: effectiveWorkerReadiness.task_queue,
       worker_ready: workerReady,
-      worker_readiness: workerReadiness,
+      worker_readiness: effectiveWorkerReadiness,
+      managed_temporal_state_consistency: managedTemporalProjection,
+      mas_managed_provider_projection: managedProviderProjection,
       worker_lifecycle: {
         worker_required: true,
-        task_queue: workerReadiness.task_queue,
+        task_queue: effectiveWorkerReadiness.task_queue,
         default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
-        lifecycle_owner: 'configured_family_runtime_provider',
+        lifecycle_owner: managedTemporalProjection
+          ? 'domain_owned_managed_temporal_projection'
+          : 'configured_family_runtime_provider',
         opl_helper: 'runTemporalStageAttemptWorkerUntil',
       },
-      adapter_mode: workerReady ? 'managed_temporal_provider_ready' : 'provider_code_landed_unconfigured',
+      adapter_mode: workerReady
+        ? managedTemporalProjection
+          ? 'mas_managed_temporal_projection_ready'
+          : 'managed_temporal_provider_ready'
+        : 'provider_code_landed_unconfigured',
       required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state', 'managed Temporal worker state or OPL_TEMPORAL_WORKER_STATUS=ready'],
       runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
     },
