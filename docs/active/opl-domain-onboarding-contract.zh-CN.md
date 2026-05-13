@@ -30,9 +30,12 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
 - [`../contracts/opl-framework/public-surface-index.json#opl_framework_locator`](../../contracts/opl-framework/public-surface-index.json)
+- `opl agents descriptors --json`
+- `opl agents descriptor --domain <domain> --json`
 
 这些合同把已收录 domain-agent catalog 与 stage topology 落成 non-executing framework surface。
 它们不会授予 OPL domain truth，也不会自动收录候选 workstream。
+`opl agents descriptors` 是这些工件之上的统一检查入口：正式收录的 domain 应能在该 read model 中暴露 entry、standard skeleton、action catalog、stage control plane、domain memory descriptor、skill catalog、runtime/session/progress/artifact refs 和 authority boundary。它仍然是 descriptor/projection surface，不读取或嵌入 domain memory 正文、prompt 长正文、route 判断或 quality verdict。
 公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 domain-agent boundary package 落地前，它们仍然只算 top-level signal。
 这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain-agent entry，而 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops` 仍然需要完整 admission package 才能完成正式收录。
 

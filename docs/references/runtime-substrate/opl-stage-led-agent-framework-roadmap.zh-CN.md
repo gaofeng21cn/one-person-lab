@@ -35,6 +35,7 @@ Date: `2026-05-12`
 - MAS runtime 退役计划：`med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md`
 - Stage control plane adoption：`docs/references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md`
 - Domain memory 总入口：`docs/references/operating-governance/family-domain-memory-governance.zh-CN.md`
+- Domain-agent 统一机器入口：`opl agents descriptors --json` / `opl agents descriptor --domain mas --json`
 - 跨仓当前状态：OPL / MAS / MAG / RCA / MDS 各自的 `docs/status.md`、`docs/project.md`、`docs/invariants.md`
 
 开发纪律：
@@ -109,6 +110,7 @@ Date: `2026-05-12`
 - family action catalog、family stage control plane schema、family runtime supervision、persistence / lifecycle / owner-route schema 已在 OPL shared layer 冻结。
 - `opl actions list|inspect|export` 与 `opl stages list|inspect` 是只读 discovery / parity surface。
 - `opl agents list|inspect` 已能读取标准字段和三仓 adapter alias，并强制 artifact locator surface；缺少 locator 的 skeleton 仍保持 `drift_detected`，不会被 OPL 误判为可托管。
+- `opl agents descriptors|descriptor --domain <domain>` 已成为 admitted domain agent 的统一只读 descriptor：它聚合 domain entry、standard skeleton、action catalog、stage control plane、domain memory descriptor、skill catalog、runtime/session/progress/artifact refs、parity 和 authority boundary。它是维护者/App 的总入口，不替代 `opl stages`、`opl actions`、`opl domain-memory` 的专题 drilldown，也不嵌入 memory 正文、prompt 长正文或 domain verdict。
 - `opl domain-memory list|inspect|migration-plan` 已能读取标准 domain-owned memory descriptor；当前 live binding 中 MAS/MAG/RCA 均 resolved。该入口展示 migration plan ref、seed corpus ref、writeback receipt locator 和 readiness；OPL 只做发现/投影，不执行迁移、不接受写回、不读取 memory 正文。
 - `opl family-runtime` 已有 typed queue、MAS/MAG/RCA pending task intake、guarded dispatch、retry/dead-letter / local inbox 信号和 stage attempt local ledger。
 - `opl family-runtime attempt create|list|inspect|start|query|signal` 已能登记 provider-backed stage attempt，启动/查询/发送 Temporal workflow 信号，并在缺少 Temporal 地址时明确 fail-closed。

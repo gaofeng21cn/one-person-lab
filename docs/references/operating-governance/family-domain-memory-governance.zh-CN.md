@@ -32,6 +32,13 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 | `redcube-ai` | `docs/policies/visual_pattern_memory_policy.md` | 视觉叙事、版式、风格、review failure mode 与生产质量经验的 natural-language-first policy。 |
 | `one-person-lab` | 本文和 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` | OPL 只定义 framework 发现、索引、receipt 和 owner boundary，不持有领域内容。 |
 
+机器读总入口现在分两层：
+
+- `opl agents descriptors --json` / `opl agents descriptor --domain mas --json` 是维护者和 App 的 domain-agent 总入口：它把 entry、stage、action、memory、skill、runtime、progress 和 artifact refs 聚合到同一个只读 descriptor。
+- `opl domain-memory list|inspect|migration-plan --json` 是 memory 专题入口：它只展开 domain-owned memory locator、migration plan、proposal contract、router receipt 和 writeback receipt locator。
+
+因此 MAS 论文路线经验库的 OPL 接入方式是：统一 descriptor 先显示 `domain_memory_descriptor.memory_ref_id=mas_publication_route_memory`，再由 memory 专题入口展开 locator / receipt / freshness。论文路线正文继续在 MAS 的 Markdown-first memory / policy 文档中维护；OPL 只携带 refs/status/authority boundary，不复制正文，也不变成 route recipe engine。
+
 ## 分类规则
 
 ### 适合自然语言 memory 的内容

@@ -30,9 +30,12 @@ For runtime dependencies, a candidate domain agent must treat `OPL Framework` as
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
 - [`../contracts/opl-framework/public-surface-index.json#opl_framework_locator`](../../contracts/opl-framework/public-surface-index.json)
+- `opl agents descriptors --json`
+- `opl agents descriptor --domain <domain> --json`
 
 These contracts materialize the admitted domain-agent catalog and stage topology as non-executing framework surfaces.
 They do not grant OPL domain truth, and they do not admit candidate workstreams automatically.
+`opl agents descriptors` is the unified inspection entry over these materials: an officially admitted domain should expose entry, standard skeleton, action catalog, stage control plane, domain memory descriptor, skill catalog, runtime/session/progress/artifact refs, and authority boundaries in that read model. It is still a descriptor/projection surface, and it does not read or embed domain memory bodies, long prompt bodies, route judgments, or quality verdicts.
 Public scaffolds or domain-direction hints may clarify a candidate path, but they still count only as top-level signal until the real domain-agent boundary package lands.
 This rule now applies to the remaining candidate workstreams only: `Grant Ops` has moved onto the admitted `MedAutoGrant` domain-agent entry, while `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops` still require full admission packages.
 

@@ -95,6 +95,23 @@
 
 对 `MAS` v2，可消费 projection 锚点是 domain-owned `study_charter`、`evidence_ledger`、`review_ledger`、`publication_eval/latest.json`、AI reviewer artifacts、`StudyTruthKernel` / `RuntimeHealthKernel` 或 truth health reducers / runtime health reducers。OPL only consumes projections, does not issue MAS ready verdicts, and does not hold publication judgment。
 
+## Unified Domain-Agent Descriptor Read Model
+
+`opl agents descriptors --json` 和 `opl agents descriptor --domain <domain> --json` 是当前 admitted domain agent 的统一机器读入口。它们不新增新的 schema family；它们把本目录和 `contracts/opl-framework/standard-domain-agent-skeleton-contract.json` 已冻结的 manifest surfaces 聚合为一个 read model：
+
+- `domain_agent_entry_spec`
+- `standard_domain_agent_skeleton`
+- `family_action_catalog`
+- `family_stage_control_plane`
+- `domain_memory_descriptor`
+- `skill_catalog`
+- `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
+- `descriptor_refs`、parity、readiness 与 authority boundary
+
+这个 read model 用于 CLI/App discovery、维护者检查、admission gate 和 operator drilldown。它只承载 refs、status、locator、parity 和 forbidden-authority flags；它不承载 memory 正文、prompt/skill 长正文、domain route 判断、quality verdict、publication/fundability/visual verdict 或 artifact authority。
+
+因此 MAS 的 `mas_publication_route_memory` 可以作为 `domain_memory_descriptor` 被统一 descriptor 发现，但论文套路正文仍由 MAS Markdown-first memory 管理；OPL 只把 operator 带到正确 refs。
+
 ## Persistence / Lifecycle / Owner-Route Freeze
 
 family-level persistence 与 lifecycle surface 只属于共享控制面合同。它们让 domain 仓能用同一形状暴露 durable state role、lifecycle receipt 与 next-owner routing，但不把 domain truth 迁入 `OPL`。
