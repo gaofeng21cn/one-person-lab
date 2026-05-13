@@ -139,6 +139,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl',
         'opl install',
         'opl framework locate',
+        'opl framework production-closeout',
         'opl family-runtime status',
         'opl family-runtime repair',
         'opl install --modules mas,mag,rca',

@@ -619,6 +619,210 @@ test('domain-agent skeleton remains drifted without an artifact locator surface'
   }
 });
 
+test('framework production-closeout reports functional blockers without taking domain authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-production-functional-closeout-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = withStandardSkeleton({
+    ...(fixtures.medautoscience as JsonRecord),
+    family_stage_control_plane: buildStageControlPlane(
+      'med-autoscience',
+      'manuscript_authoring',
+      {
+        owner: 'med-autoscience',
+        title: 'Manuscript authoring',
+        stageKind: 'creation',
+        domainStageRefs: ['write'],
+      },
+    ),
+    owner_receipt_contract: {
+      surface_kind: 'domain_owner_receipt_contract',
+      accepted_return_shapes: ['domain_receipt', 'typed_blocker'],
+    },
+    managed_temporal_state_consistency: {
+      surface_kind: 'managed_temporal_state_consistency',
+      projection_mode: 'read_only',
+    },
+    lifecycle_apply_requests: [
+      {
+        action_id: 'mas-opl-ledger-retention',
+        action_kind: 'retention',
+        owner_scope: 'opl_owned_ledger',
+        authority_owner: 'opl_framework',
+        target_ref: 'opl-ledger:mas',
+      },
+    ],
+    legacy_retirement_tombstone_proof: {
+      surface_kind: 'legacy_retirement_tombstone_proof',
+      active_default_callers: [],
+    },
+  });
+  const magManifest = withStandardSkeleton({
+    ...(fixtures.medautogrant.product_entry_manifest as JsonRecord),
+    family_stage_control_plane: buildStageControlPlane(
+      'med-autogrant',
+      'proposal_authoring',
+      {
+        owner: 'med-autogrant',
+        title: 'Proposal authoring',
+        stageKind: 'creation',
+        domainStageRefs: ['outline'],
+      },
+    ),
+    owner_receipt_contract: {
+      surface_kind: 'domain_owner_receipt_contract',
+      accepted_return_shapes: ['domain_receipt', 'typed_blocker', 'no_regression_evidence'],
+    },
+    lifecycle_apply_requests: [
+      {
+        action_id: 'mag-cleanup-artifact',
+        action_kind: 'cleanup',
+        owner_scope: 'domain_owned_artifact',
+        authority_owner: 'med-autogrant',
+        target_ref: 'grant-workspace:artifact',
+        restore_ref: 'restore:mag:artifact',
+      },
+    ],
+    legacy_retirement_tombstone_proof: {
+      surface_kind: 'legacy_retirement_tombstone_proof',
+      active_default_callers: [],
+    },
+  }, { agent_id: 'mag' });
+  const rcaManifest = withStandardSkeleton({
+    ...(fixtures.redcube as JsonRecord),
+    family_stage_control_plane: buildStageControlPlane(
+      'redcube_ai',
+      'artifact_creation',
+      {
+        owner: 'redcube_ai',
+        title: 'Artifact creation',
+        stageKind: 'creation',
+        domainStageRefs: ['author_pptx_native'],
+      },
+    ),
+    owner_receipt_contract: {
+      surface_kind: 'domain_owner_receipt_contract',
+      accepted_return_shapes: ['domain_receipt', 'typed_blocker', 'no_regression_evidence'],
+    },
+    lifecycle_apply_requests: [
+      {
+        action_id: 'rca-retention-artifact',
+        action_kind: 'retention',
+        owner_scope: 'domain_owned_artifact',
+        authority_owner: 'redcube-ai',
+        target_ref: 'visual-workspace:artifact',
+        restore_ref: 'restore:rca:artifact',
+        domain_receipt_ref: 'receipt:rca:lifecycle-retention',
+      },
+    ],
+    legacy_retirement_tombstone_proof: {
+      surface_kind: 'legacy_retirement_tombstone_proof',
+      active_default_callers: [],
+    },
+  }, { agent_id: 'rca' });
+
+  try {
+    for (const [project, manifest] of [
+      ['medautoscience', masManifest],
+      ['medautogrant', magManifest],
+      ['redcube', rcaManifest],
+    ] as const) {
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        project,
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(manifest),
+      ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    }
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'proposal_authoring',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mag',
+        controlled_stage_attempt: {
+          action_kind: 'grant_stage_attempt_apply',
+          contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
+          owner_receipt_refs: ['receipt:mag:owner-apply'],
+        },
+      }),
+      '--source-fingerprint',
+      'sha256:mag-owner-receipt',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'artifact_creation',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/rca',
+        controlled_soak_no_regression_attempt: {
+          surface_kind: 'controlled_soak_no_regression_attempt',
+          no_regression_evidence_refs: ['rca:no-regression:visual-stage-1'],
+        },
+      }),
+      '--source-fingerprint',
+      'sha256:rca-no-regression',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const closeout = runCli(['framework', 'production-closeout'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).production_functional_closeout;
+
+    assert.equal(closeout.surface_kind, 'opl_production_functional_closeout_gate');
+    assert.equal(closeout.status, 'usable_with_typed_blockers');
+    assert.equal(closeout.summary.resolved_manifest_count, 3);
+    assert.equal(closeout.summary.descriptor_aligned_count, 3);
+    assert.equal(closeout.summary.resolved_stage_plane_count, 3);
+    assert.equal(closeout.summary.provider_ready, false);
+    assert.equal(closeout.authority_boundary.opl_writes_domain_truth, false);
+    assert.equal(closeout.authority_boundary.opl_writes_domain_artifact, false);
+    assert.equal(closeout.authority_boundary.opl_writes_domain_memory_body, false);
+    assert.equal(closeout.stage_attempt_evidence.controlled_apply_summary.domain_receipt_observed_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.controlled_apply_summary.no_regression_evidence_observed_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.lifecycle_guarded_apply_summary.domain_writes_performed, false);
+    const mag = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
+    const rca = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'redcube');
+    const mas = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
+    assert.equal(mag.stage_attempt_evidence.owner_receipt_refs[0], 'receipt:mag:owner-apply');
+    assert.equal(rca.stage_attempt_evidence.no_regression_evidence_refs[0], 'rca:no-regression:visual-stage-1');
+    assert.equal(mas.managed_temporal_state_consistency_declared, true);
+    assert.equal(
+      closeout.typed_blockers.some((blocker: { blocker_id: string }) =>
+        blocker.blocker_id === 'temporal_provider_not_configured'
+      ),
+      true,
+    );
+    assert.equal(
+      closeout.typed_blockers.some((blocker: { blocker_id: string }) =>
+        blocker.blocker_id === 'medautoscience:no_stage_attempt_evidence_in_opl_ledger'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family stage control plane resolves real MAS RCA MAG manifests when local checkouts are present', { skip: process.env.OPL_REAL_STAGE_SMOKE !== '1' }, () => {
   const roots = {
     mas: process.env.OPL_REAL_MAS_REPO ?? '/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-stage-control-deep-adapter',
