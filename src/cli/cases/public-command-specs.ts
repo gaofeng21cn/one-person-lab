@@ -2,6 +2,7 @@ import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWork
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
+import { buildProductionFunctionalCloseout } from '../../production-functional-closeout.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
@@ -368,6 +369,17 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['framework locate']);
         return buildOplFrameworkLocator();
+      },
+    },
+    'framework production-closeout': {
+      usage: 'opl framework production-closeout',
+      summary:
+        'Read the production functional closeout gate across OPL, MAS, MAG, and RCA without running long soaks.',
+      examples: ['opl framework production-closeout'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['framework production-closeout']);
+        return buildProductionFunctionalCloseout(getContracts());
       },
     },
     'packages manifest': packagesManifestSpec,
