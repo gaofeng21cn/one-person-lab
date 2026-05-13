@@ -164,6 +164,17 @@ test('package.json exposes the canonical family shared release maintenance comma
   );
 });
 
+test('package.json exports the unified domain-agent descriptor read model', () => {
+  assert.equal(
+    packageJson.exports?.['./family-domain-agent-descriptor'],
+    './dist/family-domain-agent-descriptor.js',
+  );
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'src/family-domain-agent-descriptor.ts')),
+    true,
+  );
+});
+
 test('package.json exposes native helper gate scripts and package dry-run check', () => {
   assert.equal(packageJson.scripts?.['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
   assert.equal(packageJson.scripts?.['native:prebuild'], 'node ./scripts/native-helper-prebuild.mjs install');
