@@ -176,26 +176,22 @@ const retiredCliCommandMatrix = [
   {
     args: ['@mas', 'tighten the manuscript argument around invasive phenotype findings'],
     command: 'opl @mas',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl skill sync/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['@mag', 'Draft a grant revision response pack.', '--dry-run'],
     command: 'opl @mag',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl skill sync/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['@rca', 'Prepare a defense-ready slide deck.', '--dry-run'],
     command: 'opl @rca',
-    errorCode: 'cli_usage_error',
-    replacements: [/opl skill sync/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['web'],
     command: 'web',
-    errorCode: 'cli_usage_error',
-    replacements: [/AionUI shell/],
+    errorCode: 'unknown_command',
   },
   {
     args: [['mcp', 'stdio'].join('-')],

@@ -39,7 +39,6 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
   'family-runtime': '管理 provider-backed family runtime queue、stage attempt、dispatch、approval、notification 与事件。',
-  legacy: '历史兼容命令。',
 };
 
 const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
@@ -49,6 +48,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'chat',
   'framework',
   'runtime',
+  'session',
   'shell',
 ]);
 
@@ -90,16 +90,13 @@ function resolveCommandSpec(
 }
 
 function buildRootHelp(commands: Record<string, CommandSpec>) {
-  const visibleEntries = Object.entries(commands).filter(([, spec]) => spec.group !== 'legacy');
+  const visibleEntries = Object.entries(commands);
   const grouped = Object.entries(commands).reduce<Record<string, Array<{
     command: string;
     usage: string;
     summary: string;
     examples: string[];
   }>>>((acc, [command, spec]) => {
-    if (spec.group === 'legacy') {
-      return acc;
-    }
     const groupId = spec.group ?? 'top_level';
     acc[groupId] ??= [];
     acc[groupId].push({

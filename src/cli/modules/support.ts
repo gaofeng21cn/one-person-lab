@@ -14,7 +14,6 @@ export {
   withContractsContext,
 } from './help-output.ts';
 export {
-  buildRetiredCommandError,
   buildUsageError,
   printJson,
   runCodexPassthroughHandled,

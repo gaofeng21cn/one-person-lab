@@ -17,22 +17,6 @@ function buildUsageError(
   });
 }
 
-function buildRetiredCommandError(
-  command: string,
-  replacement: string,
-  spec?: Pick<CommandSpec, 'usage' | 'examples'>,
-) {
-  return buildUsageError(
-    `Command "${command}" has been retired. ${replacement}`,
-    spec,
-    {
-      command,
-      retired: true,
-      replacement,
-    },
-  );
-}
-
 function runCodexPassthroughHandled(args: string[]) {
   const result = runCodexPassthrough(args);
   process.exitCode = result.exitCode;
@@ -42,7 +26,6 @@ function runCodexPassthroughHandled(args: string[]) {
 }
 
 export {
-  buildRetiredCommandError,
   buildUsageError,
   printJson,
   runCodexPassthroughHandled,
