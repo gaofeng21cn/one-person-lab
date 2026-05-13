@@ -1,6 +1,7 @@
 import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes-bridge.ts';
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
-import { buildTemporalWorkerReadiness } from './family-runtime-temporal-provider.ts';
+import { buildTemporalWorkerReadiness, inspectTemporalWorkerLifecycle } from './family-runtime-temporal-provider.ts';
+import type { familyRuntimePaths } from './family-runtime-store.ts';
 
 export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'hermes_legacy', 'temporal'] as const;
 
@@ -149,6 +150,50 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
   };
 }
 
+export async function inspectFamilyRuntimeProviderWithLifecycle(
+  kind: FamilyRuntimeProviderKind,
+  paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+): Promise<FamilyRuntimeProviderInspection> {
+  if (kind !== 'temporal') {
+    return inspectFamilyRuntimeProvider(kind);
+  }
+  const workerReadiness = await inspectTemporalWorkerLifecycle(paths);
+  const workerReady = workerReadiness.worker_ready === true;
+  const degradedReason = workerReadiness.blockers[0] ?? null;
+  return {
+    provider_kind: kind,
+    status: workerReady ? 'ready' : 'provider_code_landed_unconfigured',
+    ready: workerReady,
+    degraded_reason: workerReady ? null : degradedReason,
+    capabilities: [
+      'stage_attempt_workflow_provider_code',
+      'codex_activity_provider_code',
+      'human_gate_signal_provider_code',
+      'query_projection_provider_code',
+      'workflow_history_provider_code',
+      'worker_lifecycle_contract',
+    ],
+    details: {
+      address: workerReadiness.address,
+      address_source: workerReadiness.address_source,
+      namespace: workerReadiness.namespace,
+      task_queue: workerReadiness.task_queue,
+      worker_ready: workerReady,
+      worker_readiness: workerReadiness,
+      worker_lifecycle: {
+        worker_required: true,
+        task_queue: workerReadiness.task_queue,
+        default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+        lifecycle_owner: 'configured_family_runtime_provider',
+        opl_helper: 'runTemporalStageAttemptWorkerUntil',
+      },
+      adapter_mode: workerReady ? 'managed_temporal_provider_ready' : 'provider_code_landed_unconfigured',
+      required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state', 'managed Temporal worker state or OPL_TEMPORAL_WORKER_STATUS=ready'],
+      runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
+    },
+  };
+}
+
 export function inspectFamilyRuntimeProviders(selected: FamilyRuntimeProviderKind) {
   return {
     selected_provider: selected,
@@ -160,6 +205,27 @@ export function inspectFamilyRuntimeProviders(selected: FamilyRuntimeProviderKin
     },
     providers: {
       [selected]: inspectFamilyRuntimeProvider(selected),
+    } as Partial<Record<FamilyRuntimeProviderKind, FamilyRuntimeProviderInspection>>,
+    provider_catalog: Object.fromEntries(
+      FAMILY_RUNTIME_PROVIDER_KINDS.map((providerKind) => [providerKind, providerMetadata(providerKind)]),
+    ),
+  };
+}
+
+export async function inspectFamilyRuntimeProvidersWithLifecycle(
+  selected: FamilyRuntimeProviderKind,
+  paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+) {
+  return {
+    selected_provider: selected,
+    allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
+    default_resolution: {
+      env: 'OPL_FAMILY_RUNTIME_PROVIDER',
+      offline_env: 'OPL_DISABLE_HERMES_ONLINE=1 only affects explicitly selected hermes_legacy provider readiness',
+      fallback: 'local_sqlite',
+    },
+    providers: {
+      [selected]: await inspectFamilyRuntimeProviderWithLifecycle(selected, paths),
     } as Partial<Record<FamilyRuntimeProviderKind, FamilyRuntimeProviderInspection>>,
     provider_catalog: Object.fromEntries(
       FAMILY_RUNTIME_PROVIDER_KINDS.map((providerKind) => [providerKind, providerMetadata(providerKind)]),
