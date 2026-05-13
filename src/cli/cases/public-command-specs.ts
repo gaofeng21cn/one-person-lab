@@ -14,6 +14,10 @@ import {
   buildFamilyActionsList,
 } from '../../family-action-catalog.ts';
 import {
+  buildFamilyAgentDescriptorInspect,
+  buildFamilyAgentDescriptorList,
+} from '../../family-domain-agent-descriptor.ts';
+import {
   buildFamilyAgentInspect,
   buildFamilyAgentsList,
 } from '../../family-domain-agent-skeleton.ts';
@@ -572,6 +576,23 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyAgentInspect(getContracts(), args),
+    },
+    'agents descriptors': {
+      usage: 'opl agents descriptors',
+      summary: 'List unified domain-agent descriptors projected from entry, stage, action, memory, skill, runtime, and artifact refs.',
+      examples: ['opl agents descriptors'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents descriptors']);
+        return buildFamilyAgentDescriptorList(getContracts());
+      },
+    },
+    'agents descriptor': {
+      usage: 'opl agents descriptor --domain <domain>',
+      summary: 'Inspect one unified domain-agent descriptor without embedding domain memory or instruction bodies.',
+      examples: ['opl agents descriptor --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyAgentDescriptorInspect(getContracts(), args),
     },
     'domain-memory list': {
       usage: 'opl domain-memory list',

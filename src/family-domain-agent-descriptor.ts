@@ -1,0 +1,476 @@
+import { FrameworkContractError } from './contracts.ts';
+import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
+import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
+import { buildFamilyActionCatalogParity } from './family-action-catalog.ts';
+import { buildStandardDomainAgentSkeletonInspection } from './family-domain-agent-skeleton.ts';
+import { pickSkillActivationProjection } from './family-domain-catalog.ts';
+import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
+import type { FrameworkContracts } from './types.ts';
+
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function normalizeDomainSelection(value: string) {
+  const key = value.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    mas: 'medautoscience',
+    'med-autoscience': 'medautoscience',
+    medautoscience: 'medautoscience',
+    mag: 'medautogrant',
+    'med-autogrant': 'medautogrant',
+    medautogrant: 'medautogrant',
+    rca: 'redcube',
+    redcube: 'redcube',
+    'redcube-ai': 'redcube',
+    redcube_ai: 'redcube',
+  };
+  return aliases[key] ?? key;
+}
+
+function parseDescriptorArgs(args: string[]) {
+  let domain = '';
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--domain' && value) {
+      domain = value;
+      index += 1;
+      continue;
+    }
+    throw new FrameworkContractError('cli_usage_error', `Unknown agents descriptor option: ${token}.`, {
+      usage: 'opl agents descriptor --domain <domain>',
+    });
+  }
+  if (!domain) {
+    throw new FrameworkContractError('cli_usage_error', 'agents descriptor requires --domain.', {
+      required: ['--domain'],
+    });
+  }
+  return { domain };
+}
+
+function componentStatus(entry: DomainManifestCatalogEntry, ready: boolean) {
+  if (entry.status !== 'resolved') {
+    return 'blocked_by_manifest_status';
+  }
+  return ready ? 'resolved' : 'missing';
+}
+
+function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
+  return {
+    manifest: {
+      ref_kind: 'normalized_domain_manifest',
+      ref: '/',
+      status: manifest ? 'resolved' : 'missing',
+    },
+    domain_agent_entry_spec: {
+      ref_kind: 'json_pointer',
+      ref: '/domain_entry_contract/domain_agent_entry_spec',
+      status: manifest?.domain_entry_contract?.domain_agent_entry_spec ? 'resolved' : 'missing',
+    },
+    standard_domain_agent_skeleton: {
+      ref_kind: 'json_pointer',
+      ref: '/standard_domain_agent_skeleton',
+      status: manifest?.standard_domain_agent_skeleton ? 'resolved' : 'missing',
+    },
+    family_action_catalog: {
+      ref_kind: 'json_pointer',
+      ref: '/family_action_catalog',
+      status: manifest?.family_action_catalog ? 'resolved' : 'missing',
+    },
+    family_stage_control_plane: {
+      ref_kind: 'json_pointer',
+      ref: '/family_stage_control_plane',
+      status: manifest?.family_stage_control_plane ? 'resolved' : 'missing',
+    },
+    domain_memory_descriptor: {
+      ref_kind: 'json_pointer',
+      ref: '/domain_memory_descriptor',
+      status: manifest?.domain_memory_descriptor ? 'resolved' : 'missing',
+    },
+    skill_catalog: {
+      ref_kind: 'json_pointer',
+      ref: '/skill_catalog',
+      status: manifest?.skill_catalog ? 'resolved' : 'missing',
+    },
+    runtime_inventory: {
+      ref_kind: 'json_pointer',
+      ref: '/runtime_inventory',
+      status: manifest?.runtime_inventory ? 'resolved' : 'missing',
+    },
+    session_continuity: {
+      ref_kind: 'json_pointer',
+      ref: '/session_continuity',
+      status: manifest?.session_continuity ? 'resolved' : 'missing',
+    },
+    progress_projection: {
+      ref_kind: 'json_pointer',
+      ref: '/progress_projection',
+      status: manifest?.progress_projection ? 'resolved' : 'missing',
+    },
+    artifact_inventory: {
+      ref_kind: 'json_pointer',
+      ref: '/artifact_inventory',
+      status: manifest?.artifact_inventory ? 'resolved' : 'missing',
+    },
+  };
+}
+
+function buildEntryProjection(entry: DomainManifestCatalogEntry) {
+  const manifest = entry.manifest;
+  const spec = manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null;
+  return {
+    status: componentStatus(entry, Boolean(spec)),
+    agent_id: spec?.agent_id ?? null,
+    title: spec?.title ?? null,
+    description: spec?.description ?? null,
+    default_engine: spec?.default_engine ?? null,
+    workspace_requirement: spec?.workspace_requirement ?? null,
+    entry_command: spec?.entry_command ?? null,
+    manifest_command: spec?.manifest_command ?? null,
+    product_entry_surface: manifest?.product_entry_surface ?? null,
+    recommended_command: manifest?.recommended_command ?? null,
+    manifest_command_locator: entry.manifest_command,
+    workspace_path: entry.workspace_path,
+    binding_id: entry.binding_id,
+  };
+}
+
+function buildSkeletonProjection(entry: DomainManifestCatalogEntry) {
+  const inspection = buildStandardDomainAgentSkeletonInspection(entry);
+  return {
+    status: inspection.skeleton_status,
+    agent_id: inspection.agent_id,
+    skeleton_source_field: inspection.skeleton_source_field,
+    descriptor_readiness: inspection.descriptor_readiness,
+    physical_skeleton_layout_audit: inspection.physical_skeleton_layout_audit,
+    production_closure_gap_count: inspection.production_closure_gaps.length,
+    declared_repo_source_dirs: inspection.declared_repo_source_dirs,
+    missing_repo_source_dirs: inspection.missing_repo_source_dirs,
+    artifact_boundary: inspection.artifact_boundary,
+    contract_refs: inspection.contract_refs,
+    issues: inspection.issues,
+  };
+}
+
+function buildActionCatalogProjection(entry: DomainManifestCatalogEntry) {
+  const catalog = entry.manifest?.family_action_catalog ?? null;
+  const supportedSurfaceKinds = catalog
+    ? [...new Set(catalog.actions.flatMap((action) =>
+        Object.entries(action.supported_surfaces)
+          .filter(([, descriptor]) => descriptor !== null)
+          .map(([surface]) => surface)
+      ))]
+    : [];
+  return {
+    status: componentStatus(entry, Boolean(catalog)),
+    catalog_id: catalog?.catalog_id ?? null,
+    target_domain_id: catalog?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
+    owner: catalog?.owner ?? null,
+    action_count: catalog?.actions.length ?? 0,
+    read_only_action_count: catalog?.actions.filter((action) => action.effect === 'read_only').length ?? 0,
+    mutating_action_count: catalog?.actions.filter((action) => action.effect === 'mutating').length ?? 0,
+    action_ids: catalog?.actions.map((action) => action.action_id) ?? [],
+    supported_surface_kinds: supportedSurfaceKinds,
+    parity: catalog ? buildFamilyActionCatalogParity(catalog, entry.manifest) : null,
+    authority_boundary: catalog?.authority_boundary ?? null,
+  };
+}
+
+function buildStageControlPlaneProjection(entry: DomainManifestCatalogEntry) {
+  const plane = entry.manifest?.family_stage_control_plane ?? null;
+  return {
+    status: componentStatus(entry, Boolean(plane)),
+    plane_id: plane?.plane_id ?? null,
+    target_domain_id: plane?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
+    owner: plane?.owner ?? null,
+    stage_count: plane?.stages.length ?? 0,
+    stage_ids: plane?.stages.map((stage) => stage.stage_id) ?? [],
+    stage_kinds: plane ? [...new Set(plane.stages.map((stage) => stage.stage_kind))] : [],
+    domain_stage_refs: plane
+      ? [...new Set(plane.stages.flatMap((stage) => stage.domain_stage_refs))]
+      : [],
+    knowledge_ref_count: plane?.stages.reduce((total, stage) => total + stage.knowledge_refs.length, 0) ?? 0,
+    action_ref_count: plane?.stages.reduce((total, stage) => total + stage.allowed_action_refs.length, 0) ?? 0,
+    parity: plane ? buildFamilyStageControlPlaneParity(plane, entry.manifest) : null,
+    authority_boundary: plane?.authority_boundary ?? null,
+  };
+}
+
+function buildDomainMemoryProjection(entry: DomainManifestCatalogEntry) {
+  const descriptor = entry.manifest?.domain_memory_descriptor ?? null;
+  const authority = descriptor?.authority_boundary ?? null;
+  return {
+    status: componentStatus(entry, Boolean(descriptor)),
+    memory_ref_id: descriptor?.memory_ref_id ?? null,
+    memory_family: descriptor?.memory_family ?? null,
+    owner: descriptor?.owner ?? null,
+    memory_pack_ref: descriptor?.memory_pack_ref ?? null,
+    stage_applicability: descriptor?.stage_applicability ?? [],
+    retrieval_contract_ref: descriptor?.retrieval_contract_ref ?? null,
+    writeback_contract_ref: descriptor?.writeback_contract_ref ?? null,
+    receipt_contract_ref: descriptor?.receipt_contract_ref ?? null,
+    writeback_receipt_locator_ref: descriptor?.writeback_receipt_locator_ref ?? null,
+    migration_readiness: descriptor?.migration_readiness ?? null,
+    freshness: descriptor?.freshness ?? null,
+    receipt_projection: descriptor?.receipt_projection ?? null,
+    authority_boundary: authority,
+    non_authority_flags: {
+      opl_owns_memory_content: false,
+      opl_accepts_or_rejects_memory_writeback: false,
+      opl_applies_memory_writeback: false,
+      opl_writes_domain_truth: false,
+      opl_authorizes_quality_verdict: false,
+      opl_writes_artifacts: false,
+    },
+  };
+}
+
+function buildSkillProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const catalog = manifest?.skill_catalog ?? null;
+  const activation = manifest ? pickSkillActivationProjection(manifest) : null;
+  const runtimeContinuity = activation?.runtime_continuity ?? null;
+  return {
+    status: componentStatus(entry, Boolean(catalog)),
+    skill_count: catalog?.skills.length ?? 0,
+    skill_ids: catalog?.skills.map((skill) => skill.skill_id) ?? [],
+    supported_commands: catalog?.supported_commands ?? [],
+    command_contract_count: catalog?.command_contracts.length ?? 0,
+    activation,
+    runtime_continuity_status: runtimeContinuity ? 'resolved' : catalog ? 'missing' : 'blocked',
+  };
+}
+
+function buildRuntimeProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  return {
+    runtime_inventory: {
+      status: componentStatus(entry, Boolean(manifest?.runtime_inventory)),
+      runtime_owner: manifest?.runtime_inventory?.runtime_owner ?? null,
+      domain_owner: manifest?.runtime_inventory?.domain_owner ?? null,
+      executor_owner: manifest?.runtime_inventory?.executor_owner ?? null,
+      substrate: manifest?.runtime_inventory?.substrate ?? null,
+      availability: manifest?.runtime_inventory?.availability ?? null,
+      health_status: manifest?.runtime_inventory?.health_status ?? null,
+      status_surface: manifest?.runtime_inventory?.status_surface ?? null,
+      recovery_surface: manifest?.runtime_inventory?.recovery_surface ?? null,
+    },
+    task_lifecycle: {
+      status: componentStatus(entry, Boolean(manifest?.task_lifecycle)),
+      task_kind: manifest?.task_lifecycle?.task_kind ?? null,
+      task_id: manifest?.task_lifecycle?.task_id ?? null,
+      lifecycle_status: manifest?.task_lifecycle?.status ?? null,
+      progress_surface: manifest?.task_lifecycle?.progress_surface ?? null,
+      resume_surface: manifest?.task_lifecycle?.resume_surface ?? null,
+    },
+    runtime_control: {
+      status: componentStatus(entry, Boolean(manifest?.runtime_control)),
+      domain_agent_id: manifest?.runtime_control?.domain_agent_id ?? null,
+      runtime_owner: manifest?.runtime_control?.runtime_owner ?? null,
+      domain_owner: manifest?.runtime_control?.domain_owner ?? null,
+      executor_owner: manifest?.runtime_control?.executor_owner ?? null,
+      control_status: manifest?.runtime_control?.status ?? null,
+      control_gate_ids: manifest?.runtime_control?.control_gate_ids ?? [],
+    },
+    session_continuity: {
+      status: componentStatus(entry, Boolean(manifest?.session_continuity)),
+      domain_agent_id: manifest?.session_continuity?.domain_agent_id ?? null,
+      runtime_owner: manifest?.session_continuity?.runtime_owner ?? null,
+      domain_owner: manifest?.session_continuity?.domain_owner ?? null,
+      executor_owner: manifest?.session_continuity?.executor_owner ?? null,
+      continuity_status: manifest?.session_continuity?.status ?? null,
+      entry_surface: manifest?.session_continuity?.entry_surface ?? null,
+      progress_surface: manifest?.session_continuity?.progress_surface ?? null,
+      artifact_surface: manifest?.session_continuity?.artifact_surface ?? null,
+      restore_surface: manifest?.session_continuity?.restore_surface ?? null,
+    },
+    progress_projection: {
+      status: componentStatus(entry, Boolean(manifest?.progress_projection)),
+      headline: manifest?.progress_projection?.headline ?? null,
+      latest_update: manifest?.progress_projection?.latest_update ?? null,
+      next_step: manifest?.progress_projection?.next_step ?? null,
+      current_status: manifest?.progress_projection?.current_status ?? null,
+      runtime_status: manifest?.progress_projection?.runtime_status ?? null,
+      human_gate_ids: manifest?.progress_projection?.human_gate_ids ?? [],
+    },
+    artifact_inventory: {
+      status: componentStatus(entry, Boolean(manifest?.artifact_inventory)),
+      workspace_path: manifest?.artifact_inventory?.workspace_path ?? null,
+      summary: manifest?.artifact_inventory?.summary ?? null,
+      artifact_surface: manifest?.artifact_inventory?.artifact_surface ?? null,
+      inspect_paths: manifest?.artifact_inventory?.inspect_paths ?? [],
+    },
+    automation: {
+      status: componentStatus(entry, Boolean(manifest?.automation)),
+      automation_count: manifest?.automation?.automations.length ?? 0,
+      readiness_summary: manifest?.automation?.readiness_summary ?? null,
+    },
+  };
+}
+
+function buildReadinessSummary(parts: Array<{ status: unknown }>) {
+  const statuses = parts.map((part) => optionalString(part.status));
+  if (statuses.some((status) => status === 'blocked_by_manifest_status')) {
+    return 'blocked_by_manifest_status';
+  }
+  if (statuses.every((status) => status === 'resolved' || status === 'aligned')) {
+    return 'descriptor_surfaces_resolved';
+  }
+  if (statuses.some((status) => status === 'resolved' || status === 'aligned')) {
+    return 'descriptor_surfaces_partial';
+  }
+  return 'descriptor_surfaces_missing';
+}
+
+function buildDescriptor(entry: DomainManifestCatalogEntry) {
+  const manifest = entry.manifest;
+  const entryProjection = buildEntryProjection(entry);
+  const skeleton = buildSkeletonProjection(entry);
+  const actionCatalog = buildActionCatalogProjection(entry);
+  const stageControlPlane = buildStageControlPlaneProjection(entry);
+  const domainMemory = buildDomainMemoryProjection(entry);
+  const skillCatalog = buildSkillProjection(manifest, entry);
+  const runtimeSurfaces = buildRuntimeProjection(manifest, entry);
+  const readinessStatus = buildReadinessSummary([
+    entryProjection,
+    { status: skeleton.status },
+    actionCatalog,
+    stageControlPlane,
+    domainMemory,
+    skillCatalog,
+    runtimeSurfaces.runtime_inventory,
+    runtimeSurfaces.session_continuity,
+    runtimeSurfaces.progress_projection,
+    runtimeSurfaces.artifact_inventory,
+  ]);
+
+  return {
+    surface_kind: 'opl_domain_agent_descriptor',
+    descriptor_version: 'opl-domain-agent-descriptor.v1',
+    project_id: entry.project_id,
+    project: entry.project,
+    binding_id: entry.binding_id,
+    workspace_path: entry.workspace_path,
+    manifest_status: entry.status,
+    target_domain_id: manifest?.target_domain_id ?? null,
+    descriptor_status: readinessStatus,
+    agent_id:
+      entryProjection.agent_id
+      ?? skeleton.agent_id
+      ?? manifest?.target_domain_id
+      ?? null,
+    title: entryProjection.title,
+    description: entryProjection.description,
+    entry: entryProjection,
+    standard_domain_agent_skeleton: skeleton,
+    family_action_catalog: actionCatalog,
+    family_stage_control_plane: stageControlPlane,
+    domain_memory_descriptor: domainMemory,
+    skill_catalog: skillCatalog,
+    runtime_surfaces: runtimeSurfaces,
+    descriptor_refs: buildDescriptorRefs(manifest),
+    authority_boundary: {
+      opl_role: 'descriptor_discovery_projection_transport_and_runtime_lifecycle_only',
+      domain_agent_role: 'domain_truth_runtime_quality_artifact_and_memory_owner',
+      descriptor_body_policy: 'refs_and_status_only_not_memory_or_instruction_body',
+      natural_language_context_policy: 'markdown_first_domain_owned_context_loaded_by_agent_when_needed',
+    },
+    non_authority_flags: {
+      opl_owns_domain_truth: false,
+      opl_owns_domain_memory_body: false,
+      opl_accepts_or_rejects_domain_memory_writeback: false,
+      opl_authorizes_quality_verdict: false,
+      opl_authorizes_publication_or_fundability_verdict: false,
+      opl_owns_artifact_authority: false,
+      descriptor_embeds_longform_agent_context: false,
+    },
+    error: entry.error,
+  };
+}
+
+function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
+  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+  const normalized = normalizeDomainSelection(domain);
+  const entry = catalog.projects.find((candidate) => {
+    const manifest = candidate.manifest;
+    const descriptor = buildDescriptor(candidate);
+    return candidate.project_id === normalized
+      || candidate.project === normalized
+      || manifest?.target_domain_id === domain
+      || manifest?.target_domain_id === normalized
+      || descriptor.agent_id === domain
+      || descriptor.agent_id === normalized
+      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.target_domain_id === domain)
+      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.target_domain_id === normalized);
+  });
+  if (!entry) {
+    throw new FrameworkContractError('cli_usage_error', `Unknown family domain agent descriptor domain: ${domain}.`, {
+      domain,
+      allowed_domains: catalog.projects.map((project) => project.project_id),
+    });
+  }
+  return entry;
+}
+
+export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
+  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+  const descriptors = catalog.projects.map(buildDescriptor);
+  return {
+    version: 'g2',
+    family_agent_descriptors: {
+      surface_kind: 'opl_domain_agent_descriptor_index',
+      summary: {
+        total_projects_count: descriptors.length,
+        resolved_manifest_count: descriptors.filter((descriptor) => descriptor.manifest_status === 'resolved').length,
+        descriptor_surfaces_resolved_count: descriptors.filter((descriptor) =>
+          descriptor.descriptor_status === 'descriptor_surfaces_resolved'
+        ).length,
+        descriptor_surfaces_partial_count: descriptors.filter((descriptor) =>
+          descriptor.descriptor_status === 'descriptor_surfaces_partial'
+        ).length,
+        blocked_count: descriptors.filter((descriptor) =>
+          descriptor.descriptor_status === 'blocked_by_manifest_status'
+        ).length,
+        memory_descriptor_resolved_count: descriptors.filter((descriptor) =>
+          descriptor.domain_memory_descriptor.status === 'resolved'
+        ).length,
+        stage_control_plane_resolved_count: descriptors.filter((descriptor) =>
+          descriptor.family_stage_control_plane.status === 'resolved'
+        ).length,
+        action_catalog_resolved_count: descriptors.filter((descriptor) =>
+          descriptor.family_action_catalog.status === 'resolved'
+        ).length,
+      },
+      descriptors,
+      notes: [
+        'This is the unified OPL read model over domain-owned manifest surfaces.',
+        'Descriptors carry refs, readiness, locator, parity, and authority boundaries only.',
+        'Domain memory bodies, route decisions, quality verdicts, and artifact authority remain domain-owned.',
+      ],
+    },
+  };
+}
+
+export function buildFamilyAgentDescriptorInspect(contracts: FrameworkContracts, args: string[]) {
+  const { domain } = parseDescriptorArgs(args);
+  const entry = findDescriptorEntry(contracts, domain);
+  const descriptor = buildDescriptor(entry);
+  return {
+    version: 'g2',
+    family_agent_descriptor: {
+      ...descriptor,
+      surface_kind: 'opl_domain_agent_descriptor_inspection',
+      descriptor_surface_kind: descriptor.surface_kind,
+      inspection_notes: [
+        'Use this as the maintainer and App/CLI total entry for an admitted domain agent.',
+        'For agent-readable longform context, follow descriptor refs to domain-owned Markdown or skill surfaces.',
+      ],
+    },
+  };
+}
