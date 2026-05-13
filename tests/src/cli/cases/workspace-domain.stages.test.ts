@@ -449,7 +449,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
         ],
       },
       skeleton: {
-        'agent/stages': ['templates/agent_entry_modes.yaml'],
+        'agent/stages': ['agent/stages/stage_route_contract.yaml'],
         'agent/prompts': ['MAS app skill command contracts'],
         'agent/skills': ['medautosci sidecar export --format json'],
         'agent/knowledge': ['stage_knowledge_packet'],

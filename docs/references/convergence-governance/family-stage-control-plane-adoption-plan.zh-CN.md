@@ -100,7 +100,7 @@ Date: `2026-05-10`
 
 第一轮只读盘点这些 surface：
 
-- Stage / route contract：`agent_entry_modes.yaml`、stage-led policy、bounded-analysis policy、stage packet / prompt / skill refs。
+- Stage / route contract：`agent/stages/stage_route_contract.yaml`、stage-led policy、bounded-analysis policy、stage packet / prompt / skill refs；旧 `agent_entry_modes` 入口只作为 MAS 兼容别名，不再作为 OPL family inventory 的 canonical source。
 - Controller / route：study charter、controller decisions、owner route、route decision orchestrator、study line decision engine。
 - Runtime / state machine：runtime watch、runtime supervisor scan / consume / execute-dispatch / reconcile、RuntimeHealthKernel、worker lease / retry / idempotency receipts。
 - Quality / evaluation：AI reviewer workflow、publication eval、medical publication surface、review ledger、evidence ledger、quality repair / gate clearing。
