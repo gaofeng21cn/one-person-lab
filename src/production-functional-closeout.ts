@@ -3,18 +3,25 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
+import { resolveManifestCommandTimeoutMs } from './domain-manifest/resolver.ts';
 import { isRecord, optionalString } from './domain-manifest/shared-utils.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { buildFamilyAgentsList } from './family-domain-agent-skeleton.ts';
 import { buildFamilyDomainMemoryList } from './family-domain-memory.ts';
 import { buildFamilyStageListEntry, buildFamilyStagesList } from './family-stage-control-plane.ts';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
-import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
-import { listStageAttempts, stageAttemptSummary, stageAttemptToPayload } from './family-runtime-stage-attempts.ts';
-import { familyRuntimePaths, queueSummary } from './family-runtime-store.ts';
+import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
+import {
+  listStageAttemptCloseouts,
+  listStageAttempts,
+  stageAttemptSummary,
+  stageAttemptToPayload,
+} from './family-runtime-stage-attempts.ts';
+import { familyRuntimePaths, listEvents, queueSummary } from './family-runtime-store.ts';
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { probeTemporalServer, resolveTemporalAddressForPaths } from './family-runtime-temporal-service.ts';
+import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -26,7 +33,12 @@ type TypedBlocker = {
   source_surface: string;
   repair_command?: string | null;
   next_action?: string;
+  timeout_ms?: number | null;
+  manifest_command?: string | null;
+  error_message?: string | null;
 };
+
+const PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS = 2_000;
 
 function processIsAlive(pid: number) {
   try {
@@ -56,6 +68,10 @@ function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function uniqueStrings(values: string[]) {
+  return [...new Set(values)];
+}
+
 function tableExists(db: DatabaseSync, tableName: string) {
   const row = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(tableName);
   return Boolean(row);
@@ -68,6 +84,8 @@ function safeReadAttemptLedger(paths: ReturnType<typeof familyRuntimePaths>) {
       queue: { total: 0, by_status: {} },
       stage_attempts: { total: 0, by_status: {} },
       attempts: [],
+      closeouts: [],
+      events: [],
     };
   }
 
@@ -80,6 +98,16 @@ function safeReadAttemptLedger(paths: ReturnType<typeof familyRuntimePaths>) {
       queue: tasksReady ? queueSummary(db) : { total: 0, by_status: {} },
       stage_attempts: attemptsReady ? stageAttemptSummary(db) : { total: 0, by_status: {} },
       attempts: attemptsReady ? listStageAttempts(db) : [],
+      closeouts: attemptsReady
+        ? listStageAttempts(db).flatMap((attempt) =>
+            listStageAttemptCloseouts(db, attempt.stage_attempt_id).map((closeout) => ({
+              ...closeout,
+              domain_id: attempt.domain_id,
+              stage_id: attempt.stage_id,
+            })),
+          )
+        : [],
+      events: tasksReady ? listEvents(db) : [],
     };
   } finally {
     db.close();
@@ -211,12 +239,68 @@ function lifecycleForAttempt(attempt: ReturnType<typeof stageAttemptToPayload>) 
   }).guarded_apply_proof;
 }
 
-function summarizeAttemptEvidence(attempts: Array<ReturnType<typeof stageAttemptToPayload>>) {
+function closeoutMemoryRefEvidence(
+  closeouts: Array<ReturnType<typeof listStageAttemptCloseouts>[number] & {
+    domain_id: string;
+    stage_id: string;
+  }>,
+  domainIds: string[],
+) {
+  const byDomain = domainIds.map((domainId) => {
+    const domainCloseouts = closeouts.filter((closeout) => closeout.domain_id === domainId);
+    return {
+      domain_id: domainId,
+      closeout_count: domainCloseouts.length,
+      consumed_refs: uniqueStrings(domainCloseouts.flatMap((closeout) => stringList(closeout.packet.consumed_refs))),
+      consumed_memory_refs: uniqueStrings(domainCloseouts.flatMap((closeout) =>
+        stringList(closeout.packet.consumed_memory_refs)
+      )),
+      writeback_receipt_refs: uniqueStrings(domainCloseouts.flatMap((closeout) =>
+        stringList(closeout.packet.writeback_receipt_refs)
+      )),
+      rejected_write_count: domainCloseouts.reduce(
+        (count, closeout) => count + recordList(closeout.packet.rejected_writes).length,
+        0,
+      ),
+    };
+  });
+  return {
+    surface_kind: 'opl_stage_attempt_memory_ref_evidence',
+    consumed_ref_count: uniqueStrings(closeouts.flatMap((closeout) => stringList(closeout.packet.consumed_refs))).length,
+    consumed_memory_ref_count: uniqueStrings(closeouts.flatMap((closeout) =>
+      stringList(closeout.packet.consumed_memory_refs)
+    )).length,
+    writeback_receipt_ref_count: uniqueStrings(closeouts.flatMap((closeout) =>
+      stringList(closeout.packet.writeback_receipt_refs)
+    )).length,
+    rejected_write_count: closeouts.reduce(
+      (count, closeout) => count + recordList(closeout.packet.rejected_writes).length,
+      0,
+    ),
+    domains: byDomain,
+    authority_boundary: {
+      opl: 'memory_receipt_ref_projection_only',
+      domain: 'memory_body_accept_reject_truth_owner',
+      opl_writes_memory_body: false,
+    },
+  };
+}
+
+function summarizeAttemptEvidence(
+  attempts: Array<ReturnType<typeof stageAttemptToPayload>>,
+  closeouts: Array<ReturnType<typeof listStageAttemptCloseouts>[number] & {
+    domain_id: string;
+    stage_id: string;
+  }>,
+  domainIds: string[],
+) {
   const contracts = attempts.map(contractForAttempt);
   const lifecycleProofs = attempts.map(lifecycleForAttempt);
+  const memoryRefEvidence = closeoutMemoryRefEvidence(closeouts, domainIds);
   return {
     surface_kind: 'opl_stage_attempt_functional_closeout_evidence',
     ledger_attempt_count: attempts.length,
+    closeout_packet_count: closeouts.length,
     controlled_apply_summary: {
       contract_open_count: contracts.filter((contract) => contract.contract_open).length,
       domain_receipt_observed_count: contracts.filter((contract) => contract.apply_status === 'domain_receipt_observed').length,
@@ -231,20 +315,34 @@ function summarizeAttemptEvidence(attempts: Array<ReturnType<typeof stageAttempt
       no_apply_requests_count: lifecycleProofs.filter((proof) => proof.apply_status === 'no_apply_requests').length,
       domain_writes_performed: false,
     },
-    domain_breakdown: ['medautoscience', 'medautogrant', 'redcube'].map((domainId) => {
+    memory_ref_summary: {
+      consumed_ref_count: memoryRefEvidence.consumed_ref_count,
+      consumed_memory_ref_count: memoryRefEvidence.consumed_memory_ref_count,
+      writeback_receipt_ref_count: memoryRefEvidence.writeback_receipt_ref_count,
+      rejected_write_count: memoryRefEvidence.rejected_write_count,
+      opl_writes_memory_body: false,
+    },
+    domain_breakdown: domainIds.map((domainId) => {
       const domainAttempts = attempts.filter((attempt) => attempt.domain_id === domainId);
       const domainContracts = domainAttempts.map(contractForAttempt);
       const domainLifecycleProofs = domainAttempts.map(lifecycleForAttempt);
+      const domainMemory = memoryRefEvidence.domains.find((entry) => entry.domain_id === domainId);
       return {
         domain_id: domainId,
         attempt_count: domainAttempts.length,
+        closeout_packet_count: domainMemory?.closeout_count ?? 0,
         controlled_apply_statuses: domainContracts.map((contract) => contract.apply_status),
         owner_receipt_refs: domainContracts.flatMap((contract) => contract.owner_receipt_refs),
         no_regression_evidence_refs: domainContracts.flatMap((contract) => contract.no_regression_evidence_refs),
         typed_blockers: domainContracts.flatMap((contract) => contract.typed_blockers),
         lifecycle_apply_statuses: domainLifecycleProofs.map((proof) => proof.apply_status),
+        consumed_refs: domainMemory?.consumed_refs ?? [],
+        consumed_memory_refs: domainMemory?.consumed_memory_refs ?? [],
+        writeback_receipt_refs: domainMemory?.writeback_receipt_refs ?? [],
+        rejected_write_count: domainMemory?.rejected_write_count ?? 0,
       };
     }),
+    memory_ref_evidence: memoryRefEvidence,
     authority_boundary: {
       opl_writes_domain_truth: false,
       opl_writes_domain_artifact: false,
@@ -287,9 +385,32 @@ function physicalSkeletonEvidenceFromAgent(agent: JsonRecord | null) {
   };
 }
 
+function physicalSkeletonLegacyEvidenceObserved(value: unknown) {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (optionalString(value.legacy_active_path_policy) !== 'physically_removed_or_history_tombstone_only') {
+    return false;
+  }
+  const residue = recordList(value.legacy_active_path_residue);
+  if (residue.length === 0) {
+    return false;
+  }
+  const allowedStates = new Set([
+    'physically_removed_from_active_source',
+    'tombstone_only',
+    'history_tombstone_only',
+  ]);
+  return residue.every((entry) => {
+    const state = optionalString(entry.state);
+    return Boolean(state && allowedStates.has(state));
+  });
+}
+
 function legacyNoActiveCallerObserved(manifest: DomainManifestCatalogEntry['manifest']) {
   const tombstone = manifest?.legacy_retirement_tombstone_proof;
   const residue = manifest?.runtime_residue_retirement;
+  const physicalSkeletonFollowThrough = manifest?.physical_skeleton_follow_through;
   const activeDefaultCallers = isRecord(tombstone) ? tombstone.active_default_callers : null;
   const activePathPolicy = isRecord(residue) ? residue.active_path_policy : null;
   return {
@@ -298,17 +419,23 @@ function legacyNoActiveCallerObserved(manifest: DomainManifestCatalogEntry['mani
       || optionalString(tombstone?.status) === 'no_active_default_caller_proven'
       || optionalString(residue?.status) === 'active_path_retired'
       || (isRecord(activePathPolicy)
-        && Object.values(activePathPolicy).every((value) => value === false || typeof value !== 'boolean')),
+        && Object.values(activePathPolicy).every((value) => value === false || typeof value !== 'boolean'))
+      || physicalSkeletonLegacyEvidenceObserved(physicalSkeletonFollowThrough),
     source_surface:
       tombstone
         ? 'legacy_retirement_tombstone_proof'
         : residue
           ? 'runtime_residue_retirement'
+          : physicalSkeletonLegacyEvidenceObserved(physicalSkeletonFollowThrough)
+            ? 'physical_skeleton_follow_through'
           : null,
     source_refs: [
       ...stringList(tombstone?.source_refs),
       ...stringList(residue?.source_refs),
       ...recordList(residue?.source_refs).flatMap((ref) => stringList([ref.ref])),
+      ...stringList(physicalSkeletonFollowThrough?.source_refs),
+      ...recordList(physicalSkeletonFollowThrough?.legacy_active_path_residue)
+        .flatMap((entry) => stringList([entry.evidence_ref])),
     ],
   };
 }
@@ -336,6 +463,34 @@ function domainProductionClosureGaps(agent: JsonRecord | null, manifest: DomainM
   });
 }
 
+function manifestErrorProjection(entry: DomainManifestCatalogEntry) {
+  if (!entry.error) {
+    return null;
+  }
+  const timeoutMs = typeof entry.error.timeout_ms === 'number'
+    ? entry.error.timeout_ms
+    : entry.status === 'command_timeout'
+      ? resolveManifestCommandTimeoutMs(PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS)
+      : null;
+  const suggestedTimeoutMs = timeoutMs ? Math.max(10_000, timeoutMs * 5) : null;
+  return {
+    code: entry.error.code,
+    message: entry.error.message,
+    stdout: entry.error.stdout,
+    stderr: entry.error.stderr,
+    timeout_ms: timeoutMs,
+    manifest_command: entry.manifest_command,
+    repair_command: entry.status === 'command_timeout' && suggestedTimeoutMs
+      ? `OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS=${suggestedTimeoutMs} opl framework production-closeout`
+      : entry.manifest_command
+        ? `opl domain manifests --json`
+        : null,
+    next_action: entry.status === 'command_timeout'
+      ? 'Increase OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS for this closeout read, or optimize the domain manifest command so it returns within the production closeout budget.'
+      : 'Repair the domain manifest command, then rerun `opl framework production-closeout`.',
+  };
+}
+
 function buildDomainBlockers(input: {
   entry: DomainManifestCatalogEntry;
   agent: JsonRecord | null;
@@ -346,12 +501,19 @@ function buildDomainBlockers(input: {
   const blockers: TypedBlocker[] = [];
   const projectId = input.entry.project_id;
   if (input.entry.status !== 'resolved') {
+    const manifestError = manifestErrorProjection(input.entry);
     blockers.push({
-      blocker_kind: 'domain_manifest',
+      blocker_kind: input.entry.status === 'command_timeout'
+        ? 'domain_manifest_timeout'
+        : 'domain_manifest',
       blocker_id: `${projectId}:manifest_not_resolved`,
       owner: projectId,
       source_surface: 'opl_domain_manifest_catalog',
-      next_action: 'Bind a domain workspace with a valid manifest command.',
+      repair_command: manifestError?.repair_command,
+      timeout_ms: manifestError?.timeout_ms,
+      manifest_command: manifestError?.manifest_command,
+      error_message: manifestError?.message,
+      next_action: manifestError?.next_action ?? 'Bind a domain workspace with a valid manifest command.',
     });
     return blockers;
   }
@@ -391,7 +553,7 @@ function buildDomainBlockers(input: {
       next_action: 'Declare the domain owner receipt envelope or return typed blocker refs.',
     });
   }
-  if (!input.entry.manifest?.legacy_retirement_tombstone_proof && !input.entry.manifest?.runtime_residue_retirement) {
+  if (!legacyNoActiveCallerObserved(input.entry.manifest).observed) {
     blockers.push({
       blocker_kind: 'legacy_retirement',
       blocker_id: `${projectId}:legacy_tombstone_proof_not_declared`,
@@ -440,6 +602,7 @@ function buildDomainCloseoutEntries(input: {
       project_id: entry.project_id,
       project: entry.project,
       manifest_status: entry.status,
+      manifest_error: manifestErrorProjection(entry),
       descriptor_status: agent?.descriptor_readiness && isRecord(agent.descriptor_readiness)
         ? optionalString(agent.descriptor_readiness.status)
         : null,
@@ -456,9 +619,7 @@ function buildDomainCloseoutEntries(input: {
       ),
       managed_temporal_state_consistency_declared: Boolean(manifest?.managed_temporal_state_consistency),
       lifecycle_guarded_apply: lifecycleFromManifest,
-      legacy_retirement_tombstone_declared: Boolean(
-        manifest?.legacy_retirement_tombstone_proof ?? manifest?.runtime_residue_retirement,
-      ),
+      legacy_retirement_tombstone_declared: legacyNoActiveCallerObserved(manifest).observed,
       stage_attempt_evidence: attemptEvidence,
       typed_blockers: buildDomainBlockers({
         entry,
@@ -477,12 +638,36 @@ function buildDomainCloseoutEntries(input: {
 
 function buildGlobalBlockers(input: {
   providerReadiness: Awaited<ReturnType<typeof buildProviderReadiness>>;
+  providerContinuousProof: ReturnType<typeof buildProviderContinuousProof>;
   domainEntries: ReturnType<typeof buildDomainCloseoutEntries>;
   attemptEvidence: ReturnType<typeof summarizeAttemptEvidence>;
 }) {
   const blockers: TypedBlocker[] = [];
   if (input.providerReadiness.typed_blocker) {
     blockers.push(input.providerReadiness.typed_blocker);
+  }
+  if (input.providerContinuousProof.continuous_proof_status !== 'all_observed_proofs_proven') {
+    blockers.push({
+      blocker_kind: 'temporal_provider_slo',
+      blocker_id: 'temporal_provider_continuous_proof_not_proven',
+      owner: 'opl_provider_runtime',
+      source_surface: 'opl_temporal_provider_continuous_proof_projection',
+      repair_command: 'opl family-runtime residency proof --provider temporal --production',
+      next_action: input.providerContinuousProof.required_next_action,
+    });
+  }
+  if (
+    input.providerContinuousProof.continuous_proof_status === 'all_observed_proofs_proven'
+    && input.providerContinuousProof.proof_slo_status !== 'proof_fresh'
+  ) {
+    blockers.push({
+      blocker_kind: 'temporal_provider_slo',
+      blocker_id: 'temporal_provider_proof_freshness_not_current',
+      owner: 'opl_provider_runtime',
+      source_surface: 'opl_temporal_provider_continuous_proof_projection',
+      repair_command: 'opl family-runtime residency proof --provider temporal --production',
+      next_action: input.providerContinuousProof.required_next_action,
+    });
   }
   blockers.push(...input.domainEntries.flatMap((entry) => entry.typed_blockers));
   if (input.attemptEvidence.controlled_apply_summary.blocked_domain_receipt_required_count > 0) {
@@ -508,13 +693,22 @@ function buildGlobalBlockers(input: {
 
 export async function buildProductionFunctionalCloseout(contracts: FrameworkContracts) {
   const paths = familyRuntimePaths();
-  const catalog = buildDomainManifestCatalog(contracts);
-  const agents = buildFamilyAgentsList(contracts).family_agents;
-  const memories = buildFamilyDomainMemoryList(contracts).family_domain_memory;
-  const stages = buildFamilyStagesList(contracts).family_stages;
+  const domainIds = contracts.domains.domains.map((domain) => domain.domain_id);
+  const manifestCatalogOptions = {
+    manifestCommandTimeoutMs: PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS,
+  };
+  const catalog = buildDomainManifestCatalog(contracts, manifestCatalogOptions);
+  const sharedManifestCatalogOptions = {
+    ...manifestCatalogOptions,
+    domainManifests: catalog.domain_manifests,
+  };
+  const agents = buildFamilyAgentsList(contracts, sharedManifestCatalogOptions).family_agents;
+  const memories = buildFamilyDomainMemoryList(contracts, sharedManifestCatalogOptions).family_domain_memory;
+  const stages = buildFamilyStagesList(contracts, sharedManifestCatalogOptions).family_stages;
   const providerReadiness = await buildProviderReadiness(paths);
   const ledger = safeReadAttemptLedger(paths);
-  const attemptEvidence = summarizeAttemptEvidence(ledger.attempts);
+  const attemptEvidence = summarizeAttemptEvidence(ledger.attempts, ledger.closeouts, domainIds);
+  const continuousProof = buildProviderContinuousProof(ledger.events);
   const domainEntries = buildDomainCloseoutEntries({
     catalog,
     agents,
@@ -524,6 +718,7 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
   });
   const blockers = buildGlobalBlockers({
     providerReadiness,
+    providerContinuousProof: continuousProof,
     domainEntries,
     attemptEvidence,
   });
@@ -556,6 +751,7 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
         live_soak_excluded: true,
       },
       provider_readiness: providerReadiness,
+      provider_continuous_proof: continuousProof,
       domain_manifests: catalog.domain_manifests.summary,
       descriptor_alignment: agents.summary,
       stage_plane: stages.summary,
@@ -567,6 +763,21 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
         ledger_status: ledger.status,
         queue: ledger.queue,
         stage_attempts: ledger.stage_attempts,
+        provider_continuous_proof: {
+          surface_kind: continuousProof.surface_kind,
+          provider_kind: continuousProof.provider_kind,
+          proof_event_count: continuousProof.proof_event_count,
+          proven_event_count: continuousProof.proven_event_count,
+          latest_event_id: continuousProof.latest_event_id,
+          latest_event_created_at: continuousProof.latest_event_created_at,
+          latest_event_age_seconds: continuousProof.latest_event_age_seconds,
+          max_proof_age_seconds: continuousProof.max_proof_age_seconds,
+          proof_freshness_status: continuousProof.proof_freshness_status,
+          latest_closeout_status: continuousProof.latest_closeout_status,
+          continuous_proof_status: continuousProof.continuous_proof_status,
+          proof_slo_status: continuousProof.proof_slo_status,
+          authority_boundary: continuousProof.authority_boundary,
+        },
       },
       stage_attempt_evidence: attemptEvidence,
       domains: domainEntries,

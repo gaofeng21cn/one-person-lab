@@ -59,6 +59,7 @@ export type RuntimeTrayItem = {
   family_stage_workbench?: JsonRecord | null;
   study_workbench?: JsonRecord | null;
   stage_attempt_workbench?: JsonRecord | null;
+  provider_continuous_proof?: JsonRecord | null;
 };
 
 export type MasWorkspaceProjectionRef = {

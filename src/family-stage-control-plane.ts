@@ -114,8 +114,16 @@ export function buildFamilyStageListEntry(
   };
 }
 
-function buildStageIndex(contracts: FrameworkContracts) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
+type ManifestCatalogOptions = {
+  manifestCommandTimeoutMs?: number;
+  domainManifests?: DomainManifestCatalog;
+};
+
+function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
+  const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
+  }).domain_manifests;
   const domains = catalog.projects.map((entry) => {
     const plane = resolvePlaneFromEntry(entry);
     return {
@@ -144,8 +152,8 @@ function buildStageIndex(contracts: FrameworkContracts) {
   };
 }
 
-export function buildFamilyStagesList(contracts: FrameworkContracts) {
-  const index = buildStageIndex(contracts);
+export function buildFamilyStagesList(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
+  const index = buildStageIndex(contracts, options);
   return {
     version: 'g2',
     family_stages: {

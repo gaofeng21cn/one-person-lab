@@ -1,4 +1,4 @@
-import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
+import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
 export const CODEX_STAGE_ACTIVITY_NAME = 'CodexStageActivity';
@@ -15,10 +15,7 @@ export const TEMPORAL_STAGE_ATTEMPT_QUERIES = [
   'StageAttemptQuery',
 ] as const;
 
-export type TemporalStageAttemptSignalKind =
-  | 'human_gate'
-  | 'user_instruction'
-  | 'resume';
+export type { TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 
 export type TemporalStageAttemptSignalPayload = {
   signal_kind: TemporalStageAttemptSignalKind;

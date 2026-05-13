@@ -1,0 +1,287 @@
+import { DatabaseSync } from 'node:sqlite';
+
+import {
+  type FamilyRuntimeDomainId,
+  type FamilyRuntimeProviderKind,
+  type TemporalStageAttemptSignalKind,
+} from './family-runtime-types.ts';
+
+export type StageAttemptStatus =
+  | 'queued'
+  | 'running'
+  | 'checkpointed'
+  | 'blocked'
+  | 'human_gate'
+  | 'completed'
+  | 'failed'
+  | 'dead_lettered';
+
+export type StageAttemptRow = {
+  stage_attempt_id: string;
+  idempotency_key: string;
+  provider_kind: FamilyRuntimeProviderKind;
+  workflow_id: string;
+  domain_id: FamilyRuntimeDomainId;
+  stage_id: string;
+  workspace_locator_json: string;
+  source_fingerprint: string | null;
+  executor_kind: string;
+  status: StageAttemptStatus;
+  checkpoint_refs_json: string;
+  closeout_refs_json: string;
+  human_gate_refs_json: string;
+  retry_budget_json: string;
+  attempt_count: number;
+  task_id: string | null;
+  blocked_reason: string | null;
+  provider_receipt_json: string;
+  provider_run_json: string;
+  activity_events_json: string;
+  route_impact_json: string;
+  closeout_receipt_status: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StageAttemptSignalRow = {
+  signal_id: string;
+  stage_attempt_id: string;
+  signal_kind: TemporalStageAttemptSignalKind;
+  payload_json: string;
+  source: string;
+  created_at: string;
+};
+
+export type StageAttemptCloseoutRow = {
+  closeout_id: string;
+  stage_attempt_id: string;
+  packet_json: string;
+  created_at: string;
+};
+
+function parseJsonObject(value: string) {
+  const parsed = JSON.parse(value);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : {};
+}
+
+function parseJsonList(value: string) {
+  const parsed = JSON.parse(value);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function readColumnNames(db: DatabaseSync, tableName: string) {
+  return new Set(
+    (db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>).map((row) => row.name),
+  );
+}
+
+function addColumnIfMissing(db: DatabaseSync, tableName: string, columns: Set<string>, name: string, ddl: string) {
+  if (!columns.has(name)) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${ddl}`);
+    columns.add(name);
+  }
+}
+
+export function createStageAttemptTable(db: DatabaseSync) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stage_attempts (
+      stage_attempt_id TEXT PRIMARY KEY,
+      idempotency_key TEXT NOT NULL,
+      provider_kind TEXT NOT NULL,
+      workflow_id TEXT NOT NULL,
+      domain_id TEXT NOT NULL,
+      stage_id TEXT NOT NULL,
+      workspace_locator_json TEXT NOT NULL,
+      source_fingerprint TEXT,
+      executor_kind TEXT NOT NULL,
+      status TEXT NOT NULL,
+      checkpoint_refs_json TEXT NOT NULL,
+      closeout_refs_json TEXT NOT NULL,
+      human_gate_refs_json TEXT NOT NULL,
+      retry_budget_json TEXT NOT NULL,
+      attempt_count INTEGER NOT NULL,
+      task_id TEXT,
+      blocked_reason TEXT,
+      provider_receipt_json TEXT NOT NULL,
+      provider_run_json TEXT NOT NULL,
+      activity_events_json TEXT NOT NULL,
+      route_impact_json TEXT NOT NULL,
+      closeout_receipt_status TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key);
+    CREATE INDEX IF NOT EXISTS idx_stage_attempts_domain_stage ON stage_attempts(domain_id, stage_id, updated_at);
+    CREATE INDEX IF NOT EXISTS idx_stage_attempts_task_id ON stage_attempts(task_id);
+    CREATE INDEX IF NOT EXISTS idx_stage_attempts_status ON stage_attempts(status, updated_at);
+    CREATE TABLE IF NOT EXISTS stage_attempt_signals (
+      signal_id TEXT PRIMARY KEY,
+      stage_attempt_id TEXT NOT NULL,
+      signal_kind TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      source TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_stage_attempt_signals_attempt ON stage_attempt_signals(stage_attempt_id, created_at);
+    CREATE TABLE IF NOT EXISTS stage_attempt_closeouts (
+      closeout_id TEXT PRIMARY KEY,
+      stage_attempt_id TEXT NOT NULL,
+      packet_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_stage_attempt_closeouts_attempt ON stage_attempt_closeouts(stage_attempt_id, created_at);
+  `);
+  const columns = readColumnNames(db, 'stage_attempts');
+  addColumnIfMissing(db, 'stage_attempts', columns, 'idempotency_key', "idempotency_key TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'provider_run_json', "provider_run_json TEXT NOT NULL DEFAULT '{}'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'activity_events_json', "activity_events_json TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'route_impact_json', "route_impact_json TEXT NOT NULL DEFAULT '{}'");
+  addColumnIfMissing(db, 'stage_attempts', columns, 'closeout_receipt_status', 'closeout_receipt_status TEXT');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key)');
+}
+
+export function stageAttemptToPayload(row: StageAttemptRow) {
+  return {
+    stage_attempt_id: row.stage_attempt_id,
+    idempotency_key: row.idempotency_key,
+    provider_kind: row.provider_kind,
+    workflow_id: row.workflow_id,
+    domain_id: row.domain_id,
+    stage_id: row.stage_id,
+    workspace_locator: parseJsonObject(row.workspace_locator_json),
+    source_fingerprint: row.source_fingerprint,
+    executor_kind: row.executor_kind,
+    status: row.status,
+    checkpoint_refs: parseJsonList(row.checkpoint_refs_json),
+    closeout_refs: parseJsonList(row.closeout_refs_json),
+    human_gate_refs: parseJsonList(row.human_gate_refs_json),
+    retry_budget: parseJsonObject(row.retry_budget_json),
+    attempt_count: row.attempt_count,
+    task_id: row.task_id,
+    blocked_reason: row.blocked_reason,
+    provider_receipt: parseJsonObject(row.provider_receipt_json),
+    provider_run: parseJsonObject(row.provider_run_json),
+    activity_events: parseJsonList(row.activity_events_json),
+    route_impact: parseJsonObject(row.route_impact_json),
+    closeout_receipt_status: row.closeout_receipt_status,
+    authority_boundary: {
+      opl: 'attempt_control_metadata_and_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      executor: 'codex_cli_or_domain_selected_executor',
+    },
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+export function stageAttemptSignalToPayload(row: StageAttemptSignalRow) {
+  return {
+    signal_id: row.signal_id,
+    stage_attempt_id: row.stage_attempt_id,
+    signal_kind: row.signal_kind,
+    payload: parseJsonObject(row.payload_json),
+    source: row.source,
+    created_at: row.created_at,
+  };
+}
+
+export function stageAttemptCloseoutToPayload(row: StageAttemptCloseoutRow) {
+  return {
+    closeout_id: row.closeout_id,
+    stage_attempt_id: row.stage_attempt_id,
+    packet: parseJsonObject(row.packet_json),
+    created_at: row.created_at,
+  };
+}
+
+export function listStageAttempts(db: DatabaseSync) {
+  return (db.prepare(`
+    SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC
+  `).all() as StageAttemptRow[]).map(stageAttemptToPayload);
+}
+
+export function listStageAttemptRows(db: DatabaseSync, limit?: number) {
+  if (typeof limit === 'number' && Number.isInteger(limit) && limit > 0) {
+    return db.prepare(`
+      SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC LIMIT ?
+    `).all(limit) as StageAttemptRow[];
+  }
+  return db.prepare(`
+    SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC
+  `).all() as StageAttemptRow[];
+}
+
+export function latestStageAttemptCloseoutPacketsByAttempt(db: DatabaseSync, stageAttemptIds: string[]) {
+  const byAttempt = new Map<string, Record<string, unknown>>();
+  if (stageAttemptIds.length === 0) {
+    return byAttempt;
+  }
+  const rows = db.prepare(`
+    SELECT stage_attempt_id, packet_json
+    FROM stage_attempt_closeouts
+    WHERE stage_attempt_id IN (${stageAttemptIds.map(() => '?').join(',')})
+    ORDER BY stage_attempt_id ASC, created_at ASC
+  `).all(...stageAttemptIds) as Pick<StageAttemptCloseoutRow, 'stage_attempt_id' | 'packet_json'>[];
+  for (const row of rows) {
+    byAttempt.set(row.stage_attempt_id, parseJsonObject(row.packet_json));
+  }
+  return byAttempt;
+}
+
+export function stageAttemptSignalsByAttempt(db: DatabaseSync, stageAttemptIds: string[]) {
+  const byAttempt = new Map<string, ReturnType<typeof stageAttemptSignalToPayload>[]>();
+  if (stageAttemptIds.length === 0) {
+    return byAttempt;
+  }
+  const rows = db.prepare(`
+    SELECT *
+    FROM stage_attempt_signals
+    WHERE stage_attempt_id IN (${stageAttemptIds.map(() => '?').join(',')})
+    ORDER BY stage_attempt_id ASC, created_at ASC
+  `).all(...stageAttemptIds) as StageAttemptSignalRow[];
+  for (const row of rows) {
+    const signals = byAttempt.get(row.stage_attempt_id) ?? [];
+    signals.push(stageAttemptSignalToPayload(row));
+    byAttempt.set(row.stage_attempt_id, signals);
+  }
+  return byAttempt;
+}
+
+export function listStageAttemptsForTask(db: DatabaseSync, taskId: string) {
+  return (db.prepare(`
+    SELECT * FROM stage_attempts WHERE task_id = ? ORDER BY updated_at DESC, created_at DESC
+  `).all(taskId) as StageAttemptRow[]).map(stageAttemptToPayload);
+}
+
+export function getStageAttemptRow(db: DatabaseSync, stageAttemptId: string) {
+  return db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(stageAttemptId) as
+    | StageAttemptRow
+    | undefined;
+}
+
+export function inspectStageAttemptPayload(db: DatabaseSync, stageAttemptId: string) {
+  const row = getStageAttemptRow(db, stageAttemptId);
+  return row ? stageAttemptToPayload(row) : null;
+}
+
+export function listStageAttemptSignals(db: DatabaseSync, stageAttemptId: string) {
+  return (db.prepare(`
+    SELECT * FROM stage_attempt_signals WHERE stage_attempt_id = ? ORDER BY created_at ASC
+  `).all(stageAttemptId) as StageAttemptSignalRow[]).map(stageAttemptSignalToPayload);
+}
+
+export function listStageAttemptCloseouts(db: DatabaseSync, stageAttemptId: string) {
+  return (db.prepare(`
+    SELECT * FROM stage_attempt_closeouts WHERE stage_attempt_id = ? ORDER BY created_at ASC
+  `).all(stageAttemptId) as StageAttemptCloseoutRow[]).map(stageAttemptCloseoutToPayload);
+}
+
+export function parseStageAttemptJsonObject(value: string) {
+  return parseJsonObject(value);
+}
+
+export function parseStageAttemptJsonList(value: string) {
+  return parseJsonList(value);
+}

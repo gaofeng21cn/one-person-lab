@@ -414,16 +414,19 @@ exit 1
     assert.equal(snapshot.running_items[0].action_owner, 'none');
     assert.equal(snapshot.running_items[0].requires_user_action, false);
     assert.equal(snapshot.running_items[0].action_kind, 'running');
-    assert.equal(snapshot.attention_items.length, 1);
-    assert.equal(snapshot.attention_items[0].project_id, 'redcube');
-    assert.equal(snapshot.attention_items[0].action_owner, 'user');
-    assert.equal(snapshot.attention_items[0].requires_user_action, true);
-    assert.equal(snapshot.attention_items[0].action_kind, 'human_gate');
-    assert.equal(snapshot.attention_items[0].source_refs.some((ref: { ref: string }) => ref.ref === '/progress_projection/attention_items'), true);
+    assert.equal(snapshot.attention_items.length, 2);
+    const redcubeAttentionItem = snapshot.attention_items.find((item: { project_id: string }) => item.project_id === 'redcube');
+    assert.equal(redcubeAttentionItem.action_owner, 'user');
+    assert.equal(redcubeAttentionItem.requires_user_action, true);
+    assert.equal(redcubeAttentionItem.action_kind, 'human_gate');
+    assert.equal(redcubeAttentionItem.source_refs.some((ref: { ref: string }) => ref.ref === '/progress_projection/attention_items'), true);
+    const providerProofItem = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal');
+    assert.equal(providerProofItem.action_owner, 'infrastructure');
+    assert.equal(providerProofItem.provider_continuous_proof.continuous_proof_status, 'no_proof_observed');
     assert.equal(snapshot.recent_items.length, 1);
     assert.equal(snapshot.recent_items[0].project_id, 'medautogrant');
     assert.equal(snapshot.recent_items[0].action_owner, 'none');
-    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 0 });
+    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 1 });
     assert.equal(
       snapshot.managed_domain_provider_states.surface_kind,
       'opl_runtime_tray_managed_domain_provider_states',
@@ -542,19 +545,20 @@ exit 1
     assert.equal(snapshot.runtime_health.status, 'running');
     assert.equal(snapshot.runtime_health.label, '运行中');
     assert.equal(snapshot.running_items.length, 0);
-    assert.equal(snapshot.attention_items.length, 1);
-    assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:hermes-cron:cron-attention');
-    assert.equal(snapshot.attention_items[0].project_label, 'MAS 基础设施');
-    assert.equal(snapshot.attention_items[0].title, '工作区监督任务：dm-cvd-mortality-risk-b8331468');
-    assert.equal(snapshot.attention_items[0].status_label, '后台监督超时');
-    assert.equal(snapshot.attention_items[0].action_owner, 'infrastructure');
-    assert.equal(snapshot.attention_items[0].requires_user_action, false);
-    assert.equal(snapshot.attention_items[0].action_kind, 'infrastructure_timeout');
-    assert.equal(snapshot.attention_items[0].action_summary, '后台监督脚本执行超时，需要系统侧恢复。');
-    assert.equal(snapshot.attention_items[0].next_action_summary, '恢复后台监督定时任务，并确认下一次运行不再超时。');
-    assert.equal(snapshot.attention_items[0].source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_output'), true);
+    assert.equal(snapshot.attention_items.length, 2);
+    const cronAttentionItem = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:hermes-cron:cron-attention');
+    assert.equal(cronAttentionItem.project_label, 'MAS 基础设施');
+    assert.equal(cronAttentionItem.title, '工作区监督任务：dm-cvd-mortality-risk-b8331468');
+    assert.equal(cronAttentionItem.status_label, '后台监督超时');
+    assert.equal(cronAttentionItem.action_owner, 'infrastructure');
+    assert.equal(cronAttentionItem.requires_user_action, false);
+    assert.equal(cronAttentionItem.action_kind, 'infrastructure_timeout');
+    assert.equal(cronAttentionItem.action_summary, '后台监督脚本执行超时，需要系统侧恢复。');
+    assert.equal(cronAttentionItem.next_action_summary, '恢复后台监督定时任务，并确认下一次运行不再超时。');
+    assert.equal(cronAttentionItem.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_output'), true);
+    assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
     assert.equal(snapshot.recent_items.length, 0);
-    assert.deepEqual(snapshot.action_counts, { user: 0, opl: 0, infrastructure: 1 });
+    assert.deepEqual(snapshot.action_counts, { user: 0, opl: 0, infrastructure: 2 });
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -736,17 +740,18 @@ exit 1
 
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
     assert.equal(snapshot.runtime_health.label, '需用户处理');
-    assert.equal(snapshot.attention_items.length, 1);
-    assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:study:002-dm-china-us-mortality-attribution');
-    assert.equal(snapshot.attention_items[0].active_run_id, 'run-002');
-    assert.equal(snapshot.attention_items[0].status_label, '运行中：分析补充');
-    assert.equal(snapshot.attention_items[0].action_owner, 'opl');
-    assert.equal(snapshot.attention_items[0].requires_user_action, false);
-    assert.equal(snapshot.attention_items[0].action_kind, 'publication_gate');
-    assert.equal(snapshot.attention_items[0].action_summary, '论文质量或交付检查未关闭；当前阶段：分析补充。');
-    assert.equal(snapshot.attention_items[0].next_action_summary, '建议阶段：分析补充；目标：补齐证据一致性。');
-    assert.equal(snapshot.attention_items[0].blockers.includes('投稿包投影需要刷新。'), true);
-    assert.equal(snapshot.attention_items[0].recommended_commands[0].surface_kind, 'study_progress');
+    assert.equal(snapshot.attention_items.length, 2);
+    const dm002Item = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:study:002-dm-china-us-mortality-attribution');
+    assert.equal(dm002Item.active_run_id, 'run-002');
+    assert.equal(dm002Item.status_label, '运行中：分析补充');
+    assert.equal(dm002Item.action_owner, 'opl');
+    assert.equal(dm002Item.requires_user_action, false);
+    assert.equal(dm002Item.action_kind, 'publication_gate');
+    assert.equal(dm002Item.action_summary, '论文质量或交付检查未关闭；当前阶段：分析补充。');
+    assert.equal(dm002Item.next_action_summary, '建议阶段：分析补充；目标：补齐证据一致性。');
+    assert.equal(dm002Item.blockers.includes('投稿包投影需要刷新。'), true);
+    assert.equal(dm002Item.recommended_commands[0].surface_kind, 'study_progress');
+    assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].item_id, 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap');
     assert.equal(snapshot.running_items[0].action_owner, 'none');
@@ -759,7 +764,7 @@ exit 1
     assert.equal(snapshot.recent_items[0].requires_user_action, true);
     assert.equal(snapshot.recent_items[0].action_kind, 'handoff_review');
     assert.deepEqual(snapshot.recent_items[0].blockers, []);
-    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 1, infrastructure: 0 });
+    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 1, infrastructure: 1 });
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

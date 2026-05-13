@@ -373,8 +373,14 @@ test('family-runtime residency proof --production requires external Temporal rea
     );
     const proof = output.family_runtime_residency_proof;
     const production = proof.production_residency_proof;
+    const persistedProofRef = path.join(stateRoot, 'family-runtime', 'proofs', 'latest-temporal-production-proof.json');
 
     assert.equal(proof.proof_mode, 'external_temporal_service_worker');
+    assert.equal(proof.persisted_proof_ref, persistedProofRef);
+    assert.equal(fs.existsSync(persistedProofRef), true);
+    const persisted = JSON.parse(fs.readFileSync(persistedProofRef, 'utf8'));
+    assert.equal(persisted.family_runtime_residency_proof.closeout_status, 'production_residency_needs_live_evidence');
+    assert.equal(persisted.family_runtime_residency_proof.proof_mode, 'external_temporal_service_worker');
     assert.equal(proof.closeout_status, 'production_residency_needs_live_evidence');
     assert.equal(production.surface_kind, 'opl_temporal_external_production_residency_proof');
     assert.equal(production.closeout_status, 'production_residency_blocked');
@@ -409,6 +415,13 @@ test('family-runtime residency proof --production requires external Temporal rea
       retry_or_dead_letter_boundary_observed: false,
       domain_truth_boundary_preserved: true,
     });
+    const events = runCli(['family-runtime', 'events', 'export'], familyRuntimeEnv(stateRoot));
+    const proofEvent = events.family_runtime_events.events.find((event: { event_type: string }) =>
+      event.event_type === 'temporal_residency_proof'
+    );
+    assert.equal(proofEvent.payload.closeout_status, 'production_residency_needs_live_evidence');
+    assert.deepEqual(proofEvent.payload.proof_receipt, production.proof_receipt);
+    assert.equal(proofEvent.payload.persisted_proof_ref, persistedProofRef);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

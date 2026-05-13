@@ -16,7 +16,7 @@ Temporal 负责 durable execution：workflow history、activity retry/timeout、
 
 Hermes-Agent 的新定位是：迁移期 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate，local provider 只作为 dev/CI/offline diagnostic baseline。
 
-2026-05-12 closeout：Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof 和 Agent Executor Adapter 接入链路已经落地。剩余验收集中在外部 production Temporal service / managed worker 的长时 residency、真实 domain stage activity soak、provider-hosted guarded apply 和真实 cost/progress 校准。
+2026-05-12 closeout：Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof 和 Agent Executor Adapter 接入链路已经落地。2026-05-13 fresh closeout 进一步证明本机 managed Temporal service / worker 当前 ready，显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`opl family-runtime residency proof --provider temporal --production` 返回 `production_residency_proven`，并把 proof receipt 写入 runtime event ledger；`framework production-closeout` 可读到 `provider_continuous_proof.continuous_proof_status=all_observed_proofs_proven`，`runtime snapshot` 已把 provider proof 投到 operator attention/recent item。剩余验收集中在周期性长时 residency / SLO、真实 domain stage activity soak、provider-hosted guarded apply 和真实 cost/progress 校准。
 
 ## 顶层设计
 
@@ -55,7 +55,7 @@ Provider 层不持有：
 | `stage_attempt` | Workflow | 一次 domain stage 的 durable attempt。 |
 | `Codex CLI execution` | Activity | 运行 Codex、domain sidecar dispatch、gate replay 或 artifact rebuild。 |
 | `user instruction intake` | Signal | 里程碑后用户 10 条修改要求、approval、pause/resume/stop。 |
-| `progress projection` | Query | OPL App / CLI 读取当前状态、next owner、blocked reason。 |
+| `progress projection` | Query | OPL App / CLI 读取当前状态、next owner、blocked reason；provider proof 作为 operator item 展示，但不升级为 domain ready。 |
 | `retry/dead-letter` | Retry policy / failure state | Provider 只表达运行失败和重试预算，不解释 domain quality。 |
 | `history/replay` | Workflow history | 作为 runtime audit，不替代 domain truth。 |
 
@@ -68,7 +68,7 @@ Provider 层不持有：
 交付：
 
 - 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 只服务 dev/CI/offline diagnostic baseline，`hermes_legacy` 只服务 legacy/proof/diagnostic adapter。
-- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 与 repo-native live residency proof 已落地；`opl family-runtime service start|status|stop --provider temporal` 已作为本机托管 Temporal service lifecycle 入口落地，`opl family-runtime residency proof --provider temporal --production` 可消费本机 managed service + worker state。未配置、服务不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时均 fail-closed。真实 MAS domain soak 仍属 P2 后续证据。
+- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 与 repo-native live residency proof 已落地；`opl family-runtime service start|status|stop --provider temporal` 已作为本机托管 Temporal service lifecycle 入口落地，`opl family-runtime residency proof --provider temporal --production` 可消费本机 managed service + worker state。未配置、服务不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时均 fail-closed；2026-05-13 fresh 本机 managed service/worker 已 ready 且 production proof 已通过。真实 MAS domain soak 仍属 P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
 
@@ -80,7 +80,7 @@ Provider 层不持有：
 
 ### P1. Temporal Stage Workflow Core
 
-状态：已落地到 repo/test 可用实现，并补齐本机托管 production proof 入口。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper、worker lifecycle contract 和本机 Temporal service lifecycle。缺少 Temporal 地址且没有 managed local service state 时 CLI 明确 fail-closed 为 production required dependency blocker；provider readiness 需要 Temporal service 可达与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，`opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof，`service start|status|stop` 本机托管入口，以及 `--production` 对本机 managed service / managed worker 的 fail-closed 验收入口。尚未完成的是把 production service 长时托管真实 MAS paper line、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
+状态：已落地到 repo/test 可用实现，并补齐本机托管 production proof 入口。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal`、worker helper、worker lifecycle contract 和本机 Temporal service lifecycle。缺少 Temporal 地址且没有 managed local service state 时 CLI 明确 fail-closed 为 production required dependency blocker；provider readiness 需要 Temporal service 可达与 worker ready 信号同时存在。2026-05-12 已补齐 worker resident state re-query / restart already-ready / stop 后 worker-not-ready 的直接 proof test，Codex live runner timeout / checkpoint heartbeat / process output summary proof test，`opl family-runtime residency proof --provider temporal --live` 的 Temporal test server + real worker code-path proof，`service start|status|stop` 本机托管入口，以及 `--production` 对本机 managed service / managed worker 的 fail-closed 验收入口。2026-05-13 fresh 本机 managed service/worker 当前 ready，显式 Temporal provider view full/durable ready，production proof 返回 `production_residency_proven`。尚未完成的是把 production service 长时托管真实 MAS paper line、真实 activity retry 运行证据和 MAS 真实 paper line 的 provider-hosted guarded apply soak。
 
 交付：
 
@@ -92,6 +92,7 @@ Provider 层不持有：
 - 已完成：repo-native Temporal live residency proof 可启动 Temporal test server 与真实 worker，跑通 completed attempt、human/user/resume signals、worker restart 后 re-query、missing-closeout blocked 和 domain-truth boundary。
 - 已完成：本机 production service 入口 `opl family-runtime service start|status|stop --provider temporal`；默认优先使用 PATH 上的 `temporal server start-dev`，也可用 `OPL_TEMPORAL_SERVICE_START_COMMAND` 显式指定 launcher。service state 写入 OPL family-runtime state root，worker 与 production proof 可在没有额外 `OPL_TEMPORAL_ADDRESS` 的情况下消费 managed local service address。
 - 已完成：production proof 入口 `opl family-runtime residency proof --provider temporal --production`；它只使用配置好的 Temporal service / managed worker，未配置、不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时返回 typed platform blocker、operator repair action、runtime snapshot 和 blocked proof receipt，配置完成后证明 completed / blocked attempt、signal history、restart re-query、typed-closeout required 和 authority boundary。
+- 已完成：2026-05-13 fresh production proof 在本机 managed Temporal service / worker 上返回 `production_residency_proven`；checks 覆盖 service reachable、worker ready、completed attempt、restart re-query、signal history、typed closeout required、missing closeout blocked、retry/dead-letter boundary 和 domain-truth boundary。
 - 待完成：真实长时 domain activity soak、domain sidecar live dispatch、生产 retry/dead-letter 运行证据，以及 token/cost/progress 观测校准。
 
 验收：
@@ -106,8 +107,8 @@ Provider 层不持有：
 
 交付：
 
-- 当前优先级从“三仓泛化证明”收敛为 MAS real paper line。MAG/RCA controlled attempts 暂缓，但 descriptor/index 不得退化。
-- 已用 DM002、DM003、Obesity 三篇 active paper line 做 read-only closeout projection；下一步只在 MAS owner gate 允许时做 provider-hosted guarded apply。
+- 当前优先级从“三仓泛化证明”收敛为 MAS real paper line。MAG/RCA 已完成 OPL task-bound sidecar receipt / no-regression evidence ref ingestion；grant/visual long soak 与 domain owner receipt 仍后移，但 descriptor/index 不得退化。
+- 已用 DM002、DM003、Obesity 三篇 active paper line 做 read-only closeout projection，并用 DM002 guarded apply 跑出 OPL-ingestable `blocked_no_mas_owner_apply_receipt` typed closeout；下一步只在 MAS owner gate 允许时继续 provider-hosted guarded apply owner chain。
 - 将 `stage_knowledge_packet -> Codex activity -> stage_memory_closeout_packet -> router receipt -> progress delta / human gate / stop-loss` 作为 provider attempt trace 展示。
 - 失败时落到 typed blocker、dead-letter 或 human gate，不伪造阳性结论。
 
@@ -120,26 +121,26 @@ Provider 层不持有：
 
 ### P3. MAG/RCA Controlled Attempts
 
-状态：本轮延后。OPL 仍保持 MAG/RCA descriptor、stage plane、domain-memory descriptor 和 direct skill / OPL discovery 不退化；controlled grant / visual provider soak 等 MAS paper-line 优先闭合后再做。
+状态：task-bound ingestion 已落地，long soak 仍后移。OPL 已把显式 provider-hosted MAG guarded-run task 和 RCA `emit_no_regression_evidence` task 写入 stage attempt ledger，并 ingest MAG sidecar receipt refs / RCA no-regression evidence refs；这证明 OPL provider-hosted attempt bridge 可跨 grant / visual domain 运转。它仍不等于 MAG grant-stage owner receipt、RCA artifact-producing owner receipt、grant/visual quality verdict 或长时 controlled soak 已完成。
 
 交付：
 
-- MAG：用 grant stage pack 做 controlled `critique/revision` 或 `package` attempt。
-- RCA：用 visual stage pack 做 controlled `review_and_revision` 或 `package_and_handoff` attempt。
-- 两者都走同一 provider abstraction 与 stage attempt ledger。
+- MAG：已用 guarded-run sidecar task 做 task-bound receipt ingestion；后续仍需 grant stage pack 产出 domain owner receipt、typed blocker 或 no-regression evidence。
+- RCA：已用 `emit_no_regression_evidence` sidecar task 做 task-bound no-regression evidence ingestion；后续仍需 visual stage pack 产出 artifact-producing owner receipt、typed blocker 或 long-run no-regression evidence。
+- 两者都走同一 provider abstraction 与 stage attempt ledger，OPL 只保存 refs / receipts / blockers，不写 grant 或 visual truth。
 
 验收：
 
-- OPL 能显示 stage attempt、human gate、artifact refs 与 next owner。
+- OPL 能显示 stage attempt、human gate、artifact refs、receipt refs、no-regression refs 与 next owner。
 - MAG/RCA 质量与导出 verdict 仍回到各自 domain gate。
 
 ### P4. Visibility And Operator Console
 
-状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，可展示 provider run/activity/heartbeat、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影，并已通过白名单 bridge 支持 provider-level human gate / resume / dead-letter repair signal。Temporal worker/domain 代码路径已由 live residency proof 覆盖；仍待完成的是按 domain/stage/blocker/memory refs 的操作体验和真实 MAS domain soak。
+状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，并从该 workbench 派生 `opl:stage-attempt:<id>` operator item，可展示 provider run/activity/heartbeat、controlled apply refs、artifact locator / restore proof、closeout refs、consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、human gate/user instruction/resume signals 和 dead-letter。Aion Runtime Attempt Workbench 已消费该只读投影，并已通过白名单 bridge 支持 provider-level human gate / resume / dead-letter repair signal。Temporal worker/domain 代码路径已由 live residency proof 覆盖；仍待完成的是真实 MAS domain soak 与真实 domain owner receipt / artifact mutation receipt 证据。
 
 交付：
 
-- OPL App / CLI 显示 provider kind、attempt id、workflow status、activity status、signal history、query freshness、closeout/consumed memory/rejected writeback refs、dead-letter reason。
+- OPL App / CLI 显示 provider kind、attempt id、workflow status、activity status、signal history、query freshness、controlled apply refs、artifact locator / restore proof、closeout/consumed memory/rejected writeback refs、dead-letter reason。
 - 对 Hermes/local/Temporal provider 使用同一投影结构。
 - 对 domain truth 只显示 source refs，不复制 truth。
 

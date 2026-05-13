@@ -250,69 +250,104 @@ function buildSkillProjection(manifest: NormalizedDomainManifest | null, entry: 
   };
 }
 
+function buildRuntimeInventoryProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const runtimeInventory = manifest?.runtime_inventory;
+  return {
+    status: componentStatus(entry, Boolean(runtimeInventory)),
+    runtime_owner: runtimeInventory?.runtime_owner ?? null,
+    domain_owner: runtimeInventory?.domain_owner ?? null,
+    executor_owner: runtimeInventory?.executor_owner ?? null,
+    substrate: runtimeInventory?.substrate ?? null,
+    availability: runtimeInventory?.availability ?? null,
+    health_status: runtimeInventory?.health_status ?? null,
+    status_surface: runtimeInventory?.status_surface ?? null,
+    recovery_surface: runtimeInventory?.recovery_surface ?? null,
+  };
+}
+
+function buildTaskLifecycleProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const taskLifecycle = manifest?.task_lifecycle;
+  return {
+    status: componentStatus(entry, Boolean(taskLifecycle)),
+    task_kind: taskLifecycle?.task_kind ?? null,
+    task_id: taskLifecycle?.task_id ?? null,
+    lifecycle_status: taskLifecycle?.status ?? null,
+    progress_surface: taskLifecycle?.progress_surface ?? null,
+    resume_surface: taskLifecycle?.resume_surface ?? null,
+  };
+}
+
+function buildRuntimeControlProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const runtimeControl = manifest?.runtime_control;
+  return {
+    status: componentStatus(entry, Boolean(runtimeControl)),
+    domain_agent_id: runtimeControl?.domain_agent_id ?? null,
+    runtime_owner: runtimeControl?.runtime_owner ?? null,
+    domain_owner: runtimeControl?.domain_owner ?? null,
+    executor_owner: runtimeControl?.executor_owner ?? null,
+    control_status: runtimeControl?.status ?? null,
+    control_gate_ids: runtimeControl?.control_gate_ids ?? [],
+  };
+}
+
+function buildSessionContinuityProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const sessionContinuity = manifest?.session_continuity;
+  return {
+    status: componentStatus(entry, Boolean(sessionContinuity)),
+    domain_agent_id: sessionContinuity?.domain_agent_id ?? null,
+    runtime_owner: sessionContinuity?.runtime_owner ?? null,
+    domain_owner: sessionContinuity?.domain_owner ?? null,
+    executor_owner: sessionContinuity?.executor_owner ?? null,
+    continuity_status: sessionContinuity?.status ?? null,
+    entry_surface: sessionContinuity?.entry_surface ?? null,
+    progress_surface: sessionContinuity?.progress_surface ?? null,
+    artifact_surface: sessionContinuity?.artifact_surface ?? null,
+    restore_surface: sessionContinuity?.restore_surface ?? null,
+  };
+}
+
+function buildProgressProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const progressProjection = manifest?.progress_projection;
+  return {
+    status: componentStatus(entry, Boolean(progressProjection)),
+    headline: progressProjection?.headline ?? null,
+    latest_update: progressProjection?.latest_update ?? null,
+    next_step: progressProjection?.next_step ?? null,
+    current_status: progressProjection?.current_status ?? null,
+    runtime_status: progressProjection?.runtime_status ?? null,
+    human_gate_ids: progressProjection?.human_gate_ids ?? [],
+  };
+}
+
+function buildArtifactInventoryProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const artifactInventory = manifest?.artifact_inventory;
+  return {
+    status: componentStatus(entry, Boolean(artifactInventory)),
+    workspace_path: artifactInventory?.workspace_path ?? null,
+    summary: artifactInventory?.summary ?? null,
+    artifact_surface: artifactInventory?.artifact_surface ?? null,
+    inspect_paths: artifactInventory?.inspect_paths ?? [],
+  };
+}
+
+function buildAutomationProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const automation = manifest?.automation;
+  return {
+    status: componentStatus(entry, Boolean(automation)),
+    automation_count: automation?.automations.length ?? 0,
+    readiness_summary: automation?.readiness_summary ?? null,
+  };
+}
+
 function buildRuntimeProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
   return {
-    runtime_inventory: {
-      status: componentStatus(entry, Boolean(manifest?.runtime_inventory)),
-      runtime_owner: manifest?.runtime_inventory?.runtime_owner ?? null,
-      domain_owner: manifest?.runtime_inventory?.domain_owner ?? null,
-      executor_owner: manifest?.runtime_inventory?.executor_owner ?? null,
-      substrate: manifest?.runtime_inventory?.substrate ?? null,
-      availability: manifest?.runtime_inventory?.availability ?? null,
-      health_status: manifest?.runtime_inventory?.health_status ?? null,
-      status_surface: manifest?.runtime_inventory?.status_surface ?? null,
-      recovery_surface: manifest?.runtime_inventory?.recovery_surface ?? null,
-    },
-    task_lifecycle: {
-      status: componentStatus(entry, Boolean(manifest?.task_lifecycle)),
-      task_kind: manifest?.task_lifecycle?.task_kind ?? null,
-      task_id: manifest?.task_lifecycle?.task_id ?? null,
-      lifecycle_status: manifest?.task_lifecycle?.status ?? null,
-      progress_surface: manifest?.task_lifecycle?.progress_surface ?? null,
-      resume_surface: manifest?.task_lifecycle?.resume_surface ?? null,
-    },
-    runtime_control: {
-      status: componentStatus(entry, Boolean(manifest?.runtime_control)),
-      domain_agent_id: manifest?.runtime_control?.domain_agent_id ?? null,
-      runtime_owner: manifest?.runtime_control?.runtime_owner ?? null,
-      domain_owner: manifest?.runtime_control?.domain_owner ?? null,
-      executor_owner: manifest?.runtime_control?.executor_owner ?? null,
-      control_status: manifest?.runtime_control?.status ?? null,
-      control_gate_ids: manifest?.runtime_control?.control_gate_ids ?? [],
-    },
-    session_continuity: {
-      status: componentStatus(entry, Boolean(manifest?.session_continuity)),
-      domain_agent_id: manifest?.session_continuity?.domain_agent_id ?? null,
-      runtime_owner: manifest?.session_continuity?.runtime_owner ?? null,
-      domain_owner: manifest?.session_continuity?.domain_owner ?? null,
-      executor_owner: manifest?.session_continuity?.executor_owner ?? null,
-      continuity_status: manifest?.session_continuity?.status ?? null,
-      entry_surface: manifest?.session_continuity?.entry_surface ?? null,
-      progress_surface: manifest?.session_continuity?.progress_surface ?? null,
-      artifact_surface: manifest?.session_continuity?.artifact_surface ?? null,
-      restore_surface: manifest?.session_continuity?.restore_surface ?? null,
-    },
-    progress_projection: {
-      status: componentStatus(entry, Boolean(manifest?.progress_projection)),
-      headline: manifest?.progress_projection?.headline ?? null,
-      latest_update: manifest?.progress_projection?.latest_update ?? null,
-      next_step: manifest?.progress_projection?.next_step ?? null,
-      current_status: manifest?.progress_projection?.current_status ?? null,
-      runtime_status: manifest?.progress_projection?.runtime_status ?? null,
-      human_gate_ids: manifest?.progress_projection?.human_gate_ids ?? [],
-    },
-    artifact_inventory: {
-      status: componentStatus(entry, Boolean(manifest?.artifact_inventory)),
-      workspace_path: manifest?.artifact_inventory?.workspace_path ?? null,
-      summary: manifest?.artifact_inventory?.summary ?? null,
-      artifact_surface: manifest?.artifact_inventory?.artifact_surface ?? null,
-      inspect_paths: manifest?.artifact_inventory?.inspect_paths ?? [],
-    },
-    automation: {
-      status: componentStatus(entry, Boolean(manifest?.automation)),
-      automation_count: manifest?.automation?.automations.length ?? 0,
-      readiness_summary: manifest?.automation?.readiness_summary ?? null,
-    },
+    runtime_inventory: buildRuntimeInventoryProjection(manifest, entry),
+    task_lifecycle: buildTaskLifecycleProjection(manifest, entry),
+    runtime_control: buildRuntimeControlProjection(manifest, entry),
+    session_continuity: buildSessionContinuityProjection(manifest, entry),
+    progress_projection: buildProgressProjection(manifest, entry),
+    artifact_inventory: buildArtifactInventoryProjection(manifest, entry),
+    automation: buildAutomationProjection(manifest, entry),
   };
 }
 

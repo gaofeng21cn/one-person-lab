@@ -1,4 +1,4 @@
-import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
+import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 
 type JsonRecord = Record<string, unknown>;
 

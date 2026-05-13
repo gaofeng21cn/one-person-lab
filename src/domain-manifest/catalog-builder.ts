@@ -2,7 +2,10 @@ import type { FrameworkContracts } from '../types.ts';
 import { getActiveWorkspaceBinding } from '../workspace-registry.ts';
 import { resolveBindingManifest } from './resolver.ts';
 
-export function buildDomainManifestCatalog(contracts: FrameworkContracts) {
+export function buildDomainManifestCatalog(
+  contracts: FrameworkContracts,
+  options: { manifestCommandTimeoutMs?: number } = {},
+) {
   const projects = contracts.domains.domains.map((domain) => {
     const binding = getActiveWorkspaceBinding(domain.domain_id);
     if (!binding) {
@@ -18,7 +21,9 @@ export function buildDomainManifestCatalog(contracts: FrameworkContracts) {
       };
     }
 
-    return resolveBindingManifest(domain.domain_id, domain.project, binding);
+    return resolveBindingManifest(domain.domain_id, domain.project, binding, {
+      timeoutMs: options.manifestCommandTimeoutMs,
+    });
   });
 
   return {
@@ -34,7 +39,10 @@ export function buildDomainManifestCatalog(contracts: FrameworkContracts) {
         manifest_configured_count: projects.filter((entry) => entry.manifest_command !== null).length,
         resolved_count: projects.filter((entry) => entry.status === 'resolved').length,
         failed_count: projects.filter((entry) =>
-          entry.status === 'command_failed' || entry.status === 'invalid_json' || entry.status === 'invalid_manifest'
+          entry.status === 'command_failed'
+          || entry.status === 'command_timeout'
+          || entry.status === 'invalid_json'
+          || entry.status === 'invalid_manifest'
         ).length,
       },
       projects,

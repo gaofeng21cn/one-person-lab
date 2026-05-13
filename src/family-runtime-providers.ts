@@ -2,11 +2,15 @@ import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { buildTemporalWorkerReadiness, inspectTemporalWorkerLifecycle } from './family-runtime-temporal-provider.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
-import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import {
+  FAMILY_RUNTIME_PROVIDER_KINDS,
+  type FamilyRuntimeProviderKind,
+} from './family-runtime-types.ts';
 
-export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'hermes_legacy', 'temporal'] as const;
-
-export type FamilyRuntimeProviderKind = typeof FAMILY_RUNTIME_PROVIDER_KINDS[number];
+export {
+  FAMILY_RUNTIME_PROVIDER_KINDS,
+  type FamilyRuntimeProviderKind,
+} from './family-runtime-types.ts';
 
 export type FamilyRuntimeProviderInspection = {
   provider_kind: FamilyRuntimeProviderKind;
@@ -15,6 +19,14 @@ export type FamilyRuntimeProviderInspection = {
   degraded_reason: string | null;
   capabilities: string[];
   details: Record<string, unknown>;
+};
+
+type ManagedProviderProjection = {
+  managed_temporal_state_consistency?: Record<string, unknown> | null;
+} | null;
+
+type ProviderLifecycleOptions = {
+  managedProviderProjection?: ManagedProviderProjection;
 };
 
 function providerMetadata(kind: FamilyRuntimeProviderKind) {
@@ -182,6 +194,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
 export async function inspectFamilyRuntimeProviderWithLifecycle(
   kind: FamilyRuntimeProviderKind,
   paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+  options: ProviderLifecycleOptions = {},
 ): Promise<FamilyRuntimeProviderInspection> {
   if (kind !== 'temporal') {
     return inspectFamilyRuntimeProvider(kind);
@@ -189,7 +202,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
   const workerReadiness = await inspectTemporalWorkerLifecycle(paths);
   const managedProviderProjection = workerReadiness.worker_ready === true
     ? null
-    : readMasManagedProviderProjection();
+    : options.managedProviderProjection ?? null;
   const managedTemporalProjection = managedProviderProjection?.managed_temporal_state_consistency ?? null;
   const effectiveWorkerReadiness = managedTemporalProjection
     ? buildManagedTemporalWorkerReadiness(managedTemporalProjection)
@@ -260,6 +273,7 @@ export function inspectFamilyRuntimeProviders(selected: FamilyRuntimeProviderKin
 export async function inspectFamilyRuntimeProvidersWithLifecycle(
   selected: FamilyRuntimeProviderKind,
   paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>,
+  options: ProviderLifecycleOptions = {},
 ) {
   return {
     selected_provider: selected,
@@ -270,7 +284,7 @@ export async function inspectFamilyRuntimeProvidersWithLifecycle(
       fallback: 'local_sqlite',
     },
     providers: {
-      [selected]: await inspectFamilyRuntimeProviderWithLifecycle(selected, paths),
+      [selected]: await inspectFamilyRuntimeProviderWithLifecycle(selected, paths, options),
     } as Partial<Record<FamilyRuntimeProviderKind, FamilyRuntimeProviderInspection>>,
     provider_catalog: Object.fromEntries(
       FAMILY_RUNTIME_PROVIDER_KINDS.map((providerKind) => [providerKind, providerMetadata(providerKind)]),

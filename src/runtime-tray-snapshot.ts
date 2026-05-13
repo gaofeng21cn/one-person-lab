@@ -1,8 +1,12 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { DatabaseSync } from 'node:sqlite';
 import { inspectHermesRuntime } from './hermes.ts';
-import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
+import {
+  inspectFamilyRuntimeProviderWithLifecycle,
+  resolveFamilyRuntimeProviderKind,
+} from './family-runtime-providers.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { FrameworkContracts } from './types.ts';
@@ -13,7 +17,11 @@ import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, Runtime
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
 import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
 import { buildStageAttemptWorkbench } from './runtime-tray-stage-attempt-workbench.ts';
+import { buildStageAttemptTrayItems } from './runtime-tray-stage-attempt-items.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
+import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
+import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 
 type HermesCronJob = {
   id?: unknown;
@@ -76,6 +84,19 @@ function runtimeOwnerForCurrentProvider() {
   return resolveFamilyRuntimeProviderKind() === 'hermes_legacy'
     ? 'upstream_hermes_agent'
     : 'provider_backed_family_runtime';
+}
+
+function buildRuntimeProviderContinuousProof() {
+  const paths = familyRuntimePaths();
+  if (!fs.existsSync(paths.queue_db)) {
+    return buildProviderContinuousProof([]);
+  }
+  const db = new DatabaseSync(paths.queue_db, { readOnly: true });
+  try {
+    return buildProviderContinuousProof(listEvents(db));
+  } finally {
+    db.close();
+  }
 }
 
 function normalizeSourceRef(
@@ -811,18 +832,27 @@ function buildHermesCronProjection(enabled: boolean): HermesCronProjection {
   };
 }
 
-export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
+export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
   const providerKind = resolveFamilyRuntimeProviderKind();
+  const familyRuntimeRuntimePaths = familyRuntimePaths();
   const hermesDeepInspection = providerKind === 'hermes_legacy';
   const hermes = inspectHermesRuntime({
     deep: hermesDeepInspection,
     reason: `Runtime tray did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
   });
   const hermesReady = Boolean(hermesDeepInspection && hermes.binary && hermes.version && hermes.gateway_service.loaded);
-  const providerReady = hermesDeepInspection ? hermesReady : inspectFamilyRuntimeProvider(providerKind).ready;
-  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-  const stageAttemptWorkbench = buildStageAttemptWorkbench();
   const masManagedProviderProjection = readMasManagedProviderProjection();
+  const lifecycleProvider = hermesDeepInspection
+    ? null
+    : await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyRuntimeRuntimePaths, {
+      managedProviderProjection: masManagedProviderProjection,
+    });
+  const providerReady = hermesDeepInspection ? hermesReady : lifecycleProvider?.ready === true;
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const stageAttemptWorkbench = await buildStageAttemptWorkbench({
+    managedProviderProjection: masManagedProviderProjection,
+  });
+  const providerContinuousProof = buildRuntimeProviderContinuousProof();
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
@@ -830,7 +860,18 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
     includeHermesCronJobs: hermesDeepInspection,
   });
   const hermesCronProjection = buildHermesCronProjection(hermesDeepInspection);
-  const items = [...domainItems, ...masStudyProjection.items, ...hermesCronProjection.items];
+  const stageAttemptItems = buildStageAttemptTrayItems({
+    workbench: stageAttemptWorkbench,
+    sourceRefs: stageAttemptWorkbench.source_refs,
+  });
+  const providerProofItem = buildProviderProofTrayItem(providerContinuousProof);
+  const items = [
+    ...domainItems,
+    ...masStudyProjection.items,
+    ...hermesCronProjection.items,
+    ...stageAttemptItems,
+    providerProofItem,
+  ];
   const runningItems = items.filter((entry) => entry.lane === 'running').sort(sortItems);
   const attentionItems = items.filter((entry) => entry.lane === 'attention').sort(sortItems);
   const recentItems = items.filter((entry) => entry.lane === 'recent').sort(sortItems);
@@ -877,6 +918,7 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       recent_items: recentItems,
       action_counts: actionCounts,
       stage_attempt_workbench: stageAttemptWorkbench,
+      provider_continuous_proof: providerContinuousProof,
       managed_domain_provider_states: {
         surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
         role: 'app_status_read_model_only',
@@ -894,6 +936,7 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         sourceRef('/runtime_manager/owner_split', 'runtime_owner_split'),
         sourceRef('/runtime_manager/future_sidecar_migration', 'daemon_policy'),
         sourceRef('/stage_attempt_workbench', 'stage_attempt_workbench'),
+        sourceRef('/provider_continuous_proof', 'provider_continuous_proof'),
         ...(masManagedProviderProjection
           ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
           : []),
