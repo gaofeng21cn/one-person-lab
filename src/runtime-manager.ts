@@ -274,6 +274,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
             'paper_autonomy/repair-recheck',
             'paper_autonomy/ai-reviewer-recheck',
             'paper_autonomy/gate-replay',
+            'paper_autonomy/guarded-apply',
             'paper_autonomy/route-decision',
           ],
           state_projection: [

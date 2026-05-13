@@ -38,6 +38,7 @@ const lanes = {
       'tests/src/family-runtime-temporal-provider.test.ts',
       'tests/src/agent-executor.test.ts',
       'tests/src/cli/cases/family-runtime.test.ts',
+      'tests/src/cli/cases/family-runtime-paper-autonomy.test.ts',
       'tests/src/cli/cases/family-runtime-worker.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts.test.ts',
       'tests/src/cli/cases/agent-executor-cli.test.ts',

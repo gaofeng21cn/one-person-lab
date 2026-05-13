@@ -477,6 +477,88 @@ test('family-runtime residency proof --production reads managed local Temporal s
   }
 });
 
+test('family-runtime temporal provider status uses managed service and worker lifecycle state', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-managed-status-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const service = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  const worker = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  service.unref();
+  worker.unref();
+  try {
+    assert.equal(typeof service.pid, 'number');
+    assert.equal(typeof worker.pid, 'number');
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: service.pid,
+      address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'test temporal service',
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: worker.pid,
+      address,
+      namespace: 'default',
+      task_queue: 'opl-stage-attempts',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+    }, null, 2)}\n`);
+
+    const output = runCli(
+      ['family-runtime', 'status', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+        OPL_TEMPORAL_WORKER_STATUS: '',
+        OPL_TEMPORAL_WORKER_ENABLED: '',
+      }),
+    );
+    const provider = output.family_runtime.provider_runtime.providers.temporal;
+
+    assert.equal(output.family_runtime.readiness.provider_ready, true);
+    assert.equal(output.family_runtime.readiness.full_online_ready, true);
+    assert.equal(output.family_runtime.readiness.degraded, false);
+    assert.equal(provider.status, 'ready');
+    assert.equal(provider.ready, true);
+    assert.equal(provider.degraded_reason, null);
+    assert.equal(provider.details.address, address);
+    assert.equal(provider.details.address_source, 'managed_local_service_state');
+    assert.equal(provider.details.worker_ready, true);
+    assert.equal(provider.details.worker_readiness.surface_kind, 'temporal_worker_lifecycle_status');
+    assert.equal(provider.details.worker_readiness.lifecycle_status, 'ready');
+    assert.equal(provider.details.adapter_mode, 'managed_temporal_provider_ready');
+  } finally {
+    if (typeof service.pid === 'number') {
+      try {
+        process.kill(service.pid, 'SIGTERM');
+      } catch {
+        // already stopped
+      }
+    }
+    if (typeof worker.pid === 'number') {
+      try {
+        process.kill(worker.pid, 'SIGTERM');
+      } catch {
+        // already stopped
+      }
+    }
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime residency proof rejects conflicting live and production modes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-residency-conflict-'));
   try {

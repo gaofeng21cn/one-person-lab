@@ -14,6 +14,7 @@ import {
 import {
   ensureFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
+  inspectFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import {
@@ -58,13 +59,13 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 
-function buildStatusPayload(
+async function buildStatusPayload(
   db: DatabaseSync,
   paths = familyRuntimePaths(),
   requestedProvider = resolveFamilyRuntimeProviderKind(),
 ) {
   const selectedProvider = resolveFamilyRuntimeProviderKind(requestedProvider);
-  const providerRuntime = inspectFamilyRuntimeProviders(selectedProvider);
+  const providerRuntime = await inspectFamilyRuntimeProvidersWithLifecycle(selectedProvider, paths);
   const provider = providerRuntime.providers[selectedProvider]
     ?? (() => {
       throw new FrameworkContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
@@ -637,10 +638,10 @@ export async function runFamilyRuntime(args: string[]) {
   const { db, paths } = openQueueDb();
   try {
     if (parsed.mode === 'status') {
-      return buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
+      return await buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
     }
     if (parsed.mode === 'doctor') {
-      const status = buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind)).family_runtime;
+      const status = (await buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind))).family_runtime;
       return {
         version: 'g2',
         family_runtime_doctor: {

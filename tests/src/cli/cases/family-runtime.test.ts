@@ -101,7 +101,7 @@ test('family-runtime temporal provider reports landed code separately from live 
     assert.equal(provider.degraded_reason, 'temporal_runtime_not_configured');
     assert.equal(provider.details.adapter_mode, 'provider_code_landed_unconfigured');
     assert.equal(provider.capabilities.includes('stage_attempt_workflow_provider_code'), true);
-    assert.equal(provider.details.worker_readiness.surface_kind, 'temporal_worker_readiness');
+    assert.equal(provider.details.worker_readiness.surface_kind, 'temporal_worker_lifecycle_status');
     assert.equal(provider.details.worker_readiness.readiness_status, 'not_configured');
     assert.deepEqual(provider.details.worker_readiness.blockers, ['temporal_runtime_not_configured']);
   } finally {

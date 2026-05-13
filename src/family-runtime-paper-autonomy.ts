@@ -8,6 +8,7 @@ const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
   'paper_autonomy/repair-recheck',
   'paper_autonomy/ai-reviewer-recheck',
   'paper_autonomy/gate-replay',
+  'paper_autonomy/guarded-apply',
   'paper_autonomy/route-decision',
 ]);
 
@@ -28,6 +29,7 @@ export function paperAutonomyProjection(
     : Array.isArray(payload.source_refs)
       ? payload.source_refs
       : [];
+  const guardedApply = task.task_kind === 'paper_autonomy/guarded-apply';
   return {
     surface_kind: 'opl_mas_paper_autonomy_task_projection',
     domain_truth_owner: 'med-autoscience',
@@ -35,8 +37,16 @@ export function paperAutonomyProjection(
     online_runtime_substrate_owner: 'provider_backed_family_runtime',
     task_kind: task.task_kind,
     study_id: typeof payload.study_id === 'string' ? payload.study_id : null,
-    next_owner: typeof repairWorkUnit.owner === 'string' ? repairWorkUnit.owner : null,
-    callable_surface: typeof repairWorkUnit.callable_surface === 'string' ? repairWorkUnit.callable_surface : null,
+    next_owner: guardedApply
+      ? 'med-autoscience'
+      : typeof repairWorkUnit.owner === 'string'
+        ? repairWorkUnit.owner
+        : null,
+    callable_surface: guardedApply
+      ? 'medautosci sidecar dispatch'
+      : typeof repairWorkUnit.callable_surface === 'string'
+        ? repairWorkUnit.callable_surface
+        : null,
     repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
     source_refs: sourceRefs,
     source_fingerprint: typeof repairWorkUnit.source_fingerprint === 'string'
