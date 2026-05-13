@@ -13,6 +13,7 @@ import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, Runtime
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
 import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
 import { buildStageAttemptWorkbench } from './runtime-tray-stage-attempt-workbench.ts';
+import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 
 type HermesCronJob = {
   id?: unknown;
@@ -821,6 +822,7 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
   const providerReady = hermesDeepInspection ? hermesReady : inspectFamilyRuntimeProvider(providerKind).ready;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const stageAttemptWorkbench = buildStageAttemptWorkbench();
+  const masManagedProviderProjection = readMasManagedProviderProjection();
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
@@ -875,11 +877,26 @@ export function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       recent_items: recentItems,
       action_counts: actionCounts,
       stage_attempt_workbench: stageAttemptWorkbench,
+      managed_domain_provider_states: {
+        surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
+        role: 'app_status_read_model_only',
+        medautoscience: masManagedProviderProjection,
+        authority_boundary: {
+          opl: 'display_and_status_projection_only',
+          domain_truth_owner: 'med-autoscience',
+          can_write_domain_truth: false,
+          can_authorize_quality_verdict: false,
+          can_authorize_submission_readiness: false,
+        },
+      },
       source_refs: uniqueByRef([
         sourceRef('/domain_manifests', 'domain_manifest_catalog'),
         sourceRef('/runtime_manager/owner_split', 'runtime_owner_split'),
         sourceRef('/runtime_manager/future_sidecar_migration', 'daemon_policy'),
         sourceRef('/stage_attempt_workbench', 'stage_attempt_workbench'),
+        ...(masManagedProviderProjection
+          ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
+          : []),
         ...masStudyProjection.source_refs,
         ...hermesCronProjection.source_refs,
       ]),
