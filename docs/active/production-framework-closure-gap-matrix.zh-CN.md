@@ -14,6 +14,8 @@ Date: `2026-05-12`
 
 未闭合部分集中在 production closure：production Temporal residency、真实长时 domain activity soak、MAS/MAG/RCA domain owner receipt chain、domain memory apply 泛化、OPL lifecycle guarded apply 跨域实证、domain repo physical skeleton layout，以及 active-path legacy residue 的最终物理退役。
 
+2026-05-13 补充：真实 paper/grant/visual 长时 soak 属于 production evidence gate；排除这类耗时运行后，功能性缺口仍应按 `docs/active/production-functional-closure-plan.zh-CN.md` 一次性推进。当前可工程实现的剩余功能主要是 provider readiness/operator closure、owner receipt envelope、domain memory/lifecycle apply receipt 泛化、physical skeleton follow-through、legacy active-path final retirement、operator workbench drilldown 和 cross-repo closeout gate。
+
 ## Closure Gap Matrix
 
 | gap | 当前已落地 | 未闭合证据 | 下一跳完成门槛 |
