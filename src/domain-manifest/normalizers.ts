@@ -12,6 +12,7 @@ import {
   normalizeAutomationCatalog,
   normalizeSkillCatalog,
 } from './artifact-skill-normalizers.ts';
+import { normalizeFunctionalClosureSurfaces } from './functional-closure-surfaces.ts';
 import {
   normalizeClearanceLane,
   normalizeDetailedReadinessSurface,
@@ -819,6 +820,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
           : {}),
       }
     : null;
+  const functionalClosureSurfaces = normalizeFunctionalClosureSurfaces(manifest);
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
   const sessionContinuity = normalizeSessionContinuity(manifest.session_continuity, {
@@ -966,6 +968,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
+    ...functionalClosureSurfaces,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
     runtime_control: runtimeControl,
