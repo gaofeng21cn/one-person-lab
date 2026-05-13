@@ -9,8 +9,6 @@ import { buildProductEntryHandoffEnvelope } from '../../src/product-entry-handof
 import { buildProductEntrySessionPrompt } from '../../src/product-entry-parts/builders.ts';
 import {
   buildProductEntryDoctor,
-  runProductEntryLogs,
-  runProductEntrySessions,
 } from '../../src/product-entry-runtime.ts';
 
 const contractsDir = path.join(process.cwd(), 'contracts', 'opl-framework');
@@ -121,52 +119,6 @@ test('product-entry session prompt carries runtime-owner and executor contract w
   assert.doesNotMatch(prompt, /gateway and federation shell/);
 });
 
-test('product-entry runtime leaf wraps Hermes operational surfaces directly', () => {
-  const hermesFixture = createFakeBinaryFixture('hermes', `
-if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
-  cat <<'EOF'
-Preview                                            Last Active   Src    ID
-───────────────────────────────────────────────────────────────────────────────────────────────
-Focused runtime audit                              2m ago        api_server run_focus
-EOF
-  exit 0
-fi
-if [ "$1" = "logs" ] && [ "$2" = "gateway" ]; then
-  echo "[INFO] gateway ready"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
-  echo "Service definition updated"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-
-  try {
-    withEnv({ OPL_HERMES_BIN: hermesFixture.binaryPath }, () => {
-      const sessions = runProductEntrySessions({ limit: 1, source: 'api_server' });
-      assert.equal(sessions.product_entry.mode, 'sessions');
-      assert.equal(sessions.product_entry.sessions[0].session_id, 'run_focus');
-      assert.deepEqual(
-        sessions.product_entry.command_preview,
-        ['hermes', 'sessions', 'list', '--limit', '1', '--source', 'api_server'],
-      );
-
-      const logs = runProductEntryLogs({ logName: 'gateway', lines: 2 });
-      assert.equal(logs.product_entry.mode, 'logs');
-      assert.match(logs.product_entry.raw_output, /gateway ready/);
-
-    });
-  } finally {
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
 test('product-entry handoff envelope leaf builds the current family handoff payload', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-leaf-state-'));
 
@@ -193,9 +145,10 @@ test('product-entry handoff envelope leaf builds the current family handoff payl
     assert.equal(envelope.handoff_bundle.workspace_locator.absolute_path, repoRoot);
     const domainContext = envelope.handoff_bundle.domain_context as { project: string } | null;
     const returnSurfaceContract = envelope.handoff_bundle.return_surface_contract as {
-      opl: { dashboard_command: string };
+      opl: { dashboard_command: string; runtime_status_command: string };
     };
     assert.equal(domainContext?.project, 'redcube-ai');
+    assert.equal(returnSurfaceContract.opl.runtime_status_command, 'opl status runtime --limit 10');
     assert.equal(returnSurfaceContract.opl.dashboard_command, 'opl status dashboard');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

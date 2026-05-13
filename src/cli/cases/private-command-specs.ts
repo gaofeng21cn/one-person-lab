@@ -1,7 +1,7 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateFrameworkContracts } from '../../contracts.ts';
 import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
 import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-envelope.ts';
-import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
+import { buildProductEntryDoctor, runProductEntryResume } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
@@ -19,7 +19,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -494,18 +494,6 @@ resume: {
   ],
   handler: (args) => runCodexPassthroughHandled(['resume', ...args]),
 },
-    sessions: {
-      usage: 'opl session list [--limit <n>] [--source <source>]',
-      summary: 'List recent Hermes sessions through a machine-readable OPL product-entry surface.',
-      examples: ['opl session list', 'opl session list --limit 10', 'opl session list --limit 10 --source api_server'],
-      handler: (args) => runProductEntrySessions(parseSessionsArgs(args, commandSpecs.sessions)),
-    },
-    logs: {
-      usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
-      summary: 'Wrap Hermes log access in an OPL product-entry envelope for debugging and operations.',
-      examples: ['opl session logs runtime', 'opl session logs runtime --lines 50', 'opl session logs worker --level info --component runtime'],
-      handler: (args) => runProductEntryLogs(parseLogsArgs(args, commandSpecs.logs)),
-    },
     'workspace list': {
       usage: 'opl workspace list',
       summary: 'Show the file-backed workspace registry for OPL and admitted domain project surfaces.',

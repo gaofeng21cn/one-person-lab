@@ -172,7 +172,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
     assert.equal(medautogrant.manifest.product_entry_preflight.ready_to_try_now, true);
     assert.equal(medautogrant.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
-    assert.equal(medautogrant.manifest.runtime_inventory.runtime_owner, 'upstream_hermes_agent');
+    assert.equal(medautogrant.manifest.runtime_inventory.runtime_owner, 'configured_family_runtime_provider');
     assert.equal(medautogrant.manifest.runtime_inventory.availability, 'ready');
     assert.equal(medautogrant.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(medautogrant.manifest.task_lifecycle.resume_surface.surface_kind, 'grant_user_loop');
@@ -447,7 +447,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.product_entry_overview.progress_surface.surface_kind, 'grant_progress');
     assert.equal(grantEntry.product_entry_overview.resume_surface.surface_kind, 'grant_user_loop');
     assert.equal(grantEntry.runtime_inventory.surface_kind, 'runtime_inventory');
-    assert.equal(grantEntry.runtime_inventory_runtime_owner, 'upstream_hermes_agent');
+    assert.equal(grantEntry.runtime_inventory_runtime_owner, 'configured_family_runtime_provider');
     assert.equal(grantEntry.runtime_inventory_availability, 'ready');
     assert.equal(grantEntry.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(grantEntry.task_lifecycle_status, 'resumable');

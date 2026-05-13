@@ -78,7 +78,7 @@ export function buildHandoffBundle(
       return_surface_contract: {
         opl: {
           resume_command: 'opl session resume <session_id>',
-          logs_command: 'opl session logs runtime --session <session_id>',
+          runtime_status_command: 'opl status runtime --limit 10',
           dashboard_command: 'opl status dashboard',
           resume_endpoint: endpoints.resume,
           logs_endpoint: endpoints.logs,

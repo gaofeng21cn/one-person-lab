@@ -5,13 +5,11 @@ import type {
   DashboardCliInput,
   DomainLaunchStrategy,
   LaunchDomainCliInput,
-  LogsCliInput,
   ProductEntryCliInput,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
   SessionLedgerCliInput,
-  SessionsCliInput,
   SkillPacksCliInput,
   StartCliInput,
   WorkspaceStatusCliInput,
@@ -286,102 +284,6 @@ function parseResumeArgs(
   return {
     sessionId,
   };
-}
-
-function parseSessionsArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): SessionsCliInput {
-  const parsed: SessionsCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--limit':
-        parsed.limit = parsePositiveInteger(token, value, spec);
-        break;
-      case '--source':
-        parsed.source = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for session list: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parseLogsArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): LogsCliInput {
-  const parsed: LogsCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      if (parsed.logName) {
-        throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-          token,
-        });
-      }
-
-      parsed.logName = token;
-      continue;
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--lines':
-        parsed.lines = parsePositiveInteger(token, value, spec);
-        break;
-      case '--since':
-        parsed.since = value;
-        break;
-      case '--level':
-        parsed.level = value;
-        break;
-      case '--component':
-        parsed.component = value;
-        break;
-      case '--session':
-        parsed.sessionId = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for session logs: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
 }
 
 function parseWorkspaceStatusArgs(
@@ -828,7 +730,6 @@ export {
   parseExecutorRequestPath,
   parseKeyValueArgs,
   parseLaunchDomainArgs,
-  parseLogsArgs,
   parsePort,
   parsePositiveInteger,
   parseProductEntryArgs,
@@ -837,7 +738,6 @@ export {
   parseRuntimeStatusArgs,
   parseSkillPackArgs,
   parseSessionLedgerArgs,
-  parseSessionsArgs,
   parseStartArgs,
   parseWorkspaceStatusArgs,
 };

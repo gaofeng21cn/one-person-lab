@@ -1,31 +1,33 @@
+import { spawnSync } from 'node:child_process';
+
 import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
-test('logs returns a structured wrapper over Hermes log output', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "logs" ] && [ "$2" = "gateway" ]; then
-  cat <<'EOF'
-[INFO] gateway boot
-[INFO] domain handoff ready
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
+function runCliRawFailure(args: string[]) {
+  const result = spawnSync(process.execPath, ['--experimental-strip-types', cliPath, ...args], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NODE_NO_WARNINGS: '1',
+    },
+  });
 
-  try {
-    const output = runCli(['session', 'logs', 'gateway', '--lines', '20'], {
-      OPL_HERMES_BIN: hermesPath,
-    });
+  assert.notEqual(result.status, 0);
+  return result;
+}
 
-    assert.equal(output.product_entry.mode, 'logs');
-    assert.equal(output.product_entry.log_name, 'gateway');
-    assert.equal(output.product_entry.lines, 20);
-    assert.match(output.product_entry.raw_output, /gateway boot/);
-    assert.ok(output.product_entry.command_preview.includes('gateway'));
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+test('retired session logs Hermes wrapper fails closed in favor of runtime status surfaces', () => {
+  const result = runCliRawFailure(['session', 'logs', 'gateway', '--lines', '20']);
+
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /unrecognized subcommand 'logs'/);
+});
+
+test('retired session list Hermes wrapper fails closed in favor of session ledger and runtime status', () => {
+  const result = runCliRawFailure(['session', 'list', '--limit', '20']);
+
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /unexpected argument 'list'/);
 });
 
 test('retired runtime repair-gateway command fails closed in favor of family-runtime repair', () => {
