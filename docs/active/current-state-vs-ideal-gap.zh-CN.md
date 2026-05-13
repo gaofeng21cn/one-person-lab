@@ -10,6 +10,8 @@ Date: `2026-05-13`
 
 当前 family 已经完成“目标形态的控制面骨架”：`OPL Framework -> One Person Lab App -> Foundry Agents` 三层产品认知成立，MAS/MAG/RCA 都能被 OPL 识别为 descriptor-level aligned 的 standard domain agent，三仓 stage plane 和 domain memory descriptor 也都能被 OPL 只读解析。
 
+回答原计划完成度时应分开两层：核心功能 surface / contract / receipt-ref / typed-blocker 机制已经落地；原计划里仍属于功能性 follow-through 的破坏性物理目录迁移、真实 memory body / writeback apply、legacy 最终物理删除、统一 descriptor CLI 和当前生产 provider readiness 仍未完成。长时 paper/grant/visual soak 之外，这些仍是实际缺口。
+
 离理想情况的主要差距不是概念、命名或 descriptor，而是 production closure：
 
 - OPL 本机 fresh runtime 仍是 `local_sqlite` provider ready，`full_online_ready=false`、`durable_online_ready=false`；这不能替代 production Temporal-backed online readiness。
@@ -27,7 +29,7 @@ Date: `2026-05-13`
 
 | surface | fresh result | 读法 |
 | --- | --- | --- |
-| `git status --short` | OPL、MAS、MAG、RCA、OPL App、MDS 均无输出，且均在 `main` | 当前 gap 文档基于 clean main 状态，不吸收未提交工作区改动。 |
+| `git status --short` | MAS 干净；MAG/RCA/OPL 都在 main 且含本地已提交 ahead；OPL 本轮文档更新前有 docs dirty | 当前 gap 文档基于四仓 main 的 fresh read model；不把未提交文档当作机器真相。 |
 | `node dist/cli.js agents list --json` | `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`physical_skeleton_audit_pending_count=3`、`production_closure_gap_count=15` | 三仓 descriptor 已对齐；物理 skeleton 和 production closure 仍未闭合。 |
 | `node dist/cli.js stages list --json` | `resolved_planes_count=3`、`stages_count=18`；MAS/MAG/RCA 各 6 个 stage | Stage control plane 已成为 OPL 可读 surface。 |
 | `node dist/cli.js domain-memory list --json` | `resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0` | Memory locator/descriptor 已对齐；真实 retrieval/writeback/body migration 仍由 domain owner 后续闭合。 |
@@ -39,12 +41,12 @@ Date: `2026-05-13`
 
 | 维度 | 理想情况 | 当前实际 | 差距 | 要完善的部分 |
 | --- | --- | --- | --- | --- |
-| OPL Framework | 完整生产级智能体开发与运行框架，支撑长期在线、stage attempt、状态、记忆、文件生命周期、恢复和审计 | 控制面骨架、shared contracts、Temporal provider code、local queue/attempt ledger、native helper、runtime snapshot、stage/domain-memory discovery 已落地 | Production online readiness 和真实 domain owner receipt chain 未闭合 | 完成 production Temporal provider residency、真实 Codex/domain activity soak、owner receipt envelope、memory/lifecycle apply receipt、cross-repo closeout gate |
+| OPL Framework | 完整生产级智能体开发与运行框架，支撑长期在线、stage attempt、状态、记忆、文件生命周期、恢复和审计 | 控制面骨架、shared contracts、Temporal provider code、local queue/attempt ledger、native helper、runtime snapshot、stage/domain-memory discovery、owner receipt/ref surface 和 closeout gate 已落地 | Production online readiness、真实 domain owner receipt chain 和统一 descriptor CLI 未闭合 | 完成 production Temporal provider readiness/residency、真实 Codex/domain activity soak、稳定 `agents descriptors` 聚合入口、owner receipt envelope 的 live proof |
 | Stage-led 模型 | 每个 domain stage 有输入、prompt、skill、knowledge、tool、quality gate、handoff 与 closeout | 三仓 18 个 stage plane 可读，descriptor ready | Stage 仍主要是 descriptor/projection；真实 provider-hosted stage execution 证据不足 | 用 MAS 真实 paper line、MAG grant controlled attempt、RCA visual controlled attempt 跑出 owner receipt / typed blocker / no-regression evidence |
 | Agent executor | `Codex CLI` 为默认最小执行器，其他 executor 显式 adapter 接入并可审计 | 默认 Codex 口径已收口；Hermes/Claude 只作为显式 opt-in adapter/proof lane | 非默认 executor 不承诺行为等价；真实长时 Codex runner production soak 未完成 | 继续保留 non-equivalence notice；优先证明 Codex CLI long-running activity、heartbeat、typed closeout 和 domain receipt |
 | Domain skeleton | MAS/MAG/RCA 使用统一 `agent/ contracts/ runtime/ docs/` repo-source 边界，runtime artifacts 不进开发仓 | 三仓 manifest/descriptor 声明 aligned；artifact locator surface declared | `physical_skeleton_audit_pending_count=3`；物理目录重组仍未完成 | 做 path compatibility audit、direct skill parity、OPL-hosted parity、restore/provenance proof、no-forbidden artifact proof，再逐仓物理迁移 |
-| Domain memory | OPL 只持 locator / refs / receipts；domain 持有正文、接受/拒绝、route/quality truth | 三仓 memory descriptor resolved；MAS 有 publication-route memory workspace apply closure；MAG/RCA 有 proof contract | Fresh read model 中 retrieval/writeback/body migration 仍为 false；真实 receipt 实例不足 | 三仓产出真实 consumed/writeback accepted/rejected receipt；OPL/App 做 ref-only grouping；memory body 始终留在 workspace/runtime owner |
-| File lifecycle | OPL 持 workspace/artifact locator、retention、cleanup、restore proof、migration ledger；产物在 workspace/runtime root | OPL lifecycle schema / locator 和 domain proof surface 已存在；MAG/RCA/MAS 都声明 guarded apply proof 或 locator | 跨三仓真实 cleanup/restore/retention guarded apply 仍缺生产证据 | 用 domain-owned receipt 或 typed blocker 证明 artifact mutation；OPL 只写 framework-owned ledger/locator |
+| Domain memory | OPL 只持 locator / refs / receipts；domain 持有正文、接受/拒绝、route/quality truth | 三仓 memory descriptor resolved；MAS 有 publication-route memory workspace apply closure；MAG/RCA 有 receipt/evidence writer 或 proof contract | Fresh OPL read model 中 retrieval/writeback/body migration 仍不是 OPL-applied success；真实 receipt instances 和 body migration 仍不足 | 三仓产出真实 consumed/writeback accepted/rejected receipt；OPL/App 做 ref-only grouping；memory body 始终留在 workspace/runtime owner |
+| File lifecycle | OPL 持 workspace/artifact locator、retention、cleanup、restore proof、migration ledger；产物在 workspace/runtime root | OPL lifecycle schema / locator 和 domain proof surface 已存在；MAG/RCA/MAS 都声明 guarded apply proof 或 locator | 跨三仓真实 workspace cleanup/restore/retention guarded apply 仍缺 live artifact mutation evidence | 用 domain-owned receipt 或 typed blocker 证明 artifact mutation；OPL 只写 framework-owned ledger/locator |
 | App / Workbench | 用户可以看见 Agent、workspace、stage、progress、artifact、human gate、attention queue，并能按 owner 路由 action | OPL App 是 OPL fork of AionUI；runtime snapshot 有 attention queue 和 stage-attempt workbench；Aion workbench 已有五轴 visibility | 当前 fresh snapshot 无 active attempt；App 仍需真实 domain/stage/blocker/memory drilldown 与 production evidence polish | 对接真实 provider/domain receipt；按 domain/stage/memory refs 分组；保持 App 不写 domain truth |
 | Legacy retirement | Hermes-first/Gateway/frontdoor/local-manager/MDS-default 退出 active/default path | 默认语义已退役，保留项多为 adapter/provenance/diagnostic/fixture/history | 物理残留仍需 no-active-caller proof 后清理 | 逐项删除或迁入 history/tombstone；保留项必须标明 explicit adapter / diagnostic / fixture / provenance |
 
@@ -63,7 +65,7 @@ Date: `2026-05-13`
 - Fresh `family-runtime status` 当前选中 `local_sqlite`，只能代表 dev/CI/offline ledger ready；production ideal 要求 Temporal-backed provider 长期 ready。
 - Stage attempt 当前 fresh total 为 0；这不能证明真实长时间 online stage execution。
 - `agents descriptors` 总入口尚未成为可调用命令；维护者仍需拼 `agents list`、`stages list`、`domain-memory list`、`actions` 等专题入口。
-- Production closure 还缺真实 provider-hosted guarded apply、owner receipt chain、domain memory/lifecycle apply 泛化和旧面物理退役。
+- Production closure 还缺真实 provider-hosted guarded apply、owner receipt chain、domain memory body / writeback apply、workspace artifact lifecycle apply 和旧面物理退役。
 
 ### 需要完善
 
@@ -106,19 +108,19 @@ Date: `2026-05-13`
 - MAG 是活跃 `Grant Foundry` / medical grant domain agent，也是 OPL-compatible package。
 - 单一 MAG app skill、CLI、MedAutoGrantDomainEntry、product-entry/projection commands 与 schema-backed contract 是当前默认 capability surface。
 - MAG 已暴露 6-stage grant control plane、family action catalog、runtime_control、runtime_continuity、product sidecar export/dispatch、OPL stage runtime registration 和 standard domain-agent skeleton。
-- MAG 已完成 owner receipt contract generalization、controlled domain-memory accepted/rejected fixture proof、lifecycle cleanup/restore/retention guarded apply proof、physical skeleton minimum anchors 和 no-forbidden-write projection。
+- MAG 已完成 owner receipt contract generalization、controlled domain-memory accepted/rejected runtime receipt evidence path、lifecycle cleanup/restore/retention guarded apply proof、physical skeleton minimum anchors 和 no-forbidden-write projection。
 
 ### 主要差距
 
 - `controlled_soak_no_regression_attempt` 仍是 `deferred_typed_blocker`；真实 OPL-hosted controlled grant-stage attempt 尚未产出 MAG domain owner receipt 或 no-regression evidence。
-- 当前 accepted/rejected receipt 主要是 shape proof，不是真实 workspace/runtime receipt instance。
+- MAG repo 内 receipt evidence writer 已可把 accepted/rejected decision 写成 runtime receipt instance；真实 OPL-hosted grant-stage attempt 下的 receipt / no-regression evidence 仍未产出。
 - Grant strategy memory 的 migration/readiness 是 descriptor 或 proof contract 层，真实 memory body / writeback apply 泛化未闭合。
 - 更大范围 source path 迁移和 legacy active-path 删除仍需 path compatibility 与 no-active-caller proof。
 
 ### 需要完善
 
 1. 让真实 OPL-hosted controlled grant-stage attempt 经 MAG sidecar / direct entry 产出 domain receipt、typed blocker 或 no-regression evidence。
-2. 把 controlled memory proof 推进到真实 workspace/runtime accepted/rejected receipt instance。
+2. 用真实 OPL-hosted grant-stage attempt 产出 workspace/runtime accepted/rejected receipt 或 no-regression evidence。
 3. 对 cleanup/restore/retention guarded apply 做真实 workspace 级 receipt proof。
 4. 在 direct skill path 和 OPL-hosted path parity 稳定后，推进 physical skeleton 物理迁移。
 5. 清理旧 Hermes/Gateway/local-manager 命名和 legacy manager 入口，保留项迁入 explicit proof/provenance/history。
@@ -131,21 +133,21 @@ Date: `2026-05-13`
 - Direct route 已 landed；OPL-hosted route 是 contract/projection landed，但 production provider soak pending。
 - `ppt_deck` 与 `xiaohongshu` image-first 是当前默认视觉路线，HTML/native PPTX 是显式可选路线。
 - RCA 已暴露 family action catalog、stage control projection、route equivalence、product sidecar export/dispatch、OPL runtime manager registration、standard skeleton、artifact locator contract、domain memory descriptor、controlled visual stage attempt、controlled memory apply proof、domain owner receipt contract、lifecycle guarded apply proof 和 physical skeleton follow-through。
-- RCA 已把 review helper 1154 行既有 line-budget 债登记为 reviewed baseline，并阻止继续增长。
+- RCA 已拆分 `review.py` 的 geometry audit、markdown report 与 summary projection helper，并删除既有 line-budget baseline；主 helper 回到默认预算内。
 
 ### 主要差距
 
 - RCA 还不能声明 Temporal-backed production execution 或 OPL-hosted controlled visual stage soak 已完成。
 - `controlled_soak_no_regression_attempt` 仍是 deferred typed blocker，缺真实 RCA owner receipt 或 no-regression evidence。
-- 真实 reusable visual lesson body 写入、真实 accepted/rejected runtime receipt instance 和真实 artifact-producing owner receipt 仍未跑出。
-- Review helper baseline 仍需按 screenshot capture、geometry audit、markdown report、summary projection 拆分。
+- 真实 reusable visual lesson body 写入、真实 artifact-producing owner receipt 和 OPL-hosted visual-stage no-regression evidence 仍未跑出。
+- Review helper 后续只剩 screenshot capture 主体可继续按自然边界拆分；geometry audit、markdown report、summary projection 已不是 blocker。
 
 ### 需要完善
 
 1. 跑真实 OPL-hosted controlled visual stage attempt，让 RCA 返回 domain receipt、artifact-producing owner receipt、typed blocker 或 no-regression evidence。
-2. 把 visual pattern memory 从 descriptor/proof 推进到真实 runtime receipt refs，同时继续禁止 repo 保存 memory body 或 artifact blob。
+2. 把 visual pattern memory 从 descriptor/proof 推进到真实 runtime receipt refs 和 reusable lesson body writeback，同时继续禁止 repo 保存 memory body 或 artifact blob。
 3. 对 lifecycle cleanup/restore/retention 做真实 visual workspace guarded apply proof。
-4. 拆分 `python/redcube_ai/native_helpers/ppt_deck/review.py` 的 reviewed baseline，删除 line-budget 例外。
+4. 继续按自然边界拆分 screenshot capture 主体，但不得恢复 line-budget baseline。
 5. 在 no-active-caller proof 后，继续清理旧 Hermes/Gateway/local-manager history residue。
 
 ## One Person Lab App 当前差距
@@ -202,10 +204,10 @@ Date: `2026-05-13`
    完成 Temporal production residency、worker lifecycle、query/signal/history、restart/re-query、operator repair 和 production proof receipt。
 2. `MAS paper-line provider-hosted guarded apply`
    以三篇真实 paper line 为主验收，产出 MAS owner receipt、progress delta、human gate、stop-loss 或 typed blocker。
-3. `Owner receipt / typed blocker envelope`
-   把 MAS/MAG/RCA 的 owner receipt、typed blocker、no-regression evidence 收敛成统一 OPL closeout gate。
+3. `Unified descriptor and closeout read model`
+   补齐稳定 `agents descriptors` 聚合入口，并让 owner receipt、typed blocker、no-regression evidence 都进入统一 OPL closeout gate。
 4. `Domain memory and lifecycle apply`
-   三仓都产出真实 consumed/writeback accepted/rejected receipt 和 cleanup/restore/retention guarded apply receipt。
+   三仓都产出真实 consumed/writeback accepted/rejected receipt、memory body apply evidence 和 cleanup/restore/retention guarded apply receipt。
 5. `OPL App operator drilldown`
    用真实 receipts 做 domain/stage/memory/artifact drilldown，明确 action owner。
 6. `Physical skeleton follow-through`
