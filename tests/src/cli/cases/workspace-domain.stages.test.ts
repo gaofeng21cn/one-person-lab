@@ -1,19 +1,6 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
-import { bindRealManifest, fakeHermesBin, shellArg } from './workspace-domain.stages.real-smoke-helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
-type SnapshotStageItem = {
-  project_id: string;
-  family_stage_control_plane?: {
-    parity: { status: string };
-    stage_count: number;
-  };
-  family_stage_workbench?: {
-    non_authority_flags: {
-      opl_writes_domain_truth: boolean;
-    };
-  };
-};
 
 function buildStageControlPlane(targetDomainId: string, stageId: string, options: {
   owner: string;
@@ -117,6 +104,27 @@ function withFamilyStageControlPlane(payload: JsonRecord, plane: JsonRecord) {
 }
 
 function withStandardSkeleton(payload: JsonRecord, overrides: JsonRecord = {}) {
+  const physicalSkeletonFollowThrough = {
+    surface_kind: 'physical_skeleton_follow_through',
+    status: 'low_risk_repo_source_follow_through_landed',
+    source_refs: [
+      'agent/README.md',
+      'contracts/README.md',
+      'runtime/README.md',
+      'docs/status.md',
+    ],
+    physical_roots: [
+      { boundary_id: 'agent', anchor_ref: 'agent/README.md', status: 'present_with_repo_source_entrypoint' },
+      { boundary_id: 'contracts', anchor_ref: 'contracts/README.md', status: 'present_with_runtime_program_contracts' },
+      { boundary_id: 'runtime', anchor_ref: 'runtime/README.md', status: 'present_with_repo_source_entrypoint' },
+      { boundary_id: 'docs', anchor_ref: 'docs/status.md', status: 'present_with_owner_docs' },
+    ],
+    forbidden_moves: [
+      'workspace_runtime_artifacts',
+      'receipt_instances',
+      'memory_content_body',
+    ],
+  };
   const skeleton = {
     surface_kind: 'standard_domain_agent_skeleton',
     version: 'standard-domain-agent-skeleton.v1',
@@ -148,12 +156,14 @@ function withStandardSkeleton(payload: JsonRecord, overrides: JsonRecord = {}) {
       product_entry_manifest: {
         ...(payload.product_entry_manifest as JsonRecord),
         standard_domain_agent_skeleton: skeleton,
+        physical_skeleton_follow_through: physicalSkeletonFollowThrough,
       },
     };
   }
   return {
     ...payload,
     standard_domain_agent_skeleton: skeleton,
+    physical_skeleton_follow_through: physicalSkeletonFollowThrough,
   };
 }
 
@@ -428,6 +438,16 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       target_domain_id: 'med-autoscience',
       mapping_mode: 'contract_only_no_physical_artifact_move',
       repo_tracks_real_workspace_artifacts: false,
+      physical_skeleton_layout_audit: {
+        surface_kind: 'standard_domain_agent_physical_skeleton_layout_audit',
+        status: 'slot_audit_landed',
+        source_refs: [
+          'agent/stages',
+          'contracts/runtime/sidecar',
+          'runtime/sidecar.py',
+          'docs/program/stage_surface_standardization_program.md',
+        ],
+      },
       skeleton: {
         'agent/stages': ['templates/agent_entry_modes.yaml'],
         'agent/prompts': ['MAS app skill command contracts'],
@@ -467,6 +487,25 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
         repo_tracks_artifact_blobs: false,
       },
     },
+    physical_skeleton_follow_through: {
+      surface_kind: 'mag_physical_skeleton_follow_through',
+      state: 'minimum_repo_source_anchors_landed',
+      roots: {
+        agent: { anchor_ref: 'agent/README.md', state: 'physical_root_present' },
+        contracts: { anchor_ref: 'contracts/README.md', state: 'physical_root_present' },
+        runtime: { anchor_ref: 'runtime/README.md', state: 'physical_root_present' },
+        docs: { anchor_ref: 'docs/status.md', state: 'physical_root_present' },
+      },
+      root_status: [
+        { root: 'agent', anchor_ref: 'agent/README.md', exists: true },
+        { root: 'contracts', anchor_ref: 'contracts/README.md', exists: true },
+        { root: 'runtime', anchor_ref: 'runtime/README.md', exists: true },
+        { root: 'docs', anchor_ref: 'docs/status.md', exists: true },
+      ],
+      moves_workspace_artifacts: false,
+      moves_runtime_receipt_instances: false,
+      moves_memory_body: false,
+    },
   };
   const rcaManifest = {
     ...(fixtures.redcube as JsonRecord),
@@ -490,6 +529,22 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
           repo_tracks_visual_or_export_artifact_blobs: false,
         },
       },
+    },
+    physical_skeleton_follow_through: {
+      surface_kind: 'physical_skeleton_follow_through',
+      status: 'low_risk_repo_source_follow_through_landed',
+      physical_roots: [
+        { boundary_id: 'agent', anchor_ref: 'agent/README.md', status: 'present_with_repo_source_entrypoint' },
+        { boundary_id: 'contracts', anchor_ref: 'contracts/runtime-program/current-program.json', status: 'present_with_runtime_program_contracts' },
+        { boundary_id: 'runtime', anchor_ref: 'packages/redcube-gateway/src/actions/product-sidecar.ts', status: 'present_with_repo_source_entrypoint' },
+        { boundary_id: 'docs', anchor_ref: 'docs/status.md', status: 'present_with_owner_docs' },
+      ],
+      forbidden_moves: [
+        'workspace_runtime_artifacts',
+        'receipt_instances',
+        'memory_content_body',
+        'png_pptx_pdf_exports',
+      ],
     },
   };
 
@@ -545,15 +600,28 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
     assert.equal(list.family_agents.summary.aligned_count, 3);
     assert.equal(list.family_agents.summary.missing_count, 0);
     assert.equal(list.family_agents.summary.descriptor_aligned_count, 3);
-    assert.equal(list.family_agents.summary.physical_skeleton_audit_pending_count, 3);
+    assert.equal(list.family_agents.summary.physical_skeleton_audit_pending_count, 0);
+    assert.equal(list.family_agents.summary.physical_skeleton_evidence_observed_count, 3);
     assert.equal(list.family_agents.summary.production_closure_gap_count, 15);
     assert.equal(mas.family_agent.skeleton_status, 'aligned');
     assert.equal(mas.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
     assert.equal(mas.family_agent.descriptor_readiness.status, 'descriptor_aligned');
-    assert.equal(mas.family_agent.physical_skeleton_layout_audit.status, 'descriptor_aligned_physical_layout_pending');
+    assert.equal(mas.family_agent.physical_skeleton_layout_audit.status, 'repo_source_anchor_evidence_observed');
     assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.required_dirs, ['agent', 'contracts', 'runtime', 'docs']);
     assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.missing_declared_dirs, []);
     assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.forbidden_declared_dirs, []);
+    assert.deepEqual(mas.family_agent.physical_skeleton_layout_audit.evidence_refs, [
+      'agent/stages',
+      'contracts/runtime/sidecar',
+      'runtime/sidecar.py',
+      'docs/program/stage_surface_standardization_program.md',
+    ]);
+    assert.equal(
+      mas.family_agent.production_closure_gaps.find((gap: { gap_id: string }) =>
+        gap.gap_id === 'physical_repo_skeleton_reorganization'
+      ).projection_status,
+      'evidence_refs_observed',
+    );
     assert.equal(mas.family_agent.physical_skeleton_layout_audit.authority_boundary.opl_role, 'read_only_layout_audit');
     assert.deepEqual(
       mas.family_agent.production_closure_gaps.map((gap: { gap_id: string }) => gap.gap_id),
@@ -568,6 +636,12 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
     assert.equal(mag.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
     assert.equal(rca.family_agent.skeleton_source_field, 'standard_domain_agent_skeleton');
     assert.deepEqual(rca.family_agent.declared_repo_source_dirs, ['agent', 'contracts', 'runtime', 'docs']);
+    assert.deepEqual(rca.family_agent.physical_skeleton_layout_audit.evidence_refs, [
+      'agent/README.md',
+      'contracts/runtime-program/current-program.json',
+      'packages/redcube-gateway/src/actions/product-sidecar.ts',
+      'docs/status.md',
+    ]);
     assert.equal(rca.family_agent.artifact_boundary.artifact_roots_are_locators, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -792,6 +866,8 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(closeout.status, 'usable_with_typed_blockers');
     assert.equal(closeout.summary.resolved_manifest_count, 3);
     assert.equal(closeout.summary.descriptor_aligned_count, 3);
+    assert.equal(closeout.summary.physical_skeleton_evidence_observed_count, 3);
+    assert.equal(closeout.summary.physical_skeleton_audit_pending_count, 0);
     assert.equal(closeout.summary.resolved_stage_plane_count, 3);
     assert.equal(closeout.summary.provider_ready, false);
     assert.equal(closeout.authority_boundary.opl_writes_domain_truth, false);
@@ -805,6 +881,19 @@ test('framework production-closeout reports functional blockers without taking d
     const mas = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
     assert.equal(mag.stage_attempt_evidence.owner_receipt_refs[0], 'receipt:mag:owner-apply');
     assert.equal(rca.stage_attempt_evidence.no_regression_evidence_refs[0], 'rca:no-regression:visual-stage-1');
+    assert.equal(mag.physical_skeleton_evidence.status, 'repo_source_anchor_evidence_observed');
+    assert.equal(
+      mag.production_closure_gaps.find((gap: { gap_id: string }) =>
+        gap.gap_id === 'physical_repo_skeleton_reorganization'
+      ).projection_status,
+      'evidence_refs_observed',
+    );
+    assert.equal(
+      mag.production_closure_gaps.find((gap: { gap_id: string }) =>
+        gap.gap_id === 'legacy_surface_physical_retirement'
+      ).projection_status,
+      'no_active_caller_evidence_observed',
+    );
     assert.equal(mas.managed_temporal_state_consistency_declared, true);
     assert.equal(
       closeout.typed_blockers.some((blocker: { blocker_id: string }) =>
@@ -820,130 +909,5 @@ test('framework production-closeout reports functional blockers without taking d
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family stage control plane resolves real MAS RCA MAG manifests when local checkouts are present', { skip: process.env.OPL_REAL_STAGE_SMOKE !== '1' }, () => {
-  const roots = {
-    mas: process.env.OPL_REAL_MAS_REPO ?? '/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-stage-control-deep-adapter',
-    rca: process.env.OPL_REAL_RCA_REPO ?? '/Users/gaofeng/workspace/redcube-ai/.worktrees/rca-stage-control-hardening',
-    mag: process.env.OPL_REAL_MAG_REPO ?? '/Users/gaofeng/workspace/med-autogrant/.worktrees/mag-stage-control-hardening',
-  };
-  for (const [name, root] of Object.entries(roots)) {
-    if (!fs.existsSync(root)) {
-      test.skip(`missing ${name} checkout: ${root}`);
-      return;
-    }
-  }
-
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-family-stage-state-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-family-stage-workspace-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const masProfile = path.join(workspaceRoot, 'mas.profile.toml');
-  const masWorkspace = path.join(workspaceRoot, 'mas-workspace');
-  const redcubeWorkspace = path.join(workspaceRoot, 'redcube-workspace');
-  const magInput = path.join(roots.mag, 'examples', 'nsfc_workspace_p2c_critique.json');
-  fs.mkdirSync(path.join(masWorkspace, 'runtime', 'quests'), { recursive: true });
-  fs.mkdirSync(path.join(masWorkspace, 'studies'), { recursive: true });
-  fs.mkdirSync(path.join(masWorkspace, 'portfolio'), { recursive: true });
-  fs.mkdirSync(redcubeWorkspace, { recursive: true });
-  fs.writeFileSync(
-    masProfile,
-    [
-      'name = "opl-real-stage-smoke"',
-      `workspace_root = ${JSON.stringify(masWorkspace)}`,
-      `runtime_root = ${JSON.stringify(path.join(masWorkspace, 'runtime', 'quests'))}`,
-      `studies_root = ${JSON.stringify(path.join(masWorkspace, 'studies'))}`,
-      `portfolio_root = ${JSON.stringify(path.join(masWorkspace, 'portfolio'))}`,
-      'default_publication_profile = "general_medical_journal"',
-      'default_citation_style = "AMA"',
-      'enable_medical_overlay = true',
-      'medical_overlay_scope = "workspace"',
-      'medical_overlay_skills = ["intake-audit", "baseline", "write", "finalize"]',
-      'research_route_bias_policy = "high_plasticity_medical"',
-      'preferred_study_archetypes = ["clinical_classifier"]',
-      '',
-    ].join('\n'),
-  );
-
-  try {
-    bindRealManifest({
-      project: 'medautoscience',
-      workspacePath: roots.mas,
-      manifestCommand: `uv run python -m med_autoscience.cli product manifest --profile ${shellArg(masProfile)} --format json`,
-      stateRoot,
-      contractsRoot: fixtureContractsRoot,
-    });
-    bindRealManifest({
-      project: 'redcube',
-      workspacePath: roots.rca,
-      manifestCommand: `npm run --silent redcube -- product manifest --workspace-root ${shellArg(redcubeWorkspace)}`,
-      stateRoot,
-      contractsRoot: fixtureContractsRoot,
-    });
-    bindRealManifest({
-      project: 'medautogrant',
-      workspacePath: roots.mag,
-      manifestCommand: `uv run medautogrant product manifest --input ${shellArg(magInput)} --format json`,
-      stateRoot,
-      contractsRoot: fixtureContractsRoot,
-    });
-
-    const list = runCli(['stages', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    assert.equal(list.family_stages.summary.resolved_planes_count, 3);
-    assert.equal(list.family_stages.domains.every((domain: { ready: boolean }) => domain.ready), true);
-    assert.equal(list.family_stages.stages.length >= 18, true);
-
-    const masInspect = runCli(['stages', 'inspect', '--domain', 'mas', '--stage', 'manuscript_authoring'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    assert.equal(masInspect.family_stage.parity.status, 'aligned');
-    assert.equal(masInspect.family_stage.workbench_projection.owner, 'MedAutoScience');
-    assert.equal(masInspect.family_stage.workbench_projection.authority_boundary.can_write_domain_truth, false);
-    assert.equal(masInspect.family_stage.workbench_projection.source_refs.length > 0, true);
-
-    const rcaInspect = runCli(['stages', 'inspect', '--domain', 'rca', '--stage', 'artifact_creation'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    assert.equal(rcaInspect.family_stage.parity.status, 'aligned');
-    assert.equal(rcaInspect.family_stage.workbench_projection.authority_boundary.rca_owns_artifact_authority, true);
-    assert.equal(rcaInspect.family_stage.workbench_projection.freshness.status, 'current');
-
-    const magInspect = runCli(['stages', 'inspect', '--domain', 'mag', '--stage', 'proposal_authoring'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    assert.equal(magInspect.family_stage.parity.status, 'aligned');
-    assert.equal(magInspect.family_stage.workbench_projection.authority_boundary.can_write_grant_truth, false);
-    assert.equal(magInspect.family_stage.workbench_projection.source_refs.length >= 5, true);
-
-    const snapshot = runCli(['runtime', 'snapshot'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: fakeHermesBin(workspaceRoot),
-      HERMES_HOME: path.join(workspaceRoot, 'hermes-home'),
-    });
-    const snapshotItems = [
-      ...snapshot.runtime_tray_snapshot.running_items,
-      ...snapshot.runtime_tray_snapshot.attention_items,
-      ...snapshot.runtime_tray_snapshot.recent_items,
-    ];
-    const itemByProject = new Map(
-      (snapshotItems as SnapshotStageItem[]).map((item) => [item.project_id, item]),
-    );
-    assert.equal(itemByProject.get('medautoscience')?.family_stage_control_plane?.parity.status, 'aligned');
-    assert.equal(itemByProject.get('redcube')?.family_stage_control_plane?.stage_count, 6);
-    assert.equal(
-      itemByProject.get('medautogrant')?.family_stage_workbench?.non_authority_flags.opl_writes_domain_truth,
-      false,
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

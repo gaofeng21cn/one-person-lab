@@ -151,7 +151,9 @@ function buildSkeletonProjection(entry: DomainManifestCatalogEntry) {
     skeleton_source_field: inspection.skeleton_source_field,
     descriptor_readiness: inspection.descriptor_readiness,
     physical_skeleton_layout_audit: inspection.physical_skeleton_layout_audit,
+    physical_skeleton_evidence: inspection.physical_skeleton_evidence,
     production_closure_gap_count: inspection.production_closure_gaps.length,
+    production_closure_gaps: inspection.production_closure_gaps,
     declared_repo_source_dirs: inspection.declared_repo_source_dirs,
     missing_repo_source_dirs: inspection.missing_repo_source_dirs,
     artifact_boundary: inspection.artifact_boundary,
@@ -445,6 +447,13 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
         ).length,
         action_catalog_resolved_count: descriptors.filter((descriptor) =>
           descriptor.family_action_catalog.status === 'resolved'
+        ).length,
+        physical_skeleton_evidence_observed_count: descriptors.filter((descriptor) =>
+          descriptor.standard_domain_agent_skeleton.physical_skeleton_evidence !== null
+        ).length,
+        physical_skeleton_audit_pending_count: descriptors.filter((descriptor) =>
+          descriptor.standard_domain_agent_skeleton.physical_skeleton_layout_audit.status
+            === 'descriptor_aligned_physical_layout_pending'
         ).length,
       },
       descriptors,

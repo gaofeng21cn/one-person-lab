@@ -29,6 +29,9 @@ export function normalizeFunctionalClosureSurfaces(manifest: JsonRecord) {
     lifecycle_guarded_apply_proof: isRecord(manifest.lifecycle_guarded_apply_proof)
       ? manifest.lifecycle_guarded_apply_proof
       : null,
+    physical_skeleton_follow_through: isRecord(manifest.physical_skeleton_follow_through)
+      ? manifest.physical_skeleton_follow_through
+      : null,
     legacy_retirement_tombstone_proof: isRecord(manifest.legacy_retirement_tombstone_proof)
       ? manifest.legacy_retirement_tombstone_proof
       : null,

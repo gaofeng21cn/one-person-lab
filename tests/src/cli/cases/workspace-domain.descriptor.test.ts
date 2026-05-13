@@ -19,7 +19,7 @@ function attachManifestSurface(payload: JsonRecord, field: string, value: JsonRe
 }
 
 function withStandardSkeleton(payload: JsonRecord, agentId: string) {
-  return attachManifestSurface(payload, 'standard_domain_agent_skeleton', {
+  const withSkeleton = attachManifestSurface(payload, 'standard_domain_agent_skeleton', {
     surface_kind: 'standard_domain_agent_skeleton',
     version: 'standard-domain-agent-skeleton.v1',
     agent_id: agentId,
@@ -42,6 +42,21 @@ function withStandardSkeleton(payload: JsonRecord, agentId: string) {
       opl: 'framework_transport_and_projection_only',
       domain: 'truth_quality_artifact_owner',
     },
+  });
+  return attachManifestSurface(withSkeleton, 'physical_skeleton_follow_through', {
+    surface_kind: 'physical_skeleton_follow_through',
+    status: 'low_risk_repo_source_follow_through_landed',
+    physical_roots: [
+      { boundary_id: 'agent', anchor_ref: 'agent/README.md', status: 'present_with_repo_source_entrypoint' },
+      { boundary_id: 'contracts', anchor_ref: 'contracts/README.md', status: 'present_with_runtime_program_contracts' },
+      { boundary_id: 'runtime', anchor_ref: 'runtime/README.md', status: 'present_with_repo_source_entrypoint' },
+      { boundary_id: 'docs', anchor_ref: 'docs/status.md', status: 'present_with_owner_docs' },
+    ],
+    forbidden_moves: [
+      'workspace_runtime_artifacts',
+      'receipt_instances',
+      'memory_content_body',
+    ],
   });
 }
 
@@ -267,6 +282,8 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.memory_descriptor_resolved_count, 3);
     assert.equal(list.family_agent_descriptors.summary.stage_control_plane_resolved_count, 3);
     assert.equal(list.family_agent_descriptors.summary.action_catalog_resolved_count, 3);
+    assert.equal(list.family_agent_descriptors.summary.physical_skeleton_evidence_observed_count, 3);
+    assert.equal(list.family_agent_descriptors.summary.physical_skeleton_audit_pending_count, 0);
 
     const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -277,6 +294,16 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(mas.family_agent_descriptor.descriptor_status, 'descriptor_surfaces_resolved');
     assert.equal(mas.family_agent_descriptor.entry.agent_id, 'mas');
     assert.equal(mas.family_agent_descriptor.standard_domain_agent_skeleton.status, 'aligned');
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_layout_audit.status,
+      'repo_source_anchor_evidence_observed',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.production_closure_gaps.find((gap: { gap_id: string }) =>
+        gap.gap_id === 'physical_repo_skeleton_reorganization'
+      ).projection_status,
+      'evidence_refs_observed',
+    );
     assert.equal(mas.family_agent_descriptor.family_action_catalog.action_count, 1);
     assert.equal(mas.family_agent_descriptor.family_action_catalog.parity.status, 'aligned');
     assert.equal(mas.family_agent_descriptor.family_stage_control_plane.stage_count, 1);

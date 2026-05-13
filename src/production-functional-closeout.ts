@@ -52,6 +52,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
 function tableExists(db: DatabaseSync, tableName: string) {
   const row = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(tableName);
   return Boolean(row);
@@ -262,6 +266,76 @@ function entriesByProject(value: unknown) {
     : [];
 }
 
+function physicalSkeletonEvidenceFromAgent(agent: JsonRecord | null) {
+  const evidence = isRecord(agent?.physical_skeleton_evidence)
+    ? agent.physical_skeleton_evidence
+    : null;
+  if (!evidence) {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_domain_physical_skeleton_evidence_refs',
+    status: optionalString(evidence.status) ?? 'repo_source_anchor_evidence_observed',
+    evidence_refs: stringList(evidence.evidence_refs),
+    evidence_surface_kind: optionalString(evidence.evidence_surface_kind),
+    evidence_status: optionalString(evidence.evidence_status),
+    repository_boundary: isRecord(evidence.repository_boundary) ? evidence.repository_boundary : null,
+    authority_boundary: {
+      opl_role: 'read_only_evidence_ref_aggregation',
+      domain_role: 'repo_layout_owner',
+    },
+  };
+}
+
+function legacyNoActiveCallerObserved(manifest: DomainManifestCatalogEntry['manifest']) {
+  const tombstone = manifest?.legacy_retirement_tombstone_proof;
+  const residue = manifest?.runtime_residue_retirement;
+  const activeDefaultCallers = isRecord(tombstone) ? tombstone.active_default_callers : null;
+  const activePathPolicy = isRecord(residue) ? residue.active_path_policy : null;
+  return {
+    observed:
+      (Array.isArray(activeDefaultCallers) && activeDefaultCallers.length === 0)
+      || optionalString(tombstone?.status) === 'no_active_default_caller_proven'
+      || optionalString(residue?.status) === 'active_path_retired'
+      || (isRecord(activePathPolicy)
+        && Object.values(activePathPolicy).every((value) => value === false || typeof value !== 'boolean')),
+    source_surface:
+      tombstone
+        ? 'legacy_retirement_tombstone_proof'
+        : residue
+          ? 'runtime_residue_retirement'
+          : null,
+    source_refs: [
+      ...stringList(tombstone?.source_refs),
+      ...stringList(residue?.source_refs),
+      ...recordList(residue?.source_refs).flatMap((ref) => stringList([ref.ref])),
+    ],
+  };
+}
+
+function domainProductionClosureGaps(agent: JsonRecord | null, manifest: DomainManifestCatalogEntry['manifest']) {
+  const gaps = recordList(agent?.production_closure_gaps).map((gap) => ({ ...gap }));
+  const legacyEvidence = legacyNoActiveCallerObserved(manifest);
+  return gaps.map((gap) => {
+    if (gap.gap_id === 'legacy_surface_physical_retirement' && legacyEvidence.observed) {
+      return {
+        ...gap,
+        projection_status: 'no_active_caller_evidence_observed',
+        legacy_delete_allowed: false,
+        typed_blocker: {
+          blocker_kind: 'legacy_physical_delete',
+          blocker_id: 'legacy_physical_delete_requires_full_no_active_caller_and_provenance_proof',
+          owner: 'opl_and_domain_repos',
+          source_surface: legacyEvidence.source_surface,
+          next_action: 'Keep physical delete blocked until full no-active-caller, replacement parity, and provenance retention proof are all present.',
+        },
+        evidence_refs: legacyEvidence.source_refs,
+      };
+    }
+    return gap;
+  });
+}
+
 function buildDomainBlockers(input: {
   entry: DomainManifestCatalogEntry;
   agent: JsonRecord | null;
@@ -373,6 +447,8 @@ function buildDomainCloseoutEntries(input: {
       physical_skeleton_status: agent?.physical_skeleton_layout_audit && isRecord(agent.physical_skeleton_layout_audit)
         ? optionalString(agent.physical_skeleton_layout_audit.status)
         : null,
+      physical_skeleton_evidence: physicalSkeletonEvidenceFromAgent(agent),
+      production_closure_gaps: domainProductionClosureGaps(agent, manifest),
       stage_plane_ready: stageDomain?.ready === true,
       memory_descriptor_ready: memory?.ready === true,
       owner_receipt_contract_declared: Boolean(
@@ -471,6 +547,8 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
         domain_count: domainEntries.length,
         resolved_manifest_count: catalog.domain_manifests.summary.resolved_count,
         descriptor_aligned_count: agents.summary.descriptor_aligned_count,
+        physical_skeleton_evidence_observed_count: agents.summary.physical_skeleton_evidence_observed_count,
+        physical_skeleton_audit_pending_count: agents.summary.physical_skeleton_audit_pending_count,
         resolved_stage_plane_count: stages.summary.resolved_planes_count,
         resolved_memory_descriptor_count: memories.summary.resolved_memory_descriptor_count,
         provider_ready: providerReadiness.production_provider_ready,
