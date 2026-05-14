@@ -495,6 +495,13 @@ print(json.dumps({
                 "/product_entry_manifest/controlled_stage_attempt_projection",
                 "/product_entry_manifest/owner_receipt_contract"
             ],
+            "consumed_memory_refs": [
+                "mag-memory:accepted:goal-mag"
+            ],
+            "writeback_receipt_refs": [
+                "mag-memory-writeback:accepted:goal-mag",
+                "mag-memory-writeback:rejected:goal-mag"
+            ],
             "write_policy": "runtime_receipt_instance_only_no_repo_write"
         },
         "receipt_refs": {
@@ -508,7 +515,7 @@ PY
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const enqueue = runCli([
       'family-runtime',
@@ -553,9 +560,47 @@ PY
       'inspect',
       task.family_runtime_task.stage_attempts[0].stage_attempt_id,
     ], env);
+    const query = runCli([
+      'family-runtime',
+      'attempt',
+      'query',
+      task.family_runtime_task.stage_attempts[0].stage_attempt_id,
+    ], env);
     const locator = inspected.family_runtime_stage_attempt.attempt.workspace_locator;
+    const visibility = query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility;
 
     assert.deepEqual(locator.controlled_stage_attempt.owner_receipt_refs, [ownerReceiptRef]);
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_refs.includes(ownerReceiptRef), true);
+    assert.equal(
+      inspected.family_runtime_stage_attempt.attempt.closeout_refs.includes('mag-sidecar-receipt:stage-closeout'),
+      true,
+    );
+    assert.deepEqual(inspected.family_runtime_stage_attempt.attempt.route_impact, {
+      decision: 'domain_owner_receipt',
+      action: 'stage-attempt/closeout',
+      status: 'completed',
+      result_surface_kind: 'sidecar_stage_attempt_closeout_result',
+      receipt_status: null,
+      owner_receipt_ref: ownerReceiptRef,
+      lifecycle_receipt_ref: null,
+      no_regression_evidence_ref: null,
+      no_regression_evidence_observed: false,
+      lifecycle_receipt_observed: false,
+      typed_blocker_count: 0,
+      writes_performed: false,
+      next_owner: 'med-autogrant',
+      domain_ready_verdict: 'domain_gate_pending',
+    });
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.activity_events.at(-1).closeout_refs.includes(
+      ownerReceiptRef,
+    ), true);
+    const closeout = inspected.family_runtime_stage_attempt.attempt.activity_events.at(-1);
+    assert.equal(closeout.activity_kind, 'typed_closeout_ingest');
+    assert.deepEqual(visibility.consumed_memory_refs, ['mag-memory:accepted:goal-mag']);
+    assert.deepEqual(visibility.writeback_receipt_refs, [
+      'mag-memory-writeback:accepted:goal-mag',
+      'mag-memory-writeback:rejected:goal-mag',
+    ]);
     assert.equal(
       locator.lifecycle_apply_requests[0].domain_receipt_ref,
       lifecycleReceiptRef,
