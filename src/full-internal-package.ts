@@ -238,7 +238,7 @@ export function shouldExcludeRuntimePath(relativePathInput: string) {
 }
 
 export type PackageLockLike = {
-  packages?: Record<string, { dev?: boolean }>;
+  packages?: Record<string, { dev?: boolean; optional?: boolean }>;
 };
 
 export function listFullRuntimeProductionNodeModulePaths(packageLock: PackageLockLike) {
@@ -246,6 +246,7 @@ export function listFullRuntimeProductionNodeModulePaths(packageLock: PackageLoc
     .filter(([packagePath, metadata]) =>
       packagePath.startsWith('node_modules/')
       && !metadata.dev
+      && !metadata.optional
       && packagePath.split('/').every(Boolean)
     )
     .map(([packagePath]) => normalizeRuntimeRelativePath(packagePath))
