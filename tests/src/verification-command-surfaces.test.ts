@@ -182,7 +182,10 @@ test('package.json exposes native helper gate scripts and package dry-run check'
   assert.equal(packageJson.scripts?.['native:prebuild-archive'], 'node ./scripts/native-helper-prebuild.mjs archive');
   assert.equal(packageJson.scripts?.['native:prebuild-check'], 'node ./scripts/native-helper-prebuild.mjs check');
   assert.equal(packageJson.scripts?.['native:pack-check'], 'node ./scripts/native-helper-pack-check.mjs');
-  assert.equal(packageJson.scripts?.['native:test'], 'rustup run stable cargo test --workspace');
+  assert.equal(
+    packageJson.scripts?.['native:test'],
+    'RUSTC="$(rustup which --toolchain stable rustc)" "$(rustup which --toolchain stable cargo)" test --workspace',
+  );
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-prebuild.mjs')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-pack-check.mjs')), true);
 });

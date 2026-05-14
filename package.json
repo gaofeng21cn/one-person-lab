@@ -50,7 +50,7 @@
     "native:prebuild-check": "node ./scripts/native-helper-prebuild.mjs check",
     "native:pack-check": "node ./scripts/native-helper-pack-check.mjs",
     "native:repair": "node ./scripts/native-helper-repair.mjs",
-    "native:test": "rustup run stable cargo test --workspace",
+    "native:test": "RUSTC=\"$(rustup which --toolchain stable rustc)\" \"$(rustup which --toolchain stable cargo)\" test --workspace",
     "native:family-smoke": "node ./scripts/native-helper-family-smoke.mjs",
     "family:structure-advisory": "node ./scripts/family-structure-advisory.mjs",
     "family:shared-release": "node ./scripts/family-shared-release.mjs",
