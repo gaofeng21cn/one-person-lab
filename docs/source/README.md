@@ -10,5 +10,6 @@ This directory holds support for the generic workspace/source intake shell, work
 Start with:
 
 - [OPL Family Development Reference](../active/opl-family-development-reference.zh-CN.md)
-- [Shared Foundation](../active/shared-foundation.md)
-- [Shared Foundation Ownership](../active/shared-foundation-ownership.md)
+- [OPL Operating Model](../public/operating-model.md)
+- [Shared Runtime Contract](../active/shared-runtime-contract.md)
+- [Shared Domain Contract](../active/shared-domain-contract.md)

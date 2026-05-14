@@ -30,5 +30,6 @@ Tombstone rules:
 - Retired routes stay here for provenance, migration review, and audit only.
 - Do not revive an old route because a historical file contains a command, acceptance checklist, or old path example.
 - Runtime / product-entry / migration documents whose content has already been absorbed should be entered through [Runtime substrate history archive](./runtime-substrate/README.md).
+- Absorbed shared-boundary framing pages live under [Shared Boundary Process History](./process/shared-boundary/README.md).
 - Product API / ACP native specs now live in the [process history archive](./process/README.md) as historical formation context only.
 - Current planning for the complete stage-led runtime framework with Agent executors as the minimum execution unit starts from [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).

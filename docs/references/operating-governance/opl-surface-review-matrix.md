@@ -33,7 +33,7 @@ This review matrix does not:
 This review matrix sits in the shared-foundation reviewability layer only.
 `OPL` may index human-review and companion-surface obligations here, but domain review truth, publication truth, and final continue/stop/reframe authority still remain with humans and domain-owned surfaces.
 That keeps the matrix useful for discoverability and acceptance alignment without turning it into an approval control plane or shared truth store.
-For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
+For the broader ownership split, see the [OPL Family Development Reference](../../active/opl-family-development-reference.zh-CN.md).
 For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
 
 ## Review Fields

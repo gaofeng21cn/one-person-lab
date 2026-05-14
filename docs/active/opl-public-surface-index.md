@@ -48,17 +48,16 @@ These are indexed by `OPL`, but remain repo-owned:
 `OPL` discovers and activates them through `opl skill sync` plus each domain repository's own CLI / program / script / contract surfaces.
 The current top-level integration unit is therefore the repo-owned domain app skill and its underlying command contracts, not an OPL-owned gateway handoff vocabulary.
 
-### 3. Shared-foundation companion surfaces
+### 3. Shared-boundary companion surfaces
 
 These remain active as shared boundary documents:
 
-- [Shared Foundation](./shared-foundation.md)
-- [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [Shared Runtime Contract](./shared-runtime-contract.md)
 - [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md)
 
 They support the current runtime/activation model, but they do not reintroduce a gateway-first public storyline.
+The old Shared Foundation / Shared Foundation Ownership pages have been absorbed into the [OPL Family Development Reference](./opl-family-development-reference.zh-CN.md) and [Operating Model](../public/operating-model.md); archived copies live under [Shared Boundary Process History](../history/process/shared-boundary/README.md).
 
 ## Historical Provenance
 

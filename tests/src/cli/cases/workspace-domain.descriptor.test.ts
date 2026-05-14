@@ -59,6 +59,18 @@ function withStandardSkeleton(payload: JsonRecord, agentId: string) {
       'receipt_instances',
       'memory_content_body',
     ],
+    direct_skill_parity_refs: [`proof:${agentId}:direct-skill-parity`],
+    opl_hosted_parity_refs: [`proof:${agentId}:opl-hosted-parity`],
+    replacement_parity_refs: [`proof:${agentId}:replacement-parity`],
+    provenance_refs: [`docs/history/runtime-substrate/${agentId}-legacy-tombstone.md`],
+    legacy_active_path_policy: 'physically_removed_or_history_tombstone_only',
+    legacy_active_path_residue: [
+      {
+        path_family: `${agentId} legacy default path`,
+        state: 'tombstone_only',
+        evidence_ref: `docs/history/runtime-substrate/${agentId}-legacy-tombstone.md`,
+      },
+    ],
   });
 }
 
@@ -342,6 +354,22 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(
       mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_layout_audit.status,
       'repo_source_anchor_evidence_observed',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.status,
+      'ready_for_supervised_physical_delete_or_history_tombstone',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.delete_gate.can_execute_delete,
+      false,
+    );
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.delete_gate.can_create_retained_legacy_entry,
+      false,
+    );
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.checklist.retained_legacy_entries.status,
+      'no_retained_legacy_entries',
     );
     assert.equal(
       mas.family_agent_descriptor.standard_domain_agent_skeleton.production_closure_gaps.find((gap: { gap_id: string }) =>

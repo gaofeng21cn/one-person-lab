@@ -26,8 +26,9 @@ Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contra
 | `family-product-entry-and-domain-handoff-architecture.md` | operator / agent / product entry taxonomy、handoff envelope、domain authority boundary | Domain-Agent Admission Contract、public docs、current development lines |
 | `family-lightweight-direct-entry-rollout-board.md` | `frontdoor_surface` / `operator_loop_surface` 区分、direct path 与 OPL handoff 对齐、不允许四仓入口语义漂移 | Domain-Agent Admission Contract、current development lines |
 | `opl-product-entry-and-hermes-kernel-integration.md` | 不 fork/vendor 外部 runtime、不要把用户暴露给底层 runtime 拼装、Hermes-first 误写禁止项 | Runtime 命名与边界合同、Temporal provider 计划、stage-led roadmap |
+| `hermes-agent-runtime-substrate-benchmark.md` | Hermes runtime substrate 对标中仍有价值的对比点；其中 gateway-first / Domain Harness OS 结论已被当前口径取代 | Runtime 命名与边界合同、Temporal provider 计划、Hermes executor evaluation |
 | `opl-vertical-online-agent-platform-roadmap.md` | 垂类产品族、shared runtime/domain contract、future managed runtime 与当前 reality 的区分 | Runtime 命名与边界合同、public roadmap、stage-led roadmap |
-| `mas-top-level-cutover-board.md` | OPL -> MAS handoff 字段、MAS display/research 分线、不能把 transition seam 写成 backend 替换完成 | OPL 当前开发线路、MAS program portfolio/current development lines |
+| `mas-top-level-cutover-board.md` | OPL -> MAS handoff 字段、MAS display/research 分线、不能把 transition seam 写成 backend 替换完成 | OPL 当前开发线路、MAS active portfolio/current development lines |
 
 ## Tombstone 规则
 

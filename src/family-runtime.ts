@@ -250,6 +250,32 @@ function persistTemporalProductionProof(
   return paths.latest_temporal_production_proof;
 }
 
+function temporalProviderSloExecutionReceipt(input: {
+  proof: Awaited<ReturnType<typeof buildTemporalResidencyProof>>;
+  persistedProofRef: string | null;
+}) {
+  const receipt = residencyProofReceipt(input.proof);
+  return {
+    surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+    provider_kind: 'temporal',
+    command: 'opl family-runtime residency proof --provider temporal --production',
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'supervised_command_receipt_only',
+    proof_mode: input.proof.proof_mode,
+    closeout_status: input.proof.closeout_status,
+    receipt_status: receipt.receipt_status,
+    receipt_kind: receipt.receipt_kind,
+    persisted_proof_ref: input.persistedProofRef,
+    proves_only: 'temporal_service_worker_residency_cadence_execution',
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
+}
+
 function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
   const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
   if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
@@ -629,6 +655,10 @@ export async function runFamilyRuntime(args: string[]) {
         production: parsed.production,
       });
       const persistedProofRef = persistTemporalProductionProof(paths, proof);
+      const sloExecutionReceipt = temporalProviderSloExecutionReceipt({
+        proof,
+        persistedProofRef,
+      });
       insertEvent(db, {
         eventType: 'temporal_residency_proof',
         source: 'opl-cli',
@@ -638,13 +668,20 @@ export async function runFamilyRuntime(args: string[]) {
           closeout_status: proof.closeout_status,
           proof_receipt: residencyProofReceipt(proof),
           persisted_proof_ref: persistedProofRef,
+          provider_slo_execution_receipt: sloExecutionReceipt,
         },
+      });
+      insertEvent(db, {
+        eventType: 'temporal_provider_slo_execution_receipt',
+        source: 'opl-cli',
+        payload: sloExecutionReceipt,
       });
       return {
         version: 'g2',
         family_runtime_residency_proof: {
           surface_id: 'opl_family_runtime_residency_proof',
           persisted_proof_ref: persistedProofRef,
+          provider_slo_execution_receipt: sloExecutionReceipt,
           ...proof,
         },
       };

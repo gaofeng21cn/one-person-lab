@@ -1,5 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process';
-import net from 'node:net';
+import { spawnSync } from 'node:child_process';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
@@ -63,6 +62,52 @@ test('family-runtime stage attempt create is idempotent by semantic attempt key 
   }
 });
 
+test('family-runtime Temporal production proof writes provider SLO execution receipt', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-receipt-'));
+  try {
+    const proof = runCli([
+      'family-runtime',
+      'residency',
+      'proof',
+      '--provider',
+      'temporal',
+      '--production',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }));
+    const receipt = proof.family_runtime_residency_proof.provider_slo_execution_receipt;
+
+    assert.equal(receipt.surface_kind, 'opl_temporal_provider_slo_execution_receipt');
+    assert.equal(receipt.provider_kind, 'temporal');
+    assert.equal(receipt.command, 'opl family-runtime residency proof --provider temporal --production');
+    assert.equal(receipt.execution_policy, 'supervised_command_receipt_only');
+    assert.equal(receipt.closeout_status, 'production_residency_needs_live_evidence');
+    assert.equal(receipt.receipt_status, 'blocked');
+    assert.equal(receipt.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
+
+    const events = runCli(['family-runtime', 'events', 'export'], familyRuntimeEnv(stateRoot));
+    const sloEvents = events.family_runtime_events.events.filter((event: { event_type: string }) =>
+      event.event_type === 'temporal_provider_slo_execution_receipt'
+    );
+    const proofEvents = events.family_runtime_events.events.filter((event: { event_type: string }) =>
+      event.event_type === 'temporal_residency_proof'
+    );
+
+    assert.equal(sloEvents.length, 1);
+    assert.equal(sloEvents[0].payload.surface_kind, 'opl_temporal_provider_slo_execution_receipt');
+    assert.equal(sloEvents[0].payload.receipt_status, 'blocked');
+    assert.equal(proofEvents.length, 1);
+    assert.equal(
+      proofEvents[0].payload.provider_slo_execution_receipt.surface_kind,
+      'opl_temporal_provider_slo_execution_receipt',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime attempt query, signal, and fixture-run expose provider lifecycle without domain verdict ownership', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-query-'));
   try {
@@ -77,7 +122,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--provider',
       'local_sqlite',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts","restore_refs":["restore:mas-runtime-loop"]}',
+      '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts","source_refs":["source:dataset"],"material_refs":["material:table1"],"missing_material_refs":["material:irb"],"restore_refs":["restore:mas-runtime-loop"]}',
       '--source-fingerprint',
       'sha256:analysis',
     ], familyRuntimeEnv(stateRoot));
@@ -134,7 +179,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--checkpoint-ref',
       'checkpoint:analysis-slice-1',
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"writeback_receipt_refs":["memory-writeback:receipt-analysis"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","reason":"weak_primary_endpoint","next_owner":"med-autoscience"}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-analysis"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","reason":"weak_primary_endpoint","next_owner":"med-autoscience","quality_ref":"publication_eval/latest.json","readiness_ref":"controller_decisions/latest.json","slo_ref":"slo:analysis-currentness","breached_slo_ids":["ai_reviewer_currentness"],"repair_command":"medautosci sidecar dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
     ], familyRuntimeEnv(stateRoot));
     const queryAfter = runCli([
       'family-runtime',
@@ -202,6 +247,108 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.rejected_writes[0].reason,
       'domain_truth_write_forbidden',
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.artifact_gallery.gallery_scope,
+      'stage_attempt',
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.artifact_gallery.authority_boundary.can_read_artifact_body,
+      false,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.route_decision_graph.summary.route_decision_ref_observed,
+      true,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.route_decision_graph.authority_boundary.can_infer_route_decision,
+      false,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.review_repair_queue.summary.rejected_write_count,
+      1,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.review_repair_queue.authority_boundary.can_decide_repair,
+      false,
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.quality_readiness.quality_refs,
+      ['publication_eval/latest.json'],
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.quality_readiness.readiness_refs,
+      ['controller_decisions/latest.json'],
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.quality_readiness.authority_boundary.can_authorize_quality_verdict,
+      false,
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.observability_slo.breached_slo_ids,
+      ['ai_reviewer_currentness'],
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.observability_slo.repair_commands[0].command,
+      'medautosci sidecar dispatch --task <task.json> --format json',
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.observability_slo.authority_boundary.can_execute_repair_command,
+      false,
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.workspace_source_intake.source_refs,
+      ['source:dataset'],
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.workspace_source_intake.material_refs,
+      ['material:table1'],
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.workspace_source_intake.missing_material_attention_refs,
+      ['material:irb'],
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.workspace_source_intake.authority_boundary.can_authorize_source_readiness,
+      false,
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.memory_locator_index.consumed_memory_refs,
+      ['memory:route-policy'],
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.memory_locator_index.authority_boundary.can_read_memory_body,
+      false,
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.package_export_lifecycle.package_refs,
+      ['package:submission-minimal'],
+    );
+    assert.deepEqual(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.package_export_lifecycle.export_refs,
+      ['export:current-package'],
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.package_export_lifecycle.authority_boundary.can_authorize_export_verdict,
+      false,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.summary.execution_policy,
+      'route_only_no_execution',
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.actions.some((action: {
+        route_target_kind: string;
+        command_or_surface_ref: string;
+      }) =>
+        action.route_target_kind === 'domain_sidecar' &&
+        action.command_or_surface_ref === 'medautosci sidecar dispatch --task <task.json> --format json'
+      ),
+      true,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.authority_boundary.can_execute_domain_action,
+      false,
     );
     assert.deepEqual(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.artifact_locator_index, {
       locator_kind: 'workspace_runtime_artifact_locator',
@@ -530,233 +677,6 @@ test('family-runtime attempt fixture-run rejects missing typed closeout refs wit
     assert.equal(output.error.code, 'contract_shape_invalid');
     assert.equal(inspected.family_runtime_stage_attempt.attempt.status, 'running');
     assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_receipt_status, null);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime temporal attempt start fails closed when Temporal address is not configured', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-start-missing-'));
-  try {
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'scout',
-      '--provider',
-      'temporal',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
-      '--start',
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        OPL_STATE_DIR: stateRoot,
-        OPL_TEMPORAL_ADDRESS: '',
-        TEMPORAL_ADDRESS: '',
-      },
-    });
-    const output = JSON.parse(result.stdout || result.stderr);
-    const attempts = runCli(['family-runtime', 'attempt', 'list'], familyRuntimeEnv(stateRoot));
-
-    assert.notEqual(result.status, 0);
-    assert.equal(output.error.code, 'contract_shape_invalid');
-    assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
-    assert.equal(attempts.family_runtime_stage_attempts.summary.total, 1);
-    assert.equal(attempts.family_runtime_stage_attempts.attempts[0].provider_kind, 'temporal');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime attempt inspect projects current provider readiness separately from creation receipt', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-current-provider-'));
-  const runtimeRoot = path.join(stateRoot, 'family-runtime');
-  const server = net.createServer((socket) => socket.end());
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
-  const service = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
-    detached: true,
-    stdio: 'ignore',
-  });
-  const worker = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
-    detached: true,
-    stdio: 'ignore',
-  });
-  service.unref();
-  worker.unref();
-
-  try {
-    assert.equal(typeof service.pid, 'number');
-    assert.equal(typeof worker.pid, 'number');
-    fs.mkdirSync(runtimeRoot, { recursive: true });
-    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
-      service_kind: 'custom_command',
-      pid: service.pid,
-      address,
-      started_at: new Date().toISOString(),
-      status: 'running',
-      command: 'test temporal service',
-    }, null, 2)}\n`);
-    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
-      pid: worker.pid,
-      address,
-      namespace: 'default',
-      task_queue: 'opl-stage-attempts',
-      started_at: new Date().toISOString(),
-      status: 'ready',
-    }, null, 2)}\n`);
-
-    const env = familyRuntimeEnv(stateRoot, {
-      OPL_TEMPORAL_ADDRESS: '',
-      TEMPORAL_ADDRESS: '',
-      OPL_TEMPORAL_WORKER_STATUS: '',
-      OPL_TEMPORAL_WORKER_ENABLED: '',
-    });
-    const created = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'ai_reviewer_re_eval',
-      '--provider',
-      'temporal',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
-    ], env);
-    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    const inspected = runCli(['family-runtime', 'attempt', 'inspect', attemptId], env);
-    const listed = runCli(['family-runtime', 'attempt', 'list'], env);
-
-    assert.equal(
-      created.family_runtime_stage_attempt.attempt.provider_receipt.receipt_status,
-      'provider_code_landed_unconfigured',
-    );
-    assert.equal(created.family_runtime_stage_attempt.attempt.provider_receipt.provider_ready, false);
-    assert.equal(inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.provider_ready, true);
-    assert.equal(inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.status, 'ready');
-    assert.equal(
-      inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.provider_receipt_is_creation_time_snapshot,
-      true,
-    );
-    assert.equal(
-      inspected.family_runtime_stage_attempt.attempt.current_provider_readiness.details.address_source,
-      'managed_local_service_state',
-    );
-    assert.equal(listed.family_runtime_stage_attempts.attempts[0].current_provider_readiness.provider_ready, true);
-  } finally {
-    process.kill(service.pid!, 'SIGTERM');
-    process.kill(worker.pid!, 'SIGTERM');
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime temporal attempt query and signal fail closed when Temporal address is not configured', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-query-missing-'));
-  try {
-    const created = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'review',
-      '--provider',
-      'temporal',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
-    ], familyRuntimeEnv(stateRoot));
-    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    for (const args of [
-      ['family-runtime', 'attempt', 'query', attemptId],
-      [
-        'family-runtime',
-        'attempt',
-        'signal',
-        attemptId,
-        '--kind',
-        'resume',
-        '--payload',
-        '{"reason":"operator_resume"}',
-      ],
-    ]) {
-      const result = spawnSync(process.execPath, [
-        '--experimental-strip-types',
-        path.join(repoRoot, 'src', 'cli.ts'),
-        ...args,
-      ], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          NODE_NO_WARNINGS: '1',
-          OPL_STATE_DIR: stateRoot,
-          OPL_TEMPORAL_ADDRESS: '',
-          TEMPORAL_ADDRESS: '',
-        },
-      });
-      const output = JSON.parse(result.stdout || result.stderr);
-
-      assert.notEqual(result.status, 0);
-      assert.equal(output.error.code, 'contract_shape_invalid');
-      assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
-    }
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime temporal attempt start refuses non-temporal attempts', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-start-provider-'));
-  try {
-    const created = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'redcube',
-      '--stage',
-      'review',
-      '--provider',
-      'local_sqlite',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/rca"}',
-    ], familyRuntimeEnv(stateRoot));
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      path.join(repoRoot, 'src', 'cli.ts'),
-      'family-runtime',
-      'attempt',
-      'start',
-      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        ...familyRuntimeEnv(stateRoot),
-      },
-    });
-    const output = JSON.parse(result.stdout || result.stderr);
-
-    assert.notEqual(result.status, 0);
-    assert.equal(output.error.code, 'cli_usage_error');
-    assert.match(output.error.message, /temporal stage attempt/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

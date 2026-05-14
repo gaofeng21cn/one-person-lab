@@ -2,7 +2,7 @@
 
 # Shared Foundation
 
-> Current-status note (`2026-05-11`): this shared-foundation reference now uses the active OPL wording. Read lower-level domain execution language as `domain harness / controller`; current public docs describe `MAS`, `MAG`, and `RCA` as independent domain agents reached through OPL activation or direct Codex/app-skill entry.
+> Archive note (`2026-05-14`): this page has been absorbed into the current OPL family development reference, public operating model, and active shared runtime/domain contracts. It is retained only as historical bilingual provenance for the earlier Shared Foundation framing, not as an active support document.
 
 `OPL` groups multiple workstreams into one system not simply because they all involve Agents, but because they reuse the same foundational layers through a stage-led framework model.
 
@@ -117,4 +117,8 @@ It already has three active domain-agent surfaces: `MAS`, `MAG`, and `RCA`.
 
 ## Further Reading
 
-- [Shared Foundation Ownership](./shared-foundation-ownership.md)
+- [OPL Family Development Reference](../../../active/opl-family-development-reference.zh-CN.md)
+- [OPL Operating Model](../../../public/operating-model.md)
+- [Shared Runtime Contract](../../../active/shared-runtime-contract.md)
+- [Shared Domain Contract](../../../active/shared-domain-contract.md)
+- [Archived Shared Foundation Ownership](./shared-foundation-ownership.md)

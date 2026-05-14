@@ -39,6 +39,7 @@ import {
   buildTemporalStageAttemptWorkflowContract,
   buildTemporalStageAttemptWorkflowInput,
 } from './family-runtime-temporal.ts';
+import { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-generic-projections.ts';
 
 export {
   createStageAttemptTable,
@@ -109,6 +110,14 @@ function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
 function stringListFrom(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function recordListFrom(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => (
+        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+      ))
     : [];
 }
 
@@ -578,7 +587,68 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
   const latestCloseout = closeouts.at(-1)?.packet as Record<string, unknown> | undefined;
   const closeoutRefs = stringListFrom(attempt.closeout_refs);
   const consumedRefs = stringListFrom(latestCloseout?.consumed_refs);
+  const consumedMemoryRefs = stringListFrom(latestCloseout?.consumed_memory_refs);
   const writebackReceiptRefs = stringListFrom(latestCloseout?.writeback_receipt_refs);
+  const rejectedWrites = recordListFrom(latestCloseout?.rejected_writes);
+  const domainReadyVerdict = typeof latestCloseout?.domain_ready_verdict === 'string'
+    ? latestCloseout.domain_ready_verdict
+    : null;
+  const nextOwner = typeof latestCloseout?.next_owner === 'string'
+    ? latestCloseout.next_owner
+    : typeof attempt.route_impact.next_owner === 'string'
+      ? attempt.route_impact.next_owner
+      : attempt.domain_id;
+  const controlledApplyContract = buildFamilyRuntimeControlledApplyContract({
+    domainId: attempt.domain_id,
+    stageId: attempt.stage_id,
+    workspaceLocator: attempt.workspace_locator,
+    routeImpact: attempt.route_impact,
+  });
+  const lifecyclePrimitives = buildFamilyRuntimeLifecyclePrimitives({
+    workspaceLocator: attempt.workspace_locator,
+    artifactRefs: [
+      ...closeoutRefs,
+      ...consumedRefs,
+      ...writebackReceiptRefs,
+    ],
+  });
+  const genericProjections = buildAttemptGenericProjections({
+    stage_attempt_id: attempt.stage_attempt_id,
+    domain_id: attempt.domain_id,
+    stage_id: attempt.stage_id,
+    next_owner: nextOwner,
+    route_impact: attempt.route_impact,
+    workspace_locator: attempt.workspace_locator,
+    source_fingerprint: attempt.source_fingerprint,
+    checkpoint_refs: stringListFrom(attempt.checkpoint_refs),
+    closeout_refs: closeoutRefs,
+    consumed_refs: consumedRefs,
+    consumed_memory_refs: consumedMemoryRefs,
+    writeback_receipt_refs: writebackReceiptRefs,
+    artifact_refs: [
+      ...closeoutRefs,
+      ...consumedRefs,
+      ...writebackReceiptRefs,
+    ],
+    rejected_writes: rejectedWrites,
+    attention_flags: [
+      attempt.status === 'human_gate' || humanGateLedger.length > 0 || stringListFrom(attempt.human_gate_refs).length > 0
+        ? 'human_gate'
+        : null,
+      resumeLedger.length > 0 ? 'resume_available' : null,
+      attempt.status === 'dead_lettered' ? 'dead_lettered' : null,
+      attempt.blocked_reason ? 'blocked' : null,
+      rejectedWrites.length > 0 ? 'rejected_writes' : null,
+    ].filter((flag): flag is string => Boolean(flag)),
+    human_gate_refs: stringListFrom(attempt.human_gate_refs),
+    human_gate_ledger: humanGateLedger,
+    resume_ledger: resumeLedger,
+    dead_letter: taskDeadLetterForAttempt(db, attempt),
+    domain_ready_verdict: domainReadyVerdict,
+    controlled_apply_contract: controlledApplyContract,
+    lifecycle_primitives: lifecyclePrimitives,
+    current_provider_readiness: null,
+  });
   return {
     stage_attempt_query: {
       surface_kind: 'stage_attempt_query',
@@ -592,20 +662,9 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
           ? buildTemporalStageAttemptWorkflowInput(attempt)
           : null,
       codex_stage_activity: buildCodexStageActivityInput({ attempt }),
-      lifecycle_primitives: buildFamilyRuntimeLifecyclePrimitives({
-        workspaceLocator: attempt.workspace_locator,
-        artifactRefs: [
-          ...closeoutRefs,
-          ...consumedRefs,
-          ...writebackReceiptRefs,
-        ],
-      }),
-      controlled_apply_contract: buildFamilyRuntimeControlledApplyContract({
-        domainId: attempt.domain_id,
-        stageId: attempt.stage_id,
-        workspaceLocator: attempt.workspace_locator,
-        routeImpact: attempt.route_impact,
-      }),
+      lifecycle_primitives: lifecyclePrimitives,
+      controlled_apply_contract: controlledApplyContract,
+      ...genericProjections,
       operator_visibility: {
         provider_kind: attempt.provider_kind,
         attempt_id: attempt.stage_attempt_id,
@@ -621,15 +680,13 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
           checkpoint_refs: attempt.checkpoint_refs,
         },
         consumed_refs: consumedRefs,
-        consumed_memory_refs: Array.isArray(latestCloseout?.consumed_memory_refs)
-          ? latestCloseout.consumed_memory_refs
-          : [],
+        consumed_memory_refs: consumedMemoryRefs,
         writeback_receipt_refs: writebackReceiptRefs,
         closeout_refs: attempt.closeout_refs,
         closeout_receipt_status: attempt.closeout_receipt_status,
         route_impact: attempt.route_impact,
-        rejected_writes: Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [],
-        next_owner: typeof latestCloseout?.next_owner === 'string' ? latestCloseout.next_owner : null,
+        rejected_writes: rejectedWrites,
+        next_owner: nextOwner,
         human_gate_refs: attempt.human_gate_refs,
         human_gate_ledger: humanGateLedger,
         user_instruction_ledger: userInstructionLedger,
@@ -644,10 +701,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       },
       completion_boundary: {
         provider_completion: attempt.status === 'completed' ? 'completed' : 'not_completed',
-        domain_ready_verdict:
-          typeof latestCloseout?.domain_ready_verdict === 'string'
-            ? latestCloseout.domain_ready_verdict
-            : null,
+        domain_ready_verdict: domainReadyVerdict,
         provider_completion_is_domain_ready: false,
       },
       signals: listStageAttemptSignals(db, stageAttemptId),

@@ -2,6 +2,8 @@
 
 状态锚点：`2026-04-11`
 
+> 2026-05-14 生命周期说明：本文是历史 runtime substrate benchmark。正文中的 `gateway owner process`、`Domain Harness OS`、`OPL Gateway` 与 gateway-first 落地顺序反映 2026-04 Hermes 学习阶段，不再代表当前 OPL runtime target、provider target 或默认执行路线。当前 active owner 是 stage-led OPL framework roadmap、Temporal provider plan、runtime naming/boundary contract 和 Hermes executor evaluation；`hermes_agent` 只作为显式非默认 executor adapter/backend 保留，旧 Hermes provider / Gateway / readiness / compatibility surface 只按 provenance、diagnostic 或 negative-guard 阅读。
+
 ## 文档目的
 
 这份文档把 `Hermes Agent` 作为一个外部工程参照物，专门研究它在长期在线 agent runtime、gateway、session、memory、cron、approval 与 profile isolation 上已经做成熟的 substrate 设计。
@@ -14,14 +16,14 @@
 2. 哪些设计要经过 domain-oriented 改写后才能吸收。
 3. 哪些设计即使成熟，也不应该进入 `OPL` 的长期主线。
 
-这份文档属于 `docs/references/` 下的内部参考级文档。
+这份文档曾属于 `docs/references/` 下的内部参考级文档；当前已归入 `docs/history/runtime-substrate/`。
 它不反向抬升为 `OPL` 的公开产品定位真相，也不替代：
 
-- `docs/operating-model.zh-CN.md`
-- `docs/shared-runtime-contract.zh-CN.md`
-- `docs/shared-domain-contract.zh-CN.md`
-- `docs/shared-foundation.zh-CN.md`
-- `docs/unified-harness-engineering-substrate.zh-CN.md`
+- `docs/public/operating-model.zh-CN.md`
+- `docs/active/shared-runtime-contract.zh-CN.md`
+- `docs/active/shared-domain-contract.zh-CN.md`
+- `docs/active/opl-family-development-reference.zh-CN.md`
+- `docs/public/unified-harness-engineering-substrate.zh-CN.md`
 - `AGENTS.md`
 - `contracts/README.md`
 - `contracts/opl-framework/README.zh-CN.md`
@@ -31,6 +33,7 @@
 - `docs/history/runtime-substrate/opl-vertical-online-agent-platform-roadmap.md`
 - `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`
 - `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
+- `docs/references/runtime-substrate/hermes-agent-executor-evaluation.md`
 
 ## 对标范围
 

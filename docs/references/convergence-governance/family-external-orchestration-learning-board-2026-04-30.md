@@ -6,7 +6,7 @@
 
 默认参考来源：
 
-- `MAS` intake：`med-autoscience/docs/program/external_agent_orchestration_learning_intake_2026_04_30.md`
+- `MAS` intake：`med-autoscience/docs/history/program/external_agent_orchestration_learning_intake_2026_04_30.md`
 - `openai/symphony@58cf97d`
 - `msitarzewski/agency-agents@783f6a7`
 - `Biajin-PKU/research-harness@006ab44`

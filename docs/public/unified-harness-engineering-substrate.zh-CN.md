@@ -10,7 +10,7 @@
 ## 它是什么
 
 `Unified Harness Engineering Substrate` 是 `OPL` 之下共享的 Harness Engineering 上位语言。
-它定义的是多个 domain system 共同继承的一组稳定约束，而不是取代它们各自的 domain contract、domain-agent entry 与内部 harness/controller 实现。
+它定义的是多个 domain system 共同继承的一组稳定约束，而不是取代它们各自的 domain contract、domain-agent entry、domain-owned authority、runtime controller 与 delivery system。
 
 当前更准确的理解是：
 
@@ -31,8 +31,8 @@
 - “所有 domain 已经共享完全一致对象模型”的声明
 - “所有 domain 已经落在同一个公共代码仓”的声明
 - 任何一个 domain-agent entry 的替代品
-- 任何一个 `Domain Harness OS` 的替代品
-- `OPL` 可以绕过 public domain-agent entry、直接触碰 domain-local harness 执行面的许可
+- 任何一个 domain-owned authority、runtime controller 或 delivery system 的替代品
+- `OPL` 可以绕过 public domain-agent entry、直接触碰 domain-local execution plane 的许可
 - `Hermes` 或其他 runtime 项目的简单套壳说法
 
 ## 分层关系
@@ -46,7 +46,7 @@ Human / Agent
           -> Shared Runtime Contract
           -> Shared Domain Contract
               -> Domain-agent entry
-                  -> Domain harness/controller
+                  -> Domain-owned authority / runtime controller / delivery system
                       -> Execution Plane
                           -> Deployment Shape
 ```
@@ -63,8 +63,8 @@ Human / Agent
   - 负责跨 domain 共享的正式行为合同
 - `Domain-agent entry`
   - 负责 public domain-local task entry 与 product-entry surface
-- `Domain harness/controller`
-  - 负责 domain-local 的执行逻辑、审计面与交付语义
+- `Domain-owned authority / runtime controller / delivery system`
+  - 负责 domain-local 的领域真相、执行控制、审计面与交付语义
 - `Execution Plane`
   - 负责实际驱动 session、run、watch、resume 与 delivery 的运行层
 - `Deployment Shape`
@@ -139,7 +139,7 @@ Human / Agent
 - `Shared Domain Contract`
   - 逐步承接 formal-entry matrix、`per-run handle`、durable report、audit trail、gate semantics 等跨 domain 正式行为合同
 - 各 domain agent
-  - 继续持有自己的 formal entry、domain object、gate、audit、delivery、harness/controller boundary 与 canonical truth
+  - 继续持有自己的 formal entry、domain object、gate、audit、delivery、runtime controller boundary 与 canonical truth
 
 因此，后续更合理的方向不是“直接把三个业务仓改造成同一种执行内核”，而是：
 
@@ -172,4 +172,4 @@ Human / Agent
 - domain-specific contract 继续留在各自 domain
 - `OPL` 负责解释整个体系如何拼起来，而不是吞掉 domain-local runtime owner 权限
 
-这样，后续新增 Harness OS 时，就能更像是在同一套框架思想上演化，而不是重复发明几套彼此不兼容的系统。
+这样，后续新增 domain agent 时，就能更像是在同一套框架思想上演化，而不是重复发明几套彼此不兼容的系统。

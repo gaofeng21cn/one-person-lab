@@ -2,7 +2,7 @@
 
 # 共享基础结构
 
-> 当前状态说明（`2026-05-11`）：本文已经使用当前 OPL 活跃口径。下层 domain 执行语言按 `domain harness / controller` 理解；当前公开文档把 `MAS`、`MAG`、`RCA` 写成可由 OPL activation 或 Codex/app-skill direct entry 调用的独立 domain agents。
+> 归档说明（`2026-05-14`）：本文已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。这里仅作为早期 Shared Foundation framing 的双语历史来源保留，不再是 active support 文档。
 
 `OPL` 之所以能把多个工作流纳入同一体系，不只是因为它们都能让 Agent 参与，而是因为它们通过 stage-led framework model 复用同一套基础层。
 
@@ -117,4 +117,8 @@
 
 ## 延伸阅读
 
-- [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
+- [OPL Family 开发主参考](../../../active/opl-family-development-reference.zh-CN.md)
+- [OPL 运行模型](../../../public/operating-model.zh-CN.md)
+- [共享运行时合同](../../../active/shared-runtime-contract.zh-CN.md)
+- [共享领域合同](../../../active/shared-domain-contract.zh-CN.md)
+- [归档版共享基础结构归属](./shared-foundation-ownership.zh-CN.md)

@@ -26,8 +26,9 @@ Current entries:
 | `family-product-entry-and-domain-handoff-architecture.md` | operator / agent / product entry taxonomy, handoff envelope, domain authority boundary | Domain-Agent Admission Contract, public docs, current development lines |
 | `family-lightweight-direct-entry-rollout-board.md` | `frontdoor_surface` / `operator_loop_surface` split, direct path and OPL handoff alignment, and no drift across domain entry vocabularies | Domain-Agent Admission Contract, current development lines |
 | `opl-product-entry-and-hermes-kernel-integration.md` | no fork/vendor of an external runtime, do not expose users to low-level runtime assembly, and Hermes-first miswording prohibitions | Runtime naming and boundary contract, Temporal provider plan, stage-led roadmap |
+| `hermes-agent-runtime-substrate-benchmark.md` | useful runtime substrate comparison points from Hermes, with gateway-first / Domain Harness OS conclusions superseded | Runtime naming and boundary contract, Temporal provider plan, Hermes executor evaluation |
 | `opl-vertical-online-agent-platform-roadmap.md` | vertical product family, shared runtime/domain contracts, and future managed runtime vs current reality split | Runtime naming and boundary contract, public roadmap, stage-led roadmap |
-| `mas-top-level-cutover-board.md` | OPL -> MAS handoff fields, MAS display/research separation, and transition-seam honesty | OPL current development lines, MAS program portfolio/current development lines |
+| `mas-top-level-cutover-board.md` | OPL -> MAS handoff fields, MAS display/research separation, and transition-seam honesty | OPL current development lines, MAS active portfolio/current development lines |
 
 ## Tombstone Rules
 

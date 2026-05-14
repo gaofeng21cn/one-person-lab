@@ -163,7 +163,7 @@
 
 状态：先被 2026-05-08 的 Hermes-first online substrate 决策取代，又被 2026-05-10 的 Temporal-backed production runtime 决策 supersede。当前 Full OPL readiness 要求 Temporal-backed family runtime provider ready；本段只保留迁移背景。
 
-原因：当时新用户首屏优先目标是尽快进入 `OPL` 的核心工作与已准入 domain 工作；迁移期曾把 Hermes online-management gateway 视为渐进就绪项，但 gateway system service 的加载状态不应被写成底层 runtime 未就绪式首屏 blocker。当前该口径已被 Temporal-backed family runtime provider 取代；`hermes_agent` 只保留为显式非默认 executor adapter/backend。
+原因：当时新用户首屏优先目标是尽快进入 `OPL` 的核心工作与已准入 domain 工作；迁移期曾把 Hermes online-management gateway 视为渐进就绪项，但 gateway system service 的加载状态不应被写成底层 runtime 未就绪式首屏 blocker。当前该口径已被 Temporal-backed family runtime provider 取代；`hermes_agent` 属于当前 canonical executor backend set，并且只能作为显式非默认 executor adapter/backend 使用。
 
 影响：
 

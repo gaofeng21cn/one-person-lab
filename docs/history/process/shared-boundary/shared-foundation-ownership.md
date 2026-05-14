@@ -2,7 +2,7 @@
 
 # Shared Foundation Ownership
 
-> Current-status note (`2026-05-11`): this document is retained as a shared-foundation ownership reference using the active OPL wording. Read lower-level execution language as `domain harness / controller`; the current public model uses independent domain agents (`MAS`, `MAG`, `RCA`) with domain-owned truth surfaces.
+> Archive note (`2026-05-14`): this ownership split has been absorbed into the current OPL family development reference, public operating model, and active shared runtime/domain contracts. This page is retained only as historical provenance for the earlier Shared Foundation framing.
 
 ## Purpose
 

@@ -40,8 +40,10 @@ lifecycle, projection, workbench, and observability capabilities should be
 lifted into OPL. The canonical directory set is
 `active/public/product/runtime/delivery/source/policies/specs/references/history`.
 Older `program`, `plans`, and `capabilities` directories in managed domain repos
-become migration sources, contract-linked records, or historical provenance;
-new recurring material should enter the canonical directory set first.
+are direct migration targets: active material should move into canonical
+directories, and any retained old path must be limited to external/upstream
+support, explicit history/provenance, or tombstone context. New recurring
+material enters the canonical directory set first.
 `opl-aion-shell` docs are upstream AionUI dependency docs and are excluded from
 this repository-directory governance.
 
@@ -119,7 +121,7 @@ current OPL owner split is:
 | Root README | `README.md`, `README.zh-CN.md` | User install/start entry and product-family overview | Technical details should point to docs index and core five; stale public links must be corrected immediately. |
 | Core five | `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md` | Active truth for role, boundary, state, hard constraints, and decisions | Reference docs stay subordinate to these files. |
 | Docs governance | `docs/docs_portfolio_consolidation.md` | Current documentation lifecycle owner | New long-lived docs must be admitted through this lifecycle map. |
-| `docs/active/` | `README*`, current development lines, development-document portfolio, public surface index, domain onboarding, runtime naming, shared foundation/runtime/domain contracts | Active human-readable support for current runtime, activation, onboarding, shared-boundary language, and development-document disposition | Gateway/federation/frontdoor material is referenced only as history or migration background. |
+| `docs/active/` | `README*`, current development lines, development-document portfolio, public surface index, domain onboarding, runtime naming, shared runtime/domain contracts, and closure gap matrix | Active human-readable support for current runtime, activation, onboarding, shared-boundary language, production closure, and development-document disposition | Gateway/federation/frontdoor material is referenced only as history or migration background. |
 | `docs/public/` | `README*`, roadmap, task map, operating model, UHS narrative | Public product-direction support after the repository home | UHS remains a support narrative; implementation authority lives in active contracts, the core five, and machine-readable contracts. |
 | `docs/specs/` | `README*` | Active spec index | The two April 2026 Product API / ACP specs have moved to `docs/history/process/specs/`; when this index is empty, current runtime/product-boundary truth lives in the core five, `docs/active/`, runtime-substrate roadmap, and machine-readable contracts. |
 | `docs/references/current-support/` | `README*`, GUI/WebUI/install/release/skill/test support references | Current operational support references | Support commands and deployment notes must stay subordinate to CLI/API/contracts/source truth. |
@@ -140,7 +142,9 @@ current OPL owner split is:
 | `docs/active/development-document-portfolio*` | Keep as active support | Active docs index plus docs portfolio | It classifies old development content by current role: merge, retain, downgrade, retire, or archive. |
 | `docs/active/opl-public-surface-index*` | Keep active support | `docs/active/README*` and core five | It correctly tombstones gateway/federation/routed-action prose and points to current runtime/activation surfaces. |
 | `docs/active/opl-domain-onboarding-contract*` | Keep active support | Domain admission contract plus machine-readable OPL framework contracts | Admission remains active, but historical execution-model companions must stay marked as history. |
-| `docs/active/shared-*` and `opl-runtime-naming-and-boundary-contract*` | Keep active support | Shared-boundary owner docs | These define shared language as human-readable support. |
+| `docs/active/shared-runtime-contract*`, `docs/active/shared-domain-contract*`, and `opl-runtime-naming-and-boundary-contract*` | Keep active support | Shared-boundary owner docs | These define current runtime/domain boundary language as human-readable support. |
+| `docs/history/process/shared-boundary/shared-foundation*` | Archived after absorption | OPL family development reference, public operating model, and active shared runtime/domain contracts | The reusable owner split has been copied into current owners; the old pages are retained only as bilingual provenance for the earlier Shared Foundation framing. |
+| `docs/history/process/plans/2026-05-14-production-functional-closure-plan.zh-CN.md` | Archived after absorption | Production framework closure gap matrix | The one-time parallel functional closure plan has completed; active follow-through now belongs in the current gap matrix, not a second active plan. |
 | `docs/public/roadmap*`, `task-map*`, `operating-model*` | Keep public support | Public docs index | They describe product direction and task semantics after the install/start entry. |
 | `docs/public/unified-harness-engineering-substrate*` | Keep as support narrative | Shared runtime/domain contract docs | It is useful umbrella language, but implementation truth lives in active contracts, core five, and machine-readable contracts. |
 | `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` | Archived as historical process spec | Core five plus stage-led framework roadmap | Its resource model was absorbed; its Product API / local 8787 / frontdoor-era wording is historical design context. |
@@ -232,9 +236,9 @@ All other long-lived docs must live in `active/`, `public/`, `specs/`, `referenc
 Cross-repo docs治理 must follow the same-name canonical docs taxonomy:
 
 - `OPL` owns family documentation language, cross-repo intake templates, shared governance references, and audit checklists.
-- `MAS` owns medical research truth; its older `program/` and `capabilities/` trees are migration sources that canonical `active/`, `product/`, `runtime/`, `delivery/`, and `source/` indexes must route explicitly.
-- `MAG` owns grant truth; its older `plans/` tree maps into canonical `active/`, while older path-stable specs may remain under `docs/specs/` only with active/history classification.
-- `RCA` owns visual-deliverable truth; its `program/` tree maps into canonical `active/`, while existing product/runtime/delivery/source/policies/references/history directories already match the family taxonomy.
+- `MAS` owns medical research truth; its former `program/` active material belongs in canonical `active/`, and its former `capabilities/medical-display/` material belongs in `delivery/medical-display/`.
+- `MAG` owns grant truth; its former `plans/` active material belongs in canonical `active/`, while older specs may remain under `docs/specs/` only with explicit active/history classification.
+- `RCA` owns visual-deliverable truth; its former `program/` active material belongs in canonical `active/`, with absorbed Phase 2 and Hermes proof records in `docs/history/`.
 - `MDS` is not an admitted OPL domain agent. It is a MAS-declared archive,
   backend-audit, source-provenance, explicit archive-import, upstream-intake,
   diagnostic, and parity-oracle reference.

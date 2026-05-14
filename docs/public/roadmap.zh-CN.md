@@ -32,7 +32,7 @@
 
 当前执行顺序见 [OPL 当前开发线路](../active/current-development-lines.zh-CN.md)：先完成 OPL framework foundation，再用 MAS 真实 paper line 作为第一条 production-closure 验收路径，同时保持 MAS/MAG/RCA descriptor migration 与 direct-skill parity 不退化；旧 operator wording 需要 no-default-caller 证据后退役，随后产品化到 OPL App Runtime Workbench，最后在 MAS owner-chain 证明稳定后推进 MAG/RCA controlled soak 和更宽的 domain acceptance。
 
-排除真实论文、基金和视觉交付长时 soak 后，仍需工程落地的功能性闭环见 [生产功能闭环一步到位计划](../active/production-functional-closure-plan.zh-CN.md)。这份计划把剩余能力拆成 provider readiness、owner receipt、domain memory/lifecycle apply、physical skeleton、legacy retirement、operator workbench 和 closeout gate 七条可并行 lane；每条 lane 要么给出可验证实现，要么给出机器可读 typed blocker。
+排除真实论文、基金和视觉交付长时 soak 后，当前功能性闭环 owner 已收口到 [生产级框架闭环差距矩阵](../active/production-framework-closure-gap-matrix.zh-CN.md)。2026-05-14 一次性并行计划已完成吸收，历史副本见 [生产功能闭环计划归档](../history/process/plans/2026-05-14-production-functional-closure-plan.zh-CN.md)；后续不再新增平行总计划，而是直接围绕矩阵里的 provider SLO、owner receipt、domain memory/lifecycle apply、physical skeleton、legacy retirement、operator workbench 和 live soak evidence gate 推进。
 
 ## 近期重点
 

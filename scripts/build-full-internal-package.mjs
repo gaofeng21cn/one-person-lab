@@ -210,6 +210,63 @@ function directoryFingerprint(root, runtimePrefix) {
   return hash.digest('hex');
 }
 
+function productionNodeModulesFingerprint(sourceRoot) {
+  const lockPath = path.join(sourceRoot, 'package-lock.json');
+  if (!fs.existsSync(lockPath)) {
+    return null;
+  }
+
+  const packageLock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  const productionPaths = listFullRuntimeProductionNodeModulePaths(packageLock);
+  const hash = crypto.createHash('sha256');
+  for (const relativePath of productionPaths) {
+    const absolutePath = path.join(sourceRoot, relativePath);
+    hash.update(relativePath);
+    hash.update(fs.existsSync(absolutePath) ? directoryFingerprint(absolutePath, relativePath) : 'missing');
+  }
+  return hash.digest('hex');
+}
+
+function assertOplRuntimeProductionDependencies(oplRoot) {
+  const packageJsonPath = path.join(oplRoot, 'package.json');
+  const packageLockPath = path.join(oplRoot, 'package-lock.json');
+  if (!fs.existsSync(packageJsonPath) || !fs.existsSync(packageLockPath)) {
+    throw new Error(`Full runtime OPL payload is missing package metadata under ${oplRoot}`);
+  }
+
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const dependencies = packageJson.dependencies ?? {};
+  const requiredTemporalPackages = [
+    '@temporalio/activity',
+    '@temporalio/client',
+    '@temporalio/common',
+    '@temporalio/worker',
+    '@temporalio/workflow',
+  ];
+  const missingDeclared = requiredTemporalPackages.filter((packageName) => typeof dependencies[packageName] !== 'string');
+  if (missingDeclared.length > 0) {
+    throw new Error(
+      `Full runtime OPL payload has Temporal runtime packages outside dependencies: ${missingDeclared.join(', ')}`,
+    );
+  }
+
+  const packageLock = JSON.parse(fs.readFileSync(packageLockPath, 'utf8'));
+  const missingProductionPaths = listFullRuntimeProductionNodeModulePaths(packageLock)
+    .filter((relativePath) => !fs.existsSync(path.join(oplRoot, relativePath)));
+  if (missingProductionPaths.length > 0) {
+    throw new Error([
+      `Full runtime OPL payload is missing ${missingProductionPaths.length} production node module path(s).`,
+      ...missingProductionPaths.slice(0, 20).map((relativePath) => `  - ${relativePath}`),
+      missingProductionPaths.length > 20 ? `  ... ${missingProductionPaths.length - 20} more omitted` : '',
+    ].filter(Boolean).join('\n'));
+  }
+
+  const temporalTestingPath = path.join(oplRoot, 'node_modules', '@temporalio', 'testing');
+  if (fs.existsSync(temporalTestingPath)) {
+    throw new Error('Full runtime OPL payload includes @temporalio/testing, which is a dev-only test server package.');
+  }
+}
+
 function directorySizeBytes(root) {
   let total = 0;
   if (!fs.existsSync(root)) {
@@ -601,6 +658,7 @@ function buildRuntimeCacheKeys(options, sources) {
         opl_commit: readGitHead(repoRoot),
         package_json_sha256: fileSha256(path.join(repoRoot, 'package.json')),
         package_lock_sha256: fileSha256(path.join(repoRoot, 'package-lock.json')),
+        production_node_modules_fingerprint: productionNodeModulesFingerprint(repoRoot),
         tsconfig_sha256: fileSha256(path.join(repoRoot, 'tsconfig.json')),
         packager_inputs: packagerInputs,
         exclude_policy_hash: excludePolicyHash,
@@ -756,6 +814,7 @@ function prepareRuntime(options, sources) {
       buildSkillsLayer(layerRoot, options);
     }),
   ];
+  assertOplRuntimeProductionDependencies(path.join(runtimeRoot, 'opl'));
   writeDomainMarkers(runtimeRoot, options, packagedAt);
 
   const components = {

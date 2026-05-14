@@ -79,9 +79,38 @@ function readPhysicalRootEvidenceRefs(value: unknown) {
 
   return [
     optionalString(value.anchor_ref),
+    optionalString(value.evidence_ref),
     ...readStringList(value.entrypoint_refs),
     ...readStringList(value.source_refs),
     ...readStringList(value.repo_refs),
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function readRecordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function readRefsFromFields(value: unknown, fields: string[]) {
+  if (!isRecord(value)) {
+    return [];
+  }
+  return fields.flatMap((field) => [
+    optionalString(value[field]),
+    ...readStringList(value[field]),
+  ]).filter((entry): entry is string => Boolean(entry));
+}
+
+function readSurfaceRef(value: unknown) {
+  if (typeof value === 'string') {
+    return optionalString(value) ? [value] : [];
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  return [
+    optionalString(value.ref),
+    optionalString(value.path),
+    optionalString(value.source_ref),
   ].filter((entry): entry is string => Boolean(entry));
 }
 
@@ -401,6 +430,252 @@ function buildPhysicalSkeletonEvidence(physicalSkeletonLayoutAudit: ReturnType<t
   };
 }
 
+function physicalSkeletonLegacyEvidenceObserved(value: unknown) {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (optionalString(value.legacy_active_path_policy) !== 'physically_removed_or_history_tombstone_only') {
+    return false;
+  }
+  const residue = readRecordList(value.legacy_active_path_residue);
+  if (residue.length === 0) {
+    return false;
+  }
+  const allowedStates = new Set([
+    'physically_removed_from_active_source',
+    'tombstone_only',
+    'history_tombstone_only',
+  ]);
+  return residue.every((entry) => {
+    const state = optionalString(entry.state);
+    return Boolean(state && allowedStates.has(state));
+  });
+}
+
+function activePathPolicyRetired(value: unknown) {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return Object.values(value).every((entry) => entry === false || typeof entry !== 'boolean');
+}
+
+function legacyNoActiveCallerEvidence(manifest: DomainManifestCatalogEntry['manifest']) {
+  const tombstone = isRecord(manifest?.legacy_retirement_tombstone_proof)
+    ? manifest.legacy_retirement_tombstone_proof
+    : null;
+  const residue = isRecord(manifest?.runtime_residue_retirement)
+    ? manifest.runtime_residue_retirement
+    : null;
+  const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
+    ? manifest.physical_skeleton_follow_through
+    : null;
+  const activeDefaultCallers = tombstone ? tombstone.active_default_callers : null;
+  const observed =
+    (Array.isArray(activeDefaultCallers) && activeDefaultCallers.length === 0)
+    || optionalString(tombstone?.status) === 'no_active_default_caller_proven'
+    || optionalString(residue?.status) === 'active_path_retired'
+    || activePathPolicyRetired(residue?.active_path_policy)
+    || physicalSkeletonLegacyEvidenceObserved(followThrough);
+  const sourceRefs = uniqueStrings([
+    ...readRefsFromFields(tombstone, ['source_refs', 'evidence_refs', 'no_active_caller_refs']),
+    ...readRefsFromFields(residue, ['source_refs', 'evidence_refs', 'no_active_caller_refs']),
+    ...readRecordList(residue?.source_refs).flatMap(readPhysicalRootEvidenceRefs),
+    ...readRefsFromFields(followThrough, ['source_refs', 'evidence_refs', 'no_active_caller_refs']),
+    ...readRecordList(followThrough?.legacy_active_path_residue).flatMap(readPhysicalRootEvidenceRefs),
+  ]);
+  return {
+    status: observed ? 'observed' : 'missing',
+    source_surface:
+      tombstone
+        ? 'legacy_retirement_tombstone_proof'
+        : residue
+          ? 'runtime_residue_retirement'
+          : physicalSkeletonLegacyEvidenceObserved(followThrough)
+            ? 'physical_skeleton_follow_through'
+            : null,
+    evidence_refs: sourceRefs,
+  };
+}
+
+function replacementParityEvidence(
+  manifest: DomainManifestCatalogEntry['manifest'],
+  physicalSkeletonLayoutAudit: ReturnType<typeof buildPhysicalSkeletonLayoutAudit>,
+) {
+  const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
+    ? manifest.physical_skeleton_follow_through
+    : null;
+  const tombstone = isRecord(manifest?.legacy_retirement_tombstone_proof)
+    ? manifest.legacy_retirement_tombstone_proof
+    : null;
+  const evidenceRefs = uniqueStrings([
+    ...readRefsFromFields(followThrough, [
+      'replacement_parity_refs',
+      'direct_skill_parity_refs',
+      'opl_hosted_parity_refs',
+      'no_regression_evidence_refs',
+      'parity_refs',
+    ]),
+    ...readRefsFromFields(tombstone, [
+      'replacement_parity_refs',
+      'direct_skill_parity_refs',
+      'opl_hosted_parity_refs',
+      'no_regression_evidence_refs',
+      'parity_refs',
+    ]),
+  ]);
+  const layoutAnchorsObserved = physicalSkeletonLayoutAudit.status === 'repo_source_anchor_evidence_observed';
+  return {
+    status: evidenceRefs.length > 0 ? 'observed' : 'missing',
+    evidence_refs: evidenceRefs,
+    layout_anchor_status: physicalSkeletonLayoutAudit.status,
+    layout_anchors_observed: layoutAnchorsObserved,
+    required_refs: [
+      'direct_skill_path_parity',
+      'opl_hosted_path_parity',
+      'replacement_or_no_regression_evidence',
+    ],
+  };
+}
+
+function provenanceRetentionEvidence(manifest: DomainManifestCatalogEntry['manifest']) {
+  const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
+    ? manifest.physical_skeleton_follow_through
+    : null;
+  const tombstone = isRecord(manifest?.legacy_retirement_tombstone_proof)
+    ? manifest.legacy_retirement_tombstone_proof
+    : null;
+  const residue = isRecord(manifest?.runtime_residue_retirement)
+    ? manifest.runtime_residue_retirement
+    : null;
+  const sourceProvenance = isRecord(manifest?.source_provenance)
+    ? manifest.source_provenance
+    : null;
+  const evidenceRefs = uniqueStrings([
+    ...readRefsFromFields(followThrough, ['provenance_refs', 'history_refs', 'tombstone_refs']),
+    ...readRefsFromFields(tombstone, ['provenance_refs', 'history_refs', 'tombstone_refs', 'source_refs']),
+    ...readRefsFromFields(residue, ['provenance_refs', 'history_refs', 'tombstone_refs', 'source_refs']),
+    ...readRecordList(followThrough?.legacy_active_path_residue).flatMap(readPhysicalRootEvidenceRefs),
+    ...readSurfaceRef(sourceProvenance?.source_provenance_ref),
+    ...readSurfaceRef(sourceProvenance?.historical_fixture_ref),
+    ...readSurfaceRef(sourceProvenance?.explicit_archive_import_ref),
+    ...readSurfaceRef(sourceProvenance?.parity_oracle_ref),
+  ]);
+  return {
+    status: evidenceRefs.length > 0 ? 'observed' : 'missing',
+    evidence_refs: evidenceRefs,
+    required_refs: [
+      'history_or_tombstone_ref',
+      'source_provenance_or_restore_ref',
+      'parity_oracle_ref_when_needed',
+    ],
+  };
+}
+
+function historyTombstoneEvidence(manifest: DomainManifestCatalogEntry['manifest']) {
+  const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
+    ? manifest.physical_skeleton_follow_through
+    : null;
+  const tombstone = isRecord(manifest?.legacy_retirement_tombstone_proof)
+    ? manifest.legacy_retirement_tombstone_proof
+    : null;
+  const evidenceRefs = uniqueStrings([
+    ...readRefsFromFields(tombstone, ['tombstone_refs', 'history_refs', 'source_refs']),
+    ...readRefsFromFields(followThrough, ['tombstone_refs', 'history_refs']),
+    ...readRecordList(followThrough?.legacy_active_path_residue)
+      .filter((entry) => optionalString(entry.state)?.includes('tombstone'))
+      .flatMap(readPhysicalRootEvidenceRefs),
+  ]);
+  const policyObserved = physicalSkeletonLegacyEvidenceObserved(followThrough)
+    || optionalString(tombstone?.status) === 'no_active_default_caller_proven';
+  return {
+    status: policyObserved || evidenceRefs.length > 0 ? 'observed' : 'missing',
+    policy: optionalString(followThrough?.legacy_active_path_policy) ?? null,
+    evidence_refs: evidenceRefs,
+  };
+}
+
+function retiredEntryResidueEvidence(manifest: DomainManifestCatalogEntry['manifest']) {
+  const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
+    ? manifest.physical_skeleton_follow_through
+    : null;
+  const tombstone = isRecord(manifest?.legacy_retirement_tombstone_proof)
+    ? manifest.legacy_retirement_tombstone_proof
+    : null;
+  const retainedEntryRefs = uniqueStrings([
+    ...readRefsFromFields(followThrough, [
+      'retained_entry_refs',
+      'retired_entry_refs',
+      'legacy_entry_refs',
+    ]),
+    ...readRefsFromFields(tombstone, [
+      'retained_entry_refs',
+      'retired_entry_refs',
+      'legacy_entry_refs',
+    ]),
+  ]);
+  return {
+    status: retainedEntryRefs.length === 0 ? 'no_retained_legacy_entries' : 'blocked_retained_legacy_entries',
+    retained_entry_refs: retainedEntryRefs,
+    retained_entry_policy: 'delete_or_history_tombstone_only',
+  };
+}
+
+function buildPhysicalSkeletonFollowThroughGate(
+  manifest: DomainManifestCatalogEntry['manifest'],
+  physicalSkeletonLayoutAudit: ReturnType<typeof buildPhysicalSkeletonLayoutAudit>,
+) {
+  const noActiveCaller = legacyNoActiveCallerEvidence(manifest);
+  const replacementParity = replacementParityEvidence(manifest, physicalSkeletonLayoutAudit);
+  const provenanceRetention = provenanceRetentionEvidence(manifest);
+  const historyTombstone = historyTombstoneEvidence(manifest);
+  const retainedLegacyEntries = retiredEntryResidueEvidence(manifest);
+  const checklist = {
+    no_active_caller: noActiveCaller,
+    replacement_parity: replacementParity,
+    provenance_retention: provenanceRetention,
+    history_or_tombstone: historyTombstone,
+    retained_legacy_entries: retainedLegacyEntries,
+  };
+  const blockedReasons = [
+    noActiveCaller.status !== 'observed' ? 'missing_no_active_caller_evidence' : null,
+    replacementParity.status !== 'observed' ? 'missing_replacement_parity_evidence' : null,
+    provenanceRetention.status !== 'observed' ? 'missing_provenance_retention_evidence' : null,
+    historyTombstone.status !== 'observed' ? 'missing_history_or_tombstone_evidence' : null,
+    retainedLegacyEntries.status !== 'no_retained_legacy_entries'
+      ? 'retained_legacy_entries_declared'
+      : null,
+  ].filter((entry): entry is string => Boolean(entry));
+  const deleteReady = blockedReasons.length === 0;
+  return {
+    surface_kind: 'opl_physical_skeleton_follow_through_gate',
+    gate_scope: 'repo_source_physical_skeleton_and_legacy_retirement',
+    status: deleteReady
+      ? 'ready_for_supervised_physical_delete_or_history_tombstone'
+      : 'blocked_until_follow_through_evidence_complete',
+    checklist,
+    evidence_refs: uniqueStrings([
+      ...noActiveCaller.evidence_refs,
+      ...replacementParity.evidence_refs,
+      ...provenanceRetention.evidence_refs,
+      ...historyTombstone.evidence_refs,
+    ]),
+    delete_gate: {
+      delete_ready: deleteReady,
+      delete_policy: 'delete_or_history_tombstone_only',
+      blocked_reasons: blockedReasons,
+      can_execute_delete: false,
+      can_create_retained_legacy_entry: false,
+    },
+    authority_boundary: {
+      opl_role: 'read_only_follow_through_gate',
+      domain_role: 'repo_layout_and_legacy_surface_owner',
+      can_move_files: false,
+      can_delete_files: false,
+      can_keep_retained_legacy_entries: false,
+    },
+  };
+}
+
 export function normalizeStandardDomainAgentSkeleton(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -493,6 +768,10 @@ export function buildStandardDomainAgentSkeletonInspection(
     repoSourceDirs,
     issues,
   });
+  const physicalSkeletonFollowThroughGate = buildPhysicalSkeletonFollowThroughGate(
+    entry.manifest,
+    physicalSkeletonLayoutAudit,
+  );
   const productionClosureGaps = buildProductionClosureGaps({
     physicalEvidenceObserved: physicalSkeletonLayoutAudit.status === 'repo_source_anchor_evidence_observed',
   });
@@ -517,6 +796,7 @@ export function buildStandardDomainAgentSkeletonInspection(
     descriptor_readiness: descriptorReadiness,
     physical_skeleton_layout_audit: physicalSkeletonLayoutAudit,
     physical_skeleton_evidence: buildPhysicalSkeletonEvidence(physicalSkeletonLayoutAudit),
+    physical_skeleton_follow_through_gate: physicalSkeletonFollowThroughGate,
     production_closure_gaps: evidencedProductionClosureGaps,
     provider_closure_evidence: providerEvidence,
     artifact_boundary: skeleton?.artifact_boundary ?? null,

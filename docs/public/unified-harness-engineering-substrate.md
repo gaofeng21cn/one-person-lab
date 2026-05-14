@@ -10,7 +10,7 @@ It exists so that `OPL` can present a coherent system family without pretending 
 ## What It Is
 
 `Unified Harness Engineering Substrate` is the shared Harness Engineering umbrella language under `OPL`.
-It describes the reusable rules that multiple domain systems should inherit while keeping their own domain contracts, domain-agent entries, and internal harness/controller implementations.
+It describes the reusable rules that multiple domain systems should inherit while keeping their own domain contracts, domain-agent entries, domain-owned authority, runtime controllers, and delivery systems.
 
 The more accurate current reading is:
 
@@ -31,8 +31,8 @@ The substrate is not:
 - a claim that every domain already uses one identical object model
 - a claim that every domain already runs on one shared code repository
 - a replacement for any domain-agent entry
-- a replacement for any `Domain Harness OS`
-- a license for `OPL` to bypass a public domain-agent entry and touch domain-local harness execution directly
+- a replacement for any domain-owned authority, runtime controller, or delivery system
+- a license for `OPL` to bypass a public domain-agent entry and touch a domain-local execution plane directly
 - a claim that `UHS` is just a wrapper around `Hermes` or any other runtime project
 
 ## Layering
@@ -46,7 +46,7 @@ Human / Agent
           -> Shared Runtime Contract
           -> Shared Domain Contract
               -> Domain-agent entry
-                  -> Domain harness/controller
+                  -> Domain-owned authority / runtime controller / delivery system
                       -> Execution Plane
                           -> Deployment Shape
 ```
@@ -63,8 +63,8 @@ The layers mean different things:
   - owns the cross-domain contract for formal product behavior
 - `Domain-agent entry`
   - owns the public domain-local task entry and product-entry surface
-- `Domain harness/controller`
-  - owns domain-local execution logic, audit surfaces, and delivery semantics
+- `Domain-owned authority / runtime controller / delivery system`
+  - owns domain-local truth, execution control, audit surfaces, and delivery semantics
 - `Execution Plane`
   - owns the actual session, run, watch, resume, and delivery execution layer
 - `Deployment Shape`
@@ -140,7 +140,7 @@ In that structure:
 - `Shared Domain Contract`
   - gradually owns shared cross-domain product-behavior contracts such as the formal-entry matrix, the `per-run handle`, the durable report surface, the audit trail, and gate semantics
 - each domain agent
-  - keeps its own formal entry, domain objects, gates, audit surfaces, delivery semantics, harness/controller boundary, and canonical truth
+  - keeps its own formal entry, domain objects, gates, audit surfaces, delivery semantics, runtime-controller boundary, and canonical truth
 
 That means the more honest direction is not “force all three domain repositories into one execution kernel now.”
 It is:
