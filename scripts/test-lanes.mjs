@@ -34,6 +34,7 @@ const lanes = {
       'tests/src/native-helper-family-smoke.test.ts',
       'tests/src/native-helper-prebuild.test.ts',
       'tests/src/family-runtime-attempt-contract.test.ts',
+      'tests/src/family-transition-runner.test.ts',
       'tests/src/family-runtime-codex-stage-runner.test.ts',
       'tests/src/family-runtime-temporal-provider.test.ts',
       'tests/src/agent-executor.test.ts',

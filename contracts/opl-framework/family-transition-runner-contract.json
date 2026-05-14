@@ -1,0 +1,104 @@
+{
+  "contract_kind": "opl_family_transition_runner_contract.v1",
+  "surface_kind": "family_transition_runner_contract",
+  "owner": "one-person-lab",
+  "scope": "domain-neutral state-machine transition spec and matrix runner for OPL-hosted stage attempts",
+  "runner_model": "domain_declared_transition_table",
+  "contract_version": "family-transition-runner.v1",
+  "required_spec_fields": [
+    "surface_kind",
+    "version",
+    "spec_id",
+    "target_domain_id",
+    "owner",
+    "authority_boundary",
+    "guards",
+    "transitions"
+  ],
+  "required_transition_fields": [
+    "transition_id",
+    "current_state",
+    "event",
+    "next_state",
+    "owner_route"
+  ],
+  "optional_transition_fields": [
+    "required_guards",
+    "forbidden_guards",
+    "next_work_unit",
+    "human_gate",
+    "typed_blocker",
+    "dead_letter_intent",
+    "receipt",
+    "projection",
+    "authority_boundary"
+  ],
+  "runner_outputs": [
+    "next_state",
+    "next_work_unit",
+    "owner_route",
+    "human_gate",
+    "typed_blocker",
+    "dead_letter_intent",
+    "receipt",
+    "projection",
+    "authority_boundary"
+  ],
+  "fail_closed_cases": [
+    "unknown_guard_id",
+    "transition_domain_mismatch",
+    "unknown_transition",
+    "transition_guard_unsatisfied",
+    "transition_guard_forbidden",
+    "ambiguous_transition"
+  ],
+  "matrix_runner": {
+    "surface_kind": "family_transition_matrix_result",
+    "purpose": "table-driven evaluation of domain transition specs, including adjacent-state and guard-boundary cases",
+    "summary_fields": [
+      "total",
+      "transition_applied",
+      "blocked",
+      "dead_letter_intended"
+    ]
+  },
+  "authority_boundary": {
+    "opl": [
+      "transition schema",
+      "transition table execution",
+      "guard id matching",
+      "fail-closed blocker/dead-letter intent",
+      "receipt/projection envelope",
+      "matrix runner"
+    ],
+    "domain_agent": [
+      "domain transition table",
+      "guard definitions",
+      "quality/truth verdict",
+      "artifact authority",
+      "owner receipt",
+      "oracle fixtures"
+    ],
+    "forbidden_opl_authority": [
+      "publication quality verdict",
+      "fundability verdict",
+      "visual/export verdict",
+      "domain truth interpretation",
+      "domain artifact mutation",
+      "domain memory body writeback",
+      "domain action execution"
+    ]
+  },
+  "domain_truth_boundary": {
+    "opl_interprets_domain_quality": false,
+    "opl_executes_domain_action": false,
+    "opl_writes_domain_truth": false,
+    "domain_ready_verdict_owner": "domain_agent",
+    "artifact_authority_owner": "domain_agent"
+  },
+  "reference_states_for_matrix_tests": [
+    "bundle_stage_ready",
+    "bundle_stage_blocked",
+    "publishability_gate_blocked"
+  ]
+}
