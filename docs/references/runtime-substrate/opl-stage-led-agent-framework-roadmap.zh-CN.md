@@ -33,7 +33,7 @@ Date: `2026-05-14`
 
 - Temporal provider 细化计划：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
 - Production closure gap matrix：`docs/active/production-framework-closure-gap-matrix.zh-CN.md`
-- MAS runtime 退役计划：`med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md`
+- MAS runtime 退役计划：`med-autoscience/docs/active/opl_temporal_mas_runtime_retirement_program.md`
 - Stage control plane adoption：`docs/references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md`
 - Domain memory 总入口：`docs/references/operating-governance/family-domain-memory-governance.zh-CN.md`
 - Domain-agent 统一机器入口：`opl agents descriptors --json` / `opl agents descriptor --domain mas --json`
@@ -409,7 +409,7 @@ Codex CLI 负责：
 | --- | --- | --- | --- | --- |
 | `one-person-lab` | family agent framework | provider abstraction、Temporal workflow/activity/signal/query、typed queue、attempt ledger、human gate、operator projection、shared descriptor validation | 不持有任何 domain truth | Hermes-first、Gateway、old local-only runtime wording 进入 legacy/diagnostic/history；public help 不再把这些面展示成默认路径；无 active caller 后删除残留 alias。 |
 | `one-person-lab` runtime/lifecycle layer | framework runtime substrate | SQLite/local provider patterns、file lifecycle、artifact index、retention、restore proof、migration ledger、workspace lifecycle、provider receipts | 不持有 domain artifact content 或 verdict | 以 MAS 现有经验为 reference implementation，抽象成 OPL shared contract/provider primitive。 |
-| `med-autoscience` | medical research domain agent | online wakeup、retry/dead-letter、stage attempt transport、provider readiness、operator workbench projection；framework-generic SQLite/file lifecycle lessons 上收到 OPL | study truth、publication gate、AI reviewer、evidence/review ledger、route decision、artifact/package authority、sidecar receipt refs | 按 `docs/program/opl_temporal_mas_runtime_retirement_program.md` 执行；Temporal/MAS paper soak 前不得删除 local diagnostics。 |
+| `med-autoscience` | medical research domain agent | online wakeup、retry/dead-letter、stage attempt transport、provider readiness、operator workbench projection；framework-generic SQLite/file lifecycle lessons 上收到 OPL | study truth、publication gate、AI reviewer、evidence/review ledger、route decision、artifact/package authority、sidecar receipt refs | 按 `docs/active/opl_temporal_mas_runtime_retirement_program.md` 执行；Temporal/MAS paper soak 前不得删除 local diagnostics。 |
 | `med-autogrant` | grant domain agent | grant stage attempt transport、approval/retry/dead-letter、operator projection、standard skeleton adapter | fundability strategy、specific aims、proposal authoring、critique/revision、submission-ready export authority | 旧 local host-agent runtime、Gateway wording、Hermes provider proof 记录只能保留 provenance/evidence；controlled stage attempt 与 skeleton parity 通过后继续物理清理。 |
 | `redcube-ai` | visual-deliverable domain agent | visual stage attempt transport、runtime wakeup、operator projection、provider receipt、standard skeleton adapter | visual direction、artifact creation、review/export gate、canonical artifact authority | 旧 Hermes route wording、historical Gateway file names、repo-local managed runtime pilot 只作 migration provenance；direct route / sidecar / stage descriptor parity 后删除默认残留。 |
 | `med-deepscientist` | archive / diagnostic / upstream-intake reference | 无 active provider / stage adapter 迁移 | legacy source、fixture、backend audit、parity oracle、explicit restore/import evidence | 不接入 OPL active domain list；只有 MAS 已具备 source provenance、restore/provenance replacement 和 behavior fixture 后再物理删除旧 daemon/WebUI/quest surface。 |
@@ -468,7 +468,7 @@ Codex CLI 负责：
 - 主文档：本文
 - 细化文档：`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
 - 首个后续代码 tranche：`Master P2. Codex Stage Activity Runner`
-- 同步子计划：MAS 只跟随 `/Users/gaofeng/workspace/med-autoscience/docs/program/opl_temporal_mas_runtime_retirement_program.md` 做 provider-ready contract / sidecar / guarded soak，不抢先物理删除本地诊断面。
+- 同步子计划：MAS 只跟随 `/Users/gaofeng/workspace/med-autoscience/docs/active/opl_temporal_mas_runtime_retirement_program.md` 做 provider-ready contract / sidecar / guarded soak，不抢先物理删除本地诊断面。
 
 ### Master P2. Codex Stage Activity Runner
 

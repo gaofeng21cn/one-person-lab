@@ -6,7 +6,7 @@
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 当前 OPL framework 合同入口看 `contracts/opl-framework/README.md`
 - 当前产品认知按 `OPL Framework -> One Person Lab App -> Foundry Agents` 阅读：Framework 持有合同与运行控制面，App 消费这些合同做用户工作台，MAS/MAG/RCA 等 Foundry Agents 声明并适配这些合同但不内嵌一份 OPL runtime
-- 当前公开默认主路径是 `external shell or CLI -> Codex CLI first-class executor -> OPL typed family queue / activation layer -> Temporal-backed family runtime provider -> selected domain agent entry`；Full OPL family readiness 的 online runtime substrate 是已配置且 ready 的 Temporal provider，Hermes-Agent 在 provider/readiness/compat 语境只作为历史 provenance、参考材料、诊断语料或负向 guard，`hermes_agent` 仅作为显式非默认 executor adapter 存在，local provider 只作为 dev/CI/offline diagnostic baseline
+- 当前公开默认主路径是 `external shell or CLI -> Codex CLI first-class executor -> OPL typed family queue / activation layer -> Temporal-backed family runtime provider -> selected domain agent entry`；Full OPL family readiness 的 online runtime substrate 是已配置且 ready 的 Temporal provider，Hermes-Agent 在 provider/readiness/compat 语境只作为历史 provenance、参考材料、诊断语料或负向 guard，`hermes_agent` 与 `claude_code` 同属 canonical 显式非默认 executor adapter/backend，只承诺接口、生命周期、receipt、audit 与 fail-closed gate，不承诺质量、工具语义或 resume 与 `Codex CLI` 等价；local provider 只作为 dev/CI/offline diagnostic baseline
 - 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的显式可选 backend/audit/oracle companion 进入环境管理和投影，不作为默认安装依赖或顶层 domain-agent entry。
 - 已退役的旧入口词族不是 OPL 当前合同面；若只在历史 gateway 语料或 domain 仓内部 command/schema contract 中出现，必须按对应层级阅读。
 

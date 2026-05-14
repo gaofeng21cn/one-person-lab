@@ -447,7 +447,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
           'agent/stages',
           'contracts/runtime/sidecar',
           'runtime/sidecar.py',
-          'docs/program/stage_surface_standardization_program.md',
+          'docs/active/stage_surface_standardization_program.md',
         ],
       },
       skeleton: {
@@ -507,6 +507,18 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       moves_workspace_artifacts: false,
       moves_runtime_receipt_instances: false,
       moves_memory_body: false,
+      direct_skill_parity_refs: ['proof:mag:direct-skill-parity'],
+      opl_hosted_parity_refs: ['proof:mag:opl-hosted-parity'],
+      replacement_parity_refs: ['proof:mag:replacement-parity'],
+      provenance_refs: ['docs/history/runtime-substrate/mag-gateway-tombstone.md'],
+      legacy_active_path_policy: 'physically_removed_or_history_tombstone_only',
+      legacy_active_path_residue: [
+        {
+          path_family: 'default Gateway active path',
+          state: 'tombstone_only',
+          evidence_ref: 'docs/history/runtime-substrate/mag-gateway-tombstone.md',
+        },
+      ],
     },
   };
   const rcaManifest = {
@@ -616,7 +628,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       'agent/stages',
       'contracts/runtime/sidecar',
       'runtime/sidecar.py',
-      'docs/program/stage_surface_standardization_program.md',
+      'docs/active/stage_surface_standardization_program.md',
     ]);
     assert.equal(
       mas.family_agent.production_closure_gaps.find((gap: { gap_id: string }) =>
@@ -625,6 +637,16 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       'evidence_refs_observed',
     );
     assert.equal(mas.family_agent.physical_skeleton_layout_audit.authority_boundary.opl_role, 'read_only_layout_audit');
+    assert.equal(
+      mag.family_agent.physical_skeleton_follow_through_gate.status,
+      'ready_for_supervised_physical_delete_or_history_tombstone',
+    );
+    assert.equal(
+      mag.family_agent.physical_skeleton_follow_through_gate.checklist.replacement_parity.status,
+      'observed',
+    );
+    assert.equal(mag.family_agent.physical_skeleton_follow_through_gate.delete_gate.delete_ready, true);
+    assert.equal(mag.family_agent.physical_skeleton_follow_through_gate.delete_gate.can_execute_delete, false);
     assert.deepEqual(
       mas.family_agent.production_closure_gaps.map((gap: { gap_id: string }) => gap.gap_id),
       [

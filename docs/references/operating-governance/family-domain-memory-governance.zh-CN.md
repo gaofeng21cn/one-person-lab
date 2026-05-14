@@ -27,7 +27,7 @@ OPL family 需要统一的 domain memory 管理纪律，但不应该把领域经
 | repo | domain entry | 当前角色 |
 | --- | --- | --- |
 | `med-autoscience` | `docs/policies/study-workflow/publication_route_memory_policy.md` | 医学论文路线经验的 natural-language-first policy。 |
-| `med-autoscience` | `docs/capabilities/medical-display/README.md` | 医学图表模板是 audited display contract；图表选择和视觉审稿经验才适合进入 memory。 |
+| `med-autoscience` | `docs/delivery/medical-display/README.md` | 医学图表模板是 audited display contract；图表选择和视觉审稿经验才适合进入 memory。 |
 | `med-autogrant` | `docs/references/grant_strategy_memory_policy.md` | 基金 fundability、aims、reviewer grammar 与同基金任务策略经验的自然语言 memory policy。 |
 | `redcube-ai` | `docs/policies/visual_pattern_memory_policy.md` | 视觉叙事、版式、风格、review failure mode 与生产质量经验的 natural-language-first policy。 |
 | `one-person-lab` | 本文和 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` | OPL 只定义 framework 发现、索引、receipt 和 owner boundary，不持有领域内容。 |

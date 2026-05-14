@@ -10,5 +10,6 @@ Machine boundary: 人读索引。机器真相继续归 workspace registry、sour
 当前入口先看：
 
 - [OPL 系列项目开发主参考](../active/opl-family-development-reference.zh-CN.md)
-- [共享基础结构](../active/shared-foundation.zh-CN.md)
-- [共享基础结构归属](../active/shared-foundation-ownership.zh-CN.md)
+- [OPL 运行模型](../public/operating-model.zh-CN.md)
+- [共享运行时合同](../active/shared-runtime-contract.zh-CN.md)
+- [共享领域合同](../active/shared-domain-contract.zh-CN.md)

@@ -152,6 +152,7 @@ function buildSkeletonProjection(entry: DomainManifestCatalogEntry) {
     descriptor_readiness: inspection.descriptor_readiness,
     physical_skeleton_layout_audit: inspection.physical_skeleton_layout_audit,
     physical_skeleton_evidence: inspection.physical_skeleton_evidence,
+    physical_skeleton_follow_through_gate: inspection.physical_skeleton_follow_through_gate,
     production_closure_gap_count: inspection.production_closure_gaps.length,
     production_closure_gaps: inspection.production_closure_gaps,
     provider_closure_evidence: inspection.provider_closure_evidence,

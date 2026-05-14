@@ -16,9 +16,9 @@ Current owner surfaces:
 - [Temporal family runtime provider plan](./temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the production provider candidate.
 - [OPL Runtime Manager target](./opl-runtime-manager-target.md): active support target for provider readiness, native helper, and state index boundaries.
 
-Legacy references in this directory may still mention gateway-first, frontdoor, federation, host-agent, Hermes-first, or older direct-entry plans. Those references are retained for migration review and provenance. They must not override the roadmap, the core five docs, or current machine-readable contracts.
+Legacy evaluation references in this directory may still mention gateway-first, frontdoor, federation, host-agent, Hermes-first, or older direct-entry plans. They are retained only when their current role is explicit and they still need to sit near the active roadmap. They must not override the roadmap, the core five docs, or current machine-readable contracts.
 
-After the 2026-05-11 content-level consolidation, early direct-entry, Hermes-first, host-agent-only, managed-runtime checklist, vertical online-agent platform, and MAS cutover whole documents were moved to [Runtime substrate history archive](../../history/runtime-substrate/README.md). This directory now keeps only current runtime/provider/executor support references and migration/evaluation references that still need to sit near the active roadmap.
+After the 2026-05-11 / 2026-05-14 content-level consolidation, early direct-entry, Hermes-first, host-agent-only, managed-runtime checklist, vertical online-agent platform, Hermes runtime-substrate benchmark, and MAS cutover whole documents were moved to [Runtime substrate history archive](../../history/runtime-substrate/README.md). This directory now keeps only current runtime/provider/executor support references and migration/evaluation references that still need to sit near the active roadmap.
 
 Before reusing content from this directory:
 

@@ -32,7 +32,7 @@ This authority matrix does not:
 This authority matrix sits in the shared-foundation boundary-language layer only.
 `OPL` owns the top-level vocabulary that names route, execution, truth, review, and publication splits here, but the underlying authorities remain with domain-owned capability entries, domain harnesses, and humans/private surfaces outside `OPL`.
 That makes the matrix an inspectable reference surface for ownership review, not a runtime control plane or shared truth store.
-For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
+For the broader ownership split, see the [OPL Family Development Reference](../../active/opl-family-development-reference.zh-CN.md).
 For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
 
 ## Authority Fields

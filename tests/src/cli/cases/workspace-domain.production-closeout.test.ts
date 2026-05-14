@@ -231,6 +231,10 @@ test('framework production-closeout reports functional blockers without taking d
         { root: 'runtime', anchor_ref: 'runtime/README.md', exists: true },
         { root: 'docs', anchor_ref: 'docs/status.md', exists: true },
       ],
+      direct_skill_parity_refs: ['proof:mag:direct-skill-parity'],
+      opl_hosted_parity_refs: ['proof:mag:opl-hosted-parity'],
+      replacement_parity_refs: ['proof:mag:replacement-parity'],
+      provenance_refs: ['docs/history/runtime-substrate/mag-gateway-tombstone.md'],
       legacy_active_path_policy: 'physically_removed_or_history_tombstone_only',
       legacy_active_path_residue: [
         {
@@ -310,6 +314,10 @@ test('framework production-closeout reports functional blockers without taking d
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mag',
+        artifact_root: '/tmp/mag/artifacts',
+        source_refs: ['source:mag:call'],
+        material_refs: ['material:mag:narrative'],
+        missing_material_refs: ['material:mag:budget-justification'],
         controlled_stage_attempt: {
           action_kind: 'grant_stage_attempt_apply',
           contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
@@ -335,6 +343,17 @@ test('framework production-closeout reports functional blockers without taking d
           decision: 'no_regression_evidence',
           no_regression_evidence_ref: 'receipt:mag:no-regression',
           no_regression_evidence_observed: true,
+          quality_ref: 'quality:mag:review',
+          readiness_ref: 'readiness:mag:package',
+          slo_ref: 'slo:mag:currentness',
+          breached_slo_ids: ['mag_owner_receipt_missing'],
+          package_refs: ['package:mag:submission'],
+          export_refs: ['export:mag:submission-ready'],
+          gap_report_refs: ['gap:mag:readiness'],
+          handoff_refs: ['handoff:mag:owner-review'],
+          repair_command: 'medautogrant sidecar dispatch --task <task.json> --format json',
+          direct_skill_ref: 'skill:medautogrant',
+          direct_skill_command: 'medautogrant product-entry status --format json',
         },
       }),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
@@ -433,11 +452,130 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.writeback_receipt_ref_count, 1);
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.rejected_write_count, 1);
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.opl_writes_memory_body, false);
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.surface_kind, 'opl_operator_action_routing_projection');
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.summary.execution_policy, 'route_only_no_execution');
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.summary.direct_skill_route_count, 2);
+    assert.equal(
+      closeout.stage_attempt_evidence.operator_action_routing.actions.some((action: {
+        route_target_kind: string;
+        command_or_surface_ref: string;
+      }) =>
+        action.route_target_kind === 'direct_skill' &&
+        action.command_or_surface_ref === 'medautogrant product-entry status --format json'
+      ),
+      true,
+    );
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.authority_boundary.can_execute_direct_skill, false);
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.authority_boundary.can_write_domain_truth, false);
+    assert.equal(closeout.stage_attempt_evidence.authority_boundary.opl_executes_operator_action_routes, false);
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.surface_kind,
+      'opl_stage_attempt_generic_projection_closeout_evidence',
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projection_policy,
+      'refs_only_no_domain_truth_body_no_action_execution',
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.artifact_gallery.item_count >= 3,
+      true,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.workspace_source_intake.source_ref_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.workspace_source_intake.missing_material_attention_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.quality_readiness.quality_ref_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.quality_readiness.readiness_ref_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.observability_slo.breached_slo_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.observability_slo.repair_command_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.package_export_lifecycle.package_ref_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.package_export_lifecycle.export_ref_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projection_summary.memory_locator_index.consumed_memory_ref_count,
+      1,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.artifact_gallery.authority_boundary.can_read_artifact_body,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.workspace_source_intake.authority_boundary.can_authorize_source_readiness,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.quality_readiness.authority_boundary.can_authorize_quality_verdict,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.observability_slo.authority_boundary.can_execute_repair_command,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.package_export_lifecycle.authority_boundary.can_authorize_export_verdict,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.authority_boundary.can_read_domain_truth_body,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.authority_boundary.can_execute_domain_action,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.authority_boundary.opl_executes_generic_projection_actions,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.authority_boundary.provider_completion_is_domain_ready,
+      false,
+    );
     const mag = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
     const rca = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'redcube');
     const mas = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
     assert.equal(mag.stage_attempt_evidence.owner_receipt_refs[0], 'receipt:mag:owner-apply');
     assert.equal(mag.stage_attempt_evidence.no_regression_evidence_refs[0], 'receipt:mag:no-regression');
+    assert.equal(mag.stage_attempt_evidence.operator_direct_skill_route_refs.includes('skill:medautogrant'), true);
+    assert.equal(
+      mag.stage_attempt_evidence.operator_direct_skill_route_refs.includes(
+        'medautogrant product-entry status --format json',
+      ),
+      true,
+    );
+    assert.equal(
+      mag.stage_attempt_evidence.operator_domain_sidecar_route_refs.includes(
+        'medautogrant sidecar dispatch --task <task.json> --format json',
+      ),
+      true,
+    );
+    assert.equal(
+      mag.stage_attempt_evidence.operator_app_surface_route_refs.some((ref: string) =>
+        ref.endsWith('/route_decision_graph')
+      ),
+      true,
+    );
     assert.equal(rca.stage_attempt_evidence.no_regression_evidence_refs[0], 'rca:no-regression:visual-stage-1');
     assert.deepEqual(rca.stage_attempt_evidence.lifecycle_restore_refs, [
       'restore:rca:artifact',
@@ -454,6 +592,33 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(mas.stage_attempt_evidence.rejected_write_count, 1);
     assert.equal(mag.physical_skeleton_evidence.status, 'repo_source_anchor_evidence_observed');
     assert.equal(mag.legacy_retirement_tombstone_declared, true);
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.surface_kind,
+      'opl_physical_skeleton_follow_through_gate',
+    );
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.status,
+      'ready_for_supervised_physical_delete_or_history_tombstone',
+    );
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.checklist.no_active_caller.status,
+      'observed',
+    );
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.checklist.replacement_parity.status,
+      'observed',
+    );
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.checklist.provenance_retention.status,
+      'observed',
+    );
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.checklist.retained_legacy_entries.status,
+      'no_retained_legacy_entries',
+    );
+    assert.equal(mag.physical_skeleton_follow_through_gate.delete_gate.delete_ready, true);
+    assert.equal(mag.physical_skeleton_follow_through_gate.delete_gate.can_execute_delete, false);
+    assert.equal(mag.physical_skeleton_follow_through_gate.delete_gate.can_create_retained_legacy_entry, false);
     assert.equal(
       mag.production_closure_gaps.find((gap: { gap_id: string }) =>
         gap.gap_id === 'physical_repo_skeleton_reorganization'
@@ -599,13 +764,31 @@ test('framework production-closeout projects Temporal residency proof history', 
 
     assert.equal(closeout.provider_continuous_proof.surface_kind, 'opl_temporal_provider_continuous_proof_projection');
     assert.equal(closeout.provider_continuous_proof.proof_event_count, 1);
+    assert.equal(closeout.provider_continuous_proof.slo_execution_receipt_event_count, 1);
     assert.equal(typeof closeout.provider_continuous_proof.latest_event_age_seconds, 'number');
+    assert.equal(
+      closeout.provider_continuous_proof.latest_slo_execution_receipt.surface_kind,
+      'opl_temporal_provider_slo_execution_receipt',
+    );
     assert.equal(closeout.provider_continuous_proof.proof_freshness_status, 'fresh');
     assert.equal(closeout.provider_continuous_proof.proof_slo_status, 'proof_blocker_observed');
     assert.equal(closeout.provider_continuous_proof.latest_closeout_status, 'production_residency_needs_live_evidence');
     assert.equal(closeout.provider_continuous_proof.latest_proof_receipt.receipt_status, 'blocked');
+    assert.equal(
+      closeout.provider_continuous_proof.operator_slo_repair_loop.repair_state,
+      'needs_provider_repair_then_proof_rerun',
+    );
+    assert.equal(
+      closeout.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.event_count,
+      1,
+    );
+    assert.equal(
+      closeout.provider_continuous_proof.operator_slo_repair_loop.authority_boundary.can_execute_repair_command,
+      false,
+    );
     assert.equal(closeout.provider_continuous_proof.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(closeout.runtime_ledger.provider_continuous_proof.proof_event_count, 1);
+    assert.equal(closeout.runtime_ledger.provider_continuous_proof.slo_execution_receipt_event_count, 1);
     assert.equal(typeof closeout.runtime_ledger.provider_continuous_proof.latest_event_age_seconds, 'number');
     assert.equal(
       closeout.runtime_ledger.provider_continuous_proof.continuous_proof_status,
@@ -613,6 +796,10 @@ test('framework production-closeout projects Temporal residency proof history', 
     );
     assert.equal(closeout.runtime_ledger.provider_continuous_proof.proof_freshness_status, 'fresh');
     assert.equal(closeout.runtime_ledger.provider_continuous_proof.proof_slo_status, 'proof_blocker_observed');
+    assert.equal(
+      closeout.runtime_ledger.provider_continuous_proof.operator_slo_repair_loop.operator_commands[0].command,
+      'opl family-runtime residency proof --provider temporal --production',
+    );
     assert.equal(
       closeout.runtime_ledger.provider_continuous_proof.authority_boundary.provider_completion_is_domain_ready,
       false,
@@ -683,6 +870,14 @@ db.close();`,
     assert.equal(closeout.provider_continuous_proof.proof_freshness_status, 'stale');
     assert.equal(closeout.provider_continuous_proof.proof_slo_status, 'proof_stale');
     assert.equal(closeout.runtime_ledger.provider_continuous_proof.proof_slo_status, 'proof_stale');
+    assert.equal(
+      closeout.runtime_ledger.provider_continuous_proof.operator_slo_repair_loop.repair_state,
+      'needs_operator_cadence_refresh',
+    );
+    assert.equal(
+      closeout.runtime_ledger.provider_continuous_proof.operator_slo_repair_loop.authority_boundary.can_authorize_domain_ready,
+      false,
+    );
     assert.equal(
       closeout.typed_blockers.some((blocker: { blocker_id: string }) =>
         blocker.blocker_id === 'temporal_provider_proof_freshness_not_current'

@@ -131,7 +131,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - [OPL 默认 Skill 生态参考](./references/current-support/opl-default-skill-ecosystem.zh-CN.md)
 - [OPL Release 与 Packages 模块化分发参考](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [OPL 测试 Lane 治理参考](./references/current-support/opl-test-lane-governance.zh-CN.md)
-- [共享基础结构](./active/shared-foundation.zh-CN.md)、[共享基础结构归属](./active/shared-foundation-ownership.zh-CN.md)、[共享运行时合同](./active/shared-runtime-contract.zh-CN.md)、[共享领域合同](./active/shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./active/opl-runtime-naming-and-boundary-contract.zh-CN.md) 是活跃支撑文档。
+- [共享运行时合同](./active/shared-runtime-contract.zh-CN.md)、[共享领域合同](./active/shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./active/opl-runtime-naming-and-boundary-contract.zh-CN.md) 是活跃 shared-boundary 支撑文档。原 `Shared Foundation` / `Shared Foundation Ownership` 已吸收到 [OPL Family 开发主参考](./active/opl-family-development-reference.zh-CN.md) 和公开 operating model，历史副本进入 [Shared Boundary 过程历史](./history/process/shared-boundary/README.zh-CN.md)。
 - 已退役的 `gateway / federation / routed-action` 语料进入 [Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.zh-CN.md)。
 - 已退役的 `frontdoor` 时代材料进入 [Frontdoor 历史资料](./history/frontdoor-legacy/README.md)。
 
@@ -164,5 +164,5 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - 历史继续作为仓库跟踪的 provenance 和 tombstone。
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。
-- 跨仓 docs 治理按 [OPL Family 开发主参考](./active/opl-family-development-reference.zh-CN.md)、[Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md) 执行：OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy；旧 `program/plans/capabilities` 等目录按迁移源、合同引用或历史 provenance 处理，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。
+- 跨仓 docs 治理按 [OPL Family 开发主参考](./active/opl-family-development-reference.zh-CN.md)、[Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md) 执行：OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy；旧 `program/plans/capabilities` 等目录能物理迁移就直接迁移，仍暂留的旧路径只能是外部/上游支撑、历史 provenance 或 tombstone，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。
 - 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。

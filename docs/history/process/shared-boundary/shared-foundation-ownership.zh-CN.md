@@ -2,7 +2,7 @@
 
 # 共享基础结构归属
 
-> 当前状态说明（`2026-05-11`）：本文作为 shared-foundation ownership 参考保留，并使用当前 OPL 活跃口径。下层执行语言按 `domain harness / controller` 理解；当前公开模型使用独立 domain agents（`MAS`、`MAG`、`RCA`）与各自 domain-owned truth surfaces。
+> 归档说明（`2026-05-14`）：这份 ownership split 已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。本文只作为早期 Shared Foundation framing 的历史来源保留。
 
 ## 目的
 

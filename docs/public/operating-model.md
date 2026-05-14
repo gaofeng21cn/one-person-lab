@@ -62,18 +62,18 @@ The top-level `OPL` framework layer is responsible for:
 
 The current repository is the public framework and product surface for this role, with some provider/runtime pieces still moving from contract and test evidence toward production residency.
 
-### Domain Agent, Entry, And Harness
+### Domain Agent, Entry, And Domain-Owned Runtime
 
 Each independent domain-agent repository is expected to keep three distinct layers:
 
 - a `domain agent` as the public identity of the repository
 - a domain-owned entry surface that serves as the stable workstream boundary
-- a `Domain Harness OS` that executes, records, gates, and delivers domain work
+- domain-owned authority / runtime controller / delivery system surfaces that execute, record, gate, and deliver domain work
 
 For example:
 
-- `MedAutoScience` is the independent domain agent for `Research Foundry`, with its own domain entry, runtime truth, and harness underneath
-- `RedCube AI` is the independent domain agent for visual delivery, with its own domain entry, runtime truth, and harness underneath
+- `MedAutoScience` is the independent domain agent for `Research Foundry`, with its own domain entry, runtime truth, quality gates, and delivery authority underneath
+- `RedCube AI` is the independent domain agent for visual delivery, with its own domain entry, runtime truth, review gates, and delivery authority underneath
 
 ## Agent-First Execution
 
@@ -164,9 +164,10 @@ That means the right direction is:
 
 - Codex-default `OPL` runtime plus explicit activation above domains
 - thinner but explicit domain-owned entries
-- explicit domain harnesses underneath
+- explicit domain-owned authority, runtime controller, and delivery system surfaces underneath
 
 ## Further Reading
 
-- [Shared Foundation](../active/shared-foundation.md)
-- [Shared Foundation Ownership](../active/shared-foundation-ownership.md)
+- [OPL Family Development Reference](../active/opl-family-development-reference.zh-CN.md)
+- [Shared Runtime Contract](../active/shared-runtime-contract.md)
+- [Shared Domain Contract](../active/shared-domain-contract.md)

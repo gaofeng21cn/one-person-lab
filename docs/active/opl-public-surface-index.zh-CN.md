@@ -48,15 +48,15 @@
 `OPL` 通过 `opl skill sync` 和各 domain 仓自己的 CLI / 程序 / 脚本 / contract surface 来发现并激活它们。
 所以当前顶层集成单元其实是 repo-owned 的 domain app skill 及其底下的 command contract，而不是 OPL 自己再造一套 gateway handoff 词汇。
 
-### 3. 共享基础结构配套界面
+### 3. 共享边界配套界面
 
-下面这些文档仍然活跃，但它们服务的是 shared-foundation 边界，而不是重新把公开主线拉回已退役的 gateway-first 路线：
+下面这些文档仍然活跃，但它们服务的是 shared-boundary 边界，而不是重新把公开主线拉回已退役的 gateway-first 路线：
 
-- [共享基础结构](./shared-foundation.zh-CN.md)
-- [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
 - [共享运行时合同](./shared-runtime-contract.zh-CN.md)
 - [共享领域合同](./shared-domain-contract.zh-CN.md)
 - [OPL 运行时命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
+
+旧 `Shared Foundation` / `Shared Foundation Ownership` 页面已吸收到 [OPL Family 开发主参考](./opl-family-development-reference.zh-CN.md) 与 [运行模型](../public/operating-model.zh-CN.md)；历史副本进入 [Shared Boundary 过程历史](../history/process/shared-boundary/README.zh-CN.md)。
 
 ## 历史来源材料
 

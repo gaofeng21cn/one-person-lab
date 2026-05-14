@@ -32,7 +32,7 @@ Machine boundary: 仅作为 legacy-derived 人读参考；当前仓库没有发�
 这张 authority matrix 只位于 shared-foundation 的 boundary-language 层。
 `OPL` 在这里拥有的是命名 route、execution、truth、review 与 publication 分工的顶层词汇；但底层 authority 仍然留在 domain-owned capability entry、domain harness 与 `OPL` 之外的人类 / private surface 中。
 因此，这张 matrix 只是供 ownership review 使用的 inspectable reference surface，而不是 runtime control plane 或共享 truth store。
-更完整的 ownership split 可参考[共享基础结构归属](../../active/shared-foundation-ownership.zh-CN.md)。
+更完整的 ownership split 可参考 [OPL Family 开发主参考](../../active/opl-family-development-reference.zh-CN.md)。
 当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 为准。
 
 ## Authority 字段

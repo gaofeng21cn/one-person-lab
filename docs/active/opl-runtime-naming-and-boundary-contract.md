@@ -13,7 +13,7 @@ This document freezes the core runtime-related naming in the `OPL` ecosystem so 
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
 - domain-agent entry
-- domain harness/controller
+- domain-owned authority / runtime controller / delivery system
 - `execution plane`
 - `deployment shape`
 
@@ -51,7 +51,7 @@ Human / Agent
           -> Shared Runtime Contract
           -> Shared Domain Contract
               -> Domain-agent entry
-                  -> Domain harness/controller
+                  -> Domain-owned authority / runtime controller / delivery system
                       -> Execution Plane
                           -> Deployment Shape
 ```
@@ -68,8 +68,8 @@ Each layer answers a different question:
   - the shared cross-domain contract for formal product behavior
 - `Domain-agent entry`
   - the stable formal app-skill, CLI, MCP, or product-entry surface for one domain agent
-- `Domain harness/controller`
-  - the orchestration, governance, review, and delivery system inside one domain agent
+- `Domain-owned authority / runtime controller / delivery system`
+  - the domain truth, runtime control, governance, review, and delivery system inside one domain agent
 - `Execution Plane`
   - the layer that actually runs sessions, quests, runs, worktrees, watch, and resume
 - `Deployment Shape`
@@ -104,7 +104,7 @@ The more accurate wording today is:
 
 - it is not a MAS default operation, diagnostic, runtime-root, or WebUI dependency
 - it is a MAS-declared optional source-provenance, historical-fixture, explicit archive-import, backend-audit, upstream-intake, and parity-oracle reference
-- it is not a fifth top-level `Domain Harness OS`
+- it is not a fifth top-level domain agent or runtime authority
 - it is not the system identity or public entrypoint of `MedAutoScience`
 
 ## `Codex-default host-agent runtime` And `managed runtime`
@@ -181,7 +181,7 @@ When the ecosystem later moves to a future `managed runtime`, the following shou
 - the shared invariants in `Unified Harness Engineering Substrate`
 - the shared runtime objects in the `Shared Runtime Contract`
 - the shared formal behavior objects in the `Shared Domain Contract`
-- the boundary between public domain-agent entry and domain harness/controller
+- the boundary between public domain-agent entry and domain-owned authority / runtime controller
 - the formal-entry matrix semantics such as `CLI / MCP / controller`
 - the semantic boundary of execution handles such as `program_id / study_id / quest_id / active_run_id`
 - ownership of domain-owned audit, review, delivery, and canonical truth
@@ -196,11 +196,11 @@ What may actually change is the execution plane and deployment shape:
 - whether watch, status, resume, and replay become platform-level capabilities
 - whether operators still need to care about local daemons, machine paths, and manual recovery
 
-If the ecosystem later adopts a `Hermes`-backed runtime substrate, the accurate description should still be:
+If a future domain retains upstream `Hermes-Agent` evidence or an explicit `hermes_agent` executor adapter, the accurate description should still be:
 
-- it is an implementation direction for the `Shared Runtime Contract`
-- it is not the whole `UHS`
-- it does not replace the `OPL` framework, any public domain-agent entry, or any domain harness/controller
+- it is an explicit non-default executor adapter, diagnostic evidence, or provenance reference
+- it is not the family runtime provider, the production substrate, or the whole `UHS`
+- it does not replace the `OPL` framework, any public domain-agent entry, or any domain-owned authority / runtime controller
 
 ### Managed Runtime Readiness Dimensions
 
@@ -208,12 +208,12 @@ The useful content from the old `managed-runtime-migration-readiness-checklist` 
 
 | Dimension | Question | Current owner |
 | --- | --- | --- |
-| `R1 / naming and ontology` | Are federation, domain, execution plane, and deployment shape separated? | This document and the core five |
+| `R1 / naming and ontology` | Are legacy federation vocabulary, domain, execution plane, and deployment shape separated? | This document and the core five |
 | `R2 / formal entry` | Are `CLI`, `MCP`, `controller`, app skill, and product entry layered? | Domain onboarding contract and domain owner docs |
 | `R3 / execution handle` | Are run, quest, topic, draft, workspace, and program handles stable? | Domain owner docs and machine contracts |
 | `R4 / durable surface` | Are audit, review, delivery, status, and report surfaces durable? | Domain owner docs / artifacts / contracts |
 | `R5 / hosted-friendly contract extraction` | Can local/runtime surfaces be exported as a future-host-compatible contract bundle? | OPL framework plus domain repo |
-| `R6 / runtime protocol narrowness` | Is the execution plane reduced to a stable, auditable, verifiable protocol? | OPL Runtime Manager / provider contracts |
+| `R6 / runtime protocol narrowness` | Is the execution plane reduced to a stable, auditable, verifiable protocol? | provider / hosted-integration contracts |
 | `R7 / external dependency clearance` | Are external runtime, workspace, and human-gate dependencies cleared before cutover? | Domain repo owner |
 | `R8 / platform-owned lifecycle` | Are session, watch, resume, replay, and sandbox lifecycle owned by the platform/provider? | Provider-backed framework / future managed runtime |
 
@@ -313,13 +313,13 @@ Do not describe the system as if:
 - `OPL` is the runtime owner
 - `Managed Runtime` only means “a longer-running Codex”
 - `MedDeepScientist` is the system identity of `MedAutoScience`
-- monorepo ingest means the boundary between domain harness/controller and execution engine disappears
+- monorepo ingest means the boundary between domain-owned authority / runtime controller and execution engine disappears
 - a future `managed runtime` is already part of current repo-tracked reality
 
 Describe it as:
 
 - `OPL` owns stage-led framework language
-- each domain repository owns `domain harness / controller + Domain Harness OS`
+- each domain repository owns domain authority, runtime control, delivery systems, and artifact truth
 - execution engines own the execution plane
 - `host-agent runtime` and `managed runtime` are two deployment shapes of the execution plane
 - a future migration changes how the execution plane is hosted, not the domain contract
@@ -328,6 +328,8 @@ Describe it as:
 
 - [OPL Operating Model](../public/operating-model.md)
 - [Unified Harness Engineering Substrate](../public/unified-harness-engineering-substrate.md)
-- [Shared Foundation](./shared-foundation.md)
+- [OPL Family Development Reference](./opl-family-development-reference.zh-CN.md)
+- [Shared Runtime Contract](./shared-runtime-contract.md)
+- [Shared Domain Contract](./shared-domain-contract.md)
 - [Codex-default Host-Agent Runtime Contract historical draft](../history/runtime-substrate/host-agent-runtime-contract.md)
 - [Ecosystem Status Matrix](../references/convergence-governance/ecosystem-status-matrix.md)

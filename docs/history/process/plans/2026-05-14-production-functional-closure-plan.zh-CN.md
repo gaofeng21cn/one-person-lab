@@ -2,9 +2,11 @@
 
 Owner: `One Person Lab`
 Purpose: 记录排除真实论文、基金、视觉交付长时 soak 这类耗时验收后，OPL 成为完整生产级智能体框架所需的功能性闭环、已落地证据、剩余 production evidence gate，以及 MAS/MAG/RCA 的同一收口口径。
-State: `functional_surfaces_landed_evidence_gates_remaining`
+State: `history_completed_plan_absorbed`
 Machine boundary: 本文是人读 program plan。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests、workspace/runtime artifacts 与真实 app evidence。
 Date: `2026-05-14`
+
+> 归档说明（`2026-05-14`）：本计划是一次性并行 functional closure closeout 记录。当前 active follow-through owner 已收口到 [生产级框架闭环差距矩阵](../../../active/production-framework-closure-gap-matrix.zh-CN.md)。后续不要在本文继续扩写新 recurring plan。
 
 ## 当前真实状态
 

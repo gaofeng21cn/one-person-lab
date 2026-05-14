@@ -20,6 +20,7 @@
 
 - [Plans](./plans/)：已经完成的实施计划和 closeout brief。
 - [Specs](./specs/)：已被当前产品边界取代的历史设计规格，包括 Product API / ACP native 形成过程。
+- [Shared Boundary](./shared-boundary/)：已吸收的 shared-foundation framing 页面；其中 owner split 已迁入当前 active owner surface。
 - [Superpowers](./superpowers/)：早期 worker flow 生成的 plan/spec 过程材料。
 
 ## 边界

@@ -13,7 +13,7 @@
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
 - domain-agent entry
-- domain harness/controller
+- domain-owned authority / runtime controller / delivery system
 - `execution plane`
 - `deployment shape`
 
@@ -51,7 +51,7 @@ Human / Agent
           -> Shared Runtime Contract
           -> Shared Domain Contract
               -> Domain-agent entry
-                  -> Domain harness/controller
+                  -> Domain-owned authority / runtime controller / delivery system
                       -> Execution Plane
                           -> Deployment Shape
 ```
@@ -68,8 +68,8 @@ Human / Agent
   - 跨域共享的正式行为合同
 - `Domain-agent entry`
   - 某个 domain agent 的稳定 app-skill、CLI、MCP 或 product-entry surface
-- `Domain harness/controller`
-  - 某个 domain agent 内部的编排、治理、审阅、交付系统本体
+- `Domain-owned authority / runtime controller / delivery system`
+  - 某个 domain agent 内部的领域真相、运行控制、治理、审阅与交付系统本体
 - `Execution Plane`
   - 真正执行 session、quest、run、worktree、watch、resume 的运行层
 - `Deployment Shape`
@@ -104,7 +104,7 @@ Human / Agent
 
 - 它不是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖
 - 它只作为 MAS 显式声明的 source provenance、historical fixture、explicit archive import、backend audit、upstream intake 与 parity oracle reference 出现
-- 它不是 `OPL` 顶层的第五个 `Domain Harness OS`
+- 它不是 `OPL` 顶层的第五个 domain agent 或 runtime authority
 - 它也不是 `MedAutoScience` 的系统本体或公开入口
 
 ## `Codex-default host-agent runtime` 与 `managed runtime`
@@ -180,7 +180,7 @@ Human / Agent
 - `Unified Harness Engineering Substrate` 的共享不变量
 - `Shared Runtime Contract` 的共享运行对象
 - `Shared Domain Contract` 的共享正式行为对象
-- public domain-agent entry / domain harness-controller 的边界
+- public domain-agent entry / domain-owned authority / runtime controller 的边界
 - `CLI / MCP / controller` 这类 formal-entry matrix 语义
 - `program_id / study_id / quest_id / active_run_id` 这类 execution handle 的语义边界
 - domain-owned audit、review、delivery 与 canonical truth 的归属
@@ -195,11 +195,11 @@ Human / Agent
 - watch / status / resume / replay 是否成为平台统一能力
 - operator 是否还需要盯住本地 daemon、机器路径和手工恢复
 
-如果未来采用 `Hermes-backed runtime substrate`，更准确的描述也应是：
+如果未来某个 domain 保留上游 `Hermes-Agent` evidence 或显式 `hermes_agent` executor adapter，更准确的描述也应是：
 
-- 它是 `Shared Runtime Contract` 的实现方向
-- 它不是整个 `UHS`
-- 它不替代 `OPL` framework、public domain-agent entry 或 domain harness/controller
+- 它是显式非默认 executor adapter、diagnostic evidence 或 provenance reference
+- 它不是 family runtime provider、production substrate 或整个 `UHS`
+- 它不替代 `OPL` framework、public domain-agent entry 或 domain-owned authority / runtime controller
 
 ### Managed runtime readiness 维度
 
@@ -207,12 +207,12 @@ Human / Agent
 
 | 维度 | 要回答的问题 | 当前归属 |
 | --- | --- | --- |
-| `R1 / 命名与 ontology` | federation、domain、execution plane、deployment shape 是否已经分开 | 本文与核心五件套 |
+| `R1 / 命名与 ontology` | legacy federation 词汇、domain、execution plane、deployment shape 是否已经分开 | 本文与核心五件套 |
 | `R2 / formal entry` | `CLI`、`MCP`、`controller`、app skill、product entry 是否有层级 | domain onboarding contract 与 domain owner docs |
 | `R3 / execution handle` | run、quest、topic、draft、workspace、program 等句柄边界是否稳定 | domain owner docs 与 machine contracts |
 | `R4 / durable surface` | audit、review、delivery、status、report 是否有持久 surface | domain owner docs / artifacts / contracts |
 | `R5 / hosted-friendly contract extraction` | local/runtime surface 是否能抽成未来 host 必须兼容的 contract bundle | OPL framework + domain repo |
-| `R6 / runtime protocol narrowness` | execution plane 是否压到稳定、可审计、可验证的最小协议面 | OPL Runtime Manager / provider contracts |
+| `R6 / runtime protocol narrowness` | execution plane 是否压到稳定、可审计、可验证的最小协议面 | provider / hosted-integration contracts |
 | `R7 / external dependency clearance` | cutover 前依赖的 external runtime、workspace、human gate 是否已清掉 | domain repo owner |
 | `R8 / platform-owned lifecycle` | session、watch、resume、replay、sandbox 是否已经由平台/provider 承担 | provider-backed framework / future managed runtime |
 
@@ -312,13 +312,13 @@ MedAutoScience == MedDeepScientist
 - `OPL` 是 runtime owner
 - `Managed Runtime` 只是“更会长跑的 Codex”
 - `MedDeepScientist` 是 `MedAutoScience` 的系统本体
-- monorepo ingest 等于 domain harness/controller 与 execution engine 边界消失
+- monorepo ingest 等于 domain-owned authority / runtime controller 与 execution engine 边界消失
 - future `managed runtime` 已经是当前 repo-tracked reality
 
 应该把系统写成：
 
 - `OPL` 负责 stage-led framework 语言
-- domain repo 负责 `domain harness / controller + Domain Harness OS`
+- domain repo 负责 domain-owned authority、runtime controller、delivery system 与 artifact truth
 - execution engine 负责 execution plane
 - `host-agent runtime` 与 `managed runtime` 是 execution plane 的两种 deployment shape
 - future migration 只改 execution plane 的托管方式，不改写 domain contract
@@ -327,6 +327,8 @@ MedAutoScience == MedDeepScientist
 
 - [OPL 运行模型](../public/operating-model.zh-CN.md)
 - [Unified Harness Engineering Substrate](../public/unified-harness-engineering-substrate.zh-CN.md)
-- [共享基础结构](./shared-foundation.zh-CN.md)
+- [OPL Family 开发主参考](./opl-family-development-reference.zh-CN.md)
+- [共享运行时合同](./shared-runtime-contract.zh-CN.md)
+- [共享领域合同](./shared-domain-contract.zh-CN.md)
 - [Codex-default Host-Agent Runtime 合同历史稿](../history/runtime-substrate/host-agent-runtime-contract.md)
 - [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)

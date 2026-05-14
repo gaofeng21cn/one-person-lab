@@ -8,7 +8,7 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 
 ## 结论
 
-本轮整理按内容块判断生命周期状态。2026-05-14 后，长期落点统一服从同名 canonical docs taxonomy。不同文件中的同一判断只保留一个当前 owner；仍有价值的内容吸收到当前 owner doc；过时内容进入 history/provenance 语境；因合同、审计或历史路径仍需保留的文件先做 lifecycle 标注，不做不安全搬移。
+本轮整理按内容块判断生命周期状态。2026-05-14 后，长期落点统一服从同名 canonical docs taxonomy。不同文件中的同一判断只保留一个当前 owner；仍有价值的内容吸收到当前 owner doc；过时内容进入 history/provenance 语境；能安全物理迁移的旧目录直接迁移，仍暂留的旧路径只能作为外部/上游支撑、历史 provenance 或 tombstone。
 
 优先级固定为：
 
@@ -23,9 +23,9 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 | Repo | 当前角色 | 文档整理 owner | 不应承担的角色 |
 | --- | --- | --- | --- |
 | `one-person-lab` | OPL family agent framework owner | core five、`docs/active/`、runtime-substrate roadmap、family governance references | 不持有 domain truth、domain quality verdict、domain artifact authority |
-| `med-autoscience` | medical research domain agent | `docs/program/`、`docs/runtime/`、`docs/capabilities/`、`docs/policies/`、core five | 不把 MDS / Hermes / OPL App 写成医学 truth owner |
-| `med-autogrant` | grant domain agent | core five、`docs/specs/README*`、`specs_lifecycle_map`、plans/references/history indexes | 不把 dated specs 文件名当成 current truth；不把 product-entry 写成成熟 public frontdesk |
-| `redcube-ai` | visual-deliverable domain agent | product/runtime/delivery/source/program/references/history 分层与 `human_doc:*` contract-linked docs | 不把 OPL-hosted、Hermes 或 gateway/harness 语汇写成默认 runtime owner |
+| `med-autoscience` | medical research domain agent | `docs/active/`、`docs/runtime/`、`docs/delivery/medical-display/`、`docs/policies/`、core five | 不把 MDS / Hermes / OPL App 写成医学 truth owner |
+| `med-autogrant` | grant domain agent | core five、`docs/active/`、`docs/specs/README*`、`specs_lifecycle_map`、references/history indexes | 不把 dated specs 文件名当成 current truth；不把 product-entry 写成成熟 public frontdesk |
+| `redcube-ai` | visual-deliverable domain agent | product/runtime/delivery/source/active/references/history 分层与 `human_doc:*` semantic reader-context IDs | 不把 OPL-hosted、Hermes 或 gateway/harness 语汇写成默认 runtime owner |
 | `med-deepscientist` | MAS-declared archive/reference/oracle | core five、policies、references/upstream intake、en/zh guide corpus entry notes | 不作为 OPL admitted domain agent，不作为 MAS 默认 runtime 或 product entry |
 
 ## 内容级处理规则
@@ -34,7 +34,7 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 - 同一主题只保留一个当前 owner；其他文件变成 support、history、provenance 或 tombstone 指针。
 - `README*` 和目录 index 先呈现当前事实、下一跳和旧新关系，再列长清单。
 - 可以在原文件中调整段落、加 lifecycle banner 或缩短重复内容；只有引用安全后才物理移动文件。
-- `human_doc:*`、contract、source、test、history evidence 仍指向旧路径时，优先 index-level lifecycle separation。
+- `human_doc:*` 是 semantic reader-context ID，不再等同于旧物理目录。contract、source、test、history evidence 若仍指向旧路径，先改 active caller；不能改的只允许 history/provenance/tombstone 语境。
 - 历史命令、旧路径、旧状态可以保留，但必须位于 provenance/history/legacy 语境。
 - 不新增测试去固定 Markdown 文案、章节或措辞；只验证合同、schema、source、CLI/API、生成物或 semantic id。
 
@@ -45,7 +45,7 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 | `0` | `one-person-lab` | family governance 入口、cross-repo owner map、旧 runtime-substrate 语义退役说明 | docs index 指向本文件；旧 gateway/Hermes/MDS 语义只在 legacy/provenance/support 语境出现 |
 | `1` | `med-autoscience` | runtime/control 旧 MDS daemon/transport 口径收敛，program P0/P1/P2/P3/P3a 分工稳定，Portal/OPL App 分工去重 | MAS 保持 medical truth owner；MDS 为 archive/provenance/parity oracle |
 | `2` | `med-autogrant` | core docs 精简，specs lifecycle explicit file table，product-entry 和 provider 口径校准 | `codex_cli` 是默认 runtime owner；旧 specs 不再冒充 current truth |
-| `3` | `redcube-ai` | `human_doc:*` 审计后再移动，runtime doc 瘦身，phase-2 absorbed tranche 标注，Hermes/history 降级 | contract-linked program docs 不被无证移动；RCA 保持 visual truth owner |
+| `3` | `redcube-ai` | current baton brief 迁入 `docs/active/`，phase-2 absorbed tranche 与 Hermes proof 迁入 history，runtime doc 瘦身 | `human_doc:*` 保留为 semantic reader-context ID；RCA 保持 visual truth owner |
 | `4` | `med-deepscientist` | en/zh guide corpus 入口边界、compat pointer 检查、archive/reference/oracle 口径 | MDS 不回流为 MAS 默认 runtime 或 OPL domain agent |
 
 ## 验证规则
@@ -54,7 +54,7 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 
 - `git diff --check`
 - focused `rg`：`Hermes-first`、`MDS.*default`、`gateway first`、`frontdoor`、`replaceable backend`、`Current Truth`
-- 对移动文件执行 inbound reference check：`rg -n "<old-path>|human_doc:|docs/program|docs/specs" docs src tests contracts`
+- 对移动文件执行 inbound reference check：`rg -n "<old-path>|human_doc:|docs/active|docs/specs" docs src tests contracts`
 
 触及 machine-readable contracts、runtime manifests、schema refs、CLI/API 或验证入口时，必须跑对应仓库的 meta/full verification。
 

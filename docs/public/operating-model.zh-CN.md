@@ -61,18 +61,18 @@ Agent 主要负责：
 
 当前仓库承担的是这个角色的公开 framework 与产品面；其中部分 provider/runtime 能力仍处在从合同与测试证据走向生产常驻的阶段。
 
-### Domain Agent、Entry 与 Harness
+### Domain Agent、Entry 与 Domain-Owned Runtime
 
 每个独立 `domain agent` 仓应保持三层分开：
 
 - `domain agent` 作为仓库对外公开主语
 - domain-owned entry surface 作为该工作流的稳定边界入口
-- `Domain Harness OS` 作为该工作流的执行、记录、治理与交付底座
+- domain-owned authority / runtime controller / delivery system 作为该工作流的执行、记录、治理与交付底座
 
 例如：
 
-- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain entry、runtime truth 与 harness
-- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain entry、runtime truth 与 harness
+- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain entry、runtime truth、quality gate 与 delivery authority
+- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain entry、runtime truth、review gate 与 delivery authority
 
 ## Agent-first 执行
 
@@ -126,7 +126,7 @@ Agent 主要负责：
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 当前已经落地的是这条结构的 framework/control-plane、executor adapter、provider code path、receipt/projection 和 domain descriptor 层；尚未闭合的是外部 production provider 长时运行和真实 domain soak。
 
-当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。`hermes_agent` 仅作为显式非默认 executor adapter/backend 保留。
+当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。`hermes_agent` 属于当前 canonical executor backend set，并且只能作为显式非默认 executor adapter/backend 使用。
 
 Hermes provider / Gateway / readiness / compat 面只保留为历史 provenance、诊断语料或负向 guard。Temporal-backed provider 已是 production online runtime 的必需 substrate，真实 production soak 仍单独验收。
 `OPL Runtime Manager` 可以在已配置 family runtime provider 之上适配 product-managed runtime operations，但不能写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
@@ -165,9 +165,10 @@ Rust native helper / index-only 工作可以支持 native assistance 与 indexed
 
 - Codex-default `OPL` runtime 加显式 activation 在 domain 之上
 - 显式而精简的 domain-owned entry 在中层
-- 明确的 domain harness 在下层
+- 明确的 domain-owned authority、runtime controller 与 delivery system 在下层
 
 ## 延伸阅读
 
-- [共享基础结构](../active/shared-foundation.zh-CN.md)
-- [共享基础结构归属](../active/shared-foundation-ownership.zh-CN.md)
+- [OPL Family 开发主参考](../active/opl-family-development-reference.zh-CN.md)
+- [共享运行时合同](../active/shared-runtime-contract.zh-CN.md)
+- [共享领域合同](../active/shared-domain-contract.zh-CN.md)

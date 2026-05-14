@@ -33,7 +33,7 @@ This lifecycle map does not:
 This lifecycle map sits in the shared-foundation reference layer only.
 `OPL` may freeze historical dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth remain with human/domain-owned surfaces.
 That keeps the map discoverable for review and acceptance alignment without turning it into a workflow control plane or shared truth store.
-For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
+For the broader ownership split, see the [OPL Family Development Reference](../../active/opl-family-development-reference.zh-CN.md).
 For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
 
 ## Lifecycle Fields

@@ -30,5 +30,6 @@ Tombstone 规则：
 - 退役路线只保留给来源追溯、迁移回顾和审计。
 - 不因为历史文件里仍有命令、验收清单或旧路径示例，就恢复旧路线。
 - runtime / product-entry / migration 旧整文档如果已经被吸收，默认从 [Runtime Substrate 历史归档](./runtime-substrate/README.zh-CN.md) 进入。
+- 已吸收的 shared-boundary framing 页面进入 [Shared Boundary 过程历史](./process/shared-boundary/README.zh-CN.md)。
 - Product API / ACP native specs 已迁入 [过程历史归档](./process/README.zh-CN.md)，只保留历史形成过程。
 - 当前完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架规划从 [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 进入。

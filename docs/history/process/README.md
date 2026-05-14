@@ -20,6 +20,7 @@ Current truth lives in:
 
 - [Plans](./plans/) keeps completed implementation plans and closeout briefs.
 - [Specs](./specs/) keeps superseded design specs that no longer define the active product boundary, including Product API / ACP-native formation context.
+- [Shared Boundary](./shared-boundary/) keeps absorbed shared-foundation framing pages after their owner split moved into current active owner surfaces.
 - [Superpowers](./superpowers/) keeps generated planning/spec artifacts from previous worker flows.
 
 ## Boundary

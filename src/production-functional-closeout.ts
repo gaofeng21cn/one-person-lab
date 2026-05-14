@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
@@ -11,17 +10,22 @@ import { buildFamilyDomainMemoryList } from './family-domain-memory.ts';
 import { buildFamilyStageListEntry, buildFamilyStagesList } from './family-stage-control-plane.ts';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
+import { buildProviderReadiness } from './production-functional-closeout-provider-readiness.ts';
 import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 import {
   listStageAttemptCloseouts,
+  listStageAttemptSignals,
   listStageAttempts,
   stageAttemptSummary,
   stageAttemptToPayload,
 } from './family-runtime-stage-attempts.ts';
 import { familyRuntimePaths, listEvents, queueSummary } from './family-runtime-store.ts';
-import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
-import { probeTemporalServer, resolveTemporalAddressForPaths } from './family-runtime-temporal-service.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import { buildWorkbenchOperatorActionRouting } from './runtime-tray-action-routing.ts';
+import {
+  buildWorkbenchGenericProjections,
+  type StageAttemptGenericProjectionInput,
+} from './runtime-tray-stage-attempt-generic-projections.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -39,24 +43,6 @@ type TypedBlocker = {
 };
 
 const PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS = 30_000;
-
-function processIsAlive(pid: number) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function readJsonRecord(filePath: string) {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
 
 function stringList(value: unknown) {
   return Array.isArray(value)
@@ -85,6 +71,7 @@ function safeReadAttemptLedger(paths: ReturnType<typeof familyRuntimePaths>) {
       stage_attempts: { total: 0, by_status: {} },
       attempts: [],
       closeouts: [],
+      attempt_signals: [],
       events: [],
     };
   }
@@ -93,15 +80,25 @@ function safeReadAttemptLedger(paths: ReturnType<typeof familyRuntimePaths>) {
   try {
     const tasksReady = tableExists(db, 'tasks');
     const attemptsReady = tableExists(db, 'stage_attempts');
+    const attempts = attemptsReady ? listStageAttempts(db) : [];
     return {
       status: 'readable' as const,
       queue: tasksReady ? queueSummary(db) : { total: 0, by_status: {} },
       stage_attempts: attemptsReady ? stageAttemptSummary(db) : { total: 0, by_status: {} },
-      attempts: attemptsReady ? listStageAttempts(db) : [],
+      attempts,
       closeouts: attemptsReady
-        ? listStageAttempts(db).flatMap((attempt) =>
+        ? attempts.flatMap((attempt) =>
             listStageAttemptCloseouts(db, attempt.stage_attempt_id).map((closeout) => ({
               ...closeout,
+              domain_id: attempt.domain_id,
+              stage_id: attempt.stage_id,
+            })),
+          )
+        : [],
+      attempt_signals: attemptsReady
+        ? attempts.flatMap((attempt) =>
+            listStageAttemptSignals(db, attempt.stage_attempt_id).map((signal) => ({
+              ...signal,
               domain_id: attempt.domain_id,
               stage_id: attempt.stage_id,
             })),
@@ -112,113 +109,6 @@ function safeReadAttemptLedger(paths: ReturnType<typeof familyRuntimePaths>) {
   } finally {
     db.close();
   }
-}
-
-function readTemporalWorkerState(paths: ReturnType<typeof familyRuntimePaths>) {
-  const statePath = path.join(paths.root, 'temporal-worker.json');
-  const state = readJsonRecord(statePath);
-  if (!state) {
-    return { state_path: statePath, state: null, pid_alive: false };
-  }
-  const pid = typeof state.pid === 'number' && Number.isInteger(state.pid) ? state.pid : null;
-  return {
-    state_path: statePath,
-    state,
-    pid_alive: pid !== null ? processIsAlive(pid) : false,
-  };
-}
-
-function temporalRepairAction(readinessStatus: string) {
-  const repairCommands = {
-    start_local_temporal_service: 'opl family-runtime service start --provider temporal',
-    configure_temporal_address: 'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
-    verify_temporal_server: 'opl family-runtime worker status --provider temporal',
-    start_managed_worker: 'opl family-runtime worker start --provider temporal',
-    rerun_production_proof: 'opl family-runtime residency proof --provider temporal --production',
-  };
-  const nextCommandByStatus: Record<string, string | null> = {
-    not_configured: repairCommands.start_local_temporal_service,
-    server_unreachable: repairCommands.start_local_temporal_service,
-    worker_not_ready: repairCommands.start_managed_worker,
-    ready: repairCommands.rerun_production_proof,
-  };
-  return {
-    surface_kind: 'temporal_worker_repair_action',
-    provider_kind: 'temporal',
-    action_id:
-      readinessStatus === 'ready'
-        ? 'none'
-        : readinessStatus === 'worker_not_ready'
-          ? 'start_temporal_worker'
-          : readinessStatus === 'server_unreachable'
-            ? 'repair_temporal_service'
-            : 'configure_temporal_service',
-    next_command: nextCommandByStatus[readinessStatus] ?? repairCommands.start_local_temporal_service,
-    repair_commands: repairCommands,
-  };
-}
-
-async function buildProviderReadiness(paths: ReturnType<typeof familyRuntimePaths>) {
-  const addressResolution = resolveTemporalAddressForPaths(paths);
-  const address = addressResolution.address;
-  const serverReachable = address ? await probeTemporalServer(address) : false;
-  const workerState = readTemporalWorkerState(paths);
-  const namespace = resolveTemporalNamespace();
-  const taskQueue = resolveTemporalTaskQueue();
-  const state = workerState.state;
-  const workerStateMatches =
-    Boolean(state)
-    && optionalString(state?.address) === address
-    && optionalString(state?.namespace) === namespace
-    && optionalString(state?.task_queue) === taskQueue;
-  const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
-    || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
-  const workerReady = Boolean(serverReachable && (envWorkerReady || (workerStateMatches && workerState.pid_alive)));
-  const readinessStatus =
-    !address
-      ? 'not_configured'
-      : !serverReachable
-        ? 'server_unreachable'
-        : !workerReady
-          ? 'worker_not_ready'
-          : 'ready';
-
-  return {
-    surface_kind: 'opl_production_temporal_provider_readiness',
-    provider_kind: 'temporal',
-    readiness_status: readinessStatus,
-    production_provider_ready: readinessStatus === 'ready',
-    address,
-    address_source: addressResolution.addressSource,
-    server_reachable: serverReachable,
-    namespace,
-    task_queue: taskQueue,
-    default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
-    worker_ready: workerReady,
-    worker_state_path: workerState.state_path,
-    managed_worker_pid:
-      workerState.pid_alive && typeof workerState.state?.pid === 'number'
-        ? workerState.state.pid
-        : null,
-    managed_worker_state_matches: workerStateMatches,
-    service_state: addressResolution.serviceState,
-    repair_action: temporalRepairAction(readinessStatus),
-    typed_blocker:
-      readinessStatus === 'ready'
-        ? null
-        : {
-            blocker_kind: 'temporal_readiness',
-            blocker_id: `temporal_provider_${readinessStatus}`,
-            owner: 'opl_provider_runtime',
-            source_surface: 'opl_production_temporal_provider_readiness',
-            repair_command: temporalRepairAction(readinessStatus).next_command,
-            next_action: 'Bring the managed local Temporal service and worker to ready, then rerun production proof.',
-          },
-    authority_boundary: {
-      opl: 'provider_readiness_and_repair_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
-  };
 }
 
 function contractForAttempt(attempt: ReturnType<typeof stageAttemptToPayload>) {
@@ -257,6 +147,202 @@ function lifecycleProofRefs(proofs: ReturnType<typeof lifecycleForAttempt>[]) {
         .map((action) => lifecycleRequestRef(action.domain_receipt_ref))
         .filter((ref): ref is string => Boolean(ref)),
     ),
+  };
+}
+
+function latestCloseoutPacketsByAttempt(
+  closeouts: Array<ReturnType<typeof listStageAttemptCloseouts>[number]>,
+) {
+  return closeouts.reduce<Map<string, JsonRecord>>((byAttempt, closeout) => {
+    byAttempt.set(closeout.stage_attempt_id, closeout.packet);
+    return byAttempt;
+  }, new Map());
+}
+
+function signalsByAttempt(
+  signals: Array<ReturnType<typeof listStageAttemptSignals>[number]>,
+) {
+  return signals.reduce<Map<string, JsonRecord[]>>((byAttempt, signal) => {
+    const entries = byAttempt.get(signal.stage_attempt_id) ?? [];
+    entries.push(signal as JsonRecord);
+    byAttempt.set(signal.stage_attempt_id, entries);
+    return byAttempt;
+  }, new Map());
+}
+
+function summarizeOperatorActionRouting(
+  attempts: Array<ReturnType<typeof stageAttemptToPayload>>,
+  closeouts: Array<ReturnType<typeof listStageAttemptCloseouts>[number]>,
+  signals: Array<ReturnType<typeof listStageAttemptSignals>[number]>,
+) {
+  const closeoutsByAttempt = latestCloseoutPacketsByAttempt(closeouts);
+  const signalEntriesByAttempt = signalsByAttempt(signals);
+  return buildWorkbenchOperatorActionRouting(attempts.map((attempt) => {
+    const latestCloseout = closeoutsByAttempt.get(attempt.stage_attempt_id) ?? {};
+    const nextOwner = optionalString(latestCloseout.next_owner)
+      ?? optionalString(attempt.route_impact.next_owner)
+      ?? attempt.domain_id;
+    return {
+      stage_attempt_id: attempt.stage_attempt_id,
+      domain_id: attempt.domain_id,
+      stage_id: attempt.stage_id,
+      next_owner: nextOwner,
+      route_impact: attempt.route_impact,
+      human_gate_refs: stringList(attempt.human_gate_refs),
+      resume_ledger: signalEntriesByAttempt.get(attempt.stage_attempt_id) ?? [],
+    };
+  }));
+}
+
+function actionRouteRefs(
+  actions: Array<{
+    route_target_kind: string;
+    command_or_surface_ref: string;
+  }>,
+  targetKind: string,
+) {
+  return uniqueStrings(actions
+    .filter((action) => action.route_target_kind === targetKind)
+    .map((action) => action.command_or_surface_ref));
+}
+
+function closeoutPacketForAttempt(
+  closeoutsByAttempt: Map<string, JsonRecord>,
+  stageAttemptId: string,
+) {
+  return closeoutsByAttempt.get(stageAttemptId) ?? {};
+}
+
+function attemptSignalPayloads(signals: JsonRecord[], signalKind: string) {
+  return signals.filter((signal) => optionalString(signal.signal_kind) === signalKind);
+}
+
+function attemptHasHumanGate(
+  attempt: ReturnType<typeof stageAttemptToPayload>,
+  humanGateRefs: string[],
+  humanGateLedger: JsonRecord[],
+) {
+  return attempt.status === 'human_gate' || humanGateRefs.length > 0 || humanGateLedger.length > 0;
+}
+
+function genericProjectionInputs(
+  attempts: Array<ReturnType<typeof stageAttemptToPayload>>,
+  closeouts: Array<ReturnType<typeof listStageAttemptCloseouts>[number]>,
+  signals: Array<ReturnType<typeof listStageAttemptSignals>[number]>,
+): StageAttemptGenericProjectionInput[] {
+  const closeoutsByAttempt = latestCloseoutPacketsByAttempt(closeouts);
+  const signalEntriesByAttempt = signalsByAttempt(signals);
+  return attempts.map((attempt) => {
+    const latestCloseout = closeoutPacketForAttempt(closeoutsByAttempt, attempt.stage_attempt_id);
+    const routeImpact = attempt.route_impact;
+    const humanGateRefs = stringList(attempt.human_gate_refs);
+    const signalEntries = signalEntriesByAttempt.get(attempt.stage_attempt_id) ?? [];
+    const humanGateLedger = attemptSignalPayloads(signalEntries, 'human_gate');
+    const resumeLedger = attemptSignalPayloads(signalEntries, 'resume');
+    const rejectedWrites = recordList(latestCloseout.rejected_writes);
+    const closeoutRefs = stringList(attempt.closeout_refs);
+    const consumedRefs = stringList(latestCloseout.consumed_refs);
+    const writebackReceiptRefs = stringList(latestCloseout.writeback_receipt_refs);
+    const nextOwner = optionalString(latestCloseout.next_owner)
+      ?? optionalString(routeImpact.next_owner)
+      ?? attempt.domain_id;
+    return {
+      stage_attempt_id: attempt.stage_attempt_id,
+      domain_id: attempt.domain_id,
+      stage_id: attempt.stage_id,
+      next_owner: nextOwner,
+      route_impact: routeImpact,
+      workspace_locator: attempt.workspace_locator,
+      source_fingerprint: attempt.source_fingerprint,
+      checkpoint_refs: stringList(attempt.checkpoint_refs),
+      closeout_refs: closeoutRefs,
+      consumed_refs: consumedRefs,
+      consumed_memory_refs: stringList(latestCloseout.consumed_memory_refs),
+      writeback_receipt_refs: writebackReceiptRefs,
+      artifact_refs: uniqueStrings([
+        ...closeoutRefs,
+        ...consumedRefs,
+        ...writebackReceiptRefs,
+      ]),
+      rejected_writes: rejectedWrites,
+      attention_flags: [
+        attemptHasHumanGate(attempt, humanGateRefs, humanGateLedger) ? 'human_gate' : null,
+        resumeLedger.length > 0 ? 'resume_available' : null,
+        attempt.status === 'dead_lettered' ? 'dead_lettered' : null,
+        attempt.blocked_reason ? 'blocked' : null,
+        rejectedWrites.length > 0 ? 'rejected_writes' : null,
+      ].filter((flag): flag is string => Boolean(flag)),
+      human_gate_refs: humanGateRefs,
+      human_gate_ledger: humanGateLedger,
+      resume_ledger: resumeLedger,
+      dead_letter: attempt.status === 'dead_lettered'
+        ? {
+            reason: attempt.blocked_reason,
+            task: null,
+          }
+        : null,
+      domain_ready_verdict: optionalString(latestCloseout.domain_ready_verdict)
+        ?? optionalString(routeImpact.domain_ready_verdict),
+      controlled_apply_contract: contractForAttempt(attempt),
+      lifecycle_primitives: buildFamilyRuntimeLifecyclePrimitives({
+        workspaceLocator: attempt.workspace_locator,
+        artifactRefs: [
+          ...closeoutRefs,
+          ...consumedRefs,
+          ...writebackReceiptRefs,
+        ],
+      }),
+      current_provider_readiness: null,
+    };
+  });
+}
+
+function summarizeGenericProjections(
+  attempts: Array<ReturnType<typeof stageAttemptToPayload>>,
+  closeouts: Array<ReturnType<typeof listStageAttemptCloseouts>[number]>,
+  signals: Array<ReturnType<typeof listStageAttemptSignals>[number]>,
+) {
+  const projections = buildWorkbenchGenericProjections(genericProjectionInputs(attempts, closeouts, signals));
+  return {
+    surface_kind: 'opl_stage_attempt_generic_projection_closeout_evidence',
+    projection_scope: 'production_functional_closeout',
+    projection_policy: 'refs_only_no_domain_truth_body_no_action_execution',
+    summary: {
+      artifact_gallery: projections.artifact_gallery.summary,
+      route_decision_graph: projections.route_decision_graph.summary,
+      review_repair_queue: projections.review_repair_queue.summary,
+      quality_readiness: projections.quality_readiness.summary,
+      observability_slo: projections.observability_slo.summary,
+      workspace_source_intake: projections.workspace_source_intake.summary,
+      memory_locator_index: projections.memory_locator_index.summary,
+      package_export_lifecycle: projections.package_export_lifecycle.summary,
+      action_routing: projections.action_routing.summary,
+    },
+    projections: {
+      artifact_gallery: projections.artifact_gallery,
+      route_decision_graph: projections.route_decision_graph,
+      review_repair_queue: projections.review_repair_queue,
+      quality_readiness: projections.quality_readiness,
+      observability_slo: projections.observability_slo,
+      workspace_source_intake: projections.workspace_source_intake,
+      memory_locator_index: projections.memory_locator_index,
+      package_export_lifecycle: projections.package_export_lifecycle,
+    },
+    authority_boundary: {
+      can_read_domain_truth_body: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_source_readiness: false,
+      can_authorize_package_readiness: false,
+      can_authorize_export_verdict: false,
+      can_execute_repair_command: false,
+      can_execute_domain_action: false,
+      can_execute_direct_skill: false,
+      can_mutate_domain_artifact: false,
+      provider_completion_is_domain_ready: false,
+    },
   };
 }
 
@@ -313,12 +399,18 @@ function summarizeAttemptEvidence(
     domain_id: string;
     stage_id: string;
   }>,
+  signals: Array<ReturnType<typeof listStageAttemptSignals>[number] & {
+    domain_id: string;
+    stage_id: string;
+  }>,
   domainIds: string[],
 ) {
   const contracts = attempts.map(contractForAttempt);
   const lifecycleProofs = attempts.map(lifecycleForAttempt);
   const lifecycleRefs = lifecycleProofRefs(lifecycleProofs);
   const memoryRefEvidence = closeoutMemoryRefEvidence(closeouts, domainIds);
+  const operatorActionRouting = summarizeOperatorActionRouting(attempts, closeouts, signals);
+  const genericProjections = summarizeGenericProjections(attempts, closeouts, signals);
   return {
     surface_kind: 'opl_stage_attempt_functional_closeout_evidence',
     ledger_attempt_count: attempts.length,
@@ -346,12 +438,25 @@ function summarizeAttemptEvidence(
       rejected_write_count: memoryRefEvidence.rejected_write_count,
       opl_writes_memory_body: false,
     },
+    operator_action_routing_summary: operatorActionRouting.summary,
+    generic_projection_summary: genericProjections.summary,
+    generic_projections: genericProjections,
+    operator_action_routing: {
+      surface_kind: operatorActionRouting.surface_kind,
+      routing_scope: operatorActionRouting.routing_scope,
+      router_role: operatorActionRouting.router_role,
+      availability: operatorActionRouting.availability,
+      summary: operatorActionRouting.summary,
+      actions: operatorActionRouting.actions,
+      authority_boundary: operatorActionRouting.authority_boundary,
+    },
     domain_breakdown: domainIds.map((domainId) => {
       const domainAttempts = attempts.filter((attempt) => attempt.domain_id === domainId);
       const domainContracts = domainAttempts.map(contractForAttempt);
       const domainLifecycleProofs = domainAttempts.map(lifecycleForAttempt);
       const domainLifecycleRefs = lifecycleProofRefs(domainLifecycleProofs);
       const domainMemory = memoryRefEvidence.domains.find((entry) => entry.domain_id === domainId);
+      const domainActions = operatorActionRouting.actions.filter((action) => action.domain_id === domainId);
       return {
         domain_id: domainId,
         attempt_count: domainAttempts.length,
@@ -367,6 +472,12 @@ function summarizeAttemptEvidence(
         consumed_memory_refs: domainMemory?.consumed_memory_refs ?? [],
         writeback_receipt_refs: domainMemory?.writeback_receipt_refs ?? [],
         rejected_write_count: domainMemory?.rejected_write_count ?? 0,
+        operator_action_route_count: domainActions.length,
+        operator_action_route_refs: uniqueStrings(domainActions.map((action) => action.command_or_surface_ref)),
+        operator_app_surface_route_refs: actionRouteRefs(domainActions, 'app_surface'),
+        operator_provider_signal_route_refs: actionRouteRefs(domainActions, 'provider_signal'),
+        operator_domain_sidecar_route_refs: actionRouteRefs(domainActions, 'domain_sidecar'),
+        operator_direct_skill_route_refs: actionRouteRefs(domainActions, 'direct_skill'),
       };
     }),
     memory_ref_evidence: memoryRefEvidence,
@@ -375,6 +486,9 @@ function summarizeAttemptEvidence(
       opl_writes_domain_artifact: false,
       opl_writes_domain_memory_body: false,
       opl_declares_domain_quality_verdict: false,
+      opl_executes_operator_action_routes: false,
+      opl_executes_generic_projection_actions: false,
+      provider_completion_is_domain_ready: false,
     },
   };
 }
@@ -638,6 +752,9 @@ function buildDomainCloseoutEntries(input: {
         ? optionalString(agent.physical_skeleton_layout_audit.status)
         : null,
       physical_skeleton_evidence: physicalSkeletonEvidenceFromAgent(agent),
+      physical_skeleton_follow_through_gate: isRecord(agent?.physical_skeleton_follow_through_gate)
+        ? agent.physical_skeleton_follow_through_gate
+        : null,
       production_closure_gaps: domainProductionClosureGaps(agent, manifest),
       stage_plane_ready: stageDomain?.ready === true,
       memory_descriptor_ready: memory?.ready === true,
@@ -734,7 +851,12 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
   const stages = buildFamilyStagesList(contracts, sharedManifestCatalogOptions).family_stages;
   const providerReadiness = await buildProviderReadiness(paths);
   const ledger = safeReadAttemptLedger(paths);
-  const attemptEvidence = summarizeAttemptEvidence(ledger.attempts, ledger.closeouts, domainIds);
+  const attemptEvidence = summarizeAttemptEvidence(
+    ledger.attempts,
+    ledger.closeouts,
+    ledger.attempt_signals,
+    domainIds,
+  );
   const continuousProof = buildProviderContinuousProof(ledger.events);
   const domainEntries = buildDomainCloseoutEntries({
     catalog,
@@ -801,8 +923,11 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
           max_proof_age_seconds: continuousProof.max_proof_age_seconds,
           proof_freshness_status: continuousProof.proof_freshness_status,
           latest_closeout_status: continuousProof.latest_closeout_status,
+          slo_execution_receipt_event_count: continuousProof.slo_execution_receipt_event_count,
+          latest_slo_execution_event_created_at: continuousProof.latest_slo_execution_event_created_at,
           continuous_proof_status: continuousProof.continuous_proof_status,
           proof_slo_status: continuousProof.proof_slo_status,
+          operator_slo_repair_loop: continuousProof.operator_slo_repair_loop,
           authority_boundary: continuousProof.authority_boundary,
         },
       },
