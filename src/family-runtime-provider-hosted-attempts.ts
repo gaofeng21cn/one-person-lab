@@ -16,6 +16,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
 function providerHostedTaskDeclared(payload: Record<string, unknown>) {
   return payload.opl_provider_hosted_stage_attempt === true
     || payload.provider_hosted_stage_attempt === true
@@ -72,6 +76,25 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
   const nestedLocator = isRecord(payload.workspace_locator) ? payload.workspace_locator : null;
   if (nestedLocator) {
     locator.workspace_locator = nestedLocator;
+  }
+  for (const key of [
+    'controlled_stage_attempt',
+    'controlled_stage_attempt_projection',
+    'controlled_soak_no_regression_attempt',
+  ]) {
+    if (isRecord(payload[key])) {
+      locator[key] = payload[key];
+    }
+  }
+  const lifecycleApplyRequests = recordList(payload.lifecycle_apply_requests);
+  if (lifecycleApplyRequests.length > 0) {
+    locator.lifecycle_apply_requests = lifecycleApplyRequests;
+  }
+  const restoreRefs = Array.isArray(payload.restore_refs)
+    ? payload.restore_refs.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+  if (restoreRefs.length > 0) {
+    locator.restore_refs = restoreRefs;
   }
   if (Array.isArray(payload.target_studies)) {
     locator.target_studies = payload.target_studies.filter(

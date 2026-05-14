@@ -460,3 +460,108 @@ PY
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime preserves MAG controlled apply and lifecycle requests in provider-hosted locator', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mag-locator-'));
+  const ownerReceiptRef = '/tmp/mag/runtime/receipts/owner-receipts/goal-mag-opl-stage-closeout.json';
+  const lifecycleReceiptRef = '/tmp/mag/runtime/receipts/lifecycle/goal-mag-lifecycle-cleanup-blocker.json';
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+assert task["task_kind"] == "stage-attempt/closeout"
+print(json.dumps({
+    "ok": True,
+    "command": "product-sidecar-dispatch",
+    "sidecar_dispatch": {
+        "surface_kind": "mag_product_sidecar_dispatch",
+        "task_id": task["task_id"],
+        "action": task["action"],
+        "status": "completed",
+        "target_domain_id": "medautogrant",
+        "result": {
+            "surface_kind": "sidecar_stage_attempt_closeout_result",
+            "return_shape": "domain_owner_receipt",
+            "receipt_ref": task["controlled_stage_attempt"]["owner_receipt_refs"][0],
+            "receipt_refs": {
+                "owner_receipt_ref": task["controlled_stage_attempt"]["owner_receipt_refs"][0],
+                "owner_receipt_contract_ref": "/product_entry_manifest/owner_receipt_contract",
+                "source_ref": "opl-stage-attempt://goal-mag"
+            },
+            "source_refs": [
+                "/product_entry_manifest/controlled_stage_attempt_projection",
+                "/product_entry_manifest/owner_receipt_contract"
+            ],
+            "write_policy": "runtime_receipt_instance_only_no_repo_write"
+        },
+        "receipt_refs": {
+            "dispatch_receipt_ref": "mag-sidecar-receipt:stage-closeout",
+            "opl_consumes_receipt_ref_only": True
+        }
+    }
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'stage-attempt/closeout',
+      '--payload',
+      JSON.stringify({
+        action: 'stage-attempt/closeout',
+        input_path: '/tmp/mag/input.json',
+        stage_id: 'review_and_rebuttal',
+        provider_hosted_stage_attempt: true,
+        provider_attempt_id: 'opl-temporal:mag:locator-preserve',
+        controlled_stage_attempt: {
+          action_kind: 'grant_stage_attempt_apply',
+          contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
+          owner_receipt_refs: [ownerReceiptRef],
+        },
+        lifecycle_apply_requests: [
+          {
+            action_id: 'goal-mag-cleanup-request',
+            action_kind: 'cleanup',
+            authority_owner: 'med-autogrant',
+            owner_scope: 'domain_owned_artifact',
+            target_ref: 'mag-artifact-locator:goal-mag',
+            restore_ref: 'mag-restore-ref:goal-mag',
+            domain_receipt_ref: lifecycleReceiptRef,
+          },
+        ],
+      }),
+      '--dedupe-key',
+      'mag:test:locator-preserve',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const inspected = runCli([
+      'family-runtime',
+      'attempt',
+      'inspect',
+      task.family_runtime_task.stage_attempts[0].stage_attempt_id,
+    ], env);
+    const locator = inspected.family_runtime_stage_attempt.attempt.workspace_locator;
+
+    assert.deepEqual(locator.controlled_stage_attempt.owner_receipt_refs, [ownerReceiptRef]);
+    assert.equal(
+      locator.lifecycle_apply_requests[0].domain_receipt_ref,
+      lifecycleReceiptRef,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
