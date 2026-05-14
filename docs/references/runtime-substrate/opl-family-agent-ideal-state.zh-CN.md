@@ -101,6 +101,17 @@ MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry
 
 这类上收不表示 OPL 接管 domain truth。OPL 持有的是 transport、locator、index、projection、receipt refs 和 operator workflow；医学研究路线、基金策略、fundability、specific aims、视觉策略、visual direction、review/export verdict、质量 verdict、artifact/export authority、source readiness verdict 和 memory body 继续回到对应 domain owner。
 
+### 仍需 OPL 层实现的目标能力
+
+对照 MAS、MAG、RCA 的理想态与当前三仓 read model，OPL 后续应优先补齐下面这些 framework 能力，而不是让 domain repo 各自复制：
+
+- `state-machine runner`：OPL 已有 domain-neutral transition schema、runner 和 matrix runner 基础；后续继续补 tick loop、provider attempt bridge、retry/dead-letter、human gate transport、dispatch receipt 和真实 domain spec ingestion。Domain repo 提供 transition spec；OPL 只执行和审计 spec，不解释医学发表、基金 fundability 或视觉 export ready。
+- `provider SLO executor`：把当前 Temporal production proof / `operator_slo_repair_loop` 从 read-model 推进到周期性 supervised execution receipt、overdue repair receipt、restart/re-query/signal/history 长时证据。该能力只证明 provider residency，不证明 domain ready。
+- `stage attempt activity bridge`：把 typed queue、provider attempt、sidecar dispatch、typed closeout、owner receipt refs、typed blocker、no-regression evidence refs 和 no-forbidden-write proof 做成跨 domain 的稳定 transport。
+- `App workbench product shell`：把 workspace/source intake、route/decision graph、review/repair queue、artifact gallery、package/export lifecycle、memory locator、quality/readiness、observability/SLO 与 owner-aware action routing 做成 One Person Lab App 的通用工作台。
+- `memory / artifact / lifecycle transport`：提供 body-free memory inventory、writeback proposal / receipt transport、runtime artifact root locator、retention / restore ledger、package/export shell 和 provenance drilldown。OPL 不保存 memory body、不接受/拒绝 writeback、不改 artifact、不下 export verdict。
+- `physical skeleton / legacy retirement gate`：保持 read-only follow-through gate，并在 direct/hosted parity、replacement proof 和 provenance retention 齐备后指导 repo owner 做受控迁移或删除。
+
 ### 质控与审计
 
 - OPL 提供 framework-level gate：stage closeout required-for-completion、receipt idempotency、conflict fail-closed、forbidden write protection、source fingerprint、attempt replay safety、direct/hosted parity 和 operator audit trail。
