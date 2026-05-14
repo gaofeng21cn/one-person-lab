@@ -3,7 +3,6 @@ import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path,
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
-    OPL_DISABLE_HERMES_ONLINE: '1',
     ...extra,
   };
 }

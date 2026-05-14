@@ -6,7 +6,6 @@ import {
   writeOplUpdateChannel,
 } from '../system-preferences.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
-import { ensureFamilyRuntimeProvider } from '../family-runtime-providers.ts';
 import type { FrameworkContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
@@ -64,31 +63,6 @@ async function maybeUpdateCodex(
     target_id: 'codex',
     status: normalizeUpdateStatus(result.engine_action.status),
     reason: `codex_cli_${codex.version_status}`,
-    result: result.engine_action,
-  };
-}
-
-async function maybeUpdateHermes(
-  contracts: FrameworkContracts,
-  environment: OplSystemEnvironment,
-): Promise<SystemUpdateTargetResult> {
-  if (environment.core_engines.family_runtime_provider.provider_kind !== 'hermes_legacy') {
-    return buildSkippedUpdate('engine', 'hermes', 'hermes_legacy_provider_not_selected');
-  }
-  const hermes = environment.core_engines.hermes;
-  if (!hermes.installed) {
-    return buildSkippedUpdate('engine', 'hermes', 'hermes_missing');
-  }
-  if (!hermes.update_available) {
-    return buildSkippedUpdate('engine', 'hermes', 'hermes_ready');
-  }
-
-  const result = await runOplEngineAction(contracts, 'update', 'hermes');
-  return {
-    target_type: 'engine',
-    target_id: 'hermes',
-    status: normalizeUpdateStatus(result.engine_action.status),
-    reason: hermes.update_summary ?? 'hermes_update_available',
     result: result.engine_action,
   };
 }
@@ -210,7 +184,6 @@ async function runOplSystemUpdate(contracts: FrameworkContracts) {
   const initialModules = buildOplModules().modules.modules;
   const targets: SystemUpdateTargetResult[] = [
     await maybeUpdateCodex(contracts, initialEnvironment),
-    await maybeUpdateHermes(contracts, initialEnvironment),
     ...initialModules.map((module) => maybeUpdateModule(module)),
   ];
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
@@ -261,18 +234,19 @@ export async function runOplSystemAction(
   input: OplSystemActionInput = {},
 ) {
   if (action === 'repair') {
-    const repairPayload = ensureFamilyRuntimeProvider('hermes_legacy', 'repair');
     return {
       version: 'g2',
       system_action: {
         action,
-        status: repairPayload.status === 'ready' ? 'completed' : 'manual_required',
+        status: 'manual_required',
         update_channel: readOplUpdateChannel().channel,
         workspace_root: readOplWorkspaceRoot(),
         details: {
           surface_kind: 'family_runtime_provider_repair',
-          command_preview: ['opl', 'family-runtime', 'repair', '--provider', 'hermes_legacy'],
-          provider: repairPayload,
+          command_preview: ['opl', 'family-runtime', 'status', '--provider', 'temporal'],
+          provider: null,
+          note:
+            'Generic system repair no longer manages a Hermes family-runtime bridge. Review or configure the Temporal provider explicitly.',
         },
       },
     };

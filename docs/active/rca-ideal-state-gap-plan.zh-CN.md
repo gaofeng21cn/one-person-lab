@@ -80,7 +80,7 @@ OPL / App 不能做：
 | Visual memory | descriptor、locator、writeback proposal、accept/reject command、runtime receipt refs 已有 | 真实 reusable visual lesson body / accepted-rejected receipt 还没形成 runtime apply 闭环 | 在真实交付 closeout 后生成 proposal，由 RCA accept/reject，并只把 locator/receipt refs 投影给 OPL |
 | Artifact lifecycle | lifecycle guarded apply proof 已有；artifact locator / proof runner 已有 | cleanup / restore / retention 缺真实 visual workspace receipt | 对真实 workspace 做 guarded apply；RCA 返回 artifact mutation receipt 或 typed blocker，OPL 只保存 locator/ledger |
 | App / workbench projection | OPL 已有 runtime snapshot 和 stage-attempt workbench projection | RCA-oriented gallery、review queue、route graph、proof drilldown 和 handoff packet 还未产品化 | App 只展示 RCA refs、freshness、owner、next action；按钮路由到 OPL signal 或 RCA product-entry / sidecar |
-| Legacy retirement | 旧 Hermes / Gateway / local-manager active path 已降级为 history/provenance/optional proof 语境 | 物理删除仍需 no-active-caller、direct/hosted parity、fixture/provenance proof | 有证据后逐项删除或 tombstone；无证据时只保留降级说明 |
+| Legacy retirement | 旧 Hermes / Gateway / local-manager active path 已降级为 history/provenance/diagnostic/negative-guard 语境 | 物理删除仍需 no-active-caller、direct/hosted parity、fixture/provenance proof | 有证据后逐项删除或 tombstone；无证据时只保留退役证据说明 |
 
 ## 完善计划
 

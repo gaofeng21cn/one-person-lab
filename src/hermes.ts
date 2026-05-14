@@ -24,7 +24,7 @@ export interface HermesRuntimeInspection {
   update_summary: string | null;
   gateway_service: HermesGatewayServiceStatus;
   issues: string[];
-  inspection_mode: 'shallow_optional' | 'deep_selected';
+  inspection_mode: 'shallow_non_provider_diagnostic' | 'deep_selected';
 }
 
 export interface HermesCommandOptions {
@@ -175,7 +175,7 @@ export function inspectHermesRuntime(options: HermesRuntimeInspectionOptions = {
       issues: [
         'Hermes binary not found. Set OPL_HERMES_BIN or install `hermes` into PATH.',
       ],
-      inspection_mode: options.deep === false ? 'shallow_optional' : 'deep_selected',
+      inspection_mode: options.deep === false ? 'shallow_non_provider_diagnostic' : 'deep_selected',
     };
   }
 
@@ -192,9 +192,9 @@ export function inspectHermesRuntime(options: HermesRuntimeInspectionOptions = {
       },
       issues: [
         options.reason
-          ?? 'Hermes deep inspection skipped because Hermes is optional unless hermes_legacy provider or an explicit Hermes diagnostic is selected.',
+          ?? 'Hermes deep inspection skipped because Hermes is not a provider and only explicit proof/diagnostic inspection may select it.',
       ],
-      inspection_mode: 'shallow_optional',
+      inspection_mode: 'shallow_non_provider_diagnostic',
     };
   }
 

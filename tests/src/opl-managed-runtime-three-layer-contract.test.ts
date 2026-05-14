@@ -67,12 +67,12 @@ test('family manifest fixtures consume the shared managed runtime three-layer co
       executor_owner: 'codex_cli',
     },
     redcube: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
       domain_owner: 'redcube_ai',
       executor_owner: 'codex_cli',
     },
     medautogrant: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
       domain_owner: 'med-autogrant',
       executor_owner: 'med-autogrant',
     },

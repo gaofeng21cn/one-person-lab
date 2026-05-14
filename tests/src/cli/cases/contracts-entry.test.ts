@@ -241,7 +241,7 @@ test('contract validate returns a stable machine-readable contract summary', () 
   });
 });
 
-test('doctor reports a Codex-default ready local entry and Hermes gateway availability when Hermes is available', () => {
+test('doctor reports a Codex-default ready local entry with optional Hermes diagnostics when Hermes is available', () => {
   const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
 echo "unused"
 exit 0
@@ -275,7 +275,6 @@ exit 1
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       OPL_HERMES_BIN: hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
 
     assert.equal(output.version, 'g2');
@@ -286,13 +285,14 @@ exit 1
     assert.equal(output.product_entry.online_runtime_ready, true);
     assert.equal(output.product_entry.messaging_gateway_ready, true);
     assert.equal(output.product_entry.hermes.binary.path, hermesPath);
-    assert.equal(output.product_entry.hermes.version, 'Hermes Agent v9.9.9-test');
-    assert.equal(output.product_entry.hermes.gateway_service.loaded, true);
+    assert.equal(output.product_entry.hermes.version, null);
+    assert.equal(output.product_entry.hermes.gateway_service.loaded, false);
+    assert.equal(output.product_entry.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
     assert.match(output.product_entry.notes[0], /opl exec/);
     assert.match(output.product_entry.notes[0], /opl resume/);
     assert.match(output.product_entry.notes[1], /opl skill sync/);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
-    assert.match(output.product_entry.notes[2], /hermes_legacy provider/);
+    assert.match(output.product_entry.notes[2], /explicit executor or proof diagnostics/);
     assert.deepEqual(output.product_entry.issues, []);
     assert.equal(output.validation.status, 'valid');
   } finally {
@@ -311,23 +311,17 @@ exit 0
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       PATH: fixtureRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
 
     assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
-    assert.equal(output.product_entry.ready, false);
+    assert.equal(output.product_entry.ready, true);
     assert.equal(output.product_entry.local_entry_ready, true);
-    assert.equal(output.product_entry.online_runtime_ready, false);
-    assert.equal(output.product_entry.configured_provider, 'hermes_legacy');
-    assert.equal(output.product_entry.messaging_gateway_ready, false);
+    assert.equal(output.product_entry.online_runtime_ready, true);
+    assert.equal(output.product_entry.configured_provider, 'local_sqlite');
+    assert.equal(output.product_entry.messaging_gateway_ready, true);
     assert.equal(output.product_entry.hermes.binary, null);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
-    assert.equal(
-      output.product_entry.issues.includes(
-        'Hermes binary not found. Set OPL_HERMES_BIN or install `hermes` into PATH.',
-      ),
-      true,
-    );
+    assert.deepEqual(output.product_entry.issues, []);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

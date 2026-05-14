@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFakeHermesFixture, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFakeHermesFixture, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 function createNativeHelperRepairScript(root: string, helperBinDir: string) {
   const repairScript = path.join(root, 'repair-native.sh');
@@ -467,66 +467,23 @@ exit 1
   }
 });
 
-test('runtime snapshot projects explicit Hermes legacy MAS cron failures as infrastructure attention', () => {
+test('runtime snapshot ignores retired Hermes cron residue', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-state-'));
   const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
   fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
-  fs.mkdirSync(path.join(hermesHome, 'cron', 'output', 'cron-running'), { recursive: true });
-  fs.mkdirSync(path.join(hermesHome, 'cron', 'output', 'cron-attention'), { recursive: true });
-  fs.writeFileSync(
-    path.join(hermesHome, 'cron', 'output', 'cron-running', '2026-04-29_20-00-00.md'),
-    '# Cron Job: medautoscience-supervision-nfpitnet\n\n## Response\n\n[SILENT]\n',
-  );
-  fs.writeFileSync(
-    path.join(hermesHome, 'cron', 'output', 'cron-attention', '2026-04-29_20-05-00.md'),
-    '# Cron Job: medautoscience-supervision-dm-cvd\n\n## Script Error\nScript timed out after 120s\n',
-  );
   fs.writeFileSync(
     jobsPath,
     `${JSON.stringify({
       jobs: [
         {
-          id: 'cron-running',
-          name: 'medautoscience-supervision-nfpitnet-be4c006a',
-          script: 'med-autoscience/nfpitnet-be4c006a/watch_runtime_tick.py',
-          schedule_display: 'every 5m',
-          enabled: true,
-          state: 'scheduled',
-          next_run_at: '2026-04-29T20:05:00+08:00',
-          last_run_at: '2026-04-29T20:00:00+08:00',
-          last_status: 'ok',
-        },
-        {
           id: 'cron-attention',
           name: 'medautoscience-supervision-dm-cvd-mortality-risk-b8331468',
           script: 'med-autoscience/dm-cvd-mortality-risk-b8331468/watch_runtime_tick.py',
-          schedule_display: 'every 5m',
           enabled: true,
           state: 'scheduled',
-          next_run_at: '2026-04-29T20:10:00+08:00',
-          last_run_at: '2026-04-29T20:05:00+08:00',
-          last_status: 'ok',
-        },
-        {
-          id: 'non-mas',
-          name: 'daily-housekeeping',
-          script: 'ops/housekeeping.py',
-          enabled: true,
-          state: 'scheduled',
+          last_status: 'error',
         },
       ],
     }, null, 2)}\n`,
@@ -536,84 +493,39 @@ exit 1
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_HERMES_BIN: hermesPath,
       HERMES_HOME: hermesHome,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
+    const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
-    assert.equal(snapshot.runtime_health.status, 'running');
-    assert.equal(snapshot.runtime_health.label, '运行中');
-    assert.equal(snapshot.running_items.length, 0);
-    assert.equal(snapshot.attention_items.length, 2);
-    const cronAttentionItem = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:hermes-cron:cron-attention');
-    assert.equal(cronAttentionItem.project_label, 'MAS 基础设施');
-    assert.equal(cronAttentionItem.title, '工作区监督任务：dm-cvd-mortality-risk-b8331468');
-    assert.equal(cronAttentionItem.status_label, '后台监督超时');
-    assert.equal(cronAttentionItem.action_owner, 'infrastructure');
-    assert.equal(cronAttentionItem.requires_user_action, false);
-    assert.equal(cronAttentionItem.action_kind, 'infrastructure_timeout');
-    assert.equal(cronAttentionItem.action_summary, '后台监督脚本执行超时，需要系统侧恢复。');
-    assert.equal(cronAttentionItem.next_action_summary, '恢复后台监督定时任务，并确认下一次运行不再超时。');
-    assert.equal(cronAttentionItem.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_output'), true);
+    assert.equal(snapshot.runtime_health.provider_kind, 'local_sqlite');
+    assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('hermes-cron')), false);
+    assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), false);
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
-    assert.equal(snapshot.recent_items.length, 0);
-    assert.deepEqual(snapshot.action_counts, { user: 0, opl: 0, infrastructure: 2 });
-    assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(hermesHome, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('runtime snapshot projects MAS live study artifacts discovered from explicit Hermes legacy scripts', () => {
+test('runtime snapshot projects MAS live study artifacts from domain manifest workspace locator', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-state-'));
-  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-mas-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
+  const fixtures = loadFamilyManifestFixtures();
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   const profilePath = path.join(profileDir, 'dm.workspace.toml');
-  const scriptPath = path.join(hermesHome, 'scripts', 'med-autoscience', 'dm', 'watch_runtime_tick.py');
-  const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
+  const manifest = structuredClone(fixtures.medautoscience);
 
   fs.mkdirSync(profileDir, { recursive: true });
   fs.writeFileSync(profilePath, 'workspace_name = "dm"\n');
-  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
-  fs.writeFileSync(
-    scriptPath,
-    `COMMAND = json.loads("[\\"${workspaceRoot}/ops/medautoscience/bin/watch-runtime\\", \\"--max-ticks\\", \\"1\\"]")\n`,
-  );
-  fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
-  fs.writeFileSync(
-    jobsPath,
-    `${JSON.stringify({
-      jobs: [
-        {
-          id: 'cron-dm',
-          name: 'medautoscience-supervision-dm',
-          script: 'med-autoscience/dm/watch_runtime_tick.py',
-          schedule_display: 'every 5m',
-          enabled: true,
-          state: 'scheduled',
-          last_status: 'ok',
-        },
-      ],
-    }, null, 2)}\n`,
-  );
+  manifest.workspace_locator = {
+    ...((manifest.workspace_locator as Record<string, unknown>) ?? {}),
+    workspace_root: workspaceRoot,
+    profile_ref: profilePath,
+    profile_name: 'dm',
+  };
 
   const writeStudy = (
     studyId: string,
@@ -728,19 +640,29 @@ exit 1
   });
 
   try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      workspaceRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_HERMES_BIN: hermesPath,
-      HERMES_HOME: hermesHome,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
     assert.equal(snapshot.runtime_health.label, '需用户处理');
-    assert.equal(snapshot.attention_items.length, 2);
+    assert.equal(snapshot.attention_items.length, 3);
     const dm002Item = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:study:002-dm-china-us-mortality-attribution');
     assert.equal(dm002Item.active_run_id, 'run-002');
     assert.equal(dm002Item.status_label, '运行中：分析补充');
@@ -764,14 +686,12 @@ exit 1
     assert.equal(snapshot.recent_items[0].requires_user_action, true);
     assert.equal(snapshot.recent_items[0].action_kind, 'handoff_review');
     assert.deepEqual(snapshot.recent_items[0].blockers, []);
-    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 1, infrastructure: 1 });
+    assert.deepEqual(snapshot.action_counts, { user: 2, opl: 1, infrastructure: 1 });
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(hermesHome, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -801,39 +721,15 @@ esac
   }
 }
 
-test('runtime manager reconcile treats missing selected Hermes legacy provider as provider attention', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-reconcile-state-'));
+test('runtime manager rejects retired Hermes legacy provider selection', () => {
+  const failure = runCliFailure(['runtime', 'manager'], {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
+  });
 
-  try {
-    const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: '',
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
-      PATH: '',
-    });
-    const reconcile = output.runtime_manager.reconcile;
-
-    assert.equal(output.runtime_manager.status, 'provider_attention_needed');
-    assert.equal(reconcile.surface_kind, 'opl_runtime_manager_reconcile');
-    assert.equal(reconcile.overall_status, 'attention_needed');
-    assert.equal(reconcile.checked_surfaces.provider_runtime, 'provider_attention_needed');
-    assert.equal(reconcile.checked_surfaces.hermes_legacy_runtime, 'online_runtime_missing');
-    assert.equal(reconcile.non_goals.includes('does_not_schedule_tasks'), true);
-    assert.deepEqual(
-      reconcile.recommended_actions.map((action: { action_id: string; blocking: boolean }) => [
-        action.action_id,
-        action.blocking,
-      ]),
-      [
-        ['install_hermes_online_runtime', true],
-        ['repair_native_helpers', false],
-        ['refresh_native_indexes', false],
-      ],
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
+  assert.equal(failure.status, 2);
+  assert.equal(failure.payload.error.code, 'cli_usage_error');
+  assert.equal(failure.payload.error.details.provider_kind, 'hermes_legacy');
+  assert.deepEqual(failure.payload.error.details.allowed_provider_kinds, ['local_sqlite', 'temporal']);
 });
 
 test('runtime manager reports temporal provider code landed when live runtime is not configured', () => {
@@ -911,50 +807,14 @@ exit 1
   }
 });
 
-test('runtime manager action apply repairs available surfaces and returns before after reconcile summaries', () => {
+test('runtime manager action apply repairs available native surfaces without legacy provider actions', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-action-apply-'));
-  const gatewayState = path.join(fixtureRoot, 'gateway-ready');
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
-  echo "gateway repair completed"
-  touch "${gatewayState}"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  if [ -f "${gatewayState}" ]; then
-    echo "Gateway service is loaded"
-  else
-    echo "Gateway service is not loaded"
-  fi
-  exit 0
-fi
-if [ "$1" = "cron" ] && [ "$2" = "list" ]; then
-  if [ -f "${gatewayState}" ]; then
-    echo "Name: opl-family-runtime-tick"
-  fi
-  exit 0
-fi
-if [ "$1" = "webhook" ] && [ "$2" = "list" ]; then
-  if [ -f "${gatewayState}" ]; then
-    echo "opl-family-runtime-webhook"
-  fi
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = path.join(fixtureRoot, 'state');
   const helperBinDir = path.join(fixtureRoot, 'native-bin');
   const repairScript = createNativeHelperRepairScript(fixtureRoot, helperBinDir);
 
   try {
     const output = runCli(['runtime', 'manager', 'action', '--apply'], {
-      OPL_HERMES_BIN: hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
@@ -963,8 +823,8 @@ exit 1
 
     assert.equal(action.mode, 'apply');
     assert.equal(action.dry_run, false);
-    assert.equal(action.before.reconcile.checked_surfaces.provider_runtime, 'provider_attention_needed');
-    assert.equal(action.before.reconcile.checked_surfaces.hermes_legacy_runtime, 'online_runtime_attention');
+    assert.equal(action.before.reconcile.checked_surfaces.provider_runtime, 'ready');
+    assert.equal(action.before.reconcile.checked_surfaces.hermes_legacy_runtime, undefined);
     assert.equal(action.after.reconcile.overall_status, 'ready');
     assert.deepEqual(action.after.reconcile.recommended_actions, []);
     assert.deepEqual(
@@ -973,7 +833,6 @@ exit 1
         entry.status,
       ]),
       [
-        ['repair_hermes_legacy_provider', 'completed'],
         ['repair_native_helpers', 'completed'],
         ['refresh_native_indexes', 'completed'],
       ],
@@ -983,6 +842,5 @@ exit 1
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });

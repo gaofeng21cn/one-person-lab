@@ -2,9 +2,7 @@ import { inspectHermesRuntime } from './hermes.ts';
 import {
   inspectFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
-  ensureFamilyRuntimeProvider,
   resolveFamilyRuntimeProviderKind,
-  type FamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
 
@@ -194,9 +192,7 @@ function isNativeHelperAction(actionId: string) {
 }
 
 function isOnlineRuntimeAction(actionId: string) {
-  return actionId === 'repair_hermes_legacy_provider'
-    || actionId === 'install_hermes_online_runtime'
-    || actionId === 'configure_temporal_provider';
+  return actionId === 'configure_temporal_provider';
 }
 
 function filterActionableRuntimeManagerActions(
@@ -218,7 +214,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
   const selectedProvider = resolveFamilyRuntimeProviderKind();
   const provider = inspectFamilyRuntimeProvider(selectedProvider);
   const providers = inspectFamilyRuntimeProviders(selectedProvider);
-  const hermes = inspectHermesRuntimeForProvider(selectedProvider);
+  const hermes = inspectHermesRuntimeForProvider();
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
     persistIndexes: input.persistNativeIndexes,
   });
@@ -291,8 +287,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         },
       },
       hermes_runtime: {
-        provider_kind: 'hermes_legacy',
-        role: 'legacy_optional_provider_and_repair_surface',
+        role: 'explicit_executor_or_proof_diagnostic_only',
         binary: hermes.binary,
         version: hermes.version,
         gateway_service: hermes.gateway_service,
@@ -356,7 +351,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
           'Only promote beyond provider adapters if supported providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
       },
       notes: [
-        'Family runtime is Temporal-backed in production; local_sqlite is the dev/CI/offline local ledger provider, hermes_legacy is the migration bridge, and temporal is the required production durable workflow provider.',
+        'Family runtime is Temporal-backed in production; local_sqlite is the dev/CI/offline local ledger provider, and temporal is the required production durable workflow provider.',
         'OPL Runtime Manager is the product control plane, typed queue, stage attempt ledger, domain dispatch, and projection layer.',
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
@@ -408,25 +403,6 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   let after: ReturnType<typeof buildRuntimeManager> | null = null;
 
   for (const action of actionableActions) {
-    if (action.action_id === 'repair_hermes_legacy_provider') {
-      executedActions.push(runHermesLegacyProviderAction());
-      continue;
-    }
-
-    if (action.action_id === 'install_hermes_online_runtime') {
-      executedActions.push({
-        action_id: action.action_id,
-        status: 'blocked_manual_install_required',
-        blocking: action.blocking,
-        action_lane: 'online_runtime',
-        capability: 'online_family_runtime',
-        command_preview: ['opl', 'engine', 'install', '--engine', 'hermes'],
-        note:
-          'Hermes legacy provider was selected, but Hermes is not installed. Install Hermes first, then run `opl family-runtime repair --provider hermes_legacy`.',
-      });
-      continue;
-    }
-
     if (action.action_id === 'configure_temporal_provider') {
       executedActions.push({
         action_id: action.action_id,
@@ -549,49 +525,12 @@ function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntim
   };
 }
 
-function runHermesLegacyProviderAction() {
-  try {
-    const repair = ensureFamilyRuntimeProvider('hermes_legacy', 'repair');
-    if (repair.provider_kind !== 'hermes_legacy' || !('bridge' in repair)) {
-      throw new Error('Expected hermes_legacy provider repair payload.');
-    }
-    const bridge = repair.bridge;
-    return {
-      action_id: 'repair_hermes_legacy_provider',
-      status: bridge.gateway_ready && bridge.cron_registered && bridge.webhook_registered ? 'completed' : 'failed',
-      blocking: true,
-      action_lane: 'online_runtime',
-      capability: 'online_family_runtime',
-      command_preview: ['opl', 'family-runtime', 'repair', '--provider', 'hermes_legacy'],
-      note:
-        'Hermes legacy provider repair is only used when the hermes_legacy provider is selected.',
-      details: repair,
-    };
-  } catch (error) {
-    return {
-      action_id: 'repair_hermes_legacy_provider',
-      status: 'failed',
-      blocking: true,
-      action_lane: 'online_runtime',
-      capability: 'online_family_runtime',
-      command_preview: ['opl', 'family-runtime', 'repair', '--provider', 'hermes_legacy'],
-      note:
-        'Hermes legacy provider repair failed; provider readiness remains degraded.',
-      details: {
-        error: error instanceof Error ? error.message : String(error),
-      },
-    };
-  }
-}
-
 function buildRuntimeManagerReconcile(
   provider: ReturnType<typeof inspectFamilyRuntimeProvider>,
   hermes: ReturnType<typeof inspectHermesRuntimeForProvider>,
   nativeHelperProjection: ReturnType<typeof buildNativeHelperProjection>,
 ) {
   const recommendedActions = [];
-  const hermesInstalled = Boolean(hermes.binary && hermes.version);
-  const hermesReady = Boolean(hermesInstalled && hermes.gateway_service.loaded);
   const nativeRuntimeStatus = nativeHelperProjection.runtime.status;
   const indexFreshnessStatus = nativeHelperProjection.persistence.freshness.status;
 
@@ -605,28 +544,6 @@ function buildRuntimeManagerReconcile(
       command: 'OPL_TEMPORAL_ADDRESS=<host:port> opl family-runtime status --provider temporal',
       reason:
         'Temporal provider is selected but no Temporal address is configured. Live workflows require an external Temporal server and worker.',
-    });
-  } else if (provider.provider_kind === 'hermes_legacy' && hermesInstalled && !hermes.gateway_service.loaded) {
-    recommendedActions.push({
-      action_id: 'repair_hermes_legacy_provider',
-      priority: 'p0_online_runtime',
-      blocking: true,
-      action_lane: 'online_runtime',
-      capability: 'online_family_runtime',
-      command: 'opl family-runtime repair --provider hermes_legacy',
-      reason:
-        'Hermes legacy provider is selected and Hermes-Agent is installed, but the gateway service is not loaded.',
-    });
-  } else if (provider.provider_kind === 'hermes_legacy' && !hermesInstalled) {
-    recommendedActions.push({
-      action_id: 'install_hermes_online_runtime',
-      priority: 'p0_online_runtime',
-      blocking: true,
-      action_lane: 'online_runtime',
-      capability: 'online_family_runtime',
-      command: 'opl engine install --engine hermes',
-      reason:
-        'Hermes legacy provider is selected but Hermes-Agent is not installed.',
     });
   }
 
@@ -660,11 +577,7 @@ function buildRuntimeManagerReconcile(
         : provider.status === 'provider_code_landed_unconfigured'
           ? 'provider_code_landed_unconfigured'
           : 'provider_attention_needed',
-      hermes_legacy_runtime: hermesReady
-        ? 'ready'
-        : hermesInstalled
-          ? 'online_runtime_attention'
-          : 'online_runtime_missing',
+      hermes_diagnostics: hermes.binary ? 'available_non_provider_diagnostic' : 'not_inspected_non_provider_diagnostic',
       native_helper_runtime: nativeRuntimeStatus,
       native_index_freshness: indexFreshnessStatus,
       domain_registration_registry: 'declared_projection_contracts',
@@ -679,10 +592,7 @@ function buildRuntimeManagerReconcile(
   };
 }
 
-function inspectHermesRuntimeForProvider(providerKind: FamilyRuntimeProviderKind) {
-  if (providerKind === 'hermes_legacy') {
-    return inspectHermesRuntime();
-  }
+function inspectHermesRuntimeForProvider() {
   return {
     binary: null,
     version: null,
@@ -694,8 +604,8 @@ function inspectHermesRuntimeForProvider(providerKind: FamilyRuntimeProviderKind
       raw_output: '',
     },
     issues: [
-      `Hermes legacy runtime was not inspected because ${providerKind} is the selected family runtime provider.`,
+      'Hermes runtime was not inspected because OPL family-runtime providers are local_sqlite or temporal only.',
     ],
-    inspection_mode: 'shallow_optional' as const,
+    inspection_mode: 'shallow_non_provider_diagnostic' as const,
   };
 }

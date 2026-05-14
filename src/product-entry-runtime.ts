@@ -20,13 +20,12 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const provider = inspectFamilyRuntimeProvider(providerKind);
   const hermes = inspectHermesRuntime({
-    deep: providerKind === 'hermes_legacy',
-    reason: `Product Entry did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
+    deep: false,
+    reason: 'Product Entry did not deep-inspect Hermes because family-runtime providers are local_sqlite or temporal only.',
   });
   const localEntryReady = Boolean(codex);
   const onlineRuntimeReady = provider.ready;
   const ready = localEntryReady && onlineRuntimeReady;
-  const hermesIssues = providerKind === 'hermes_legacy' ? hermes.issues : [];
 
   return {
     version: 'g2',
@@ -38,14 +37,14 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
       local_entry_ready: localEntryReady,
       online_runtime_ready: onlineRuntimeReady,
       configured_provider: providerKind,
-      messaging_gateway_ready: providerKind === 'hermes_legacy' ? hermes.gateway_service.loaded : provider.ready,
+      messaging_gateway_ready: provider.ready,
       family_runtime_provider: provider,
       hermes,
-      issues: provider.degraded_reason ? [provider.degraded_reason, ...hermesIssues] : hermesIssues,
+      issues: provider.degraded_reason ? [provider.degraded_reason] : [],
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
         'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',
-        'Full OPL readiness uses the configured family runtime provider; Hermes is now the hermes_legacy provider or an explicit executor route.',
+        'Full OPL readiness uses the configured family runtime provider; Hermes is retained only for explicit executor or proof diagnostics.',
       ],
     },
   };

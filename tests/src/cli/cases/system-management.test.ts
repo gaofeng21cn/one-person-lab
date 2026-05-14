@@ -175,7 +175,7 @@ exit 1
     assert.equal(output.system.core_engines.hermes.update_summary, null);
     assert.equal(output.system.core_engines.hermes.gateway_loaded, false);
     assert.equal(output.system.core_engines.hermes.health_status, 'attention_needed');
-    assert.equal(output.system.core_engines.hermes.inspection_mode, 'shallow_optional');
+    assert.equal(output.system.core_engines.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
     assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
     assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'ready');
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
@@ -349,7 +349,6 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
-        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: workspaceRoot,
@@ -451,7 +450,7 @@ exit 1
     assert.equal(output.system_initialize.setup_flow.is_first_run, false);
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
     assert.equal(output.system_initialize.setup_flow.phase, 'modules');
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['family_runtime_provider', 'domain_modules']);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['domain_modules']);
     assert.equal(
       output.system_initialize.setup_flow.progress.ready_required_count <
       output.system_initialize.setup_flow.progress.total_required_count,
@@ -534,7 +533,7 @@ exit 1
   }
 });
 
-test('system initialize reports selected Hermes legacy provider as blocking Full readiness when gateway is unloaded', () => {
+test('system initialize reports temporal provider setup as blocking Full readiness when worker is unconfigured', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-online-management-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const modulesRoot = path.join(homeRoot, 'modules');
@@ -545,18 +544,6 @@ test('system initialize reports selected Hermes legacy provider as blocking Full
     baseUrl: 'https://codex-opl.example.test/v1',
     apiKey: 'codex-opl-key',
   });
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "Gateway service is not loaded"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
   echo "codex-cli 0.125.0"
@@ -573,12 +560,13 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
-        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
+        OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: modulesRoot,
         OPL_WORKSPACE_ROOT: workspaceRoot,
-        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       system_initialize: {
@@ -643,18 +631,17 @@ exit 1
     assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['family_runtime_provider']);
     assert.equal(output.system_initialize.online_management.surface_id, 'opl_online_management');
     assert.equal(output.system_initialize.online_management.status, 'initializing');
-    assert.equal(output.system_initialize.online_management.provider_kind, 'hermes_legacy');
+    assert.equal(output.system_initialize.online_management.provider_kind, 'temporal');
     assert.equal(output.system_initialize.online_management.blocking, true);
     assert.equal(output.system_initialize.online_management.full_online_blocking, true);
     assert.equal(output.system_initialize.online_management.ready, false);
     assert.match(
       output.system_initialize.online_management.capability_summary,
-      /hermes_legacy/i,
+      /temporal/i,
     );
-    assert.equal(output.system_initialize.online_management.repair_action.action_id, 'repair_hermes_legacy_provider');
-    assert.deepEqual(output.system_initialize.online_management.repair_action.payload_template, { action: 'repair' });
-    assert.equal(output.system_initialize.online_management.service_status.engine_id, 'hermes_legacy');
-    assert.equal(output.system_initialize.online_management.service_status.installed, true);
+    assert.equal(output.system_initialize.online_management.repair_action.action_id, 'review_family_runtime_provider');
+    assert.equal(output.system_initialize.online_management.service_status.engine_id, 'temporal');
+    assert.equal(output.system_initialize.online_management.service_status.installed, false);
     assert.equal(output.system_initialize.online_management.service_status.gateway_loaded, false);
     assert.equal(output.system_initialize.online_management.service_status.health_status, 'attention_needed');
     assert.equal(output.system_initialize.online_management.last_repair_result, null);
@@ -664,12 +651,11 @@ exit 1
     assert.equal(onlineManagementItem.label, 'Family Runtime Provider');
     assert.equal(onlineManagementItem.required, true);
     assert.equal(onlineManagementItem.blocking, true);
-    assert.match(onlineManagementItem.detail_summary, /hermes_legacy/i);
-    assert.equal(output.system_initialize.recommended_next_action.action_id, 'repair_hermes_legacy_provider');
+    assert.match(onlineManagementItem.detail_summary, /temporal/i);
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'review_family_runtime_provider');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
@@ -754,7 +740,7 @@ exit 1
             reconcile: {
               checked_surfaces: {
                 provider_runtime: string;
-                hermes_legacy_runtime: string;
+                hermes_diagnostics: string;
               };
             };
           };
@@ -793,10 +779,7 @@ exit 1
       output.install.runtime_manager_action.after.reconcile.checked_surfaces.provider_runtime,
       'ready',
     );
-    assert.equal(
-      output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_legacy_runtime,
-      'online_runtime_missing',
-    );
+    assert.equal(output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_diagnostics, 'not_inspected_non_provider_diagnostic');
     assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'attention_needed');
     assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, false);
     assert.equal(output.install.system_initialize.online_management.status, 'ready');
@@ -974,6 +957,20 @@ exit 1
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('engine actions reject retired Hermes target without compatibility action surface', () => {
+  const failure = runCliFailure(['engine', 'install', '--engine', 'hermes']);
+
+  assert.equal(failure.status, 2);
+  assert.equal(failure.payload.error.code, 'cli_usage_error');
+  assert.equal(failure.payload.error.details.engine_id, 'hermes');
+  assert.deepEqual(failure.payload.error.details.available_engine_ids, ['codex']);
+  assert.deepEqual(failure.payload.error.details.retired_engine_ids, ['hermes']);
+  assert.match(
+    failure.payload.error.details.retirement_boundary,
+    /not as an engine action target/,
+  );
 });
 
 test('builtin Codex install command bounds npm registry fetches', () => {

@@ -28,7 +28,6 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     runCli([
       'family-runtime',
@@ -44,7 +43,6 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     const nativeIndexDir = path.join(stateRoot, 'runtime-manager');
     fs.mkdirSync(nativeIndexDir, { recursive: true });
@@ -408,7 +406,6 @@ test('runtime snapshot workbench shows current managed Temporal readiness withou
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
       OPL_TEMPORAL_WORKER_ENABLED: '',
-      OPL_DISABLE_HERMES_ONLINE: '1',
     };
     const created = runCli([
       'family-runtime',
@@ -610,7 +607,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     const completedAttemptId = completedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
     runCli([
@@ -625,7 +621,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
 
     const gatedAttempt = runCli([
@@ -643,7 +638,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     const gatedAttemptId = gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
     runCli([
@@ -658,7 +652,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     runCli([
       'family-runtime',
@@ -672,7 +665,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     runCli([
       'family-runtime',
@@ -686,7 +678,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     const deadLetterAttempt = runCli([
       'family-runtime',
@@ -703,7 +694,6 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
     const deadLetterAttemptId = deadLetterAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');

@@ -1,19 +1,10 @@
 import fs from 'node:fs';
 
 import { FrameworkContractError } from '../contracts.ts';
-import {
-  buildHermesSessionsListArgs,
-  inspectHermesRuntime,
-  parseHermesSessionsTable,
-  runHermesCommand,
-} from '../hermes.ts';
+import { inspectHermesRuntime } from '../hermes.ts';
 import { inspectFamilyRuntimeProviders, resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
 import { buildSessionLedger } from '../session-ledger.ts';
-import {
-  collectHermesProcessUsage,
-  normalizeCommandOutput,
-  parseHermesStatusOutput,
-} from '../runtime-observer.ts';
+import { collectHermesProcessUsage } from '../runtime-observer.ts';
 
 import type { RuntimeStatusOptions, WorkspaceStatusOptions } from './types.ts';
 import {
@@ -21,27 +12,6 @@ import {
   buildWorkspaceEntriesSummary,
   normalizeWorkspacePath,
 } from './shared.ts';
-
-function buildRecentSessions(limit = 5) {
-  const result = runHermesCommand(buildHermesSessionsListArgs({ limit }));
-
-  if (result.exitCode !== 0) {
-    throw new FrameworkContractError(
-      'hermes_command_failed',
-      'Hermes sessions list failed inside OPL runtime-status.',
-      {
-        args: buildHermesSessionsListArgs({ limit }),
-        stdout: result.stdout,
-        stderr: result.stderr,
-      },
-    );
-  }
-
-  return {
-    command_preview: ['hermes', ...buildHermesSessionsListArgs({ limit })],
-    sessions: parseHermesSessionsTable(result.stdout),
-  };
-}
 
 export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
   const absolutePath = normalizeWorkspacePath(options.workspacePath);
@@ -72,16 +42,14 @@ export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
 export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeProviders = inspectFamilyRuntimeProviders(providerKind);
-  const hermesDeepInspection = providerKind === 'hermes_legacy';
   const hermes = inspectHermesRuntime({
-    deep: hermesDeepInspection,
-    reason: `Runtime status did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
+    deep: false,
+    reason: 'Runtime status did not deep-inspect Hermes because OPL family-runtime providers are local_sqlite or temporal only.',
   });
-  const statusResult = hermesDeepInspection && hermes.binary ? runHermesCommand(['status']) : null;
-  const statusOutput = statusResult ? normalizeCommandOutput(statusResult.stdout, statusResult.stderr) : '';
-  const parsedStatus = statusOutput ? parseHermesStatusOutput(statusOutput) : null;
+  const statusOutput = '';
+  const parsedStatus = null;
   const processUsage = collectHermesProcessUsage();
-  const recentSessions = hermesDeepInspection && hermes.binary ? buildRecentSessions(options.sessionsLimit ?? 5) : {
+  const recentSessions = {
     command_preview: ['hermes', 'sessions', 'list', '--limit', String(options.sessionsLimit ?? 5)],
     sessions: [],
   };
@@ -93,7 +61,7 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
       runtime_substrate: 'provider_backed_family_runtime',
       configured_provider: providerKind,
       family_runtime_providers: familyRuntimeProviders,
-      hermes_legacy_diagnostics: {
+      hermes_diagnostics: {
         hermes,
         status_report: {
           command_preview: ['hermes', 'status'],
@@ -113,7 +81,7 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
       process_usage: processUsage,
       managed_session_ledger: ledger,
       notes: [
-        'Runtime status is provider-backed; Hermes fields are legacy diagnostics unless the configured provider is hermes_legacy.',
+        'Runtime status is provider-backed; Hermes fields are explicit non-provider diagnostics only.',
         'Process usage remains runtime-level diagnostic visibility.',
         'The managed session ledger adds OPL-owned event attribution, but does not claim kernel-global exact per-session billing.',
         'Workspace and project orchestration sit above the configured family runtime provider.',

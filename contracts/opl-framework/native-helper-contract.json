@@ -21,7 +21,7 @@
   },
   "owner_split": {
     "helper_owner": "one-person-lab",
-    "runtime_kernel_owner": "upstream_hermes_agent",
+    "runtime_kernel_owner": "provider_backed_family_runtime",
     "domain_truth_owners": [
       "med-autoscience",
       "med-autogrant",

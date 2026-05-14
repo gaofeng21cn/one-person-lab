@@ -167,26 +167,26 @@ exit 1
     assert.equal(output.dashboard.runtime_status.configured_provider, 'local_sqlite');
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 0);
     assert.equal(
-      output.dashboard.runtime_status.hermes_legacy_diagnostics.recent_sessions.sessions.length,
+      output.dashboard.runtime_status.hermes_diagnostics.recent_sessions.sessions.length,
       0,
     );
-    assert.equal(output.dashboard.runtime_status.hermes_legacy_diagnostics.hermes.inspection_mode, 'shallow_optional');
+    assert.equal(output.dashboard.runtime_status.hermes_diagnostics.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
 
-    const explicitHermesLegacyDashboard = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+    const explicitTemporalDashboard = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
-    assert.equal(explicitHermesLegacyDashboard.dashboard.runtime_status.configured_provider, 'hermes_legacy');
-    assert.equal(explicitHermesLegacyDashboard.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+    assert.equal(explicitTemporalDashboard.dashboard.runtime_status.configured_provider, 'temporal');
+    assert.equal(explicitTemporalDashboard.dashboard.runtime_status.recent_sessions.sessions.length, 0);
     assert.equal(
-      explicitHermesLegacyDashboard.dashboard.runtime_status.hermes_legacy_diagnostics.recent_sessions.sessions.length,
-      1,
+      explicitTemporalDashboard.dashboard.runtime_status.hermes_diagnostics.recent_sessions.sessions.length,
+      0,
     );
     assert.equal(
-      explicitHermesLegacyDashboard.dashboard.runtime_status.hermes_legacy_diagnostics.hermes.inspection_mode,
-      'deep_selected',
+      explicitTemporalDashboard.dashboard.runtime_status.hermes_diagnostics.hermes.inspection_mode,
+      'shallow_non_provider_diagnostic',
     );
     assert.equal('rollout_board_refs' in output.dashboard.gui_runtime, false);
     assert.deepEqual(output.dashboard.gui_runtime.rollout_board_surfaces, [
@@ -229,9 +229,10 @@ test('help excludes retired local web adapter command surface', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'),
   );
 
-  const scoped = runCli(['web', '--help']) as { help: { command: string; summary: string } };
-  assert.equal(scoped.help.command, 'web');
-  assert.match(scoped.help.summary, /Retired/);
+  const { status, payload } = runCliFailure(['web', '--help']);
+  assert.equal(status, 2);
+  assert.equal(payload.error.code, 'unknown_command');
+  assert.equal(payload.error.details.command, 'web');
 });
 
 test('help advertises initialize and environment management command surfaces', () => {
@@ -311,15 +312,14 @@ test('public service commands are retired from the default CLI surface', () => {
     assert.equal(commands.includes(command), false);
   }
 });
-test('web bundle and web package commands are retired from the public CLI', () => {
+test('web bundle and web package commands are removed from the public CLI', () => {
   for (const args of [
     ['web', 'bundle'],
     ['web', 'package'],
   ]) {
     const { status, payload } = runCliFailure(args);
     assert.equal(status, 2);
-    assert.equal(payload.error.code, 'cli_usage_error');
+    assert.equal(payload.error.code, 'unknown_command');
     assert.equal(payload.error.details.command, 'web');
-    assert.equal(payload.error.details.retired, true);
   }
 });

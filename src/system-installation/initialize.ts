@@ -51,19 +51,6 @@ function buildRecommendedSkillsStatus() {
   return buildOplRecommendedSkills().some((skill) => skill.status === 'ready') ? 'ready' : 'attention_needed';
 }
 
-function buildOnlineManagementStatus(input: {
-  installed: boolean;
-  gateway_loaded: boolean;
-}) {
-  if (input.installed && input.gateway_loaded) {
-    return 'ready';
-  }
-  if (input.installed) {
-    return 'initializing';
-  }
-  return 'missing';
-}
-
 export async function buildOplInitialize(contracts: FrameworkContracts) {
   const environmentPayload = await buildOplEnvironment(contracts);
   const modulesPayload = buildOplModules();
@@ -79,7 +66,6 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
   const recommendedSkills = buildOplRecommendedSkills();
   const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
   const codex = environment.core_engines.codex;
-  const hermes = environment.core_engines.hermes;
   const familyRuntimeProvider = environment.core_engines.family_runtime_provider;
   const codexCliReady = codex.health_status === 'ready';
   const codexConfigReady = codex.config_status === 'detected' && codex.api_key_present === true;
@@ -94,7 +80,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
     : familyRuntimeProvider.provider_kind === 'temporal'
       && familyRuntimeProvider.status === 'provider_code_landed_unconfigured'
       ? 'initializing'
-      : buildOnlineManagementStatus(hermes);
+      : 'attention_needed';
   const launchReady = coreReady && domainReady;
   const fullReady = coreReady && domainReady && providerReady;
 
@@ -135,32 +121,9 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
   const openEnvironmentAction = buildInitializeActionDescriptor({
     action_id: 'open_environment',
     label: 'Review environment',
-    description: 'Inspect Codex, family runtime provider, Hermes legacy bridge, and managed paths before continuing.',
+    description: 'Inspect Codex, family runtime provider, non-provider diagnostics, and managed paths before continuing.',
     section_id: 'environment',
     endpoint: endpoints.system_environment,
-  });
-  const installHermesAction = buildInitializeActionDescriptor({
-    action_id: 'install_or_configure_hermes',
-    label: 'Install Hermes legacy provider',
-    description: 'Install Hermes-Agent only when the hermes_legacy provider is selected for migration-period wakeup and webhook support.',
-    section_id: 'environment',
-    endpoint: endpoints.engine_action,
-    method: 'POST',
-    payload_template: {
-      engine_id: 'hermes',
-      action: 'install',
-    },
-  });
-  const repairHermesLegacyProviderAction = buildInitializeActionDescriptor({
-    action_id: 'repair_hermes_legacy_provider',
-    label: 'Repair Hermes legacy provider',
-    description: 'Run the family-runtime provider repair path for the selected hermes_legacy bridge.',
-    section_id: 'environment',
-    endpoint: endpoints.system_action,
-    method: 'POST',
-    payload_template: {
-      action: 'repair',
-    },
   });
   const reviewFamilyRuntimeProviderAction = buildInitializeActionDescriptor({
     action_id: 'review_family_runtime_provider',
@@ -260,14 +223,10 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
           ? `Provider ${familyRuntimeProvider.provider_kind} needs attention: ${familyRuntimeProvider.degraded_reason}.`
           : `Provider ${familyRuntimeProvider.provider_kind} is not ready.`,
       endpoint: endpoints.system_environment,
-      action_endpoint: familyRuntimeProvider.provider_kind === 'hermes_legacy'
-        ? (hermes.installed ? endpoints.system_action : endpoints.engine_action)
-        : endpoints.system_environment,
+      action_endpoint: endpoints.system_environment,
       action: providerReady
         ? openEnvironmentAction
-        : familyRuntimeProvider.provider_kind === 'hermes_legacy'
-          ? (hermes.installed ? repairHermesLegacyProviderAction : installHermesAction)
-          : reviewFamilyRuntimeProviderAction,
+        : reviewFamilyRuntimeProviderAction,
     },
     {
       item_id: 'native_helpers',
@@ -354,9 +313,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
           : !codexConfigReady
             ? configureCodexAction
             : !providerReady
-              ? (familyRuntimeProvider.provider_kind === 'hermes_legacy'
-                ? (hermes.installed ? repairHermesLegacyProviderAction : installHermesAction)
-                : reviewFamilyRuntimeProviderAction)
+              ? reviewFamilyRuntimeProviderAction
               : openEnvironmentAction)
         : setupPhase === 'modules'
           ? reviewModulesAction
@@ -409,18 +366,16 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
             : `Family runtime provider ${familyRuntimeProvider.provider_kind} is not ready.`,
         repair_action: providerReady
           ? openEnvironmentAction
-          : familyRuntimeProvider.provider_kind === 'hermes_legacy'
-            ? (hermes.installed ? repairHermesLegacyProviderAction : installHermesAction)
-            : reviewFamilyRuntimeProviderAction,
+          : reviewFamilyRuntimeProviderAction,
         service_status: {
           engine_id: familyRuntimeProvider.provider_kind,
-          installed: hermes.installed,
-          gateway_loaded: hermes.gateway_loaded,
-          binary_path: hermes.binary_path,
-          binary_source: hermes.binary_source,
-          health_status: hermes.health_status,
-          issues: hermes.issues,
-          raw_status: hermes.gateway_status_raw,
+          installed: providerReady,
+          gateway_loaded: providerReady,
+          binary_path: null,
+          binary_source: null,
+          health_status: familyRuntimeProvider.health_status,
+          issues: familyRuntimeProvider.degraded_reason ? [familyRuntimeProvider.degraded_reason] : [],
+          raw_status: null,
         },
         last_repair_result: null,
       },

@@ -5,7 +5,6 @@
   "provider_model": "provider_backed_stage_attempt_runtime",
   "allowed_providers": [
     "local_sqlite",
-    "hermes_legacy",
     "temporal"
   ],
   "observability_only": true,

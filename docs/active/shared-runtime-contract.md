@@ -119,17 +119,17 @@ The current split is:
 
 ## Relationship To Hermes-Agent
 
-What the upstream `Hermes-Agent` contributes most usefully today is migration-period runtime implementation experience and optional proof-provider context.
+What the upstream `Hermes-Agent` contributes most usefully today is runtime implementation experience, explicit executor/proof diagnostics, and historical provenance.
 
 The more accurate statement is therefore:
 
 - the production online substrate for the OPL framework is provider-backed stage runtime, with the Temporal-backed provider as the required path
-- `Hermes-Agent` remains a legacy/optional provider, executor/proof lane, or technical reference during migration
+- `Hermes-Agent` remains an explicit non-provider executor/proof diagnostic or technical reference
 - `Hermes-Agent` is not the whole `UHS`
 - `Hermes-Agent` does not replace the OPL session/runtime entry, any domain-agent entry, or any domain-owned truth surface
 - any integration mode must keep OPL as framework/control-plane owner and domain repositories as truth owners
 
-In short, `Hermes` is not the current target owner of “how the system keeps running.” It is retained as migration/proof context while OPL's provider-backed stage runtime matures.
+In short, `Hermes` is not the current target owner of “how the system keeps running.” It is retained as proof/diagnostic/provenance context while OPL's provider-backed stage runtime matures.
 
 ## Current Truth
 
@@ -141,7 +141,7 @@ As of the current public mainline, the true state remains:
 - the `Shared Runtime Contract` is a reference contract under the current shared-boundary layer, not the default product entry
 - the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` semantics without turning them into one runtime owner
 - the active four-repository public line is `one-person-lab + MAS + MAG + RCA`; `MDS` is retained only as MAS-declared optional companion provenance/audit, explicit archive-import, intake, and parity-oracle refs
-- `Hermes-Agent` remains an opt-in legacy/proof provider or technical reference, not the default OPL public fact
+- `Hermes-Agent` remains an opt-in executor/proof diagnostic or technical reference, not a provider or default OPL public fact
 
 ## Implementation Boundary
 
@@ -149,7 +149,7 @@ As long as the upper-layer contracts stay intact, the `Shared Runtime Contract` 
 
 - the current local Codex-default executor path
 - the target provider-backed stage runtime, including the Temporal-backed provider path
-- legacy/optional proof providers such as `Hermes-Agent`
+- explicit non-provider executor/proof diagnostics such as `Hermes-Agent`
 - a future platform-hosted execution plane
 
 In product terms, the target shape means:

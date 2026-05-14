@@ -6,7 +6,6 @@ import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
-    OPL_DISABLE_HERMES_ONLINE: '1',
     ...extra,
   };
 }
@@ -561,7 +560,6 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
         ...process.env,
         NODE_NO_WARNINGS: '1',
         OPL_STATE_DIR: stateRoot,
-        OPL_DISABLE_HERMES_ONLINE: '1',
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
       },
@@ -707,7 +705,6 @@ test('family-runtime temporal attempt query and signal fail closed when Temporal
           ...process.env,
           NODE_NO_WARNINGS: '1',
           OPL_STATE_DIR: stateRoot,
-          OPL_DISABLE_HERMES_ONLINE: '1',
           OPL_TEMPORAL_ADDRESS: '',
           TEMPORAL_ADDRESS: '',
         },

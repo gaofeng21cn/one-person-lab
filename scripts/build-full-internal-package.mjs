@@ -31,7 +31,6 @@ function parseArgs(argv) {
       ? path.join(repoRoot, FULL_RELEASE_OUTPUT_DIR)
       : FULL_INTERNAL_OUTPUT_DIR,
     guiRoot: path.join(workspaceRoot, 'opl-aion-shell'),
-    hermesRoot: process.env.OPL_FULL_HERMES_ROOT || path.join(workspaceRoot, '_external', 'hermes-agent'),
     masRoot: process.env.OPL_FULL_MAS_ROOT || path.join(workspaceRoot, 'med-autoscience'),
     magRoot: process.env.OPL_FULL_MAG_ROOT || path.join(workspaceRoot, 'med-autogrant'),
     rcaRoot: process.env.OPL_FULL_RCA_ROOT || path.join(workspaceRoot, 'redcube-ai'),
@@ -72,7 +71,9 @@ function parseArgs(argv) {
     if (token === '--version') parsed.version = value;
     else if (token === '--out-dir') parsed.outDir = path.resolve(value);
     else if (token === '--gui-root') parsed.guiRoot = path.resolve(value);
-    else if (token === '--hermes-root') parsed.hermesRoot = path.resolve(value);
+    else if (token === '--hermes-root') {
+      throw new Error('--hermes-root has been retired; OPL Full packages no longer include Hermes runtime payloads.');
+    }
     else if (token === '--mas-root') parsed.masRoot = path.resolve(value);
     else if (token === '--mag-root') parsed.magRoot = path.resolve(value);
     else if (token === '--rca-root') parsed.rcaRoot = path.resolve(value);
@@ -156,10 +157,6 @@ function findOfficeCliBinary(explicitBin) {
     throw new Error('officecli binary not found. Install officecli or pass --officecli-bin / set OPL_FULL_OFFICECLI_BIN.');
   }
   return found;
-}
-
-function findHermesSource(explicitRoot) {
-  return requirePath(explicitRoot, 'Hermes root');
 }
 
 function fileSha256(filePath) {
@@ -460,7 +457,6 @@ PYTHON_BIN="$(find "$RUNTIME_HOME/python" -maxdepth 2 -path '*/bin' -type d 2>/d
 export OPL_FULL_RUNTIME_HOME="$RUNTIME_HOME"
 export OPL_PACKAGED_SKILLS_ROOT="$RUNTIME_HOME/skills"
 export OPL_CODEX_BIN="$RUNTIME_HOME/bin/codex"
-export OPL_HERMES_BIN="$RUNTIME_HOME/bin/hermes"
 export OPL_MODULE_PATH_MEDAUTOSCIENCE="$RUNTIME_HOME/modules/mas"
 export OPL_MODULE_PATH_MEDAUTOGRANT="$RUNTIME_HOME/modules/mag"
 export OPL_MODULE_PATH_REDCUBE="$RUNTIME_HOME/modules/rca"
@@ -472,57 +468,6 @@ fi
 exec "$RUNTIME_HOME/opl/bin/opl" "$@"
 `);
 
-  writeExecutable(path.join(runtimeRoot, 'bin', 'hermes'), `#!/usr/bin/env bash
-set -euo pipefail
-RUNTIME_HOME="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-export HERMES_HOME="\${HERMES_HOME:-$HOME/.hermes-opl}"
-export HERMES_PROFILE="\${HERMES_PROFILE:-opl-full}"
-export PATH="$RUNTIME_HOME/hermes/.venv/bin:$RUNTIME_HOME/python/$(basename "$RUNTIME_HOME"/python/* 2>/dev/null || true)/bin:$PATH"
-if [[ -x "$RUNTIME_HOME/hermes/.venv/bin/hermes" ]]; then
-  exec "$RUNTIME_HOME/hermes/.venv/bin/hermes" "$@"
-fi
-if [[ -f "$RUNTIME_HOME/hermes/hermes_cli/main.py" ]]; then
-  exec python3 "$RUNTIME_HOME/hermes/hermes_cli/main.py" "$@"
-fi
-exec python3 -m hermes_cli.main "$@"
-`);
-
-}
-
-function writeHermesLaunchAgentAssets(layerRoot) {
-  writeExecutable(path.join(layerRoot, 'hermes', 'scripts', 'install-opl-gateway-launchagent.sh'), `#!/usr/bin/env bash
-set -euo pipefail
-LABEL="ai.hermes.gateway"
-RUNTIME_HOME="$(cd "$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
-exec "$RUNTIME_HOME/bin/hermes" gateway install
-`);
-  writeExecutable(path.join(layerRoot, 'hermes', 'scripts', 'repair-opl-gateway-launchagent.sh'), `#!/usr/bin/env bash
-set -euo pipefail
-RUNTIME_HOME="$(cd "$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
-exec "$RUNTIME_HOME/bin/hermes" gateway install
-`);
-  fs.mkdirSync(path.join(layerRoot, 'hermes', 'profiles'), { recursive: true });
-  fs.writeFileSync(
-    path.join(layerRoot, 'hermes', 'profiles', 'opl-full.profile.json'),
-    `${JSON.stringify({
-      profile_id: 'opl-full',
-      gateway_launchagent_label: 'ai.hermes.gateway',
-      queue_tick_command: 'opl family-runtime tick --source hermes-cron',
-      queue_tick_cadence: 'every 1m',
-      webhook_subscription: 'opl-family-runtime-webhook',
-    }, null, 2)}\n`,
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(layerRoot, 'hermes', 'version-manifest.json'),
-    `${JSON.stringify({
-      component: 'hermes-agent',
-      packaged_by: 'one-person-lab-full',
-      gateway_launchagent_label: 'ai.hermes.gateway',
-      online_runtime_ready_check: 'opl family-runtime doctor',
-    }, null, 2)}\n`,
-    'utf8',
-  );
 }
 
 function writePackagedModuleMarker(moduleRoot, marker) {
@@ -574,7 +519,6 @@ function resolveRuntimeSources(options) {
   return {
     codexRoot,
     codexBinaries,
-    hermesRoot: findHermesSource(options.hermesRoot),
     nodeBin,
     pythonRoot,
     uvBin,
@@ -615,15 +559,6 @@ function buildRuntimeCacheKeys(options, sources) {
         officecli_version: commandOutput(sources.officeCliBin, ['--version']),
         python_root_name: path.basename(sources.pythonRoot),
         python_version: commandOutput(path.join(sources.pythonRoot, 'bin', 'python3'), ['--version']),
-        packager_inputs: packagerInputs,
-        exclude_policy_hash: excludePolicyHash,
-      },
-    }),
-    'hermes-runtime': buildFullRuntimeCacheKey({
-      layerId: 'hermes-runtime',
-      parts: {
-        hermes_commit: readGitHead(options.hermesRoot),
-        hermes_fingerprint: directoryFingerprint(options.hermesRoot, 'hermes'),
         packager_inputs: packagerInputs,
         exclude_policy_hash: excludePolicyHash,
       },
@@ -744,11 +679,6 @@ function buildDomainLayer(layerRoot, options) {
   copyTreeFiltered(options.rcaRoot, path.join(layerRoot, 'modules', 'rca'), 'modules/rca');
 }
 
-function buildHermesLayer(layerRoot, options) {
-  copyTreeFiltered(options.hermesRoot, path.join(layerRoot, 'hermes'), 'hermes');
-  writeHermesLaunchAgentAssets(layerRoot);
-}
-
 function writeDomainMarkers(runtimeRoot, options, packagedAt) {
   writePackagedModuleMarker(path.join(runtimeRoot, 'modules', 'mas'), buildPackagedModuleMarker({
     moduleId: 'medautoscience',
@@ -792,9 +722,6 @@ function prepareRuntime(options, sources) {
     runCachedLayer(options, 'toolchain', cacheKeys.toolchain, runtimeRoot, (layerRoot) => {
       buildToolchainLayer(layerRoot, sources);
     }),
-    runCachedLayer(options, 'hermes-runtime', cacheKeys['hermes-runtime'], runtimeRoot, (layerRoot) => {
-      buildHermesLayer(layerRoot, options);
-    }),
     runCachedLayer(options, 'domain-runtime', cacheKeys['domain-runtime'], runtimeRoot, (layerRoot) => {
       buildDomainLayer(layerRoot, options);
     }),
@@ -817,7 +744,6 @@ function prepareRuntime(options, sources) {
     python: { source_path: sources.pythonRoot, version: commandOutput(path.join(runtimeRoot, 'python', path.basename(sources.pythonRoot), 'bin', 'python3'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'python')) },
     uv: { source_path: sources.uvBin, version: commandOutput(path.join(runtimeRoot, 'uv', 'bin', 'uv'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'uv')) },
     officecli: { source_path: sources.officeCliBin, version: commandOutput(path.join(runtimeRoot, 'bin', 'officecli'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'bin', 'officecli')) },
-    hermes: { source_path: options.hermesRoot, git_commit: readGitHead(options.hermesRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'hermes')) },
     skills: { source_path: path.join(os.homedir(), '.codex', 'skills'), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'skills')) },
   };
 
@@ -923,7 +849,6 @@ function main() {
 
   for (const [label, source] of [
     ['GUI root', options.guiRoot],
-    ['Hermes root', options.hermesRoot],
     ['MAS root', options.masRoot],
     ['MAG root', options.magRoot],
     ['RCA root', options.rcaRoot],

@@ -1295,7 +1295,7 @@
       "recommended_command": "redcube product invoke",
       "runtime_inventory": {
         "surface_kind": "runtime_inventory",
-        "runtime_owner": "upstream_hermes_agent",
+        "runtime_owner": "provider_backed_family_runtime",
         "domain_owner": "redcube_ai",
         "executor_owner": "redcube_ai",
         "status_surface": {
@@ -1520,7 +1520,7 @@
       },
       "runtime_loop_closure": {
         "surface_kind": "runtime_loop_closure",
-        "runtime_owner": "upstream_hermes_agent",
+        "runtime_owner": "provider_backed_family_runtime",
         "domain_owner": "redcube_ai",
         "executor_owner": "redcube_ai",
         "resume_point": {

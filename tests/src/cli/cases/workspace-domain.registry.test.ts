@@ -560,7 +560,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(recommendedEntry.product_entry_overview.summary, recommendedEntry.product_entry_status_summary);
     assert.equal(recommendedEntry.product_entry_overview.progress_surface.surface_kind, 'product_entry_session');
     assert.equal(recommendedEntry.runtime_inventory.surface_kind, 'runtime_inventory');
-    assert.equal(recommendedEntry.runtime_inventory_runtime_owner, 'upstream_hermes_agent');
+    assert.equal(recommendedEntry.runtime_inventory_runtime_owner, 'provider_backed_family_runtime');
     assert.equal(recommendedEntry.runtime_inventory_health_status, 'healthy');
     assert.equal(recommendedEntry.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(recommendedEntry.task_lifecycle_resume_surface_kind, 'product_entry_session');

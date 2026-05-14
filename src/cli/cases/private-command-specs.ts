@@ -256,7 +256,6 @@ export function buildInternalCommandSpecs(
       examples: [
         'opl family-runtime status',
         'opl family-runtime status --provider temporal',
-        'opl family-runtime install --provider hermes_legacy',
         'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
         'opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator \'{"workspace_root":"/tmp/mas"}\'',
         'opl family-runtime attempt create --domain medautoscience --stage scout --provider temporal --workspace-locator \'{"workspace_root":"/tmp/mas"}\' --start',
@@ -269,7 +268,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime service status --provider temporal',
         'opl family-runtime worker start --provider temporal',
         'opl family-runtime residency proof --provider temporal [--live|--production]',
-        'opl family-runtime tick --source hermes-cron --hydrate',
+        'opl family-runtime tick --source temporal-worker --hydrate',
         'opl family-runtime queue list',
       ],
       handler: (args) => runFamilyRuntime(args),

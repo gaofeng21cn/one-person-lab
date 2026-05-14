@@ -16,8 +16,8 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeProvider = inspectFamilyRuntimeProvider(providerKind);
   const hermes = inspectHermesRuntime({
-    deep: providerKind === 'hermes_legacy',
-    reason: `Hermes legacy diagnostics were not deep-inspected because ${providerKind} is the selected family runtime provider.`,
+    deep: false,
+    reason: 'Hermes diagnostics were not deep-inspected because OPL family-runtime providers are local_sqlite or temporal only.',
   });
   const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildOplModules().modules;
@@ -75,9 +75,9 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
           issues: codexIssues,
         },
         hermes: {
-          required: providerKind === 'hermes_legacy',
-          required_for: 'hermes_legacy_provider_only',
-          capability_role: 'legacy_optional_provider_or_explicit_executor_route',
+          required: false,
+          required_for: 'explicit_executor_or_proof_diagnostic_only',
+          capability_role: 'explicit_executor_or_proof_diagnostic_only',
           installed: Boolean(hermes.binary),
           version: hermes.version,
           version_raw_output: hermes.version_raw_output,
@@ -121,7 +121,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
       notes: [
         'OPL owns the user-facing initialization surface and reports Codex readiness separately from configured family runtime provider readiness.',
         'Codex CLI readiness and Codex API configuration are reported separately so first-run can guide missing API keys without copying secrets into logs.',
-        'Full OPL readiness uses the configured family runtime provider; Hermes-Agent is only required when the hermes_legacy provider is selected.',
+        'Full OPL readiness uses the configured family runtime provider; Hermes-Agent is retained only for explicit executor or proof diagnostics.',
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',

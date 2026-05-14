@@ -18,17 +18,14 @@
     "provider_model": "provider_backed_stage_attempt_runtime",
     "allowed_providers": [
       "local_sqlite",
-      "hermes_legacy",
       "temporal"
     ],
     "default_resolution": {
       "env": "OPL_FAMILY_RUNTIME_PROVIDER",
-      "offline_env": "OPL_DISABLE_HERMES_ONLINE=1 only affects explicitly selected hermes_legacy provider readiness",
       "fallback": "local_sqlite"
     },
     "production_required_provider": "temporal",
     "production_candidate": "temporal",
-    "legacy_provider": "hermes_legacy",
     "local_provider": "local_sqlite",
     "local_provider_role": "dev_ci_offline_diagnostic_baseline"
   },

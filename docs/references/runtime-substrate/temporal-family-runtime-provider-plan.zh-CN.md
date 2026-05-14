@@ -14,7 +14,7 @@ OPL family runtime 的生产在线架构已经从 Hermes-first online substrate 
 
 Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 stage 内默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
 
-Hermes-Agent 的新定位是：迁移期 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate，local provider 只作为 dev/CI/offline diagnostic baseline。
+Hermes-Agent 的新定位是：显式非 provider executor/proof diagnostic、Codex CLI 备线评估材料或历史 provenance。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate，也不再作为 active provider compatibility interface；local provider 只作为 dev/CI/offline diagnostic baseline。
 
 2026-05-12 closeout：Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof 和 Agent Executor Adapter 接入链路已经落地。2026-05-13 fresh closeout 进一步证明本机 managed Temporal service / worker 当前 ready，显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`opl family-runtime residency proof --provider temporal --production` 返回 `production_residency_proven`，并把 proof receipt 写入 runtime event ledger；`framework production-closeout` 可读到 `provider_continuous_proof.continuous_proof_status=all_observed_proofs_proven`，`runtime snapshot` 已把 provider proof 投到 operator attention/recent item。剩余验收集中在周期性长时 residency / SLO、真实 domain stage activity soak、provider-hosted guarded apply 和真实 cost/progress 校准。
 
@@ -25,7 +25,6 @@ User / Codex App / OPL GUI / CLI
   -> OPL stage control plane
   -> family runtime provider abstraction
       -> local_sqlite provider (dev/CI/offline diagnostic)
-      -> hermes_legacy provider (migration/proof)
       -> temporal provider (production required)
   -> domain handoff envelope
   -> Codex CLI activity inside domain stage
@@ -67,14 +66,14 @@ Provider 层不持有：
 
 交付：
 
-- 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 只服务 dev/CI/offline diagnostic baseline，`hermes_legacy` 只服务 legacy/proof/diagnostic adapter。
+- 已冻结 provider 枚举：`local_sqlite`、`temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 只服务 dev/CI/offline diagnostic baseline。`hermes_legacy` 已退役为非法 provider selection，旧配置必须 fail-closed。
 - 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 与 repo-native live residency proof 已落地；`opl family-runtime service start|status|stop --provider temporal` 已作为本机托管 Temporal service lifecycle 入口落地，`opl family-runtime residency proof --provider temporal --production` 可消费本机 managed service + worker state。未配置、服务不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时均 fail-closed；2026-05-13 fresh 本机 managed service/worker 已 ready 且 production proof 已通过。真实 MAS domain soak 仍属 P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
 
 验收：
 
-- 已通过 focused CLI / contract tests 验证现有 Hermes/local 路径能作为 `hermes_legacy` 或 `local_sqlite` provider 被识别。
+- 已通过 focused CLI / contract tests 验证 local 路径能作为 `local_sqlite` provider 被识别，并验证 `hermes_legacy` provider selection fail-closed。
 - 活跃合同不再把 Hermes 写成未来目标唯一 substrate；历史文档只保留 supersede 语境。
 - Direct Codex skill path 不受 provider abstraction 影响。
 
@@ -151,19 +150,19 @@ Provider 层不持有：
 
 ### P5. Hermes Retirement / Downgrade
 
-状态：OPL 侧 operator closeout 先落在文档、public help、residue scan 与 no-default-caller evidence。当前默认执行语义保持 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`。默认用户入口、当前 roadmap、active public surface 和 operator-facing guidance 不再把 Hermes/Gateway/frontdoor/local-manager/default-compat 写成默认 runtime、默认 executor、Full readiness blocker 或 domain owner。生产 runtime core 与 provider 实现不在本轮改动范围内；物理删除旧实现面继续等待 MAS paper-line guarded apply、direct-skill parity、fixture/provenance 需求和无 active caller 证据。
+状态：OPL 侧 operator closeout 已从保留兼容面转为 active interface 退役。当前默认执行语义保持 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`。默认用户入口、当前 roadmap、active public surface 和 operator-facing guidance 不再把 Hermes/Gateway/frontdoor/local-manager/default-compat 写成默认 runtime、默认 executor、Full readiness blocker、provider compatibility interface 或 domain owner。生产 runtime core 与 provider 实现只保留 `local_sqlite | temporal`；旧实现面只能作为 history/provenance/diagnostic source ref 或负向 guard 存在。
 
 交付：
 
-- Hermes-first 文档、contracts、install/readiness 文案改为 `hermes_legacy`。
-- Hermes executor proof 与 optional module 留在显式 lane。
+- Hermes-first 文档、contracts、install/readiness 文案从 active provider 面删除。
+- Hermes executor proof 与 diagnostic module 只留在显式非 provider lane。
 - Full readiness 目标从 Hermes readiness 转为 Temporal provider readiness，Temporal 是 production required provider。
 - Active-path residue scan 覆盖 public docs、active docs、runtime-substrate / operator-governance references 和 CLI root help，防止默认路径重新出现 Hermes/Gateway/frontdoor/local-manager wording。
 
 验收：
 
 - 默认新投入不再新增 Hermes-first session/wakeup 功能。
-- 需要 Hermes 的功能必须标为 legacy/optional/proof，并能被 provider abstraction 替换。
+- 需要 Hermes 的功能必须标为 explicit executor/proof/diagnostic 或 history/provenance，并不得进入 provider abstraction。
 - 清理旧 alias、旧 vocabulary 和过时 docs，避免二次污染。
 
 ## 退役方案
@@ -177,7 +176,6 @@ Provider 层不持有：
 
 保留但降级：
 
-- `hermes_legacy` provider：迁移期兼容与回归基线。
 - Hermes executor/proof lane：用于评估非 Codex executor 或 structured agent loop。
 - Local provider：开发、CI、离线诊断、fixture 和 fail-closed baseline；不能替代 production online readiness。
 

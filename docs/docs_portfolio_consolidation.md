@@ -78,9 +78,9 @@ current OPL owner split is:
   historical-fixture, explicit archive-import, upstream-intake, and parity
   oracle reference only.
 - `Hermes-Agent`: external upstream runtime/project. In OPL prose it may only
-  appear as `hermes_legacy`, optional provider, explicit executor/proof lane,
-  migration context, or historical material unless a current core doc and
-  machine-readable contract promote a narrower role.
+  appear as an explicit non-provider executor/proof diagnostic, migration
+  provenance, or historical material. Active provider-bridge interfaces,
+  provider fallback semantics, and readiness paths for Hermes are retired.
 - `Temporal`: required production provider for durable stage-attempt
   substrate. Current docs must keep required target state and landed state separate.
 

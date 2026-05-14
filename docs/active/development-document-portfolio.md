@@ -62,7 +62,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | MAG grant strategy, fundability / proposal quality, specific aims authority | MAG |
 | RCA visual direction, visual artifacts, review/export gates | RCA |
 | MDS / DeepScientist backend facts | MAS provenance / parity oracle / explicit archive import, never OPL default runtime |
-| Hermes-first online substrate or Hermes Kernel as default product runtime | Legacy/optional/proof/evaluation reference; current default is provider-backed framework |
+| Hermes-first online substrate or Hermes Kernel as default product runtime | History/provenance/diagnostic/evaluation reference; current default is provider-backed framework |
 | Gateway-era federation/routed-action routes | History / compatibility / tombstone |
 | Dated boards, activation packages, one-off closeouts | `docs/history/process/**` or corresponding references/history, with useful conclusions promoted to current owner docs |
 | External framework learning | References / convergence-governance; absorb vocabulary, contract patterns, provenance, and gate methods only |
@@ -80,7 +80,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 
 | Old plan | Current handling |
 | --- | --- |
-| Hermes-first product-entry / kernel integration | No longer the target runtime mainline. Retained as historical decision and optional/proof background. |
+| Hermes-first product-entry / kernel integration | No longer the target runtime mainline. Retained as historical decision and provenance background. |
 | Family lightweight direct-entry rollout board | No longer a whole active backlog. Retain entry taxonomy, handoff envelope, and entry/operator boundary lessons. |
 | OPL vertical online-agent platform roadmap | No longer the master roadmap. Useful content is absorbed by the stage-led framework and public roadmap. |
 | MAS top-level cutover board | No longer the current MAS migration order. MAS migration now follows OPL framework-first plus the MAS program portfolio. |

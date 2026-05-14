@@ -35,7 +35,7 @@
 - [合同目录说明](../../contracts/README.md)
 
 这些界面解释默认入口（`opl`、`opl exec`、`opl resume`）、当前资源模型（`workspaces / sessions / progress / artifacts`），以及“只有显式 domain activation 或 executor switch 才进入 OPL 增量语义”这条规则。
-它们也把 `OPL Runtime Manager` 限定为已配置 provider-backed family runtime 之上的产品控制面，并把 typed family queue、bridge 诊断、Rust native helper / index 工作限定在产品调度、native assistance 与 indexed discovery。Temporal-backed provider 是 production online runtime 的必需 substrate；未安装、不可达或 worker 未 ready 都是平台 readiness blocker，需要通过安装、修复、监控和运维维护闭合。`Hermes-Agent` 在迁移期只保留为 `hermes_legacy` provider、诊断/provenance/test fixture 或可选安装模块。普通 Product Entry 与 session resume 不再提供 Hermes executor 路径。
+它们也把 `OPL Runtime Manager` 限定为已配置 provider-backed family runtime 之上的产品控制面，并把 typed family queue、provider 诊断、Rust native helper / index 工作限定在产品调度、native assistance 与 indexed discovery。Temporal-backed provider 是 production online runtime 的必需 substrate；未安装、不可达或 worker 未 ready 都是平台 readiness blocker，需要通过安装、修复、监控和运维维护闭合。`Hermes-Agent` 只保留为显式 executor / proof / diagnostic 资产，不再作为 family runtime provider、默认 substrate 或 Gateway cron bridge。普通 Product Entry 与 session resume 不再提供 Hermes executor 路径。
 
 ### 2. 已链接的 domain capability surface
 
@@ -68,7 +68,7 @@
 - [OPL Gateway 契约面](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
 
 这些 surface 不能再作为今天 `OPL` 的活跃实现、测试或机器可读合同输入。
-本轮已落地的清理范围小于物理删除：当前 public help 和 active wording 不再把 Hermes executor、Gateway cron、frontdoor/local-manager 或 compatibility alias 展示成普通默认路径。Legacy `hermes_legacy` provider 诊断、历史 provenance 和测试 fixture 仍可保留旧名，但必须显式说明用途。
+本轮清理已经把 Hermes legacy provider / Gateway cron / frontdoor-local-manager / compatibility alias 从 active provider 与默认路径中移除。历史 provenance、fixture 或负向 guard 可保留旧名，但必须明确为退役证据，不能再作为 provider fallback 或 readiness 路径。
 
 ## 参考级配套材料
 
@@ -94,5 +94,5 @@
 - 它把当前 `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` 主线讲清楚
 - 它区分 OPL-owned 的 runtime/activation surface 与 repo-owned 的 domain capability surface
 - 它明确标出旧 gateway/federation 语料已经退到 reference/provenance 层
-- 它把保留的旧名限制在 `hermes_legacy` provider 诊断、provenance 或测试 fixture 语境
+- 它把保留的旧名限制在退役 provider 负向 guard、provenance 或历史 fixture 语境
 - 它继续把 domain runtime truth、progress truth 与 artifact truth 放在对应 domain 仓自己名下

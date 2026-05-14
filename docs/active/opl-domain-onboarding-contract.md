@@ -149,12 +149,13 @@ Every domain onboarding package must explicitly distinguish three entry types:
 | `agent_entry` | CLI, MCP, controller, or app-skill callable surfaces for Codex or another host agent | Must be structured, auditable, and fail-closed; it cannot be just a prompt. |
 | `product_entry` | launch, recovery, session, routing, and interaction entrypoint for an end user | Must state whether it is mature today; future hosted/web targets cannot be written as current reality. |
 
-If the domain exposes `frontdoor_surface`, `operator_loop_surface`, or equivalent fields, the package must state:
+If an older domain manifest still carries `frontdoor_surface` or equivalent legacy fields, the onboarding package must migrate that meaning into the current entry taxonomy above. Retained legacy field names are historical/provenance evidence only and must not be used as default OPL routing, readiness, or compatibility surfaces.
 
-- whether `frontdoor_surface` is a real user entry or only a product-entry shell;
+If the domain exposes `operator_loop_surface` or equivalent current-loop fields, the package must state:
+
 - whether `operator_loop_surface` still owns the real runtime / controller loop;
 - how the direct domain path and OPL-hosted path share owner receipts, artifact locators, and return surfaces;
-- which entries are historical, diagnostic, or compatibility routes rather than defaults.
+- which entries are historical or diagnostic routes rather than defaults.
 
 The `OPL -> domain` handoff envelope must at minimum express:
 

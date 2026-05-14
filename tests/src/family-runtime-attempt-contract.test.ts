@@ -19,7 +19,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   assert.equal(contract.provider_model, 'provider_backed_stage_attempt_runtime');
-  assert.deepEqual(contract.allowed_providers, ['local_sqlite', 'hermes_legacy', 'temporal']);
+  assert.deepEqual(contract.allowed_providers, ['local_sqlite', 'temporal']);
   for (const state of [
     'queued',
     'running',

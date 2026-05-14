@@ -1,74 +1,79 @@
-import { assert, createFakeHermesFixture, createFamilyContractsFixtureRoot, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
+
+function bindMasWorkspace(input: {
+  stateRoot: string;
+  fixtureContractsRoot: string;
+  workspaceRoot: string;
+  profilePath: string;
+}) {
+  const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  manifest.workspace_locator = {
+    ...((manifest.workspace_locator as Record<string, unknown>) ?? {}),
+    workspace_root: input.workspaceRoot,
+    profile_ref: input.profilePath,
+    profile_name: 'dm-cvd-mortality-risk',
+  };
+  manifest.task_lifecycle = {
+    ...((manifest.task_lifecycle as Record<string, unknown>) ?? {}),
+    status: 'completed',
+    human_gate_ids: [],
+    summary: 'MAS workspace locator is bound for Portal projection tests.',
+  };
+  manifest.progress_projection = {
+    ...((manifest.progress_projection as Record<string, unknown>) ?? {}),
+    current_status: 'completed',
+    runtime_status: 'ready',
+    headline: 'MAS Portal projection fixture is bound.',
+    attention_items: [],
+    human_gate_ids: [],
+  };
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    input.workspaceRoot,
+    '--manifest-command',
+    buildManifestCommand(manifest),
+  ], {
+    OPL_STATE_DIR: input.stateRoot,
+    OPL_CONTRACTS_DIR: input.fixtureContractsRoot,
+  });
+}
 
 test('runtime snapshot prefers MAS Progress Portal handoff for study projection and portal links', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-portal-state-'));
-  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-portal-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-portal-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   const profilePath = path.join(profileDir, 'dm.workspace.toml');
-  const scriptPath = path.join(hermesHome, 'scripts', 'med-autoscience', 'dm', 'watch_runtime_tick.py');
-  const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
   const portalPayloadPath = path.join(workspaceRoot, 'artifacts', 'runtime', 'progress_portal', 'latest.json');
   const portalHtmlPath = path.join(workspaceRoot, 'ops', 'mas', 'progress', 'index.html');
 
   fs.mkdirSync(profileDir, { recursive: true });
   fs.writeFileSync(profilePath, 'workspace_name = "dm"\n');
-  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
-  fs.writeFileSync(
-    scriptPath,
-    `COMMAND = json.loads("[\\"${workspaceRoot}/ops/medautoscience/bin/watch-runtime\\", \\"--max-ticks\\", \\"1\\"]")\n`,
-  );
-  fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
-  fs.writeFileSync(
-    jobsPath,
-    `${JSON.stringify({
-      jobs: [
-        {
-          id: 'cron-dm-portal',
-          name: 'medautoscience-supervision-dm',
-          script: 'med-autoscience/dm/watch_runtime_tick.py',
-          schedule_display: 'every 5m',
-          enabled: true,
-          state: 'scheduled',
-          last_status: 'ok',
-        },
-      ],
-    }, null, 2)}\n`,
-  );
   fs.mkdirSync(path.dirname(portalPayloadPath), { recursive: true });
   fs.mkdirSync(path.dirname(portalHtmlPath), { recursive: true });
   fs.writeFileSync(portalHtmlPath, '<!doctype html><title>MAS Progress Portal</title>\n');
   fs.writeFileSync(portalPayloadPath, `${JSON.stringify(portalPayload(workspaceRoot), null, 2)}\n`);
 
   try {
+    bindMasWorkspace({ stateRoot, fixtureContractsRoot, workspaceRoot, profilePath });
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_HERMES_BIN: hermesPath,
-      HERMES_HOME: hermesHome,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
 
     assert.equal(snapshot.runtime_health.status, 'running');
-    assert.equal(snapshot.attention_items.length, 1);
-    assert.equal(snapshot.attention_items[0].item_id.startsWith('medautoscience:portal-workspace-alert:'), true);
-    assert.equal(snapshot.attention_items[0].action_owner, 'opl');
-    assert.equal(snapshot.attention_items[0].portal_path, portalHtmlPath);
-    assert.equal(snapshot.running_items.length, 2);
+    assert.equal(snapshot.attention_items.length, 2);
+    const portalAlert = snapshot.attention_items.find((item: { item_id: string }) =>
+      item.item_id.startsWith('medautoscience:portal-workspace-alert:')
+    );
+    assert.ok(portalAlert);
+    assert.equal(portalAlert.action_owner, 'opl');
+    assert.equal(portalAlert.portal_path, portalHtmlPath);
     const dm002 = snapshot.running_items.find((item: { study_id?: string }) => item.study_id === '002-dm-china-us-mortality-attribution');
     const dpcc003 = snapshot.running_items.find((item: { study_id?: string }) => item.study_id === '003-dpcc-primary-care-phenotype-treatment-gap');
     assert.ok(dm002);
@@ -83,79 +88,40 @@ exit 1
     assert.equal(dm002.portal_source_refs.some((ref: { role: string }) => ref.role === 'mas_progress_portal_payload'), true);
     assert.equal(dm002.source_refs.some((ref: { role: string }) => ref.role === 'mas_progress_portal_payload'), true);
     assert.equal(dpcc003.active_run_id, 'mas-run-003');
-    assert.equal(snapshot.recent_items.length, 1);
-    assert.equal(snapshot.recent_items[0].study_id, '004-dpcc-longitudinal-care-inertia-intensification-gap');
-    assert.equal(snapshot.recent_items[0].action_owner, 'none');
-    assert.deepEqual(snapshot.action_counts, { user: 0, opl: 1, infrastructure: 0 });
+    const recentPortalItem = snapshot.recent_items.find((item: { study_id?: string }) =>
+      item.study_id === '004-dpcc-longitudinal-care-inertia-intensification-gap'
+    );
+    assert.ok(recentPortalItem);
+    assert.equal(recentPortalItem.action_owner, 'none');
+    assert.deepEqual(snapshot.action_counts, { user: 0, opl: 1, infrastructure: 1 });
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(hermesHome, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
 test('runtime snapshot consumes MAS OPL workbench projection as read-only study drilldown data', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-workbench-state-'));
-  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-workbench-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-workbench-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   const profilePath = path.join(profileDir, 'dm.workspace.toml');
-  const scriptPath = path.join(hermesHome, 'scripts', 'med-autoscience', 'dm', 'watch_runtime_tick.py');
-  const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
   const portalPayloadPath = path.join(workspaceRoot, 'artifacts', 'runtime', 'progress_portal', 'latest.json');
   const portalHtmlPath = path.join(workspaceRoot, 'ops', 'mas', 'progress', 'index.html');
 
   fs.mkdirSync(profileDir, { recursive: true });
   fs.writeFileSync(profilePath, 'workspace_name = "dm"\n');
-  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
-  fs.writeFileSync(
-    scriptPath,
-    `COMMAND = json.loads("[\\"${workspaceRoot}/ops/medautoscience/bin/watch-runtime\\", \\"--max-ticks\\", \\"1\\"]")\n`,
-  );
-  fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
-  fs.writeFileSync(
-    jobsPath,
-    `${JSON.stringify({
-      jobs: [
-        {
-          id: 'cron-dm-workbench',
-          name: 'medautoscience-supervision-dm',
-          script: 'med-autoscience/dm/watch_runtime_tick.py',
-          schedule_display: 'every 5m',
-          enabled: true,
-          state: 'scheduled',
-          last_status: 'ok',
-        },
-      ],
-    }, null, 2)}\n`,
-  );
   fs.mkdirSync(path.dirname(portalPayloadPath), { recursive: true });
   fs.mkdirSync(path.dirname(portalHtmlPath), { recursive: true });
   fs.writeFileSync(portalHtmlPath, '<!doctype html><title>MAS Progress Portal</title>\n');
   fs.writeFileSync(portalPayloadPath, `${JSON.stringify(workbenchPortalPayload(workspaceRoot, profilePath), null, 2)}\n`);
 
   try {
+    bindMasWorkspace({ stateRoot, fixtureContractsRoot, workspaceRoot, profilePath });
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_HERMES_BIN: hermesPath,
-      HERMES_HOME: hermesHome,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
     const snapshot = output.runtime_tray_snapshot;
     const item = snapshot.running_items.find((entry: { study_id?: string }) => entry.study_id === '002-dm-china-us-mortality-attribution');
@@ -195,10 +161,8 @@ exit 1
     assert.equal(item.source_refs.some((ref: { role: string }) => ref.role === 'mas_opl_runtime_workbench_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(hermesHome, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 

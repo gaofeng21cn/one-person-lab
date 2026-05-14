@@ -246,7 +246,7 @@ test('product entry companion validators normalize shared family payloads', () =
       workspace_root: '/tmp/redcube-workspace',
     },
     runtime: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
     },
     product_entry_status: {
       summary: 'Usable now.',
@@ -463,7 +463,7 @@ test('product entry companion validators fail closed on missing required shared 
       workspace_root: '/tmp/redcube-workspace',
     },
     runtime: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
     },
     product_entry_status: {
       summary: 'Usable now.',

@@ -279,7 +279,7 @@
   "runtime_loop_closure": {
     "surface_kind": "runtime_loop_closure",
     "loop_owner": {
-      "runtime_owner": "upstream_hermes_agent",
+      "runtime_owner": "provider_backed_family_runtime",
       "domain_owner": "redcube_ai",
       "product_entry_owner": "redcube_ai"
     },
@@ -331,7 +331,7 @@
     }
   },
   "runtime": {
-    "runtime_owner": "upstream_hermes_agent",
+    "runtime_owner": "provider_backed_family_runtime",
     "runtime_state_root": "/fixtures/redcube/runtime-state",
     "session_store_root": "/fixtures/redcube/runtime-state/product-entry-sessions"
   },
@@ -413,7 +413,7 @@
   },
   "managed_runtime_contract": {
     "shared_contract_ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json",
-    "runtime_owner": "upstream_hermes_agent",
+    "runtime_owner": "provider_backed_family_runtime",
     "domain_owner": "redcube_ai",
     "executor_owner": "codex_cli",
     "supervision_status_surface": {
@@ -437,7 +437,7 @@
   "runtime_inventory": {
     "surface_kind": "runtime_inventory",
     "summary": "RedCube 当前通过 upstream Hermes runtime 与 entry-session store 持续管理 deliverable loop。",
-    "runtime_owner": "upstream_hermes_agent",
+    "runtime_owner": "provider_backed_family_runtime",
     "domain_owner": "redcube_ai",
     "executor_owner": "codex_cli",
     "substrate": "codex_default_executor_with_provider_backed_family_runtime",
@@ -532,7 +532,7 @@
           },
           "runtime_continuity": {
             "surface_kind": "skill_runtime_continuity",
-            "runtime_owner": "upstream_hermes_agent",
+            "runtime_owner": "provider_backed_family_runtime",
             "domain_owner": "redcube_ai",
             "executor_owner": "codex_cli",
             "session_locator_field": "entry_session_id",

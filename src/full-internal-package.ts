@@ -6,7 +6,7 @@ export const FULL_RELEASE_OUTPUT_DIR = 'dist/opl-full-release';
 export const FULL_RUNTIME_RESOURCE_DIR = 'opl-full-runtime';
 export const PACKAGED_MODULE_MARKER_FILE = 'opl-runtime-module.json';
 export const FULL_RUNTIME_CACHE_LAYOUT_VERSION = 1;
-export const FULL_RUNTIME_CACHE_LAYER_IDS = ['toolchain', 'hermes-runtime', 'domain-runtime', 'opl-runtime', 'skills'] as const;
+export const FULL_RUNTIME_CACHE_LAYER_IDS = ['toolchain', 'domain-runtime', 'opl-runtime', 'skills'] as const;
 
 export type FullRuntimeCacheLayerId = typeof FULL_RUNTIME_CACHE_LAYER_IDS[number];
 
@@ -163,24 +163,6 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
         role: 'office_document_cli_binary',
         required: true,
       },
-      hermes: {
-        ...normalizeComponent(components.hermes),
-        role: 'legacy_optional_provider_payload',
-        required: false,
-        hermes: true,
-        provider_kind: 'hermes_legacy',
-        gateway_launchagent_label: 'ai.hermes.gateway',
-        online_runtime_ready_check: 'opl family-runtime doctor',
-        payloads: [
-          'pinned_hermes_source_or_wheel',
-          'venv_bootstrap',
-          'hermes_cli_shim',
-          'launchagent_install_repair_scripts',
-          'profile_seed',
-          'version_manifest',
-          'checksum',
-        ],
-      },
       skills: {
         ...normalizeComponent(components.skills),
         role: 'recommended_codex_skills_including_officecli_ui_ux',
@@ -297,9 +279,9 @@ export function buildInternalPackageReadme(input: {
     '4. MAS/MAG/RCA 随包内容只作为首启安装源；初始化后会进入标准模块目录：',
     '   ~/Library/Application Support/OPL/state/modules/<repo-name>',
     '5. Full runtime 内置 officecli CLI binary 与 MAS/MAG/RCA、officecli、officecli-docx/pptx/xlsx、ui-ux-pro-max 等推荐 companion skills；App 初始化会把它们同步到 Codex 可见路径。',
-    '6. Full 包内置 family runtime provider payload：当前迁移期可包含 Hermes legacy bridge payload；Temporal provider 落地后由 provider contract 接管生产 durable stage attempt。',
+    '6. Full 包内置 family runtime provider 所需的本地状态与模块材料；生产 durable stage attempt 由 Temporal provider contract 接管。',
     '7. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Core ready、Domain modules ready、family runtime provider ready 三层状态；Full 完整通过要求三层都 ready。',
-    '8. 首启会通过 opl family-runtime doctor/status 读取 provider-backed readiness；Hermes gateway LaunchAgent 只属于 hermes_legacy provider。',
+    '8. 首启会通过 opl family-runtime doctor/status 读取 provider-backed readiness；Full 包不再携带 Hermes runtime payload。',
     '9. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName

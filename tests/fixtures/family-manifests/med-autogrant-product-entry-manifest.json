@@ -80,7 +80,7 @@
     },
     "runtime": {
       "current_owner_line": "external Hermes substrate + MedAutoGrant authority surfaces",
-      "runtime_owner": "upstream_hermes_agent"
+      "runtime_owner": "provider_backed_family_runtime"
     },
     "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
     "domain_entry_contract": {
@@ -160,7 +160,7 @@
     },
     "managed_runtime_contract": {
       "shared_contract_ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json",
-      "runtime_owner": "upstream_hermes_agent",
+      "runtime_owner": "provider_backed_family_runtime",
       "domain_owner": "med-autogrant",
       "executor_owner": "med-autogrant",
       "supervision_status_surface": {
@@ -629,7 +629,7 @@
       "surface_kind": "runtime_control",
       "version": 2,
       "summary": "repo-owned runtime control reference：显式导出 owner 语义、restore point、progress/artifact/approval surface 与 direct-entry locator。",
-      "runtime_owner": "upstream_hermes_agent",
+      "runtime_owner": "provider_backed_family_runtime",
       "domain_owner": "med-autogrant",
       "executor_owner": "med-autogrant",
       "session_locator": {
@@ -719,7 +719,7 @@
             },
             "runtime_continuity": {
               "surface_kind": "skill_runtime_continuity",
-              "runtime_owner": "upstream_hermes_agent",
+              "runtime_owner": "provider_backed_family_runtime",
               "domain_owner": "med-autogrant",
               "executor_owner": "med-autogrant",
               "session_locator_field": "grant_run_id",

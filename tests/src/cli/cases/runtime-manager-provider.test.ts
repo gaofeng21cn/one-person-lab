@@ -8,7 +8,6 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       OPL_HERMES_BIN: path.join(stateRoot, 'missing-hermes'),
       OPL_STATE_DIR: stateRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
-      OPL_DISABLE_HERMES_ONLINE: '1',
     });
 
     assert.equal(output.version, 'g2');
@@ -20,7 +19,6 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.family_runtime_queue.provider_model, 'provider_backed_stage_attempt_runtime');
     assert.deepEqual(output.runtime_manager.family_runtime_queue.allowed_providers, [
       'local_sqlite',
-      'hermes_legacy',
       'temporal',
     ]);
     assert.equal(output.runtime_manager.provider_runtime.selected_provider, 'local_sqlite');
@@ -63,4 +61,3 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
-

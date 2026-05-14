@@ -84,7 +84,7 @@ test('runtime task companion helpers normalize MAS, MAG, and RCA style payloads'
   const sessionContinuity = buildSessionContinuity({
     summary: 'Current RedCube deliverable loop stays resumable in the same entry session.',
     domain_agent_id: 'rca',
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: 'provider_backed_family_runtime',
     domain_owner: 'redcube_ai',
     executor_owner: 'codex_cli',
     status: 'resumable',

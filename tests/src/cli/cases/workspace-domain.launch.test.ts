@@ -517,7 +517,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.runtime_inventory.runtime_owner,
-      'upstream_hermes_agent',
+      'provider_backed_family_runtime',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.task_lifecycle.surface_kind,
