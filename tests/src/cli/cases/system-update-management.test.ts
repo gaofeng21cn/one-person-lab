@@ -1,56 +1,22 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, createCodexConfigFixture, createFakeCodexFixture, createFakeHermesFixture, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, createCodexConfigFixture, createFakeCodexFixture, createGitModuleRemoteFixture, fs, os, path, runCli, test } from '../helpers.ts';
 
-test('system exposes Hermes as shallow non-provider diagnostics outside family runtime provider selection', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-update-home-'));
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  cat <<'EOF'
-Hermes Agent v0.10.0 (2026.4.16)
-Project: /tmp/hermes-agent
-Update available: 42 commits behind — run 'hermes update'
-EOF
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "✓ Gateway service is loaded"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
+test('system ignores retired Hermes env outside family runtime provider selection', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-retired-hermes-update-home-'));
 
   try {
     const output = runCli(
       ['system'],
       {
         HOME: homeRoot,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_HERMES_BIN: path.join(homeRoot, 'retired-hermes-bin'),
       },
-    ) as {
-      system: {
-        core_engines: {
-          hermes: {
-            installed: boolean;
-            version: string | null;
-            version_raw_output: string | null;
-            update_available: boolean;
-            update_summary: string | null;
-            health_status: string;
-          };
-        };
-      };
-    };
+    );
 
-    assert.equal(output.system.core_engines.hermes.installed, true);
-    assert.equal(output.system.core_engines.hermes.version, null);
-    assert.equal(output.system.core_engines.hermes.version_raw_output, null);
-    assert.equal(output.system.core_engines.hermes.update_available, false);
-    assert.equal(output.system.core_engines.hermes.update_summary, null);
-    assert.equal(output.system.core_engines.hermes.health_status, 'attention_needed');
+    assert.equal(Object.hasOwn(output.system.core_engines, 'hermes'), false);
+    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
   } finally {
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -218,7 +184,6 @@ exit 1
 test('system update skips ready targets updates available targets and reports dirty module skips', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-update-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
-  const hermesUpdateMarker = path.join(homeRoot, 'hermes-update.marker');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
@@ -226,26 +191,6 @@ if [[ "$1" == "--version" ]]; then
   exit 0
 fi
 echo "Unsupported codex fixture command: $*" >&2
-exit 1
-`);
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  cat <<'EOF'
-Hermes Agent v0.10.0 (2026.4.16)
-Update available: 42 commits behind — run 'hermes update'
-EOF
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-if [[ "$1" == "update" ]]; then
-  touch ${shellSingleQuote(hermesUpdateMarker)}
-  echo "hermes update fixture completed"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
 exit 1
 `);
   const moduleExtraFiles = {
@@ -289,12 +234,11 @@ EOF
   });
   const env = {
     HOME: homeRoot,
-    OPL_HERMES_BIN: hermesFixture.hermesPath,
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: medAutoGrantRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-    PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+    PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
   };
 
   try {
@@ -345,7 +289,6 @@ EOF
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
     assert.equal(targets.has('engine:hermes'), false);
-    assert.equal(fs.existsSync(hermesUpdateMarker), false);
     assert.equal(targets.get('module:medautoscience')?.status, 'completed');
     assert.equal(targets.get('module:medautogrant')?.status, 'skipped');
     assert.equal(targets.get('module:medautogrant')?.reason, 'dirty_checkout');
@@ -361,7 +304,6 @@ EOF
     assert.equal(updatedMas.recommended_action, null);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoGrantRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });

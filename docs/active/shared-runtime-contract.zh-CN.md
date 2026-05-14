@@ -115,21 +115,21 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 - 在 contract 层吸收 event correlation、checkpoint lineage、flow introspection 与 human-gate pause / resume 语义
 - 不把 `CrewAI` 统一成默认 `LLM`、`Agent`、`Crew` 或 memory owner
-- 不让 `CrewAI` 替代 `Hermes-Agent`、`Codex CLI`、OPL session/runtime 入口或任何 domain-agent entry
+- 不让 `CrewAI` 替代 `Codex CLI`、OPL session/runtime 入口或任何 domain-agent entry
 
 ## 与 Hermes-Agent 的关系
 
-上游 `Hermes-Agent` 当前最值得吸收的，是 runtime 工程经验、显式 executor/proof diagnostic 和历史 provenance。
+上游 `Hermes-Agent` 当前在 OPL 中只保留两类边界：`hermes_agent` 可作为显式非默认 executor adapter/backend；Hermes runtime / Gateway / provider 相关内容只作为历史 provenance、诊断语料和负向 guard 参考。
 
 因此，更准确的表达是：
 
 - OPL framework 的 production online substrate 是 provider-backed stage runtime，当前必需路径是 Temporal-backed provider
-- `Hermes-Agent` 保留为显式非 provider executor/proof diagnostic 或技术参考
+- `Hermes-Agent` 保留为显式非默认 executor adapter/backend、历史 provenance、诊断语料或负向 guard
 - `Hermes-Agent` 不是整个 `UHS`
 - `Hermes-Agent` 也不会替代 OPL session/runtime 入口、任何 domain-agent entry 或 domain-owned truth surface
 - 任何集成方式都必须保持 OPL 作为 framework/control-plane owner，并保持 domain 仓作为 truth owner
 
-也就是说，`Hermes` 当前不是“怎么稳定地跑”的目标 owner。它作为 proof / diagnostic / provenance 语境保留；OPL provider-backed stage runtime 的生产在线能力由 Temporal-backed provider 承担并按必需依赖维护。
+也就是说，`Hermes` 当前不是“怎么稳定地跑”的目标 owner。它的 active executor-facing 角色是显式 `hermes_agent` adapter/backend；旧 provider / Gateway / runtime surface 只作为 diagnostic / provenance / negative-guard 语境保留。OPL provider-backed stage runtime 的生产在线能力由 Temporal-backed provider 承担并按必需依赖维护。
 
 ## 当前真实状态
 
@@ -141,7 +141,7 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 - `Shared Runtime Contract` 是当前共享边界下的参考合同，不是默认产品入口
 - runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` 语义，而不是把它们误写成某个统一 runtime owner
 - 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 只保留为 MAS 声明的可选 companion diagnostic、intake 与 parity oracle 引用
-- `Hermes-Agent` 只保留为显式非 provider executor/proof diagnostic、Codex CLI 备线评估材料或历史 provenance，不再是默认长期在线 substrate
+- Hermes provider/readiness/compat 角色限定为历史 provenance、诊断语料或负向 guard；`hermes_agent` executor adapter 仅可显式选择，并必须独立 receipt / audit / fail-closed；它不提供默认长期在线 substrate、provider readiness path、默认 executor 或兼容 fallback
 
 ## 实现边界
 
@@ -149,7 +149,7 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 - 当前本地 Codex-default executor 路径
 - 目标 provider-backed stage runtime，包括 Temporal-backed provider 路径
-- `Hermes-Agent` 这类显式非 provider executor/proof diagnostic 或历史 provenance 资产
+- `Hermes-Agent` 这类显式非默认 executor adapter、历史 provenance、诊断语料或负向 guard 资产
 - future platform-hosted execution plane
 
 从产品形态看，目标形态是：

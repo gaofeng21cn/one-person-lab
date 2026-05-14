@@ -5,7 +5,6 @@ test('runtime manager reports OPL control plane over provider-backed family runt
 
   try {
     const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: path.join(stateRoot, 'missing-hermes'),
       OPL_STATE_DIR: stateRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });

@@ -14,11 +14,11 @@ Its goal is to define what `OPL` may legitimately index after routing, onboardin
 
 The target is not a monolithic runtime.
 The target is a thin top-level operating layer that records governance signals, routing audit traces, and readiness indexes while domain systems continue to own runtime truth.
-Legacy `gateway` wording in this document is retained for compatibility with the historical surface IDs and example corpus. Current topology is stage-led with Agent executors as the minimum execution unit.
+Legacy `gateway` wording in this document is provenance-only vocabulary from the archived surface IDs and example corpus. It is not an active compatibility interface. Current topology is stage-led with Agent executors as the minimum execution unit.
 
 ## Relationship To Earlier Gateway Layers
 
-This operating surface is downstream of retained historical compatibility layers:
+This operating surface was originally downstream of these now-archived historical layers:
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
 - [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
@@ -27,7 +27,7 @@ This operating surface is downstream of retained historical compatibility layers
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - the machine-readable contracts in [`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
 
-Those layers are provenance and compatibility inputs. Current topology and owner boundaries remain governed by the core five, current contracts, and the stage-led framework roadmap.
+Those layers are provenance inputs only. Current topology and owner boundaries remain governed by the core five, current contracts, source, CLI/API behavior, runtime ledgers, domain-owned manifests, and the stage-led framework roadmap.
 
 ## Core Promise
 
@@ -38,7 +38,7 @@ It may not:
 - become the owner of domain runtime audit truth
 - become the owner of domain review truth
 - become the owner of artifact or publish truth
-- bypass domain gateways to control harness execution directly
+- bypass domain-owned capability entries to control harness execution directly
 
 In short:
 
@@ -53,7 +53,7 @@ This operating surface does not:
 - store canonical audit truth for a domain
 - replace domain review state with a top-level copy
 - become the unified runtime entry for all execution
-- turn domain gateways into implementation details
+- turn domain-owned capability entries into implementation details
 
 ## Allowed Top-Level Record Kinds
 
@@ -63,7 +63,7 @@ The minimum top-level operating surface may record only the following kinds:
 
 Purpose:
 
-- record how `OPL` routed a request into a domain gateway
+- record how `OPL` routed a request into a domain-owned capability entry
 - preserve routing evidence and outcome at the top level
 
 This is a top-level trace of the routing step, not the domain runtime audit record.
@@ -154,9 +154,9 @@ Every top-level governance / audit record must point back to domain-owned truth 
 
 This prevents `OPL` from being misread as the canonical owner of runtime or publish state.
 
-### Domain entry compatibility value remains `domain_gateway`
+### Legacy `domain_gateway` is provenance-only
 
-This operating surface may reference the retained compatibility value `domain_gateway` for reviewability. In current prose, read this as domain-owned capability entry under the stage-led topology where Agent executors are the minimum execution unit.
+Archived examples may still contain the legacy literal `domain_gateway` for reviewability. Current prose and new machine-readable surfaces must use current domain-owned capability entry semantics instead of retaining that literal as a compatibility interface.
 
 ### Publish readiness is not publish truth
 
@@ -186,7 +186,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
   "request_id": "opl-2026-04-05-010",
   "workstream_id": "presentation_ops",
   "domain_id": "redcube",
-  "summary": "Routed a defense-deck request into the RedCube domain gateway.",
+  "summary": "Routed a defense-deck request into the RedCube domain-owned capability entry.",
   "status": "recorded",
   "evidence_refs": [
     "intent=presentation_delivery",
@@ -202,7 +202,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
   "recorded_at": "2026-04-05T06:20:00Z",
   "routing_audit": {
     "routing_status": "routed",
-    "entry_surface": "domain_gateway",
+    "entry_surface": "legacy_domain_gateway_identifier",
     "routing_decision_ref": "opl://routed-actions/opl-2026-04-05-010",
     "handoff_ref": "opl://handoffs/opl-2026-04-05-010"
   }
@@ -330,7 +330,7 @@ Do not describe or implement this layer as:
 - `OPL executes domain review or publish`
 - `OPL is the unified runtime entry`
 - `OPL manages all runs directly`
-- domain gateways being reduced to implementation details
+- domain-owned capability entries being reduced to implementation details
 
 Do not add operations that:
 

@@ -12,6 +12,7 @@ import {
   buildFullPackageManifest,
   buildInternalArtifactNames,
   buildInternalPackageReadme,
+  listFullRuntimeProductionNodeModulePaths,
   shouldExcludeRuntimePath,
 } from '../../src/full-internal-package.ts';
 
@@ -138,6 +139,24 @@ test('runtime staging excludes dev/runtime-heavy paths while preserving core ent
   assert.equal(shouldExcludeRuntimePath('modules/rca/packages/redcube-gateway/dist/index.js'), false);
 });
 
+test('full runtime production dependency manifest includes Temporal runtime packages without dev test server packages', () => {
+  const packageLock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package-lock.json'), 'utf8')) as {
+    packages?: Record<string, { dev?: boolean }>;
+  };
+  const productionNodeModulePaths = listFullRuntimeProductionNodeModulePaths(packageLock);
+
+  for (const packagePath of [
+    'node_modules/@temporalio/activity',
+    'node_modules/@temporalio/client',
+    'node_modules/@temporalio/common',
+    'node_modules/@temporalio/worker',
+    'node_modules/@temporalio/workflow',
+  ]) {
+    assert.equal(productionNodeModulePaths.includes(packagePath), true, packagePath);
+  }
+  assert.equal(productionNodeModulePaths.includes('node_modules/@temporalio/testing'), false);
+});
+
 test('packaged first-run CLI path does not eagerly load quality-details dev dependencies', () => {
   const source = fs.readFileSync(path.join(repoRoot, 'src/cli/cases/public-command-specs.ts'), 'utf8');
 
@@ -174,7 +193,7 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /Full 包内置 family runtime provider 所需的本地状态与模块材料/);
   assert.match(text, /确认 Core ready、Domain modules ready、family runtime provider ready 三层状态/);
   assert.match(text, /Full 完整通过要求三层都 ready/);
-  assert.match(text, /显式 executor\/proof\/diagnostic 资产/);
+  assert.match(text, /Full 包不再携带 Hermes runtime payload/);
   assert.doesNotMatch(text, /MDS backend/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);
@@ -283,7 +302,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     fs.mkdirSync(outDir, { recursive: true });
 
     const codexRoot = path.join(tmpRoot, 'codex');
-    const hermesRoot = path.join(tmpRoot, 'hermes-agent');
     const codexVendor = path.join(
       codexRoot,
       'node_modules',
@@ -296,9 +314,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     fs.writeFileSync(path.join(codexRoot, 'package.json'), '{"version":"0.1.0"}\n');
     writeExecutable(path.join(codexVendor, 'codex', 'codex'), '#!/usr/bin/env bash\necho codex 0.1.0\n');
     writeExecutable(path.join(codexVendor, 'path', 'rg'), '#!/usr/bin/env bash\necho rg\n');
-    fs.mkdirSync(path.join(hermesRoot, 'hermes_cli'), { recursive: true });
-    fs.writeFileSync(path.join(hermesRoot, 'hermes_cli', 'main.py'), 'print("hermes")\n', 'utf8');
-    fs.writeFileSync(path.join(hermesRoot, 'README.md'), 'Hermes Agent\n', 'utf8');
 
     const pythonRoot = path.join(tmpRoot, 'python', 'cpython-3.12.0-macos-aarch64-none');
     writeExecutable(path.join(pythonRoot, 'bin', 'python3'), '#!/usr/bin/env bash\necho Python 3.12.0\n');
@@ -362,8 +377,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
           outputDir,
           '--gui-root',
           guiRoot,
-          '--hermes-root',
-          hermesRoot,
           '--mas-root',
           path.join(tmpRoot, 'med-autoscience'),
           '--mag-root',
@@ -402,7 +415,7 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     const firstPayload = JSON.parse(first.stdout) as { runtime_cache: { events: Array<{ status: string }> } };
     assert.deepEqual(
       firstPayload.runtime_cache.events.map((event) => event.status),
-      ['miss_written', 'miss_written', 'miss_written', 'miss_written', 'miss_written'],
+      ['miss_written', 'miss_written', 'miss_written', 'miss_written'],
     );
 
     const second = runPackage();
@@ -410,26 +423,20 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     const secondPayload = JSON.parse(second.stdout) as { runtime_cache: { events: Array<{ status: string }> } };
     assert.deepEqual(
       secondPayload.runtime_cache.events.map((event) => event.status),
-      ['hit', 'hit', 'hit', 'hit', 'hit'],
+      ['hit', 'hit', 'hit', 'hit'],
     );
     assert.ok(fs.existsSync(path.join(outputDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
     const runtimeRoot = path.join(guiRoot, 'packaged-runtimes', 'opl-full-runtime', 'runtime', 'current');
     assert.ok(fs.existsSync(path.join(runtimeRoot, 'bin', 'officecli')));
-    assert.equal(fs.existsSync(path.join(runtimeRoot, 'bin', 'hermes')), true);
-    assert.equal(fs.existsSync(path.join(runtimeRoot, 'hermes')), true);
-    assert.equal(fs.existsSync(path.join(runtimeRoot, 'hermes', 'scripts', 'run-hermes-diagnostic.sh')), true);
-    assert.equal(fs.existsSync(path.join(runtimeRoot, 'hermes', 'scripts', 'install-opl-gateway-launchagent.sh')), false);
-    assert.equal(fs.existsSync(path.join(runtimeRoot, 'hermes', 'profiles', 'opl-full.profile.json')), true);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, 'bin', 'hermes')), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, 'hermes')), false);
     const manifest = JSON.parse(
       fs.readFileSync(
         path.join(guiRoot, 'packaged-runtimes', 'opl-full-runtime', 'manifest', 'full-package-manifest.json'),
         'utf8',
       ),
-    ) as { components: { hermes: { required: boolean; role: string; provider_kind: string | null; gateway_launchagent_label: string | null } } };
-    assert.equal(manifest.components.hermes.required, false);
-    assert.equal(manifest.components.hermes.role, 'optional_executor_proof_diagnostic_payload');
-    assert.equal(manifest.components.hermes.provider_kind, null);
-    assert.equal(manifest.components.hermes.gateway_launchagent_label, null);
+    ) as { components: Record<string, unknown> };
+    assert.equal(Object.hasOwn(manifest.components, 'hermes'), false);
     for (const skillName of ['mas', 'mag', 'rca', 'officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
       assert.equal(
         fs.existsSync(path.join(runtimeRoot, 'skills', skillName, 'SKILL.md')),

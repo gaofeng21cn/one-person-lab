@@ -128,7 +128,7 @@ test('hermes_agent execution accepts log output before the final receipt line', 
     `#!/usr/bin/env node
 process.stdin.resume();
 process.stdin.on('end', () => {
-  process.stdout.write('  ┊ 🔎 find pyproject.toml\\n');
+  process.stdout.write('log: find pyproject.toml\\n');
   process.stdout.write(JSON.stringify({
     surface_kind: 'opl_agent_execution_receipt',
     executor_kind: 'hermes_agent',
@@ -185,6 +185,60 @@ test('hermes_agent execution fails closed when the helper does not return a JSON
   } finally {
     fs.rmSync(helper.fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('hermes_agent execution fails closed when full loop proof is incomplete', () => {
+  const helper = makeExecutable(
+    'hermes-helper',
+    `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on('end', () => {
+  process.stdout.write(JSON.stringify({
+    surface_kind: 'opl_agent_execution_receipt',
+    executor_kind: 'hermes_agent',
+    mode: 'agent_loop',
+    event_summary: [],
+    proof: { full_agent_loop_proved: false, tool_call_count: 0 }
+  }) + '\\n');
+});
+`,
+  );
+  try {
+    assert.throws(
+      () => runAgentExecutor({
+        executor_kind: 'hermes_agent',
+        prompt: 'Return a receipt.',
+        cwd: repoRoot,
+        env: { OPL_HERMES_AGENT_EXECUTOR_BIN: helper.file },
+      }),
+      (error) => error instanceof FrameworkContractError
+        && error.code === 'contract_shape_invalid',
+    );
+  } finally {
+    fs.rmSync(helper.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('hermes_agent doctor reports missing binary without Codex fallback', () => {
+  const doctor = inspectAgentExecutor('hermes_agent', {
+    env: { OPL_HERMES_AGENT_EXECUTOR_BIN: '', PATH: '' },
+  });
+  assert.equal(doctor.executor_kind, 'hermes_agent');
+  assert.equal(doctor.ready, false);
+  assert.equal(doctor.issues[0], 'hermes_agent_binary_missing');
+  assert.equal(doctor.fallback_allowed, false);
+
+  assert.throws(
+    () => runAgentExecutor({
+      executor_kind: 'hermes_agent',
+      prompt: 'Return a receipt.',
+      cwd: repoRoot,
+      env: { OPL_HERMES_AGENT_EXECUTOR_BIN: '', PATH: '' },
+    }),
+    (error) => error instanceof FrameworkContractError
+      && error.code === 'surface_not_found'
+      && error.details?.fallback_allowed === false,
+  );
 });
 
 test('claude_code execution uses configured binary without Codex fallback', () => {

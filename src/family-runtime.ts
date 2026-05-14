@@ -15,15 +15,7 @@ import {
   inspectFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
-import {
-  queryTemporalStageAttemptWorkflow,
-  signalTemporalStageAttemptWorkflow,
-  buildTemporalWorkerLifecycleContract,
-  inspectTemporalWorkerLifecycle,
-  startTemporalWorkerLifecycle,
-  startTemporalStageAttemptWorkflow,
-  stopTemporalWorkerLifecycle,
-} from './family-runtime-temporal-provider.ts';
+import { buildTemporalWorkerLifecycleContract } from './family-runtime-temporal-readiness.ts';
 import { runTemporalServiceCommand } from './family-runtime-temporal-service-command.ts';
 import {
   createStageAttempt,
@@ -41,7 +33,6 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
 import { closeoutPacketFromSidecarOutput } from './family-runtime-sidecar-closeout.ts';
-import { buildTemporalResidencyProof } from './family-runtime-residency-proof.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
@@ -64,6 +55,11 @@ import {
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
+import type { buildTemporalResidencyProof } from './family-runtime-residency-proof.ts';
+
+async function temporalProviderModule() {
+  return await import('./family-runtime-temporal-provider.ts');
+}
 
 async function buildStatusPayload(
   db: DatabaseSync,
@@ -546,7 +542,7 @@ export async function runFamilyRuntime(args: string[]) {
         family_runtime_worker: {
           surface_id: 'opl_family_runtime_worker',
           action: 'status',
-          ...(await inspectTemporalWorkerLifecycle(paths)),
+          ...(await (await temporalProviderModule()).inspectTemporalWorkerLifecycle(paths)),
         },
       };
     }
@@ -567,6 +563,7 @@ export async function runFamilyRuntime(args: string[]) {
           allowed_provider_kinds: ['temporal'],
         });
       }
+      const { startTemporalWorkerLifecycle } = await temporalProviderModule();
       const result = await startTemporalWorkerLifecycle(paths, { detach: parsed.detach });
       insertEvent(db, {
         eventType: 'temporal_worker_start',
@@ -594,6 +591,7 @@ export async function runFamilyRuntime(args: string[]) {
           allowed_provider_kinds: ['temporal'],
         });
       }
+      const { stopTemporalWorkerLifecycle } = await temporalProviderModule();
       const result = await stopTemporalWorkerLifecycle(paths);
       insertEvent(db, {
         eventType: 'temporal_worker_stop',
@@ -621,6 +619,7 @@ export async function runFamilyRuntime(args: string[]) {
           allowed_provider_kinds: ['temporal'],
         });
       }
+      const { buildTemporalResidencyProof } = await import('./family-runtime-residency-proof.ts');
       const proof = await buildTemporalResidencyProof(db, paths, {
         live: parsed.live,
         production: parsed.production,
@@ -698,7 +697,7 @@ export async function runFamilyRuntime(args: string[]) {
       const result = createStageAttempt(db, parsed.input);
       const { attempt } = result;
       const temporal_start = parsed.input.start
-        ? await startTemporalStageAttemptWorkflow(attempt)
+        ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt)
         : null;
       insertEvent(db, {
         taskId: attempt.task_id,
@@ -731,6 +730,7 @@ export async function runFamilyRuntime(args: string[]) {
     }
     if (parsed.mode === 'attempt_start') {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      const { startTemporalStageAttemptWorkflow } = await temporalProviderModule();
       const temporal_start = await startTemporalStageAttemptWorkflow(attempt);
       insertEvent(db, {
         taskId: attempt.task_id,
@@ -779,7 +779,7 @@ export async function runFamilyRuntime(args: string[]) {
       const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
       const attempt = localQuery.stage_attempt_query.attempt;
       const temporal_query = attempt.provider_kind === 'temporal'
-        ? await queryTemporalStageAttemptWorkflow(attempt)
+        ? await (await temporalProviderModule()).queryTemporalStageAttemptWorkflow(attempt)
         : null;
       return {
         version: 'g2',
@@ -793,7 +793,7 @@ export async function runFamilyRuntime(args: string[]) {
     if (parsed.mode === 'attempt_signal') {
       const result = signalStageAttempt(db, parsed);
       const temporal_signal = result.attempt.provider_kind === 'temporal'
-        ? await signalTemporalStageAttemptWorkflow({
+        ? await (await temporalProviderModule()).signalTemporalStageAttemptWorkflow({
             attempt: result.attempt,
             signalKind: parsed.signalKind,
             payload: parsed.payload,

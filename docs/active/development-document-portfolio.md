@@ -11,8 +11,8 @@ OPL development documents should no longer be read as a queue where every old pl
 
 1. Build OPL as the complete stage-led framework with Agent executors as the minimum execution unit.
 2. Migrate MAS/MAG/RCA into that framework as OPL-admitted domain agents while preserving direct skill path equivalence.
-3. Partition old and new functionality by content: lift framework-generic capability into OPL, keep domain truth inside each domain repo, and downgrade historical diagnostics or compatibility material.
-4. Retire old Hermes-first, Gateway-era, direct-entry, local-manager, and MDS-default routes after replacement evidence exists.
+3. Partition old and new functionality by content: lift framework-generic capability into OPL, keep domain truth inside each domain repo, and downgrade retired routes into historical diagnostics, provenance, tombstones, or negative guards.
+4. Retire old Hermes-first, Gateway-era, direct-entry, local-manager, and MDS-default routes as soon as replacement evidence exists; delete or tombstone unused modules, interfaces, and tests instead of keeping compatibility entrypoints.
 5. Use the App workbench and real domain soak to validate the target shape after migration.
 
 The rule is: keep useful content, merge it into the current owner surface, and stop treating old documents as active whole-document backlogs. Old routes remain provenance, migration references, or tombstones.
@@ -23,7 +23,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | --- | --- | --- | --- | --- |
 | `1` | `opl_framework_foundation` | [OPL Current Development Lines](./current-development-lines.md), [OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md), [Temporal provider plan](../references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md) | Stage attempt, provider runtime, typed queue, wakeup, retry/dead-letter, human gate, receipt/projection, and shared lifecycle/index primitives. | Provider-backed stage attempts are recoverable, queryable, projected, and do not write domain truth. |
 | `2` | `domain_framework_migration` | [Domain-Agent Admission Contract](./opl-domain-onboarding-contract.md), [Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md), OPL roadmap | MAS/MAG/RCA expose skeletons, descriptors, sidecar receipts, artifact locators, projection builders, and authority refs. | Direct and OPL-hosted paths share domain owner receipts; OPL only holds refs, projection, and attempt history. |
-| `3` | `feature_partition_and_retirement` | This doc, [Documentation Portfolio](../docs_portfolio_consolidation.md), runtime-substrate index, domain owner docs | Classify old development content as retain, merge, lift, degrade, retire, or archive. | Old default dependencies, compatibility aliases, obsolete managers, and duplicate UI entries have replacement evidence and owner decisions. |
+| `3` | `feature_partition_and_retirement` | This doc, [Documentation Portfolio](../docs_portfolio_consolidation.md), runtime-substrate index, domain owner docs | Classify old development content as retain, merge, lift, degrade, retire, or archive. | Old default dependencies, compatibility aliases, obsolete managers, and duplicate UI entries have replacement evidence, owner decisions, and no active compatibility interface. |
 | `4` | `opl_app_runtime_workbench` | [OPL Runtime Manager Target](../references/runtime-substrate/opl-runtime-manager-target.md), current-support / App references | Productize provider readiness, stage attempts, domain status, human gates, receipts, artifact refs, and source refs. | The App/workbench shows framework/provider state plus domain owner receipts without becoming a second truth source. |
 | `5` | `domain_soak_and_acceptance` | OPL roadmap plus MAS/MAG/RCA status/program/runtime owner docs | Run real or controlled domain soak on the migrated target shape. | MAS/MAG/RCA produce real progress delta, quality gate movement, human gate, stop-loss, or typed blocker. |
 | `6` | `new_domain_admission` | [Domain-Agent Admission Contract](./opl-domain-onboarding-contract.md), domain-admission references | Admit new domains only through the standard skeleton/descriptor/locator/authority boundary. | No new domain copies the old Gateway-era direct-entry route. |
@@ -45,7 +45,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | Runtime-substrate current docs | Provider, Runtime Manager, and framework references | Keep support references. Current machine behavior must still come from contracts, source, CLI/API, and runtime evidence. |
 | Runtime-substrate history docs | Hermes-first, direct-entry, Gateway-era, host-agent-only, managed-runtime checklist, MAS cutover, and online-platform migration material | Absorbed content lives in active owners; whole historical documents live in `docs/history/runtime-substrate/`. Do not expand them as active planning. |
 | `docs/references/current-support/*` | GUI, install, release, test, quality support | Keep current support, subordinate to source/contracts/CLI/API truth. |
-| `docs/references/operating-governance/*` | Governance, quality, operator, memory, audit, publish support | Keep governance support; legacy-derived gateway ids must be described as compatibility/audit context. |
+| `docs/references/operating-governance/*` | Governance, quality, operator, memory, audit, publish support | Keep governance support; legacy-derived gateway ids must be described as historical audit context, not compatibility surfaces. |
 | `docs/references/convergence-governance/*` | Family convergence and external learning references | Keep support references; promote durable rules into active owner docs. |
 | `docs/references/domain-admission/*` | Candidate/admission/tranche records | Keep admission support and dated records; formal gates live in active onboarding docs. |
 | `docs/references/examples-corpora/*` | Example corpora and operating records | Keep as evidence corpora, not current behavior oracles. |
@@ -62,8 +62,8 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 | MAG grant strategy, fundability / proposal quality, specific aims authority | MAG |
 | RCA visual direction, visual artifacts, review/export gates | RCA |
 | MDS / DeepScientist backend facts | MAS provenance / parity oracle / explicit archive import, never OPL default runtime |
-| Hermes-first online substrate or Hermes Kernel as default product runtime | History/provenance/diagnostic/evaluation reference; current default is provider-backed framework |
-| Gateway-era federation/routed-action routes | History / compatibility / tombstone |
+| Hermes-first online substrate or Hermes Kernel as default product runtime | History / provenance / diagnostic / negative-guard reference; current default is provider-backed framework |
+| Gateway-era federation/routed-action routes | History / tombstone / negative guard; active docs may reference them only as historical context, not retained compatibility entries |
 | Dated boards, activation packages, one-off closeouts | `docs/history/process/**` or corresponding references/history, with useful conclusions promoted to current owner docs |
 | External framework learning | References / convergence-governance; absorb vocabulary, contract patterns, provenance, and gate methods only |
 
@@ -74,7 +74,7 @@ The rule is: keep useful content, merge it into the current owner surface, and s
 3. Move a file into `docs/history/**` only after `rg` checks inbound links, machine-readable refs, and historical audit needs.
 4. Historical commands, absolute paths, and old states may remain only inside provenance or tombstone context.
 5. Active docs must never present legacy wording as the current default path.
-6. Document archiving is not implementation cleanup. Code aliases, compatibility paths, manager surfaces, and UI entries require replacement evidence and verification before deletion.
+6. Document archiving is not implementation cleanup. Code aliases, compatibility paths, manager surfaces, and UI entries must be deleted or moved to history once replacement evidence and verification prove no active caller remains.
 
 ## Old Plans No Longer Executed Whole
 

@@ -3,10 +3,6 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
-import {
-  inspectTemporalWorkerLifecycle,
-  runTemporalProductionResidencyProof,
-} from './family-runtime-temporal-provider.ts';
 import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 
@@ -36,6 +32,10 @@ export async function buildTemporalResidencyProof(
   paths: RuntimePaths,
   input: { live?: boolean; production?: boolean } = {},
 ) {
+  const {
+    inspectTemporalWorkerLifecycle,
+    runTemporalProductionResidencyProof,
+  } = await import('./family-runtime-temporal-provider.ts');
   const worker = await inspectTemporalWorkerLifecycle(paths);
   const liveProof = input.live ? await runTemporalLiveResidencyProof() : null;
   const productionProof = input.production ? await runTemporalProductionResidencyProof(paths) : null;

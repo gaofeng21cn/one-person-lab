@@ -6,7 +6,7 @@ import {
   runCodexCommand,
 } from './codex.ts';
 import { runAgentExecutor } from './agent-executor.ts';
-import { isInteractiveShell } from './hermes.ts';
+import { isInteractiveShell } from './terminal.ts';
 import type { ProductEntryExecInput } from './product-entry-parts/types.ts';
 import {
   buildContractsContext,

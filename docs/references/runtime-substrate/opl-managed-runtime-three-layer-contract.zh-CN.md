@@ -4,7 +4,7 @@ Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: 本文是人读边界参考；机器可读事实必须使用 `contracts/`、source code、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 或 App/workbench projection。
 
-当前状态说明（2026-05-11）：本文保留“三层 owner split”作为有效内容，但旧版 `runtime_owner = upstream_hermes_agent` 映射已经过时。当前 OPL production online runtime 是 provider-backed runtime；Temporal-backed provider 是必需 substrate，`Hermes-Agent` 只保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。最新落地顺序见 [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) 与 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+当前状态说明（2026-05-14）：本文保留“三层 owner split”作为有效内容，但旧版 `runtime_owner = upstream_hermes_agent` 映射已经过时。当前 OPL production online runtime 是 provider-backed runtime；Temporal-backed provider 是必需 substrate。`hermes_agent` 仅作为显式非默认 executor adapter/backend 保留；Hermes provider / Gateway / readiness / compat 面只作为历史 provenance、诊断语料或负向 guard。最新落地顺序见 [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) 与 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
 
 这份参考文档冻结 `OPL` 已准入 domain 现在必须共用的最小 machine-readable contract。
 
@@ -39,19 +39,19 @@ Machine boundary: 本文是人读边界参考；机器可读事实必须使用 `
 - `med-autoscience`
   - `runtime_owner = opl_family_runtime_provider`
   - `provider_target = temporal`
-  - `legacy_provider = hermes_legacy`
+  - `legacy_provider = none`
   - `domain_owner = med-autoscience`
   - `executor_owner = codex_cli_via_mas_domain_entry`
 - `redcube-ai`
   - `runtime_owner = opl_family_runtime_provider`
   - `provider_target = temporal`
-  - `legacy_provider = hermes_legacy`
+  - `legacy_provider = none`
   - `domain_owner = redcube_ai`
   - `executor_owner = codex_cli`
 - `med-autogrant`
   - `runtime_owner = opl_family_runtime_provider`
   - `provider_target = temporal`
-  - `legacy_provider = hermes_legacy`
+  - `legacy_provider = none`
   - `domain_owner = med-autogrant`
   - `executor_owner = codex_cli_or_domain_declared_executor`
 

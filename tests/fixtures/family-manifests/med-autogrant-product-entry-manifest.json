@@ -75,11 +75,11 @@
       "active_tranche": "P4.D critique Codex CLI autonomous-mode executor landing",
       "next_focus": [
         "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
-        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 Hermes substrate 上不漂移。"
+        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 provider-backed runtime 上不漂移。"
       ]
     },
     "runtime": {
-      "current_owner_line": "external Hermes substrate + MedAutoGrant authority surfaces",
+      "current_owner_line": "provider-backed family runtime + MedAutoGrant authority surfaces",
       "runtime_owner": "provider_backed_family_runtime"
     },
     "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
@@ -308,7 +308,7 @@
       "recommended_step_id": "open_product_entry",
       "next_focus": [
         "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
-        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 Hermes substrate 上不漂移。"
+        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 provider-backed runtime 上不漂移。"
       ],
       "remaining_gaps_count": 2,
       "human_gate_ids": [
@@ -332,11 +332,11 @@
           "command": "uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
         },
         {
-          "check_id": "upstream_hermes_owner_line",
-          "title": "Upstream Hermes Owner Line",
+          "check_id": "provider_backed_owner_line",
+          "title": "Provider Backed Owner Line",
           "status": "pass",
           "blocking": true,
-          "summary": "当前 runtime owner line 已对齐 upstream Hermes substrate。",
+          "summary": "当前 runtime owner line 已对齐 provider-backed family runtime。",
           "command": "uv run python -m med_autogrant mainline-status --format json"
         },
         {
@@ -828,7 +828,7 @@
       "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",
       "next_focus": [
         "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
-        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 Hermes substrate 上不漂移。"
+        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 provider-backed runtime 上不漂移。"
       ],
       "remaining_gaps_count": 2
     },

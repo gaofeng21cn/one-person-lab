@@ -11,8 +11,6 @@ import { FrameworkContractError } from './contracts.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
-  DEFAULT_TEMPORAL_TASK_QUEUE,
-  resolveTemporalAddress,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
   type TemporalStageAttemptSignalKind,
@@ -20,6 +18,16 @@ import {
   type TemporalStageAttemptWorkflowInput,
   type TemporalStageAttemptWorkflowState,
 } from './family-runtime-temporal.ts';
+import {
+  buildTemporalWorkerLifecycleContract,
+  buildTemporalWorkerReadiness,
+} from './family-runtime-temporal-readiness.ts';
+export {
+  buildTemporalWorkerLifecycleContract,
+  buildTemporalWorkerReadiness,
+  resolveTemporalWorkerReadinessStatus,
+  type TemporalWorkerReadinessStatus,
+} from './family-runtime-temporal-readiness.ts';
 import {
   humanGateSignal,
   resumeSignal,
@@ -39,12 +47,6 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
   provider_kind: string;
 };
 
-export type TemporalWorkerReadinessStatus =
-  | 'not_configured'
-  | 'server_unreachable'
-  | 'worker_not_ready'
-  | 'ready';
-
 type TemporalWorkerState = {
   provider_kind: 'temporal';
   pid: number;
@@ -57,56 +59,13 @@ type TemporalWorkerState = {
 
 type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
 
-function buildTemporalWorkerRepairAction(input: {
-  readinessStatus: TemporalWorkerReadinessStatus;
-  address?: string | null;
-  namespace?: string | null;
-  taskQueue?: string | null;
-}) {
-  const repairCommands = {
-    start_local_temporal_service:
-      'opl family-runtime service start --provider temporal',
-    configure_temporal_address:
-      'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
-    verify_temporal_server:
-      'opl family-runtime worker status --provider temporal',
-    start_managed_worker:
-      'opl family-runtime worker start --provider temporal',
-    rerun_production_proof:
-      'opl family-runtime residency proof --provider temporal --production',
-  };
-  const actionByStatus: Record<TemporalWorkerReadinessStatus, string> = {
-    not_configured: 'configure_temporal_service',
-    server_unreachable: 'repair_temporal_service',
-    worker_not_ready: 'start_temporal_worker',
-    ready: 'none',
-  };
-  const nextCommandByStatus: Record<TemporalWorkerReadinessStatus, string | null> = {
-    not_configured: repairCommands.start_local_temporal_service,
-    server_unreachable: repairCommands.start_local_temporal_service,
-    worker_not_ready: repairCommands.start_managed_worker,
-    ready: repairCommands.rerun_production_proof,
-  };
-  return {
-    surface_kind: 'temporal_worker_repair_action',
-    provider_kind: 'temporal',
-    action_id: actionByStatus[input.readinessStatus],
-    required_env: ['OPL_TEMPORAL_ADDRESS or managed local service state'],
-    current_address: input.address ?? null,
-    namespace: input.namespace ?? null,
-    task_queue: input.taskQueue ?? null,
-    next_command: nextCommandByStatus[input.readinessStatus],
-    repair_commands: repairCommands,
-  };
-}
-
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
 }
 
 function requireTemporalAddress() {
-  const address = resolveTemporalAddress();
+  const address = process.env.OPL_TEMPORAL_ADDRESS?.trim() || process.env.TEMPORAL_ADDRESS?.trim() || null;
   if (!address) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -163,89 +122,6 @@ function processIsAlive(pid: number) {
   } catch {
     return false;
   }
-}
-
-export function resolveTemporalWorkerReadinessStatus(input: {
-  address?: string | null;
-  serverReachable?: boolean | null;
-  workerReady?: boolean | null;
-}): TemporalWorkerReadinessStatus {
-  if (!input.address) {
-    return 'not_configured';
-  }
-  if (input.serverReachable === false) {
-    return 'server_unreachable';
-  }
-  if (!input.workerReady) {
-    return 'worker_not_ready';
-  }
-  return 'ready';
-}
-
-export function buildTemporalWorkerReadiness(input: {
-  address?: string | null;
-  addressSource?: string | null;
-  namespace?: string | null;
-  taskQueue?: string | null;
-  workerEnabled?: string | null;
-  workerStatus?: string | null;
-  serverReachable?: boolean | null;
-  liveProbeStartedWorker?: boolean | null;
-  unreachableReason?: string | null;
-  managedWorkerPid?: number | null;
-  managedWorkerStatePath?: string | null;
-  temporalServiceLifecycle?: Record<string, unknown> | null;
-} = {}) {
-  const address = input.address ?? resolveTemporalAddress();
-  const addressSource = input.addressSource ?? (address ? 'environment' : 'not_configured');
-  const namespace = input.namespace ?? resolveTemporalNamespace();
-  const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
-  const workerEnabled = input.workerEnabled ?? process.env.OPL_TEMPORAL_WORKER_ENABLED ?? null;
-  const workerStatus = input.workerStatus ?? process.env.OPL_TEMPORAL_WORKER_STATUS ?? null;
-  const serverReachable = input.serverReachable ?? null;
-  const workerReady = Boolean(address)
-    && serverReachable !== false
-    && (workerEnabled?.trim() === '1' || workerStatus?.trim() === 'ready');
-  const readinessStatus = resolveTemporalWorkerReadinessStatus({
-    address,
-    serverReachable,
-    workerReady,
-  });
-  const blockers = [
-    ...(!address ? ['temporal_runtime_not_configured'] : []),
-    ...(address && serverReachable === false ? ['temporal_server_unreachable'] : []),
-    ...(address && serverReachable !== false && !workerReady ? ['temporal_worker_not_ready'] : []),
-  ];
-  const repairAction = buildTemporalWorkerRepairAction({
-    readinessStatus,
-    address,
-    namespace,
-    taskQueue,
-  });
-  return {
-    surface_kind: 'temporal_worker_readiness',
-    provider_kind: 'temporal',
-    readiness_status: readinessStatus,
-    worker_ready: workerReady,
-    server_reachable: serverReachable,
-    address,
-    address_source: addressSource,
-    namespace,
-    task_queue: taskQueue,
-    default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
-    live_probe_started_worker: input.liveProbeStartedWorker ?? false,
-    unreachable_reason: input.unreachableReason ?? null,
-    managed_worker_pid: input.managedWorkerPid ?? null,
-    managed_worker_state_path: input.managedWorkerStatePath ?? null,
-    temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,
-    blockers,
-    repair_action: repairAction,
-    lifecycle: buildTemporalWorkerLifecycleContract(),
-    authority_boundary: {
-      opl: 'worker_lifecycle_readiness_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
-  };
 }
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
@@ -905,28 +781,6 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
     stopped_pid: stoppedPid,
     before,
     status: await inspectTemporalWorkerLifecycle(paths),
-  };
-}
-
-export function buildTemporalWorkerLifecycleContract() {
-  return {
-    surface_kind: 'temporal_worker_lifecycle_contract',
-    provider_kind: 'temporal',
-    workflow_name: 'StageAttemptWorkflow',
-    task_queue: resolveTemporalTaskQueue(),
-    default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
-    namespace: resolveTemporalNamespace(),
-    worker_helper: 'runTemporalStageAttemptWorkerUntil',
-    fail_closed_when_unconfigured: true,
-    required_env: ['OPL_TEMPORAL_ADDRESS'],
-    activities: [
-      'codexStageActivity',
-      'domainSidecarDispatchActivity',
-    ],
-    authority_boundary: {
-      opl: 'worker_lifecycle_and_activity_transport_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
   };
 }
 

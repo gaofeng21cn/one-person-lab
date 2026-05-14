@@ -237,6 +237,21 @@ export function shouldExcludeRuntimePath(relativePathInput: string) {
     || matchesExcludedRuntimePathPattern(lower);
 }
 
+export type PackageLockLike = {
+  packages?: Record<string, { dev?: boolean }>;
+};
+
+export function listFullRuntimeProductionNodeModulePaths(packageLock: PackageLockLike) {
+  return Object.entries(packageLock.packages ?? {})
+    .filter(([packagePath, metadata]) =>
+      packagePath.startsWith('node_modules/')
+      && !metadata.dev
+      && packagePath.split('/').every(Boolean)
+    )
+    .map(([packagePath]) => normalizeRuntimeRelativePath(packagePath))
+    .sort();
+}
+
 export function buildPackagedModuleMarker(input: {
   moduleId: string;
   repoName: string;

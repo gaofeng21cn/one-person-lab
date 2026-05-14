@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type OplAgentMode = 'codex' | 'hermes';
+export type OplAgentMode = 'codex';
 
 export type OplRuntimeModes = {
   version: 'g1';
@@ -13,7 +13,7 @@ export type OplRuntimeModes = {
 };
 
 function isOplAgentMode(value: unknown): value is OplAgentMode {
-  return value === 'codex' || value === 'hermes';
+  return value === 'codex';
 }
 
 export function buildDefaultOplRuntimeModes(): OplRuntimeModes {
@@ -59,7 +59,7 @@ export function writeOplRuntimeModes(input: Partial<{
   if (input.interaction_mode !== undefined && !isOplAgentMode(input.interaction_mode)) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'OPL interaction_mode must be codex or hermes.',
+      'OPL interaction_mode must be codex.',
       {
         interaction_mode: input.interaction_mode,
       },
@@ -70,7 +70,7 @@ export function writeOplRuntimeModes(input: Partial<{
   if (input.execution_mode !== undefined && !isOplAgentMode(input.execution_mode)) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'OPL execution_mode must be codex or hermes.',
+      'OPL execution_mode must be codex.',
       {
         execution_mode: input.execution_mode,
       },

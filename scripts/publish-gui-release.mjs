@@ -245,7 +245,7 @@ function findFullPackageArtifacts(fullPackageDir, version, macArch) {
 
 function assertFullPackageManifestHasReleaseNotesMetadata(manifest) {
   const missing = [];
-  for (const key of ['mas', 'mag', 'rca', 'hermes']) {
+  for (const key of ['mas', 'mag', 'rca']) {
     const gitCommit = manifest?.components?.[key]?.git_commit;
     if (typeof gitCommit !== 'string' || !gitCommit.trim()) {
       missing.push(`components.${key}.git_commit`);
@@ -382,8 +382,8 @@ function buildBundledModuleNotes(manifest) {
     ['MAS', manifest.components.mas],
     ['MAG', manifest.components.mag],
     ['RCA', manifest.components.rca],
-    ['Hermes-Agent', manifest.components.hermes],
   ]
+    .filter(([, component]) => component && typeof component === 'object')
     .map(([label, component]) => {
       const sha = shortSha(component?.git_commit);
       return sha ? `- ${label}: ${generatedAt} build, main @ ${sha}` : `- ${label}: ${generatedAt} build`;
@@ -400,7 +400,7 @@ function buildFullPackageReleaseNotesSection(version, manifest = null) {
   return [
     'Full first-install package',
     `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, the family runtime support payload, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
-    '- Full OPL readiness is Temporal-backed. Temporal is the required production durable stage-attempt provider; Hermes-Agent remains only an explicit executor/proof/diagnostic lane.',
+    '- Full OPL readiness is Temporal-backed. Temporal is the required production durable stage-attempt provider; Hermes/Gateway runtime payloads are retired and are not bundled or exposed as compatibility surfaces.',
     '- MDS remains retired and is not bundled as a default module or MAS runtime dependency.',
     '- Full is a first-install download, not a separate update channel. App auto-update still follows the standard latest*.yml metadata and standard One Person Lab package.',
     ...(bundledModuleNotes.length > 0 ? ['', 'Bundled module versions', ...bundledModuleNotes] : []),

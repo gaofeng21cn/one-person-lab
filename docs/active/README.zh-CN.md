@@ -21,9 +21,7 @@ Owner: `One Person Lab`
 
 - `current-development-lines*`：当前 framework-first 内容级开发线路图。
 - `production-framework-closure-gap-matrix.zh-CN.md`：当前 OPL 距离完整生产级智能体框架的 production closure 差距矩阵。
-- `current-state-vs-ideal-gap.zh-CN.md`：对照 OPL / Foundry Agents 理想目标态，记录 OPL、MAS、MAG、RCA、One Person Lab App 与 MDS 的当前实际状态、差距和完善顺序。
-- `mas-ideal-state-cross-repo-gap-plan.zh-CN.md`：以 MAS 理想目标态为参照，记录 OPL、MAS、MAG、RCA、One Person Lab App 与 MDS/DeepScientist 的跨仓差距、owner 边界和完善计划。
-- `rca-ideal-state-gap-plan.zh-CN.md`：以 RCA 理想目标态为参照，记录 RCA 自身差距、RCA/OPL owner 边界和 RCA 下一步完善计划；MAS/MAG 等 sibling repo 只作为模式参考，不在本文维护并行 backlog。
+- `current-state-vs-ideal-gap.zh-CN.md`：对照 OPL / Foundry Agents 理想目标态，记录 OPL family-level 当前实际状态、差距和完善顺序；MAS/MAG/RCA 的单仓完善计划回到各自仓库的理想态或 status/program 文档。
 - `development-document-portfolio*`：当前开发文档组合整理入口；按内容判断旧文档应吸收、保留、降级、退役还是归档。
 - `opl-public-surface-index*`：当前公开 surface 地图。
 - `opl-domain-onboarding-contract*`：候选 domain onboarding 审阅支撑。

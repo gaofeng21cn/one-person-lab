@@ -44,7 +44,7 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，应先看当前 Codex-default executor 与 provider-backed stage-runtime 口径：
 
 - [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md) — 当前 Codex-default executor、provider-backed stage runtime、host-agent / managed runtime deployment-shape 口径
-- [家族 Executor Adapter 默认口径](../references/runtime-substrate/family-executor-adapter-defaults.md) — 当前家族执行器命名、默认模式、默认模型与 `Hermes-Agent` 实验边界（中文内部参考）
+- [家族 Executor Adapter 默认口径](../references/runtime-substrate/family-executor-adapter-defaults.md) — 当前家族执行器命名、默认模式、默认模型与退役 executor guard（中文内部参考）
 
 如果审查时仍需要追溯历史迁移上下文，再单独参考下面这些历史材料：
 
@@ -205,7 +205,7 @@ Onboarding package 必须说明：
 - 默认执行器正式名称是否是 `Codex CLI`、默认模式是否是 `autonomous`、默认模型 / 默认 reasoning effort 是否继承本机 `Codex` 默认配置，以及它依赖的 stable agent runtime surface 是什么
 - 当前仓库主线是否是 `Auto-only`；如果是，未来 `Human-in-the-loop` 产品会如何作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - formal-entry matrix 如何通过 `default_formal_entry`、`supported_protocol_layer` 与 `internal_controller_surface` 表达
-- 任何被写成 `Hermes-Agent experimental` 的执行路线，是否真的是完整 `Hermes AIAgent` loop，而不是单步 chat 或 chat relay
+- 任何 `Hermes-Agent experimental` 执行路线是否被显式声明为非默认 receipt/audit adapter，以及旧 provider/Gateway 用法是否已迁入历史、诊断或负向 guard
 - 代码承担哪些 stable object / controller / tool / gate / review 责任
 - 哪些部分绝不能被描述成 `fixed-code-first` 主流程，只让 Agent 做少量 prompt 补位
 

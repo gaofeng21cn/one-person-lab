@@ -55,7 +55,7 @@ OPL Framework 的长期职责是持有所有 domain-neutral、可跨垂类复用
 
 - 以 `stage_attempt` 为生产运行单元，记录 attempt id、provider kind、workflow id、stage id、workspace locator、source fingerprint、retry budget、checkpoint refs、closeout refs、human gate refs 和 owner receipt refs。
 - 使用 provider-backed runtime 承担 durable workflow、worker residency、activity retry/timeout、heartbeat、signal/query、history、dead-letter 和 restart recovery。生产在线目标由 Temporal-backed provider 承接。
-- 把 `Codex CLI` 作为当前第一公民 Agent executor。Hermes-Agent、Claude Code 等 executor 只能通过显式 adapter 接入，并产生可审计 receipt。
+- 把 `Codex CLI` 作为当前第一公民 Agent executor。非默认 executor 只能通过当前 canonical registry 显式接入并产生可审计 receipt；`hermes_agent` 和 `claude_code` 同属显式非默认 executor adapter/backend，不属于 provider、默认 executor、readiness path 或兼容 fallback，也不承诺与 `Codex CLI` 行为、质量、工具语义或 resume 等价。
 - 支持 pause、resume、human gate、user instruction、stop、repair、retry、dead-letter 和 handoff；每个动作都必须留下 provider receipt 或 domain owner receipt。
 
 ### 状态管理
@@ -111,7 +111,7 @@ MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry
 - `goal`：本阶段要完成的专家目标。
 - `inputs`：输入材料、workspace locator、上游 handoff、用户约束、domain memory refs、artifact refs。
 - `entry_conditions`：何时允许进入该阶段。
-- `executor_requirements`：默认 `Codex CLI`，以及显式可选 executor adapter 要求。
+- `executor_requirements`：默认 `Codex CLI`，以及当前允许的显式 executor adapter 要求；退役 executor 名称只允许作为历史、诊断或负向 guard。
 - `prompt_refs`：阶段提示词、审稿提示词、修复提示词、角色策略。
 - `skill_refs`：Codex skill、domain skill、工具说明和可调用 surface。
 - `knowledge_refs`：领域知识、记忆、文献、历史失败路径、参考 corpus。
@@ -235,6 +235,26 @@ One Person Lab App 面向用户，不面向 framework 内部实现。理想 App 
 - `Attention Queue`：汇总需要用户确认、需要修复、需要等待 provider、需要 domain owner action 的事项。
 - `Operator Drilldown`：在不越权写 domain truth 的前提下，展示 provider receipt、domain receipt、memory refs、artifact locator 和 repair command。
 
+### 运行状态页 / Runtime Workbench 理想形态
+
+理想的 OPL 运行状态页应是面向人的状态工作台，而不是巨大 raw snapshot 的直接渲染。它消费 `opl runtime snapshot`、family runtime provider、stage attempt ledger、domain-owned projection、workspace / artifact locator 和 source refs，把普通用户与操作者真正需要判断的状态放在第一屏。
+
+第一屏应采用中文优先、dense、status-first 的工作台布局：顶部指标条展示整体健康、provider readiness、最后更新时间、数据 freshness、运行中数量、OPL 正在处理数量、需用户处理数量、后台恢复数量和近期项目数量；下面使用 segmented filter 或 tabs 按 lane 分组展示 `运行中`、`用户处理`、`OPL 正在处理`、`后台恢复` 与 `近期项目`。CLI 命令只作为 probe / debug / repair 证据留在详情层，不作为普通用户主操作面。
+
+每个 runtime item 卡片应固定展示：
+
+- Agent / domain、workspace、stage、active run、当前 owner、下一步动作、blocked reason、freshness 和状态来源。
+- source refs、artifact refs、portal / workbench 链接、artifact/package/export 状态，以及可打开的 workspace 或交付物入口。
+- owner-aware action：用户确认、provider signal、OPL repair、domain sidecar / direct skill / product entry action 必须分清 owner；不可把按钮做成无 owner 的通用“继续”或“修复”。
+
+Stage attempt drilldown 应展示 attempt id、provider kind、workflow / activity 状态、heartbeat、checkpoint refs、closeout refs、receipt refs、human gate refs、dead-letter、resume refs、rejected writes、route impact、provider completion 与 domain ready verdict 的区别。Provider completion 只能说明 transport / workflow 完成，不能写成 domain readiness、quality verdict 或 artifact/export readiness。
+
+Domain agent drilldown 应按 MAS / MAG / RCA 以及后续 Foundry Agents 展示 domain-owned projection：质量 / publication / fundability / visual / export verdict、domain route、review / repair queue、artifact authority、receipt refs 和可执行 action。OPL App 只展示投影、路由、owner、source refs 和 action transport；不持有或改写 domain truth，不替代 domain-owned ready verdict。
+
+基础设施与恢复面板应展示 provider、queue、worker、native helpers、module install 状态、dirty / ahead / behind 开发状态、repair command、latest proof、SLO / freshness 和 degraded reason。开发状态应作为诊断信息展示，不应在没有 install / update / repair action 时误导为不可用或必须更新。
+
+详情层默认折叠 raw refs、命令、JSON pointer、payload 摘要和 schema refs，只在开发者详情或操作者 drilldown 中展开。普通用户优先看到当前状态、原因、谁负责、下一步和可安全点击的动作；操作者可以继续下钻到 receipt、source ref、repair command 与 provider/domain 边界。
+
 App 中的按钮和动作必须路由到明确 owner：
 
 - framework-level 动作走 OPL CLI / Runtime Manager。
@@ -270,11 +290,11 @@ OPL 与 Foundry Agents 达到理想生产级状态时，应满足以下门槛：
 - Source/workspace envelope、artifact gallery、route/decision graph、review/repair transport、native-helper execution envelope 和 observability projection 在 MAS/MAG/RCA 之间泛化，同时保持 domain-owned verdict。
 - App 能展示用户关心的状态和动作来源，不把 provider completion 写成 domain ready verdict。
 - Domain repo 不写入真实 runtime artifacts；运行文件全部进入 workspace / runtime artifact root。
-- 旧 Hermes-first、Gateway/frontdoor、local manager、MDS-default 等历史默认面完成 active-path 退役，只在 explicit adapter、diagnostic、fixture、provenance 或 history 语境保留。
+- 旧 Hermes-first、Gateway/frontdoor、local manager、MDS-default 等历史默认面完成 active-path 退役；active surface 不保留兼容接口，旧名称只在 diagnostic、fixture、provenance、history 或负向 guard 语境保留。
 
 ## 当前使用方式
 
-本文适合作为新增垂类 Agent、规划 OPL production closure、设计 App runtime workbench、评估 shared module 上收范围时的目标态参考。
+本文适合作为新增垂类 Agent、规划 OPL production closure、设计 App runtime workbench、评估 shared module 上收范围时的目标态参考。MAS/MAG/RCA 的单仓理想态和仓内完善计划由对应 domain repo 自己维护；OPL 只保留 framework-level 上收边界、shared primitives、domain admission 和 App/workbench 目标。
 
 实际实施时按当前状态递进：
 

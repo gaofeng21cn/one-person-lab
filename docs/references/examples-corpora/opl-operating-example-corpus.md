@@ -20,36 +20,36 @@ This corpus does not:
 
 The examples are illustrative operating-record walkthroughs only.
 
-## Current Example Set
+## Former Example Set
 
 ### 1. Governance decision
 
-- File: [`../../examples/opl-framework/governance-decision-record.json`](../../../examples/opl-framework/governance-decision-record.json)
+- Former artifact: `examples/opl-framework/governance-decision-record.json` (retired from the active repo artifact set)
 - Shows a top-level decision record above domain-owned review truth.
 
 ### 2. Cross-domain review index
 
-- File: [`../../examples/opl-framework/cross-domain-review-index.json`](../../../examples/opl-framework/cross-domain-review-index.json)
+- Former artifact: `examples/opl-framework/cross-domain-review-index.json` (retired from the active repo artifact set)
 - Shows how `OPL` indexes required review surfaces and blocking gates across domains without duplicating review truth.
 
 ### 3. Publish readiness signal
 
-- File: [`../../examples/opl-framework/publish-readiness-signal.json`](../../../examples/opl-framework/publish-readiness-signal.json)
+- Former artifact: `examples/opl-framework/publish-readiness-signal.json` (retired from the active repo artifact set)
 - Shows a pre-publish readiness index before domain-owned publish truth exists.
 
 ### 4. Publish outcome index
 
-- File: [`../../examples/opl-framework/publish-outcome-index.json`](../../../examples/opl-framework/publish-outcome-index.json)
+- Former artifact: `examples/opl-framework/publish-outcome-index.json` (retired from the active repo artifact set)
 - Shows a top-level index of a domain-owned publish / release / export / submission outcome.
 
 ### 5. Promotion candidate signal
 
-- File: [`../../examples/opl-framework/promotion-candidate-signal.json`](../../../examples/opl-framework/promotion-candidate-signal.json)
+- Former artifact: `examples/opl-framework/promotion-candidate-signal.json` (retired from the active repo artifact set)
 - Shows a post-publish promotion-readiness signal above domain-owned outcome truth.
 
 ### 6. Promotion surface index
 
-- File: [`../../examples/opl-framework/promotion-surface-index.json`](../../../examples/opl-framework/promotion-surface-index.json)
+- Former artifact: `examples/opl-framework/promotion-surface-index.json` (retired from the active repo artifact set)
 - Shows public-surface references and blockers after a domain-owned outcome already exists.
 
 ## Reading Rule
@@ -57,7 +57,7 @@ The examples are illustrative operating-record walkthroughs only.
 Read these examples as **contract-level operating-record walkthroughs**, not executable workflows.
 
 If an example references review, publish, promotion, or public-channel truth, that truth remains inside the owning domain system through `domain_truth_refs`.
-Any follow-on action still routes through `domain_gateway`; this corpus never authorizes harness bypass, direct venue submission, or direct public posting.
+Any follow-on action must point to the current domain-owned capability entry or action-route ref. Historical examples may still contain the legacy literal `domain_gateway`, but this corpus does not preserve it as an active compatibility route and never authorizes harness bypass, direct venue submission, or direct public posting.
 
 ## Governing Contracts
 
@@ -76,9 +76,8 @@ Any follow-on action still routes through `domain_gateway`; this corpus never au
 
 The operating example corpus is acceptable only when:
 
-- each example stays machine-readable
-- governance examples validate directly against the frozen governance-audit schema
-- publish / promotion examples validate directly against the frozen publish-promotion schema
-- examples stay illustrative, non-governing, and non-executing
-- examples do not transfer review, publish, or promotion truth into `OPL`
-- any follow-on action still routes through `domain_gateway`
+- former artifact names remain provenance-only and are not clickable active repo paths
+- the corpus stays illustrative, non-governing, and non-executing
+- the corpus does not transfer review, publish, or promotion truth into `OPL`
+- active schema and behavior truth comes from current contracts/source/CLI behavior
+- any follow-on action points to current domain-owned capability/action-route refs rather than preserving `domain_gateway` as a compatibility value

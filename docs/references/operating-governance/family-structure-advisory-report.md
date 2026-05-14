@@ -37,11 +37,8 @@ mechanical_residue:
 public_surface_risk:
 
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
-- `contracts/opl-framework/domain-onboarding-readiness.schema.json`
-- `contracts/opl-framework/public-surface-index.json`
-- `contracts/opl-framework/candidate-domain-backlog.json`
 
-These are large machine-readable public surfaces. They are not immediate split targets, but future edits should prefer schema modularity or generated/source separation over growing these files further.
+This is the current large machine-readable public surface in the advisory scan. It is not an immediate split target, but future edits should prefer schema modularity or generated/source separation over growing it further.
 
 ### med-autogrant
 

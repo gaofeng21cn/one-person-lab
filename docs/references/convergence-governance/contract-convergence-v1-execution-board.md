@@ -1,5 +1,7 @@
 # Contract Convergence v1 执行板
 
+> 2026-05-14 生命周期说明：本文保留为 `2026-04-11` 四仓 convergence program 快照。正文中的 `Gateway / Federation`、`Domain Harness OS` 和 `Phase C` 说法只记录当时的统一治理语言；当前 OPL truth 已收敛为 stage-led、以 Agent executor 为最小执行单位的 family agent framework。当前入口和剩余差距以 `docs/status.md`、`docs/architecture.md`、`docs/active/current-state-vs-ideal-gap.zh-CN.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` 为准。本文不提供 active gateway/federation compatibility interface。
+
 状态锚点：`2026-04-11`
 
 ## 文档目的
@@ -42,9 +44,9 @@
 
 ### `Phase A / Naming And Boundary Convergence`
 
-已完成并冻结：
+当时完成并冻结的历史命名：
 
-- `OPL` 是顶层 `Gateway / Federation`
+- `OPL` 当时写作顶层 `Gateway / Federation`；当前读法是 stage-led family agent framework owner
 - `Unified Harness Engineering Substrate` 是共享架构基座
 - 三个业务仓是共享 substrate 上的 `Domain Harness OS`
 - 当前统一按 `Auto-only` 主线理解，future `Human-in-the-loop` 产品作为 sibling 或 upper-layer product
@@ -123,6 +125,7 @@
 - 不把三个业务仓强行收敛成同一种执行内核实现
 - 不提前抽共享公共代码框架
 - 不把 `OPL` 扩写成 runtime owner
+- 不把本文的历史 `Gateway / Federation` 词汇恢复成当前 active topology 或 compatibility surface
 - 不在 `Med Auto Science` 主线里碰论文配图资产化独立支线
 - 不把 future `Human-in-the-loop` sibling / upper-layer product 拉回同仓双模
 - 不把 `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 提前拉进当前四仓 `Phase C`

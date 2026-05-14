@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFakeHermesFixture, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 function createNativeHelperRepairScript(root: string, helperBinDir: string) {
   const repairScript = path.join(root, 'repair-native.sh');
@@ -36,18 +36,6 @@ printf 'native helper repair completed\\n'
 }
 
 test('runtime manager reports stale and expired native index freshness from the last successful snapshot', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-stale-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
 
@@ -77,7 +65,6 @@ esac
 
   try {
     const success = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
     });
@@ -89,7 +76,6 @@ esac
     assert.deepEqual(success.runtime_manager.reconcile.recommended_actions, []);
 
     const stale = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
     });
@@ -122,7 +108,6 @@ esac
     fs.writeFileSync(successPersistence.last_success_file, `${JSON.stringify(lastSuccess, null, 2)}\n`);
 
     const expired = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
     });
@@ -131,25 +116,12 @@ esac
     assert.equal(expiredFreshness.last_success_expired, true);
     assert.equal(expiredFreshness.failure_count, 2);
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(helperBinDir, { recursive: true, force: true });
   }
 });
 
 test('runtime manager records structured native index diff and history GC reporting', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-index-gc-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-index-gc-bin-'));
   const runtimeDir = path.join(stateRoot, 'runtime-manager');
@@ -199,7 +171,6 @@ exit 1
 
   try {
     const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
     });
@@ -247,7 +218,6 @@ exit 1
     const latestHistoryEntry = JSON.parse(historyLines[historyLines.length - 1]);
     assert.deepEqual(latestHistoryEntry.gc, persistence.gc);
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(helperBinDir, { recursive: true, force: true });
   }
@@ -256,25 +226,11 @@ exit 1
 test('runtime snapshot projects active domain manifests into tray lanes without owning runtime truth', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-workspace-'));
-  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-hermes-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   fs.mkdirSync(path.join(workspaceRoot, 'mas'), { recursive: true });
   fs.mkdirSync(path.join(workspaceRoot, 'redcube'), { recursive: true });
   fs.mkdirSync(path.join(workspaceRoot, 'mag'), { recursive: true });
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-
   const runningManifest = structuredClone(fixtures.medautoscience);
   runningManifest.task_lifecycle = {
     ...(runningManifest.task_lifecycle as Record<string, unknown>),
@@ -399,8 +355,6 @@ exit 1
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_HERMES_BIN: hermesPath,
-      HERMES_HOME: hermesHome,
     });
     const snapshot = output.runtime_tray_snapshot;
 
@@ -461,9 +415,7 @@ exit 1
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
-    fs.rmSync(hermesHome, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -761,23 +713,10 @@ test('runtime manager reports temporal provider code landed when live runtime is
 });
 
 test('runtime manager action dry-run plans repairs without mutating native index files', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-action-dry-state-'));
 
   try {
     const output = runCli(['runtime', 'manager', 'action', '--dry-run'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
     });
@@ -802,7 +741,6 @@ exit 1
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), false);
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index-failures.jsonl')), false);
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

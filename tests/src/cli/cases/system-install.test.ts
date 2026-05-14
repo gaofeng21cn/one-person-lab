@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 
@@ -764,18 +764,6 @@ test('install command reuses only the default Codex runtime dependency', () => {
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
   const codexConfigFixture = createCodexConfigFixture();
   const codexPath = path.join(codexFixtureRoot, 'codex');
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "Gateway service is not loaded"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
 
   fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
 
@@ -785,9 +773,8 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-        PATH: `${codexFixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
         ...disableRemoteCompanionInstall(),
       },
     ) as {
@@ -815,7 +802,6 @@ exit 1
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -962,6 +948,7 @@ test('skill companion apply installs Superpowers full bundle only in managed mod
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_SUPERPOWERS_REPO_URL: superpowersRemote.remoteRoot,
+      ...disableRemoteCompanionInstall(),
     }) as {
       companion_skills: {
         mode: string;

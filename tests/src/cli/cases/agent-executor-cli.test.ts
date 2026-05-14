@@ -41,7 +41,7 @@ test('executor CLI exposes doctor and request-file run surfaces', () => {
   }
 });
 
-test('explicit non-default executor fails closed when binary is missing', () => {
+test('explicit Hermes-Agent executor fails closed when binary is missing', () => {
   const failure = runCliFailure(['executor', 'doctor', '--executor', 'hermes_agent'], {
     OPL_HERMES_AGENT_EXECUTOR_BIN: '',
     PATH: '',
@@ -49,5 +49,6 @@ test('explicit non-default executor fails closed when binary is missing', () => 
 
   assert.equal(failure.status, 4);
   assert.equal(failure.payload.error.code, 'surface_not_found');
+  assert.equal(failure.payload.error.details.executor_kind, 'hermes_agent');
   assert.equal(failure.payload.error.details.fallback_allowed, false);
 });

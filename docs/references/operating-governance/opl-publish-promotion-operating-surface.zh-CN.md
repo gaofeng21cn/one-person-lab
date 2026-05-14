@@ -14,11 +14,11 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 目标不是顶层 publish runtime。
 目标是一个薄的顶层 operating layer：只索引 publish outcome、promotion candidate 与 public-surface reference，而 publish truth 仍然留在 domain system 内部。
-本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
+本文中的 legacy `gateway` wording 只是来自已归档 surface id 与 example corpus 的 provenance vocabulary，不是 active compatibility interface。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
 
 ## 与前置 Gateway 层的关系
 
-这层 operating surface 建立在保留的历史兼容层之上：
+这层 operating surface 最初建立在以下已归档历史层之上：
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.zh-CN.md)
 - [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
@@ -28,7 +28,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - 当前机器可读合同目录：[`../../contracts/opl-framework/README.zh-CN.md`](../../../contracts/opl-framework/README.zh-CN.md)
 
-这些层是 provenance 与 compatibility input。当前 topology 与 owner boundary 仍以核心五件套、当前合同和 stage-led framework roadmap 为准。
+这些层只作为 provenance input。当前 topology 与 owner boundary 仍以核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 stage-led framework roadmap 为准。
 
 ## 与 P5.M1 的边界
 
@@ -53,7 +53,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - 成为 domain release / export / submission truth 的 owner
 - 成为 domain public-channel posting truth 的 owner
 - 直接执行 publish、submit、export、release 或 promote
-- 绕过 domain gateway 直接控制 harness execution
+- 绕过 domain-owned capability entry 直接控制 harness execution
 
 一句话说：
 
@@ -68,7 +68,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - 存储某个 domain 的 canonical publish truth
 - 用顶层副本替代 domain 的 release / export / submission record
 - 变成所有 publish flow 的统一 public-runtime entry
-- 把 domain gateway 降格成实现细节
+- 把 domain-owned capability entry 降格成实现细节
 
 ## 允许的顶层 Record Kind
 
@@ -184,9 +184,9 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - distribution result
 - 已经完成 promotion 的证明
 
-### 后续动作仍然使用 `domain_gateway` 兼容值
+### 后续动作使用当前 domain-owned capability entry
 
-如果后续还需要执行 publish 或 promotion action，`OPL` 仍然必须 route 到 domain-owned capability entry；这里用保留兼容值 `domain_gateway` 表示。
+如果后续还需要执行 publish 或 promotion action，`OPL` 必须 route 到相关 domain owner 暴露的当前 domain-owned capability entry。
 
 这一层可以索引 outcome 或 target surface。
 但不能直接 submit、export、release 或 post。
@@ -339,7 +339,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - `OPL executes publish or promotion`
 - `OPL is the unified publish runtime entry`
 - `OPL manages all public posting directly`
-- 把 domain gateway 降格成实现细节
+- 把 domain-owned capability entry 降格成实现细节
 
 也不要新增这些操作：
 

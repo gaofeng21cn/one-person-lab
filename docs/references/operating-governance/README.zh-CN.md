@@ -6,7 +6,7 @@ Machine boundary: 仅人读索引；机器可读 governance 行为必须使用 c
 
 本目录收纳 governance、quality projection、incident learning、operator projection、domain memory、目录治理和 surface review 参考。
 
-当前 OPL topology 不是 gateway-first。本目录中部分文件仍保留 legacy-derived 的 `gateway` 或 `domain_gateway` surface id，是因为配套机器可读工件仍用这些 id 做历史兼容与 reviewability。除非核心五件套和当前合同重新确认，否则这些 id 只能按 derived compatibility vocabulary 理解。
+当前 OPL topology 不是 gateway-first。本目录中部分文件仍保留 legacy-derived 的 `gateway` 或 `domain_gateway` wording，是因为已归档的 compatibility corpus 和示例记录仍用这些标签做 provenance 与 reviewability。请只把这些标签理解为历史词汇；它们不是 active compatibility interface，当前机器可读行为必须来自核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger 或 domain-owned manifest。
 
 ## 当前 Owner Surfaces
 
@@ -28,8 +28,8 @@ Machine boundary: 仅人读索引；机器可读 governance 行为必须使用 c
 
 当 governance 文档提到 `gateway` 时，先判断该段属于：
 
-1. 历史兼容语言；
-2. derived machine-readable surface vocabulary；
+1. 历史 provenance 语言；
+2. 已归档 example / reviewability vocabulary；
 3. 当前 framework activation/discovery/projection language。
 
 只有第三类可以不带 tombstone 指针复用到 active docs。

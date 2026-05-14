@@ -36,7 +36,7 @@ The current execution order lives in [OPL Current Development Lines](../active/c
 
 - keep legacy gateway and federation wording available only as provenance/reference material while promoting the runtime/activation model to the mainline
 - keep `Unified Harness Engineering Substrate`, `Shared Runtime Contract`, and `Shared Domain Contract` scoped as shared-above-domain surfaces
-- keep provider-backed stage runtime honest, with Temporal as the required production online substrate and `Hermes-Agent` retained only as migration/proof context
+- keep provider-backed stage runtime honest, with Temporal as the required production online substrate, `hermes_agent` retained as a canonical explicit non-default executor adapter/backend with independent receipt/audit/fail-closed gates, and old Hermes provider/Gateway material limited to provenance, diagnostics, fixtures, or negative guards
 - keep public help, current docs, and operator-facing guidance free of default Hermes/Gateway/frontdoor/local-manager wording; retained names must be explicit legacy/provenance/diagnostic/history/fixture references
 - keep future hosted and desktop entry work anchored to the same runtime truth that drives the Codex-default executor path
 - keep candidate domains moving through explicit definition and onboarding lanes

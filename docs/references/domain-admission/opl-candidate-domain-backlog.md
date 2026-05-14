@@ -4,9 +4,9 @@
 
 ## Purpose
 
-This document indexes the machine-readable admission-blocker backlog for the current under-definition `OPL` workstreams.
+This document indexes the admission-blocker backlog for the current under-definition `OPL` workstreams.
 
-Its job is to show what boundary material is still missing before `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` can be formally admitted as independent domain gateways.
+Its job is to show what boundary material is still missing before `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` can be formally admitted as independent domain-agent/capability boundaries.
 
 It is not a pre-admission registry.
 It is not an execution surface.
@@ -32,11 +32,11 @@ At the current baseline, that is enough to define the candidate-domain path:
 
 It does **not** create `G1` registry admission, `G2` discovery readiness, or `G3` routed-action readiness.
 
-## Machine-Readable Artifact
+## Machine Boundary
 
-- [`../../contracts/opl-framework/candidate-domain-backlog.json`](../../../contracts/opl-framework/candidate-domain-backlog.json)
+No current machine-readable `candidate-domain-backlog.json` contract is published in this repo. Current candidate visibility comes from [`task-topology.json`](../../../contracts/opl-framework/task-topology.json) and [`workstreams.json`](../../../contracts/opl-framework/workstreams.json); this document is a derived human-readable blocker reference.
 
-This artifact keeps candidate workstreams visible without pretending their domain boundaries already exist.
+The active machine-readable topology keeps candidate workstreams visible without pretending their domain boundaries already exist.
 
 Companion tranche summary:
 
@@ -46,7 +46,7 @@ Companion tranche summary:
 
 This backlog does not:
 
-- assign future domain identity or gateway/harness surface metadata
+- assign future domain identity or legacy route-surface metadata
 - reframe `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` as extensions of `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`
 - add candidate entries to the `G1` registry
 - create a discovery target or routed-action target
@@ -74,7 +74,7 @@ Each entry stays reference-only and carries only:
 
 `IP Ops` already has explicit top-level semantics in the task map / task topology: it covers intellectual-property protection outputs such as invention disclosures, patent application drafts, claims, embodiments, and office-action response plans.
 
-What is still missing is a future domain boundary package that makes patent-specific registry material, public gateway docs, truth ownership for patent drafts / claims / embodiments / prior-art positioning / office-action responses, human/legal review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes patent-specific registry material, public domain-agent/capability docs, truth ownership for patent drafts / claims / embodiments / prior-art positioning / office-action responses, human/legal review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
 The routing readiness blocker must also prove that patent requests do not route to `MedAutoGrant` unless the request is actually Grant Ops proposal work.
 
@@ -84,7 +84,7 @@ The negative conclusion frozen here is that `IP Foundry` / `Med Auto Patent` wor
 
 `Award Ops` already has explicit top-level semantics in the task map / task topology: it covers science-and-technology award applications, achievement summaries, contribution ranking, impact evidence, and recommendation materials.
 
-What is still missing is a future domain boundary package that makes award-specific registry material, public gateway docs, truth ownership for award applications / achievement summaries / contribution ranking / impact evidence / recommendation materials, human expert review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes award-specific registry material, public domain-agent/capability docs, truth ownership for award applications / achievement summaries / contribution ranking / impact evidence / recommendation materials, human expert review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
 The routing readiness blocker must also prove that award requests do not route to `MedAutoGrant` as grant proposal work, even though Award Ops may reuse Grant Ops authoring substrate.
 
@@ -96,10 +96,10 @@ The negative conclusion frozen here is that `Award Foundry` / `Med Auto Award` w
 
 The negative conclusion frozen in the current path is that thesis assembly does add top-level boundary truth, but only as a reference-only candidate boundary inside the existing topology/backlog/onboarding chain: chapter-draft sets, cross-chapter synchronization, and defense-preparation coordination are not identical to `Research Ops` manuscript/submission flow, and a downstream `defense_deck` derivative does not collapse the workstream into `Presentation Ops` / `RedCube AI`.
 
-What is still missing is a future domain boundary package that makes thesis-specific registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes thesis-specific registry material, public domain-agent/capability docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The discovery readiness blocker must keep read-only discovery pointed at the future `domain_gateway` entry without implying handoff readiness or collapsing Thesis Ops into `Research Ops` or `Presentation Ops`.
-The routing readiness blocker must freeze explicit routing evidence, keep the only successful target at `domain_gateway`, preserve the no-bypass rule against direct harness targeting, and avoid silently collapsing the workstream into another admitted domain.
+The discovery readiness blocker must keep read-only discovery pointed at a future domain-owned capability entry without implying handoff readiness or collapsing Thesis Ops into `Research Ops` or `Presentation Ops`.
+The routing readiness blocker must freeze explicit routing evidence, keep successful targets limited to current domain-owned capability/action-route refs, preserve the no-bypass rule against direct harness targeting, and avoid silently collapsing the workstream into another admitted domain.
 The cross-domain wording blocker must keep Thesis Ops wording aligned between `OPL` and any future thesis domain without equating thesis assembly to `Research Ops` manuscript flow or `Presentation Ops` / `RedCube AI` deck production.
 Those future packages are blockers only; they do not make `Thesis Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
@@ -107,10 +107,10 @@ Those future packages are blockers only; they do not make `Thesis Ops` currently
 
 `Review Ops` already has explicit top-level semantics in the task map / task topology: it groups reviewer-role work plus response/rebuttal coordination under one candidate semantic bundle. `Review Foundry` / `Med Auto Review` is the planned product-family wording for this candidate lane.
 
-What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes review-specific registry material, public domain-agent/capability docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The discovery readiness blocker must keep read-only discovery pointed at the future `domain_gateway` entry without implying handoff readiness for the review bundle.
-The routing readiness blocker must freeze explicit routing evidence, keep the only successful target at `domain_gateway`, and preserve the no-bypass rule against direct harness targeting.
+The discovery readiness blocker must keep read-only discovery pointed at a future domain-owned capability entry without implying handoff readiness for the review bundle.
+The routing readiness blocker must freeze explicit routing evidence, keep successful targets limited to current domain-owned capability/action-route refs, and preserve the no-bypass rule against direct harness targeting.
 The cross-domain wording blocker must keep reviewer-role wording aligned between `OPL` and any future review domain without transferring review-truth ownership into `OPL`.
 
 The negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth.
@@ -126,7 +126,7 @@ If the execution-model declaration is still missing, the workstream remains unde
 If a public scaffold or domain-direction hint exists, it still counts only as top-level signal/evidence until the real boundary package is present.
 
 It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`.
-Those admitted domains remain independent gateway-and-harness surfaces.
+Those admitted domains remain independent domain-agent entries with domain-owned capability surfaces.
 
 No backlog entry authorizes a domain handoff, discovery target, routed-action target, or harness access.
 
@@ -146,6 +146,6 @@ The candidate backlog is acceptable only when:
 - blocker checks align to the onboarding formal-inclusion gate
 - discovery readiness blockers and routing readiness blockers remain explicit as separate blocked checks
 - execution-model blockers stay explicit in the public companion wording: stable agent runtime surface, shared-base `Auto` / `Human-in-the-loop` convergence, and code-versus-Agent responsibility split must all be named before anything can move beyond under definition / deferred
-- no entry allocates future domain identity, gateway/harness surface metadata, or any routed readiness state
+- no entry allocates future domain identity, legacy route-surface metadata, or any routed readiness state
 - the backlog stays discoverable and reviewable without becoming a control plane
 - the backlog remains reference-only, non-executing, and non-admitting

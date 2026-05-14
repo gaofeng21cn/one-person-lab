@@ -370,7 +370,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
         service_status: {
           engine_id: familyRuntimeProvider.provider_kind,
           installed: providerReady,
-          gateway_loaded: providerReady,
+          provider_ready: providerReady,
           binary_path: null,
           binary_source: null,
           health_status: familyRuntimeProvider.health_status,

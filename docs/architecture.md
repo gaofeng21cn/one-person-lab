@@ -30,7 +30,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与基于开源 AionUI 定制的 `opl-aion-shell` 都消费同一套 runtime truth
 - `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel
-- family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，Hermes/local provider 只在显式 provider / executor adapter 或诊断语境中出现，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
+- family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只服务 dev/CI/offline diagnostic baseline，`hermes_agent` 是显式非默认 executor adapter/backend；旧 Hermes provider / Gateway 语料只作为 proof、provenance、diagnostic、fixture 或负向 guard 读取，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
 - `opl install` 默认安装或复用 Codex、family runtime provider、MAS/MAG/RCA domain modules 与推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
 - 首启 readiness 分为 Core、Domain modules、family runtime provider 三层；Full OPL readiness 要求三层都 ready
@@ -38,7 +38,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
 - `opl module exec` 负责把自动化 CLI 调用绑定到 OPL module registry 解析出的当前 checkout；domain CLI 从 repo checkout 内启动，避免把用户 PATH 上的旧全局 tool 当作执行真相
 - `Codex CLI` 是默认且第一公民的 concrete executor；family runtime provider 负责 stage-attempt durability / wakeup / approval / retry / query transport，具体 executor 仍由 OPL / domain stage 显式选择
-- `OPL Product Entry` 的普通 ask/chat/resume 路径只使用 Codex-default executor；`opl session list/logs` 和 runtime status 中的 Hermes 输出是 explicit adapter / diagnostics / provenance，不是默认 executor 或 runtime truth
+- `OPL Product Entry` 的普通 ask/chat/resume 路径只使用 Codex-default executor；runtime status 不再暴露 Hermes / Gateway diagnostics，显式非默认 executor 只通过独立 receipt / audit surface 进入
 - `MAS`、`MAG`、`RCA` 等 Foundry Agents 继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface；它们以 OPL-compatible package / repo 接入，而不是内嵌一份 OPL runtime
 - `One Person Lab App` 对这些 Agent 来说是可选前端；同一个 Agent 可以通过 direct Codex app skill、自己的 CLI、或 OPL Framework hosted/projection path 运行
 - MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，包括 `mas_opl_runtime_workbench_projection` 的 App drilldown/read-only workbench 投影，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
@@ -71,7 +71,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - 会话生命周期
 - 进度投影
 - 交付物投影
-- shell compatibility surfaces
+- shell projection surfaces
 
 ### 2. OPL Activation Layer
 
@@ -91,14 +91,14 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 负责：
 
 - family runtime provider 的 provision / version pin / profile wiring
-- provider readiness 的触发、检查与状态报告；Temporal provider 是 production online runtime 的必需 substrate，Hermes gateway readiness 只属于显式 provider / executor adapter 或诊断语境
+- provider readiness 的触发、检查与状态报告；Temporal provider 是 production online runtime 的必需 substrate，Hermes-Agent 不作为 provider / Gateway readiness surface
 - `opl family-runtime` typed queue、stage attempt ledger、idempotency、lease、retry、dead-letter、approval、local inbox 与 event export
 - `opl family-runtime attempt create|list|inspect` 的 provider receipt 与 task-bound lifecycle projection；该 ledger 只记录 control metadata、checkpoint/closeout refs、human gate refs 与 blocked reason
-- provider wakeup bridge；迁移期 Hermes cron/webhook bridge 仍可使用 `hermes cron -> opl family-runtime tick --source hermes-cron --hydrate`，但不再是目标唯一 provider 形态
+- provider wakeup bridge；生产路径使用 provider-backed signal / tick / hydrate 语义，旧 Gateway / cron bridge 不再属于 active interface
 - domain task registration contract 的 hydration；当前 MAS 通过 `pending_family_tasks[]` 把非终局、非 hard human gate 的 autonomy blocker 交给 OPL queue
 - family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
-- `opl status runtime` 顶层报告 provider-backed family runtime；Hermes status、recent sessions 与 process usage 只作为 explicit adapter / diagnostics / provenance 镜像保留
+- `opl status runtime` 顶层报告 provider-backed family runtime、provider set 与 OPL-managed session ledger；旧 Hermes diagnostics、recent sessions 镜像与 process usage 不再作为 active runtime status 字段
 - `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
 - 可选 Rust `OPL native helper` 的 registry，例如 system probe、native doctor、runtime watch、artifact indexer、state indexer
 - Rust helper 的 package lifecycle：`native:build`、`native:doctor`、`native:repair`、`native:test`，以及随 npm package 分发的 Cargo workspace 与 helper 脚本
@@ -115,7 +115,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - concrete executor
 - domain wakeup / supervision scheduler
 - provider system-service lifecycle implementation beyond invoking supported install/repair/status commands
-- 私有 fork / vendor 一份 `Hermes-Agent` 或把 Temporal/Hermes 任一 provider 写成 domain truth owner
+- 私有 fork / vendor 一份 `Hermes-Agent` 或把 Temporal/provider runtime history 写成 domain truth owner
 
 这层让未来 provider 切换时，已有 task registration、status projection、native helper、state index 与 domain owner 边界可以直接复用。当前优先级是 Temporal-backed provider pilot；只有 Temporal/provider abstraction 无法表达 OPL 必需的 task、wakeup、approval、audit 或产品隔离合同时，才进入自有完整长期常驻 sidecar 评估。
 
@@ -233,31 +233,31 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 ## 当前实现边界与缺口
 
-当前 OPL 已经实现的是 family framework 的控制面骨架与 repo/test 级最小 provider 闭环：
+当前 OPL 已经实现的是 family framework 的控制面骨架、Temporal production proof 入口与 task-bound bridge 闭环：
 
 - shared contract：`family-action-catalog`、`family-action-graph`、`family-stage-control-plane`、`family-runtime-supervision`、`family-persistence-policy`、`family-lifecycle-ledger`、`family-owner-route`、`family-product-entry-manifest-v2`。
 - shared helper：TypeScript helper 与 `python/opl-harness-shared` mirror，可供 MAS/MAG/RCA 生成 action/stage/runtime/product-entry projection。
 - local orchestration：`opl family-runtime` typed queue、pending task intake、guarded dispatch、local inbox/event、retry/dead-letter 信号和 stage attempt ledger。
 - discovery：`opl actions` / `opl stages` / `opl agents` 只读发现与 parity；当前 OPL 已能校验 standard skeleton descriptor 并要求 artifact locator surface，MAS/MAG/RCA 均为 descriptor-level aligned，stage 与 domain-memory descriptor 也均 resolved。
 - unified descriptor：`opl agents descriptors` / `opl agents descriptor --domain <domain>` 已把 entry、skeleton、stage、action、memory、skill、runtime/session/progress/artifact refs 聚合成统一 read model；它只携带 refs/status/parity/authority boundary，不承载 domain memory 正文或 domain verdict。
-- provider execution：Temporal `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start|query|signal`、worker lifecycle status 和 fail-closed readiness 已落地到 repo/test 面；缺少 Temporal 地址时本机 worker readiness 明确报告 `not_configured`。
+- provider execution：Temporal `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start|query|signal`、worker lifecycle status 和 fail-closed readiness 已落地；2026-05-14 本机 managed Temporal service / worker proof 已返回 `production_residency_proven`，provider view 显示 `full_online_ready=true` / `durable_online_ready=true`。
 - typed receipt / workbench：Codex stage activity 已有 dry-run / live-dry-run / `codex_cli` runner repo/test harness、typed closeout required-for-completion gate、consumed refs / memory refs / writeback receipt refs / rejected writes / route impact / next owner 投影；`opl runtime snapshot` 已输出只读 `stage_attempt_workbench`。
 
-当前尚未实现的是完整生产级 stage execution runtime：
+当前尚未闭合的是完整生产级 long domain owner chain：
 
-- Temporal-backed provider 尚未成为默认生产 residency：真实 Temporal server / worker deployment、worker restart / re-query、长期 worker residency 和 production retry/dead-letter 运行证据仍未闭合。
-- `Codex CLI` stage activity runner 已能在 repo/test harness 中启动 `codex_cli` runner、记录 stdout event summary、timeout、process output summary 和 checkpoint heartbeat；真实长时 domain activity soak、token / cost / progress 观测校准、domain sidecar live dispatch 与 owner receipt 连续 evidence 仍需落地。
+- Temporal-backed provider 已证明本机 managed production residency 当前可达；仍未闭合的是周期性长时 SLO、真实 production service 运维证据、长时间 retry/dead-letter 观测与真实 domain soak。
+- `Codex CLI` stage activity runner 已能在 repo/test harness 中启动 `codex_cli` runner、记录 stdout event summary、timeout、process output summary 和 checkpoint heartbeat；真实长时 domain activity soak、token / cost / progress 观测校准、domain sidecar live dispatch 与 owner receipt 连续 evidence 仍需继续落地。
 - OPL App / GUI 已能消费 stage-attempt workbench 和 provider-level signal 传输，但仍需要真实 worker/domain 执行证明、domain/stage/blocker/memory refs 分组操作面，以及避免把 provider completion 写成 domain ready verdict 的持续 UI 验收。
-- MAS real paper line、MAG grant stage 和 RCA visual stage 仍需要真实或 controlled guarded apply soak，证明 OPL-hosted path 与 direct skill path 共享 domain owner receipts 且语义等价。
+- MAS real paper line 已有 read-only closeout projection，并通过 provider-hosted task-bound bridge 产出 typed blocker / no-forbidden-write proof；MAG/RCA 已有 live task-bound sidecar receipt / no-regression evidence ingestion。仍需证明真实 MAS owner guarded-apply chain 推动论文前进，以及 grant / visual long soak 到最终交付。
 
-所以，OPL 现在可以被描述为 `stage-led family framework control plane, Codex CLI first-class executor, optional executor adapters, Temporal provider minimal loop, Codex runner repo/test harness, typed closeout gate, and domain skeleton discovery / validation landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`；当前 standard skeleton 家族对齐已在 MAS/MAG/RCA 三仓达到 descriptor-level aligned，仍不能写成三仓 physical skeleton layout 已完成。
+所以，OPL 现在可以被描述为 `stage-led family framework control plane, Codex CLI first-class executor, explicit optional executor adapters, Temporal production residency proof, provider-hosted task-bound bridge, Codex runner repo/test harness, typed closeout gate, and domain skeleton discovery / validation landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `long-running domain-owner production chain fully closed`；当前 standard skeleton 家族对齐已在 MAS/MAG/RCA 三仓达到 descriptor-level aligned，仍不能写成三仓 physical skeleton layout 已完成。
 
 ## 默认执行策略
 
 - 第一公民执行器正式名称：`Codex CLI`
 - 默认执行模式：`autonomous`
 - 默认模型与默认 reasoning effort：继承本机 `Codex` 默认配置
-- `Family runtime provider` 当前是 Full OPL online family runtime 的 readiness 对象；Temporal-backed provider 是 production online runtime 的必需 substrate，Hermes-Agent 只作为可选 Agent executor adapter 或显式 route-selected proof lane，不替代 Codex CLI 默认执行语义，也不承诺行为效果等价
+- `Family runtime provider` 当前是 Full OPL online family runtime 的 readiness 对象；Temporal-backed provider 是 production online runtime 的必需 substrate。`hermes_agent` 是显式非默认 Agent executor adapter/backend，不替代 Codex CLI 默认执行语义，也不承诺行为、质量、工具语义或 resume 等价；旧 Hermes provider / Gateway proof 语料只按历史、诊断、fixture 或负向 guard 阅读
 
 ## 文档组织原则
 

@@ -127,7 +127,7 @@ On that path:
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
 The framework/control-plane, executor adapter, provider code path, receipt/projection, and domain descriptor layers have landed; external production provider residency and real domain soak remain separate acceptance work.
 
-When `Hermes-Agent` appears in this context, it refers to the upstream external runtime project/service only. It is now retained only as a legacy/optional provider, explicit executor/proof lane, diagnostic/provenance surface, or optional install module. The Temporal-backed provider is the required production online runtime substrate, while real production soak remains a separate acceptance gate.
+When `Hermes-Agent` appears in this context, it refers to the upstream external runtime project/service only. `hermes_agent` is retained only as an explicit non-default executor adapter/backend; Hermes provider / Gateway / readiness / compatibility surfaces remain historical provenance, diagnostic vocabulary, or negative guards. The Temporal-backed provider is the required production online runtime substrate, while real production soak remains a separate acceptance gate.
 `OPL Runtime Manager` may adapt product-managed runtime operations over a configured family runtime provider, but it must not be described as a scheduler, session store, memory owner, domain truth owner, or concrete executor owner.
 Rust native helper / index-only work may support native assistance and indexed discovery, but it must not become the owner of domain execution or truth.
 

@@ -44,7 +44,7 @@ This rule now applies to the remaining candidate workstreams only: `Grant Ops` h
 When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, start with the current Codex-default executor and provider-backed stage-runtime wording:
 
 - [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md) — current Codex-default executor, provider-backed stage runtime, and host-agent / managed-runtime deployment-shape wording
-- [Family Executor Adapter Defaults](../references/runtime-substrate/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family executor naming, default mode, default model, and Hermes-Agent experimental boundary
+- [Family Executor Adapter Defaults](../references/runtime-substrate/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family executor naming, default mode, default model, and retired executor guards
 
 If historical migration context is still needed during review, use these historical references separately:
 
@@ -205,7 +205,7 @@ The onboarding package must identify:
 - whether the default executor name is `Codex CLI`, whether the default mode is `autonomous`, whether the default model / reasoning inherit the local `Codex` default configuration, and what stable agent runtime surface it depends on
 - whether the current repository mainline is `Auto-only`, and if so how any future `Human-in-the-loop` product would reuse the same substrate as a compatible sibling or upper-layer product rather than as same-repo dual-mode logic
 - how its formal-entry matrix is expressed through `default_formal_entry`, `supported_protocol_layer`, and `internal_controller_surface`
-- whether any `Hermes-Agent` executor route marked `experimental` is a full `Hermes AIAgent` loop rather than a single-step chat or chat relay
+- whether any `Hermes-Agent experimental` execution route is explicitly declared as a non-default receipt/audit adapter, and whether old provider/Gateway use has moved to history, diagnostics, or a negative guard
 - which stable object / controller / tool / gate / review responsibilities stay in code
 - which parts must not be described as a `fixed-code-first` mainline with the Agent reduced to prompt fill-ins
 

@@ -14,11 +14,11 @@ Its goal is to define what `OPL` may legitimately index after domain-owned publi
 
 The target is not a top-level publish runtime.
 The target is a thin top-level operating layer that indexes publish outcomes, promotion candidates, and public-surface references while domain systems continue to own publish truth.
-Legacy `gateway` wording in this document is retained for compatibility with historical surface IDs and example corpora. Current topology is stage-led with Agent executors as the minimum execution unit.
+Legacy `gateway` wording in this document is provenance-only vocabulary from archived surface IDs and example corpora. It is not an active compatibility interface. Current topology is stage-led with Agent executors as the minimum execution unit.
 
 ## Relationship To Earlier Gateway Layers
 
-This operating surface is downstream of retained historical compatibility layers:
+This operating surface was originally downstream of these now-archived historical layers:
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
 - [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
@@ -28,7 +28,7 @@ This operating surface is downstream of retained historical compatibility layers
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - the machine-readable contracts in [`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
 
-Those layers are provenance and compatibility inputs. Current topology and owner boundaries remain governed by the core five, current contracts, and the stage-led framework roadmap.
+Those layers are provenance inputs only. Current topology and owner boundaries remain governed by the core five, current contracts, source, CLI/API behavior, runtime ledgers, domain-owned manifests, and the stage-led framework roadmap.
 
 ## Boundary From P5.M1
 
@@ -53,7 +53,7 @@ It may not:
 - become the owner of domain release / export / submission truth
 - become the owner of domain public-channel posting truth
 - execute publish, submit, export, release, or promote directly
-- bypass domain gateways to control harness execution directly
+- bypass domain-owned capability entries to control harness execution directly
 
 In short:
 
@@ -68,7 +68,7 @@ This operating surface does not:
 - store canonical publish truth for a domain
 - replace a domain's release / export / submission record with a top-level copy
 - become the unified public-runtime entry for all publish flows
-- turn domain gateways into implementation details
+- turn domain-owned capability entries into implementation details
 
 ## Allowed Top-Level Record Kinds
 
@@ -184,9 +184,9 @@ It must not be used as:
 - a distribution result
 - proof that promotion already happened
 
-### Follow-on actions still use the `domain_gateway` compatibility value
+### Follow-on actions use current domain-owned capability entries
 
-If any follow-on publish or promotion action is needed, `OPL` must still route through the domain-owned capability entry represented here by the retained `domain_gateway` compatibility value.
+If any follow-on publish or promotion action is needed, `OPL` must route through the current domain-owned capability entry exposed by the relevant domain owner.
 
 This operating surface may index the outcome or the target surface.
 It must not submit, export, release, or post directly.
@@ -339,7 +339,7 @@ Do not describe or implement this layer as:
 - `OPL executes publish or promotion`
 - `OPL is the unified publish runtime entry`
 - `OPL manages all public posting directly`
-- domain gateways being reduced to implementation details
+- domain-owned capability entries being reduced to implementation details
 
 Do not add operations that:
 

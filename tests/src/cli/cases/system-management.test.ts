@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 import { resolveEngineActionSpec } from '../../../../src/system-installation/engine-helpers.ts';
@@ -45,26 +45,6 @@ test('system exposes user-facing engine and managed-path status from OPL default
     baseUrl: 'https://codex-opl.example.test/v1',
     apiKey: 'codex-opl-key',
   });
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes 1.2.3"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-if [[ "$1" == "cron" && "$2" == "list" ]]; then
-  echo "Name: opl-family-runtime-tick"
-  exit 0
-fi
-if [[ "$1" == "webhook" && "$2" == "list" ]]; then
-  echo "opl-family-runtime-webhook"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
   echo "codex-cli 0.125.0"
@@ -80,8 +60,7 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
-        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       system: {
@@ -101,16 +80,6 @@ exit 1
             health_status: string;
             issues: string[];
             diagnostics: string[];
-          };
-          hermes: {
-            installed: boolean;
-            version: string | null;
-            version_raw_output: string | null;
-            update_available: boolean;
-            update_summary: string | null;
-            gateway_loaded: boolean;
-            health_status: string;
-            inspection_mode: string;
           };
           family_runtime_provider: {
             provider_kind: string;
@@ -168,14 +137,7 @@ exit 1
     assert.equal(output.system.core_engines.codex.health_status, 'ready');
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.deepEqual(output.system.core_engines.codex.diagnostics, []);
-    assert.equal(output.system.core_engines.hermes.installed, true);
-    assert.equal(output.system.core_engines.hermes.version, null);
-    assert.equal(output.system.core_engines.hermes.version_raw_output, null);
-    assert.equal(output.system.core_engines.hermes.update_available, false);
-    assert.equal(output.system.core_engines.hermes.update_summary, null);
-    assert.equal(output.system.core_engines.hermes.gateway_loaded, false);
-    assert.equal(output.system.core_engines.hermes.health_status, 'attention_needed');
-    assert.equal(output.system.core_engines.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
+    assert.equal(Object.hasOwn(output.system.core_engines, 'hermes'), false);
     assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
     assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'ready');
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
@@ -205,7 +167,6 @@ exit 1
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -321,18 +282,6 @@ test('system initialize aggregates environment modules settings workspace and sy
     baseUrl: 'https://codex-opl.example.test/v1',
     apiKey: 'codex-opl-key',
   });
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes 1.2.3"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
   echo "codex-cli 0.125.0"
@@ -348,11 +297,10 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: workspaceRoot,
-        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       system_initialize: {
@@ -376,7 +324,6 @@ exit 1
         };
         core_engines: {
           codex: { installed: boolean };
-          hermes: { installed: boolean };
         };
         native_helpers: {
           health_status: string;
@@ -457,7 +404,7 @@ exit 1
       true,
     );
     assert.equal(output.system_initialize.core_engines.codex.installed, true);
-    assert.equal(output.system_initialize.core_engines.hermes.installed, true);
+    assert.equal(Object.hasOwn(output.system_initialize.core_engines, 'hermes'), false);
     assert.equal(output.system_initialize.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
     assert.equal(
       output.system_initialize.checklist.some((entry) => entry.item_id === 'workspace_root' && entry.required),
@@ -527,7 +474,6 @@ exit 1
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
@@ -599,7 +545,6 @@ exit 1
           service_status: {
             engine_id: string;
             installed: boolean;
-            gateway_loaded: boolean;
             health_status: string;
           };
           last_repair_result: unknown | null;
@@ -642,7 +587,7 @@ exit 1
     assert.equal(output.system_initialize.online_management.repair_action.action_id, 'review_family_runtime_provider');
     assert.equal(output.system_initialize.online_management.service_status.engine_id, 'temporal');
     assert.equal(output.system_initialize.online_management.service_status.installed, false);
-    assert.equal(output.system_initialize.online_management.service_status.gateway_loaded, false);
+    assert.equal(Object.hasOwn(output.system_initialize.online_management.service_status, 'gateway_loaded'), false);
     assert.equal(output.system_initialize.online_management.service_status.health_status, 'attention_needed');
     assert.equal(output.system_initialize.online_management.last_repair_result, null);
 
@@ -661,46 +606,13 @@ exit 1
   }
 });
 
-test('opl install keeps Hermes gateway repair out of the default Codex install path', async () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-home-'));
+test('opl install keeps retired gateway repair out of the default Codex install path', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-retired-gateway-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const codexConfigFixture = createCodexConfigFixture({
     apiKey: 'codex-opl-key',
   });
-  const gatewayState = path.join(homeRoot, 'hermes-gateway-ready');
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "install" ]]; then
-  touch ${shellSingleQuote(gatewayState)}
-  echo "Gateway service is loaded"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
-    echo "Gateway service is loaded"
-  else
-    echo "Gateway service is not loaded"
-  fi
-  exit 0
-fi
-if [[ "$1" == "cron" && "$2" == "list" ]]; then
-  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
-    echo "Name: opl-family-runtime-tick"
-  fi
-  exit 0
-fi
-if [[ "$1" == "webhook" && "$2" == "list" ]]; then
-  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
-    echo "opl-family-runtime-webhook"
-  fi
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
+  const retiredGatewayState = path.join(homeRoot, 'retired-gateway-ready');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
   echo "codex-cli 0.125.0"
@@ -716,11 +628,10 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: homeRoot,
-        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
         OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
       },
     ) as {
@@ -740,7 +651,6 @@ exit 1
             reconcile: {
               checked_surfaces: {
                 provider_runtime: string;
-                hermes_diagnostics: string;
               };
             };
           };
@@ -753,10 +663,7 @@ exit 1
             ready: boolean;
           };
           core_engines: {
-            hermes: {
-              health_status: string;
-              gateway_loaded: boolean;
-            };
+            [key: string]: unknown;
           };
         };
         background_actions: Array<{ action_id: string; status: string }>;
@@ -768,7 +675,7 @@ exit 1
       };
     };
 
-    assert.equal(fs.existsSync(gatewayState), false);
+    assert.equal(fs.existsSync(retiredGatewayState), false);
     assert.equal(output.install.runtime_manager_action.status, 'completed');
     assert.deepEqual(output.install.runtime_manager_action.executed_actions, []);
     assert.deepEqual(output.install.runtime_manager_action.non_blocking_actions, []);
@@ -779,9 +686,8 @@ exit 1
       output.install.runtime_manager_action.after.reconcile.checked_surfaces.provider_runtime,
       'ready',
     );
-    assert.equal(output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_diagnostics, 'not_inspected_non_provider_diagnostic');
-    assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'attention_needed');
-    assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, false);
+    assert.equal(Object.hasOwn(output.install.runtime_manager_action.after.reconcile.checked_surfaces, 'hermes_diagnostics'), false);
+    assert.equal(Object.hasOwn(output.install.system_initialize.core_engines, 'hermes'), false);
     assert.equal(output.install.system_initialize.online_management.status, 'ready');
     assert.equal(output.install.system_initialize.online_management.blocking, false);
     assert.equal(output.install.system_initialize.online_management.full_online_blocking, false);
@@ -806,7 +712,6 @@ exit 1
       true,
     );
   } finally {
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -969,7 +874,15 @@ test('engine actions reject retired Hermes target without compatibility action s
   assert.deepEqual(failure.payload.error.details.retired_engine_ids, ['hermes']);
   assert.match(
     failure.payload.error.details.retirement_boundary,
-    /not as an engine action target/,
+    /legacy hermes engine action target is retired/,
+  );
+  assert.match(
+    failure.payload.error.details.retirement_boundary,
+    /canonical hermes_agent executor adapter remains available/,
+  );
+  assert.match(
+    failure.payload.error.details.retirement_boundary,
+    /explicit AgentExecutionRequest selection/,
   );
 });
 

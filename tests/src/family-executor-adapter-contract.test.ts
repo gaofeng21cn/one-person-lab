@@ -124,6 +124,7 @@ test('family executor defaults split canonical name, stage-selection status, and
   assert.equal(executorStatuses.hermes_agent, 'experimental');
   assert.equal(executorStatuses.claude_code, 'experimental');
   assert.equal(guardrails.hermes_agent_requires_full_agent_loop, true);
+  assert.equal(guardrails.hermes_agent_not_provider_or_gateway_surface, true);
   assert.equal(guardrails.non_default_executor_requires_explicit_selection, true);
   assert.equal(guardrails.non_default_executor_forbids_silent_codex_fallback, true);
   assert.equal(guardrails.simple_llm_backend_forbidden, true);
@@ -138,6 +139,7 @@ test('family executor defaults split canonical name, stage-selection status, and
   assertLayeredExecutorPolicy(contract);
   assert.ok(!('default_executor' in defaults));
   assert.ok(!('hermes_native_requires_full_agent_loop' in guardrails));
+  assert.ok(!('retired_hermes_agent_executor_forbidden' in guardrails));
   assert.ok(!((contract.canonical_executor_backends as string[]).includes('simple_llm')));
   assert.ok(!((contract.canonical_executor_backends as string[]).includes('openai_compatible_gateway')));
 });
@@ -201,9 +203,11 @@ test('family manifests use the same split executor declaration', () => {
     claude_code: 'experimental',
   });
   assert.equal(executorDefaults.hermes_agent_requires_full_agent_loop, true);
+  assert.equal(executorDefaults.hermes_agent_not_provider_or_gateway_surface, true);
   assert.equal(executorDefaults.simple_llm_backend_forbidden, true);
   assert.equal(executorDefaults.openai_compatible_gateway_backend_forbidden, true);
   assertLayeredExecutorPolicy(executorDefaults);
   assert.ok(!('default_executor' in executorDefaults));
   assert.ok(!('hermes_native_requires_full_agent_loop' in executorDefaults));
+  assert.ok(!('retired_hermes_agent_executor_forbidden' in executorDefaults));
 });

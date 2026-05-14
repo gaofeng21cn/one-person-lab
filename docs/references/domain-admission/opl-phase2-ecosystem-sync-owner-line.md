@@ -78,7 +78,7 @@
 4. 每个 same-mainline slice 先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests；
 5. 继续守住：
    - `CLI-first / read-only` formal entry
-   - `domain_gateway` 才是唯一允许的 successful handoff target
+   - 当时 `domain_gateway` 被写作唯一允许的 successful handoff target；当前只能按历史 literal 阅读，新的 successful handoff 必须走 domain-owned capability entry / action-route refs
    - no-bypass
    - candidate domains 继续 blocked below onboarding / non-admitted / non-G2 / non-G3 / non-handoff-ready
 

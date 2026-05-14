@@ -4,11 +4,11 @@
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/README.md`
-Machine boundary: human-readable companion for example artifacts only.
+Machine boundary: human-readable legacy/provenance companion only. The repo no longer publishes active `examples/opl-framework/*.json` artifacts for this corpus.
 
 ## Purpose
 
-This document indexes historical/legacy-derived machine-readable examples for the former `OPL Gateway` contract stack.
+This document indexes former historical/legacy-derived machine-readable examples for the former `OPL Gateway` contract stack.
 
 Its goal is to keep the legacy gateway examples discoverable for review, migration, and schema archaeology without turning examples into a runtime or current topology.
 It is a companion index, not a new contract layer.
@@ -26,11 +26,11 @@ This corpus does not:
 The examples are illustrative contract compositions only.
 For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any routed-action fragments here stay at the planning-level contract layer and do not imply an activated launcher or runtime.
 
-## Current Example Set
+## Former Example Set
 
 ### 1. Research submission flow
 
-- File: [`../../examples/opl-framework/research-ops-submission.json`](../../../examples/opl-framework/research-ops-submission.json)
+- Former artifact: `examples/opl-framework/research-ops-submission.json` (retired from the active repo artifact set)
 - Shows how a `research_ops` request composes:
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -39,7 +39,7 @@ For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any route
 
 ### 2. Presentation publish / promotion flow
 
-- File: [`../../examples/opl-framework/presentation-ops-publish.json`](../../../examples/opl-framework/presentation-ops-publish.json)
+- Former artifact: `examples/opl-framework/presentation-ops-publish.json` (retired from the active repo artifact set)
 - Shows how a `presentation_ops` request composes:
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -52,7 +52,7 @@ Read the examples as **contract-level walkthroughs**, not executable workflows.
 This corpus is illustrative and non-governing.
 
 If an example references a domain outcome, that outcome remains domain-owned truth.
-`OPL` only carries the top-level routing, governance, and publish/promotion indexes defined by the retained compatibility contracts.
+`OPL` only carries the top-level routing, governance, and publish/promotion indexes shown by these archived provenance examples. Current behavior must use active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
 
 ## Governing Contracts
 
@@ -71,7 +71,7 @@ If an example references a domain outcome, that outcome remains domain-owned tru
 
 The example corpus is acceptable only when:
 
-- each example stays machine-readable
-- schema-governed sub-objects validate against the frozen schemas where applicable
-- examples do not imply direct harness execution
-- examples do not move canonical truth into `OPL`
+- former artifact names remain provenance-only and are not clickable active repo paths
+- the corpus does not imply direct harness execution
+- the corpus does not move canonical truth into `OPL`
+- the corpus points readers to current contracts/source/CLI behavior for active machine truth

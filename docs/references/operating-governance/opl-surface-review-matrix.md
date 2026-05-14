@@ -4,19 +4,19 @@
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable companion to the derived JSON artifact only.
+Machine boundary: human-readable legacy-derived reference only; no current machine-readable `surface-review-matrix.json` contract is published in this repo.
 
 ## Purpose
 
-This document indexes the derived machine-readable review matrix for historical/current OPL public, contract, and supporting surfaces.
+This document preserves the legacy-derived review matrix vocabulary for historical OPL public, contract, and supporting surfaces.
 
 Its job is to make human-review obligations, acceptance coverage, companion review surfaces, and publishability-stage boundaries inspectable from one place without turning the matrix into an approval engine, publish controller, release engine, or second source of truth.
 
-The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain gateway vocabulary are retained as compatibility/reviewability vocabulary for the derived matrix and historical corpus.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain gateway vocabulary are historical/reviewability labels from the archived corpus, not active compatibility interfaces.
 
-## Machine-Readable Artifact
+## Current Machine Boundary
 
-- [`../../contracts/opl-framework/surface-review-matrix.json`](../../../contracts/opl-framework/surface-review-matrix.json)
+No current `contracts/opl-framework/surface-review-matrix.json` exists. Current machine-readable behavior must use the active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
 
 ## Non-Goals
 
@@ -113,10 +113,10 @@ These values describe documentation-readiness stage only. They are not workflow 
 
 Read this matrix as a **derived review-boundary index**, not as an approval or publication contract.
 
-`human_review_required` tells reviewers whether explicit human review remains mandatory before the surface is treated as current public gateway material.
+`human_review_required` in archived examples tells reviewers whether explicit human review was required before that historical surface could be treated as public material.
 `required_acceptance_gates` only references already frozen acceptance gates.
 `required_companion_surfaces` only points to already indexed supporting or governing surfaces.
-`publishability_stage` tells you which kind of gateway-surface alignment must already exist before the surface is publishable as current public material.
+`publishability_stage` preserves the historical alignment vocabulary; current publishability must be governed by active contracts and domain-owned gates.
 If the covered surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, review coverage stays reference-only and does not turn those surfaces into an approval layer, publish controller, or domain-truth owner.
 If the covered surface is the [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md), review coverage still remains reference-only; it does not create runtime authority, candidate admission, or runtime-owner promotion.
 If the covered surface is `opl_task_map`, under-definition workstreams remain semantic candidates only; they do not become admitted domains or routed targets through review coverage alone.
@@ -138,8 +138,7 @@ None of these fields transfer domain review or publication authority into `OPL`.
 The review matrix is acceptable only when:
 
 - it covers the frozen OPL public, shared-foundation boundary, contract, and supporting surfaces that currently matter for human review and publishability inspection
-- every `required_acceptance_gate` resolves inside `../../contracts/opl-framework/acceptance-matrix.json`
-- every `required_companion_surface` resolves inside `../../contracts/opl-framework/public-surface-index.json`
+- archived `required_acceptance_gate` and `required_companion_surface` values are reviewability references only
 - every `governing_ref` resolves to an existing local artifact
 - it remains derived, reference-only, and non-executing
 - it does not become an approval engine, publish controller, release engine, or second source of truth

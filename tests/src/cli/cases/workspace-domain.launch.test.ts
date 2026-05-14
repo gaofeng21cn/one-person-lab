@@ -1,4 +1,4 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('workspace-bind derives family direct-entry locators from structured project locators', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-state-'));
@@ -762,44 +762,6 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
 });
 
 test('session-ledger captures OPL-managed session events with honest resource samples', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
-  cat <<'EOF'
-Preview                                            Last Active   Src    ID
-───────────────────────────────────────────────────────────────────────────────────────────────
-Ledger session                                     1m ago        cli    sess_ledger
-EOF
-  exit 0
-fi
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-if [ "$1" = "status" ]; then
-  cat <<'EOF'
-◆ Environment
-  Project:      /tmp/hermes-agent
-◆ Gateway Service
-  Status:       ✓ loaded
-  Manager:      launchd
-◆ Scheduled Jobs
-  Jobs:         1
-◆ Sessions
-  Active:       1
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "resume" ] && [ "$2" = "sess_ledger" ]; then
   cat <<'EOF'
@@ -810,8 +772,6 @@ fi
 echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
-  const psFixture = createFakePsFixture(`27025 1 0.2 0.4 49616 00:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
-27026 27025 4.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_ledger`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ledger-state-'));
 
   try {
@@ -849,16 +809,12 @@ exit 1
 
     const resumeOutput = runCli(['session', 'resume', 'sess_ledger'], {
       OPL_CODEX_BIN: codexPath,
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(resumeOutput.product_entry.mode, 'resume');
 
     const ledgerOutput = runCli(['session', 'ledger', '--limit', '5'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
 
     assert.equal(ledgerOutput.session_ledger.summary.entry_count, 2);
@@ -876,27 +832,27 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.sessions[0].event_count, 2);
     assert.equal(ledgerOutput.session_ledger.sessions[0].domain_id, 'redcube');
     assert.deepEqual(ledgerOutput.session_ledger.sessions[0].modes, ['resume', 'ask']);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 2);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_sample_status, 'captured');
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 1);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_unavailable, 1);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_sample_status, 'unavailable');
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_rss_kb, 174616);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_cpu_percent, 4.4);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_rss_kb, null);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_cpu_percent, null);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.peak_process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.peak_total_rss_kb, 174616);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.peak_total_cpu_percent, 4.4);
     assert.equal(ledgerOutput.session_ledger.sessions[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
     const runtimeOutput = runCli(['status', 'runtime', '--limit', '2'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.entry_count, 2);
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.session_aggregate_count, 1);
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.domain_counts.redcube, 2);
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.sessions[0].session_id, 'sess_ledger');
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
-    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

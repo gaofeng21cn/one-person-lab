@@ -127,7 +127,7 @@ test('product entry program companions normalize preflight and detailed readines
         title: 'Check provider runtime contract',
         commands: [
           'uv run python -m med_autoscience.cli doctor --profile <profile>',
-          'uv run python -m med_autoscience.cli hermes-runtime-check --profile <profile>',
+          'uv run python -m med_autoscience.cli provider-runtime-check --profile <profile>',
         ],
       }),
     ],

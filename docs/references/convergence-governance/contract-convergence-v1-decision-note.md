@@ -1,6 +1,6 @@
 # Contract Convergence v1 决策记录（2026-04-08）
 
-> 2026-05-02 退役更新：本文件保留 2026-04-08 的历史决策背景；其中涉及 OMX 的开发控制面分工已被 Codex-only 当前执行口径取代，不得作为当前执行入口、prompt 模板或长跑手册使用。
+> 2026-05-14 退役更新：本文件保留 2026-04-08 的历史决策背景；其中涉及 OMX 的开发控制面分工已被 Codex-only 当前执行口径取代，`gateway / federation` 说法也已被 stage-led OPL family agent framework 口径取代。本文不得作为当前执行入口、prompt 模板、长跑手册或 active compatibility interface 使用。
 
 ## 文档定位
 
@@ -28,12 +28,12 @@
 
 ### 1. `OPL` 的系统位置
 
-- `OPL` 是顶层 `gateway`、`federation` 与 shared-language 仓。
+- `OPL` 当时被写作顶层 `gateway`、`federation` 与 shared-language 仓；当前读法是 stage-led family agent framework owner。
 - `OPL` 不是第四个 `Domain Harness OS`。
 - `OPL` 不持有 domain-local long-running runtime。
-- `OPL` 的职责是统一系列项目的命名、边界、合同、联邦语义与治理语义。
+- 这份快照中，`OPL` 的职责是统一系列项目的命名、边界、合同、联邦语义与治理语义；当前 active truth 回到 framework activation、stage attempt、typed queue、provider-backed runtime projection 与 domain-owned capability entry。
 
-因此，后续若要继续推进 `OPL`，方向不是“继续编一个更大的平台故事”，而是在 admitted-domain 的证据边界内，持续收紧顶层联邦、入口、路由、治理与对外口径。
+因此，复用本文时只能取其历史治理教训：在 admitted-domain 的证据边界内收紧入口、路由、治理与对外口径；不能把 `gateway / federation` 恢复成当前 active topology 或 compatibility surface。
 
 ### 2. `Unified Harness Engineering Substrate` 是上位架构名
 

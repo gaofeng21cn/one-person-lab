@@ -15,23 +15,6 @@ export function createContractsFixtureRoot(mutator?: (contractsRoot: string) => 
   return { fixtureRoot, fixtureContractsRoot };
 }
 
-export function createFakeHermesFixture(handlerBody: string) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-fixture-'));
-  const hermesPath = path.join(fixtureRoot, 'fake-hermes');
-  fs.writeFileSync(
-    hermesPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-${handlerBody}
-`,
-    { mode: 0o755 },
-  );
-  return {
-    fixtureRoot,
-    hermesPath,
-  };
-}
-
 export function createFakeCodexFixture(handlerBody: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-fixture-'));
   const codexPath = path.join(fixtureRoot, 'codex');
@@ -46,25 +29,6 @@ ${handlerBody}
   return {
     fixtureRoot,
     codexPath,
-  };
-}
-
-export function createFakePsFixture(output: string) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ps-fixture-'));
-  const psPath = path.join(fixtureRoot, 'ps');
-  fs.writeFileSync(
-    psPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'EOF'
-${output}
-EOF
-`,
-    { mode: 0o755 },
-  );
-  return {
-    fixtureRoot,
-    psPath,
   };
 }
 

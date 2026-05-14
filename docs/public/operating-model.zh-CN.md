@@ -126,7 +126,9 @@ Agent 主要负责：
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 当前已经落地的是这条结构的 framework/control-plane、executor adapter、provider code path、receipt/projection 和 domain descriptor 层；尚未闭合的是外部 production provider 长时运行和真实 domain soak。
 
-当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。它现在只保留为 legacy/optional provider、显式 executor/proof lane、diagnostic/provenance 或可选安装模块；Temporal-backed provider 已是 production online runtime 的必需 substrate，真实 production soak 仍单独验收。
+当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。`hermes_agent` 仅作为显式非默认 executor adapter/backend 保留。
+
+Hermes provider / Gateway / readiness / compat 面只保留为历史 provenance、诊断语料或负向 guard。Temporal-backed provider 已是 production online runtime 的必需 substrate，真实 production soak 仍单独验收。
 `OPL Runtime Manager` 可以在已配置 family runtime provider 之上适配 product-managed runtime operations，但不能写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
 Rust native helper / index-only 工作可以支持 native assistance 与 indexed discovery，但不能成为 domain execution 或 truth 的 owner。
 

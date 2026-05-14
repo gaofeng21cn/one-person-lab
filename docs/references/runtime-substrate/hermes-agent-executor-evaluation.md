@@ -1,6 +1,8 @@
 # Hermes-Agent 备选执行器评估
 
-状态锚点：`2026-04-13`
+状态锚点：`2026-05-14`
+
+当前口径：`hermes_agent` 已是 OPL family canonical executor backend 之一，但只作为显式非默认 adapter/backend 使用。它和 `claude_code` 一样只承诺接口连接、生命周期、receipt、audit 与 fail-closed；不承诺行为、质量、工具语义或 resume 与 `Codex CLI` 等价。本文的评估规则用于守住这个非等价边界。旧 Hermes provider / Gateway / readiness / compatibility surface 已退出 active/default path，不属于本文要保留的执行器接口。
 
 ## 目的
 
@@ -19,8 +21,9 @@
 - family 默认 concrete executor 仍然是 `Codex CLI`
 - family 默认执行模式仍然是 `autonomous`
 - 默认模型与默认 reasoning effort / thinking 仍继承本机 `Codex` 默认配置
-- `Hermes-Agent` 在当前家族里首先承担 runtime substrate / orchestration，而不是自动等于默认执行器
-- `Hermes-Agent` 备选执行路线完成评估前，任何 Hermes 路线都只允许写成 `experimental`、`migration_bridge` 或 `regression_oracle`
+- `hermes_agent` 是显式非默认 canonical executor adapter/backend，不是默认执行器
+- `Hermes-Agent` provider / Gateway / readiness / compatibility 旧面已经退役，不能被写成当前 runtime substrate 或兼容 fallback
+- `hermes_agent` 执行路线只允许写成 `experimental`、`migration_bridge` 或 `regression_oracle`
 
 ## 什么样的路线算合格评估对象
 
@@ -92,7 +95,7 @@
 
 - `Codex CLI` 的 `autonomous` 模式仍是质量最稳、路径最清楚的默认 concrete executor
 - `Hermes-Agent` 的现实意义主要在多 provider 兼容性、runtime stack 一体化、以及长期备选执行器潜力
-- 评估通过后，也只代表“具备备选执行器候选资格”，不代表立刻替换 family 默认
+- 评估通过后，也只代表“显式非默认执行器接口可用且证据充分”，不代表替换 family 默认，也不代表质量与 `Codex CLI` 等价
 
 ## 推荐执行顺序
 
@@ -111,6 +114,6 @@
 
 ## 当前对应关系
 
-- 当前默认主线：`docs/references/family-executor-adapter-defaults.md`
+- 当前默认主线：`docs/references/runtime-substrate/family-executor-adapter-defaults.md`
 - 当前四仓执行器 follow-up：`docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
 - 当前顶层状态：`docs/status.md`
