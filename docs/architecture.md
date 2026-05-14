@@ -14,11 +14,11 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 当前仓库跟踪的产品链路是：
 
-`User / Codex / opl / One Person Lab App / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> configured family runtime provider when durable orchestration is needed -> selected domain capability surface -> domain runtime and deliverables`
+`User / Codex / opl / One Person Lab App / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> configured family runtime provider when durable orchestration is needed -> selected domain capability surface -> domain-owned stage pack / receipt / deliverables`
 
 显式长跑托管任务与 online management 的目标链路在这个主链路下增加 provider-backed family runtime substrate：
 
-`OPL Product Entry / One Person Lab App / CLI -> OPL Runtime Manager / family-runtime queue -> configured family runtime provider -> Domain Adapter -> selected domain capability surface -> domain runtime and deliverables`
+`OPL Product Entry / One Person Lab App / CLI -> OPL stage-led family runtime provider -> thin Domain Adapter -> selected domain capability surface -> domain-owned stage pack / receipt / deliverables`
 
 这里的核心点是：
 
@@ -29,7 +29,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与基于开源 AionUI 定制的 `opl-aion-shell` 都消费同一套 runtime truth
-- `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel
+- OPL hosted integration 是 OPL 产品级管理/诊断/投影层；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel
 - family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只服务 dev/CI/offline diagnostic baseline，`hermes_agent` 是显式非默认 executor adapter/backend；旧 Hermes provider / Gateway 语料只作为 proof、provenance、diagnostic、fixture 或负向 guard 读取，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
 - `opl install` 默认安装或复用 Codex、family runtime provider、MAS/MAG/RCA domain modules 与推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
@@ -40,6 +40,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `Codex CLI` 是默认且第一公民的 concrete executor；family runtime provider 负责 stage-attempt durability / wakeup / approval / retry / query transport，具体 executor 仍由 OPL / domain stage 显式选择
 - `OPL Product Entry` 的普通 ask/chat/resume 路径只使用 Codex-default executor；runtime status 不再暴露 Hermes / Gateway diagnostics，显式非默认 executor 只通过独立 receipt / audit surface 进入
 - `MAS`、`MAG`、`RCA` 等 Foundry Agents 继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface；它们以 OPL-compatible package / repo 接入，而不是内嵌一份 OPL runtime
+- Foundry Agent repo 的目标形态是 `Domain Knowledge / Authority Pack + thin adapter`：声明 stage、prompt/skill、knowledge refs、quality gate、transition spec、projection builder、receipt schema 和 artifact locator；不维护 parallel generic scheduler、queue、attempt ledger、state-machine runner、workspace lifecycle、artifact lifecycle、memory locator 或 App/workbench runtime
 - `One Person Lab App` 对这些 Agent 来说是可选前端；同一个 Agent 可以通过 direct Codex app skill、自己的 CLI、或 OPL Framework hosted/projection path 运行
 - MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，包括 `mas_opl_runtime_workbench_projection` 的 App drilldown/read-only workbench 投影，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
 
@@ -86,7 +87,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - 显式 domain contract dispatch
 - domain capability surface discovery
 
-### 2.5 OPL Runtime Manager / Family Runtime Bridge
+### 2.5 OPL Stage-Led Family Runtime Provider / Hosted Integration
 
 负责：
 
@@ -104,16 +105,16 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - Rust helper 的 package lifecycle：`native:build`、`native:doctor`、`native:repair`、`native:test`，以及随 npm package 分发的 Cargo workspace 与 helper 脚本
 - Rust helper 的 prebuild/cache lifecycle：优先消费匹配平台与 crate version 的 prebuild manifest，把 binaries 安装进 `OPL_STATE_DIR` cache；缺失或无效时回到本地 Cargo build
 - 高频文件/状态索引的 contract-first catalog；workspace 扫描、session ledger 索引、artifact manifest、large JSON 校验与目录 snapshot 优先由 Rust helper 承担
-- 当 Rust helper 可发现时，`OPL Runtime Manager` 通过 JSON stdio 调用 native doctor、state indexer、artifact indexer 与 runtime watch，并把一次聚合 projection 持久化到 OPL 本地 state；该 projection 带 TTL、diff history、failure log、last-success snapshot 与 freshness 判断，只做索引与诊断加速，不替代 domain 仓的 durable truth
+- 当 Rust helper 可发现时，OPL hosted integration 通过 JSON stdio 调用 native doctor、state indexer、artifact indexer 与 runtime watch，并把一次聚合 projection 持久化到 OPL 本地 state；该 projection 带 TTL、diff history、failure log、last-success snapshot 与 freshness 判断，只做索引与诊断加速，不替代 domain 仓的 durable truth
 - native family smoke 明确分成本地真实 workspace 模式与 CI fixture 模式；两者都只覆盖 MAS/MAG，不进入 RCA 当前暂缓的 TS/Python 重分层线
 
 不负责：
 
-- domain scheduler kernel
-- domain session / memory store
+- domain truth / quality verdict / artifact authority
+- domain memory body 或 memory accept/reject decision
 - domain truth
 - concrete executor
-- domain wakeup / supervision scheduler
+- domain stage pack 内部专家判断
 - provider system-service lifecycle implementation beyond invoking supported install/repair/status commands
 - 私有 fork / vendor 一份 `Hermes-Agent` 或把 Temporal/provider runtime history 写成 domain truth owner
 
@@ -137,7 +138,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - 稳定 capability surface（CLI / 本地程序 / 脚本 / contract）
 - 领域逻辑
 - 领域规则
-- 领域运行时
+- domain transition spec、owner receipt、typed blocker 和 projection builder
 - 领域交付物
 
 在当前定位下：
@@ -146,7 +147,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `direct entry / product entry` 是各个 domain agent 自己的轻量独立前门
 - `domain harness / controller` 继续保留为仓内边界层与执行层语言，不再作为仓库对外第一身份
 - `OPL` 当前通过 repo-owned `domain agent entry spec` 消费各 domain agent 的基础入口真相，而不再只依赖顶层硬编码蓝图
-- `MAS` 的当前接入单元是单一 domain app skill 加 repo-owned projection surfaces；`OPL` 消费这些 surface 做统一发现、显示和路由，不替代 MAS 的 runtime/controller/publication authority
+- `MAS` 的当前接入单元是单一 domain app skill 加 repo-owned projection surfaces；`OPL` 消费这些 surface 做统一发现、显示和路由，不替代 MAS 的 controller/publication authority、domain transition semantics 或 owner receipt authority
 - `mas_opl_runtime_workbench_projection` 是 MAS 输出给 OPL App 的 read-only study workbench 投影；OPL runtime snapshot 可以把它映射为 study drilldown、links、terminal read-only status 和 action transport metadata，但 action receipt、terminal attach owner、study truth、publication verdict、quality verdict 与 artifact authority 继续由 MAS 持有
 - `MDS` 不再作为 MAS 默认运行依赖参与 OPL 安装；MAS 只可把它显式暴露为 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle companion，不作为这一层的 OPL 顶层 domain agent
 
@@ -223,8 +224,8 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 ## OPL 与 Domain Agents 的关系
 
-- `OPL` 不持有领域运行时所有权
-- `OPL` 不替代领域智能体自己的逻辑
+- `OPL` 持有通用开发与运行框架：stage attempt lifecycle、provider-backed runtime、queue/wakeup、state-machine runner、human gate、workspace/artifact/memory locator、operator projection 和 App/workbench shell
+- `OPL` 不替代领域智能体自己的逻辑、domain transition semantics、quality verdict、artifact authority、memory body 或 owner receipt authority
 - `OPL` 负责 Codex-default session/runtime、activation layer、shared modules/contracts/indexes、统一入口与 projection surface
 - `OPL` 负责 stage-led family framework 支撑：stage descriptor、handoff、queue、wakeup、retry、approval、trace、projection 和 parity；domain agent 负责 stage pack、prompt/skill、quality gate、truth reducer 和交付 authority
 - `MAS`、`MAG`、`RCA` 作为独立 `domain agent`，可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用

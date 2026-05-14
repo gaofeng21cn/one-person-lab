@@ -12,6 +12,10 @@ Date: `2026-05-13`
 
 `MAS`、`MAG`、`RCA` 以及未来 Patent、Award、Thesis、Review 等 `Foundry Agents` 是基于 OPL Framework 开发的垂类智能体。它们持有领域知识、stage 语义、领域真相、质量 verdict 与交付 authority；它们复用 OPL 的运行外围能力，不重复维护 scheduler、queue、attempt ledger、workspace lifecycle、artifact index、memory locator、resume token、operator projection 这类通用模块。
 
+换句话说，理想 Foundry Agent 是 `Domain Knowledge / Authority Pack + thin adapter`，不是自带一套运行平台。开发、运行、托管、恢复、排队、唤醒、状态机执行、工作区生命周期、文件生命周期、App/workbench 投影和跨 domain 审计都应由 OPL Framework / One Person Lab App 提供通用承载；Foundry Agent 只声明 stage 内需要做什么、如何判断质量、谁能写 truth、哪些 artifact 可变更、以及完成或阻塞时返回什么 receipt。
+
+状态机也按这个边界拆分：OPL Framework 提供 generic state-machine engine，包括 transition schema、幂等 tick、attempt/retry/dead-letter、human gate transport、dispatch receipt、operator projection 和 transition matrix runner；Foundry Agents 提供 domain transition table / spec。OPL 可以验证和执行 domain 声明的 transition spec，但不能把 MAS 的 publication gate、MAG 的 fundability gate 或 RCA 的 visual/export gate 解释成 OPL 自己的 ready verdict。
+
 `One Person Lab App` 是面向普通用户的桌面端或 Web 端工作台。它消费 OPL Framework 与 Foundry Agents 的投影，让用户看见任务、阶段、进度、阻塞、人类确认点、交付物和下一步动作。App 不持有 domain truth，也不复制 OPL runtime 或 domain runtime。
 
 本文描述目标态，不替代当前状态判断。当前落地程度和剩余闭环以 [OPL 当前状态](../../status.md)、[OPL 架构](../../architecture.md)、[OPL Stage-Led Agent Framework Roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md) 与 [OPL 生产级框架闭环差距矩阵](../../active/production-framework-closure-gap-matrix.zh-CN.md) 为准。
@@ -83,6 +87,7 @@ MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry
 | 通用能力 | OPL Framework 理想职责 | Domain Agent 理想职责 |
 | --- | --- | --- |
 | Provider-backed workflow | 提供 stage attempt、workflow id、query/signal、heartbeat、retry/dead-letter、restart recovery 和 provider receipt。 | 声明 stage、entry condition、allowed task、domain closeout、owner receipt 和 forbidden writes。 |
+| State-machine runner / transition matrix | 提供 transition schema、幂等 tick、attempt/retry/dead-letter、human gate transport、dispatch receipt、operator projection 和 table-driven matrix runner。 | 声明 domain transition table、guard、owner、next work unit、domain action、fail-closed blocker、oracle fixtures 和 forbidden cross-owner writes。 |
 | Queue / human gate transport | 提供 typed queue、approval transport、resume token、human gate signal、operator action ledger 和 handoff history。 | 给出 human gate 边界、resume/stop-loss 语义、domain blocker 和下一 owner。 |
 | Workspace / source intake shell | 提供 workspace registry、source receipt、candidate/input pool、profile/call/material locator、intake handoff、missing-material attention item 和 provenance shell。 | 持有 funding/call 解释、profile 选择策略、study/grant/source truth、source readiness verdict、blocking/residual gap 和 go/no-go 或 refine 决策。 |
 | Memory locator / index / writeback transport | 提供 memory descriptor discovery、locator/index、freshness、body-free inventory、consumed refs、writeback proposal/ref transport 和 App grouping。 | 持有 memory body、领域检索策略、接受/拒绝规则、writeback receipt、route/quality judgment。 |
@@ -138,9 +143,11 @@ OPL 负责 stage 的发现、排队、唤醒、恢复、投影和审计。Stage 
 
 每个 Foundry Agent 不需要重复维护：
 
+- 独立 agent runtime framework 或通用运行平台。
 - 长时间在线 runtime substrate。
 - 通用 queue / retry / dead-letter / human gate transport。
 - stage attempt ledger。
+- generic state-machine runner / transition matrix runner。
 - framework-level state cache 和 operator projection。
 - workspace registry、artifact index、retention、restore proof 和 migration ledger 的通用实现。
 - generic memory service、memory locator/index、body-free inventory projection 和 writeback transport。
@@ -282,6 +289,7 @@ App 中的按钮和动作必须路由到明确 owner：
 OPL 与 Foundry Agents 达到理想生产级状态时，应满足以下门槛：
 
 - OPL production provider 长期 ready：service、worker、query/signal、retry/dead-letter、restart recovery、operator repair 都有持续证据。
+- OPL generic state-machine runner 可消费 MAS/MAG/RCA 声明的 domain transition table / spec，并用 matrix runner 验证输入状态组合到 route/work-unit/action/receipt 的转换；OPL 不持有 domain gate 语义。
 - 每个 admitted Agent 同时通过 direct Codex skill path 与 OPL-hosted path，并留下语义等价和 no-regression evidence。
 - 每个 stage attempt 都有 typed closeout、checkpoint、owner receipt、blocked reason 或 human gate receipt。
 - OPL 只持 refs、locator、metadata 和 projection；domain truth、quality verdict 和 artifact authority 留在 domain owner。
