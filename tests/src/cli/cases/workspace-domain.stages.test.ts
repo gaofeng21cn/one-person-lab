@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -643,6 +645,103 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       'docs/status.md',
     ]);
     assert.equal(rca.family_agent.artifact_boundary.artifact_roots_are_locators, true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain-agent skeleton read model closes provider residency gap only with fresh proven Temporal proof', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-provider-gap-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const manifests = [
+    fixtures.medautoscience,
+    { product_entry_manifest: fixtures.medautogrant },
+    fixtures.redcube,
+  ];
+
+  try {
+    runCli(['family-runtime', 'events', 'export'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_proof_current',
+    'temporal_residency_proof',
+    'test',
+    JSON.stringify({
+      provider_kind: 'temporal',
+      proof_mode: 'external_temporal_service_worker',
+      closeout_status: 'production_residency_proven',
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_proof',
+        receipt_status: 'proven',
+        provider_kind: 'temporal'
+      }
+    }),
+    new Date().toISOString()
+  );
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const [index, manifest] of manifests.entries()) {
+      const project = ['medautoscience', 'medautogrant', 'redcube'][index];
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        project,
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(manifest),
+      ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    }
+
+    const list = runCli(['agents', 'list'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const mas = runCli(['agents', 'inspect', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(list.family_agents.summary.provider_temporal_residency_gap_status, 'closed_by_fresh_proven_proof');
+    assert.equal(list.family_agents.summary.production_closure_gap_count, 12);
+    assert.deepEqual(
+      mas.family_agent.production_closure_gaps.map((gap: { gap_id: string }) => gap.gap_id),
+      [
+        'provider_hosted_domain_soak',
+        'workspace_runtime_memory_apply_receipt',
+        'physical_repo_skeleton_reorganization',
+        'legacy_surface_physical_retirement',
+      ],
+    );
+    assert.deepEqual(mas.family_agent.provider_closure_evidence, {
+      external_temporal_production_residency_proof: {
+        status: 'closed_by_fresh_proven_proof',
+        provider_kind: 'temporal',
+        proof_slo_status: 'proof_fresh',
+        latest_closeout_status: 'production_residency_proven',
+        provider_completion_is_domain_ready: false,
+      },
+    });
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

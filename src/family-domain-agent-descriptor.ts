@@ -154,6 +154,7 @@ function buildSkeletonProjection(entry: DomainManifestCatalogEntry) {
     physical_skeleton_evidence: inspection.physical_skeleton_evidence,
     production_closure_gap_count: inspection.production_closure_gaps.length,
     production_closure_gaps: inspection.production_closure_gaps,
+    provider_closure_evidence: inspection.provider_closure_evidence,
     declared_repo_source_dirs: inspection.declared_repo_source_dirs,
     missing_repo_source_dirs: inspection.missing_repo_source_dirs,
     artifact_boundary: inspection.artifact_boundary,
@@ -455,6 +456,19 @@ function findDescriptorEntry(contracts: FrameworkContracts, domain: string) {
   return entry;
 }
 
+function descriptorProviderResidencyGapStatus(descriptors: ReturnType<typeof buildDescriptor>[]) {
+  const firstStatus = descriptors
+    .map((descriptor) =>
+      optionalString(
+        descriptor.standard_domain_agent_skeleton.provider_closure_evidence
+          ?.external_temporal_production_residency_proof
+          ?.status,
+      )
+    )
+    .find((status) => status !== null);
+  return firstStatus ?? null;
+}
+
 export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
   const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const descriptors = catalog.projects.map(buildDescriptor);
@@ -490,6 +504,11 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
           descriptor.standard_domain_agent_skeleton.physical_skeleton_layout_audit.status
             === 'descriptor_aligned_physical_layout_pending'
         ).length,
+        production_closure_gap_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.standard_domain_agent_skeleton.production_closure_gaps.length,
+          0,
+        ),
+        provider_temporal_residency_gap_status: descriptorProviderResidencyGapStatus(descriptors),
       },
       descriptors,
       notes: [

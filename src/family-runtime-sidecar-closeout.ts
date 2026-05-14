@@ -161,12 +161,19 @@ function magCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
     return null;
   }
   const result = firstRecord(dispatch.result);
+  const resultReceiptRefs = firstRecord(result?.receipt_refs);
   const taskId = optionalString(dispatch.task_id);
   const action = optionalString(dispatch.action);
   const status = optionalString(dispatch.status);
+  const returnShape = optionalString(result?.return_shape);
+  const ownerReceiptRef = optionalString(resultReceiptRefs?.owner_receipt_ref);
+  const lifecycleReceiptRef = optionalString(resultReceiptRefs?.lifecycle_receipt_ref);
+  const noRegressionReceiptRef = returnShape === 'no_regression_evidence'
+    ? optionalString(result?.receipt_ref) ?? ownerReceiptRef
+    : null;
   const receiptRefs = [
     ...stringValues(dispatch.receipt_refs),
-    ...stringValues(result?.receipt_refs),
+    ...stringValues(resultReceiptRefs),
     optionalString(result?.receipt_ref),
     taskId && action ? `mag-sidecar-dispatch:${action}:${taskId}` : null,
   ].filter((entry): entry is string => Boolean(entry));
@@ -183,6 +190,7 @@ function magCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
     ?? status
     ?? action
     ?? 'mag_product_sidecar_dispatch';
+  const writesPerformed = firstRecord(result?.summary)?.writes_performed === true;
   return {
     surface_kind: 'domain_stage_closeout_packet',
     closeout_refs: receiptRefs,
@@ -200,8 +208,13 @@ function magCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
       status,
       result_surface_kind: optionalString(result?.surface_kind),
       receipt_status: optionalString(result?.receipt_status),
+      owner_receipt_ref: ownerReceiptRef,
+      lifecycle_receipt_ref: lifecycleReceiptRef,
+      no_regression_evidence_ref: noRegressionReceiptRef,
+      no_regression_evidence_observed: Boolean(noRegressionReceiptRef),
+      lifecycle_receipt_observed: Boolean(lifecycleReceiptRef),
       typed_blocker_count: typedBlockers.length,
-      writes_performed: false,
+      writes_performed: writesPerformed,
     },
     authority_boundary: {
       opl: 'closeout_transport_only',

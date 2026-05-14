@@ -14,6 +14,10 @@ import {
   stageAttemptSignalsByAttempt,
 } from './family-runtime-stage-attempt-ledger.ts';
 import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+import {
+  buildAttemptGenericProjections,
+  buildWorkbenchGenericProjections,
+} from './runtime-tray-stage-attempt-generic-projections.ts';
 import { fileSourceRef, optionalString } from './runtime-tray-snapshot-utils.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 
@@ -153,6 +157,7 @@ function attemptProjection(
   const isHumanGate = attemptHasHumanGate(row, humanGateRefs, humanGateLedger);
   const isDeadLetter = row.status === 'dead_lettered';
   const isBlocked = Boolean(row.blocked_reason);
+  const nextOwner = optionalString(latestCloseout?.next_owner) ?? optionalString(routeImpact.next_owner) ?? row.domain_id;
   const attentionFlags = [
     isHumanGate ? 'human_gate' : null,
     resumeLedger.length > 0 ? 'resume_available' : null,
@@ -160,6 +165,43 @@ function attemptProjection(
     isBlocked ? 'blocked' : null,
     rejectedWrites.length > 0 ? 'rejected_writes' : null,
   ].filter((flag): flag is string => Boolean(flag));
+  const deadLetter = row.status === 'dead_lettered'
+    ? {
+        reason: row.blocked_reason,
+        task: null,
+      }
+    : null;
+  const artifactRefs = [
+    ...closeoutRefs,
+    ...consumedRefs,
+    ...writebackReceiptRefs,
+  ];
+  const currentProviderReadiness = currentProviderReadinessProjection(providerKindForRow(row), providerReadiness);
+  const genericProjections = buildAttemptGenericProjections({
+    stage_attempt_id: row.stage_attempt_id,
+    domain_id: row.domain_id,
+    stage_id: row.stage_id,
+    next_owner: nextOwner,
+    route_impact: routeImpact,
+    workspace_locator: workspaceLocator,
+    source_fingerprint: row.source_fingerprint,
+    checkpoint_refs: checkpointRefs,
+    closeout_refs: closeoutRefs,
+    consumed_refs: consumedRefs,
+    consumed_memory_refs: consumedMemoryRefs,
+    writeback_receipt_refs: writebackReceiptRefs,
+    artifact_refs: artifactRefs,
+    rejected_writes: rejectedWrites,
+    attention_flags: attentionFlags,
+    human_gate_refs: humanGateRefs,
+    human_gate_ledger: humanGateLedger,
+    resume_ledger: resumeLedger,
+    dead_letter: deadLetter,
+    domain_ready_verdict: domainReadyVerdict,
+    controlled_apply_contract: controlledApplyContract,
+    lifecycle_primitives: lifecyclePrimitives,
+    current_provider_readiness: currentProviderReadiness,
+  });
 
   return {
     stage_attempt_id: row.stage_attempt_id,
@@ -168,6 +210,7 @@ function attemptProjection(
     stage_id: row.stage_id,
     workflow_id: row.workflow_id,
     workspace_locator: workspaceLocator,
+    source_fingerprint: row.source_fingerprint,
     workflow_status: optionalString(providerRun.provider_status) ?? row.status,
     activity_status: optionalString(activity?.activity_status),
     activity_kind: optionalString(activity?.activity_kind),
@@ -182,22 +225,20 @@ function attemptProjection(
     consumed_memory_refs: consumedMemoryRefs,
     writeback_receipt_refs: writebackReceiptRefs,
     closeout_refs: closeoutRefs,
+    artifact_refs: artifactRefs,
     closeout_receipt_status: row.closeout_receipt_status,
+    domain_ready_verdict: domainReadyVerdict,
     rejected_writes: rejectedWrites,
     route_impact: routeImpact,
-    next_owner: optionalString(latestCloseout?.next_owner) ?? optionalString(routeImpact.next_owner) ?? row.domain_id,
+    ...genericProjections,
+    next_owner: nextOwner,
     human_gate_refs: humanGateRefs,
     human_gate_ledger: humanGateLedger,
     user_instruction_ledger: userInstructionLedger,
     resume_ledger: resumeLedger,
     user_instructions: userInstructionLedger,
     resume_signals: resumeLedger,
-    dead_letter: row.status === 'dead_lettered'
-      ? {
-        reason: row.blocked_reason,
-        task: null,
-      }
-      : null,
+    dead_letter: deadLetter,
     completion_boundary: {
       provider_completion: row.status === 'completed' ? 'completed' : 'not_completed',
       domain_ready_verdict: domainReadyVerdict,
@@ -205,7 +246,7 @@ function attemptProjection(
     },
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
-    current_provider_readiness: currentProviderReadinessProjection(providerKindForRow(row), providerReadiness),
+    current_provider_readiness: currentProviderReadiness,
     filter_keys: {
       domain_id: row.domain_id,
       stage_id: row.stage_id,
@@ -348,6 +389,7 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       attention_count: attentionCounters.total,
       attention_counters: attentionCounters,
       memory_ref_counters: memoryRefCounters(attempts),
+      ...buildWorkbenchGenericProjections(attempts),
       human_gate_count: attentionCounters.human_gate_count,
       resume_count: attentionCounters.resume_count,
       dead_letter_count: attentionCounters.dead_letter_count,
@@ -381,6 +423,7 @@ const EMPTY_WORKBENCH_METADATA = {
       attempts_with_consumed_memory_refs: 0,
       attempts_with_writeback_receipt_refs: 0,
     },
+    ...buildWorkbenchGenericProjections([]),
     human_gate_count: 0,
     resume_count: 0,
     dead_letter_count: 0,
@@ -407,6 +450,15 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       provider_completion_is_domain_ready: false,
       attempts: [],
       ...EMPTY_WORKBENCH_METADATA,
+      artifact_gallery: EMPTY_WORKBENCH_METADATA.summary.artifact_gallery,
+      route_decision_graph: EMPTY_WORKBENCH_METADATA.summary.route_decision_graph,
+      review_repair_queue: EMPTY_WORKBENCH_METADATA.summary.review_repair_queue,
+      quality_readiness: EMPTY_WORKBENCH_METADATA.summary.quality_readiness,
+      observability_slo: EMPTY_WORKBENCH_METADATA.summary.observability_slo,
+      workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
+      memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
+      package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
+      action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
@@ -437,6 +489,15 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       availability: 'available',
       provider_completion_is_domain_ready: false,
       ...metadata,
+      artifact_gallery: metadata.summary.artifact_gallery,
+      route_decision_graph: metadata.summary.route_decision_graph,
+      review_repair_queue: metadata.summary.review_repair_queue,
+      quality_readiness: metadata.summary.quality_readiness,
+      observability_slo: metadata.summary.observability_slo,
+      workspace_source_intake: metadata.summary.workspace_source_intake,
+      memory_locator_index: metadata.summary.memory_locator_index,
+      package_export_lifecycle: metadata.summary.package_export_lifecycle,
+      action_routing: metadata.summary.action_routing,
       attempts,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
@@ -451,6 +512,15 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       provider_completion_is_domain_ready: false,
       attempts: [],
       ...EMPTY_WORKBENCH_METADATA,
+      artifact_gallery: EMPTY_WORKBENCH_METADATA.summary.artifact_gallery,
+      route_decision_graph: EMPTY_WORKBENCH_METADATA.summary.route_decision_graph,
+      review_repair_queue: EMPTY_WORKBENCH_METADATA.summary.review_repair_queue,
+      quality_readiness: EMPTY_WORKBENCH_METADATA.summary.quality_readiness,
+      observability_slo: EMPTY_WORKBENCH_METADATA.summary.observability_slo,
+      workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
+      memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
+      package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
+      action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',

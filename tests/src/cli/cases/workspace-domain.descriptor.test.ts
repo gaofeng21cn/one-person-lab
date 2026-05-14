@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -58,6 +60,45 @@ function withStandardSkeleton(payload: JsonRecord, agentId: string) {
       'memory_content_body',
     ],
   });
+}
+
+function insertFreshProviderProof(stateRoot: string) {
+  runCli(['family-runtime', 'events', 'export'], {
+    OPL_STATE_DIR: stateRoot,
+  });
+  const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+  const result = spawnSync(process.execPath, [
+    '--experimental-strip-types',
+    '-e',
+    `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_proof_descriptor_current',
+    'temporal_residency_proof',
+    'test',
+    JSON.stringify({
+      provider_kind: 'temporal',
+      proof_mode: 'external_temporal_service_worker',
+      closeout_status: 'production_residency_proven',
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_proof',
+        receipt_status: 'proven',
+        provider_kind: 'temporal'
+      }
+    }),
+    new Date().toISOString()
+  );
+db.close();`,
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NODE_NO_WARNINGS: '1',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr);
 }
 
 function withActionCatalog(payload: JsonRecord, targetDomainId: string, owner: string, actionId: string) {
@@ -260,6 +301,8 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
   };
 
   try {
+    insertFreshProviderProof(stateRoot);
+
     for (const [project, manifest] of Object.entries(manifests)) {
       runCli([
         'workspace',
@@ -284,6 +327,8 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.action_catalog_resolved_count, 3);
     assert.equal(list.family_agent_descriptors.summary.physical_skeleton_evidence_observed_count, 3);
     assert.equal(list.family_agent_descriptors.summary.physical_skeleton_audit_pending_count, 0);
+    assert.equal(list.family_agent_descriptors.summary.provider_temporal_residency_gap_status, 'closed_by_fresh_proven_proof');
+    assert.equal(list.family_agent_descriptors.summary.production_closure_gap_count, 12);
 
     const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -303,6 +348,16 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         gap.gap_id === 'physical_repo_skeleton_reorganization'
       ).projection_status,
       'evidence_refs_observed',
+    );
+    assert.deepEqual(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.provider_closure_evidence.external_temporal_production_residency_proof,
+      {
+        status: 'closed_by_fresh_proven_proof',
+        provider_kind: 'temporal',
+        proof_slo_status: 'proof_fresh',
+        latest_closeout_status: 'production_residency_proven',
+        provider_completion_is_domain_ready: false,
+      },
     );
     assert.equal(mas.family_agent_descriptor.family_action_catalog.action_count, 1);
     assert.equal(mas.family_agent_descriptor.family_action_catalog.parity.status, 'aligned');

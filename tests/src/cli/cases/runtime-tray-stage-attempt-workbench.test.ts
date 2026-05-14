@@ -18,11 +18,13 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       '--provider',
       'local_sqlite',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts","restore_refs":["restore:mas-runtime-loop"]}',
+      '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts","profile_ref":"profile:nfpitnet","source_refs":["source:dataset"],"material_refs":["material:table1"],"missing_material_refs":["material:irb"],"restore_refs":["restore:mas-runtime-loop"]}',
       '--task',
       'task-runtime-snapshot-attempt',
       '--checkpoint-ref',
       'checkpoint:analysis-seed',
+      '--source-fingerprint',
+      'sha256:analysis-source',
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -38,12 +40,40 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       '--checkpoint-ref',
       'checkpoint:analysis-midpoint',
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair"}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:analysis-currentness","breached_slo_ids":["ai_reviewer_currentness"],"repair_command":"medautosci sidecar dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"],"external_submission_status_ref":"portal:manual-boundary"}}',
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_DISABLE_HERMES_ONLINE: '1',
     });
+    const nativeIndexDir = path.join(stateRoot, 'runtime-manager');
+    fs.mkdirSync(nativeIndexDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(nativeIndexDir, 'native-state-index.json'),
+      `${JSON.stringify({
+        surface_kind: 'opl_runtime_manager_native_state_projection',
+        version: 'v1',
+        generated_at: '2026-05-14T00:00:00.000Z',
+        lifecycle: {
+          expires_at: '2099-01-01T00:00:00.000Z',
+        },
+        native_indexes: {
+          state_index: {
+            helper_id: 'opl-state-indexer',
+            request_id: 'runtime-manager-state-index',
+            status: 'ok',
+            helper_version: '0.1.0',
+            binary_version: '0.1.0',
+            crate_name: 'opl-native-helper',
+            crate_version: '0.1.0',
+            result: {
+              surface_kind: 'native_state_index',
+            },
+            errors: [],
+          },
+        },
+      }, null, 2)}\n`,
+    );
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
@@ -60,6 +90,76 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.summary.by_status.completed, 1);
     assert.equal(snapshot.stage_attempt_workbench.summary.memory_ref_counters.consumed_memory_ref_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.summary.memory_ref_counters.writeback_receipt_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.surface_kind, 'opl_artifact_gallery_projection');
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.gallery_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.renderer_role, 'generic_artifact_gallery_handoff_shell');
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.attempt_with_artifact_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.item_count, 3);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.authority_boundary.can_read_artifact_body, false);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.authority_boundary.can_mutate_artifact, false);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.authority_boundary.can_authorize_export_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.surface_kind, 'opl_route_decision_graph_projection');
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.graph_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.renderer_role, 'generic_route_decision_graph_shell');
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.summary.route_evidence_attempt_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.summary.route_decision_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.authority_boundary.can_infer_route_decision, false);
+    assert.equal(snapshot.stage_attempt_workbench.route_decision_graph.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.surface_kind, 'opl_review_repair_queue_projection');
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.queue_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.transport_role, 'generic_review_repair_transport');
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.summary.item_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.summary.rejected_write_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.authority_boundary.can_decide_repair, false);
+    assert.equal(snapshot.stage_attempt_workbench.review_repair_queue.authority_boundary.can_authorize_review_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.surface_kind, 'opl_quality_readiness_projection');
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.projection_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.renderer_role, 'generic_quality_readiness_projection_shell');
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.summary.attempt_with_domain_readiness_verdict_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.summary.quality_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.summary.readiness_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.quality_readiness.authority_boundary.can_authorize_submission_readiness, false);
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.surface_kind, 'opl_observability_slo_projection');
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.projection_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.transport_role, 'generic_observability_slo_repair_command_projection');
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.summary.attempt_with_slo_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.summary.repair_command_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.summary.breached_slo_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.authority_boundary.can_execute_repair_command, false);
+    assert.equal(snapshot.stage_attempt_workbench.observability_slo.authority_boundary.can_authorize_slo_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.surface_kind, 'opl_workspace_source_intake_projection');
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.projection_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.shell_role, 'generic_workspace_source_intake_shell');
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.summary.attempt_with_workspace_root_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.summary.source_fingerprint_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.summary.missing_material_attention_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.authority_boundary.can_authorize_source_readiness, false);
+    assert.equal(snapshot.stage_attempt_workbench.workspace_source_intake.authority_boundary.can_select_domain_profile, false);
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.surface_kind, 'opl_memory_locator_index_projection');
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.projection_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.index_role, 'generic_memory_locator_index_shell');
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.summary.consumed_memory_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.summary.writeback_receipt_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.summary.rejected_write_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.authority_boundary.can_read_memory_body, false);
+    assert.equal(snapshot.stage_attempt_workbench.memory_locator_index.authority_boundary.can_accept_or_reject_writeback, false);
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.surface_kind, 'opl_package_export_lifecycle_projection');
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.projection_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.shell_role, 'generic_package_export_lifecycle_shell');
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.summary.package_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.summary.export_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.summary.gap_report_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.summary.handoff_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.authority_boundary.can_authorize_package_readiness, false);
+    assert.equal(snapshot.stage_attempt_workbench.package_export_lifecycle.authority_boundary.can_authorize_export_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.surface_kind, 'opl_operator_action_routing_projection');
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.routing_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.attempt_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.action_count, 12);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.stage_attempt_workbench.groups.by_domain.medautoscience.total, 1);
     assert.deepEqual(snapshot.stage_attempt_workbench.filter_metadata.group_keys, ['domain_id', 'stage_id', 'status']);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].provider_kind, 'local_sqlite');
@@ -79,12 +179,83 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       'memory-writeback:receipt-1',
     ]);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].lifecycle_primitives.restore_proof.opl_cleanup_allowed, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].artifact_gallery.gallery_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].artifact_gallery.summary.item_count, 3);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].artifact_gallery.summary.content_policy, 'locator_only_no_artifact_content');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].artifact_gallery.items[0].handoff_target, `opl family-runtime attempt query ${attempt.family_runtime_stage_attempt.attempt.stage_attempt_id}`);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].artifact_gallery.authority_boundary.can_read_artifact_body, false);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].controlled_apply_contract.apply_status, 'no_controlled_apply_request');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].rejected_writes[0].reason, 'domain_truth_write_forbidden');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].route_impact.decision, 'bounded_repair');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].route_decision_graph.graph_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].route_decision_graph.summary.route_decision_ref_observed, true);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].route_decision_graph.summary.domain_ref_count, 4);
+    assert.equal(
+      snapshot.stage_attempt_workbench.attempts[0].route_decision_graph.nodes.some((node: { node_kind: string }) =>
+        node.node_kind === 'domain_route_decision_ref'
+      ),
+      true,
+    );
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].route_decision_graph.authority_boundary.can_write_domain_truth, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].review_repair_queue.queue_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].review_repair_queue.summary.rejected_write_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].review_repair_queue.items[0].repair_target, `opl family-runtime attempt query ${attempt.family_runtime_stage_attempt.attempt.stage_attempt_id}`);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].review_repair_queue.authority_boundary.can_write_domain_truth, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].quality_readiness.projection_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].quality_readiness.domain_ready_verdict, 'domain_gate_pending');
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].quality_readiness.quality_refs, ['publication_eval/latest.json']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].quality_readiness.readiness_refs, ['controller_decisions/latest.json']);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].quality_readiness.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.projection_scope, 'stage_attempt');
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].observability_slo.slo_refs, ['slo:analysis-currentness']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].observability_slo.breached_slo_ids, ['ai_reviewer_currentness']);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.repair_commands[0].command, 'medautosci sidecar dispatch --task <task.json> --format json');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.authority_boundary.can_execute_repair_command, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.projection_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.source_fingerprint, 'sha256:analysis-source');
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.source_refs, ['source:dataset']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.material_refs, ['material:table1']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.missing_material_attention_refs, ['material:irb']);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.authority_boundary.can_authorize_source_readiness, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].memory_locator_index.projection_scope, 'stage_attempt');
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].memory_locator_index.consumed_memory_refs, ['memory:route-policy']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].memory_locator_index.writeback_receipt_refs, ['memory-writeback:receipt-1']);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].memory_locator_index.rejected_writes[0].reason, 'domain_truth_write_forbidden');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].memory_locator_index.authority_boundary.can_read_memory_body, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.projection_scope, 'stage_attempt');
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.package_refs, ['package:submission-minimal']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.export_refs, ['export:current-package']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.gap_report_refs, ['gap:package-readiness']);
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.handoff_refs, ['handoff:manual-submission']);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.external_submission_status_ref, 'portal:manual-boundary');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.authority_boundary.can_authorize_export_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.routing_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.summary.action_count, 12);
+    assert.equal(
+      snapshot.stage_attempt_workbench.attempts[0].action_routing.actions.some((action: { action_kind: string }) =>
+        action.action_kind === 'projection_drilldown:artifact_gallery'
+      ),
+      true,
+    );
+    assert.equal(
+      snapshot.stage_attempt_workbench.attempts[0].action_routing.actions.some((action: { route_target_kind: string; command_or_surface_ref: string }) =>
+        action.route_target_kind === 'domain_sidecar' &&
+        action.command_or_surface_ref === 'medautosci sidecar dispatch --task <task.json> --format json'
+      ),
+      true,
+    );
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].filter_keys.domain_id, 'medautoscience');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].filter_keys.has_consumed_memory_refs, true);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].filter_keys.has_writeback_receipt_refs, true);
+    assert.equal(snapshot.native_helper_execution_envelope.surface_kind, 'opl_native_helper_execution_envelope_projection');
+    assert.equal(snapshot.native_helper_execution_envelope.envelope_scope, 'runtime_snapshot');
+    assert.equal(snapshot.native_helper_execution_envelope.availability, 'native_execution_index_observed');
+    assert.equal(snapshot.native_helper_execution_envelope.execution_policy, 'read_existing_native_index_only_no_helper_execution');
+    assert.equal(snapshot.native_helper_execution_envelope.helper_indexes[0].helper_id, 'opl-state-indexer');
+    assert.equal(snapshot.native_helper_execution_envelope.helper_indexes[0].result_surface_kind, 'native_state_index');
+    assert.equal(snapshot.native_helper_execution_envelope.authority_boundary.can_execute_helper_without_operator, false);
+    assert.equal(snapshot.native_helper_execution_envelope.authority_boundary.can_mutate_domain_artifact, false);
     const attemptItem = snapshot.attention_items.find((item: { item_id: string }) =>
       item.item_id === `opl:stage-attempt:${attempt.family_runtime_stage_attempt.attempt.stage_attempt_id}`
     );
@@ -99,6 +270,9 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.deepEqual(attemptItem.stage_attempt_workbench.writeback_receipt_refs, ['memory-writeback:receipt-1']);
     assert.equal(attemptItem.stage_attempt_workbench.lifecycle_primitives.artifact_locator_index.content_policy, 'locator_only_no_artifact_content');
     assert.equal(attemptItem.stage_attempt_workbench.lifecycle_primitives.restore_proof.opl_cleanup_allowed, false);
+    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.renderer_role, 'generic_artifact_gallery_handoff_shell');
+    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.summary.content_policy, 'locator_only_no_artifact_content');
+    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.authority_boundary.can_mutate_artifact, false);
     assert.equal(
       attemptItem.stage_attempt_workbench.lifecycle_primitives.authority_boundary.domain,
       'artifact_content_retention_restore_authority',
@@ -108,6 +282,25 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       false,
     );
     assert.equal(attemptItem.stage_attempt_workbench.rejected_writes[0].reason, 'domain_truth_write_forbidden');
+    assert.equal(attemptItem.stage_attempt_workbench.route_decision_graph.renderer_role, 'generic_route_decision_graph_shell');
+    assert.equal(attemptItem.stage_attempt_workbench.route_decision_graph.summary.route_decision_ref_observed, true);
+    assert.equal(attemptItem.stage_attempt_workbench.route_decision_graph.authority_boundary.can_infer_route_decision, false);
+    assert.equal(attemptItem.stage_attempt_workbench.review_repair_queue.transport_role, 'generic_review_repair_transport');
+    assert.equal(attemptItem.stage_attempt_workbench.review_repair_queue.summary.rejected_write_count, 1);
+    assert.equal(attemptItem.stage_attempt_workbench.review_repair_queue.authority_boundary.can_decide_repair, false);
+    assert.equal(attemptItem.stage_attempt_workbench.quality_readiness.renderer_role, 'generic_quality_readiness_projection_shell');
+    assert.equal(attemptItem.stage_attempt_workbench.quality_readiness.authority_boundary.can_authorize_submission_readiness, false);
+    assert.equal(attemptItem.stage_attempt_workbench.observability_slo.transport_role, 'generic_observability_slo_repair_command_projection');
+    assert.equal(attemptItem.stage_attempt_workbench.observability_slo.authority_boundary.can_execute_repair_command, false);
+    assert.equal(attemptItem.stage_attempt_workbench.workspace_source_intake.shell_role, 'generic_workspace_source_intake_shell');
+    assert.equal(attemptItem.stage_attempt_workbench.workspace_source_intake.authority_boundary.can_select_domain_profile, false);
+    assert.equal(attemptItem.stage_attempt_workbench.memory_locator_index.index_role, 'generic_memory_locator_index_shell');
+    assert.equal(attemptItem.stage_attempt_workbench.memory_locator_index.authority_boundary.can_accept_or_reject_writeback, false);
+    assert.equal(attemptItem.stage_attempt_workbench.package_export_lifecycle.shell_role, 'generic_package_export_lifecycle_shell');
+    assert.equal(attemptItem.stage_attempt_workbench.package_export_lifecycle.authority_boundary.can_authorize_package_readiness, false);
+    assert.equal(attemptItem.stage_attempt_workbench.action_routing.routing_scope, 'stage_attempt');
+    assert.equal(attemptItem.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
+    assert.equal(attemptItem.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(attemptItem.stage_attempt_workbench.authority_boundary.opl_writes_memory_body, false);
     assert.equal(
       attemptItem.stage_attempt_workbench.authority_boundary.provider_completion_is_domain_ready,
@@ -560,6 +753,30 @@ db.close();`,
     assert.equal(workbench.summary.memory_ref_counters.writeback_receipt_ref_count, 1);
     assert.equal(workbench.summary.memory_ref_counters.attempts_with_consumed_memory_refs, 1);
     assert.equal(workbench.summary.memory_ref_counters.attempts_with_writeback_receipt_refs, 1);
+    assert.equal(workbench.artifact_gallery.gallery_scope, 'stage_attempt_workbench');
+    assert.equal(workbench.artifact_gallery.summary.attempt_count, 3);
+    assert.equal(workbench.artifact_gallery.summary.attempt_with_artifact_ref_count, 1);
+    assert.equal(workbench.artifact_gallery.summary.item_count, 2);
+    assert.equal(workbench.artifact_gallery.authority_boundary.can_authorize_export_verdict, false);
+    assert.equal(workbench.route_decision_graph.graph_scope, 'stage_attempt_workbench');
+    assert.equal(workbench.route_decision_graph.summary.attempt_count, 3);
+    assert.equal(workbench.route_decision_graph.summary.route_evidence_attempt_count, 1);
+    assert.equal(workbench.route_decision_graph.summary.route_decision_ref_count, 0);
+    assert.equal(workbench.route_decision_graph.authority_boundary.can_write_domain_truth, false);
+    assert.equal(workbench.review_repair_queue.queue_scope, 'stage_attempt_workbench');
+    assert.equal(workbench.review_repair_queue.summary.attempt_count, 3);
+    assert.equal(workbench.review_repair_queue.summary.attempt_with_queue_item_count, 2);
+    assert.equal(workbench.review_repair_queue.summary.human_gate_count, 1);
+    assert.equal(workbench.review_repair_queue.summary.dead_letter_count, 1);
+    assert.equal(workbench.review_repair_queue.authority_boundary.can_authorize_review_verdict, false);
+    assert.equal(workbench.action_routing.routing_scope, 'stage_attempt_workbench');
+    assert.equal(workbench.action_routing.summary.attempt_count, 3);
+    assert.equal(workbench.action_routing.summary.opl_cli_route_count, 3);
+    assert.equal(workbench.action_routing.summary.app_surface_route_count, 27);
+    assert.equal(workbench.action_routing.summary.provider_signal_route_count, 2);
+    assert.equal(workbench.action_routing.summary.domain_sidecar_route_count, 3);
+    assert.equal(workbench.action_routing.authority_boundary.can_execute_domain_action, false);
+    assert.equal(workbench.action_routing.authority_boundary.can_execute_provider_signal, false);
     assert.equal(workbench.groups.by_domain.medautoscience.total, 1);
     assert.equal(workbench.groups.by_domain.medautoscience.memory_ref_counters.consumed_memory_ref_count, 2);
     assert.equal(workbench.groups.by_domain.redcube.human_gate_count, 1);
@@ -577,10 +794,13 @@ db.close();`,
     assert.equal(gated.user_instruction_ledger[0].payload.instruction_ref, 'user:review-note');
     assert.equal(gated.resume_ledger[0].payload.resume_token, 'resume:review');
     assert.deepEqual(gated.attention_flags, ['human_gate', 'resume_available']);
+    assert.equal(gated.review_repair_queue.summary.human_gate_count, 1);
+    assert.deepEqual(gated.review_repair_queue.items[0].human_gate_refs, ['gate:review']);
     assert.equal(gated.filter_keys.human_gate, true);
     assert.equal(gated.filter_keys.resume_available, true);
     assert.equal(deadLetter.dead_letter.reason, 'retry_budget_exhausted');
     assert.deepEqual(deadLetter.attention_flags, ['dead_lettered', 'blocked']);
+    assert.equal(deadLetter.review_repair_queue.summary.dead_letter_count, 1);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

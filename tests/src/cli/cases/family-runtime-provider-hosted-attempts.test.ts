@@ -368,3 +368,95 @@ PY
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime maps MAG lifecycle receipt blockers into task-bound controlled attempts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mag-lifecycle-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+assert task["task_kind"] == "lifecycle/receipt"
+assert task["action"] == "lifecycle/receipt"
+print(json.dumps({
+    "ok": True,
+    "command": "product-sidecar-dispatch",
+    "sidecar_dispatch": {
+        "surface_kind": "mag_product_sidecar_dispatch",
+        "task_id": task["task_id"],
+        "action": task["action"],
+        "status": "completed",
+        "target_domain_id": "medautogrant",
+        "result": {
+            "surface_kind": "sidecar_lifecycle_receipt_result",
+            "return_shape": "typed_blocker",
+            "receipt_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json",
+            "receipt_refs": {
+                "lifecycle_receipt_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json",
+                "owner_receipt_contract_ref": "/product_entry_manifest/owner_receipt_contract",
+                "lifecycle_guarded_apply_proof_ref": "/product_entry_manifest/lifecycle_guarded_apply_proof",
+                "source_ref": "opl-lifecycle://cleanup/1",
+                "opl_consumes_receipt_ref_only": True
+            },
+            "source_refs": [
+                "/product_entry_manifest/lifecycle_guarded_apply_proof",
+                "/product_entry_manifest/owner_receipt_contract"
+            ],
+            "typed_blocker": {
+                "blocker_kind": "mag_lifecycle_owner_receipt_required",
+                "owner": "med-autogrant",
+                "receipt_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json"
+            },
+            "lifecycle_receipt_evidence": {
+                "operation": "cleanup",
+                "receipt_shape": "typed_blocker",
+                "receipt_instance_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json"
+            },
+            "write_policy": "runtime_receipt_instance_only_no_repo_write"
+        },
+        "receipt_refs": {
+            "dispatch_receipt_ref": "mag-sidecar-receipt:lifecycle-cleanup",
+            "opl_consumes_receipt_ref_only": True
+        }
+    }
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'lifecycle/receipt',
+      '--payload',
+      '{"action":"lifecycle/receipt","input_path":"/tmp/mag/input.json","operation":"cleanup","stage_id":"package_and_submit_ready","provider_hosted_stage_attempt":true,"provider_attempt_id":"opl-temporal:mag:lifecycle-cleanup"}',
+      '--dedupe-key',
+      'mag:test:lifecycle-cleanup',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(attempt.status, 'completed');
+    assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(attempt.closeout_refs.includes('mag-runtime-receipts/lifecycle/cleanup-blocker-1.json'), true);
+    assert.equal(attempt.route_impact.decision, 'typed_blocker');
+    assert.equal(attempt.route_impact.lifecycle_receipt_ref, 'mag-runtime-receipts/lifecycle/cleanup-blocker-1.json');
+    assert.equal(attempt.route_impact.lifecycle_receipt_observed, true);
+    assert.equal(attempt.route_impact.typed_blocker_count, 1);
+    assert.equal(attempt.route_impact.writes_performed, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
