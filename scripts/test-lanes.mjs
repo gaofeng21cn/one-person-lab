@@ -212,6 +212,9 @@ function assertSuccessfulGitLsFiles(result) {
 }
 
 function isActiveTrackedTestFile(file) {
+  if (!fs.existsSync(path.join(repoRoot, file))) {
+    return false;
+  }
   return file.startsWith('tests/src/') || file.startsWith('tests/built/');
 }
 

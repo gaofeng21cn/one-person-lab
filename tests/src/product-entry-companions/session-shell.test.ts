@@ -44,13 +44,13 @@ function readFamilyManifestFixture(fileName: string) {
 
 test('product entry session helpers normalize runtime, continuation, and delivery surfaces', () => {
   const runtimeSessionContract = buildRuntimeSessionContract({
-    runtime_owner: 'upstream_hermes_agent',
-    expected_runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: 'provider_backed_family_runtime',
+    expected_runtime_owner: 'provider_backed_family_runtime',
     default_adapter_surface: '@redcube/codex-cli-client',
     default_session_mode: 'entry_session',
   });
   assert.deepEqual(runtimeSessionContract, {
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: 'provider_backed_family_runtime',
     adapter_surface: '@redcube/codex-cli-client',
     session_mode: 'entry_session',
   });
@@ -85,13 +85,13 @@ test('product entry session helpers normalize runtime, continuation, and deliver
   const entrySession = buildEntrySessionSurface({
     entry_session_id: 'entry-session-1',
     session_file: '/tmp/entry-session-1.json',
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: 'provider_backed_family_runtime',
     resumed_from_session: true,
   });
   assert.deepEqual(entrySession, {
     entry_session_id: 'entry-session-1',
     session_file: '/tmp/entry-session-1.json',
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: 'provider_backed_family_runtime',
     resumed_from_session: true,
   });
 

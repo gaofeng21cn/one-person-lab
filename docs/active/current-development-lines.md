@@ -15,7 +15,7 @@ The same calibration added MAS read-only paper-line closeout projection across t
 
 Temporal residency now has two explicit readings: `--live` is the repo-native Temporal test server plus real worker proof, and `--production` is the external or managed Temporal service / worker proof. 2026-05-14 fresh managed local Temporal service / worker status is ready, explicit Temporal provider status is `full_online_ready=true` / `durable_online_ready=true`, `--production` proof returns `production_residency_proven`, production closeout reads the latest proof receipt as `provider_continuous_proof.continuous_proof_status=all_observed_proofs_proven`, runtime snapshot exposes the proof as an operator attention/recent item, and the latest proof is persisted in OPL state for MAS binding-derived hydrate. The remaining production work is not provider reachability itself; it is long-running Codex/domain activity soak, provider-hosted guarded apply, memory body apply receipts, physical skeleton reorganization, periodic provider SLO evidence, and physical deletion of old surfaces after MAS owner-chain evidence is mature.
 
-This Lane F plus Lane E OPL-side operator closeout owns only documentation, public/help wording, residue scan, and no-default-caller guardrails. It does not touch OPL production runtime core files. The active path remains `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`. The goal is to keep old Hermes/Gateway/frontdoor/local-manager/default-compat surfaces out of the active/default path while retaining explicit legacy, provenance, diagnostic, history, and fixture references.
+This Lane F plus Lane E OPL-side operator closeout owns only documentation, public/help wording, residue scan, and no-default-caller guardrails. It does not touch OPL production runtime core files. The active path remains `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`. The goal is to keep old Hermes/Gateway/frontdoor/local-manager/default-compat surfaces out of the active/default path while retaining only provenance, diagnostic, history, fixture, and negative-guard references.
 
 Work that should wait for MAS owner-chain maturity is long-running Codex/domain activity soak, provider-hosted guarded apply, memory body apply receipts, physical skeleton reorganization, and physical deletion of old surfaces.
 
@@ -54,7 +54,7 @@ Structural quality gate semantics are now split by enforcement layer. `sentrux g
 | MAS study truth, publication gate, evidence/review ledger, manuscript/package authority | MAS |
 | MAG grant strategy, fundability / proposal quality, specific aims authority | MAG |
 | RCA visual direction, creative artifact generation, review/export gate | RCA |
-| old gateway/frontdoor/Hermes-first/local-manager default wording | retire / history / compatibility archive after replacement proof and no-default-caller scan |
+| old gateway/frontdoor/Hermes-first/local-manager default wording | retire / history archive after replacement proof and no-default-caller scan |
 | external framework learning | references only until promoted into contracts/source/active owner docs |
 
 ## Priority Rules

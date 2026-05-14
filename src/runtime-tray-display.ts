@@ -1,8 +1,3 @@
-export type RuntimeTrayDisplayCronJob = {
-  name?: unknown;
-  script?: unknown;
-};
-
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
@@ -163,23 +158,4 @@ export function masPublicationNextActionSummary(routeTarget: string | null) {
     return '建议阶段：交付收口；目标：确认投稿包达到交付条件。';
   }
   return '建议动作：继续关闭质量与交付检查。';
-}
-
-export function titleFromHermesCronJob(job: RuntimeTrayDisplayCronJob) {
-  const script = optionalString(job.script);
-  const scriptMatch = script?.match(/med-autoscience\/([^/]+)\//);
-  if (scriptMatch?.[1]) {
-    return scriptMatch[1];
-  }
-
-  const name = optionalString(job.name);
-  if (!name) {
-    return 'MAS';
-  }
-
-  return name
-    .replace(/^medautoscience-supervision-/, '')
-    .replace(/^medautoscience-/, '')
-    .replace(/[-_]+/g, ' ')
-    .trim() || 'MAS';
 }

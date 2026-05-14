@@ -285,8 +285,7 @@ export async function runOplTurnkeyInstall(
       : await Promise.all(selectedEngines.map(async (engineId) => {
         const engine = environment.core_engines[engineId];
         const shouldReuseExisting =
-          engine.health_status === 'ready'
-          || (engineId === 'hermes' && engine.installed);
+          engine.health_status === 'ready';
         if (shouldReuseExisting) {
           return {
             version: 'g2',
@@ -324,11 +323,7 @@ export async function runOplTurnkeyInstall(
         skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
       }),
     );
-    const skipOnlineManagement = Boolean(
-      input.noOnlineRuntime
-      || input.skipEngines
-      || !selectedEngines.includes('hermes'),
-    );
+    const skipOnlineManagement = Boolean(input.noOnlineRuntime);
     const runtimeManagerAction = runRuntimeManagerAction({
       mode: 'apply',
       skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
@@ -337,8 +332,8 @@ export async function runOplTurnkeyInstall(
     const familyRuntimeBridge = skipOnlineManagement
       ? await runFamilyRuntime(['status'])
       : await runFamilyRuntime(['install']);
-    const onlineManagementRepair = runtimeManagerAction.runtime_manager_action.executed_actions.find(
-      (action) => action.action_id === 'repair_hermes_legacy_provider',
+    const onlineManagementActions = runtimeManagerAction.runtime_manager_action.executed_actions.filter(
+      (action) => action.action_lane === 'online_runtime',
     );
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('runtime_manager_repair_completed', {
@@ -349,22 +344,23 @@ export async function runOplTurnkeyInstall(
         })),
       }),
     );
-    if (onlineManagementRepair) {
+    if (onlineManagementActions.length > 0) {
+      const onlineManagementFailed = onlineManagementActions.some((action) => action.status === 'failed');
       const onlineManagementRepairEventType =
-        onlineManagementRepair.status === 'failed'
+        onlineManagementFailed
           ? 'online_management_repair_failed'
           : 'online_management_repair_completed';
       firstRunLogEvents.push(
         appendOplFirstRunLogEvent(onlineManagementRepairEventType, {
-          status: onlineManagementRepair.status,
+          status: onlineManagementFailed ? 'failed' : 'completed',
           blocking: false,
-          executed_actions: [{
-            action_id: onlineManagementRepair.action_id,
-            status: onlineManagementRepair.status,
-            blocking: onlineManagementRepair.blocking ?? true,
-            action_lane: onlineManagementRepair.action_lane ?? 'online_runtime',
-            capability: onlineManagementRepair.capability ?? 'online_family_runtime',
-          }],
+          executed_actions: onlineManagementActions.map((action) => ({
+            action_id: action.action_id,
+            status: action.status,
+            blocking: action.blocking ?? true,
+            action_lane: action.action_lane ?? 'online_runtime',
+            capability: action.capability ?? 'online_family_runtime',
+          })),
         }),
       );
     }

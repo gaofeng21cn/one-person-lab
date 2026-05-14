@@ -3,21 +3,23 @@ import type { FrameworkContracts } from '../types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';
 import { buildOplEnvironment } from './environment.ts';
-import type { OplEngineAction } from './shared.ts';
+import type { OplEngineAction, OplEngineId } from './shared.ts';
 import { normalizeOutput } from './shared.ts';
 
-function findEngineOrThrow(engineId: string) {
+function findEngineOrThrow(engineId: string): OplEngineId {
   const normalized = engineId.trim().toLowerCase();
-  if (normalized === 'codex' || normalized === 'hermes') {
+  if (normalized === 'codex') {
     return normalized;
   }
 
   throw new FrameworkContractError(
     'cli_usage_error',
-    'Unknown OPL engine id.',
+    'Unknown or retired OPL engine id.',
     {
       engine_id: engineId,
-      available_engine_ids: ['codex', 'hermes'],
+      available_engine_ids: ['codex'],
+      retired_engine_ids: ['hermes'],
+      retirement_boundary: 'Hermes-Agent is retained only as explicit executor/proof diagnostic or historical provenance, not as an engine action target.',
     },
     2,
   );

@@ -20,14 +20,14 @@
 
 ### 决策：Temporal 成为 OPL production online family runtime 的必需 substrate，Hermes-first 口径退出目标在线底座
 
-原因：OPL 当前目标已经从“找一个长期在线会话宿主”收敛为“以 domain stage 为语义单元、以 Agent executor 为最小执行单位的 durable family agent framework”。这类框架需要的是可恢复 stage attempt、activity retry/timeout、human gate signal、status query、workflow history、idempotent dispatch、dead-letter 和 operator projection。Temporal 的 Workflow / Activity / Signal / Query / History 模型正好对应 OPL production online runtime 的可靠性底座；它应像 Codex CLI 一样被安装、检测、修复和持续维护。Hermes 不再承担目标长期 session/wakeup substrate 的默认口径，但仍可作为显式 provider、Agent executor adapter、proof lane 或可选安装模块接入。
+原因：OPL 当前目标已经从“找一个长期在线会话宿主”收敛为“以 domain stage 为语义单元、以 Agent executor 为最小执行单位的 durable family agent framework”。这类框架需要的是可恢复 stage attempt、activity retry/timeout、human gate signal、status query、workflow history、idempotent dispatch、dead-letter 和 operator projection。Temporal 的 Workflow / Activity / Signal / Query / History 模型正好对应 OPL production online runtime 的可靠性底座；它应像 Codex CLI 一样被安装、检测、修复和持续维护。Hermes 不再承担目标长期 session/wakeup substrate，也不保留 active family runtime provider 语义；它只能作为显式非 provider Agent executor adapter、proof diagnostic 或历史 provenance 出现。
 
 影响：
 
-- `OPL Runtime Manager` 的目标表述从 Hermes-first 改为 Temporal-backed production family runtime；provider 枚举按 `local_sqlite | hermes_legacy | temporal` 方向保留，其中 `temporal` 是 production required provider，`local_sqlite` 是 dev/CI/offline diagnostic baseline，`hermes_legacy` 是 legacy/proof/diagnostic adapter。
+- `OPL Runtime Manager` 的目标表述从 Hermes-first 改为 Temporal-backed production family runtime；active provider 枚举冻结为 `local_sqlite | temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 是 dev/CI/offline diagnostic baseline。`hermes_legacy` 不再是 provider kind；若环境或旧 fixture 仍选择它，必须 fail-closed。
 - Temporal provider 的语义映射固定为：Workflow = `stage_attempt`，Activity = selected Agent executor stage execution / domain sidecar dispatch，Signal = human gate / user modification intake / resume，Query = App/CLI progress projection，History = durable replay/audit。
 - `Codex CLI` 是当前第一公民 concrete executor；Temporal 只负责 durable orchestration substrate，不生成 domain idea，不判断 publication/fundability/visual quality。
-- `Hermes-Agent` 迁移后的角色是可选 Agent executor adapter、显式 proof lane 或可选安装模块；Full readiness 不再要求 Hermes 作为目标 session/wakeup substrate，但要求 Temporal service / worker / readiness proof 成立。接入只承诺连接、生命周期、回执与审计面成立，不承诺行为或效果与 `Codex CLI` 等价。
+- `Hermes-Agent` 迁移后的角色是显式非 provider Agent executor adapter、proof diagnostic 或历史 provenance；Full readiness 不再要求 Hermes 作为目标 session/wakeup substrate，也不提供 Hermes 安装 / 更新 / provider compatibility action surface；Temporal service / worker / readiness proof 是生产在线依赖。接入只承诺连接、生命周期、回执与审计面成立，不承诺行为或效果与 `Codex CLI` 等价。
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority；OPL 只持有 provider abstraction、stage attempt ledger、queue、human gate transport、retry/dead-letter、observability 和 projection。
 - 2026-05-08 的 Hermes-first 决策保留为历史与迁移背景，但被本决策 supersede；后续新增投入默认服务 Temporal-backed production runtime lane。
 
@@ -35,7 +35,7 @@
 
 原因：`MAS`、`MAG`、`RCA` 的共同需求不是让 OPL 变成一个领域大脑，而是需要长期自治、状态恢复、唤醒、队列、human gate、trace、projection 和跨域可见性这类 agent framework 能力。与以 LLM 调用或 agent node 为原子单位的通用框架不同，OPL family 的执行原子是 Agent executor，当前第一公民 executor 是 `Codex CLI`，更合理的语义单元是 domain stage：一个 stage 冻结目标、输入、skill/prompt、评价方法、handoff、receipt 和 authority boundary，stage 内部让被选中的 executor 与 domain skill 自主完成专家工作。
 
-这次定位同时明确：OPL 不是只做入口聚合、工作台投影或共享合同目录，而是完整的智能体运行框架。它可以使用 Temporal、Hermes legacy、local provider 或未来其他外部 substrate，但阶段生命周期、队列、attempt ledger、human gate、恢复、投影、artifact/file lifecycle 和 operator visibility 的 framework 边界归 OPL；provider 只承担可替换的运行 substrate。OPL 的产品目标是让医学研究、基金写作、视觉交付和后续高价值知识工作尽可能自动推进到可审计交付。
+这次定位同时明确：OPL 不是只做入口聚合、工作台投影或共享合同目录，而是完整的智能体运行框架。active provider 只允许 Temporal production substrate 与 local dev/CI/offline baseline；阶段生命周期、队列、attempt ledger、human gate、恢复、投影、artifact/file lifecycle 和 operator visibility 的 framework 边界归 OPL；provider 只承担可替换的运行 substrate。OPL 的产品目标是让医学研究、基金写作、视觉交付和后续高价值知识工作尽可能自动推进到可审计交付。
 
 影响：
 
@@ -70,16 +70,16 @@
 
 影响：
 
-- 历史上 `opl install` 曾计划默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；当前目标口径已改为 Temporal-backed family runtime，Temporal 是生产必需 substrate，Hermes 只保留为可选 Agent executor adapter、显式 proof lane 或诊断/历史语境。
+- 历史上 `opl install` 曾计划默认安装/复用 `Codex CLI`、Hermes online runtime、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；当前目标口径已改为 Temporal-backed family runtime，Temporal 是生产必需 substrate，Hermes 只保留为显式非 provider proof/diagnostic 或历史 provenance 语境。
 - 历史上 `Hermes-Agent` 曾被写成 Full OPL family readiness 的 required online substrate；当前 Full OPL readiness 应按已配置 family runtime provider ready 判断，不能再把 Hermes 写成目标必需项。
 - `Codex CLI` 仍是默认且第一公民的具体执行器；Hermes online substrate 不自动替换 domain-selected executor，也不成为 MAS/MAG/RCA truth owner。
 - 新增 `opl family-runtime` typed queue / bridge：队列位于 `${OPL_STATE_DIR}/family-runtime/queue.sqlite`，Hermes cron/webhook 负责唤醒，OPL tick 负责跨仓 dispatch 和本地 inbox/event 记录。
 - `opl family-runtime intake` 与 `opl family-runtime tick --hydrate` 会先读取 domain sidecar export 的 `pending_family_tasks[]`，按 dedupe key 入队，再在同一 tick 中派发已入队任务。Hermes cron 注册脚本必须使用 `opl family-runtime tick --source hermes-cron --hydrate`，否则只会消费已有队列而不会把 MAS/MAG/RCA read-model blocker 转成 executable task。
 - 历史计划中 Full 首次安装包曾要求携带 Hermes payload、profile seed、CLI shim、LaunchAgent install/repair scripts、版本 manifest 与 checksum；当前 Full 包应携带已配置 family runtime provider 所需 payload，Temporal provider 落地后由 provider manifest/checksum 表达 readiness。
 - 历史计划中 `opl system initialize` 和 App 首启曾显示 Core ready、Domain modules ready、Hermes online runtime ready 三层状态；当前应显示 Core、Domain modules、family runtime provider readiness，不能把 Hermes 写成目标默认层。
-- 历史上“Hybrid optional Hermes provider adapter”的文档口径保留为 archive/decision history，不再作为当前安装或 readiness 行为。
+- 历史上“Hybrid optional Hermes provider adapter”的文档口径只保留为 archive/decision history，不再作为当前安装、provider fallback 或 readiness 行为。
 
-### 历史决策：Hermes 从默认安装依赖降为显式可选 hosted/runtime provider adapter
+### 历史决策：Hermes 从默认安装依赖降为显式 hosted/runtime adapter
 
 状态：先被 2026-05-08 Hermes-first online substrate 决策取代，又被 2026-05-10 Temporal-backed provider 决策 supersede。保留本段用于解释 2026-05-08 早期误判和回滚背景，不作为当前实现口径。
 
@@ -88,9 +88,9 @@
 历史影响：
 
 - `opl install` 一度默认只安装/复用 `Codex CLI`、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI。
-- `Hermes-Agent` 一度只作为显式 optional hosted/runtime/provider adapter 保留。
+- `Hermes-Agent` 一度只作为显式 hosted/runtime/provider adapter 保留；该口径现已退役为历史，不作为当前兼容接口。
 - `opl system initialize`、App 首启与 README 一度把 Hermes 缺失视为非阻塞 online-management 状态。
-- Full 首次安装包一度不携带 Hermes provider-adapter payload。
+- Full 首次安装包一度不携带 Hermes adapter payload。
 
 ### 决策：引入 Family Action Catalog 作为 action metadata 单一声明面
 
@@ -166,7 +166,7 @@
 
 影响：
 
-- `opl install` 不再默认安装 Hermes；显式 Hermes provider adapter 可被安装或复用。
+- 历史上 `opl install` 不再默认安装 Hermes，但仍允许显式 Hermes provider adapter 安装或复用；该口径现已 superseded，不作为当前安装行为。
 - Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务；OPL 负责触发安装/启动、检查 readiness 并报告状态，不接管 gateway service lifecycle 实现。
 - `opl system initialize`、App 首启与公开 README 文案必须区分 core/domain readiness 与 online-management readiness。
 - 当 Codex CLI 与已准入 domain modules ready 时，首屏可以进入通用工作、医学研究、基金写作或汇报/PPT 工作；Hermes gateway 未 loaded 只展示为 online-management pending / starting / needs attention。
@@ -252,7 +252,7 @@
 - prebuild/cache 策略先按 manifest 和 `OPL_STATE_DIR` cache 落地，目标是让 fresh install 优先恢复匹配平台的 helper binary，只有缺失或无效时才走本地 Cargo build
 - native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
 - `opl runtime snapshot` 可以为桌面托盘和 App Runtime Workbench 投影 `attention_items`、`running_items`、`recent_items` 与 MAS study drilldown/read-only workbench 数据，但只读取 domain-owned durable surfaces；为了托盘状态显示或 App drilldown 不新增本地 daemon，也不把 MAS `mas_opl_runtime_workbench_projection` 升级为 OPL-owned study truth
-- family runtime provider 继续是外部 online runtime substrate owner；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影。Temporal 是 production required provider，Hermes 只在显式 provider / Agent executor adapter 或诊断语境中出现
+- family runtime provider 继续是外部 online runtime substrate owner；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影。Temporal 是 production required provider，Hermes 只在显式非 provider Agent executor adapter、proof diagnostic 或历史 provenance 语境中出现
 - `domain task registration hydration` 是 Runtime Manager 的一等职责：OPL 读取 domain-owned sidecar export 中显式授权的 `pending_family_tasks[]`，写入 OPL typed queue，并保持 retry / dead-letter / notification / approval 语义；OPL 不从 read-only projection 自行推断医学、基金或视觉交付任务。
 - provider system service lifecycle 由 provider-specific installer/gateway command 管理；OPL 只触发、检查和报告 readiness
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
@@ -415,7 +415,7 @@
 
 ### 决策：统一 runtime substrate，不强制统一具体执行器
 
-状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production required substrate 口径吸收。当前读法是：Temporal-backed family runtime provider 承担 production online substrate；`Hermes-Agent` 保留为可选 Agent executor adapter 或显式 proof lane。`Codex CLI` 当前仍是家族默认且第一公民的具体执行器，默认模式是 `autonomous`。
+状态：历史决策，已被 2026-05 的 provider-backed family runtime / Temporal production required substrate 口径吸收。当前读法是：Temporal-backed family runtime provider 承担 production online substrate；`Hermes-Agent` 只保留为显式非 provider Agent executor adapter、proof diagnostic 或历史 provenance。`Codex CLI` 当前仍是家族默认且第一公民的具体执行器，默认模式是 `autonomous`。
 
 影响：
 
@@ -431,5 +431,5 @@
 
 - 家族第一公民执行器正式名称统一写作 `Codex CLI`
 - 家族默认执行模式统一写作 `autonomous`
-- `Hermes-Agent` 继续保留正式名称，当前路线状态统一写作 `optional_executor_adapter / experimental`
+- `Hermes-Agent` 继续保留正式名称，当前路线状态统一写作 `explicit_non_provider_executor_diagnostic / experimental`
 - 默认模型与默认 reasoning effort 继续继承本机 `Codex` 默认配置

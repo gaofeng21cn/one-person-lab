@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import { assert, createCodexConfigFixture, createFakeCodexFixture, createFakeHermesFixture, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 
-test('system exposes Hermes update availability only for explicitly selected Hermes legacy provider', () => {
+test('system exposes Hermes as shallow non-provider diagnostics outside family runtime provider selection', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-update-home-'));
   const hermesFixture = createFakeHermesFixture(`
 if [[ "$1" == "version" ]]; then
@@ -27,7 +27,6 @@ exit 1
       {
         HOME: homeRoot,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
-        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       },
     ) as {
       system: {
@@ -45,14 +44,11 @@ exit 1
     };
 
     assert.equal(output.system.core_engines.hermes.installed, true);
-    assert.equal(output.system.core_engines.hermes.version, 'Hermes Agent v0.10.0 (2026.4.16)');
-    assert.match(output.system.core_engines.hermes.version_raw_output ?? '', /Project: \/tmp\/hermes-agent/);
-    assert.equal(output.system.core_engines.hermes.update_available, true);
-    assert.equal(
-      output.system.core_engines.hermes.update_summary,
-      "Update available: 42 commits behind — run 'hermes update'",
-    );
-    assert.equal(output.system.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.system.core_engines.hermes.version, null);
+    assert.equal(output.system.core_engines.hermes.version_raw_output, null);
+    assert.equal(output.system.core_engines.hermes.update_available, false);
+    assert.equal(output.system.core_engines.hermes.update_summary, null);
+    assert.equal(output.system.core_engines.hermes.health_status, 'attention_needed');
   } finally {
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -342,14 +338,13 @@ EOF
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.total_targets_count, 6);
+    assert.equal(output.system_action.details.summary.total_targets_count, 5);
     assert.equal(output.system_action.details.summary.completed_targets_count, 1);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 5);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 4);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
-    assert.equal(targets.get('engine:hermes')?.status, 'skipped');
-    assert.equal(targets.get('engine:hermes')?.reason, 'hermes_legacy_provider_not_selected');
+    assert.equal(targets.has('engine:hermes'), false);
     assert.equal(fs.existsSync(hermesUpdateMarker), false);
     assert.equal(targets.get('module:medautoscience')?.status, 'completed');
     assert.equal(targets.get('module:medautogrant')?.status, 'skipped');

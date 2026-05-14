@@ -1,7 +1,7 @@
-import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes-bridge.ts';
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { buildTemporalWorkerReadiness, inspectTemporalWorkerLifecycle } from './family-runtime-temporal-provider.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
+import { FrameworkContractError } from './contracts.ts';
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
   type FamilyRuntimeProviderKind,
@@ -46,7 +46,7 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
   }
   return {
     provider_kind: kind,
-    provider_role: 'legacy_optional_provider',
+    provider_role: 'development_and_offline_provider',
     deep_inspection: 'selected_provider_only',
   };
 }
@@ -99,10 +99,21 @@ export function resolveFamilyRuntimeProviderKind(
     return requested;
   }
   const configured = process.env.OPL_FAMILY_RUNTIME_PROVIDER?.trim();
+  if (!configured) {
+    return 'local_sqlite';
+  }
   if (isFamilyRuntimeProviderKind(configured)) {
     return configured;
   }
-  return 'local_sqlite';
+  throw new FrameworkContractError(
+    'cli_usage_error',
+    'Unsupported family runtime provider kind.',
+    {
+      provider_kind: configured,
+      allowed_provider_kinds: [...FAMILY_RUNTIME_PROVIDER_KINDS],
+      env_var: 'OPL_FAMILY_RUNTIME_PROVIDER',
+    },
+  );
 }
 
 export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): FamilyRuntimeProviderInspection {
@@ -163,30 +174,20 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
     };
   }
 
-  const bridge = inspectHermesBridge();
-  const ready =
-    bridge.disabled === false
-    && bridge.gateway_ready
-    && bridge.cron_registered
-    && bridge.webhook_registered;
   return {
     provider_kind: kind,
-    status: ready ? 'ready' : 'attention_needed',
-    ready,
-    degraded_reason: ready
-      ? null
-      : bridge.disabled
-        ? 'hermes_legacy_disabled_for_development_or_offline_diagnostics'
-        : 'hermes_legacy_gateway_cron_or_webhook_not_ready',
+    status: 'ready',
+    ready: true,
+    degraded_reason: null,
     capabilities: [
-      'legacy_gateway_residency',
-      'legacy_cron_wakeup',
-      'legacy_webhook_intake',
-      'delivery_transport',
-      'approval_transport',
+      'typed_family_queue',
+      'local_stage_attempt_ledger',
+      'local_inbox_notification_copy',
+      'events_export',
     ],
     details: {
-      bridge,
+      durable_online_wakeup: false,
+      external_runtime_required: false,
     },
   };
 }
@@ -258,7 +259,6 @@ export function inspectFamilyRuntimeProviders(selected: FamilyRuntimeProviderKin
     allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
     default_resolution: {
       env: 'OPL_FAMILY_RUNTIME_PROVIDER',
-      offline_env: 'OPL_DISABLE_HERMES_ONLINE=1 only affects explicitly selected hermes_legacy provider readiness',
       fallback: 'local_sqlite',
     },
     providers: {
@@ -280,7 +280,6 @@ export async function inspectFamilyRuntimeProvidersWithLifecycle(
     allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
     default_resolution: {
       env: 'OPL_FAMILY_RUNTIME_PROVIDER',
-      offline_env: 'OPL_DISABLE_HERMES_ONLINE=1 only affects explicitly selected hermes_legacy provider readiness',
       fallback: 'local_sqlite',
     },
     providers: {
@@ -293,13 +292,6 @@ export async function inspectFamilyRuntimeProvidersWithLifecycle(
 }
 
 export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mode: 'install' | 'repair') {
-  if (kind === 'hermes_legacy') {
-    return {
-      surface_id: 'opl_family_runtime_provider',
-      provider_kind: kind,
-      ...ensureHermesBridge(mode),
-    };
-  }
   if (kind === 'temporal') {
     const inspection = inspectFamilyRuntimeProvider(kind);
     return {

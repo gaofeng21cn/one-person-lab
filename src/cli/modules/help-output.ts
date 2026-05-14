@@ -48,8 +48,10 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'chat',
   'framework',
   'runtime',
+  'service',
   'session',
   'shell',
+  'web',
 ]);
 
 function cloneCommandSpec(

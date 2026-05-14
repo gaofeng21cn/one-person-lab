@@ -6,7 +6,7 @@ This directory freezes the machine-readable companion schemas for the family-lev
 
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:
 
-- `Hermes-Agent` remains a migration-period legacy/optional provider or explicit executor/proof lane; Temporal is the required online runtime substrate for Full readiness and durable orchestration, while local providers are dev/CI/offline diagnostics only
+- `Hermes-Agent` remains an explicit non-provider executor/proof diagnostic or historical provenance asset; Temporal is the required online runtime substrate for Full readiness and durable orchestration, while local providers are dev/CI/offline diagnostics only
 - `Codex CLI` remains the default concrete executor name and `autonomous` remains the default route mode unless a domain route explicitly selects another executor
 - `one-person-lab` owns the typed family queue and product control plane over the Temporal-backed family runtime provider, not a replacement runtime kernel
 - domain repositories remain the owners of durable truth, audit truth, and review truth
@@ -61,7 +61,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 ### Control-plane-oriented
 
 - `../opl-framework/family-runtime-online-substrate-contract.json`
-  - provider-backed family runtime contract; the active Full-readiness substrate is the Temporal-backed provider, while Hermes/local providers are legacy/proof/dev diagnostics
+  - provider-backed family runtime contract; the active Full-readiness substrate is the Temporal-backed provider, `local_sqlite` is dev/CI/offline diagnostics only, and Hermes is not a provider
 - `family-runtime-supervision.schema.json`
   - shared read-only wakeup / supervision projection for adapter id, cadence, last success / tick, lease freshness, SLO state, repair command, safe reconcile hint, domain-owned source refs, and authority boundary
 - `family-persistence-policy.schema.json`

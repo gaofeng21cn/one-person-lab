@@ -2,7 +2,7 @@ export const FAMILY_RUNTIME_DOMAIN_IDS = ['medautoscience', 'medautogrant', 'red
 
 export type FamilyRuntimeDomainId = typeof FAMILY_RUNTIME_DOMAIN_IDS[number];
 
-export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'hermes_legacy', 'temporal'] as const;
+export const FAMILY_RUNTIME_PROVIDER_KINDS = ['local_sqlite', 'temporal'] as const;
 
 export type FamilyRuntimeProviderKind = typeof FAMILY_RUNTIME_PROVIDER_KINDS[number];
 

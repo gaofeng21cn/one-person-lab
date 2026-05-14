@@ -149,12 +149,13 @@ Onboarding package 还必须说明这个新 domain：
 | `agent_entry` | 面向 Codex 或其他 host-agent 的 CLI、MCP、controller 或 app skill callable surface | 必须结构化、可审计、可失败；不能只是一段 prompt。 |
 | `product_entry` | 面向最终用户的启动、恢复、会话、路由与交互入口 | 必须清楚说明当前是否已经成熟；不允许把未来 hosted/web 目标写成当前现实。 |
 
-如果 domain 已经暴露 `frontdoor_surface`、`operator_loop_surface` 或等价字段，必须同时说明：
+如果旧 domain manifest 仍携带 `frontdoor_surface` 或等价 legacy 字段，onboarding package 必须把这层含义迁移到上面的当前入口分类中。保留的旧字段名只能作为 historical / provenance evidence，不能再作为 OPL 默认路由、readiness 或 compatibility surface。
 
-- `frontdoor_surface` 是否是真正的用户入口，还是只是一层 product-entry shell；
+如果 domain 暴露 `operator_loop_surface` 或等价当前 loop 字段，必须同时说明：
+
 - `operator_loop_surface` 是否仍承担真实 runtime / controller loop；
 - direct domain path 与 OPL-hosted path 如何共享 owner receipts、artifact locator 和 return surface；
-- 哪些入口只是 historical / diagnostic / compatibility route，不能作为默认路线。
+- 哪些入口只是 historical / diagnostic route，不能作为默认路线。
 
 `OPL -> domain` handoff envelope 至少要能表达：
 

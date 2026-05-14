@@ -8,8 +8,8 @@ const removedProductApiCommands = [
   {
     args: ['web'],
     command: 'web',
-    errorCode: 'cli_usage_error',
-    retired: true,
+    errorCode: 'unknown_command',
+    retired: false,
   },
   {
     args: [['mcp', 'stdio'].join('-')],

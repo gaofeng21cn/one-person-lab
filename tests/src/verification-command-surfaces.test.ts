@@ -828,7 +828,7 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.match(notes, /Full first-install package/);
   assert.match(notes, new RegExp(`One-Person-Lab-Full-${version}-mac-arm64\\.dmg`));
   assert.match(notes, /fastest first setup/);
-  assert.match(notes, /preloads MAS, MAG, RCA, the configured family runtime provider payload, OfficeCLI, and recommended companion skills/);
+  assert.match(notes, /preloads MAS, MAG, RCA, the family runtime support payload, OfficeCLI, and recommended companion skills/);
   assert.match(notes, /Full OPL readiness is Temporal-backed/);
   assert.match(notes, /Temporal is the required production durable stage-attempt provider/);
   assert.match(notes, /MDS remains retired and is not bundled as a default module or MAS runtime dependency/);

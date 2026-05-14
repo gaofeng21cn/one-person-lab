@@ -35,7 +35,7 @@ These documents define the current `OPL` mainline:
 - [Contracts Overview](../../contracts/README.md)
 
 These surfaces explain the default entry (`opl`, `opl exec`, `opl resume`), the current resource model (`workspaces / sessions / progress / artifacts`), and the rule that explicit domain activation or executor switching is opt-in.
-They also keep `OPL Runtime Manager` scoped as the product control plane over the configured provider-backed family runtime, with typed family queue, bridge diagnostics, and Rust native helper / index work limited to native assistance and indexed discovery. Temporal-backed provider is the required production online substrate; missing install, unreachable service, or not-ready workers are platform readiness blockers to install, repair, monitor, and operate. `Hermes-Agent` remains only a migration-period `hermes_legacy` provider, diagnostics/provenance/test fixture, or optional install module. Ordinary Product Entry and session resume no longer expose a Hermes executor path.
+They also keep `OPL Runtime Manager` scoped as the product control plane over the configured provider-backed family runtime, with typed family queue, provider diagnostics, and Rust native helper / index work limited to native assistance and indexed discovery. Temporal-backed provider is the required production online substrate; missing install, unreachable service, or not-ready workers are platform readiness blockers to install, repair, monitor, and operate. `Hermes-Agent` remains only an explicit executor / proof / diagnostic asset, not a family runtime provider, default substrate, or Gateway cron bridge. Ordinary Product Entry and session resume no longer expose a Hermes executor path.
 
 ### 2. Linked domain capability surfaces
 
@@ -70,7 +70,7 @@ The earlier gateway-first phase is retained only as historical provenance:
 - [OPL Gateway Contract Surface](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
 
 These surfaces must not be used as active implementation, test, or machine-readable contract inputs for today's `OPL`.
-The landed cleanup line is narrower than physical deletion: current public help and active wording no longer advertise Hermes executor, Gateway cron, frontdoor/local-manager, or compatibility aliases as the normal path. Legacy `hermes_legacy` provider diagnostics, historical provenance, and test fixtures may still retain old names when their purpose is explicit.
+The landed cleanup removes the Hermes legacy provider / Gateway cron / frontdoor-local-manager / compatibility aliases from active providers and default paths. Historical provenance, fixtures, or negative guards may retain old names only when clearly marked as retired evidence rather than provider fallbacks or readiness paths.
 
 ## Reference-Grade Supporting Material
 
@@ -96,5 +96,5 @@ This surface index is acceptable only when:
 - it makes the current `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` mainline obvious
 - it distinguishes OPL-owned runtime/activation surfaces from repo-owned domain capability surfaces
 - it clearly marks legacy gateway/federation material as reference or provenance content
-- it keeps retained legacy names scoped to `hermes_legacy` provider diagnostics, provenance, or test fixtures
+- it keeps retained legacy names scoped to retired-provider negative guards, provenance, or historical fixtures
 - it keeps domain runtime truth, progress truth, and artifact truth owned by the corresponding domain repositories

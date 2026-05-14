@@ -165,7 +165,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
       workspace_root: '/tmp/redcube-workspace',
     },
     runtime: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
       session_store_root: '/tmp/runtime-state/product-entry-sessions',
     },
     product_entry_status: {
@@ -252,7 +252,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
       workspace_root: '/tmp/redcube-workspace',
     },
     runtime: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
     },
     product_entry_status: {
       summary: 'The direct product-entry surface is usable now.',
@@ -465,7 +465,7 @@ test('family product status builder projects manifest core into canonical produc
       workspace_root: '/tmp/redcube-workspace',
     },
     runtime: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'provider_backed_family_runtime',
       runtime_state_root: '/tmp/redcube-runtime',
     },
     product_entry_status: {
@@ -705,7 +705,7 @@ test('product entry companion helpers build family product_entry directly from t
     recommended_command: 'redcube product invoke',
     extra_payload: {
       runtime: {
-        runtime_owner: 'upstream_hermes_agent',
+        runtime_owner: 'provider_backed_family_runtime',
       },
       product_entry_status: {
         summary: 'Usable now.',

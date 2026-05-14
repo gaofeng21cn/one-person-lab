@@ -17,7 +17,7 @@ OPL 当前开发仍按 framework-first 执行。最近一轮 functional closeout
 
 真实 Temporal residency 现在拆成两个明确口径：`--live` 是 repo-native Temporal test server + real worker proof，`--production` 是外部 Temporal service / managed worker proof，后者在未配置、不可达或 worker 未 ready 时 fail-closed。2026-05-14 fresh 本机 managed Temporal service / worker 已 ready，显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`--production` proof 返回 `production_residency_proven`，production closeout 已读到 `provider_continuous_proof.continuous_proof_status=all_observed_proofs_proven`，runtime snapshot 已把 provider proof 投影成 operator attention/recent item，latest proof 已持久化到 OPL state 并被 MAS binding-derived hydrate 使用。仍应等待 MAS owner-chain 成熟后再做的是长时 Codex/domain activity soak、guarded apply provider attempt、memory body apply receipt、周期性 provider SLO evidence、物理 skeleton 重组和旧面物理删除。
 
-本轮 Lane F 与 Lane E 的 OPL 侧 operator closeout 只负责文档、public/help wording、residue scan 与 no-default-caller guardrail；不触碰 OPL production runtime core。当前 active path 仍是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`。目标是让旧 Hermes/Gateway/frontdoor/local-manager/default-compat surface 退出 active/default path，同时保留 explicit legacy、provenance、diagnostic、history 和 fixture 语境。
+本轮 Lane F 与 Lane E 的 OPL 侧 operator closeout 只负责文档、public/help wording、residue scan 与 no-default-caller guardrail；不触碰 OPL production runtime core。当前 active path 仍是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime when durable orchestration is needed -> selected domain-agent entry`。目标是让旧 Hermes/Gateway/frontdoor/local-manager/default-compat surface 退出 active/default path，只保留 provenance、diagnostic、history、fixture 和负向 guard 语境。
 
 当前顺序是：
 
@@ -52,7 +52,7 @@ OPL 当前开发仍按 framework-first 执行。最近一轮 functional closeout
 | MAS study truth、publication gate、evidence/review ledger、manuscript/package authority | MAS |
 | MAG grant strategy、fundability / proposal quality、specific aims authority | MAG |
 | RCA visual direction、creative artifact generation、review/export gate | RCA |
-| old gateway/frontdoor/Hermes-first/local-manager default wording | retire / history / compatibility archive after replacement proof and no-default-caller scan |
+| old gateway/frontdoor/Hermes-first/local-manager default wording | retire / history archive after replacement proof and no-default-caller scan |
 | external framework learning | references only until promoted into contracts/source/active owner docs |
 
 ## 优先级规则

@@ -17,7 +17,7 @@ export type OplModuleAction =
   | 'reinstall'
   | 'remove';
 
-export type OplEngineId = 'codex' | 'hermes';
+export type OplEngineId = 'codex';
 
 export type OplEngineAction =
   | 'install'

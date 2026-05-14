@@ -1,6 +1,5 @@
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import { actionContext, noActionContext, runningActionContext } from './runtime-tray-action.ts';
 import { humanizeStatusLabel, localizeRuntimeDisplayList } from './runtime-tray-display.ts';
 import {
@@ -43,10 +42,8 @@ function relativeOrAbsolutePath(root: string, ref: string | null) {
   return path.isAbsolute(ref) ? ref : path.join(root, ref);
 }
 
-function runtimeOwnerForCurrentProvider() {
-  return resolveFamilyRuntimeProviderKind() === 'hermes_legacy'
-    ? 'upstream_hermes_agent'
-    : 'provider_backed_family_runtime';
+function runtimeOwnerForCurrentProvider(): RuntimeTrayItem['runtime_owner'] {
+  return 'provider_backed_family_runtime';
 }
 
 function commandForMasStudy(profileRef: string | null, studyId: string, command: 'study-progress' | 'study-runtime-status') {

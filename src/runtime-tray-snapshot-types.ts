@@ -31,7 +31,7 @@ export type RuntimeTrayItem = {
   updated_at: string | null;
   command: string | null;
   workspace_path: string | null;
-  runtime_owner: 'provider_backed_family_runtime' | 'upstream_hermes_agent';
+  runtime_owner: 'provider_backed_family_runtime';
   domain_owner: string;
   source_refs: RuntimeTraySourceRef[];
   action_owner: RuntimeTrayActionOwner;

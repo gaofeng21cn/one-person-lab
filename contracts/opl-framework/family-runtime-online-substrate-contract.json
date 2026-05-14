@@ -16,7 +16,6 @@
   },
   "allowed_providers": [
     "local_sqlite",
-    "hermes_legacy",
     "temporal"
   ],
   "provider_semantics": {
@@ -24,17 +23,6 @@
       "role": "local queue, receipt, and stage attempt ledger provider for development, CI, offline diagnostics, direct skill calls, and guarded local operation; not a production online readiness substitute",
       "durable_online_wakeup": false,
       "external_runtime_required": false
-    },
-    "hermes_legacy": {
-      "role": "migration-period legacy wakeup and webhook bridge",
-      "durable_online_wakeup": true,
-      "external_runtime_required": true,
-      "legacy_bridge": {
-        "cron_job_name": "opl-family-runtime-tick",
-        "cron_cadence": "every 1m",
-        "cron_script": "opl family-runtime tick --source hermes-cron --hydrate",
-        "webhook_subscription": "opl-family-runtime-webhook"
-      }
     },
     "temporal": {
       "role": "required production durable stage-attempt workflow provider",
@@ -99,7 +87,6 @@
     "authority_boundary"
   ],
   "degraded_diagnostic_mode": {
-    "env": "OPL_DISABLE_HERMES_ONLINE=1",
     "selected_provider_when_unconfigured": "local_sqlite",
     "full_online_ready": false,
     "allowed_surfaces": [
@@ -116,7 +103,7 @@
     "OPL cannot clear domain quality gates",
     "OPL cannot override artifact or publication authority",
     "Provider receipt cannot become MAS/MAG/RCA truth owner",
-    "Hermes legacy bridge cannot be described as the default production substrate",
+    "Hermes cannot be described as a family-runtime provider or default production substrate",
     "Local sqlite provider cannot be described as production online ready",
     "Temporal unavailable must be reported as a required dependency blocker for Full online readiness"
   ]

@@ -89,7 +89,6 @@ exit 1
       {
         OPL_CODEX_BIN: codexFixture.binaryPath,
         OPL_HERMES_BIN: hermesFixture.binaryPath,
-        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       },
       () => buildProductEntryDoctor(validateFrameworkContracts(contractsDir)),
     );
@@ -99,11 +98,12 @@ exit 1
     assert.equal(doctor.product_entry.ready, true);
     assert.equal(doctor.product_entry.local_entry_ready, true);
     assert.equal(doctor.product_entry.online_runtime_ready, true);
-    assert.equal(doctor.product_entry.configured_provider, 'hermes_legacy');
+    assert.equal(doctor.product_entry.configured_provider, 'local_sqlite');
     assert.equal(doctor.product_entry.messaging_gateway_ready, true);
     assert.equal(doctor.product_entry.hermes.binary?.path, hermesFixture.binaryPath);
+    assert.equal(doctor.product_entry.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
     assert.match(doctor.product_entry.notes.join('\n'), /configured family runtime provider/);
-    assert.match(doctor.product_entry.notes.join('\n'), /hermes_legacy provider/);
+    assert.match(doctor.product_entry.notes.join('\n'), /explicit executor or proof diagnostics/);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });

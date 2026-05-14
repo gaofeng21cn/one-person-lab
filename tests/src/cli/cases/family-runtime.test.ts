@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, createFakeHermesFixture, fs, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
 
 function createDispatchFixture(body: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-'));
@@ -34,7 +34,6 @@ ${body}
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
-    OPL_DISABLE_HERMES_ONLINE: '1',
     ...extra,
   };
 }
@@ -47,7 +46,6 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
     assert.deepEqual(output.family_runtime.provider_runtime.allowed_providers, [
       'local_sqlite',
-      'hermes_legacy',
       'temporal',
     ]);
     assert.equal(output.family_runtime.readiness.provider_ready, true);
@@ -76,7 +74,6 @@ test('family-runtime local provider status does not inspect a bad Hermes binary 
     assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
     assert.equal(output.family_runtime.readiness.provider_ready, true);
     assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.ready, true);
-    assert.equal(output.family_runtime.provider_runtime.providers.hermes_legacy, undefined);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -545,7 +542,7 @@ echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","pap
     { mode: 0o755 },
   );
   try {
-    const tick = runCli(['family-runtime', 'tick', '--source', 'hermes-cron', '--hydrate'], familyRuntimeEnv(stateRoot, {
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
     }));
@@ -644,163 +641,6 @@ test('family-runtime blocks domain truth writes before dispatch', () => {
   }
 });
 
-test('family-runtime repair registers Hermes cron and webhook bridge', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hermes-'));
-  const cronState = path.join(stateRoot, 'cron-ready');
-  const webhookState = path.join(stateRoot, 'webhook-ready');
-  const hermes = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "install" ]]; then
-  echo "gateway installed"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-if [[ "$1" == "cron" && "$2" == "list" ]]; then
-  if [[ -f ${shellSingleQuote(cronState)} ]]; then
-    echo "Name: opl-family-runtime-tick"
-  fi
-  exit 0
-fi
-if [[ "$1" == "cron" && "$2" == "create" ]]; then
-  touch ${shellSingleQuote(cronState)}
-  printf '%s\\n' "$*" > ${shellSingleQuote(path.join(stateRoot, 'cron.args'))}
-  exit 0
-fi
-if [[ "$1" == "webhook" && "$2" == "list" ]]; then
-  if [[ -f ${shellSingleQuote(webhookState)} ]]; then
-    echo "opl-family-runtime-webhook"
-  fi
-  exit 0
-fi
-if [[ "$1" == "webhook" && "$2" == "subscribe" ]]; then
-  touch ${shellSingleQuote(webhookState)}
-  printf '%s\\n' "$*" > ${shellSingleQuote(path.join(stateRoot, 'webhook.args'))}
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-  try {
-    const output = runCli(['family-runtime', 'repair'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermes.hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
-    });
-
-    assert.equal(output.family_runtime_provider.provider_kind, 'hermes_legacy');
-    assert.equal(output.family_runtime_provider.status, 'ready');
-    assert.equal(output.family_runtime_provider.bridge.cron_registered, true);
-    assert.equal(output.family_runtime_provider.bridge.webhook_registered, true);
-    assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /opl family-runtime tick --source hermes-cron --hydrate/);
-    assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /create every 1m .* --name opl-family-runtime-tick/);
-    assert.match(fs.readFileSync(path.join(stateRoot, 'webhook.args'), 'utf8'), /opl-family-runtime-webhook/);
-    assert.match(
-      fs.readFileSync(path.join(stateRoot, 'webhook.args'), 'utf8'),
-      /subscribe opl-family-runtime-webhook --prompt opl-family-runtime-webhook/,
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(hermes.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime reports degraded gateway after stop and repair restores online readiness', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hermes-restart-'));
-  const gatewayState = path.join(stateRoot, 'gateway-ready');
-  const cronState = path.join(stateRoot, 'cron-ready');
-  const webhookState = path.join(stateRoot, 'webhook-ready');
-  fs.writeFileSync(cronState, 'ready');
-  fs.writeFileSync(webhookState, 'ready');
-  const hermes = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "install" ]]; then
-  touch ${shellSingleQuote(gatewayState)}
-  echo "gateway installed"
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
-    echo "Gateway service is loaded"
-  else
-    echo "Gateway service is stopped"
-  fi
-  exit 0
-fi
-if [[ "$1" == "cron" && "$2" == "list" ]]; then
-  if [[ -f ${shellSingleQuote(cronState)} ]]; then
-    echo "Name: opl-family-runtime-tick"
-  fi
-  exit 0
-fi
-if [[ "$1" == "webhook" && "$2" == "list" ]]; then
-  if [[ -f ${shellSingleQuote(webhookState)} ]]; then
-    echo "opl-family-runtime-webhook"
-  fi
-  exit 0
-fi
-if [[ "$1" == "cron" && "$2" == "create" ]]; then
-  touch ${shellSingleQuote(cronState)}
-  exit 0
-fi
-if [[ "$1" == "webhook" && "$2" == "subscribe" ]]; then
-  touch ${shellSingleQuote(webhookState)}
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-  try {
-    runCli(['family-runtime', 'repair'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermes.hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
-    });
-    fs.rmSync(gatewayState, { force: true });
-
-    const stopped = runCli(['family-runtime', 'status'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermes.hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
-    });
-    assert.equal(stopped.family_runtime.readiness.full_online_ready, false);
-    assert.equal(stopped.family_runtime.provider_runtime.selected.details.bridge.gateway_ready, false);
-    assert.match(
-      stopped.family_runtime.provider_runtime.selected.details.bridge.issues.join('\n'),
-      /Hermes gateway service is not currently loaded/,
-    );
-
-    const repaired = runCli(['family-runtime', 'repair'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermes.hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
-    });
-    const ready = runCli(['family-runtime', 'status'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermes.hermesPath,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
-    });
-
-    assert.equal(repaired.family_runtime_provider.provider_kind, 'hermes_legacy');
-    assert.equal(repaired.family_runtime_provider.status, 'ready');
-    assert.equal(ready.family_runtime.readiness.full_online_ready, true);
-    assert.equal(ready.family_runtime.provider_runtime.selected.details.bridge.gateway_ready, true);
-    assert.equal(ready.family_runtime.provider_runtime.selected.details.bridge.cron_registered, true);
-    assert.equal(ready.family_runtime.provider_runtime.selected.details.bridge.webhook_registered, true);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(hermes.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
 test('family-runtime runs cross-repo notification approval retry and dead-letter E2E', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cross-repo-'));
   const masExport = createExportFixture(`cat <<'JSON'
@@ -861,7 +701,7 @@ JSON
     OPL_FAMILY_RUNTIME_REDCUBE_DISPATCH: rcaDispatch.dispatchPath,
   });
   try {
-    const firstTick = runCli(['family-runtime', 'tick', '--source', 'hermes-cron', '--hydrate'], env);
+    const firstTick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], env);
     let queue = runCli(['family-runtime', 'queue', 'list'], env);
     const approvedTask = queue.family_runtime_queue.tasks.find(
       (task: { domain_id: string }) => task.domain_id === 'medautogrant',
@@ -881,8 +721,8 @@ JSON
       '--decision',
       'approve',
     ], env);
-    const secondTick = runCli(['family-runtime', 'tick', '--source', 'hermes-cron'], env);
-    const thirdTick = runCli(['family-runtime', 'tick', '--source', 'hermes-cron'], env);
+    const secondTick = runCli(['family-runtime', 'tick', '--source', 'test-runner'], env);
+    const thirdTick = runCli(['family-runtime', 'tick', '--source', 'test-runner'], env);
     queue = runCli(['family-runtime', 'queue', 'list'], env);
     const notifications = runCli(['family-runtime', 'notify', 'list'], env);
     const events = runCli(['family-runtime', 'events', 'export'], env);

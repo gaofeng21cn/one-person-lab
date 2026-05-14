@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { resolveCodexBinary } from '../codex.ts';
-import { inspectHermesRuntime } from '../hermes.ts';
 
 import {
   type OplEngineAction,
@@ -245,7 +244,7 @@ export function resolveCodexVersion() {
 
 export function findEngineOrThrow(engineId: string): OplEngineId {
   const normalized = engineId.trim().toLowerCase();
-  if (normalized === 'codex' || normalized === 'hermes') {
+  if (normalized === 'codex') {
     return normalized;
   }
 
@@ -256,41 +255,23 @@ function buildEngineActionEnvKey(engineId: OplEngineId, action: OplEngineAction)
   return `OPL_${engineId.toUpperCase()}_${action.toUpperCase()}_COMMAND`;
 }
 
-function resolveHermesInstallCommand() {
-  return 'curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash';
-}
-
 function resolveBuiltinEngineActionCommand(
   engineId: OplEngineId,
   action: OplEngineAction,
 ) {
-  if (engineId === 'codex') {
-    switch (action) {
-      case 'install':
-      case 'update':
-      case 'reinstall':
-        return [
-          'npm install -g @openai/codex@latest',
-          '--fetch-retries=3',
-          '--fetch-retry-mintimeout=2000',
-          '--fetch-retry-maxtimeout=20000',
-          '--fetch-timeout=60000',
-        ].join(' ');
-      case 'remove':
-        return 'npm uninstall -g @openai/codex';
-    }
-  }
-
-  const hermes = inspectHermesRuntime();
-
   switch (action) {
     case 'install':
-    case 'reinstall':
-      return resolveHermesInstallCommand();
     case 'update':
-      return hermes.binary ? `${hermes.binary.path} update` : null;
+    case 'reinstall':
+      return [
+        'npm install -g @openai/codex@latest',
+        '--fetch-retries=3',
+        '--fetch-retry-mintimeout=2000',
+        '--fetch-retry-maxtimeout=20000',
+        '--fetch-timeout=60000',
+      ].join(' ');
     case 'remove':
-      return null;
+      return 'npm uninstall -g @openai/codex';
   }
 }
 
@@ -343,9 +324,7 @@ export function resolveEngineActionSpec(
   const envOverride = process.env[buildEngineActionEnvKey(engineId, action)];
   const builtinCommand = resolveBuiltinEngineActionCommand(engineId, action);
   const manualNote =
-    engineId === 'hermes' && action === 'remove'
-      ? 'Hermes remove does not currently have a safe cross-platform uninstall command. Use the installer-specific removal path manually.'
-      : `No built-in ${engineId} ${action} command is configured. Set ${buildEngineActionEnvKey(engineId, action)} to enable it.`;
+    `No built-in ${engineId} ${action} command is configured. Set ${buildEngineActionEnvKey(engineId, action)} to enable it.`;
 
   return resolveShellActionSpec(envOverride, builtinCommand, manualNote);
 }

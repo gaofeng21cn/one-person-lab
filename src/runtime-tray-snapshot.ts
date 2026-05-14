@@ -1,8 +1,6 @@
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import { DatabaseSync } from 'node:sqlite';
-import { inspectHermesRuntime } from './hermes.ts';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
@@ -11,7 +9,7 @@ import { buildDomainManifestCatalog } from './management/domain-manifest-catalog
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { FrameworkContracts } from './types.ts';
 import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';
-import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary, titleFromHermesCronJob } from './runtime-tray-display.ts';
+import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary } from './runtime-tray-display.ts';
 import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
 import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, RuntimeTrayHealthStatus, RuntimeTrayItem, RuntimeTrayLane, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
@@ -23,27 +21,7 @@ import { buildProviderContinuousProof } from './family-runtime-provider-continuo
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
-
-type HermesCronJob = {
-  id?: unknown;
-  name?: unknown;
-  script?: unknown;
-  schedule_display?: unknown;
-  enabled?: unknown;
-  state?: unknown;
-  next_run_at?: unknown;
-  last_run_at?: unknown;
-  last_status?: unknown;
-  last_error?: unknown;
-  last_delivery_error?: unknown;
-};
-
-type HermesCronProjection = {
-  items: RuntimeTrayItem[];
-  source_refs: RuntimeTraySourceRef[];
-};
-
-type HermesCronOutputIssue = 'script_error' | 'timed_out' | null;
+import { buildDomainProjectionIngestion } from './runtime-tray-domain-projection-ingestion.ts';
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',
@@ -81,10 +59,8 @@ const ATTENTION_STATUS_MARKERS = [
   'stale',
 ];
 
-function runtimeOwnerForCurrentProvider() {
-  return resolveFamilyRuntimeProviderKind() === 'hermes_legacy'
-    ? 'upstream_hermes_agent'
-    : 'provider_backed_family_runtime';
+function runtimeOwnerForCurrentProvider(): RuntimeTrayItem['runtime_owner'] {
+  return 'provider_backed_family_runtime';
 }
 
 function buildRuntimeProviderContinuousProof() {
@@ -338,102 +314,6 @@ function sortItems(left: RuntimeTrayItem, right: RuntimeTrayItem) {
   return left.project_label.localeCompare(right.project_label) || left.item_id.localeCompare(right.item_id);
 }
 
-function hermesHomeRoot() {
-  return process.env.HERMES_HOME
-    ? path.resolve(process.env.HERMES_HOME)
-    : path.join(os.homedir(), '.hermes');
-}
-
-function hermesCronJobsPath() {
-  return process.env.OPL_HERMES_CRON_JOBS_FILE
-    ? path.resolve(process.env.OPL_HERMES_CRON_JOBS_FILE)
-    : path.join(hermesHomeRoot(), 'cron', 'jobs.json');
-}
-
-function latestHermesCronOutputPath(hermesHome: string, jobId: string) {
-  const outputDir = path.join(hermesHome, 'cron', 'output', jobId);
-  try {
-    const latestFile = fs.readdirSync(outputDir)
-      .filter((name) => name.endsWith('.md'))
-      .sort()
-      .at(-1);
-    return latestFile ? path.join(outputDir, latestFile) : null;
-  } catch {
-    return null;
-  }
-}
-
-function latestHermesCronOutputIssue(outputPath: string | null): HermesCronOutputIssue {
-  if (!outputPath) {
-    return null;
-  }
-
-  try {
-    const content = fs.readFileSync(outputPath, 'utf8');
-    if (/script timed out after\s+\d+s/i.test(content) || /timed out/i.test(content)) {
-      return 'timed_out';
-    }
-    if (content.includes('## Script Error') || content.includes('The data-collection script failed')) {
-      return 'script_error';
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function readHermesCronJobs() {
-  const jobsPath = hermesCronJobsPath();
-  try {
-    const payload = JSON.parse(fs.readFileSync(jobsPath, 'utf8')) as { jobs?: unknown };
-    return {
-      jobsPath,
-      jobs: Array.isArray(payload.jobs) ? payload.jobs as HermesCronJob[] : [],
-    };
-  } catch {
-    return {
-      jobsPath,
-      jobs: [],
-    };
-  }
-}
-
-function isMasHermesCronJob(job: HermesCronJob) {
-  const name = optionalString(job.name)?.toLowerCase() ?? '';
-  const script = optionalString(job.script)?.toLowerCase() ?? '';
-  return name.startsWith('medautoscience-') || script.includes('med-autoscience/');
-}
-
-function scriptPathForHermesCronJob(hermesHome: string, job: HermesCronJob) {
-  const script = optionalString(job.script);
-  if (!script) {
-    return null;
-  }
-  return path.isAbsolute(script) ? script : path.join(hermesHome, 'scripts', script);
-}
-
-function masWorkspaceRootFromCronScript(scriptPath: string | null) {
-  if (!scriptPath) {
-    return null;
-  }
-
-  try {
-    const script = fs.readFileSync(scriptPath, 'utf8');
-    const marker = '/ops/medautoscience/bin/watch-runtime';
-    const markerIndex = script.indexOf(marker);
-    if (markerIndex === -1) {
-      return null;
-    }
-
-    const beforeMarker = script.slice(0, markerIndex);
-    const quoteIndex = Math.max(beforeMarker.lastIndexOf('"'), beforeMarker.lastIndexOf("'"));
-    const workspaceRoot = beforeMarker.slice(quoteIndex + 1);
-    return workspaceRoot.startsWith('/') ? workspaceRoot : null;
-  } catch {
-    return null;
-  }
-}
-
 function profileForMasWorkspace(workspaceRoot: string) {
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   try {
@@ -465,35 +345,6 @@ function masWorkspaceRefsFromDomainManifests(entries: DomainManifestCatalogEntry
           sourceRef('/domain_manifests/projects/medautoscience/product_entry_manifest', 'domain_manifest'),
           sourceRef('/workspace_locator', 'mas_workspace_locator'),
         ],
-      };
-    })
-    .filter((entry): entry is MasWorkspaceProjectionRef => Boolean(entry));
-}
-
-function masWorkspaceRefsFromHermesCronJobs(enabled: boolean) {
-  if (!enabled) {
-    return [];
-  }
-  const hermesHome = hermesHomeRoot();
-  const { jobsPath, jobs } = readHermesCronJobs();
-  return jobs
-    .filter(isMasHermesCronJob)
-    .map((job): MasWorkspaceProjectionRef | null => {
-      const scriptPath = scriptPathForHermesCronJob(hermesHome, job);
-      const workspaceRoot = masWorkspaceRootFromCronScript(scriptPath);
-      if (!workspaceRoot) {
-        return null;
-      }
-
-      const profileRef = profileForMasWorkspace(workspaceRoot);
-      return {
-        workspace_root: workspaceRoot,
-        profile_ref: profileRef,
-        profile_name: profileRef ? path.basename(profileRef).replace(/\.workspace\.toml$/, '') : path.basename(workspaceRoot),
-        source_refs: uniqueByRef([
-          fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes 定时任务'),
-          scriptPath ? fileSourceRef(scriptPath, 'hermes_cron_script', 'Hermes 脚本') : null,
-        ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref))),
       };
     })
     .filter((entry): entry is MasWorkspaceProjectionRef => Boolean(entry));
@@ -720,11 +571,9 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
 
 function buildMasStudyProjection(
   domainManifests: { projects: DomainManifestCatalogEntry[] },
-  options: { includeHermesCronJobs: boolean },
 ) {
   const workspaces = uniqueMasWorkspaces([
     ...masWorkspaceRefsFromDomainManifests(domainManifests.projects),
-    ...masWorkspaceRefsFromHermesCronJobs(options.includeHermesCronJobs),
   ]);
   const portalProjections = workspaces.map((workspace) => buildMasPortalItems(workspace));
   const portalWorkspaceRoots = new Set(portalProjections.flatMap((projection) => [...projection.portal_workspace_roots]));
@@ -750,118 +599,25 @@ function buildMasStudyProjection(
   };
 }
 
-function buildHermesCronProjection(enabled: boolean): HermesCronProjection {
-  if (!enabled) {
-    return { items: [], source_refs: [] };
-  }
-  const hermesHome = hermesHomeRoot();
-  const { jobsPath, jobs } = readHermesCronJobs();
-  const items = jobs
-    .filter(isMasHermesCronJob)
-    .map((job): RuntimeTrayItem | null => {
-      const jobId = optionalString(job.id);
-      if (!jobId) {
-        return null;
-      }
-
-      const enabled = job.enabled !== false;
-      const state = optionalString(job.state) ?? (enabled ? 'scheduled' : 'paused');
-      const latestOutputPath = latestHermesCronOutputPath(hermesHome, jobId);
-      const outputIssue = latestHermesCronOutputIssue(latestOutputPath);
-      const hasRecordedError =
-        Boolean(optionalString(job.last_error) || optionalString(job.last_delivery_error))
-        || optionalString(job.last_status) === 'error'
-        || Boolean(outputIssue);
-      if (!hasRecordedError && enabled) {
-        return null;
-      }
-
-      const lane: RuntimeTrayLane = 'attention';
-      const status = hasRecordedError ? 'needs_attention' : enabled ? state : 'paused';
-      const schedule = optionalString(job.schedule_display);
-      const lastRun = optionalString(job.last_run_at);
-      const nextRun = optionalString(job.next_run_at);
-      const summaryParts = [
-        schedule ? `排程：${schedule}` : null,
-        lastRun ? `上次运行：${lastRun}` : null,
-        nextRun ? `下次运行：${nextRun}` : null,
-      ].filter((value): value is string => Boolean(value));
-      const sourceRefs = uniqueByRef([
-        fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes 定时任务'),
-        latestOutputPath ? fileSourceRef(latestOutputPath, 'hermes_cron_output', '最新定时任务输出') : null,
-      ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref)));
-      const action = actionContext(
-        'infrastructure',
-        outputIssue === 'timed_out' ? 'infrastructure_timeout' : 'infrastructure_recovery',
-        outputIssue === 'timed_out'
-          ? '后台监督脚本执行超时，需要系统侧恢复。'
-          : '后台监督任务报告异常，需要系统侧恢复。',
-      );
-
-      return {
-        item_id: `medautoscience:hermes-cron:${jobId}`,
-        project_id: 'medautoscience',
-        project_label: `${PROJECT_LABELS.medautoscience} 基础设施`,
-        lane,
-        title: `工作区监督任务：${titleFromHermesCronJob(job)}`,
-        status,
-        status_label: hasRecordedError
-          ? outputIssue === 'timed_out' ? '后台监督超时' : '系统侧需恢复'
-          : '已暂停',
-        summary: summaryParts.length > 0 ? summaryParts.join('；') : null,
-        updated_at: lastRun,
-        command: `hermes cron run ${jobId}`,
-        workspace_path: null,
-        runtime_owner: 'upstream_hermes_agent' as const,
-        domain_owner: 'med-autoscience',
-        source_refs: sourceRefs,
-        ...action,
-        next_action_summary:
-          '恢复后台监督定时任务，并确认下一次运行不再超时。',
-      };
-    })
-    .filter((item): item is RuntimeTrayItem => Boolean(item));
-
-  return {
-    items,
-    source_refs: items.length > 0
-      ? [
-        fileSourceRef(jobsPath, 'hermes_cron_projection', 'Hermes 定时任务'),
-        sourceRef('/runtime_tray_snapshot/hermes_cron_items', 'runtime_projection'),
-      ]
-      : [],
-  };
-}
-
 export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeRuntimePaths = familyRuntimePaths();
-  const hermesDeepInspection = providerKind === 'hermes_legacy';
-  const hermes = inspectHermesRuntime({
-    deep: hermesDeepInspection,
-    reason: `Runtime tray did not deep-inspect Hermes because ${providerKind} is the configured family runtime provider.`,
-  });
-  const hermesReady = Boolean(hermesDeepInspection && hermes.binary && hermes.version && hermes.gateway_service.loaded);
   const masManagedProviderProjection = readMasManagedProviderProjection();
-  const lifecycleProvider = hermesDeepInspection
-    ? null
-    : await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyRuntimeRuntimePaths, {
-      managedProviderProjection: masManagedProviderProjection,
-    });
-  const providerReady = hermesDeepInspection ? hermesReady : lifecycleProvider?.ready === true;
+  const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyRuntimeRuntimePaths, {
+    managedProviderProjection: masManagedProviderProjection,
+  });
+  const providerReady = lifecycleProvider.ready === true;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const stageAttemptWorkbench = await buildStageAttemptWorkbench({
     managedProviderProjection: masManagedProviderProjection,
   });
   const providerContinuousProof = buildRuntimeProviderContinuousProof();
   const nativeHelperExecutionEnvelope = buildNativeHelperExecutionEnvelope();
+  const domainProjectionIngestion = buildDomainProjectionIngestion(domainManifests.projects);
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
-  const masStudyProjection = buildMasStudyProjection(domainManifests, {
-    includeHermesCronJobs: hermesDeepInspection,
-  });
-  const hermesCronProjection = buildHermesCronProjection(hermesDeepInspection);
+  const masStudyProjection = buildMasStudyProjection(domainManifests);
   const stageAttemptItems = buildStageAttemptTrayItems({
     workbench: stageAttemptWorkbench,
     sourceRefs: stageAttemptWorkbench.source_refs,
@@ -870,7 +626,6 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
   const items = [
     ...domainItems,
     ...masStudyProjection.items,
-    ...hermesCronProjection.items,
     ...stageAttemptItems,
     providerProofItem,
   ];
@@ -906,13 +661,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
             ? 'Family runtime provider 未就绪；OPL 没有启动替代守护进程。'
             : `${runningItems.length} 个运行中，${actionCounts.opl} 个处理中项目，${actionCounts.infrastructure} 个后台恢复项，${actionCounts.user} 个用户处理项，${recentItems.length} 个近期项目。`,
         provider_kind: providerKind,
-        hermes_ready: hermesReady,
-        hermes_runtime: {
-          binary: hermes.binary,
-          version: hermes.version,
-          gateway_service: hermes.gateway_service,
-          issues: hermes.issues,
-        },
+        provider_ready: providerReady,
       },
       last_updated: new Date().toISOString(),
       running_items: runningItems,
@@ -922,6 +671,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       stage_attempt_workbench: stageAttemptWorkbench,
       provider_continuous_proof: providerContinuousProof,
       native_helper_execution_envelope: nativeHelperExecutionEnvelope,
+      domain_projection_ingestion: domainProjectionIngestion,
       managed_domain_provider_states: {
         surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
         role: 'app_status_read_model_only',
@@ -941,11 +691,12 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         sourceRef('/stage_attempt_workbench', 'stage_attempt_workbench'),
         sourceRef('/provider_continuous_proof', 'provider_continuous_proof'),
         sourceRef('/native_helper_execution_envelope', 'native_helper_execution_envelope'),
+        sourceRef('/domain_projection_ingestion', 'domain_projection_ingestion'),
         ...(masManagedProviderProjection
           ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
           : []),
+        ...domainProjectionIngestion.source_refs,
         ...masStudyProjection.source_refs,
-        ...hermesCronProjection.source_refs,
       ]),
       daemon_policy: {
         local_daemon_added: false,
