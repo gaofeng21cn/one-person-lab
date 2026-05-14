@@ -22,7 +22,7 @@ OPL 系列项目的理想态、差距和完善计划按两层维护：
 | OPL 全局目标态 | [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.zh-CN.md) | 定义 OPL Framework、Foundry Agents、One Person Lab App、workspace/runtime artifact root 的 north-star。 |
 | OPL 全局差距 | [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.zh-CN.md) | 记录 family-level 当前状态、production closure 缺口、全局完善顺序。 |
 | OPL 当前路线 | [OPL 当前开发线路](./current-development-lines.zh-CN.md) 与 [OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) | 说明 framework-first 执行顺序、Temporal provider、standard domain-agent skeleton 与旧路线退役纪律。 |
-| OPL 功能闭环计划 | [OPL Production Functional Closure Plan](./production-functional-closure-plan.zh-CN.md) 与 [生产级框架闭环差距矩阵](./production-framework-closure-gap-matrix.zh-CN.md) | 承接跨仓 owner receipt、memory/lifecycle apply、operator workbench、legacy retirement 和 live soak gate。 |
+| OPL 生产闭环矩阵 | [生产级框架闭环差距矩阵](./production-framework-closure-gap-matrix.zh-CN.md) | 承接跨仓 owner receipt、memory/lifecycle apply、operator workbench、legacy retirement 和 live soak gate；2026-05-14 一次性 functional closure plan 的活跃 follow-through 现在回到本矩阵。 |
 | 单仓目标与计划 | 各 repo 的 `docs/references/*ideal*`、`docs/status.md`、`docs/active/`、`docs/runtime/`、`docs/delivery/` 或 `docs/source/` | 只维护本仓 domain truth、authority、direct/hosted 边界、单仓差距和上收清单；旧 `program` / `plans` / `capabilities` 目录不再作为默认落点。 |
 
 ## Owner 分层
@@ -39,6 +39,15 @@ OPL 仓负责所有 domain-neutral、跨 MAS/MAG/RCA 可复用、服务长期运
 - One Person Lab App 需要消费的通用 workbench contracts、action routing shell、runtime snapshot 和 drilldown 语义。
 
 OPL 不负责 domain truth、domain quality verdict、publication/fundability/visual/export ready verdict、memory body、artifact mutation permission 或最终交付 authority。
+
+当前继续应落在 OPL 层面的实现 / 硬化 backlog 是：
+
+- generic state-machine runner：OPL 已持有 domain-neutral transition contract、runner 和 matrix runner；后续 OPL 层硬化应继续补幂等 tick、provider attempt bridge、retry / dead-letter、human gate transport、dispatch receipt 和 matrix audit。MAS/MAG/RCA 只声明各自的 domain transition table / guard / oracle fixture / owner action。
+- provider SLO 与 repair-loop 执行证据：Temporal production proof 已有 read-model 与 supervised receipt；周期性 proof 调度、repair execution receipt、restart / re-query / signal history 的长期 SLO 仍应由 OPL runtime/provider 层闭合。
+- stage activity bridge：OPL 负责从 typed queue 到 provider-backed stage attempt、sidecar dispatch、typed closeout ledger、owner receipt refs 与 typed blocker 的通用传输；真实 MAS paper、MAG grant、RCA visual owner receipt chain 继续由 domain owner 闭合。
+- App / workbench 产品化：OPL App 负责把 workspace/source intake、artifact gallery、package/export lifecycle、route graph、review/repair queue、quality/readiness、observability/SLO、memory locator 和 action routing 这组通用 projection 做成人用 drilldown；domain repo 只提供 refs、verdict refs、route nodes/edges 和 receipts。
+- memory / artifact / lifecycle transport：OPL 可实现 locator、body-free inventory、writeback proposal / receipt transport、retention / restore ledger 和 provenance shell；memory body、accept/reject、artifact mutation 和 package/export verdict 必须回到 domain receipt。
+- physical skeleton / legacy follow-through gate：OPL 负责 no-active-caller、replacement parity、provenance retention、history/tombstone、no-retained-legacy-entry 与 delete readiness 的只读门禁；实际文件移动或删除由对应 repo owner 在 parity / provenance 证据齐备后执行。
 
 ### Domain repo 负责
 
