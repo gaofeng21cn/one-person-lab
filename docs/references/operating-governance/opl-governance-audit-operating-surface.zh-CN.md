@@ -14,11 +14,11 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 目标不是单体 runtime。
 目标是一个薄的顶层 operating layer：只记录 governance signal、routing audit trace 与 readiness index，而 runtime truth 仍然留在 domain system 内部。
-本文中的 legacy `gateway` wording 是为了兼容历史 surface id 与 example corpus。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
+本文中的 legacy `gateway` wording 只是来自已归档 surface id 与 example corpus 的 provenance vocabulary，不是 active compatibility interface。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
 
 ## 与前置 Gateway 层的关系
 
-这层 operating surface 建立在保留的历史兼容层之上：
+这层 operating surface 最初建立在以下已归档历史层之上：
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.zh-CN.md)
 - [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
@@ -27,7 +27,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.zh-CN.md)
 - 当前机器可读合同目录：[`../../contracts/opl-framework/README.zh-CN.md`](../../../contracts/opl-framework/README.zh-CN.md)
 
-这些层是 provenance 与 compatibility input。当前 topology 与 owner boundary 仍以核心五件套、当前合同和 stage-led framework roadmap 为准。
+这些层只作为 provenance input。当前 topology 与 owner boundary 仍以核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 stage-led framework roadmap 为准。
 
 ## 核心承诺
 
@@ -38,7 +38,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - 成为 domain runtime audit truth 的 owner
 - 成为 domain review truth 的 owner
 - 成为 artifact truth 或 publish truth 的 owner
-- 绕过 domain gateway 直接控制 harness execution
+- 绕过 domain-owned capability entry 直接控制 harness execution
 
 一句话说：
 
@@ -53,7 +53,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - 存储某个 domain 的 canonical audit truth
 - 用顶层副本替代 domain review state
 - 变成所有执行的统一 runtime entry
-- 把 domain gateway 降格成实现细节
+- 把 domain-owned capability entry 降格成实现细节
 
 ## 允许的顶层 Record Kind
 
@@ -63,7 +63,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 目的：
 
-- 记录 `OPL` 如何把一个请求路由到某个 domain gateway
+- 记录 `OPL` 如何把一个请求路由到某个 domain-owned capability entry
 - 在顶层保留 routing evidence 与 routing outcome
 
 它是顶层对 routing step 的审计痕迹，不是 domain runtime audit record。
@@ -154,9 +154,9 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 这样才能防止外界把 `OPL` 误读成 runtime 或 publish state 的 canonical owner。
 
-### Domain entry 兼容值仍为 `domain_gateway`
+### Legacy `domain_gateway` 只保留 provenance 语义
 
-这一层可以引用保留兼容值 `domain_gateway` 以支持 reviewability。在当前 prose 中，应把它理解成 stage-led、以 Agent executor 为最小执行单位的 topology 下的 domain-owned capability entry。
+已归档示例中可以为了 reviewability 保留 legacy literal `domain_gateway`。当前 prose 与新增机器可读 surface 必须使用当前 domain-owned capability entry 语义，不能把这个 literal 继续保留成 compatibility interface。
 
 ### Publish readiness 不等于 publish truth
 
@@ -186,7 +186,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
   "request_id": "opl-2026-04-05-010",
   "workstream_id": "presentation_ops",
   "domain_id": "redcube",
-  "summary": "Routed a defense-deck request into the RedCube domain gateway.",
+  "summary": "Routed a defense-deck request into the RedCube domain-owned capability entry.",
   "status": "recorded",
   "evidence_refs": [
     "intent=presentation_delivery",
@@ -202,7 +202,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
   "recorded_at": "2026-04-05T06:20:00Z",
   "routing_audit": {
     "routing_status": "routed",
-    "entry_surface": "domain_gateway",
+    "entry_surface": "legacy_domain_gateway_identifier",
     "routing_decision_ref": "opl://routed-actions/opl-2026-04-05-010",
     "handoff_ref": "opl://handoffs/opl-2026-04-05-010"
   }
@@ -330,7 +330,7 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 - `OPL executes domain review or publish`
 - `OPL is the unified runtime entry`
 - `OPL manages all runs directly`
-- 把 domain gateway 降格成实现细节
+- 把 domain-owned capability entry 降格成实现细节
 
 也不要新增这些操作：
 

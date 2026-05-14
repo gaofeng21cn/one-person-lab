@@ -1,6 +1,6 @@
 # OPL 生态四仓统一状态总表
 
-> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。当前活跃入口以 Codex-only 文档为准（`README*`、`docs/README*`、`contracts/opl-framework/README*`）。
+> 历史说明（2026-04-11 OMX offboarding；2026-05-14 复核）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。正文中的 `Gateway / Federation`、`Domain Harness OS` 与 `Codex-default host-agent runtime` 是当时快照语言；当前活跃入口以 stage-led OPL framework 文档为准（`README*`、`docs/README*`、`docs/status.md`、`docs/architecture.md`、`contracts/opl-framework/README*`）。本文不提供 active gateway/federation compatibility interface。
 
 状态锚点：`2026-04-11`
 
@@ -70,8 +70,8 @@
 
 ### 已经落地的部分
 
-- 顶层命名与分层已冻结：
-  - `OPL` 是顶层 `Gateway / Federation`
+- 顶层命名与分层在当时快照中已冻结：
+  - `OPL` 当时写作顶层 `Gateway / Federation`；当前读法是 stage-led family agent framework owner
   - `Unified Harness Engineering Substrate` 是共享架构基座
   - 三个业务仓是在同一 substrate 上演化的 `Domain Harness OS`
 - 当前产品分层语义已统一：
@@ -114,7 +114,7 @@
 | --- | --- |
 | 统一术语与架构层 | 高 |
 | formal-entry / layering 合同层 | 高 |
-| 顶层 gateway 合同与只读入口 | 中 |
+| 历史顶层 gateway 合同与只读入口 | 历史参考，不作为当前 active interface |
 | 跨仓 durable surface 对齐 | 中高 |
 | repo-verified behavior convergence | 中 |
 | 共享代码框架 / 共享执行内核 | 低 |
@@ -124,8 +124,8 @@
 
 ### 顶层 OPL
 
-`OPL` 当前 repo-tracked formal entry 仍是本地 `TypeScript CLI + framework contract baseline`。
-它是顶层 `Gateway` 的 formal entry，不等于 domain runtime owner 入口。
+`OPL` 在 `2026-04-11` 快照中的 repo-tracked formal entry 是本地 `TypeScript CLI + framework contract baseline`。
+当时它被写作顶层 `Gateway` 的 formal entry；当前读法是 OPL framework CLI / App / activation surface，不等于 domain runtime owner 入口，也不恢复 gateway compatibility interface。
 当前顶层 baton 同时继承并保持可追溯的前序锚点：
 
 - `G2 stable public baseline`
@@ -147,7 +147,7 @@
 
 | 仓库 | 当前角色 | 当前阶段 | 当前已经成立的真相 | 下一步重点 |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 2` admitted-domain federation truth 已吸收，当前停在中央同步持有人语境下的 honest stop | 顶层 formal entry、candidate-domain blocked truth、`Unified Harness Engineering Substrate`、四仓统一文档治理都已冻结；本轮 central sync 已把 `redcube-ai` 的 `e8146a1` / `762ea4c`、`med-autoscience` 的 `9b5cea8` / `7ee19a8` / `6c64264`，以及 `med-autogrant` 的 `98df81f` 对顶层参考面同步完成 | 只在 admitted-domain 业务仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，重开中央同步线；不越界成 runtime owner |
+| `one-person-lab` | 历史快照写作顶层 `Gateway / Federation`；当前为 stage-led family agent framework | `Phase 2` admitted-domain federation truth 已吸收，当前停在中央同步持有人语境下的 honest stop | 当时的 formal entry、candidate-domain blocked truth、`Unified Harness Engineering Substrate`、四仓统一文档治理都已冻结；本轮 central sync 已把 `redcube-ai` 的 `e8146a1` / `762ea4c`、`med-autoscience` 的 `9b5cea8` / `7ee19a8` / `6c64264`，以及 `med-autogrant` 的 `98df81f` 对顶层参考面同步完成 | 只在 admitted-domain 业务仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，重开中央同步线；不越界成 runtime owner；不恢复 gateway/federation compatibility surface |
 | `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | runtime mainline 已吸收，repo-side 停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB` | 主线 runtime contract 已吸收到 `main`，formal-entry / Auto-only / future HITL layering 口径已收口；runtime 主线与 display 独立 owner line 已明确分离；manual stabilization checklist 已冻结成 repo-tracked current truth，`runtime_watch` heartbeat / auto-recovery、closure handoff-ready bundle 识别与 publication gate 未 clear 时的 premature completion fail-closed 都已 absorbed 到 repo-side behavior hardening；`9b5cea8` 已把 verification surfaces 分层，`7ee19a8` 已冻结 runtime/workspace repair priorities，`6c64264` 已把 repo entry 迁回当前 repo-tracked truth；`monorepo / runtime core ingest / controlled cutover` 仍保留为后置长线 | 围绕 manual stabilization checklist 做手工测试与问题修正；在 external runtime gate 清除前，不重开新的架构 tranche，也不提前进入 physical migration |
 | `redcube-ai` | 视觉交付 `Domain Harness OS` | `Phase 2 / runtime watch locator integrity hardening` 已 absorb；same-mainline continuation board 已预冻结 | `CLI / MCP / controller` 语义已收口，`Auto-only` 主线与 future layering 口径已统一；`planning_ready` 仍通过 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同一 deliverable/topic 治理路径收口；quickstart route 已把 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 压成 repo-verified operator path，且包含 `fd01266` 测试对齐；其中 `workspace doctor` 继续只做诊断，brand-new workspace 的 canonical bootstrap writer 是 `source intake / source research`，不是独立 workspace-init surface；`e8146a1` 已把 verification surfaces 分层，`762ea4c` 已把 runtime-program state 迁回 repo-tracked truth，`phase_2_family_parity_autopilot_continuation_board` 已冻结出 `phase_2_family_parity_governance_surface_convergence` | 若继续，应从 `phase_2_family_parity_governance_surface_convergence` 开始沿 prefrozen same-mainline board 推进；不扩大 formal entry，不误写成 managed runtime |
 | `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | runtime-first ladder 已吸收到 post-R5A local runtime hardening current truth（`6277163` / `e8f9582` / `2c434b1` / `c3ba2a7` / `98df81f`） | author-side mainline、formal-entry、durability 与 `Auto-only` 主线语义已进入 current truth；`run-local / resume-local / build-artifact-bundle / execute-revision-pass / build-final-package / build-hosted-contract-bundle` 已形成当前本地 runtime ladder；canonical post-R5A walkthrough / output consistency 已冻结成 current truth，revised-workspace validator / operator alignment 已 absorbed closeout，`build-hosted-contract-bundle` 覆盖既有 output 时必须对 root-checkout `CURRENT_PROGRAM.program_id` 做 fail-closed 校验，而 `98df81f` 已把 control-plane state 迁回 repo-tracked truth；`MCP` 仍诚实停留在 future layer | 当前 truthful continuation 不是回到旧 `P4.B`，也不是进入 actual hosted runtime，而是只在出现新的 concrete post-R5A local runtime hardening delta 后再继续收紧；不提前误写成 `P5` |

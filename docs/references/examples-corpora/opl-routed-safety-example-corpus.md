@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This document indexes the canonical machine-readable examples for the explicit non-success routing states in the frozen `OPL Routed Action Gateway`.
+This document indexes historical machine-readable examples for explicit non-success routing states from the archived `OPL Routed Action Gateway` corpus.
 
 Its goal is to make top-level routing safety discoverable and reviewable without turning failure examples into a runtime.
 
@@ -20,22 +20,22 @@ This corpus does not:
 The examples are illustrative safety compositions only.
 For the current `Phase 1 / G3 thin handoff planning freeze hardening`, they remain planning-level contract examples rather than runtime behavior.
 
-## Current Example Set
+## Former Example Set
 
 ### 1. Ambiguous task
 
-- File: [`../../examples/opl-framework/ambiguous-task-routing.json`](../../../examples/opl-framework/ambiguous-task-routing.json)
+- Former artifact: `examples/opl-framework/ambiguous-task-routing.json` (retired from the active repo artifact set)
 - Shows how `OPL` keeps routing unresolved when a request mixes `research_ops` and `presentation_ops` semantics without enough clarification.
 
 ### 2. Unknown domain
 
-- File: [`../../examples/opl-framework/unknown-domain-routing.json`](../../../examples/opl-framework/unknown-domain-routing.json)
-- Shows how `OPL` returns `unknown_domain` when a candidate workstream is top-level recognizable but no registered domain gateway currently owns it.
+- Former artifact: `examples/opl-framework/unknown-domain-routing.json` (retired from the active repo artifact set)
+- Shows how `OPL` returns `unknown_domain` when a candidate workstream is top-level recognizable but no current domain-owned capability entry owns it.
 
 ### 3. Refusal
 
-- File: [`../../examples/opl-framework/refusal-routing.json`](../../../examples/opl-framework/refusal-routing.json)
-- Shows how `OPL` refuses a top-level request that tries to bypass the domain gateway boundary.
+- Former artifact: `examples/opl-framework/refusal-routing.json` (retired from the active repo artifact set)
+- Shows how `OPL` refuses a top-level request that tries to bypass the domain-owned action boundary.
 
 ## Reading Rule
 
@@ -55,7 +55,7 @@ These examples only show how the frozen G3 and P5.M1 layers record that boundary
 
 The routed-safety corpus is acceptable only when:
 
-- each example stays machine-readable
-- routed-action and governance-audit sub-objects validate against the frozen schemas where applicable
+- former artifact names remain provenance-only and are not clickable active repo paths
 - examples do not imply hidden best-effort routing or direct harness fallback
 - examples do not move canonical truth into `OPL`
+- current routing behavior is read from active contracts/source/CLI behavior, not this historical corpus

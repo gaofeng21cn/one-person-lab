@@ -4,19 +4,19 @@
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable companion to the derived JSON artifact only.
+Machine boundary: human-readable legacy-derived reference only; no current machine-readable `surface-lifecycle-map.json` contract is published in this repo.
 
 ## Purpose
 
-This document indexes the derived machine-readable lifecycle map for the historical/current OPL surface stack.
+This document preserves the legacy-derived lifecycle vocabulary for the historical OPL surface stack.
 
 Its job is to make contract, routing, operating, discoverability, and acceptance surfaces traversable from one place without turning the map into a workflow engine, transition authority, or second source of truth.
 
-The current OPL topology is stage-led with Agent executors as the minimum execution unit. Legacy `gateway` IDs remain here only where the derived artifact and compatibility archive still need them for traversal and reviewability.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit. Legacy `gateway` IDs remain here only as archived traversal/reviewability labels, not active compatibility interfaces.
 
-## Machine-Readable Artifact
+## Current Machine Boundary
 
-- [`../../contracts/opl-framework/surface-lifecycle-map.json`](../../../contracts/opl-framework/surface-lifecycle-map.json)
+No current `contracts/opl-framework/surface-lifecycle-map.json` exists. Current machine-readable behavior must use the active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
 
 ## Non-Goals
 
@@ -31,7 +31,7 @@ This lifecycle map does not:
 ## Shared-Foundation Ownership Boundary
 
 This lifecycle map sits in the shared-foundation reference layer only.
-`OPL` may freeze dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth still remain with human/domain-owned surfaces below the gateway boundary.
+`OPL` may freeze historical dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth remain with human/domain-owned surfaces.
 That keeps the map discoverable for review and acceptance alignment without turning it into a workflow control plane or shared truth store.
 For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
 For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
@@ -97,7 +97,7 @@ Read this lifecycle map as a **derived reference graph**, not as an execution co
 They do not authorize automatic transitions, and they do not replace prose review.
 If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary document only and does not grant mutation, transition, review, or publication authority.
 If the surface is the [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md), it remains a reference-grade activation freeze only and does not authorize runtime execution, candidate admission, or runtime-owner promotion.
-When an entry keeps a follow-on route boundary, the only allowed value is `domain_gateway`.
+When an archived entry keeps a follow-on route boundary, legacy examples may still show `domain_gateway`; current active surfaces must name the relevant domain-owned capability entry instead.
 If no follow-on action belongs to the surface, the map uses `null`.
 If the surface is `opl_candidate_domain_backlog`, the dependency chain remains blocker-oriented only; it does not authorize automatic promotion into onboarding, discovery, or routing.
 
@@ -121,6 +121,6 @@ The lifecycle map is acceptable only when:
 - it covers the currently frozen shared-foundation / gateway / operating / supporting surfaces that matter for top-level traversal
 - every `requires_surfaces` and `enables_surfaces` target resolves inside the same lifecycle map
 - every `governing_ref` resolves to an existing local artifact
-- `follow_on_route_surface` is always `null` or `domain_gateway`
+- legacy `follow_on_route_surface` examples stay provenance-only and do not define an active compatibility value
 - it remains discoverable alongside the derived surface authority matrix and derived surface review matrix without any of these maps becoming an execution surface
 - it remains derived, reference-only, and non-executing

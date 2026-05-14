@@ -8,9 +8,9 @@
 
 - core readiness：Codex CLI、workspace root、推荐 skills 与 GUI shell 的可用性。
 - domain modules readiness：MAS/MAG/RCA 等已准入 domain modules 的可用性。
-- family runtime provider readiness：已配置 provider、profile、bridge / signal transport 与 family-runtime queue 的可用性。迁移期 `hermes_legacy` provider 仍可暴露 Hermes gateway、cron/webhook bridge 等诊断细项；生产在线路径的必需 substrate 是 Temporal-backed provider。
+- family runtime provider readiness：已配置 provider、profile、bridge / signal transport 与 family-runtime queue 的可用性。生产在线路径的必需 substrate 是 Temporal-backed provider；Hermes provider/Gateway/readiness 只作为历史 provenance、诊断语料或负向 guard 读取，不再作为 provider readiness、provider proof surface 或兼容入口；`hermes_agent` executor adapter 不参与首启 readiness 判定。
 
-`opl install` 默认安装/复用已配置 family runtime provider。Temporal 是 production online runtime 的必需 substrate；迁移期 `hermes_legacy` provider 仍可通过 Hermes installer/gateway command 管理，Hermes online-management gateway 只作为 legacy/optional provider 或显式 proof lane 使用。OPL 通过 `opl family-runtime install|repair`、`opl runtime manager action --apply`、provider-specific repair 或 engine install 路径触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
+`opl install` 默认安装/复用已配置 family runtime provider。Temporal 是 production online runtime 的必需 substrate；Hermes online-management gateway 不再作为 install、repair 或 readiness path。OPL 通过 `opl family-runtime install|repair`、`opl runtime manager action --apply`、provider-specific repair 或 engine install 路径触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
 
 Full OPL readiness 需要 core、domain modules 与 family runtime provider 三层都 ready。provider 缺失、未 ready、桥接能力仍在 starting，或需要稍后复查时，应展示为 Full online runtime degraded；本地 CLI/status/manifest 仍可给出诊断，但不能把 Full readiness 写成完整通过。
 

@@ -4,19 +4,19 @@
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.zh-CN.md`
-Machine boundary: 只作为 derived JSON 工件的人读配套。
+Machine boundary: 仅作为 legacy-derived 人读参考；当前仓库没有发布 `surface-lifecycle-map.json` 机器可读合同。
 
 ## 目的
 
-这份文档索引历史/当前 OPL surface stack 的 derived machine-readable lifecycle map。
+这份文档保留历史 OPL surface stack 的 legacy-derived lifecycle 词汇。
 
 它的作用是：把 contract、routing、operating、discoverability 与 acceptance surface 串成可遍历的关系图，同时不把这张 map 升格成 workflow engine、transition authority 或第二真相源。
 
-当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。Legacy `gateway` id 只在 derived artifact 与 compatibility archive 仍需要它们做 traversal 和 reviewability 时保留。
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。Legacy `gateway` id 只作为已归档 traversal/reviewability 标签保留，不是 active compatibility interface。
 
-## 机器可读工件
+## 当前机器边界
 
-- [`../../contracts/opl-framework/surface-lifecycle-map.json`](../../../contracts/opl-framework/surface-lifecycle-map.json)
+当前不存在 `contracts/opl-framework/surface-lifecycle-map.json`。当前机器可读行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
 
 ## 非目标
 
@@ -31,7 +31,7 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 ## Shared-Foundation Ownership Boundary
 
 这张 lifecycle map 只位于 shared-foundation 的 reference 层。
-`OPL` 可以在这里冻结依赖与遍历语言，但 transition execution、runtime writeback、review truth 与 publication truth 仍然留在 gateway 边界之下的人类 / domain-owned surface 中。
+`OPL` 可以在这里冻结历史依赖与遍历语言，但 transition execution、runtime writeback、review truth 与 publication truth 仍然留在人类 / domain-owned surface 中。
 因此，这张 map 可以服务于 review 与 acceptance alignment 的 discoverability，而不会升级成 workflow control plane 或共享 truth store。
 更完整的 ownership split 可参考[共享基础结构归属](../../active/shared-foundation-ownership.zh-CN.md)。
 当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 为准。
@@ -97,7 +97,7 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 它们不会授权自动 transition，也不会替代 prose review。
 如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，它也仍然只是 shared-foundation boundary 文档，不会因此获得 mutation、transition、review 或 publication authority。
 如果某个 surface 是 [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.zh-CN.md) 或 [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md)，它也仍然只是 reference-grade activation freeze，不会因此授权 runtime execution、candidate admission，或把 `OPL` 提升成 runtime owner。
-如果某个 entry 仍保留 follow-on route boundary，唯一允许值仍然是 `domain_gateway`。
+如果某个已归档 entry 仍保留 follow-on route boundary，legacy 示例仍可能出现 `domain_gateway`；当前 active surface 必须命名相关 domain-owned capability entry。
 如果某个 surface 没有后续动作边界，map 就使用 `null`。
 如果某个 surface 是 `opl_candidate_domain_backlog`，这里暴露的依赖链也仍然只是 blocker-oriented 参考关系；它不会授权自动晋升到 onboarding、discovery 或 routing。
 
@@ -121,6 +121,6 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 - 它覆盖当前真正影响顶层遍历的已冻结 shared-foundation / gateway / operating / supporting surface
 - 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能在同一个 lifecycle map 内解析
 - 每个 `governing_ref` 都能解析到本地存在的工件
-- `follow_on_route_surface` 始终只可能是 `null` 或 `domain_gateway`
+- legacy `follow_on_route_surface` 示例只保留 provenance 语义，不定义 active compatibility value
 - 它能与 derived surface authority matrix、derived surface review matrix 一起被发现，但这些 map 都不会升级成执行 surface
 - 它保持 derived、reference-only、non-executing

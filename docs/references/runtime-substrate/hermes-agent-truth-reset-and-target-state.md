@@ -1,6 +1,6 @@
 # Hermes-Agent 真相重置与目标形态说明
 
-> 2026-05-10 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。`Hermes-Agent` 在新目标下退为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块；Temporal provider 落地后，它不再是目标 session/wakeup substrate。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+> 2026-05-14 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。Hermes 不再承担 provider、默认 executor、Codex CLI 备线、可选安装模块或目标 session/wakeup substrate 角色。`hermes_agent` 仅作为显式非默认 executor adapter/backend 保留，并只承诺接口连接、生命周期、回执、审计和 fail-closed。该 adapter 不承诺质量、工具语义或 resume 与 `Codex CLI` 等价。Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
 
 ## 1. 为什么要做这份重置
 
@@ -20,7 +20,7 @@
 
 ### 2.1 OPL
 
-当前状态补充（2026-05-11）：本节保留的是 Hermes-first 重置时的历史判断。当前 `OPL` 已经收敛为 stage-led、provider-backed，并以 Agent executor 为最小执行单位的 family agent framework owner，持有 stage attempt、typed queue、projection、shared contracts 和 provider abstraction；`gateway / federation` 只作为 legacy/provenance/compatibility vocabulary 阅读。`OPL` 仍不能声称自己已经拥有上游 `Hermes-Agent` runtime，也不把 Hermes 写成默认 session/wakeup substrate。
+当前状态补充（2026-05-14）：本节保留的是 Hermes-first 重置时的历史判断。当前 `OPL` 已经收敛为 stage-led、provider-backed，并以 Agent executor 为最小执行单位的 family agent framework owner，持有 stage attempt、typed queue、projection、shared contracts 和 provider abstraction；`gateway / federation` 只作为 history/provenance/diagnostic vocabulary 或负向 guard 阅读。`OPL` 仍不能声称自己已经拥有上游 `Hermes-Agent` runtime，也不把 Hermes 写成默认 session/wakeup substrate、provider、proof-provider、readiness path 或兼容接口。`hermes_agent` executor adapter/backend 是单独的显式非默认接口，不能被解读成 provider 或默认路径。
 
 ### 2.2 RedCube AI
 
@@ -60,7 +60,9 @@
 
 ## 4. 历史 Hermes-first 理想形态
 
-本节记录 2026-05-10 之前的 Hermes-first 迁移判断，已经被 provider-backed / Temporal-required production substrate 决策 supersede。当前有效目标不再是让 Hermes-Agent 成为四仓统一默认 substrate，而是让 OPL family runtime 以 Temporal-backed provider 作为 production online runtime 的必需 substrate；Hermes-Agent 保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。
+本节记录 2026-05-10 之前的 Hermes-first 迁移判断，已经被 provider-backed / Temporal-required production substrate 决策 supersede。当前有效目标不再是让 Hermes-Agent 成为四仓统一默认 substrate，而是让 OPL family runtime 以 Temporal-backed provider 作为 production online runtime 的必需 substrate。
+
+`hermes_agent` 作为显式非默认 executor adapter/backend 保留。Hermes provider / Gateway / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。
 
 ### 4.1 OPL 的历史 Hermes-first 理想形态
 

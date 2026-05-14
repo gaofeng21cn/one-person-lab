@@ -107,14 +107,14 @@ At the current stage:
 - provider-backed stage runtime is the production online carrier for long-running attempts, recovery, human gates, and projection, with the Temporal-backed provider as the required substrate
 
 That split matters: Codex names the default concrete executor, not the identity of the substrate.
-The same substrate should remain compatible with:
+The same substrate should support:
 
 - future managed web runtimes
 - future platform-hosted execution surfaces
 
 If the ecosystem retains upstream `Hermes-Agent` integration evidence inside a domain repository, the accurate place for that choice is:
 
-- a legacy/optional provider, executor/proof lane, or technical reference
+- historical provenance, diagnostic vocabulary, or a negative guard
 
 not:
 

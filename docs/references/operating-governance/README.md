@@ -6,7 +6,7 @@ Machine boundary: human-readable index only; machine-readable governance behavio
 
 This directory holds governance, quality projection, incident learning, operator projection, domain memory, directory governance, and surface-review references.
 
-The current OPL topology is not gateway-first. Some files here intentionally preserve legacy-derived `gateway` or `domain_gateway` surface IDs because paired machine-readable artifacts still use them for historical compatibility and reviewability. Treat those IDs as derived compatibility vocabulary unless the core five and current contracts restate them.
+The current OPL topology is not gateway-first. Some files here intentionally preserve legacy-derived `gateway` or `domain_gateway` wording because the archived compatibility corpus and example records still use those labels for provenance and reviewability. Treat those labels as historical vocabulary only; they are not active compatibility interfaces, and current machine-readable behavior must come from the core five, current contracts, source, CLI/API behavior, runtime ledgers, or domain-owned manifests.
 
 ## Current Owner Surfaces
 
@@ -28,8 +28,8 @@ The current OPL topology is not gateway-first. Some files here intentionally pre
 
 When a governance document says `gateway`, first classify whether the paragraph is:
 
-1. historical compatibility language,
-2. derived machine-readable surface vocabulary,
+1. historical provenance language,
+2. archived example / reviewability vocabulary,
 3. current framework activation/discovery/projection language.
 
 Only the third category can be reused in active docs without a tombstone pointer.

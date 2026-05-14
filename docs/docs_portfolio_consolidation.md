@@ -77,10 +77,13 @@ current OPL owner split is:
 - `MDS`: MAS-declared archive, backend-audit, source-provenance,
   historical-fixture, explicit archive-import, upstream-intake, and parity
   oracle reference only.
-- `Hermes-Agent`: external upstream runtime/project. In OPL prose it may only
-  appear as an explicit non-provider executor/proof diagnostic, migration
-  provenance, or historical material. Active provider-bridge interfaces,
-  provider fallback semantics, and readiness paths for Hermes are retired.
+- `Hermes-Agent`: external upstream runtime/project. In OPL prose,
+  `hermes_agent` may appear as a canonical explicit non-default executor
+  adapter/backend with independent receipt, audit, full-loop proof, and
+  fail-closed gates. Hermes provider, proof-provider, Gateway/readiness,
+  provider fallback, default execution, and compatibility surfaces are retired
+  and may appear only as migration provenance, historical/reference material,
+  diagnostic vocabulary, fixtures, or negative guards.
 - `Temporal`: required production provider for durable stage-attempt
   substrate. Current docs must keep required target state and landed state separate.
 
@@ -96,7 +99,7 @@ current OPL owner split is:
 | `docs/specs/` | `README*` | Active spec index | The two April 2026 Product API / ACP specs have moved to `docs/history/process/specs/`; when this index is empty, current runtime/product-boundary truth lives in the core five, `docs/active/`, runtime-substrate roadmap, and machine-readable contracts. |
 | `docs/references/current-support/` | `README*`, GUI/WebUI/install/release/skill/test support references | Current operational support references | Support commands and deployment notes must stay subordinate to CLI/API/contracts/source truth. |
 | `docs/references/runtime-substrate/` | `README*`, stage-led framework roadmap, Temporal provider plan, Runtime Manager target | Runtime/provider/executor support references | Older direct-entry, Hermes-first, host-agent, gateway, and online-platform whole plans have moved to `docs/history/runtime-substrate/`; current references stay subordinate to roadmap and core five. |
-| `docs/references/operating-governance/` | `README*`, domain memory governance, quality/operator/incident references, surface matrices | Governance and reviewability support | Gateway-derived surface maps remain derived references over historical compatibility surfaces; current topology lives in the core five and active runtime docs. |
+| `docs/references/operating-governance/` | `README*`, domain memory governance, quality/operator/incident references, and legacy-derived surface review notes | Governance and reviewability support | Gateway-derived surface notes remain provenance references over archived compatibility surfaces; current topology lives in the core five, active runtime docs, current contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests. |
 | `docs/references/convergence-governance/` | Family docs lifecycle rollout, convergence lessons, intake templates, external-learning boards | Cross-repo governance and convergence support | Dated rollout boards stay support references; final current truth must be copied into core owner docs or active reference indexes. |
 | `docs/references/domain-admission/` | Candidate backlog and admission/phase records | Candidate-domain support and dated admission records | Candidate workstreams remain semantic signals until admission evidence lands. |
 | `docs/references/examples-corpora/` | Example corpora and operating records | Examples and evidence corpora | Gateway/routed examples are contract walkthroughs and evidence examples. |
@@ -121,7 +124,7 @@ current OPL owner split is:
 | `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md` | Keep as active support plan | Stage-led roadmap | It is the Temporal provider technical lane; production Temporal autonomy requires soak evidence. |
 | `docs/history/runtime-substrate/**` | Keep as tombstoned history | Runtime-substrate history index | Useful content has been absorbed into active owners; whole documents preserve evaluation and migration context only. |
 | `docs/references/operating-governance/family-domain-memory-governance.zh-CN.md` | Keep active support | Operating-governance index | It governs whether domain experience belongs in memory, contracts, or deferred framework work. |
-| `docs/references/operating-governance/opl-surface-{authority,lifecycle,review}-matrix*` | Keep as legacy-derived support references | Operating-governance index plus current framework contracts | Their machine artifacts still cover historical gateway-derived IDs; prose should present them as legacy-derived reviewability references. |
+| `docs/references/operating-governance/opl-surface-{authority,lifecycle,review}-matrix*` | Keep as legacy-derived support references | Operating-governance index plus current framework contracts | The old machine artifacts are no longer active contracts in this repo; prose must present these files as legacy-derived reviewability references only. |
 | `docs/history/compatibility/gateway-federation/**` | Keep tombstoned | History compatibility index | Retired gateway/federation/routed-action corpus. |
 | `docs/history/frontdoor-legacy/**` | Keep tombstoned | Frontdoor legacy index | Retired frontdoor/Product API/bootstrap notes. |
 | `docs/history/process/**` | Keep as process archive | Process history index | Completed or superseded implementation plans and generated planning notes. |
@@ -139,9 +142,10 @@ current OPL owner split is:
    move it to `docs/history/process/specs/` after updating inbound prose links
    and name the current owner surface in the archive header.
 4. If operating-governance material still names `domain_gateway` or old
-   gateway IDs because a machine-readable compatibility artifact still uses
-   them, the prose should call that legacy-derived coverage and point to the
-   current topology owner.
+   gateway IDs, the prose must call them archived provenance / reviewability
+   vocabulary and point to the current topology owner. Do not keep them as
+   active compatibility interfaces or claim retired matrix JSON contracts are
+   still current machine artifacts.
 5. Physical moves should happen only after inbound prose links and
    machine-readable `human_doc:*`/contract references are checked. Until then,
    index-level lifecycle separation is preferred.

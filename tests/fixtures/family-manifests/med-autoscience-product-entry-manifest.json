@@ -305,6 +305,7 @@
     },
     "chat_completion_only_executor_forbidden": true,
     "hermes_agent_requires_full_agent_loop": true,
+    "hermes_agent_not_provider_or_gateway_surface": true,
     "non_default_executor_requires_explicit_selection": true,
     "non_default_executor_forbids_silent_codex_fallback": true,
     "simple_llm_backend_forbidden": true,
@@ -794,7 +795,7 @@
       {
         "guardrail_id": "workspace_supervision_gap",
         "trigger": "workspace-cockpit attention queue / study-progress supervisor freshness",
-        "symptom": "MAS workspace supervision 未在线或 freshness 已漂移；Hermes 不参与 active provider 路径，只可作为显式非 provider diagnostic/provenance 读取。",
+        "symptom": "MAS workspace supervision 未在线或 freshness 已漂移；Hermes 不参与 active provider 路径，只可作为历史 provenance、诊断语料或负向 guard 读取。",
         "recommended_command": "uv run python -m med_autoscience.cli watch --runtime-root /fixtures/med-autoscience/runtime --profile /fixtures/med-autoscience/profile.local.toml --ensure-study-runtimes --apply"
       }
     ],
@@ -813,7 +814,7 @@
   },
   "phase3_clearance_lane": {
     "surface_kind": "phase3_host_clearance_lane",
-    "summary": "Phase 3 把 provider-backed runtime readiness、MAS workspace supervision 和 study recovery proof 扩到更多 workspace/host；Hermes 不作为 provider 或兼容路径，只作为 explicit non-provider diagnostic/provenance 证据读取。",
+    "summary": "Phase 3 把 provider-backed runtime readiness、MAS workspace supervision 和 study recovery proof 扩到更多 workspace/host；Hermes 不作为 provider、proof lane 或兼容路径，只作为历史 provenance、诊断语料或负向 guard 读取。",
     "recommended_step_id": "provider_runtime_contract",
     "recommended_command": "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml",
     "clearance_targets": [
@@ -822,7 +823,7 @@
         "title": "Check provider runtime contract",
         "commands": [
           "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml",
-          "uv run python -m med_autoscience.cli hermes-runtime-check --profile /fixtures/med-autoscience/profile.local.toml"
+          "uv run python -m med_autoscience.cli provider-runtime-check --profile /fixtures/med-autoscience/profile.local.toml"
         ]
       }
     ],

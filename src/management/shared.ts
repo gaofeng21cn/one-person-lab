@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../contracts.ts';
-import { normalizeCommandOutput } from '../runtime-observer.ts';
+import { normalizeCommandOutput } from '../terminal.ts';
 
 export type CommandResult = {
   exitCode: number;

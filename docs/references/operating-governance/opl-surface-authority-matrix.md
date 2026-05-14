@@ -4,19 +4,19 @@
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable companion to the derived JSON artifact only.
+Machine boundary: human-readable legacy-derived reference only; no current machine-readable `surface-authority-matrix.json` contract is published in this repo.
 
 ## Purpose
 
-This document indexes the derived machine-readable authority matrix for the historical/current OPL surface stack.
+This document preserves the legacy-derived authority matrix vocabulary for the historical OPL surface stack.
 
 Its job is to make routing, execution, truth, review, and publication ownership boundaries inspectable from one place without turning the matrix into an authorization engine, runtime control plane, or second source of truth.
 
-The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain `gateway` or `domain_gateway` are retained because the paired derived JSON artifact and historical compatibility corpus still use them for reviewability. Read them as legacy-derived reviewability vocabulary.
+The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain `gateway` or `domain_gateway` are historical/reviewability labels from the archived compatibility corpus. Read them as legacy-derived vocabulary only, not as active compatibility interfaces.
 
-## Machine-Readable Artifact
+## Current Machine Boundary
 
-- [`../../contracts/opl-framework/surface-authority-matrix.json`](../../../contracts/opl-framework/surface-authority-matrix.json)
+No current `contracts/opl-framework/surface-authority-matrix.json` exists. Current machine-readable behavior must use the active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
 
 ## Non-Goals
 
@@ -30,7 +30,7 @@ This authority matrix does not:
 ## Shared-Foundation Ownership Boundary
 
 This authority matrix sits in the shared-foundation boundary-language layer only.
-`OPL` owns the top-level vocabulary that names route, execution, truth, review, and publication splits here, but the underlying authorities remain where the matrix says they remain: domain gateways, domain harnesses, and humans/private surfaces outside `OPL`.
+`OPL` owns the top-level vocabulary that names route, execution, truth, review, and publication splits here, but the underlying authorities remain with domain-owned capability entries, domain harnesses, and humans/private surfaces outside `OPL`.
 That makes the matrix an inspectable reference surface for ownership review, not a runtime control plane or shared truth store.
 For the broader ownership split, see [Shared Foundation Ownership](../../active/shared-foundation-ownership.md).
 For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
@@ -91,8 +91,8 @@ Read this matrix as a **derived authority split**, not as an execution or author
 When `owner_scope = opl`, the matrix may still expose routing, indexing, discoverability, or acceptance responsibility, but execution authority and domain truth/review/publication authority stay outside `OPL`.
 If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, every authority field remains boundary-only and does not shift canonical truth, mutation, review truth, or publication truth into `OPL`.
 If the surface is the [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md), every authority field also remains `none`; these packages do not admit candidate domains, do not authorize handoff bypass, and do not promote `OPL` into a runtime owner.
-When `owner_scope = domain`, the entry marks where domain-local routing and harness execution begin behind the domain gateway boundary.
-If a follow-on surface exists, the only allowed value remains `domain_gateway`.
+When `owner_scope = domain`, the entry marks where domain-local routing and harness execution begin behind a domain-owned capability entry.
+Legacy examples may still show `domain_gateway`, but new active surfaces must name the current domain-owned capability entry instead of retaining that value as a compatibility interface.
 If the surface is `opl_candidate_domain_backlog`, every authority field remains `none`; the backlog does not grant pre-admission authority over a future domain.
 
 ## Companion Mapping Surfaces
@@ -117,7 +117,7 @@ If the surface is `opl_candidate_domain_backlog`, every authority field remains 
 
 The authority matrix is acceptable only when:
 
-- it covers the frozen OPL shared-foundation / gateway / operating / supporting surfaces plus the linked domain public-entry surfaces needed for current authority review
+- it covers the frozen OPL shared-foundation / historical gateway / operating / supporting surfaces plus the linked domain public-entry surfaces needed for current authority review
 - every `governing_ref` resolves to an existing local artifact
 - `OPL` surfaces never claim domain execution, canonical-truth, review-truth, or publication-truth authority
 - linked domain public-entry surfaces remain domain-owned and do not collapse into OPL internal modules

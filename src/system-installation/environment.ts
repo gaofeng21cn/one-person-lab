@@ -1,5 +1,4 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
-import { inspectHermesRuntime } from '../hermes.ts';
 import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
 import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
@@ -15,10 +14,6 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
   const codexBinary = resolveCodexVersion();
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeProvider = inspectFamilyRuntimeProvider(providerKind);
-  const hermes = inspectHermesRuntime({
-    deep: false,
-    reason: 'Hermes diagnostics were not deep-inspected because OPL family-runtime providers are local_sqlite or temporal only.',
-  });
   const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildOplModules().modules;
   const moduleSummary = modulesPayload.summary;
@@ -35,12 +30,6 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
       && codexBinary.issues.length === 0
       ? 'ready'
       : codexBinary.installed
-        ? 'attention_needed'
-        : 'missing';
-  const hermesHealthStatus =
-    hermes.binary && hermes.gateway_service.loaded
-      ? 'ready'
-      : hermes.binary
         ? 'attention_needed'
         : 'missing';
   const overallStatus =
@@ -74,23 +63,6 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
           api_key_present: Boolean(codexDefaults?.provider_api_key),
           issues: codexIssues,
         },
-        hermes: {
-          required: false,
-          required_for: 'explicit_executor_or_proof_diagnostic_only',
-          capability_role: 'explicit_executor_or_proof_diagnostic_only',
-          installed: Boolean(hermes.binary),
-          version: hermes.version,
-          version_raw_output: hermes.version_raw_output,
-          update_available: hermes.update_available,
-          update_summary: hermes.update_summary,
-          binary_path: hermes.binary?.path ?? null,
-          binary_source: hermes.binary?.source ?? null,
-          gateway_loaded: hermes.gateway_service.loaded,
-          gateway_status_raw: hermes.gateway_service.raw_output,
-          health_status: hermesHealthStatus,
-          inspection_mode: hermes.inspection_mode,
-          issues: hermes.issues,
-        },
         family_runtime_provider: {
           provider_kind: providerKind,
           required_for: 'full_opl_family_runtime_readiness',
@@ -121,7 +93,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
       notes: [
         'OPL owns the user-facing initialization surface and reports Codex readiness separately from configured family runtime provider readiness.',
         'Codex CLI readiness and Codex API configuration are reported separately so first-run can guide missing API keys without copying secrets into logs.',
-        'Full OPL readiness uses the configured family runtime provider; Hermes-Agent is retained only for explicit executor or proof diagnostics.',
+        'Full OPL readiness uses the configured family runtime provider; non-default executors are explicit stage/request selections with independent receipts.',
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',

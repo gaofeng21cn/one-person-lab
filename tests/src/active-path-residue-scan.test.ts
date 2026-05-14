@@ -64,6 +64,24 @@ function assertCurrentBoundary(relativePath: string) {
   }
 }
 
+function* walk(relativeRoot: string): Generator<string> {
+  const absoluteRoot = path.join(repoRoot, relativeRoot);
+  if (!fs.existsSync(absoluteRoot)) {
+    return;
+  }
+
+  for (const entry of fs.readdirSync(absoluteRoot, { withFileTypes: true })) {
+    const relativePath = path.join(relativeRoot, entry.name);
+    if (entry.isDirectory()) {
+      yield* walk(relativePath);
+      continue;
+    }
+    if (entry.isFile() && ['.ts', '.mjs', '.js', '.json', '.sh'].includes(path.extname(entry.name))) {
+      yield relativePath;
+    }
+  }
+}
+
 test('active docs and root help do not advertise legacy operator paths as defaults', () => {
   const violations: string[] = [];
 
@@ -104,4 +122,30 @@ test('root help fast-start examples stay on the current Codex-default path', () 
   assert.doesNotMatch(helpOutput, new RegExp(`${legacyHermes}.*default`, 'i'));
   assert.doesNotMatch(helpOutput, new RegExp(`${legacyGateway}.*cron`, 'i'));
   assert.doesNotMatch(helpOutput, new RegExp(`${['front', 'door'].join('')}.*${legacyLocalManager}`, 'i'));
+});
+
+test('production source does not retain retired Hermes provider or gateway environment surfaces', () => {
+  const forbiddenProductionPatterns = [
+    /OPL_HERMES_BIN/,
+    /inspectHermesRuntime/,
+    /collectHermesProcessUsage/,
+    /hermes_diagnostics/,
+    /hermes_runtime/,
+    /hermes_legacy_runtime/,
+    /messaging_gateway_ready/,
+  ];
+  const violations: string[] = [];
+
+  for (const relativeRoot of ['src', 'scripts']) {
+    for (const relativePath of walk(relativeRoot)) {
+      const content = read(relativePath);
+      for (const pattern of forbiddenProductionPatterns) {
+        if (pattern.test(content)) {
+          violations.push(`${relativePath}: ${pattern}`);
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(violations, []);
 });

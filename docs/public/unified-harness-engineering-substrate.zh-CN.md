@@ -107,14 +107,14 @@ Human / Agent
 - provider-backed stage runtime 是长期在线、恢复、human gate 和 projection 的 production online 承载层，Temporal-backed provider 是必需 substrate
 
 这个区分很重要：Codex 说的是默认具体执行器，不是 substrate 的本体定义。
-在后续阶段，同一套 substrate 也应兼容：
+在后续阶段，同一套 substrate 也应支持：
 
 - 托管式 Web runtime
 - 平台侧统一托管的执行面
 
 如果某个 domain 仓保留上游 `Hermes-Agent` 集成证据，它更准确的归属应是：
 
-- 迁移期 legacy/optional provider、executor/proof lane 或技术参考
+- 历史 provenance、诊断语料或负向 guard
 
 它不是：
 

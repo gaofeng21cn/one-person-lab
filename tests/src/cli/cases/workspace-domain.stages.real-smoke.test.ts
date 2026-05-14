@@ -1,5 +1,5 @@
 import { assert, createFamilyContractsFixtureRoot, fs, os, path, runCli, test } from '../helpers.ts';
-import { bindRealManifest, fakeHermesBin, shellArg } from './workspace-domain.stages.real-smoke-helpers.ts';
+import { bindRealManifest, shellArg } from './workspace-domain.stages.real-smoke-helpers.ts';
 
 type SnapshotStageItem = {
   project_id: string;
@@ -116,8 +116,6 @@ test('family stage control plane resolves real MAS RCA MAG manifests when local 
     const snapshot = runCli(['runtime', 'snapshot'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: fakeHermesBin(workspaceRoot),
-      HERMES_HOME: path.join(workspaceRoot, 'hermes-home'),
     });
     const snapshotItems = [
       ...snapshot.runtime_tray_snapshot.running_items,

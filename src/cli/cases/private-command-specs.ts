@@ -441,6 +441,7 @@ export function buildInternalCommandSpecs(
         'Run an OPL agent executor. Codex CLI remains the default; non-default executors require explicit selection.',
       examples: [
         'opl exec "Plan a medical grant proposal revision loop."',
+        'opl exec --executor hermes_agent --cd /Users/gaofeng/workspace/med-autoscience "Run a receipt-gated research stage."',
         'opl exec --executor claude_code --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
         'opl exec --model gpt-5.4 "Summarize current workspace status."',
       ],

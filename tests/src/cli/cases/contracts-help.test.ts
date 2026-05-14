@@ -1,4 +1,4 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('contract validate exposes env contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
@@ -645,6 +645,7 @@ test('help returns command discovery and runnable examples', () => {
       (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
         entry.command === 'exec'
         && /--executor <codex_cli\|hermes_agent\|claude_code>/.test(entry.usage)
+        && entry.examples.some((example) => example.includes('--executor hermes_agent'))
         && entry.examples.some((example) => example.includes('--executor claude_code'))
         && /Codex CLI remains the default/.test(entry.summary),
     ),
@@ -654,7 +655,8 @@ test('help returns command discovery and runnable examples', () => {
       (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
         entry.command === 'executor doctor'
         && /--executor <codex_cli\|hermes_agent\|claude_code>/.test(entry.usage)
-        && entry.examples.some((example) => example.includes('--executor hermes_agent')),
+        && entry.examples.some((example) => example.includes('--executor hermes_agent'))
+        && entry.examples.some((example) => example.includes('--executor claude_code')),
     ),
   );
   assert.ok(

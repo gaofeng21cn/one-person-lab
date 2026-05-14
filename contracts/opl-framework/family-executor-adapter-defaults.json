@@ -127,6 +127,7 @@
   "guardrails": {
     "chat_completion_only_executor_forbidden": true,
     "hermes_agent_requires_full_agent_loop": true,
+    "hermes_agent_not_provider_or_gateway_surface": true,
     "non_default_executor_requires_explicit_selection": true,
     "non_default_executor_forbids_silent_codex_fallback": true,
     "simple_llm_backend_forbidden": true,

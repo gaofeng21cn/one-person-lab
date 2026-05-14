@@ -68,12 +68,13 @@ Current owner surfaces:
 - [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md): master entry for the complete stage-led runtime framework with Agent executors as the minimum execution unit, domain-agent boundary, language/runtime choices, and legacy-surface retirement.
 - [Temporal family runtime provider plan](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md): active support plan for the required provider-backed production online substrate.
 - [OPL Runtime Manager target](./runtime-substrate/opl-runtime-manager-target.md): active support target for Runtime Manager, provider readiness, native helper, and state index boundaries.
+- [OPL and Foundry Agents ideal target state](./runtime-substrate/opl-family-agent-ideal-state.zh-CN.md): target-state reference for OPL Framework, Foundry Agents, and One Person Lab App; it also records the human-facing App Runtime Workbench / runtime status page ideal shape.
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md), [Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md), and [CrewAI absorb note](./runtime-substrate/family-orchestration-contract-absorb-crewai.md): active support references only where their body still aligns with the roadmap and core five.
 
 Superseded or legacy references kept for migration review and tombstone context. Before reusing any content, classify it with [OPL development document portfolio](../active/development-document-portfolio.md):
 
 - [Runtime substrate history archive](../history/runtime-substrate/README.md): absorbed early direct-entry, Hermes-first, host-agent-only, managed-runtime checklist, vertical online-agent platform, and MAS cutover whole documents.
-- [Hermes-Agent truth reset and target state](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md), [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md), and [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md): Hermes evaluation context only; Hermes is now `hermes_legacy` / optional provider or explicit executor/proof lane.
+- [Hermes-Agent truth reset and target state](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md), [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md), and [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md): Hermes evaluation context only. `hermes_agent` remains a canonical explicit non-default executor adapter/backend. `hermes_legacy` is an illegal provider selection, and old Hermes provider/proof-provider/readiness/Gateway material belongs only to diagnostics, fixtures, negative guards, or provenance.
 - [OPL managed runtime three-layer contract](./runtime-substrate/opl-managed-runtime-three-layer-contract.md): older managed-runtime layering reference; current useful content lives in the runtime naming and boundary contract.
 
 ## 4. Domain Admission References
@@ -134,6 +135,6 @@ Retired prose files live in `docs/history/`. Machine-readable contracts, tests, 
 - New reference docs should be filed into the directory buckets above.
 - `docs/**` and `README*` are human-readable surfaces. Do not make scripts, contracts, tests, or runtime dashboards depend on their concrete paths; use stable contract files or semantic surface ids instead.
 - Completed one-off plans, generated process specs, and superseded design drafts should move to [Process history](../history/process/README.md), not stay in active reference or specs layers.
-- Retired gateway/federation corpus stays here or in the paired compatibility surfaces and must not be treated as the current implementation basis.
+- Retired gateway/federation corpus stays here or in paired history/tombstone references and must not be treated as the current implementation basis, current machine-readable contract, or compatibility surface.
 - Retired `frontdoor`-era material stays here for audit only and must not be treated as the current implementation basis.
 - Retired OMX-era prompt, longrun, and worktree material has been removed from active references; use the historical archive only as a tombstone, not as an execution guide.

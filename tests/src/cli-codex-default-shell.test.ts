@@ -134,23 +134,6 @@ ${handlerBody}
   };
 }
 
-function createFakeHermesFixture(handlerBody: string) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-default-fixture-'));
-  const hermesPath = path.join(fixtureRoot, 'hermes');
-  fs.writeFileSync(
-    hermesPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-${handlerBody}
-`,
-    { mode: 0o755 },
-  );
-  return {
-    fixtureRoot,
-    hermesPath,
-  };
-}
-
 const fakeFamilySkillDescriptions: Record<string, string> = {
   mas: 'Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
   mag: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',

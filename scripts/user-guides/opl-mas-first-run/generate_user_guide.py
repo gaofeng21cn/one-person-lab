@@ -117,7 +117,7 @@ STEPS = [
         "01-download-release.png",
         (
             f"最新版本页面：[{LATEST_RELEASE_URL}]({LATEST_RELEASE_URL})。",
-            "Full 首次安装包包含 MAS/MAG/RCA、officecli 与推荐 skills 等运行 payload，适合首次安装或干净机器，用来减少首次环境准备等待；Hermes 只在需要 hosted/online task management 时显式安装。",
+            "Full 首次安装包包含 MAS/MAG/RCA、officecli 与推荐 skills 等运行 payload，适合首次安装或干净机器，用来减少首次环境准备等待；Hermes runtime payload 已退役，不作为首次安装、hosted task management 或兼容入口。",
             "标准 mac-arm64 DMG 体积更小，适合已经安装 OPL、后续通过 App 内更新或标准包更新的用户。",
             "首次下载建议选择 Full / mac-arm64 DMG；下载前确认来源页面并核对 Release 页面校验信息。",
         ),

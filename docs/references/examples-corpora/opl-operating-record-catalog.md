@@ -8,9 +8,9 @@ This document indexes the machine-readable catalog for the frozen `P5.M1` / `P5.
 
 Its job is to make operating-stage semantics, schema ownership, canonical example refs, and follow-on routing boundaries discoverable from one place without turning the catalog into a runtime manifest or a second source of truth.
 
-## Machine-Readable Artifact
+## Machine Boundary
 
-- [`../../contracts/opl-framework/operating-record-catalog.json`](../../../contracts/opl-framework/operating-record-catalog.json)
+No current machine-readable `operating-record-catalog.json` contract is published in this repo. This document is a human-readable derived reference over the operating examples and current framework contracts.
 
 ## Non-Goals
 
@@ -36,7 +36,7 @@ Each record-kind entry stays reference-level and carries only:
 - `domain_truth_required`
 - `follow_on_route_surface`
 
-## Current Catalog Coverage
+## Reference Catalog Coverage
 
 ### P5.M1 governance / audit kinds
 
@@ -57,7 +57,7 @@ Read this catalog as a **derived reference map**, not as a governing execution c
 
 The governing schemas and operating-surface docs remain authoritative.
 The catalog only points to them and records the stage boundary at which each record kind becomes valid.
-If a follow-on action exists, it still routes through `domain_gateway` only.
+If a follow-on action exists, it must point to the current domain-owned capability entry or action-route ref. Historical entries may retain the legacy literal `domain_gateway` for provenance only; this catalog does not define it as an active compatibility route.
 
 ## Governing Sources
 
@@ -76,5 +76,5 @@ The operating-record catalog is acceptable only when:
 - every `schema_ref` and `example_ref` resolves to an existing local artifact
 - it stays non-executing and reference-only
 - it does not shift truth ownership into `OPL`
-- it keeps `domain_gateway` as the only follow-on route surface
+- it keeps follow-on route values aligned to current domain-owned capability/action-route refs and treats legacy `domain_gateway` only as provenance
 - it remains discoverable from the derived surface lifecycle map without becoming an execution stage

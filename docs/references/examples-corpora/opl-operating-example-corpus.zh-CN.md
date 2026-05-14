@@ -20,36 +20,36 @@
 
 这些 example 只是 illustrative 的 operating-record walkthrough。
 
-## 当前 Example Set
+## Former Example Set
 
 ### 1. Governance decision
 
-- 文件：[`../../examples/opl-framework/governance-decision-record.json`](../../../examples/opl-framework/governance-decision-record.json)
+- Former artifact：`examples/opl-framework/governance-decision-record.json`（已从 active repo artifact set 退役）
 - 展示位于 domain-owned review truth 之上的顶层 decision record。
 
 ### 2. Cross-domain review index
 
-- 文件：[`../../examples/opl-framework/cross-domain-review-index.json`](../../../examples/opl-framework/cross-domain-review-index.json)
+- Former artifact：`examples/opl-framework/cross-domain-review-index.json`（已从 active repo artifact set 退役）
 - 展示 `OPL` 如何索引跨 domain 所需的 review surface 与 blocking gate，而不复制 review truth。
 
 ### 3. Publish readiness signal
 
-- 文件：[`../../examples/opl-framework/publish-readiness-signal.json`](../../../examples/opl-framework/publish-readiness-signal.json)
+- Former artifact：`examples/opl-framework/publish-readiness-signal.json`（已从 active repo artifact set 退役）
 - 展示在 domain-owned publish truth 形成之前的 pre-publish readiness index。
 
 ### 4. Publish outcome index
 
-- 文件：[`../../examples/opl-framework/publish-outcome-index.json`](../../../examples/opl-framework/publish-outcome-index.json)
+- Former artifact：`examples/opl-framework/publish-outcome-index.json`（已从 active repo artifact set 退役）
 - 展示对 domain-owned publish / release / export / submission outcome 的顶层索引。
 
 ### 5. Promotion candidate signal
 
-- 文件：[`../../examples/opl-framework/promotion-candidate-signal.json`](../../../examples/opl-framework/promotion-candidate-signal.json)
+- Former artifact：`examples/opl-framework/promotion-candidate-signal.json`（已从 active repo artifact set 退役）
 - 展示建立在 domain-owned outcome truth 之上的 post-publish promotion-readiness signal。
 
 ### 6. Promotion surface index
 
-- 文件：[`../../examples/opl-framework/promotion-surface-index.json`](../../../examples/opl-framework/promotion-surface-index.json)
+- Former artifact：`examples/opl-framework/promotion-surface-index.json`（已从 active repo artifact set 退役）
 - 展示在 domain-owned outcome 已存在之后，对 public surface reference 与 blocker 的顶层索引。
 
 ## 阅读规则
@@ -57,7 +57,7 @@
 这些 example 必须被理解成 **contract-level operating-record walkthroughs**，而不是 executable workflow。
 
 只要 example 引用了 review、publish、promotion 或 public-channel truth，这些 truth 仍然通过 `domain_truth_refs` 留在对应 domain system 内部。
-任何后续 action 仍然必须 route 到 `domain_gateway`；这组 corpus 不授权 harness bypass、direct venue submission 或 direct public posting。
+任何后续 action 都必须指向当前 domain-owned capability entry 或 action-route ref。历史 example 仍可能包含 legacy literal `domain_gateway`，但这组 corpus 不把它保留成 active compatibility route，也不授权 harness bypass、direct venue submission 或 direct public posting。
 
 ## 上位合同
 
@@ -76,9 +76,8 @@
 
 只有当下面这些条件都成立时，这组 operating example corpus 才算合格：
 
-- 每个 example 都保持 machine-readable
-- governance examples 直接通过 frozen governance-audit schema 校验
-- publish / promotion examples 直接通过 frozen publish-promotion schema 校验
-- examples 保持 illustrative、non-governing、non-executing
-- examples 不把 review、publish 或 promotion truth 上收给 `OPL`
-- 任何后续 action 仍然必须 route 进 `domain_gateway`
+- former artifact 名称只保留 provenance 语义，不再作为可点击 active repo path
+- corpus 保持 illustrative、non-governing、non-executing
+- corpus 不把 review、publish 或 promotion truth 上收给 `OPL`
+- active schema 与行为 truth 必须来自当前 contracts/source/CLI 行为
+- 任何后续 action 都指向当前 domain-owned capability/action-route refs，而不是把 `domain_gateway` 保留成 compatibility value

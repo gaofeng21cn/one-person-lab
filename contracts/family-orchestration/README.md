@@ -6,7 +6,7 @@ This directory freezes the machine-readable companion schemas for the family-lev
 
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:
 
-- `Hermes-Agent` remains an explicit non-provider executor/proof diagnostic or historical provenance asset; Temporal is the required online runtime substrate for Full readiness and durable orchestration, while local providers are dev/CI/offline diagnostics only
+- Hermes provider/readiness/compatibility semantics are limited to historical provenance, reference material, diagnostic vocabulary, or a negative guard; `hermes_agent` remains available only as an explicit non-default executor adapter with independent receipt, audit, and fail-closed gates; Temporal is the required online runtime substrate for Full readiness and durable orchestration, while local providers are dev/CI/offline diagnostics only
 - `Codex CLI` remains the default concrete executor name and `autonomous` remains the default route mode unless a domain route explicitly selects another executor
 - `one-person-lab` owns the typed family queue and product control plane over the Temporal-backed family runtime provider, not a replacement runtime kernel
 - domain repositories remain the owners of durable truth, audit truth, and review truth

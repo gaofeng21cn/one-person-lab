@@ -1,5 +1,8 @@
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
-import { buildTemporalWorkerReadiness, inspectTemporalWorkerLifecycle } from './family-runtime-temporal-provider.ts';
+import {
+  buildTemporalWorkerLifecycleContract,
+  buildTemporalWorkerReadiness,
+} from './family-runtime-temporal-readiness.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from './contracts.ts';
 import {
@@ -200,6 +203,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
   if (kind !== 'temporal') {
     return inspectFamilyRuntimeProvider(kind);
   }
+  const { inspectTemporalWorkerLifecycle } = await import('./family-runtime-temporal-provider.ts');
   const workerReadiness = await inspectTemporalWorkerLifecycle(paths);
   const managedProviderProjection = workerReadiness.worker_ready === true
     ? null
@@ -237,6 +241,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
         worker_required: true,
         task_queue: effectiveWorkerReadiness.task_queue,
         default_task_queue: DEFAULT_TEMPORAL_TASK_QUEUE,
+        lifecycle: buildTemporalWorkerLifecycleContract(),
         lifecycle_owner: managedTemporalProjection
           ? 'domain_owned_managed_temporal_projection'
           : 'configured_family_runtime_provider',

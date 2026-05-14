@@ -1,4 +1,3 @@
-import { inspectHermesRuntime } from './hermes.ts';
 import {
   inspectFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
@@ -214,11 +213,10 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
   const selectedProvider = resolveFamilyRuntimeProviderKind();
   const provider = inspectFamilyRuntimeProvider(selectedProvider);
   const providers = inspectFamilyRuntimeProviders(selectedProvider);
-  const hermes = inspectHermesRuntimeForProvider();
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
     persistIndexes: input.persistNativeIndexes,
   });
-  const reconcile = buildRuntimeManagerReconcile(provider, hermes, nativeHelperProjection);
+  const reconcile = buildRuntimeManagerReconcile(provider, nativeHelperProjection);
 
   return {
     version: 'g2',
@@ -253,7 +251,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         'not_a_domain_artifact_gate_owner',
         'not_a_domain_truth_owner',
         'not_a_concrete_executor',
-        'not_a_private_fork_of_hermes_agent',
+        'not_a_private_fork_of_external_executor_runtime',
       ],
       family_runtime_queue: {
         surface_kind: 'opl_family_runtime_queue',
@@ -285,13 +283,6 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
           authority_boundary:
             'OPL projects and dispatches MAS paper autonomy tasks but never writes MAS truth, publication quality, artifact gates, or current_package.',
         },
-      },
-      hermes_runtime: {
-        role: 'explicit_executor_or_proof_diagnostic_only',
-        binary: hermes.binary,
-        version: hermes.version,
-        gateway_service: hermes.gateway_service,
-        issues: hermes.issues,
       },
       provider_runtime: providers,
       reconcile,
@@ -393,7 +384,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
           'does_not_schedule_tasks',
           'does_not_store_session_memory',
           'does_not_replace_domain_truth',
-          'does_not_private_fork_hermes_agent',
+          'does_not_private_fork_external_executor_runtime',
         ],
       },
     };
@@ -496,7 +487,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
         'does_not_schedule_tasks',
         'does_not_store_session_memory',
         'does_not_replace_domain_truth',
-        'does_not_private_fork_hermes_agent',
+        'does_not_private_fork_external_executor_runtime',
       ],
     },
   };
@@ -508,12 +499,6 @@ function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntim
   return {
     status: runtimeManager.status,
     reconcile: runtimeManager.reconcile,
-    hermes_runtime: {
-      binary: runtimeManager.hermes_runtime.binary,
-      version: runtimeManager.hermes_runtime.version,
-      gateway_service: runtimeManager.hermes_runtime.gateway_service,
-      issues: runtimeManager.hermes_runtime.issues,
-    },
     native_helper_runtime: {
       status: runtimeManager.native_helper_target.runtime.status,
       invocations: runtimeManager.native_helper_target.runtime.invocations.map((invocation) => ({
@@ -527,7 +512,6 @@ function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntim
 
 function buildRuntimeManagerReconcile(
   provider: ReturnType<typeof inspectFamilyRuntimeProvider>,
-  hermes: ReturnType<typeof inspectHermesRuntimeForProvider>,
   nativeHelperProjection: ReturnType<typeof buildNativeHelperProjection>,
 ) {
   const recommendedActions = [];
@@ -577,7 +561,6 @@ function buildRuntimeManagerReconcile(
         : provider.status === 'provider_code_landed_unconfigured'
           ? 'provider_code_landed_unconfigured'
           : 'provider_attention_needed',
-      hermes_diagnostics: hermes.binary ? 'available_non_provider_diagnostic' : 'not_inspected_non_provider_diagnostic',
       native_helper_runtime: nativeRuntimeStatus,
       native_index_freshness: indexFreshnessStatus,
       domain_registration_registry: 'declared_projection_contracts',
@@ -587,25 +570,7 @@ function buildRuntimeManagerReconcile(
       'does_not_schedule_tasks',
       'does_not_store_session_memory',
       'does_not_replace_domain_truth',
-      'does_not_private_fork_hermes_agent',
+      'does_not_private_fork_external_executor_runtime',
     ],
-  };
-}
-
-function inspectHermesRuntimeForProvider() {
-  return {
-    binary: null,
-    version: null,
-    version_raw_output: null,
-    update_available: false,
-    update_summary: null,
-    gateway_service: {
-      loaded: false,
-      raw_output: '',
-    },
-    issues: [
-      'Hermes runtime was not inspected because OPL family-runtime providers are local_sqlite or temporal only.',
-    ],
-    inspection_mode: 'shallow_non_provider_diagnostic' as const,
   };
 }

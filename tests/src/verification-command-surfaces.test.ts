@@ -436,7 +436,6 @@ test('GUI release publisher uploads Full first-install assets only when explicit
         mas: { git_commit: 'massha123456' },
         mag: { git_commit: 'magsha123456' },
         rca: { git_commit: 'rcasha123456' },
-        hermes: { git_commit: 'hermessha123456' },
         officecli: { version: '1.0.73' },
       },
     }),
@@ -694,7 +693,6 @@ test('GUI release publisher can upload only Full first-install assets for an exi
         mas: { git_commit: 'massha123456' },
         mag: { git_commit: 'magsha123456' },
         rca: { git_commit: 'rcasha123456' },
-        hermes: { git_commit: 'hermessha123456' },
         officecli: { version: '1.0.73' },
       },
     })}\n`,
@@ -787,7 +785,6 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
         mas: { git_commit: 'massha1' },
         mag: { git_commit: 'magsha1' },
         rca: { git_commit: 'rcasha1' },
-        hermes: { git_commit: 'hermessha1' },
         officecli: { version: '1.0.73' },
       },
     })}\n`,
@@ -839,7 +836,7 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.match(notes, /MAS: 2026-05-09 18:20 Beijing time build, main @ massha1/);
   assert.match(notes, /MAG: 2026-05-09 18:20 Beijing time build, main @ magsha1/);
   assert.match(notes, /RCA: 2026-05-09 18:20 Beijing time build, main @ rcasha1/);
-  assert.match(notes, /Hermes-Agent: 2026-05-09 18:20 Beijing time build, main @ hermess/);
+  assert.doesNotMatch(notes, /Hermes-Agent: 2026-05-09 18:20 Beijing time build/);
   assert.match(notes, /OfficeCLI: 1\.0\.73/);
   assert.doesNotMatch(notes, /MAS\/MDS\/MAG\/RCA/);
   assert.doesNotMatch(notes, /Validation/);

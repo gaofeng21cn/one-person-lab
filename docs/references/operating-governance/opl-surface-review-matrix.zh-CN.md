@@ -4,19 +4,19 @@
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.zh-CN.md`
-Machine boundary: 只作为 derived JSON 工件的人读配套。
+Machine boundary: 仅作为 legacy-derived 人读参考；当前仓库没有发布 `surface-review-matrix.json` 机器可读合同。
 
 ## 目的
 
-这份文档索引历史/当前 OPL public / contract / supporting surfaces 的 derived machine-readable review matrix。
+这份文档保留历史 OPL public / contract / supporting surfaces 的 legacy-derived review matrix 词汇。
 
 它的作用是：把 human-review obligation、acceptance coverage、配套 review surface，以及 publishability-stage boundary 集中暴露出来，同时不把这张 matrix 升格成 approval engine、publish controller、release engine 或第二真相源。
 
-当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。仍包含 gateway 词汇的 surface id 是 derived matrix 和历史语料的兼容/reviewability vocabulary。
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。仍包含 gateway 词汇的 surface id 是来自已归档 corpus 的历史/reviewability 标签，不是 active compatibility interface。
 
-## 机器可读工件
+## 当前机器边界
 
-- [`../../contracts/opl-framework/surface-review-matrix.json`](../../../contracts/opl-framework/surface-review-matrix.json)
+当前不存在 `contracts/opl-framework/surface-review-matrix.json`。当前机器可读行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
 
 ## 非目标
 
@@ -113,10 +113,10 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 
 这张 matrix 必须被理解成 **derived review-boundary index**，而不是 approval contract 或 publication contract。
 
-`human_review_required` 只是在告诉 reviewer：这个 surface 要被当成当前 public gateway material 之前，是否仍需要显式 human review。
+已归档示例里的 `human_review_required` 只是在告诉 reviewer：这个历史 surface 当时要被当成 public material 之前，是否需要显式 human review。
 `required_acceptance_gates` 只引用已经冻结的 acceptance gate。
 `required_companion_surfaces` 只指向已经被索引的 supporting 或 governing surface。
-`publishability_stage` 只说明：一个 surface 在被当成当前 public material 之前，需要先满足哪一类 gateway-surface alignment。
+`publishability_stage` 只保留历史 alignment 词汇；当前 publishability 必须由 active contracts 与 domain-owned gates 管理。
 如果被覆盖的 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么这些 review coverage 也仍然只是 reference-only，不会把它们升级成 approval layer、publish controller，或 domain-truth owner。
 如果被覆盖的 surface 是 [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.zh-CN.md) 或 [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md)，那么这些 review coverage 也仍然只是 reference-only；它们不会创造 runtime authority、candidate admission，或把 `OPL` 提升成 runtime owner。
 如果被覆盖的 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只保持语义候选身份，不会因为被纳入 review coverage 就自动变成正式收录 domain 或 routed target。
@@ -138,8 +138,7 @@ Machine boundary: 只作为 derived JSON 工件的人读配套。
 只有当下面这些条件都成立时，review matrix 才算合格：
 
 - 它覆盖当前 human review 与 publishability inspection 所需的全部已冻结 OPL public / shared-foundation boundary / contract / supporting surface
-- 每个 `required_acceptance_gate` 都能在 `../../contracts/opl-framework/acceptance-matrix.json` 中解析
-- 每个 `required_companion_surface` 都能在 `../../contracts/opl-framework/public-surface-index.json` 中解析
+- 已归档的 `required_acceptance_gate` 与 `required_companion_surface` 只作为 reviewability reference
 - 每个 `governing_ref` 都能解析到存在的本地工件
 - 它保持 derived、reference-only、non-executing
 - 它不会升级成 approval engine、publish controller、release engine 或第二真相源

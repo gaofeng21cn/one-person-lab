@@ -2,15 +2,17 @@
 
 更新时间：`2026-04-13`
 
+> 2026-05-14 生命周期说明：本文保留为 2026-04 用户面成熟度 snapshot。当前 OPL family 的活跃入口不再使用 `frontdoor_surface` / web front desk 作为实现目标或 manifest 要求；旧 frontdoor / gateway / federated product entry 语义只按历史 provenance 阅读。当前有效口径以 `docs/status.md`、`docs/active/current-state-vs-ideal-gap.zh-CN.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` 和 machine-readable domain descriptors / product-entry readiness surfaces 为准。
+
 ## 目的
 
 - 这份文档只从用户视角衡量 `OPL / MedAutoScience / MedAutoGrant / RedCube AI` 的成熟度，不用 runtime 集成深度替代“能不能用、好不好用”。
 - 它回答四个问题：用户从哪里进入、当前能做哪几步、在哪一层会停住、下一棒应该先补什么。
-- 本轮统一基线是：三个业务仓的 machine-readable `product-entry manifest` 不再只暴露 `operator_loop_surface`，而是都要显式区分 `frontdoor_surface`、`operator_loop_surface` 与 `operator_loop_actions`；`OPL` 顶层的 `domain manifests / status dashboard / contract handoff-envelope / web front desk` 要同步消费这层动作面。
+- 本文当时的统一基线曾要求业务仓 manifest 区分 `frontdoor_surface`、`operator_loop_surface` 与 `operator_loop_actions`。该要求现已退役为历史 snapshot；当前活跃基线是 domain descriptor、product-entry readiness、runtime/workbench projection、owner receipt / typed blocker 和 direct / hosted parity。
 
 ## 家族理想形态
 
-- 顶层 `OPL` 是 family-level product entry：用户可以直接用 `opl` 或 web front desk 进入，不需要先借 `Codex` 才能调用家族能力。
+- 顶层 `OPL` 是 family-level framework / product-entry shell：用户可以直接用 `opl`、One Person Lab App 或 domain direct skill 进入，不需要先猜底层 runtime 命令。
 - 每个 domain 仓都提供自己的 lightweight direct entry：用户既可以从 `OPL` handoff 进入，也可以直接进入某个 domain。
 - 每个 direct entry 都要对外冻结同一组用户面 contract：
   - `formal_entry`
@@ -29,19 +31,20 @@
 | `S2` | 可执行当前回路 | 知道当前主循环是什么、下一步能做什么 | `operator_loop_surface`、`operator_loop_actions` |
 | `S2.5` | 可解释回路边界 | 知道哪里会卡在人审、怎么续跑、checkpoint 从哪里看 | `family_orchestration.human_gates`、`resume_contract`、`checkpoint_lineage_surface` |
 | `S3` | 可持续续跑 | 同一任务可以恢复、看进度、看 handoff，不会每次重新猜状态 | durable session/progress surface、resume/handoff contract |
-| `S4` | 直接产品前台 | 用户可以直接进入本仓产品壳，尽量不碰底层 controller 命令 | local front desk / mature direct shell / cockpit |
-| `S5` | 托管运营态 | 有 hosted/web 前台、会话与工作区管理、可观测与运维面 | hosted runtime、managed session/workspace governance |
+| `S4` | 直接产品工作台 | 用户可以直接进入本仓产品壳或 OPL App drilldown，尽量不碰底层 controller 命令 | mature direct shell / cockpit / App workbench |
+| `S5` | 托管运营态 | 有 provider-backed runtime、会话与工作区管理、可观测与运维面 | Temporal-backed provider、managed session/workspace governance |
 
 ## 本轮统一动作
 
-- `MedAutoScience` 的 manifest 现在把 `product-frontdoor` 冻结成显式 `frontdoor_surface`，同时继续导出 `open_loop / submit_task / continue_study / inspect_progress`。
-- `MedAutoGrant` 的 manifest 现在把 `product-frontdoor` 冻结成显式 `frontdoor_surface`，同时继续导出 `open_loop / inspect_progress / inspect_cockpit / build_direct_entry`。
-- `RedCube AI` 的 manifest 继续把 `redcube product frontdoor` 作为显式 `frontdoor_surface`，并导出 `start_deliverable / continue_session / opl_bridge_handoff`。
-- `OPL` 顶层现在会把这些 `operator_loop_actions` 继续透传到：
+- 下面条目保留为当时动作记录，不作为当前 manifest 要求。
+- `MedAutoScience` 当时把 product entry 前台语义显式写入 manifest，同时继续导出 `open_loop / submit_task / continue_study / inspect_progress`。
+- `MedAutoGrant` 当时把 product entry 前台语义显式写入 manifest，同时继续导出 `open_loop / inspect_progress / inspect_cockpit / build_direct_entry`。
+- `RedCube AI` 当时把 product entry 前台语义写入 manifest，并导出 `start_deliverable / continue_session / opl_bridge_handoff`。
+- `OPL` 顶层当时会把这些 `operator_loop_actions` 继续透传到：
   - `domain manifests`
-  - `dashboard.front_desk.recommended_entry_surfaces`
+  - dashboard recommended entry surfaces
   - `contract handoff-envelope`
-  - `opl web` 的 front desk project cards
+  - 当时的 web project cards
 - 三个业务仓的 manifest 现在还会统一带出 `product_entry_quickstart` companion，给出用户第一组可执行步骤、resume 合同与 human gate id；`OPL` 顶层 discovery / dashboard / handoff / web 同步消费这层用户面。
 - 三个业务仓的 manifest 现在也会统一带出 `product_entry_overview` companion，把当前入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型前台看板，避免用户还要手工从 status/loop/quickstart 几层自己拼。
 - 三个业务仓的 manifest 现在还会统一带出轻量 `product_entry_readiness` companion，直接回答“现在能不能用、是否已经好用、是不是全自动、建议从哪进、目前还差什么”；`OPL` 顶层 discovery / dashboard / handoff / web 也同步消费这层成熟度摘要。
@@ -50,23 +53,23 @@
 
 | 仓库 | 当前落点 | 已经对用户成立的事实 | 还没成立的事实 | 下一棒 |
 | --- | --- | --- | --- | --- |
-| `OPL` | `S4` 前段 | `opl`、`opl web`、workspace/session/handoff 管理面都已存在，用户已经可以不经 `Codex` 直接进入顶层壳 | managed hosted runtime 还没落地，family frontdoor-domain wiring 还未完全压实 | 继续做 hosted runtime hardening、family frontdoor 到 domain direct entry 的稳定联动 |
-| `MedAutoScience` | `S3` | 用户现在已有显式 `product-frontdoor` 合同，可先从 frontdoor 进入，再转到 `workspace-cockpit` / `submit-study-task` / `launch-study` / `study-progress` | 独立医学产品前台还没落地；真实执行仍经受控 `MedDeepScientist` backend | 先继续把真实研究回路在手工测试中压稳，再决定如何把 front desk 从 shell 推到更完整入口 |
-| `MedAutoGrant` | `S3 -> S4` | 用户现在已有显式 `product-frontdoor` 合同，可从 frontdoor 进入 `grant-user-loop`、`grant-progress`、`grant-cockpit` 与 direct / `OPL` handoff builder；当前 manifest 也开始带出 family human gate / resume companion | 成熟 grant-facing front desk 还没落地；authoring 执行器的产品态 UX 还不够顺手 | 用同一套 `product frontdoor + operator_loop_actions + family_orchestration preview` 继续把 direct grant 前台收口，不新造第二套 executor 协议 |
-| `RedCube AI` | `S3 -> S4` | 用户已经有显式 `redcube product frontdoor`，也能 `invoke`、`session`、`federate`，同一交付的会话连续性已落地；当前 manifest 已开始带出 family human gate / resume companion | 成熟 end-user shell 与 managed web productization 还没落地 | 在现有 frontdoor / manifest / session continuity 之上继续补成熟 product shell 与更直接的前台壳 |
+| `OPL` | `S4` 前段 | `opl`、One Person Lab App、workspace/session/handoff 管理面已经存在，用户可以不经底层 controller 直接进入顶层壳 | managed production domain soak、App drilldown 和真实 owner receipt 驱动仍未闭合 | 继续做 provider-backed runtime hardening、runtime snapshot / App workbench drilldown 与 domain receipt wiring |
+| `MedAutoScience` | `S3` | 用户已有 workspace cockpit / submit-study-task / launch-study / study-progress 等 direct/domain entry | 独立医学产品工作台还没落地；真实 OPL-hosted paper-line owner chain 仍以 typed blocker 为主 | 先继续把真实研究回路在 MAS owner gate 内压稳，再把 domain-owned projection 接到 OPL/App workbench |
+| `MedAutoGrant` | `S3 -> S4` | 用户已有 `grant-user-loop`、`grant-progress`、`grant-cockpit` 与 direct / `OPL` handoff builder；manifest 带出 family human gate / resume companion | 成熟 grant-facing workbench 还没落地；真实 OPL-hosted grant-stage owner receipt 仍不足 | 用 product-entry readiness、operator actions 和 family orchestration preview 继续收口 direct grant 工作台，不新造第二套 executor 协议 |
+| `RedCube AI` | `S3 -> S4` | 用户已有 direct deliverable / session continuity / OPL bridge handoff，并带出 family human gate / resume companion | 成熟 end-user shell 与 managed web productization 还没落地；artifact-producing owner receipt long soak 仍不足 | 在现有 manifest / session continuity / projection refs 上继续补成熟 product shell 与 App drilldown |
 
 ## 当前统一短板
 
 1. 四仓都已经有“入口”，但只有 `OPL` 真正跨过了“直接前台”这一步；三个业务仓仍主要是 lightweight direct shell。
 2. 三个业务仓都已能告诉用户“当前 loop 是什么”，但还没有都做到“用户几乎不需要再碰底层命令”。
-3. hosted / web 态仍主要集中在 `OPL` 顶层，三个业务仓的 direct front desk 还没有完全成熟。
+3. hosted / App workbench 态仍主要集中在 `OPL` 顶层，三个业务仓的 direct product workbench 还没有完全成熟。
 4. `MedAutoScience` 的用户面成熟度还受真实研究 runtime 与手工测试门控影响，不能靠文档推进替代真实验证。
 
 ## 接下来的推进顺序
 
-1. 先维持这轮统一真相：所有 domain manifest 都必须继续带 `frontdoor_surface + operator_loop_surface + operator_loop_actions + product_entry_quickstart + product_entry_overview + product_entry_readiness`，`OPL` 顶层所有 discovery / dashboard / handoff surface 都继续消费它。
-2. 再把 `OPL` 继续往 `S5` 推：重点是 hosted runtime hardening 与 family front desk 的 domain wiring。
-3. 同时让 `MedAutoGrant` 与 `RedCube AI` 往 `S4` 推：把现有 shell 收成更像产品前台的 direct loop，而不是继续堆 controller 命令。
+1. 先维持当前统一真相：所有 domain manifest / descriptor 都必须继续暴露 product-entry readiness、operator actions、runtime/workbench projection refs、owner receipt / typed blocker / no-regression evidence refs 和 authority boundary。
+2. 再把 `OPL` 继续往 `S5` 推：重点是 Temporal-backed runtime hardening、runtime snapshot / App drilldown 与 domain owner receipt wiring。
+3. 同时让 `MedAutoGrant` 与 `RedCube AI` 往 `S4` 推：把现有 shell 收成更像产品工作台的 direct loop，而不是继续堆 controller 命令。
 4. `MedAutoScience` 先以真实研究回路稳定性为先：主线不是继续发明新前台，而是把已有 loop 在真实 study 上压稳，再决定前台壳的提升顺序。
 
 ## 这一页不做什么

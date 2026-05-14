@@ -80,6 +80,7 @@ Date: `2026-05-14`
 - 不把 MAS `append-block` 主 stage 独立 skill surface 纳入本计划。
 - 不移动 workspace/runtime artifacts、receipt instances、memory body 或真实输出包到 repo-source skeleton。
 - 不把 Hermes/Gateway/local provider 重新写成 production required substrate。
+- 不删除 `hermes_agent` 显式非默认 executor adapter；清理对象是旧 Hermes provider/readiness/Gateway/compat 面、默认 alias、过时接口和无 active caller 测试。
 
 ## 验收口径
 
@@ -102,3 +103,4 @@ Date: `2026-05-14`
 - `unified_domain_agent_descriptor_cli`：canonical `./bin/opl agents descriptors --json` / `./bin/opl agents descriptor --domain mas --json` 已可用，release/dist `node dist/cli.js agents descriptors --json` 已同步；后续是保持 release/dist 构建输出、App consumption 和专题 drilldown 口径同步。
 - `physical_path_migration`：MAS/MAG/RCA physical skeleton anchor evidence 已存在；完整物理 `agent/ contracts/ runtime/ docs/` 目录迁移仍需 direct skill path、OPL-hosted path、restore/provenance proof 和 no-forbidden-write proof。
 - `legacy_physical_delete`：旧 Hermes/Gateway/frontdoor/local-manager/MDS/default-compat residue 的物理删除只保留真实 no-active-caller / provenance typed blocker；历史、fixture、provenance 引用继续保留语境标签。
+- `executor_adapter_hygiene`：保持 `Codex CLI` 为默认 executor，`hermes_agent` 与 `claude_code` 为显式非默认 adapter；旧 provider/Gateway/readiness/compat alias、过时模块、接口和测试在 replacement proof + no-active-caller proof 后直接删除或迁入 tombstone，不新增兼容 facade。

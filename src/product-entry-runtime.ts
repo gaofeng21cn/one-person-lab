@@ -4,10 +4,7 @@ import {
   runCodexCommand,
 } from './codex.ts';
 import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
-import {
-  inspectHermesRuntime,
-  isInteractiveShell,
-} from './hermes.ts';
+import { isInteractiveShell } from './terminal.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type { ContractValidationSummary } from './types.ts';
 import {
@@ -19,10 +16,6 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
   const codex = resolveCodexBinary();
   const providerKind = resolveFamilyRuntimeProviderKind();
   const provider = inspectFamilyRuntimeProvider(providerKind);
-  const hermes = inspectHermesRuntime({
-    deep: false,
-    reason: 'Product Entry did not deep-inspect Hermes because family-runtime providers are local_sqlite or temporal only.',
-  });
   const localEntryReady = Boolean(codex);
   const onlineRuntimeReady = provider.ready;
   const ready = localEntryReady && onlineRuntimeReady;
@@ -37,14 +30,13 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
       local_entry_ready: localEntryReady,
       online_runtime_ready: onlineRuntimeReady,
       configured_provider: providerKind,
-      messaging_gateway_ready: provider.ready,
+      family_runtime_provider_ready: provider.ready,
       family_runtime_provider: provider,
-      hermes,
       issues: provider.degraded_reason ? [provider.degraded_reason] : [],
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
         'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',
-        'Full OPL readiness uses the configured family runtime provider; Hermes is retained only for explicit executor or proof diagnostics.',
+        'Full OPL readiness uses the configured family runtime provider; non-default executors are explicit stage/request selections with independent receipts.',
       ],
     },
   };

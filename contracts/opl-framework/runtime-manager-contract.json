@@ -71,7 +71,7 @@
     "not_a_domain_artifact_gate_owner",
     "not_a_domain_truth_owner",
     "not_a_concrete_executor",
-    "not_a_private_fork_of_hermes_agent",
+    "not_a_private_fork_of_external_executor_runtime",
     "not_a_domain_temporal_server_owner"
   ],
   "native_helper_target": {

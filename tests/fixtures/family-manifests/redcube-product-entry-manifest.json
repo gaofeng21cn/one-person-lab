@@ -436,7 +436,7 @@
   },
   "runtime_inventory": {
     "surface_kind": "runtime_inventory",
-    "summary": "RedCube 当前通过 upstream Hermes runtime 与 entry-session store 持续管理 deliverable loop。",
+    "summary": "RedCube 当前通过 provider-backed family runtime 与 entry-session store 持续管理 deliverable loop；Hermes 只保留为历史 provenance、诊断语料或负向 guard。",
     "runtime_owner": "provider_backed_family_runtime",
     "domain_owner": "redcube_ai",
     "executor_owner": "codex_cli",

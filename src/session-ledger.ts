@@ -4,7 +4,6 @@ import { randomUUID } from 'node:crypto';
 
 import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
-import { collectHermesProcessUsage } from './runtime-observer.ts';
 
 type SessionLedgerFile = {
   version: 'g2';
@@ -143,21 +142,10 @@ function writeSessionLedgerFile(payload: SessionLedgerFile) {
 }
 
 function buildResourceSample() {
-  try {
-    const usage = collectHermesProcessUsage();
-    return {
-      status: 'captured' as const,
-      capture_scope: 'opl_managed_runtime_sample' as const,
-      process_count: usage.summary.process_count,
-      total_rss_kb: usage.summary.total_rss_kb,
-      total_cpu_percent: usage.summary.total_cpu_percent,
-    };
-  } catch (error) {
-    return {
-      status: 'unavailable' as const,
-      reason: error instanceof Error ? error.message : 'Unknown process sampling failure.',
-    };
-  }
+  return {
+    status: 'unavailable' as const,
+    reason: 'Process sampling moved to provider/runtime-specific proof surfaces.',
+  };
 }
 
 function findLatestEntryForSession(entries: SessionLedgerEntry[], sessionId: string) {

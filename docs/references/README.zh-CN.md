@@ -68,12 +68,13 @@
 - [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)：完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架、domain-agent 边界、语言/runtime 取舍和旧面退役的总入口。
 - [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)：provider-backed production online runtime 必需 substrate 的当前支撑计划。
 - [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)：Runtime Manager、provider readiness、native helper 和 state index 边界的当前支撑目标。
+- [OPL 与 Foundry Agents 理想目标态](./runtime-substrate/opl-family-agent-ideal-state.zh-CN.md)：OPL Framework、Foundry Agents 与 One Person Lab App 的目标分层参考，也承载 App Runtime Workbench / 运行状态页的人用工作台理想形态。
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)、[Family runtime attempt contract](./runtime-substrate/family-runtime-attempt-contract.md) 和 [CrewAI 吸收说明](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)：只有当正文仍与 roadmap 和核心五件套一致时，才作为 active support 参考。
 
 保留给迁移回顾和 tombstone 语境的 superseded / legacy references。复用任何内容前，先按 [OPL 开发文档组合整理](../active/development-document-portfolio.zh-CN.md) 判断内容块当前归属：
 
 - [Runtime Substrate 历史归档](../history/runtime-substrate/README.zh-CN.md)：已吸收的早期 direct-entry、Hermes-first、host-agent-only、managed-runtime checklist、vertical online-agent platform 与 MAS cutover 整文档。
-- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)、[Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md) 和 [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)：只作为 Hermes 评估背景；Hermes 当前是 `hermes_legacy` / optional provider 或显式 executor/proof lane。
+- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)、[Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md) 和 [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)：这些文档是 Hermes 评估背景。`hermes_agent` 仍是 canonical 显式非默认 executor adapter/backend；`hermes_legacy` 是非法 provider selection；旧 Hermes provider / proof-provider / readiness / Gateway 语料只归 diagnostic、fixture、negative guard 或 provenance。
 - [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md)：较早的 managed runtime 三层参考；有效内容以 runtime 命名与边界合同为准。
 
 ## 四、Domain admission 参考
@@ -134,6 +135,6 @@
 - 新参考文档优先按上面的目录分区归档。
 - `docs/**` 与 `README*` 默认是人读材料。不要让脚本、合同、测试或 runtime dashboard 依赖它们的具体路径；需要跨层引用时使用稳定合同文件或语义 surface id。
 - 已完成的一次性计划、生成型过程 specs 和被取代的设计草稿应迁入 [过程历史归档](../history/process/README.zh-CN.md)，不要继续留在 active reference 或 specs 层。
-- 已退役的 gateway / federation 语料只用于历史审计、兼容性检查和 schema 追溯，不能再作为当前实现依据。
+- 已退役的 gateway / federation 语料只用于历史审计、provenance review 和 schema 追溯，不能再作为当前实现依据、当前机器可读合同或兼容接口。
 - 已退役的 `frontdoor` 时代材料只用于历史审计，不能再作为当前实现依据。
 - 已退役的 OMX 时代提示词、长跑与 worktree 材料已经从活跃参考面删除；历史索引只作为墓碑页，不作为执行手册。

@@ -1,4 +1,4 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 import { buildDomainManifestCatalog } from '../../../../src/management/domain-manifest-catalog.ts';
@@ -67,64 +67,20 @@ test('current readiness projection is derived from current OPL surfaces', () => 
 });
 
 test('status dashboard aggregates current OPL management surfaces into one view', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-if [ "$1" = "status" ]; then
-  cat <<'EOF'
-◆ Environment
-  Project:      /tmp/hermes-agent
-◆ Gateway Service
-  Status:       ✓ loaded
-  Manager:      launchd
-◆ Scheduled Jobs
-  Jobs:         0
-◆ Sessions
-  Active:       1
-EOF
-  exit 0
-fi
-if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
-  cat <<'EOF'
-Preview                                            Last Active   Src    ID
-───────────────────────────────────────────────────────────────────────────────────────────────
-OPL dashboard session                              1m ago        cli    sess_dash
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dashboard-state-'));
 
   try {
     const output = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermesPath,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      PATH: process.env.PATH ?? '',
     });
     const previousEnv = {
       OPL_STATE_DIR: process.env.OPL_STATE_DIR,
-      OPL_HERMES_BIN: process.env.OPL_HERMES_BIN,
-      PATH: process.env.PATH,
     };
 
     let directDashboard: ReturnType<typeof buildOplDashboard> | null = null;
     try {
       process.env.OPL_STATE_DIR = stateRoot;
-      process.env.OPL_HERMES_BIN = hermesPath;
-      process.env.PATH = `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`;
       directDashboard = buildOplDashboard(loadFrameworkContracts({ contractsDir }), {
         workspacePath: repoRoot,
         sessionsLimit: 1,
@@ -134,16 +90,6 @@ exit 1
         delete process.env.OPL_STATE_DIR;
       } else {
         process.env.OPL_STATE_DIR = previousEnv.OPL_STATE_DIR;
-      }
-      if (previousEnv.OPL_HERMES_BIN === undefined) {
-        delete process.env.OPL_HERMES_BIN;
-      } else {
-        process.env.OPL_HERMES_BIN = previousEnv.OPL_HERMES_BIN;
-      }
-      if (previousEnv.PATH === undefined) {
-        delete process.env.PATH;
-      } else {
-        process.env.PATH = previousEnv.PATH;
       }
     }
 
@@ -165,29 +111,18 @@ exit 1
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.configured_provider, 'local_sqlite');
-    assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 0);
-    assert.equal(
-      output.dashboard.runtime_status.hermes_diagnostics.recent_sessions.sessions.length,
-      0,
-    );
-    assert.equal(output.dashboard.runtime_status.hermes_diagnostics.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
+    assert.equal(output.dashboard.runtime_status.managed_session_ledger.sessions.length, 0);
+    assert.equal(Object.hasOwn(output.dashboard.runtime_status, 'recent_sessions'), false);
+    assert.equal(Object.hasOwn(output.dashboard.runtime_status, 'hermes_diagnostics'), false);
 
     const explicitTemporalDashboard = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_STATE_DIR: stateRoot,
-      OPL_HERMES_BIN: hermesPath,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      PATH: process.env.PATH ?? '',
     });
     assert.equal(explicitTemporalDashboard.dashboard.runtime_status.configured_provider, 'temporal');
-    assert.equal(explicitTemporalDashboard.dashboard.runtime_status.recent_sessions.sessions.length, 0);
-    assert.equal(
-      explicitTemporalDashboard.dashboard.runtime_status.hermes_diagnostics.recent_sessions.sessions.length,
-      0,
-    );
-    assert.equal(
-      explicitTemporalDashboard.dashboard.runtime_status.hermes_diagnostics.hermes.inspection_mode,
-      'shallow_non_provider_diagnostic',
-    );
+    assert.equal(explicitTemporalDashboard.dashboard.runtime_status.managed_session_ledger.sessions.length, 0);
+    assert.equal(Object.hasOwn(explicitTemporalDashboard.dashboard.runtime_status, 'hermes_diagnostics'), false);
     assert.equal('rollout_board_refs' in output.dashboard.gui_runtime, false);
     assert.deepEqual(output.dashboard.gui_runtime.rollout_board_surfaces, [
       {
@@ -202,8 +137,6 @@ exit 1
       },
     ]);
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

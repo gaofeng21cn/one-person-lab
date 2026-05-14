@@ -203,7 +203,7 @@ export function buildOplDashboard(
         ],
         notes: [
           'OPL no longer ships a local 8787 Product API service; GUI/WebUI integration belongs to the OPL-branded AionUI shell path.',
-          'Workspace registry, managed session ledger, handoff bundle, and current Codex/Hermes mode selection are all visible from the same top-level board.',
+          'Workspace registry, managed session ledger, handoff bundle, and Codex-default mode selection are all visible from the same top-level board.',
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed domain entry surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level product API board can show human-gate and resume semantics instead of hiding them in domain docs.',

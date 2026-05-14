@@ -115,21 +115,22 @@ The current split is:
 
 - absorb event correlation, checkpoint lineage, flow introspection, and human-gate pause / resume semantics at the contract layer
 - do not standardize on `CrewAI` as the default `LLM`, `Agent`, `Crew`, or memory owner
-- do not let `CrewAI` replace `Hermes-Agent`, `Codex CLI`, the OPL session/runtime entry, or any domain-agent entry
+- do not let `CrewAI` replace `Codex CLI`, the OPL session/runtime entry, or any domain-agent entry
 
 ## Relationship To Hermes-Agent
 
-What the upstream `Hermes-Agent` contributes most usefully today is runtime implementation experience, explicit executor/proof diagnostics, and historical provenance.
+The upstream `Hermes-Agent` is retained in two distinct roles: `hermes_agent` can be an explicit non-default executor adapter/backend, while Hermes runtime / Gateway / provider material is historical provenance, diagnostic vocabulary, or negative-guard reference material.
 
 The more accurate statement is therefore:
 
 - the production online substrate for the OPL framework is provider-backed stage runtime, with the Temporal-backed provider as the required path
-- `Hermes-Agent` remains an explicit non-provider executor/proof diagnostic or technical reference
+- `hermes_agent` remains a canonical explicit non-default executor adapter/backend
+- Hermes provider, Gateway, readiness, and compatibility surfaces remain historical provenance, diagnostic vocabulary, or negative guards
 - `Hermes-Agent` is not the whole `UHS`
 - `Hermes-Agent` does not replace the OPL session/runtime entry, any domain-agent entry, or any domain-owned truth surface
 - any integration mode must keep OPL as framework/control-plane owner and domain repositories as truth owners
 
-In short, `Hermes` is not the current target owner of “how the system keeps running.” It is retained as proof/diagnostic/provenance context while OPL's provider-backed stage runtime matures.
+In short, `Hermes` is not the current target owner of “how the system keeps running.” Its active executor-facing role is the explicit `hermes_agent` adapter/backend; its old provider/Gateway/runtime surfaces stay diagnostic/provenance/negative-guard context while OPL's provider-backed stage runtime matures.
 
 ## Current Truth
 
@@ -141,7 +142,7 @@ As of the current public mainline, the true state remains:
 - the `Shared Runtime Contract` is a reference contract under the current shared-boundary layer, not the default product entry
 - the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` semantics without turning them into one runtime owner
 - the active four-repository public line is `one-person-lab + MAS + MAG + RCA`; `MDS` is retained only as MAS-declared optional companion provenance/audit, explicit archive-import, intake, and parity-oracle refs
-- `Hermes-Agent` remains an opt-in executor/proof diagnostic or technical reference, not a provider or default OPL public fact
+- `hermes_agent` remains an explicit non-default executor adapter/backend with independent receipt, audit, and fail-closed gates; Hermes provider/readiness/compatibility surfaces remain historical provenance, diagnostic vocabulary, or negative guards
 
 ## Implementation Boundary
 
@@ -149,7 +150,7 @@ As long as the upper-layer contracts stay intact, the `Shared Runtime Contract` 
 
 - the current local Codex-default executor path
 - the target provider-backed stage runtime, including the Temporal-backed provider path
-- explicit non-provider executor/proof diagnostics such as `Hermes-Agent`
+- explicit non-default executor adapters such as `hermes_agent`, plus historical provenance, diagnostic vocabulary, or negative guards for retired Hermes provider/Gateway surfaces
 - a future platform-hosted execution plane
 
 In product terms, the target shape means:

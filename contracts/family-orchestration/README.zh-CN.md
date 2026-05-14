@@ -6,7 +6,7 @@
 
 这里吸收的是 `CrewAI` 一类编排框架里最值得复用的思想，但吸收方式是 contract-first，而不是把 `CrewAI` 直接引入为 family runtime dependency，也不是改写现有 owner split：
 
-- Temporal-backed provider 是 Full readiness 的 online runtime substrate，也是 durable orchestration 的生产必需 provider；`Hermes-Agent` 只作为显式非 provider executor/proof diagnostic 或历史 provenance，local provider 只用于 dev/CI/offline diagnostics
+- Temporal-backed provider 是 Full readiness 的 online runtime substrate，也是 durable orchestration 的生产必需 provider；`Hermes-Agent` 在 provider/readiness/compat 语境只作为历史 provenance、参考材料、诊断语料或负向 guard，`hermes_agent` 仅作为显式非默认 executor adapter 保留并要求独立 receipt、audit 和 fail-closed，local provider 只用于 dev/CI/offline diagnostics
 - `Codex CLI` 继续是默认具体执行器正式名称，`autonomous` 继续是默认路线模式，除非 domain route 显式选择其他 executor
 - `one-person-lab` 持有 Temporal-backed family runtime provider 之上的 typed family queue 与产品控制面，不复制 runtime kernel
 - 各 domain 仓继续持有 durable truth、audit truth 与 review truth
@@ -61,7 +61,7 @@
 ### control-plane-oriented
 
 - `../opl-framework/family-runtime-online-substrate-contract.json`
-  - 冻结 provider-backed family runtime 的 owner split、OPL typed family queue / dispatch bridge、stage attempt ledger 与 degraded diagnostics；Hermes 不再作为 provider surface，只保留显式 proof/diagnostic 或历史 provenance 语义
+  - 冻结 provider-backed family runtime 的 owner split、OPL typed family queue / dispatch bridge、stage attempt ledger 与 degraded diagnostics；Hermes 不再作为 provider surface、provider proof surface 或兼容接口，只保留历史 provenance、诊断语料或负向 guard 语义；显式 `hermes_agent` executor adapter 由 executor registry / receipt gate 约束
 - `family-runtime-supervision.schema.json`
   - 冻结共享的只读 wakeup / supervision projection，覆盖 adapter id、cadence、last success / tick、lease freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 authority boundary
 - `family-persistence-policy.schema.json`

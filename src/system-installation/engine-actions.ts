@@ -19,7 +19,7 @@ function findEngineOrThrow(engineId: string): OplEngineId {
       engine_id: engineId,
       available_engine_ids: ['codex'],
       retired_engine_ids: ['hermes'],
-      retirement_boundary: 'Hermes-Agent is retained only as explicit executor/proof diagnostic or historical provenance, not as an engine action target.',
+      retirement_boundary: 'The legacy hermes engine action target is retired. The canonical hermes_agent executor adapter remains available only through explicit AgentExecutionRequest selection, independent receipt/audit gates, and fail-closed proof; it is not installed or repaired through engine actions.',
     },
     2,
   );

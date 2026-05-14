@@ -63,32 +63,11 @@ test('product-entry runtime leaf exposes Codex-default executor over provider-ba
 echo "unused"
 exit 0
 `);
-  const hermesFixture = createFakeBinaryFixture('hermes', `
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-if [ "$1" = "cron" ] && [ "$2" = "list" ]; then
-  echo "Name: opl-family-runtime-tick"
-  exit 0
-fi
-if [ "$1" = "webhook" ] && [ "$2" = "list" ]; then
-  echo "opl-family-runtime-webhook"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
 
   try {
     const doctor = withEnv(
       {
         OPL_CODEX_BIN: codexFixture.binaryPath,
-        OPL_HERMES_BIN: hermesFixture.binaryPath,
       },
       () => buildProductEntryDoctor(validateFrameworkContracts(contractsDir)),
     );
@@ -99,14 +78,13 @@ exit 1
     assert.equal(doctor.product_entry.local_entry_ready, true);
     assert.equal(doctor.product_entry.online_runtime_ready, true);
     assert.equal(doctor.product_entry.configured_provider, 'local_sqlite');
-    assert.equal(doctor.product_entry.messaging_gateway_ready, true);
-    assert.equal(doctor.product_entry.hermes.binary?.path, hermesFixture.binaryPath);
-    assert.equal(doctor.product_entry.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
+    assert.equal(doctor.product_entry.family_runtime_provider_ready, true);
+    assert.equal(Object.hasOwn(doctor.product_entry, 'messaging_gateway_ready'), false);
+    assert.equal(Object.hasOwn(doctor.product_entry, 'hermes'), false);
     assert.match(doctor.product_entry.notes.join('\n'), /configured family runtime provider/);
-    assert.match(doctor.product_entry.notes.join('\n'), /explicit executor or proof diagnostics/);
+    assert.match(doctor.product_entry.notes.join('\n'), /non-default executors are explicit stage\/request selections/);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 

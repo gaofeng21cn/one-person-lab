@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('loadFrameworkContracts returns the active framework registries', () => {
   const contracts = loadFrameworkContracts(repoRoot);
@@ -241,40 +241,16 @@ test('contract validate returns a stable machine-readable contract summary', () 
   });
 });
 
-test('doctor reports a Codex-default ready local entry with optional Hermes diagnostics when Hermes is available', () => {
+test('doctor reports a Codex-default ready local entry without Hermes compatibility diagnostics', () => {
   const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
 echo "unused"
 exit 0
-`);
-  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-if [ "$1" = "cron" ] && [ "$2" = "list" ]; then
-  echo "Name: opl-family-runtime-tick"
-  exit 0
-fi
-if [ "$1" = "webhook" ] && [ "$2" = "list" ]; then
-  echo "opl-family-runtime-webhook"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
 `);
 
   try {
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
-      OPL_HERMES_BIN: hermesPath,
+      OPL_HERMES_BIN: path.join(codexFixtureRoot, 'retired-hermes'),
     });
 
     assert.equal(output.version, 'g2');
@@ -283,21 +259,18 @@ exit 1
     assert.equal(output.product_entry.ready, true);
     assert.equal(output.product_entry.local_entry_ready, true);
     assert.equal(output.product_entry.online_runtime_ready, true);
-    assert.equal(output.product_entry.messaging_gateway_ready, true);
-    assert.equal(output.product_entry.hermes.binary.path, hermesPath);
-    assert.equal(output.product_entry.hermes.version, null);
-    assert.equal(output.product_entry.hermes.gateway_service.loaded, false);
-    assert.equal(output.product_entry.hermes.inspection_mode, 'shallow_non_provider_diagnostic');
+    assert.equal(output.product_entry.family_runtime_provider_ready, true);
+    assert.equal(Object.hasOwn(output.product_entry, 'messaging_gateway_ready'), false);
+    assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
     assert.match(output.product_entry.notes[0], /opl exec/);
     assert.match(output.product_entry.notes[0], /opl resume/);
     assert.match(output.product_entry.notes[1], /opl skill sync/);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
-    assert.match(output.product_entry.notes[2], /explicit executor or proof diagnostics/);
+    assert.match(output.product_entry.notes[2], /non-default executors are explicit stage\/request selections/);
     assert.deepEqual(output.product_entry.issues, []);
     assert.equal(output.validation.status, 'valid');
   } finally {
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -318,8 +291,9 @@ exit 0
     assert.equal(output.product_entry.local_entry_ready, true);
     assert.equal(output.product_entry.online_runtime_ready, true);
     assert.equal(output.product_entry.configured_provider, 'local_sqlite');
-    assert.equal(output.product_entry.messaging_gateway_ready, true);
-    assert.equal(output.product_entry.hermes.binary, null);
+    assert.equal(output.product_entry.family_runtime_provider_ready, true);
+    assert.equal(Object.hasOwn(output.product_entry, 'messaging_gateway_ready'), false);
+    assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
     assert.deepEqual(output.product_entry.issues, []);
   } finally {
@@ -479,59 +453,10 @@ exit 1
 
 test('status runtime reports provider-backed runtime status and the OPL session ledger', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-status-state-'));
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-if [ "$1" = "status" ]; then
-  cat <<'EOF'
-◆ Environment
-  Project:      /tmp/hermes-agent
-  Model:        gpt-5.4
-◆ Terminal Backend
-  Backend:      local
-◆ Messaging Platforms
-  Telegram      ✓ configured
-  Slack         ✗ not configured
-◆ Gateway Service
-  Status:       ✓ loaded
-  Manager:      launchd
-◆ Scheduled Jobs
-  Jobs:         2
-◆ Sessions
-  Active:       3
-EOF
-  exit 0
-fi
-if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
-  cat <<'EOF'
-Preview                                            Last Active   Src    ID
-───────────────────────────────────────────────────────────────────────────────────────────────
-OPL dashboard session                              1m ago        cli    sess_dash
-RedCube active session                             2m ago        api_server sess_redcube
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
-27026 27025 5.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_dash`);
 
   try {
     const output = runCli(['status', 'runtime', '--limit', '2'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
 
     assert.equal(output.version, 'g2');
@@ -542,28 +467,10 @@ exit 1
     assert.equal(output.runtime_status.managed_session_ledger.summary.entry_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
 test('runtime manager invokes native helpers and persists the state index projection', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
 
@@ -594,7 +501,6 @@ esac
 
   try {
     const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
     });
@@ -625,25 +531,12 @@ esac
     assert.equal(persisted.native_indexes.artifact_manifest.result.surface_kind, 'native_artifact_manifest');
     assert.equal(persisted.native_indexes.runtime_health.result.surface_kind, 'runtime_health_snapshot_index');
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(helperBinDir, { recursive: true, force: true });
   }
 });
 
 test('runtime manager discovers cached native helpers and records index lifecycle metadata', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-cache-state-'));
   const helperCacheDir = path.join(
     stateRoot,
@@ -680,7 +573,6 @@ esac
 
   try {
     const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
     });
     const helperSources = output.runtime_manager.native_helper_target.runtime.discovery.helpers
@@ -727,29 +619,15 @@ esac
     assert.equal(fs.existsSync(persistence.last_success_file), true);
     assert.equal(fs.readFileSync(persistence.history_file, 'utf8').trim().split('\n').length, 1);
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
 test('runtime manager records native index failure lifecycle when helpers are unavailable', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  echo "Gateway service is loaded"
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-failure-state-'));
 
   try {
     const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
     });
@@ -761,33 +639,15 @@ exit 1
     assert.equal(failure.status, 'skipped_helper_unavailable');
     assert.equal(failure.errors[0].code, 'native_index_helper_unavailable');
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
 test('runtime manager reports the native helper package and repair lifecycle', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
 
   try {
     const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
       OPL_STATE_DIR: stateRoot,
     });
 
@@ -837,7 +697,6 @@ exit 1
     assert.equal(packageJson.files.includes('scripts/native-helper-prebuild.mjs'), true);
     assert.equal(packageJson.files.includes('scripts/native-helper-repair.mjs'), true);
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

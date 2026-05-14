@@ -18,6 +18,7 @@ import {
   buildFullRuntimeCacheKey,
   buildInternalPackageReadme,
   buildPackagedModuleMarker,
+  listFullRuntimeProductionNodeModulePaths,
   shouldExcludeRuntimePath,
 } from '../src/full-internal-package.ts';
 
@@ -368,6 +369,27 @@ function copyPathContents(sourceRoot, targetRoot) {
   }
 }
 
+function copyProductionNodeModules(sourceRoot, targetRoot) {
+  const lockPath = path.join(sourceRoot, 'package-lock.json');
+  const nodeModulesRoot = path.join(sourceRoot, 'node_modules');
+  if (!fs.existsSync(lockPath) || !fs.existsSync(nodeModulesRoot)) {
+    return;
+  }
+  const packageLock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  for (const relativePath of listFullRuntimeProductionNodeModulePaths(packageLock)) {
+    const sourcePath = path.join(sourceRoot, relativePath);
+    if (!fs.existsSync(sourcePath)) {
+      continue;
+    }
+    const targetPath = path.join(targetRoot, relativePath);
+    fs.cpSync(sourcePath, targetPath, {
+      recursive: true,
+      dereference: true,
+      preserveTimestamps: true,
+    });
+  }
+}
+
 function copySkillDirectory(sourceRoot, targetRoot, skillName) {
   if (!fs.existsSync(path.join(sourceRoot, 'SKILL.md'))) {
     throw new Error(`Skill source missing SKILL.md for ${skillName}: ${sourceRoot}`);
@@ -704,7 +726,9 @@ function writeDomainMarkers(runtimeRoot, options, packagedAt) {
 }
 
 function buildOplLayer(layerRoot) {
-  copyTreeFiltered(repoRoot, path.join(layerRoot, 'opl'), 'opl');
+  const targetRoot = path.join(layerRoot, 'opl');
+  copyTreeFiltered(repoRoot, targetRoot, 'opl');
+  copyProductionNodeModules(repoRoot, targetRoot);
 }
 
 function buildSkillsLayer(layerRoot, options) {
