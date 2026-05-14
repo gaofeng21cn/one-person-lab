@@ -23,7 +23,7 @@ OPL 系列项目的理想态、差距和完善计划按两层维护：
 | OPL 全局差距 | [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.zh-CN.md) | 记录 family-level 当前状态、production closure 缺口、全局完善顺序。 |
 | OPL 当前路线 | [OPL 当前开发线路](./current-development-lines.zh-CN.md) 与 [OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) | 说明 framework-first 执行顺序、Temporal provider、standard domain-agent skeleton 与旧路线退役纪律。 |
 | OPL 功能闭环计划 | [OPL Production Functional Closure Plan](./production-functional-closure-plan.zh-CN.md) 与 [生产级框架闭环差距矩阵](./production-framework-closure-gap-matrix.zh-CN.md) | 承接跨仓 owner receipt、memory/lifecycle apply、operator workbench、legacy retirement 和 live soak gate。 |
-| 单仓目标与计划 | 各 repo 的 `docs/references/*ideal*`、`docs/status.md`、`docs/program/` 或 `docs/plans/` | 只维护本仓 domain truth、authority、direct/hosted 边界、单仓差距和上收清单。 |
+| 单仓目标与计划 | 各 repo 的 `docs/references/*ideal*`、`docs/status.md`、`docs/active/`、`docs/runtime/`、`docs/delivery/` 或 `docs/source/` | 只维护本仓 domain truth、authority、direct/hosted 边界、单仓差距和上收清单；旧 `program` / `plans` / `capabilities` 目录不再作为默认落点。 |
 
 ## Owner 分层
 
@@ -48,8 +48,10 @@ MAS/MAG/RCA 这类 Foundry Agent repo 负责领域大脑与领域交付 authorit
 - study/grant/visual truth、route decision、quality verdict、publication/fundability/visual/export authority；
 - memory body、retrieval semantics、writeback proposal 的领域含义、accept/reject decision 和 owner receipt；
 - canonical artifact/package/deck/manuscript/proposal authority、artifact mutation permission 和 export/submission gate；
-- direct app skill path、domain CLI/MCP/API、sidecar export/dispatch、domain projection builder、artifact locator contract、receipt schema 和 typed blocker；
+- direct app skill path、domain CLI/MCP/API、thin sidecar export/dispatch adapter、domain projection builder、artifact locator contract、receipt schema 和 typed blocker；
 - direct path 与 OPL-hosted path 的语义等价、no-forbidden-write、no-regression evidence 和 owner-chain 证据。
+
+Domain repo 不应长期维护 generic scheduler、generic queue、generic attempt ledger、generic state-machine runner、generic workspace/source intake、generic memory locator、generic artifact lifecycle、generic workbench、generic observability 或跨 domain App shell。需要 OPL 托管运行时，domain repo 声明 stage pack、transition spec、authority refs、receipt schema、projection builder 和薄 adapter，由 OPL Framework 承载运行、恢复、排队、唤醒、投影和审计。
 
 单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 
@@ -80,9 +82,10 @@ App 不持有 OPL runtime，不持有 domain truth，也不把 provider completi
 
 OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy。统一目录名是长期目标：
 读者进入任意由 OPL 系列直接管理的 framework/domain repo 时，都应能在同一组目录下找到同类材料。
-已有非 canonical 目录属于迁移对象；它们要么逐步迁入 canonical 目录，要么作为
-upstream/imported support、path-stable provenance、contract-linked baton 或
-tombstone 留在原位，并由 canonical 目录 README 明确指向。
+已有非 canonical 目录属于迁移对象；能直接迁移的直接迁入 canonical 目录。
+不能迁移的，只允许作为 upstream/imported support、历史 provenance、外部依赖目录
+或 tombstone 暂留，并由 canonical 目录 README 明确指向。旧目录不能继续作为
+new recurring material 的默认落点。
 
 `opl-aion-shell` 的 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。OPL
 只在本仓维护 One Person Lab App/workbench 的全局目标、消费合同和 runtime/domain
@@ -92,7 +95,7 @@ truth 投影边界；AionUI fork 内部 docs 结构继续服从上游项目。
 
 | 目录 | 角色 | 迁移/保留规则 |
 | --- | --- | --- |
-| `docs/active/` | 当前执行、当前计划、当前差距、active baton 与 closeout evidence | MAS 旧 `program/`、MAG 旧 `plans/`、RCA 旧 `program/` 先由 `active/README*` 承接，再按链接审计逐步迁入或降级。 |
+| `docs/active/` | 当前执行、当前计划、当前差距、active baton 与 closeout evidence | MAS 旧 `program/`、MAG 旧 `plans/`、RCA 旧 `program/` 已按各仓审计迁入 `active/` 或 history；后续 active material 直接落这里。 |
 | `docs/public/` | 公开叙事、用户第一阅读层、roadmap/task map、对外定位 | MAG 根层 public allowlist、App localized `readme/` 由 `public/README*` 收口，不直接删除。 |
 | `docs/product/` | 人类/operator 入口、product entry、workbench、quickstart、profile、发布协作 | OPL 维护 App/workbench 的消费目标和合同；domain repo 的 direct skill/product entry 指南落这里。 |
 | `docs/runtime/` | runtime topology、control plane、projection/read model、provider/executor 边界、watch/repair 语义 | root `contracts/` 仍是机器合同目录；`docs/runtime/` 只做人读说明和当前 runtime owner 索引。 |

@@ -21,8 +21,8 @@
 - MAS v2 wording 必须保持 `MAS` 为独立 `domain agent` 与单一 domain app skill owner；`OPL` 只能消费 MAS-owned entry/projection truth，不得把 MAS runtime、controller truth、quality authority 或 publication gate 收归 OPL。
 - `MDS` 只能作为 `MAS` 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle companion 被读取；不得作为 OPL 默认安装依赖、顶层 domain-agent 入口或独立 OPL-managed domain agent 回流。
 - 当 admitted domain 吸收外部 companion 能力时，OPL 只上收 domain-neutral control-plane 原则与 discovery refs；可保留能力必须落到 domain-owned surface，外部 companion 必须降级为显式 audit/diagnostic/intake/oracle 引用，并记录 source ref/hash、capability classification、license refs、owner boundary、parity proof 与 no-history contributor audit。
-- `OPL` 不持有领域运行时所有权。
-- `OPL` 不替代各个领域仓的智能体逻辑。
+- `OPL` 持有 family-level 开发与运行框架、通用状态机、stage attempt lifecycle、queue/wakeup、resume/human gate、workspace/artifact/memory locator、operator projection 和 App/workbench shell。MAS/MAG/RCA 不维护平行的通用 runtime 模块；需要运行能力时通过 OPL Framework 托管。
+- `OPL` 不替代各个领域仓的智能体逻辑、domain truth、quality verdict、artifact authority、memory body 或 domain transition semantics。
 
 ## 当前公开产品模型
 
