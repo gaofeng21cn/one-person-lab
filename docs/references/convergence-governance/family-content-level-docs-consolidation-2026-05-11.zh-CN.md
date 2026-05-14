@@ -8,7 +8,7 @@ Machine boundary: human-readable governance only. Machine behavior must use cont
 
 ## 结论
 
-本轮整理按内容块执行，不按文件名或目录名机械处理。不同文件中的同一判断只保留一个当前 owner；仍有价值的内容吸收到当前 owner doc；过时内容进入 history/provenance 语境；因合同、审计或历史路径仍需保留的文件先做 lifecycle 标注，不做不安全搬移。
+本轮整理按内容块判断生命周期状态。2026-05-14 后，长期落点统一服从同名 canonical docs taxonomy。不同文件中的同一判断只保留一个当前 owner；仍有价值的内容吸收到当前 owner doc；过时内容进入 history/provenance 语境；因合同、审计或历史路径仍需保留的文件先做 lifecycle 标注，不做不安全搬移。
 
 优先级固定为：
 

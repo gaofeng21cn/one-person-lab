@@ -297,7 +297,7 @@ test('framework production-closeout reports functional blockers without taking d
       ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     }
 
-    runCli([
+    const magAttempt = runCli([
       'family-runtime',
       'attempt',
       'create',
@@ -318,6 +318,25 @@ test('framework production-closeout reports functional blockers without taking d
       }),
       '--source-fingerprint',
       'sha256:mag-owner-receipt',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      magAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['mag-closeout:proposal-authoring'],
+        consumed_refs: ['mag-evidence:proposal-authoring'],
+        next_owner: 'med-autogrant',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'no_regression_evidence',
+          no_regression_evidence_ref: 'receipt:mag:no-regression',
+          no_regression_evidence_observed: true,
+        },
+      }),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     const masAttempt = runCli([
       'family-runtime',
@@ -369,6 +388,17 @@ test('framework production-closeout reports functional blockers without taking d
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/rca',
+        lifecycle_apply_requests: [
+          {
+            action_id: 'rca-retention-artifact',
+            action_kind: 'retention',
+            owner_scope: 'domain_owned_artifact',
+            authority_owner: 'redcube-ai',
+            target_ref: 'visual-workspace:artifact',
+            restore_ref: 'restore:rca:artifact',
+            domain_receipt_ref: 'receipt:rca:lifecycle-retention',
+          },
+        ],
         controlled_soak_no_regression_attempt: {
           surface_kind: 'controlled_soak_no_regression_attempt',
           no_regression_evidence_refs: ['rca:no-regression:visual-stage-1'],
@@ -397,6 +427,8 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(closeout.stage_attempt_evidence.controlled_apply_summary.domain_receipt_observed_count, 1);
     assert.equal(closeout.stage_attempt_evidence.controlled_apply_summary.no_regression_evidence_observed_count, 1);
     assert.equal(closeout.stage_attempt_evidence.lifecycle_guarded_apply_summary.domain_writes_performed, false);
+    assert.equal(closeout.stage_attempt_evidence.lifecycle_guarded_apply_summary.lifecycle_restore_ref_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.lifecycle_guarded_apply_summary.lifecycle_domain_receipt_ref_count, 1);
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.consumed_memory_ref_count, 1);
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.writeback_receipt_ref_count, 1);
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.rejected_write_count, 1);
@@ -405,7 +437,14 @@ test('framework production-closeout reports functional blockers without taking d
     const rca = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'redcube');
     const mas = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
     assert.equal(mag.stage_attempt_evidence.owner_receipt_refs[0], 'receipt:mag:owner-apply');
+    assert.equal(mag.stage_attempt_evidence.no_regression_evidence_refs[0], 'receipt:mag:no-regression');
     assert.equal(rca.stage_attempt_evidence.no_regression_evidence_refs[0], 'rca:no-regression:visual-stage-1');
+    assert.deepEqual(rca.stage_attempt_evidence.lifecycle_restore_refs, [
+      'restore:rca:artifact',
+    ]);
+    assert.deepEqual(rca.stage_attempt_evidence.lifecycle_domain_receipt_refs, [
+      'receipt:rca:lifecycle-retention',
+    ]);
     assert.deepEqual(mas.stage_attempt_evidence.consumed_memory_refs, [
       'mas-memory:publication-route:negative-result-stoploss',
     ]);

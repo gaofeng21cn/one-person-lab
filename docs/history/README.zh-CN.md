@@ -5,7 +5,7 @@
 这里是 `One Person Lab` 已退役文档路线的统一归档入口。
 
 仓库跟踪的历史材料只从这里进入。
-历史状态按内容判断，不按文件名判断。任何计划、路线图或参考材料，如果仍把 gateway-first、frontdoor、federation、Hermes-first、host-agent、Product API 或 OMX 写成 active topology，而核心文档没有重新确认，就按历史材料理解。
+历史状态按内容判断；长期历史入口固定在 canonical `docs/history/`。任何计划、路线图或参考材料，如果仍把 gateway-first、frontdoor、federation、Hermes-first、host-agent、Product API 或 OMX 写成 active topology，而核心文档没有重新确认，就按历史材料理解。
 当前产品真相、共享运行时边界和维护者工作入口统一回到：
 
 - [仓库首页](../../README.zh-CN.md)

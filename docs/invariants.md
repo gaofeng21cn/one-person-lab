@@ -43,9 +43,9 @@
 
 - `README*` 与 `docs/README*` 是默认公开入口。
 - `docs/project.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`、`docs/status.md` 是 AI / 维护者核心工作集。
-- `docs/README*` 维护的四层文档体系继续有效：公开主线、公开合同配套、参考级配套、历史规格与计划。
+- `docs/README*` 维护的 canonical docs taxonomy 继续有效：`active/public/product/runtime/delivery/source/policies/specs/references/history`。
 - 参考级与历史文档不得反向改写公开主线。
-- 文档生命周期治理按内容角色判断，不按文件名、目录名或旧链接机械判断。若一份文档内容已经是过时计划、旧 topology、旧入口或旧 provider 判断，即使它仍在 `docs/references/` 或被索引引用，也必须标注为 superseded / retired / tombstone 语境，并指向当前 owner surface。
+- 文档生命周期状态按内容角色判断，长期落点服从 canonical docs taxonomy。若一份文档内容已经是过时计划、旧 topology、旧入口或旧 provider 判断，即使它仍在 `docs/references/` 或被索引引用，也必须标注为 superseded / retired / tombstone 语境，并指向当前 owner surface。
 - 叙述性 `README*`、`docs/**` 与参考文档不得被脚本或测试固定措辞、标题、段落或具体 prose path；需要机器约束时使用 contract/schema/source surface、CLI/API 行为、生成 artifact 或 `human_doc:*` 语义标识。
 
 ## 合同面

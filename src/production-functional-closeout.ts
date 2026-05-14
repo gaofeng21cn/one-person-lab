@@ -226,6 +226,7 @@ function contractForAttempt(attempt: ReturnType<typeof stageAttemptToPayload>) {
     domainId: attempt.domain_id,
     stageId: attempt.stage_id,
     workspaceLocator: attempt.workspace_locator,
+    routeImpact: attempt.route_impact,
   });
 }
 
@@ -237,6 +238,26 @@ function lifecycleForAttempt(attempt: ReturnType<typeof stageAttemptToPayload>) 
       ...stringList(attempt.checkpoint_refs),
     ],
   }).guarded_apply_proof;
+}
+
+function lifecycleRequestRef(value: unknown) {
+  return isRecord(value) ? optionalString(value.ref) : null;
+}
+
+function lifecycleProofRefs(proofs: ReturnType<typeof lifecycleForAttempt>[]) {
+  const actions = proofs.flatMap((proof) => recordList(proof.actions));
+  return {
+    restore_refs: uniqueStrings(
+      actions
+        .map((action) => lifecycleRequestRef(action.restore_ref))
+        .filter((ref): ref is string => Boolean(ref)),
+    ),
+    domain_receipt_refs: uniqueStrings(
+      actions
+        .map((action) => lifecycleRequestRef(action.domain_receipt_ref))
+        .filter((ref): ref is string => Boolean(ref)),
+    ),
+  };
 }
 
 function closeoutMemoryRefEvidence(
@@ -296,6 +317,7 @@ function summarizeAttemptEvidence(
 ) {
   const contracts = attempts.map(contractForAttempt);
   const lifecycleProofs = attempts.map(lifecycleForAttempt);
+  const lifecycleRefs = lifecycleProofRefs(lifecycleProofs);
   const memoryRefEvidence = closeoutMemoryRefEvidence(closeouts, domainIds);
   return {
     surface_kind: 'opl_stage_attempt_functional_closeout_evidence',
@@ -313,6 +335,8 @@ function summarizeAttemptEvidence(
       opl_apply_ready_count: lifecycleProofs.filter((proof) => proof.apply_status === 'opl_apply_ready').length,
       blocked_domain_receipt_required_count: lifecycleProofs.filter((proof) => proof.apply_status === 'blocked_domain_receipt_required').length,
       no_apply_requests_count: lifecycleProofs.filter((proof) => proof.apply_status === 'no_apply_requests').length,
+      lifecycle_restore_ref_count: lifecycleRefs.restore_refs.length,
+      lifecycle_domain_receipt_ref_count: lifecycleRefs.domain_receipt_refs.length,
       domain_writes_performed: false,
     },
     memory_ref_summary: {
@@ -326,6 +350,7 @@ function summarizeAttemptEvidence(
       const domainAttempts = attempts.filter((attempt) => attempt.domain_id === domainId);
       const domainContracts = domainAttempts.map(contractForAttempt);
       const domainLifecycleProofs = domainAttempts.map(lifecycleForAttempt);
+      const domainLifecycleRefs = lifecycleProofRefs(domainLifecycleProofs);
       const domainMemory = memoryRefEvidence.domains.find((entry) => entry.domain_id === domainId);
       return {
         domain_id: domainId,
@@ -336,6 +361,8 @@ function summarizeAttemptEvidence(
         no_regression_evidence_refs: domainContracts.flatMap((contract) => contract.no_regression_evidence_refs),
         typed_blockers: domainContracts.flatMap((contract) => contract.typed_blockers),
         lifecycle_apply_statuses: domainLifecycleProofs.map((proof) => proof.apply_status),
+        lifecycle_restore_refs: domainLifecycleRefs.restore_refs,
+        lifecycle_domain_receipt_refs: domainLifecycleRefs.domain_receipt_refs,
         consumed_refs: domainMemory?.consumed_refs ?? [],
         consumed_memory_refs: domainMemory?.consumed_memory_refs ?? [],
         writeback_receipt_refs: domainMemory?.writeback_receipt_refs ?? [],

@@ -368,6 +368,93 @@ PY
   }
 });
 
+test('family-runtime maps MAG no-regression sidecar receipts into controlled apply evidence', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mag-no-regression-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+assert task["task_kind"] == "stage-attempt/closeout"
+receipt_ref = task["controlled_stage_attempt"]["owner_receipt_refs"][0]
+print(json.dumps({
+    "ok": True,
+    "command": "product-sidecar-dispatch",
+    "sidecar_dispatch": {
+        "surface_kind": "mag_product_sidecar_dispatch",
+        "task_id": task["task_id"],
+        "action": task["action"],
+        "status": "completed",
+        "target_domain_id": "medautogrant",
+        "result": {
+            "surface_kind": "sidecar_stage_attempt_closeout_result",
+            "return_shape": "no_regression_evidence",
+            "receipt_ref": receipt_ref,
+            "receipt_refs": {
+                "owner_receipt_ref": receipt_ref
+            },
+            "summary": {
+                "writes_performed": False
+            }
+        },
+        "receipt_refs": {
+            "owner_receipt_ref": receipt_ref,
+            "opl_consumes_receipt_ref_only": True
+        }
+    }
+}))
+PY
+`);
+  try {
+    const receiptRef = 'mag-runtime-receipts/owner/no-regression-1.json';
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'stage-attempt/closeout',
+      '--payload',
+      JSON.stringify({
+        action: 'stage-attempt/closeout',
+        input_path: '/tmp/mag/input.json',
+        stage_id: 'review_and_rebuttal',
+        provider_hosted_stage_attempt: true,
+        provider_attempt_id: 'opl-temporal:mag:no-regression',
+        controlled_stage_attempt: {
+          action_kind: 'grant_stage_attempt_apply',
+          contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
+          owner_receipt_refs: [receiptRef],
+        },
+      }),
+      '--dedupe-key',
+      'mag:test:no-regression',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attemptId = task.family_runtime_task.stage_attempts[0].stage_attempt_id;
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], env);
+    const contract = query.family_runtime_stage_attempt_query.stage_attempt_query.controlled_apply_contract;
+
+    assert.equal(contract.apply_status, 'domain_receipt_observed');
+    assert.deepEqual(contract.owner_receipt_refs, [receiptRef]);
+    assert.deepEqual(contract.no_regression_evidence_refs, [receiptRef]);
+    assert.equal(
+      query.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.route_impact.no_regression_evidence_observed,
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime maps MAG lifecycle receipt blockers into task-bound controlled attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mag-lifecycle-'));
   const dispatch = createDispatchFixture(`

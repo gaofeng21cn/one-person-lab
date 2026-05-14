@@ -43,6 +43,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
 - [Documentation Portfolio](./docs_portfolio_consolidation.md)
+- [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
 - [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
 - [OPL Current Development Lines](./active/current-development-lines.md)
 - [OPL Development Document Portfolio](./active/development-document-portfolio.md)
@@ -53,7 +54,17 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
 - [Specs Index](./specs/README.md)
 
+For OPL-family development after the 2026-05-14 layered-planning reset, use
+[OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
+as the main reference. OPL keeps global target state, global gaps, shared
+primitive absorption, App/workbench targets, domain admission, and cross-repo
+execution order. MAS/MAG/RCA repos keep their own target states, gaps,
+authority boundaries, direct/hosted paths, and repo-specific absorption lists.
+`opl-aion-shell` upstream AionUI docs are outside this directory-governance
+scope.
+
 For OPL framework development after the 2026-05-11 architecture reset, use
+[OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md),
 [OPL Current Development Lines](./active/current-development-lines.md),
 [OPL Development Document Portfolio](./active/development-document-portfolio.md), and
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
@@ -73,11 +84,16 @@ That entry governs framework/domain ownership without moving domain content into
 
 `docs/` is now managed by lifecycle state instead of a flat four-layer pile.
 Each long-lived document must have a clear `owner`, `purpose`, `state`, and `machine boundary`.
-Lifecycle is judged by content role, not by filename or old path. A file with an active-looking name can still be a superseded plan; a reference file can remain useful only as migration background; a history file can contain command examples that are provenance rather than current guidance.
+Lifecycle state is judged by content role, while durable placement converges on the canonical directory set. A file with an active-looking name can still be a superseded plan; a reference file can remain useful only as migration background; a history file can contain command examples that are provenance rather than current guidance.
 
 - `docs/` root keeps only the docs index, core five, and [Documentation Portfolio](./docs_portfolio_consolidation.md).
 - `docs/active/` keeps current human-readable runtime, activation, onboarding, and shared-boundary support.
 - `docs/public/` keeps public product-direction support read after the repository home.
+- `docs/product/` keeps One Person Lab App/workbench, operator-entry, and product-entry support.
+- `docs/runtime/` keeps OPL framework runtime, provider/executor, control-plane, and projection/read-model support.
+- `docs/delivery/` keeps generic artifact/package/export lifecycle-shell support; domain delivery authority remains in MAS/MAG/RCA.
+- `docs/source/` keeps generic workspace/source intake and source-truth transport-shell support; domain source semantics remain in domain repos.
+- `docs/policies/` keeps long-lived governance rules and repo-local operating discipline.
 - `docs/specs/` only keeps active runtime / product-boundary specs; when it is empty, spec truth has converged into the core five, `docs/active/`, the runtime-substrate roadmap, and machine-readable contracts.
 - `docs/references/` keeps support references grouped by purpose.
 - `docs/history/` keeps dated snapshots, retired paths, provenance archives, and tombstones.
@@ -108,6 +124,7 @@ These human-readable documents support the current `OPL` mainline: `Codex-defaul
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
 - [OPL Public Surface Index](./active/opl-public-surface-index.md)
+- [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
 - [OPL Development Document Portfolio](./active/development-document-portfolio.md)
 - [Active Docs Index](./active/README.md)
 
@@ -154,11 +171,13 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 
 - Keep [Repository Home](../README.md) install-first, user-facing, and readable for potential users, clinicians, and other non-technical experts.
 - Keep active public docs bilingual.
-- Govern docs by content lifecycle, not mechanically by file name, directory name, or whether a stale inbound link still exists.
+- Govern docs through the OPL-family canonical docs taxonomy. Content lifecycle
+  decides placement, but the long-lived directory names converge on
+  `active/public/product/runtime/delivery/source/policies/specs/references/history`.
 - Archive or tombstone superseded plans once their decision has moved into the core five or the current framework roadmap.
 - Keep reference-grade docs explicit about provenance vs current truth.
 - Keep history as tracked provenance and tombstone material.
 - Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.
 - New or moved documents must follow [Documentation Portfolio](./docs_portfolio_consolidation.md) before they become long-lived surfaces.
-- Cross-repo docs governance follows the [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) and the [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md): keep lifecycle roles equivalent across OPL, MAS, MAG, RCA, and MDS without forcing identical directory names or treating whole old documents as active backlogs.
+- Cross-repo docs governance follows the [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md), the [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md), and the [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md): OPL, MAS, MAG, and RCA converge on the same canonical docs taxonomy. Older `program/plans/capabilities` directories are migration sources, contract-linked records, or historical provenance, not parallel long-term taxonomies. `opl-aion-shell` docs are upstream AionUI dependency docs and are outside this directory-governance scope.
 - When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.

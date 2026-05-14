@@ -1,8 +1,16 @@
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+
 import type { FrameworkContracts } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { FrameworkContractError } from './contracts.ts';
 import type { FamilyDomainMemoryRef } from './family-domain-memory-contract.ts';
+import {
+  listStageAttemptCloseouts,
+  listStageAttempts,
+} from './family-runtime-stage-attempts.ts';
+import { familyRuntimePaths } from './family-runtime-store.ts';
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();
@@ -45,9 +53,47 @@ function parseOptionArgs(args: string[], required: string[]) {
   return parsed;
 }
 
-function buildMemoryIndexEntry(entry: DomainManifestCatalogEntry) {
+type RuntimeReceiptEvidence = {
+  surface_kind: 'opl_domain_memory_runtime_receipt_evidence';
+  domain_id: string;
+  status: 'no_runtime_closeout_refs_observed' | 'runtime_closeout_refs_observed';
+  source_status: string;
+  summary: {
+    closeout_count: number;
+    consumed_memory_ref_count: number;
+    writeback_receipt_ref_count: number;
+    rejected_write_count: number;
+    opl_writes_memory_body: false;
+  };
+  consumed_memory_refs: string[];
+  writeback_receipt_refs: string[];
+  rejected_writes: Record<string, unknown>[];
+  closeout_refs: string[];
+  source_refs: string[];
+  authority_boundary: {
+    opl: 'runtime_receipt_ref_projection_only';
+    domain: 'memory_body_accept_reject_truth_owner';
+    opl_writes_memory_body: false;
+    opl_accepts_or_rejects_memory_writeback: false;
+    opl_applies_memory_writeback: false;
+  };
+};
+
+type RuntimeReceiptEvidenceIndex = {
+  source_status: string;
+  byDomain: Map<string, RuntimeReceiptEvidence>;
+};
+
+function buildMemoryIndexEntry(
+  entry: DomainManifestCatalogEntry,
+  runtimeReceiptEvidenceIndex: RuntimeReceiptEvidenceIndex,
+) {
   const descriptor = entry.status === 'resolved' ? entry.manifest?.domain_memory_descriptor ?? null : null;
   const receiptProjection = descriptor ? buildReceiptProjection(descriptor) : null;
+  const runtimeReceiptEvidence = buildRuntimeReceiptEvidenceForDomain(
+    entry.project_id,
+    runtimeReceiptEvidenceIndex,
+  );
   return {
     project_id: entry.project_id,
     project: entry.project,
@@ -66,6 +112,7 @@ function buildMemoryIndexEntry(entry: DomainManifestCatalogEntry) {
     writeback_contract_ref: descriptor?.writeback_contract_ref ?? null,
     receipt_contract_ref: descriptor?.receipt_contract_ref ?? null,
     receipt_projection: receiptProjection,
+    runtime_receipt_evidence: runtimeReceiptEvidence,
     freshness: descriptor?.freshness ?? null,
     migration_readiness: descriptor?.migration_readiness ?? null,
     ready: Boolean(descriptor),
@@ -106,6 +153,156 @@ function buildReceiptProjection(descriptor: FamilyDomainMemoryRef) {
   };
 }
 
+function uniqueStrings(values: string[]) {
+  return [...new Set(values)];
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function recordList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => (
+        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+      ))
+    : [];
+}
+
+function emptyRuntimeReceiptEvidence(domainId: string, sourceStatus = 'ledger_empty'): RuntimeReceiptEvidence {
+  return {
+    surface_kind: 'opl_domain_memory_runtime_receipt_evidence',
+    domain_id: domainId,
+    status: 'no_runtime_closeout_refs_observed',
+    source_status: sourceStatus,
+    summary: {
+      closeout_count: 0,
+      consumed_memory_ref_count: 0,
+      writeback_receipt_ref_count: 0,
+      rejected_write_count: 0,
+      opl_writes_memory_body: false,
+    },
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    closeout_refs: [],
+    source_refs: [],
+    authority_boundary: {
+      opl: 'runtime_receipt_ref_projection_only',
+      domain: 'memory_body_accept_reject_truth_owner',
+      opl_writes_memory_body: false,
+      opl_accepts_or_rejects_memory_writeback: false,
+      opl_applies_memory_writeback: false,
+    },
+  };
+}
+
+function readRuntimeReceiptEvidenceByDomain(): RuntimeReceiptEvidenceIndex {
+  const paths = familyRuntimePaths();
+  if (!fs.existsSync(paths.queue_db)) {
+    return {
+      source_status: 'queue_db_missing',
+      byDomain: new Map<string, RuntimeReceiptEvidence>(),
+    };
+  }
+
+  const db = new DatabaseSync(paths.queue_db, { readOnly: true });
+  try {
+    const attemptsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_attempts'").get();
+    const closeoutsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_attempt_closeouts'").get();
+    if (!attemptsTable || !closeoutsTable) {
+      return {
+        source_status: 'stage_attempt_ledger_missing',
+        byDomain: new Map<string, RuntimeReceiptEvidence>(),
+      };
+    }
+    const byDomain = new Map<string, RuntimeReceiptEvidence>();
+    for (const attempt of listStageAttempts(db)) {
+      const domainId = attempt.domain_id;
+      const closeouts = listStageAttemptCloseouts(db, attempt.stage_attempt_id);
+      if (closeouts.length === 0) {
+        continue;
+      }
+      const current = byDomain.get(domainId) ?? emptyRuntimeReceiptEvidence(domainId, 'stage_attempt_ledger_readable');
+      const consumedMemoryRefs = uniqueStrings([
+        ...current.consumed_memory_refs,
+        ...closeouts.flatMap((closeout) => stringList(closeout.packet.consumed_memory_refs)),
+      ]);
+      const writebackReceiptRefs = uniqueStrings([
+        ...current.writeback_receipt_refs,
+        ...closeouts.flatMap((closeout) => stringList(closeout.packet.writeback_receipt_refs)),
+      ]);
+      const closeoutRefs = uniqueStrings([
+        ...current.closeout_refs,
+        ...closeouts.flatMap((closeout) => stringList(closeout.packet.closeout_refs)),
+      ]);
+      const rejectedWrites = [
+        ...current.rejected_writes,
+        ...closeouts.flatMap((closeout) => recordList(closeout.packet.rejected_writes)),
+      ];
+      const sourceRefs = uniqueStrings([
+        ...current.source_refs,
+        ...closeouts.map((closeout) => `${paths.queue_db}#stage_attempt_closeouts/${closeout.closeout_id}`),
+      ]);
+      byDomain.set(domainId, {
+        ...current,
+        status: 'runtime_closeout_refs_observed',
+        source_status: 'stage_attempt_ledger_readable',
+        summary: {
+          closeout_count: current.summary.closeout_count + closeouts.length,
+          consumed_memory_ref_count: consumedMemoryRefs.length,
+          writeback_receipt_ref_count: writebackReceiptRefs.length,
+          rejected_write_count: rejectedWrites.length,
+          opl_writes_memory_body: false,
+        },
+        consumed_memory_refs: consumedMemoryRefs,
+        writeback_receipt_refs: writebackReceiptRefs,
+        rejected_writes: rejectedWrites,
+        closeout_refs: closeoutRefs,
+        source_refs: sourceRefs,
+      });
+    }
+    return {
+      source_status: 'stage_attempt_ledger_readable',
+      byDomain,
+    };
+  } catch {
+    return {
+      source_status: 'stage_attempt_ledger_unreadable',
+      byDomain: new Map<string, RuntimeReceiptEvidence>(),
+    };
+  } finally {
+    db.close();
+  }
+}
+
+function buildRuntimeReceiptEvidenceForDomain(
+  domainId: string,
+  runtimeReceiptEvidenceIndex: RuntimeReceiptEvidenceIndex,
+) {
+  return runtimeReceiptEvidenceIndex.byDomain.get(domainId)
+    ?? emptyRuntimeReceiptEvidence(domainId, runtimeReceiptEvidenceIndex.source_status);
+}
+
+function summarizeRuntimeReceiptEvidence(
+  memories: Array<ReturnType<typeof buildMemoryIndexEntry>>,
+) {
+  return {
+    closeout_count: memories.reduce((sum, entry) => sum + entry.runtime_receipt_evidence.summary.closeout_count, 0),
+    consumed_memory_ref_count: uniqueStrings(memories.flatMap((entry) =>
+      entry.runtime_receipt_evidence.consumed_memory_refs
+    )).length,
+    writeback_receipt_ref_count: uniqueStrings(memories.flatMap((entry) =>
+      entry.runtime_receipt_evidence.writeback_receipt_refs
+    )).length,
+    rejected_write_count: memories.reduce((sum, entry) =>
+      sum + entry.runtime_receipt_evidence.summary.rejected_write_count, 0),
+    opl_writes_memory_body: false,
+  };
+}
+
 type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
@@ -116,7 +313,8 @@ function buildMemoryIndex(contracts: FrameworkContracts, options: ManifestCatalo
   const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
   }).domain_manifests;
-  const memories = catalog.projects.map(buildMemoryIndexEntry);
+  const runtimeReceiptEvidenceIndex = readRuntimeReceiptEvidenceByDomain();
+  const memories = catalog.projects.map((entry) => buildMemoryIndexEntry(entry, runtimeReceiptEvidenceIndex));
   return {
     domain_manifests: catalog,
     memories,
@@ -133,6 +331,7 @@ export function buildFamilyDomainMemoryList(contracts: FrameworkContracts, optio
         total_projects_count: index.memories.length,
         resolved_memory_descriptor_count: index.memories.filter((entry) => entry.ready).length,
         missing_memory_descriptor_count: index.memories.filter((entry) => !entry.ready).length,
+        runtime_receipt_evidence: summarizeRuntimeReceiptEvidence(index.memories),
       },
       memories: index.memories,
       notes: [
@@ -165,6 +364,10 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
 
   const descriptor = entry.status === 'resolved' ? entry.manifest?.domain_memory_descriptor ?? null : null;
   const receiptProjection = descriptor ? buildReceiptProjection(descriptor) : null;
+  const runtimeReceiptEvidence = buildRuntimeReceiptEvidenceForDomain(
+    entry.project_id,
+    readRuntimeReceiptEvidenceByDomain(),
+  );
   return {
     version: 'g2',
     family_domain_memory: {
@@ -175,6 +378,7 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
       descriptor_status: descriptor ? 'resolved' : 'missing',
       descriptor,
       receipt_projection: receiptProjection,
+      runtime_receipt_evidence: runtimeReceiptEvidence,
       migration_plan: descriptor
         ? {
             migration_plan_ref: descriptor.migration_plan_ref,
@@ -183,6 +387,7 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
             writeback_contract_ref: descriptor.writeback_contract_ref,
             receipt_contract_ref: descriptor.receipt_contract_ref,
             receipt_projection: receiptProjection,
+            runtime_receipt_evidence: runtimeReceiptEvidence,
             migration_readiness: descriptor.migration_readiness,
             current_state: descriptor.migration_readiness?.status ?? descriptor.freshness?.status ?? 'unknown',
             opl_role: 'migration_projection_only',
@@ -235,6 +440,7 @@ export function buildFamilyDomainMemoryMigrationPlan(contracts: FrameworkContrac
       receipt_contract_ref: descriptor.receipt_contract_ref,
       recall_projection_ref: descriptor.recall_projection_ref,
       receipt_projection: buildReceiptProjection(descriptor),
+      runtime_receipt_evidence: inspected.runtime_receipt_evidence,
       authority_boundary: inspected.authority_boundary,
       non_authority_flags: {
         opl_owns_memory_content: false,

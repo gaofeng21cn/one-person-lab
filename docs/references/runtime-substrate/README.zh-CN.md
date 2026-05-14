@@ -4,11 +4,12 @@ Status: `support_reference_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；机器可读行为必须使用合同、源码、CLI/API 行为、runtime ledger、生成产物或 `human_doc:*` 语义标识。
 
-本目录收纳 runtime、provider、executor、product-entry 与迁移参考。治理规则按内容生命周期判断，不按文件名机械判断。
+本目录收纳 runtime、provider、executor、product-entry 与迁移参考。生命周期状态按内容角色判断，长期落点服从 OPL-family canonical docs taxonomy。
 
 当前 owner surfaces：
 
 - [OPL 当前开发线路](../../active/current-development-lines.zh-CN.md)：framework-first 内容级执行地图。
+- [OPL 系列项目开发主参考](../../active/opl-family-development-reference.zh-CN.md)：跨 OPL、MAS、MAG、RCA 与 OPL-owned App/workbench 目标的主开发读法；固定全局计划、单仓计划、上收清单、同名 docs taxonomy 和过时兼容面退役规则。
 - [OPL 开发文档组合整理](../../active/development-document-portfolio.zh-CN.md)：按内容判断旧 runtime / product-entry / migration 文档应吸收、保留、降级、退役还是归档。
 - [OPL stage-led agent framework roadmap](./opl-stage-led-agent-framework-roadmap.zh-CN.md)：完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架的总入口。
 - [OPL 与 Foundry Agents 理想目标态](./opl-family-agent-ideal-state.zh-CN.md)：描述 OPL Framework、Foundry Agents、workspace/runtime artifact root 与 One Person Lab App 的 north-star 目标边界。

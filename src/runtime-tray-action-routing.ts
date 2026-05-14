@@ -75,6 +75,25 @@ function repairCommandRoutes(attempt: ActionRoutingAttempt): OperatorActionRoute
   }));
 }
 
+function directSkillRoutes(attempt: ActionRoutingAttempt): OperatorActionRoute[] {
+  return uniqueStrings([
+    ...stringList(attempt.route_impact.direct_skill_commands),
+    ...stringList(attempt.route_impact.direct_skill_refs),
+    optionalString(attempt.route_impact.direct_skill_command),
+    optionalString(attempt.route_impact.direct_skill_ref),
+  ].filter((entry): entry is string => Boolean(entry))).map((commandOrRef, index) => ({
+    action_id: `action:${attempt.stage_attempt_id}:direct-skill:${index}`,
+    action_kind: 'domain_direct_skill',
+    action_owner: 'domain',
+    route_target_kind: 'direct_skill',
+    command_or_surface_ref: commandOrRef,
+    stage_attempt_id: attempt.stage_attempt_id,
+    domain_id: attempt.domain_id,
+    stage_id: attempt.stage_id,
+    execution_policy: 'route_only_no_execution',
+  }));
+}
+
 function providerSignalRoutes(attempt: ActionRoutingAttempt): OperatorActionRoute[] {
   const humanGateRoutes = uniqueStrings(attempt.human_gate_refs).map((ref, index) => ({
     action_id: `action:${attempt.stage_attempt_id}:provider-human-gate:${index}`,
@@ -155,6 +174,7 @@ export function buildAttemptOperatorActionRouting(attempt: ActionRoutingAttempt)
     appSurfaceRoute(attempt, 'projection_drilldown:memory_locator_index', 'memory_locator_index'),
     appSurfaceRoute(attempt, 'projection_drilldown:artifact_gallery', 'artifact_gallery'),
     appSurfaceRoute(attempt, 'projection_drilldown:package_export_lifecycle', 'package_export_lifecycle'),
+    appSurfaceRoute(attempt, 'projection_drilldown:lifecycle_primitives', 'lifecycle_primitives'),
     appSurfaceRoute(attempt, 'projection_drilldown:route_decision_graph', 'route_decision_graph'),
     appSurfaceRoute(attempt, 'projection_drilldown:review_repair_queue', 'review_repair_queue'),
     appSurfaceRoute(attempt, 'projection_drilldown:quality_readiness', 'quality_readiness'),
@@ -163,6 +183,7 @@ export function buildAttemptOperatorActionRouting(attempt: ActionRoutingAttempt)
     ...providerSignalRoutes(attempt),
     ...domainOwnerRoute(attempt),
     ...repairCommandRoutes(attempt),
+    ...directSkillRoutes(attempt),
   ];
 
   return {

@@ -1,6 +1,6 @@
 # Hermes-Agent 真相重置与目标形态说明
 
-> 2026-05-14 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。Hermes 不再承担 provider、默认 executor、Codex CLI 备线、可选安装模块或目标 session/wakeup substrate 角色。`hermes_agent` 仅作为显式非默认 executor adapter/backend 保留，并只承诺接口连接、生命周期、回执、审计和 fail-closed。该 adapter 不承诺质量、工具语义或 resume 与 `Codex CLI` 等价。Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+> 2026-05-14 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 不再承担 provider、默认 executor、Codex CLI 备线、可选安装模块或目标 session/wakeup substrate 角色。`hermes_agent` 是 canonical 显式非默认 executor adapter/backend，并只承诺接口连接、生命周期、回执、审计和 fail-closed。该 adapter 不承诺质量、工具语义或 resume 与 `Codex CLI` 等价。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
 
 ## 1. 为什么要做这份重置
 
@@ -11,10 +11,11 @@
 
 这两件事不是一回事。
 
-当前必须冻结的真相是：
+当前必须冻结的历史命名边界是：
 
 - `Hermes-Agent` 只指上游外部 runtime substrate 项目 / 服务本体。
 - 仓内自写的 runtime helper、adapter、shim、migration scaffold、repo-local substrate，都不等于接入上游 `Hermes-Agent`。
+- `hermes_agent` 是当前 canonical 显式非默认 executor adapter/backend；它不是 provider/Gateway/readiness surface，也不是默认执行器。
 
 ## 2. 当前四仓的真实状态
 
@@ -40,7 +41,9 @@
 
 ## 3. 什么才算真正接入上游 Hermes-Agent
 
-至少同时满足下面几类条件，才可以在 repo-tracked truth 里写“已接入上游 Hermes-Agent”：
+本节记录 2026-05-10 之前 Hermes-first 目标的历史验收标准。当前 production online runtime 目标已经转向 Temporal-backed provider；这些条件只用于解释历史 Hermes provider/substrate 说法为什么不能被冒充为当前事实。`hermes_agent` executor adapter/backend 的当前验收另见 [Hermes-Agent 备选执行器评估](./hermes-agent-executor-evaluation.md) 与 [Family Executor Adapter Defaults](./family-executor-adapter-defaults.md)。
+
+至少同时满足下面几类条件，历史上才可以在 repo-tracked truth 里写“已接入上游 Hermes-Agent provider/substrate”：
 
 1. runtime substrate 的 owner 真正是上游 `Hermes-Agent`
    - session、run、event、resume、interrupt、memory、scheduler、gateway 等核心 substrate 能力，不再由仓内自写实现承担主责。
@@ -87,25 +90,25 @@
 
 ### 4.4 Med Auto Grant 的历史 Hermes-first 理想形态
 
-- 上游 `Hermes-Agent` 持有长期在线 runtime orchestration、session、resume、hosted handoff substrate。
+- 历史设想中，上游 `Hermes-Agent` 持有长期在线 runtime orchestration、session、resume、hosted handoff substrate。
 - `MedAutoGrant` 只保留：
   - `NSFCWorkspace`
   - critique / revision / final package
   - author-side grant semantics
   - grant-specific gate / audit / export truth
 
-## 5. 理想形态相对当前状态的优点
+## 5. 历史 Hermes-first 理想形态相对当时状态的优点
 
 - 少维护一整套自写 runtime substrate：session、memory、cron、approval、interrupt、gateway 等能力可以更多依赖上游。
 - 顶层与业务仓边界更清楚：`OPL` 不再被误解成 runtime owner，各业务仓也不用一边做 domain，一边重复造 substrate。
 - 更利于后续 Web / hosted 产品化：如果 runtime substrate 已经是可托管形态，产品迁移难度显著下降。
 - 更利于多仓统一：formal entry、run handle、durable report、audit trail、gate semantics 可以建立在同一真实 substrate 之上，而不是三套本地 runtime 各写各的。
 
-## 6. 理想形态相对当前状态的代价
+## 6. 历史 Hermes-first 理想形态相对当时状态的代价
 
 - 引入上游依赖与版本耦合：要接受上游节奏、兼容性和部署要求。
 - 前期适配成本上升：要把当前仓内自写的 runtime 责任重新拆回 domain logic 与 substrate adapter 两层。
-- 迁移必须更诚实：尤其是 `MedAutoScience`，因为当前真实长跑执行仍与 `MedDeepScientist` 强耦合，不能靠文档硬切。
+- 迁移必须更诚实：尤其是当时的 `MedAutoScience` 仍与 `MedDeepScientist` 强耦合，不能靠文档硬切。当前 MAS 已完成 monolith closeout；这条只作为历史风险说明。
 
 ## 7. 历史推荐迁移顺序
 
@@ -133,5 +136,5 @@
 
 ### 第五阶段：回到 OPL 做联邦同步
 
-- 当至少一个业务仓完成真实上游 Hermes-Agent 集成后，`OPL` 再提升顶层 runtime substrate 口径。
-- 在那之前，`OPL` 只能把它定义为目标形态，不能提前把它写成既成事实。
+- 当时的设想是至少一个业务仓完成真实上游 Hermes-Agent provider/substrate 集成后，`OPL` 再提升顶层 runtime substrate 口径。
+- 该设想已被 Temporal-backed provider 取代；当前不能把 Hermes provider/substrate 写成 OPL 目标态或既成事实，但 `hermes_agent` executor adapter/backend 仍是 canonical 显式非默认接口。

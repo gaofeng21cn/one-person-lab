@@ -119,7 +119,7 @@ The current split is:
 
 ## Relationship To Hermes-Agent
 
-The upstream `Hermes-Agent` is retained in two distinct roles: `hermes_agent` can be an explicit non-default executor adapter/backend, while Hermes runtime / Gateway / provider material is historical provenance, diagnostic vocabulary, or negative-guard reference material.
+The Hermes naming boundary has two distinct current meanings: `hermes_agent` is a canonical explicit non-default executor adapter/backend, while old Hermes runtime / Gateway / provider material is historical provenance, diagnostic vocabulary, or negative-guard reference material.
 
 The more accurate statement is therefore:
 

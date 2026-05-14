@@ -61,18 +61,63 @@ function* walk(relativeRoot: string): Generator<string> {
   }
 }
 
+function scannedTextFiles(roots: string[]) {
+  return roots.flatMap((relativeRoot) => [...walk(relativeRoot)]);
+}
+
 test('active OPL source, contracts, fixtures, and tests do not reintroduce retired compatibility vocabulary', () => {
   const violations: string[] = [];
 
-  for (const relativeRoot of scannedRoots) {
-    for (const relativePath of walk(relativeRoot)) {
-      const lower = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').toLowerCase();
-      for (const term of forbiddenTerms) {
-        if (lower.includes(term.toLowerCase())) {
-          violations.push(`${relativePath}: ${term}`);
-        }
+  for (const relativePath of scannedTextFiles(scannedRoots)) {
+    const lower = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').toLowerCase();
+    for (const term of forbiddenTerms) {
+      if (lower.includes(term.toLowerCase())) {
+        violations.push(`${relativePath}: ${term}`);
       }
     }
+  }
+
+  assert.deepEqual(violations, []);
+});
+
+test('active machine surfaces do not keep retired Hermes provider or gateway compatibility aliases', () => {
+  const scannedFiles = scannedTextFiles([
+    'src',
+    'contracts',
+    'tests/fixtures/family-manifests',
+  ]);
+  const forbiddenPatterns = [
+    /compatibility[_-]?aliases/i,
+    /legacy[_-]?aliases/i,
+    /hermes[_-]?legacy/i,
+    /hermes[_-]?(?:runtime|online|provider|proof|readiness|gateway)[_-]?(?:compat|alias|bridge|fallback|surface|path)?/i,
+    /gateway[_-]?(?:compat|alias|bridge|fallback|provider|readiness|surface|path)/i,
+    /(?:compat|alias|bridge|fallback)[_-]?(?:gateway|hermes[_-]?provider|hermes[_-]?runtime|hermes[_-]?online)/i,
+  ];
+  const allowedPatterns = [
+    /hermes_agent/i,
+    /hermes-agent/i,
+    /hermes_agent_not_provider_or_gateway_surface/i,
+    /openai_compatible_gateway_backend_forbidden/i,
+    /without hermes compatibility diagnostics/i,
+    /repair_hermes_legacy_provider/,
+    /install_hermes_online_runtime/,
+  ];
+  const violations: string[] = [];
+
+  for (const relativePath of scannedFiles) {
+    const content = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+    const lines = content.split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (allowedPatterns.some((pattern) => pattern.test(line))) {
+        return;
+      }
+      for (const pattern of forbiddenPatterns) {
+        if (pattern.test(line)) {
+          violations.push(`${relativePath}:${index + 1}: ${pattern}`);
+        }
+      }
+    });
   }
 
   assert.deepEqual(violations, []);
@@ -128,22 +173,31 @@ test('human docs do not retire the canonical hermes_agent executor adapter', () 
     'docs/references/README.md',
     'docs/references/README.zh-CN.md',
     'docs/references/runtime-substrate/family-executor-adapter-defaults.md',
+    'docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md',
     'docs/references/runtime-substrate/hermes-agent-executor-evaluation.md',
     'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md',
     'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md',
+    'docs/references/convergence-governance/opl-positioning-convergence-lessons.zh-CN.md',
     'docs/public/roadmap.md',
     'docs/public/roadmap.zh-CN.md',
     'docs/project.md',
     'docs/architecture.md',
+    'docs/decisions.md',
+    'docs/status.md',
   ];
 
   const forbiddenPatterns = [
-    /hermes_agent[^\n]*(?:unsupported|retired|退役|不支持)/i,
-    /(?:unsupported|retired)[^\n]*hermes_agent/i,
+    /`hermes_agent`[^.\n;；]{0,80}(?:is|=|为|是)?[^.\n;；]{0,40}(?:unsupported|not supported|retired|不可选|不支持|已退役)/i,
+    /(?:unsupported|not supported|retired|不可选|不支持|已退役)[^.\n;；]{0,80}`hermes_agent`/i,
     /(?:canonical|allowed)[^\n]*(?:codex_cli\s*(?:\||,|and|和)\s*claude_code)[^\n]*(?:only|仅|只有)/i,
     /Active executor\/proof routes,\s*\n\s*provider-bridge interfaces[\s\S]{0,120}retired/i,
     /Hermes-Agent[^\n]*(?:retained only|only retained|只作为|只保留)[^\n]*(?:migration|proof|迁移)/i,
     /Hermes-Agent[^\n]*(?:retained only|only retained|只作为|只保留)[^\n]*(?:historical provenance|diagnostic vocabulary|negative guard|历史 provenance|诊断语料|负向 guard)/i,
+    /Hermes[：:][^\n]*(?:外部 )?runtime substrate owner/i,
+    /Hermes-Agent[^\n]*(?:是|as|=)[^\n]*(?:外部 )?runtime substrate(?:\s|$|[，。；,;])/i,
+    /Hermes-Agent[^\n]*(?:是|as|=)[^\n]*online-management gateway owner/i,
+    /^(?!.*(?:历史|historical|history|当时|设想|supersede))[^。\n]*Hermes-Agent[^\n]*(?:持有|owns|负责)[^\n]*长期在线 runtime orchestration/i,
+    /长跑和 online-management 由外部 `Hermes-Agent` substrate 管/,
   ];
   const violations: string[] = [];
 
@@ -157,6 +211,46 @@ test('human docs do not retire the canonical hermes_agent executor adapter', () 
   }
 
   assert.deepEqual(violations, []);
+});
+
+test('core executor surfaces keep hermes_agent in the canonical explicit non-default backend set', () => {
+  const contract = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/family-executor-adapter-defaults.json'),
+    'utf8',
+  )) as {
+    canonical_executor_backends?: string[];
+    executor_registry?: { non_default_equivalence?: string };
+    guardrails?: Record<string, unknown>;
+  };
+
+  assert.deepEqual(contract.canonical_executor_backends, ['codex_cli', 'hermes_agent', 'claude_code']);
+  assert.equal(contract.executor_registry?.non_default_equivalence, 'connectivity_lifecycle_receipt_audit_only');
+  assert.equal(contract.guardrails?.hermes_agent_not_provider_or_gateway_surface, true);
+
+  const requiredDocPatterns: Array<[string, RegExp]> = [
+    [
+      'docs/status.md',
+      /`hermes_agent` 与 `claude_code` 同属显式非默认 executor adapter\/backend/,
+    ],
+    [
+      'docs/decisions.md',
+      /`hermes_agent` 仍可作为显式非默认 executor adapter\/backend/,
+    ],
+    [
+      'docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md',
+      /`hermes_agent` 是 canonical 显式非默认 executor adapter\/backend/,
+    ],
+    [
+      'docs/references/runtime-substrate/family-executor-adapter-defaults.md',
+      /`canonical_executor_backends = \[codex_cli, hermes_agent, claude_code\]`/,
+    ],
+  ];
+
+  const missing = requiredDocPatterns
+    .filter(([relativePath, pattern]) => !pattern.test(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')))
+    .map(([relativePath]) => relativePath);
+
+  assert.deepEqual(missing, []);
 });
 
 test('examples and admission references do not preserve domain_gateway as an active route', () => {

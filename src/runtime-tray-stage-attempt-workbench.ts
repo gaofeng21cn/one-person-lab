@@ -145,6 +145,7 @@ function attemptProjection(
     domainId: row.domain_id,
     stageId: row.stage_id,
     workspaceLocator,
+    routeImpact,
   });
   const lifecyclePrimitives = buildFamilyRuntimeLifecyclePrimitives({
     workspaceLocator,
