@@ -19,6 +19,7 @@ Owner: `One Person Lab`
 
 ## 内容
 
+- `opl-family-development-reference.zh-CN.md`：OPL 系列项目开发主参考；固定全局计划放 OPL、单仓计划回各 repo、通用能力上收 OPL、过时兼容面直接退役、docs 目录按同名 canonical taxonomy 对齐。
 - `current-development-lines*`：当前 framework-first 内容级开发线路图。
 - `production-framework-closure-gap-matrix.zh-CN.md`：当前 OPL 距离完整生产级智能体框架的 production closure 差距矩阵。
 - `current-state-vs-ideal-gap.zh-CN.md`：对照 OPL / Foundry Agents 理想目标态，记录 OPL family-level 当前实际状态、差距和完善顺序；MAS/MAG/RCA 的单仓完善计划回到各自仓库的理想态或 status/program 文档。

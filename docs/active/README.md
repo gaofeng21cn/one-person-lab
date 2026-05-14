@@ -19,6 +19,7 @@ Documents here support the current model, but they are not machine-readable auth
 
 ## Contents
 
+- `opl-family-development-reference.zh-CN.md`: main development reference for the OPL family; fixes the split between OPL global planning and repo-local plans, OPL-owned generic primitive absorption, direct retirement of stale compatibility surfaces, and same-name canonical docs taxonomy alignment.
 - `current-development-lines*`: current framework-first content-level development map.
 - `production-framework-closure-gap-matrix.zh-CN.md`: current production closure gap matrix for OPL as a complete production-grade agent framework.
 - `current-state-vs-ideal-gap.zh-CN.md`: compares the OPL / Foundry Agents ideal state with the current family-level gaps and completion order; MAS/MAG/RCA repo-specific completion plans live in their own ideal-state or status/program documents.

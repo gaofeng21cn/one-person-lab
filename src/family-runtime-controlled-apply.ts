@@ -71,6 +71,7 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
   workspaceLocator: JsonRecord;
+  routeImpact?: JsonRecord;
 }): FamilyRuntimeControlledApplyContract {
   const request = controlledApplyRequest(input.workspaceLocator);
   const contractId = optionalString(request?.contract_id)
@@ -84,6 +85,11 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
   const noRegressionEvidenceRefs = [
     ...stringListFrom(request?.no_regression_evidence_refs),
     ...stringListFrom(request?.evidence_refs),
+    ...stringListFrom(input.routeImpact?.no_regression_evidence_refs),
+    ...stringListFrom(input.routeImpact?.evidence_refs),
+    ...(optionalString(input.routeImpact?.no_regression_evidence_ref)
+      ? [optionalString(input.routeImpact?.no_regression_evidence_ref)!]
+      : []),
   ];
   const typedBlockers = request === null
     ? []

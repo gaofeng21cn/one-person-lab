@@ -210,7 +210,11 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
 function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
   const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
   if (override) {
-    return [...override.split(/\s+/), taskPath];
+    const tokens = override.split(/\s+/);
+    if (tokens.some((token) => token.includes('{task}'))) {
+      return tokens.map((token) => token.replaceAll('{task}', taskPath));
+    }
+    return [...tokens, taskPath];
   }
 
   return [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'];

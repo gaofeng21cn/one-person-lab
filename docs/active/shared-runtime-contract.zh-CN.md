@@ -119,12 +119,13 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 ## 与 Hermes-Agent 的关系
 
-上游 `Hermes-Agent` 当前在 OPL 中只保留两类边界：`hermes_agent` 可作为显式非默认 executor adapter/backend；Hermes runtime / Gateway / provider 相关内容只作为历史 provenance、诊断语料和负向 guard 参考。
+`Hermes` 相关命名在当前 OPL 中必须拆开读：`hermes_agent` 是 canonical 显式非默认 executor adapter/backend；旧 Hermes runtime / Gateway / provider 相关内容只作为历史 provenance、诊断语料和负向 guard 参考。
 
 因此，更准确的表达是：
 
 - OPL framework 的 production online substrate 是 provider-backed stage runtime，当前必需路径是 Temporal-backed provider
-- `Hermes-Agent` 保留为显式非默认 executor adapter/backend、历史 provenance、诊断语料或负向 guard
+- `hermes_agent` 是 canonical 显式非默认 executor adapter/backend
+- 旧 Hermes provider、Gateway、readiness 与 compatibility surface 只保留为历史 provenance、诊断语料或负向 guard
 - `Hermes-Agent` 不是整个 `UHS`
 - `Hermes-Agent` 也不会替代 OPL session/runtime 入口、任何 domain-agent entry 或 domain-owned truth surface
 - 任何集成方式都必须保持 OPL 作为 framework/control-plane owner，并保持 domain 仓作为 truth owner
@@ -149,7 +150,7 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 
 - 当前本地 Codex-default executor 路径
 - 目标 provider-backed stage runtime，包括 Temporal-backed provider 路径
-- `Hermes-Agent` 这类显式非默认 executor adapter、历史 provenance、诊断语料或负向 guard 资产
+- `hermes_agent` 这类显式非默认 executor adapter，以及旧 Hermes provider/Gateway surface 的历史 provenance、诊断语料或负向 guard 资产
 - future platform-hosted execution plane
 
 从产品形态看，目标形态是：

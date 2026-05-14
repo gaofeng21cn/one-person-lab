@@ -20,7 +20,7 @@ Lifecycle decisions are content-level decisions. A document with a current-looki
 
 Entry pages should show the current state, hierarchy, old/new relationship, and next reading step before listing supporting material. Old plans, closeout notes, compatibility records, and dated calibrations remain useful as provenance; place them after the current framework roadmap, core five, active specs, and active support docs.
 
-The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). That rollout turns the MAS full-docs restructuring into an OPL-family standard: repositories must be role-equivalent in lifecycle governance, but they do not need identical directory names.
+The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). The May 14 refresh tightens that rule into a same-name canonical docs taxonomy for the OPL family: lifecycle decisions still happen at the content level, but long-lived repo docs converge on the same directory names.
 
 The 2026-05-11 content-level rollout extends that rule across the current
 OPL family. The execution order is framework-first: `OPL` owns the shared
@@ -30,6 +30,21 @@ docs to content-level owner surfaces; `MDS` remains an archive/reference/oracle
 surface declared by MAS. The rollout entry is
 [OPL Family Content-Level Docs Consolidation 2026-05-11](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md).
 
+The 2026-05-14 layered-planning rule makes the development reference explicit:
+[OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
+is the main OPL-family development reference. OPL owns global target state,
+global gaps, shared primitive absorption, App/workbench targets, domain
+admission, and cross-repo execution order. Each domain repo owns its own
+target-state/gap/plan surface and records which generic runtime, memory,
+lifecycle, projection, workbench, and observability capabilities should be
+lifted into OPL. The canonical directory set is
+`active/public/product/runtime/delivery/source/policies/specs/references/history`.
+Older `program`, `plans`, and `capabilities` directories in managed domain repos
+become migration sources, contract-linked records, or historical provenance;
+new recurring material should enter the canonical directory set first.
+`opl-aion-shell` docs are upstream AionUI dependency docs and are excluded from
+this repository-directory governance.
+
 ## Reading Order
 
 1. `README.md` / `README.zh-CN.md`
@@ -37,9 +52,14 @@ surface declared by MAS. The rollout entry is
 3. Core five: `project.md`, `status.md`, `architecture.md`, `invariants.md`, `decisions.md`
 4. Active current docs: `docs/active/`, especially `current-development-lines*` and `development-document-portfolio*`
 5. Current public narrative: `docs/public/`
-6. Active specs: `docs/specs/`
-7. Support references: `docs/references/`
-8. Historical archive: `docs/history/`
+6. Product/workbench support: `docs/product/`
+7. Runtime support: `docs/runtime/`
+8. Delivery lifecycle support: `docs/delivery/`
+9. Source/workspace support: `docs/source/`
+10. Stable policies: `docs/policies/`
+11. Active specs: `docs/specs/`
+12. Support references: `docs/references/`
+13. Historical archive: `docs/history/`
 
 ## Directory Roles
 
@@ -48,6 +68,11 @@ surface declared by MAS. The rollout entry is
 | `docs/` root | Technical entry and current core truth | Only README, core five, docs governance, and first-level lifecycle directories. |
 | `docs/active/` | Current runtime, activation, shared-boundary, onboarding, current development lines, and development-document portfolio support docs | Active support for current implementation and content-level development-document disposition; still human-readable, not machine authority. |
 | `docs/public/` | Public product direction after install/start entry | Bilingual user-facing narrative, roadmap, task map, and operating model. |
+| `docs/product/` | One Person Lab App/workbench, operator-entry, and product-entry support | Describes OPL-owned App/workbench consumption contracts without governing upstream AionUI docs. |
+| `docs/runtime/` | Runtime/provider/executor/control-plane/projection support | Human-readable OPL runtime support; machine truth stays in contracts, source, CLI/API behavior, ledgers, and provider receipts. |
+| `docs/delivery/` | Generic artifact/package/export lifecycle-shell support | OPL owns shared lifecycle shell and refs; domain delivery authority stays in domain repos. |
+| `docs/source/` | Generic workspace/source intake and source-truth transport-shell support | OPL owns shared shell and locator/projection boundaries; domain source semantics stay in domain repos. |
+| `docs/policies/` | Long-lived governance rules and repo-local operating discipline | Policies must stay subordinate to core invariants/decisions and machine-readable contracts. |
 | `docs/specs/` | Active runtime / product-boundary specs | Only specs that still define current behavior or current target boundary. |
 | `docs/references/current-support/` | Current operational support references | Setup, GUI, release, quality, and install references. |
 | `docs/references/runtime-substrate/` | Runtime substrate, provider, executor, and product-entry references | Stage-led framework roadmap, Temporal/provider support, Runtime Manager target, and current migration/evaluation material. |
@@ -111,6 +136,7 @@ current OPL owner split is:
 | --- | --- | --- | --- |
 | `docs/project.md`, `docs/status.md`, `docs/architecture.md` | Keep as active truth | Core five | They already state the stage-led OPL framework boundary, Agent executors as the minimum execution unit, and domain-agent ownership. |
 | `docs/active/current-development-lines*` | Keep as active support | Active docs index plus stage-led framework roadmap | It defines the framework-first content-level execution order. |
+| `docs/active/opl-family-development-reference.zh-CN.md` | Keep as active support | OPL-family development reference | It fixes the layered plan owner split across OPL, MAS, MAG, RCA, and OPL-owned App/workbench targets, including shared primitive absorption and direct retirement of stale compatibility surfaces. |
 | `docs/active/development-document-portfolio*` | Keep as active support | Active docs index plus docs portfolio | It classifies old development content by current role: merge, retain, downgrade, retire, or archive. |
 | `docs/active/opl-public-surface-index*` | Keep active support | `docs/active/README*` and core five | It correctly tombstones gateway/federation/routed-action prose and points to current runtime/activation surfaces. |
 | `docs/active/opl-domain-onboarding-contract*` | Keep active support | Domain admission contract plus machine-readable OPL framework contracts | Admission remains active, but historical execution-model companions must stay marked as history. |
@@ -203,22 +229,27 @@ All other long-lived docs must live in `active/`, `public/`, `specs/`, `referenc
 
 ## Family Rollout Rule
 
-Cross-repo docs治理 must follow role-equivalent lifecycle architecture:
+Cross-repo docs治理 must follow the same-name canonical docs taxonomy:
 
 - `OPL` owns family documentation language, cross-repo intake templates, shared governance references, and audit checklists.
-- `MAS` owns medical research runtime/program/capability truth and remains the reference implementation for deep docs lifecycle restructuring.
-- `MAG` owns grant truth; older path-stable specs may remain under `docs/specs/` while README/index layers separate active and historical records.
-- `RCA` owns visual-deliverable truth; product, runtime, delivery, source, references, program, policies, and history should be separate reader layers.
+- `MAS` owns medical research truth; its older `program/` and `capabilities/` trees are migration sources that canonical `active/`, `product/`, `runtime/`, `delivery/`, and `source/` indexes must route explicitly.
+- `MAG` owns grant truth; its older `plans/` tree maps into canonical `active/`, while older path-stable specs may remain under `docs/specs/` only with active/history classification.
+- `RCA` owns visual-deliverable truth; its `program/` tree maps into canonical `active/`, while existing product/runtime/delivery/source/policies/references/history directories already match the family taxonomy.
 - `MDS` is not an admitted OPL domain agent. It is a MAS-declared archive,
   backend-audit, source-provenance, explicit archive-import, upstream-intake,
   diagnostic, and parity-oracle reference.
+- `opl-aion-shell` is the upstream AionUI fork dependency for the App shell.
+  Its docs tree remains governed by upstream AionUI. OPL docs may describe the
+  App/workbench target and consumption boundary, but this family taxonomy does
+  not impose directory changes on that repo.
 
 When a domain repo cannot safely move historical docs because current-program, audit, or old absolute-path evidence still points at them, the correct move is index-level lifecycle separation first, physical migration later.
 
-The current cross-repo rollout is content-level, not file-name-level. Workers
-must read document bodies, merge still-valid content into the active owner doc,
-adjust outdated sections in place when path stability matters, and archive only
-after inbound `human_doc:*`, contract, docs, and history references are checked.
+The current cross-repo rollout is content-level for classification and
+same-name for durable directory placement. Workers must read document bodies,
+merge still-valid content into the active owner doc, adjust outdated sections in
+place when path stability matters, and archive or migrate only after inbound
+`human_doc:*`, contract, docs, and history references are checked.
 
 ## Root AGENTS Alignment
 

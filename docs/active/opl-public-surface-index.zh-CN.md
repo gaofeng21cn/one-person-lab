@@ -35,7 +35,7 @@
 - [合同目录说明](../../contracts/README.md)
 
 这些界面解释默认入口（`opl`、`opl exec`、`opl resume`）、当前资源模型（`workspaces / sessions / progress / artifacts`），以及“只有显式 domain activation 或 executor switch 才进入 OPL 增量语义”这条规则。
-它们也把 `OPL Runtime Manager` 限定为已配置 provider-backed family runtime 之上的产品控制面，并把 typed family queue、provider 诊断、Rust native helper / index 工作限定在产品调度、native assistance 与 indexed discovery。Temporal-backed provider 是 production online runtime 的必需 substrate；未安装、不可达或 worker 未 ready 都是平台 readiness blocker，需要通过安装、修复、监控和运维维护闭合。Hermes provider/readiness/Gateway 语义已经退出 runtime provider、默认 substrate、readiness path、兼容 fallback 和 cron surface；`hermes_agent` 只作为显式非默认 executor adapter 保留，必须走独立 receipt、audit 和 fail-closed gate。普通 Product Entry 与 session resume 保持 Codex-default 路径。
+它们也把 `OPL Runtime Manager` 限定为已配置 provider-backed family runtime 之上的产品控制面，并把 typed family queue、provider 诊断、Rust native helper / index 工作限定在产品调度、native assistance 与 indexed discovery。Temporal-backed provider 是 production online runtime 的必需 substrate；未安装、不可达或 worker 未 ready 都是平台 readiness blocker，需要通过安装、修复、监控和运维维护闭合。旧 Hermes provider/readiness/Gateway 语义已经退出 runtime provider、默认 substrate、readiness path、兼容 fallback 和 cron surface；`hermes_agent` 是 canonical 显式非默认 executor adapter/backend，必须走独立 receipt、audit 和 fail-closed gate。普通 Product Entry 与 session resume 保持 Codex-default 路径。
 
 ### 2. 已链接的 domain capability surface
 

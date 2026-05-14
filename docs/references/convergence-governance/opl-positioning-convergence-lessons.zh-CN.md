@@ -1,12 +1,12 @@
 # OPL 定位演化与收敛经验参考
 
-状态锚点：`2026-05-07`
+状态锚点：`2026-05-14`
 
 ## 用途
 
 这份参考材料沉淀两次仓库调研的核心经验：
 
-- 从 commit 历史看 `OPL` 如何从 gateway / federation 蓝图，逐步收敛为 `Codex-default session runtime + explicit activation layer + family shared modules/contracts/indexes`。
+- 从 commit 历史看 `OPL` 如何从 gateway / federation 蓝图，逐步收敛为 `Codex CLI first-class executor + explicit activation layer + provider-backed stage runtime + family shared modules/contracts/indexes`。
 - 从定位转变过程看，仓库如何防止旧入口、旧术语、旧 runtime 假设和旧 UI/API 形态反向污染当前主线。
 
 它是第三层参考材料，不替代 `docs/status.md`、`docs/invariants.md`、`docs/decisions.md` 或机器可读合同。后续开发遇到类似“新方向出现、旧路线还在、多个入口互相污染”的情况时，先用本文作为方法参考，再回到当前核心五件套确认 live truth。
@@ -21,13 +21,14 @@
 
 最终形成的稳定答案是：
 
-- `OPL` 持有 `Codex-default session/runtime`、显式 activation、family-level shared modules、shared contracts、shared indexes、安装与投影面。
+- `OPL` 持有 `Codex CLI` 第一公民 executor 入口、显式 activation、Temporal-backed family runtime provider 控制面、family-level shared modules、shared contracts、shared indexes、安装与投影面。
 - `MAS`、`MAG`、`RCA` 持有各自 domain truth、domain runtime、domain quality judgment 与 deliverable authority。
-- `MDS` 是 `MAS` 的隐藏 runtime/backend companion，不升级为 OPL 顶层 domain agent。
-- `Hermes-Agent` 是外部 runtime substrate / online-management gateway owner，`OPL Runtime Manager` 只做产品级 provision、profile、诊断、恢复入口、状态投影和 native helper catalog。
+- `MDS` 是 `MAS` 显式声明的 archive、provenance、backend audit、explicit archive import、upstream intake 或 parity oracle reference，不升级为 OPL 顶层 domain agent。
+- Temporal-backed provider 是 production online runtime 的必需 substrate；`OPL Runtime Manager` 做产品级 provider profile、typed queue、诊断、恢复入口、状态投影和 native helper catalog。
+- `hermes_agent` 与 `claude_code` 同属 canonical 显式非默认 executor adapter/backend，只承诺接口连接、生命周期、回执、审计和 fail-closed；不承诺行为、质量、工具语义或 resume 与 `Codex CLI` 等价。旧 Hermes provider / Gateway / readiness / compatibility surface 只作为 history、provenance、diagnostic、fixture 或 negative guard 阅读。
 - GUI 由外部 `opl-aion-shell` 交付，主仓只提供 CLI-backed machine-readable surfaces、release/install surface 与 runtime truth。
 
-这条线说明：`OPL` 不是“大一统 agent 内核”，也不是 GUI 或 API service 的别名。它是默认 Codex 会话运行时之上的家族级激活与共享合同层。
+这条线说明：`OPL` 不是“大一统 agent 内核”，也不是 GUI 或 API service 的别名。它是 Codex-first、stage-led、provider-backed 的家族级激活、运行外围与共享合同层。
 
 ## 二、历史阶段给出的经验
 
@@ -64,9 +65,9 @@
 
 ### 4. 默认路径必须极窄，扩展能力必须显式进入
 
-OPL 的默认入口最终收敛为 `Codex-default`，只有显式 domain activation 或显式 runtime switch 才离开默认语义。这解决了三个污染源：
+OPL 的默认入口最终收敛为 `Codex CLI` 第一公民 executor，只有显式 domain activation、显式 non-default executor selection 或显式 provider 配置才离开默认语义。这解决了三个污染源：
 
-- `Hermes-Agent` 不会被误当成默认执行器。
+- `hermes_agent` 通过显式选择和回执 gate 使用，不会被误当成默认执行器。
 - `MAS/MAG/RCA` 不会被包装成 OPL-only 语义。
 - GUI / ACP shell 不会反向定义 session runtime。
 
@@ -98,7 +99,8 @@ MAS v2 alignment 是典型例子：
 
 - 主仓保留 runtime truth、CLI、contracts、release/install surface。
 - GUI shell 放在 `opl-aion-shell`，通过 CLI-backed surfaces 消费 OPL。
-- 长跑和 online-management 由外部 `Hermes-Agent` substrate 管，OPL Runtime Manager 只投影和诊断。
+- 长跑 stage runtime 由 configured family runtime provider 承担；当前 production online substrate 是 Temporal-backed provider，`OPL Runtime Manager` 做 provider profile、typed queue、诊断和投影。
+- `hermes_agent` 只是显式非默认 executor backend；旧 Hermes online-management / Gateway 语义不再定义 OPL runtime 或 readiness。
 - 开发 worktree / OMX / subagent 是维护方式，不进入产品语义。
 
 经验是：当讨论“入口”“runtime”“托管”“GUI”时，先明确它属于哪一层。多数定位漂移都来自把这三层放在同一句话里处理。
@@ -158,9 +160,9 @@ MAS v2 alignment 是典型例子：
 
 ### 技巧 5：把外部依赖压成 thin adapter
 
-当外部系统能力很强时，最容易发生“顺手接管”。OPL 对 Hermes、native helper、GUI 的处理都采用 thin adapter：
+当外部系统能力很强时，最容易发生“顺手接管”。OPL 对非默认 executor、native helper、GUI 的处理都采用 thin adapter：
 
-- Hermes：外部 runtime substrate owner；OPL 只安装、pin、检查 readiness 和投影。
+- `hermes_agent` / `claude_code`：canonical 显式非默认 executor adapter/backend；OPL 只保证接口连接、生命周期、receipt、audit 和 fail-closed，不承诺质量或行为与 `Codex CLI` 等价。
 - Native helper：只做 probe/index/doctor 加速；不做 domain truth。
 - GUI shell：只消费 CLI-backed machine-readable surfaces；不复制安装、模块管理、skill sync 或 runtime 管理逻辑。
 

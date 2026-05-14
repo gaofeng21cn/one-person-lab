@@ -177,8 +177,8 @@ Date: `2026-05-14`
 
 - 可以引入外部 runtime dependency；Temporal 是当前生产级 durable execution substrate 的优先候选。
 - 引入 Temporal 的目标是 durable workflow history、activity retry/timeout、heartbeat、signal/query、long-run recovery 和 human gate，不是把 domain truth 迁进 Temporal。
-- Hermes-Agent 不再承担目标 session/wakeup substrate、provider、默认 executor、Codex CLI 备线、可选安装模块、provider proof surface 或 readiness path。
-- `hermes_agent` 只保留为显式非默认 executor adapter/backend；其他 Hermes 引用只属于历史 provenance、诊断语料或负向 guard 语境。
+- 旧 Hermes provider/Gateway 路线不再承担目标 session/wakeup substrate、provider、默认 executor、Codex CLI 备线、可选安装模块、provider proof surface 或 readiness path。
+- `hermes_agent` 是 canonical 显式非默认 executor adapter/backend；其他旧 Hermes 引用只属于历史 provenance、诊断语料或负向 guard 语境。
 - 不引入新依赖只为“看起来像框架”；依赖必须能替代当前 OPL 自己难以可靠维护的 durable execution 能力，并能通过 fixture workflow、real domain soak 和 direct skill parity 验收。
 
 对比依据：

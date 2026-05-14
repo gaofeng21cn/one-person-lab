@@ -604,6 +604,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         domainId: attempt.domain_id,
         stageId: attempt.stage_id,
         workspaceLocator: attempt.workspace_locator,
+        routeImpact: attempt.route_impact,
       }),
       operator_visibility: {
         provider_kind: attempt.provider_kind,

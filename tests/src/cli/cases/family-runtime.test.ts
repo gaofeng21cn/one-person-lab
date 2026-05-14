@@ -134,6 +134,71 @@ test('bin/opl routes family-runtime commands into the OPL CLI instead of Codex p
   }
 });
 
+test('family-runtime dispatch override can place the task path in a domain CLI option', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-placeholder-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-option-'));
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1" != "--task" || ! -f "$2" || "$3" != "--format" || "$4" != "json" || "$#" -ne 4 ]]; then
+  printf '{"ok":false,"error":"bad argv","argv":%s}\\n' "$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "$@")"
+  exit 2
+fi
+python3 - "$2" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+print(json.dumps({
+    "ok": True,
+    "closeout_packet": {
+        "surface_kind": "stage_attempt_closeout_packet",
+        "closeout_refs": ["mag-dispatch:task-option"],
+        "next_owner": "med-autogrant",
+        "domain_ready_verdict": "domain_gate_pending",
+        "route_impact": {"decision": "task_option_override"}
+    },
+    "task_id": task["task_id"]
+}))
+PY
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: `${dispatchPath} --task {task} --format json`,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautogrant',
+      '--task-kind',
+      'stage-attempt/closeout',
+      '--payload',
+      '{"action":"stage-attempt/closeout","input_path":"/tmp/mag/input.json","stage_id":"review_and_rebuttal","provider_hosted_stage_attempt":true}',
+      '--dedupe-key',
+      'mag:test:dispatch-placeholder',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(attempt.status, 'completed');
+    assert.equal(attempt.closeout_refs.includes('mag-dispatch:task-option'), true);
+    assert.equal(attempt.route_impact.decision, 'task_option_override');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime enqueue is idempotent by dedupe key and writes local inbox notification', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dedupe-'));
   try {

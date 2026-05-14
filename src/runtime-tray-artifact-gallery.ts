@@ -25,10 +25,47 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function nestedRef(value: unknown) {
+  return isRecord(value) && typeof value.ref === 'string' && value.ref.trim().length > 0
+    ? value.ref.trim()
+    : null;
+}
+
+function lifecycleApplyActions(attempt: ArtifactGalleryAttempt) {
+  const guardedApply = isRecord(attempt.lifecycle_primitives.guarded_apply_proof)
+    ? attempt.lifecycle_primitives.guarded_apply_proof
+    : {};
+  return recordList(guardedApply.actions);
+}
+
+function lifecycleRestoreRefs(attempt: ArtifactGalleryAttempt) {
+  return uniqueStrings(
+    lifecycleApplyActions(attempt)
+      .map((action) => nestedRef(action.restore_ref))
+      .filter((ref): ref is string => Boolean(ref)),
+  );
+}
+
+function lifecycleDomainReceiptRefs(attempt: ArtifactGalleryAttempt) {
+  return uniqueStrings(
+    lifecycleApplyActions(attempt)
+      .map((action) => nestedRef(action.domain_receipt_ref))
+      .filter((ref): ref is string => Boolean(ref)),
+  );
+}
+
 function galleryRefs(attempt: ArtifactGalleryAttempt) {
   const locatorIndex = isRecord(attempt.lifecycle_primitives.artifact_locator_index)
     ? attempt.lifecycle_primitives.artifact_locator_index
     : {};
+  const lifecycleRefs = [
+    ...lifecycleRestoreRefs(attempt),
+    ...lifecycleDomainReceiptRefs(attempt),
+  ];
   const controlledApplyRefs = [
     ...stringList(attempt.controlled_apply_contract.owner_receipt_refs),
     ...stringList(attempt.controlled_apply_contract.no_regression_evidence_refs),
@@ -38,6 +75,7 @@ function galleryRefs(attempt: ArtifactGalleryAttempt) {
     ...attempt.consumed_refs,
     ...attempt.writeback_receipt_refs,
     ...stringList(locatorIndex.indexed_refs),
+    ...lifecycleRefs,
     ...controlledApplyRefs,
   ]);
 }
@@ -59,6 +97,8 @@ export function buildAttemptArtifactGallery(attempt: ArtifactGalleryAttempt) {
   const locatorIndex = isRecord(attempt.lifecycle_primitives.artifact_locator_index)
     ? attempt.lifecycle_primitives.artifact_locator_index
     : {};
+  const restoreRefs = lifecycleRestoreRefs(attempt);
+  const domainReceiptRefs = lifecycleDomainReceiptRefs(attempt);
   const items = galleryItems(attempt);
   return {
     surface_kind: 'opl_artifact_gallery_projection',
@@ -76,6 +116,8 @@ export function buildAttemptArtifactGallery(attempt: ArtifactGalleryAttempt) {
       closeout_ref_count: attempt.closeout_refs.length,
       consumed_ref_count: attempt.consumed_refs.length,
       writeback_receipt_ref_count: attempt.writeback_receipt_refs.length,
+      lifecycle_restore_ref_count: restoreRefs.length,
+      lifecycle_domain_receipt_ref_count: domainReceiptRefs.length,
       content_policy: 'locator_only_no_artifact_content',
     },
     authority_boundary: {
@@ -91,6 +133,14 @@ export function buildAttemptArtifactGallery(attempt: ArtifactGalleryAttempt) {
 export function buildWorkbenchArtifactGallery(attempts: ArtifactGalleryAttempt[]) {
   const perAttempt = attempts.map(buildAttemptArtifactGallery);
   const items = perAttempt.flatMap((gallery) => gallery.items);
+  const lifecycleRestoreRefsCount = perAttempt.reduce(
+    (count, gallery) => count + Number(gallery.summary.lifecycle_restore_ref_count),
+    0,
+  );
+  const lifecycleDomainReceiptRefsCount = perAttempt.reduce(
+    (count, gallery) => count + Number(gallery.summary.lifecycle_domain_receipt_ref_count),
+    0,
+  );
   return {
     surface_kind: 'opl_artifact_gallery_projection',
     gallery_scope: 'stage_attempt_workbench',
@@ -102,6 +152,8 @@ export function buildWorkbenchArtifactGallery(attempts: ArtifactGalleryAttempt[]
       attempt_count: attempts.length,
       attempt_with_artifact_ref_count: perAttempt.filter((gallery) => gallery.items.length > 0).length,
       item_count: items.length,
+      lifecycle_restore_ref_count: lifecycleRestoreRefsCount,
+      lifecycle_domain_receipt_ref_count: lifecycleDomainReceiptRefsCount,
       content_policy: 'locator_only_no_artifact_content',
     },
     authority_boundary: {

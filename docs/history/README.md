@@ -5,7 +5,7 @@
 This directory is the archive index for retired `One Person Lab` documentation lanes.
 
 It is the only supported entry for repo-tracked historical material.
-History is classified by content, not by filename. If a plan, roadmap, or reference still mentions an old topology such as gateway-first, frontdoor, federation, Hermes-first, host-agent, Product API, or OMX as if it were active, treat it as historical unless the current core docs explicitly restate it.
+History is classified by content, and the durable history entry is the canonical `docs/history/` tree. If a plan, roadmap, or reference still mentions an old topology such as gateway-first, frontdoor, federation, Hermes-first, host-agent, Product API, or OMX as if it were active, treat it as historical unless the current core docs explicitly restate it.
 Current product truth, shared runtime boundaries, and maintainer workflow belong in:
 
 - [Repository Home](../../README.md)

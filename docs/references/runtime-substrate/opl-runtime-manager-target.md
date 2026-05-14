@@ -14,7 +14,8 @@
 
 - `OPL`：产品入口、bootstrap、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及 provider readiness 的触发、检查和报告
 - `Temporal-backed provider`：production online runtime 的必需 substrate；承接 stage attempt workflow、Codex/domain dispatch activity、retry/timeout、human gate signal、progress query、workflow history 与 replay/audit
-- `Hermes-Agent`：非 provider、非默认 executor、非 readiness path、非兼容 fallback；`hermes_agent` 仅作为显式非默认 executor adapter/backend，必须独立 receipt / audit / fail-closed；旧 Hermes provider/Gateway 面只可作为 history/provenance/diagnostic source ref、fixture 或负向 guard
+- `hermes_agent`：canonical 显式非默认 executor adapter/backend，必须独立 receipt / audit / fail-closed，不承诺与 `Codex CLI` 行为或质量等价
+- 旧 Hermes provider/Gateway 面：非 provider、非 readiness path、非兼容 fallback，只可作为 history/provenance/diagnostic source ref、fixture 或负向 guard
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`
 

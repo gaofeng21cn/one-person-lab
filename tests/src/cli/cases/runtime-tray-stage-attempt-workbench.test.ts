@@ -154,7 +154,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.action_routing.surface_kind, 'opl_operator_action_routing_projection');
     assert.equal(snapshot.stage_attempt_workbench.action_routing.routing_scope, 'stage_attempt_workbench');
     assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.attempt_count, 1);
-    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.action_count, 12);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.action_count, 13);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.provider_completion_is_domain_ready, false);
@@ -228,7 +228,13 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.external_submission_status_ref, 'portal:manual-boundary');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].package_export_lifecycle.authority_boundary.can_authorize_export_verdict, false);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.routing_scope, 'stage_attempt');
-    assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.summary.action_count, 12);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.summary.action_count, 13);
+    assert.equal(
+      snapshot.stage_attempt_workbench.attempts[0].action_routing.actions.some((action: { action_kind: string }) =>
+        action.action_kind === 'projection_drilldown:lifecycle_primitives'
+      ),
+      true,
+    );
     assert.equal(
       snapshot.stage_attempt_workbench.attempts[0].action_routing.actions.some((action: { action_kind: string }) =>
         action.action_kind === 'projection_drilldown:artifact_gallery'
@@ -352,6 +358,232 @@ test('runtime snapshot projects provider continuous proof receipt without domain
       false,
     );
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'provider_continuous_proof'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot exposes route-impact no-regression evidence in operator workbench refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-no-regression-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'proposal_authoring',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mag',
+        controlled_stage_attempt: {
+          action_kind: 'grant_stage_attempt_apply',
+          contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
+        },
+      }),
+      '--source-fingerprint',
+      'sha256:mag-no-regression',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['mag-closeout:proposal-authoring'],
+        consumed_refs: ['mag-evidence:proposal-authoring'],
+        next_owner: 'med-autogrant',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'no_regression_evidence',
+          no_regression_evidence_ref: 'receipt:mag:no-regression',
+          no_regression_evidence_observed: true,
+          direct_skill_ref: 'skill:medautogrant',
+          direct_skill_command: 'medautogrant product-entry status --format json',
+        },
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const snapshot = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_tray_snapshot;
+    const workbenchAttempt = snapshot.stage_attempt_workbench.attempts.find(
+      (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
+    );
+    const attemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
+      (item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptId}`,
+    );
+
+    assert.equal(workbenchAttempt.controlled_apply_contract.apply_status, 'no_regression_evidence_observed');
+    assert.deepEqual(workbenchAttempt.controlled_apply_contract.no_regression_evidence_refs, [
+      'receipt:mag:no-regression',
+    ]);
+    assert.deepEqual(attemptItem.stage_attempt_workbench.controlled_apply_contract.no_regression_evidence_refs, [
+      'receipt:mag:no-regression',
+    ]);
+    assert.equal(
+      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
+        item.ref === 'receipt:mag:no-regression'
+      ),
+      true,
+    );
+    assert.equal(
+      attemptItem.stage_attempt_workbench.artifact_gallery.items.some((item: { ref: string }) =>
+        item.ref === 'receipt:mag:no-regression'
+      ),
+      true,
+    );
+    assert.equal(workbenchAttempt.action_routing.summary.direct_skill_route_count, 2);
+    assert.equal(
+      workbenchAttempt.action_routing.actions.some((action: { route_target_kind: string; command_or_surface_ref: string }) =>
+        action.route_target_kind === 'direct_skill' &&
+        action.command_or_surface_ref === 'skill:medautogrant'
+      ),
+      true,
+    );
+    assert.equal(
+      attemptItem.stage_attempt_workbench.action_routing.actions.some((action: { route_target_kind: string; command_or_surface_ref: string }) =>
+        action.route_target_kind === 'direct_skill' &&
+        action.command_or_surface_ref === 'medautogrant product-entry status --format json'
+      ),
+      true,
+    );
+    assert.equal(workbenchAttempt.action_routing.authority_boundary.can_execute_direct_skill, false);
+    assert.equal(workbenchAttempt.controlled_apply_contract.no_forbidden_write_proof.opl_writes_domain_artifact, false);
+    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot exposes lifecycle guarded-apply receipt refs in operator artifact gallery', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-lifecycle-receipt-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const workspaceLocator = {
+      workspace_root: '/tmp/rca',
+      runtime_root: '/tmp/rca/runtime',
+      artifact_root: '/tmp/rca/artifacts',
+      lifecycle_apply_requests: [
+        {
+          action_id: 'cleanup-visual-runtime-cache',
+          action_kind: 'safe_cleanup',
+          target_ref: 'artifact:rca:runtime-cache',
+          authority_owner: 'redcube',
+          owner_scope: 'domain_owned_artifact',
+          restore_ref: 'restore:rca:runtime-cache',
+          domain_receipt_ref: 'receipt:rca:lifecycle-cleanup',
+        },
+      ],
+    };
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'visual-review',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify(workspaceLocator),
+      '--source-fingerprint',
+      'sha256:rca-lifecycle-receipt',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['rca-closeout:visual-review'],
+        consumed_refs: ['rca-artifact:review-delta'],
+        next_owner: 'redcube',
+        domain_ready_verdict: 'domain_gate_pending',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const snapshot = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_tray_snapshot;
+    const workbenchAttempt = snapshot.stage_attempt_workbench.attempts.find(
+      (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
+    );
+    const attemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
+      (item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptId}`,
+    );
+
+    assert.equal(workbenchAttempt.lifecycle_primitives.guarded_apply_proof.apply_status, 'domain_receipt_observed');
+    assert.equal(
+      workbenchAttempt.lifecycle_primitives.guarded_apply_proof.summary.domain_receipt_observed_count,
+      1,
+    );
+    assert.equal(workbenchAttempt.lifecycle_primitives.guarded_apply_proof.summary.domain_writes_performed, false);
+    assert.equal(
+      workbenchAttempt.lifecycle_primitives.guarded_apply_proof.actions[0].apply_decision,
+      'domain_receipt_observed',
+    );
+    assert.equal(
+      workbenchAttempt.lifecycle_primitives.guarded_apply_proof.actions[0].domain_receipt_ref.ref,
+      'receipt:rca:lifecycle-cleanup',
+    );
+    assert.equal(
+      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
+        item.ref === 'receipt:rca:lifecycle-cleanup'
+      ),
+      true,
+    );
+    assert.equal(
+      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
+        item.ref === 'restore:rca:runtime-cache'
+      ),
+      true,
+    );
+    assert.equal(workbenchAttempt.artifact_gallery.summary.lifecycle_restore_ref_count, 1);
+    assert.equal(workbenchAttempt.artifact_gallery.summary.lifecycle_domain_receipt_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.lifecycle_restore_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.lifecycle_domain_receipt_ref_count, 1);
+    assert.equal(
+      attemptItem.stage_attempt_workbench.artifact_gallery.items.some((item: { ref: string }) =>
+        item.ref === 'receipt:rca:lifecycle-cleanup'
+      ),
+      true,
+    );
+    assert.equal(
+      attemptItem.stage_attempt_workbench.lifecycle_primitives.guarded_apply_proof.apply_status,
+      'domain_receipt_observed',
+    );
+    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.authority_boundary.can_mutate_artifact, false);
+    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -762,7 +994,7 @@ db.close();`,
     assert.equal(workbench.action_routing.routing_scope, 'stage_attempt_workbench');
     assert.equal(workbench.action_routing.summary.attempt_count, 3);
     assert.equal(workbench.action_routing.summary.opl_cli_route_count, 3);
-    assert.equal(workbench.action_routing.summary.app_surface_route_count, 27);
+    assert.equal(workbench.action_routing.summary.app_surface_route_count, 30);
     assert.equal(workbench.action_routing.summary.provider_signal_route_count, 2);
     assert.equal(workbench.action_routing.summary.domain_sidecar_route_count, 3);
     assert.equal(workbench.action_routing.authority_boundary.can_execute_domain_action, false);

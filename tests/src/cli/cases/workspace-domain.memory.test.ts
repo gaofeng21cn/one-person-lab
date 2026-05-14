@@ -182,6 +182,7 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
     assert.equal(listedMas.receipt_projection.accepted_rejected_authority_owner, 'MedAutoScience');
     assert.equal(listedMas.receipt_projection.authority_flags.can_accept_memory_write, false);
     assert.equal(listedMas.receipt_projection.readiness.writeback_apply_landed, false);
+    assert.equal(listedMas.runtime_receipt_evidence.summary.closeout_count, 0);
 
     const inspect = runCli(['domain-memory', 'inspect', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -262,6 +263,133 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
       migrationPlan.family_domain_memory_migration_plan.receipt_projection.authority_flags.can_write_domain_truth,
       false,
     );
+    assert.equal(migrationPlan.family_domain_memory_migration_plan.runtime_receipt_evidence.summary.closeout_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain memory read model projects runtime receipt refs without applying memory writes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-domain-memory-runtime-evidence-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = withDomainMemoryDescriptor(fixtures.medautoscience);
+  const magManifest = withDomainMemoryDescriptor(fixtures.medautogrant, {
+    memory_ref_id: 'mag_grant_strategy_memory',
+    target_domain_id: 'med-autogrant',
+    owner: 'MedAutoGrant',
+    memory_family: 'grant_strategy_memory',
+  });
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(magManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'review_and_rebuttal',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mag","runtime_root":"/tmp/mag/runtime"}',
+      '--source-fingerprint',
+      'sha256:mag-memory',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      '{"surface_kind":"stage_memory_closeout_packet","closeout_refs":["receipt:mag-review-closeout"],"consumed_refs":["evidence:critique"],"consumed_memory_refs":["mag-memory:strategy:accepted"],"writeback_receipt_refs":["mag-memory-writeback:accepted","mag-memory-writeback:rejected"],"rejected_writes":[{"target":"memory","reason":"domain_router_rejected"}],"next_owner":"med-autogrant","domain_ready_verdict":"domain_gate_pending"}',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const list = runCli(['domain-memory', 'list'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const listedMag = list.family_domain_memory.memories.find((entry: { project_id: string }) => (
+      entry.project_id === 'medautogrant'
+    ));
+
+    assert.equal(list.family_domain_memory.summary.runtime_receipt_evidence.closeout_count, 1);
+    assert.equal(list.family_domain_memory.summary.runtime_receipt_evidence.writeback_receipt_ref_count, 2);
+    assert.equal(listedMag.runtime_receipt_evidence.status, 'runtime_closeout_refs_observed');
+    assert.equal(listedMag.runtime_receipt_evidence.summary.closeout_count, 1);
+    assert.equal(listedMag.runtime_receipt_evidence.summary.consumed_memory_ref_count, 1);
+    assert.equal(listedMag.runtime_receipt_evidence.summary.writeback_receipt_ref_count, 2);
+    assert.equal(listedMag.runtime_receipt_evidence.summary.rejected_write_count, 1);
+    assert.deepEqual(listedMag.runtime_receipt_evidence.consumed_memory_refs, ['mag-memory:strategy:accepted']);
+    assert.deepEqual(listedMag.runtime_receipt_evidence.writeback_receipt_refs, [
+      'mag-memory-writeback:accepted',
+      'mag-memory-writeback:rejected',
+    ]);
+    assert.deepEqual(listedMag.runtime_receipt_evidence.closeout_refs, ['receipt:mag-review-closeout']);
+    assert.equal(listedMag.runtime_receipt_evidence.authority_boundary.opl_writes_memory_body, false);
+    assert.equal(listedMag.receipt_projection.readiness.writeback_apply_landed, false);
+
+    const inspectedMag = runCli(['domain-memory', 'inspect', '--domain', 'mag'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(inspectedMag.family_domain_memory.runtime_receipt_evidence.summary.closeout_count, 1);
+    assert.deepEqual(inspectedMag.family_domain_memory.runtime_receipt_evidence.writeback_receipt_refs, [
+      'mag-memory-writeback:accepted',
+      'mag-memory-writeback:rejected',
+    ]);
+    assert.equal(inspectedMag.family_domain_memory.non_authority_flags.opl_applies_memory_writeback, false);
+    assert.equal(inspectedMag.family_domain_memory.receipt_projection.readiness.writeback_apply_landed, false);
+
+    const migrationPlanMag = runCli(['domain-memory', 'migration-plan', '--domain', 'mag'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(
+      migrationPlanMag.family_domain_memory_migration_plan.runtime_receipt_evidence.summary.closeout_count,
+      1,
+    );
+    assert.deepEqual(
+      migrationPlanMag.family_domain_memory_migration_plan.runtime_receipt_evidence.writeback_receipt_refs,
+      [
+        'mag-memory-writeback:accepted',
+        'mag-memory-writeback:rejected',
+      ],
+    );
+    assert.equal(
+      migrationPlanMag.family_domain_memory_migration_plan.runtime_receipt_evidence.authority_boundary
+        .opl_applies_memory_writeback,
+      false,
+    );
+
+    const inspectedMas = runCli(['domain-memory', 'inspect', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(inspectedMas.family_domain_memory.runtime_receipt_evidence.summary.closeout_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

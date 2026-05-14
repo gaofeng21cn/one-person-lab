@@ -43,6 +43,7 @@
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
 - [文档组合治理](./docs_portfolio_consolidation.md)
+- [OPL 系列项目开发主参考](./active/opl-family-development-reference.zh-CN.md)
 - [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
 - [OPL 当前开发线路](./active/current-development-lines.zh-CN.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.zh-CN.md)
@@ -53,8 +54,11 @@
 - [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
 - [规格索引](./specs/README.zh-CN.md)
 
+2026-05-14 分层收敛后，OPL 系列项目开发的主参考是
+[OPL 系列项目开发主参考](./active/opl-family-development-reference.zh-CN.md)：OPL 仓维护全局目标、全局差距、上收边界、shared primitives、App/workbench 目标和跨仓开发顺序；MAS/MAG/RCA 各仓维护本仓目标、差距、authority、direct/hosted 边界和本仓上收清单。`opl-aion-shell` 的上游 AionUI docs 不纳入这套目录治理。
+
 2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
-[OPL 当前开发线路](./active/current-development-lines.zh-CN.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.zh-CN.md) 与
+[OPL 系列项目开发主参考](./active/opl-family-development-reference.zh-CN.md)、[OPL 当前开发线路](./active/current-development-lines.zh-CN.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.zh-CN.md) 与
 [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)。
 跨仓内容级整理入口是 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)：OPL 持有 framework owner 口径，MAS/MAG/RCA 保留各自 domain truth，MDS 只保留 MAS 声明的 archive/reference/oracle 角色；整理时先按段落内容判断生命周期，再决定合并、调整或归档。
 前者给出 framework-first 执行顺序；开发文档组合整理负责判断旧开发文档内容应合并、保留、降级、退役还是归档；roadmap 持有当前 `TypeScript` 控制面决策、Temporal provider 计划、domain-agent 边界，以及
@@ -67,11 +71,16 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 
 `docs/` 现在按生命周期状态管理，而不是继续平铺四层文件。
 每份长期文档都必须说明 `owner`、`purpose`、`state` 和 `machine boundary`。
-生命周期按内容角色判断，不按文件名、目录名或旧链接机械判断。一个看起来仍在 active/reference 路径下的文件，如果内容是过时计划、旧 topology、旧入口或旧 provider 判断，就必须标成 superseded / retired / tombstone 语境，并指向当前 owner surface。
+生命周期状态按内容角色判断，长期落点按 canonical 目录集合收敛。一个看起来仍在 active/reference 路径下的文件，如果内容是过时计划、旧 topology、旧入口或旧 provider 判断，就必须标成 superseded / retired / tombstone 语境，并指向当前 owner surface。
 
 - `docs/` 根目录只保留文档索引、核心五件套和 [文档组合治理](./docs_portfolio_consolidation.md)。
 - `docs/active/` 承接当前 runtime、activation、onboarding 和 shared-boundary 的人读支撑。
 - `docs/public/` 承接仓库首页之后的公开产品方向支撑。
+- `docs/product/` 承接 One Person Lab App/workbench、operator entry 和产品入口支撑。
+- `docs/runtime/` 承接 OPL framework runtime、provider/executor、control plane 与 projection/read-model 支撑。
+- `docs/delivery/` 承接通用 artifact/package/export lifecycle shell 支撑；domain 交付 authority 仍归 MAS/MAG/RCA。
+- `docs/source/` 承接通用 workspace/source intake 和 source truth transport shell 支撑；domain source semantics 仍归各仓。
+- `docs/policies/` 承接长期治理规则和 repo-local 运行纪律。
 - `docs/specs/` 只承接仍然活跃的 runtime / product-boundary 规格；当前为空时，说明规格真相已经收敛到核心五件套、`docs/active/`、runtime-substrate roadmap 和机器可读合同。
 - `docs/references/` 按用途承接支撑参考。
 - `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
@@ -101,6 +110,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
 - [OPL 公开界面索引](./active/opl-public-surface-index.zh-CN.md)
+- [OPL 系列项目开发主参考](./active/opl-family-development-reference.zh-CN.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.zh-CN.md)
 - [活跃支撑文档索引](./active/README.zh-CN.md)
 
@@ -147,11 +157,12 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 
 - 继续把 [仓库首页](../README.zh-CN.md) 保持成安装优先、用户视角、医生/专家和其他非技术读者可读的公开入口。
 - 活跃公开文档继续保持双语。
-- 文档治理按内容生命周期判断，不按文件名、目录名或旧链接机械判断。
+- 文档治理按 OPL-family canonical docs taxonomy 执行；内容生命周期决定去向，
+  但长期目录名统一为 `active/public/product/runtime/delivery/source/policies/specs/references/history`。
 - 已被核心五件套或当前 framework roadmap 取代的一次性计划，应进入 history / tombstone 语境，不继续作为 active reference 扩写。
 - 参考文档必须把 provenance surface 和 current truth 区分清楚。
 - 历史继续作为仓库跟踪的 provenance 和 tombstone。
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。
-- 跨仓 docs 治理按 [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md) 执行：OPL、MAS、MAG、RCA、MDS 保持生命周期角色等价，不强制目录名完全一致，也不把旧文档整篇当作当前 backlog。
+- 跨仓 docs 治理按 [OPL Family 开发主参考](./active/opl-family-development-reference.zh-CN.md)、[Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md) 执行：OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy；旧 `program/plans/capabilities` 等目录按迁移源、合同引用或历史 provenance 处理，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。
 - 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。
