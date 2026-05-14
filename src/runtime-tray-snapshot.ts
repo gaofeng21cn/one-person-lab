@@ -22,6 +22,7 @@ import { readMasManagedProviderProjection } from './family-runtime-mas-managed-p
 import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
+import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
 
 type HermesCronJob = {
   id?: unknown;
@@ -853,6 +854,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
     managedProviderProjection: masManagedProviderProjection,
   });
   const providerContinuousProof = buildRuntimeProviderContinuousProof();
+  const nativeHelperExecutionEnvelope = buildNativeHelperExecutionEnvelope();
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
@@ -919,6 +921,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       action_counts: actionCounts,
       stage_attempt_workbench: stageAttemptWorkbench,
       provider_continuous_proof: providerContinuousProof,
+      native_helper_execution_envelope: nativeHelperExecutionEnvelope,
       managed_domain_provider_states: {
         surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
         role: 'app_status_read_model_only',
@@ -937,6 +940,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         sourceRef('/runtime_manager/future_sidecar_migration', 'daemon_policy'),
         sourceRef('/stage_attempt_workbench', 'stage_attempt_workbench'),
         sourceRef('/provider_continuous_proof', 'provider_continuous_proof'),
+        sourceRef('/native_helper_execution_envelope', 'native_helper_execution_envelope'),
         ...(masManagedProviderProjection
           ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
           : []),

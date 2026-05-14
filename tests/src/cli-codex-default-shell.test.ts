@@ -157,7 +157,12 @@ const fakeFamilySkillDescriptions: Record<string, string> = {
   rca: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
 };
 
-const retiredCliCommandMatrix = [
+const retiredCliCommandMatrix: Array<{
+  args: string[];
+  command: string;
+  errorCode: string;
+  replacements?: RegExp[];
+}> = [
   {
     args: ['ask', 'Plan the next paper submission steps.'],
     command: 'opl ask',

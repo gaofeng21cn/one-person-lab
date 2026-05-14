@@ -1,6 +1,13 @@
 import { FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
+import {
+  applyProviderClosureEvidence,
+  providerClosureEvidence,
+  providerResidencyGapStatus,
+  readProviderContinuousProof,
+  type ProviderContinuousProof,
+} from './family-domain-agent-provider-closure.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -436,7 +443,10 @@ export function normalizeStandardDomainAgentSkeleton(value: unknown) {
   };
 }
 
-export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifestCatalogEntry) {
+export function buildStandardDomainAgentSkeletonInspection(
+  entry: DomainManifestCatalogEntry,
+  providerContinuousProof: ProviderContinuousProof = readProviderContinuousProof(),
+) {
   let skeleton = null;
   const issues: string[] = [];
   try {
@@ -486,6 +496,8 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
   const productionClosureGaps = buildProductionClosureGaps({
     physicalEvidenceObserved: physicalSkeletonLayoutAudit.status === 'repo_source_anchor_evidence_observed',
   });
+  const providerEvidence = providerClosureEvidence(providerContinuousProof);
+  const evidencedProductionClosureGaps = applyProviderClosureEvidence(productionClosureGaps, providerContinuousProof);
 
   return {
     project_id: entry.project_id,
@@ -505,7 +517,8 @@ export function buildStandardDomainAgentSkeletonInspection(entry: DomainManifest
     descriptor_readiness: descriptorReadiness,
     physical_skeleton_layout_audit: physicalSkeletonLayoutAudit,
     physical_skeleton_evidence: buildPhysicalSkeletonEvidence(physicalSkeletonLayoutAudit),
-    production_closure_gaps: productionClosureGaps,
+    production_closure_gaps: evidencedProductionClosureGaps,
+    provider_closure_evidence: providerEvidence,
     artifact_boundary: skeleton?.artifact_boundary ?? null,
     contract_refs: skeleton?.contracts ?? null,
     issues,
@@ -520,6 +533,7 @@ type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['doma
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
   domainManifests?: DomainManifestCatalog;
+  providerContinuousProof?: ProviderContinuousProof;
 };
 
 function findAgentEntry(contracts: FrameworkContracts, domain: string) {
@@ -566,7 +580,10 @@ export function buildFamilyAgentsList(contracts: FrameworkContracts, options: Ma
   const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
   }).domain_manifests;
-  const agents = catalog.projects.map(buildStandardDomainAgentSkeletonInspection);
+  const providerContinuousProof = options.providerContinuousProof ?? readProviderContinuousProof();
+  const agents = catalog.projects.map((entry) =>
+    buildStandardDomainAgentSkeletonInspection(entry, providerContinuousProof)
+  );
   return {
     version: 'g2',
     family_agents: {
@@ -590,6 +607,7 @@ export function buildFamilyAgentsList(contracts: FrameworkContracts, options: Ma
           (total, agent) => total + agent.production_closure_gaps.length,
           0,
         ),
+        provider_temporal_residency_gap_status: providerResidencyGapStatus(providerContinuousProof),
       },
       agents,
     },
@@ -599,11 +617,12 @@ export function buildFamilyAgentsList(contracts: FrameworkContracts, options: Ma
 export function buildFamilyAgentInspect(contracts: FrameworkContracts, args: string[]) {
   const { domain } = parseInspectArgs(args);
   const entry = findAgentEntry(contracts, domain);
+  const providerContinuousProof = readProviderContinuousProof();
   return {
     version: 'g2',
     family_agent: {
       surface_kind: 'opl_standard_domain_agent_skeleton_inspection',
-      ...buildStandardDomainAgentSkeletonInspection(entry),
+      ...buildStandardDomainAgentSkeletonInspection(entry, providerContinuousProof),
     },
   };
 }

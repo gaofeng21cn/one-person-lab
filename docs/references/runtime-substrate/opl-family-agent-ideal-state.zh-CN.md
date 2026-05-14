@@ -8,7 +8,7 @@ Date: `2026-05-13`
 
 ## 结论
 
-理想状态下，`OPL Framework` 是完整生产级智能体开发与运行框架。它负责把开发、运行、长时间在线、状态管理、记忆管理、文件生命周期、恢复、审计、质控投影和用户工作台连接成一套可复用 framework。
+理想状态下，`OPL Framework` 是完整生产级智能体开发与运行框架。它负责把开发、运行、长时间在线、状态管理、记忆管理、文件生命周期、恢复、审计、质控投影和用户工作台连接成一套可复用 framework。MAS、MAG 与 RCA 理想目标态中提到的通用 runtime、queue、workspace/source intake shell、memory locator、artifact/package lifecycle、restore/retention、projection、workbench shell、route/decision visualization、review/repair transport、native-helper execution envelope 和 observability primitive，都应优先在这一层沉淀为 family-level 能力。
 
 `MAS`、`MAG`、`RCA` 以及未来 Patent、Award、Thesis、Review 等 `Foundry Agents` 是基于 OPL Framework 开发的垂类智能体。它们持有领域知识、stage 语义、领域真相、质量 verdict 与交付 authority；它们复用 OPL 的运行外围能力，不重复维护 scheduler、queue、attempt ledger、workspace lifecycle、artifact index、memory locator、resume token、operator projection 这类通用模块。
 
@@ -76,6 +76,26 @@ OPL Framework 的长期职责是持有所有 domain-neutral、可跨垂类复用
 - 真实输入文件、中间产物、运行日志、receipt 实例、交付包、manuscript、grant package、PPT deck 等运行产物属于 workspace / runtime artifact root。
 - domain repo 源码目录只放 source、contract、prompt、Skill、stage definition、quality gate、projection builder、tests、fixtures 和 docs；生产运行文件不写入开发目录。
 
+### 通用能力上收
+
+MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry Agents 的上收边界：domain agent 应成为 `Domain Knowledge / Authority Pack`，OPL Framework 应提供可复用的通用运行与产品外围。MAG 在这条边界上补充了 grant-specific 证据：funding/call intake、TODO/显式唤醒、grant strategy memory、submission-ready package、route/decision drilldown 和质量/导出投影都需要通用 transport 与 workbench 壳，但不能把 fundability、authoring quality 或 export verdict 交给 OPL。RCA 在这条边界上补充了 visual-deliverable 证据：source/workspace intake、artifact gallery、route/decision map、review/repair queue、export handoff、native helper execution 和 screenshot/export proof 都需要通用 envelope 与 workbench 壳，但不能把 visual direction、review verdict、export verdict 或 canonical artifact authority 交给 OPL。
+
+| 通用能力 | OPL Framework 理想职责 | Domain Agent 理想职责 |
+| --- | --- | --- |
+| Provider-backed workflow | 提供 stage attempt、workflow id、query/signal、heartbeat、retry/dead-letter、restart recovery 和 provider receipt。 | 声明 stage、entry condition、allowed task、domain closeout、owner receipt 和 forbidden writes。 |
+| Queue / human gate transport | 提供 typed queue、approval transport、resume token、human gate signal、operator action ledger 和 handoff history。 | 给出 human gate 边界、resume/stop-loss 语义、domain blocker 和下一 owner。 |
+| Workspace / source intake shell | 提供 workspace registry、source receipt、candidate/input pool、profile/call/material locator、intake handoff、missing-material attention item 和 provenance shell。 | 持有 funding/call 解释、profile 选择策略、study/grant/source truth、source readiness verdict、blocking/residual gap 和 go/no-go 或 refine 决策。 |
+| Memory locator / index / writeback transport | 提供 memory descriptor discovery、locator/index、freshness、body-free inventory、consumed refs、writeback proposal/ref transport 和 App grouping。 | 持有 memory body、领域检索策略、接受/拒绝规则、writeback receipt、route/quality judgment。 |
+| Artifact lifecycle / restore / retention | 提供 artifact locator、runtime artifact root registry、retention、safe cleanup、restore proof、migration ledger 和 lifecycle projection。 | 持有 canonical artifact authority、artifact mutation permission、package/export verdict 和 domain receipt。 |
+| Package/export lifecycle shell | 提供 package locator、export attempt ledger、gap-report projection、delivery artifact index、artifact gallery、handoff packet navigation、restore/provenance proof 和 external-submission status shell。 | 持有 package readiness、submission/export verdict、visual/export verdict、portal/manual submission boundary 和 artifact content authority。 |
+| Workbench shell / route visualization | 提供 workspace shell、attention queue、running/recent items、stage attempt drilldown、通用 route/decision graph renderer 和 action routing shell。 | 提供 domain-owned projection、route map nodes/edges、decision rationale、quality refs、artifact refs 和 typed action receipts。 |
+| Quality / readiness projection shell | 提供 scorecard/closure-dossier/quality-ref 展示协议、freshness、AI-reviewer-currentness 状态和 operator drilldown。 | 持有 publication/fundability/visual/authoring quality verdict、AI reviewer artifact 和 hard-issue closure 判断。 |
+| Review / repair transport | 提供 blocked item queue、repair target transport、rerun request envelope、human approval lane、repair receipt threading、screenshot/export proof locator 和 repair command projection。 | 持有 review verdict、blocked item 语义、repair decision、quality gate、ready/exportable/handoffable verdict。 |
+| Native helper catalog / execution envelope | 提供 helper registration、environment/provisioning metadata、execution receipt、version/proof index、operator-safe launch envelope 和 helper artifact locator。 | 持有 domain helper implementation、helper-specific proof、artifact mutation logic 和 domain gate integration。 |
+| Observability / diagnostics | 提供 trace/log/event transport、freshness/SLO projection、stale scan、repair command projection 和 operator drilldown。 | 提供 domain blocker、quality/source refs、runtime health facts、safe repair hint 和 authority boundary。 |
+
+这类上收不表示 OPL 接管 domain truth。OPL 持有的是 transport、locator、index、projection、receipt refs 和 operator workflow；医学研究路线、基金策略、fundability、specific aims、视觉策略、visual direction、review/export verdict、质量 verdict、artifact/export authority、source readiness verdict 和 memory body 继续回到对应 domain owner。
+
 ### 质控与审计
 
 - OPL 提供 framework-level gate：stage closeout required-for-completion、receipt idempotency、conflict fail-closed、forbidden write protection、source fingerprint、attempt replay safety、direct/hosted parity 和 operator audit trail。
@@ -108,6 +128,7 @@ OPL 负责 stage 的发现、排队、唤醒、恢复、投影和审计。Stage 
 
 每个 Foundry Agent 应持有：
 
+- 领域 `Domain Knowledge / Authority Pack`：领域 stage pack、路线/策略知识、quality rubric、memory policy、artifact authority contract、owner receipt schema 和 domain projection builder。
 - 领域 ontology、任务类型、stage pack 和 route policy。
 - 领域 prompt、Skill、tool policy、knowledge refs 和 memory writeback policy。
 - 领域 truth reducer、quality gate、review gate、artifact/package authority。
@@ -122,6 +143,13 @@ OPL 负责 stage 的发现、排队、唤醒、恢复、投影和审计。Stage 
 - stage attempt ledger。
 - framework-level state cache 和 operator projection。
 - workspace registry、artifact index、retention、restore proof 和 migration ledger 的通用实现。
+- generic memory service、memory locator/index、body-free inventory projection 和 writeback transport。
+- generic workspace/source intake shell、profile/call/material locator、source receipt provenance、missing-material attention item 和 intake handoff transport。
+- generic workbench navigation、attention queue、running/recent items、route graph renderer、notification 和 cross-domain dashboard。
+- generic package/export locator、gap-report projection、delivery artifact index、artifact gallery、handoff shell 和 external-submission status shell。
+- generic review/repair transport、blocked item queue、repair target threading、screenshot/export proof locator 和 human approval lane。
+- generic native helper catalog、execution envelope、version/proof index、helper artifact locator 和 operator-safe launch shell。
+- generic observability transport、trace/log/event collection、freshness/SLO projection、stale scan 和 repair command projection。
 - family-level skill sync、module install、contract discovery 和 App 投影协议。
 
 目标 skeleton 如下：
@@ -201,7 +229,9 @@ One Person Lab App 面向用户，不面向 framework 内部实现。理想 App 
 - `Workspaces`：展示用户工作区、资料、运行状态、artifact root、recent activity 和 cleanup / restore 状态。
 - `Sessions`：展示普通 Codex session、OPL-hosted stage attempt、resume token 和历史上下文。
 - `Progress`：展示 stage、当前 owner、blocked reason、human gate、next action、freshness 和 quality refs。
-- `Artifacts`：展示交付物、artifact deltas、package refs、export state、restore proof 和 provenance。
+- `Route / Decision`：展示 domain-owned route map、decision trail、分支、失败/阻塞原因、转向理由、superseded path、active/winning path、route node/edge 和 source refs。App 提供通用图形壳与 drilldown，不推断 domain route 或质量。
+- `Review / Repair`：展示 domain-owned review verdict、blocked item、repair target、rerun request、human approval、repair receipt、screenshot/export proof 和 residual risk；App 只提供通用队列和 drilldown。
+- `Artifacts`：展示交付物、artifact deltas、artifact gallery、package refs、export state、handoff packet、restore proof 和 provenance。
 - `Attention Queue`：汇总需要用户确认、需要修复、需要等待 provider、需要 domain owner action 的事项。
 - `Operator Drilldown`：在不越权写 domain truth 的前提下，展示 provider receipt、domain receipt、memory refs、artifact locator 和 repair command。
 
@@ -237,6 +267,7 @@ OPL 与 Foundry Agents 达到理想生产级状态时，应满足以下门槛：
 - OPL 只持 refs、locator、metadata 和 projection；domain truth、quality verdict 和 artifact authority 留在 domain owner。
 - Memory retrieval、writeback proposal、accepted/rejected receipt 和 migration plan 在三仓以上泛化。
 - File lifecycle、retention、safe cleanup、restore proof 和 migration ledger 在 workspace/runtime root 上可运行。
+- Source/workspace envelope、artifact gallery、route/decision graph、review/repair transport、native-helper execution envelope 和 observability projection 在 MAS/MAG/RCA 之间泛化，同时保持 domain-owned verdict。
 - App 能展示用户关心的状态和动作来源，不把 provider completion 写成 domain ready verdict。
 - Domain repo 不写入真实 runtime artifacts；运行文件全部进入 workspace / runtime artifact root。
 - 旧 Hermes-first、Gateway/frontdoor、local manager、MDS-default 等历史默认面完成 active-path 退役，只在 explicit adapter、diagnostic、fixture、provenance 或 history 语境保留。
