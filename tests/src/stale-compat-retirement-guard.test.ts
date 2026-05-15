@@ -127,11 +127,11 @@ test('operating governance references do not claim retired surface matrix contra
   const scannedFiles = [
     'docs/docs_portfolio_consolidation.md',
     'docs/references/README.md',
-    'docs/references/examples-corpora/opl-gateway-example-corpus.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-gateway-example-corpus.md',
     'docs/references/operating-governance/README.md',
-    'docs/references/operating-governance/opl-surface-authority-matrix.md',
-    'docs/references/operating-governance/opl-surface-lifecycle-map.md',
-    'docs/references/operating-governance/opl-surface-review-matrix.md',
+    'docs/history/compatibility/gateway-federation/operating-governance/opl-surface-authority-matrix.md',
+    'docs/history/compatibility/gateway-federation/operating-governance/opl-surface-lifecycle-map.md',
+    'docs/history/compatibility/gateway-federation/operating-governance/opl-surface-review-matrix.md',
   ];
 
   const forbiddenPatterns = [
@@ -247,11 +247,11 @@ test('core executor surfaces keep hermes_agent in the canonical explicit non-def
 
 test('examples and admission references do not preserve domain_gateway as an active route', () => {
   const scannedFiles = [
-    'docs/references/examples-corpora/opl-operating-example-corpus.md',
-    'docs/references/examples-corpora/opl-operating-record-catalog.md',
-    'docs/references/examples-corpora/opl-routed-safety-example-corpus.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-example-corpus.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-record-catalog.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-routed-safety-example-corpus.md',
     'docs/references/domain-admission/opl-candidate-domain-backlog.md',
-    'docs/references/domain-admission/opl-phase2-ecosystem-sync-owner-line.md',
+    'docs/history/process/domain-admission/opl-phase2-ecosystem-sync-owner-line.md',
   ];
 
   const forbiddenPatterns = [
@@ -288,10 +288,10 @@ test('examples and admission references do not preserve domain_gateway as an act
 
 test('examples-corpora references do not link retired example artifacts as active files', () => {
   const scannedFiles = [
-    'docs/references/examples-corpora/opl-gateway-example-corpus.md',
-    'docs/references/examples-corpora/opl-operating-example-corpus.md',
-    'docs/references/examples-corpora/opl-operating-record-catalog.md',
-    'docs/references/examples-corpora/opl-routed-safety-example-corpus.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-gateway-example-corpus.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-example-corpus.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-record-catalog.md',
+    'docs/history/compatibility/gateway-federation/examples-corpora/opl-routed-safety-example-corpus.md',
   ];
 
   const forbiddenPatterns = [

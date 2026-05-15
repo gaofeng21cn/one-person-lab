@@ -6,7 +6,7 @@
 
 ## 定位
 
-- `AGENTS.md` 只约束工作方式，不承载项目知识细节。
+- `AGENTS.md` 只约束工作方式、少量稳定身份边界和文档生命周期纪律，不承载项目知识细节或阶段完成判断。
 - 项目知识默认从 `README*`、`docs/README*`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md` 读取。
 - `OPL` 是以 Agent executor 为最小执行单位的 stage-led 完整智能体运行框架：当前第一公民 executor 是 `Codex CLI`，`Hermes-Agent`、Claude Code 等其他 executor 可以按显式 adapter 接入；OPL 只保证接入、生命周期、回执与投影边界可审计，不保证非默认 executor 的行为或效果与 `Codex CLI` 等价。
 - 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。这些仓持有各自的 domain truth、quality verdict、runtime owner、artifact authority 与直接 app skill 路径；OPL 持有 framework-level runtime / activation / discovery / projection。
@@ -22,6 +22,7 @@
 - 若文档提到 `Hermes-Agent`，必须明确它指的是上游外部 runtime 项目 / 服务；仓内自写的 shim、pilot、helper 或过渡 scaffold，不得写成“已接入 Hermes-Agent”。
 - Temporal-backed provider 是 OPL production online runtime 的必需 substrate；`Hermes-Agent` 不再作为目标 24h session/wakeup substrate，但作为可选 Agent executor adapter、显式 proof lane、diagnostic 或历史参考保留。文档和合同必须区分 required production substrate、landed state、executor adapter 与 retained provenance；local provider 只能写成 dev/CI/offline diagnostic baseline，不能写成 Full online readiness 的替代品。
 - 一旦 target topology 已明确，新增投入默认服务目标形态；旧路线只允许作为迁移桥、兼容层或回归对照存在，不继续深磨。
+- 已被当前 owner surface 替代的模块、接口、alias、facade、聚合测试和文档入口，默认迁移 active caller 后直接退役；需要来龙去脉时只保留 history/tombstone/provenance，不新增兼容面。
 - 不做降级处理、兜底补丁、启发式修补或“先糊住再说”式实现。
 
 ## 文档分层与生命周期治理
@@ -36,9 +37,9 @@
 - 每份长期文档都必须能说明 `owner`、`purpose`、`state`、`machine boundary`；缺少任一信号时，先补入口或归位，再继续扩写。
 - 文档治理按内容生命周期判断，文件名和目录名只作为辅助信号；同一文档内的当前事实、活跃计划、支撑参考与历史叙事应分别归入当前 owner doc、active/support 层或 history/tombstone 语境。
 - 入口文档应优先让读者一眼看清当前状态、层次、新旧关系和下一跳；旧计划、旧路线和已完成 closeout 进入 provenance / history 层。
-- `docs/active/`：当前执行、当前计划、当前差距、active baton 与 closeout evidence。
+- `docs/active/`：当前执行、当前计划、当前差距、active baton 与 closeout evidence；OPL 系列项目开发主参考和 OPL 自身 gap plan 保持在这里。
 - `docs/public/`：当前公开叙事、roadmap、task map 与 operating model。
-- `docs/product/`：One Person Lab App/workbench、operator entry、product entry 与 action-routing shell 支撑。
+- `docs/product/`：One Person Lab App/workbench、operator entry、product entry、action-routing shell 与 public surface 支撑；`opl-aion-shell/docs` 属于上游 AionUI 依赖文档，不纳入本仓 docs taxonomy 治理。
 - `docs/runtime/`：framework runtime、provider/executor、control plane、projection/read model、resume/wakeup 与 repair 语义支撑。
 - `docs/delivery/`：通用 artifact/package/export lifecycle shell 支撑；domain 交付 authority 留在 MAS/MAG/RCA。
 - `docs/source/`：通用 workspace/source intake 与 source truth transport shell 支撑；domain source semantics 留在 MAS/MAG/RCA。
@@ -52,6 +53,8 @@
 
 - `docs/**` 默认只维护中文 canonical 内容；稳定路径优先使用无语言后缀 `.md`。
 - 根层 `README*` 是否保留公开双语入口，由产品分发和 public 需求单独决定。
+- OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy：`active/public/product/runtime/delivery/source/policies/specs/references/history`；目录是否保留按长期生命周期职责判断，不按当前文件数量判断。
+- OPL 文档持有全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；MAS/MAG/RCA 只在各自仓维护本仓 truth、gap、authority、direct/hosted 边界和上收候选。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
 - `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
 - 退役定位只能放在 `docs/history/**` 的 archive / tombstone 语境中；active docs 提到 gateway、federation、frontdoor 等旧路线时，必须同时指向当前 truth owner。
