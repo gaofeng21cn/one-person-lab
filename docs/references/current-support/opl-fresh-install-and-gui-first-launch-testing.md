@@ -41,7 +41,7 @@ npm run fresh-install:smoke
 
 ## GUI / VM 层
 
-GUI 层使用干净 macOS VM snapshot 验证真实 Release App 首启。每轮从 snapshot 启动，下载 one-person-lab Release DMG，安装到 `/Applications`，直接打开 `One Person Lab.app`。
+GUI 层使用干净 macOS VM snapshot 验证真实 Release App 首启。每轮从 snapshot 启动，下载 `one-person-lab-app` Release DMG，安装到 `/Applications`，直接打开 `One Person Lab.app`。
 
 已落地的执行面在 `gaofeng21cn/one-person-lab-app` 的 `shells/aionui`：
 

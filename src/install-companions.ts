@@ -923,8 +923,8 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
       'bun run dist:linux',
     ],
     notes: [
-      'OPL owns the runtime contract and release distribution discovery surface; one-person-lab-app owns the OPL-branded desktop GUI package built from shells/aionui.',
-      'A valid OPL GUI package is an OPL-branded Electron-builder distributable uploaded to the one-person-lab GitHub Release. The GUI source repository is internal build input.',
+      'OPL owns the runtime contract and App release discovery surface; one-person-lab-app owns the OPL-branded desktop GUI package built from shells/aionui.',
+      'A valid OPL GUI package is an OPL-branded Electron-builder distributable uploaded to the one-person-lab-app GitHub Release.',
       'The upstream AionUI app is not itself the OPL GUI.',
       'Source build is only the fallback when no release asset matches the local platform and architecture.',
     ],

@@ -287,7 +287,7 @@
 - `opl install` 不再安装、启动或打开 8787 Product API service
 - public `opl service *`、`opl system reinstall-support`、`opl web`、`web bundle` 与 `web package` 退出当前命令面
 - 仓内旧本地 web adapter 与 self-hostable web package 实现删除，避免继续形成第二产品入口
-- GUI 分发由 `one-person-lab-app/shells/aionui` 构建、`one-person-lab` GitHub Release 暴露；维护者用 `npm run gui:release` 发布 artifact
+- GUI 分发由 `one-person-lab-app` 构建并发布到 `gaofeng21cn/one-person-lab-app` GitHub Release；Framework repo 不再保留 App release/upload/build workflow
 
 ## 2026-04-23
 
@@ -413,7 +413,7 @@
 
 - `OPL` 主仓只保留 CLI 产品入口、工作空间 / 会话 / 进度 / 交付物真相、release distribution surface，以及 Codex-default runtime config；Hermes mode config 只保留历史语境
 - 独立界面仓负责真正的 GUI 外壳
-- 一键安装默认打开已安装 GUI；macOS 上缺失时自动下载、挂载并安装 one-person-lab release 中匹配当前平台的 OPL 品牌 Electron DMG；缺少匹配 release asset 时才把 `one-person-lab-app/shells/aionui` 源码构建作为 fallback
+- 一键安装默认打开已安装 GUI；macOS 上缺失时自动下载、挂载并安装 `one-person-lab-app` release 中匹配当前平台的 OPL 品牌 Electron DMG
 
 ### 决策：外部 GUI 基座只在“当前主线 / 基准 / 参考 / 备线”语境出现
 

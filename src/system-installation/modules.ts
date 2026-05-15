@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
-import { PACKAGED_MODULE_MARKER_FILE } from '../full-internal-package.ts';
+import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
   resolveFamilyWorkspaceRootFromRepoRoot,
   syncFamilySkillPackFromRepoRoot,
