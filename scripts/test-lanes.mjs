@@ -44,6 +44,7 @@ const lanes = {
       'tests/src/cli/cases/family-runtime-binding-intake.test.ts',
       'tests/src/cli/cases/family-runtime-paper-autonomy.test.ts',
       'tests/src/cli/cases/family-runtime-provider-hosted-attempts.test.ts',
+      'tests/src/cli/cases/family-runtime-provider-slo.test.ts',
       'tests/src/cli/cases/family-runtime-transition-bridge.test.ts',
       'tests/src/cli/cases/workspace-domain.production-closeout.test.ts',
       'tests/src/cli/cases/family-runtime-worker.test.ts',

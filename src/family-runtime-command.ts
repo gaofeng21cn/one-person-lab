@@ -42,6 +42,7 @@ export type FamilyRuntimeCommandInput =
     detach?: boolean;
   }
   | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
+  | { mode: 'provider_slo_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
@@ -283,6 +284,26 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       });
     }
     return { mode: 'residency_proof', providerKind, live, production };
+  }
+  if (mode === 'provider-slo' && rest[0] === 'tick') {
+    let providerKind: FamilyRuntimeProviderKind | undefined;
+    let force = false;
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--provider' && value) {
+        providerKind = assertProviderKind(value);
+        index += 1;
+      } else if (token === '--force') {
+        force = true;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime provider-slo tick option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime provider-slo tick --provider temporal [--force]',
+        });
+      }
+    }
+    return { mode: 'provider_slo_tick', providerKind, force };
   }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };

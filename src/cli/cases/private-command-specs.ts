@@ -268,6 +268,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime service status --provider temporal',
         'opl family-runtime worker start --provider temporal',
         'opl family-runtime residency proof --provider temporal [--live|--production]',
+        'opl family-runtime provider-slo tick --provider temporal',
         'opl family-runtime tick --source temporal-worker --hydrate',
         'opl family-runtime queue list',
       ],

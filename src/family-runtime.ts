@@ -37,6 +37,7 @@ import {
   persistTemporalProductionProof,
   temporalProviderSloExecutionReceipt,
 } from './family-runtime-provider-proof-receipts.ts';
+import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
   QUEUE_SCHEMA_VERSION,
@@ -706,6 +707,21 @@ export async function runFamilyRuntime(args: string[]) {
           provider_slo_execution_receipt: sloExecutionReceipt,
           ...proof,
         },
+      };
+    }
+    if (parsed.mode === 'provider_slo_tick') {
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
+      if (providerKind !== 'temporal') {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime provider-slo tick currently supports only --provider temporal.', {
+          provider_kind: providerKind,
+          allowed_provider_kinds: ['temporal'],
+        });
+      }
+      return {
+        version: 'g2',
+        family_runtime_provider_slo_tick: await runTemporalProviderSloTick(db, paths, {
+          force: parsed.force,
+        }),
       };
     }
     if (parsed.mode === 'enqueue') {
