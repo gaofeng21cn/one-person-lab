@@ -448,6 +448,7 @@ export function buildPublicCommandSpecs(
         'opl family-runtime status',
         'opl family-runtime repair',
         'opl family-runtime tick --source provider-cron --hydrate',
+        'opl family-runtime provider-slo tick --provider temporal',
       ],
       group: 'runtime',
     }),

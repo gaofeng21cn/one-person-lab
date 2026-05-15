@@ -43,7 +43,7 @@ OPL 不负责 domain truth、domain quality verdict、publication/fundability/vi
 当前继续应落在 OPL 层面的实现 / 硬化 backlog 是：
 
 - generic state-machine runner：OPL 已持有 domain-neutral transition contract、runner 和 matrix runner；后续 OPL 层硬化应继续补幂等 tick、provider attempt bridge、retry / dead-letter、human gate transport、dispatch receipt 和 matrix audit。MAS/MAG/RCA 只声明各自的 domain transition table / guard / oracle fixture / owner action。
-- provider SLO 与 repair-loop 执行证据：Temporal production proof 已有 read-model 与 supervised receipt；周期性 proof 调度、repair execution receipt、restart / re-query / signal history 的长期 SLO 仍应由 OPL runtime/provider 层闭合。
+- provider SLO 与 repair-loop 执行证据：Temporal production proof 已有 read-model、supervised receipt 与 `family-runtime provider-slo tick --provider temporal` cadence executor；长期窗口内的周期性 proof 调度、repair execution receipt、restart / re-query / signal history SLO 仍应由 OPL runtime/provider 层闭合。
 - stage activity bridge：OPL 负责从 typed queue 到 provider-backed stage attempt、sidecar dispatch、typed closeout ledger、owner receipt refs 与 typed blocker 的通用传输；真实 MAS paper、MAG grant、RCA visual owner receipt chain 继续由 domain owner 闭合。
 - App / workbench 产品化：OPL App 负责把 workspace/source intake、artifact gallery、package/export lifecycle、route graph、review/repair queue、quality/readiness、observability/SLO、memory locator 和 action routing 这组通用 projection 做成人用 drilldown；domain repo 只提供 refs、verdict refs、route nodes/edges 和 receipts。
 - memory / artifact / lifecycle transport：OPL 可实现 locator、body-free inventory、writeback proposal / receipt transport、retention / restore ledger 和 provenance shell；memory body、accept/reject、artifact mutation 和 package/export verdict 必须回到 domain receipt。
