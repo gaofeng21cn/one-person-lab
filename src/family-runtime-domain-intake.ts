@@ -22,6 +22,7 @@ type DomainExportCommand = {
 
 type EnqueueTaskResult = {
   accepted?: boolean;
+  requeued_from_terminal?: boolean;
   idempotent_noop?: boolean;
   task?: ReturnType<typeof taskToPayload>;
 };
@@ -138,6 +139,7 @@ function pendingTaskInputFrom(
       taskKind,
       payload: {
         ...payload,
+        ...(typeof item.source_fingerprint === 'string' ? { source_fingerprint: item.source_fingerprint } : {}),
         ...(Array.isArray(item.source_refs) ? { source_refs: item.source_refs } : {}),
         ...(typeof item.dispatch_owner === 'string' ? { dispatch_owner: item.dispatch_owner } : {}),
         ...(typeof item.profile_name === 'string' ? { profile_name: item.profile_name } : {}),
@@ -182,6 +184,7 @@ export function hydrateDomainTasks(
   const domains = input.domainId ? [input.domainId] : [...FAMILY_RUNTIME_DOMAIN_IDS];
   const exports = [];
   let enqueuedCount = 0;
+  let requeuedCount = 0;
   let idempotentNoopCount = 0;
   let blockedCount = 0;
   for (const domainId of domains) {
@@ -219,6 +222,9 @@ export function hydrateDomainTasks(
       acceptedTasks.push(resultPayload);
       if (resultPayload.accepted) {
         enqueuedCount += 1;
+        if (resultPayload.requeued_from_terminal) {
+          requeuedCount += 1;
+        }
       } else if (resultPayload.idempotent_noop) {
         idempotentNoopCount += 1;
       }
@@ -231,6 +237,7 @@ export function hydrateDomainTasks(
       command_source: command.source,
       exported_count: inputs.length + blocked.length,
       enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
+      requeued_count: acceptedTasks.filter((task) => task.requeued_from_terminal).length,
       idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
       blocked_count: blocked.length,
       blocked,
@@ -239,11 +246,17 @@ export function hydrateDomainTasks(
   insertEvent(db, {
     eventType: 'domain_intake_completed',
     source: input.source,
-    payload: { enqueued_count: enqueuedCount, idempotent_noop_count: idempotentNoopCount, blocked_count: blockedCount },
+    payload: {
+      enqueued_count: enqueuedCount,
+      requeued_count: requeuedCount,
+      idempotent_noop_count: idempotentNoopCount,
+      blocked_count: blockedCount,
+    },
   });
   return {
     source: input.source,
     enqueued_count: enqueuedCount,
+    requeued_count: requeuedCount,
     idempotent_noop_count: idempotentNoopCount,
     blocked_count: blockedCount,
     exports,
