@@ -112,6 +112,123 @@ JSON
   }
 });
 
+test('family-runtime hydrate consumes MAS scaleout guarded apply tasks as domain-owned exports', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-scaleout-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-scaleout-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "paper_autonomy/guarded-apply",
+      "priority": 30,
+      "source": "mas-sidecar-export",
+      "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
+      "source_fingerprint": "fingerprint-dm002",
+      "dispatch_owner": "med-autoscience",
+      "profile_name": "nfpitnet",
+      "source_refs": [
+        {"role": "mas_owner_controller_decision", "ref": "studies/DM002/artifacts/controller_decisions/latest.json", "exists": false}
+      ],
+      "payload": {
+        "profile": "/tmp/nfpitnet.workspace.toml",
+        "study_id": "DM002",
+        "target_studies": ["DM002"],
+        "provider_attempt_id": "opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply",
+        "idempotency_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
+        "authority_boundary": "mas_owner_guarded_apply_only"
+      }
+    },
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "paper_autonomy/guarded-apply",
+      "priority": 30,
+      "source": "mas-sidecar-export",
+      "dedupe_key": "mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal",
+      "source_fingerprint": "fingerprint-dm003",
+      "dispatch_owner": "med-autoscience",
+      "profile_name": "nfpitnet",
+      "source_refs": [
+        {"role": "mas_owner_controller_decision", "ref": "studies/DM003/artifacts/controller_decisions/latest.json", "exists": false}
+      ],
+      "payload": {
+        "profile": "/tmp/nfpitnet.workspace.toml",
+        "study_id": "DM003",
+        "target_studies": ["DM003"],
+        "provider_attempt_id": "opl-temporal:nfpitnet:DM003:provider-hosted-guarded-apply",
+        "idempotency_key": "mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal",
+        "authority_boundary": "mas_owner_guarded_apply_only"
+      }
+    },
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "paper_autonomy/guarded-apply",
+      "priority": 30,
+      "source": "mas-sidecar-export",
+      "dedupe_key": "mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal",
+      "source_fingerprint": "fingerprint-obesity",
+      "dispatch_owner": "med-autoscience",
+      "profile_name": "nfpitnet",
+      "source_refs": [
+        {"role": "mas_owner_controller_decision", "ref": "studies/Obesity/artifacts/controller_decisions/latest.json", "exists": false}
+      ],
+      "payload": {
+        "profile": "/tmp/nfpitnet.workspace.toml",
+        "study_id": "Obesity",
+        "target_studies": ["Obesity"],
+        "provider_attempt_id": "opl-temporal:nfpitnet:Obesity:provider-hosted-guarded-apply",
+        "idempotency_key": "mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal",
+        "authority_boundary": "mas_owner_guarded_apply_only"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+  });
+  try {
+    const intake = runCli(['family-runtime', 'intake', '--domain', 'medautoscience'], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const tasks = queue.family_runtime_queue.tasks;
+    const tasksByStudy = Object.fromEntries(tasks.map((task: { payload: { study_id: string } }) => [
+      task.payload.study_id,
+      task,
+    ]));
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 3);
+    assert.equal(intake.family_runtime_intake.exports[0].exported_count, 3);
+    assert.deepEqual(Object.keys(tasksByStudy).sort(), ['DM002', 'DM003', 'Obesity']);
+    assert.equal(tasksByStudy.DM002.payload.source_fingerprint, 'fingerprint-dm002');
+    assert.equal(tasksByStudy.DM003.payload.source_fingerprint, 'fingerprint-dm003');
+    assert.equal(tasksByStudy.Obesity.payload.source_fingerprint, 'fingerprint-obesity');
+    assert.equal(tasksByStudy.DM002.paper_autonomy.source_fingerprint, 'fingerprint-dm002');
+    assert.equal(tasksByStudy.DM003.paper_autonomy.source_fingerprint, 'fingerprint-dm003');
+    assert.equal(tasksByStudy.Obesity.paper_autonomy.source_fingerprint, 'fingerprint-obesity');
+    assert.equal(tasksByStudy.DM003.payload.dispatch_owner, 'med-autoscience');
+    assert.equal(tasksByStudy.Obesity.payload.source_refs[0].ref, 'studies/Obesity/artifacts/controller_decisions/latest.json');
+    assert.deepEqual(
+      tasks.map((task: { task_kind: string }) => task.task_kind),
+      [
+        'paper_autonomy/guarded-apply',
+        'paper_autonomy/guarded-apply',
+        'paper_autonomy/guarded-apply',
+      ],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime requeues terminal MAS tasks when exported provider evidence changes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-requeue-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-requeue-'));
