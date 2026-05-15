@@ -72,10 +72,11 @@ export type OplRecommendedSkill = {
 export type OplGuiShellSurface = {
   shell_id: 'opl_aion_shell';
   label: 'OPL Desktop GUI';
-  owner: 'opl-aion-shell';
+  owner: 'one-person-lab-app';
   base_shell: 'aionui';
   relation_to_opl: 'opl_branded_gui_shell';
   repo_url: string;
+  active_shell_root: 'shells/aionui';
   release_repo: string;
   release_tag: string;
   opl_release_version: string;
@@ -863,16 +864,17 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
 
 export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
   const workspaceRoot = resolveFamilyWorkspaceRootFromRepoRoot(repoRoot);
-  const siblingCheckoutPath = path.join(workspaceRoot, 'opl-aion-shell');
+  const siblingCheckoutPath = path.join(workspaceRoot, 'one-person-lab-app');
   const releaseVersion = getOplReleaseVersion();
 
   return {
     shell_id: 'opl_aion_shell',
     label: 'OPL Desktop GUI',
-    owner: 'opl-aion-shell',
+    owner: 'one-person-lab-app',
     base_shell: 'aionui',
     relation_to_opl: 'opl_branded_gui_shell',
-    repo_url: 'https://github.com/gaofeng21cn/opl-aion-shell',
+    repo_url: 'https://github.com/gaofeng21cn/one-person-lab-app',
+    active_shell_root: 'shells/aionui',
     release_repo: getOplReleaseRepo(),
     release_tag: buildOplReleaseTag(releaseVersion),
     opl_release_version: releaseVersion,
@@ -921,7 +923,7 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
       'bun run dist:linux',
     ],
     notes: [
-      'OPL owns the runtime contract and release distribution surface; opl-aion-shell owns the OPL-branded desktop GUI package built on the AionUI codebase.',
+      'OPL owns the runtime contract and release distribution discovery surface; one-person-lab-app owns the OPL-branded desktop GUI package built from shells/aionui.',
       'A valid OPL GUI package is an OPL-branded Electron-builder distributable uploaded to the one-person-lab GitHub Release. The GUI source repository is internal build input.',
       'The upstream AionUI app is not itself the OPL GUI.',
       'Source build is only the fallback when no release asset matches the local platform and architecture.',

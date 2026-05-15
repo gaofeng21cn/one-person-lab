@@ -6,7 +6,8 @@
   "local_smoke_command": "npm run test:fresh-install",
   "vm_smoke_command": "npm run fresh-install:smoke -- --vm-artifacts-only",
   "gui_vm_implementation": {
-    "repo": "gaofeng21cn/opl-aion-shell",
+    "repo": "gaofeng21cn/one-person-lab-app",
+    "shell_root": "shells/aionui",
     "packaged_guest_smoke_command": "bun run test:opl-first-run-vm -- --dmg <release.dmg> --assert-clean",
     "tart_host_smoke_command": "bun run test:opl-first-run-vm:tart -- --source-vm <clean-tart-vm> --dmg <release.dmg>",
     "nightly_workflow": ".github/workflows/opl-first-run-vm.yml",
@@ -143,7 +144,7 @@
   ],
   "ci_policy": {
     "github_actions": "Run local CLI fresh-install smoke, package checks, codesign/notarization, and non-GUI assertions only.",
-    "self_hosted_macos": "Run gaofeng21cn/opl-aion-shell .github/workflows/opl-first-run-vm.yml on a reset Tart clean macOS snapshot.",
+    "self_hosted_macos": "Run gaofeng21cn/one-person-lab-app shells/aionui .github/workflows/opl-first-run-vm.yml on a reset Tart clean macOS snapshot.",
     "docker": "Do not use Docker as proof for macOS desktop first-launch behavior."
   }
 }

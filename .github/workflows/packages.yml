@@ -123,7 +123,7 @@ jobs:
       - name: Build and push WebUI image
         uses: docker/build-push-action@v6
         with:
-          context: https://github.com/gaofeng21cn/opl-aion-shell.git#main
+          context: https://github.com/gaofeng21cn/one-person-lab-app.git#main:shells/aionui
           push: true
           build-args: |
             VITE_OPL_DEFAULT_LANGUAGE=zh-CN

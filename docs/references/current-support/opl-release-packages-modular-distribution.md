@@ -4,7 +4,7 @@
 
 - GitHub Releases 面向用户下载，承载 `One Person Lab-<OPL版本>-<平台>-<架构>` 这类桌面 App 安装包。
 - GitHub Packages 面向机器消费，适合承载可独立更新的 OPL 内核包、domain module 制品、WebUI/Docker 镜像与预构建 helper。
-- `opl-aion-shell` 继续是 GUI 源码与构建输入；用户入口、版本叙事和下载面归到 `one-person-lab`。
+- `one-person-lab-app/shells/aionui` 继续是 GUI 源码与构建输入；用户入口、版本叙事和下载面归到 `one-person-lab` release。
 
 ## 当前分发边界
 
