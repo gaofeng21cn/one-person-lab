@@ -213,6 +213,39 @@ function operatorCommands(repairState: string) {
   ];
 }
 
+function operatorCadenceAction(input: {
+  repairState: string;
+  cadence: ReturnType<typeof operatorCadence>;
+}) {
+  const commandRole = input.repairState === 'cadence_current'
+    ? 'cadence_refresh'
+    : 'repair_or_initial_proof';
+  return {
+    action_id: 'temporal-provider-production-proof-cadence',
+    action_kind: 'provider_slo_cadence_execution',
+    provider_kind: 'temporal',
+    command: PRODUCTION_PROOF_COMMAND,
+    command_role: commandRole,
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'manual_or_supervised_no_auto_execution',
+    dispatch_status: input.repairState === 'cadence_current' && input.cadence.overdue_by_seconds === 0
+      ? 'cadence_current'
+      : 'execution_due_or_repair_required',
+    expected_event_type: 'temporal_provider_slo_execution_receipt',
+    expected_receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+    max_proof_age_seconds: input.cadence.max_proof_age_seconds,
+    next_proof_due_at: input.cadence.next_proof_due_at,
+    overdue_by_seconds: input.cadence.overdue_by_seconds,
+    authority_boundary: {
+      can_auto_execute: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
+}
+
 function executionReceiptProjection(input: {
   executionEvents: ProviderRuntimeEvent[];
   latestExecution: ProviderRuntimeEvent | undefined;
@@ -248,6 +281,11 @@ function operatorSloRepairLoop(input: {
     continuousProofStatus: input.continuousProofStatus,
     proofFreshnessStatus: input.freshnessStatus,
   });
+  const cadence = operatorCadence({
+    maxAgeSeconds: input.maxAgeSeconds,
+    latestAgeSeconds: input.latestAgeSeconds,
+    latestCreatedAt: input.latest?.created_at ?? null,
+  });
   return {
     surface_kind: 'opl_provider_slo_repair_loop_projection',
     provider_kind: 'temporal',
@@ -268,10 +306,10 @@ function operatorSloRepairLoop(input: {
       latestExecution: input.latestExecution,
       latestExecutionPayload: input.latestExecutionPayload,
     }),
-    operator_cadence: operatorCadence({
-      maxAgeSeconds: input.maxAgeSeconds,
-      latestAgeSeconds: input.latestAgeSeconds,
-      latestCreatedAt: input.latest?.created_at ?? null,
+    operator_cadence: cadence,
+    operator_cadence_action: operatorCadenceAction({
+      repairState,
+      cadence,
     }),
     operator_commands: operatorCommands(repairState),
     required_next_action: input.requiredNextAction,

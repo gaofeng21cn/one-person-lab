@@ -31,7 +31,7 @@
 ## 这个目录应该怎么读
 
 - `workstreams.json`、`domains.json`、`stage-selection-vocabulary.json`、`task-topology.json` 和 `public-surface-index.json` 定义当前活跃的 stage-led framework 选择面、Framework / App / Foundry 的产品层 owner split，以及 OPL-compatible agents 用来定位外部 framework 运行依赖的 `opl_framework_locator` surface。
-- `family-runtime-online-substrate-contract.json`、`family-runtime-attempt-contract.json`、`family-transition-runner-contract.json`、`standard-domain-agent-skeleton-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime 主线的活跃机器合同。
+- `family-runtime-online-substrate-contract.json`、`family-runtime-attempt-contract.json`、`family-transition-runner-contract.json`、`standard-domain-agent-skeleton-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime 主线的活跃机器合同。`family-runtime-online-substrate-contract.json` 同时声明 Temporal provider SLO cadence action envelope，用于路由 supervised production proof 执行，但不授权 domain readiness。
 - `family-executor-adapter-defaults.json` 继续作为共享 executor 合同使用。
 - 已退役的 gateway、federation、routed-action、onboarding、acceptance、governance 与 example corpora 不再保留在这个活跃 contract root 中。
 
