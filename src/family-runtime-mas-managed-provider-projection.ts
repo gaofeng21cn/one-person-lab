@@ -9,7 +9,15 @@ type JsonRecord = Record<string, unknown>;
 export type MasManagedProviderProjection = {
   surface_kind: 'opl_mas_managed_provider_projection';
   role: 'read_only_status_projection';
+  managed_temporal_state_consistency_declared: boolean;
+  family_stage_control_plane_declared: boolean;
+  domain_memory_descriptor_declared: boolean;
+  owner_receipt_contract_declared: boolean;
+  legacy_retirement_tombstone_declared: boolean;
   managed_temporal_state_consistency: JsonRecord | null;
+  family_stage_control_plane: JsonRecord | null;
+  domain_memory_descriptor: JsonRecord | null;
+  owner_receipt_contract: JsonRecord | null;
   legacy_retirement_tombstone_proof: JsonRecord | null;
   source_status: 'available' | 'not_configured';
   source_refs: JsonRecord[];
@@ -178,22 +186,88 @@ function normalizeLegacyRetirementTombstoneProof(projection: JsonRecord, source:
 
 function projectionFromPayload(payload: unknown, source: JsonRecord): MasManagedProviderProjection | null {
   const managedTemporal = findProjection(payload, 'managed_temporal_state_consistency');
+  const familyStageControlPlane = findProjection(payload, 'family_stage_control_plane');
+  const domainMemoryDescriptor = findProjection(payload, 'domain_memory_descriptor');
+  const ownerReceiptContract = findProjection(payload, 'owner_receipt_contract')
+    ?? findProjection(payload, 'domain_owner_receipt_contract');
   const legacyTombstone = findProjection(payload, 'legacy_retirement_tombstone_proof');
   const normalizedManagedTemporal = managedTemporal
     ? normalizeManagedTemporalProjection(managedTemporal, source)
+    : null;
+  const normalizedFamilyStageControlPlane = familyStageControlPlane
+    ? {
+        ...familyStageControlPlane,
+        surface_kind: optionalString(familyStageControlPlane.surface_kind) ?? 'family_stage_control_plane',
+        source_manifest: source,
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          domain_truth: 'domain_owned',
+          ...(
+            isRecord(familyStageControlPlane.authority_boundary)
+              ? familyStageControlPlane.authority_boundary
+              : {}
+          ),
+        },
+      }
+    : null;
+  const normalizedDomainMemoryDescriptor = domainMemoryDescriptor
+    ? {
+        ...domainMemoryDescriptor,
+        surface_kind: optionalString(domainMemoryDescriptor.surface_kind) ?? 'family_domain_memory_descriptor',
+        source_manifest: source,
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          domain_truth: 'domain_owned',
+          ...(
+            isRecord(domainMemoryDescriptor.authority_boundary)
+              ? domainMemoryDescriptor.authority_boundary
+              : {}
+          ),
+        },
+      }
+    : null;
+  const normalizedOwnerReceiptContract = ownerReceiptContract
+    ? {
+        ...ownerReceiptContract,
+        surface_kind: optionalString(ownerReceiptContract.surface_kind) ?? 'owner_receipt_contract',
+        source_manifest: source,
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          domain_truth: 'domain_owned',
+          ...(
+            isRecord(ownerReceiptContract.authority_boundary)
+              ? ownerReceiptContract.authority_boundary
+              : {}
+          ),
+        },
+      }
     : null;
   const normalizedLegacyTombstone = legacyTombstone
     ? normalizeLegacyRetirementTombstoneProof(legacyTombstone, source)
     : null;
 
-  if (!normalizedManagedTemporal && !normalizedLegacyTombstone) {
+  if (
+    !normalizedManagedTemporal
+    && !normalizedFamilyStageControlPlane
+    && !normalizedDomainMemoryDescriptor
+    && !normalizedOwnerReceiptContract
+    && !normalizedLegacyTombstone
+  ) {
     return null;
   }
 
   return {
     surface_kind: 'opl_mas_managed_provider_projection',
     role: 'read_only_status_projection',
+    managed_temporal_state_consistency_declared: Boolean(normalizedManagedTemporal),
+    family_stage_control_plane_declared: Boolean(normalizedFamilyStageControlPlane),
+    domain_memory_descriptor_declared: Boolean(normalizedDomainMemoryDescriptor),
+    owner_receipt_contract_declared: Boolean(normalizedOwnerReceiptContract),
+    legacy_retirement_tombstone_declared: Boolean(normalizedLegacyTombstone),
     managed_temporal_state_consistency: normalizedManagedTemporal,
+    family_stage_control_plane: normalizedFamilyStageControlPlane,
+    domain_memory_descriptor: normalizedDomainMemoryDescriptor,
+    owner_receipt_contract: normalizedOwnerReceiptContract,
     legacy_retirement_tombstone_proof: normalizedLegacyTombstone,
     source_status: 'available',
     source_refs: [source],

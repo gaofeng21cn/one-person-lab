@@ -107,6 +107,11 @@ test('family-runtime status consumes MAS manifest managed Temporal projection wi
     assert.equal(provider.details.worker_readiness.worker_ready, true);
     assert.deepEqual(provider.details.worker_readiness.blockers, []);
     assert.equal(managedProjection.projection_status, 'ready');
+    assert.equal(provider.details.managed_domain_projection_summary.managed_temporal_state_consistency_declared, true);
+    assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.domain_memory_descriptor_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.owner_receipt_contract_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.legacy_retirement_tombstone_declared, false);
     assert.equal(managedProjection.source_manifest.project_id, 'medautoscience');
     assert.equal(managedProjection.authority_boundary.opl_role, 'projection_consumer_only');
     assert.equal(managedProjection.authority_boundary.paper_closure_authority, 'mas_only');
@@ -159,6 +164,11 @@ JSON
     assert.equal(provider.details.address, 'sidecar-managed-temporal.example.test:7233');
     assert.equal(provider.details.address_source, 'mas_managed_temporal_state_consistency_projection');
     assert.equal(managedProjection.source_manifest.surface_kind, 'mas_family_sidecar_export_projection_ref');
+    assert.equal(provider.details.managed_domain_projection_summary.managed_temporal_state_consistency_declared, true);
+    assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.domain_memory_descriptor_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.owner_receipt_contract_declared, false);
+    assert.equal(provider.details.managed_domain_projection_summary.legacy_retirement_tombstone_declared, false);
     assert.equal(managedProjection.authority_boundary.opl_role, 'projection_consumer_only');
     assert.equal(output.family_runtime.opl_owner.forbidden_authority.includes('domain_quality_verdict'), true);
   } finally {

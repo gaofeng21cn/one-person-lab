@@ -3,6 +3,7 @@ import {
   buildTemporalWorkerLifecycleContract,
   buildTemporalWorkerReadiness,
 } from './family-runtime-temporal-readiness.ts';
+import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from './contracts.ts';
 import {
@@ -24,9 +25,15 @@ export type FamilyRuntimeProviderInspection = {
   details: Record<string, unknown>;
 };
 
-type ManagedProviderProjection = {
-  managed_temporal_state_consistency?: Record<string, unknown> | null;
-} | null;
+type ManagedProviderProjection = Partial<Pick<
+  MasManagedProviderProjection,
+  | 'managed_temporal_state_consistency'
+  | 'managed_temporal_state_consistency_declared'
+  | 'family_stage_control_plane_declared'
+  | 'domain_memory_descriptor_declared'
+  | 'owner_receipt_contract_declared'
+  | 'legacy_retirement_tombstone_declared'
+>> | null;
 
 type ProviderLifecycleOptions = {
   managedProviderProjection?: ManagedProviderProjection;
@@ -236,6 +243,15 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       worker_ready: workerReady,
       worker_readiness: effectiveWorkerReadiness,
       managed_temporal_state_consistency: managedTemporalProjection,
+      managed_domain_projection_summary: managedProviderProjection
+        ? {
+            managed_temporal_state_consistency_declared: Boolean(managedProviderProjection.managed_temporal_state_consistency_declared),
+            family_stage_control_plane_declared: Boolean(managedProviderProjection.family_stage_control_plane_declared),
+            domain_memory_descriptor_declared: Boolean(managedProviderProjection.domain_memory_descriptor_declared),
+            owner_receipt_contract_declared: Boolean(managedProviderProjection.owner_receipt_contract_declared),
+            legacy_retirement_tombstone_declared: Boolean(managedProviderProjection.legacy_retirement_tombstone_declared),
+          }
+        : null,
       mas_managed_provider_projection: managedProviderProjection,
       worker_lifecycle: {
         worker_required: true,
