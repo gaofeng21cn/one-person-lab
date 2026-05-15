@@ -21,9 +21,9 @@
 | `current-support/` | 当前操作支撑参考。 |
 | `runtime-substrate/` | Runtime substrate、product-entry、Hermes 与 Runtime Manager 参考。 |
 | `convergence-governance/` | Family 收敛、文档生命周期、intake 模板与状态对齐。 |
-| `domain-admission/` | 候选 / 已收录 domain backlog 与 tranche records。 |
-| `examples-corpora/` | 样例语料与操作记录。 |
-| `operating-governance/` | 质量、operator projection、surface governance、review 与 publish 参考。 |
+| `domain-admission/` | 当前仍有效的 candidate backlog 与 domain onboarding support。已完成 tranche、Phase 1/2 activation package 和 owner-line 记录进入 `docs/history/process/domain-admission/`。 |
+| `examples-corpora/` | 当前仍有效的样例语料。旧 gateway/routed-action/operating record corpus 已进入 `docs/history/compatibility/gateway-federation/examples-corpora/`。 |
+| `operating-governance/` | 当前仍有效的质量、operator projection 与 family governance support。旧 gateway-derived surface authority/lifecycle/review/publish matrix 已进入 `docs/history/compatibility/gateway-federation/operating-governance/`。 |
 
 除 README 或经 [文档组合治理](../docs_portfolio_consolidation.md) 明确承认的新顶层生命周期索引外，不再在 `docs/references/` 根目录新增 loose Markdown。
 
@@ -79,18 +79,13 @@
 ## 四、Domain admission 参考
 
 - [OPL candidate domain backlog](./domain-admission/opl-candidate-domain-backlog.md)
-- [Candidate workstream tranche closeout](./domain-admission/opl-candidate-workstream-tranche-closeout.md)
-- [Phase 1 exit activation package](./domain-admission/opl-phase-1-exit-activation-package.md)
-- [中央 federation 参考面对齐看板](./domain-admission/opl-phase-2-central-reference-sync-board.md)
-- [已收录 domain 增量 intake 刷新记录](./domain-admission/opl-phase-2-admitted-domain-delta-intake-refresh.md)
-- [生态同步 owner line 记录](./domain-admission/opl-phase2-ecosystem-sync-owner-line.md)
+- [历史 domain admission tranche 归档](../history/process/domain-admission/README.md)：Candidate workstream closeout、Phase 1/2 activation package、中央 sync board 与生态同步 owner line 只作为历史 process record 读取，不再作为 reference 层 active owner。
 
 ## 五、样例、语料与操作记录
 
-- [OPL gateway example corpus](./examples-corpora/opl-gateway-example-corpus.md)
-- [OPL routed-safety example corpus](./examples-corpora/opl-routed-safety-example-corpus.md)
-- [OPL operating example corpus](./examples-corpora/opl-operating-example-corpus.md)
-- [OPL operating record catalog](./examples-corpora/opl-operating-record-catalog.md)
+当前 reference 层不再维护 gateway/routed-action/operating record corpus。旧 corpus 已归档到
+[Gateway / Federation examples corpus 历史归档](../history/compatibility/gateway-federation/examples-corpora/README.md)。
+这些文件只用于 provenance、schema archaeology 和旧示例审计，不再作为当前 machine-readable examples 或兼容接口。
 
 ## 六、Operating governance 参考
 
@@ -100,11 +95,7 @@
 - [Family incident learning loop](./operating-governance/family-incident-learning-loop.md)
 - [Family product operator projection](./operating-governance/family-product-operator-projection.md)
 - [OPL family 目录治理](./operating-governance/opl-family-directory-governance.md)
-- [OPL governance audit operating surface](./operating-governance/opl-governance-audit-operating-surface.md)
-- [OPL publish promotion operating surface](./operating-governance/opl-publish-promotion-operating-surface.md)
-- [OPL surface authority matrix](./operating-governance/opl-surface-authority-matrix.md)
-- [OPL surface lifecycle map](./operating-governance/opl-surface-lifecycle-map.md)
-- [OPL surface review matrix](./operating-governance/opl-surface-review-matrix.md)
+- [Gateway-derived operating governance 历史归档](../history/compatibility/gateway-federation/operating-governance/README.md)：旧 governance audit、publish promotion、surface authority、surface lifecycle 和 surface review matrix 只保留为 legacy-derived provenance，不再承担 current operating governance。
 
 ## 七、退役兼容与 frontdoor 参考
 
