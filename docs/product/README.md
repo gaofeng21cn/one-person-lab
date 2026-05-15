@@ -7,11 +7,12 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 
 本目录承接 One Person Lab App/workbench、operator entry、product entry 和 action-routing shell 的 OPL-owned 支撑文档。
 
-`opl-aion-shell` 的 `docs/` 是上游 AionUI 依赖文档，不由本目录治理。本目录只记录 OPL 对 App/workbench 的目标、消费合同和边界。
+当前 `opl-aion-shell` 的 `docs/` 是上游 AionUI 依赖文档，不由本目录治理。目标迁移形态是独立 `one-person-lab-app` 产品仓；其中 App 顶层 `docs/` 治理用户文档、release、testing 和截图教程，`shells/aionui/docs/` 仍按上游 AionUI 依赖文档处理。本目录只记录 OPL 对 App/workbench 的目标、消费合同和边界。
 
 当前入口先看：
 
 - [OPL 系列项目开发主参考](../active/opl-family-development-reference.md)
+- [One Person Lab App 仓库拆分计划](../active/one-person-lab-app-repo-split-plan.md)
 - [OPL 公开界面索引](./opl-public-surface-index.md)
 - [当前支撑参考索引](../references/current-support/README.md)
 
