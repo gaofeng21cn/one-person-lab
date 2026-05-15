@@ -33,7 +33,7 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 | surface | fresh result | 读法 |
 | --- | --- | --- |
-| `git status --short --branch` | OPL transition lanes 已吸收到本地 `main`，fresh check 为 `main...origin/main [ahead 3]`；工作区可能存在另行维护的 App split 文档改动，发布/提交口径以当前 `git status` 为准；MAG/RCA/MAS 证据来自各自 active manifest / runtime surface | 当前 gap 文档基于 fresh read model 和 runtime ledger；不把未提交文档当作已发布机器真相。 |
+| `git status --short --branch` | 2026-05-15 19:58 fresh check：OPL、MAS、MAG、RCA 根 checkout 均 clean，分别为 `main...origin/main [ahead 26]`、`[ahead 22]`、`[ahead 12]`、`[ahead 13]`；OPL `codex/opl-transition-runner-boundary-20260515` 与 MAS `codex/mas-transition-oracle-consumer-20260515` 是同 HEAD、clean、1 小时内活跃 worktree，保留不清理 | 当前 gap 文档基于 fresh read model、runtime ledger 和四仓本地 `main` 已吸收 commit；不把未推送本地 ahead 写成远端已发布机器真相。 |
 | `./bin/opl agents list --json` | `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`physical_skeleton_evidence_observed_count=3`、`physical_skeleton_audit_pending_count=0`、`production_closure_gap_count=12`、`provider_temporal_residency_gap_status=closed_by_fresh_proven_proof` | 三仓 descriptor 已对齐；MAS/MAG/RCA 均已有 repo-source anchor evidence；provider residency gap 已由 fresh Temporal proof 关闭；剩余 production closure 仍未闭合。 |
 | `./bin/opl agents descriptors --json` | `descriptor_surfaces_resolved_count=3`、`memory_descriptor_resolved_count=3`、`stage_control_plane_resolved_count=3`、`action_catalog_resolved_count=3`、`physical_skeleton_evidence_observed_count=3`、`physical_skeleton_audit_pending_count=0`、`production_closure_gap_count=12`、`provider_temporal_residency_gap_status=closed_by_fresh_proven_proof` | 统一 domain-agent descriptor 总入口已可用；它聚合 refs、readiness、parity、authority boundary 和 provider closure evidence，不承载 domain truth 或 memory body。 |
 | `node dist/cli.js agents descriptors --json` | `descriptor_surfaces_resolved_count=3`、`memory_descriptor_resolved_count=3`、`stage_control_plane_resolved_count=3`、`action_catalog_resolved_count=3`、`physical_skeleton_evidence_observed_count=3`、`physical_skeleton_audit_pending_count=0` | release/dist CLI 已与 canonical `./bin/opl` descriptor 入口同步；后续作为持续验证项保留。 |
@@ -116,7 +116,7 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 - MAS 真实三篇 paper line 已有 read-only OPL-ingestable proof：DM002 -> `ai_reviewer_re_eval`，DM003 / Obesity -> `artifact_delta`，且 `writes_performed=false`。
 - Publication-route memory 已从 descriptor/seed library 推进到 MAS-owned body-free inventory、OPL/Aion receipt inventory、按 workspace / stage / route family / status 的 operator grouping 和 stale/deprecated review summary；OPL 仍只消费 refs、freshness、分组和 review metadata。
 - MAS runtime owner surface 已补齐 closed controller work-unit authorization 清理、runtime turn closeout artifact delta freshness、supervisor-only live quality repair owner routing、AI reviewer currentness guard 和 runtime-read manual finish guard，当前属于 repo-level owner/projection follow-through。
-- MAS `study-state-matrix` 已把 `completion_receipt_consumption` 纳入 domain transition row、family transition spec receipt 和 matrix case oracle：DM002 package closure / completed turn closeout 会投成 `completion_receipt_consumed`，DM003 newer default executor execution receipt 会 supersede stale blocked closeout；这关闭的是旧 work unit redrive / stale closeout priority 的 MAS-owned matrix 缺口，不是 publication closure。
+- MAS `study-state-matrix` 已把 `completion_receipt_consumption` 纳入 domain transition row、family transition spec receipt 和 matrix case oracle：DM002 package closure / completed turn closeout 会投成 `completion_receipt_consumed`，DM003 newer default executor execution receipt 会 supersede stale blocked closeout；AI reviewer publication eval、human-gate resume receipt、delivered-package metadata parking 和无需 human confirmation 的 stop-loss owner receipt 也已进入同一 oracle。该闭环关闭的是旧 work unit redrive / stale closeout priority / terminal stop receipt 对账缺口，不是 publication closure。
 
 ### 主要差距
 
@@ -124,14 +124,14 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 - MAS 理想形态已经把自身收窄为医学研究 `Domain Knowledge / Authority Pack`：医学 stage pack、研究路线知识、publication-route memory policy、AI reviewer / quality rubric、artifact authority contract、owner receipt schema 和 domain projection builder。与此相对，generic runtime、queue、memory locator、artifact lifecycle、restore/retention、workbench shell、route visualization 和 observability primitive 应尽量由 OPL 提供；当前 OPL 已有通用 read-model shell，MAS 仍保留 route decision、quality verdict、artifact mutation permission、memory body/writeback decision 和 owner receipt。
 - OPL 侧 task-bound guarded-apply stage attempt bridge 已有 focused test 证据；DM002 live guarded-apply dispatch 已从 `blocked_no_mas_owner_apply_receipt` 推进到 `mas_owner_apply_receipt_observed`，并进入 OPL typed closeout ledger；当前 owner receipt 是 `medical_paper_readiness_missing` 的 stable blocker，不是 paper closure。真实 provider-hosted live guarded apply soak 尚未跑出连续 progress delta / human gate / stop-loss chain。
 - Human gate / resume 进入 MAS owner route 的运行证明仍不足。
-- Owner receipt、AI reviewer receipt、human gate receipt、memory writeback receipt 和更多 package closure 变体仍需继续纳入 MAS transition matrix 并返回真实 provider-hosted owner evidence。
+- Memory writeback receipt、更多 package closure 变体和真实 paper-line owner-chain receipt 仍需继续规模化纳入 MAS transition matrix，并返回真实 provider-hosted owner evidence；AI reviewer receipt、human-gate resume receipt、stop-loss owner receipt 与 delivered-package metadata parking 已有 repo-level matrix coverage。
 - Publication-route memory 还需要更多真实 paper-line accepted/rejected writeback receipts；当前 grouping/review summary 已落地，但不替代真实 memory body/writeback apply。
 - Legacy compatibility residue 虽有 tombstone/no-active-default-caller proof，物理删除仍需逐项执行。
 
 ### 需要完善
 
-1. 用 DM002、DM003、Obesity 继续跑 live provider-hosted guarded apply；DM002 当前最新有效结果是 MAS owner `stable_blocker` receipt，blocked reason 为 `medical_paper_readiness_missing`；DM002/DM003 的 completion receipt consumption 已进入 matrix oracle，下一步仍需 artifact delta、AI reviewer update、route decision、human gate、stop-loss 或可推进论文的 MAS owner apply receipt。
-2. 每条真实 paper line 留下 attempt query、typed closeout、MAS owner receipt、progress delta / blocker 和 no-forbidden-write proof，并把 owner receipt、AI reviewer receipt、human gate receipt、memory writeback receipt 和 package closure 变体继续纳入同一 transition oracle。
+1. 用 DM002、DM003、Obesity 继续跑 live provider-hosted guarded apply；DM002 当前最新有效结果是 MAS owner `stable_blocker` receipt，blocked reason 为 `medical_paper_readiness_missing`；DM002/DM003 的 completion receipt consumption、human-gate resume、delivered-package metadata parking 和 stop-loss owner receipt 已进入 matrix oracle，下一步仍需真实 artifact delta、AI reviewer update、route decision、human gate、stop-loss 或可推进论文的 MAS owner apply receipt scaleout。
+2. 每条真实 paper line 留下 attempt query、typed closeout、MAS owner receipt、progress delta / blocker 和 no-forbidden-write proof，并把 memory writeback receipt、更多 package closure 变体和真实 owner-chain receipt 继续纳入同一 transition oracle。
 3. 扩展 publication-route memory 的真实 accepted/rejected receipts，保持 memory body 和 accept/reject authority 在 MAS workspace/runtime root；OPL/App 只展示 MAS 输出的 body-free refs、分组、freshness 和 review summary。
 4. 把 stage review locator proof 与 Portal/Workbench read-only 展示接到 production provider-hosted live apply。
 5. 将 MAS-specific 的通用能力需求逐项压回 OPL/App 通用壳：memory locator/index、artifact lifecycle、route graph shell、attention queue、workbench navigation、observability/SLO 和 repair command projection 已有 read-model 基础；下一步用真实 paper-line receipt 驱动这些壳，而不是让 MAS 继续维护第二套通用工作台。
@@ -149,18 +149,18 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 ### 主要差距
 
-- OPL 控制面已把显式 provider-hosted MAG guarded-run task 写成 MAG product sidecar action envelope，并把 MAG sidecar receipt refs ingest 为 task-bound controlled stage attempt 的 typed closeout；这是 live OPL 接入证据，但不是 grant-stage owner receipt、grant quality verdict 或 no-regression evidence。
+- OPL 控制面已把显式 provider-hosted MAG guarded-run task写成 MAG product sidecar action envelope，并把 MAG sidecar receipt refs ingest 为 task-bound controlled stage attempt 的 typed closeout；MAG 本仓还新增 `mag_controlled_soak_receipt_reconciliation_proof` / `controlled-soak-receipt-reconciliation-proof`，可把 sidecar `stage-attempt/closeout`、typed blocker / no-regression evidence 和外部 OPL ledger ref 对账成 probe payload。它证明 receipt reconciliation 形状和 MAG 侧 proof surface 可调用，但不是 grant-stage quality verdict 或 production long-run soak。
 - OPL 已能 ingest MAG `grant_transition_oracle` 并完成 matrix oracle smoke；`family-runtime intake` 现在也能把 sidecar/export 中的 `family_transition_matrix_result` 派生成 provider-hosted `family_transition/domain_tick` task。这关闭的是“OPL runner 不消费 MAG spec / matrix result 不能进入 provider attempt bridge”的 transport 缺口，不关闭真实 grant-stage owner receipt、fundability verdict、submission-ready package verdict 或 long soak。
 - MAG 理想目标态进一步说明哪些 grant-facing 能力不应长期由 MAG 重复维护通用外围：pre-authoring workspace/source intake shell、explicit wakeup / human-gate transport、grant strategy memory locator/writeback transport、submission-ready package locator/gap-report projection、route/decision drilldown、quality/readiness projection shell、artifact lifecycle/restore/retention 和 operator observability 应由 OPL Framework / App 提供通用壳。OPL 当前已有 refs-only shell；MAG 保留 funding-call 解释、fundability、specific aims、authoring quality、grant memory body/accept-reject、package readiness 和 export authority。
-- MAG repo 内 receipt evidence writer 已可把 accepted/rejected decision 写成 runtime receipt instance；真实 OPL-hosted grant-stage attempt 下的 receipt / no-regression evidence 仍未产出。
+- MAG repo 内 receipt evidence writer 已可把 accepted/rejected decision 写成 runtime receipt instance；repo-local proof 已能对账 owner receipt、typed blocker 或 no-regression evidence refs。真实 OPL-hosted grant-stage long-run attempt 下的持续 owner receipt / no-regression evidence 仍未形成 production soak。
 - Grant strategy memory 的 migration/readiness 是 descriptor 或 proof contract 层，真实 memory body / writeback apply 泛化未闭合。
 - Submission-ready package 当前是 MAG-owned export gate；OPL/App 已有 package/export lifecycle read-model shell，后续缺的是用真实 MAG owner receipt / gap report / handoff refs 产品化展示，而不是让 OPL 推断 export readiness。
 - 更大范围 source path 迁移和 legacy active-path 删除仍需 path compatibility 与 no-active-caller proof。
 
 ### 需要完善
 
-1. 用已可 ingest / hydrate 的 MAG transition oracle 与 matrix result 跑真实 provider-hosted transition attempt，并让 controlled grant-stage attempt 经 MAG sidecar / direct entry 产出 domain receipt、typed blocker 或 no-regression evidence。
-2. 用真实 OPL-hosted grant-stage attempt 产出 workspace/runtime accepted/rejected receipt 或 no-regression evidence。
+1. 用已可 ingest / hydrate 的 MAG transition oracle 与 matrix result 跑真实 provider-hosted transition attempt，并让 controlled grant-stage attempt 经 MAG sidecar / direct entry 持续产出 domain receipt、typed blocker 或 no-regression evidence。
+2. 将已落地的 receipt reconciliation proof 推进到真实 OPL-hosted grant-stage line 的长时对账，产出 workspace/runtime accepted/rejected receipt 或 no-regression evidence。
 3. 对 cleanup/restore/retention guarded apply 做真实 workspace 级 receipt proof。
 4. 把 MAG-specific 的通用外围需求接到 OPL 已有 read-model shell：workspace/source intake、explicit wakeup / human-gate transport、grant strategy memory locator/writeback transport、package/export lifecycle、route/decision graph、quality/readiness projection、attention queue 和 observability/SLO；MAG 保留 fundability、authoring quality、route decision、package readiness、export verdict 和 owner receipt。
 5. 在 direct skill path 和 OPL-hosted path parity 稳定后，推进 physical skeleton 物理迁移。
@@ -179,14 +179,14 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 ### 主要差距
 
 - RCA 还不能声明 Temporal-backed production execution 或 OPL-hosted controlled visual stage soak 已完成。
-- OPL 控制面已把显式 provider-hosted RCA `emit_no_regression_evidence` task 写成 product sidecar action envelope，并把 RCA no-regression evidence ref ingest 为 task-bound visual stage attempt 的 typed closeout；这是 live no-regression evidence ref ingestion 证据，但不是 visual-stage long soak 或 artifact-producing owner receipt。
+- OPL 控制面已把显式 provider-hosted RCA `emit_no_regression_evidence` task 写成 product sidecar action envelope，并把 RCA no-regression evidence ref ingest 为 task-bound visual stage attempt 的 typed closeout；RCA 本仓还新增 transition hosted-attempt receipt fixture，模拟 OPL provider attempt bridge 消费 `visual_transition_spec` 后只对账 RCA 返回的 `domain_owner_receipt_ref`、`typed_blocker` 或 `no_regression_evidence_ref`。这是 live no-regression evidence ref ingestion和 repo-local receipt 对账形状证据，但不是 visual-stage long soak 或 artifact-producing owner receipt。
 - RCA 理想目标态显示出一批不应长期留在 RCA 内重复实现的通用外围：source/workspace intake envelope、artifact gallery/handoff shell、route/decision graph renderer、review/repair transport、native helper catalog/execution envelope、screenshot/export proof locator、operator observability 和 workbench drilldown 应由 OPL Framework / App 提供通用壳。OPL 当前已有 refs-only shell；RCA 保留 communication strategy、visual direction、review verdict、export verdict、artifact authority、visual memory body/accept-reject 和 artifact-producing owner receipt。
-- 真实 reusable visual lesson body 写入、真实 artifact-producing owner receipt 和 OPL-hosted visual-stage no-regression evidence 仍未跑出。
+- 真实 reusable visual lesson body 写入、真实 artifact-producing owner receipt 和长时 OPL-hosted visual-stage no-regression evidence 仍未跑出；当前 fixture 不生成 `visual_ready`、`exportable` 或 `handoffable`。
 - Review helper 后续只剩 screenshot capture 主体可继续按自然边界拆分；geometry audit、markdown report、summary projection 已不是 blocker。
 
 ### 需要完善
 
-1. 跑真实 OPL-hosted controlled visual stage attempt，让 RCA 返回 domain receipt、artifact-producing owner receipt、typed blocker 或 no-regression evidence。
+1. 跑真实 OPL-hosted controlled visual stage attempt，让 RCA 返回 domain receipt、artifact-producing owner receipt、typed blocker 或 no-regression evidence，并把 repo-local transition receipt fixture 升级为真实 provider attempt 证据。
 2. 把 visual pattern memory 从 descriptor/proof 推进到真实 runtime receipt refs 和 reusable lesson body writeback，同时继续禁止 repo 保存 memory body 或 artifact blob。
 3. 对 lifecycle cleanup/restore/retention 做真实 visual workspace guarded apply proof。
 4. 将 RCA-specific 的通用外围需求接到 OPL 已有 read-model shell：source/workspace intake envelope、artifact gallery/handoff shell、review/repair transport、route/decision graph、native helper execution envelope、screenshot/export proof locator、attention queue 和 observability/SLO；RCA 保留 visual direction、route decision、review/export verdict、artifact mutation permission 和 owner receipt。
@@ -250,7 +250,7 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 2. `Temporal provider SLO and continuous proof`
    保持显式 Temporal service / worker / production proof 可重复通过，并把 query/signal/history、restart/re-query 和 operator repair 纳入长时 SLO 证据。
 3. `MAS/MAG/RCA live owner receipt`
-   以 MAS 三篇真实 paper line 为主线，继续争取 progress delta、human gate、stop-loss 或稳定 blocker scaleout；MAG/RCA 在 controlled grant / visual stage attempt 中产出 domain receipt、no-regression evidence 或 typed blocker。
+   以 MAS 三篇真实 paper line 为主线，继续争取 progress delta、human gate、stop-loss 或稳定 blocker scaleout；MAG/RCA 已有 repo-local receipt reconciliation / hosted-attempt fixture，下一步是在 controlled grant / visual stage attempt 中跑出真实持续 domain receipt、no-regression evidence 或 typed blocker。
 4. `Unified descriptor and closeout read model`
    保持 `agents descriptors` 聚合入口稳定；MAS/MAG/RCA sidecar 返回的 owner receipt、typed blocker、no-regression evidence refs 都应进入统一 OPL closeout gate，typed closeout memory refs 只做 ref-only 汇总，domain ready verdict 仍由 domain owner 给出。
 5. `Domain memory and lifecycle apply`

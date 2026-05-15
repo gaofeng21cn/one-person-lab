@@ -254,6 +254,50 @@ test('family transition runner advances bundle_stage_ready through domain-declar
   );
 });
 
+test('family transition runner records MAS transition refs without interpreting publication or artifact authority', () => {
+  const spec = {
+    ...masLikeTransitionSpec,
+    transitions: [
+      {
+        ...masLikeTransitionSpec.transitions[0],
+        projection: {
+          route_node_refs: ['mas-route-node:bundle-stage-ready'],
+          publication_eval_ref: 'artifacts/publication_eval/latest.json',
+          controller_decision_ref: 'artifacts/controller_decisions/latest.json',
+          current_package_ref: 'submission/current_package.zip',
+          domain_ready_verdict: 'publication_gate_pending',
+        },
+        authority_boundary: {
+          opl_interprets_publication_verdict: false,
+          opl_authorizes_artifact_mutation: false,
+          publication_verdict_owner: 'med-autoscience',
+          artifact_authority_owner: 'med-autoscience',
+        },
+      },
+    ],
+  } satisfies FamilyTransitionSpec;
+
+  const result = runFamilyTransition({
+    spec,
+    domain_id: 'medautoscience',
+    current_state: 'bundle_stage_ready',
+    event: 'domain_tick',
+    guards: { owner_receipt_observed: true },
+    context: { receipt_ref: 'mas-owner-receipt:publication-gate-pending' },
+  });
+
+  assert.equal(result.status, 'transition_applied');
+  assert.equal(result.projection.domain_ready_verdict, 'publication_gate_pending');
+  assert.equal(result.projection.publication_eval_ref, 'artifacts/publication_eval/latest.json');
+  assert.deepEqual(result.receipt.context_refs, ['mas-owner-receipt:publication-gate-pending']);
+  assert.equal(result.authority_boundary.opl, 'transition_runner_transport_projection_only');
+  assert.equal(result.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  assert.equal(result.authority_boundary.opl_interprets_publication_verdict, false);
+  assert.equal(result.authority_boundary.opl_authorizes_artifact_mutation, false);
+  assert.equal(result.authority_boundary.publication_verdict_owner, 'med-autoscience');
+  assert.equal(result.authority_boundary.artifact_authority_owner, 'med-autoscience');
+});
+
 test('family transition matrix keeps adjacent MAS-like blocked states from crossing into the ready route', () => {
   const result = runFamilyTransitionMatrix({
     spec: masLikeTransitionSpec,
@@ -363,6 +407,10 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.deepEqual(contract.oracle_ingestion.supported_surfaces, ['mag_grant_transition_oracle']);
   assert.ok((contract.oracle_ingestion.adapter_boundary.opl as string[]).includes('adapt oracle fixtures into matrix cases'));
   assert.ok((contract.oracle_ingestion.adapter_boundary.domain_agent as string[]).includes('fundability verdict'));
+  assert.ok((contract.runner_execution_boundary.opl_executes as string[]).includes('domain-declared transition spec'));
+  assert.ok((contract.runner_execution_boundary.opl_records as string[]).includes('transition receipt'));
+  assert.ok((contract.runner_execution_boundary.opl_must_not_interpret as string[]).includes('MAS publication verdict'));
+  assert.ok((contract.runner_execution_boundary.opl_must_not_interpret as string[]).includes('domain artifact authority'));
 
   for (const field of [
     'surface_kind',

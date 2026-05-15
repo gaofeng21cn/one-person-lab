@@ -65,7 +65,7 @@ To use the desktop product, download One Person Lab App from the App repository:
 
 [Download One Person Lab App](https://github.com/gaofeng21cn/one-person-lab-app/releases/latest)
 
-The one-shot installer, initialization flow, runtime/contracts, module management, and machine-readable App interfaces are maintained by this framework repository. Desktop DMGs, complete first-install DMGs, updater metadata, GUI smoke, GitHub Releases, and user tutorials are maintained by the App repository.
+The desktop product one-shot installer, complete first-install package, Docker/WebUI entry point, GitHub Releases, and user tutorials are maintained by the App repository. This repository maintains the CLI, initialization flow, runtime, contracts, module management, and machine-readable App interfaces behind those entries.
 
 To develop a new domain agent, debug the CLI, or integrate runtime surfaces, open the technical entry below.
 
