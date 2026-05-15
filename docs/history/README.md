@@ -25,10 +25,17 @@
 - [Frontdoor 历史资料](./frontdoor-legacy/README.md)
 - [OMX 历史资料](./omx/README.md)
 
+本轮内容级治理后，旧 domain admission tranche、Phase 1/2 activation package、gateway/routed-action examples 和 gateway-derived operating governance matrix 已从 `docs/references/` 迁入本历史层：
+
+- [Domain Admission 过程归档](./process/domain-admission/README.md)
+- [Gateway / Federation 样例语料归档](./compatibility/gateway-federation/examples-corpora/README.md)
+- [Gateway-Derived Operating Governance 归档](./compatibility/gateway-federation/operating-governance/README.md)
+
 Tombstone 规则：
 
 - 退役路线只保留给来源追溯、迁移回顾和审计。
 - 不因为历史文件里仍有命令、验收清单或旧路径示例，就恢复旧路线。
+- 已迁入历史层的文档不得重新作为 active/reference owner 扩写；有用内容先吸收到当前 owner 文档，再保留原文作为 provenance。
 - runtime / product-entry / migration 旧整文档如果已经被吸收，默认从 [Runtime Substrate 历史归档](./runtime-substrate/README.md) 进入。
 - 已吸收的 shared-boundary framing 页面进入 [Shared Boundary 过程历史](./process/shared-boundary/README.md)。
 - Product API / ACP native specs 已迁入 [过程历史归档](./process/README.md)，只保留历史形成过程。

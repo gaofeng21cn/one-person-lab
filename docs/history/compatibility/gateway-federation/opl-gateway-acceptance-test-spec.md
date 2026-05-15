@@ -41,23 +41,23 @@
 - [OPL Gateway 契约面](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](../../../specs/opl-domain-onboarding-contract.md)
-- [OPL Governance / Audit Operating Surface](../../../references/operating-governance/opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](../../../references/operating-governance/opl-publish-promotion-operating-surface.md)
+- [OPL Governance / Audit Operating Surface](./operating-governance/opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./operating-governance/opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](../../../product/opl-public-surface-index.md)
 - [OPL 任务版图](../../../public/task-map.md)
-- [OPL Routed-Safety Example Corpus](../../../references/examples-corpora/opl-routed-safety-example-corpus.md)
+- [OPL Routed-Safety Example Corpus](./examples-corpora/opl-routed-safety-example-corpus.md)
 - [OPL Gateway 落地路线](./opl-gateway-rollout.md)
 - [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
 - former artifact `contracts/opl-framework/acceptance-matrix.json`（未保留为当前 active contract）
 
 ## 配套参考 Surfaces
 
-- [OPL Gateway Example Corpus](../../../references/examples-corpora/opl-gateway-example-corpus.md)
-- [OPL Operating Example Corpus](../../../references/examples-corpora/opl-operating-example-corpus.md)
-- [OPL Operating Record Catalog](../../../references/examples-corpora/opl-operating-record-catalog.md)
-- [OPL Surface Lifecycle Map](../../../references/operating-governance/opl-surface-lifecycle-map.md)
-- [OPL Surface Authority Matrix](../../../references/operating-governance/opl-surface-authority-matrix.md)
-- [OPL Surface Review Matrix](../../../references/operating-governance/opl-surface-review-matrix.md)
+- [OPL Gateway Example Corpus](./examples-corpora/opl-gateway-example-corpus.md)
+- [OPL Operating Example Corpus](./examples-corpora/opl-operating-example-corpus.md)
+- [OPL Operating Record Catalog](./examples-corpora/opl-operating-record-catalog.md)
+- [OPL Surface Lifecycle Map](./operating-governance/opl-surface-lifecycle-map.md)
+- [OPL Surface Authority Matrix](./operating-governance/opl-surface-authority-matrix.md)
+- [OPL Surface Review Matrix](./operating-governance/opl-surface-review-matrix.md)
 - [OPL Candidate Domain Backlog](../../../references/domain-admission/opl-candidate-domain-backlog.md)
 
 这些配套 surface 只承担 illustrative 或 reference-only 角色。gateway corpus 展示跨层组合；operating corpus 把独立的 `P5.M1` / `P5.M2` record materialize 成 example；operating-record catalog 集中索引全部已冻结 record kind；lifecycle map 把这些已冻结 surface 之间的 dependency / discoverability graph 显式化；authority matrix 则把 routing / execution / truth / review / publication ownership boundary 显式化，同时不变成 authorization engine；review matrix 则把 human-review / acceptance / companion-surface / publishability-stage obligation 显式化，同时不变成 approval engine 或 publish controller；candidate-domain backlog 则把 pre-onboarding 阶段仍缺的边界材料显式记录出来，同时不提前收录 domain、也不创造 routed readiness。它们帮助人类与 Agent 理解已冻结 surface，但不替代上面的 contracts 与 acceptance gates。
