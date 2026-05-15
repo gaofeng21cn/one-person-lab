@@ -54,12 +54,12 @@ Machine boundary: 只作为 legacy/provenance 人读配套。当前仓库不再�
 
 ## 上位合同
 
-- [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
+- [OPL Federation Contract](../opl-federation-contract.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
 - [OPL Governance / Audit Operating Surface](../operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../operating-governance/opl-publish-promotion-operating-surface.md)
-- [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
-- [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
+- [OPL Gateway Acceptance Test Spec](../opl-gateway-acceptance-test-spec.md)
+- [OPL Framework Contracts](../../../../../contracts/opl-framework/README.md)
 
 ## 相关配套示例
 

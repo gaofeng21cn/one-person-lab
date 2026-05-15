@@ -17,7 +17,7 @@
 - `OPL` 自己还能继续完成什么
 - 一旦门槛真实满足，最小的更强 federation follow-on 会是什么
 
-曾经规划过的 machine-readable companion `contracts/opl-framework/phase-1-exit-activation-package.json` 未保留为当前合同面；当前可读 machine truth 回到 `contracts/opl-framework/task-topology.json`、`contracts/opl-framework/workstreams.json`、`contracts/opl-framework/domains.json` 和 [OPL Framework Contracts](../../../contracts/opl-framework/README.md)。
+曾经规划过的 machine-readable companion `contracts/opl-framework/phase-1-exit-activation-package.json` 未保留为当前合同面；当前可读 machine truth 回到 `contracts/opl-framework/task-topology.json`、`contracts/opl-framework/workstreams.json`、`contracts/opl-framework/domains.json` 和 [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)。
 
 ## 已冻结的 `Phase 1` 完成面
 

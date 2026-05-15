@@ -18,13 +18,13 @@ Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、s
 
 这层 operating surface 最初建立在以下已归档历史层之上：
 
-- [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
-- [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
+- [OPL Federation Contract](../opl-federation-contract.md)
+- [OPL Gateway 契约面](../opl-read-only-discovery-gateway.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
+- [OPL Domain Onboarding Contract](../../../../specs/opl-domain-onboarding-contract.md)
+- [OPL Gateway Acceptance Test Spec](../opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- 当前机器可读合同目录：[`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
+- 当前机器可读合同目录：[`../../contracts/opl-framework/README.md`](../../../../../contracts/opl-framework/README.md)
 
 这些层只作为 provenance input。当前 topology 与 owner boundary 仍以核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 stage-led framework roadmap 为准。
 

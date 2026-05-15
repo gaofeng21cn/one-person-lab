@@ -38,7 +38,7 @@ Onboarding contract 负责定义正式收录门槛。
 
 配套 tranche 总结：
 
-- [OPL Candidate Workstream Tranche Closeout](./opl-candidate-workstream-tranche-closeout.md)
+- [OPL Candidate Workstream Tranche Closeout](../../history/process/domain-admission/opl-candidate-workstream-tranche-closeout.md)
 
 ## 非目标
 
