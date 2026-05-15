@@ -317,6 +317,7 @@ function summarizeGenericProjections(
       memory_locator_index: projections.memory_locator_index.summary,
       package_export_lifecycle: projections.package_export_lifecycle.summary,
       action_routing: projections.action_routing.summary,
+      transition_bridge_evidence: projections.transition_bridge_evidence.summary,
     },
     projections: {
       artifact_gallery: projections.artifact_gallery,
@@ -327,6 +328,7 @@ function summarizeGenericProjections(
       workspace_source_intake: projections.workspace_source_intake,
       memory_locator_index: projections.memory_locator_index,
       package_export_lifecycle: projections.package_export_lifecycle,
+      transition_bridge_evidence: projections.transition_bridge_evidence,
     },
     authority_boundary: {
       can_read_domain_truth_body: false,
@@ -411,6 +413,7 @@ function summarizeAttemptEvidence(
   const memoryRefEvidence = closeoutMemoryRefEvidence(closeouts, domainIds);
   const operatorActionRouting = summarizeOperatorActionRouting(attempts, closeouts, signals);
   const genericProjections = summarizeGenericProjections(attempts, closeouts, signals);
+  const transitionBridgeEvidence = genericProjections.projections.transition_bridge_evidence;
   return {
     surface_kind: 'opl_stage_attempt_functional_closeout_evidence',
     ledger_attempt_count: attempts.length,
@@ -439,6 +442,7 @@ function summarizeAttemptEvidence(
       opl_writes_memory_body: false,
     },
     operator_action_routing_summary: operatorActionRouting.summary,
+    transition_bridge_evidence_summary: transitionBridgeEvidence.summary,
     generic_projection_summary: genericProjections.summary,
     generic_projections: genericProjections,
     operator_action_routing: {
@@ -457,6 +461,9 @@ function summarizeAttemptEvidence(
       const domainLifecycleRefs = lifecycleProofRefs(domainLifecycleProofs);
       const domainMemory = memoryRefEvidence.domains.find((entry) => entry.domain_id === domainId);
       const domainActions = operatorActionRouting.actions.filter((action) => action.domain_id === domainId);
+      const domainTransitionBridgeAttempts = transitionBridgeEvidence.attempts.filter((attempt) =>
+        attempt.domain_id === domainId
+      );
       return {
         domain_id: domainId,
         attempt_count: domainAttempts.length,
@@ -478,6 +485,21 @@ function summarizeAttemptEvidence(
         operator_provider_signal_route_refs: actionRouteRefs(domainActions, 'provider_signal'),
         operator_domain_sidecar_route_refs: actionRouteRefs(domainActions, 'domain_sidecar'),
         operator_direct_skill_route_refs: actionRouteRefs(domainActions, 'direct_skill'),
+        transition_bridge_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+          attempt.evidence.receipt_refs
+        )),
+        transition_bridge_owner_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+          attempt.evidence.owner_receipt_refs
+        )),
+        transition_bridge_no_regression_evidence_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+          attempt.evidence.no_regression_evidence_refs
+        )),
+        transition_bridge_typed_blocker_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+          attempt.evidence.typed_blocker_refs
+        )),
+        transition_bridge_typed_blocker_count: domainTransitionBridgeAttempts.reduce((count, attempt) =>
+          count + attempt.evidence.typed_blocker_count, 0
+        ),
       };
     }),
     memory_ref_evidence: memoryRefEvidence,
