@@ -542,6 +542,153 @@ test('runtime snapshot exposes lifecycle guarded-apply receipt refs in operator 
   }
 });
 
+test('runtime snapshot exposes transition bridge owner evidence as refs-only operator projection', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-transition-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const workspaceLocator = {
+      workspace_root: '/tmp/mag',
+      transition_bridge: {
+        surface_kind: 'opl_family_transition_provider_bridge',
+        transition_id: 'call_intake_complete_to_fundability_strategy',
+        transition_status: 'transition_applied',
+        current_state: 'call_and_candidate_intake',
+        next_state: 'fundability_strategy',
+        event: 'domain_tick',
+        owner_route: {
+          owner: 'med-autogrant',
+          route_ref: 'mag-transition:call_intake_complete_to_fundability_strategy',
+        },
+        evidence: {
+          receipt_refs: ['mag-transition-receipt:intake_handoff_receipt'],
+          owner_receipt_refs: ['mag-owner-receipt:intake_handoff_receipt'],
+          no_regression_evidence_refs: ['mag-no-regression:intake_handoff'],
+          typed_blocker_refs: ['mag-blocker:fundability-owner-followup'],
+          typed_blockers: [
+            {
+              blocker_id: 'mag-blocker:fundability-owner-followup',
+              reason: 'domain_owner_followup_required',
+              refs: ['mag-blocker:fundability-owner-followup'],
+            },
+          ],
+          domain_owner_receipt_observed: true,
+          no_regression_evidence_observed: true,
+          typed_blocker_count: 1,
+          opl_evidence_boundary: 'refs_only_no_domain_verdict_authority',
+        },
+        opl_executes_domain_action: false,
+        opl_writes_domain_truth: false,
+        opl_authorizes_domain_verdict: false,
+        domain_owner_receipt_required: true,
+      },
+    };
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'family_transition:call_intake_complete_to_fundability_strategy',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify(workspaceLocator),
+      '--source-fingerprint',
+      'sha256:mag-transition-workbench',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['mag-closeout:transition-provider-attempt'],
+        consumed_refs: ['mag-oracle-fixture:call_intake_ready_to_fundability_strategy'],
+        next_owner: 'med-autogrant',
+        domain_ready_verdict: 'domain_gate_pending',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const snapshot = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_tray_snapshot;
+    const workbenchAttempt = snapshot.stage_attempt_workbench.attempts.find(
+      (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
+    );
+    const attemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
+      (item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptId}`,
+    );
+
+    assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.projection_scope, 'stage_attempt_workbench');
+    assert.equal(
+      snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.attempt_with_transition_bridge_count,
+      1,
+    );
+    assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.owner_receipt_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.no_regression_evidence_ref_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.typed_blocker_ref_count, 1);
+    assert.equal(
+      snapshot.stage_attempt_workbench.transition_bridge_evidence.authority_boundary.can_execute_domain_action,
+      false,
+    );
+    assert.equal(workbenchAttempt.transition_bridge_evidence.transition_id, 'call_intake_complete_to_fundability_strategy');
+    assert.equal(workbenchAttempt.transition_bridge_evidence.domain_owner_receipt_required, true);
+    assert.deepEqual(workbenchAttempt.transition_bridge_evidence.evidence.receipt_refs, [
+      'mag-transition-receipt:intake_handoff_receipt',
+    ]);
+    assert.deepEqual(workbenchAttempt.transition_bridge_evidence.evidence.owner_receipt_refs, [
+      'mag-owner-receipt:intake_handoff_receipt',
+    ]);
+    assert.deepEqual(workbenchAttempt.transition_bridge_evidence.evidence.no_regression_evidence_refs, [
+      'mag-no-regression:intake_handoff',
+    ]);
+    assert.deepEqual(workbenchAttempt.transition_bridge_evidence.evidence.typed_blocker_refs, [
+      'mag-blocker:fundability-owner-followup',
+    ]);
+    assert.equal(workbenchAttempt.transition_bridge_evidence.evidence.domain_owner_receipt_observed, true);
+    assert.equal(workbenchAttempt.transition_bridge_evidence.evidence.no_regression_evidence_observed, true);
+    assert.equal(workbenchAttempt.transition_bridge_evidence.evidence.typed_blocker_count, 1);
+    assert.equal(
+      workbenchAttempt.transition_bridge_evidence.evidence.opl_evidence_boundary,
+      'refs_only_no_domain_verdict_authority',
+    );
+    assert.equal(
+      workbenchAttempt.transition_bridge_evidence.authority_boundary.can_authorize_domain_verdict,
+      false,
+    );
+    assert.equal(
+      workbenchAttempt.action_routing.actions.some((action: { action_kind: string }) =>
+        action.action_kind === 'projection_drilldown:transition_bridge_evidence'
+      ),
+      true,
+    );
+    assert.equal(
+      attemptItem.stage_attempt_workbench.transition_bridge_evidence.evidence.owner_receipt_refs[0],
+      'mag-owner-receipt:intake_handoff_receipt',
+    );
+    assert.equal(
+      attemptItem.stage_attempt_workbench.transition_bridge_evidence.authority_boundary.can_write_domain_truth,
+      false,
+    );
+    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime snapshot projects multi-attempt workbench groups, filters, and attention counters', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-ledger-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

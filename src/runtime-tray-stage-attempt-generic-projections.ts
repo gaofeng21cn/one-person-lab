@@ -31,6 +31,10 @@ import {
   buildWorkbenchRouteDecisionGraph,
 } from './runtime-tray-route-decision-graph.ts';
 import {
+  buildAttemptTransitionBridgeEvidence,
+  buildWorkbenchTransitionBridgeEvidence,
+} from './runtime-tray-transition-bridge-evidence.ts';
+import {
   buildAttemptWorkspaceSourceIntake,
   buildWorkbenchWorkspaceSourceIntake,
 } from './runtime-tray-workspace-source-intake.ts';
@@ -63,6 +67,12 @@ export type StageAttemptGenericProjectionInput = {
 };
 
 export function buildAttemptGenericProjections(input: StageAttemptGenericProjectionInput) {
+  const transitionBridgeEvidence = buildAttemptTransitionBridgeEvidence({
+    stage_attempt_id: input.stage_attempt_id,
+    domain_id: input.domain_id,
+    stage_id: input.stage_id,
+    workspace_locator: input.workspace_locator,
+  });
   return {
     artifact_gallery: buildAttemptArtifactGallery({
       stage_attempt_id: input.stage_attempt_id,
@@ -148,7 +158,9 @@ export function buildAttemptGenericProjections(input: StageAttemptGenericProject
       route_impact: input.route_impact,
       human_gate_refs: input.human_gate_refs,
       resume_ledger: input.resume_ledger,
+      transition_bridge_evidence: transitionBridgeEvidence,
     }),
+    transition_bridge_evidence: transitionBridgeEvidence,
   };
 }
 
@@ -163,5 +175,6 @@ export function buildWorkbenchGenericProjections(attempts: StageAttemptGenericPr
     memory_locator_index: buildWorkbenchMemoryLocatorIndex(attempts),
     package_export_lifecycle: buildWorkbenchPackageExportLifecycle(attempts),
     action_routing: buildWorkbenchOperatorActionRouting(attempts),
+    transition_bridge_evidence: buildWorkbenchTransitionBridgeEvidence(attempts),
   };
 }
