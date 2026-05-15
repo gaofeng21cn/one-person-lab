@@ -1,3 +1,5 @@
+import { providerProofStatusIsCurrentlyProven } from './family-runtime-provider-continuous-proof.ts';
+
 type SummaryProjection = Record<string, unknown>;
 
 type ProviderContinuousProofProjection = {
@@ -98,7 +100,7 @@ function domainCoverageStatus(domain: AttemptEvidenceDomain) {
 
 function providerSloReady(proof: ProviderContinuousProofProjection) {
   return (
-    proof.continuous_proof_status === 'all_observed_proofs_proven'
+    providerProofStatusIsCurrentlyProven(proof.continuous_proof_status)
     && proof.proof_slo_status === 'proof_fresh'
   );
 }

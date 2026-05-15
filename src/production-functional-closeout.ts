@@ -16,7 +16,10 @@ import {
   masGuardedApplyOwnerReceiptRefs,
   masGuardedApplyTypedBlockers,
 } from './production-functional-closeout-mas-guarded-evidence.ts';
-import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
+import {
+  buildProviderContinuousProof,
+  providerProofStatusIsCurrentlyProven,
+} from './family-runtime-provider-continuous-proof.ts';
 import {
   listStageAttemptCloseouts,
   listStageAttemptSignals,
@@ -823,7 +826,7 @@ function buildGlobalBlockers(input: {
   if (input.providerReadiness.typed_blocker) {
     blockers.push(input.providerReadiness.typed_blocker);
   }
-  if (input.providerContinuousProof.continuous_proof_status !== 'all_observed_proofs_proven') {
+  if (!providerProofStatusIsCurrentlyProven(input.providerContinuousProof.continuous_proof_status)) {
     blockers.push({
       blocker_kind: 'temporal_provider_slo',
       blocker_id: 'temporal_provider_continuous_proof_not_proven',
@@ -834,7 +837,7 @@ function buildGlobalBlockers(input: {
     });
   }
   if (
-    input.providerContinuousProof.continuous_proof_status === 'all_observed_proofs_proven'
+    providerProofStatusIsCurrentlyProven(input.providerContinuousProof.continuous_proof_status)
     && input.providerContinuousProof.proof_slo_status !== 'proof_fresh'
   ) {
     blockers.push({

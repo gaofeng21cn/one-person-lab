@@ -8,6 +8,7 @@ type ProviderContinuousProof = ReturnType<typeof buildProviderContinuousProof>;
 function proofStatusLabel(status: string) {
   const labels: Record<string, string> = {
     all_observed_proofs_proven: 'Provider proof 已通过',
+    latest_proof_proven: 'Provider proof 已恢复',
     no_proof_observed: '缺少 provider proof',
     proof_blocker_observed: 'Provider proof 待修复',
     proof_stale: 'Provider proof 已过期',
@@ -17,7 +18,10 @@ function proofStatusLabel(status: string) {
 }
 
 function proofSummary(proof: ProviderContinuousProof) {
-  if (proof.continuous_proof_status === 'all_observed_proofs_proven') {
+  if (
+    proof.continuous_proof_status === 'all_observed_proofs_proven'
+    || proof.continuous_proof_status === 'latest_proof_proven'
+  ) {
     return proof.latest_closeout_status
       ? `最近 Temporal production proof 为 ${proof.latest_closeout_status}；该结论只证明 provider residency。`
       : 'Temporal production proof 已记录；该结论只证明 provider residency。';
