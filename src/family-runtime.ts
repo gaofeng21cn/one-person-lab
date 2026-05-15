@@ -130,6 +130,56 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
       | FamilyRuntimeTaskRow
       | undefined;
     if (existing) {
+      const exportedPayloadJson = JSON.stringify(input.payload);
+      const exportedTaskChanged = existing.payload_json !== exportedPayloadJson
+        || existing.task_kind !== input.taskKind
+        || existing.domain_id !== input.domainId;
+      if (existing.status === 'succeeded' && exportedTaskChanged) {
+        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            source = ?, requires_approval = ?, approved_at = NULL, lease_owner = NULL,
+            lease_expires_at = NULL, last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          input.taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          input.requiresApproval ? 1 : 0,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_domain_export_update',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            reason: 'domain_export_changed_after_terminal_attempt',
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued',
+          body: `${input.domainId}:${input.taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
       insertEvent(db, {
         taskId: existing.task_id,
         domainId: existing.domain_id,
@@ -312,6 +362,15 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     return { task_id: row.task_id, status: 'blocked', reason: 'domain_forbidden_write', stage_attempts: stageAttempts };
   }
   ensureProviderHostedStageAttempt(db, row, payload);
+  const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+    attempt.status === 'queued'
+    || attempt.status === 'running'
+    || attempt.status === 'checkpointed'
+    || attempt.status === 'blocked'
+    || attempt.status === 'human_gate'
+    || attempt.status === 'failed'
+  ));
+  const activeStageAttemptIds = activeStageAttempts.map((attempt) => attempt.stage_attempt_id);
 
   const leaseOwner = `opl-family-runtime:${process.pid}`;
   const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -331,6 +390,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
   });
   const runningStageAttempts = updateStageAttemptsForTask(db, {
     taskId: row.task_id,
+    stageAttemptIds: activeStageAttemptIds,
     status: 'running',
     incrementAttempt: true,
     activityEvent: {
@@ -380,6 +440,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     const typedCloseoutPacket = closeoutPacketFromSidecarOutput(output);
     const checkpointedStageAttempts = updateStageAttemptsForTask(db, {
       taskId: row.task_id,
+      stageAttemptIds: activeStageAttemptIds,
       status: 'completed',
       closeoutRefs,
       activityEvent: {
@@ -389,7 +450,9 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
       },
     });
     const stageAttempts = typedCloseoutPacket
-      ? listStageAttemptsForTask(db, row.task_id).map((attempt) => ingestStageAttemptCloseout(db, {
+      ? listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
+          activeStageAttemptIds.length === 0 || activeStageAttemptIds.includes(attempt.stage_attempt_id)
+        )).map((attempt) => ingestStageAttemptCloseout(db, {
           stageAttemptId: attempt.stage_attempt_id,
           packet: typedCloseoutPacket,
         }).attempt)
@@ -427,6 +490,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
   });
   const stageAttempts = updateStageAttemptsForTask(db, {
     taskId: row.task_id,
+    stageAttemptIds: activeStageAttemptIds,
     status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
     blockedReason: nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : errorMessage,
     activityEvent: {

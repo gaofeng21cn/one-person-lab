@@ -123,7 +123,12 @@ export function ensureProviderHostedStageAttempt(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
-  if (listStageAttemptsForTask(db, row.task_id).length > 0) {
+  const existingAttempts = listStageAttemptsForTask(db, row.task_id);
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const expectedSourceFingerprint = sourceFingerprintForProviderHostedTask(row, payload);
+  if (existingAttempts.some((attempt) => (
+    attempt.provider_kind === providerKind && attempt.source_fingerprint === expectedSourceFingerprint
+  ))) {
     return null;
   }
   const stageId = stageIdForProviderHostedTask(row, payload);
@@ -133,9 +138,9 @@ export function ensureProviderHostedStageAttempt(
   const result = createStageAttempt(db, {
     domainId: row.domain_id,
     stageId,
-    providerKind: resolveFamilyRuntimeProviderKind(),
+    providerKind,
     workspaceLocator: workspaceLocatorForProviderHostedTask(row, payload),
-    sourceFingerprint: sourceFingerprintForProviderHostedTask(row, payload),
+    sourceFingerprint: expectedSourceFingerprint,
     executorKind: 'domain_sidecar',
     taskId: row.task_id,
   });
