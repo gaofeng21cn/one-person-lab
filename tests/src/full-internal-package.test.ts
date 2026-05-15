@@ -294,7 +294,7 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
 
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-cache-test-'));
   try {
-    const guiRoot = path.join(tmpRoot, 'opl-aion-shell');
+    const guiRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
     const outDir = path.join(guiRoot, 'out');
     const cacheDir = path.join(tmpRoot, 'cache');
     const outputDir = path.join(tmpRoot, 'out');

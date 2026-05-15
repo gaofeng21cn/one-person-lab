@@ -32,7 +32,7 @@ const DEFAULT_REPOS = [
   ['one-person-lab', repoRoot],
   ['med-autogrant', path.join(workspaceRoot, 'med-autogrant')],
   ['med-deepscientist', path.join(workspaceRoot, 'med-deepscientist')],
-  ['opl-aion-shell', path.join(workspaceRoot, 'opl-aion-shell')],
+  ['one-person-lab-app', path.join(workspaceRoot, 'one-person-lab-app')],
 ];
 
 const args = parseArgs(process.argv.slice(2));

@@ -66,7 +66,7 @@ Domain repo 不应长期维护 generic scheduler、generic queue、generic attem
 
 ### App / Workbench 负责
 
-One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录。当前 GUI shell 实现来自 `opl-aion-shell` 这个上游 AionUI fork 依赖；目标迁移形态是独立 `one-person-lab-app` 产品仓，当前 AionUI fork 作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护。迁移计划见 [One Person Lab App 仓库拆分计划](./one-person-lab-app-repo-split-plan.md)。
+One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录。当前 GUI shell 实现来自独立 `one-person-lab-app` 产品仓的 `shells/aionui/`，该目录作为 upstream-backed AionUI shell adapter 维护。迁移计划见 [One Person Lab App 仓库拆分计划](./one-person-lab-app-repo-split-plan.md)。
 
 它的产品工作台职责是：
 
@@ -103,7 +103,7 @@ README/索引，但 README 必须说明 owner、purpose、state、machine bounda
 或 tombstone 暂留，并由 canonical 目录 README 明确指向。旧目录不能继续作为
 new recurring material 的默认落点。
 
-`opl-aion-shell` 当前 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。目标 App 仓建立后，App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`shells/aionui/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理。
+App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`shells/aionui/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理。
 
 统一目录集合如下：
 
