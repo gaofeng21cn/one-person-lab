@@ -62,8 +62,7 @@
 需要更深背景时，进入这些参考面：
 
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)
-- [OPL Governance / Audit Operating Surface](../references/operating-governance/opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](../references/operating-governance/opl-publish-promotion-operating-surface.md)
+- [Gateway-Derived Operating Governance 归档](../history/compatibility/gateway-federation/operating-governance/README.md)
 - [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
 - [Runtime Substrate 历史归档](../history/runtime-substrate/README.md)
 - 只有明确需要 provenance 或 diagnostic 时，才进入 `docs/history/compatibility/` 下的 Legacy Gateway/Federation archive

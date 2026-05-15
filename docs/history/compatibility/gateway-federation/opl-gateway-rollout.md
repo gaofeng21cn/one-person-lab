@@ -191,13 +191,13 @@ Human / Agent
 
 具体合同：
 
-- [OPL Governance / Audit Operating Surface](../../../references/operating-governance/opl-governance-audit-operating-surface.md)
+- [OPL Governance / Audit Operating Surface](./operating-governance/opl-governance-audit-operating-surface.md)
 
 ## Phase G5：真实公开产品面
 
 具体合同：
 
-- [OPL Publish / Promotion Operating Surface](../../../references/operating-governance/opl-publish-promotion-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./operating-governance/opl-publish-promotion-operating-surface.md)
 
 目标：
 
@@ -221,7 +221,7 @@ Human / Agent
 
 当前配套参考：
 
-- [OPL Gateway Example Corpus](../../../references/examples-corpora/opl-gateway-example-corpus.md)
+- [OPL Gateway Example Corpus](./examples-corpora/opl-gateway-example-corpus.md)
 
 这组 corpus 只能作为 illustrative 的 contract-level walkthrough，不能被理解成 execution runtime。
 
