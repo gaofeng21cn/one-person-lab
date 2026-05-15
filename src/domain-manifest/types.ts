@@ -6,6 +6,7 @@ import type {
 import type { FamilyActionCatalog } from '../family-action-catalog-contract.ts';
 import type { FamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import type { FamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
+import type { GrantTransitionOracle } from '../family-transition-oracle-ingestion.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -463,6 +464,7 @@ export interface NormalizedDomainManifest {
   } | null;
   family_action_catalog: FamilyActionCatalog | null;
   family_stage_control_plane: FamilyStageControlPlane | null;
+  grant_transition_oracle: GrantTransitionOracle | null;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;
   standard_domain_agent_skeleton_source_field: string | null;
