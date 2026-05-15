@@ -980,6 +980,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     family_stage_control_plane: familyStageControlPlane,
     ...familyTransitionSurfaces,
     grant_transition_oracle: grantTransitionOracle,
+    visual_transition_spec: familyTransitionSurfaces.visual_transition_spec,
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,

@@ -3,6 +3,11 @@ import {
   type FamilyTransitionMatrixCase,
   type FamilyTransitionSpec,
 } from '../family-transition-runner.ts';
+import {
+  adaptVisualTransitionSpecToFamilyTransitionSpec,
+  buildVisualTransitionMatrixCases,
+  normalizeVisualTransitionSpec,
+} from '../family-transition-visual-ingestion.ts';
 import type { NormalizedFamilyTransitionProjection } from './types.ts';
 import {
   isRecord,
@@ -75,6 +80,10 @@ function normalizeDescriptor(value: unknown): JsonRecord | null {
     throw new Error('family_transition_spec_descriptor.surface_kind must be family_transition_spec_descriptor.');
   }
   return value;
+}
+
+function normalizeVisualSpec(value: unknown) {
+  return isRecord(value) ? normalizeVisualTransitionSpec(value) : null;
 }
 
 function descriptorLocatorRefs(descriptor: JsonRecord | null): JsonRecord {
@@ -180,12 +189,22 @@ export function normalizeFamilyTransitionSurfaces(
   manifestTargetDomainId: string,
 ) {
   const descriptor = normalizeDescriptor(manifest.family_transition_spec_descriptor);
-  const spec = normalizeFamilyTransitionSpec(manifest.family_transition_spec);
-  const cases = normalizeFamilyTransitionMatrixCases(manifest.family_transition_matrix_cases);
+  const visualTransitionSpec = normalizeVisualSpec(manifest.visual_transition_spec);
+  const spec = normalizeFamilyTransitionSpec(manifest.family_transition_spec)
+    ?? (visualTransitionSpec
+      ? adaptVisualTransitionSpecToFamilyTransitionSpec(visualTransitionSpec, manifestTargetDomainId)
+      : null);
+  const explicitCases = normalizeFamilyTransitionMatrixCases(manifest.family_transition_matrix_cases);
+  const cases = explicitCases.length > 0
+    ? explicitCases
+    : visualTransitionSpec
+      ? buildVisualTransitionMatrixCases(visualTransitionSpec, manifestTargetDomainId)
+      : [];
   return {
     family_transition_spec_descriptor: descriptor,
     family_transition_spec: spec,
     family_transition_matrix_cases: cases,
+    visual_transition_spec: visualTransitionSpec,
     family_transition: normalizeFamilyTransitionProjection({
       manifestTargetDomainId,
       spec,

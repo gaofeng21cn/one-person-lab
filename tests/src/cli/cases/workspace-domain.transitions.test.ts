@@ -181,6 +181,95 @@ function withMasFamilyTransitionSurfaces(payload: JsonRecord, overrides: JsonRec
   };
 }
 
+function withRcaVisualTransitionSpec(payload: JsonRecord) {
+  return {
+    ...payload,
+    visual_transition_spec: {
+      surface_kind: 'visual_transition_spec',
+      spec_id: 'rca.visual_transition_spec.v1',
+      owner: 'redcube_ai',
+      status: 'contract_landed_runner_integration_pending',
+      transition_model: 'rca_owned_transition_table_oracle_fixture_refs_only',
+      source_contract: 'docs/active/rca-ideal-state-gap-plan.md#declare_visual_transition_spec',
+      covered_family_stage_kinds: [
+        'source_intake',
+        'communication_strategy',
+        'visual_direction',
+        'artifact_creation',
+        'review_and_revision',
+        'package_and_handoff',
+      ],
+      transition_table: [
+        {
+          transition_id: 'source_ready_to_strategy',
+          from_stage: 'source_intake',
+          to_stage: 'communication_strategy',
+          required_guard_refs: ['source_readiness_ref', 'source_gap_ref'],
+          owner_action: 'continue_to_communication_strategy',
+        },
+        {
+          transition_id: 'artifact_ready_to_review',
+          from_stage: 'artifact_creation',
+          to_stage: 'review_and_revision',
+          required_guard_refs: ['artifact_refs', 'prompt_manifest_ref', 'style_manifest_ref'],
+          owner_action: 'run_review_and_repair_gate',
+        },
+      ],
+      guard_contract: {
+        guard_model: 'refs_and_typed_blockers_only',
+        required_guard_classes: [
+          'source_readiness',
+          'artifact_locator',
+          'review_state',
+          'export_proof',
+        ],
+        allowed_blocker_kinds: [
+          'source_material_required',
+          'artifact_refs_missing',
+          'review_blocked_items_present',
+          'export_proof_missing',
+          'domain_owner_receipt_required',
+        ],
+      },
+      oracle_fixture: {
+        fixture_id: 'rca.visual_transition_oracle.fixture.v1',
+        fixture_model: 'transition_guard_expected_owner_action_refs_only',
+        covered_families: ['ppt_deck', 'xiaohongshu', 'poster_onepager'],
+        expected_return_shapes: [
+          'next_stage',
+          'repair_action',
+          'typed_blocker',
+          'domain_owner_receipt_ref',
+          'no_regression_evidence_ref',
+        ],
+        forbidden_oracle_fields: [
+          'visual_verdict',
+          'export_verdict',
+          'review_verdict',
+          'canonical_artifact_blob',
+          'memory_content_body',
+        ],
+      },
+      runner_boundary: {
+        opl_can_execute_transition_spec: true,
+        opl_can_retry_or_dead_letter: true,
+        opl_can_store_transition_metadata: true,
+        opl_can_declare_visual_ready: false,
+        opl_can_declare_exportable: false,
+        opl_can_mutate_artifacts: false,
+        domain_receipt_required_for_visual_closeout: true,
+      },
+      repository_boundary: {
+        repo_tracks_transition_spec: true,
+        repo_tracks_oracle_fixture_contract: true,
+        repo_tracks_runner_state: false,
+        repo_tracks_visual_or_export_artifacts: false,
+        repo_tracks_receipt_instances: false,
+      },
+    },
+  };
+}
+
 test('domain manifests runs MAS-declared family transition matrix when actual spec and cases are present', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-state-'));
   const fixtures = loadFamilyManifestFixtures();
@@ -377,6 +466,90 @@ test('agents descriptor projects descriptor-only MAS transition specs as refresh
     );
     assert.equal(inspect.family_agent_descriptor.descriptor_refs.family_transition.status, 'descriptor_only');
     assert.equal(transition.non_authority_flags.opl_writes_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain manifests adapts RCA visual transition specs into the family transition matrix', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-rca-visual-transition-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(withRcaVisualTransitionSpec(fixtures.redcube)),
+    ], env);
+
+    const manifestOutput = runCli(['domain', 'manifests'], env);
+    const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'redcube'
+    );
+
+    assert.equal(redcube.status, 'resolved');
+    assert.equal(redcube.manifest.visual_transition_spec.spec_id, 'rca.visual_transition_spec.v1');
+    assert.equal(redcube.manifest.family_transition_spec.spec_id, 'rca.visual_transition_spec.v1');
+    assert.equal(redcube.manifest.family_transition_matrix_cases.length, 2);
+    assert.equal(redcube.manifest.family_transition.status, 'matrix_evaluated');
+    assert.equal(redcube.manifest.family_transition.matrix_result.summary.total, 2);
+    assert.equal(redcube.manifest.family_transition.matrix_result.summary.transition_applied, 2);
+    assert.equal(redcube.manifest.family_transition.authority_boundary.visual_export_verdict_owner, 'redcube_ai');
+    assert.equal(redcube.manifest.family_transition.non_authority_flags.opl_authorizes_publication_or_fundability_verdict, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('agents descriptor projects RCA visual transition spec ingestion without taking visual authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-descriptor-rca-visual-transition-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(withRcaVisualTransitionSpec(fixtures.redcube)),
+    ], env);
+
+    const list = runCli(['agents', 'descriptors'], env);
+    assert.equal(list.family_agent_descriptors.summary.transition_matrix_evaluated_count, 1);
+
+    const inspect = runCli(['agents', 'descriptor', '--domain', 'rca'], env);
+    const transition = inspect.family_agent_descriptor.family_transition;
+
+    assert.equal(transition.status, 'matrix_evaluated');
+    assert.equal(transition.spec_id, 'rca.visual_transition_spec.v1');
+    assert.equal(transition.transition_count, 2);
+    assert.equal(transition.case_count, 2);
+    assert.equal(transition.matrix_summary.transition_applied, 2);
+    assert.equal(transition.authority_boundary.visual_transition_surface_kind, 'visual_transition_spec');
+    assert.equal(transition.authority_boundary.opl_can_declare_visual_ready, false);
+    assert.equal(transition.authority_boundary.opl_can_declare_exportable, false);
+    assert.equal(transition.authority_boundary.opl_can_mutate_artifacts, false);
+    assert.equal(transition.non_authority_flags.opl_executes_domain_action, false);
+    assert.equal(inspect.family_agent_descriptor.descriptor_refs.visual_transition_spec.status, 'resolved');
+    assert.equal(inspect.family_agent_descriptor.descriptor_refs.family_transition.status, 'resolved');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
