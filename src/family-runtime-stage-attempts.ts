@@ -715,6 +715,7 @@ export function updateStageAttemptsForTask(
   input: {
     taskId: string;
     status: StageAttemptStatus;
+    stageAttemptIds?: string[];
     incrementAttempt?: boolean;
     checkpointRefs?: string[];
     closeoutRefs?: string[];
@@ -723,7 +724,12 @@ export function updateStageAttemptsForTask(
     activityEvent?: Record<string, unknown>;
   },
 ) {
-  const rows = db.prepare('SELECT * FROM stage_attempts WHERE task_id = ?').all(input.taskId) as StageAttemptRow[];
+  const rows = input.stageAttemptIds && input.stageAttemptIds.length > 0
+    ? db.prepare(`
+      SELECT * FROM stage_attempts
+      WHERE task_id = ? AND stage_attempt_id IN (${input.stageAttemptIds.map(() => '?').join(',')})
+    `).all(input.taskId, ...input.stageAttemptIds) as StageAttemptRow[]
+    : db.prepare('SELECT * FROM stage_attempts WHERE task_id = ?').all(input.taskId) as StageAttemptRow[];
   if (rows.length === 0) {
     return [];
   }
