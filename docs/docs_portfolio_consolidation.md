@@ -16,7 +16,7 @@ OPL、MAS、MAG、RCA 采用同一套 canonical docs taxonomy：
 
 这套目录不是按“当前有没有文件”决定保留，而是按四仓长期生命周期职责决定保留。目录有长期职责时，可以暂时只有 README/索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和新增正文准入规则。目录没有长期职责时，不进入 taxonomy。
 
-`opl-aion-shell` 的 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。OPL 只在本仓记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
+当前 `opl-aion-shell` 的 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。目标 App 仓建立后，`one-person-lab-app/docs/` 治理 One Person Lab App 的产品文档、release、testing、user guides 和 screenshots；`shells/aionui/docs/` 仍按上游 AionUI 依赖文档处理，不主导 App 顶层。OPL 主仓只记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
 
 ## 主参考
 

@@ -1,5 +1,22 @@
 # OPL 关键决策
 
+## 2026-05-15
+
+### 决策：One Person Lab App 拆为独立产品仓，AionUI 只作为 shell adapter 子目录维护
+
+原因：OPL Framework 已经形成完整的 stage-led 智能体开发与运行框架边界；继续把 App 打包、页面状态、截图教程、Electron 更新、AionUI upstream intake 和 framework runtime/contracts 混在同一层，会让维护者难以判断 owner，也会把当前 GUI 基座误读成 OPL 顶层身份。更清晰的维护形态是：`one-person-lab` 保持 Framework repo，`one-person-lab-app` 成为 App 产品仓；当前 AionUI fork 进入 `shells/aionui/`，作为可替换、可跟随 upstream 的 shell adapter。
+
+影响：
+
+- 默认实施方式是直接将现有 GitHub 仓 `gaofeng21cn/opl-aion-shell` 改名为 `gaofeng21cn/one-person-lab-app`，再在同一仓内重组目录；新建全新 repo 只作为权限、archive 或发布策略受阻时的备选。
+- `one-person-lab` 继续持有 OPL Framework：CLI、runtime、Temporal provider、contracts、module/skill sync、domain discovery、runtime snapshot 和 framework-level verification。
+- App 产品文档、打包、更新、Full first-install 包、页面状态测试、首启测试、截图和用户教程迁入 App repo。
+- AionUI 不成为 App repo 顶层身份；它只作为 `shells/aionui/` 下的 upstream-backed adapter 维护。
+- `shells/aionui/` 迁移默认用普通 `git mv` 完成物理分层，避免重写公开历史；若必须让历史天然带 prefix，才采用 `git filter-repo --to-subdirectory-filter` 或 subtree 导入。
+- AionUI 2.0 或其他 GUI 基座可在 `shells/aionui-next/` / `shells/<candidate>/` 并行适配；验证通过后再切换 App 顶层 active shell contract。
+- App 仍然只消费 OPL CLI / machine-readable surfaces 和 domain-owned projection refs，不复制 runtime/provider/domain truth，也不成为 quality verdict 或 artifact authority。
+- 发布迁移分阶段推进：短期保留现有 release 用户入口，中期让 App repo 成为 App 包和 updater metadata 的 source-of-truth，Framework repo 只保留 App release discovery。
+
 ## 2026-05-12
 
 ### 决策：产品认知固定为 OPL Framework、One Person Lab App 与 Foundry Agents 三层

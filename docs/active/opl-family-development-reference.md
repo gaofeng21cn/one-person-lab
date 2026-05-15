@@ -66,12 +66,13 @@ Domain repo 不应长期维护 generic scheduler、generic queue、generic attem
 
 ### App / Workbench 负责
 
-One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录；当前
-GUI shell 实现来自 `opl-aion-shell` 这个上游 AionUI fork 依赖。它的产品工作台职责是：
+One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录。当前 GUI shell 实现来自 `opl-aion-shell` 这个上游 AionUI fork 依赖；目标迁移形态是独立 `one-person-lab-app` 产品仓，当前 AionUI fork 作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护。迁移计划见 [One Person Lab App 仓库拆分计划](./one-person-lab-app-repo-split-plan.md)。
+
+它的产品工作台职责是：
 
 - 展示 OPL runtime truth、provider proof、stage attempt、attention queue、domain projection、artifact refs、review/repair refs 和 action owner；
 - 执行明确 owner 的 UI action routing：OPL CLI/provider signal、domain sidecar/direct skill、manual handoff；
-- 保持 OPL fork overlay、upstream AionUI intake、packaging/update、bridge adapter 和本地 GUI shell 规则。
+- 保持 OPL fork overlay、upstream AionUI intake、packaging/update、bridge adapter 和本地 GUI shell 规则；迁移后这些规则应落在 App 仓顶层 contract 与 `shells/aionui/AGENTS.md`，避免 AionUI 规则主导 App 顶层。
 
 App 不持有 OPL runtime，不持有 domain truth，也不把 provider completion 写成 domain ready verdict。
 
@@ -102,9 +103,7 @@ README/索引，但 README 必须说明 owner、purpose、state、machine bounda
 或 tombstone 暂留，并由 canonical 目录 README 明确指向。旧目录不能继续作为
 new recurring material 的默认落点。
 
-`opl-aion-shell` 的 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。OPL
-只在本仓维护 One Person Lab App/workbench 的全局目标、消费合同和 runtime/domain
-truth 投影边界；AionUI fork 内部 docs 结构继续服从上游项目。
+`opl-aion-shell` 当前 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。目标 App 仓建立后，App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`shells/aionui/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理。
 
 统一目录集合如下：
 
