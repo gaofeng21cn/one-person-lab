@@ -144,7 +144,15 @@ const masFamilyTransitionSpecDescriptor = {
   target_domain_id: 'medautoscience',
   spec_surface_kind: 'family_transition_spec',
   contract_version: 'family-transition-runner.v1',
-  refresh_policy: 'rebuild_study_state_matrix_or_sidecar_export_before_opl_runner',
+  refresh_policy: 'rebuild_study_state_matrix_before_opl_runner',
+  materialized_surfaces: {
+    study_state_matrix: [
+      'domain_transition_table.family_transition_spec',
+      'domain_transition_table.family_transition_matrix_cases',
+    ],
+    sidecar_export: ['family_transition_spec_descriptor'],
+    product_entry_manifest: ['family_transition_spec_descriptor'],
+  },
   authority_boundary: {
     runner_owner: 'OPL Framework',
     domain_transition_owner: 'MedAutoScience',
@@ -154,12 +162,14 @@ const masFamilyTransitionSpecDescriptor = {
   },
   locator_refs: {
     study_state_matrix_spec: '/study_state_matrix/domain_transition_table/family_transition_spec',
-    sidecar_export_spec: '/mas_family_sidecar_export/family_transition_spec',
+    study_state_matrix_cases: '/study_state_matrix/domain_transition_table/family_transition_matrix_cases',
+    sidecar_export_descriptor: '/mas_family_sidecar_export/family_transition_spec_descriptor',
     product_entry_manifest_descriptor: '/product_entry_manifest/family_transition_spec_descriptor',
   },
   source_refs: {
-    domain_transition_table: '/study_state_matrix/domain_transition_table',
-    sidecar_export: '/mas_family_sidecar_export/domain_transition_table',
+    study_state_matrix_domain_transition_table: '/study_state_matrix/domain_transition_table',
+    sidecar_export_descriptor: '/mas_family_sidecar_export/family_transition_spec_descriptor',
+    product_entry_manifest_descriptor: '/product_entry_manifest/family_transition_spec_descriptor',
   },
 };
 
@@ -341,13 +351,39 @@ test('domain manifests reports descriptor-only MAS family transition specs as ne
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.family_transition_spec_descriptor.surface_kind, 'family_transition_spec_descriptor');
+    assert.equal(medautoscience.manifest.family_transition_spec, null);
+    assert.equal(medautoscience.manifest.family_transition_matrix_cases.length, 0);
     assert.equal(medautoscience.manifest.family_transition.status, 'descriptor_only');
     assert.equal(medautoscience.manifest.family_transition.refresh_required, true);
     assert.equal(medautoscience.manifest.family_transition.matrix_result, null);
+    assert.deepEqual(
+      medautoscience.manifest.family_transition.descriptor.materialized_surfaces,
+      {
+        study_state_matrix: [
+          'domain_transition_table.family_transition_spec',
+          'domain_transition_table.family_transition_matrix_cases',
+        ],
+        sidecar_export: ['family_transition_spec_descriptor'],
+        product_entry_manifest: ['family_transition_spec_descriptor'],
+      },
+    );
     assert.equal(
       medautoscience.manifest.family_transition.locator_refs.study_state_matrix_spec,
       '/study_state_matrix/domain_transition_table/family_transition_spec',
     );
+    assert.equal(
+      medautoscience.manifest.family_transition.locator_refs.study_state_matrix_cases,
+      '/study_state_matrix/domain_transition_table/family_transition_matrix_cases',
+    );
+    assert.equal(
+      medautoscience.manifest.family_transition.locator_refs.sidecar_export_descriptor,
+      '/mas_family_sidecar_export/family_transition_spec_descriptor',
+    );
+    assert.equal(
+      medautoscience.manifest.family_transition.descriptor.source_refs.study_state_matrix_domain_transition_table,
+      '/study_state_matrix/domain_transition_table',
+    );
+    assert.equal('sidecar_export_spec' in medautoscience.manifest.family_transition.locator_refs, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -460,10 +496,30 @@ test('agents descriptor projects descriptor-only MAS transition specs as refresh
     assert.equal(transition.status, 'descriptor_only');
     assert.equal(transition.refresh_required, true);
     assert.equal(transition.matrix_summary, null);
+    assert.deepEqual(
+      transition.descriptor.materialized_surfaces,
+      {
+        study_state_matrix: [
+          'domain_transition_table.family_transition_spec',
+          'domain_transition_table.family_transition_matrix_cases',
+        ],
+        sidecar_export: ['family_transition_spec_descriptor'],
+        product_entry_manifest: ['family_transition_spec_descriptor'],
+      },
+    );
     assert.equal(
       transition.locator_refs.study_state_matrix_spec,
       '/study_state_matrix/domain_transition_table/family_transition_spec',
     );
+    assert.equal(
+      transition.locator_refs.study_state_matrix_cases,
+      '/study_state_matrix/domain_transition_table/family_transition_matrix_cases',
+    );
+    assert.equal(
+      transition.locator_refs.sidecar_export_descriptor,
+      '/mas_family_sidecar_export/family_transition_spec_descriptor',
+    );
+    assert.equal('sidecar_export_spec' in transition.locator_refs, false);
     assert.equal(inspect.family_agent_descriptor.descriptor_refs.family_transition.status, 'descriptor_only');
     assert.equal(transition.non_authority_flags.opl_writes_domain_truth, false);
   } finally {
