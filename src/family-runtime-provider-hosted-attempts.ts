@@ -20,6 +20,66 @@ function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function uniqueStrings(values: Array<string | null>) {
+  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+}
+
+function recordStringRefs(value: Record<string, unknown> | null, singularKeys: string[], listKeys: string[]) {
+  if (!value) {
+    return [];
+  }
+  return uniqueStrings([
+    ...singularKeys.map((key) => optionalString(value[key])),
+    ...listKeys.flatMap((key) => stringList(value[key])),
+  ]);
+}
+
+function transitionBridgeEvidence(transition: Record<string, unknown>) {
+  const receipt = isRecord(transition.receipt) ? transition.receipt : null;
+  const projection = isRecord(transition.projection) ? transition.projection : null;
+  const typedBlockers = [
+    ...recordList(transition.typed_blockers),
+    ...(isRecord(transition.typed_blocker) ? [transition.typed_blocker] : []),
+    ...recordList(projection?.typed_blockers),
+    ...(isRecord(projection?.typed_blocker) ? [projection.typed_blocker] : []),
+  ];
+  const receiptRefs = uniqueStrings([
+    ...recordStringRefs(receipt, [], ['receipt_refs']),
+    ...recordStringRefs(projection, ['receipt_ref'], ['receipt_refs']),
+  ]);
+  const ownerReceiptRefs = uniqueStrings([
+    ...receiptRefs,
+    ...recordStringRefs(receipt, ['owner_receipt_ref'], ['owner_receipt_refs']),
+    ...recordStringRefs(projection, ['owner_receipt_ref'], ['owner_receipt_refs']),
+  ]);
+  const noRegressionEvidenceRefs = uniqueStrings([
+    ...recordStringRefs(transition, ['no_regression_evidence_ref'], ['no_regression_evidence_refs']),
+    ...recordStringRefs(receipt, ['no_regression_evidence_ref'], ['no_regression_evidence_refs']),
+    ...recordStringRefs(projection, ['no_regression_evidence_ref'], ['no_regression_evidence_refs']),
+  ]);
+  const typedBlockerRefs = uniqueStrings([
+    ...typedBlockers.flatMap((blocker) => stringList(blocker.refs)),
+    ...recordStringRefs(projection, ['typed_blocker_ref'], ['typed_blocker_refs']),
+  ]);
+  return {
+    receipt_refs: receiptRefs,
+    owner_receipt_refs: ownerReceiptRefs,
+    no_regression_evidence_refs: noRegressionEvidenceRefs,
+    typed_blocker_refs: typedBlockerRefs,
+    typed_blockers: typedBlockers,
+    domain_owner_receipt_observed: ownerReceiptRefs.length > 0,
+    no_regression_evidence_observed: noRegressionEvidenceRefs.length > 0,
+    typed_blocker_count: typedBlockers.length,
+    opl_evidence_boundary: 'refs_only_no_domain_verdict_authority',
+  };
+}
+
 function providerHostedTaskDeclared(payload: Record<string, unknown>) {
   return payload.opl_provider_hosted_stage_attempt === true
     || payload.provider_hosted_stage_attempt === true
@@ -112,6 +172,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
       owner_route: isRecord(transition.owner_route) ? transition.owner_route : null,
       receipt: isRecord(transition.receipt) ? transition.receipt : null,
       projection: isRecord(transition.projection) ? transition.projection : null,
+      evidence: transitionBridgeEvidence(transition),
       opl_executes_domain_action: false,
       opl_writes_domain_truth: false,
       opl_authorizes_domain_verdict: false,
