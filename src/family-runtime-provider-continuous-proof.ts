@@ -121,6 +121,13 @@ function executionReceiptSummary(input: {
   };
 }
 
+function countReceiptField(events: ProviderRuntimeEvent[], fieldName: string, expected: string) {
+  return events.filter((event) => {
+    const payload = eventPayload(event);
+    return optionalString(payload?.[fieldName]) === expected;
+  }).length;
+}
+
 function eventPayload(event: ProviderRuntimeEvent | undefined) {
   return isRecord(event?.payload) ? event.payload : null;
 }
@@ -259,6 +266,10 @@ function executionReceiptProjection(input: {
     latest_receipt_summary: executionReceiptSummary({
       latestExecutionPayload: input.latestExecutionPayload,
     }),
+    executed_count: countReceiptField(input.executionEvents, 'execution_status', 'executed'),
+    skipped_count: countReceiptField(input.executionEvents, 'execution_status', 'skipped'),
+    blocked_count: countReceiptField(input.executionEvents, 'receipt_status', 'blocked'),
+    proven_count: countReceiptField(input.executionEvents, 'receipt_status', 'proven'),
     receipt_policy: 'proof_command_execution_receipt_only_no_auto_repair',
   };
 }

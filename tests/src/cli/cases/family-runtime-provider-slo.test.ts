@@ -135,6 +135,20 @@ test('family-runtime provider-slo tick skips fresh cadence without rerunning pro
     assert.equal(sloEvents.length, 1);
     assert.equal(sloEvents.at(-1).payload.receipt_status, 'skipped');
     assert.equal(sloEvents.at(-1).payload.skip_reason, 'cadence_current');
+
+    const secondSkippedTick = runCli([
+      'family-runtime',
+      'provider-slo',
+      'tick',
+      '--provider',
+      'temporal',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    })).family_runtime_provider_slo_tick;
+    assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.event_count, 2);
+    assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.skipped_count, 2);
+    assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.executed_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
