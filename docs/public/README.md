@@ -1,15 +1,15 @@
-# Public Docs
+# 公开支撑文档
 
 Status: `active_support`
 Owner: `One Person Lab`
 
-This directory holds user-facing product direction documents that are read after the repository home and docs guide.
+本目录收纳用户在仓库首页和文档索引之后阅读的产品方向文档。
 
-Current install/start entry remains the repository `README*`. Current technical truth remains the docs core five.
+安装和启动入口仍然是仓库 `README*`。当前技术真相仍然回到 docs core five。
 
-## Contents
+## 内容
 
-- `roadmap*`: product direction.
-- `task-map*`: family task map.
-- `operating-model*`: user-facing operating model.
-- `unified-harness-engineering-substrate*`: historical/current substrate narrative kept as public support, not the active implementation oracle.
+- `roadmap*`：产品路线。
+- `task-map*`：family 任务版图。
+- `operating-model*`：用户视角运行模型。
+- `unified-harness-engineering-substrate*`：底座叙事支撑，不作为当前实现 oracle。

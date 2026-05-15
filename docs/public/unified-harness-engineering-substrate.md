@@ -1,43 +1,41 @@
-**English** | [中文](./unified-harness-engineering-substrate.zh-CN.md)
-
 # Unified Harness Engineering Substrate
 
-## Purpose
+## 目的
 
-This document defines the shared Harness Engineering language reused across the current `OPL` ecosystem.
-It exists so that `OPL` can present a coherent system family without pretending that every domain already lives inside one monolithic runtime or one shared public codebase.
+这份文档用于定义当前 `OPL` 体系下共享的 Harness Engineering 语言。
+它的作用，是让 `OPL` 能以一套清楚的一致性架构对外呈现，而不是把几个 domain project 继续写成松散相关的零散仓库；同时，它也不声称所有 domain 已经被压进一个单体 runtime 或一个公共代码仓。
 
-## What It Is
+## 它是什么
 
-`Unified Harness Engineering Substrate` is the shared Harness Engineering umbrella language under `OPL`.
-It describes the reusable rules that multiple domain systems should inherit while keeping their own domain contracts, domain-agent entries, domain-owned authority, runtime controllers, and delivery systems.
+`Unified Harness Engineering Substrate` 是 `OPL` 之下共享的 Harness Engineering 上位语言。
+它定义的是多个 domain system 共同继承的一组稳定约束，而不是取代它们各自的 domain contract、domain-agent entry、domain-owned authority、runtime controller 与 delivery system。
 
-The more accurate current reading is:
+当前更准确的理解是：
 
-- `UHS` is the shared umbrella term
-- the long-running runtime part inside it is converging into the [Shared Runtime Contract](../active/shared-runtime-contract.md)
-- the cross-domain product-behavior part inside it is converging into the [Shared Domain Contract](../active/shared-domain-contract.md)
+- `UHS` 是共享总名词
+- 其中与长期在线运行最相关的部分，正在收敛为 [Shared Runtime Contract](../specs/shared-runtime-contract.md)
+- 其中与跨 domain 正式行为最相关的部分，正在收敛为 [Shared Domain Contract](../specs/shared-domain-contract.md)
 
-In the current ecosystem, it is the shared substrate below:
+在当前体系里，这个 substrate 作用于：
 
 - `Med Auto Science`
 - `RedCube AI`
 - `Med Auto Grant`
 
-## What It Is Not
+## 它不是什么
 
-The substrate is not:
+这个 substrate 不是：
 
-- a claim that every domain already uses one identical object model
-- a claim that every domain already runs on one shared code repository
-- a replacement for any domain-agent entry
-- a replacement for any domain-owned authority, runtime controller, or delivery system
-- a license for `OPL` to bypass a public domain-agent entry and touch a domain-local execution plane directly
-- a claim that `UHS` is just a wrapper around `Hermes` or any other runtime project
+- “所有 domain 已经共享完全一致对象模型”的声明
+- “所有 domain 已经落在同一个公共代码仓”的声明
+- 任何一个 domain-agent entry 的替代品
+- 任何一个 domain-owned authority、runtime controller 或 delivery system 的替代品
+- `OPL` 可以绕过 public domain-agent entry、直接触碰 domain-local execution plane 的许可
+- `Hermes` 或其他 runtime 项目的简单套壳说法
 
-## Layering
+## 分层关系
 
-The intended architecture stays:
+推荐长期分层保持为：
 
 ```text
 Human / Agent
@@ -51,37 +49,37 @@ Human / Agent
                           -> Deployment Shape
 ```
 
-The layers mean different things:
+每一层负责不同的事情：
 
 - `OPL stage-led Agent executor framework`
-  - owns top-level task semantics, stage decomposition, activation, and cross-domain boundary contracts
+  - 负责顶层任务语义、stage decomposition、activation 与跨域边界合同
 - `Unified Harness Engineering Substrate`
-  - owns the shared Harness Engineering umbrella language reused across domains
+  - 负责多个 domain 共享的 Harness Engineering 上位语言
 - `Shared Runtime Contract`
-  - owns the cross-domain contract for long-running runtime behavior
+  - 负责跨 domain 共享的长期在线运行合同
 - `Shared Domain Contract`
-  - owns the cross-domain contract for formal product behavior
+  - 负责跨 domain 共享的正式行为合同
 - `Domain-agent entry`
-  - owns the public domain-local task entry and product-entry surface
+  - 负责 public domain-local task entry 与 product-entry surface
 - `Domain-owned authority / runtime controller / delivery system`
-  - owns domain-local truth, execution control, audit surfaces, and delivery semantics
+  - 负责 domain-local 的领域真相、执行控制、审计面与交付语义
 - `Execution Plane`
-  - owns the actual session, run, watch, resume, and delivery execution layer
+  - 负责实际驱动 session、run、watch、resume 与 delivery 的运行层
 - `Deployment Shape`
-  - owns where and how the harness is hosted, without redefining the domain contract
+  - 负责 harness 具体部署在哪里、以什么形态运行，但不重写 domain contract
 
-## Shared Invariants
+## 共享不变量
 
-The substrate freezes these shared expectations:
+这个 substrate 当前冻结的共享约束包括：
 
-- `Agent-first` is the default execution posture
-- current domain repositories are `Auto-only` mainlines on one shared substrate
-- future `Human-in-the-loop` products should reuse the same substrate as compatible sibling or upper-layer products rather than forcing same-repo dual-mode logic
-- formal entry should stay explicit through one matrix: default formal entry `CLI`, supported protocol layer `MCP`, and `controller` as an internal control surface
-- state transitions, review surfaces, and delivery boundaries should remain auditable
-- deployment shape may change without redefining the domain contract
+- 默认采用 `Agent-first` 执行姿态
+- 当前各个 domain 仓首先都是共享同一 substrate 的 `Auto-only` 主线
+- 未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
+- formal entry 采用同一套显式矩阵：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface
+- 状态迁移、审阅面与交付边界保持可审计
+- 部署形态可以变化，但不应因此改写 domain contract
 
-The two contract families that now need the clearest alignment are:
+其中，最需要继续压实的两类共享合同是：
 
 - `Shared Runtime Contract`
   - `runtime profile`
@@ -91,87 +89,85 @@ The two contract families that now need the clearest alignment are:
   - `delivery / cron`
   - `approval / interrupt / resume`
 - `Shared Domain Contract`
-  - the formal-entry matrix
-  - the `per-run handle`
-  - the durable report surface
-  - the audit trail surface
+  - formal-entry matrix
+  - `per-run handle`
+  - durable report
+  - audit trail
   - gate semantics
-  - the no-bypass rule to the public domain-agent entry
+  - no-bypass to public domain-agent entry
 
-## Deployment Shapes
+## 部署形态
 
-At the current stage:
+在当前阶段：
 
-- the active concrete executor is the Codex-default local execution path, with `Codex CLI` as the minimum execution unit inside a stage
-- the public OPL formal entry remains the local `TypeScript CLI`-first / framework contract surface
-- provider-backed stage runtime is the production online carrier for long-running attempts, recovery, human gates, and projection, with the Temporal-backed provider as the required substrate
+- 活跃具体执行器是 Codex-default 本地执行路径，stage 内默认最小执行单元是 `Codex CLI`
+- 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / framework contract surface
+- provider-backed stage runtime 是长期在线、恢复、human gate 和 projection 的 production online 承载层，Temporal-backed provider 是必需 substrate
 
-That split matters: Codex names the default concrete executor, not the identity of the substrate.
-The same substrate should support:
+这个区分很重要：Codex 说的是默认具体执行器，不是 substrate 的本体定义。
+在后续阶段，同一套 substrate 也应支持：
 
-- future managed web runtimes
-- future platform-hosted execution surfaces
+- 托管式 Web runtime
+- 平台侧统一托管的执行面
 
-If the ecosystem retains upstream `Hermes-Agent` integration evidence inside a domain repository, the accurate place for that choice is:
+如果某个 domain 仓保留上游 `Hermes-Agent` 集成证据，它更准确的归属应是：
 
-- historical provenance, diagnostic vocabulary, or a negative guard
+- 历史 provenance、诊断语料或负向 guard
 
-not:
+它不是：
 
-- the identity of the whole `UHS`
-- a replacement for `OPL`
-- an owner of domain truth
+- `UHS` 的同义词
+- `OPL` 的替代品
+- domain truth 的 owner
 
-Changing the hosting location should not require rewriting the substrate or collapsing domain boundaries.
+也就是说，未来如果从“装在用户电脑上”迁移到“运行在平台上”，不应因此重写 substrate，也不应因此压平 domain 边界。
 
-## From Shared Substrate To A Vertical Online Agent Platform Family
+## 从共享 substrate 到垂类在线 Agent 平台族
 
-The long-term product meaning of this substrate is not to rewrite `OPL` into a general long-running agent platform.
-It is to let the `OPL` ecosystem evolve toward a family of vertical online agent products.
+这套 substrate 的长期产品意义，不是把 `OPL` 改写成通用长期在线 agent 平台，而是让 `OPL` 逐步具备演进成“垂类在线 agent 平台族”的能力。
 
-In that structure:
+在这个理想结构里：
 
 - `OPL`
-  - remains the stage-led framework with Agent executors as the minimum execution unit and activation layer
+  - 继续负责 stage-led、以 Agent executor 为最小执行单位的 framework 与 activation layer
 - `UHS`
-  - remains the shared Harness Engineering umbrella language
+  - 继续作为共享 Harness Engineering 的上位语言
 - `Shared Runtime Contract`
-  - gradually owns shared runtime contracts such as `runtime profile`, `session substrate`, stage runtime status, `memory hook`, `delivery / cron`, and `approval / interrupt`
+  - 逐步承接 `runtime profile`、`session substrate`、stage runtime status、`memory hook`、`delivery / cron`、`approval / interrupt` 这类共享运行合同
 - `Shared Domain Contract`
-  - gradually owns shared cross-domain product-behavior contracts such as the formal-entry matrix, the `per-run handle`, the durable report surface, the audit trail, and gate semantics
-- each domain agent
-  - keeps its own formal entry, domain objects, gates, audit surfaces, delivery semantics, runtime-controller boundary, and canonical truth
+  - 逐步承接 formal-entry matrix、`per-run handle`、durable report、audit trail、gate semantics 等跨 domain 正式行为合同
+- 各 domain agent
+  - 继续持有自己的 formal entry、domain object、gate、audit、delivery、runtime controller boundary 与 canonical truth
 
-That means the more honest direction is not “force all three domain repositories into one execution kernel now.”
-It is:
+因此，后续更合理的方向不是“直接把三个业务仓改造成同一种执行内核”，而是：
 
-- freeze the shared runtime and shared domain contract language inside `UHS` first
-- build a mature local product-runtime pilot in the right domain
-- then pull reusable substrate implementation back out of the pilot
+- 先冻结 `UHS` 之下的共享 runtime / domain contract 语言
+- 再在合适的 domain 中做成熟的本地产品 runtime pilot
+- 再从 pilot 回抽可复用的 substrate 实现
 
-This remains a future direction.
-It does not mean a unified platform runtime already exists today, and it does not make `OPL` the current runtime owner.
+这条演进线当前仍属于未来方向。
+它不等于当前已经存在统一平台 runtime，也不等于 `OPL` 已经成为 runtime owner。
 
-## Current Domain Mapping
+## 当前 Domain Mapping
 
-The current `OPL` family can be read as:
+当前 `OPL` 体系可以理解成：
 
 - `Med Auto Science`
-  - medical research domain agent
+  - 医学研究 domain agent
 - `RedCube AI`
-  - visual-deliverable domain agent
+  - 视觉交付 domain agent
 - `Med Auto Grant`
-  - grant-authoring domain agent
+  - 基金写作 domain agent
 
-`OPL` itself is not one more domain agent.
-It remains the stage-led framework with Agent executors as the minimum execution unit and activation layer above those domain systems.
+`OPL` 本身不是再额外多出来的一个 domain agent。
+它仍然是位于这些 domain system 之上的 stage-led、以 Agent executor 为最小执行单位的 framework 与 activation layer。
 
-## Practical Implication
+## 现实意义
 
-This shared substrate is meant to make future domain work faster:
+这个共享 substrate 的意义，在于后续新 domain 可以沿着同一套思路快速展开：
 
-- new domain systems should inherit the same execution philosophy
-- domain-specific contracts should stay local to the domain
-- `OPL` should explain how the family fits together without swallowing domain-local runtime ownership
+- 共享执行哲学与边界语言
+- domain-specific contract 继续留在各自 domain
+- `OPL` 负责解释整个体系如何拼起来，而不是吞掉 domain-local runtime owner 权限
 
-That is how the ecosystem can grow as one coherent system family instead of drifting into unrelated projects.
+这样，后续新增 domain agent 时，就能更像是在同一套框架思想上演化，而不是重复发明几套彼此不兼容的系统。

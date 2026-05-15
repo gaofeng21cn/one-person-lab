@@ -202,10 +202,10 @@ This directory does not:
 
 ## Related Docs
 
-- [Shared Runtime Contract](../../docs/active/shared-runtime-contract.md)
-- [Shared Runtime Contract（中文）](../../docs/active/shared-runtime-contract.zh-CN.md)
-- [Shared Domain Contract](../../docs/active/shared-domain-contract.md)
-- [Shared Domain Contract（中文）](../../docs/active/shared-domain-contract.zh-CN.md)
+- [Shared Runtime Contract](../../docs/specs/shared-runtime-contract.md)
+- [Shared Runtime Contract（中文）](../../docs/specs/shared-runtime-contract.md)
+- [Shared Domain Contract](../../docs/specs/shared-domain-contract.md)
+- [Shared Domain Contract（中文）](../../docs/specs/shared-domain-contract.md)
 - [CrewAI absorb note](../../docs/references/runtime-substrate/family-orchestration-contract-absorb-crewai.md)
 
 ## Files

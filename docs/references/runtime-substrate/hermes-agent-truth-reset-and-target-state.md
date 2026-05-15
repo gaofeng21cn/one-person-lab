@@ -1,6 +1,6 @@
 # Hermes-Agent 真相重置与目标形态说明
 
-> 2026-05-14 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 不再承担 provider、默认 executor、Codex CLI 备线、可选安装模块或目标 session/wakeup substrate 角色。`hermes_agent` 是 canonical 显式非默认 executor adapter/backend，并只承诺接口连接、生命周期、回执、审计和 fail-closed。该 adapter 不承诺质量、工具语义或 resume 与 `Codex CLI` 等价。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+> 2026-05-14 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的 production online 路径已经收敛为 provider-backed runtime，其中 Temporal-backed provider 是必需 substrate。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 不再承担 provider、默认 executor、Codex CLI 备线、可选安装模块或目标 session/wakeup substrate 角色。`hermes_agent` 是 canonical 显式非默认 executor adapter/backend，并只承诺接口连接、生命周期、回执、审计和 fail-closed。该 adapter 不承诺质量、工具语义或 resume 与 `Codex CLI` 等价。旧 Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留为历史 provenance、诊断语料或负向 guard。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.md)。
 
 ## 1. 为什么要做这份重置
 
@@ -112,7 +112,7 @@
 
 ## 7. 历史推荐迁移顺序
 
-本节同样保留为历史背景。当前迁移顺序以 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md) 为准：先冻结 provider abstraction，再做 Temporal stage workflow skeleton、MAS paper-line pilot、MAG/RCA controlled attempts、visibility，最后清理 Hermes-first 默认口径。
+本节同样保留为历史背景。当前迁移顺序以 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.md) 为准：先冻结 provider abstraction，再做 Temporal stage workflow skeleton、MAS paper-line pilot、MAG/RCA controlled attempts、visibility，最后清理 Hermes-first 默认口径。
 
 ### 第一阶段：真相重置
 

@@ -2,7 +2,7 @@
 
 状态锚点：`2026-04-11`
 
-Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 host-agent -> managed runtime readiness snapshot；R1-R8 readiness 维度已经吸收到 `docs/active/opl-runtime-naming-and-boundary-contract.zh-CN.md`。逐仓 blocker 和推进顺序是 dated snapshot，不再作为当前迁移队列执行。
+Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 host-agent -> managed runtime readiness snapshot；R1-R8 readiness 维度已经吸收到 `docs/runtime/opl-runtime-naming-and-boundary-contract.md`。逐仓 blocker 和推进顺序是 dated snapshot，不再作为当前迁移队列执行。
 
 ## 文档目的
 

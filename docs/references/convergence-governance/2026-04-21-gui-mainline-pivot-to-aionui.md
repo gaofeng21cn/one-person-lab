@@ -2,7 +2,7 @@
 
 状态锚点：`2026-04-21`
 
-当前状态：历史参考。当前实现基线以 [`docs/status.md`](../../status.md)、[`docs/decisions.md`](../../decisions.md) 和 [OPL GUI Shell Adapter 边界说明](../current-support/opl-gui-shell-adapter-boundary.zh-CN.md) 为准。
+当前状态：历史参考。当前实现基线以 [`docs/status.md`](../../status.md)、[`docs/decisions.md`](../../decisions.md) 和 [OPL GUI Shell Adapter 边界说明](../current-support/opl-gui-shell-adapter-boundary.md) 为准。
 
 ## 结论
 

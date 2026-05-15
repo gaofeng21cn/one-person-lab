@@ -32,7 +32,7 @@
 - Modify: `/Users/gaofeng/workspace/med-autoscience/README.md`
 - Modify: `/Users/gaofeng/workspace/med-autoscience/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/med-autoscience/docs/README.md`
-- Modify: `/Users/gaofeng/workspace/med-autoscience/docs/README.zh-CN.md`
+- Modify: `/Users/gaofeng/workspace/med-autoscience/docs/README.md`
 - Modify: `/Users/gaofeng/workspace/med-autoscience/AGENTS.md`
 - Create: `/Users/gaofeng/workspace/med-autoscience/docs/domain-harness-os-positioning.md`
 
@@ -46,7 +46,7 @@
 - Modify: `/Users/gaofeng/workspace/redcube-ai/README.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/README.md`
-- Modify: `/Users/gaofeng/workspace/redcube-ai/docs/README.zh-CN.md`
+- Modify: `/Users/gaofeng/workspace/redcube-ai/docs/README.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/AGENTS.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/runtime_architecture.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/policies/runtime_operating_model.md`
@@ -62,7 +62,7 @@
 - Modify: `/Users/gaofeng/workspace/med-autogrant/README.md`
 - Modify: `/Users/gaofeng/workspace/med-autogrant/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/med-autogrant/docs/README.md`
-- Modify: `/Users/gaofeng/workspace/med-autogrant/docs/README.zh-CN.md`
+- Modify: `/Users/gaofeng/workspace/med-autogrant/docs/README.md`
 - Modify: `/Users/gaofeng/workspace/med-autogrant/AGENTS.md`
 - Create: `/Users/gaofeng/workspace/med-autogrant/docs/domain-harness-os-positioning.md`
 

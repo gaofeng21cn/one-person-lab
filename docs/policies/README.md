@@ -1,14 +1,14 @@
-# Policies Docs
+# Policies 文档
 
 Owner: `One Person Lab`
 Purpose: `stable_policy_index`
 State: `active_support`
-Machine boundary: Human-readable index. Hard constraints remain in the core five, contracts, schemas, source, and verification behavior.
+Machine boundary: 人读索引。硬约束仍以核心五件套、contracts、schema、源码和验证行为为准。
 
-This directory holds long-lived governance rules and repo-local operating discipline. Cross-repo hard constraints should first land in [Invariants](../invariants.md) or machine contracts; narrower maintenance policies may live here.
+本目录承接长期稳定规则和 repo-local 运行纪律。跨仓硬约束先进入 [硬约束](../invariants.md) 或机器合同；更细的维护政策可以放在本目录。
 
-Start with:
+当前入口先看：
 
-- [Invariants](../invariants.md)
-- [Decisions](../decisions.md)
-- [Documentation Portfolio](../docs_portfolio_consolidation.md)
+- [硬约束](../invariants.md)
+- [关键决策](../decisions.md)
+- [文档组合治理](../docs_portfolio_consolidation.md)

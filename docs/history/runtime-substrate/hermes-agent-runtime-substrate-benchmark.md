@@ -19,20 +19,20 @@
 这份文档曾属于 `docs/references/` 下的内部参考级文档；当前已归入 `docs/history/runtime-substrate/`。
 它不反向抬升为 `OPL` 的公开产品定位真相，也不替代：
 
-- `docs/public/operating-model.zh-CN.md`
-- `docs/active/shared-runtime-contract.zh-CN.md`
-- `docs/active/shared-domain-contract.zh-CN.md`
-- `docs/active/opl-family-development-reference.zh-CN.md`
-- `docs/public/unified-harness-engineering-substrate.zh-CN.md`
+- `docs/public/operating-model.md`
+- `docs/specs/shared-runtime-contract.md`
+- `docs/specs/shared-domain-contract.md`
+- `docs/active/opl-family-development-reference.md`
+- `docs/public/unified-harness-engineering-substrate.md`
 - `AGENTS.md`
 - `contracts/README.md`
-- `contracts/opl-framework/README.zh-CN.md`
+- `contracts/opl-framework/README.md`
 
 历史上围绕“如何把这些 substrate 判断继续推成 `OPL` 的垂类在线 agent 平台演进路线”的阶段化落地蓝图，已迁入历史归档；当前路线以 stage-led framework roadmap 和 Temporal provider 计划为准：
 
 - `docs/history/runtime-substrate/opl-vertical-online-agent-platform-roadmap.md`
-- `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`
-- `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`
+- `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`
+- `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`
 - `docs/references/runtime-substrate/hermes-agent-executor-evaluation.md`
 
 ## 对标范围

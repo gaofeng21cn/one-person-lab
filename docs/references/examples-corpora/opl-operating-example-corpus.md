@@ -1,65 +1,63 @@
-**English** | [中文](./opl-operating-example-corpus.zh-CN.md)
-
 # OPL Operating Example Corpus
 
-## Purpose
+## 目的
 
-This document indexes the canonical machine-readable operating-record examples for the frozen `P5.M1` and `P5.M2` surfaces.
+这份文档索引已冻结 `P5.M1` 与 `P5.M2` operating surface 的 canonical machine-readable operating-record examples。
 
-Its goal is to make top-level governance, review-index, publish-readiness, publish-outcome, and promotion-surface records easier to inspect without turning examples into a workflow runtime or truth surface.
+它的目标是：在不把 example 误读成 workflow runtime 或 truth surface 的前提下，让顶层 governance、review-index、publish-readiness、publish-outcome 与 promotion-surface record 更容易被检查。
 
-## Non-Goals
+## 非目标
 
-This corpus does not:
+这组 corpus 不负责：
 
-- implement a runtime
-- execute review, publish, release, export, submission, or promotion actions
-- replace the governing operating-surface contracts
-- claim review truth, publish truth, promotion truth, or public-channel posting truth
-- authorize direct publish, release, export, submission, or posting by `OPL`
+- 实现 runtime
+- 执行 review、publish、release、export、submission 或 promotion action
+- 替代正式的 operating-surface contract
+- 声称自己拥有 review truth、publish truth、promotion truth 或 public-channel posting truth
+- 授权 `OPL` 直接执行 publish、release、export、submission 或 posting
 
-The examples are illustrative operating-record walkthroughs only.
+这些 example 只是 illustrative 的 operating-record walkthrough。
 
 ## Former Example Set
 
 ### 1. Governance decision
 
-- Former artifact: `examples/opl-framework/governance-decision-record.json` (retired from the active repo artifact set)
-- Shows a top-level decision record above domain-owned review truth.
+- Former artifact：`examples/opl-framework/governance-decision-record.json`（已从 active repo artifact set 退役）
+- 展示位于 domain-owned review truth 之上的顶层 decision record。
 
 ### 2. Cross-domain review index
 
-- Former artifact: `examples/opl-framework/cross-domain-review-index.json` (retired from the active repo artifact set)
-- Shows how `OPL` indexes required review surfaces and blocking gates across domains without duplicating review truth.
+- Former artifact：`examples/opl-framework/cross-domain-review-index.json`（已从 active repo artifact set 退役）
+- 展示 `OPL` 如何索引跨 domain 所需的 review surface 与 blocking gate，而不复制 review truth。
 
 ### 3. Publish readiness signal
 
-- Former artifact: `examples/opl-framework/publish-readiness-signal.json` (retired from the active repo artifact set)
-- Shows a pre-publish readiness index before domain-owned publish truth exists.
+- Former artifact：`examples/opl-framework/publish-readiness-signal.json`（已从 active repo artifact set 退役）
+- 展示在 domain-owned publish truth 形成之前的 pre-publish readiness index。
 
 ### 4. Publish outcome index
 
-- Former artifact: `examples/opl-framework/publish-outcome-index.json` (retired from the active repo artifact set)
-- Shows a top-level index of a domain-owned publish / release / export / submission outcome.
+- Former artifact：`examples/opl-framework/publish-outcome-index.json`（已从 active repo artifact set 退役）
+- 展示对 domain-owned publish / release / export / submission outcome 的顶层索引。
 
 ### 5. Promotion candidate signal
 
-- Former artifact: `examples/opl-framework/promotion-candidate-signal.json` (retired from the active repo artifact set)
-- Shows a post-publish promotion-readiness signal above domain-owned outcome truth.
+- Former artifact：`examples/opl-framework/promotion-candidate-signal.json`（已从 active repo artifact set 退役）
+- 展示建立在 domain-owned outcome truth 之上的 post-publish promotion-readiness signal。
 
 ### 6. Promotion surface index
 
-- Former artifact: `examples/opl-framework/promotion-surface-index.json` (retired from the active repo artifact set)
-- Shows public-surface references and blockers after a domain-owned outcome already exists.
+- Former artifact：`examples/opl-framework/promotion-surface-index.json`（已从 active repo artifact set 退役）
+- 展示在 domain-owned outcome 已存在之后，对 public surface reference 与 blocker 的顶层索引。
 
-## Reading Rule
+## 阅读规则
 
-Read these examples as **contract-level operating-record walkthroughs**, not executable workflows.
+这些 example 必须被理解成 **contract-level operating-record walkthroughs**，而不是 executable workflow。
 
-If an example references review, publish, promotion, or public-channel truth, that truth remains inside the owning domain system through `domain_truth_refs`.
-Any follow-on action must point to the current domain-owned capability entry or action-route ref. Historical examples may still contain the legacy literal `domain_gateway`, but this corpus does not preserve it as an active compatibility route and never authorizes harness bypass, direct venue submission, or direct public posting.
+只要 example 引用了 review、publish、promotion 或 public-channel truth，这些 truth 仍然通过 `domain_truth_refs` 留在对应 domain system 内部。
+任何后续 action 都必须指向当前 domain-owned capability entry 或 action-route ref。历史 example 仍可能包含 legacy literal `domain_gateway`，但这组 corpus 不把它保留成 active compatibility route，也不授权 harness bypass、direct venue submission 或 direct public posting。
 
-## Governing Contracts
+## 上位合同
 
 - [OPL Governance / Audit Operating Surface](../operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../operating-governance/opl-publish-promotion-operating-surface.md)
@@ -67,17 +65,17 @@ Any follow-on action must point to the current domain-owned capability entry or 
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 
-## Related Companions
+## 相关配套示例
 
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 
-## Completion Definition
+## 完成定义
 
-The operating example corpus is acceptable only when:
+只有当下面这些条件都成立时，这组 operating example corpus 才算合格：
 
-- former artifact names remain provenance-only and are not clickable active repo paths
-- the corpus stays illustrative, non-governing, and non-executing
-- the corpus does not transfer review, publish, or promotion truth into `OPL`
-- active schema and behavior truth comes from current contracts/source/CLI behavior
-- any follow-on action points to current domain-owned capability/action-route refs rather than preserving `domain_gateway` as a compatibility value
+- former artifact 名称只保留 provenance 语义，不再作为可点击 active repo path
+- corpus 保持 illustrative、non-governing、non-executing
+- corpus 不把 review、publish 或 promotion truth 上收给 `OPL`
+- active schema 与行为 truth 必须来自当前 contracts/source/CLI 行为
+- 任何后续 action 都指向当前 domain-owned capability/action-route refs，而不是把 `domain_gateway` 保留成 compatibility value

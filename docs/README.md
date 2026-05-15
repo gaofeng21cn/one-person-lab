@@ -1,16 +1,14 @@
-**English** | [中文](./README.zh-CN.md)
+# OPL 文档索引
 
-# OPL Docs Guide
+这个目录是 `One Person Lab` 仓库跟踪文档面的入口索引。
+仓库首页优先写给想安装并开始工作的用户。
+这份索引服务需要理解当前产品模型、活跃 runtime/activation 主线，以及文档生命周期地图的读者。
 
-This directory is the entry index for the repo-tracked docs surface of `One Person Lab`.
-The repository home is written first for users who want to install and start working.
-This guide is for readers who need the current product model, the active runtime/activation mainline, and the documentation lifecycle map.
+## 当前产品模型
 
-## Current Product Model
+`OPL` 是面向高价值知识工作的完整智能体运行框架。它以 阶段推进为原则，并以 Agent executor 为最小执行单位，阶段内默认最小执行单元是 `Codex CLI`，编排单元是领域阶段，产品目标是通过可恢复的阶段尝试、人工关口、收口凭据、进度投影和文件生命周期，推进到可审计的全自动交付。
 
-`OPL` is a complete stage-led family agent runtime framework with Agent executors as the minimum execution unit for high-value knowledge work. Its default minimum execution unit inside a stage is `Codex CLI`; its orchestration unit is the domain `stage`; its product target is fully automated, auditable delivery through recoverable stage attempts, human gates, receipts, projections, and artifact lifecycle.
-
-The current public `OPL` resource model is:
+当前公开的 `OPL` 资源模型统一为：
 
 - `System`
 - `Engines`
@@ -21,163 +19,148 @@ The current public `OPL` resource model is:
 - `Progress`
 - `Artifacts`
 
-The canonical truth is the `Codex-default` session/runtime plus the explicit activation layer and provider-backed family runtime control plane that sit above it.
-Admitted domain repositories keep their own agent logic, runtime rules, progress truth, and deliverables.
+当前 canonical truth 是 `Codex-default` session/runtime，以及其上的 explicit activation layer 和 provider-backed family runtime control plane。
+各个领域仓继续持有自己的 agent logic、runtime rule、progress truth 和 deliverable。
 
-## Start Here By Audience
+## 按读者类型进入
 
-| Audience | Start here | Why |
+| 读者 | 建议起点 | 目的 |
 | --- | --- | --- |
-| Users | [Repository Home](../README.md) | Install OPL, start the GUI or web entry, and choose Codex or a domain agent for work |
-| Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Recover the active boundary, the runtime model, and the admitted-domain split |
-| Developers and maintainers | [Documentation Portfolio](./docs_portfolio_consolidation.md), [Active Docs](./active/README.md), [Public Docs](./public/README.md), [Specs Index](./specs/README.md), [Reference Index](./references/README.md), [History Archive](./history/README.md) | Inspect lifecycle roles, active support docs, public support docs, the current spec entry, references, and retired lanes |
+| 用户 | [仓库首页](../README.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
+| 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
+| 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.md)、[公开支撑文档](./public/README.md)、[规格索引](./specs/README.md)、[参考级索引](./references/README.md)、[历史归档索引](./history/README.md) | 查看生命周期角色、活跃支撑、公开支撑、当前规格入口、参考材料和退役路线 |
 
-## Fast Technical Working Set
+## 技术工作集
 
-These files give the fastest read on the current repo-tracked truth before you change anything:
+开始改仓库状态前，最快应该读的是这些文件：
 
-- [Project](./project.md)
-- [Status](./status.md)
-- [Architecture](./architecture.md)
-- [Invariants](./invariants.md)
-- [Decisions](./decisions.md)
-- [Contracts Overview](../contracts/README.md)
-- [Documentation Portfolio](./docs_portfolio_consolidation.md)
-- [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
-- [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md)
-- [OPL Current Development Lines](./active/current-development-lines.md)
-- [OPL Development Document Portfolio](./active/development-document-portfolio.md)
-- [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
-- [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
-- [Runtime Substrate References](./references/runtime-substrate/README.md)
-- [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
-- [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md)
-- [Specs Index](./specs/README.md)
+- [项目概览](./project.md)
+- [当前状态](./status.md)
+- [架构](./architecture.md)
+- [硬约束](./invariants.md)
+- [关键决策](./decisions.md)
+- [合同目录说明](../contracts/README.md)
+- [文档组合治理](./docs_portfolio_consolidation.md)
+- [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)
+- [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md)
+- [OPL 当前开发线路](./active/current-development-lines.md)
+- [OPL 开发文档组合整理](./active/development-document-portfolio.md)
+- [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md)
+- [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [Runtime Substrate 参考索引](./references/runtime-substrate/README.md)
+- [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
+- [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.md)
+- [规格索引](./specs/README.md)
 
-For OPL-family development after the 2026-05-14 layered-planning reset, use
-[OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
-as the main reference. OPL keeps global target state, global gaps, shared
-primitive absorption, App/workbench targets, domain admission, and cross-repo
-execution order. MAS/MAG/RCA repos keep their own target states, gaps,
-authority boundaries, direct/hosted paths, and repo-specific absorption lists.
-`opl-aion-shell` upstream AionUI docs are outside this directory-governance
-scope.
+2026-05-14 分层收敛后，OPL 系列项目开发的主参考是
+[OPL 系列项目开发主参考](./active/opl-family-development-reference.md)：OPL 仓维护全局目标、全局差距、上收边界、shared primitives、App/workbench 目标和跨仓开发顺序；MAS/MAG/RCA 各仓维护本仓目标、差距、authority、direct/hosted 边界和本仓上收清单。`opl-aion-shell` 的上游 AionUI docs 不纳入这套目录治理。
 
-For OPL framework development after the 2026-05-11 architecture reset, use
-[OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md),
-[OPL Current Development Lines](./active/current-development-lines.md),
-[OPL Development Document Portfolio](./active/development-document-portfolio.md), and
-[OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
-The family content-level consolidation entry records how the same rule applies
-across `OPL`, `MAS`, `MAG`, `RCA`, and `MDS`: keep OPL as framework owner,
-keep domain truth in domain repos, and classify old material by paragraph-level
-content before moving or archiving files.
-The first gives the framework-first execution order. The portfolio classifies old development content as merge, retain, downgrade, retire, or archive. The roadmap owns the current TypeScript control-plane decision,
-Temporal provider plan, domain-agent boundary, and retirement discipline for
-Hermes-first / Gateway / legacy local-runtime surfaces.
-For MAS/MAG/RCA domain experience memory, route patterns, visual patterns, or
-template boundaries, read
-[Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.zh-CN.md).
-That entry governs framework/domain ownership without moving domain content into OPL.
+2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
+[OPL 系列项目开发主参考](./active/opl-family-development-reference.md)、[OPL 当前开发线路](./active/current-development-lines.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.md) 与
+[OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)。
+跨仓内容级整理入口是 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md)：OPL 持有 framework owner 口径，MAS/MAG/RCA 保留各自 domain truth，MDS 只保留 MAS 声明的 archive/reference/oracle 角色；整理时先按段落内容判断生命周期，再决定合并、调整或归档。
+前者给出 framework-first 执行顺序；开发文档组合整理负责判断旧开发文档内容应合并、保留、降级、退役还是归档；roadmap 持有当前 `TypeScript` 控制面决策、Temporal provider 计划、domain-agent 边界，以及
+Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
+涉及 MAS/MAG/RCA 的领域经验记忆、路线套路、视觉模式或模板边界时，先读
+[Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.md)；
+该入口只治理 framework 与 domain owner 边界，不把领域内容上收到 OPL。
 
-## Lifecycle Portfolio
+## 生命周期组合
 
-`docs/` is now managed by lifecycle state instead of a flat four-layer pile.
-Each long-lived document must have a clear `owner`, `purpose`, `state`, and `machine boundary`.
-Lifecycle state is judged by content role, while durable placement converges on the canonical directory set. A file with an active-looking name can still be a superseded plan; a reference file can remain useful only as migration background; a history file can contain command examples that are provenance rather than current guidance.
+`docs/` 现在按生命周期状态管理，而不是继续平铺四层文件。
+每份长期文档都必须说明 `owner`、`purpose`、`state` 和 `machine boundary`。
+生命周期状态按内容角色判断，长期落点按 canonical 目录集合收敛。一个看起来仍在 active/reference 路径下的文件，如果内容是过时计划、旧 topology、旧入口或旧 provider 判断，就必须标成 superseded / retired / tombstone 语境，并指向当前 owner surface。
 
-- `docs/` root keeps only the docs index, core five, and [Documentation Portfolio](./docs_portfolio_consolidation.md).
-- `docs/active/` keeps current human-readable runtime, activation, onboarding, and shared-boundary support.
-- `docs/public/` keeps public product-direction support read after the repository home.
-- `docs/product/` keeps One Person Lab App/workbench, operator-entry, and product-entry support.
-- `docs/runtime/` keeps OPL framework runtime, provider/executor, control-plane, and projection/read-model support.
-- `docs/delivery/` keeps generic artifact/package/export lifecycle-shell support; domain delivery authority remains in MAS/MAG/RCA.
-- `docs/source/` keeps generic workspace/source intake and source-truth transport-shell support; domain source semantics remain in domain repos.
-- `docs/policies/` keeps long-lived governance rules and repo-local operating discipline.
-- `docs/specs/` only keeps active runtime / product-boundary specs; when it is empty, spec truth has converged into the core five, `docs/active/`, the runtime-substrate roadmap, and machine-readable contracts.
-- `docs/references/` keeps support references grouped by purpose.
-- `docs/history/` keeps dated snapshots, retired paths, provenance archives, and tombstones.
+- `docs/` 根目录只保留文档索引、核心五件套和 [文档组合治理](./docs_portfolio_consolidation.md)。
+- `docs/active/` 承接当前 runtime、activation、onboarding 和 shared-boundary 的人读支撑。
+- `docs/public/` 承接仓库首页之后的公开产品方向支撑。
+- `docs/product/` 承接 One Person Lab App/workbench、operator entry 和产品入口支撑。
+- `docs/runtime/` 承接 OPL framework runtime、provider/executor、control plane 与 projection/read-model 支撑。
+- `docs/delivery/` 承接通用 artifact/package/export lifecycle shell 支撑；domain 交付 authority 仍归 MAS/MAG/RCA。
+- `docs/source/` 承接通用 workspace/source intake 和 source truth transport shell 支撑；domain source semantics 仍归各仓。
+- `docs/policies/` 承接长期治理规则和 repo-local 运行纪律。
+- `docs/specs/` 只承接仍然活跃的 runtime / product-boundary 规格；当前为空时，说明规格真相已经收敛到核心五件套、`docs/active/`、runtime-substrate roadmap 和机器可读合同。
+- `docs/references/` 按用途承接支撑参考。
+- `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
 
-The live public model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md).
-The live interaction model is stage-led, runtime-first, skill-first, and built around Agent executors as the minimum execution unit.
-Retired `gateway / federation / routed-action` corpus and old local Product API / UI-adapter material stay below the active layers.
+当前活跃公开模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)。
+当前活跃交互模型是 stage-led、以 Agent executor 为最小执行单位、runtime-first、skill-first。
+已退役的 `gateway / federation / routed-action` 语料以及 `frontdoor` 时代材料，都应放在活跃层之下理解。
 
-## Public Support
+## 公开支撑
 
-The repository home is for potential users first. It must stay install-first, bilingual, readable, and focused on what work OPL can help them start and deliver.
-Roadmap and operating-model documents explain product direction after the user knows how to start.
+仓库首页首先面向潜在用户，必须保持安装优先、可读，并直接说明用户可以开始和交付什么工作。路线图和运行模型在用户知道如何启动后，再解释产品方向。
 
-- [Repository Home](../README.md)
-- [Roadmap](./public/roadmap.md)
-- [Task Map](./public/task-map.md)
-- [Operating Model](./public/operating-model.md)
+- [仓库首页](../README.md)
+- [路线图](./public/roadmap.md)
+- [任务版图](./public/task-map.md)
+- [运行模型](./public/operating-model.md)
 - [Unified Harness Engineering Substrate](./public/unified-harness-engineering-substrate.md)
 
-## Active Support
+## 活跃支撑
 
-These human-readable documents support the current `OPL` mainline: `Codex-default executor + explicit activation layer + provider-backed stage runtime + family skill sync/discovery`.
+这些人读文档支撑当前 `Codex-default executor + explicit activation layer + provider-backed stage runtime + family skill sync/discovery` 主线。
 
-- [Project](./project.md)
-- [Status](./status.md)
-- [Architecture](./architecture.md)
-- [Invariants](./invariants.md)
-- [Decisions](./decisions.md)
-- [Contracts Overview](../contracts/README.md)
-- [OPL Public Surface Index](./active/opl-public-surface-index.md)
-- [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
-- [OPL Development Document Portfolio](./active/development-document-portfolio.md)
-- [Active Docs Index](./active/README.md)
+- [项目概览](./project.md)
+- [当前状态](./status.md)
+- [架构](./architecture.md)
+- [硬约束](./invariants.md)
+- [关键决策](./decisions.md)
+- [合同目录说明](../contracts/README.md)
+- [OPL 公开界面索引](./product/opl-public-surface-index.md)
+- [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)
+- [OPL 开发文档组合整理](./active/development-document-portfolio.md)
+- [活跃支撑文档索引](./active/README.md)
 
-## References And History
+## 参考与历史
 
-References hold review, audit, rollout, benchmark, migration, examples, and operating-governance material.
-They are repo-tracked support, not the default implementation basis.
+参考文档承接审核、验收、推进板、基准、迁移说明、样例和 operating-governance 材料。
+它们继续被仓库跟踪，但不是当前默认实现依据。
 
-- [Reference Index](./references/README.md)
-- [Runtime Substrate Reference Index](./references/runtime-substrate/README.md)
-- [OPL Runtime Manager target](./references/runtime-substrate/opl-runtime-manager-target.md)
-- [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
-- [Current support references](./references/current-support/README.md)
-- [Operating governance references](./references/operating-governance/README.md)
-- [Docker WebUI deployment reference](./references/current-support/opl-docker-webui-deployment.md)
-- [OPL GUI shell adapter boundary](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
-- [OPL fresh install and GUI first-launch testing](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
-- [OPL default skill ecosystem reference](./references/current-support/opl-default-skill-ecosystem.md)
-- [OPL release and Packages modular distribution reference](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
-- [OPL test lane governance reference](./references/current-support/opl-test-lane-governance.zh-CN.md)
-- [Shared Runtime Contract](./active/shared-runtime-contract.md), [Shared Domain Contract](./active/shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./active/opl-runtime-naming-and-boundary-contract.md) are active shared-boundary support docs. The former Shared Foundation / Shared Foundation Ownership docs have been absorbed into the [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md) and public operating model, with historical copies under [Shared Boundary Process History](./history/process/shared-boundary/README.md).
-- Retired `gateway / federation / routed-action` material lives in [Gateway / Federation Provenance Archive](./history/compatibility/gateway-federation/README.md).
-- Retired frontdoor-era material lives in [Frontdoor Legacy Notes](./history/frontdoor-legacy/README.md).
+- [参考级索引](./references/README.md)
+- [Runtime Substrate 参考索引](./references/runtime-substrate/README.md)
+- [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
+- [当前支撑参考索引](./references/current-support/README.md)
+- [Operating governance 参考索引](./references/operating-governance/README.md)
+- [Docker WebUI 部署参考](./references/current-support/opl-docker-webui-deployment.md)
+- [OPL GUI Shell Adapter 边界说明](./references/current-support/opl-gui-shell-adapter-boundary.md)
+- [OPL Fresh Install 与 GUI 首启测试参考](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.md)
+- [OPL 默认 Skill 生态参考](./references/current-support/opl-default-skill-ecosystem.md)
+- [OPL Release 与 Packages 模块化分发参考](./references/current-support/opl-release-packages-modular-distribution.md)
+- [OPL 测试 Lane 治理参考](./references/current-support/opl-test-lane-governance.md)
+- [共享运行时合同](./specs/shared-runtime-contract.md)、[共享领域合同](./specs/shared-domain-contract.md) 与 [OPL 运行时命名与边界合同](./runtime/opl-runtime-naming-and-boundary-contract.md) 是活跃 shared-boundary 支撑文档。原 `Shared Foundation` / `Shared Foundation Ownership` 已吸收到 [OPL Family 开发主参考](./active/opl-family-development-reference.md) 和公开 operating model，历史副本进入 [Shared Boundary 过程历史](./history/process/shared-boundary/README.md)。
+- 已退役的 `gateway / federation / routed-action` 语料进入 [Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.md)。
+- 已退役的 `frontdoor` 时代材料进入 [Frontdoor 历史资料](./history/frontdoor-legacy/README.md)。
 
-## History
+## 历史
 
-History explains how or why a freeze happened, while [Status](./status.md) remains the active baseline surface.
+历史解释某次冻结和实现的来龙去脉；[当前状态](./status.md) 是当前基线面。
 
-- [Process History](./history/process/README.md)
-- [History Archive](./history/README.md)
+- [过程历史归档](./history/process/README.md)
+- [历史归档索引](./history/README.md)
 
-## Where Current Truth Lives
+## 当前真相分别去哪看
 
-- Public role, active boundary, and default reading order: [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md)
-- OPL-owned machine-readable product surfaces: [Contracts Overview](../contracts/README.md)
-- Linked domain capability surfaces: the admitted domain repositories plus `opl skill sync`
-- Active framework contracts: `contracts/opl-framework/*.json`
-- Current runtime / product-boundary spec entry: [Specs Index](./specs/README.md)
-- Retired gateway/federation provenance corpus: [Gateway / Federation Provenance Archive](./history/compatibility/gateway-federation/README.md)
-- Reference-grade supporting material: [Reference Index](./references/README.md)
-- Historical and retired lanes: [History Archive](./history/README.md) and [Process History](./history/process/README.md)
+- 公开角色、活跃边界、默认阅读顺序： [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)
+- OPL 自己持有的机器可读产品资源： [合同目录说明](../contracts/README.md)
+- 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
+- 活跃 framework 合同：`contracts/opl-framework/*.json`
+- 当前 runtime / product-boundary 规格入口：[规格索引](./specs/README.md)
+- 已退役 gateway/federation 来源语料：[Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.md)
+- 参考级配套材料： [参考级索引](./references/README.md)
+- 历史与退役路线： [历史归档索引](./history/README.md) 与 [过程历史归档](./history/process/README.md)
 
-## Documentation Rules
+## 文档规则
 
-- Keep [Repository Home](../README.md) install-first, user-facing, and readable for potential users, clinicians, and other non-technical experts.
-- Keep active public docs bilingual.
-- Govern docs through the OPL-family canonical docs taxonomy. Content lifecycle
-  decides placement, but the long-lived directory names converge on
-  `active/public/product/runtime/delivery/source/policies/specs/references/history`.
-- Archive or tombstone superseded plans once their decision has moved into the core five or the current framework roadmap.
-- Keep reference-grade docs explicit about provenance vs current truth.
-- Keep history as tracked provenance and tombstone material.
-- Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.
-- New or moved documents must follow [Documentation Portfolio](./docs_portfolio_consolidation.md) before they become long-lived surfaces.
-- Cross-repo docs governance follows the [OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md), the [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md), and the [OPL Family Content-Level Docs Consolidation](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md): OPL, MAS, MAG, and RCA converge on the same canonical docs taxonomy. Older `program/plans/capabilities` directories should be physically migrated when possible; any retained old path is external/upstream support, history/provenance, or tombstone context, not a parallel long-term taxonomy. `opl-aion-shell` docs are upstream AionUI dependency docs and are outside this directory-governance scope.
-- When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.
+- 继续把 [仓库首页](../README.md) 保持成安装优先、用户视角、医生/专家和其他非技术读者可读的公开入口。
+- `docs/**` 是中文内部开发与维护参考。稳定文档路径优先使用无语言后缀 `.md` 承载中文 canonical 内容；不再维护 docs 层双语镜像。
+- 文档治理按 OPL-family canonical docs taxonomy 执行；内容生命周期决定去向，
+  但长期目录名统一为 `active/public/product/runtime/delivery/source/policies/specs/references/history`。
+- 已被核心五件套或当前 framework roadmap 取代的一次性计划，应进入 history / tombstone 语境，不继续作为 active reference 扩写。
+- 参考文档必须把 provenance surface 和 current truth 区分清楚。
+- 历史继续作为仓库跟踪的 provenance 和 tombstone。
+- `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
+- 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。
+- 跨仓 docs 治理按 [OPL Family 开发主参考](./active/opl-family-development-reference.md)、[Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md) 执行：OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy；旧 `program/plans/capabilities` 等目录能物理迁移就直接迁移，仍暂留的旧路径只能是外部/上游支撑、历史 provenance 或 tombstone，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。
+- 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。

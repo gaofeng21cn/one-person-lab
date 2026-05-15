@@ -1,22 +1,20 @@
-**English** | [中文](./opl-default-skill-ecosystem.zh-CN.md)
+# OPL 默认 Skill 生态参考
 
-# OPL Default Skill Ecosystem Reference
+这份文档说明 OPL App 和 `opl install` 默认维护哪些 skill，以及这些 skill 应该放在哪一层。目标是让 One Person Lab App、原版 Codex App 和命令行 Codex 看到一致的能力生态，同时避免把项目专用 skill 装到系统级。
 
-This document defines which skills One Person Lab App and `opl install` should maintain by default. The goal is for One Person Lab App, stock Codex App, and Codex CLI to see the same capability ecosystem without installing project-local skills globally.
+## 三层模型
 
-## Three Layers
-
-| Layer | Examples | Default install / sync path | Ownership rule |
+| 层级 | 例子 | 默认安装/同步位置 | 维护原则 |
 | --- | --- | --- | --- |
-| OPL family domain skills | MAS, MAG, RCA | Codex plugin / family skill sync | Owned by each active domain-agent repo; OPL registers and syncs them |
-| OPL companion capabilities | Superpowers, ui-ux-pro-max, officecli skills, officecli CLI binary | User-level Codex / agent skill discovery paths plus managed tool PATH | OPL detects them in status mode and applies them through `opl install`, OPL App first launch, Docker managed homes, Full packaged runtime, or explicit managed-profile action |
-| Codex bundled skills | Documents, Presentations, Spreadsheets | Codex plugin cache | OPL detects availability and does not copy them into `~/.codex/skills` |
+| OPL family domain skills | MAS、MAG、RCA | Codex plugin / family skill sync | 由各 active domain-agent 仓维护，OPL 只负责注册和同步 |
+| OPL companion 能力 | Superpowers、ui-ux-pro-max、officecli skills、officecli CLI binary | 用户级 Codex/agent skill discovery 路径加受管工具 PATH | OPL 在 status 模式只检测；`opl install`、OPL App 首启、Docker 托管 Home、Full 随包 runtime 或显式 managed profile 会执行安装/同步 |
+| Codex bundled skills | Documents、Presentations、Spreadsheets | Codex plugin cache | 只检测可用性，不复制到 `~/.codex/skills` |
 
-MDS internal skills such as `scout`, `review`, `baseline`, `experiment`, and `write` are not part of the OPL default global ecosystem. They should stay MAS-controlled, project-local, or domain-runtime-local instead of becoming OPL default family skills.
+MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目专用 skill 不属于 OPL 默认系统级生态。它们应该留在 MAS 控制下的项目目录或 domain runtime 内部，不升级为 OPL 默认 family skill。
 
-## Official Superpowers Model
+## Superpowers 的官方安装模型
 
-Superpowers is not installed by enabling only the `using-superpowers` skill. The official Codex installation model is:
+Superpowers 不是安装单个 `using-superpowers` skill。官方 Codex 安装方式是：
 
 ```bash
 git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
@@ -24,49 +22,49 @@ mkdir -p ~/.agents/skills
 ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
 ```
 
-After installation, restart Codex / One Person Lab App so native skill discovery can read `~/.agents/skills/superpowers`.
+安装后需要重启 Codex / OPL App，让 skill discovery 重新读取 `~/.agents/skills/superpowers`。
 
-Update with:
+更新方式：
 
 ```bash
 cd ~/.codex/superpowers && git pull --ff-only
 ```
 
-OPL applies Superpowers with this model only in explicit managed mode:
+OPL 只在显式托管模式下按这个模型应用 Superpowers：
 
-- `opl skill companion status` only inspects and does not mutate the user environment.
-- `opl skill companion apply --mode managed --superpowers full` clones into `~/.codex/superpowers` and links `~/.agents/skills/superpowers -> ~/.codex/superpowers/skills`.
-- `opl skill companion apply --mode managed --superpowers lite` preserves a lightweight profile and does not enable upstream `using-superpowers`.
-- Support `OPL_SUPERPOWERS_REPO_URL` for mirrors or tests.
-- Support `OPL_SUPERPOWERS_DIR` for a custom local clone path.
+- `opl skill companion status` 只检测，不修改。
+- `opl skill companion apply --mode managed --superpowers full` 才 clone 到 `~/.codex/superpowers` 并创建 `~/.agents/skills/superpowers -> ~/.codex/superpowers/skills`。
+- `opl skill companion apply --mode managed --superpowers lite` 保留轻量 profile，不启用 upstream `using-superpowers`。
+- 支持 `OPL_SUPERPOWERS_REPO_URL` 指向测试或镜像仓库。
+- 支持 `OPL_SUPERPOWERS_DIR` 指定本地 clone 位置。
 
-## officecli And Office Skills
+## officecli 和 Office 类 skill
 
-OPL treats officecli as a two-part companion capability because MAS/MAG/RCA may need Word, PowerPoint, Excel, or dashboard capability. The skill payloads describe how to work; the `officecli` CLI binary performs the actual document operations. Office-related skills are ready only when both the skill payload and `officecli --version` are available.
+OPL 把 officecli 作为“双组件” companion 能力，因为 MAS/MAG/RCA 都可能需要 Word、PowerPoint、Excel 或 dashboard 能力。skill payload 说明怎么用，`officecli` CLI binary 执行真实文档操作。Office 类 skill 只有 skill payload 和 `officecli --version` 同时可用时才算 ready。
 
-Default checks cover:
+默认检测这些能力：
 
-- `officecli` skill payload plus `officecli` CLI binary
-- `officecli-docx` plus `officecli` CLI binary
-- `officecli-pptx` plus `officecli` CLI binary
-- `officecli-xlsx` plus `officecli` CLI binary
+- `officecli` skill payload + `officecli` CLI binary
+- `officecli-docx` + `officecli` CLI binary
+- `officecli-pptx` + `officecli` CLI binary
+- `officecli-xlsx` + `officecli` CLI binary
 
-These skills can come from Skills Manager under `~/.skills-manager/skills/*`, from the OfficeCLI source repo, or from a packaged runtime/managed image exposed through `OPL_PACKAGED_SKILLS_ROOT`. `opl install` and OPL App first launch run the managed profile, install or reuse the `officecli` binary, and symlink the skill payloads into the Codex-visible skill directory. Full DMG exposes the binary at `runtime/current/bin/officecli`; Docker images expose packaged skill payloads at `/opt/opl/skills`.
+这些 skill 可以来自 Skills Manager 的 `~/.skills-manager/skills/*`、OfficeCLI 源码仓，或通过 `OPL_PACKAGED_SKILLS_ROOT` 暴露的随包 runtime / 托管镜像。`opl install` 和 OPL App 首启会走 managed profile，安装或复用 `officecli` binary，并把 skill payload symlink 到 Codex 可见目录。Full DMG 中 binary 位于 `runtime/current/bin/officecli`；Docker 镜像中 packaged skill payload 位于 `/opt/opl/skills`。
 
-## How OPL App Should Use This Ecosystem
+## OPL App 应该怎么用这套生态
 
-One Person Lab App should reuse Codex user-level skill discovery paths when appropriate, but whether it mutates those paths is controlled by the selected profile.
+OPL App 默认应该优先复用 Codex 的用户级 skill discovery 路径；是否修改这些路径由 profile 决定。
 
-Recommended order:
+推荐顺序：
 
-1. `observe`: inspect only and do not modify the user skill or tool ecosystem.
-2. `ask_to_apply`: build a plan and wait for user confirmation.
-3. `managed`: apply the recommended profile for `opl install`, OPL App first launch, Docker, and OPL-owned `CODEX_HOME`.
-4. Use `OPL_PACKAGED_SKILLS_ROOT` / `OPL_FULL_RUNTIME_HOME/skills` as first-install skill sources when present.
-5. Detect Codex bundled skills without copying them.
-6. Keep MDS and other MAS-internal project-local skills out of the global system list.
+1. `observe`：只读检测，不修改用户 skill 或工具生态。
+2. `ask_to_apply`：生成计划和按钮，等用户确认。
+3. `managed`：`opl install`、OPL App 首启、Docker / OPL 专用 `CODEX_HOME` 执行推荐配置。
+4. 存在 `OPL_PACKAGED_SKILLS_ROOT` / `OPL_FULL_RUNTIME_HOME/skills` 时，把它们作为首装 skill 源。
+5. 对 Codex bundled skills 只显示可用性，不复制。
+6. 对 MDS 以及其他 MAS-internal 项目专用 skill 不做系统级展示。
 
-## Verification
+## 验证
 
 ```bash
 opl install --skip-gui-open
@@ -76,4 +74,4 @@ opl skill companion apply --mode managed --superpowers lite
 opl system initialize
 ```
 
-`opl system initialize` should report the observed state. `opl skill companion status` must not mutate user configuration; `apply --mode managed` is the mutating action.
+`opl system initialize` 中 `recommended_skills` 应显示当前状态；`opl skill companion status` 不应修改用户环境，`apply --mode managed` 才能改。

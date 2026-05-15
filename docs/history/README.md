@@ -1,35 +1,35 @@
-# History Archive
+# 历史归档索引
 
-**English** | [中文](./README.zh-CN.md)
+[English](./README.md) | **中文**
 
-This directory is the archive index for retired `One Person Lab` documentation lanes.
+这里是 `One Person Lab` 已退役文档路线的统一归档入口。
 
-It is the only supported entry for repo-tracked historical material.
-History is classified by content, and the durable history entry is the canonical `docs/history/` tree. If a plan, roadmap, or reference still mentions an old topology such as gateway-first, frontdoor, federation, Hermes-first, host-agent, Product API, or OMX as if it were active, treat it as historical unless the current core docs explicitly restate it.
-Current product truth, shared runtime boundaries, and maintainer workflow belong in:
+仓库跟踪的历史材料只从这里进入。
+历史状态按内容判断；长期历史入口固定在 canonical `docs/history/`。任何计划、路线图或参考材料，如果仍把 gateway-first、frontdoor、federation、Hermes-first、host-agent、Product API 或 OMX 写成 active topology，而核心文档没有重新确认，就按历史材料理解。
+当前产品真相、共享运行时边界和维护者工作入口统一回到：
 
-- [Repository Home](../../README.md)
-- [Docs Guide](../README.md)
-- [Project](../project.md)
-- [Status](../status.md)
-- [Architecture](../architecture.md)
-- [Invariants](../invariants.md)
-- [Decisions](../decisions.md)
-- current runtime / product-boundary specs under [`docs/specs/`](../specs/); if there are no active specs, use the core five and `docs/active/`
+- [仓库首页](../../README.md)
+- [文档索引](../README.md)
+- [项目概览](../project.md)
+- [当前状态](../status.md)
+- [架构](../architecture.md)
+- [硬约束](../invariants.md)
+- [关键决策](../decisions.md)
+- [`docs/specs/`](../specs/) 下当前仍生效的 runtime / product-boundary 规格；当前无活跃 specs 时回到核心五件套和 `docs/active/`
 
-Archived lanes:
+当前归档路线：
 
-- [Compatibility archive](./compatibility/README.md)
-- [Runtime substrate history archive](./runtime-substrate/README.md)
-- [Process history archive](./process/README.md)
-- [Frontdoor legacy notes](./frontdoor-legacy/README.md)
-- [OMX historical archive](./omx/README.md)
+- [兼容性历史归档](./compatibility/README.md)
+- [Runtime Substrate 历史归档](./runtime-substrate/README.md)
+- [过程历史归档](./process/README.md)
+- [Frontdoor 历史资料](./frontdoor-legacy/README.md)
+- [OMX 历史资料](./omx/README.md)
 
-Tombstone rules:
+Tombstone 规则：
 
-- Retired routes stay here for provenance, migration review, and audit only.
-- Do not revive an old route because a historical file contains a command, acceptance checklist, or old path example.
-- Runtime / product-entry / migration documents whose content has already been absorbed should be entered through [Runtime substrate history archive](./runtime-substrate/README.md).
-- Absorbed shared-boundary framing pages live under [Shared Boundary Process History](./process/shared-boundary/README.md).
-- Product API / ACP native specs now live in the [process history archive](./process/README.md) as historical formation context only.
-- Current planning for the complete stage-led runtime framework with Agent executors as the minimum execution unit starts from [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
+- 退役路线只保留给来源追溯、迁移回顾和审计。
+- 不因为历史文件里仍有命令、验收清单或旧路径示例，就恢复旧路线。
+- runtime / product-entry / migration 旧整文档如果已经被吸收，默认从 [Runtime Substrate 历史归档](./runtime-substrate/README.md) 进入。
+- 已吸收的 shared-boundary framing 页面进入 [Shared Boundary 过程历史](./process/shared-boundary/README.md)。
+- Product API / ACP native specs 已迁入 [过程历史归档](./process/README.md)，只保留历史形成过程。
+- 当前完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架规划从 [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md) 进入。

@@ -1,29 +1,29 @@
-# Process History Archive
+# 过程历史归档
 
-**English** | [中文](./README.zh-CN.md)
+[English](./README.md) | **中文**
 
-This directory holds completed or superseded implementation plans, design drafts, and Superpowers-generated process notes.
+本目录收纳已经完成或被取代的实施计划、设计草稿和 Superpowers 生成的过程材料。
 
-These files are retained for audit, migration review, and provenance. They are not the active implementation contract for `OPL`.
+这些文件只用于审计、迁移回顾和来源追溯，不是 `OPL` 当前实现合同。
 
-Current truth lives in:
+当前真相统一回到：
 
-- [Docs Guide](../../README.md)
-- [Project](../../project.md)
-- [Status](../../status.md)
-- [Architecture](../../architecture.md)
-- [Invariants](../../invariants.md)
-- [Decisions](../../decisions.md)
-- [Active Specs](../../specs/); if there are no active specs, use the core five and `docs/active/`
+- [文档索引](../../README.md)
+- [项目概览](../../project.md)
+- [当前状态](../../status.md)
+- [架构](../../architecture.md)
+- [硬约束](../../invariants.md)
+- [关键决策](../../decisions.md)
+- [活跃规格](../../specs/)；当前无活跃 specs 时回到核心五件套和 `docs/active/`
 
-## Archived Buckets
+## 归档分区
 
-- [Plans](./plans/) keeps completed implementation plans and closeout briefs.
-- [Specs](./specs/) keeps superseded design specs that no longer define the active product boundary, including Product API / ACP-native formation context.
-- [Shared Boundary](./shared-boundary/) keeps absorbed shared-foundation framing pages after their owner split moved into current active owner surfaces.
-- [Superpowers](./superpowers/) keeps generated planning/spec artifacts from previous worker flows.
+- [Plans](./plans/)：已经完成的实施计划和 closeout brief。
+- [Specs](./specs/)：已被当前产品边界取代的历史设计规格，包括 Product API / ACP native 形成过程。
+- [Shared Boundary](./shared-boundary/)：已吸收的 shared-foundation framing 页面；其中 owner split 已迁入当前 active owner surface。
+- [Superpowers](./superpowers/)：早期 worker flow 生成的 plan/spec 过程材料。
 
-## Boundary
+## 边界
 
-The only active design specs kept outside this archive are the current runtime/product-boundary specs under `docs/specs/`. If that index is empty, current spec truth has converged into the core five, `docs/active/`, the runtime-substrate roadmap, and machine-readable contracts.
-New one-off planning notes should go here once they are completed, superseded, or no longer needed as active working material.
+当前仍留在 `docs/specs/` 的只有活跃 runtime / product-boundary 规格；如果 specs 索引为空，说明当前规格真相已经收敛到核心五件套、`docs/active/`、runtime-substrate roadmap 和机器可读合同。
+新增一次性规划材料在完成、被取代或退出活跃工作面后，应迁入本目录。

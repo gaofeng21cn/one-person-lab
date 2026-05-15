@@ -1,44 +1,42 @@
-**English** | [中文](./opl-surface-review-matrix.zh-CN.md)
-
 # OPL Surface Review Matrix
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable legacy-derived reference only; no current machine-readable `surface-review-matrix.json` contract is published in this repo.
+Machine boundary: 仅作为 legacy-derived 人读参考；当前仓库没有发布 `surface-review-matrix.json` 机器可读合同。
 
-## Purpose
+## 目的
 
-This document preserves the legacy-derived review matrix vocabulary for historical OPL public, contract, and supporting surfaces.
+这份文档保留历史 OPL public / contract / supporting surfaces 的 legacy-derived review matrix 词汇。
 
-Its job is to make human-review obligations, acceptance coverage, companion review surfaces, and publishability-stage boundaries inspectable from one place without turning the matrix into an approval engine, publish controller, release engine, or second source of truth.
+它的作用是：把 human-review obligation、acceptance coverage、配套 review surface，以及 publishability-stage boundary 集中暴露出来，同时不把这张 matrix 升格成 approval engine、publish controller、release engine 或第二真相源。
 
-The current OPL topology is stage-led with Agent executors as the minimum execution unit. Surface IDs that still contain gateway vocabulary are historical/reviewability labels from the archived corpus, not active compatibility interfaces.
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。仍包含 gateway 词汇的 surface id 是来自已归档 corpus 的历史/reviewability 标签，不是 active compatibility interface。
 
-## Current Machine Boundary
+## 当前机器边界
 
-No current `contracts/opl-framework/surface-review-matrix.json` exists. Current machine-readable behavior must use the active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
+当前不存在 `contracts/opl-framework/surface-review-matrix.json`。当前机器可读行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
 
-## Non-Goals
+## 非目标
 
-This review matrix does not:
+这个 review matrix 不负责：
 
-- approve publication
-- automate review decisions
-- replace governing contracts, docs, or acceptance gates
-- transfer domain-owned review or publication authority into `OPL`
-- authorize direct publish, direct release, direct export, direct submission, direct posting, or direct harness access by `OPL`
+- 批准发布
+- 自动化 review 决策
+- 替代 governing contracts、docs 或 acceptance gates
+- 把 domain-owned review 或 publication authority 上收给 `OPL`
+- 授权 `OPL` 直接执行 direct publish、direct release、direct export、direct submission、direct posting 或 direct harness access
 
 ## Shared-Foundation Ownership Boundary
 
-This review matrix sits in the shared-foundation reviewability layer only.
-`OPL` may index human-review and companion-surface obligations here, but domain review truth, publication truth, and final continue/stop/reframe authority still remain with humans and domain-owned surfaces.
-That keeps the matrix useful for discoverability and acceptance alignment without turning it into an approval control plane or shared truth store.
-For the broader ownership split, see the [OPL Family Development Reference](../../active/opl-family-development-reference.zh-CN.md).
-For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
+这张 review matrix 只位于 shared-foundation 的 reviewability 层。
+`OPL` 可以在这里索引 human-review 义务与 companion-surface 关系，但 domain review truth、publication truth，以及最终的 continue/stop/reframe authority 仍然留在人类与 domain-owned surface 手中。
+因此，这张 matrix 能服务于 discoverability 与 acceptance alignment，而不会升级成 approval control plane 或共享 truth store。
+更完整的 ownership split 可参考 [OPL Family 开发主参考](../../active/opl-family-development-reference.md)。
+当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.md) 为准。
 
-## Review Fields
+## Review 字段
 
-Each entry stays derived/reference-only and carries only:
+每个 entry 都保持 derived/reference-only，只携带：
 
 - `surface_id`
 - `owner_scope`
@@ -50,21 +48,21 @@ Each entry stays derived/reference-only and carries only:
 - `publishability_stage`
 - `governing_refs`
 
-## Cross-Domain Wording Check Modes
+## Cross-Domain Wording Check 模式
 
-- `shared_gate_required` — the surface is directly covered by the shared `cross_domain_wording_consistency` gate.
-- `local_review_required` — the surface still requires cross-domain wording review, but that check is carried through local governing/companion review rather than by listing the surface directly in the shared gate.
+- `shared_gate_required` — 这个 surface 直接纳入共享 `cross_domain_wording_consistency` gate。
+- `local_review_required` — 这个 surface 仍然需要 cross-domain wording review，但该检查通过本地 governing/companion review 承担，而不是直接列进共享 gate 文件列表。
 
-## Publishability Stage Values
+## Publishability Stage 取值
 
-These values describe documentation-readiness stage only. They are not workflow states.
+这些取值只描述 documentation-readiness stage，不是 workflow state。
 
 - `top_level_positioning_aligned`
 - `contract_boundary_aligned`
 - `supporting_reference_aligned`
 - `acceptance_reference_aligned`
 
-## Current Coverage
+## 当前 Coverage
 
 ### Top-level public-entry surfaces
 
@@ -103,42 +101,42 @@ These values describe documentation-readiness stage only. They are not workflow 
 - `opl_public_surface_index_doc`
 - `opl_gateway_acceptance_spec`
 
-## Companion Review / Mapping Surfaces
+## 配套 Review / Mapping Surfaces
 
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
-- [OPL Public Surface Index](../../active/opl-public-surface-index.md)
+- [OPL Public Surface Index](../../product/opl-public-surface-index.md)
 
-## Reading Rule
+## 阅读规则
 
-Read this matrix as a **derived review-boundary index**, not as an approval or publication contract.
+这张 matrix 必须被理解成 **derived review-boundary index**，而不是 approval contract 或 publication contract。
 
-`human_review_required` in archived examples tells reviewers whether explicit human review was required before that historical surface could be treated as public material.
-`required_acceptance_gates` only references already frozen acceptance gates.
-`required_companion_surfaces` only points to already indexed supporting or governing surfaces.
-`publishability_stage` preserves the historical alignment vocabulary; current publishability must be governed by active contracts and domain-owned gates.
-If the covered surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, review coverage stays reference-only and does not turn those surfaces into an approval layer, publish controller, or domain-truth owner.
-If the covered surface is the [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md), review coverage still remains reference-only; it does not create runtime authority, candidate admission, or runtime-owner promotion.
-If the covered surface is `opl_task_map`, under-definition workstreams remain semantic candidates only; they do not become admitted domains or routed targets through review coverage alone.
-If the covered surface is `opl_candidate_domain_backlog`, the surface remains a blocker index below the onboarding gate; it does not promote a candidate workstream into a domain, approve onboarding, or create routed readiness.
-None of these fields transfer domain review or publication authority into `OPL`.
+已归档示例里的 `human_review_required` 只是在告诉 reviewer：这个历史 surface 当时要被当成 public material 之前，是否需要显式 human review。
+`required_acceptance_gates` 只引用已经冻结的 acceptance gate。
+`required_companion_surfaces` 只指向已经被索引的 supporting 或 governing surface。
+`publishability_stage` 只保留历史 alignment 词汇；当前 publishability 必须由 active contracts 与 domain-owned gates 管理。
+如果被覆盖的 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么这些 review coverage 也仍然只是 reference-only，不会把它们升级成 approval layer、publish controller，或 domain-truth owner。
+如果被覆盖的 surface 是 [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) 或 [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md)，那么这些 review coverage 也仍然只是 reference-only；它们不会创造 runtime authority、candidate admission，或把 `OPL` 提升成 runtime owner。
+如果被覆盖的 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只保持语义候选身份，不会因为被纳入 review coverage 就自动变成正式收录 domain 或 routed target。
+如果被覆盖的 surface 是 `opl_candidate_domain_backlog`，那么它也只是一张位于 onboarding gate 之下的 blocker index，不会把 candidate workstream 升格成 domain，也不会批准 onboarding 或创造 routed readiness。
+这些字段都不会把 domain review 或 publication authority 上收给 `OPL`。
 
-## Governing Sources
+## 上位依据
 
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
-- [OPL Public Surface Index](../../active/opl-public-surface-index.md)
+- [OPL Public Surface Index](../../product/opl-public-surface-index.md)
 - [OPL Candidate Domain Backlog](../domain-admission/opl-candidate-domain-backlog.md)
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Gateway Rollout](../../history/compatibility/gateway-federation/opl-gateway-rollout.md)
-- [OPL Task Map](../../public/task-map.md)
+- [OPL Gateway 落地路线](../../history/compatibility/gateway-federation/opl-gateway-rollout.md)
+- [OPL 任务版图](../../public/task-map.md)
 
-## Completion Definition
+## 完成定义
 
-The review matrix is acceptable only when:
+只有当下面这些条件都成立时，review matrix 才算合格：
 
-- it covers the frozen OPL public, shared-foundation boundary, contract, and supporting surfaces that currently matter for human review and publishability inspection
-- archived `required_acceptance_gate` and `required_companion_surface` values are reviewability references only
-- every `governing_ref` resolves to an existing local artifact
-- it remains derived, reference-only, and non-executing
-- it does not become an approval engine, publish controller, release engine, or second source of truth
+- 它覆盖当前 human review 与 publishability inspection 所需的全部已冻结 OPL public / shared-foundation boundary / contract / supporting surface
+- 已归档的 `required_acceptance_gate` 与 `required_companion_surface` 只作为 reviewability reference
+- 每个 `governing_ref` 都能解析到存在的本地工件
+- 它保持 derived、reference-only、non-executing
+- 它不会升级成 approval engine、publish controller、release engine 或第二真相源

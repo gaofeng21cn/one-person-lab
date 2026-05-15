@@ -1,37 +1,35 @@
-**English** | [中文](./opl-gateway-example-corpus.zh-CN.md)
-
 # OPL Gateway Example Corpus
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/README.md`
-Machine boundary: human-readable legacy/provenance companion only. The repo no longer publishes active `examples/opl-framework/*.json` artifacts for this corpus.
+Machine boundary: 只作为 legacy/provenance 人读配套。当前仓库不再发布这组 corpus 的 active `examples/opl-framework/*.json` artifact。
 
-## Purpose
+## 目的
 
-This document indexes former historical/legacy-derived machine-readable examples for the former `OPL Gateway` contract stack.
+这份文档索引早期 `OPL Gateway` 合同体系留下的 former historical / legacy-derived machine-readable examples。
 
-Its goal is to keep the legacy gateway examples discoverable for review, migration, and schema archaeology without turning examples into a runtime or current topology.
-It is a companion index, not a new contract layer.
-The current OPL topology is stage-led with Agent executors as the minimum execution unit; these examples are contract walkthroughs and evidence material.
+它的目标是：在不把 example 做成 runtime 或当前 topology 的前提下，让 legacy gateway examples 可以继续用于 review、migration 与 schema archaeology。
+它是一个配套索引，而不是新的 contract layer。
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位；这些 examples 是合同 walkthrough 和 evidence material。
 
-## Non-Goals
+## 非目标
 
-This corpus does not:
+这组 example 不负责：
 
-- implement a runtime
-- execute a domain harness
-- claim canonical domain truth
-- replace the underlying contracts
+- 实现 runtime
+- 执行 domain harness
+- 声称自己拥有 canonical domain truth
+- 替代底层正式 contract
 
-The examples are illustrative contract compositions only.
-For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any routed-action fragments here stay at the planning-level contract layer and do not imply an activated launcher or runtime.
+这些 example 只是 illustrative 的 contract composition。
+在当前 `Phase 1 / G3 thin handoff planning freeze hardening` 中，这里出现的 routed-action 片段都只停留在 planning-level contract 层，不表示已激活 launcher 或 runtime。
 
 ## Former Example Set
 
 ### 1. Research submission flow
 
-- Former artifact: `examples/opl-framework/research-ops-submission.json` (retired from the active repo artifact set)
-- Shows how a `research_ops` request composes:
+- Former artifact：`examples/opl-framework/research-ops-submission.json`（已从 active repo artifact set 退役）
+- 展示一个 `research_ops` 请求如何组合：
   - `G3` routed action decision
   - `G1/G3` handoff payload
   - `P5.M1` governance / audit record
@@ -39,22 +37,22 @@ For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any route
 
 ### 2. Presentation publish / promotion flow
 
-- Former artifact: `examples/opl-framework/presentation-ops-publish.json` (retired from the active repo artifact set)
-- Shows how a `presentation_ops` request composes:
+- Former artifact：`examples/opl-framework/presentation-ops-publish.json`（已从 active repo artifact set 退役）
+- 展示一个 `presentation_ops` 请求如何组合：
   - `G3` routed action decision
   - `G1/G3` handoff payload
   - `P5.M1` governance / audit record
   - `P5.M2` publish / promotion record
 
-## Reading Rule
+## 阅读规则
 
-Read the examples as **contract-level walkthroughs**, not executable workflows.
-This corpus is illustrative and non-governing.
+这些 example 必须被理解成**contract-level walkthrough**，而不是 executable workflow。
+这组 corpus 是 illustrative、non-governing 的配套参考。
 
-If an example references a domain outcome, that outcome remains domain-owned truth.
-`OPL` only carries the top-level routing, governance, and publish/promotion indexes shown by these archived provenance examples. Current behavior must use active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
+只要 example 引用了某个 domain outcome，该 outcome 仍然是 domain-owned truth。
+`OPL` 只携带这些已归档 provenance 示例中展示的顶层 routing、governance 与 publish/promotion index。当前行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
 
-## Governing Contracts
+## 上位合同
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
 - [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
@@ -63,15 +61,15 @@ If an example references a domain outcome, that outcome remains domain-owned tru
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 
-## Related Companion
+## 相关配套示例
 
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 
-## Completion Definition
+## 完成定义
 
-The example corpus is acceptable only when:
+只有当下面这些条件都成立时，这组 example corpus 才算合格：
 
-- former artifact names remain provenance-only and are not clickable active repo paths
-- the corpus does not imply direct harness execution
-- the corpus does not move canonical truth into `OPL`
-- the corpus points readers to current contracts/source/CLI behavior for active machine truth
+- former artifact 名称只保留 provenance 语义，不再作为可点击 active repo path
+- corpus 不暗示 direct harness execution
+- corpus 不把 canonical truth 上收给 `OPL`
+- corpus 引导读者回到当前 contracts/source/CLI 行为读取 active machine truth

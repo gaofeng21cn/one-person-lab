@@ -1,31 +1,35 @@
-# Active Specs
+# 活跃规格索引
 
 Status: `spec_index`
 Owner: `One Person Lab`
-Machine boundary: human-readable index only; machine-readable behavior must use contracts, schemas, source, CLI/API behavior, runtime ledgers, generated artifacts, or semantic `human_doc:*` ids.
+Machine boundary: 仅人读索引；机器可读行为必须使用 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物或语义化 `human_doc:*` id。
 
-This directory is intentionally small. It only holds active specs that still define the current runtime or product boundary.
+本目录故意保持很小。它只收纳仍定义当前 runtime、domain admission、shared boundary 或 product-boundary 的活跃规格支撑。
 
-Current truth starts in:
+当前真相先看：
 
-- [Docs Guide](../README.md)
-- [Project](../project.md)
-- [Status](../status.md)
-- [Architecture](../architecture.md)
-- [Invariants](../invariants.md)
-- [Decisions](../decisions.md)
-- [OPL Current Development Lines](../active/current-development-lines.md)
-- [OPL Development Document Portfolio](../active/development-document-portfolio.md)
-- [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+- [文档索引](../README.md)
+- [项目概览](../project.md)
+- [当前状态](../status.md)
+- [架构](../architecture.md)
+- [硬约束](../invariants.md)
+- [关键决策](../decisions.md)
+- [OPL 当前开发线路](../active/current-development-lines.md)
+- [OPL 开发文档组合整理](../active/development-document-portfolio.md)
+- [OPL stage-led agent framework roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
 
-## Contents
+## 内容
 
-| File | Lifecycle state | Current owner | Reading rule |
+| 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
 | --- | --- | --- | --- |
-| No active specs currently live here | `empty_active_spec_set` | Core five, `docs/active/`, runtime-substrate roadmap, and machine-readable contracts | Do not revive Product API / ACP / frontdoor semantics from old specs; historical specs start in the [process specs archive](../history/process/specs/). |
+| `opl-domain-onboarding-contract.md` | `active_support` | Domain admission owner | 候选 domain-agent 准入、truth ownership、entry surface、execution model 和 stage selection readiness 审阅支撑。 |
+| `shared-runtime-contract.md` | `active_support` | OPL shared runtime owner | OPL 与 domain repo 之间的 shared runtime 边界支撑；机器真相归 contracts/source/runtime evidence。 |
+| `shared-domain-contract.md` | `active_support` | OPL shared domain owner | Domain truth、quality verdict、artifact authority、receipt refs 和 projection 边界支撑。 |
 
-## Admission Rule
+旧 Product API / ACP / frontdoor 规格不从本目录恢复；历史规格从 [过程历史规格归档](../history/process/specs/) 进入。
 
-New active specs belong here only when they still define the current runtime or product boundary and cannot be better represented by the core five, `docs/active/`, `docs/references/`, or machine-readable contracts.
+## 收录规则
 
-When a spec is completed, absorbed, or replaced, move it to `docs/history/process/specs/` with the current owner and archive reason.
+新的活跃规格只有在仍定义当前 runtime 或 product boundary，且无法更适合地落在核心五件套、`docs/active/`、`docs/references/` 或机器可读合同时，才进入本目录。
+
+规格完成、被吸收或被替代后，应迁入 `docs/history/process/specs/`，并写明当前 owner 与归档理由。

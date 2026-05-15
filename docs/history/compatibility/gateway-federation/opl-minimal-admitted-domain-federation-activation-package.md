@@ -1,81 +1,79 @@
-**English** | [中文](./opl-minimal-admitted-domain-federation-activation-package.zh-CN.md)
-
 # OPL Minimal admitted-domain federation activation package
 
-## Purpose
+## 目的
 
-This reference-grade package freezes the smallest honest follow-on after the prior `Phase 1 exit activation package`.
+这份 reference-grade package 用来冻结在先前 `Phase 1 exit activation package` 之后、当前最小且诚实的 follow-on。
 
-It is activated now because the current `2026-04-08` repo-tracked four-repo sync shows that two admitted domain surfaces are finally stable enough to support a stronger top-level federation expression:
+它现在可以被激活，是因为 `2026-04-08` 的 repo-tracked 四仓同步面已经显示：至少两个 admitted domain surface 终于稳定到足以支撑更强的顶层 federation 表达：
 
-- `research_ops` via `MedAutoScience`
-- `presentation_ops` via `RedCube AI`
+- `research_ops` -> `MedAutoScience`
+- `presentation_ops` -> `RedCube AI`
 
-This package still does **not** activate a runtime.
-It still does **not** promote `OPL` into a runtime owner.
-It still applies to already admitted domains only.
+这份 package **不会**激活 runtime。
+它**不会**把 `OPL` 提升成 runtime owner。
+它也**只**适用于已 admitted domain。
 
-The machine-readable companion is [`../../contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json`](../../../../contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json).
+曾经规划过的 machine-readable 工件 `contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json` 未保留为当前 active contract；本文只作为历史 activation package 记录。
 
-## Why The Threshold Is Now Met
+## 为什么门槛现在满足
 
-The predecessor `Phase 1 exit activation package` remained blocked on external readiness.
-That historical freeze is preserved as repo-tracked truth.
+前序的 `Phase 1 exit activation package` 当时仍 blocked 在 external readiness。
+这份历史 freeze 继续保留为 repo-tracked truth。
 
-The current reassessment changes only one thing:
+当前重评估只改变了一件事：
 
-- `MedAutoScience` now has its repo-side integration-harness activation baseline absorbed on `main`
-- `RedCube AI` now has its repo-side source-intake + shared-source-truth baseline absorbed on `main`
+- `MedAutoScience` 已把 repo-side `integration harness activation baseline` absorb 到 `main`
+- `RedCube AI` 已把 repo-side `source intake + shared source truth baseline` absorb 到 `main`
 
-Together, those two admitted domain surfaces are now stable enough for the minimum stronger federation wording that `OPL` had already pre-frozen.
+因此，这两条 admitted domain surface 现在已经稳定到足以支撑此前已预冻结的最小 stronger federation wording。
 
-## What This Package Activates
+## 这份 Package 实际激活了什么
 
-This package activates only the smallest contract-first federation follow-on:
+它只激活最小的 contract-first federation follow-on：
 
-- strengthen top-level federation wording for already admitted domains only
-- make the two currently admitted domain surfaces explicit as the basis of the stronger federation expression
-- keep the `OPL` formal entry at the current local `TypeScript CLI`-first / framework contract surface
+- 只针对已 admitted domain 收紧顶层 federation wording
+- 把当前两条已 admitted domain surface 显式写成更强 federation 表达的依据
+- 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / framework contract surface
 
-In other words, this is a docs+contracts+tests activation package, not a runtime package.
+换句话说，这是一份 docs+contracts+tests activation package，不是 runtime package。
 
-## Activated Admitted Domain Surfaces
+## 当前已激活的 Admitted Domain Surface
 
-The current activated admitted domain surfaces are:
+当前被激活进这份 package 的 admitted domain surface 只有两条：
 
 1. `research_ops` -> `MedAutoScience`
 2. `presentation_ops` -> `RedCube AI`
 
-That does **not** mean every family or every downstream deliverable is fully mature.
-It means the top-level admitted domain surfaces are now stable enough to justify a stronger federation expression.
+这**不**代表每个 family、每个下游 deliverable 都已经完全成熟。
+它只表示：顶层 admitted domain surface 已经稳定到足以支撑更强的 federation 表达。
 
-## Explicit Non-Qualifiers
+## 明确不被纳入的对象
 
-This package does **not** change the blocked truth for candidate domains:
+这份 package **不会**改变 candidate domain 的 blocked truth：
 
-- `Grant Foundry -> Med Auto Grant` remains signal-only / domain-direction evidence only
-- `Review Ops` remains an under-definition bundle blocked below onboarding
-- `Thesis Ops` remains an under-definition bundle blocked below onboarding
+- `Grant Foundry -> Med Auto Grant` 仍然只是 signal-only / domain-direction evidence
+- `Review Ops` 仍是 blocked 于 onboarding 之下的 under-definition bundle
+- `Thesis Ops` 仍是 blocked 于 onboarding 之下的 under-definition bundle
 
-So this package does **not** admit `Grant Ops`, `Review Ops`, or `Thesis Ops`.
+因此，这份 package **不会** admission `Grant Ops`、`Review Ops` 或 `Thesis Ops`。
 
-## Hard Boundaries That Still Hold
+## 继续保持的硬边界
 
-The current activation keeps these hard boundaries explicit:
+当前 activation 继续显式保持这些硬边界：
 
-- no routed-action runtime
-- no mutation entry
-- no run launch
-- no workspace write
-- no shared execution core
-- no managed web runtime
-- no runtime owner promotion for `OPL`
+- 不实现 routed-action runtime
+- 不新增 mutation entry
+- 不新增 run launch
+- 不新增 workspace write
+- 不实现 shared execution core
+- 不实现 managed web runtime
+- 不把 `OPL` 提升成 runtime owner
 
-Any future successful handoff still remains `domain_gateway`-only and still follows the no-bypass rule against direct harness targeting.
+任何未来 successful handoff 仍然只能 targeting `domain_gateway`，并继续遵守不得直达 harness 的 no-bypass 规则。
 
-## Current Honest State
+## 当前最诚实的状态
 
-At the current repo-tracked freeze, the minimum stronger-federation follow-on is **activated now**.
+在当前 repo-tracked freeze 下，最小的 stronger-federation follow-on **当前已激活**。
 
-That does **not** create a larger runtime phase.
-It only records that the predecessor `Phase 1 exit activation package` has now been honestly superseded by the current `Minimal admitted-domain federation activation package` for already admitted domains only.
+但它**不会**制造一个更大的 runtime phase。
+它只记录：此前的 `Phase 1 exit activation package`，现在已经被当前 `Minimal admitted-domain federation activation package` 这份仅面向已 admitted domain 的最小激活包诚实接续。

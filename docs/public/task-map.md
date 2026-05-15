@@ -1,10 +1,8 @@
-**English** | [中文](./task-map.zh-CN.md)
+# OPL 任务版图
 
-# OPL Task Map
+## 总览
 
-## Overview
-
-`OPL` divides the formal work of a one-person research lab into seven workstreams:
+`OPL` 把一人课题组的正式工作拆成七类工作流：
 
 - `Research Ops`
 - `Grant Ops`
@@ -14,260 +12,259 @@
 - `Review Ops`
 - `Presentation Ops`
 
-This split defines top-level task semantics.
-At runtime, those semantics route through the Codex-default executor path, explicit `OPL` activation when needed, provider-backed stage runtime for durable attempts, and the selected domain capability surface with explicit ownership and handoff boundaries.
+这个拆分定义的是顶层任务语义。
+在运行时，这些语义通过 Codex-default executor 路径、按需显式进入 `OPL` activation，由 provider-backed stage runtime 承载可恢复的阶段尝试，再路由到选定的 domain capability surface，同时保留清楚的 ownership 与 handoff 边界。
 
-At the operating level, these workstreams also share one target doctrine:
+在执行层面，这些 workstream 也共享同一条目标原则：
 
-- use stage-led, `Agent-first` domain systems with explicit domain-owned entry and harness layering
-- keep the current admitted domain repositories `Auto-only`
-- let any future `Human-in-the-loop` product reuse the same substrate as a sibling or upper-layer product
+- 采用以 stage 为编排单位、带有显式 domain-owned entry 与 harness 分层的 `Agent-first` domain system
+- 当前已收录的 domain 仓统一按 `Auto-only` 主线理解
+- 未来 `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用同一 substrate
 
-The task map freezes workstream boundaries and delivery objects.
-It preserves shared semantics while allowing different interfaces, model providers, and orchestration stacks across domains.
+任务版图冻结的是工作流边界与交付对象，同时允许各 domain 采用不同的界面、模型提供方与编排栈。
 
-## Machine-Readable Companions
+## 机器可读配套工件
 
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 
-These companions materialize:
+这些配套工件分别把：
 
-- the top-level task topology as a machine-readable semantic surface
-- the admitted and candidate workstream catalog used by stage selection
+- 顶层 task topology materialize 成 machine-readable 的语义 surface
+- stage selection 使用的已收录与候选 workstream catalog
 
-They may describe under-definition workstreams such as `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops`, while keeping them on an explicit candidate/onboarding path.
-`Grant Ops` is already registered to the admitted `MedAutoGrant` domain-agent entry, while formal admission, stage-selection readiness, and stage-execution readiness for the remaining under-definition workstreams still require dedicated admission evidence.
+它们可以描述 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
+`Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain-agent entry，而剩余 under-definition workstream 的 formal 收录、stage-selection readiness 与 stage-execution readiness 仍然要通过单独的 admission evidence 获得。
 
-For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md).
+如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)。
 
 ## Research Ops
 
-`Research Ops` covers the main chain from data to paper delivery.
+`Research Ops` 负责从数据到论文交付的主研究链。
 
-Typical tasks include:
+典型任务包括：
 
-- data governance
-- research question formation
-- analysis and validation progression
-- evidence packaging
-- manuscript and submission delivery
+- 数据治理
+- 研究问题形成
+- 分析与验证推进
+- 证据组织
+- 稿件与投稿交付
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- analysis packages
-- evidence packages
-- manuscripts
-- submission packages
+- 分析包
+- 证据包
+- 稿件
+- 投稿包
 
-The current domain surface for this workstream is:
+当前承接这个工作流的 domain surface 是：
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
 ## Grant Ops
 
-`Grant Ops` covers grant-direction / proposal authoring plus proposal-side reviewer simulation and revision inside the grant-writing loop.
+`Grant Ops` 负责基金方向判断、申请书写作，以及处在申请书写作闭环里的作者侧模拟评审与修订。
 
-Typical tasks include:
+典型任务包括：
 
-- feasibility assessment for grant directions and topics
-- proposal structure generation
-- organizing background, innovation claims, and technical routes
-- simulating reviewer comments
-- proposal iteration
+- 基金方向与选题可行性判断
+- 申请书结构生成
+- 研究背景、创新点和技术路线组织
+- 模拟评审意见
+- 申请书迭代
 
-These simulation and revision steps remain proposal-authoring aids; they do not by themselves create a reviewer-role surface.
+这里的模拟评审与修订仍属于申请书作者侧的辅助环节；它们本身不会自动变成“站在评审方”的 surface。
 
-This workstream clearly reuses:
+这个工作流会明显复用：
 
-- literature assets
-- research memory
-- review memory
-- existing study results and figures
+- 文献资产
+- 研究记忆
+- 评审记忆
+- 已有研究结果与图表
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- grant-direction assessments
-- proposal outlines and drafts
-- reviewer-simulation packs
-- proposal revision plans
+- 基金方向评估
+- 申请书提纲与初稿
+- 模拟评审包
+- 申请书修订计划
 
-Current boundary status:
+当前边界状态：
 
-- current lifecycle state: registered workstream mapped directly to the admitted `MedAutoGrant` domain surface
-- formal mapping: `grant_ops -> medautogrant` is frozen in the active workstream/domain-agent catalog
-- public entry: the top-level domain entry is `MedAutoGrant`, and grant-direction, proposal authoring, proposal-side reviewer simulation, and revision truth remain domain-owned there
-- stage-entry rule: successful stage entry targets the public domain-agent entry, with no direct harness bypass
-- top-level handling: clear requests resolve to `medautogrant` through the active stage vocabulary and domain manifest surfaces
+- 当前生命周期状态：已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain surface
+- formal 映射：`grant_ops -> medautogrant` 已经在活跃 workstream/domain-agent catalog 中冻结
+- 当前公开入口：顶层 domain entry 已经是 `MedAutoGrant`，基金方向判断、申请书写作、作者侧模拟评审与修订 truth 都继续由它持有
+- stage-entry 规则：successful handoff 只能 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- 当前顶层处理方式：清楚的请求会通过活跃 stage vocabulary 与 domain manifest surface 直接解析到 `medautogrant`
 
 ## IP Ops
 
-`IP Ops` covers intellectual-property protection around research outputs.
+`IP Ops` 负责围绕科研成果做知识产权保护材料。
 
-Typical tasks include:
+典型任务包括：
 
-- patentability framing
-- technical disclosure organization
-- claim and embodiment drafting
-- prior-art and novelty positioning
-- office-action response planning
+- 专利可申请性 framing
+- 技术交底组织
+- 权利要求与实施例起草
+- 现有技术、新颖性和创造性定位
+- 审查意见答复路线规划
 
-It may reuse research evidence, grant narratives, figures, and technical routes, while keeping patent-specific truth separate from grant proposal truth and research publication truth.
+它可以复用研究证据、基金叙事、图表和技术路线，但专利申请的 canonical truth 必须独立于基金申请 truth 和论文发表 truth。
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- invention disclosures
-- patent application drafts
-- claim sets
-- embodiment packs
-- office-action response plans
+- 技术交底书
+- 专利申请书草稿
+- 权利要求书
+- 实施例材料包
+- 审查意见答复计划
 
-Current boundary status:
+当前边界状态：
 
-- current lifecycle state: under-definition candidate workstream
-- planned family/product wording: `IP Foundry` with `Med Auto Patent` as the first planned product
-- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
-- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
-- tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
-- truth boundary: patent canonical truth and human/legal review gates must be owned by the future IP Ops domain boundary
-- stage-selection rule: clear patent requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
+- 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`IP Foundry` / 知产工坊，首个规划产品为 `Med Auto Patent`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
+- truth boundary：专利 canonical truth 与人工/法律审阅 gate 必须由未来 IP Ops domain boundary 持有
+- 路由规则：清楚的专利请求可以返回 `unknown_domain`；不得作为基金申请工作路由到 `MedAutoGrant`
 
 ## Award Ops
 
-`Award Ops` covers award applications and achievement-promotion materials.
+`Award Ops` 负责报奖申请和成果推广型材料。
 
-Typical tasks include:
+典型任务包括：
 
-- award category and fit assessment
-- achievement storyline organization
-- contribution and innovation ranking
-- impact and adoption evidence packaging
-- award-review response planning
+- 奖项类别与匹配度判断
+- 成果主线组织
+- 贡献与创新排序
+- 影响力与应用佐证材料整理
+- 报奖评审意见答复路线规划
 
-It may reuse Research Ops evidence and Grant Ops authoring substrate, while keeping award-specific contribution, impact, and recommendation truth separate from grant proposal truth.
+它可以复用 Research Ops 的证据和 Grant Ops 的写作基座，但报奖中的贡献、影响力、推荐材料 truth 必须独立于基金申请 truth。
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- award application drafts
-- achievement summaries
-- contribution-ranking packs
-- impact-evidence packs
-- recommendation materials
+- 报奖书草稿
+- 成果总结
+- 贡献排序材料包
+- 影响力佐证材料包
+- 推荐材料
 
-Current boundary status:
+当前边界状态：
 
-- current lifecycle state: under-definition candidate workstream
-- planned family/product wording: `Award Foundry` with `Med Auto Award` as the first planned product
-- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
-- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
-- tracked blocker packages: `truth_ownership`, `review_surfaces`, `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
-- truth boundary: award canonical truth and human expert review gates must be owned by the future Award Ops domain boundary
-- stage-selection rule: clear award requests may surface as `unknown_domain`; they must not route to `MedAutoGrant` as grant proposal work
+- 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`Award Foundry` / 报奖工坊，首个规划产品为 `Med Auto Award`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
+- truth boundary：报奖 canonical truth 与人工专家审阅 gate 必须由未来 Award Ops domain boundary 持有
+- 路由规则：清楚的报奖请求可以返回 `unknown_domain`；不得作为基金申请工作路由到 `MedAutoGrant`
 
 ## Thesis Ops
 
-`Thesis Ops` covers dissertation writing and defense preparation.
+`Thesis Ops` 负责学位论文与答辩准备。
 
-Typical tasks include:
+典型任务包括：
 
-- chapter structure organization
-- reuse of existing papers and figures
-- terminology and narrative synchronization across chapters
-- organization of abstract, introduction, and discussion layers
-- defense preparation
+- 章节结构组织
+- 已有论文与图表复用
+- 章节间术语和叙事同步
+- 摘要、引言和讨论层次组织
+- 答辩准备
 
-It remains closely coupled with `Research Ops`, while focusing on dissertation assembly and defense preparation as its own workstream.
-Existing admitted surfaces can contribute reusable evidence and downstream derivatives, and thesis-specific domain ownership will be frozen through a dedicated onboarding path.
+它和 `Research Ops` 高度相关，同时围绕学位论文装配与答辩准备保留自己的任务边界。
+现有 admitted surface 可以提供复用证据和下游衍生物，Thesis Ops 的 domain ownership 则通过单独 onboarding 路径来冻结。
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- chapter-structure plans
-- chapter draft sets
-- cross-chapter synchronization packs
-- defense-preparation packs
+- 章节结构方案
+- 章节草稿集
+- 跨章节同步包
+- 答辩准备包
 
-Current boundary status:
+当前边界状态：
 
-- current lifecycle state: under-definition candidate workstream
-- planned family/product wording: `Thesis Foundry` with `Med Auto Thesis` as the first planned product
-- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
-- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
-- tracked blocker packages: `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
-- truth boundary: thesis-specific canonical truth will be frozen with the future Thesis Ops domain boundary
-- stage-entry rule: any future successful handoff must target the public domain-agent entry, with no direct harness bypass
-- current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
+- 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`Thesis Foundry` / 学位论文工坊，首个规划产品为 `Med Auto Thesis`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
+- truth boundary：Thesis-specific canonical truth 会随着未来 Thesis Ops domain boundary 一起冻结
+- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Review Ops
 
-`Review Ops` covers both “standing in the reviewer role” and “responding to reviewers.”
+`Review Ops` 负责“站在评审方”与“回应评审方”两类任务。
 
-This combined label currently stays at the top-level semantic-bundle stage.
-Review artifacts keep their domain-owned truth until a dedicated review domain boundary is frozen.
+这个组合当前仍处在顶层 semantic bundle 阶段。
+review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated Review Ops boundary 被正式冻结。
 
-Typical tasks include:
+典型任务包括：
 
-- peer review
-- grant review
-- structuring reviewer comments
-- organizing rebuttal and revision routes
+- 审稿
+- 基金评审
+- 评审意见结构化整理
+- 回复与修回路线组织
 
-This workstream also accumulates review standards and feedback patterns that should remain reusable across domains.
+这个工作流也会积累可跨 domain 复用的评审标准和反馈模式。
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- review reports
-- reviewer-comment structures
-- rebuttal plans
-- revision-route maps
+- 评审报告
+- 评审意见结构稿
+- rebuttal 计划
+- 修订路线图
 
-Current boundary status:
+当前边界状态：
 
-- current lifecycle state: under-definition candidate workstream
-- planned family/product wording: `Review Foundry` with `Med Auto Review` as the first planned product
-- admission path: waiting for formal domain-agent admission and registered workstream/domain mapping
-- stage path: waiting for stage-selection readiness, stage-execution readiness, and domain-agent handoff eligibility
-- tracked blocker packages: `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording`
-- truth boundary: review truth will remain domain-owned when a dedicated Review Ops boundary is frozen
-- stage-entry rule: any future successful handoff must target the public domain-agent entry, with no direct harness bypass
-- current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
+- 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`Review Foundry` / 评审工坊，首个规划产品为 `Med Auto Review`
+- formal 收录路径：等待正式 domain-agent admission 与注册后的 workstream/domain mapping
+- stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
+- 已跟踪的 blocker package：`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
+- truth boundary：review truth 会在 dedicated Review Ops boundary 冻结后继续保持为 domain-owned
+- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Presentation Ops
 
-`Presentation Ops` covers lectures, lab talks, project reports, and defense materials.
+`Presentation Ops` 负责讲课、组会、汇报和答辩材料。
 
-Typical tasks include:
+典型任务包括：
 
-- extracting a teaching or presentation storyline from research materials
-- generating figure-ready narrative structures for reports
-- organizing lecture and defense slide decks
-- reusing paper figures, abstracts, and conclusions
+- 从研究材料抽取讲解主线
+- 生成汇报级图表与叙事结构
+- 组织讲课和答辩幻灯片
+- 复用已有论文图表、摘要和结论
 
-Typical delivery objects include:
+典型交付对象包括：
 
-- lecture decks
-- lab-talk decks
-- project-report decks
-- defense decks
+- 讲课 deck
+- 组会 / 汇报 deck
+- 项目汇报 deck
+- 答辩 deck
 
-The current domain surface for this workstream is:
+当前承接这个工作流的 domain surface 是：
 
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
 
-Within that surface:
+在这个 surface 内：
 
-- `ppt_deck` is the family that most directly maps to `Presentation Ops`
-- distinctions such as `lecture_student`, `lecture_peer`, `executive_briefing`, and `defense_deck` should be controlled through `profile pack`
-- `xiaohongshu` shares the same RedCube harness and stays a separate visual family at the OPL layer
+- `ppt_deck` 是最直接映射到 `Presentation Ops` 的 family
+- `lecture_student`、`lecture_peer`、`executive_briefing`、`defense_deck` 这类差异应由 `profile pack` 控制
+- `xiaohongshu` 虽然共享同一 RedCube harness，但在 OPL 顶层继续保留独立的视觉 family 语义
 
-## How These Workstreams Reuse One Another
+## 这些工作流为什么属于同一个 OPL stage-led framework
 
-These workstreams belong in one `OPL` stage-led framework because they share:
+这些工作流之所以能放进同一个 `OPL stage-led framework`，是因为它们共享：
 
-- the same datasets and figures
-- the same references and external evidence
-- the same research questions and judgments
-- the same formal delivery surfaces
-- the same shared-foundation language
+- 同一批数据与图表
+- 同一批文献与外部证据
+- 同一组研究问题与判断
+- 同一层正式交付表面
+- 同一套共享基础结构语言
 
-That is why the `OPL` task map is not a feature list.
-It is a division of labor above domain surfaces and harnesses.
+所以 `OPL` 的任务地图不是 feature list。
+它是 domain surface 与 harness 之上的分工图。

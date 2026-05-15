@@ -1,82 +1,80 @@
-**English** | [中文](./opl-routed-action-gateway.zh-CN.md)
-
 # OPL Routed Action Gateway
 
-> Historical note (`2026-04-24`): this document is retained as the planning-only routed-action freeze from the gateway-first phase. Current `OPL` does not use this file as its default runtime/activation contract.
-> Current entry truth: active work enters through `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry`. Mentions of `OPL Gateway`, `domain_gateway`, or `domain harness` below are legacy compatibility vocabulary, not the current public first subject for `MAS`, `MAG`, or `RCA`.
+> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段 planning-only 的 routed-action 冻结件。当前 `OPL` 不再把它当作默认 runtime/activation 合同。
+> 当前入口真相：活跃工作从 `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry` 进入。下文 `OPL Gateway`、`domain_gateway` 或 `domain harness` 都是旧兼容词汇，不是 `MAS`、`MAG`、`RCA` 当前对外第一主语。
 
-## Purpose
+## 目的
 
-This document freezes the planning-only routed-action contract for the `OPL Gateway`.
+这份文档冻结 `OPL Gateway` 当前 planning-only 的 routed-action contract。
 
-It defines how `OPL` classifies a top-level action request, builds a handoff payload, and records the routing trace before control reaches an admitted domain gateway.
-The current layer is planning-only. It does not grant runtime launch, mutation entry, or workspace write.
-The machine-readable examples in this document keep the current `g3` schema version.
+它定义的是：`OPL` 如何在控制权进入 admitted domain gateway 之前，对顶层 action request 做分类、构建 handoff payload，并记录 routing trace。
+当前这一层只停留在 planning-contract 层。本轮不授予 runtime launch、mutation entry 或 workspace write。
+文档里的 machine-readable 示例继续沿用现有 `g3` schema version。
 
-The goal is to make top-level routing explicit, auditable, and safe.
+目标是把顶层路由做成显式、可审计、可安全执行的合同。
 
-## Current Dependency Baseline
+## 当前依赖基线
 
-This contract builds on:
+这份合同建立在下面这些东西之上：
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.md)
 - [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
 
-These gateway-discovery surfaces provide the frozen dependency baseline for routed-action planning.
+这些 gateway-discovery surface 构成 routed-action planning 的冻结依赖基线。
 
-## Core Promise
+## 核心承诺
 
-At this planning-level contract, an agent should be able to:
+在当前 planning-level contract 里，Agent 应当能够：
 
-- submit a top-level request to `OPL`
-- receive an explicit routing decision
-- build a stable handoff payload for the target `domain_gateway`
-- record an auditable routing trace
+- 向 `OPL` 提交顶层 action request
+- 拿到显式 routing decision
+- 为目标 `domain_gateway` 构建稳定 handoff payload
+- 在请求进入 domain gateway 之前写下可审计的 routing trace
 
-It must still **not**:
+但它仍然**不能**：
 
-- bypass a domain gateway
-- target a domain harness directly
-- move canonical truth ownership into `OPL`
+- 绕过 domain gateway
+- 直达 domain harness
+- 把 canonical truth ownership 上收给 `OPL`
 
-The only allowed successful handoff target is `domain_gateway`. This no-bypass rule is hard, not advisory.
+唯一允许的成功 handoff 目标只能是 `domain_gateway`。这条 no-bypass 规则是硬边界，不是偏好建议。
 
-## Required Operations
+## 必需操作
 
-The minimum routed-action planning-level contract must expose these operations:
+最小 routed-action planning-level contract 必须暴露这些操作：
 
 - `route_request`
 - `build_handoff_payload`
 - `audit_routing_decision`
 
-## Operation Definitions
+## 操作定义
 
 ### `route_request`
 
-Purpose:
+目的：
 
-- classify a top-level action request into workstream semantics and determine the next formal entry surface
+- 按 workstream 语义分类顶层 action request，并确定下一层正式入口面
 
-Required inputs:
+必需输入：
 
 - `request_id`
 - `request_kind`
 - `intent`
 - `target`
 - `goal`
-- optional `materials`
-- optional `constraints`
-- optional `preferred_family`
-- optional `preferred_profile`
+- 可选 `materials`
+- 可选 `constraints`
+- 可选 `preferred_family`
+- 可选 `preferred_profile`
 
-Routing order:
+路由顺序：
 
-1. route by `workstream semantics` first
-2. route by `domain ownership` second
-3. route by `family / profile preference` third
+1. 先按 `workstream semantics` 路由
+2. 再按 `domain ownership` 路由
+3. 最后按 `family / profile preference` 路由
 
-Suggested routed response:
+建议 routed 响应：
 
 ```json
 {
@@ -102,25 +100,25 @@ Suggested routed response:
 }
 ```
 
-Special rule:
+特殊规则：
 
-- `ppt_deck` directly maps to `presentation_ops`
-- `xiaohongshu` may still route to `redcube`
-- but `xiaohongshu` must not be auto-labeled as `presentation_ops` unless the top-level semantics truly match presentation material
+- `ppt_deck` 直接映射 `presentation_ops`
+- `xiaohongshu` 仍可能路由到 `redcube`
+- 但除非顶层语义真的匹配 presentation material，否则不能自动标成 `presentation_ops`
 
 ### `build_handoff_payload`
 
-Purpose:
+目的：
 
-- build the stable payload passed from `OPL` into the selected domain gateway
+- 构建从 `OPL` 传给目标 domain gateway 的稳定 payload
 
-Required rule:
+必需规则：
 
-- this operation may run only after `route_request` returns `status = routed`
-- the output must conform to [`../contracts/opl-framework/handoff.schema.json`](../../../../contracts/opl-framework/handoff.schema.json)
-- the only allowed successful target is `domain_gateway`; this operation is planning-only and may not launch a domain runtime
+- 只有在 `route_request` 返回 `status = routed` 后，这个操作才允许执行
+- 输出当时要求符合 former artifact `contracts/opl-framework/handoff.schema.json`；该文件未保留为当前 active contract。
+- 唯一允许的成功目标只能是 `domain_gateway`；这个操作当前只处于 planning 层，不得启动 domain runtime
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -157,23 +155,23 @@ Suggested response:
 
 ### `audit_routing_decision`
 
-Purpose:
+目的：
 
-- record the top-level routing decision and its evidence before the request enters a domain gateway
+- 在请求进入 domain gateway 之前，把顶层 routing decision 及其 evidence 记录下来
 
-Required fields:
+必需字段：
 
 - `request_id`
 - `decision_status`
 - `request_summary`
 - `request_kind`
-- `resolved_workstream_id` or `candidate_workstreams`
-- `resolved_domain_id` or `candidate_domains`
+- `resolved_workstream_id` 或 `candidate_workstreams`
+- `resolved_domain_id` 或 `candidate_domains`
 - `reason`
 - `routing_evidence`
 - `timestamp`
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -197,17 +195,17 @@ Suggested response:
 }
 ```
 
-## Handling Rules
+## 处理规则
 
-### Refusal
+### refusal
 
-Use refusal when the request itself violates the top-level boundary, for example:
+当请求本身违反顶层边界时，应返回 refusal，例如：
 
-- asking `OPL` to bypass the domain gateway and call a harness directly
-- asking `OPL` to mutate domain-private truth before the route is established
-- asking for an unsupported top-level action shape
+- 要求 `OPL` 绕过 domain gateway 直接调用 harness
+- 要求 `OPL` 在路由未建立前先 mutation domain-private truth
+- 顶层 action shape 本身不受支持
 
-Suggested refusal response:
+建议 refusal 响应：
 
 ```json
 {
@@ -222,11 +220,11 @@ Suggested refusal response:
 }
 ```
 
-### Unknown domain
+### unknown-domain
 
-Use `unknown_domain` when top-level semantics are sufficiently clear for a candidate workstream, but no registered domain currently owns that candidate workstream.
+当顶层语义已经足够清楚到可以命名一个 candidate workstream，但当前没有任何已注册 domain 正式拥有这个 candidate workstream 时，应返回 `unknown_domain`。
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -241,17 +239,17 @@ Suggested response:
 }
 ```
 
-### Ambiguous task
+### ambiguous-task
 
-Use `ambiguous_task` when the request cannot yet be safely classified at the top level.
+当顶层还无法安全分类该请求时，应返回 `ambiguous_task`。
 
-Required rule:
+必需规则：
 
-- do not invent a workstream
-- do not invent a domain owner
-- do not build a handoff payload
+- 不要凭空发明 workstream
+- 不要凭空发明 domain owner
+- 不要提前构建 handoff payload
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -277,31 +275,31 @@ Suggested response:
 }
 ```
 
-## Hard Boundary
+## 硬边界
 
-This layer routes only into a domain gateway.
+这一层只把路由交给 domain gateway。
 
-The allowed next formal entry surface after a successful top-level route is:
+成功顶层路由之后，允许的下一层正式入口是：
 
 ```text
 OPL Gateway -> Domain Gateway
 ```
 
-The direct harness path stays outside this contract:
+domain harness 路径继续留在这份合同之外：
 
 ```text
 OPL Gateway -> Domain Harness OS
 ```
 
-## Source-Of-Truth Rules
+## Source-Of-Truth 规则
 
-At this planning layer, `OPL` owns:
+在当前 planning 层，`OPL` 持有：
 
-- the routing decision
-- the handoff payload
-- the top-level audit trace
+- routing decision
+- handoff payload
+- 顶层 audit trace
 
-At this planning layer, domain gateways keep:
+在当前 planning 层，domain gateway 持有：
 
 - domain-private runtime state
 - domain canonical truth
@@ -309,29 +307,29 @@ At this planning layer, domain gateways keep:
 
 ## Machine-Readable Contract
 
-The machine-readable schema for this layer lives at:
+这一层的 machine-readable schema 位于：
 
-- [`../contracts/opl-framework/routed-actions.schema.json`](../../../../contracts/opl-framework/routed-actions.schema.json)
+- former artifact `contracts/opl-framework/routed-actions.schema.json`（未保留为当前 active contract）
 
-At the current baseline, that schema stays in the planning dependency layer.
+在当前基线上，这份 schema 继续停留在 planning dependency 层。
 
-Canonical routed-safety examples for the non-success states live at:
+显式非成功路由状态的 canonical routed-safety examples 位于：
 
 - [OPL Routed-Safety Example Corpus](../../../references/examples-corpora/opl-routed-safety-example-corpus.md)
 
-## Planning Contract Completion Definition
+## Planning Contract 完成定义
 
-This planning-only routed-action contract is complete when:
+只有满足下面条件，这份 planning-only routed-action contract 才算完成：
 
-- `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as stable planning-level operations
-- refusal, unknown-domain, and ambiguous-task handling are explicit
-- routed outputs can be expressed without prose-only interpretation
-- the only allowed successful handoff target remains `domain_gateway`
-- the no-bypass rule still forbids bypassing domain gateways
-- the schema remains a planning dependency rather than a launcher
+- `route_request`、`build_handoff_payload`、`audit_routing_decision` 被冻结成稳定的 planning-level 操作
+- refusal / unknown-domain / ambiguous-task handling 被显式写清
+- routed output 不再依赖 prose-only interpretation
+- 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`
+- 这份 no-bypass 合同仍然禁止绕过 domain gateway
+- schema 仍只是 planning dependency，而不是 launcher
 
-This planning-only routed-action contract needs more work when:
+下面这些情况说明这份 planning-only routed-action contract 还需要继续补齐：
 
-- routing still depends on free-form prose alone
-- the top-level gateway invents ownership where none is registered
-- the top-level gateway bypasses a domain gateway to hit a harness directly
+- 路由仍然只靠自由 prose 解释
+- 顶层 gateway 在未注册 ownership 的情况下自行发明 owner
+- 顶层 gateway 绕过 domain gateway 直达 harness

@@ -1,88 +1,86 @@
-**English** | [中文](./opl-candidate-workstream-tranche-closeout.zh-CN.md)
-
 # OPL Candidate Workstream Tranche Closeout
 
-## Scope
+## 范围
 
-This closeout freezes the current finite tranche across three still-under-definition `OPL` workstreams:
+这份 closeout 冻结当前有限 tranche 中三个仍处于 under-definition 状态的 `OPL` workstream：
 
 - `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
 
-It is a summary surface only.
-It does not admit a domain.
-It does not create `G2` discovery readiness.
-It does not create `G3` routed-action readiness.
-It does not add a new candidate-definition layer.
+它只是一份总结 surface。
+它不会收录任何 domain。
+它不会创造 `G2` discovery readiness。
+它不会创造 `G3` routed-action readiness。
+它不会新增 candidate-definition layer。
 
-The active path remains:
+当前有效路径仍然只有：
 
 1. task topology
 2. candidate-domain backlog
 3. domain onboarding
 
-## Why this tranche matters
+## 为什么这轮 tranche 有价值
 
-The value of this tranche is not “more prose.”
-It is the removal of three ambiguous shortcuts that could have misled future onboarding work:
+这轮 tranche 的价值不是“又多写了一层 prose”。
+而是把三条可能误导后续 onboarding 的捷径冻结掉：
 
-- `Grant Ops` is **not** a hidden reviewer-owned surface.
-- `Review Ops` is **not** already an admitted review domain.
-- `Thesis Ops` is **not** reducible to `Research Ops` manuscript/submission flow or to `Presentation Ops` / `RedCube AI` deck production.
+- `Grant Ops` **不是**隐藏的 reviewer-owned surface。
+- `Review Ops` **不是**已经收录的 review domain。
+- `Thesis Ops` **不能**被压缩成 `Research Ops` 的 manuscript/submission flow，也**不能**被压缩成 `Presentation Ops` / `RedCube AI` 的 deck production。
 
-Those negative boundaries are now frozen into the tracked topology/backlog/acceptance path.
+这些 negative boundary 现在已经冻结进 tracked 的 topology / backlog / acceptance path。
 
-## Frozen outcome by workstream
+## 各 workstream 的冻结结果
 
-| Workstream | Frozen in this tranche | Still missing | Must not be claimed early |
+| Workstream | 这轮 tranche 已冻结 | 仍然缺少什么 | 绝不能提前宣称什么 |
 | --- | --- | --- | --- |
-| `Grant Ops` | Proposal-facing boundary only: reviewer simulation and revision stay author-side grant-authoring aids/artifacts. | A real domain boundary package with registry material, public gateway docs, truth ownership, review surfaces, readiness evidence, and cross-domain wording. | Independent admission, reviewer-role ownership, `G2` discovery readiness, `G3` routed-action readiness, future domain metadata. |
-| `Review Ops` | One under-definition semantic bundle: reviewer-role work plus response/rebuttal coordination. | A real review-domain boundary package with review-specific truth ownership, public docs, review surfaces, readiness evidence, and cross-domain wording. | Admitted review domain, `OPL` ownership of review truth, `G2` discovery readiness, `G3` routed-action readiness. |
-| `Thesis Ops` | Reference-only candidate boundary for thesis assembly: chapter-draft sets, cross-chapter synchronization, and defense-preparation packs stay distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production. | A real thesis-domain boundary package with thesis-specific registry material, public docs, truth ownership, review surfaces, readiness evidence, and cross-domain wording. | Collapse into admitted domains, `G2` discovery readiness, `G3` routed-action readiness, future domain metadata, direct domain handoff. |
+| `Grant Ops` | 只冻结 proposal-facing boundary：模拟评审与修订仍是作者侧的 grant-authoring aids / artifacts。 | 真正的 domain boundary package：registry material、public gateway docs、truth ownership、review surfaces、readiness evidence、cross-domain wording。 | 独立 admission、reviewer-role ownership、`G2` discovery readiness、`G3` routed-action readiness、未来 domain metadata。 |
+| `Review Ops` | 只冻结为一个 under-definition semantic bundle：reviewer-role work + response/rebuttal coordination。 | 真正的 review-domain boundary package：review-specific truth ownership、public docs、review surfaces、readiness evidence、cross-domain wording。 | 已收录 review domain、`OPL` 拥有 review truth、`G2` discovery readiness、`G3` routed-action readiness。 |
+| `Thesis Ops` | 只冻结 thesis assembly 的 reference-only candidate boundary：chapter-draft sets、cross-chapter synchronization、defense-preparation packs 仍然区别于 `Research Ops` 的 manuscript/submission flow，也不等于 `Presentation Ops` / `RedCube AI` 的 deck production。 | 真正的 thesis-domain boundary package：thesis-specific registry material、public docs、truth ownership、review surfaces、readiness evidence、cross-domain wording。 | 被折叠进已收录 domain、`G2` discovery readiness、`G3` routed-action readiness、未来 domain metadata、直接 domain handoff。 |
 
-## Shared rules that remain frozen
+## 仍然冻结不变的共享规则
 
-Across all three workstreams:
+对这三个 workstream，以下规则仍然成立：
 
-- no standalone candidate-definition surface is added
-- no future `domain_id`, `gateway_surface`, or `harness_surface` is pre-assigned
-- no workstream is auto-collapsed into `MedAutoScience` or `RedCube AI`
-- no workstream becomes a discovery target or routed-action target before onboarding evidence exists
-- no workstream gains direct harness access
-- all current surfaces remain reference-only, non-executing, and non-admitting
+- 不新增独立 candidate-definition surface
+- 不预先分配未来 `domain_id`、`gateway_surface`、`harness_surface`
+- 不把任何 workstream 自动折叠进 `MedAutoScience` 或 `RedCube AI`
+- 在 onboarding evidence 出现前，不让任何 workstream 变成 discovery target 或 routed-action target
+- 不给任何 workstream 直接 harness access
+- 所有当前 surface 仍保持 reference-only、non-executing、non-admitting
 
-## What this tranche did not do
+## 这轮 tranche 没有做什么
 
-This tranche did **not**:
+这轮 tranche **没有**：
 
-- expand `OPL` into a monolithic runtime
-- move canonical domain truth into `OPL`
-- bypass domain gateways to reach harnesses
-- admit any new domain gateway
-- prove that any candidate workstream is ready for discovery or routing
+- 把 `OPL` 扩张成 monolithic runtime
+- 把 canonical domain truth 上收到 `OPL`
+- 绕过 domain gateway 直达 harness
+- 收录任何新的 domain gateway
+- 证明任何 candidate workstream 已经具备 discovery 或 routing 条件
 
-## Where the frozen truth now lives
+## 当前冻结真相实际落在哪里
 
-The frozen boundary truth lives in the existing tracked path, not in this closeout alone:
+当前冻结下来的边界真相，并不只存在于这份 closeout 文档里，而是落在已有 tracked path 中：
 
-- [OPL Task Map](../../public/task-map.md)
+- [OPL 任务版图](../../public/task-map.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
-- [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 
-Checkpoint commits for the tranche workstreams:
+这轮 tranche 对应的 checkpoint commit：
 
 - `dc16aa3` — `Grant Ops`
 - `5b254fc` — `Review Ops`
 - `0d2c48b` — `Thesis Ops`
 
-## Next decision boundary
+## 下一道决策边界
 
-A future program is worthwhile only if it can add genuinely new boundary truth beyond this tranche, for example:
+只有当下一轮 program 能提供这轮 tranche 之外的新增边界真相时，才值得继续推进，例如：
 
-- a real domain boundary package for one candidate workstream
-- explicit public-domain ownership surfaces
-- readiness evidence that can survive admission/discovery/routing review
+- 某个 candidate workstream 拿出真实的 domain boundary package
+- 出现明确的 public-domain ownership surfaces
+- 出现能经受 admission / discovery / routing review 的 readiness evidence
 
-Until then, the correct posture is to keep these workstreams visible but blocked.
+在那之前，正确姿态仍然是：让这些 workstream 保持可见，但继续 blocked。

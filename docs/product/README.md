@@ -1,16 +1,22 @@
-# Product Docs
+# Product 文档
 
 Owner: `One Person Lab`
 Purpose: `product_workbench_support`
 State: `active_support`
-Machine boundary: Human-readable index. Machine truth remains in `contracts/`, source, CLI/API behavior, runtime ledgers, and provider/domain receipts.
+Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、CLI/API、runtime ledgers 与 provider/domain receipts。
 
-This directory holds OPL-owned support for the One Person Lab App/workbench, operator entry, product entry, and action-routing shell.
+本目录承接 One Person Lab App/workbench、operator entry、product entry 和 action-routing shell 的 OPL-owned 支撑文档。
 
-`opl-aion-shell` docs are upstream AionUI dependency docs and are not governed by this directory. This directory only records OPL App/workbench targets, consumption contracts, and boundaries.
+`opl-aion-shell` 的 `docs/` 是上游 AionUI 依赖文档，不由本目录治理。本目录只记录 OPL 对 App/workbench 的目标、消费合同和边界。
 
-Start with:
+当前入口先看：
 
-- [OPL Family Development Reference](../active/opl-family-development-reference.zh-CN.md)
-- [OPL Public Surface Index](../active/opl-public-surface-index.md)
-- [Current Support References](../references/current-support/README.md)
+- [OPL 系列项目开发主参考](../active/opl-family-development-reference.md)
+- [OPL 公开界面索引](./opl-public-surface-index.md)
+- [当前支撑参考索引](../references/current-support/README.md)
+
+## 内容
+
+| 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
+| --- | --- | --- | --- |
+| `opl-public-surface-index.md` | `active_support` | OPL product/workbench owner | 解释当前公开 surface、OPL-owned runtime/activation surface、domain-owned capability surface、旧 gateway/federation 语料的历史读法和 App/workbench 消费边界。 |

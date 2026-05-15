@@ -1,18 +1,16 @@
-**English** | [中文](./opl-gateway-rollout.zh-CN.md)
+# OPL Gateway 落地路线
 
-# OPL Gateway Rollout
+## 目的
 
-## Purpose
+这份文档说明：`OPL Gateway` 应该如何从“文档优先的公开表面”，逐步推进成“真实入口”，同时又不压扁 domain 边界。
+状态锚点：`2026-04-08`。
 
-This document describes how the `OPL Gateway` should move from a documentation-first public surface into a real entry surface without collapsing domain boundaries.
-Snapshot anchor: `2026-04-08`.
+目标不是单体 runtime。
+目标是一个能把任务路由到独立 domain system 的真实顶层 gateway。
 
-The target is not a monolithic runtime.
-The target is a real top-level gateway that can route work into independent domain systems.
+## 目标形态
 
-## Target Shape
-
-The long-term control chain remains:
+长期控制链保持不变：
 
 ```text
 Human / Agent
@@ -21,228 +19,228 @@ Human / Agent
           -> Domain Harness OS
 ```
 
-Current mapped domains:
+当前已映射的 domain：
 
 - `Research Ops` -> `MedAutoScience`
 - `Presentation Ops` -> `RedCube AI`
 
-## Non-Goals
+## 非目标
 
-This rollout is not for:
+这条落地路线不是为了：
 
-- moving all runtime code into `one-person-lab`
-- deleting domain gateways
-- hiding domain-specific governance inside a vague top-level prompt
-- pretending every planned workstream already exists
+- 把所有 runtime 代码搬进 `one-person-lab`
+- 删除 domain gateway
+- 用一个含糊的顶层 prompt 抹平 domain-specific 治理
+- 假装所有 planned workstream 都已经存在
 
-## Rollout Principles
+## 落地原则
 
-- keep domain gateways independently usable
-- move top-level semantics upward before moving execution upward
-- prefer routing contracts before shared runtime code
-- treat the `Unified Harness Engineering Substrate` as shared architectural substrate language rather than as an already-extracted shared public code framework
-- keep shared truth indexes above domains, but keep canonical truth inside domains
-- add a real top-level gateway only when it reduces duplication without flattening domain boundaries
+- 保持 domain gateway 独立可用
+- 先上收顶层语义，再上收执行入口
+- 先冻结 routing contract，再考虑共享 runtime 代码
+- 把 `Unified Harness Engineering Substrate` 理解为共享架构基座语言，而不是已经抽出的共享代码框架
+- 共享 index 可以上收，canonical truth 仍留在各自 domain
+- 只有当顶层 gateway 真正减少重复而不压扁边界时，才让它继续变厚
 
-## Phase G0: Positioning Freeze
+## Phase G0：定位冻结
 
-Goal:
+目标：
 
-- freeze the public language for `OPL Gateway`, `domain gateway`, and `domain harness`
+- 冻结 `OPL Gateway`、`domain gateway`、`domain harness` 这套公开语言
 
-Evidence:
+证据：
 
-- public README and core docs aligned
-- domain projects positioned as independent gateways under `OPL`
+- README 与核心文档对齐
+- 各 domain 项目被明确写成 `OPL` 之下的独立 gateway
 
-Status:
+状态：
 
-- in progress / largely completed by current documentation convergence
+- 当前这轮文档收敛基本完成
 
-## Phase G1: Federation Contract Freeze
+## Phase G1：Federation Contract Freeze
 
-Goal:
+目标：
 
-- define the minimum machine-readable federation contract for the `OPL Gateway`
+- 定义 `OPL Gateway` 的最小机器可读联邦契约
 
-Should include:
+应包含：
 
 - workstream registry
 - domain registry
 - gateway routing vocabulary
-- shared identity for task, run, deliverable, and review verbs
-- rules for when a request stays top-level versus when it must enter a domain
+- task / run / deliverable / review verbs 的共享身份
+- 何时停留在顶层、何时必须进入某个 domain 的规则
 
-Completion signal:
+完成信号：
 
-- domain routing can be specified without reading prose docs
+- 不看 prose 文档，也能说明任务该路由到哪个 domain
 
-Current materialization target:
+当前 materialization 目录：
 
 - [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
 
-## Phase G2: Read-Only Entry Surface
+## Phase G2：只读入口先落地
 
-Goal:
+目标：
 
-- make `OPL Gateway` real as a discovery and read-only entry surface before it becomes a mutation surface
+- 先把 `OPL Gateway` 做成 discovery 与只读入口，再做 mutation 入口
 
-Current frozen state:
+当前冻结状态：
 
-- under the `Phase 1` public mainline, the CLI-first / framework contract baseline is already runnable
-- the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
-- above that unchanged formal-entry baseline, the active public front door is now the landed local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces
-- the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
-- the repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`
-- the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`
-- the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth and still applies only to the admitted `MedAutoScience` + `RedCube AI` federation surface
-- no new active follow-on tranche is currently open beyond that absorbed package; another central sync only becomes truthful when an admitted-domain absorbed delta lands or the central reference surfaces drift
+- `Phase 1` 公开主线下，CLI-first / framework contract baseline 已可运行
+- 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
+- 在这条未变化的 formal-entry baseline 之上，当前活跃的公开前台已经是已落地的本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface
+- 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
+- repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`
+- 已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`
+- 当前这份 `Minimal admitted-domain federation activation package` 已经被吸收到 repo-tracked 顶层真相中，但它也仍然只面向已 admitted domain surface，也就是 `MedAutoScience` + `RedCube AI` 这两条 federation surface
+- 当前没有新的 active follow-on tranche 超出这份已 absorbed package；只有 admitted-domain absorbed delta 再次出现，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的
 
-Should support:
+应支持：
 
-- listing workstreams
-- listing registered domain gateways
-- showing which families map directly to which workstreams
-- linking users and agents to the right domain entry path
+- 列出 workstream
+- 列出已注册 domain gateway
+- 显示哪些 family 直接映射哪些 workstream
+- 把用户和 Agent 引导到正确 domain 入口
 
-Completion signal:
+完成信号：
 
-- an agent can ask “what system should I use for this task?” and receive a stable top-level answer
-- the current G1 materialization is discoverable at [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
+- Agent 可以先问“这类任务该用哪个系统”，并拿到稳定顶层答案
+- 当前 G1 materialization 可在 [OPL Framework Contracts](../../../../contracts/opl-framework/README.md) 找到
 
-Detailed contract:
+详细契约：
 
-- [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Public Surface Index](../../../active/opl-public-surface-index.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.md)
+- [OPL Public Surface Index](../../../product/opl-public-surface-index.md)
 
-## Phase G3: Routed Action Entry
+## Phase G3：Routed Action Entry
 
-Goal:
+目标：
 
-- let the `OPL Gateway` accept top-level task intents and route them into the right domain gateway
+- 让 `OPL Gateway` 能接收顶层任务意图，并把它路由到正确 domain gateway
 
-Current phase constraint:
+当前阶段限定：
 
-- the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains the closeout boundary for routed-action planning, and the repository is not entering routed-action implementation
-- the repo-tracked `Review Ops -> Thesis Ops` candidate-domain closeout keeps those candidate paths below admission / discovery / routing readiness while G3 stays inactive beyond planning freeze
-- the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, which recorded the minimal stronger-federation follow-on before the threshold was met
-- the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth, strengthens federation wording for the already admitted domains only, and still does not activate runtime ownership
-- no new active follow-on tranche is currently open beyond that absorbed package; another central sync only becomes truthful when an admitted-domain absorbed delta lands or the central reference surfaces drift
-- this is a planning gate, not a runtime gate; `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as planning-level contract operations only
-- the only allowed successful handoff target remains `domain_gateway`, and the no-bypass rule forbids direct domain-harness targeting
-- `routed-actions.schema.json` remains a planning dependency, not a launcher
-- that means no mutation entry is added here, and `OPL` does not become a runtime owner
-- in other words, `G3` remains inactive beyond the planning freeze
+- 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续作为 routed-action planning 的 closeout 边界，当前不会进入 routed action implementation
+- repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 会继续把这些 candidate path 保持在 admission / discovery / routing readiness 之下，`G3` 也仍然停在 planning freeze 之外未激活
+- 已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它在门槛满足前冻结了最小的更强 federation follow-on
+- 当前这份 `Minimal admitted-domain federation activation package` 已经被吸收到 repo-tracked 顶层真相中：它只对已 admitted domain 收紧 federation wording，并不会激活 runtime ownership
+- 当前没有新的 active follow-on tranche 超出这份已 absorbed package；只有 admitted-domain absorbed delta 再次出现，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的
+- 当前这是 planning gate，不是 runtime gate；`route_request`、`build_handoff_payload`、`audit_routing_decision` 只冻结为 planning-level contract 操作
+- 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`，并且 no-bypass 规则禁止直达 domain harness
+- `routed-actions.schema.json` 仍只是 planning dependency，不是 launcher
+- 这意味着当前不会新增 mutation entry，也不会把 `OPL` 升格成 runtime owner
+- 换句话说，`G3` 在 planning freeze 之外仍未激活
 
-Should support:
+应支持：
 
-- task classification into workstream semantics
-- stable handoff payloads
-- explicit domain routing
-- top-level audit traces of routing decisions
+- 按 workstream 语义分类任务
+- 稳定 handoff payload
+- 显式 domain routing
+- 顶层 routing decision 的审计记录
 
-Must not do:
+必须避免：
 
-- bypass domain gateways and talk directly to domain harness internals
+- 绕过 domain gateway，直接碰 domain harness 内部
 
-Completion signal:
+完成信号：
 
-- an agent can start from `OPL` and still land inside the correct domain gateway with explicit routing evidence
+- Agent 可以从 `OPL` 起步，同时带着显式 routing evidence 落到正确 domain gateway
 
-Contract extension needed before adding more domains:
+在继续新增更多 domain 之前，需要补齐的合同：
 
-- [OPL Domain Onboarding Contract](../../../active/opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../../../specs/opl-domain-onboarding-contract.md)
 - [OPL Candidate Domain Backlog](../../../references/domain-admission/opl-candidate-domain-backlog.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
-At the current baseline, candidate-domain definition remains the composition of `task-topology`, `candidate-domain backlog`, and `domain-onboarding`.
-Do not insert a separate intermediate candidate-definition control surface unless those layers first prove insufficient to express a real missing boundary.
-For the current Grant Ops path, `Grant Foundry -> Med Auto Grant` now resolves to the admitted `MedAutoGrant` domain gateway entry. The remaining candidate-domain path now applies to `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops`.
+在当前基线上，candidate-domain definition 仍由 `task-topology`、`candidate-domain backlog` 与 `domain-onboarding` 三层共同构成。
+除非先证明这三层不足以表达一个真实缺失边界，否则不要再插入一层额外的 candidate-definition control surface。
+对当前 `Grant Ops` 路径而言，`Grant Foundry -> Med Auto Grant` 现在已经解析到已收录的 `MedAutoGrant` domain gateway 入口。剩余的 candidate-domain 路径现在适用于 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops`。
 
-Detailed contract:
+具体合同：
 
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 
-## Phase G4: Candidate Shared Cross-Domain Indexes
+## Phase G4：候选跨 Domain Shared Index
 
-Goal:
+目标：
 
-- freeze the boundary for future shared indexes that may later make cross-domain work easier without creating a second truth source
+- 冻结未来共享 index 的边界：它们后续可以帮助跨 domain 协作，但当前不能制造第二真相源
 
-Candidate indexes:
+候选 index：
 
 - shared asset index
 - shared memory index
 - shared domain registry
 - shared publication / delivery catalog
 
-Current status:
+当前状态：
 
-- all four G4 indexes remain roadmap-only, future-only, reference-only, and non-admitting candidates
-- none of them is currently a public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface
-- later explicit contracts and acceptance alignment must freeze readiness before any of these candidates appears as a current surface
+- 这四个 G4 index 目前都只是 roadmap-only、future-only、reference-only、non-admitting 的候选项
+- 它们目前都不是 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface
+- 只有在后续显式合同与 acceptance alignment 冻结 readiness boundary 之后，这些候选项才可能被写成当前 surface
 
-Rule:
+规则：
 
-- candidate indexes may aggregate only after a later explicit contract freezes the readiness boundary
-- canonical truth stays in the owning domain
+- 只有在后续显式合同冻结 readiness boundary 之后，candidate index 才能开始承担聚合角色
+- canonical truth 仍留在拥有它的 domain
 
-Completion signal:
+完成信号：
 
-- cross-domain discovery becomes easier while truth ownership remains unambiguous without weakening MedAutoScience or RedCube AI independence
+- 跨 domain discovery 变得更容易，同时 truth ownership 仍然单一清楚，也不会削弱 MedAutoScience 与 RedCube AI 的独立性
 
-Detailed contract:
+具体合同：
 
 - [OPL Governance / Audit Operating Surface](../../../references/operating-governance/opl-governance-audit-operating-surface.md)
 
-## Phase G5: Real Public Product Surface
+## Phase G5：真实公开产品面
 
-Detailed contract:
+具体合同：
 
 - [OPL Publish / Promotion Operating Surface](../../../references/operating-governance/opl-publish-promotion-operating-surface.md)
 
-Goal:
+目标：
 
-- make the `OPL Gateway` a stable public product entry for humans and agents
+- 把 `OPL Gateway` 做成对人类和 Agent 都稳定的顶层产品入口
 
-Possible surfaces:
+可能形态：
 
 - docs site
-- MCP-style top-level tool surface
-- CLI-style top-level routing surface (this refers to a more productized future shape, not to the current `G2` CLI-first read-only baseline)
+- MCP 风格顶层工具面
+- CLI 风格顶层 routing surface（这里指更成熟的产品化形态，不等同于当前 `G2` 已存在的 CLI-first read-only baseline）
 
-Rule:
+规则：
 
-- the first real gateway surface should still be thin
-- top-level orchestration should route, not swallow domain logic
-- the currently landed local front desk remains that thin first surface; later productization should harden it rather than replace it with a generic chat shell identity
+- 第一版真实 gateway 仍应保持薄
+- 顶层职责是 route，不是吞掉 domain logic
+- 当前已经落地的本地 front desk 就是这层“薄入口”的第一版；后续产品化应继续硬化它，而不是改写成某个通用聊天壳的产品身份
 
-Completion signal:
+完成信号：
 
-- users and agents can begin from `OPL` as a real entry point while domain systems remain first-class
+- 用户和 Agent 可以从 `OPL` 作为真实入口起步，同时各 domain system 仍保持一等公民地位
 
-Current companion reference:
+当前配套参考：
 
 - [OPL Gateway Example Corpus](../../../references/examples-corpora/opl-gateway-example-corpus.md)
 
-Use the corpus as an illustrative contract-level walkthrough, not as an execution runtime.
+这组 corpus 只能作为 illustrative 的 contract-level walkthrough，不能被理解成 execution runtime。
 
-## Readiness Gates
+## Readiness Gate
 
-Do not advance the rollout if any of these are still unresolved:
+只要下面任何一个问题未解，就不应继续推进：
 
-- unclear domain boundaries
-- top-level vocabulary that conflicts with domain vocabulary
-- duplicate truth sources
-- attempts to bypass domain gateways
-- attempts to describe `OPL` too early as a unified runtime owner
-- attempts to pull a shared execution core forward before the four-repo baseline is stable
+- domain 边界不清楚
+- 顶层词汇和 domain 词汇冲突
+- 出现重复 truth source
+- 试图绕过 domain gateway
+- 试图把 `OPL` 提前写成统一 runtime owner
+- 在四仓未稳定前提前抽共享执行内核
 
-## Ideal End State
+## 理想终态
 
-The ideal end state is:
+理想终态是：
 
-- `OPL` is a real top-level gateway
-- `MedAutoScience` remains the `Research Ops` domain gateway
-- `RedCube AI` remains the visual-deliverable domain gateway
-- future workstreams gain their own domain gateways instead of being forced into existing ones
+- `OPL` 成为真实顶层 gateway
+- `MedAutoScience` 保持 `Research Ops` domain gateway
+- `RedCube AI` 保持视觉交付 domain gateway
+- 未来工作流获得自己的 domain gateway，而不是被强行塞进既有系统

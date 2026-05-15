@@ -1,61 +1,59 @@
-**English** | [中文](./opl-candidate-domain-backlog.zh-CN.md)
-
 # OPL Candidate Domain Backlog
 
-## Purpose
+## 目的
 
-This document indexes the admission-blocker backlog for the current under-definition `OPL` workstreams.
+这份文档索引当前仍在定义中的 `OPL` workstream 的 admission-blocker backlog。
 
-Its job is to show what boundary material is still missing before `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` can be formally admitted as independent domain-agent/capability boundaries.
+它的作用是明确说明：`IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 在被正式收录为独立 domain-agent/capability boundary 之前，还缺哪些边界材料。
 
-It is not a pre-admission registry.
-It is not an execution surface.
+它不是预收录 registry。
+它不是执行 surface。
 
-## Relationship To Task Topology And Domain Onboarding
+## 与 Task Topology / Domain Onboarding 的关系
 
-This backlog sits between two already frozen layers:
+这份 backlog 位于两个已冻结层之间：
 
-- [OPL Task Map](../../public/task-map.md)
-- [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.md)
+- [OPL 任务版图](../../public/task-map.md)
+- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
 
-The task map / task-topology layer makes top-level semantics explicit.
-The onboarding contract defines the formal admission gate.
-This backlog records what is still missing between those two layers.
+Task map / task-topology 层负责把顶层语义写清楚。
+Onboarding contract 负责定义正式收录门槛。
+这份 backlog 负责记录这两层之间还缺什么边界材料。
 
-At the current baseline, that is enough to define the candidate-domain path:
+在当前基线上，这三层已经足以表达 candidate-domain path：
 
-- task topology defines the workstream boundary
-- the backlog records missing boundary packages
-- onboarding defines the formal inclusion gate
+- task topology 定义 workstream boundary
+- backlog 记录仍缺哪些 boundary package
+- onboarding 定义 formal inclusion gate
 
-`OPL` therefore does **not** currently add a separate candidate-domain-definition surface between backlog and onboarding.
+因此，`OPL` 当前**不会**再在 backlog 与 onboarding 之间额外插入一层独立的 candidate-domain-definition surface。
 
-It does **not** create `G1` registry admission, `G2` discovery readiness, or `G3` routed-action readiness.
+它**不会**创造 `G1` registry admission、`G2` discovery readiness 或 `G3` routed-action readiness。
 
 ## Machine Boundary
 
-No current machine-readable `candidate-domain-backlog.json` contract is published in this repo. Current candidate visibility comes from [`task-topology.json`](../../../contracts/opl-framework/task-topology.json) and [`workstreams.json`](../../../contracts/opl-framework/workstreams.json); this document is a derived human-readable blocker reference.
+当前仓库没有发布 `candidate-domain-backlog.json` 机器可读合同。当前候选可见性来自 [`task-topology.json`](../../../contracts/opl-framework/task-topology.json) 与 [`workstreams.json`](../../../contracts/opl-framework/workstreams.json)；本文只是 derived human-readable blocker reference。
 
-The active machine-readable topology keeps candidate workstreams visible without pretending their domain boundaries already exist.
+当前 active machine-readable topology 让候选 workstream 保持可见，但不会假装它们的 domain boundary 已经存在。
 
-Companion tranche summary:
+配套 tranche 总结：
 
 - [OPL Candidate Workstream Tranche Closeout](./opl-candidate-workstream-tranche-closeout.md)
 
-## Non-Goals
+## 非目标
 
-This backlog does not:
+这份 backlog 不负责：
 
-- assign future domain identity or legacy route-surface metadata
-- reframe `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` as extensions of `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`
-- add candidate entries to the `G1` registry
-- create a discovery target or routed-action target
-- become an approval queue, release plan, or runtime planner
-- transfer truth, review, or publication authority into `OPL`
+- 分配未来的 domain identity 或 legacy route-surface metadata
+- 把 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 改写成 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI` 的扩展分支
+- 把候选项加入 `G1` registry
+- 创造 discovery target 或 routed-action target
+- 变成 approval queue、release plan 或 runtime planner
+- 把 truth / review / publication authority 上收给 `OPL`
 
-## Backlog Fields
+## Backlog 字段
 
-Each entry stays reference-only and carries only:
+每个 entry 都保持 reference-only，只携带：
 
 - `workstream_id`
 - `label`
@@ -68,84 +66,84 @@ Each entry stays reference-only and carries only:
 - `formal_inclusion_gate`
 - `notes`
 
-## Current Candidate Coverage
+## 当前候选覆盖
 
 ### IP Ops
 
-`IP Ops` already has explicit top-level semantics in the task map / task topology: it covers intellectual-property protection outputs such as invention disclosures, patent application drafts, claims, embodiments, and office-action response plans.
+`IP Ops` 在 task map / task topology 中已经有明确的顶层语义：它覆盖技术交底书、专利申请书草稿、权利要求、实施例和审查意见答复计划这类知识产权保护交付物。
 
-What is still missing is a future domain boundary package that makes patent-specific registry material, public domain-agent/capability docs, truth ownership for patent drafts / claims / embodiments / prior-art positioning / office-action responses, human/legal review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
-That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The routing readiness blocker must also prove that patent requests do not route to `MedAutoGrant` unless the request is actually Grant Ops proposal work.
+但它仍然缺少未来 domain boundary package：包括 patent-specific registry material、public domain-agent/capability docs、专利申请书 / 权利要求 / 实施例 / 现有技术定位 / 审查意见答复的 truth ownership、人工/法律审阅 surface、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+routing readiness blocker 还必须证明专利请求不会被路由到 `MedAutoGrant`，除非该请求实际属于 Grant Ops 基金申请工作。
 
-The negative conclusion frozen here is that `IP Foundry` / `Med Auto Patent` wording is a candidate product-family signal only; it does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of patent truth.
+这里冻结下来的 negative conclusion 是：`IP Foundry` / `Med Auto Patent` 只是 candidate product-family signal；它不足以推出 formal admission、discovery readiness、routed-action readiness、handoff readiness，或把 patent truth ownership 上收到 OPL。
 
 ### Award Ops
 
-`Award Ops` already has explicit top-level semantics in the task map / task topology: it covers science-and-technology award applications, achievement summaries, contribution ranking, impact evidence, and recommendation materials.
+`Award Ops` 在 task map / task topology 中已经有明确的顶层语义：它覆盖科技进步奖、自然科学奖、成果奖、人才/项目荣誉材料中的报奖书、成果总结、贡献排序、影响力佐证和推荐材料。
 
-What is still missing is a future domain boundary package that makes award-specific registry material, public domain-agent/capability docs, truth ownership for award applications / achievement summaries / contribution ranking / impact evidence / recommendation materials, human expert review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
-That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The routing readiness blocker must also prove that award requests do not route to `MedAutoGrant` as grant proposal work, even though Award Ops may reuse Grant Ops authoring substrate.
+但它仍然缺少未来 domain boundary package：包括 award-specific registry material、public domain-agent/capability docs、报奖书 / 成果总结 / 贡献排序 / 影响力佐证 / 推荐材料的 truth ownership、人工专家审阅 surface、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+routing readiness blocker 还必须证明报奖请求不会作为基金申请工作路由到 `MedAutoGrant`，即使 Award Ops 可以复用 Grant Ops 的写作基座。
 
-The negative conclusion frozen here is that `Award Foundry` / `Med Auto Award` wording is a candidate product-family signal only; it does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of award truth.
+这里冻结下来的 negative conclusion 是：`Award Foundry` / `Med Auto Award` 只是 candidate product-family signal；它不足以推出 formal admission、discovery readiness、routed-action readiness、handoff readiness，或把 award truth ownership 上收到 OPL。
 
 ### Thesis Ops
 
-`Thesis Ops` already has explicit top-level semantics in the task map / task topology. `Thesis Foundry` / `Med Auto Thesis` is the planned product-family wording for this candidate lane.
+`Thesis Ops` 在 task map / task topology 中已经有明确的顶层语义。`Thesis Foundry` / `Med Auto Thesis` 是这条 candidate lane 的规划产品表达。
 
-The negative conclusion frozen in the current path is that thesis assembly does add top-level boundary truth, but only as a reference-only candidate boundary inside the existing topology/backlog/onboarding chain: chapter-draft sets, cross-chapter synchronization, and defense-preparation coordination are not identical to `Research Ops` manuscript/submission flow, and a downstream `defense_deck` derivative does not collapse the workstream into `Presentation Ops` / `RedCube AI`.
+当前路径里冻结下来的 negative conclusion 是：Thesis Ops 的 thesis assembly 确实增加了顶层边界语义，但这种边界只以 reference-only candidate boundary 的形式存在于现有 topology / backlog / onboarding 链路中；章节草稿集、跨章节同步、答辩准备协调，并不等同于 `Research Ops` 的 manuscript / submission flow，而下游可能派生出的 `defense_deck` 也不会把这个 workstream 压缩成 `Presentation Ops` / `RedCube AI`。
 
-What is still missing is a future domain boundary package that makes thesis-specific registry material, public domain-agent/capability docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
-That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The discovery readiness blocker must keep read-only discovery pointed at a future domain-owned capability entry without implying handoff readiness or collapsing Thesis Ops into `Research Ops` or `Presentation Ops`.
-The routing readiness blocker must freeze explicit routing evidence, keep successful targets limited to current domain-owned capability/action-route refs, preserve the no-bypass rule against direct harness targeting, and avoid silently collapsing the workstream into another admitted domain.
-The cross-domain wording blocker must keep Thesis Ops wording aligned between `OPL` and any future thesis domain without equating thesis assembly to `Research Ops` manuscript flow or `Presentation Ops` / `RedCube AI` deck production.
-Those future packages are blockers only; they do not make `Thesis Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
+但它仍然缺少未来 domain boundary package：包括 thesis-specific registry material、public domain-agent/capability docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+其中 discovery readiness blocker 必须把只读 discovery 明确指向未来的 domain-owned capability entry，但不能提前暗示 handoff readiness，也不能把 Thesis Ops 静默塌缩成 `Research Ops` 或 `Presentation Ops`。
+其中 routing readiness blocker 必须冻结显式 route evidence，把 successful target 限定为当前 domain-owned capability/action-route refs，继续遵守不得直达 harness 的 no-bypass 规则，并避免把这个 workstream 静默并入其他 admitted domain。
+其中 cross-domain wording blocker 必须让 `OPL` 与未来 thesis domain 的 wording 保持对齐，同时不把 thesis assembly 等同于 `Research Ops` 的 manuscript flow 或 `Presentation Ops` / `RedCube AI` 的 deck production。
+这些未来 package 只是 blocker，不代表 `Thesis Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Review Ops
 
-`Review Ops` already has explicit top-level semantics in the task map / task topology: it groups reviewer-role work plus response/rebuttal coordination under one candidate semantic bundle. `Review Foundry` / `Med Auto Review` is the planned product-family wording for this candidate lane.
+`Review Ops` 在 task map / task topology 中已经有明确的顶层语义：它把 reviewer-role work 与 response / rebuttal coordination 放在同一个 candidate semantic bundle 里。`Review Foundry` / `Med Auto Review` 是这条 candidate lane 的规划产品表达。
 
-What is still missing is a future domain boundary package that makes review-specific registry material, public domain-agent/capability docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
-That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The discovery readiness blocker must keep read-only discovery pointed at a future domain-owned capability entry without implying handoff readiness for the review bundle.
-The routing readiness blocker must freeze explicit routing evidence, keep successful targets limited to current domain-owned capability/action-route refs, and preserve the no-bypass rule against direct harness targeting.
-The cross-domain wording blocker must keep reviewer-role wording aligned between `OPL` and any future review domain without transferring review-truth ownership into `OPL`.
+但它仍然缺少未来 domain boundary package：包括 review-specific registry material、review reports / comment structures / rebuttal plans / revision-route maps 的 truth ownership、public domain-agent/capability docs、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+其中 discovery readiness blocker 必须把只读 discovery 明确指向未来的 domain-owned capability entry，但不能提前暗示 review bundle 已具备 handoff readiness。
+其中 routing readiness blocker 必须冻结显式 route evidence，把 successful target 限定为当前 domain-owned capability/action-route refs，并继续遵守不得直达 harness 的 no-bypass 规则。
+其中 cross-domain wording blocker 必须让 `OPL` 与未来 review domain 的 reviewer-role wording 保持对齐，同时不把 review-truth ownership 上收到 `OPL`。
 
-The negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth.
+这里冻结下来的 negative conclusion 是：这种组合语义仍不足以推出 formal admission、discovery readiness、routed-action readiness、handoff readiness，或把 review truth ownership 上收到 OPL。
 
-## Reading Rule
+## 阅读规则
 
-Read this surface as a **reference-only blocker index**.
+这份 surface 必须被理解成 **reference-only blocker index**。
 
-If a backlog entry exists, the workstream is still below the domain-onboarding gate.
-`blocked` does not mean “almost admitted.”
-It means the required boundary package is still incomplete.
-If the execution-model declaration is still missing, the workstream remains under definition / deferred rather than becoming “ready,” “aligned,” or implicitly admitted.
-If a public scaffold or domain-direction hint exists, it still counts only as top-level signal/evidence until the real boundary package is present.
+只要某个 backlog entry 还存在，对应 workstream 就仍然位于 domain-onboarding gate 之下。
+`blocked` 不代表“快收录了”。
+它代表必需 boundary package 仍未完整。
+如果 execution-model declaration 还缺失，该 workstream 就仍然只能停留在 under definition / deferred，而不能被写成 `ready`、`aligned` 或隐式 admitted。
+如果当前只存在公开 scaffold 或 domain-direction hint，它也仍然只能被解释为顶层信号/证据，而不能代替真实 boundary package。
 
-It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`.
-Those admitted domains remain independent domain-agent entries with domain-owned capability surfaces.
+它也不允许 `OPL` 悄悄把这些仍在定义中的 workstream 吸收进 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI`。
+这些已收录 domain 仍然保持独立的 domain-agent entry 与 domain-owned capability surface。
 
-No backlog entry authorizes a domain handoff, discovery target, routed-action target, or harness access.
+任何 backlog entry 都不授权 domain handoff、discovery target、routed-action target 或 harness access。
 
-## Governing Sources
+## 上位依据
 
-- [OPL Task Map](../../public/task-map.md)
-- [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.md)
+- [OPL 任务版图](../../public/task-map.md)
+- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 
-## Completion Definition
+## 完成定义
 
-The candidate backlog is acceptable only when:
+只有当下面这些条件都成立时，candidate backlog 才算合格：
 
-- each current candidate workstream has an explicit backlog entry
-- blocker packages align to the onboarding-package categories
-- blocker checks align to the onboarding formal-inclusion gate
-- discovery readiness blockers and routing readiness blockers remain explicit as separate blocked checks
-- execution-model blockers stay explicit in the public companion wording: stable agent runtime surface, shared-base `Auto` / `Human-in-the-loop` convergence, and code-versus-Agent responsibility split must all be named before anything can move beyond under definition / deferred
-- no entry allocates future domain identity, legacy route-surface metadata, or any routed readiness state
-- the backlog stays discoverable and reviewable without becoming a control plane
-- the backlog remains reference-only, non-executing, and non-admitting
+- 每个当前候选 workstream 都有显式 backlog entry
+- blocker package 与 onboarding-package 类别一一对齐
+- blocker check 与 onboarding formal-inclusion gate 一一对齐
+- discovery readiness blocker 与 routing readiness blocker 继续保持为两项独立 blocked check
+- public companion wording 继续把 execution-model blocker 写明：stable agent runtime surface、共享同一基座的 `Auto` / `Human-in-the-loop`、以及 code-versus-Agent responsibility split 在显式回答前，都只能保持 under definition / deferred
+- 没有任何 entry 分配未来 domain identity、legacy route-surface metadata 或 routed readiness state
+- backlog 保持可发现、可审阅，但不变成 control plane
+- backlog 仍然保持 reference-only、non-executing、non-admitting

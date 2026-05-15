@@ -1,60 +1,58 @@
-**English** | [中文](./opl-read-only-discovery-gateway.zh-CN.md)
+# OPL Gateway 契约面
 
-# OPL Gateway Contract Surface
+## 目的
 
-## Purpose
+这份文档冻结 `OPL Gateway` 的 `G2` 目标。
 
-This document freezes the `G2` target for the `OPL Gateway`.
+`G2` 是 `OPL` 第一次成为真实入口表面，但仅限于只读 discovery。
+截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / framework contract baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
 
-`G2` is the first phase where `OPL` becomes a real entry surface, but only in a read-only discovery sense.
-As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`, and the repository already has a runnable local `TypeScript CLI`-first / framework contract baseline; the current job is to close it into one stable repo-tracked `G2 stable public baseline`.
+目标不是 mutation domain state。
+目标是让人类和 Agent 能先问顶层 gateway：我该用哪个系统、这个 workstream 是什么、这个请求应该落到哪个 domain。
 
-The goal is not to mutate domain state.
-The goal is to let humans and agents ask the top-level gateway what system they should use, what a workstream means, and how a request maps into a domain.
+## 与 G1 的关系
 
-## Relationship To G1
+`G2` 直接消费 `G1` 契约。
 
-`G2` consumes the `G1` contract.
-
-That means this discovery gateway is defined on top of:
+也就是说，这个 discovery gateway 建立在下面这些东西之上：
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- the [workstream registry](../../../../contracts/opl-framework/workstreams.json)
-- the [domain registry](../../../../contracts/opl-framework/domains.json)
-- the [routing vocabulary](../../../../contracts/opl-framework/routing-vocabulary.json)
-- the materialized machine-readable artifacts in [`../contracts/opl-framework/README.md`](../../../../contracts/opl-framework/README.md)
+- [workstream registry](../../../../contracts/opl-framework/workstreams.json)
+- [domain registry](../../../../contracts/opl-framework/domains.json)
+- former artifact `contracts/opl-framework/routing-vocabulary.json`（未保留为当前 active contract）
+- 当前仓库中已落地的机器可读工件：[`../contracts/opl-framework/README.md`](../../../../contracts/opl-framework/README.md)
 
-If `G1` is not frozen, `G2` should not proceed.
+如果 `G1` 没冻结，`G2` 不应继续推进。
 
-## Core Promise
+## 核心承诺
 
-At `G2`, an agent should be able to ask:
+在 `G2`，Agent 应该可以先问：
 
-- what workstreams exist?
-- what domain system owns this workstream?
-- which families map directly to that workstream?
-- does this task belong to `MedAutoScience`, `MedAutoGrant`, `RedCube AI`, or neither?
-- what is the correct next entry surface?
+- 当前有哪些 workstream？
+- 这个 workstream 由哪个 domain system 承接？
+- 哪些 family 直接映射这个 workstream？
+- 这个任务应该进 `MedAutoScience`、`MedAutoGrant`、`RedCube AI`，还是都不是？
+- 下一步正式入口应该是什么？
 
-And receive a stable, machine-readable answer without touching domain internals.
+并得到稳定、机器可读、且不触碰 domain 内部的答案。
 
-## Non-Goals
+## 非目标
 
-`G2` does not:
+`G2` 不负责：
 
-- create deliverables
-- mutate workspaces
-- start runs
-- bypass domain gateways
-- own canonical runtime truth
+- 创建 deliverable
+- 修改 workspace
+- 启动 run
+- 绕过 domain gateway
+- 拥有 canonical runtime truth
 
-It is discovery-only.
+它只负责 discovery。
 
-## Required Read-Only Operations
+## 必需的只读操作
 
-The minimum discovery gateway should expose these operations:
+最小 discovery gateway 应暴露这些操作：
 
-These operations are both the minimum `G2` contract and the public discovery surface already exposed by the current `Phase 1` CLI baseline.
+这些操作既是 `G2` 的最小合同，也是当前 `Phase 1` CLI baseline 已暴露的公开 discovery surface。
 
 - `list_workstreams`
 - `get_workstream`
@@ -65,15 +63,15 @@ These operations are both the minimum `G2` contract and the public discovery sur
 - `resolve_request_surface`
 - `explain_domain_boundary`
 
-## Operation Definitions
+## 操作定义
 
 ### `list_workstreams`
 
-Purpose:
+目的：
 
-- return all registered workstreams with their top-level owner and status
+- 返回所有已注册 workstream 及其顶层 owner 和状态
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -103,11 +101,11 @@ Suggested response:
 
 ### `get_workstream`
 
-Purpose:
+目的：
 
-- return the full registered meaning of one workstream
+- 返回某一个 workstream 的完整注册含义
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -132,11 +130,11 @@ Suggested response:
 
 ### `list_domains`
 
-Purpose:
+目的：
 
-- return all registered domain gateways and their owned workstreams
+- 返回所有已注册 domain gateway 及其承接的 workstream
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -169,11 +167,11 @@ Suggested response:
 
 ### `get_domain`
 
-Purpose:
+目的：
 
-- return the formal meaning of one domain gateway
+- 返回某一个 domain gateway 的正式含义
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -194,11 +192,11 @@ Suggested response:
 
 ### `list_surfaces`
 
-Purpose:
+目的：
 
-- return summaries for the currently indexed top-level public surfaces
+- 返回当前已索引的顶层 public surface 摘要
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -222,11 +220,11 @@ Suggested response:
 
 ### `get_surface`
 
-Purpose:
+目的：
 
-- return the full registered meaning of one public surface
+- 返回某一个 public surface 的完整注册含义
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -246,18 +244,18 @@ Suggested response:
 
 ### `resolve_request_surface`
 
-Purpose:
+目的：
 
-- classify a top-level request into the most likely workstream and domain surface
+- 把一个顶层请求解析成最可能的 workstream 和 domain surface
 
-Required inputs:
+必需输入：
 
 - `intent`
 - `target`
 - `goal`
-- optional `preferred_family`
+- 可选 `preferred_family`
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -274,22 +272,22 @@ Suggested response:
 }
 ```
 
-Note:
+说明：
 
-- in the current `Phase 1`, `confidence` remains an illustrative field and is not frozen as a separately versioned public contract value
+- `confidence` 在当前 `Phase 1` 只作为示意性字段，不单独冻结成需要逐字逐值匹配的公开契约
 
-Special rule:
+特殊规则：
 
-- if the request is for `xiaohongshu`, the domain may still resolve to `redcube`
-- but the workstream must not auto-resolve to `presentation_ops` unless the top-level semantics truly match presentation material
+- 如果请求是 `xiaohongshu`，domain 仍可能解析到 `redcube`
+- 但除非顶层语义真的匹配，否则 workstream 不能自动标成 `presentation_ops`
 
 ### `explain_domain_boundary`
 
-Purpose:
+目的：
 
-- explain why a task belongs to one domain and not another
+- 解释为什么一个任务属于某个 domain，而不是另一个 domain
 
-Suggested response:
+建议响应：
 
 ```json
 {
@@ -307,25 +305,25 @@ Suggested response:
 }
 ```
 
-## Source-Of-Truth Rules
+## Source-Of-Truth 规则
 
-At `G2`, the gateway reads from:
+在 `G2`，gateway 只读：
 
-- the `G1` federation contract
-- the top-level workstream and domain registries
+- `G1` federation contract
+- 顶层 workstream / domain registry
 
-It does not read domain-private runtime state as if that were top-level truth.
+它不能把 domain private runtime state 当作顶层真相。
 
-It may link to domain surfaces.
-It may not mutate domain truth.
+它可以链接 domain surface。
+但不能 mutation domain truth。
 
-## Surface Shapes
+## Surface 形态
 
-The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport for the framework contract surface.
-At the development-control layer, the active path is Codex-only: standard Codex sessions handle planning, implementation, verification, and review against the frozen framework contracts.
-That development host choice does not make Codex the product runtime substrate owner of `OPL`; any honest upstream `Hermes-Agent` rollout still has to land inside a domain repository first.
-The legacy `Codex Host` / `OMX` split now survives only in Layer 3 historical migration references and does not redefine this public gateway surface.
-In that baseline, the discovery contract is exposed through commands such as:
+当前 `Phase 1` 的交付目标，是继续用本地 `TypeScript CLI` 作为当前只读 gateway surface 的 discovery transport。
+在开发控制面上，当前活跃路径已经收口为 Codex-only：标准 Codex 会话直接承担规划、实现、验证与评审，并对冻结的 framework contracts 负责。
+但这个开发宿主选择并不意味着 Codex 就是 `OPL` 的产品 runtime substrate owner；任何诚实的上游 `Hermes-Agent` rollout，仍必须先在某个 domain 仓里落地。
+历史上的 `Codex Host` / `OMX` 分工现在只保留在第三层历史迁移参考文档中，不再定义这份公开 gateway 文档的当前语义。
+在这条基线里，discovery contract 通过下面这些命令暴露：
 
 - `opl contract workstreams`
 - `opl contract workstream <workstream_id>`
@@ -336,31 +334,31 @@ In that baseline, the discovery contract is exposed through commands such as:
 - `opl domain resolve-request`
 - `opl domain explain-boundary`
 
-Companion transport commands also include:
+配套 transport 命令还包括：
 
 - `opl help`
 - `opl contract validate`
 
-Docs-site navigation and future MCP discovery tools remain compatible transports if they keep the same contract.
+docs-site navigation 与未来的 MCP discovery tools 仍然可以作为兼容 transport，只要共享同一份 contract。
 
-The contract matters more than the transport.
-Conceptually, the next formal entry after a successful discovery remains the domain gateway, but `G2` itself does not grant route authority; it only identifies the correct boundary.
-The current baseline does not turn `OPL` into a unified runtime owner or pull a shared execution core forward; the CLI only carries read-only discovery here.
-The current implementation target is therefore the local CLI discovery surface rather than a web/server runtime.
+重要的是 contract，不是 transport。
+在概念上，discovery 之后的下一层 formal entry 仍然是 domain gateway；但 `G2` 本身**不授予 route authority**，它只负责识别正确边界。
+当前不把 `OPL` 提升成统一 runtime owner，也不抽共享执行内核；CLI 在这里只承载只读 discovery。
+因此，当前实现目标是本地 CLI discovery surface，而不是 web/server runtime。
 
-## Completion Definition
+## 完成定义
 
-`G2` is complete when:
+只有满足下面条件，`G2` 才算完成：
 
-- discovery requests can be answered through machine-readable outputs
-- the top-level gateway can resolve domain ownership without prose-only reasoning
-- no mutation path is required for the discovery workflow
-- domain gateways remain the next formal entry surface after discovery
+- discovery 请求能通过机器可读输出回答
+- 顶层 gateway 能在不靠 prose-only 推理的前提下解析 domain ownership
+- discovery workflow 不依赖 mutation path
+- 在 discovery 之后，domain gateway 仍是下一层正式入口
 
-`G2` is not complete when:
+下面这些情况说明 `G2` 还没完成：
 
-- the gateway still answers only with free-form prose
-- domain ownership is still ambiguous
-- the gateway starts mutating domain state
+- gateway 仍只会返回自由 prose
+- domain ownership 仍模糊
+- gateway 开始 mutation domain state
 
-After the `G2` closeout, the next baton is only the `G3 thin handoff planning` freeze rather than a unified routed-action runtime.
+`G2` 收口之后，下一棒仅进入 `G3 thin handoff planning` 冻结，而不是进入统一 routed-action runtime。

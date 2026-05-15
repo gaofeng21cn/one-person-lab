@@ -1,6 +1,6 @@
 # Codex-default Host-Agent Runtime 合同
 
-Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 Codex-default host-agent runtime 口径来源；有效内容已经吸收到 `docs/active/opl-runtime-naming-and-boundary-contract.zh-CN.md`、`docs/active/opl-domain-onboarding-contract.zh-CN.md` 和 executor adapter defaults。当前活跃执行主线是 Codex-default executor + explicit OPL activation + provider-backed stage runtime，不再按本文整份执行。
+Tombstone note 2026-05-11: 本文件已经从 `docs/references/runtime-substrate/` 迁入历史归档。它保留为早期 Codex-default host-agent runtime 口径来源；有效内容已经吸收到 `docs/runtime/opl-runtime-naming-and-boundary-contract.md`、`docs/specs/opl-domain-onboarding-contract.md` 和 executor adapter defaults。当前活跃执行主线是 Codex-default executor + explicit OPL activation + provider-backed stage runtime，不再按本文整份执行。
 
 > 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考；当前活跃执行口径以 Codex-only 文档为准。
 > 当前已同步的现实状态是：三个业务仓都已把 repo-local control-plane state 迁回各自的 repo-tracked truth；OMX 不再作为当前 OPL 开发环境或执行入口。

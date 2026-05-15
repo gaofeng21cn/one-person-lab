@@ -1,44 +1,42 @@
-**English** | [中文](./opl-surface-lifecycle-map.zh-CN.md)
-
 # OPL Surface Lifecycle Map
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable legacy-derived reference only; no current machine-readable `surface-lifecycle-map.json` contract is published in this repo.
+Machine boundary: 仅作为 legacy-derived 人读参考；当前仓库没有发布 `surface-lifecycle-map.json` 机器可读合同。
 
-## Purpose
+## 目的
 
-This document preserves the legacy-derived lifecycle vocabulary for the historical OPL surface stack.
+这份文档保留历史 OPL surface stack 的 legacy-derived lifecycle 词汇。
 
-Its job is to make contract, routing, operating, discoverability, and acceptance surfaces traversable from one place without turning the map into a workflow engine, transition authority, or second source of truth.
+它的作用是：把 contract、routing、operating、discoverability 与 acceptance surface 串成可遍历的关系图，同时不把这张 map 升格成 workflow engine、transition authority 或第二真相源。
 
-The current OPL topology is stage-led with Agent executors as the minimum execution unit. Legacy `gateway` IDs remain here only as archived traversal/reviewability labels, not active compatibility interfaces.
+当前 OPL topology 是 stage-led、以 Agent executor 为最小执行单位。Legacy `gateway` id 只作为已归档 traversal/reviewability 标签保留，不是 active compatibility interface。
 
-## Current Machine Boundary
+## 当前机器边界
 
-No current `contracts/opl-framework/surface-lifecycle-map.json` exists. Current machine-readable behavior must use the active contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests.
+当前不存在 `contracts/opl-framework/surface-lifecycle-map.json`。当前机器可读行为必须使用 active contracts、source、CLI/API 行为、runtime ledger 和 domain-owned manifest。
 
-## Non-Goals
+## 非目标
 
-This lifecycle map does not:
+这个 lifecycle map 不负责：
 
-- execute transitions
-- decide unresolved routing states
-- replace the governing docs, schemas, or supporting corpora
-- move canonical truth into `OPL`
-- authorize direct harness access, direct publish, direct release, direct export, direct submission, or direct posting by `OPL`
+- 执行 transition
+- 决定 unresolved routing state
+- 替代 governing docs、schemas 或 supporting corpora
+- 把 canonical truth 上收给 `OPL`
+- 授权 `OPL` 直接执行 direct harness access、direct publish、direct release、direct export、direct submission 或 direct posting
 
 ## Shared-Foundation Ownership Boundary
 
-This lifecycle map sits in the shared-foundation reference layer only.
-`OPL` may freeze historical dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth remain with human/domain-owned surfaces.
-That keeps the map discoverable for review and acceptance alignment without turning it into a workflow control plane or shared truth store.
-For the broader ownership split, see the [OPL Family Development Reference](../../active/opl-family-development-reference.zh-CN.md).
-For current topology, read [Project](../../project.md), [Status](../../status.md), [Architecture](../../architecture.md), and the [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
+这张 lifecycle map 只位于 shared-foundation 的 reference 层。
+`OPL` 可以在这里冻结历史依赖与遍历语言，但 transition execution、runtime writeback、review truth 与 publication truth 仍然留在人类 / domain-owned surface 中。
+因此，这张 map 可以服务于 review 与 acceptance alignment 的 discoverability，而不会升级成 workflow control plane 或共享 truth store。
+更完整的 ownership split 可参考 [OPL Family 开发主参考](../../active/opl-family-development-reference.md)。
+当前 topology 以[项目概览](../../project.md)、[当前状态](../../status.md)、[架构](../../architecture.md)和 [OPL stage-led agent framework roadmap](../runtime-substrate/opl-stage-led-agent-framework-roadmap.md) 为准。
 
-## Lifecycle Fields
+## Lifecycle 字段
 
-Each entry stays derived/reference-only and carries only:
+每个 entry 都保持 derived/reference-only，只携带：
 
 - `surface_id`
 - `layer_id`
@@ -49,7 +47,7 @@ Each entry stays derived/reference-only and carries only:
 - `follow_on_route_surface`
 - `governing_refs`
 
-## Current Coverage
+## 当前 Coverage
 
 ### Shared-foundation boundary surfaces
 
@@ -84,43 +82,43 @@ Each entry stays derived/reference-only and carries only:
 - `opl_public_surface_index_doc`
 - `opl_gateway_acceptance_spec`
 
-## Companion Mapping Surfaces
+## 配套 Mapping Surfaces
 
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
 - [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
 
-## Reading Rule
+## 阅读规则
 
-Read this lifecycle map as a **derived reference graph**, not as an execution contract.
+这张 lifecycle map 必须被理解成 **derived reference graph**，而不是 execution contract。
 
-`requires_surfaces` and `enables_surfaces` expose frozen dependency and discoverability relationships only.
-They do not authorize automatic transitions, and they do not replace prose review.
-If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary document only and does not grant mutation, transition, review, or publication authority.
-If the surface is the [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md), it remains a reference-grade activation freeze only and does not authorize runtime execution, candidate admission, or runtime-owner promotion.
-When an archived entry keeps a follow-on route boundary, legacy examples may still show `domain_gateway`; current active surfaces must name the relevant domain-owned capability entry instead.
-If no follow-on action belongs to the surface, the map uses `null`.
-If the surface is `opl_candidate_domain_backlog`, the dependency chain remains blocker-oriented only; it does not authorize automatic promotion into onboarding, discovery, or routing.
+`requires_surfaces` 与 `enables_surfaces` 只暴露已经冻结的依赖与 discoverability 关系。
+它们不会授权自动 transition，也不会替代 prose review。
+如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，它也仍然只是 shared-foundation boundary 文档，不会因此获得 mutation、transition、review 或 publication authority。
+如果某个 surface 是 [OPL Phase 1 Exit Activation Package](../domain-admission/opl-phase-1-exit-activation-package.md) 或 [OPL Minimal admitted-domain federation activation package](../../history/compatibility/gateway-federation/opl-minimal-admitted-domain-federation-activation-package.md)，它也仍然只是 reference-grade activation freeze，不会因此授权 runtime execution、candidate admission，或把 `OPL` 提升成 runtime owner。
+如果某个已归档 entry 仍保留 follow-on route boundary，legacy 示例仍可能出现 `domain_gateway`；当前 active surface 必须命名相关 domain-owned capability entry。
+如果某个 surface 没有后续动作边界，map 就使用 `null`。
+如果某个 surface 是 `opl_candidate_domain_backlog`，这里暴露的依赖链也仍然只是 blocker-oriented 参考关系；它不会授权自动晋升到 onboarding、discovery 或 routing。
 
-## Governing Sources
+## 上位依据
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
+- [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL Candidate Domain Backlog](../domain-admission/opl-candidate-domain-backlog.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
-- [OPL Public Surface Index](../../active/opl-public-surface-index.md)
+- [OPL Public Surface Index](../../product/opl-public-surface-index.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 
-## Completion Definition
+## 完成定义
 
-The lifecycle map is acceptable only when:
+只有当下面这些条件都成立时，lifecycle map 才算合格：
 
-- it covers the currently frozen shared-foundation / gateway / operating / supporting surfaces that matter for top-level traversal
-- every `requires_surfaces` and `enables_surfaces` target resolves inside the same lifecycle map
-- every `governing_ref` resolves to an existing local artifact
-- legacy `follow_on_route_surface` examples stay provenance-only and do not define an active compatibility value
-- it remains discoverable alongside the derived surface authority matrix and derived surface review matrix without any of these maps becoming an execution surface
-- it remains derived, reference-only, and non-executing
+- 它覆盖当前真正影响顶层遍历的已冻结 shared-foundation / gateway / operating / supporting surface
+- 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能在同一个 lifecycle map 内解析
+- 每个 `governing_ref` 都能解析到本地存在的工件
+- legacy `follow_on_route_surface` 示例只保留 provenance 语义，不定义 active compatibility value
+- 它能与 derived surface authority matrix、derived surface review matrix 一起被发现，但这些 map 都不会升级成执行 surface
+- 它保持 derived、reference-only、non-executing

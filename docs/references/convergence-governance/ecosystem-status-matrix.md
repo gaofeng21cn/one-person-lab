@@ -1,6 +1,6 @@
 # OPL 生态四仓统一状态总表
 
-> 历史说明（2026-04-11 OMX offboarding；2026-05-14 复核）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。正文中的 `Gateway / Federation`、`Domain Harness OS` 与 `Codex-default host-agent runtime` 是当时快照语言；当前活跃入口以 stage-led OPL framework 文档为准（`README*`、`docs/README*`、`docs/status.md`、`docs/architecture.md`、`contracts/opl-framework/README*`）。本文不提供 active gateway/federation compatibility interface。
+> 历史说明（2026-04-11 OMX offboarding；2026-05-14 复核）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。正文中的 `Gateway / Federation`、`Domain Harness OS` 与 `Codex-default host-agent runtime` 是当时快照语言；当前活跃入口以 stage-led OPL framework 文档为准（根层 `README*`、中文 `docs/README.md`、`docs/status.md`、`docs/architecture.md`、`contracts/opl-framework/README*`）。本文不提供 active gateway/federation compatibility interface。
 
 状态锚点：`2026-04-11`
 
@@ -94,9 +94,9 @@
   - 当前默认本地形态是 `Codex-default host-agent runtime`
   - 未来都应兼容同一 substrate 上的 managed web runtime
 - 文档治理已统一：
-  - 对外双语
-  - 内部技术/规划/备忘默认中文
-  - `docs/README*` 为 docs 入口
+  - 根层 `README*` 的公开语言策略由 public/product 需求决定
+  - `docs/**` 当前只维护中文 canonical 内容
+  - `docs/README.md` 为 docs 入口
   - 根 `AGENTS.md` 与 docs 核心工作集共同负责治理边界
 
 ### 尚未落地的部分
@@ -175,7 +175,7 @@
 - execution handle contract 的表达框架
 - durable surface contract 的表达框架
 - `Codex-default host-agent runtime` 作为当前默认本地形态
-- 对外双语 / 对内中文的文档治理规则
+- 根层 `README*` 单独决定公开语言策略、`docs/**` 中文 canonical 的文档治理规则
 - `Phase C` 由 `OPL` 集中持有，不再按四仓散管理
 
 ### 还没有拉平的部分

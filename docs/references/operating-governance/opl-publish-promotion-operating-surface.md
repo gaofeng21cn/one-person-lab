@@ -1,138 +1,136 @@
-**English** | [中文](./opl-publish-promotion-operating-surface.zh-CN.md)
-
 # OPL Publish / Promotion Operating Surface
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable support only; machine-readable behavior must use contracts, schemas, source, CLI/API behavior, generated artifacts, or semantic `human_doc:*` ids.
+Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
 
-## Purpose
+## 目的
 
-This document freezes the minimum top-level publish / promotion operating surface for `OPL`.
+这份文档冻结 `OPL` 顶层最小化的 publish / promotion operating surface。
 
-Its goal is to define what `OPL` may legitimately index after domain-owned publish gates and domain-owned release / export / submission outcomes already exist.
+它的目标是定义：在 domain-owned publish gate 与 domain-owned release / export / submission outcome 已经存在之后，`OPL` 在顶层还能合法索引哪些 publish / promotion record。
 
-The target is not a top-level publish runtime.
-The target is a thin top-level operating layer that indexes publish outcomes, promotion candidates, and public-surface references while domain systems continue to own publish truth.
-Legacy `gateway` wording in this document is provenance-only vocabulary from archived surface IDs and example corpora. It is not an active compatibility interface. Current topology is stage-led with Agent executors as the minimum execution unit.
+目标不是顶层 publish runtime。
+目标是一个薄的顶层 operating layer：只索引 publish outcome、promotion candidate 与 public-surface reference，而 publish truth 仍然留在 domain system 内部。
+本文中的 legacy `gateway` wording 只是来自已归档 surface id 与 example corpus 的 provenance vocabulary，不是 active compatibility interface。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
 
-## Relationship To Earlier Gateway Layers
+## 与前置 Gateway 层的关系
 
-This operating surface was originally downstream of these now-archived historical layers:
+这层 operating surface 最初建立在以下已归档历史层之上：
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
+- [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- the machine-readable contracts in [`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
+- 当前机器可读合同目录：[`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
 
-Those layers are provenance inputs only. Current topology and owner boundaries remain governed by the core five, current contracts, source, CLI/API behavior, runtime ledgers, domain-owned manifests, and the stage-led framework roadmap.
+这些层只作为 provenance input。当前 topology 与 owner boundary 仍以核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 stage-led framework roadmap 为准。
 
-## Boundary From P5.M1
+## 与 P5.M1 的边界
 
-`publish_readiness_signal` from `P5.M1` stops at this question:
+`P5.M1` 里的 `publish_readiness_signal` 截止在这个问题：
 
-- does the top-level request appear ready to enter a domain-owned publish gate?
+- 一个顶层请求是否看起来已经具备进入 domain-owned publish gate 的条件？
 
-This `P5.M2` surface begins only after a domain-owned publish / release / export / submission outcome already exists.
+这份 `P5.M2` 文档只在 domain-owned publish / release / export / submission outcome 已经存在之后才开始生效。
 
-In short:
+一句话说：
 
-- `P5.M1` = readiness before domain-owned publish truth
-- `P5.M2` = top-level indexing and promotion signaling after domain-owned publish truth
+- `P5.M1` = domain-owned publish truth 形成之前的 readiness
+- `P5.M2` = domain-owned publish truth 形成之后的顶层索引与 promotion signal
 
-## Core Promise
+## 核心承诺
 
-At this layer, `OPL` may own only **top-level publish-outcome indexes, promotion-candidate signals, and promotion-surface indexes**.
+在这一层，`OPL` 只允许拥有**顶层 publish-outcome index、promotion-candidate signal 与 promotion-surface index**。
 
-It may not:
+它不允许：
 
-- become the owner of domain publish truth
-- become the owner of domain release / export / submission truth
-- become the owner of domain public-channel posting truth
-- execute publish, submit, export, release, or promote directly
-- bypass domain-owned capability entries to control harness execution directly
+- 成为 domain publish truth 的 owner
+- 成为 domain release / export / submission truth 的 owner
+- 成为 domain public-channel posting truth 的 owner
+- 直接执行 publish、submit、export、release 或 promote
+- 绕过 domain-owned capability entry 直接控制 harness execution
 
-In short:
+一句话说：
 
-- `OPL` owns **top-level publish / promotion indexes and signals**
-- each domain owns **publish truth, release truth, export truth, submission truth, artifact truth, and public-channel posting truth**
+- `OPL` 只拥有**顶层 publish / promotion index 与 signal**
+- 各 domain 继续拥有**publish truth、release truth、export truth、submission truth、artifact truth 与 public-channel posting truth**
 
-## Non-Goals
+## 非目标
 
-This operating surface does not:
+这层 operating surface 不负责：
 
-- execute domain publish or promotion operations
-- store canonical publish truth for a domain
-- replace a domain's release / export / submission record with a top-level copy
-- become the unified public-runtime entry for all publish flows
-- turn domain-owned capability entries into implementation details
+- 直接执行 domain publish 或 promotion 操作
+- 存储某个 domain 的 canonical publish truth
+- 用顶层副本替代 domain 的 release / export / submission record
+- 变成所有 publish flow 的统一 public-runtime entry
+- 把 domain-owned capability entry 降格成实现细节
 
-## Allowed Top-Level Record Kinds
+## 允许的顶层 Record Kind
 
-The minimum top-level operating surface may record only the following kinds:
+最小顶层 operating surface 只允许记录下面几类对象：
 
 ### 1. `publish_outcome_index`
 
-Purpose:
+目的：
 
-- record a top-level index entry for a domain-owned publish / release / export / submission outcome
-- expose stable references or public references without claiming outcome truth
+- 为 domain-owned publish / release / export / submission outcome 记录一个顶层 index entry
+- 暴露稳定引用或 public reference，但不宣称自己拥有 outcome truth
 
-This is an index of a domain-owned outcome.
-It is not the canonical publish, release, export, or submission record itself.
+它只是对 domain-owned outcome 的索引。
+它不是 canonical publish、release、export 或 submission record 本身。
 
 ### 2. `promotion_candidate_signal`
 
-Purpose:
+目的：
 
-- record whether a domain-owned outcome appears ready to enter a domain-owned or human-owned promotion gate
-- expose a top-level promotion-readiness signal without claiming promotion truth
+- 记录一个 domain-owned outcome 是否看起来已经具备进入 domain-owned 或 human-owned promotion gate 的条件
+- 暴露的是顶层 promotion-readiness signal，而不是 promotion truth
 
-This is a readiness signal only.
-It does not mean the item is already promoted, announced, distributed, or posted on a public surface.
+它只是 readiness signal。
+它不代表已经 promoted、announced、distributed，也不代表已经正式出现在 public surface 上。
 
 ### 3. `promotion_surface_index`
 
-Purpose:
+目的：
 
-- expose which public surfaces matter for one top-level request or one indexed outcome
-- show where promotion is blocked or what human approval is still required
+- 暴露一个顶层请求或一个 indexed outcome 关联哪些 public surface
+- 说明 promotion 卡在哪个 surface，或者还缺哪个 human approval
 
-This remains an index/reference layer, not a duplicate of public-channel posting truth.
+它仍然只是 index / reference layer，而不是 public-channel posting truth 的复制。
 
-## Source-Of-Truth Rules
+## Source-Of-Truth 规则
 
-### What OPL May Own At This Layer
+### 这一层里 OPL 可以拥有的东西
 
-`OPL` may own:
+`OPL` 可以拥有：
 
-- top-level publish-outcome indexes
-- top-level promotion-candidate signals
-- top-level promotion-surface indexes
+- 顶层 publish-outcome index
+- 顶层 promotion-candidate signal
+- 顶层 promotion-surface index
 
-### What Must Stay In The Domain
+### 必须继续留在 Domain 里的东西
 
-The following must remain domain-owned canonical truth:
+下面这些必须继续作为 domain-owned canonical truth：
 
 - publish gate truth
 - publish execution truth
-- release results
-- export results
-- submission results
+- release result
+- export result
+- submission result
 - artifact truth
 - public-channel posting truth
 - domain-private performance / metrics truth
-- revision history for published or promoted artifacts
+- 已 publish / promoted artifact 的 revision history
 
-`OPL` may reference these through stable pointers.
-It may not silently absorb them into top-level truth.
+`OPL` 可以通过稳定 pointer 引用这些 truth。
+但不能悄悄把它们吸收到顶层真相里。
 
-## Minimal Operating Record Shape
+## 最小 Operating Record Shape
 
-The minimum machine-readable envelope should carry:
+最小 machine-readable envelope 应包含：
 
 - `version`
 - `record_kind`
@@ -146,65 +144,65 @@ The minimum machine-readable envelope should carry:
 - `domain_truth_refs`
 - `recorded_at`
 
-The record kind may add kind-specific fields, but the envelope should stay top-level and coordination-focused.
+不同 `record_kind` 可以再带各自的 kind-specific field，但整个 envelope 必须保持顶层、协调型，而不是 publish runtime state container。
 
-## Required Boundary Semantics
+## 必需边界语义
 
-### `domain_truth_refs` is mandatory
+### `domain_truth_refs` 必须存在
 
-Every top-level publish / promotion record must point back to domain-owned truth.
+每条顶层 publish / promotion record 都必须回指 domain-owned truth。
 
-This prevents `OPL` from being misread as the canonical owner of publish or promotion state.
+这样才能防止外界把 `OPL` 误读成 publish 或 promotion state 的 canonical owner。
 
-### `publish_outcome_index` is not publish truth
+### `publish_outcome_index` 不等于 publish truth
 
-`publish_outcome_index` may only index a domain-owned `publish`, `release`, `export`, or `submission` outcome.
+`publish_outcome_index` 只能索引 domain-owned `publish`、`release`、`export` 或 `submission` outcome。
 
-It must not be used as:
+它不能被当成：
 
-- the canonical publish record
-- the canonical release record
-- the canonical export record
-- the canonical submission record
+- canonical publish record
+- canonical release record
+- canonical export record
+- canonical submission record
 
-### Promotion records also require an indexed domain-owned outcome
+### Promotion record 也必须建立在已索引的 domain-owned outcome 之上
 
-`promotion_candidate_signal` and `promotion_surface_index` may only exist above a domain-owned publish / release / export / submission outcome.
+`promotion_candidate_signal` 与 `promotion_surface_index` 只能建立在 domain-owned 的 publish / release / export / submission outcome 之上。
 
-They must not be used to describe a pre-publish intention.
+它们不能被用来描述 pre-publish intention。
 
-### `promotion_candidate_signal` is not promotion truth
+### `promotion_candidate_signal` 不等于 promotion truth
 
-`promotion_candidate_signal` may only say whether the indexed outcome appears ready to enter a promotion gate.
+`promotion_candidate_signal` 只能表达：某个 indexed outcome 是否看起来已经具备进入 promotion gate 的条件。
 
-It must not be used as:
+它不能被当成：
 
-- a public posting event
-- an announcement event
-- a distribution result
-- proof that promotion already happened
+- public posting event
+- announcement event
+- distribution result
+- 已经完成 promotion 的证明
 
-### Follow-on actions use current domain-owned capability entries
+### 后续动作使用当前 domain-owned capability entry
 
-If any follow-on publish or promotion action is needed, `OPL` must route through the current domain-owned capability entry exposed by the relevant domain owner.
+如果后续还需要执行 publish 或 promotion action，`OPL` 必须 route 到相关 domain owner 暴露的当前 domain-owned capability entry。
 
-This operating surface may index the outcome or the target surface.
-It must not submit, export, release, or post directly.
+这一层可以索引 outcome 或 target surface。
+但不能直接 submit、export、release 或 post。
 
-### `public_refs` are references, not top-level ownership
+### `public_refs` 只是 reference，不等于顶层 ownership
 
-A top-level record may carry public references such as URLs or stable surface refs.
+顶层 record 可以携带 public reference，例如 URL 或稳定 surface ref。
 
-Those references remain an index layer.
-They do not transfer ownership of the corresponding publish or promotion truth into `OPL`.
+这些 reference 仍然只是 index layer。
+它们不把对应 publish / promotion truth 的 ownership 转移给 `OPL`。
 
-## Example Record Shapes
+## 示例 Record Shape
 
-Canonical machine-readable operating examples for the frozen publish / promotion records also live in the [OPL Operating Example Corpus](../examples-corpora/opl-operating-example-corpus.md) and its linked JSON files.
-The cross-layer reference map for all frozen operating record kinds also lives in the [OPL Operating Record Catalog](../examples-corpora/opl-operating-record-catalog.md).
-The inline shapes below remain the prose-side illustrations for this governing surface.
+已冻结 publish / promotion record 的 canonical machine-readable example 也同步落在 [OPL Operating Example Corpus](../examples-corpora/opl-operating-example-corpus.md) 与其链接的 JSON 文件中。
+全部已冻结 operating record kind 的跨层 reference map 也同步落在 [OPL Operating Record Catalog](../examples-corpora/opl-operating-record-catalog.md)。
+下面这些 inline shape 仍然是本 governing surface 的 prose-side illustration。
 
-### Example: `publish_outcome_index`
+### 示例：`publish_outcome_index`
 
 ```json
 {
@@ -235,7 +233,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-### Example: `promotion_candidate_signal`
+### 示例：`promotion_candidate_signal`
 
 ```json
 {
@@ -274,7 +272,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-### Example: `promotion_surface_index`
+### 示例：`promotion_surface_index`
 
 ```json
 {
@@ -320,42 +318,42 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-## Surface Shapes
+## Surface 形态
 
-The first top-level publish / promotion surface may appear as:
+第一版顶层 publish / promotion surface 可以体现为：
 
-- docs-side operating references
-- CLI-side operating queries
-- MCP-side operating records
+- docs-side operating reference
+- CLI-side operating query
+- MCP-side operating record
 
-As with earlier layers, the contract matters more than the transport.
+与前几层一样，真正重要的是 contract，而不是 transport。
 
-## Hard Prohibitions
+## 硬性禁止项
 
-Do not describe or implement this layer as:
+不要把这一层写成或做成：
 
 - `OPL owns publish truth`
 - `OPL owns promotion truth`
 - `OPL executes publish or promotion`
 - `OPL is the unified publish runtime entry`
 - `OPL manages all public posting directly`
-- domain-owned capability entries being reduced to implementation details
+- 把 domain-owned capability entry 降格成实现细节
 
-Do not add operations that:
+也不要新增这些操作：
 
-- submit to a venue directly
-- export or release directly
-- post to a public channel directly
-- mutate domain publish state directly
-- mutate domain artifact truth directly
-- call a harness executor directly
+- 直接向外部 venue 提交
+- 直接 export 或 release
+- 直接向 public channel 发帖
+- 直接修改 domain publish state
+- 直接修改 domain artifact truth
+- 直接调用 harness executor
 
-## Completion Definition
+## 完成定义
 
-This operating surface is acceptably frozen only when:
+只有当下面这些条件都成立时，这层 operating surface 才算冻结完成：
 
-- the allowed top-level record kinds are explicit
-- the domain-owned truth boundary is explicit
-- the machine-readable schema matches the public wording
-- no top-level field can be mistaken for canonical publish or promotion truth ownership
-- no-bypass semantics remain intact
+- 允许的顶层 record kind 已显式定义
+- domain-owned truth 边界已显式定义
+- machine-readable schema 与公开 wording 保持一致
+- 没有任何顶层字段会被误读成 canonical publish 或 promotion truth ownership
+- no-bypass 语义仍然完整
