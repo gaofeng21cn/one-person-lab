@@ -65,13 +65,9 @@ To use the desktop product, download One Person Lab App from the App repository:
 
 [Download One Person Lab App](https://github.com/gaofeng21cn/one-person-lab-app/releases/latest)
 
-To install the framework, use the CLI path from this repository:
+The one-shot installer, initialization flow, runtime/contracts, module management, and machine-readable App interfaces are maintained by this framework repository. Desktop DMGs, complete first-install DMGs, updater metadata, GUI smoke, GitHub Releases, and user tutorials are maintained by the App repository.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
-```
-
-The installer runs one-shot setup and inspects system state. After installation, use the App for general work, medical research, grant writing, and presentation preparation, or use the CLI to manage modules, skills, runtime state, and stage attempts.
+To develop a new domain agent, debug the CLI, or integrate runtime surfaces, open the technical entry below.
 
 ## Product Roadmap
 
@@ -87,6 +83,17 @@ The installer runs one-shot setup and inspects system state. After installation,
   <summary><strong>Developer and agent notes</strong></summary>
 
 ### Common Commands
+
+Source development entry:
+
+```bash
+git clone https://github.com/gaofeng21cn/one-person-lab.git
+cd one-person-lab
+npm install
+npm link
+```
+
+Common framework commands:
 
 ```bash
 opl help --text

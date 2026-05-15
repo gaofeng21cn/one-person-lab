@@ -198,7 +198,7 @@
 
 影响：
 
-- `one-person-lab-app/shells/aionui` 打包时把 Electron updater 元数据写成 `OPL_RELEASE_VERSION`
+- App repo release wrapper 调用 `opl-aion-shell` 打包时，把 Electron updater 元数据写成 `OPL_RELEASE_VERSION`
 - App 关于页继续单独展示 OPL 版本与 GUI 基线版本
 - GUI package.json 的 upstream/AionUI 基线版本不再决定 One Person Lab 自动更新顺序
 
@@ -361,8 +361,8 @@
 影响：
 
 - `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、release distribution surface 与 activation contracts
-- 当前第一 GUI 交付物按 `one-person-lab-app/shells/aionui` 的 OPL 品牌壳推进
-- 仓内已移除旧 GUI 备线材料；当前 GUI 实施依据收敛到 `one-person-lab-app/shells/aionui` 与 AionUI codebase
+- 当前第一 GUI 交付物按 `opl-aion-shell` 的 OPL 品牌壳推进，并由 `one-person-lab-app` 负责发布包装
+- 仓内已移除旧 GUI 备线材料；当前 GUI 实施依据收敛到 `opl-aion-shell` 与 AionUI codebase
 
 ## 2026-04-20
 
@@ -422,7 +422,7 @@
 影响：
 
 - AionUI codebase 可以作为当前 GUI 主线基座出现在 current status / implementation planning，但必须明确用户交付物是 OPL 品牌壳
-- 外部 GUI 产品名只能用于基准或参考语境；当前 GUI 主线只承认 `one-person-lab-app/shells/aionui` 这一 OPL 品牌壳
+- 外部 GUI 产品名只能用于基准或参考语境；当前 GUI 主线只承认 `opl-aion-shell` 这一 OPL 品牌壳，并由 `one-person-lab-app` 打包发布给用户
 - 只有真实集成发生后，才允许在 current status / current implementation 里写成已集成事实
 
 ## 2026-04-11
