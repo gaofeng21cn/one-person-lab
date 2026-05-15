@@ -101,6 +101,7 @@ For `MAS` v2, the consumable projection anchors are domain-owned `study_charter`
 - `standard_domain_agent_skeleton`
 - `family_action_catalog`
 - `family_stage_control_plane`
+- `family_transition_spec` / `family_transition_matrix_cases` / `family_transition_spec_descriptor`
 - `domain_memory_descriptor`
 - `skill_catalog`
 - `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
@@ -109,6 +110,8 @@ For `MAS` v2, the consumable projection anchors are domain-owned `study_charter`
 This read model is for CLI/App discovery, maintainer inspection, admission gates, and operator drilldown. It carries only refs, status, locators, parity, and forbidden-authority flags. It does not carry memory body text, long prompt/skill bodies, domain route judgments, quality verdicts, publication/fundability/visual verdicts, or artifact authority.
 
 For MAS, this means `mas_publication_route_memory` can be discovered as a `domain_memory_descriptor` through the unified descriptor, while the actual paper-route memory body remains Markdown-first in MAS. OPL only routes operators and agents to the right refs.
+
+`family_transition_spec` and `family_transition_matrix_cases` are the machine entry points for domain-declared transitions. `OPL` may run the matrix runner and emit transition receipt/projection, fail-closed blocker, or dead-letter envelopes. If a domain manifest exposes only `family_transition_spec_descriptor`, the unified descriptor reports `descriptor_only` / `refresh_required` plus locator refs rather than inventing a complete spec. Domain repositories still own the transition table, guards/oracle fixtures, owner actions, quality verdicts, artifact authority, and owner receipts.
 
 ## Persistence / Lifecycle / Owner-Route Freeze
 

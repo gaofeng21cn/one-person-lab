@@ -90,6 +90,31 @@ function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
       ref: '/family_stage_control_plane',
       status: manifest?.family_stage_control_plane ? 'resolved' : 'missing',
     },
+    family_transition: {
+      ref_kind: 'json_pointer',
+      ref: '/family_transition',
+      status:
+        manifest?.family_transition.status === 'matrix_evaluated'
+          ? 'resolved'
+          : manifest?.family_transition.status === 'descriptor_only'
+            ? 'descriptor_only'
+            : manifest?.family_transition.status === 'blocked'
+              ? 'blocked'
+              : 'missing',
+    },
+    family_transition_spec: {
+      ref_kind: 'json_pointer',
+      ref: '/family_transition_spec',
+      status: manifest?.family_transition_spec ? 'resolved' : 'missing',
+    },
+    family_transition_matrix_cases: {
+      ref_kind: 'json_pointer',
+      ref: '/family_transition_matrix_cases',
+      status:
+        manifest?.family_transition_matrix_cases && manifest.family_transition_matrix_cases.length > 0
+          ? 'resolved'
+          : 'missing',
+    },
     domain_memory_descriptor: {
       ref_kind: 'json_pointer',
       ref: '/domain_memory_descriptor',
@@ -205,6 +230,33 @@ function buildStageControlPlaneProjection(entry: DomainManifestCatalogEntry) {
     action_ref_count: plane?.stages.reduce((total, stage) => total + stage.allowed_action_refs.length, 0) ?? 0,
     parity: plane ? buildFamilyStageControlPlaneParity(plane, entry.manifest) : null,
     authority_boundary: plane?.authority_boundary ?? null,
+  };
+}
+
+function buildFamilyTransitionProjection(entry: DomainManifestCatalogEntry) {
+  const transition = entry.manifest?.family_transition ?? null;
+  return {
+    status:
+      entry.status !== 'resolved'
+        ? 'blocked_by_manifest_status'
+        : transition?.status ?? 'missing',
+    spec_id: transition?.spec_id ?? null,
+    target_domain_id: transition?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
+    owner: transition?.owner ?? null,
+    transition_count: transition?.transition_count ?? 0,
+    case_count: transition?.case_count ?? 0,
+    refresh_required: transition?.refresh_required ?? false,
+    blocked_reason: transition?.blocked_reason ?? null,
+    descriptor: transition?.descriptor ?? null,
+    locator_refs: transition?.locator_refs ?? {},
+    matrix_summary: transition?.matrix_result?.summary ?? null,
+    authority_boundary: transition?.authority_boundary ?? null,
+    non_authority_flags: transition?.non_authority_flags ?? {
+      opl_interprets_domain_quality: false,
+      opl_executes_domain_action: false,
+      opl_writes_domain_truth: false,
+      opl_authorizes_publication_or_fundability_verdict: false,
+    },
   };
 }
 
@@ -373,6 +425,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
   const skeleton = buildSkeletonProjection(entry);
   const actionCatalog = buildActionCatalogProjection(entry);
   const stageControlPlane = buildStageControlPlaneProjection(entry);
+  const familyTransition = buildFamilyTransitionProjection(entry);
   const domainMemory = buildDomainMemoryProjection(entry);
   const skillCatalog = buildSkillProjection(manifest, entry);
   const runtimeSurfaces = buildRuntimeProjection(manifest, entry);
@@ -410,6 +463,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
     standard_domain_agent_skeleton: skeleton,
     family_action_catalog: actionCatalog,
     family_stage_control_plane: stageControlPlane,
+    family_transition: familyTransition,
     domain_memory_descriptor: domainMemory,
     skill_catalog: skillCatalog,
     runtime_surfaces: runtimeSurfaces,
@@ -497,6 +551,15 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
         ).length,
         action_catalog_resolved_count: descriptors.filter((descriptor) =>
           descriptor.family_action_catalog.status === 'resolved'
+        ).length,
+        transition_matrix_evaluated_count: descriptors.filter((descriptor) =>
+          descriptor.family_transition.status === 'matrix_evaluated'
+        ).length,
+        transition_descriptor_only_count: descriptors.filter((descriptor) =>
+          descriptor.family_transition.status === 'descriptor_only'
+        ).length,
+        transition_blocked_count: descriptors.filter((descriptor) =>
+          descriptor.family_transition.status === 'blocked'
         ).length,
         physical_skeleton_evidence_observed_count: descriptors.filter((descriptor) =>
           descriptor.standard_domain_agent_skeleton.physical_skeleton_evidence !== null

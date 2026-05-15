@@ -103,6 +103,7 @@
 - `standard_domain_agent_skeleton`
 - `family_action_catalog`
 - `family_stage_control_plane`
+- `family_transition_spec` / `family_transition_matrix_cases` / `family_transition_spec_descriptor`
 - `domain_memory_descriptor`
 - `skill_catalog`
 - `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
@@ -112,7 +113,9 @@
 
 因此 MAS 的 `mas_publication_route_memory` 可以作为 `domain_memory_descriptor` 被统一 descriptor 发现，但论文套路正文仍由 MAS Markdown-first memory 管理；OPL 只把 operator 带到正确 refs。
 
-更硬的规则是：`family_action_catalog`、`family_stage_control_plane` 与 `family-product-entry-manifest-v2` 共同构成 canonical action/stage metadata source。CLI、MCP、Skill、product-entry、sidecar 以及 OPL-hosted route 的 descriptor 和 routing metadata 都应从这份同一来源派生；`OPL` 只负责发现、投影和校验，不派生 domain handler，也不派生 domain truth。
+`family_transition_spec` 与 `family_transition_matrix_cases` 是 domain-declared transition 的机器入口；`OPL` 可以执行 matrix runner、生成 transition receipt/projection、fail-closed blocker 或 dead-letter envelope。若 domain manifest 只暴露 `family_transition_spec_descriptor`，统一 descriptor 只能显示 `descriptor_only` / `refresh_required` 和 locator refs，不伪造完整 spec。domain repo 继续持有 transition table、guard/oracle fixture、owner action、quality verdict、artifact authority 和 owner receipt。
+
+更硬的规则是：`family_action_catalog`、`family_stage_control_plane`、`family_transition_spec` 与 `family-product-entry-manifest-v2` 共同构成 canonical action/stage/transition metadata source。CLI、MCP、Skill、product-entry、sidecar 以及 OPL-hosted route 的 descriptor 和 routing metadata 都应从这份同一来源派生；`OPL` 只负责发现、投影、校验和通用 transition execution，不派生 domain handler，也不派生 domain truth。
 
 ## Persistence / Lifecycle / Owner-Route Freeze
 
