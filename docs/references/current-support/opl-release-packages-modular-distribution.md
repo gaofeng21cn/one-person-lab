@@ -2,16 +2,16 @@
 
 ## 定位
 
-- GitHub Releases 面向用户下载，承载 `One Person Lab-<OPL版本>-<平台>-<架构>` 这类桌面 App 安装包。
+- `one-person-lab-app` GitHub Releases 面向用户下载，承载 `One-Person-Lab-<OPL版本>-<平台>-<架构>` 这类桌面 App 安装包。
 - GitHub Packages 面向机器消费，适合承载可独立更新的 OPL 内核包、domain module 制品、WebUI/Docker 镜像与预构建 helper。
-- `one-person-lab-app/shells/aionui` 继续是 GUI 源码与构建输入；用户入口、版本叙事和下载面归到 `one-person-lab` release。
+- `one-person-lab-app/shells/aionui` 继续是 GUI 源码与构建输入；用户入口、版本叙事、下载面、updater metadata、标准 DMG 与 Full 版 DMG 都归 `one-person-lab-app` release。
 
 ## 当前分发边界
 
 | 分发对象 | 推荐渠道 | 是否打入桌面 App | 理由 |
 | --- | --- | --- | --- |
-| One Person Lab 桌面 App | GitHub Releases | 是 | 用户直接下载和安装 |
-| One Person Lab Full 首次安装包 | GitHub Releases 额外 asset | 只打入 Full 包，不进入标准更新包 | 新用户首次安装时预置 MAS/MAG/RCA、已配置 family runtime provider payload、officecli 与推荐 companion skills；Full readiness 需要 family runtime provider ready，App 自动更新继续走标准包 |
+| One Person Lab 桌面 App | `one-person-lab-app` GitHub Releases | 是 | 用户直接下载和安装 |
+| One Person Lab Full 首次安装包 | `one-person-lab-app` GitHub Releases 额外 asset | 只打入 Full 包，不进入标准更新包 | 新用户首次安装时预置 MAS/MAG/RCA、已配置 family runtime provider payload、officecli 与推荐 companion skills；Full readiness 需要 family runtime provider ready，App 自动更新继续走标准包 |
 | OPL CLI / shared contracts / native helper | npm / 当前安装脚本；GitHub Packages 是后续机器通道 | 随一键安装获取 | App 不变时也需要独立修复和更新 |
 | MAS | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | domain agent 独立演进，按环境管理安装/更新 |
 | MDS | MAS 显式可选 companion；不进入默认 OPL package / Full payload | 否 | 仅作为 MAS-declared backend audit、provenance、historical fixture、intake 或 parity oracle 引用 |
@@ -45,7 +45,7 @@
 - App 更新后的首次启动会把缺失模块补齐，并把 clean checkout 更新到 upstream/default branch 最新 HEAD；dirty、ahead、diverged 或无 upstream 的开发 checkout 只提示人工处理。
 - 下一步如果 Packages/GHCR 真正接入 `opl module install/update`，再把最新来源切到 channel manifest；在那之前，文档不得把 Packages 写成当前模块安装更新机制。
 
-`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `one-person-lab` 的 `Releases` 下载桌面安装包；macOS arm64 可选择 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产来预置 MAS/MAG/RCA、已配置 family runtime provider payload、officecli CLI binary 与推荐 companion skill payload。当前 `opl install` 与环境管理先通过 git checkout 更新模块，未来再切到 Packages/GHCR 制品。MAS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release；MDS 只保留为显式可选 companion / provider adapter，不作为默认分发模块。
+`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 App repo `Releases` 的用户下载入口。新手用户从 `one-person-lab-app` 的 `Releases` 下载桌面安装包；macOS arm64 可选择 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产来预置 MAS/MAG/RCA、已配置 family runtime provider payload、officecli CLI binary 与推荐 companion skill payload。当前 `opl install` 与环境管理先通过 git checkout 更新模块，未来再切到 Packages/GHCR 制品。MAS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release；MDS 只保留为显式可选 companion / provider adapter，不作为默认分发模块。
 
 Manifest 的本地入口：
 
@@ -187,7 +187,7 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 - Docker/服务器用户更适合直接拉 WebUI 镜像和模块制品。
 - 专业用户可能已有本地 sibling checkout，OPL 应优先识别并复用，不强行覆盖。
 
-Full 首次安装包是标准 App 之外的额外 GitHub Release asset，用于减少新用户从安装到开始 MAS/MAG/RCA 工作的等待。它必须满足：
+Full 首次安装包是 App repo 标准 App 之外的额外 GitHub Release asset，用于减少新用户从安装到开始 MAS/MAG/RCA 工作的等待。Framework 只作为 Full 版 DMG 内 runtime/CLI/contracts 的内容来源，不拥有 App 发布流程。它必须满足：
 
 - 文件名使用 `One-Person-Lab-Full-<version>-mac-arm64.dmg`，与标准更新包分开。
 - 随包 runtime 首启安装到稳定路径 `~/Library/Application Support/OPL/runtime/current`，App 后续从该路径引用 runtime。

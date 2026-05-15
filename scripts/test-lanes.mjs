@@ -79,7 +79,6 @@ const lanes = {
       'tests/src/skill-catalog.test.ts',
       'tests/src/opl-skills-boundary.test.ts',
       'tests/src/automation-companions.test.ts',
-      'tests/src/full-internal-package.test.ts',
     ]),
   ],
   integration: [

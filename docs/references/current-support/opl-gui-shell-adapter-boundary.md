@@ -4,7 +4,7 @@
 
 ## 结论
 
-当前所有 GUI 相关的 fork、AionUI upstream 适配、品牌替换、界面裁剪、Electron 打包和 App 更新桥接，都应发生在 App-owned GUI shell 线里。当前迁移后的维护形态是独立 `one-person-lab-app` 产品仓，并把当前 AionUI fork 放在 `shells/aionui/` 下作为 upstream-backed shell adapter；Framework 仓在兼容阶段继续保留 release discovery / upload companion。
+当前所有 GUI 相关的 fork、AionUI upstream 适配、品牌替换、界面裁剪、Electron 打包、App 更新桥接、标准 DMG、Full 版 DMG、updater metadata、GitHub Release、GUI smoke 和用户教程，都应发生在 App-owned GUI shell 线里。当前迁移后的维护形态是独立 `one-person-lab-app` 产品仓，并把当前 AionUI fork 放在 `shells/aionui/` 下作为 upstream-backed shell adapter；Framework 仓只保留 App 可消费机器接口、App release discovery consumer surface，以及作为 Full 版 DMG 内 runtime/CLI/contracts payload source。
 
 `one-person-lab` 主仓不 fork GUI codebase。它持有 OPL 的运行时真相、安装与环境管理能力、模块与 skill 同步、机器可读合同、release version、Packages 坐标，以及 App / WebUI 共同消费的 CLI-backed 产品表面。
 
@@ -18,8 +18,8 @@ App 仓库拆分的活跃计划见 [One Person Lab App 仓库拆分计划](../..
 
 - 定义 `OPL` 的 Codex-default session/runtime、显式 activation、domain agent registry、workspace/session/progress/artifact surface。
 - 提供 `opl install`、`opl system initialize`、`opl module *`、`opl skill *`、`opl packages manifest` 等 CLI-backed 能力。
-- 管理 `Codex CLI`、`Hermes-Agent`、MAS/MAG/RCA、推荐 skills、native helper、Packages 与 release version；MDS 不作为默认安装模块。
-- 发布用户下载入口：One Person Lab App 的 release artifact 放在 `one-person-lab` GitHub Releases。
+- 管理 `Codex CLI`、MAS/MAG/RCA、推荐 skills、native helper、Packages 与 release discovery；MDS 不作为默认安装模块。
+- 消费 `one-person-lab-app` GitHub Releases 中的 One Person Lab App release artifact，但不构建、不上传、不维护 updater metadata。
 - 为 GUI 提供可消费的机器可读输出；新增安装、修复、状态或更新能力时，先落到 CLI，再由 GUI 调用。
 
 ### `one-person-lab-app/shells/aionui`
@@ -29,7 +29,7 @@ App 仓库拆分的活跃计划见 [One Person Lab App 仓库拆分计划](../..
 - 负责跟随 AionUI upstream，解决 GUI 源码冲突，并保留必要的 OPL adapter 改动。
 - 每次吸收 AionUI upstream 都应同时做本地补丁退役审计：upstream 已覆盖的深补丁应删除或收缩为薄 adapter，避免长期 fork delta 膨胀。
 - 负责 Electron builder packaging policy，包括依赖裁剪、artifact 命名、updater metadata、packaged runtime 校验。
-- 构建出的 `.dmg` / `.exe` / `.deb` / updater metadata 通过 OPL 发布流程上传到 `one-person-lab` release。
+- 构建出的 `.dmg` / `.exe` / `.deb`、Full 版 DMG 和 updater metadata 由 App repo 上传到 `one-person-lab-app` GitHub Release。
 - 迁移后，App 顶层持有 release、testing、user-guide 和 active shell contract；AionUI upstream 代码与规则收缩到 `shells/aionui/`。
 
 ## 打包裁剪与 upstream 同步的关系

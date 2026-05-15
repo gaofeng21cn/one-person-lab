@@ -55,8 +55,6 @@
     "family:structure-advisory": "node ./scripts/family-structure-advisory.mjs",
     "family:shared-release": "node ./scripts/family-shared-release.mjs",
     "packages:manifest": "node --experimental-strip-types ./scripts/package-module-archives.mjs",
-    "packages:full-internal": "node --experimental-strip-types ./scripts/build-full-internal-package.mjs",
-    "packages:full-release": "node --experimental-strip-types ./scripts/build-full-internal-package.mjs --out-dir dist/opl-full-release",
     "packages:release-discipline": "node ./scripts/package-release-discipline.mjs",
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs",
     "repo:hygiene": "scripts/repo-hygiene.sh",
@@ -73,8 +71,7 @@
     "test:full": "./scripts/run-parallel-test-lanes.sh full",
     "test": "npm run test:fast",
     "line-budget": "node ./scripts/line-budget.mjs",
-    "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs",
-    "gui:release": "node ./scripts/publish-gui-release.mjs"
+    "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs"
   },
   "dependencies": {
     "@temporalio/activity": "^1.17.1",

@@ -325,8 +325,8 @@ normalizer 在真实 macOS arm64 26.5.15 artifact + mock Windows/Linux matrix
 动作：
 
 - App repo 顶层 scripts 生成标准 App 包、Full first-install 包和 updater metadata。
-- `one-person-lab` 暂时继续作为用户下载 release 面，或读取 App repo 生成的 release manifest。
-- 更新 `opl install` / GUI release discovery，使其读取 App release manifest 或新 repo asset，但保留旧 release fallback 一个兼容周期。
+- `one-person-lab-app` 是用户下载 release 面、标准 DMG、Full 版 DMG 与 updater metadata 的唯一 owner。
+- 更新 `opl install` / GUI release discovery，使其读取 App repo release asset；Framework 不保留 App release/upload/build workflow。
 - 明确 standard updater 不能引用 Full 包。
 
 退出条件：
@@ -338,8 +338,7 @@ normalizer 在真实 macOS arm64 26.5.15 artifact + mock Windows/Linux matrix
 
 回滚点：
 
-- `opl install` fallback 到旧 release asset selection。
-- App repo release 不作为唯一下载源，直到新路径验证完整。
+- 回滚只能通过回退本次发布迁移 commit 或重新发布 App repo artifact 完成；Framework 不恢复 App 发布入口。
 
 ### 5. AionUI 2.0 / next shell 并行适配
 
@@ -514,6 +513,6 @@ App repo 验证：
 ## 下一步
 
 1. 持续维护 `one-person-lab-app` 顶层 App 文档、合同、release wrapper、page-state 与 first-run test matrix。
-2. `one-person-lab` 继续只保留 Framework truth、release discovery / upload companion 和 App/workbench 消费边界，不恢复 GUI source fork。
+2. `one-person-lab` 继续只保留 Framework truth、App release discovery consumer surface 和 App/workbench 消费边界，不恢复 GUI source fork 或 App 发布入口。
 3. 发布前固定跑 App 仓 active shell 验证、release asset validation、packaged runtime validation 和真实 `/Applications/One Person Lab.app` 启动 smoke。
 4. AionUI upstream 变化只通过显式 intake 分支吸收；OPL overlay 保持在 branding、runtime bridge、packaging policy、release/update metadata 和页面集成层。
