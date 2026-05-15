@@ -272,6 +272,10 @@ upstream  https://github.com/iOfficeAI/AionUi
 
 ### 3. 将当前 AionUI fork 移入 `shells/aionui/`
 
+状态：已完成。2026-05-15 追加验证确认 `shells/aionui`
+arm64 打包会从 App 仓根目录的 `packaged-runtimes/opl-full-runtime`
+写入 packaged app，并通过 packaged runtime scan。
+
 目的：完成顶层 App 产品层与 AionUI shell adapter 的物理分层。
 
 推荐技术路径：
@@ -309,6 +313,12 @@ git filter-repo --to-subdirectory-filter shells/aionui
 - 若已合并但未发布，可 revert 目录移动 commit。
 
 ### 4. Release / installer 兼容切换
+
+状态：兼容阶段已验证。2026-05-15 本机构建
+`One-Person-Lab-26.5.15-mac-arm64.dmg` / ZIP，替换
+`/Applications/One Person Lab.app` 后真实 GUI smoke 通过；release asset
+normalizer 在真实 macOS arm64 26.5.15 artifact + mock Windows/Linux matrix
+下通过，且 standard updater metadata 继续排除 Full first-install assets。
 
 目的：保持用户安装不破，同时让 App repo 开始成为 App 包 source-of-truth。
 
@@ -354,6 +364,10 @@ git filter-repo --to-subdirectory-filter shells/aionui
 - active shell 继续指向 `shells/aionui/`。
 
 ### 6. 收口与旧名退役
+
+状态：已完成当前文档与本地路径收口；旧 `opl-aion-shell` 只保留为
+history / redirect / migration note。剩余 release source-of-truth 切换仍按
+App release manifest / Framework release discovery 兼容阶段推进。
 
 目的：让新拓扑成为默认事实。
 
