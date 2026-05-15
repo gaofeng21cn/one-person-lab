@@ -276,13 +276,14 @@ function transitionTaskInputsFromMatrix(
   source: string,
 ) {
   const matrix = familyTransitionMatrixResult(output);
-  const entries = matrix && Array.isArray(matrix.results) ? matrix.results : [];
+  if (!matrix) {
+    return { inputs: [], blocked: [] };
+  }
+  const entries = Array.isArray(matrix.results) ? matrix.results : [];
   const inputs: EnqueueInput[] = [];
   const blocked: Array<{ reason: string; task: unknown }> = [];
   for (const entry of entries) {
-    const result = matrix
-      ? transitionTaskInputFromMatrixEntry(domainId, matrix, entry, source)
-      : { blocked: { reason: 'invalid_transition_matrix_result', task: entry } };
+    const result = transitionTaskInputFromMatrixEntry(domainId, matrix, entry, source);
     if (result.input) {
       inputs.push(result.input);
     } else if (result.blocked) {

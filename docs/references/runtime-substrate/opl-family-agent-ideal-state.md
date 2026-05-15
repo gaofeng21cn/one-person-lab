@@ -105,7 +105,7 @@ MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry
 
 对照 MAS、MAG、RCA 的理想态与当前三仓 read model，OPL 后续应优先补齐下面这些 framework 能力，而不是让 domain repo 各自复制。更硬的规则是：同一份 canonical action/stage metadata 负责派生 CLI、MCP、Skill、product-entry 与 sidecar 的 descriptor / routing metadata；OPL 只做发现、投影和校验，不派生 domain handler，也不派生 domain truth：
 
-- `state-machine runner`：OPL 已有 domain-neutral transition schema、runner、matrix runner、generic `family_transition_spec` manifest ingestion、MAG `grant_transition_oracle` ingestion 和 RCA `visual_transition_spec` ingestion；后续继续补 tick loop、provider attempt bridge、retry/dead-letter、human gate transport、dispatch receipt、MAS actual spec/cases 常态接入和 MAG/RCA adapter 的真实 owner receipt 对账。Domain repo 提供 transition spec；OPL 只执行和审计 spec，不解释医学发表、基金 fundability 或视觉 export ready。
+- `state-machine runner`：OPL 已有 domain-neutral transition schema、runner、matrix runner、generic `family_transition_spec` manifest ingestion、MAG `grant_transition_oracle` ingestion、RCA `visual_transition_spec` ingestion 和 `family_transition_matrix_result` -> provider-hosted `family_transition/domain_tick` task bridge；后续继续补真实 tick loop、retry/dead-letter、human gate transport、dispatch receipt、MAS actual spec/cases 常态接入和 MAG/RCA adapter 的真实 owner receipt / no-regression evidence 对账。Domain repo 提供 transition spec 与 owner receipt；OPL 只执行、hydrate、审计和投影 spec，不解释医学发表、基金 fundability 或视觉 export ready。
 - `provider SLO executor`：把当前 Temporal production proof / `operator_slo_repair_loop` 从 read-model 推进到周期性 supervised execution receipt、overdue repair receipt、restart/re-query/signal/history 长时证据。该能力只证明 provider residency，不证明 domain ready。
 - `stage attempt activity bridge`：把 typed queue、provider attempt、sidecar dispatch、typed closeout、owner receipt refs、typed blocker、no-regression evidence refs 和 no-forbidden-write proof 做成跨 domain 的稳定 transport。
 - `App workbench product shell`：把 workspace/source intake、route/decision graph、review/repair queue、artifact gallery、package/export lifecycle、memory locator、quality/readiness、observability/SLO 与 owner-aware action routing 做成 One Person Lab App 的通用工作台。
@@ -301,7 +301,7 @@ App 中的按钮和动作必须路由到明确 owner：
 OPL 与 Foundry Agents 达到理想生产级状态时，应满足以下门槛：
 
 - OPL production provider 长期 ready：service、worker、query/signal、retry/dead-letter、restart recovery、operator repair 都有持续证据。
-- OPL generic state-machine runner 可消费 MAS/MAG/RCA 声明的 domain transition table / spec，并用 matrix runner 验证输入状态组合到 route/work-unit/action/receipt 的转换；OPL 不持有 domain gate 语义。
+- OPL generic state-machine runner 可消费 MAS/MAG/RCA 声明的 domain transition table / spec，并用 matrix runner 验证输入状态组合到 route/work-unit/action/receipt 的转换；sidecar/export 返回的 matrix result 可进入 provider-hosted transition task；OPL 不持有 domain gate 语义。
 - 每个 admitted Agent 同时通过 direct Codex skill path 与 OPL-hosted path，并留下语义等价和 no-regression evidence。
 - 每个 stage attempt 都有 typed closeout、checkpoint、owner receipt、blocked reason 或 human gate receipt。
 - OPL 只持 refs、locator、metadata 和 projection；domain truth、quality verdict 和 artifact authority 留在 domain owner。
