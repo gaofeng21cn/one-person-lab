@@ -53,7 +53,7 @@
 - [规格索引](./specs/README.md)
 
 2026-05-14 分层收敛后，OPL 系列项目开发的主参考是
-[OPL 系列项目开发主参考](./active/opl-family-development-reference.md)：OPL 仓维护全局目标、全局差距、上收边界、shared primitives、App/workbench 目标和跨仓开发顺序；MAS/MAG/RCA 各仓维护本仓目标、差距、authority、direct/hosted 边界和本仓上收清单。`opl-aion-shell` 的上游 AionUI docs 不纳入这套目录治理。
+[OPL 系列项目开发主参考](./active/opl-family-development-reference.md)：OPL 仓维护全局目标、全局差距、上收边界、shared primitives、App/workbench 目标和跨仓开发顺序；MAS/MAG/RCA 各仓维护本仓目标、差距、authority、direct/hosted 边界和本仓上收清单。`one-person-lab-app/shells/aionui` 的上游 AionUI docs 不纳入这套目录治理。
 
 2026-05-11 架构收敛后，OPL framework 后续开发的总入口是
 [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)、[OPL 当前开发线路](./active/current-development-lines.md)、[OPL 开发文档组合整理](./active/development-document-portfolio.md) 与
@@ -162,5 +162,5 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - 历史继续作为仓库跟踪的 provenance 和 tombstone。
 - `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 新增或移动文档必须先按 [文档组合治理](./docs_portfolio_consolidation.md) 判断生命周期角色。
-- 跨仓 docs 治理按 [OPL Family 开发主参考](./active/opl-family-development-reference.md)、[Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md) 执行：OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy；旧 `program/plans/capabilities` 等目录能物理迁移就直接迁移，仍暂留的旧路径只能是外部/上游支撑、历史 provenance 或 tombstone，不继续扩写成平行目录体系。`opl-aion-shell` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。
+- 跨仓 docs 治理按 [OPL Family 开发主参考](./active/opl-family-development-reference.md)、[Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md) 和 [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md) 执行：OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy；旧 `program/plans/capabilities` 等目录能物理迁移就直接迁移，仍暂留的旧路径只能是外部/上游支撑、历史 provenance 或 tombstone，不继续扩写成平行目录体系。`one-person-lab-app/shells/aionui` 的 docs 属于上游 AionUI 依赖文档，不纳入这套目录治理。
 - 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。
