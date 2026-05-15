@@ -13,7 +13,7 @@ Machine boundary: 仅人读索引；操作真相必须使用 CLI/API 行为、co
 | 文件组 | 角色 | 当前 owner / boundary |
 | --- | --- | --- |
 | `opl-gui-shell-adapter-boundary.md` | GUI adapter 归属与 upstream-sync 边界 | 当前 `one-person-lab-app/shells/aionui` 持有 upstream-backed GUI adapter。OPL 持有 CLI-backed runtime/contracts/projection surfaces。 |
-| `../../active/one-person-lab-app-repo-split-plan.md` | App repo 拆分和 AionUI shell 子目录化迁移计划 | 固定 Framework repo、App repo、active shell 和 AionUI upstream intake owner split。 |
+| `../../active/one-person-lab-app-repo-split-plan.md` | App repo 拆分和 AionUI shell 子目录化 closeout | 固定 Framework repo、App repo、active shell 和 AionUI upstream intake owner split。 |
 | `opl-docker-webui-deployment*` | Docker 与浏览器部署参考 | WebUI 是 OPL-branded AionUI shell；已退役 headless Product API 端口不是用户入口。 |
 | `opl-fresh-install-and-gui-first-launch-testing.md` | Fresh install 与 GUI 首启证据计划 | OPL 主仓持有 CLI clean-room truth；release App VM proof 留在 `one-person-lab-app/shells/aionui`。 |
 | `opl-default-skill-ecosystem*` | 默认 skill 与 companion tool 支撑 | Domain skills 仍由 domain 持有；OPL 只同步和检测。MDS internals 留在 MAS 控制下。 |

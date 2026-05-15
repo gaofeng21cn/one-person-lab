@@ -1,14 +1,14 @@
-# One Person Lab App 仓库拆分计划
+# One Person Lab App 仓库拆分 Closeout
 
 Owner: `One Person Lab`
-Purpose: `app_repo_split_plan`
-State: `active_plan`
-Machine boundary: 本文是人读迁移计划，不是机器接口。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、release artifact、runtime ledger、provider receipt 和 App 仓自己的 release / test contract。
+Purpose: `app_repo_split_closeout`
+State: `active_closeout`
+Machine boundary: 本文是人读迁移 closeout 与后续维护边界，不是机器接口。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、release artifact、runtime ledger、provider receipt 和 App 仓自己的 release / test contract。
 Date: `2026-05-15`
 
 ## 结论
 
-One Person Lab App 应从当前 `opl-aion-shell` 的 GUI fork 仓定位，迁移为独立的 App 产品仓。目标拓扑是：
+One Person Lab App 仓库拆分已完成。当前维护拓扑是：
 
 ```text
 one-person-lab/                 # OPL Framework
@@ -25,15 +25,15 @@ one-person-lab-app/             # One Person Lab App
 
 `one-person-lab-app` 面向终端用户，持有 App 定义、用户文档、截图教程、发布说明、打包、更新、页面状态测试、首启测试和当前 GUI shell adapter。
 
-当前 AionUI fork 不应成为 App 仓顶层身份。它应作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护，以便跟随 AionUI upstream，也便于未来替换 GUI。
+当前 AionUI fork 不再是 App 仓顶层身份。它作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护，以便跟随 AionUI upstream，也便于未来替换 GUI。
 
-推荐实施方式是 **直接把现有 GitHub 仓 `gaofeng21cn/opl-aion-shell` 改名为 `gaofeng21cn/one-person-lab-app`，再在这个仓内做目录重组**。
+已采用的实施方式是 **直接把现有 GitHub 仓 `gaofeng21cn/opl-aion-shell` 改名为 `gaofeng21cn/one-person-lab-app`，再在这个仓内做目录重组**。本机 checkout 也已同步为 `/Users/gaofeng/workspace/one-person-lab-app`。
 
 理由：
 
-- 当前 `gaofeng21cn/opl-aion-shell` 不是 GitHub fork；它已经是 OPL App 产品主线仓，`origin` 只是上游 AionUI remote。
+- 原 `gaofeng21cn/opl-aion-shell` 不是 GitHub fork；它已经是 OPL App 产品主线仓，AionUI upstream 通过独立 `upstream` remote 维护。
 - 改名保留 issues、PR、release、stars/watch、branch protection、Actions secrets、GitHub Release 历史和所有 commit history。
-- GitHub 会为旧 repo URL 提供 redirect，短期兼容成本低。
+- GitHub 为旧 repo URL 提供 redirect，短期兼容成本低。
 - 后续 upstream AionUI intake 仍可通过 `upstream=https://github.com/iOfficeAI/AionUi` 完成，不因为 repo 改名而丢失同步能力。
 
 新建全新 `one-person-lab-app` repo 只作为备选：当必须保留 `opl-aion-shell` 作为冻结 archive、需要重新定义可见历史、或 GitHub repo rename 因权限 / 发布策略被阻塞时才使用。新建 repo 的成本更高，因为需要搬迁 release、secrets、branch protection、Actions、issues/PR 链接和本地 checkout。
@@ -205,18 +205,18 @@ upstream  https://github.com/iOfficeAI/AionUi
 
 ### 0. 冻结迁移基线
 
-目的：确认当前 App 仓可以安全作为 rename / restructure 起点。
+状态：已完成。目的：确认当前 App 仓可以安全作为 rename / restructure 起点。
 
 动作：
 
 - 确认 `one-person-lab` 当前文档已经记录 Framework/App split。
-- 确认 `opl-aion-shell` 工作区干净或只含已归属的迁移改动。
+- 确认 App 仓工作区干净或只含已归属的迁移改动。
 - 记录当前 product main branch、latest release tag、当前 App 版本、GUI/AionUI baseline、Full 包状态和本机安装版状态。
 - 运行当前 App 仓 baseline 验证：i18n、typecheck、test、lint、packaged runtime validation、标准 package build、真实 App smoke。
 
 退出条件：
 
-- 当前 App 仓能从 `gaofeng/main` 构建并验证。
+- 当前 App 仓能从 `origin/main` 构建并验证。
 - 当前 `one-person-lab` release / install 路径有回滚参考。
 - 记录一份 migration baseline note，包含 commit id、release id、验证命令和已知未完成项。
 
@@ -224,16 +224,17 @@ upstream  https://github.com/iOfficeAI/AionUi
 
 - 不改 GitHub repo 名。
 - 不移动目录。
-- 继续使用当前 `opl-aion-shell` 发布路径。
+- 继续使用旧 `opl-aion-shell` redirect 发布路径。
 
 ### 1. GitHub repo 改名
 
-目的：先把顶层产品身份改正，再做目录重组。
+状态：已完成。目的：先把顶层产品身份改正，再做目录重组。
 
 动作：
 
-- 在 GitHub 将 `gaofeng21cn/opl-aion-shell` rename 为 `gaofeng21cn/one-person-lab-app`。
-- 本地更新 remote：产品仓 remote 指向 `git@github.com:gaofeng21cn/one-person-lab-app.git`，AionUI upstream remote 指向 `https://github.com/iOfficeAI/AionUi`。
+- GitHub 仓已从 `gaofeng21cn/opl-aion-shell` rename 为 `gaofeng21cn/one-person-lab-app`。
+- 本地 remote 已更新：产品仓 `origin` 指向 `git@github.com:gaofeng21cn/one-person-lab-app.git`，AionUI upstream remote 指向 `https://github.com/iOfficeAI/AionUi`。
+- 本机 checkout 已从 `/Users/gaofeng/workspace/opl-aion-shell` 改名为 `/Users/gaofeng/workspace/one-person-lab-app`。
 - 保留旧 URL redirect 兼容窗口，但新文档和脚本不再新增 `opl-aion-shell` 作为产品仓名。
 - 检查 GitHub Actions secrets、branch protection、Release、workflow permissions 是否随 rename 保留。
 
@@ -396,7 +397,7 @@ npm run test:fresh-install
 
 ### `one-person-lab-app` / active shell
 
-当前 `opl-aion-shell` baseline 阶段沿用现有命令：
+当前 App 仓 active shell 仍沿用 AionUI shell 的核心验证命令：
 
 ```bash
 bun run i18n:types
@@ -453,7 +454,7 @@ App repo 验证：
 - standard App package build。
 - Full first-install package build and payload validation。
 - updater metadata validation：standard updater 不选择 Full 包。
--真实 App startup smoke。
+- 真实 App startup smoke。
 - 关键页面状态测试：runtime、settings overview、environment、about、update / release state、first launch readiness。
 
 跨仓验证：
@@ -498,9 +499,7 @@ App repo 验证：
 
 ## 下一步
 
-1. 在 `one-person-lab` 完成本计划和相关文档口径更新。
-2. 对 `opl-aion-shell` 做 repo state / branch / release audit，确认可迁移基线。
-3. 默认执行 GitHub repo rename：`gaofeng21cn/opl-aion-shell` -> `gaofeng21cn/one-person-lab-app`；只有遇到权限、发布策略或 archive 需求 blocker 时才改用新 repo。
-4. 建立 `one-person-lab-app` 顶层 skeleton，再把现有 AionUI-root 用普通 `git mv` 移入 `shells/aionui/`；只有历史必须天然带 prefix 时才考虑 filter-repo / subtree。
-5. 搬迁 App release / validation scripts，并保持当前 release 通道兼容。
-6. 跑 App repo 完整验证和真实安装 smoke 后，再调整 `opl install` 的 App release discovery。
+1. 持续维护 `one-person-lab-app` 顶层 App 文档、合同、release wrapper、page-state 与 first-run test matrix。
+2. `one-person-lab` 继续只保留 Framework truth、release discovery / upload companion 和 App/workbench 消费边界，不恢复 GUI source fork。
+3. 发布前固定跑 App 仓 active shell 验证、release asset validation、packaged runtime validation 和真实 `/Applications/One Person Lab.app` 启动 smoke。
+4. AionUI upstream 变化只通过显式 intake 分支吸收；OPL overlay 保持在 branding、runtime bridge、packaging policy、release/update metadata 和页面集成层。
