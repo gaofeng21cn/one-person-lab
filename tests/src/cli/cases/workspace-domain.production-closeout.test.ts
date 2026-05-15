@@ -787,6 +787,18 @@ test('framework production-closeout projects Temporal residency proof history', 
       1,
     );
     assert.equal(
+      closeout.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.action_id,
+      'temporal-provider-production-proof-cadence',
+    );
+    assert.equal(
+      closeout.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.expected_receipt_kind,
+      'opl_temporal_provider_slo_execution_receipt',
+    );
+    assert.equal(
+      closeout.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.authority_boundary.can_auto_execute,
+      false,
+    );
+    assert.equal(
       closeout.provider_continuous_proof.operator_slo_repair_loop.authority_boundary.can_execute_repair_command,
       false,
     );

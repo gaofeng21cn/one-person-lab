@@ -49,9 +49,28 @@
     "domain_adapter_dispatch",
     "local_inbox_notification_copy",
     "family_runtime_events_export",
+    "provider_slo_cadence_action_projection",
     "repair_doctor_surface",
     "runtime_manager_projection"
   ],
+  "provider_slo_cadence_action": {
+    "surface_kind": "opl_temporal_provider_slo_execution_receipt",
+    "action_id": "temporal-provider-production-proof-cadence",
+    "action_kind": "provider_slo_cadence_execution",
+    "command": "opl family-runtime residency proof --provider temporal --production",
+    "execution_owner": "operator_or_infrastructure",
+    "execution_policy": "manual_or_supervised_no_auto_execution",
+    "expected_event_type": "temporal_provider_slo_execution_receipt",
+    "expected_receipt_kind": "opl_temporal_provider_slo_execution_receipt",
+    "max_proof_age_seconds": 86400,
+    "authority_boundary": {
+      "can_auto_execute": false,
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "can_authorize_artifact_export": false,
+      "can_write_domain_truth": false
+    }
+  },
   "domain_owned_capabilities": [
     "runtime_truth",
     "quality_judgment",

@@ -82,8 +82,13 @@ test('family-runtime Temporal production proof writes provider SLO execution rec
     assert.equal(receipt.provider_kind, 'temporal');
     assert.equal(receipt.command, 'opl family-runtime residency proof --provider temporal --production');
     assert.equal(receipt.execution_policy, 'supervised_command_receipt_only');
+    assert.equal(receipt.cadence_action.action_id, 'temporal-provider-production-proof-cadence');
+    assert.equal(receipt.cadence_action.expected_event_type, 'temporal_provider_slo_execution_receipt');
+    assert.equal(receipt.cadence_action.execution_policy, 'manual_or_supervised_no_auto_execution');
+    assert.equal(receipt.cadence_action.max_proof_age_seconds, 86400);
     assert.equal(receipt.closeout_status, 'production_residency_needs_live_evidence');
     assert.equal(receipt.receipt_status, 'blocked');
+    assert.equal(receipt.cadence_action.authority_boundary.can_auto_execute, false);
     assert.equal(receipt.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(receipt.authority_boundary.can_write_domain_truth, false);
 
@@ -98,6 +103,10 @@ test('family-runtime Temporal production proof writes provider SLO execution rec
     assert.equal(sloEvents.length, 1);
     assert.equal(sloEvents[0].payload.surface_kind, 'opl_temporal_provider_slo_execution_receipt');
     assert.equal(sloEvents[0].payload.receipt_status, 'blocked');
+    assert.equal(
+      sloEvents[0].payload.cadence_action.expected_receipt_kind,
+      'opl_temporal_provider_slo_execution_receipt',
+    );
     assert.equal(proofEvents.length, 1);
     assert.equal(
       proofEvents[0].payload.provider_slo_execution_receipt.surface_kind,

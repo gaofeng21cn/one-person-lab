@@ -41,6 +41,22 @@ test('runtime snapshot projects provider continuous proof receipt without domain
       'manual_or_supervised_no_auto_execution',
     );
     assert.equal(
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.action_id,
+      'temporal-provider-production-proof-cadence',
+    );
+    assert.equal(
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.expected_event_type,
+      'temporal_provider_slo_execution_receipt',
+    );
+    assert.equal(
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.dispatch_status,
+      'execution_due_or_repair_required',
+    );
+    assert.equal(
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.operator_cadence_action.authority_boundary.can_auto_execute,
+      false,
+    );
+    assert.equal(
       snapshot.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.event_count,
       1,
     );
