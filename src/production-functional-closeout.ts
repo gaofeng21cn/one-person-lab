@@ -12,6 +12,10 @@ import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-cont
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import { buildProviderReadiness } from './production-functional-closeout-provider-readiness.ts';
 import { buildProductionEvidenceReadiness } from './production-functional-closeout-evidence-readiness.ts';
+import {
+  masGuardedApplyOwnerReceiptRefs,
+  masGuardedApplyTypedBlockers,
+} from './production-functional-closeout-mas-guarded-evidence.ts';
 import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 import {
   listStageAttemptCloseouts,
@@ -470,9 +474,15 @@ function summarizeAttemptEvidence(
         attempt_count: domainAttempts.length,
         closeout_packet_count: domainMemory?.closeout_count ?? 0,
         controlled_apply_statuses: domainContracts.map((contract) => contract.apply_status),
-        owner_receipt_refs: domainContracts.flatMap((contract) => contract.owner_receipt_refs),
+        owner_receipt_refs: uniqueStrings([
+          ...domainContracts.flatMap((contract) => contract.owner_receipt_refs),
+          ...masGuardedApplyOwnerReceiptRefs(domainAttempts),
+        ]),
         no_regression_evidence_refs: domainContracts.flatMap((contract) => contract.no_regression_evidence_refs),
-        typed_blockers: domainContracts.flatMap((contract) => contract.typed_blockers),
+        typed_blockers: [
+          ...domainContracts.flatMap((contract) => contract.typed_blockers),
+          ...masGuardedApplyTypedBlockers(domainAttempts),
+        ],
         lifecycle_apply_statuses: domainLifecycleProofs.map((proof) => proof.apply_status),
         lifecycle_restore_refs: domainLifecycleRefs.restore_refs,
         lifecycle_domain_receipt_refs: domainLifecycleRefs.domain_receipt_refs,
