@@ -639,6 +639,12 @@ test('runtime snapshot exposes transition bridge owner evidence as refs-only ope
     assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.owner_receipt_ref_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.no_regression_evidence_ref_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.typed_blocker_ref_count, 1);
+    assert.deepEqual(snapshot.stage_attempt_workbench.filter_metadata.transition_bridge_flags, [
+      'has_transition_bridge',
+      'has_transition_owner_receipt_refs',
+      'has_transition_no_regression_evidence_refs',
+      'has_transition_typed_blockers',
+    ]);
     assert.equal(
       snapshot.stage_attempt_workbench.transition_bridge_evidence.authority_boundary.can_execute_domain_action,
       false,
@@ -668,6 +674,10 @@ test('runtime snapshot exposes transition bridge owner evidence as refs-only ope
       workbenchAttempt.transition_bridge_evidence.authority_boundary.can_authorize_domain_verdict,
       false,
     );
+    assert.equal(workbenchAttempt.filter_keys.has_transition_bridge, true);
+    assert.equal(workbenchAttempt.filter_keys.has_transition_owner_receipt_refs, true);
+    assert.equal(workbenchAttempt.filter_keys.has_transition_no_regression_evidence_refs, true);
+    assert.equal(workbenchAttempt.filter_keys.has_transition_typed_blockers, true);
     assert.equal(
       workbenchAttempt.action_routing.actions.some((action: { action_kind: string }) =>
         action.action_kind === 'projection_drilldown:transition_bridge_evidence'

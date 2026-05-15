@@ -259,6 +259,7 @@ function attemptProjection(
       dead_lettered: isDeadLetter,
       has_consumed_memory_refs: consumedMemoryRefs.length > 0,
       has_writeback_receipt_refs: writebackReceiptRefs.length > 0,
+      ...transitionBridgeFilterKeys(genericProjections),
     },
     attention_flags: attentionFlags,
     authority_boundary: {
@@ -292,6 +293,29 @@ function projectionIsDeadLetter(attempt: StageAttemptProjection) {
 
 function projectionHasAttention(attempt: StageAttemptProjection) {
   return Boolean((attempt.filter_keys as JsonRecord).attention);
+}
+
+function transitionBridgeProjection(attempt: { transition_bridge_evidence?: unknown }) {
+  const projection = attempt.transition_bridge_evidence;
+  return projection && typeof projection === 'object' && !Array.isArray(projection)
+    ? projection as JsonRecord
+    : null;
+}
+
+function transitionBridgeSummary(attempt: { transition_bridge_evidence?: unknown }) {
+  const summary = transitionBridgeProjection(attempt)?.summary;
+  return summary && typeof summary === 'object' && !Array.isArray(summary) ? summary as JsonRecord : {};
+}
+
+function transitionBridgeFilterKeys(attempt: { transition_bridge_evidence?: unknown }) {
+  const projection = transitionBridgeProjection(attempt);
+  const summary = transitionBridgeSummary(attempt);
+  return {
+    has_transition_bridge: projection?.availability === 'transition_bridge_observed',
+    has_transition_owner_receipt_refs: Number(summary.owner_receipt_ref_count ?? 0) > 0,
+    has_transition_no_regression_evidence_refs: Number(summary.no_regression_evidence_ref_count ?? 0) > 0,
+    has_transition_typed_blockers: Number(summary.typed_blocker_count ?? 0) > 0,
+  };
 }
 
 function memoryRefCounters(attempts: StageAttemptProjection[]) {
@@ -400,6 +424,12 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       group_keys: ['domain_id', 'stage_id', 'status'],
       attention_flags: ['human_gate', 'resume_available', 'dead_lettered', 'blocked', 'rejected_writes'],
       memory_ref_flags: ['has_consumed_memory_refs', 'has_writeback_receipt_refs'],
+      transition_bridge_flags: [
+        'has_transition_bridge',
+        'has_transition_owner_receipt_refs',
+        'has_transition_no_regression_evidence_refs',
+        'has_transition_typed_blockers',
+      ],
     },
   };
 }
@@ -438,6 +468,12 @@ const EMPTY_WORKBENCH_METADATA = {
     group_keys: ['domain_id', 'stage_id', 'status'],
     attention_flags: ['human_gate', 'resume_available', 'dead_lettered', 'blocked', 'rejected_writes'],
     memory_ref_flags: ['has_consumed_memory_refs', 'has_writeback_receipt_refs'],
+    transition_bridge_flags: [
+      'has_transition_bridge',
+      'has_transition_owner_receipt_refs',
+      'has_transition_no_regression_evidence_refs',
+      'has_transition_typed_blockers',
+    ],
   },
 };
 
