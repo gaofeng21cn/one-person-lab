@@ -44,6 +44,29 @@
     "projection",
     "authority_boundary"
   ],
+  "runner_execution_boundary": {
+    "opl_executes": [
+      "domain-declared transition spec",
+      "guard id matching",
+      "matrix fixture evaluation",
+      "receipt/projection envelope construction"
+    ],
+    "opl_records": [
+      "transition receipt",
+      "owner route refs",
+      "typed blocker refs",
+      "human gate refs",
+      "dead-letter intent refs"
+    ],
+    "opl_must_not_interpret": [
+      "MAS publication verdict",
+      "MAS publication_eval/latest.json",
+      "MAS controller_decisions/latest.json",
+      "MAS current_package",
+      "domain artifact authority",
+      "domain quality authority"
+    ]
+  },
   "fail_closed_cases": [
     "unknown_guard_id",
     "transition_domain_mismatch",
