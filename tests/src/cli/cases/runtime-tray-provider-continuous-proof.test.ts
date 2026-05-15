@@ -65,6 +65,10 @@ test('runtime snapshot projects provider continuous proof receipt without domain
       'blocked',
     );
     assert.equal(
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.blocked_count,
+      1,
+    );
+    assert.equal(
       snapshot.provider_continuous_proof.operator_slo_repair_loop.authority_boundary.can_execute_repair_command,
       false,
     );
@@ -262,6 +266,10 @@ db.close();`,
     );
     assert.equal(
       proofItem.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.event_count,
+      0,
+    );
+    assert.equal(
+      proofItem.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.executed_count,
       0,
     );
     assert.equal(
