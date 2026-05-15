@@ -460,6 +460,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
+      transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
@@ -499,6 +500,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       memory_locator_index: metadata.summary.memory_locator_index,
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
       action_routing: metadata.summary.action_routing,
+      transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
       attempts,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
@@ -522,6 +524,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
+      transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',

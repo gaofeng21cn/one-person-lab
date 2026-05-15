@@ -8,6 +8,7 @@ type ActionRoutingAttempt = {
   route_impact: JsonRecord;
   human_gate_refs: string[];
   resume_ledger: JsonRecord[];
+  transition_bridge_evidence?: JsonRecord | null;
 };
 
 type OperatorActionRoute = {
@@ -24,6 +25,10 @@ type OperatorActionRoute = {
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function stringList(value: unknown) {
@@ -142,6 +147,18 @@ function domainOwnerRoute(attempt: ActionRoutingAttempt): OperatorActionRoute[] 
   }];
 }
 
+function transitionBridgeEvidenceRoute(attempt: ActionRoutingAttempt): OperatorActionRoute[] {
+  if (!isRecord(attempt.transition_bridge_evidence)
+    || attempt.transition_bridge_evidence.availability !== 'transition_bridge_observed') {
+    return [];
+  }
+  return [appSurfaceRoute(
+    attempt,
+    'projection_drilldown:transition_bridge_evidence',
+    'transition_bridge_evidence',
+  )];
+}
+
 function routeSummary(actions: OperatorActionRoute[], attemptCount: number) {
   const countByTarget = (target: OperatorActionRoute['route_target_kind']) =>
     actions.filter((action) => action.route_target_kind === target).length;
@@ -180,6 +197,7 @@ export function buildAttemptOperatorActionRouting(attempt: ActionRoutingAttempt)
     appSurfaceRoute(attempt, 'projection_drilldown:quality_readiness', 'quality_readiness'),
     appSurfaceRoute(attempt, 'projection_drilldown:observability_slo', 'observability_slo'),
     appSurfaceRoute(attempt, 'projection_drilldown:controlled_apply_contract', 'controlled_apply_contract'),
+    ...transitionBridgeEvidenceRoute(attempt),
     ...providerSignalRoutes(attempt),
     ...domainOwnerRoute(attempt),
     ...repairCommandRoutes(attempt),

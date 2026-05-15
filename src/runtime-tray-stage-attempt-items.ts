@@ -172,6 +172,7 @@ export function buildStageAttemptTrayItems(input: {
         memory_locator_index: record(attempt.memory_locator_index),
         package_export_lifecycle: record(attempt.package_export_lifecycle),
         action_routing: record(attempt.action_routing),
+        transition_bridge_evidence: record(attempt.transition_bridge_evidence),
         authority_boundary: {
           opl: 'operator_projection_over_attempt_refs_only',
           domain: 'truth_quality_artifact_gate_owner',
