@@ -65,6 +65,7 @@ JSON
             receipt_id: 'ftr-intake-handoff',
             spec_id: 'mag.grant_transition.oracle.v1',
             receipt_refs: ['mag-transition-receipt:intake_handoff_receipt'],
+            owner_receipt_refs: ['mag-owner-receipt:intake_handoff_receipt'],
           },
           projection: {
             spec_id: 'mag.grant_transition.oracle.v1',
@@ -73,6 +74,7 @@ JSON
               'mag-stage:fundability_strategy',
             ],
             action_refs: ['open_grant_user_loop'],
+            no_regression_evidence_ref: 'mag-no-regression:intake_handoff',
           },
           authority_boundary: {
             opl_can_write_grant_truth: false,
@@ -109,6 +111,23 @@ JSON
     assert.equal(attempt.workspace_locator.family_transition.receipt.spec_id, 'mag.grant_transition.oracle.v1');
     assert.equal(attempt.workspace_locator.transition_bridge.opl_executes_domain_action, false);
     assert.equal(attempt.workspace_locator.transition_bridge.domain_owner_receipt_required, true);
+    assert.deepEqual(attempt.workspace_locator.transition_bridge.evidence.receipt_refs, [
+      'mag-transition-receipt:intake_handoff_receipt',
+    ]);
+    assert.deepEqual(attempt.workspace_locator.transition_bridge.evidence.owner_receipt_refs, [
+      'mag-transition-receipt:intake_handoff_receipt',
+      'mag-owner-receipt:intake_handoff_receipt',
+    ]);
+    assert.deepEqual(attempt.workspace_locator.transition_bridge.evidence.no_regression_evidence_refs, [
+      'mag-no-regression:intake_handoff',
+    ]);
+    assert.equal(attempt.workspace_locator.transition_bridge.evidence.domain_owner_receipt_observed, true);
+    assert.equal(attempt.workspace_locator.transition_bridge.evidence.no_regression_evidence_observed, true);
+    assert.equal(
+      attempt.workspace_locator.transition_bridge.evidence.opl_evidence_boundary,
+      'refs_only_no_domain_verdict_authority',
+    );
+    assert.equal(attempt.workspace_locator.transition_bridge.opl_authorizes_domain_verdict, false);
     assert.equal(dispatchedTask.payload.family_transition.transition_id, 'call_intake_complete_to_fundability_strategy');
     assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
     assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
@@ -163,12 +182,14 @@ cat <<'JSON'
             "surface_kind": "family_transition_receipt",
             "receipt_id": "ftr-intake-handoff",
             "spec_id": "mag.grant_transition.oracle.v1",
-            "receipt_refs": ["mag-transition-receipt:intake_handoff_receipt"]
+            "receipt_refs": ["mag-transition-receipt:intake_handoff_receipt"],
+            "owner_receipt_refs": ["mag-owner-receipt:intake_handoff_receipt"]
           },
           "projection": {
             "spec_id": "mag.grant_transition.oracle.v1",
             "route_node_refs": ["mag-stage:call_and_candidate_intake", "mag-stage:fundability_strategy"],
-            "action_refs": ["open_grant_user_loop"]
+            "action_refs": ["open_grant_user_loop"],
+            "no_regression_evidence_ref": "mag-no-regression:intake_handoff"
           },
           "authority_boundary": {
             "opl_can_write_grant_truth": false,
@@ -214,6 +235,29 @@ JSON
     assert.equal(task.payload.authority_boundary.opl_executes_domain_action, false);
     assert.equal(task.payload.authority_boundary.opl_authorizes_domain_verdict, false);
     assert.equal(task.payload.authority_boundary.domain_transition_owner, 'med-autogrant');
+
+    const tick = runCli(['family-runtime', 'tick', '--source', 'transition-bridge'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: exportPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    }));
+    const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    }));
+    const attempt = inspected.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'retry_waiting');
+    assert.deepEqual(attempt.workspace_locator.transition_bridge.evidence.owner_receipt_refs, [
+      'mag-transition-receipt:intake_handoff_receipt',
+      'mag-owner-receipt:intake_handoff_receipt',
+    ]);
+    assert.deepEqual(attempt.workspace_locator.transition_bridge.evidence.no_regression_evidence_refs, [
+      'mag-no-regression:intake_handoff',
+    ]);
+    assert.equal(attempt.workspace_locator.transition_bridge.evidence.domain_owner_receipt_observed, true);
+    assert.equal(attempt.workspace_locator.transition_bridge.evidence.no_regression_evidence_observed, true);
+    assert.equal(attempt.workspace_locator.transition_bridge.opl_executes_domain_action, false);
+    assert.equal(attempt.workspace_locator.transition_bridge.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.transition_bridge.opl_authorizes_domain_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
