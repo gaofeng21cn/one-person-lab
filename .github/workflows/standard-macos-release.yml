@@ -34,9 +34,9 @@ jobs:
       - name: Checkout OPL GUI shell
         uses: actions/checkout@v4
         with:
-          repository: gaofeng21cn/opl-aion-shell
+          repository: gaofeng21cn/one-person-lab-app
           ref: main
-          path: opl-aion-shell
+          path: one-person-lab-app
 
       - name: Resolve release version
         shell: bash
@@ -64,7 +64,7 @@ jobs:
             ${{ runner.temp }}/.cache/electron-builder
             ~/.cache/electron
             ~/.cache/electron-builder
-          key: opl-standard-electron-arm64-${{ hashFiles('opl-aion-shell/package.json', 'opl-aion-shell/bun.lock') }}
+          key: opl-standard-electron-arm64-${{ hashFiles('one-person-lab-app/shells/aionui/package.json', 'one-person-lab-app/shells/aionui/bun.lock') }}
           restore-keys: |
             opl-standard-electron-arm64-
 
@@ -73,7 +73,7 @@ jobs:
         run: npm ci
 
       - name: Install GUI dependencies
-        working-directory: opl-aion-shell
+        working-directory: one-person-lab-app/shells/aionui
         shell: bash
         run: |
           set -euo pipefail
@@ -82,7 +82,7 @@ jobs:
           bunx electron-builder install-app-deps
 
       - name: Build standard macOS arm64 assets
-        working-directory: opl-aion-shell
+        working-directory: one-person-lab-app/shells/aionui
         shell: bash
         env:
           OPL_RELEASE_VERSION: ${{ env.OPL_RELEASE_VERSION }}
@@ -118,7 +118,7 @@ jobs:
           npm run gui:release -- \
             --no-build \
             --dry-run \
-            --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
+            --shell-root "$GITHUB_WORKSPACE/one-person-lab-app/shells/aionui" \
             --version "$OPL_RELEASE_VERSION" \
             --repo "$GITHUB_REPOSITORY"
 
@@ -126,7 +126,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: opl-standard-${{ env.OPL_RELEASE_VERSION }}-mac-arm64
-          path: opl-aion-shell/release
+          path: one-person-lab-app/shells/aionui/release
           if-no-files-found: error
           retention-days: 14
 
@@ -138,6 +138,6 @@ jobs:
         run: |
           npm run gui:release -- \
             --no-build \
-            --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
+            --shell-root "$GITHUB_WORKSPACE/one-person-lab-app/shells/aionui" \
             --version "$OPL_RELEASE_VERSION" \
             --repo "$GITHUB_REPOSITORY"

@@ -32,7 +32,8 @@ function parseArgs(argv) {
     outDir: process.env.CI === 'true'
       ? path.join(repoRoot, FULL_RELEASE_OUTPUT_DIR)
       : FULL_INTERNAL_OUTPUT_DIR,
-    guiRoot: path.join(workspaceRoot, 'opl-aion-shell'),
+    guiRoot: process.env.OPL_FULL_GUI_ROOT
+      || path.join(workspaceRoot, 'one-person-lab-app', 'shells', 'aionui'),
     masRoot: process.env.OPL_FULL_MAS_ROOT || path.join(workspaceRoot, 'med-autoscience'),
     magRoot: process.env.OPL_FULL_MAG_ROOT || path.join(workspaceRoot, 'med-autogrant'),
     rcaRoot: process.env.OPL_FULL_RCA_ROOT || path.join(workspaceRoot, 'redcube-ai'),

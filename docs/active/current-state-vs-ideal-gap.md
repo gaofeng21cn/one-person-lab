@@ -193,10 +193,10 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 ### 已经成立
 
-- 当前 App 仓是 `opl-aion-shell`，也就是 OPL fork of AionUI；OPL product mainline 是 `gaofeng/main`，upstream `origin/main` 只作为 AionUI sync source。
-- App repo split 目标已明确：建立独立 `one-person-lab-app` 产品仓，把当前 AionUI fork 作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护；AionUI 2.0 或其他 GUI 基座可在 `shells/*-next` 并行适配，验证通过后再切 active shell。
+- 当前 App 维护拓扑已迁移到 `one-person-lab-app`；活动 GUI shell 位于 `shells/aionui/`，作为 OPL fork of AionUI 的 upstream-backed adapter 维护。
+- App repo split 目标与默认实现路径已明确：独立 `one-person-lab-app` 产品仓持有 App 顶层文档、合同、脚本和 release/test lifecycle，当前 AionUI fork 作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护；AionUI 2.0 或其他 GUI 基座可在 `shells/*-next` 并行适配，验证通过后再切 active shell。
 - App 作为 OPL-branded GUI shell，消费 Codex-default session/runtime truth、OPL runtime snapshot、stage-attempt workbench / operator item、provider continuous proof operator item 和 domain-owned projection。
-- OPL 主仓状态已明确 App 预编译包由 `opl-aion-shell` 构建，OPL 一键安装负责打开已安装 App 或下载匹配 release DMG。
+- OPL 主仓状态已明确 App 预编译包由 `one-person-lab-app/shells/aionui` 构建，Framework 兼容阶段继续负责打开已安装 App、发现 / 上传当前 release DMG，后续再按 App release manifest 切换用户下载 source-of-truth。
 - App / workbench 已有 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 等 operator 状态轴的实现方向。
 
 ### 主要差距
@@ -204,7 +204,7 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 - App 不是 runtime owner，也不是 domain truth owner；它不能替代 OPL Framework 或 MAS/MAG/RCA。
 - 当前 fresh runtime snapshot 没有 running domain attempt，但 `stage_attempt_workbench.total=18` 且 18 条 attempt 均 completed，覆盖 `medautogrant=11`、`medautoscience=6`、`redcube=1`，其中 MAS 最新 guarded-apply attempt 已指向 owner stable blocker receipt；provider proof receipt drilldown 已进入 snapshot 的 attention / recent lane item，stage-attempt operator item 已能投影 domain/stage/blocker/memory/artifact locator refs 与 action route refs，native helper execution envelope 已能投影现有 native index / helper receipt metadata。App 仍缺真实生产运行状态下的 domain progress owner receipt、artifact mutation receipt、route/decision map drilldown、review/repair queue、artifact gallery/handoff drilldown 与长时运行 drilldown 证据。
 - App 仓仍是 fork overlay，需要持续处理 upstream AionUI intake 与 OPL-specific overlay 边界。
-- 当前 `opl-aion-shell` 顶层身份仍偏向 AionUI fork；这会让 App 产品文档、release、页面测试和 upstream intake 混在同一层。迁移后 App 顶层应承接产品和发布生命周期，AionUI 规则收缩到 `shells/aionui/`。
+- App 顶层承接产品、发布验证和测试生命周期；AionUI 规则收缩到 `shells/aionui/`。Framework 当前保留 release discovery / upload companion，不拥有 GUI source fork。
 - 如果界面展示 provider completion、domain ready verdict、quality verdict 或 artifact authority，需要持续防止文案越权。
 
 ### 需要完善

@@ -5,8 +5,12 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const defaultShellRoot = path.resolve(repoRoot, '..', 'opl-aion-shell');
+const defaultShellRoot = path.resolve(repoRoot, '..', 'one-person-lab-app', 'shells', 'aionui');
 const defaultFullPackageDir = path.resolve(repoRoot, 'dist', 'opl-full-release');
+
+function resolveShellRootEnv() {
+  return process.env.OPL_APP_SHELL_ROOT || process.env.OPL_AION_SHELL_ROOT || defaultShellRoot;
+}
 
 function defaultReleaseVersion() {
   const now = process.env.OPL_RELEASE_DATE
@@ -20,7 +24,7 @@ function defaultReleaseVersion() {
 
 function parseArgs(argv) {
   const parsed = {
-    shellRoot: process.env.OPL_AION_SHELL_ROOT || defaultShellRoot,
+    shellRoot: resolveShellRootEnv(),
     releaseRepo: process.env.OPL_RELEASE_REPO || 'gaofeng21cn/one-person-lab',
     version: process.env.OPL_RELEASE_VERSION || '',
     versionExplicit: Boolean(process.env.OPL_RELEASE_VERSION),
@@ -463,7 +467,7 @@ function main() {
   const tag = `v${options.version}`;
 
   if (!options.fullPackageOnly && !fs.existsSync(options.shellRoot)) {
-    throw new Error(`Missing opl-aion-shell checkout: ${options.shellRoot}`);
+    throw new Error(`Missing One Person Lab App active shell checkout: ${options.shellRoot}`);
   }
 
   if (options.build && !options.fullPackageOnly) {

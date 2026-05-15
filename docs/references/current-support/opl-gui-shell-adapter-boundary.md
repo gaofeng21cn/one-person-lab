@@ -4,7 +4,7 @@
 
 ## 结论
 
-当前所有 GUI 相关的 fork、AionUI upstream 适配、品牌替换、界面裁剪、Electron 打包和 App 更新桥接，都应发生在 App-owned GUI shell 线里。迁移前的实现仓是 `opl-aion-shell`；目标形态是独立 `one-person-lab-app` 产品仓，并把当前 AionUI fork 放在 `shells/aionui/` 下作为 upstream-backed shell adapter。
+当前所有 GUI 相关的 fork、AionUI upstream 适配、品牌替换、界面裁剪、Electron 打包和 App 更新桥接，都应发生在 App-owned GUI shell 线里。当前迁移后的维护形态是独立 `one-person-lab-app` 产品仓，并把当前 AionUI fork 放在 `shells/aionui/` 下作为 upstream-backed shell adapter；Framework 仓在兼容阶段继续保留 release discovery / upload companion。
 
 `one-person-lab` 主仓不 fork GUI codebase。它持有 OPL 的运行时真相、安装与环境管理能力、模块与 skill 同步、机器可读合同、release version、Packages 坐标，以及 App / WebUI 共同消费的 CLI-backed 产品表面。
 
@@ -22,7 +22,7 @@ App 仓库拆分的活跃计划见 [One Person Lab App 仓库拆分计划](../..
 - 发布用户下载入口：One Person Lab App 的 release artifact 放在 `one-person-lab` GitHub Releases。
 - 为 GUI 提供可消费的机器可读输出；新增安装、修复、状态或更新能力时，先落到 CLI，再由 GUI 调用。
 
-### `opl-aion-shell` / future `one-person-lab-app/shells/aionui`
+### `one-person-lab-app/shells/aionui`
 
 - 持有当前桌面 App / WebUI 的实际 GUI codebase。
 - 基于 AionUI codebase 做 OPL 品牌化、界面裁剪、主题、图标、设置页、环境管理、工作空间面板与对话体验。
@@ -40,7 +40,7 @@ App 仓库拆分的活跃计划见 [One Person Lab App 仓库拆分计划](../..
 
 GUI fork 更新不是机械 rebase。标准 intake 目标是“吸收 upstream + 收缩本地 delta + 保留 OPL runtime 边界”：先比较 upstream delta、OPL overlay delta 和当前本地 dirty delta，再把 OPL 补丁分类为保留、upstream 已覆盖可退役、适配到新 upstream 结构或继续观察。
 
-当前 GUI 仓的裁剪规则集中在 `opl-aion-shell/electron-builder.yml`，校验规则集中在 `opl-aion-shell/scripts/validate-packaged-runtime.js`。GUI 打包脚本应在生成 fresh `app.asar` 后自动执行 `--scan-all` 级别的 packaged runtime validation；发布前仍需真实启动一次 One Person Lab App。
+当前 GUI shell 的裁剪规则集中在 `one-person-lab-app/shells/aionui/electron-builder.yml`，校验规则集中在 `one-person-lab-app/shells/aionui/scripts/validate-packaged-runtime.js`。GUI 打包脚本应在生成 fresh `app.asar` 后自动执行 `--scan-all` 级别的 packaged runtime validation；发布前仍需真实启动一次 One Person Lab App。
 
 迁移后，这些规则应由 App 顶层脚本调用 active shell 的等价命令，而不是把 active shell 的内部路径写成永久 App contract。
 
@@ -71,10 +71,10 @@ GUI fork 更新不是机械 rebase。标准 intake 目标是“吸收 upstream +
 
 ## 后续维护规则
 
-- `OPL` 主仓文档中提到 GUI 时，默认写成“当前 GUI shell / adapter”，不要把 AionUI 或 `opl-aion-shell` 写成 OPL runtime owner。
-- `opl-aion-shell` 是当前 GUI 交付仓，不是用户主入口；目标迁移后，`one-person-lab-app` 是 App 产品仓，`shells/aionui` 是当前 GUI adapter。用户主入口仍是 release、`opl install` 和 One Person Lab App。
+- `OPL` 主仓文档中提到 GUI 时，默认写成“当前 GUI shell / adapter”，不要把 AionUI 或 `one-person-lab-app/shells/aionui` 写成 OPL runtime owner。
+- `one-person-lab-app` 是 App 产品仓，`shells/aionui` 是当前 GUI adapter。用户主入口仍是 release、`opl install` 和 One Person Lab App。
 - GUI 新能力优先要求 OPL CLI 提供机器可读输出，再由 GUI 消费。
 - Upstream AionUI 同步后，先解决源码冲突，再验证 OPL branding、Codex-default runtime、environment management、skill list、workspace panel、packaging trim 和 updater metadata。
-- 如果用户只说“跟随 / 吸收 AionUI 最新版本”，默认按 `opl-aion-shell` 的标准 upstream-intake 流程执行，包括 live upstream 核对、patch matrix、本地补丁退役审计、验证、吸收到 `gaofeng/main` 和清理临时 worktree/branch。
+- 如果用户只说“跟随 / 吸收 AionUI 最新版本”，默认按 App 仓 `shells/aionui` 的标准 upstream-intake 流程执行，包括 live upstream 核对、patch matrix、本地补丁退役审计、验证、吸收到 App main 和清理临时 worktree/branch。
 - GUI upstream 同步的固定验证顺序是：同步 upstream、解决源码冲突、`dev/build`、打包、packaged runtime validation、真实 App startup smoke。
 - 如果未来更换 GUI，新增一份迁移记录即可；核心 contract 和 domain module 不应因 GUI 更换而重写。

@@ -198,7 +198,7 @@
 
 影响：
 
-- `opl-aion-shell` 打包时把 Electron updater 元数据写成 `OPL_RELEASE_VERSION`
+- `one-person-lab-app/shells/aionui` 打包时把 Electron updater 元数据写成 `OPL_RELEASE_VERSION`
 - App 关于页继续单独展示 OPL 版本与 GUI 基线版本
 - GUI package.json 的 upstream/AionUI 基线版本不再决定 One Person Lab 自动更新顺序
 
@@ -287,7 +287,7 @@
 - `opl install` 不再安装、启动或打开 8787 Product API service
 - public `opl service *`、`opl system reinstall-support`、`opl web`、`web bundle` 与 `web package` 退出当前命令面
 - 仓内旧本地 web adapter 与 self-hostable web package 实现删除，避免继续形成第二产品入口
-- GUI 分发由 `opl-aion-shell` 构建、`one-person-lab` GitHub Release 暴露；维护者用 `npm run gui:release` 发布 artifact
+- GUI 分发由 `one-person-lab-app/shells/aionui` 构建、`one-person-lab` GitHub Release 暴露；维护者用 `npm run gui:release` 发布 artifact
 
 ## 2026-04-23
 
@@ -352,7 +352,7 @@
 - `OPL` 主仓当前主线以 `Codex-default session runtime + activation layer` 为中心，而不是以 GUI 或 API 壳为中心
 - canonical truth 收敛到：workspace binding、session lifecycle、progress / artifact projection、agent entry dispatch、runtime mode
 - GUI / Web shell 使用这套 session runtime；本地 8787 Product API / `opl web` 模块退役
-- `opl-aion-shell` 是第一 GUI 交付仓；它基于 AionUI codebase 产出 OPL 品牌壳，但原版 AionUI app 不是 OPL GUI，也不是 runtime owner
+- `one-person-lab-app` 是 App 产品仓；当前第一 GUI adapter 位于 `shells/aionui`，基于 AionUI codebase 产出 OPL 品牌壳，但原版 AionUI app 不是 OPL GUI，也不是 runtime owner
 
 ### 决策：GUI 主线确定为基于 AionUI codebase 的 OPL 品牌壳
 
@@ -361,8 +361,8 @@
 影响：
 
 - `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、release distribution surface 与 activation contracts
-- 当前第一 GUI 交付物按 `opl-aion-shell` 的 OPL 品牌壳推进
-- 仓内已移除旧 GUI 备线材料；当前 GUI 实施依据收敛到 `opl-aion-shell` 与 AionUI codebase
+- 当前第一 GUI 交付物按 `one-person-lab-app/shells/aionui` 的 OPL 品牌壳推进
+- 仓内已移除旧 GUI 备线材料；当前 GUI 实施依据收敛到 `one-person-lab-app/shells/aionui` 与 AionUI codebase
 
 ## 2026-04-20
 
@@ -413,7 +413,7 @@
 
 - `OPL` 主仓只保留 CLI 产品入口、工作空间 / 会话 / 进度 / 交付物真相、release distribution surface，以及 Codex-default runtime config；Hermes mode config 只保留历史语境
 - 独立界面仓负责真正的 GUI 外壳
-- 一键安装默认打开已安装 GUI；macOS 上缺失时自动下载、挂载并安装 one-person-lab release 中匹配当前平台的 OPL 品牌 Electron DMG；缺少匹配 release asset 时才把 `opl-aion-shell` 源码构建作为 fallback
+- 一键安装默认打开已安装 GUI；macOS 上缺失时自动下载、挂载并安装 one-person-lab release 中匹配当前平台的 OPL 品牌 Electron DMG；缺少匹配 release asset 时才把 `one-person-lab-app/shells/aionui` 源码构建作为 fallback
 
 ### 决策：外部 GUI 基座只在“当前主线 / 基准 / 参考 / 备线”语境出现
 
@@ -422,7 +422,7 @@
 影响：
 
 - AionUI codebase 可以作为当前 GUI 主线基座出现在 current status / implementation planning，但必须明确用户交付物是 OPL 品牌壳
-- 外部 GUI 产品名只能用于基准或参考语境；当前 GUI 主线只承认 `opl-aion-shell` 这一 OPL 品牌壳
+- 外部 GUI 产品名只能用于基准或参考语境；当前 GUI 主线只承认 `one-person-lab-app/shells/aionui` 这一 OPL 品牌壳
 - 只有真实集成发生后，才允许在 current status / current implementation 里写成已集成事实
 
 ## 2026-04-11

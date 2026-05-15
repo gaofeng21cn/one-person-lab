@@ -225,6 +225,10 @@ test('Full first-install release workflow builds without signing secrets and kee
   assert.match(workflow, /actions\/cache\/save@v4/);
   assert.match(workflow, /Reset Full runtime layer cache when forced/);
   assert.match(workflow, /Checkout Hermes-Agent/);
+  assert.match(workflow, /repository: gaofeng21cn\/one-person-lab-app/);
+  assert.match(workflow, /path: one-person-lab-app/);
+  assert.match(workflow, /working-directory: one-person-lab-app\/shells\/aionui/);
+  assert.match(workflow, /--shell-root "\$GITHUB_WORKSPACE\/one-person-lab-app\/shells\/aionui"/);
   assert.match(workflow, /Checkout MAG/);
   assert.match(workflow, /Checkout RCA/);
   assert.match(workflow, /Checkout OfficeCLI/);
@@ -270,6 +274,11 @@ test('standard macOS release workflow publishes only updater-owned standard asse
   const workflow = read('.github/workflows/standard-macos-release.yml');
 
   assert.match(workflow, /OPL Standard macOS Release/);
+  assert.match(workflow, /repository: gaofeng21cn\/one-person-lab-app/);
+  assert.match(workflow, /path: one-person-lab-app/);
+  assert.match(workflow, /working-directory: one-person-lab-app\/shells\/aionui/);
+  assert.match(workflow, /hashFiles\('one-person-lab-app\/shells\/aionui\/package\.json', 'one-person-lab-app\/shells\/aionui\/bun\.lock'\)/);
+  assert.match(workflow, /--shell-root "\$GITHUB_WORKSPACE\/one-person-lab-app\/shells\/aionui"/);
   assert.match(workflow, /Build standard macOS arm64 assets/);
   assert.match(workflow, /npm run build-mac:arm64/);
   assert.match(workflow, /grep -R "One-Person-Lab-Full" release\/latest\*\.yml/);
@@ -287,9 +296,20 @@ test('standard macOS release workflow publishes only updater-owned standard asse
   assert.doesNotMatch(workflow, /--full-package-only/);
 });
 
+test('GUI release and Full package scripts default to the App active shell root', () => {
+  const releaseScript = read('scripts/publish-gui-release.mjs');
+  const fullPackageScript = read('scripts/build-full-internal-package.mjs');
+
+  assert.match(releaseScript, /'one-person-lab-app', 'shells', 'aionui'/);
+  assert.match(releaseScript, /OPL_APP_SHELL_ROOT \|\| process\.env\.OPL_AION_SHELL_ROOT/);
+  assert.match(releaseScript, /Missing One Person Lab App active shell checkout/);
+  assert.match(fullPackageScript, /OPL_FULL_GUI_ROOT/);
+  assert.match(fullPackageScript, /'one-person-lab-app', 'shells', 'aionui'/);
+});
+
 test('GUI release publisher defaults to current arm64 artifacts only', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const outDir = path.join(shellRoot, 'out');
   const fakeBin = path.join(tmpRoot, 'bin');
   const version = '26.5.2';
@@ -404,7 +424,7 @@ test('GUI release publisher defaults to current arm64 artifacts only', () => {
 
 test('GUI release publisher uploads Full first-install assets only when explicitly requested', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const outDir = path.join(shellRoot, 'out');
   const fullDir = path.join(tmpRoot, 'full');
   const fakeBin = path.join(tmpRoot, 'bin');
@@ -487,7 +507,7 @@ test('GUI release publisher uploads Full first-install assets only when explicit
 
 test('GUI release publisher writes standard release notes with update guidance', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-notes-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const outDir = path.join(shellRoot, 'out');
   const originalCwd = process.cwd();
   const fakeBin = path.join(tmpRoot, 'bin');
@@ -605,7 +625,7 @@ test('GUI release publisher writes standard release notes with update guidance',
 
 test('GUI release publisher suggests same-day suffixes instead of incrementing the date version', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-date-version-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const outDir = path.join(shellRoot, 'out');
   const fakeBin = path.join(tmpRoot, 'bin');
   const dateVersion = '26.5.2';
@@ -672,7 +692,7 @@ test('GUI release publisher suggests same-day suffixes instead of incrementing t
 
 test('GUI release publisher can upload only Full first-install assets for an existing standard release', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-only-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const fullDir = path.join(tmpRoot, 'full');
   const fakeBin = path.join(tmpRoot, 'bin');
   const version = '26.5.2';
@@ -749,7 +769,7 @@ test('GUI release publisher can upload only Full first-install assets for an exi
 
 test('GUI release publisher appends Full purpose notes to an existing standard release', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-notes-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const fullDir = path.join(tmpRoot, 'full');
   const fakeBin = path.join(tmpRoot, 'bin');
   const ghLog = path.join(tmpRoot, 'gh.jsonl');
@@ -848,7 +868,7 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
 
 test('GUI release publisher rejects updater metadata that points at Full assets', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-guard-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const outDir = path.join(shellRoot, 'out');
   const fakeBin = path.join(tmpRoot, 'bin');
   const version = '26.5.2';
@@ -897,7 +917,7 @@ test('GUI release publisher rejects updater metadata that points at Full assets'
 
 test('GUI release publisher can explicitly target universal artifacts', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-universal-test-'));
-  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const shellRoot = path.join(tmpRoot, 'one-person-lab-app', 'shells', 'aionui');
   const outDir = path.join(shellRoot, 'out');
   const fakeBin = path.join(tmpRoot, 'bin');
   const version = '26.5.1';
