@@ -286,6 +286,83 @@ db.close();`,
   }
 });
 
+test('runtime snapshot treats a newer proven provider proof as current after an older blocker', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-recovered-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    runCli(['family-runtime', 'events', 'export'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_proof_blocked',
+    'temporal_residency_proof',
+    'test',
+    JSON.stringify({
+      provider_kind: 'temporal',
+      proof_mode: 'external_temporal_service_worker',
+      closeout_status: 'production_residency_needs_live_evidence',
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_blocker',
+        receipt_status: 'blocked',
+        provider_kind: 'temporal'
+      }
+    }),
+    '2026-05-15T00:00:00.000Z'
+  );
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_proof_recovered',
+    'temporal_residency_proof',
+    'test',
+    JSON.stringify({
+      provider_kind: 'temporal',
+      proof_mode: 'external_temporal_service_worker',
+      closeout_status: 'production_residency_proven',
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_proof',
+        receipt_status: 'proven',
+        provider_kind: 'temporal'
+      }
+    }),
+    ${JSON.stringify(new Date().toISOString())}
+  );
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const proof = output.runtime_tray_snapshot.provider_continuous_proof;
+
+    assert.equal(proof.proof_event_count, 2);
+    assert.equal(proof.proven_event_count, 1);
+    assert.equal(proof.continuous_proof_status, 'latest_proof_proven');
+    assert.equal(proof.proof_slo_status, 'proof_fresh');
+    assert.equal(proof.operator_slo_repair_loop.repair_state, 'cadence_current');
+    assert.equal(proof.operator_slo_repair_loop.execution_receipts.blocked_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime snapshot routes stale proven provider proof to operator attention', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-stale-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

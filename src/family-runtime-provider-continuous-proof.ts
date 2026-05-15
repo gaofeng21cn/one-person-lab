@@ -6,6 +6,10 @@ const PRODUCTION_PROOF_COMMAND = 'opl family-runtime residency proof --provider 
 
 type ProviderRuntimeEvent = ReturnType<typeof listEvents>[number];
 
+export function providerProofStatusIsCurrentlyProven(status: string | null | undefined) {
+  return status === 'all_observed_proofs_proven' || status === 'latest_proof_proven';
+}
+
 function providerProofMaxAgeSeconds() {
   const raw = process.env.OPL_PROVIDER_PROOF_MAX_AGE_SECONDS?.trim();
   const parsed = raw ? Number.parseInt(raw, 10) : NaN;
@@ -57,7 +61,7 @@ function proofSloStatus(input: {
   if (input.continuousProofStatus === 'no_proof_observed') {
     return 'no_proof_observed';
   }
-  if (input.continuousProofStatus !== 'all_observed_proofs_proven') {
+  if (!providerProofStatusIsCurrentlyProven(input.continuousProofStatus)) {
     return 'proof_blocker_observed';
   }
   if (input.proofFreshnessStatus === 'stale') {
@@ -76,7 +80,7 @@ function proofRepairState(input: {
   if (input.continuousProofStatus === 'no_proof_observed') {
     return 'needs_initial_production_proof';
   }
-  if (input.continuousProofStatus !== 'all_observed_proofs_proven') {
+  if (!providerProofStatusIsCurrentlyProven(input.continuousProofStatus)) {
     return 'needs_provider_repair_then_proof_rerun';
   }
   if (input.proofFreshnessStatus === 'stale') {
@@ -135,9 +139,19 @@ function eventPayload(event: ProviderRuntimeEvent | undefined) {
 function continuousProofStatus(input: {
   proofEventCount: number;
   provenCount: number;
+  latestCloseoutStatus: string | null;
+  latestProofReceiptStatus: string | null;
 }) {
   if (input.proofEventCount === 0) {
     return 'no_proof_observed';
+  }
+  if (
+    input.latestCloseoutStatus === 'production_residency_proven'
+    && input.latestProofReceiptStatus === 'proven'
+  ) {
+    return input.provenCount === input.proofEventCount
+      ? 'all_observed_proofs_proven'
+      : 'latest_proof_proven';
   }
   return input.provenCount === input.proofEventCount
     ? 'all_observed_proofs_proven'
@@ -171,7 +185,7 @@ function providerProofState(events: ReturnType<typeof listEvents>) {
 function requiredNextAction(input: {
   proofEventCount: number;
   freshnessStatus: string;
-  provenCount: number;
+  continuousProofStatus: string;
 }) {
   if (input.proofEventCount === 0) {
     return `Run ${PRODUCTION_PROOF_COMMAND} and keep the receipt in the runtime ledger.`;
@@ -182,7 +196,7 @@ function requiredNextAction(input: {
   if (input.freshnessStatus === 'unknown') {
     return 'Rerun production proof; the latest Temporal provider receipt has no parseable timestamp.';
   }
-  if (input.provenCount === input.proofEventCount) {
+  if (providerProofStatusIsCurrentlyProven(input.continuousProofStatus)) {
     return 'Keep rerunning production proof on the operator cadence while domain owner chains mature.';
   }
   return 'Repair Temporal service/worker readiness, rerun production proof, and keep failed receipts visible.';
@@ -344,6 +358,8 @@ export function buildProviderContinuousProof(events: ReturnType<typeof listEvent
   const proofStatus = continuousProofStatus({
     proofEventCount: state.proofEvents.length,
     provenCount: state.provenCount,
+    latestCloseoutStatus: optionalString(state.latestPayload?.closeout_status),
+    latestProofReceiptStatus: optionalString(state.latestProofReceipt?.receipt_status),
   });
   const freshnessStatus = proofFreshnessStatus({
     proofEventCount: state.proofEvents.length,
@@ -357,7 +373,7 @@ export function buildProviderContinuousProof(events: ReturnType<typeof listEvent
   const nextAction = requiredNextAction({
     proofEventCount: state.proofEvents.length,
     freshnessStatus,
-    provenCount: state.provenCount,
+    continuousProofStatus: proofStatus,
   });
   return {
     surface_kind: 'opl_temporal_provider_continuous_proof_projection',

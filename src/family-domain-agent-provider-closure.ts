@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
-import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
+import {
+  buildProviderContinuousProof,
+  providerProofStatusIsCurrentlyProven,
+} from './family-runtime-provider-continuous-proof.ts';
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 
 function tableExists(db: DatabaseSync, tableName: string) {
@@ -28,7 +31,7 @@ export function readProviderContinuousProof() {
 export type ProviderContinuousProof = ReturnType<typeof buildProviderContinuousProof>;
 
 export function providerResidencyGapStatus(proof: ProviderContinuousProof) {
-  if (proof.continuous_proof_status === 'all_observed_proofs_proven' && proof.proof_slo_status === 'proof_fresh') {
+  if (providerProofStatusIsCurrentlyProven(proof.continuous_proof_status) && proof.proof_slo_status === 'proof_fresh') {
     return 'closed_by_fresh_proven_proof';
   }
   if (proof.continuous_proof_status === 'no_proof_observed') {
