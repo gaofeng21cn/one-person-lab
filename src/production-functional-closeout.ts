@@ -11,6 +11,7 @@ import { buildFamilyStageListEntry, buildFamilyStagesList } from './family-stage
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import { buildProviderReadiness } from './production-functional-closeout-provider-readiness.ts';
+import { buildProductionEvidenceReadiness } from './production-functional-closeout-evidence-readiness.ts';
 import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 import {
   listStageAttemptCloseouts,
@@ -893,6 +894,12 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
     domainEntries,
     attemptEvidence,
   });
+  const productionEvidenceReadiness = buildProductionEvidenceReadiness({
+    providerReady: providerReadiness.production_provider_ready,
+    providerContinuousProof: continuousProof,
+    attemptEvidence,
+    typedBlockerCount: blockers.length,
+  });
   return {
     version: 'g2',
     production_functional_closeout: {
@@ -923,6 +930,7 @@ export async function buildProductionFunctionalCloseout(contracts: FrameworkCont
       },
       provider_readiness: providerReadiness,
       provider_continuous_proof: continuousProof,
+      production_evidence_readiness: productionEvidenceReadiness,
       domain_manifests: catalog.domain_manifests.summary,
       descriptor_alignment: agents.summary,
       stage_plane: stages.summary,
