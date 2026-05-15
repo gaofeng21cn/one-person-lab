@@ -758,10 +758,10 @@ function buildDomainCloseoutEntries(input: {
       production_closure_gaps: domainProductionClosureGaps(agent, manifest),
       stage_plane_ready: stageDomain?.ready === true,
       memory_descriptor_ready: memory?.ready === true,
-      owner_receipt_contract_declared: Boolean(
-        manifest?.owner_receipt_contract ?? manifest?.domain_owner_receipt_contract,
-      ),
       managed_temporal_state_consistency_declared: Boolean(manifest?.managed_temporal_state_consistency),
+      family_stage_control_plane_declared: Boolean(manifest?.family_stage_control_plane),
+      domain_memory_descriptor_declared: Boolean(manifest?.domain_memory_descriptor),
+      owner_receipt_contract_declared: Boolean(manifest?.owner_receipt_contract ?? manifest?.domain_owner_receipt_contract),
       lifecycle_guarded_apply: lifecycleFromManifest,
       legacy_retirement_tombstone_declared: legacyNoActiveCallerObserved(manifest).observed,
       stage_attempt_evidence: attemptEvidence,

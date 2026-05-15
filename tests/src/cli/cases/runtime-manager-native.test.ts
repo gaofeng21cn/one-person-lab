@@ -396,6 +396,26 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
       'no_active_default_caller_proven',
     );
     assert.equal(
+      snapshot.managed_domain_provider_states.managed_domain_projection_summary.managed_temporal_state_consistency_declared,
+      true,
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.managed_domain_projection_summary.family_stage_control_plane_declared,
+      false,
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.managed_domain_projection_summary.domain_memory_descriptor_declared,
+      false,
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.managed_domain_projection_summary.owner_receipt_contract_declared,
+      false,
+    );
+    assert.equal(
+      snapshot.managed_domain_provider_states.managed_domain_projection_summary.legacy_retirement_tombstone_declared,
+      true,
+    );
+    assert.equal(
       snapshot.managed_domain_provider_states.medautoscience.authority_boundary.can_write_domain_truth,
       false,
     );

@@ -676,6 +676,15 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
         role: 'app_status_read_model_only',
         medautoscience: masManagedProviderProjection,
+        managed_domain_projection_summary: masManagedProviderProjection
+          ? {
+              managed_temporal_state_consistency_declared: masManagedProviderProjection.managed_temporal_state_consistency_declared,
+              family_stage_control_plane_declared: masManagedProviderProjection.family_stage_control_plane_declared,
+              domain_memory_descriptor_declared: masManagedProviderProjection.domain_memory_descriptor_declared,
+              owner_receipt_contract_declared: masManagedProviderProjection.owner_receipt_contract_declared,
+              legacy_retirement_tombstone_declared: masManagedProviderProjection.legacy_retirement_tombstone_declared,
+            }
+          : null,
         authority_boundary: {
           opl: 'display_and_status_projection_only',
           domain_truth_owner: 'med-autoscience',
