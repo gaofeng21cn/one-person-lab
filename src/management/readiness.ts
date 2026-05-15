@@ -129,7 +129,7 @@ export function buildCurrentReadinessProjection(
   };
 
   const recommendedNextActions: string[] = [];
-  recommendedNextActions.push('Use the Codex-default OPL runtime surface with the opl-aion-shell AionUI adapter.');
+  recommendedNextActions.push('Use the Codex-default OPL runtime surface with the one-person-lab-app shells/aionui adapter.');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('Add `manifest_command` to active bindings that still lack a domain-owned manifest surface.');
   }
@@ -144,7 +144,7 @@ export function buildCurrentReadinessProjection(
     surface_id: 'opl_current_readiness_projection',
     entry_surface: 'opl_codex_default_session_runtime',
     runtime_substrate: 'codex_default_with_explicit_external_substrates',
-    shell_integration_target: 'opl_aion_shell_aionui_adapter',
+    shell_integration_target: 'one_person_lab_app_shells_aionui_adapter',
     overall_status: summary.usable_now_projects_count > 0 ? 'usable_with_known_gaps' : 'setup_incomplete',
     domain_entry_parity: domainEntryParity,
     domain_binding_parity: domainBindingParity,

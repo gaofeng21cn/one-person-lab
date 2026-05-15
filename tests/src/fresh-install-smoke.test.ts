@@ -151,6 +151,7 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
     gui_accessibility_labels: Record<string, string>;
     gui_vm_implementation: {
       repo: string;
+      shell_root: string;
       packaged_guest_smoke_command: string;
       tart_host_smoke_command: string;
       nightly_workflow: string;
@@ -173,7 +174,8 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.equal(matrix.gui_accessibility_labels.codex_configure_button, 'opl-first-run-configure-codex-button');
   assert.equal(matrix.gui_accessibility_labels.retry_button, 'opl-first-run-retry-button');
   assert.equal(matrix.gui_accessibility_labels.guid_entry, 'opl-guid-entry');
-  assert.equal(matrix.gui_vm_implementation.repo, 'gaofeng21cn/opl-aion-shell');
+  assert.equal(matrix.gui_vm_implementation.repo, 'gaofeng21cn/one-person-lab-app');
+  assert.equal(matrix.gui_vm_implementation.shell_root, 'shells/aionui');
   assert.match(matrix.gui_vm_implementation.packaged_guest_smoke_command, /test:opl-first-run-vm/);
   assert.match(matrix.gui_vm_implementation.tart_host_smoke_command, /test:opl-first-run-vm:tart/);
   assert.equal(matrix.gui_vm_implementation.nightly_workflow, '.github/workflows/opl-first-run-vm.yml');

@@ -39,9 +39,9 @@ jobs:
       - name: Checkout OPL GUI shell
         uses: actions/checkout@v4
         with:
-          repository: gaofeng21cn/opl-aion-shell
+          repository: gaofeng21cn/one-person-lab-app
           ref: main
-          path: opl-aion-shell
+          path: one-person-lab-app
 
       - name: Checkout Hermes-Agent
         uses: actions/checkout@v4
@@ -133,7 +133,7 @@ jobs:
         run: npm run build
 
       - name: Install GUI dependencies
-        working-directory: opl-aion-shell
+        working-directory: one-person-lab-app/shells/aionui
         shell: bash
         run: |
           set -euo pipefail
@@ -265,7 +265,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          app_path="$GITHUB_WORKSPACE/opl-aion-shell/out/mac-arm64/One Person Lab.app"
+          app_path="$GITHUB_WORKSPACE/one-person-lab-app/shells/aionui/out/mac-arm64/One Person Lab.app"
           dmg_path="$GITHUB_WORKSPACE/one-person-lab/dist/opl-full-release/One-Person-Lab-Full-${OPL_RELEASE_VERSION}-mac-arm64.dmg"
           if [ "${OPL_MAC_STRICT_SIGNING_CHECKS:-false}" = "true" ]; then
             codesign --verify --deep --strict --verbose=2 "$app_path"
@@ -294,7 +294,7 @@ jobs:
           npm run gui:release -- \
             --no-build \
             --dry-run \
-            --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
+            --shell-root "$GITHUB_WORKSPACE/one-person-lab-app/shells/aionui" \
             --version "$OPL_RELEASE_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
             --full-package-only \
@@ -334,7 +334,7 @@ jobs:
         run: |
           npm run gui:release -- \
             --no-build \
-            --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
+            --shell-root "$GITHUB_WORKSPACE/one-person-lab-app/shells/aionui" \
             --version "$OPL_RELEASE_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
             --full-package-only \
