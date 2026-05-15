@@ -29,6 +29,11 @@ export function paperAutonomyProjection(
     : Array.isArray(payload.source_refs)
       ? payload.source_refs
       : [];
+  const sourceFingerprint = typeof repairWorkUnit.source_fingerprint === 'string'
+    ? repairWorkUnit.source_fingerprint
+    : typeof payload.source_fingerprint === 'string'
+      ? payload.source_fingerprint
+      : null;
   const guardedApply = task.task_kind === 'paper_autonomy/guarded-apply';
   return {
     surface_kind: 'opl_mas_paper_autonomy_task_projection',
@@ -49,9 +54,7 @@ export function paperAutonomyProjection(
         : null,
     repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
     source_refs: sourceRefs,
-    source_fingerprint: typeof repairWorkUnit.source_fingerprint === 'string'
-      ? repairWorkUnit.source_fingerprint
-      : null,
+    source_fingerprint: sourceFingerprint,
     idempotency_key: task.dedupe_key,
     authority_boundary: {
       writes_mas_truth: false,
