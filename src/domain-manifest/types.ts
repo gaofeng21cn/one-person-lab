@@ -6,6 +6,11 @@ import type {
 import type { FamilyActionCatalog } from '../family-action-catalog-contract.ts';
 import type { FamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import type { FamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
+import type {
+  FamilyTransitionMatrixCase,
+  FamilyTransitionMatrixResult,
+  FamilyTransitionSpec,
+} from '../family-transition-runner.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -194,6 +199,28 @@ export interface NormalizedAutomationCatalog {
   summary: string;
   automations: NormalizedAutomationDescriptor[];
   readiness_summary: string | null;
+}
+
+export interface NormalizedFamilyTransitionProjection {
+  surface_kind: 'family_transition_manifest_projection';
+  status: 'missing' | 'descriptor_only' | 'matrix_evaluated' | 'blocked';
+  spec_id: string | null;
+  target_domain_id: string | null;
+  owner: string | null;
+  transition_count: number;
+  case_count: number;
+  refresh_required: boolean;
+  blocked_reason: string | null;
+  descriptor: JsonRecord | null;
+  locator_refs: JsonRecord;
+  matrix_result: FamilyTransitionMatrixResult | null;
+  authority_boundary: JsonRecord;
+  non_authority_flags: {
+    opl_interprets_domain_quality: false;
+    opl_executes_domain_action: false;
+    opl_writes_domain_truth: false;
+    opl_authorizes_publication_or_fundability_verdict: false;
+  };
 }
 
 export type DomainManifestStatus =
@@ -463,6 +490,10 @@ export interface NormalizedDomainManifest {
   } | null;
   family_action_catalog: FamilyActionCatalog | null;
   family_stage_control_plane: FamilyStageControlPlane | null;
+  family_transition_spec_descriptor: JsonRecord | null;
+  family_transition_spec: FamilyTransitionSpec | null;
+  family_transition_matrix_cases: FamilyTransitionMatrixCase[];
+  family_transition: NormalizedFamilyTransitionProjection;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;
   standard_domain_agent_skeleton_source_field: string | null;

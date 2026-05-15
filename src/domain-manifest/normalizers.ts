@@ -7,6 +7,7 @@ import { normalizeFamilyActionCatalog } from '../family-action-catalog-contract.
 import { normalizeFamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
+import { normalizeFamilyTransitionSurfaces } from './family-transition-normalizer.ts';
 import {
   normalizeArtifactInventory,
   normalizeAutomationCatalog,
@@ -837,6 +838,8 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     : null;
   const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
   const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
+  const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
+  const familyTransitionSurfaces = normalizeFamilyTransitionSurfaces(manifest, manifestTargetDomainId);
   const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
   const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
@@ -916,7 +919,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
           ? manifest.schema_version
           : null,
     manifest_kind: requireString(manifest.manifest_kind, 'manifest_kind'),
-    target_domain_id: requireString(manifest.target_domain_id, 'target_domain_id'),
+    target_domain_id: manifestTargetDomainId,
     formal_entry: {
       default: requireString(formalEntry.default, 'formal_entry.default'),
       supported_protocols: readStringList(formalEntry.supported_protocols),
@@ -969,6 +972,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
       : null,
     family_action_catalog: familyActionCatalog,
     family_stage_control_plane: familyStageControlPlane,
+    ...familyTransitionSurfaces,
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
