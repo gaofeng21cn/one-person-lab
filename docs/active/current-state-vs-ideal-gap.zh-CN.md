@@ -27,13 +27,13 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 本文对照 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.zh-CN.md)。MAS/MAG/RCA 的单仓理想态、仓内差距和实施计划回到各自仓库维护；OPL 只维护 family-level framework、shared primitive、App/workbench 和 domain admission 的完善顺序。当前状态和比例判断仍以 [OPL 当前状态](../status.md)、[OPL 架构](../architecture.md)、[OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md) 与 [OPL 生产级框架闭环差距矩阵](./production-framework-closure-gap-matrix.zh-CN.md) 为准。
 
-## Fresh Evidence 2026-05-14
+## Fresh Evidence 2026-05-15
 
 本次文档使用以下 fresh checks：
 
 | surface | fresh result | 读法 |
 | --- | --- | --- |
-| `git status --short` | OPL 当前有本轮实现与文档改动；MAG/RCA/MAS 证据来自各自 active manifest / runtime surface | 当前 gap 文档基于 fresh read model 和 runtime ledger；不把未提交文档当作已发布机器真相。 |
+| `git status --short` | OPL 当前已回到干净 `main...origin/main`；MAG/RCA/MAS 证据来自各自 active manifest / runtime surface | 当前 gap 文档基于 fresh read model 和 runtime ledger；不把未提交文档当作已发布机器真相。 |
 | `./bin/opl agents list --json` | `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`physical_skeleton_evidence_observed_count=3`、`physical_skeleton_audit_pending_count=0`、`production_closure_gap_count=12`、`provider_temporal_residency_gap_status=closed_by_fresh_proven_proof` | 三仓 descriptor 已对齐；MAS/MAG/RCA 均已有 repo-source anchor evidence；provider residency gap 已由 fresh Temporal proof 关闭；剩余 production closure 仍未闭合。 |
 | `./bin/opl agents descriptors --json` | `descriptor_surfaces_resolved_count=3`、`memory_descriptor_resolved_count=3`、`stage_control_plane_resolved_count=3`、`action_catalog_resolved_count=3`、`physical_skeleton_evidence_observed_count=3`、`physical_skeleton_audit_pending_count=0`、`production_closure_gap_count=12`、`provider_temporal_residency_gap_status=closed_by_fresh_proven_proof` | 统一 domain-agent descriptor 总入口已可用；它聚合 refs、readiness、parity、authority boundary 和 provider closure evidence，不承载 domain truth 或 memory body。 |
 | `node dist/cli.js agents descriptors --json` | `descriptor_surfaces_resolved_count=3`、`memory_descriptor_resolved_count=3`、`stage_control_plane_resolved_count=3`、`action_catalog_resolved_count=3`、`physical_skeleton_evidence_observed_count=3`、`physical_skeleton_audit_pending_count=0` | release/dist CLI 已与 canonical `./bin/opl` descriptor 入口同步；后续作为持续验证项保留。 |
