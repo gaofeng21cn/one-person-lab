@@ -635,16 +635,20 @@ test('framework production-closeout reports functional blockers without taking d
       mag.production_closure_gaps.find((gap: { gap_id: string }) =>
         gap.gap_id === 'legacy_surface_physical_retirement'
       ).evidence_refs,
-      [
-        'agent/README.md',
-        'contracts/README.md',
-        'runtime/README.md',
-        'docs/status.md',
-        'docs/history/specs/hermes-tombstone.md',
-        'docs/decisions.md#temporal-runtime',
-      ],
+        [
+          'agent/README.md',
+          'contracts/README.md',
+          'runtime/README.md',
+          'docs/status.md',
+          'docs/history/specs/hermes-tombstone.md',
+          'docs/decisions.md#temporal-runtime',
+        ],
     );
     assert.equal(mas.managed_temporal_state_consistency_declared, true);
+    assert.equal(mas.family_stage_control_plane_declared, true);
+    assert.equal(mas.domain_memory_descriptor_declared, false);
+    assert.equal(mas.owner_receipt_contract_declared, true);
+    assert.equal(mas.legacy_retirement_tombstone_declared, true);
     assert.equal(
       closeout.typed_blockers.some((blocker: { blocker_id: string }) =>
         blocker.blocker_id === 'temporal_provider_not_configured'
