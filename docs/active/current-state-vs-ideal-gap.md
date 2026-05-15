@@ -197,17 +197,17 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 ### 已经成立
 
-- 当前 App 维护拓扑已迁移到 `one-person-lab-app`；活动 GUI shell 位于 `shells/aionui/`，作为 OPL fork of AionUI 的 upstream-backed adapter 维护。
-- App repo split 已完成：独立 `one-person-lab-app` 产品仓持有 App 顶层文档、合同、脚本和 release/test lifecycle；本机 checkout 路径已同步为 `/Users/gaofeng/workspace/one-person-lab-app`；当前 AionUI fork 作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护；AionUI 2.0 或其他 GUI 基座可在 `shells/*-next` 并行适配，验证通过后再切 active shell。
+- 当前 App 维护拓扑已迁移为 clean App repo + 独立 shell repo：`one-person-lab-app` 持有 App 产品层，`opl-aion-shell` 持有 upstream-backed AionUI shell adapter。
+- App repo split 已完成为本地默认拓扑：独立 `one-person-lab-app` 产品仓持有 App 顶层文档、合同、脚本和 release/test lifecycle；本机 checkout 路径已同步为 `/Users/gaofeng/workspace/one-person-lab-app`；当前 AionUI fork 作为 `/Users/gaofeng/workspace/opl-aion-shell` 下的 upstream-backed shell repo 维护，并通过 App repo 的 `shells/aionui` external checkout 被消费。AionUI 2.0 或其他 GUI 基座可在 shell repo 或 App external checkout 合同下并行适配，验证通过后再切 active shell。
 - App 作为 OPL-branded GUI shell，消费 Codex-default session/runtime truth、OPL runtime snapshot、stage-attempt workbench / operator item、provider continuous proof operator item 和 domain-owned projection。
-- OPL 主仓状态已明确 App 预编译包由 `one-person-lab-app/shells/aionui` 构建，Framework 兼容阶段继续负责打开已安装 App、发现 / 上传当前 release DMG，后续再按 App release manifest 切换用户下载 source-of-truth。
+- OPL 主仓状态已明确 App 预编译包由 App repo release wrapper 调用 `opl-aion-shell` 构建；Framework 只负责打开已安装 App 和发现 App repo release DMG，不上传或构建 App release artifact。
 - App / workbench 已有 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 等 operator 状态轴的实现方向。
 
 ### 主要差距
 
 - App 不是 runtime owner，也不是 domain truth owner；它不能替代 OPL Framework 或 MAS/MAG/RCA。
 - 当前 fresh runtime snapshot 没有 running domain attempt，但 `stage_attempt_workbench.total=18` 且 18 条 attempt 均 completed，覆盖 `medautogrant=11`、`medautoscience=6`、`redcube=1`，其中 MAS 最新 guarded-apply attempt 已指向 owner stable blocker receipt；provider proof receipt drilldown 已进入 snapshot 的 attention / recent lane item，stage-attempt operator item 已能投影 domain/stage/blocker/memory/artifact locator refs 与 action route refs，native helper execution envelope 已能投影现有 native index / helper receipt metadata。App repo split、contracts / unit / DOM / release mock / fresh-install matrix 级验证已完成；2026-05-15 已用 `one-person-lab-app/shells/aionui` 26.5.15 arm64 build 替换 `/Applications/One Person Lab.app` 并跑通真实 GUI 启动 smoke，smoke artifact `artifacts/opl-installed-smoke-20260515-154821` 记录 `status=passed`、`app_path=/Applications/One Person Lab.app`、label `opl-guid-entry`。App 仍缺真实生产运行状态下的 domain progress owner receipt、artifact mutation receipt、route/decision map drilldown、review/repair queue、artifact gallery/handoff drilldown 与长时运行 drilldown 证据。
-- App 仓仍是 fork overlay，需要持续处理 upstream AionUI intake 与 OPL-specific overlay 边界。
+- App 仓不再作为 fork overlay；upstream AionUI intake 与 OPL-specific overlay 边界由 `opl-aion-shell` 持有。
 - App 顶层承接产品、发布验证和测试生命周期；AionUI 规则收缩到 `shells/aionui/`。Framework 只保留 App release discovery/consumer surface 和 App/workbench 可消费机器接口，不拥有 App 发布流程或 GUI source fork。
 - 如果界面展示 provider completion、domain ready verdict、quality verdict 或 artifact authority，需要持续防止文案越权。
 

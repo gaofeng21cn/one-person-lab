@@ -4,17 +4,17 @@
 
 ## 当前 WebUI 边界
 
-面向用户的 WebUI 是 `one-person-lab-app/shells/aionui` 维护的 One Person Lab 品牌 AionUI 壳，并以 One Person Lab App / WebUI 构建产物发布。OPL 主仓继续负责安装入口、运行时合同、模块管理和文档。
+面向用户的 WebUI 是 `opl-aion-shell` 维护的 One Person Lab 品牌 AionUI 壳，并由 `one-person-lab-app` 作为 App/WebUI 产品发布。OPL 主仓继续负责安装入口、运行时合同、模块管理和文档。
 
 已退役的 headless Product API Web surface 不是用户 WebUI 入口。新的部署说明不要把历史本地 Product API 端口写成浏览器入口。
 
 ## Docker 镜像
 
-从 `one-person-lab-app/shells/aionui` 构建 WebUI 镜像：
+从 shell 仓构建 WebUI 镜像：
 
 ```bash
-git clone https://github.com/gaofeng21cn/one-person-lab-app.git
-cd one-person-lab-app/shells/aionui
+git clone https://github.com/gaofeng21cn/opl-aion-shell.git
+cd opl-aion-shell
 docker build -t one-person-lab-webui .
 ```
 
@@ -167,4 +167,4 @@ curl -fsS http://127.0.0.1:3000/api/auth/user
 - 容器内建议使用 `CODEX_HOME=/data/codex`，让 Codex 默认配置跟随 OPL 状态一起保存。
 - 保留 `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills`，除非明确要替换随镜像打入的 companion skill 集合。
 - provider API key 使用部署 secrets 管理。
-- OPL 主仓继续作为安装入口和合同来源；`one-person-lab-app/shells/aionui` 作为 WebUI 实现和构建来源。
+- OPL 主仓继续作为安装入口和合同来源；`opl-aion-shell` 作为 WebUI 实现和构建来源，`one-person-lab-app` 持有用户下载与发布面。
