@@ -24,14 +24,27 @@ function providerHostedTaskDeclared(payload: Record<string, unknown>) {
   return payload.opl_provider_hosted_stage_attempt === true
     || payload.provider_hosted_stage_attempt === true
     || Boolean(optionalString(payload.provider_attempt_id))
+    || isRecord(payload.family_transition)
     || isRecord(payload.controlled_stage_attempt)
     || isRecord(payload.controlled_stage_attempt_projection)
     || isRecord(payload.controlled_soak_no_regression_attempt);
 }
 
+function familyTransitionResult(payload: Record<string, unknown>) {
+  const transition = isRecord(payload.family_transition) ? payload.family_transition : null;
+  if (!transition) {
+    return null;
+  }
+  return optionalString(transition.transition_id) ? transition : null;
+}
+
 function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
   if (row.domain_id === 'medautoscience' && row.task_kind === 'paper_autonomy/guarded-apply') {
     return row.task_kind;
+  }
+  const transition = familyTransitionResult(payload);
+  if (transition) {
+    return `family_transition:${optionalString(transition.transition_id)}`;
   }
   if (!providerHostedTaskDeclared(payload)) {
     return null;
@@ -86,6 +99,25 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
       locator[key] = payload[key];
     }
   }
+  const transition = familyTransitionResult(payload);
+  if (transition) {
+    locator.family_transition = transition;
+    locator.transition_bridge = {
+      surface_kind: 'opl_family_transition_provider_bridge',
+      transition_id: optionalString(transition.transition_id),
+      transition_status: optionalString(transition.status),
+      current_state: optionalString(transition.current_state),
+      next_state: optionalString(transition.next_state),
+      event: optionalString(transition.event),
+      owner_route: isRecord(transition.owner_route) ? transition.owner_route : null,
+      receipt: isRecord(transition.receipt) ? transition.receipt : null,
+      projection: isRecord(transition.projection) ? transition.projection : null,
+      opl_executes_domain_action: false,
+      opl_writes_domain_truth: false,
+      opl_authorizes_domain_verdict: false,
+      domain_owner_receipt_required: true,
+    };
+  }
   const lifecycleApplyRequests = recordList(payload.lifecycle_apply_requests);
   if (lifecycleApplyRequests.length > 0) {
     locator.lifecycle_apply_requests = lifecycleApplyRequests;
@@ -105,6 +137,17 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
 }
 
 function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+  const transition = familyTransitionResult(payload);
+  if (transition) {
+    return stableId('transition_source', [
+      row.domain_id,
+      row.task_kind,
+      optionalString(transition.transition_id),
+      optionalString(transition.current_state),
+      optionalString(transition.next_state),
+      isRecord(transition.receipt) ? transition.receipt : null,
+    ]);
+  }
   for (const value of [
     payload.source_fingerprint,
     payload.idempotency_key,
