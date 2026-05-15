@@ -127,6 +127,11 @@ function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
       ref: '/grant_transition_oracle',
       status: manifest?.grant_transition_oracle ? 'resolved' : 'missing',
     },
+    visual_transition_spec: {
+      ref_kind: 'json_pointer',
+      ref: '/visual_transition_spec',
+      status: manifest?.visual_transition_spec ? 'resolved' : 'missing',
+    },
     domain_memory_descriptor: {
       ref_kind: 'json_pointer',
       ref: '/domain_memory_descriptor',
