@@ -64,10 +64,10 @@
 
 当前冻结下来的边界真相，并不只存在于这份 closeout 文档里，而是落在已有 tracked path 中：
 
-- [OPL 任务版图](../../public/task-map.md)
-- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
-- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
-- [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
+- [OPL 任务版图](../../../public/task-map.md)
+- [OPL Candidate Domain Backlog](../../../references/domain-admission/opl-candidate-domain-backlog.md)
+- [OPL Domain Onboarding Contract](../../../specs/opl-domain-onboarding-contract.md)
+- [OPL Gateway Acceptance Test Spec](../../compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 
 这轮 tranche 对应的 checkpoint commit：
 

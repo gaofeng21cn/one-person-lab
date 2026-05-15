@@ -44,10 +44,10 @@
 
 ## 上位合同
 
-- [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
 - [OPL Governance / Audit Operating Surface](../operating-governance/opl-governance-audit-operating-surface.md)
-- [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
-- [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
+- [OPL Framework Contracts](../../../../../contracts/opl-framework/README.md)
+- [OPL Gateway Acceptance Test Spec](../opl-gateway-acceptance-test-spec.md)
 
 ## 完成定义
 

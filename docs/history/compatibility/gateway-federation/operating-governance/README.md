@@ -17,9 +17,9 @@ Machine boundary: 本目录只保存旧 gateway-derived operating governance 词
 
 当前 operating governance 入口：
 
-- [OPL 系列项目开发主参考](../../../active/opl-family-development-reference.md)
-- [Family Domain Memory Governance](../../../references/operating-governance/family-domain-memory-governance.md)
-- [Family Domain Quality Projection Contract](../../../references/operating-governance/family-domain-quality-projection-contract.md)
-- [Family Product Operator Projection](../../../references/operating-governance/family-product-operator-projection.md)
+- [OPL 系列项目开发主参考](../../../../active/opl-family-development-reference.md)
+- [Family Domain Memory Governance](../../../../references/operating-governance/family-domain-memory-governance.md)
+- [Family Domain Quality Projection Contract](../../../../references/operating-governance/family-domain-quality-projection-contract.md)
+- [Family Product Operator Projection](../../../../references/operating-governance/family-product-operator-projection.md)
 
 读取规则：旧 `gateway` / `domain_gateway` / `follow_on_route_surface` literal 只保留 reviewability 和 provenance 语义；新增 active surface 必须使用当前 stage-led framework、domain-owned capability entry、descriptor、receipt 和 projection 语言。
