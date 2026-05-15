@@ -323,6 +323,27 @@ test('framework production-closeout reports functional blockers without taking d
           contract_id: 'opl_temporal_controlled_stage_attempt_apply_contract',
           owner_receipt_refs: ['receipt:mag:owner-apply'],
         },
+        transition_bridge: {
+          transition_id: 'call_intake_complete_to_fundability_strategy',
+          transition_status: 'blocked_by_domain_owner',
+          current_state: 'call_intake_complete',
+          next_state: 'fundability_strategy_ready',
+          event: 'call_intake_confirmed',
+          domain_owner_receipt_required: true,
+          evidence: {
+            receipt_refs: ['transition:mag:call-intake-receipt'],
+            owner_receipt_refs: ['transition:mag:owner-strategy-receipt'],
+            no_regression_evidence_refs: ['transition:mag:no-regression'],
+            typed_blocker_refs: ['transition:mag:blocker:owner-strategy'],
+            typed_blockers: [{
+              blocker_kind: 'domain_owner_receipt_required',
+              blocker_id: 'mag:transition_owner_strategy_receipt_required',
+              owner: 'med-auto-grant',
+              source_surface: 'transition_bridge',
+            }],
+            opl_evidence_boundary: 'refs_only_no_domain_verdict_authority',
+          },
+        },
       }),
       '--source-fingerprint',
       'sha256:mag-owner-receipt',
@@ -516,6 +537,16 @@ test('framework production-closeout reports functional blockers without taking d
       closeout.stage_attempt_evidence.generic_projection_summary.memory_locator_index.consumed_memory_ref_count,
       1,
     );
+    assert.equal(closeout.stage_attempt_evidence.generic_projection_summary.transition_bridge_evidence.owner_receipt_ref_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.transition_bridge_evidence_summary.no_regression_evidence_ref_count, 1);
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.transition_bridge_evidence.authority_boundary.can_write_domain_truth,
+      false,
+    );
+    assert.equal(
+      closeout.stage_attempt_evidence.generic_projections.projections.transition_bridge_evidence.authority_boundary.can_execute_domain_action,
+      false,
+    );
     assert.equal(
       closeout.stage_attempt_evidence.generic_projections.projections.artifact_gallery.authority_boundary.can_read_artifact_body,
       false,
@@ -557,6 +588,11 @@ test('framework production-closeout reports functional blockers without taking d
     const mas = closeout.domains.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
     assert.equal(mag.stage_attempt_evidence.owner_receipt_refs[0], 'receipt:mag:owner-apply');
     assert.equal(mag.stage_attempt_evidence.no_regression_evidence_refs[0], 'receipt:mag:no-regression');
+    assert.deepEqual(mag.stage_attempt_evidence.transition_bridge_receipt_refs, ['transition:mag:call-intake-receipt']);
+    assert.deepEqual(mag.stage_attempt_evidence.transition_bridge_owner_receipt_refs, ['transition:mag:owner-strategy-receipt']);
+    assert.deepEqual(mag.stage_attempt_evidence.transition_bridge_no_regression_evidence_refs, ['transition:mag:no-regression']);
+    assert.deepEqual(mag.stage_attempt_evidence.transition_bridge_typed_blocker_refs, ['transition:mag:blocker:owner-strategy']);
+    assert.equal(mag.stage_attempt_evidence.transition_bridge_typed_blocker_count, 1);
     assert.equal(mag.stage_attempt_evidence.operator_direct_skill_route_refs.includes('skill:medautogrant'), true);
     assert.equal(
       mag.stage_attempt_evidence.operator_direct_skill_route_refs.includes(
