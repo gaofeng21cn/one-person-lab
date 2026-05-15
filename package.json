@@ -84,5 +84,6 @@
     "@temporalio/testing": "^1.17.1",
     "@types/node": "^24.5.2",
     "typescript": "^5.8.3"
-  }
+  },
+  "license": "Apache-2.0"
 }
