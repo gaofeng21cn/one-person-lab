@@ -31,7 +31,7 @@ need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     printf 'Missing required command: %s\n' "$1" >&2
     printf '\n' >&2
-    printf 'One Person Lab needs git, Node.js, and npm before it can run the one-shot installer.\n' >&2
+    printf 'One Person Lab needs git, Node.js, and npm before it can run the framework bootstrap.\n' >&2
     if [ "$(uname -s)" = "Darwin" ]; then
       printf 'Fastest macOS setup:\n' >&2
       printf '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\n' >&2
@@ -50,7 +50,7 @@ need_cmd() {
     fi
     printf '\n' >&2
     printf 'After that, rerun:\n' >&2
-    printf '  curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash\n' >&2
+    printf '  curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main/install.sh | bash\n' >&2
     exit 1
   fi
 }
@@ -95,7 +95,7 @@ if [ "$BOOTSTRAP_ONLY" = "1" ]; then
   exit 0
 fi
 
-log "Running one-shot OPL setup"
+log "Running OPL framework bootstrap"
 if command -v opl >/dev/null 2>&1; then
   opl install "$@"
   log "Inspecting OPL system state"
