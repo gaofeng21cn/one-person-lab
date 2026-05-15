@@ -51,18 +51,18 @@ OPL 不负责 domain truth、domain quality verdict、publication/fundability/vi
 
 ### Domain repo 负责
 
-MAS/MAG/RCA 这类 Foundry Agent repo 负责领域大脑与领域交付 authority：
+MAS/MAG/RCA 这类 Foundry Agent repo 负责领域大脑、领域交付 authority 和 domain package 的薄程序面。这里的“薄程序面”是为了让 OPL 能发现、托管、审计和投影该 domain agent；它不构成第二套通用 framework/runtime。
 
 - domain stage semantics、prompt、skill、knowledge pack、route policy、quality rubric、review gate 和 artifact gate；
 - study/grant/visual truth、route decision、quality verdict、publication/fundability/visual/export authority；
 - memory body、retrieval semantics、writeback proposal 的领域含义、accept/reject decision 和 owner receipt；
 - canonical artifact/package/deck/manuscript/proposal authority、artifact mutation permission 和 export/submission gate；
-- direct app skill path、domain CLI/MCP/API、thin sidecar export/dispatch adapter、domain projection builder、artifact locator contract、receipt schema 和 typed blocker；
+- direct app skill path、domain CLI/MCP/API、descriptor、contract/schema、thin sidecar export/dispatch adapter、domain projection builder、domain transition spec/table、quality gate、artifact locator contract、receipt schema、tests 和 typed blocker；
 - direct path 与 OPL-hosted path 的语义等价、no-forbidden-write、no-regression evidence 和 owner-chain 证据。
 
-Domain repo 不应长期维护 generic scheduler、generic queue、generic attempt ledger、generic state-machine runner、generic workspace/source intake、generic memory locator、generic artifact lifecycle、generic workbench、generic observability 或跨 domain App shell。需要 OPL 托管运行时，domain repo 声明 stage pack、transition spec、authority refs、receipt schema、projection builder 和薄 adapter，由 OPL Framework 承载运行、恢复、排队、唤醒、投影和审计。
+Domain repo 不应长期维护 generic scheduler、generic queue、generic attempt ledger、generic state-machine runner、generic workspace/source intake、generic memory locator、generic artifact lifecycle、generic workbench、generic observability 或跨 domain App shell。需要 OPL 托管运行时，domain repo 声明 stage pack、transition spec、authority refs、receipt schema、projection builder 和 thin sidecar / adapter，由 OPL Framework 承载运行、恢复、排队、唤醒、投影和审计。
 
-单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
+单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。目录结构应与 OPL family taxonomy 保持同名一致，代码内部结构可以按领域实现差异保留，但 OPL-facing skeleton、docs taxonomy 和 owner boundary 应统一。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 
 ### App / Workbench 负责
 
