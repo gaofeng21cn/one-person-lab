@@ -11,6 +11,7 @@ import type {
   FamilyTransitionMatrixResult,
   FamilyTransitionSpec,
 } from '../family-transition-runner.ts';
+import type { GrantTransitionOracle } from '../family-transition-oracle-ingestion.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -494,6 +495,7 @@ export interface NormalizedDomainManifest {
   family_transition_spec: FamilyTransitionSpec | null;
   family_transition_matrix_cases: FamilyTransitionMatrixCase[];
   family_transition: NormalizedFamilyTransitionProjection;
+  grant_transition_oracle: GrantTransitionOracle | null;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;
   standard_domain_agent_skeleton_source_field: string | null;

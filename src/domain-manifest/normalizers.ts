@@ -8,6 +8,7 @@ import { normalizeFamilyStageControlPlane } from '../family-stage-control-plane-
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
 import { normalizeFamilyTransitionSurfaces } from './family-transition-normalizer.ts';
+import { normalizeGrantTransitionOracle } from '../family-transition-oracle-ingestion.ts';
 import {
   normalizeArtifactInventory,
   normalizeAutomationCatalog,
@@ -152,6 +153,10 @@ function buildStandardDomainAgentSkeletonCandidate(
       ? { physical_skeleton_follow_through: manifest.physical_skeleton_follow_through }
       : {}),
   };
+}
+
+function normalizeGrantTransitionOracleSurface(value: unknown) {
+  return isRecord(value) ? normalizeGrantTransitionOracle(value) : null;
 }
 
 function normalizeRuntimeControlSurfaceDescriptor(
@@ -840,6 +845,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
   const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
   const familyTransitionSurfaces = normalizeFamilyTransitionSurfaces(manifest, manifestTargetDomainId);
+  const grantTransitionOracle = normalizeGrantTransitionOracleSurface(manifest.grant_transition_oracle);
   const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
   const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
@@ -973,6 +979,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     family_action_catalog: familyActionCatalog,
     family_stage_control_plane: familyStageControlPlane,
     ...familyTransitionSurfaces,
+    grant_transition_oracle: grantTransitionOracle,
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
