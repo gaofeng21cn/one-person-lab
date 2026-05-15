@@ -103,7 +103,7 @@ MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry
 
 ### 仍需 OPL 层实现的目标能力
 
-对照 MAS、MAG、RCA 的理想态与当前三仓 read model，OPL 后续应优先补齐下面这些 framework 能力，而不是让 domain repo 各自复制：
+对照 MAS、MAG、RCA 的理想态与当前三仓 read model，OPL 后续应优先补齐下面这些 framework 能力，而不是让 domain repo 各自复制。更硬的规则是：同一份 canonical action/stage metadata 负责派生 CLI、MCP、Skill、product-entry 与 sidecar 的 descriptor / routing metadata；OPL 只做发现、投影和校验，不派生 domain handler，也不派生 domain truth：
 
 - `state-machine runner`：OPL 已有 domain-neutral transition schema、runner 和 matrix runner 基础；后续继续补 tick loop、provider attempt bridge、retry/dead-letter、human gate transport、dispatch receipt 和真实 domain spec ingestion。Domain repo 提供 transition spec；OPL 只执行和审计 spec，不解释医学发表、基金 fundability 或视觉 export ready。
 - `provider SLO executor`：把当前 Temporal production proof / `operator_slo_repair_loop` 从 read-model 推进到周期性 supervised execution receipt、overdue repair receipt、restart/re-query/signal/history 长时证据。该能力只证明 provider residency，不证明 domain ready。
