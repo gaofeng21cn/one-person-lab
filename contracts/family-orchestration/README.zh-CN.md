@@ -112,6 +112,8 @@
 
 因此 MAS 的 `mas_publication_route_memory` 可以作为 `domain_memory_descriptor` 被统一 descriptor 发现，但论文套路正文仍由 MAS Markdown-first memory 管理；OPL 只把 operator 带到正确 refs。
 
+更硬的规则是：`family_action_catalog`、`family_stage_control_plane` 与 `family-product-entry-manifest-v2` 共同构成 canonical action/stage metadata source。CLI、MCP、Skill、product-entry、sidecar 以及 OPL-hosted route 的 descriptor 和 routing metadata 都应从这份同一来源派生；`OPL` 只负责发现、投影和校验，不派生 domain handler，也不派生 domain truth。
+
 ## Persistence / Lifecycle / Owner-Route Freeze
 
 family-level persistence 与 lifecycle surface 只属于共享控制面合同。它们让 domain 仓能用同一形状暴露 durable state role、lifecycle receipt 与 next-owner routing，但不把 domain truth 迁入 `OPL`。
@@ -146,6 +148,7 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 - MCP tool catalog descriptor
 - Skill command contract descriptor
 - product-entry operator-loop action descriptor
+- sidecar export/dispatch descriptor
 - OpenAI function tool descriptor
 - AI SDK tool descriptor
 
