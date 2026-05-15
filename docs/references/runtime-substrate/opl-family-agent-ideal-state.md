@@ -12,7 +12,7 @@ Date: `2026-05-13`
 
 `MAS`、`MAG`、`RCA` 以及未来 Patent、Award、Thesis、Review 等 `Foundry Agents` 是基于 OPL Framework 开发的垂类智能体。它们持有领域知识、stage 语义、领域真相、质量 verdict 与交付 authority；它们复用 OPL 的运行外围能力，不重复维护 scheduler、queue、attempt ledger、workspace lifecycle、artifact index、memory locator、resume token、operator projection 这类通用模块。
 
-换句话说，理想 Foundry Agent 是 `Domain Knowledge / Authority Pack + thin adapter`，不是自带一套运行平台。开发、运行、托管、恢复、排队、唤醒、状态机执行、工作区生命周期、文件生命周期、App/workbench 投影和跨 domain 审计都应由 OPL Framework / One Person Lab App 提供通用承载；Foundry Agent 只声明 stage 内需要做什么、如何判断质量、谁能写 truth、哪些 artifact 可变更、以及完成或阻塞时返回什么 receipt。
+换句话说，理想 Foundry Agent 是 `Domain Knowledge / Authority Pack + thin program surface`，不是自带一套运行平台。开发、运行、托管、恢复、排队、唤醒、状态机执行、工作区生命周期、文件生命周期、App/workbench 投影和跨 domain 审计都应由 OPL Framework / One Person Lab App 提供通用承载；Foundry Agent 只声明 stage 内需要做什么、如何判断质量、谁能写 truth、哪些 artifact 可变更、以及完成或阻塞时返回什么 receipt。这里的 thin program surface 包括 descriptor、contract/schema、sidecar/thin adapter、projection builder、domain transition spec/table、quality gate、artifact locator、receipt schema、tests 和 domain entry；它服务 OPL 发现、托管、审计和投影，不构成第二套 generic framework/runtime。
 
 状态机也按这个边界拆分：OPL Framework 提供 generic state-machine engine，包括 transition schema、幂等 tick、attempt/retry/dead-letter、human gate transport、dispatch receipt、operator projection 和 transition matrix runner；Foundry Agents 提供 domain transition table / spec。OPL 可以验证和执行 domain 声明的 transition spec，但不能把 MAS 的 publication gate、MAG 的 fundability gate 或 RCA 的 visual/export gate 解释成 OPL 自己的 ready verdict。
 
@@ -140,7 +140,7 @@ OPL 负责 stage 的发现、排队、唤醒、恢复、投影和审计。Stage 
 
 ## Foundry Agents 的理想职责
 
-垂类 Agent 的目标是把领域专业性做好，把通用运行外围交给 OPL。
+垂类 Agent 的目标是把领域专业性做好，把通用运行外围交给 OPL。它们保留 domain package 必需的薄程序面，但不承担 generic framework/runtime。
 
 每个 Foundry Agent 应持有：
 
@@ -150,6 +150,7 @@ OPL 负责 stage 的发现、排队、唤醒、恢复、投影和审计。Stage 
 - 领域 truth reducer、quality gate、review gate、artifact/package authority。
 - domain-owned sidecar export / dispatch surface。
 - OPL-readable descriptor、receipt schema、projection builder、artifact locator contract 和 lifecycle adapter。
+- domain transition spec/table、oracle fixture、owner action、typed blocker、focused tests 和 domain entry。
 - Direct Codex skill path 与 OPL-hosted path 的语义等价证明。
 
 每个 Foundry Agent 不需要重复维护：
@@ -200,7 +201,7 @@ domain-agent-repo/
     decisions.md
 ```
 
-该 skeleton 是 OPL 发现、托管、审计和投影所需的外部边界。Domain 内部可以继续使用最适合自己的语言、包结构、数据格式和专业 workflow。
+该 skeleton 是 OPL 发现、托管、审计和投影所需的外部边界。OPL-facing skeleton 与 docs taxonomy 应在 MAS/MAG/RCA 以及后续 domain agents 之间保持一致；Domain 内部可以继续使用最适合自己的语言、包结构、数据格式和专业 workflow。
 
 ## 当前与未来 Agent 家族
 
