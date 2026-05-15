@@ -5,6 +5,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  adaptGrantTransitionOracleToFamilyTransitionSpec,
+  buildGrantTransitionOracleMatrixCases,
+} from '../../src/family-transition-oracle-ingestion.ts';
+import {
   runFamilyTransition,
   runFamilyTransitionMatrix,
   type FamilyTransitionSpec,
@@ -115,6 +119,103 @@ const masLikeTransitionSpec = {
     },
   ],
 } satisfies FamilyTransitionSpec;
+
+const magLikeGrantTransitionOracle = {
+  surface_kind: 'mag_grant_transition_oracle',
+  version: 'mag-grant-transition-oracle.v1',
+  oracle_id: 'mag.grant_transition.oracle.v1',
+  target_domain_id: 'med-autogrant',
+  owner: 'med-autogrant',
+  state: 'domain_spec_landed_external_runner_gate',
+  runner_owner: 'one-person-lab',
+  runner_contract_ref: 'contracts/opl-framework/family-transition-runner-contract.json',
+  transition_table_status: 'landed',
+  oracle_fixture_status: 'landed',
+  stage_control_plane_ref: '/product_entry_manifest/family_stage_control_plane',
+  action_catalog_ref: '/product_entry_manifest/family_action_catalog',
+  authority_boundary: {
+    domain_truth_owner: 'med-autogrant',
+    fundability_verdict_owner: 'med-autogrant',
+    authoring_quality_verdict_owner: 'med-autogrant',
+    submission_ready_export_verdict_owner: 'med-autogrant',
+    opl_role: 'generic_transition_runner_only',
+    opl_can_infer_fundability_ready: false,
+    opl_can_infer_authoring_quality_ready: false,
+    opl_can_infer_submission_ready_export_ready: false,
+    opl_can_write_grant_truth: false,
+  },
+  transition_table: [
+    {
+      transition_id: 'call_intake_complete_to_fundability_strategy',
+      from_stage_id: 'call_and_candidate_intake',
+      to_stage_id: 'fundability_strategy',
+      guard_id: 'call_materials_and_profile_selected',
+      owner_action: 'open_grant_user_loop',
+      return_shape: 'domain_owner_receipt',
+      receipt_requirement: 'intake_handoff_receipt',
+      blocked_shape: 'typed_blocker',
+    },
+    {
+      transition_id: 'fundability_blocked_to_human_gate',
+      from_stage_id: 'fundability_strategy',
+      to_stage_id: 'fundability_strategy',
+      guard_id: 'fundability_blocker_requires_human_gate',
+      owner_action: 'open_grant_user_loop',
+      return_shape: 'typed_blocker',
+      receipt_requirement: 'human_gate_receipt',
+      blocked_shape: 'typed_blocker',
+    },
+    {
+      transition_id: 'review_closed_to_package_and_submit_ready',
+      from_stage_id: 'review_and_rebuttal',
+      to_stage_id: 'package_and_submit_ready',
+      guard_id: 'review_quality_closed',
+      owner_action: 'build_submission_ready_package',
+      return_shape: 'domain_owner_receipt',
+      receipt_requirement: 'quality_closure_receipt',
+      blocked_shape: 'typed_blocker',
+    },
+  ],
+  oracle_fixtures: [
+    {
+      fixture_id: 'call_intake_ready_to_fundability_strategy',
+      source_stage_id: 'call_and_candidate_intake',
+      input_state: {
+        call_materials_status: 'complete',
+        candidate_profile_status: 'selected',
+      },
+      expected_transition_id: 'call_intake_complete_to_fundability_strategy',
+    },
+    {
+      fixture_id: 'fundability_blocked_requests_human_gate',
+      source_stage_id: 'fundability_strategy',
+      input_state: {
+        fundability_verdict: 'blocked',
+        human_gate: 'required',
+      },
+      expected_transition_id: 'fundability_blocked_to_human_gate',
+    },
+    {
+      fixture_id: 'quality_closed_to_package',
+      source_stage_id: 'review_and_rebuttal',
+      input_state: {
+        review_verdict: 'closed',
+        quality_dossier_status: 'accepted',
+      },
+      expected_transition_id: 'review_closed_to_package_and_submit_ready',
+    },
+  ],
+  validation: {
+    status: 'ready_for_opl_runner_ingestion',
+    transition_count: 3,
+    oracle_fixture_count: 3,
+    checked_stage_count: 6,
+    checked_action_count: 5,
+    missing_stage_refs: [],
+    missing_action_refs: [],
+    missing_fixture_transition_refs: [],
+  },
+};
 
 test('family transition runner advances bundle_stage_ready through domain-declared owner route without domain verdict ownership', () => {
   const result = runFamilyTransition({
@@ -259,6 +360,9 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.equal(contract.runner_model, 'domain_declared_transition_table');
   assert.equal(contract.contract_version, 'family-transition-runner.v1');
   assert.equal(packageJson.exports['./family-transition-runner'], './dist/family-transition-runner.js');
+  assert.deepEqual(contract.oracle_ingestion.supported_surfaces, ['mag_grant_transition_oracle']);
+  assert.ok((contract.oracle_ingestion.adapter_boundary.opl as string[]).includes('adapt oracle fixtures into matrix cases'));
+  assert.ok((contract.oracle_ingestion.adapter_boundary.domain_agent as string[]).includes('fundability verdict'));
 
   for (const field of [
     'surface_kind',
@@ -300,4 +404,73 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.ok((contract.authority_boundary.opl as string[]).includes('matrix runner'));
   assert.ok((contract.authority_boundary.domain_agent as string[]).includes('domain transition table'));
   assert.ok((contract.authority_boundary.domain_agent as string[]).includes('oracle fixtures'));
+});
+
+test('grant transition oracle adapts MAG-owned table and fixtures into the generic matrix runner', () => {
+  const spec = adaptGrantTransitionOracleToFamilyTransitionSpec(magLikeGrantTransitionOracle);
+  const cases = buildGrantTransitionOracleMatrixCases(magLikeGrantTransitionOracle);
+  const matrix = runFamilyTransitionMatrix({ spec, cases });
+
+  assert.equal(spec.surface_kind, 'family_transition_spec');
+  assert.equal(spec.version, 'family-transition-runner.v1');
+  assert.equal(spec.spec_id, 'mag.grant_transition.oracle.v1');
+  assert.equal(spec.target_domain_id, 'med-autogrant');
+  assert.equal(spec.owner, 'med-autogrant');
+  assert.deepEqual(Object.keys(spec.guards).sort(), [
+    'call_materials_and_profile_selected',
+    'fundability_blocker_requires_human_gate',
+    'review_quality_closed',
+  ]);
+  assert.equal(spec.transitions[0].current_state, 'call_and_candidate_intake');
+  assert.equal(spec.transitions[0].event, 'domain_tick');
+  assert.deepEqual(spec.transitions[0].required_guards, ['call_materials_and_profile_selected']);
+  assert.deepEqual(spec.transitions[0].next_work_unit, {
+    work_unit_ref: 'mag-work-unit:fundability_strategy',
+    action_refs: ['open_grant_user_loop'],
+    metadata: {
+      owner_action: 'open_grant_user_loop',
+      return_shape: 'domain_owner_receipt',
+      receipt_requirement: 'intake_handoff_receipt',
+      blocked_shape: 'typed_blocker',
+    },
+  });
+  assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [
+    'mag-transition-receipt:intake_handoff_receipt',
+  ]);
+  assert.equal(spec.transitions[1].typed_blocker?.blocker_code, 'human_gate_receipt');
+  assert.equal(spec.transitions[1].human_gate?.gate_ref, 'mag-human-gate:fundability_blocked_to_human_gate');
+  assert.equal(spec.authority_boundary.opl_can_infer_fundability_ready, false);
+
+  assert.equal(cases.length, 3);
+  assert.deepEqual(cases[1].guards, { fundability_blocker_requires_human_gate: true });
+  assert.equal(matrix.summary.total, 3);
+  assert.equal(matrix.summary.transition_applied, 3);
+  assert.deepEqual(
+    matrix.results.map((entry) => [entry.case_id, entry.result.transition_id, entry.result.next_state]),
+    [
+      [
+        'call_intake_ready_to_fundability_strategy',
+        'call_intake_complete_to_fundability_strategy',
+        'fundability_strategy',
+      ],
+      [
+        'fundability_blocked_requests_human_gate',
+        'fundability_blocked_to_human_gate',
+        'fundability_strategy',
+      ],
+      [
+        'quality_closed_to_package',
+        'review_closed_to_package_and_submit_ready',
+        'package_and_submit_ready',
+      ],
+    ],
+  );
+  assert.equal(
+    matrix.results[1].result.typed_blocker?.blocker_code,
+    'human_gate_receipt',
+  );
+  assert.equal(
+    matrix.results[1].result.authority_boundary.opl_can_write_grant_truth,
+    false,
+  );
 });

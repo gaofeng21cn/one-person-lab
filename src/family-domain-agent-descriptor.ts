@@ -5,6 +5,13 @@ import { buildFamilyActionCatalogParity } from './family-action-catalog.ts';
 import { buildStandardDomainAgentSkeletonInspection } from './family-domain-agent-skeleton.ts';
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
+import {
+  adaptGrantTransitionOracleToFamilyTransitionSpec,
+  buildGrantTransitionOracleMatrixCases,
+} from './family-transition-oracle-ingestion.ts';
+import {
+  runFamilyTransitionMatrix,
+} from './family-transition-runner.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -89,6 +96,11 @@ function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
       ref_kind: 'json_pointer',
       ref: '/family_stage_control_plane',
       status: manifest?.family_stage_control_plane ? 'resolved' : 'missing',
+    },
+    grant_transition_oracle: {
+      ref_kind: 'json_pointer',
+      ref: '/grant_transition_oracle',
+      status: manifest?.grant_transition_oracle ? 'resolved' : 'missing',
     },
     domain_memory_descriptor: {
       ref_kind: 'json_pointer',
@@ -205,6 +217,54 @@ function buildStageControlPlaneProjection(entry: DomainManifestCatalogEntry) {
     action_ref_count: plane?.stages.reduce((total, stage) => total + stage.allowed_action_refs.length, 0) ?? 0,
     parity: plane ? buildFamilyStageControlPlaneParity(plane, entry.manifest) : null,
     authority_boundary: plane?.authority_boundary ?? null,
+  };
+}
+
+function buildGrantTransitionOracleProjection(entry: DomainManifestCatalogEntry) {
+  const oracle = entry.manifest?.grant_transition_oracle ?? null;
+  if (!oracle) {
+    return {
+      status: componentStatus(entry, false),
+      oracle_id: null,
+      target_domain_id: entry.manifest?.target_domain_id ?? null,
+      owner: null,
+      state: null,
+      runner_owner: null,
+      runner_contract_ref: null,
+      transition_count: 0,
+      oracle_fixture_count: 0,
+      validation: null,
+      ingestion: null,
+      authority_boundary: null,
+    };
+  }
+  const spec = adaptGrantTransitionOracleToFamilyTransitionSpec(oracle);
+  const cases = buildGrantTransitionOracleMatrixCases(oracle);
+  const matrix = runFamilyTransitionMatrix({ spec, cases });
+  return {
+    status: componentStatus(entry, true),
+    oracle_id: oracle.oracle_id,
+    target_domain_id: oracle.target_domain_id,
+    owner: oracle.owner,
+    state: oracle.state ?? null,
+    runner_owner: oracle.runner_owner ?? null,
+    runner_contract_ref: oracle.runner_contract_ref ?? null,
+    transition_count: oracle.transition_table.length,
+    oracle_fixture_count: oracle.oracle_fixtures.length,
+    transition_ids: oracle.transition_table.map((transition) => transition.transition_id),
+    guard_ids: [...new Set(oracle.transition_table.map((transition) => transition.guard_id))],
+    validation: oracle.validation ?? null,
+    ingestion: {
+      spec_id: spec.spec_id,
+      runner_event: 'domain_tick',
+      matrix,
+      status:
+        matrix.summary.total === cases.length
+        && matrix.summary.transition_applied === cases.length
+          ? 'matrix_oracle_passed'
+          : 'matrix_oracle_not_fully_applied',
+    },
+    authority_boundary: oracle.authority_boundary,
   };
 }
 
@@ -373,6 +433,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
   const skeleton = buildSkeletonProjection(entry);
   const actionCatalog = buildActionCatalogProjection(entry);
   const stageControlPlane = buildStageControlPlaneProjection(entry);
+  const grantTransitionOracle = buildGrantTransitionOracleProjection(entry);
   const domainMemory = buildDomainMemoryProjection(entry);
   const skillCatalog = buildSkillProjection(manifest, entry);
   const runtimeSurfaces = buildRuntimeProjection(manifest, entry);
@@ -410,6 +471,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
     standard_domain_agent_skeleton: skeleton,
     family_action_catalog: actionCatalog,
     family_stage_control_plane: stageControlPlane,
+    grant_transition_oracle: grantTransitionOracle,
     domain_memory_descriptor: domainMemory,
     skill_catalog: skillCatalog,
     runtime_surfaces: runtimeSurfaces,
