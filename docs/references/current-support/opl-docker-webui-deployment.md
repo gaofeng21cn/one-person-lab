@@ -1,18 +1,16 @@
-**English** | [中文](./opl-docker-webui-deployment.zh-CN.md)
+# OPL Docker WebUI 部署参考
 
-# OPL Docker WebUI Deployment Reference
+这份参考文档面向在 Linux 服务器、Docker 容器或浏览器访问路径中部署 One Person Lab 的使用者和维护者。
 
-This reference is for operators who deploy One Person Lab on Linux servers, inside Docker, or behind a browser-only access path.
+## 当前 WebUI 边界
 
-## Current WebUI Boundary
+面向用户的 WebUI 是 `opl-aion-shell` 维护的 One Person Lab 品牌 AionUI 壳，并以 One Person Lab App / WebUI 构建产物发布。OPL 主仓继续负责安装入口、运行时合同、模块管理和文档。
 
-The user-facing WebUI is the OPL-branded AionUI shell maintained in `opl-aion-shell` and published as the One Person Lab App / WebUI build. The OPL main repository remains the installer, runtime contract, module management, and documentation surface.
+已退役的 headless Product API Web surface 不是用户 WebUI 入口。新的部署说明不要把历史本地 Product API 端口写成浏览器入口。
 
-The retired headless Product API Web surface is not a user WebUI path. Do not expose or document the historical local Product API port as the browser entry point for new deployments.
+## Docker 镜像
 
-## Docker Image
-
-Build the WebUI image from the `opl-aion-shell` repository:
+从 `opl-aion-shell` 仓库构建 WebUI 镜像：
 
 ```bash
 git clone https://github.com/gaofeng21cn/opl-aion-shell.git
@@ -20,7 +18,7 @@ cd opl-aion-shell
 docker build -t one-person-lab-webui .
 ```
 
-Docker builds default to Simplified Chinese UI text. To rebuild with another default language:
+Docker 构建默认使用简体中文界面。需要改成其他默认语言时：
 
 ```bash
 docker build \
@@ -28,11 +26,11 @@ docker build \
   -t one-person-lab-webui .
 ```
 
-The runtime image also installs the `officecli` CLI binary and exposes packaged companion skill payloads at `/opt/opl/skills` through `OPL_PACKAGED_SKILLS_ROOT`. During `opl install` or OPL-managed first launch, those payloads are synced into the container `CODEX_HOME` so `officecli`, `officecli-docx/pptx/xlsx`, and `ui-ux-pro-max` are available without relying only on a remote skill clone at task time.
+runtime 镜像同时安装 `officecli` CLI binary，并通过 `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills` 暴露随镜像打入的 companion skill payload。`opl install` 或 OPL 托管首启会把这些 payload 同步到容器内 `CODEX_HOME`，让 `officecli`、`officecli-docx/pptx/xlsx` 和 `ui-ux-pro-max` 不需要等到任务执行时再完全依赖远程 clone。
 
-## Standard Browser Access
+## 标准浏览器访问
 
-Run the WebUI with a persistent data directory and remote browser access enabled:
+用持久化数据目录和远程浏览器访问启动 WebUI：
 
 ```bash
 docker run --rm \
@@ -43,17 +41,17 @@ docker run --rm \
   one-person-lab-webui
 ```
 
-Open:
+打开：
 
 ```text
 http://127.0.0.1:3000/
 ```
 
-For a server deployment, put this port behind the organization’s trusted reverse proxy, TLS, and access-control layer.
+服务器部署时，应把这个端口放在可信反向代理、TLS 和访问控制层之后。
 
-## No-Auth Mode For Trusted Deployments
+## 可信部署免登录模式
 
-For a private Docker environment where access control is already handled by the host, VPN, reverse proxy, or platform gateway, the WebUI can enter directly without the built-in login screen:
+如果 Docker 环境已经由宿主机、VPN、反向代理或平台网关负责访问控制，可以让 WebUI 直接进入界面：
 
 ```bash
 docker run --rm \
@@ -65,31 +63,31 @@ docker run --rm \
   one-person-lab-webui
 ```
 
-`OPL_WEBUI_AUTH_MODE=none` is only appropriate for trusted local, private-network, or already-authenticated deployments. Do not expose a no-auth container directly to the public internet.
+`OPL_WEBUI_AUTH_MODE=none` 只适合本机、私有网络或已经完成鉴权的可信部署。不要把免登录容器直接暴露到公网。
 
-Compatibility alias:
+兼容别名：
 
 ```bash
 -e AIONUI_WEBUI_AUTH_MODE=none
 ```
 
-## Codex Defaults In Containers
+## 容器中的 Codex 默认配置
 
-OPL reads Codex defaults from environment variables at install or runtime. These values are not baked into the Dockerfile and should be supplied by `docker run -e`, Docker Compose `environment:`, deployment-platform environment variables, or secret managers.
+OPL 在安装或运行时从环境变量读取 Codex 默认配置。这些值不是写死在 Dockerfile 里，而是通过 `docker run -e`、Docker Compose `environment:`、部署平台环境变量或 secret manager 注入。
 
-When no workspace root is supplied, OPL uses the container user’s home directory as the workspace root. For persistent Docker deployments, set `HOME=/data` or `OPL_WORKSPACE_ROOT=/data/workspaces` so workspaces survive container replacement.
+没有显式指定 workspace root 时，OPL 会使用容器用户的 Home 目录。持久化 Docker 部署建议设置 `HOME=/data`，或显式设置 `OPL_WORKSPACE_ROOT=/data/workspaces`，这样容器替换后 workspace 仍然保留。
 
-| Variable | Purpose |
+| 变量 | 用途 |
 | --- | --- |
-| `HOME` | Default home and implicit workspace root when `OPL_WORKSPACE_ROOT` is not set |
-| `OPL_WORKSPACE_ROOT` | Explicit workspace root, for example `/data/workspaces` |
-| `CODEX_HOME` | Codex config directory inside the container, for example `/data/codex` |
-| `OPL_CODEX_MODEL` | Default Codex model written to `CODEX_HOME/config.toml` |
-| `OPL_CODEX_REASONING_EFFORT` | Default reasoning effort, for example `xhigh` |
-| `OPL_CODEX_BASE_URL` | Third-party OpenAI-compatible API base URL |
-| `OPL_CODEX_API_KEY` | API key for the configured provider |
+| `HOME` | 默认 Home；未设置 `OPL_WORKSPACE_ROOT` 时也作为隐式 workspace root |
+| `OPL_WORKSPACE_ROOT` | 显式 workspace root，例如 `/data/workspaces` |
+| `CODEX_HOME` | 容器内 Codex 配置目录，例如 `/data/codex` |
+| `OPL_CODEX_MODEL` | 写入 `CODEX_HOME/config.toml` 的默认 Codex 模型 |
+| `OPL_CODEX_REASONING_EFFORT` | 默认 reasoning effort，例如 `xhigh` |
+| `OPL_CODEX_BASE_URL` | 第三方 OpenAI-compatible API base URL |
+| `OPL_CODEX_API_KEY` | 对应 provider 的 API key |
 
-Example:
+示例：
 
 ```bash
 docker run --rm \
@@ -107,9 +105,9 @@ docker run --rm \
   one-person-lab-webui
 ```
 
-Install and maintenance logs may report whether an API key is present, but should not print the key value.
+安装和维护日志可以报告是否检测到 API key，但不应打印 key 的值。
 
-## Docker Compose Example
+## Docker Compose 示例
 
 ```yaml
 services:
@@ -135,23 +133,23 @@ volumes:
   opl-data:
 ```
 
-Keep `OPL_CODEX_API_KEY` in the host shell, deployment secrets, or a `.env` file that is not committed to source control.
+`OPL_CODEX_API_KEY` 应放在宿主机 shell、部署平台 secrets 或不提交到代码仓库的 `.env` 文件里。
 
-## Verification
+## 验证
 
-Check that the container is serving the WebUI:
+确认容器正在提供 WebUI：
 
 ```bash
 curl -fsS http://127.0.0.1:3000/
 ```
 
-In no-auth mode, the auth endpoint should identify the built-in no-auth session:
+免登录模式下，auth endpoint 应返回内置 no-auth session：
 
 ```bash
 curl -fsS http://127.0.0.1:3000/api/auth/user
 ```
 
-Expected shape:
+预期结构：
 
 ```json
 {
@@ -163,10 +161,10 @@ Expected shape:
 }
 ```
 
-## Operational Notes
+## 运行维护说明
 
-- Persist `/data` so workspaces, Codex configuration, cache, and WebUI state survive container restarts.
-- Use `CODEX_HOME=/data/codex` when the container should keep Codex defaults with the rest of the OPL state.
-- Keep `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills` unless replacing the packaged companion skill set intentionally.
-- Use deployment secrets for provider API keys.
-- Keep the OPL main repository as the documented installer and contract source; keep `opl-aion-shell` as the WebUI implementation and build source.
+- 持久化 `/data`，让 workspace、Codex 配置、缓存和 WebUI 状态在容器重启后保留。
+- 容器内建议使用 `CODEX_HOME=/data/codex`，让 Codex 默认配置跟随 OPL 状态一起保存。
+- 保留 `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills`，除非明确要替换随镜像打入的 companion skill 集合。
+- provider API key 使用部署 secrets 管理。
+- OPL 主仓继续作为安装入口和合同来源；`opl-aion-shell` 作为 WebUI 实现和构建来源。

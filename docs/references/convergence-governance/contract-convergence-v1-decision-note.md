@@ -129,7 +129,7 @@
 
 - `docs/history/runtime-substrate/host-agent-runtime-contract.md`
 - `docs/history/frontdoor-legacy/development-operating-model.md`
-- 当前 owner：`docs/active/opl-runtime-naming-and-boundary-contract.zh-CN.md`、`docs/active/opl-domain-onboarding-contract.zh-CN.md`
+- 当前 owner：`docs/runtime/opl-runtime-naming-and-boundary-contract.md`、`docs/specs/opl-domain-onboarding-contract.md`
 
 需要特别注意的是：
 

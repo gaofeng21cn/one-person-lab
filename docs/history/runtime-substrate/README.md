@@ -1,38 +1,38 @@
-# Runtime Substrate History Archive
+# Runtime Substrate 历史归档
 
-**English** | [中文](./README.zh-CN.md)
+[English](./README.md) | **中文**
 
 Status: `historical_archive`
 Owner: `One Person Lab`
-Machine boundary: human-readable history archive only. Machine-readable behavior must use `contracts/`, source code, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, or semantic `human_doc:*` ids.
+Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
 
-This directory contains runtime / product-entry / migration documents whose useful content has been absorbed or superseded by the 2026-05-11 framework-first reset. They remain useful provenance, but they are no longer current backlog, roadmap, runtime contract, or product-entry plans.
+本目录收纳已经被 2026-05-11 framework-first 定位吸收或取代的 runtime / product-entry / migration 整文档。它们仍保留来源追溯价值，但不再作为当前 backlog、roadmap、runtime contract 或 product-entry 计划执行。
 
-Current entries:
+当前入口：
 
-- [OPL Current Development Lines](../../active/current-development-lines.md)
-- [OPL Development Document Portfolio](../../active/development-document-portfolio.md)
-- [OPL Runtime Naming And Boundary Contract](../../active/opl-runtime-naming-and-boundary-contract.md)
-- [OPL Domain-Agent Admission Contract](../../active/opl-domain-onboarding-contract.md)
-- [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
-- [Temporal family runtime provider plan](../../references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)
+- [OPL 当前开发线路](../../active/current-development-lines.md)
+- [OPL 开发文档组合整理](../../active/development-document-portfolio.md)
+- [OPL Runtime 命名与边界合同](../../runtime/opl-runtime-naming-and-boundary-contract.md)
+- [OPL Domain-Agent Admission Contract](../../specs/opl-domain-onboarding-contract.md)
+- [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
+- [Temporal family runtime provider 落地计划](../../references/runtime-substrate/temporal-family-runtime-provider-plan.md)
 
-## Absorbed Content
+## 已吸收内容
 
-| Historical document | Absorbed content | Current owner |
+| 历史文档 | 已吸收的内容 | 当前 owner |
 | --- | --- | --- |
-| `host-agent-runtime-contract.md` | Codex-default host-agent runtime, formal-entry matrix, execution handles, durable truth, fail-closed rules | Runtime naming and boundary contract, Domain-Agent Admission Contract, family executor defaults |
-| `managed-runtime-migration-readiness-checklist.md` | host-agent -> managed runtime migration object, R1-R8 readiness dimensions, and the rule not to present future managed runtime as current reality | Runtime naming and boundary contract |
-| `family-product-entry-and-domain-handoff-architecture.md` | operator / agent / product entry taxonomy, handoff envelope, domain authority boundary | Domain-Agent Admission Contract, public docs, current development lines |
-| `family-lightweight-direct-entry-rollout-board.md` | `frontdoor_surface` / `operator_loop_surface` split, direct path and OPL handoff alignment, and no drift across domain entry vocabularies | Domain-Agent Admission Contract, current development lines |
-| `opl-product-entry-and-hermes-kernel-integration.md` | no fork/vendor of an external runtime, do not expose users to low-level runtime assembly, and Hermes-first miswording prohibitions | Runtime naming and boundary contract, Temporal provider plan, stage-led roadmap |
-| `hermes-agent-runtime-substrate-benchmark.md` | useful runtime substrate comparison points from Hermes, with gateway-first / Domain Harness OS conclusions superseded | Runtime naming and boundary contract, Temporal provider plan, Hermes executor evaluation |
-| `opl-vertical-online-agent-platform-roadmap.md` | vertical product family, shared runtime/domain contracts, and future managed runtime vs current reality split | Runtime naming and boundary contract, public roadmap, stage-led roadmap |
-| `mas-top-level-cutover-board.md` | OPL -> MAS handoff fields, MAS display/research separation, and transition-seam honesty | OPL current development lines, MAS active portfolio/current development lines |
+| `host-agent-runtime-contract.md` | Codex-default host-agent runtime、formal-entry matrix、execution handle、durable truth、fail-closed 规则 | Runtime 命名与边界合同、Domain-Agent Admission Contract、family executor defaults |
+| `managed-runtime-migration-readiness-checklist.md` | host-agent -> managed runtime 迁移对象、R1-R8 readiness 维度、不得把 future managed runtime 写成现实 | Runtime 命名与边界合同 |
+| `family-product-entry-and-domain-handoff-architecture.md` | operator / agent / product entry taxonomy、handoff envelope、domain authority boundary | Domain-Agent Admission Contract、public docs、current development lines |
+| `family-lightweight-direct-entry-rollout-board.md` | `frontdoor_surface` / `operator_loop_surface` 区分、direct path 与 OPL handoff 对齐、不允许四仓入口语义漂移 | Domain-Agent Admission Contract、current development lines |
+| `opl-product-entry-and-hermes-kernel-integration.md` | 不 fork/vendor 外部 runtime、不要把用户暴露给底层 runtime 拼装、Hermes-first 误写禁止项 | Runtime 命名与边界合同、Temporal provider 计划、stage-led roadmap |
+| `hermes-agent-runtime-substrate-benchmark.md` | Hermes runtime substrate 对标中仍有价值的对比点；其中 gateway-first / Domain Harness OS 结论已被当前口径取代 | Runtime 命名与边界合同、Temporal provider 计划、Hermes executor evaluation |
+| `opl-vertical-online-agent-platform-roadmap.md` | 垂类产品族、shared runtime/domain contract、future managed runtime 与当前 reality 的区分 | Runtime 命名与边界合同、public roadmap、stage-led roadmap |
+| `mas-top-level-cutover-board.md` | OPL -> MAS handoff 字段、MAS display/research 分线、不能把 transition seam 写成 backend 替换完成 | OPL 当前开发线路、MAS active portfolio/current development lines |
 
-## Tombstone Rules
+## Tombstone 规则
 
-- Hermes-first, Gateway/frontdoor, direct-entry, host-agent-only, and online-agent-platform plans in these files are no longer executed as whole documents.
-- Useful content has been absorbed into current owners; reuse current owners first instead of copying historical prose.
-- Old filenames, commands, and states in these paths are provenance, migration review, and audit material only.
-- If a historical paragraph becomes current again, promote it to an active owner or machine-readable contract before citing the historical source.
+- 这些文档中的 Hermes-first、Gateway/frontdoor、direct-entry、host-agent-only、online-agent-platform 计划不再按整份执行。
+- 有效内容已经按内容块吸收到当前 owner；复用时先回当前 owner，不直接复制历史正文。
+- 历史路径中的旧文件名、旧命令、旧状态只用于 provenance、migration review 和审计。
+- 如果未来发现某段历史内容仍有当前价值，先把它提升到 active owner 或 machine-readable contract，再引用历史来源。

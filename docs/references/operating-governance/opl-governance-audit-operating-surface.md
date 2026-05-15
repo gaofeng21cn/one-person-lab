@@ -1,119 +1,117 @@
-**English** | [中文](./opl-governance-audit-operating-surface.zh-CN.md)
-
 # OPL Governance / Audit Operating Surface
 
 State: `support_reference_legacy_derived`
 Current owner: `docs/references/operating-governance/README.md`
-Machine boundary: human-readable support only; machine-readable behavior must use contracts, schemas, source, CLI/API behavior, generated artifacts, or semantic `human_doc:*` ids.
+Machine boundary: 仅人读支撑；机器可读行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
 
-## Purpose
+## 目的
 
-This document freezes the minimum top-level governance / audit operating surface for `OPL`.
+这份文档冻结 `OPL` 顶层最小化的 governance / audit operating surface。
 
-Its goal is to define what `OPL` may legitimately index after routing, onboarding, and acceptance evidence exists.
+它的目标是定义：在 routing、onboarding 与 acceptance evidence 已经存在之后，`OPL` 还能合法索引哪些 operating record。
 
-The target is not a monolithic runtime.
-The target is a thin top-level operating layer that records governance signals, routing audit traces, and readiness indexes while domain systems continue to own runtime truth.
-Legacy `gateway` wording in this document is provenance-only vocabulary from the archived surface IDs and example corpus. It is not an active compatibility interface. Current topology is stage-led with Agent executors as the minimum execution unit.
+目标不是单体 runtime。
+目标是一个薄的顶层 operating layer：只记录 governance signal、routing audit trace 与 readiness index，而 runtime truth 仍然留在 domain system 内部。
+本文中的 legacy `gateway` wording 只是来自已归档 surface id 与 example corpus 的 provenance vocabulary，不是 active compatibility interface。当前 topology 是 stage-led、以 Agent executor 为最小执行单位。
 
-## Relationship To Earlier Gateway Layers
+## 与前置 Gateway 层的关系
 
-This operating surface was originally downstream of these now-archived historical layers:
+这层 operating surface 最初建立在以下已归档历史层之上：
 
 - [OPL Federation Contract](../../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Gateway Contract Surface](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
+- [OPL Gateway 契约面](../../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](../../active/opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../../specs/opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
-- the machine-readable contracts in [`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
+- 当前机器可读合同目录：[`../../contracts/opl-framework/README.md`](../../../contracts/opl-framework/README.md)
 
-Those layers are provenance inputs only. Current topology and owner boundaries remain governed by the core five, current contracts, source, CLI/API behavior, runtime ledgers, domain-owned manifests, and the stage-led framework roadmap.
+这些层只作为 provenance input。当前 topology 与 owner boundary 仍以核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger、domain-owned manifest 和 stage-led framework roadmap 为准。
 
-## Core Promise
+## 核心承诺
 
-At this layer, `OPL` may own only **top-level governance records, routing audit traces, and readiness indexes**.
+在这一层，`OPL` 只允许拥有**顶层治理记录、routing audit trace 与 readiness index**。
 
-It may not:
+它不允许：
 
-- become the owner of domain runtime audit truth
-- become the owner of domain review truth
-- become the owner of artifact or publish truth
-- bypass domain-owned capability entries to control harness execution directly
+- 成为 domain runtime audit truth 的 owner
+- 成为 domain review truth 的 owner
+- 成为 artifact truth 或 publish truth 的 owner
+- 绕过 domain-owned capability entry 直接控制 harness execution
 
-In short:
+一句话说：
 
-- `OPL` owns **top-level governance signal, routing audit, and readiness index**
-- each domain owns **runtime audit truth, review truth, publish truth, and artifact truth**
+- `OPL` 只拥有**顶层治理信号、路由审计、readiness 索引**
+- 各 domain 继续拥有**runtime audit truth、review truth、publish truth 与 artifact truth**
 
-## Non-Goals
+## 非目标
 
-This operating surface does not:
+这层 operating surface 不负责：
 
-- execute domain review or publish operations
-- store canonical audit truth for a domain
-- replace domain review state with a top-level copy
-- become the unified runtime entry for all execution
-- turn domain-owned capability entries into implementation details
+- 直接执行 domain review 或 publish
+- 存储某个 domain 的 canonical audit truth
+- 用顶层副本替代 domain review state
+- 变成所有执行的统一 runtime entry
+- 把 domain-owned capability entry 降格成实现细节
 
-## Allowed Top-Level Record Kinds
+## 允许的顶层 Record Kind
 
-The minimum top-level operating surface may record only the following kinds:
+最小顶层 operating surface 只允许记录下面几类对象：
 
 ### 1. `routing_audit`
 
-Purpose:
+目的：
 
-- record how `OPL` routed a request into a domain-owned capability entry
-- preserve routing evidence and outcome at the top level
+- 记录 `OPL` 如何把一个请求路由到某个 domain-owned capability entry
+- 在顶层保留 routing evidence 与 routing outcome
 
-This is a top-level trace of the routing step, not the domain runtime audit record.
+它是顶层对 routing step 的审计痕迹，不是 domain runtime audit record。
 
 ### 2. `governance_decision`
 
-Purpose:
+目的：
 
-- record a top-level governance decision such as:
+- 记录顶层治理决策，例如：
   - `continue`
   - `stop`
   - `reframe`
   - `gate`
 
-This is the legitimate top-level governance language already implied by the shared foundation.
-It records the governance outcome; it does not move continue/stop/reframe authority away from humans or domain-owned review signals.
+这是 shared foundation 中已经合法存在的顶层治理语言。
+它记录的是顶层治理结果，并不把 continue/stop/reframe 的决定权从 human 或 domain-owned review signal 上收给 `OPL` 自身。
 
 ### 3. `publish_readiness_signal`
 
-Purpose:
+目的：
 
-- record whether a request appears ready to enter a domain-owned publish gate
-- expose a top-level readiness signal without claiming domain publish truth
+- 记录一个请求是否**看起来已经具备进入 domain-owned publish gate 的条件**
+- 暴露的是顶层 readiness signal，而不是 domain publish truth
 
-This is a readiness index only.
-It does not mean the work is already published, exported, submitted, or canonically approved inside the domain.
+它只是 readiness index。
+它不代表已经正式 published、exported、submitted，也不代表 domain 内部已经形成 canonical approval truth。
 
 ### 4. `cross_domain_review_index`
 
-Purpose:
+目的：
 
-- expose which review surfaces and gates matter across domains for one top-level request
-- show where a request is blocked or what human review is still required
+- 暴露一个顶层请求跨 domain 需要依赖哪些 review surface 和 gate
+- 说明当前卡在哪个 gate，或者还缺哪个 human review
 
-This remains an index/reference layer, not a duplicate of domain review truth.
+它仍然只是 index / reference layer，而不是 domain review truth 的复制。
 
-## Source-Of-Truth Rules
+## Source-Of-Truth 规则
 
-### What OPL May Own At This Layer
+### 这一层里 OPL 可以拥有的东西
 
-`OPL` may own:
+`OPL` 可以拥有：
 
-- top-level routing audit trace
-- top-level governance decision records
-- top-level publish-readiness signals
-- cross-domain review / gate indexes
+- 顶层 routing audit trace
+- 顶层 governance decision record
+- 顶层 publish-readiness signal
+- 跨 domain review / gate index
 
-### What Must Stay In The Domain
+### 必须继续留在 Domain 里的东西
 
-The following must remain domain-owned canonical truth:
+下面这些必须继续作为 domain-owned canonical truth：
 
 - runtime audit truth
 - run logs
@@ -122,15 +120,15 @@ The following must remain domain-owned canonical truth:
 - domain review state
 - artifact truth
 - publish execution truth
-- release / export / submission results
+- release / export / submission result
 - domain-private quality-regression truth
 
-`OPL` may reference these through stable pointers.
-It may not silently absorb them into top-level truth.
+`OPL` 可以通过稳定 pointer 引用这些 truth。
+但不能悄悄把它们吸收到顶层真相里。
 
-## Minimal Operating Record Shape
+## 最小 Operating Record Shape
 
-The minimum machine-readable envelope should carry:
+最小 machine-readable envelope 应包含：
 
 - `version`
 - `record_kind`
@@ -144,39 +142,39 @@ The minimum machine-readable envelope should carry:
 - `domain_truth_refs`
 - `recorded_at`
 
-The record kind may add kind-specific fields, but the envelope should stay top-level and coordination-focused.
+不同 `record_kind` 可以再带各自的 kind-specific field，但整个 envelope 必须保持顶层、协调型，而不是 runtime state container。
 
-## Required Boundary Semantics
+## 必需边界语义
 
-### `domain_truth_refs` is mandatory
+### `domain_truth_refs` 必须存在
 
-Every top-level governance / audit record must point back to domain-owned truth when such truth exists.
+只要相关 domain truth 已存在，每条顶层 governance / audit record 都必须回指这些 domain-owned truth。
 
-This prevents `OPL` from being misread as the canonical owner of runtime or publish state.
+这样才能防止外界把 `OPL` 误读成 runtime 或 publish state 的 canonical owner。
 
-### Legacy `domain_gateway` is provenance-only
+### Legacy `domain_gateway` 只保留 provenance 语义
 
-Archived examples may still contain the legacy literal `domain_gateway` for reviewability. Current prose and new machine-readable surfaces must use current domain-owned capability entry semantics instead of retaining that literal as a compatibility interface.
+已归档示例中可以为了 reviewability 保留 legacy literal `domain_gateway`。当前 prose 与新增机器可读 surface 必须使用当前 domain-owned capability entry 语义，不能把这个 literal 继续保留成 compatibility interface。
 
-### Publish readiness is not publish truth
+### Publish readiness 不等于 publish truth
 
-`publish_readiness_signal` must only say whether the top-level request appears ready to enter a domain-owned publish gate.
+`publish_readiness_signal` 只能表达：这个顶层请求是否已经具备进入 domain-owned publish gate 的条件。
 
-It must not be used as:
+它不能被当成：
 
-- a publication event
-- a submission result
-- a release result
-- an export result
+- publication event
+- submission result
+- release result
+- export result
 - domain approval truth
 
-## Example Record Shapes
+## 示例 Record Shape
 
-Canonical machine-readable operating examples for the frozen governance / audit records also live in the [OPL Operating Example Corpus](../examples-corpora/opl-operating-example-corpus.md) and its linked JSON files.
-The cross-layer reference map for all frozen operating record kinds also lives in the [OPL Operating Record Catalog](../examples-corpora/opl-operating-record-catalog.md).
-The inline shapes below remain the prose-side illustrations for this governing surface.
+已冻结 governance / audit record 的 canonical machine-readable example 也同步落在 [OPL Operating Example Corpus](../examples-corpora/opl-operating-example-corpus.md) 与其链接的 JSON 文件中。
+全部已冻结 operating record kind 的跨层 reference map 也同步落在 [OPL Operating Record Catalog](../examples-corpora/opl-operating-record-catalog.md)。
+下面这些 inline shape 仍然是本 governing surface 的 prose-side illustration。
 
-### Example: `routing_audit`
+### 示例：`routing_audit`
 
 ```json
 {
@@ -209,7 +207,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-### Example: `governance_decision`
+### 示例：`governance_decision`
 
 ```json
 {
@@ -240,7 +238,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-### Example: `publish_readiness_signal`
+### 示例：`publish_readiness_signal`
 
 ```json
 {
@@ -270,7 +268,7 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-### Example: `cross_domain_review_index`
+### 示例：`cross_domain_review_index`
 
 ```json
 {
@@ -311,41 +309,41 @@ The inline shapes below remain the prose-side illustrations for this governing s
 }
 ```
 
-## Surface Shapes
+## Surface 形态
 
-The first top-level governance / audit surface may appear as:
+第一版顶层 governance / audit surface 可以体现为：
 
-- docs-side operating references
-- CLI-side operating queries
-- MCP-side operating records
+- docs-side operating reference
+- CLI-side operating query
+- MCP-side operating record
 
-As with earlier layers, the contract matters more than the transport.
+与前几层一样，真正重要的是 contract，而不是 transport。
 
-## Hard Prohibitions
+## 硬性禁止项
 
-Do not describe or implement this layer as:
+不要把这一层写成或做成：
 
 - `OPL stores canonical audit truth`
 - `OPL owns publish state`
 - `OPL executes domain review or publish`
 - `OPL is the unified runtime entry`
 - `OPL manages all runs directly`
-- domain-owned capability entries being reduced to implementation details
+- 把 domain-owned capability entry 降格成实现细节
 
-Do not add operations that:
+也不要新增这些操作：
 
-- start or stop a domain run directly
-- write domain review state directly
-- approve publish / export / submission directly
-- call a harness executor directly
-- mutate domain artifact truth directly
+- 直接启动/停止 domain run
+- 直接写 domain review state
+- 直接批准 publish / export / submission
+- 直接调用 harness executor
+- 直接修改 domain artifact truth
 
-## Completion Definition
+## 完成定义
 
-This operating surface is acceptably frozen only when:
+只有当下面这些条件都成立时，这层 operating surface 才算冻结完成：
 
-- the allowed top-level record kinds are explicit
-- the domain-owned truth boundary is explicit
-- the machine-readable schema matches the public wording
-- no top-level field can be mistaken for domain runtime truth ownership
-- no-bypass semantics remain intact
+- 允许的顶层 record kind 已显式定义
+- domain-owned truth 边界已显式定义
+- machine-readable schema 与公开 wording 保持一致
+- 没有任何顶层字段会被误读成 domain runtime truth ownership
+- no-bypass 语义仍然完整

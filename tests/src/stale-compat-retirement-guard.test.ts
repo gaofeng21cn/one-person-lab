@@ -127,17 +127,11 @@ test('operating governance references do not claim retired surface matrix contra
   const scannedFiles = [
     'docs/docs_portfolio_consolidation.md',
     'docs/references/README.md',
-    'docs/references/README.zh-CN.md',
     'docs/references/examples-corpora/opl-gateway-example-corpus.md',
-    'docs/references/examples-corpora/opl-gateway-example-corpus.zh-CN.md',
     'docs/references/operating-governance/README.md',
-    'docs/references/operating-governance/README.zh-CN.md',
     'docs/references/operating-governance/opl-surface-authority-matrix.md',
-    'docs/references/operating-governance/opl-surface-authority-matrix.zh-CN.md',
     'docs/references/operating-governance/opl-surface-lifecycle-map.md',
-    'docs/references/operating-governance/opl-surface-lifecycle-map.zh-CN.md',
     'docs/references/operating-governance/opl-surface-review-matrix.md',
-    'docs/references/operating-governance/opl-surface-review-matrix.zh-CN.md',
   ];
 
   const forbiddenPatterns = [
@@ -171,15 +165,13 @@ test('human docs do not retire the canonical hermes_agent executor adapter', () 
   const scannedFiles = [
     'docs/docs_portfolio_consolidation.md',
     'docs/references/README.md',
-    'docs/references/README.zh-CN.md',
     'docs/references/runtime-substrate/family-executor-adapter-defaults.md',
     'docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md',
     'docs/references/runtime-substrate/hermes-agent-executor-evaluation.md',
-    'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md',
-    'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md',
-    'docs/references/convergence-governance/opl-positioning-convergence-lessons.zh-CN.md',
+    'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md',
+    'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
+    'docs/references/convergence-governance/opl-positioning-convergence-lessons.md',
     'docs/public/roadmap.md',
-    'docs/public/roadmap.zh-CN.md',
     'docs/project.md',
     'docs/architecture.md',
     'docs/decisions.md',
@@ -256,13 +248,9 @@ test('core executor surfaces keep hermes_agent in the canonical explicit non-def
 test('examples and admission references do not preserve domain_gateway as an active route', () => {
   const scannedFiles = [
     'docs/references/examples-corpora/opl-operating-example-corpus.md',
-    'docs/references/examples-corpora/opl-operating-example-corpus.zh-CN.md',
     'docs/references/examples-corpora/opl-operating-record-catalog.md',
-    'docs/references/examples-corpora/opl-operating-record-catalog.zh-CN.md',
     'docs/references/examples-corpora/opl-routed-safety-example-corpus.md',
-    'docs/references/examples-corpora/opl-routed-safety-example-corpus.zh-CN.md',
     'docs/references/domain-admission/opl-candidate-domain-backlog.md',
-    'docs/references/domain-admission/opl-candidate-domain-backlog.zh-CN.md',
     'docs/references/domain-admission/opl-phase2-ecosystem-sync-owner-line.md',
   ];
 
@@ -301,13 +289,9 @@ test('examples and admission references do not preserve domain_gateway as an act
 test('examples-corpora references do not link retired example artifacts as active files', () => {
   const scannedFiles = [
     'docs/references/examples-corpora/opl-gateway-example-corpus.md',
-    'docs/references/examples-corpora/opl-gateway-example-corpus.zh-CN.md',
     'docs/references/examples-corpora/opl-operating-example-corpus.md',
-    'docs/references/examples-corpora/opl-operating-example-corpus.zh-CN.md',
     'docs/references/examples-corpora/opl-operating-record-catalog.md',
-    'docs/references/examples-corpora/opl-operating-record-catalog.zh-CN.md',
     'docs/references/examples-corpora/opl-routed-safety-example-corpus.md',
-    'docs/references/examples-corpora/opl-routed-safety-example-corpus.zh-CN.md',
   ];
 
   const forbiddenPatterns = [
@@ -339,7 +323,6 @@ test('examples-corpora references do not link retired example artifacts as activ
 test('domain admission references do not publish retired candidate backlog contracts', () => {
   const scannedFiles = [
     'docs/references/domain-admission/opl-candidate-domain-backlog.md',
-    'docs/references/domain-admission/opl-candidate-domain-backlog.zh-CN.md',
   ];
 
   const forbiddenPatterns = [

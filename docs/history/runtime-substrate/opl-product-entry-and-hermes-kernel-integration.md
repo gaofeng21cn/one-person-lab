@@ -1,6 +1,6 @@
 # OPL 产品入口与 Hermes Kernel Integration 决策
 
-Lifecycle note 2026-05-14: 本文保留为 Hermes-first product-entry 决策背景和 migration provenance。当前 OPL 目标已调整为 provider-backed、stage-led、以 Agent executor 为最小执行单位的 framework；Temporal 是 production required provider，旧 Hermes provider/Gateway/readiness/proof-provider surface 只作为历史 provenance、诊断语料或负向 guard。`hermes_agent` 另作为 canonical 显式非默认 executor adapter/backend 保留，不是 provider、默认 executor、readiness path 或兼容接口。当前 owner 入口是 `docs/active/development-document-portfolio.zh-CN.md`、`docs/active/current-development-lines.zh-CN.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` 和 `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md`。
+Lifecycle note 2026-05-14: 本文保留为 Hermes-first product-entry 决策背景和 migration provenance。当前 OPL 目标已调整为 provider-backed、stage-led、以 Agent executor 为最小执行单位的 framework；Temporal 是 production required provider，旧 Hermes provider/Gateway/readiness/proof-provider surface 只作为历史 provenance、诊断语料或负向 guard。`hermes_agent` 另作为 canonical 显式非默认 executor adapter/backend 保留，不是 provider、默认 executor、readiness path 或兼容接口。当前 owner 入口是 `docs/active/development-document-portfolio.md`、`docs/active/current-development-lines.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` 和 `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`。
 
 ## 1. 这份决策要解决什么问题
 

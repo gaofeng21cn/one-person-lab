@@ -2,7 +2,7 @@
 
 状态锚点：`2026-04-11`
 
-Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway / runtime-substrate 演进参考。当前总路线图已经收敛为 stage-led、以 Agent executor 为最小执行单位的 OPL framework：以 `Codex CLI` 为 stage 内默认执行单元，以 provider-backed stage attempt、typed queue、human gate、receipt/projection 和 domain-agent skeleton 为主线。当前 owner 入口是 `docs/active/development-document-portfolio.zh-CN.md`、`docs/active/current-development-lines.zh-CN.md` 和 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。
+Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway / runtime-substrate 演进参考。当前总路线图已经收敛为 stage-led、以 Agent executor 为最小执行单位的 OPL framework：以 `Codex CLI` 为 stage 内默认执行单元，以 provider-backed stage attempt、typed queue、human gate、receipt/projection 和 domain-agent skeleton 为主线。当前 owner 入口是 `docs/active/development-document-portfolio.md`、`docs/active/current-development-lines.md` 和 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`。
 
 ## 文档目的
 
@@ -11,7 +11,7 @@ Lifecycle note 2026-05-11: 本文保留为早期 online-agent-platform / Gateway
 它属于 `docs/references/` 下的中文参考级文档。
 它服务于后续四仓统一推进，但不反向替代：
 
-- `README.md` / `README.zh-CN.md`
+- `README.md` / `README.md`
 - `docs/operating-model.md` / `docs/operating-model.zh-CN.md`
 - `docs/unified-harness-engineering-substrate.md` / `docs/unified-harness-engineering-substrate.zh-CN.md`
 - `docs/roadmap.md` / `docs/roadmap.zh-CN.md`

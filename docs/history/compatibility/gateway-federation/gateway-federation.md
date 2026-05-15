@@ -1,25 +1,23 @@
-**English** | [中文](./gateway-federation.zh-CN.md)
-
 # OPL Gateway Federation
 
-> Historical note (`2026-04-24`): this document is retained as legacy boundary wording from the gateway-first phase. The current `OPL` mainline is runtime-first and skill-first. Read it only as historical or compatibility context.
+> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的边界语料。当前 `OPL` 主线已经转成 runtime-first、skill-first；这里只应作为历史或兼容背景阅读。
 
-## Purpose
+## 目的
 
-This document defines the intended relationship between:
+这份文档定义下面三者的关系：
 
-- the top-level `OPL Gateway`
-- `domain gateways` inside independent domain-agent repositories
-- `domain harnesses` inside independent domain-agent repositories
+- 顶层 `OPL Gateway`
+- 独立 `domain agent` 仓内部的 `domain gateway`
+- 独立 `domain agent` 仓内部的 `domain harness`
 
-It exists to prevent two common mistakes:
+它的作用是避免两个常见误判：
 
-- treating `OPL` as only a static blueprint
-- treating `OPL` as a monolithic runtime that should swallow every domain
+- 把 `OPL` 继续只理解成静态蓝图
+- 把 `OPL` 理解成一个应该吞掉所有 domain 的单体 runtime
 
-## Core Judgment
+## 核心判断
 
-The right control shape is:
+正确控制链应是：
 
 ```text
 Human / Agent
@@ -28,94 +26,94 @@ Human / Agent
           -> Domain Harness OS
 ```
 
-`OPL` owns the top-level product language and routing semantics.
-Each independent domain-agent repository owns its own formal execution and delivery surface.
+`OPL` 掌握顶层产品语言和路由语义。
+每个独立 `domain agent` 仓掌握自己的正式执行与交付面。
 
-Under the current positioning, the public identities are:
+在当前定位下，更准确的公开主语是：
 
-- `OPL`: family-level session/runtime/projection plus shared modules/contracts/indexes
-- `MAS`, `MAG`, `RCA`: independent domain agents
-- `domain gateway / domain harness`: internal boundary and execution layers within those domain-agent repositories
+- `OPL`：family-level session/runtime/projection 与 shared modules/contracts/indexes
+- `MAS`、`MAG`、`RCA`：独立 `domain agent`
+- `domain gateway / domain harness`：这些 domain agent 仓内部的边界层与执行层语言
 
-## OPL Gateway Responsibilities
+## OPL Gateway 的职责
 
-The `OPL Gateway` is responsible for:
+`OPL Gateway` 负责：
 
-- top-level task intake semantics
-- routing into the correct domain
-- expressing the shared-foundation language
-- aligning cross-domain governance and delivery vocabulary
-- serving as the top-level public product surface
+- 顶层任务 intake 语义
+- 把任务路由到正确 domain
+- 声明共享基础结构语言
+- 统一跨 domain 的治理与交付词汇
+- 作为顶层公开产品面
 
-The current repository is the documentation-first and contract-first public surface for this role.
+当前仓库承担的是这个角色的文档优先、契约优先的公开说明面。
 
-## Domain Gateway Responsibilities
+## Domain Gateway 的职责
 
-Each `domain gateway` is responsible for:
+每个 `domain gateway` 负责：
 
-- stable entry surfaces for its workstream
-- domain-specific validation and contract hydration
-- domain-specific review and delivery semantics
-- independent standalone use when needed
+- 为该工作流提供稳定入口
+- 进行 domain-specific 的校验与 contract hydration
+- 提供 domain-specific 的 review 与 delivery 语义
+- 在需要时支持独立使用
 
-This is why domain gateways must stay even if `OPL` exists above them.
-They remain the stable boundary layer inside each domain-agent repository, not a discarded historical naming artifact.
+这也是为什么即使有 `OPL`，domain gateway 仍必须保留。
+它是 `domain agent` 仓内部的稳定边界层，不是已经过时的历史残留。
 
-## Domain Harness Responsibilities
+## Domain Harness 的职责
 
-Each `Domain Harness OS` is responsible for:
+每个 `Domain Harness OS` 负责：
 
-- execution
+- 执行
 - truth persistence
 - governance hooks
-- replay and rerun
-- audit writeback
-- delivery production
+- replay 与 rerun
+- 审计回写
+- 交付物生产
 
-The harness is the internal execution base, not the top-level product surface.
+harness 是内部执行底座，不是顶层产品面。
 
-## Current Mapping
+## 当前映射
 
 ### Research Foundry
 
 - `OPL workstream`: `Research Foundry`
 - `domain agent`: `MedAutoScience`
-- `domain gateway`: the research gateway inside `MedAutoScience`
-- `domain harness`: the research harness controlled by `MedAutoScience`
+- `domain gateway`: `MedAutoScience` 仓内 research gateway
+- `domain harness`: 由 `MedAutoScience` 控制的 research harness
 
 ### Presentation Foundry
 
 - `OPL workstream`: `Presentation Foundry`
 - `domain agent`: `RedCube AI`
-- `domain gateway`: the visual gateway inside `RedCube AI`
+- `domain gateway`: `RedCube AI` 仓内 visual gateway
 - `direct family`: `ppt_deck`
-- note: `xiaohongshu` shares the RedCube harness but is not automatically identical to `Presentation Foundry`
+- 说明：`xiaohongshu` 与 `ppt_deck` 共享 RedCube harness，但不自动等同于 `Presentation Foundry`
 
 ### Grant Foundry
 
 - `OPL workstream`: `Grant Foundry`
 - `domain agent`: `MedAutoGrant`
-- `domain gateway`: the grant gateway inside `MedAutoGrant`
-- `domain harness`: the grant harness controlled by `MedAutoGrant`
+- `domain gateway`: `MedAutoGrant` 仓内 grant gateway
+- `domain harness`: 由 `MedAutoGrant` 控制的 grant harness
 
-## Boundary Rules
+## 边界规则
 
-Do not describe the system as:
+不要把系统写成：
 
-- `OPL` replacing all domain gateways
-- domain-agent repositories becoming private implementation details with no standalone role
-- a single runtime owning all workstreams
+- `OPL` 取代所有 domain gateway
+- domain agent 仓退化成没有独立角色的私有实现细节
+- 一个 runtime 拥有全部工作流
 
-Describe it as:
+应该把系统写成：
 
-- a top-level gateway above domains
-- domain gateways inside independent domain-agent repositories below it
-- independent harnesses below those gateways
+- 顶层的 `OPL Gateway`
+- 其下独立 `domain agent` 仓内部的 `domain gateway`
+- 再其下独立的 `domain harness`
 
-## Next Contract Layer
+## 下一层具体契约
 
-The next concrete layer after this conceptual boundary document is:
+在这份边界文档之后，下一层更具体的合同是：
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Public Surface Index](../../../active/opl-public-surface-index.md)
+- [OPL Public Surface Index](../../../product/opl-public-surface-index.md)
 - [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)

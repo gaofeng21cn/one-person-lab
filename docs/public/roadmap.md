@@ -1,82 +1,82 @@
-**English** | [中文](./roadmap.zh-CN.md)
+# OPL 路线图
 
-# OPL Roadmap
+## 当前角色
 
-## Current Role
+`OPL` 是 one-person research lab 的 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。
+它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力；domain truth 继续由各个 domain 仓直接持有。
 
-`OPL` is the stage-led runtime framework with Agent executors as the minimum execution unit for a one-person research lab.
-It uses `Codex CLI` as the default concrete executor inside a stage, organizes large work through expert-like stages, and owns the framework surfaces for activation, stage attempts, typed queues, wakeup, receipts, recovery, projection, and shared modules/contracts/indexes while domain repositories continue to own their domain truth.
+今天的公开 `OPL` 表面已经收口到这几层：
 
-Today the public `OPL` surface centers on:
+- `Codex CLI` 作为 `opl`、`opl exec` 与 `opl resume` 的默认具体 executor 路径
+- 显式 `OPL` activation 承担 family-level 语义、domain discovery、stage selection 与 runtime switch
+- provider-backed stage runtime 承担 queue、wakeup、attempt、receipt、approval、retry/dead-letter 与 projection
+- `MedAutoScience`、`MedAutoGrant`、`RedCube AI` 之上的 shared modules、contracts 与 indexes
+- `OPL Runtime Manager` 作为已配置 family runtime provider 之上的产品控制面
+- Rust native helper / index 工作只承担 native assistance 与 indexed discovery，不持有 domain truth 或 executor ownership
 
-- `Codex CLI` as the default concrete executor path for `opl`, `opl exec`, and `opl resume`
-- explicit `OPL` activation for family-level semantics, domain discovery, stage selection, and runtime switching
-- provider-backed stage runtime for queue, wakeup, attempt, receipt, approval, retry/dead-letter, and projection
-- shared modules, contracts, and indexes above `MedAutoScience`, `MedAutoGrant`, and `RedCube AI`
-- `OPL Runtime Manager` as the product control plane over the configured family runtime provider
-- Rust native helper / index work limited to native assistance and indexed discovery, not domain truth or execution ownership
+## 活跃路线
 
-## Active Route
+当前活跃路线有两条等价入口：
 
-The active route for `OPL` has two equivalent entry paths:
+- direct path：`Codex-default executor -> explicit OPL activation -> selected domain agent entry`
+- durable path：`Codex-default executor -> explicit OPL activation / typed family queue -> configured family runtime provider when durable orchestration is needed -> selected domain agent entry`
 
-- direct path: `Codex-default executor -> explicit OPL activation -> selected domain agent entry`
-- durable path: `Codex-default executor -> explicit OPL activation / typed family queue -> configured family runtime provider when durable orchestration is needed -> selected domain agent entry`
+这条路线现在聚焦四件事：
 
-Current work on that route stays focused on four priorities:
+1. 保持 `Codex CLI` 作为默认 executor，除非用户显式 activation 到其他 runtime。
+2. 把 `OPL` 的当前 truth surface 收口到 family-level sessions、progress、artifacts 与 shared indexes，而不是 web / API 壳。
+3. 把 `OPL Runtime Manager` 理解成已配置 family runtime provider 之上的产品控制面与 typed dispatch 层，不写成 domain scheduler、domain truth owner、quality owner、artifact owner 或 concrete executor owner。
+4. 保持 public docs、contracts 与 admitted-domain wording 持续对齐真实家族拓扑。
 
-1. Keep `Codex CLI` as the default executor unless a user explicitly activates a different runtime.
-2. Make family-level sessions, progress, artifacts, and shared indexes the current `OPL` truth surface rather than a web/API shell.
-3. Treat `OPL Runtime Manager` as the product control plane and typed dispatch layer over the configured family runtime provider, not as a domain scheduler, domain truth owner, quality owner, artifact owner, or concrete executor owner.
-4. Keep public docs, contracts, and admitted-domain wording aligned with the real family topology.
+当前执行顺序见 [OPL 当前开发线路](../active/current-development-lines.md)：先完成 OPL framework foundation，再用 MAS 真实 paper line 作为第一条 production-closure 验收路径，同时保持 MAS/MAG/RCA descriptor migration 与 direct-skill parity 不退化；旧 operator wording 需要 no-default-caller 证据后退役，随后产品化到 OPL App Runtime Workbench，最后在 MAS owner-chain 证明稳定后推进 MAG/RCA controlled soak 和更宽的 domain acceptance。
 
-The current execution order lives in [OPL Current Development Lines](../active/current-development-lines.md): finish the OPL framework foundation first, use real MAS paper lines as the first production-closure acceptance path, keep MAS/MAG/RCA descriptor migration and direct-skill parity from regressing, retire legacy operator wording with no-default-caller evidence, productize the OPL App Runtime Workbench, then run MAG/RCA controlled soaks and broader domain acceptance after the MAS owner-chain proof is stable.
+排除真实论文、基金和视觉交付长时 soak 后，当前功能性闭环 owner 已收口到 [生产级框架闭环差距矩阵](../active/production-framework-closure-gap-matrix.md)。2026-05-14 一次性并行计划已完成吸收，历史副本见 [生产功能闭环计划归档](../history/process/plans/2026-05-14-production-functional-closure-plan.md)；后续不再新增平行总计划，而是直接围绕矩阵里的 provider SLO、owner receipt、domain memory/lifecycle apply、physical skeleton、legacy retirement、operator workbench 和 live soak evidence gate 推进。
 
-## Near-Term Priorities
+## 近期重点
 
-- keep legacy gateway and federation wording available only as provenance/reference material while promoting the runtime/activation model to the mainline
-- keep `Unified Harness Engineering Substrate`, `Shared Runtime Contract`, and `Shared Domain Contract` scoped as shared-above-domain surfaces
-- keep provider-backed stage runtime honest, with Temporal as the required production online substrate, `hermes_agent` retained as a canonical explicit non-default executor adapter/backend with independent receipt/audit/fail-closed gates, and old Hermes provider/Gateway material limited to provenance, diagnostics, fixtures, or negative guards
-- keep public help, current docs, and operator-facing guidance free of default Hermes/Gateway/frontdoor/local-manager wording; retained names must be explicit legacy/provenance/diagnostic/history/fixture references
-- keep future hosted and desktop entry work anchored to the same runtime truth that drives the Codex-default executor path
-- keep candidate domains moving through explicit definition and onboarding lanes
+- 保持旧 gateway / federation wording 只作为 provenance / reference material，同时把 runtime / activation 语义写成主线
+- 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
+- 保持 provider-backed stage runtime 的诚实表达：Temporal 是 production online runtime 的必需 substrate，`hermes_agent` 是 canonical 的显式非默认 executor adapter/backend，并通过独立 receipt、audit 与 fail-closed gate 约束；旧 Hermes provider / Gateway 语料只保留为 provenance、diagnostic、fixture 或负向 guard
+- 保持 public help、当前文档与 operator-facing guidance 不再展示默认 Hermes/Gateway/frontdoor/local-manager wording；保留旧名时必须显式属于 legacy/provenance/diagnostic/history/fixture
+- 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime truth 演进
+- 保持 candidate domain 沿定义、审查与 onboarding 路径推进
 
-## Family Shape
+## 家族形态
 
-The current family shape is already clear enough to guide the roadmap:
+当前家族形态已经足够清楚，可以直接指导路线图：
 
-- `MedAutoScience` owns the `Research Ops` domain entry, workflow, runtime truth, and harness
-- `MedAutoGrant` owns the admitted `Grant Ops` domain entry, workflow, runtime truth, and harness
-- `RedCube AI` owns the visual-deliverable domain entry, workflow, runtime truth, and harness
-- `ppt_deck` remains the clearest current bridge into `Presentation Ops`
-- `IP Ops` stays on the definition and onboarding lane for `IP Foundry` / `Med Auto Patent`
-- `Award Ops` stays on the definition and onboarding lane for `Award Foundry` / `Med Auto Award`
-- `Thesis Ops` stays on the definition and onboarding lane for `Thesis Foundry` / `Med Auto Thesis`
-- `Review Ops` stays on the definition and onboarding lane for `Review Foundry` / `Med Auto Review`
+- `MedAutoScience` 持有 `Research Ops` domain entry、workflow、runtime truth 与 harness
+- `MedAutoGrant` 持有 admitted 的 `Grant Ops` domain entry、workflow、runtime truth 与 harness
+- `RedCube AI` 持有视觉交付 domain entry、workflow、runtime truth 与 harness
+- `ppt_deck` 继续是当前最直接映射到 `Presentation Ops` 的 family
+- `IP Ops` 继续作为 `IP Foundry` / `Med Auto Patent` 的定义与 onboarding 路径推进
+- `Award Ops` 继续作为 `Award Foundry` / `Med Auto Award` 的定义与 onboarding 路径推进
+- `Thesis Ops` 继续作为 `Thesis Foundry` / `Med Auto Thesis` 的定义与 onboarding 路径推进
+- `Review Ops` 继续作为 `Review Foundry` / `Med Auto Review` 的定义与 onboarding 路径推进
 
-## Historical Records And Reference Surfaces
+## 历史记录与参考入口
 
-Historical activation packages, gateway/federation material, phase freezes, convergence boards, and migration traces stay in `docs/references/` and `docs/history/`.
-The root roadmap keeps only the current family route and the reading path for active readers.
+历史 activation package、gateway/federation material、phase freeze、convergence board 与 migration trace 继续留在 `docs/references/` 与 `docs/history/`。
+根层 roadmap 只保留当前家族路线，以及活跃读者需要的阅读入口。
 
-Use these reference surfaces when you need deeper context:
+需要更深背景时，进入这些参考面：
 
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)
 - [OPL Governance / Audit Operating Surface](../references/operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../references/operating-governance/opl-publish-promotion-operating-surface.md)
-- [Ecosystem Status Matrix](../references/convergence-governance/ecosystem-status-matrix.md)
-- [Runtime substrate history archive](../history/runtime-substrate/README.md)
-- Legacy Gateway/Federation archives under `docs/history/compatibility/` only when a provenance or diagnostic question explicitly requires them
+- [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
+- [Runtime Substrate 历史归档](../history/runtime-substrate/README.md)
+- 只有明确需要 provenance 或 diagnostic 时，才进入 `docs/history/compatibility/` 下的 Legacy Gateway/Federation archive
 
-## Evaluation Criteria
+## 判断标准
 
-The roadmap is healthy when readers can immediately understand:
+这份路线图健康时，读者会立刻理解：
 
-- `OPL` owns activation, stage attempts, queue/wakeup, receipts, recovery, projection, and shared modules/contracts/indexes in a stage-led framework where Agent executors are the minimum execution unit
-- admitted domains keep their own authority under that shell
-- the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
-- the Temporal production provider now has a minimal verifiable loop: workflow/activity/signal/query, worker lifecycle contract, typed closeout ingestion, fail-closed readiness, `stage_attempt_workbench` projection, and repo-native Temporal test-server plus real-worker residency proof; external production service provisioning/readiness and domain soak remain next-stage acceptance work
-- MAS paper-line read-only closeout proof has landed, while provider-hosted guarded apply and long-running MAS owner-chain proof remain the next production-closure gates
-- legacy `OPL Gateway`, `opl web`, `Product API`, Hermes default, local-manager, and AionUI-first-shell material is read as provenance, diagnostic, history, or fixture context unless a current core document promotes it
-- future hosted and desktop work continues the same runtime/activation truth surfaces
-- new workstreams are entering as explicit domain surfaces with clear boundaries
+- `OPL` 是整个 family 的 stage-led framework owner，并以 Agent executor 为最小执行单位，持有 activation、stage attempt、queue/wakeup、receipt、recovery、projection 与 shared modules / contracts / indexes
+- admitted domain 在这个壳层之下继续持有各自 authority
+- 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是已配置 family runtime provider 之上的产品控制面
+- Temporal production provider 已有最小可验证闭环：workflow/activity/signal/query、worker lifecycle contract、typed closeout ingestion、fail-closed readiness、`stage_attempt_workbench` 投影，以及 repo-native Temporal test server + real worker residency proof；外部 production service / managed worker 的 `--production` proof 入口已 fail-closed 落地，真实 domain soak 仍是下一阶段验收
+- MAS paper-line read-only closeout proof 已落地；provider-hosted guarded apply 和长时 MAS owner-chain proof 仍是下一步 production-closure gate
+- 旧 `OPL Gateway`、`opl web`、`Product API`、Hermes default、local-manager 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 provenance、diagnostic、history 或 fixture context 阅读
+- 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
+- 新工作线会以边界清楚的 domain surface 进入家族体系

@@ -1,20 +1,20 @@
-# Shared Boundary Process History
+# Shared Boundary 过程历史
 
-**English** | [中文](./README.zh-CN.md)
+[English](./README.md) | **中文**
 
 Owner: `One Person Lab`
 Purpose: archived shared-boundary framing material
 State: `history`
-Machine boundary: human-readable provenance only. Machine truth remains in `contracts/`, source, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, and current active docs.
+Machine boundary: 仅做人读 provenance。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 与当前 active docs。
 
-This directory keeps the former Shared Foundation and Shared Foundation Ownership pages after their reusable content was absorbed into current owner surfaces.
+本目录保留原 `Shared Foundation` 与 `Shared Foundation Ownership` 页面。它们仍有效的 owner split 已吸收到当前 owner surface。
 
-Current truth now lives in:
+当前真相现在看：
 
-- [OPL Family Development Reference](../../../active/opl-family-development-reference.zh-CN.md)
-- [OPL Operating Model](../../../public/operating-model.md)
-- [Shared Runtime Contract](../../../active/shared-runtime-contract.md)
-- [Shared Domain Contract](../../../active/shared-domain-contract.md)
-- [Runtime Naming And Boundary Contract](../../../active/opl-runtime-naming-and-boundary-contract.md)
+- [OPL Family 开发主参考](../../../active/opl-family-development-reference.md)
+- [OPL 运行模型](../../../public/operating-model.md)
+- [共享运行时合同](../../../specs/shared-runtime-contract.md)
+- [共享领域合同](../../../specs/shared-domain-contract.md)
+- [Runtime 命名与边界合同](../../../runtime/opl-runtime-naming-and-boundary-contract.md)
 
-Do not use these archived pages as active workflow, runtime, mutation, review, publication, or domain-truth authority.
+不要把这里的归档页面当成活跃 workflow、runtime、mutation、review、publication 或 domain-truth authority。

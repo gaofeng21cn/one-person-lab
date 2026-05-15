@@ -1,54 +1,52 @@
-**English** | [中文](./opl-federation-contract.zh-CN.md)
-
 # OPL Federation Contract
 
-> Historical note (`2026-04-24`): this document is retained as a legacy gateway-first freeze. The current `OPL` mainline is `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`. Do not use this file as the default implementation basis; return to [Project](../../../project.md), [Status](../../../status.md), [Architecture](../../../architecture.md), [Decisions](../../../decisions.md), and [Contracts Overview](../../../../contracts/README.md) for current truth.
+> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的旧冻结件。当前 `OPL` 主线已经收口为 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。不要把这份文件当成默认实现依据；当前真相请回到 [项目概览](../../../project.md)、[当前状态](../../../status.md)、[架构](../../../architecture.md)、[关键决策](../../../decisions.md) 与 [合同目录说明](../../../../contracts/README.md)。
 
-## Purpose
+## 目的
 
-This document freezes the `G1` contract for the `OPL Gateway`.
+这份文档冻结 `OPL Gateway` 的 `G1` 契约。
 
-Its purpose is to define the minimum machine-readable contract needed before `OPL` can become a real routed gateway.
+它的目标是在 `OPL` 变成真实 routed gateway 之前，先把最小机器可读合同定义清楚。
 
-This is still a contract-first phase.
-It does not imply that the top-level gateway runtime is already implemented.
+这仍然是 contract-first 阶段。
+它不意味着顶层 gateway runtime 已经实现完成。
 
-## G1 Scope
+## G1 范围
 
-`G1` is complete only when these pieces are frozen:
+只有下面四部分都冻结，`G1` 才算完成：
 
-- a workstream registry
-- a domain registry
-- a routing vocabulary
-- a stable handoff payload between `OPL` and domain gateways
+- workstream registry
+- domain registry
+- routing vocabulary
+- `OPL` 到各 domain gateway 的稳定 handoff payload
 
-The target is not a full execution stack.
-The target is a stable top-level contract that later implementations can consume without re-inventing the control language.
+目标不是完整执行栈。
+目标是先把顶层控制语言冻结下来，让后续实现不需要再重造一轮概念。
 
-## Canonical Future Registry Files
+## 未来的 Canonical Registry 文件
 
-The intended machine-readable surfaces are:
+理想的机器可读表面是：
 
 - `opl/workstreams.json`
 - `opl/domains.json`
 - `opl/routing-vocabulary.json`
 - `opl/handoff.schema.json`
 
-These file paths are the canonical intent of the contract.
-They may be materialized later in a docs site, registry package, or gateway repo, but the contract shape should stay stable.
+这些路径表达的是契约意图。
+后面它们可以落在 docs site、registry package 或 gateway repo 中，但契约形状应尽量保持稳定。
 
-For the current repository-local materialization, see [OPL Framework Contracts](../../../../contracts/opl-framework/README.md).
+当前仓库内的 materialization 见 [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)。
 
-Current repository materialization:
+当前仓库中的落地位置：
 
 - [`../contracts/opl-framework/workstreams.json`](../../../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/domains.json`](../../../../contracts/opl-framework/domains.json)
-- [`../contracts/opl-framework/routing-vocabulary.json`](../../../../contracts/opl-framework/routing-vocabulary.json)
-- [`../contracts/opl-framework/handoff.schema.json`](../../../../contracts/opl-framework/handoff.schema.json)
+- former artifact `contracts/opl-framework/routing-vocabulary.json`（未保留为当前 active contract）
+- former artifact `contracts/opl-framework/handoff.schema.json`（未保留为当前 active contract）
 
 ## Workstream Registry
 
-Each workstream entry should define:
+每个 workstream entry 应定义：
 
 - `workstream_id`
 - `label`
@@ -60,7 +58,7 @@ Each workstream entry should define:
 - `top_level_intents`
 - `notes`
 
-### Suggested Schema
+### 建议结构
 
 ```json
 {
@@ -104,7 +102,7 @@ Each workstream entry should define:
 
 ## Domain Registry
 
-Each domain entry should define:
+每个 domain entry 应定义：
 
 - `domain_id`
 - `label`
@@ -117,7 +115,7 @@ Each domain entry should define:
 - `non_opl_families`
 - `canonical_truth_owner`
 
-### Suggested Schema
+### 建议结构
 
 ```json
 {
@@ -167,10 +165,10 @@ Each domain entry should define:
 
 ## Routing Vocabulary
 
-The `OPL Gateway` should not route by vague product names alone.
-It should route using a shared vocabulary.
+`OPL Gateway` 不应该只靠模糊产品名路由。
+它应该使用共享 vocabulary。
 
-### Required Vocabulary Groups
+### 必需词汇组
 
 - `intent_id`
 - `workstream_id`
@@ -181,7 +179,7 @@ It should route using a shared vocabulary.
 - `review_kind`
 - `entry_mode`
 
-### Suggested Vocabulary
+### 建议词汇
 
 ```json
 {
@@ -223,9 +221,9 @@ It should route using a shared vocabulary.
 
 ## Handoff Payload
 
-Once `OPL` routes into a domain, the handoff payload should be explicit and auditable.
+当 `OPL` 开始把请求路由到某个 domain 时，handoff payload 必须显式且可审计。
 
-### Required Fields
+### 必需字段
 
 - `request_id`
 - `workstream_id`
@@ -239,7 +237,7 @@ Once `OPL` routes into a domain, the handoff payload should be explicit and audi
 - `preferred_profile`
 - `review_expectation`
 
-### Suggested Payload
+### 建议 payload
 
 ```json
 {
@@ -272,31 +270,31 @@ Once `OPL` routes into a domain, the handoff payload should be explicit and audi
 }
 ```
 
-## Routing Rules
+## Routing 规则
 
-The top-level router should follow these rules:
+顶层 router 应遵守：
 
-- route by `workstream semantics` first
-- route by `domain ownership` second
-- route by `family/profile preference` third
-- never bypass a domain gateway and target a domain harness directly
+- 先按 `workstream semantics` 路由
+- 再按 `domain ownership` 路由
+- 最后按 `family / profile preference` 路由
+- 永远不要绕过 domain gateway 直达 domain harness
 
-Special rule:
+特殊规则：
 
-- `xiaohongshu` may route to `RedCube AI`
-- but it must not be auto-labeled as `presentation_ops` unless the top-level semantics really match that workstream
+- `xiaohongshu` 可以路由到 `RedCube AI`
+- 但除非顶层语义真的匹配，否则不能自动标成 `presentation_ops`
 
-## Completion Definition For G1
+## G1 完成定义
 
-`G1` is complete when:
+只有满足下面条件，`G1` 才算完成：
 
-- the registry fields are frozen
-- the routing vocabulary is frozen
-- the handoff payload is frozen
-- later implementations can materialize the same contract without redefining these concepts
+- registry 字段被冻结
+- routing vocabulary 被冻结
+- handoff payload 被冻结
+- 后续实现可以直接消费这些契约，而不必重定义概念
 
-`G1` is not complete if:
+下面这些情况说明 `G1` 还没完成：
 
-- domain ownership is still ambiguous
-- top-level and domain vocabularies still conflict
-- the router still depends on prose-only interpretation
+- domain ownership 仍不清楚
+- 顶层词汇和 domain 词汇仍冲突
+- router 仍然依赖 prose-only 解读

@@ -1,61 +1,59 @@
-**English** | [中文](./opl-routed-safety-example-corpus.zh-CN.md)
-
 # OPL Routed-Safety Example Corpus
 
-## Purpose
+## 目的
 
-This document indexes historical machine-readable examples for explicit non-success routing states from the archived `OPL Routed Action Gateway` corpus.
+这份文档索引来自已归档 `OPL Routed Action Gateway` 语料的显式非成功路由状态历史 machine-readable examples。
 
-Its goal is to make top-level routing safety discoverable and reviewable without turning failure examples into a runtime.
+它的目标是：在不把 failure example 变成 runtime 的前提下，让顶层 routing safety 更容易被发现和审核。
 
-## Non-Goals
+## 非目标
 
-This corpus does not:
+这组 corpus 不负责：
 
-- implement a runtime
-- invent fallback routing
-- create a handoff payload when routing is unresolved
-- move canonical truth into `OPL`
+- 实现 runtime
+- 发明 fallback routing
+- 在路由未决时构造 handoff payload
+- 把 canonical truth 上收给 `OPL`
 
-The examples are illustrative safety compositions only.
-For the current `Phase 1 / G3 thin handoff planning freeze hardening`, they remain planning-level contract examples rather than runtime behavior.
+这些 example 只是 illustrative 的 safety composition。
+在当前 `Phase 1 / G3 thin handoff planning freeze hardening` 中，它们仍只是 planning-level contract 示例，而不是 runtime 行为。
 
 ## Former Example Set
 
 ### 1. Ambiguous task
 
-- Former artifact: `examples/opl-framework/ambiguous-task-routing.json` (retired from the active repo artifact set)
-- Shows how `OPL` keeps routing unresolved when a request mixes `research_ops` and `presentation_ops` semantics without enough clarification.
+- Former artifact：`examples/opl-framework/ambiguous-task-routing.json`（已从 active repo artifact set 退役）
+- 展示当一个请求同时混合 `research_ops` 与 `presentation_ops` 语义、且缺少关键信息时，`OPL` 如何保持 routing unresolved。
 
 ### 2. Unknown domain
 
-- Former artifact: `examples/opl-framework/unknown-domain-routing.json` (retired from the active repo artifact set)
-- Shows how `OPL` returns `unknown_domain` when a candidate workstream is top-level recognizable but no current domain-owned capability entry owns it.
+- Former artifact：`examples/opl-framework/unknown-domain-routing.json`（已从 active repo artifact set 退役）
+- 展示当一个 candidate workstream 的顶层语义已经可识别、但当前没有任何 domain-owned capability entry 正式拥有它时，`OPL` 如何返回 `unknown_domain`。
 
 ### 3. Refusal
 
-- Former artifact: `examples/opl-framework/refusal-routing.json` (retired from the active repo artifact set)
-- Shows how `OPL` refuses a top-level request that tries to bypass the domain-owned action boundary.
+- Former artifact：`examples/opl-framework/refusal-routing.json`（已从 active repo artifact set 退役）
+- 展示当一个顶层请求试图绕过 domain-owned action boundary 时，`OPL` 如何直接拒绝。
 
-## Reading Rule
+## 阅读规则
 
-Read these examples as **contract-level safety walkthroughs**, not executable workflows.
+这些 example 必须被理解成 **contract-level safety walkthroughs**，而不是 executable workflow。
 
-If routing is unresolved or refused, no handoff payload is built and no domain truth is created by `OPL`.
-These examples only show how the frozen G3 and P5.M1 layers record that boundary safely.
+只要 routing 仍然 unresolved 或被 refused，就不会生成 handoff payload，也不会由 `OPL` 创建任何 domain truth。
+这些 example 只是展示已冻结 G3 与 P5.M1 层如何安全记录这条边界。
 
-## Governing Contracts
+## 上位合同
 
 - [OPL Routed Action Gateway](../../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
 - [OPL Governance / Audit Operating Surface](../operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 
-## Completion Definition
+## 完成定义
 
-The routed-safety corpus is acceptable only when:
+只有当下面这些条件都成立时，这组 routed-safety corpus 才算合格：
 
-- former artifact names remain provenance-only and are not clickable active repo paths
-- examples do not imply hidden best-effort routing or direct harness fallback
-- examples do not move canonical truth into `OPL`
-- current routing behavior is read from active contracts/source/CLI behavior, not this historical corpus
+- former artifact 名称只保留 provenance 语义，不再作为可点击 active repo path
+- examples 不暗示 hidden best-effort routing 或 direct harness fallback
+- examples 不把 canonical truth 上收给 `OPL`
+- 当前 routing 行为必须从 active contracts/source/CLI 行为读取，而不是从这组历史 corpus 读取

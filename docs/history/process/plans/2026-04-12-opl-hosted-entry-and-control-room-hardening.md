@@ -84,7 +84,7 @@
 - Modify: `README.md`
 - Modify: `README.zh-CN.md`
 - Modify: `docs/README.md`
-- Modify: `docs/README.zh-CN.md`
+- Modify: `docs/README.md`
 - Modify: `docs/status.md`
 - Modify: `docs/architecture.md`
 - Modify: `docs/decisions.md`

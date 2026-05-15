@@ -21,7 +21,7 @@ OMX 已退出当前 OPL 开发环境。旧的长跑提示词、stage gate、owne
 
 如果审计旧文档时看到这些语料，应按历史迁移背景理解，并回到当前入口核对：
 
-- `../README.zh-CN.md`
+- `../README.md`
 - `../project.md`
 - `../status.md`
 - `../architecture.md`

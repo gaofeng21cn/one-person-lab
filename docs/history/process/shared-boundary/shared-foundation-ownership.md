@@ -1,161 +1,159 @@
-**English** | [中文](./shared-foundation-ownership.zh-CN.md)
+# 共享基础结构归属
 
-# Shared Foundation Ownership
+> 归档说明（`2026-05-14`）：这份 ownership split 已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。本文只作为早期 Shared Foundation framing 的历史来源保留。
 
-> Archive note (`2026-05-14`): this ownership split has been absorbed into the current OPL family development reference, public operating model, and active shared runtime/domain contracts. This page is retained only as historical provenance for the earlier Shared Foundation framing.
+## 目的
 
-## Purpose
+这份文档用来澄清：在 `OPL` 里，`Shared Foundation` 到底由谁管理。
 
-This document clarifies who manages the `Shared Foundation` in `OPL`.
+它要解决一个反复出现的歧义：
 
-The goal is to remove one recurring ambiguity:
+- `OPL` 的确负责定义 shared foundation 的顶层语言
+- 但这不等于 `OPL` 自动成为所有共享对象的单一 runtime truth store
 
-- `OPL` does define the shared foundation language
-- but `OPL` does not automatically become the single runtime truth store for every shared object
+这是一份归属与边界文档。
+它不是新的执行 surface，也不是新的 domain admission contract。
 
-This is an ownership-and-boundary document.
-It is not a new execution surface, and it is not a new domain-admission contract.
+## 核心判断
 
-## Core Judgment
+正确分工是：
 
-The correct split is:
+- `OPL` 负责 shared-foundation 对象的顶层语义、索引、身份和跨域复用规则
+- 各 domain agent 负责 domain-local 对象的 canonical truth、mutation、审计回写与交付真相
+- 人类或私有 workspace 仍然可以持有尚未正式进入 domain truth 的源材料
 
-- `OPL` owns the top-level semantic, indexing, identity, and cross-domain reuse rules for shared-foundation objects
-- each domain agent owns the canonical truth, mutation, audit writeback, and delivery truth for domain-local objects
-- humans or private workspaces may still own source materials that have not yet been formalized into domain truth
+所以，“shared foundation 被统一管理”更准确的意思是：
 
-So “shared foundation is centrally managed” should be read as:
+- 在顶层控制语言层面被统一治理
 
-- centrally governed at the top-level language layer
+而不是：
 
-Not as:
-
-- centrally mutated
-- centrally versioned as the only truth
-- centrally replacing domain-owned stores
+- 在顶层被统一 mutation
+- 在顶层被统一 version 成为唯一真相
+- 在顶层取代各 domain 自己的 truth store
 
 ## Ownership Layers
 
-### `OPL` owns
+### `OPL` 负责
 
-At the top level, `OPL` may own:
+在顶层，`OPL` 可以负责：
 
-- shared object classes and naming rules
-- top-level identifiers and reference shapes
-- shared asset and memory categories
-- cross-domain reuse expectations
-- index/catalog surfaces that help humans and Agents discover reusable objects
-- handoff expectations for what may be passed into a domain
+- 共享对象类别与命名规则
+- 顶层标识符与引用形状
+- shared asset / memory 的分类
+- 跨 domain 的复用预期
+- 帮助人类与 Agent 发现可复用对象的 index / catalog surface
+- 允许哪些对象被带入 domain 的 handoff expectation
 
-### Domain agent owns
+### Domain agent 负责
 
-Each domain remains responsible for:
+每个 domain 仍然负责：
 
-- canonical object truth inside the workstream
-- domain-local mutation and version history
-- runtime writeback and audit traces
-- domain-specific review truth
-- domain-specific delivery truth
+- 该工作流内部的 canonical object truth
+- domain-local 的 mutation 与版本历史
+- runtime writeback 与审计轨迹
+- domain-specific 的 review truth
+- domain-specific 的 delivery truth
 
-### `Human / private workspace` may own
+### `Human / private workspace` 可以负责
 
-Not every useful shared object should immediately become domain truth.
-Humans or private workspaces may still own:
+并不是所有有价值的共享对象都应立刻变成 domain truth。
+人类或私有 workspace 仍可以持有：
 
-- private notes
-- source files not yet admitted into a formal workstream
-- private reference collections
-- draft materials still below formal domain governance
+- 私有笔记
+- 尚未进入正式工作流的源文件
+- 私有参考资料集合
+- 尚未进入正式 domain governance 的草稿材料
 
-## Asset Ownership Split
+## 资产层归属拆分
 
-| Object class | `OPL` owns | Domain owns | Human/private may own | Must not move into `OPL` by default |
+| 对象类型 | `OPL` 负责 | Domain 负责 | Human/private 可负责 | 默认不应上收到 `OPL` 的部分 |
 | --- | --- | --- | --- | --- |
-| `data assets` | top-level identity, category, reference shape, cross-domain reuse rules | canonical datasets, derived study assets, mutation history, audit truth | raw exports, staging files, pre-admission materials | canonical runtime data truth |
-| `references` | shared reference categories, reusable top-level reference index, cross-domain citation semantics | study-local usage, domain-local annotation, evidence packaging context | private reading lists, notes, preliminary collections | domain-specific evidence truth |
-| `templates` | shared template classes, top-level template identity, reusable cross-domain template index | domain-specific instantiation and workflow-local adaptation | draft templates before formal adoption | template execution ownership inside a domain |
-| `delivery assets` | top-level discoverability, cross-domain relation hints, delivery-kind semantics | formal deliverable truth, exports, submission/publish artifacts, reviewable outputs | draft files before formal delivery admission | final delivery truth or release ownership |
+| `data assets` | 顶层身份、分类、引用形状、跨域复用规则 | canonical dataset、study 派生产物、mutation 历史、audit truth | 原始导出、暂存文件、未收录材料 | canonical runtime data truth |
+| `references` | shared reference 分类、可复用顶层 reference index、跨域引用语义 | study-local 使用、domain-local 标注、证据组织上下文 | 私有阅读清单、批注、预备资料 | domain-specific evidence truth |
+| `templates` | shared template 类型、顶层模板身份、可复用跨域模板索引 | domain 内实例化与 workflow-local 改造 | 正式采用前的草稿模板 | domain 内模板执行 ownership |
+| `delivery assets` | 顶层 discoverability、跨域关系提示、delivery-kind 语义 | 正式交付 truth、导出物、submission/publish artifact、reviewable output | 进入正式交付前的草稿文件 | 最终 delivery truth 或 release ownership |
 
-## Memory Ownership Split
+## 记忆层归属拆分
 
-| Memory class | `OPL` owns | Domain owns | Human/private may own | Must not move into `OPL` by default |
+| 记忆类型 | `OPL` 负责 | Domain 负责 | Human/private 可负责 | 默认不应上收到 `OPL` 的部分 |
 | --- | --- | --- | --- | --- |
-| `topic memory` | reusable top-level topic identity, cross-workstream topic index, stable topic vocabulary | domain-local evidence chains tied to studies, runs, or deliverables | exploratory notes and early framing | domain-local evidence truth |
-| `review memory` | cross-domain summary/index language only when needed for discoverability | full review history, review state, review decisions, domain-specific review writeback | private reviewer notes, temporary comments | canonical review truth |
-| `venue memory` | strongest candidate for top-level shared indexing and reusable semantics | domain-local venue fit decisions tied to concrete work products | personal preference notes not yet formalized | domain-specific submission truth |
+| `topic memory` | 可复用顶层 topic identity、跨工作流 topic index、稳定 topic vocabulary | 绑定 study、run、deliverable 的 domain-local 证据链 | 探索期笔记与早期 framing | domain-local evidence truth |
+| `review memory` | 仅在 discoverability 需要时提供跨域 summary / index 语言 | 完整 review history、review state、review decision、domain-specific review writeback | 私有评审笔记、临时批注 | canonical review truth |
+| `venue memory` | 最适合做顶层 shared index 与可复用语义 | 绑定具体 work product 的 domain-local venue fit 判断 | 尚未 formalize 的个人偏好笔记 | domain-specific submission truth |
 
-## Integration With Domain Agents
+## 与 Domain Agent 的整合方式
 
-The intended flow is:
+理想流程是：
 
-1. A human or Agent starts from `OPL` with a top-level request.
-2. `OPL` identifies which shared-foundation objects are relevant at the semantic/index layer.
-3. `OPL` activates or routes the request into the correct domain-agent entry with references, not with top-level truth replacement.
-4. The target domain resolves the concrete objects it actually owns.
-5. The domain writes back its own runtime truth, review truth, and delivery truth to domain-owned surfaces.
-6. `OPL` may retain top-level references, summaries, or auditable selection signals, but not the domain's canonical object truth.
+1. 人类或 Agent 从 `OPL` 顶层发起请求。
+2. `OPL` 先在语义层 / 索引层识别哪些 shared-foundation 对象相关。
+3. `OPL` 把请求通过 activation 或 routing 交给正确的 domain-agent entry，并带过去的是引用，不是顶层 truth 替换。
+4. 目标 domain 再去解析自己真正拥有的具体对象。
+5. 该 domain 把自己的 runtime truth、review truth 与 delivery truth 写回到 domain-owned surface。
+6. `OPL` 可以保留顶层引用、摘要或可审计的 stage-selection signal，但不接管 domain 的 canonical object truth。
 
-For example:
+例如：
 
-- `OPL` may know that a research manuscript, a figure bundle, and a venue-preference memory are relevant to a presentation request
-- but `RedCube AI` still owns the visual-deliverable truth once the task enters `Presentation Foundry`
-- and `MedAutoScience` still owns the research asset truth that produced the upstream manuscript or figure bundle
+- `OPL` 可以知道一份研究稿件、一个图表包、一个 venue-preference memory 与某个 presentation 请求有关
+- 但一旦任务进入 `Presentation Foundry`，视觉交付 truth 仍由 `RedCube AI` 持有
+- 而上游稿件与研究图表的 research asset truth 仍由 `MedAutoScience` 持有
 
-## Relationship To Future Shared Indexes
+## 与未来 Shared Index 的关系
 
-The rollout already allows future:
+当前路线图已经允许未来出现：
 
 - shared asset index
 - shared memory index
 
-If these surfaces are added later, the default interpretation should remain:
+如果后续真的新增这些 surface，默认解释仍应是：
 
 - index-first
-- reference-only unless explicitly upgraded by a later contract
-- never an automatic transfer of canonical truth from domains into `OPL`
+- 除非后续有显式新合同，否则保持 reference-only
+- 绝不自动把 canonical truth 从 domain 转移到 `OPL`
 
-That means a future shared index may improve discoverability and reuse, but it still should not become:
+这意味着：未来 shared index 可以提升 discoverability 和 reuse，但它仍不应变成：
 
-- the only truth registry
-- the mutation owner for domain assets
-- the review owner for domain review state
-- the publish/release owner for domain deliverables
+- 唯一 truth registry
+- domain asset 的 mutation owner
+- domain review state 的 review owner
+- domain deliverable 的 publish / release owner
 
-### Readiness Before Public Admission
+### 进入当前 public surface 之前的 readiness 条件
 
-A future `shared asset index` or `shared memory index` should not appear on the current `OPL` public surface until a later explicit contract freezes, at minimum:
+未来的 `shared asset index` 或 `shared memory index`，在后续显式合同至少冻结下面这些条件之前，不应出现在当前 `OPL` public surface 里：
 
-- what object classes and identifiers the index is actually allowed to cover
-- the owner split and governing refs for every indexed object family
-- a reference-only / non-executing control mode
-- explicit no-truth-shift, no-mutation-ownership, and no-review/publication-takeover rules
-- review and acceptance coverage across the public-surface index, supporting boundary surfaces, and acceptance spec
+- 它究竟允许覆盖哪些 object class 与 identifier
+- 每类被索引对象的 owner split 与 governing refs
+- reference-only / non-executing 的 control mode
+- 显式禁止 truth shift、mutation ownership 转移，以及 review/publication takeover
+- public-surface index、supporting boundary surfaces 与 acceptance spec 上的 review / acceptance coverage
 
-Until those readiness conditions are frozen, any shared-index mention stays roadmap-level only.
-It is not a current public-entry surface, not a routed surface, not an execution surface, and not a truth-owner surface.
+在这些 readiness 条件冻结之前，任何 shared-index 提法都只能停留在 roadmap level。
+它不是当前 public-entry surface，不是 routed surface，不是 execution surface，也不是 truth-owner surface。
 
-## Non-Goals And Anti-Regressions
+## 非目标与反回归规则
 
-This ownership model does not allow:
+这套 ownership model 不允许：
 
-- `OPL` becoming a monolithic shared-foundation runtime
-- `OPL` becoming the single truth store for all assets or memory
-- `OPL` taking domain-owned review truth, runtime truth, or publication truth
-- `shared asset index` becoming a mutation owner
-- `shared memory index` becoming a replacement for domain review or workspace evidence
-- reducing `MedAutoScience` or `RedCube AI` to private implementation details under `OPL`
-- bypassing a domain-agent entry because a top-level shared object exists
+- 把 `OPL` 做成 shared foundation 的单体 runtime
+- 把 `OPL` 做成所有 asset / memory 的单一 truth store
+- 把 domain-owned review truth、runtime truth 或 publication truth 上收给 `OPL`
+- 让 `shared asset index` 变成 mutation owner
+- 让 `shared memory index` 取代 domain review 或 workspace 证据
+- 把 `MedAutoScience` 或 `RedCube AI` 降格成 `OPL` 下面的私有实现细节
+- 因为顶层 shared object 存在，就绕过 domain-agent entry
 
-## Current Practical Reading
+## 当前阶段的实际解读
 
-At the current repository stage:
+在当前仓库阶段：
 
-- the shared foundation is primarily frozen as top-level language and boundary documentation
-- this repository does not yet materialize a full shared asset index or shared memory index
-- that absence does not mean the ownership split is undefined
+- shared foundation 主要还是以顶层语言与边界文档的形式被冻结
+- 当前仓库还没有 materialize 出完整的 shared asset index 或 shared memory index
+- 但这不意味着 ownership split 还没定义
 
-The current reading should therefore be:
+所以当前更准确的解读应是：
 
-- `OPL` already owns the shared-foundation control language
-- domains already own their concrete truth surfaces
-- future shared indexes, if added, should stay aligned with that same split unless a later explicit contract says otherwise
+- `OPL` 已经拥有 shared-foundation 的控制语言
+- 各 domain 已经拥有各自的具体 truth surface
+- 如果未来增加 shared index，也必须继续服从这套分工，除非后续有新的显式合同重新定义

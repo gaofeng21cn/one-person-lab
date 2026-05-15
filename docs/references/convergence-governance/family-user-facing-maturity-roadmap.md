@@ -2,7 +2,7 @@
 
 更新时间：`2026-04-13`
 
-> 2026-05-14 生命周期说明：本文保留为 2026-04 用户面成熟度 snapshot。当前 OPL family 的活跃入口不再使用 `frontdoor_surface` / web front desk 作为实现目标或 manifest 要求；旧 frontdoor / gateway / federated product entry 语义只按历史 provenance 阅读。当前有效口径以 `docs/status.md`、`docs/active/current-state-vs-ideal-gap.zh-CN.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` 和 machine-readable domain descriptors / product-entry readiness surfaces 为准。
+> 2026-05-14 生命周期说明：本文保留为 2026-04 用户面成熟度 snapshot。当前 OPL family 的活跃入口不再使用 `frontdoor_surface` / web front desk 作为实现目标或 manifest 要求；旧 frontdoor / gateway / federated product entry 语义只按历史 provenance 阅读。当前有效口径以 `docs/status.md`、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` 和 machine-readable domain descriptors / product-entry readiness surfaces 为准。
 
 ## 目的
 

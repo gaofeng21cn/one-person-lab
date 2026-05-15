@@ -26,7 +26,7 @@
 
 ## 文档分层与生命周期治理
 
-- `README*` 与 `docs/README*` 是默认公开入口。
+- `README*` 与 `docs/README*` 是默认入口；`docs/**` 是中文内部开发与维护参考。
 - `docs/project.md`：项目概览与当前公开角色。
 - `docs/architecture.md`：顶层 session/runtime、activation、contract 与 domain-agent 边界。
 - `docs/invariants.md`：硬约束与不能破坏的边界。
@@ -36,16 +36,22 @@
 - 每份长期文档都必须能说明 `owner`、`purpose`、`state`、`machine boundary`；缺少任一信号时，先补入口或归位，再继续扩写。
 - 文档治理按内容生命周期判断，文件名和目录名只作为辅助信号；同一文档内的当前事实、活跃计划、支撑参考与历史叙事应分别归入当前 owner doc、active/support 层或 history/tombstone 语境。
 - 入口文档应优先让读者一眼看清当前状态、层次、新旧关系和下一跳；旧计划、旧路线和已完成 closeout 进入 provenance / history 层。
-- `docs/active/`：当前 runtime、activation、shared-boundary 与 onboarding 支持文档。
+- `docs/active/`：当前执行、当前计划、当前差距、active baton 与 closeout evidence。
 - `docs/public/`：当前公开叙事、roadmap、task map 与 operating model。
-- `docs/specs/`：当前仍生效的 runtime / product-boundary 规格。
+- `docs/product/`：One Person Lab App/workbench、operator entry、product entry 与 action-routing shell 支撑。
+- `docs/runtime/`：framework runtime、provider/executor、control plane、projection/read model、resume/wakeup 与 repair 语义支撑。
+- `docs/delivery/`：通用 artifact/package/export lifecycle shell 支撑；domain 交付 authority 留在 MAS/MAG/RCA。
+- `docs/source/`：通用 workspace/source intake 与 source truth transport shell 支撑；domain source semantics 留在 MAS/MAG/RCA。
+- `docs/policies/`：稳定治理规则、运行纪律和 repo-local 维护规则。
+- `docs/specs/`：当前仍生效的 runtime、domain admission、shared boundary 或 product-boundary 规格支撑。
 - `contracts/` 只保留 machine-readable contract surface；不再承载 narrative 规则。
 - `docs/references/`：参考级配套文档。
 - `docs/history/`：历史归档入口，包含已完成 plans、退役 specs、frontdoor / gateway / federation / routed-action 旧定位与 repo-tracked process drafts，不再承担活跃 workflow。
 
 ## 文档规则
 
-- 第一层和第二层公开文档保持双语；内部参考、历史、维护与技术文档默认中文。
+- `docs/**` 默认只维护中文 canonical 内容；稳定路径优先使用无语言后缀 `.md`。
+- 根层 `README*` 是否保留公开双语入口，由产品分发和 public 需求单独决定。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
 - `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
 - 退役定位只能放在 `docs/history/**` 的 archive / tombstone 语境中；active docs 提到 gateway、federation、frontdoor 等旧路线时，必须同时指向当前 truth owner。

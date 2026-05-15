@@ -1,15 +1,15 @@
-# Source Docs
+# Source 文档
 
 Owner: `One Person Lab`
 Purpose: `generic_source_workspace_support`
 State: `active_support`
-Machine boundary: Human-readable index. Machine truth remains in workspace registries, source/artifact contracts, runtime evidence, domain manifests, and owner receipts.
+Machine boundary: 人读索引。机器真相继续归 workspace registry、source/artifact contracts、runtime evidence、domain manifests 与 owner receipts。
 
-This directory holds support for the generic workspace/source intake shell, workspace registry, source locators, source-readiness projection, and source-truth transport boundaries. Domain source semantics, research sources, grant materials, and visual-material judgment remain in MAS/MAG/RCA.
+本目录承接通用 workspace/source intake shell、workspace registry、source locator、source readiness projection 与 source truth transport 边界。领域 source semantics、研究来源、基金材料和视觉素材判断继续归 MAS/MAG/RCA。
 
-Start with:
+当前入口先看：
 
-- [OPL Family Development Reference](../active/opl-family-development-reference.zh-CN.md)
-- [OPL Operating Model](../public/operating-model.md)
-- [Shared Runtime Contract](../active/shared-runtime-contract.md)
-- [Shared Domain Contract](../active/shared-domain-contract.md)
+- [OPL 系列项目开发主参考](../active/opl-family-development-reference.md)
+- [OPL 运行模型](../public/operating-model.md)
+- [共享运行时合同](../specs/shared-runtime-contract.md)
+- [共享领域合同](../specs/shared-domain-contract.md)

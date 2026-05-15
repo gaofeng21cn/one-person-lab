@@ -1,272 +1,114 @@
-# OPL Documentation Portfolio Consolidation
+# OPL 文档组合治理
 
-Status: `active docs governance`
-Date: `2026-05-11`
+Status: `active_docs_governance`
 Owner: `One Person Lab`
+Purpose: `docs_lifecycle_governance`
+State: `active_support`
+Machine boundary: 本文是人读治理入口。机器可读真相继续归 `contracts/`、schema、source、CLI/API 行为、runtime ledger、provider receipt、domain manifest、生成产物和语义化 `human_doc:*` id。
 
-## Summary
+## 当前结论
 
-`docs/` is managed as a documentation portfolio, not as a flat file dump.
-Every long-lived document must have four explicit signals:
+`docs/**` 是 OPL 的中文内部开发与维护参考，不再维护 docs 层双语镜像。稳定文档路径优先使用无语言后缀 `.md` 承载中文 canonical 内容。历史文档可以保留旧双语方案、旧路径和旧命令作为 provenance，但 active/reference 索引必须指向当前无后缀路径。
 
-1. `owner`: the repo, domain, or maintainer surface that owns the current truth.
-2. `purpose`: public entry, active truth, active contract, support reference, program record, history, or tombstone.
-3. `state`: `active_truth`, `active_support`, `support_reference`, `dated_snapshot`, `superseded`, `retired`, or `tombstone`.
-4. `machine boundary`: whether code, tests, contracts, or runtime surfaces may consume it.
+OPL、MAS、MAG、RCA 采用同一套 canonical docs taxonomy：
 
-`README*` and `docs/**` are human-readable surfaces. Machine-readable behavior must use `contracts/`, schemas, source files, generated artifacts, CLI/API behavior, or semantic ids such as `human_doc:*`; it must not pin prose docs paths, headings, sections, or wording as stable interfaces.
+`active/public/product/runtime/delivery/source/policies/specs/references/history`
 
-Lifecycle decisions are content-level decisions. A document with a current-looking filename can still be historical if its body describes a superseded topology, old development plan, retired gateway/frontdoor/federation route, Hermes-first default, or MDS-default dependency. A document in `docs/references/` can still be active support if its body has a current owner, current purpose, current state, and explicit machine boundary. Maintainers should classify the content before moving, expanding, or deleting the file.
+这套目录不是按“当前有没有文件”决定保留，而是按四仓长期生命周期职责决定保留。目录有长期职责时，可以暂时只有 README/索引；但索引必须写清 owner、purpose、state、machine boundary、当前承载状态和新增正文准入规则。目录没有长期职责时，不进入 taxonomy。
 
-Entry pages should show the current state, hierarchy, old/new relationship, and next reading step before listing supporting material. Old plans, closeout notes, compatibility records, and dated calibrations remain useful as provenance; place them after the current framework roadmap, core five, active specs, and active support docs.
+`opl-aion-shell` 的 `docs/` 属于上游 AionUI 依赖文档，不纳入这套目录治理。OPL 只在本仓记录 One Person Lab App/workbench 的目标、消费合同、action routing 和 runtime/domain truth 投影边界。
 
-The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). The May 14 refresh tightens that rule into a same-name canonical docs taxonomy for the OPL family: lifecycle decisions still happen at the content level, but long-lived repo docs converge on the same directory names.
+## 主参考
 
-The 2026-05-11 content-level rollout extends that rule across the current
-OPL family. The execution order is framework-first: `OPL` owns the shared
-stage-led, provider-backed agent framework language and docs lifecycle rules,
-with Agent executors as the minimum execution unit; `MAS`, `MAG`, and `RCA` keep their domain truth while migrating their
-docs to content-level owner surfaces; `MDS` remains an archive/reference/oracle
-surface declared by MAS. The rollout entry is
-[OPL Family Content-Level Docs Consolidation 2026-05-11](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.zh-CN.md).
+OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)。它持有：
 
-The 2026-05-14 layered-planning rule makes the development reference explicit:
-[OPL Family Development Reference](./active/opl-family-development-reference.zh-CN.md)
-is the main OPL-family development reference. OPL owns global target state,
-global gaps, shared primitive absorption, App/workbench targets, domain
-admission, and cross-repo execution order. Each domain repo owns its own
-target-state/gap/plan surface and records which generic runtime, memory,
-lifecycle, projection, workbench, and observability capabilities should be
-lifted into OPL. The canonical directory set is
-`active/public/product/runtime/delivery/source/policies/specs/references/history`.
-Older `program`, `plans`, and `capabilities` directories in managed domain repos
-are direct migration targets: active material should move into canonical
-directories, and any retained old path must be limited to external/upstream
-support, explicit history/provenance, or tombstone context. New recurring
-material enters the canonical directory set first.
-`opl-aion-shell` docs are upstream AionUI dependency docs and are excluded from
-this repository-directory governance.
+- OPL 全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；
+- MAS/MAG/RCA 单仓目标、差距、authority、direct/hosted 边界和上收候选的放置规则；
+- 过时模块、接口、alias、facade、聚合测试和旧文档入口的 direct retirement 规则；
+- 四仓 canonical docs taxonomy 与非 canonical 目录迁移规则。
 
-## Reading Order
+单仓文档只维护本仓 truth、差距、计划、authority 和与 OPL 的上收边界。MAS/MAG/RCA 不在本仓维护其他 domain 的 backlog，也不保留 parallel framework plan。
 
-1. `README.md` / `README.zh-CN.md`
-2. `docs/README.md` / `docs/README.zh-CN.md`
-3. Core five: `project.md`, `status.md`, `architecture.md`, `invariants.md`, `decisions.md`
-4. Active current docs: `docs/active/`, especially `current-development-lines*` and `development-document-portfolio*`
-5. Current public narrative: `docs/public/`
-6. Product/workbench support: `docs/product/`
-7. Runtime support: `docs/runtime/`
-8. Delivery lifecycle support: `docs/delivery/`
-9. Source/workspace support: `docs/source/`
-10. Stable policies: `docs/policies/`
-11. Active specs: `docs/specs/`
-12. Support references: `docs/references/`
-13. Historical archive: `docs/history/`
+## 阅读顺序
 
-## Directory Roles
+1. 根层 `README*`：安装、启动和用户第一入口。
+2. `docs/README.md`：文档入口和当前阅读路径。
+3. 核心五件套：`project.md`、`status.md`、`architecture.md`、`invariants.md`、`decisions.md`。
+4. `docs/active/`：当前执行、当前差距、active baton 与 closeout evidence。
+5. `docs/runtime/`、`docs/specs/`、`docs/product/`：runtime、domain admission/shared boundary、App/workbench/product-entry 支撑。
+6. `docs/source/`、`docs/delivery/`、`docs/policies/`：workspace/source、artifact/package lifecycle、稳定治理规则。
+7. `docs/references/`：目标态、收敛治理、运行支撑、domain admission、样例和操作治理参考。
+8. `docs/history/`：退役路线、完成计划、历史设计、tombstone 和 provenance。
 
-| Directory | Role | Active rule |
+## 目录职责
+
+| 目录 | 长期职责 | 当前 OPL 承载 |
 | --- | --- | --- |
-| `docs/` root | Technical entry and current core truth | Only README, core five, docs governance, and first-level lifecycle directories. |
-| `docs/active/` | Current runtime, activation, shared-boundary, onboarding, current development lines, and development-document portfolio support docs | Active support for current implementation and content-level development-document disposition; still human-readable, not machine authority. |
-| `docs/public/` | Public product direction after install/start entry | Bilingual user-facing narrative, roadmap, task map, and operating model. |
-| `docs/product/` | One Person Lab App/workbench, operator-entry, and product-entry support | Describes OPL-owned App/workbench consumption contracts without governing upstream AionUI docs. |
-| `docs/runtime/` | Runtime/provider/executor/control-plane/projection support | Human-readable OPL runtime support; machine truth stays in contracts, source, CLI/API behavior, ledgers, and provider receipts. |
-| `docs/delivery/` | Generic artifact/package/export lifecycle-shell support | OPL owns shared lifecycle shell and refs; domain delivery authority stays in domain repos. |
-| `docs/source/` | Generic workspace/source intake and source-truth transport-shell support | OPL owns shared shell and locator/projection boundaries; domain source semantics stay in domain repos. |
-| `docs/policies/` | Long-lived governance rules and repo-local operating discipline | Policies must stay subordinate to core invariants/decisions and machine-readable contracts. |
-| `docs/specs/` | Active runtime / product-boundary specs | Only specs that still define current behavior or current target boundary. |
-| `docs/references/current-support/` | Current operational support references | Setup, GUI, release, quality, and install references. |
-| `docs/references/runtime-substrate/` | Runtime substrate, provider, executor, and product-entry references | Stage-led framework roadmap, Temporal/provider support, Runtime Manager target, and current migration/evaluation material. |
-| `docs/references/convergence-governance/` | Cross-repo convergence and docs governance references | Family docs governance, convergence lessons, intake templates, and status matrices. |
-| `docs/references/domain-admission/` | Candidate and admitted-domain reference records | Domain backlog, tranche records, phase records, and onboarding-adjacent support. |
-| `docs/references/examples-corpora/` | Example corpora and operating records | Historical examples and reference corpora, not current behavior oracle. |
-| `docs/references/operating-governance/` | Governance, quality, lifecycle, review, publish, and operator projection references | Support for operator review and audit; no domain truth ownership. |
-| `docs/history/compatibility/` | Retired compatibility material | Gateway/federation/routed-action corpus and other compatibility archives. |
-| `docs/history/runtime-substrate/` | Retired runtime-substrate planning material | Absorbed Hermes-first, direct-entry, host-agent-only, managed-runtime checklist, online-agent-platform, and MAS cutover documents. |
-| `docs/history/frontdoor-legacy/` | Retired frontdoor-era material | Frontdoor/Product API/UI-adapter era notes and tombstones. |
-| `docs/history/process/` | Completed plans, superseded specs, and process drafts | Provenance only; not current implementation contract. |
-| `docs/history/omx/` | Retired OMX-era material | Tombstone only. |
+| `docs/` root | 文档入口、核心五件套、docs governance | `README.md`、核心五件套、本文件。 |
+| `docs/active/` | 当前执行、当前计划、当前差距、active baton、closeout evidence | family 开发主参考、当前开发线路、当前状态与理想差距、生产闭环差距矩阵、开发文档组合整理。 |
+| `docs/public/` | 仓库首页之后的公开产品方向支撑 | roadmap、task map、operating model、UHS 叙事。 |
+| `docs/product/` | One Person Lab App/workbench、operator entry、product entry、action-routing shell | public surface index 与 App/workbench 消费边界。 |
+| `docs/runtime/` | framework runtime、provider/executor、control plane、projection/read model、resume/wakeup、repair 语义 | runtime 命名与边界合同。 |
+| `docs/delivery/` | 通用 artifact/package/export lifecycle shell、locator、restore/retention、handoff projection | artifact/package lifecycle boundary。domain delivery authority 留在 MAS/MAG/RCA。 |
+| `docs/source/` | 通用 workspace/source intake shell、locator、source readiness projection、source truth transport | workspace/source intake boundary。domain source semantics 留在 MAS/MAG/RCA。 |
+| `docs/policies/` | 稳定治理规则、运行纪律、repo-local 维护规则 | docs lifecycle policy。硬约束仍以 core five 和 contracts 为准。 |
+| `docs/specs/` | 当前仍有效的 domain admission、shared boundary、runtime/product boundary 规格支撑 | domain onboarding、shared runtime/domain contracts。 |
+| `docs/references/` | north-star、positioning、integration、governance、verification、operating support | runtime substrate、convergence governance、current support、domain admission、examples、operating governance。 |
+| `docs/history/` | retired route、completed plans、tombstone、provenance、process archive | gateway/federation/frontdoor/OMX/runtime-substrate/process history。 |
 
-## Content-Level State Review 2026-05-11
+## 四仓目录状态
 
-This review treats document bodies as the source for lifecycle placement. The
-current OPL owner split is:
-
-- `OPL`: framework owner for session/runtime in a stage-led model where Agent executors are the minimum execution unit,
-  activation, discovery, projection, typed queue, stage attempts, receipts,
-  recovery, shared contracts, and shared indexes.
-- `Codex CLI`: default minimum execution unit inside a stage unless an
-  explicit route selects another executor.
-- `MAS`, `MAG`, `RCA`: active domain-agent repos. They own domain truth,
-  quality verdicts, runtime details, artifact/package authority, and direct
-  app skill paths.
-- `MDS`: MAS-declared archive, backend-audit, source-provenance,
-  historical-fixture, explicit archive-import, upstream-intake, and parity
-  oracle reference only.
-- `Hermes-Agent`: external upstream runtime/project. In OPL prose,
-  `hermes_agent` may appear as a canonical explicit non-default executor
-  adapter/backend with independent receipt, audit, full-loop proof, and
-  fail-closed gates. Hermes provider, proof-provider, Gateway/readiness,
-  provider fallback, default execution, and compatibility surfaces are retired
-  and may appear only as migration provenance, historical/reference material,
-  diagnostic vocabulary, fixtures, or negative guards.
-- `Temporal`: required production provider for durable stage-attempt
-  substrate. Current docs must keep required target state and landed state separate.
-
-### Current Owner Surfaces By Partition
-
-| Partition | Current owner surface | Current role | Absorbed / historical handling |
-| --- | --- | --- | --- |
-| Root README | `README.md`, `README.zh-CN.md` | User install/start entry and product-family overview | Technical details should point to docs index and core five; stale public links must be corrected immediately. |
-| Core five | `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md` | Active truth for role, boundary, state, hard constraints, and decisions | Reference docs stay subordinate to these files. |
-| Docs governance | `docs/docs_portfolio_consolidation.md` | Current documentation lifecycle owner | New long-lived docs must be admitted through this lifecycle map. |
-| `docs/active/` | `README*`, current development lines, development-document portfolio, public surface index, domain onboarding, runtime naming, shared runtime/domain contracts, and closure gap matrix | Active human-readable support for current runtime, activation, onboarding, shared-boundary language, production closure, and development-document disposition | Gateway/federation/frontdoor material is referenced only as history or migration background. |
-| `docs/public/` | `README*`, roadmap, task map, operating model, UHS narrative | Public product-direction support after the repository home | UHS remains a support narrative; implementation authority lives in active contracts, the core five, and machine-readable contracts. |
-| `docs/specs/` | `README*` | Active spec index | The two April 2026 Product API / ACP specs have moved to `docs/history/process/specs/`; when this index is empty, current runtime/product-boundary truth lives in the core five, `docs/active/`, runtime-substrate roadmap, and machine-readable contracts. |
-| `docs/references/current-support/` | `README*`, GUI/WebUI/install/release/skill/test support references | Current operational support references | Support commands and deployment notes must stay subordinate to CLI/API/contracts/source truth. |
-| `docs/references/runtime-substrate/` | `README*`, stage-led framework roadmap, Temporal provider plan, Runtime Manager target | Runtime/provider/executor support references | Older direct-entry, Hermes-first, host-agent, gateway, and online-platform whole plans have moved to `docs/history/runtime-substrate/`; current references stay subordinate to roadmap and core five. |
-| `docs/references/operating-governance/` | `README*`, domain memory governance, quality/operator/incident references, and legacy-derived surface review notes | Governance and reviewability support | Gateway-derived surface notes remain provenance references over archived compatibility surfaces; current topology lives in the core five, active runtime docs, current contracts, source, CLI/API behavior, runtime ledgers, and domain-owned manifests. |
-| `docs/references/convergence-governance/` | Family docs lifecycle rollout, convergence lessons, intake templates, external-learning boards | Cross-repo governance and convergence support | Dated rollout boards stay support references; final current truth must be copied into core owner docs or active reference indexes. |
-| `docs/references/domain-admission/` | Candidate backlog and admission/phase records | Candidate-domain support and dated admission records | Candidate workstreams remain semantic signals until admission evidence lands. |
-| `docs/references/examples-corpora/` | Example corpora and operating records | Examples and evidence corpora | Gateway/routed examples are contract walkthroughs and evidence examples. |
-| `docs/history/` | `README*` and child tombstone indexes | Retired, completed, or superseded material | Historical command snippets and acceptance checklists remain provenance. |
-
-### Key Document Disposition Table
-
-| Document or group | Disposition | Current owner / next hop | Reason |
-| --- | --- | --- | --- |
-| `docs/project.md`, `docs/status.md`, `docs/architecture.md` | Keep as active truth | Core five | They already state the stage-led OPL framework boundary, Agent executors as the minimum execution unit, and domain-agent ownership. |
-| `docs/active/current-development-lines*` | Keep as active support | Active docs index plus stage-led framework roadmap | It defines the framework-first content-level execution order. |
-| `docs/active/opl-family-development-reference.zh-CN.md` | Keep as active support | OPL-family development reference | It fixes the layered plan owner split across OPL, MAS, MAG, RCA, and OPL-owned App/workbench targets, including shared primitive absorption and direct retirement of stale compatibility surfaces. |
-| `docs/active/development-document-portfolio*` | Keep as active support | Active docs index plus docs portfolio | It classifies old development content by current role: merge, retain, downgrade, retire, or archive. |
-| `docs/active/opl-public-surface-index*` | Keep active support | `docs/active/README*` and core five | It correctly tombstones gateway/federation/routed-action prose and points to current runtime/activation surfaces. |
-| `docs/active/opl-domain-onboarding-contract*` | Keep active support | Domain admission contract plus machine-readable OPL framework contracts | Admission remains active, but historical execution-model companions must stay marked as history. |
-| `docs/active/shared-runtime-contract*`, `docs/active/shared-domain-contract*`, and `opl-runtime-naming-and-boundary-contract*` | Keep active support | Shared-boundary owner docs | These define current runtime/domain boundary language as human-readable support. |
-| `docs/history/process/shared-boundary/shared-foundation*` | Archived after absorption | OPL family development reference, public operating model, and active shared runtime/domain contracts | The reusable owner split has been copied into current owners; the old pages are retained only as bilingual provenance for the earlier Shared Foundation framing. |
-| `docs/history/process/plans/2026-05-14-production-functional-closure-plan.zh-CN.md` | Archived after absorption | Production framework closure gap matrix | The one-time parallel functional closure plan has completed; active follow-through now belongs in the current gap matrix, not a second active plan. |
-| `docs/public/roadmap*`, `task-map*`, `operating-model*` | Keep public support | Public docs index | They describe product direction and task semantics after the install/start entry. |
-| `docs/public/unified-harness-engineering-substrate*` | Keep as support narrative | Shared runtime/domain contract docs | It is useful umbrella language, but implementation truth lives in active contracts, core five, and machine-readable contracts. |
-| `docs/history/process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` | Archived as historical process spec | Core five plus stage-led framework roadmap | Its resource model was absorbed; its Product API / local 8787 / frontdoor-era wording is historical design context. |
-| `docs/history/process/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md` | Archived as historical process spec | Core five plus stage-led framework roadmap | Its session-runtime-first pivot was absorbed; ACP/Product API wording is projection history. |
-| `docs/references/current-support/*` | Keep as current support | Current-support index | These docs explain GUI shell, Docker/WebUI, install, release, skill, quality, and test support; none owns runtime truth. |
-| `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md` | Keep as master active support | Runtime-substrate index | It is the current framework roadmap and legacy-surface retirement entry. |
-| `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md` | Keep as active support plan | Stage-led roadmap | It is the Temporal provider technical lane; production Temporal autonomy requires soak evidence. |
-| `docs/history/runtime-substrate/**` | Keep as tombstoned history | Runtime-substrate history index | Useful content has been absorbed into active owners; whole documents preserve evaluation and migration context only. |
-| `docs/references/operating-governance/family-domain-memory-governance.zh-CN.md` | Keep active support | Operating-governance index | It governs whether domain experience belongs in memory, contracts, or deferred framework work. |
-| `docs/references/operating-governance/opl-surface-{authority,lifecycle,review}-matrix*` | Keep as legacy-derived support references | Operating-governance index plus current framework contracts | The old machine artifacts are no longer active contracts in this repo; prose must present these files as legacy-derived reviewability references only. |
-| `docs/history/compatibility/gateway-federation/**` | Keep tombstoned | History compatibility index | Retired gateway/federation/routed-action corpus. |
-| `docs/history/frontdoor-legacy/**` | Keep tombstoned | Frontdoor legacy index | Retired frontdoor/Product API/bootstrap notes. |
-| `docs/history/process/**` | Keep as process archive | Process history index | Completed or superseded implementation plans and generated planning notes. |
-| `docs/history/omx/**` | Keep tombstoned | OMX history index | Retired OMX-era workflow material. |
-
-### Merge And Archive Rules From This Review
-
-1. If a retained reference contains a current invariant, copy that invariant
-   into the core five, active support owner, or machine-readable contract; do
-   keep the dated board as support or history.
-2. If a retained reference describes gateway/frontdoor/federation/Hermes-first
-   as the active path, prepend or update a lifecycle note that labels it
-   `superseded`, `legacy`, or `retired` and points to the current owner.
-3. If a file seems to remain in `docs/specs/` only for inbound-link stability,
-   move it to `docs/history/process/specs/` after updating inbound prose links
-   and name the current owner surface in the archive header.
-4. If operating-governance material still names `domain_gateway` or old
-   gateway IDs, the prose must call them archived provenance / reviewability
-   vocabulary and point to the current topology owner. Do not keep them as
-   active compatibility interfaces or claim retired matrix JSON contracts are
-   still current machine artifacts.
-5. Physical moves should happen only after inbound prose links and
-   machine-readable `human_doc:*`/contract references are checked. Until then,
-   index-level lifecycle separation is preferred.
-
-## Lifecycle States
-
-| State | Meaning | Allowed location | Update rule |
-| --- | --- | --- | --- |
-| `active_truth` | Current product role, architecture, status, invariants, or durable decision. | `docs/` root core five | Update with behavior, public boundary, or admitted-domain status changes. |
-| `active_support` | Current human-readable support for active runtime/activation/shared-boundary docs. | `docs/active/`, `docs/public/`, `docs/specs/` | Keep aligned with core truth; do not use as machine authority. |
-| `support_reference` | Background, audit, method, or operating support that explains current work but does not own it. | `docs/references/` | Keep indexed by role; do not let it override active truth. |
-| `dated_snapshot` | A completed intake, closeout, activation package, or one-time board. | `docs/history/` | Preserve provenance; active owner remains elsewhere. |
-| `superseded` | A design or plan replaced by a newer current surface. | Prefer `docs/history/`; temporary reference retention is allowed only when the index labels it as superseded and points to the current owner. | Add a pointer to the current owner surface; do not expand it as active planning. |
-| `retired` | A route that is no longer valid. | `docs/history/compatibility/`, `docs/history/frontdoor-legacy/`, `docs/history/omx/` | Keep as audit material only. |
-| `tombstone` | A short index telling readers not to revive a retired route. | Relevant `docs/history/**/README*` | Name the retired route and point to current truth. |
-
-## Active Root Allowlist
-
-The root of `docs/` should stay sparse. Tracked files at `docs/` root are limited to:
-
-- `README.md`
-- `README.zh-CN.md`
-- `project.md`
-- `status.md`
-- `architecture.md`
-- `invariants.md`
-- `decisions.md`
-- `docs_portfolio_consolidation.md`
-
-All other long-lived docs must live in `active/`, `public/`, `specs/`, `references/`, or `history/`.
-
-## Anti-Pollution Rules
-
-1. Do not keep retired positioning in an active directory for path compatibility.
-2. If a machine surface points at a prose doc path, migrate it to a contract/schema/source path or `human_doc:*` semantic id first.
-3. Retired gateway/federation/routed-action/frontdoor wording may appear in active docs only as historical context with an explicit current-truth pointer.
-4. Old development plans must be merged into the current owner surface or archived as dated snapshots; do not leave parallel plans that appear to be active only because their filenames still sound current.
-5. New docs must be admitted through their lifecycle role before expansion.
-6. Directories that accept recurring additions need a README or portfolio entry that says what belongs there and what should be archived.
-7. Historical docs may preserve old path examples as provenance, but active and reference indexes must point to current locations.
-8. Public README pages must be written for potential users first. Chinese README text should be plain Chinese except for product names, command names, API names, and terms that are intentionally kept in English.
-9. Do not add scripts or tests that assert narrative README/docs prose, headings, or status wording. Tests may validate contracts, schemas, CLI/API behavior, generated artifact structure, source paths, or `human_doc:*` ids.
-
-## External Practice Map
-
-| Source | Practice adopted here |
+| 仓库 | 当前判断 |
 | --- | --- |
-| [Diataxis](https://diataxis.fr/) | Separate explanation, how-to, reference, and learning material by reader intent. |
-| [GitLab documentation topic types](https://docs.gitlab.com/development/documentation/topic_types/troubleshooting/) | Keep troubleshooting, task, and reference material in explicit topic boundaries instead of mixing them into default entry pages. |
-| [Microsoft Learn style guide](https://learn.microsoft.com/en-us/style-guide/word-choice/use-simple-words-concise-sentences) | Keep entry pages concise, scannable, and terminology-consistent. |
-| [Write the Docs: Docs as Code](https://www.writethedocs.org/guide/docs-as-code.html) | Treat documentation changes as reviewed, diffable, verifiable repo work with owners and lifecycle state. |
-| [The Good Docs Project IA guide](https://www.thegooddocsproject.dev/tactic/ia-guide) | Design information architecture from reader goals and maintain a clear navigation path. |
-| [Red Hat modular docs](https://redhat-documentation.github.io/modular-docs/) | Keep modules independently meaningful and assemble them by user story instead of flat adjacency. |
-| [Google developer docs style guide](https://developers.google.cn/style/highlights) | Keep headings, links, dates, and wording scannable and consistent. |
+| `OPL` | 完整保留 canonical 目录集合；本轮把 active 中的 runtime/spec/product 内容归位，并给 source/delivery/policies 放入真实 owner 文档。 |
+| `MAS` | 完整保留 canonical 目录集合；`active/runtime/delivery/policies/references/history` 已真实承载，`product/public/source/specs` 可先保持薄索引，后续按真实 owner surface 吸收。旧 `program/`、`capabilities/` active 目录已物理退役，历史内容留在 `docs/history/`。 |
+| `MAG` | 完整保留 canonical 目录集合；真实 owner 主要在 core five、`active/`、`references/`、`specs/`、`history/`，`product/runtime/delivery/source/policies/public` 先作为职责明确的薄索引，后续小批量吸收仍 current 的内容。旧 `plans/` 已退役。 |
+| `RCA` | 完整保留 canonical 目录集合；`active/product/runtime/delivery/source/policies/references/history` 已真实承载，`public/specs` 可以保持薄索引。旧 `program/`、`plans/`、`capabilities/` 不复活成 active 目录。 |
 
-## Family Rollout Rule
+## 内容级整合规则
 
-Cross-repo docs治理 must follow the same-name canonical docs taxonomy:
+文档生命周期按内容判断，不按文件名、日期或目录名自动判断。维护时先拆分同一文件中的几类内容：
 
-- `OPL` owns family documentation language, cross-repo intake templates, shared governance references, and audit checklists.
-- `MAS` owns medical research truth; its former `program/` active material belongs in canonical `active/`, and its former `capabilities/medical-display/` material belongs in `delivery/medical-display/`.
-- `MAG` owns grant truth; its former `plans/` active material belongs in canonical `active/`, while older specs may remain under `docs/specs/` only with explicit active/history classification.
-- `RCA` owns visual-deliverable truth; its former `program/` active material belongs in canonical `active/`, with absorbed Phase 2 and Hermes proof records in `docs/history/`.
-- `MDS` is not an admitted OPL domain agent. It is a MAS-declared archive,
-  backend-audit, source-provenance, explicit archive-import, upstream-intake,
-  diagnostic, and parity-oracle reference.
-- `opl-aion-shell` is the upstream AionUI fork dependency for the App shell.
-  Its docs tree remains governed by upstream AionUI. OPL docs may describe the
-  App/workbench target and consumption boundary, but this family taxonomy does
-  not impose directory changes on that repo.
+1. 当前事实合入核心五件套、当前 owner doc、contracts/schema/source 或 runtime/generated surface。
+2. 当前执行、当前差距、active baton、closeout evidence 留在 `docs/active/`。
+3. Runtime、product、source、delivery、policy、spec 这类长期 owner 内容进入对应 canonical 目录。
+4. 目标态、外部学习、governance、verification、operator support 进入 `docs/references/`，不得写成 current truth。
+5. 已完成计划、旧路线、旧接口、旧 provider、旧 gateway/frontdoor/federation、旧 compatibility 叙事进入 `docs/history/` 或 tombstone。
+6. 如果历史文件仍因 `human_doc:*`、absolute evidence、audit path 或 contract-linked reader context 需要 path stability，先用 README/index 标清生命周期，物理迁移后置。
 
-When a domain repo cannot safely move historical docs because current-program, audit, or old absolute-path evidence still points at them, the correct move is index-level lifecycle separation first, physical migration later.
+## Direct Retirement
 
-The current cross-repo rollout is content-level for classification and
-same-name for durable directory placement. Workers must read document bodies,
-merge still-valid content into the active owner doc, adjust outdated sections in
-place when path stability matters, and archive or migrate only after inbound
-`human_doc:*`, contract, docs, and history references are checked.
+过时模块、接口、CLI alias、wrapper、facade、聚合测试和旧文档入口被当前 owner surface 替代后，默认直接退役：
 
-## Root AGENTS Alignment
+1. 搜 active caller、contract refs、`human_doc:*`、fixture/provenance 需求。
+2. active caller 存在时先迁移到最新 owner surface。
+3. caller 迁完后删除旧模块、接口、alias、wrapper、facade 或 compatibility-only aggregate test。
+4. 需要保留来龙去脉时，放入 `docs/history/`、tombstone 或明确 provenance/reference。
+5. 不新增兼容 shim、别名、re-export facade 或只为旧入口存在的聚合测试。
 
-Root `AGENTS.md` remains a work-method file. It may summarize the active owner split and docs reading order, while project truth stays in `README*`, the core five, active docs, contracts, schemas, source, and generated artifacts. When root `AGENTS.md` wording drifts from this portfolio or the core docs, update it to match the current owner split and keep it as routing guidance.
+文档归档不能替代内容清理。旧内容必须吸收、归档或删除，避免在 active/reference 层二次污染新规划。
 
-## Archive Rule
+## 机器边界
 
-Before moving or archiving a doc:
+`README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口。确需关联人读材料时，使用 contract/schema/source 路径或语义化 `human_doc:*` id。
 
-1. Read the body, not just the path, and classify its `owner`, `purpose`, `state`, and `machine boundary`.
-2. Decide whether the live content should be merged into an active owner, reduced to a pointer, archived as a dated snapshot, or tombstoned.
-3. Search inbound links with `rg`.
-4. Update active/reference links to the new location or current owner surface.
-5. Leave historical command snippets alone only when they are clearly provenance.
-6. Add or update a README/tombstone for the destination directory.
-7. Run `git diff --check` and the repo verification lane required by the change.
+允许测试的对象是 contracts、schemas、CLI/API 行为、source paths、generated artifact structure、manifest、runtime receipt、`human_doc:*` id 和 machine-readable index。不要新增固定 Markdown wording、章节标题、叙述路径或状态文案的测试。
+
+## 新文档准入
+
+新增长期文档前先回答：
+
+| 问题 | 决策 |
+| --- | --- |
+| 是否决定当前执行顺序、差距、baton 或 closeout evidence？ | 放 `docs/active/`。 |
+| 是否面向 public narrative / roadmap / task map / operating model？ | 放 `docs/public/`。 |
+| 是否面向 App/workbench、operator/product entry、profile 或 action routing？ | 放 `docs/product/`。 |
+| 是否解释 runtime/provider/executor/control plane/projection/watch/repair？ | 放 `docs/runtime/`。 |
+| 是否解释 artifact/package/export lifecycle shell 或 domain deliverable support？ | 放 `docs/delivery/`。 |
+| 是否解释 workspace/source intake、source readiness 或 source truth transport？ | 放 `docs/source/`。 |
+| 是否是长期规则或 repo-local discipline？ | 放 `docs/policies/`，必要时同步 `invariants.md`。 |
+| 是否定义当前 active spec 或 boundary spec？ | 放 `docs/specs/`。 |
+| 是否是目标态、支撑参考、外部学习、governance 或 verification support？ | 放 `docs/references/`。 |
+| 是否只是旧路线、完成计划、provenance 或 tombstone？ | 放 `docs/history/`。 |
+
+无法归类的文档不得直接新增到 active 层；先更新本治理文档或对应目录 README。

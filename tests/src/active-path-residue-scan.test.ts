@@ -11,20 +11,14 @@ const scannedFiles = [
   'README.md',
   'README.zh-CN.md',
   'docs/public/README.md',
-  'docs/public/README.zh-CN.md',
   'docs/public/roadmap.md',
-  'docs/public/roadmap.zh-CN.md',
   'docs/public/operating-model.md',
-  'docs/public/operating-model.zh-CN.md',
   'docs/public/task-map.md',
-  'docs/public/task-map.zh-CN.md',
   'docs/active/current-development-lines.md',
-  'docs/active/current-development-lines.zh-CN.md',
-  'docs/active/opl-public-surface-index.md',
-  'docs/active/opl-public-surface-index.zh-CN.md',
-  'docs/references/operating-governance/family-domain-memory-governance.zh-CN.md',
-  'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md',
-  'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md',
+  'docs/product/opl-public-surface-index.md',
+  'docs/references/operating-governance/family-domain-memory-governance.md',
+  'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
+  'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md',
   'src/cli/modules/help-output.ts',
 ];
 
@@ -105,12 +99,9 @@ test('active docs and root help do not advertise legacy operator paths as defaul
 test('active operator closeout surfaces keep the current provider-backed boundary explicit', () => {
   [
     'docs/public/roadmap.md',
-    'docs/public/roadmap.zh-CN.md',
     'docs/active/current-development-lines.md',
-    'docs/active/current-development-lines.zh-CN.md',
-    'docs/active/opl-public-surface-index.md',
-    'docs/active/opl-public-surface-index.zh-CN.md',
-    'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md',
+    'docs/product/opl-public-surface-index.md',
+    'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
   ].forEach(assertCurrentBoundary);
 });
 

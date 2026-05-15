@@ -1,22 +1,22 @@
-# Compatibility Archive
+# 兼容性历史归档
 
 Status: `retired`
 Owner: `One Person Lab`
 
-This directory holds retired compatibility corpora. These files are retained for audit, migration review, schema archaeology, and provenance.
-Compatibility files are not current product directions. Gateway, federation, routed-action, and old public-surface examples in this tree are tombstoned unless a current contract or core doc explicitly promotes a narrow machine-readable compatibility surface.
+本目录收纳已经退役的兼容性语料。这里的文件只用于审计、迁移回顾、schema archaeology 和来源追溯。
+兼容语料不是当前产品方向。本目录中的 gateway、federation、routed-action 和旧 public-surface 示例都按 tombstone 理解，除非当前 contract 或核心文档明确把某个窄的机器可读兼容面保留下来。
 
-Current truth lives in:
+当前真相统一回到：
 
-- [Docs Guide](../../README.md)
-- [Project](../../project.md)
-- [Status](../../status.md)
-- [Architecture](../../architecture.md)
-- [Decisions](../../decisions.md)
-- [Contracts Overview](../../../contracts/README.md)
+- [文档索引](../../README.md)
+- [项目概览](../../project.md)
+- [当前状态](../../status.md)
+- [架构](../../architecture.md)
+- [关键决策](../../decisions.md)
+- [合同目录说明](../../../contracts/README.md)
 
-## Buckets
+## 分区
 
-- [Gateway / federation compatibility](./gateway-federation/README.md)
+- [Gateway / federation 兼容语料](./gateway-federation/README.md)
 
-Current runtime/framework planning lives in [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md).
+当前 runtime/framework 规划统一回到 [OPL stage-led agent framework roadmap](../../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)。

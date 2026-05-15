@@ -1,30 +1,28 @@
-**English** | [中文](./opl-operating-record-catalog.zh-CN.md)
-
 # OPL Operating Record Catalog
 
-## Purpose
+## 目的
 
-This document indexes the machine-readable catalog for the frozen `P5.M1` / `P5.M2` top-level operating record kinds.
+这份文档索引已冻结 `P5.M1` / `P5.M2` 顶层 operating record kind 的 machine-readable catalog。
 
-Its job is to make operating-stage semantics, schema ownership, canonical example refs, and follow-on routing boundaries discoverable from one place without turning the catalog into a runtime manifest or a second source of truth.
+它的作用是：在不把 catalog 升格成 runtime manifest 或第二真相源的前提下，把 operating-stage 语义、schema ownership、canonical example ref 与 follow-on routing boundary 集中暴露出来。
 
 ## Machine Boundary
 
-No current machine-readable `operating-record-catalog.json` contract is published in this repo. This document is a human-readable derived reference over the operating examples and current framework contracts.
+当前仓库没有发布 `operating-record-catalog.json` 机器可读合同。本文只是基于 operating examples 与当前 framework contracts 的人读 derived reference。
 
-## Non-Goals
+## 非目标
 
-This catalog does not:
+这个 catalog 不负责：
 
-- implement execution
-- replace the governing schemas or prose docs
-- restate full field-level schema truth
-- own review, publish, promotion, or public-channel truth
-- authorize direct publish, release, export, submission, or posting by `OPL`
+- 实现执行
+- 替代正式 schema 或 prose 文档
+- 复述完整的 field-level schema truth
+- 拥有 review、publish、promotion 或 public-channel truth
+- 授权 `OPL` 直接执行 publish、release、export、submission 或 posting
 
-## Catalog Fields
+## Catalog 字段
 
-Each record-kind entry stays reference-level and carries only:
+每个 record-kind entry 都保持 reference-level，只携带：
 
 - `record_kind`
 - `surface_layer`
@@ -51,15 +49,15 @@ Each record-kind entry stays reference-level and carries only:
 - `promotion_candidate_signal`
 - `promotion_surface_index`
 
-## Reading Rule
+## 阅读规则
 
-Read this catalog as a **derived reference map**, not as a governing execution contract.
+这份 catalog 必须被理解成 **derived reference map**，而不是 governing execution contract。
 
-The governing schemas and operating-surface docs remain authoritative.
-The catalog only points to them and records the stage boundary at which each record kind becomes valid.
-If a follow-on action exists, it must point to the current domain-owned capability entry or action-route ref. Historical entries may retain the legacy literal `domain_gateway` for provenance only; this catalog does not define it as an active compatibility route.
+真正的权威仍然是 governing schema 与 operating-surface prose 文档。
+catalog 只是回指这些工件，并记录每种 record kind 何时才算进入有效 stage boundary。
+如果后续还存在 action，它必须指向当前 domain-owned capability entry 或 action-route ref。历史 entry 可以为了 provenance 保留 legacy literal `domain_gateway`，但这份 catalog 不把它定义成 active compatibility route。
 
-## Governing Sources
+## 上位依据
 
 - [OPL Governance / Audit Operating Surface](../operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](../operating-governance/opl-publish-promotion-operating-surface.md)
@@ -68,13 +66,13 @@ If a follow-on action exists, it must point to the current domain-owned capabili
 - [OPL Framework Contracts](../../../contracts/opl-framework/README.md)
 - [OPL Gateway Acceptance Test Spec](../../history/compatibility/gateway-federation/opl-gateway-acceptance-test-spec.md)
 
-## Completion Definition
+## 完成定义
 
-The operating-record catalog is acceptable only when:
+只有当下面这些条件都成立时，operating-record catalog 才算合格：
 
-- it covers all frozen `P5.M1` / `P5.M2` record kinds
-- every `schema_ref` and `example_ref` resolves to an existing local artifact
-- it stays non-executing and reference-only
-- it does not shift truth ownership into `OPL`
-- it keeps follow-on route values aligned to current domain-owned capability/action-route refs and treats legacy `domain_gateway` only as provenance
-- it remains discoverable from the derived surface lifecycle map without becoming an execution stage
+- 它覆盖全部已冻结 `P5.M1` / `P5.M2` record kind
+- 每个 `schema_ref` 与 `example_ref` 都能解析到存在的本地工件
+- 它保持 non-executing、reference-only
+- 它不把 truth ownership 上收给 `OPL`
+- 它让 follow-on route value 对齐当前 domain-owned capability/action-route refs，并且只把 legacy `domain_gateway` 当作 provenance
+- 它能被 derived surface lifecycle map 正确发现，但不会因此升级成 execution stage
