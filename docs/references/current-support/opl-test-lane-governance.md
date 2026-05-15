@@ -11,7 +11,7 @@
 | regression | `npm run test:regression` | 宽回归入口；覆盖 CLI 默认 shell、domain catalog、entry contracts、product-entry、orchestration、skills、automation 与 full internal package。 |
 | integration | `npm run test:integration` | ACP/session runtime、install/configure、retired Product API fail-closed 与 domain definition 黑盒入口。 |
 | artifact | `npm run test:artifact` | 构建后 artifact 行为，先 `npm run build`，再跑 built CLI 测试。 |
-| fresh-install | `npm run test:fresh-install` | 本机 clean-room install / initialize 矩阵；真实 GUI 首启仍由 `one-person-lab-app/shells/aionui` 的 VM workflow 承担。 |
+| fresh-install | `npm run test:fresh-install` | 本机 clean-room install / initialize 矩阵；真实 GUI 首启由 `one-person-lab-app` 的 App VM workflow 承担，并通过 external checkout 调用 `opl-aion-shell`。 |
 | native | `./scripts/verify.sh native` | native helper doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke。 |
 | structure | `./scripts/verify.sh structure` | 本地 Sentrux blocking gate，失败时输出 OPL quality details sidecar。 |
 | full | `./scripts/verify.sh full` | 聚合 fast、regression、integration、artifact、fresh-install、native、structure、typecheck 与 lint。 |

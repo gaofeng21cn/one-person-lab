@@ -98,12 +98,16 @@ fi
 log "Running one-shot OPL setup"
 if command -v opl >/dev/null 2>&1; then
   opl install "$@"
+  log "Inspecting OPL system state"
+  opl system initialize
 else
   ./bin/opl install "$@"
+  log "Inspecting OPL system state"
+  ./bin/opl system initialize
 fi
 
 log "One Person Lab is ready"
 printf '\nNext steps:\n'
 printf '  1. Open the One Person Lab App on macOS, or open the Docker/WebUI URL from your deployment.\n'
 printf '  2. Choose a workspace root when the App asks for it.\n'
-printf '  3. Run "opl system initialize" to inspect Codex, Hermes-Agent, modules, skills, and GUI state.\n'
+printf '  3. Re-run "opl system initialize" any time you want to inspect Codex, modules, skills, runtime provider, and GUI state.\n'

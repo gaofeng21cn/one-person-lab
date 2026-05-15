@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A stage-led agent framework for high-value knowledge delivery.</strong></p>
-<p align="center">Organize agent work like expert service delivery: scope, ground, execute, review, revise, and ship traceable outcomes.</p>
+<p align="center"><strong>A stage-led agent framework for high-value knowledge delivery</strong></p>
+<p align="center">Organize research, grants, presentations, patents, and other complex work into expert stages that are traceable, recoverable, and auditable.</p>
 
 <p align="center">
   <img src="assets/branding/opl-stage-led-delivery-overview.png" alt="One Person Lab stage-led delivery model" width="100%" />
@@ -17,35 +17,35 @@
 
 ## Why One Person Lab
 
-Papers, grants, patents, reviews, awards, and high-end presentations are difficult because the system must know which expert stage the work is in, what evidence is sufficient, how quality is judged, and which result can move forward.
+Papers, grants, patents, reviews, awards, and high-end presentations all require the same high-stakes judgments: whether the goal is clear, whether the evidence is sufficient, whether the reasoning is sound, whether the quality bar is met, and whether the result can move forward.
 
-One Person Lab uses the expert stage as the core runtime unit. Each stage carries a goal, source material, quality criteria, handoff, receipt, and authority boundary. Inside a stage, a domain agent can read, reason, write, compute, review, and revise before returning a domain-owned verdict and deliverable. The framework keeps those stages visible, recoverable, auditable, and ready for continuation.
+One Person Lab turns those judgments into runnable expert stages. Each stage carries a goal, source material, quality criteria, handoff, receipt, and authority boundary. Inside a stage, a domain agent can read, reason, write, compute, review, and revise before returning a domain-owned verdict and deliverable. One Person Lab keeps those stages visible, recoverable, auditable, and ready for continuation.
 
-This is the architectural advantage: One Person Lab productizes the delivery logic of professional knowledge work and makes agents operate around stages, evidence, quality, and deliverables.
+That is the architectural advantage: One Person Lab productizes the delivery logic of professional knowledge work and makes agents operate around stages, evidence, quality, and deliverables.
 
 ## Architectural Advantages
 
-- **Expert-stage execution**: work advances through define, ground, execute, review, revise, and ship phases, matching tasks that require repeated quality judgment.
-- **Quality as part of the workflow**: each stage carries goals, source material, criteria, and receipts, so progress and revision points stay explicit.
-- **Domain authority stays with domain agents**: medical research, grant writing, and visual delivery are judged by the owning agents, while One Person Lab provides shared runtime, discovery, recovery, and presentation.
-- **Recoverable and auditable long runs**: attempts, handoffs, receipts, progress, and artifacts are organized as traceable state.
-- **One framework, many product lines**: Research Foundry, Grant Foundry, and Presentation Foundry share the same stage-led foundation, with Patent, Award, Thesis, and Review lines planned.
+- **Stages are the delivery unit**: the system tracks what each expert stage should produce across definition, preparation, execution, review, revision, and delivery.
+- **Evidence and quality gates are built in**: source material, criteria, and receipts make progress, rework points, and delivery rationale explicit.
+- **Domain agents carry domain judgment**: medical research, grant writing, and visual delivery are owned by specialized agents, while One Person Lab provides shared runtime, discovery, recovery, and presentation.
+- **Long tasks can continue**: attempts, handoffs, receipts, progress, and artifacts are organized as traceable state across sessions.
+- **The product family can expand**: Research, Grant, and Presentation Foundry share the same stage-led foundation, with Patent, Award, Thesis, and Review lines planned.
+
+## Product Layers
+
+One Person Lab is both the technical stage-led agent framework and the product family built around it:
+
+| Layer | Audience | Role |
+| --- | --- | --- |
+| **One Person Lab** | Developers, technical operators, product integration | Shared foundation for building and running domain agents: stage control, runtime providers, contracts, module discovery, skill sync, runtime snapshots, and progress projections. |
+| **Domain agents** | Specialized work | MAS, MAG, RCA, and future agents carry domain judgment, quality verdicts, stage semantics, and deliverables. |
+| **One Person Lab App** | End users | Desktop workbench that packages One Person Lab, domain agents, and companion tools with download, first-run checks, progress, files, runtime status, and updates. |
+
+The chain is straightforward: build and run domain agents with One Person Lab, then package One Person Lab and the agents into a desktop product for users.
 
 <p align="center">
   <img src="assets/branding/opl-framework-ecosystem-map.png" alt="One Person Lab builds domain agents and packages them into the desktop product" width="100%" />
 </p>
-
-## Product Layers
-
-One Person Lab is both the technical framework and the product family built around it:
-
-| Layer | Audience | Role |
-| --- | --- | --- |
-| **One Person Lab** | Developers, technical operators, product integration | CLI, activation, stage control, runtime providers, queue, contracts, module discovery, skill sync, runtime snapshots, and progress projections. |
-| **Domain agents** | Specialized work | MAS, MAG, RCA, and future agents own domain judgment, quality verdicts, stage semantics, and deliverables. |
-| **One Person Lab App** | End users | Desktop workbench for packaging the framework, domain agents, and companion tools with download, first-run, progress, files, runtime status, and update flows. |
-
-The chain is straightforward: build and run domain agents with One Person Lab, then package the framework and agents into a desktop product for users.
 
 ## Current Product Lines
 
@@ -69,10 +69,9 @@ To install the framework, use the CLI path from this repository:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
-opl system initialize
 ```
 
-After installation, use the App for general work, medical research, grant writing, and presentation preparation, or use the CLI to manage modules, skills, runtime state, and stage attempts.
+The installer runs one-shot setup and inspects system state. After installation, use the App for general work, medical research, grant writing, and presentation preparation, or use the CLI to manage modules, skills, runtime state, and stage attempts.
 
 ## Product Roadmap
 

@@ -103,7 +103,7 @@ README/索引，但 README 必须说明 owner、purpose、state、machine bounda
 或 tombstone 暂留，并由 canonical 目录 README 明确指向。旧目录不能继续作为
 new recurring material 的默认落点。
 
-App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`shells/aionui/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理。
+App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、testing、user guide 和 screenshot lifecycle；`opl-aion-shell/docs/` 仍按 upstream AionUI 依赖文档处理，不主导 App 顶层治理。
 
 统一目录集合如下：
 

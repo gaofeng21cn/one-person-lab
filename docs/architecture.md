@@ -28,7 +28,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `One Person Lab App` 是 user-facing workbench：它消费 Framework 的 runtime/activation truth 和 domain-owned projection，不成为 domain runtime、quality verdict 或 artifact authority
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
-- 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 `one-person-lab-app/shells/aionui` 都消费同一套 runtime truth
+- 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 App repo 通过 `opl-aion-shell` 提供的 GUI shell 都消费同一套 runtime truth
 - OPL hosted integration 是 OPL 产品级管理/诊断/投影层；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel
 - family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只服务 dev/CI/offline diagnostic baseline，`hermes_agent` 是显式非默认 executor adapter/backend；旧 Hermes provider / Gateway 语料只作为 proof、provenance、diagnostic、fixture 或负向 guard 读取，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
@@ -213,13 +213,13 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 ### 5. Shell Projection Layer
 
-外部界面仓与 ACP-compatible 壳属于这一层。当前 GUI 适配位于 `one-person-lab-app/shells/aionui`；它通过 ACP-compatible runtime surface 消费 OPL session/runtime truth，不拥有 runtime。
+外部界面仓与 ACP-compatible 壳属于这一层。当前 GUI 适配由 `opl-aion-shell` 提供，并由 `one-person-lab-app` 作为 external checkout 消费；它通过 ACP-compatible runtime surface 消费 OPL session/runtime truth，不拥有 runtime。
 它们读取同一套 session runtime truth，把 `agents / workspaces / sessions / progress / artifacts` 映射成：
 
 - 本地 `opl` shell / TUI
 - `Codex` 中的显式调用面
 - ACP-compatible 外部壳
-- `one-person-lab-app/shells/aionui` AionUI 定制 GUI
+- `opl-aion-shell` AionUI 定制 GUI，经 `one-person-lab-app` 打包发布
 - 未来 hosted / online 壳
 
 ## OPL 与 Domain Agents 的关系

@@ -26,7 +26,7 @@ npm run fresh-install:smoke
 ./scripts/verify.sh fresh-install
 ```
 
-这条 lane 只覆盖 OPL 主仓 CLI clean-room 与合同矩阵。发布物级 GUI 首启证明仍归 `one-person-lab-app/shells/aionui` 的干净 macOS VM workflow，不把桌面可视化首启塞进主仓 fast 或 integration lane。
+这条 lane 只覆盖 OPL 主仓 CLI clean-room 与合同矩阵。发布物级 GUI 首启证明归 `one-person-lab-app` 的 App release/VM workflow，并通过 external checkout 调用 `opl-aion-shell`，不把桌面可视化首启塞进主仓 fast 或 integration lane。
 
 覆盖场景来自 `contracts/opl-framework/fresh-install-test-matrix.json`：
 
@@ -43,14 +43,14 @@ npm run fresh-install:smoke
 
 GUI 层使用干净 macOS VM snapshot 验证真实 Release App 首启。每轮从 snapshot 启动，下载 `one-person-lab-app` Release DMG，安装到 `/Applications`，直接打开 `One Person Lab.app`。
 
-已落地的执行面在 `gaofeng21cn/one-person-lab-app` 的 `shells/aionui`：
+已落地的执行面由 `gaofeng21cn/one-person-lab-app` 持有，并在 CI / 本地检出 `gaofeng21cn/opl-aion-shell` 到 `shells/aionui`：
 
 ```bash
 bun run test:opl-first-run-vm -- --dmg <release.dmg> --assert-clean
 bun run test:opl-first-run-vm:tart -- --source-vm <clean-tart-vm> --dmg <release.dmg>
 ```
 
-nightly/self-hosted Mac 入口是 `one-person-lab-app/shells/aionui/.github/workflows/opl-first-run-vm.yml`。默认 runner labels 为 `self-hosted`、`macOS`、`opl-gui-vm`；runner 需要可用 Tart，guest VM 需要 SSH、Node.js、已登录桌面会话，以及 `osascript` / System Events 的 Accessibility 权限。
+nightly/self-hosted Mac 入口属于 App repo workflow。默认 runner labels 为 `self-hosted`、`macOS`、`opl-gui-vm`；runner 需要可用 Tart，guest VM 需要 SSH、Node.js、已登录桌面会话，以及 `osascript` / System Events 的 Accessibility 权限。
 
 必须采集的工件：
 

@@ -8,51 +8,37 @@ Date: `2026-05-15`
 
 ## 结论
 
-One Person Lab App 仓库拆分已完成。当前维护拓扑是：
+当前最终维护拓扑是三个仓 / 三个本地目录：
 
 ```text
-one-person-lab/                 # OPL Framework
-one-person-lab-app/             # One Person Lab App
-  docs/
-  contracts/
-  scripts/
-  shells/
-    aionui/                     # 当前稳定 AionUI shell adapter
-    aionui-next/                # 可选实验线，例如 AionUI 2.0 适配
+/Users/gaofeng/workspace/one-person-lab/       # OPL Framework repo
+/Users/gaofeng/workspace/opl-aion-shell/       # history-rich AionUI/OPL shell repo
+/Users/gaofeng/workspace/one-person-lab-app/   # clean One Person Lab App product repo
 ```
 
-`one-person-lab` 继续作为最顶层 OPL Framework 仓，持有 stage-led runtime、Temporal-backed provider、contracts、CLI、module / skill sync、domain discovery、runtime snapshot 和 framework-level verification。
+远端目标拓扑与本地目录一致：
 
-`one-person-lab-app` 面向终端用户，持有 App 定义、用户文档、截图教程、发布说明、打包、更新、页面状态测试、首启测试和当前 GUI shell adapter。
+```text
+gaofeng21cn/one-person-lab       # OPL Framework
+gaofeng21cn/opl-aion-shell       # AionUI upstream-following shell fork
+gaofeng21cn/one-person-lab-app   # clean App product repo
+```
 
-当前 AionUI fork 不再是 App 仓顶层身份。它作为 `shells/aionui/` 下的 upstream-backed shell adapter 维护，以便跟随 AionUI upstream，也便于未来替换 GUI。
+`one-person-lab` 继续作为 OPL Framework 仓，持有安装、初始化、runtime/contracts、module 管理、App 可消费机器接口，以及作为 Full 版 DMG 内 runtime/CLI/contracts 的 payload source。
 
-已采用的实施方式是 **直接把现有 GitHub 仓 `gaofeng21cn/opl-aion-shell` 改名为 `gaofeng21cn/one-person-lab-app`，再在这个仓内做目录重组**。本机 checkout 也已同步为 `/Users/gaofeng/workspace/one-person-lab-app`。
+`opl-aion-shell` 是 history-rich shell 仓。它保留 AionUI 历史与 contributors，继续跟随 `iOfficeAI/AionUi` upstream，并在仓根直接维护当前 OPL 品牌 AionUI shell。
 
-理由：
+`one-person-lab-app` 是干净 App 产品仓。默认分支只追踪 App 顶层产品、发布、测试、教程和合同文件；`shells/aionui` 是外部 checkout / 本地 symlink / CI checkout，指向 `gaofeng21cn/opl-aion-shell`，不把 AionUI 历史合并进 App 默认分支。
 
-- 原 `gaofeng21cn/opl-aion-shell` 不是 GitHub fork；它已经是 OPL App 产品主线仓，AionUI upstream 通过独立 `upstream` remote 维护。
-- 改名保留 issues、PR、release、stars/watch、branch protection、Actions secrets、GitHub Release 历史和所有 commit history。
-- GitHub 为旧 repo URL 提供 redirect，短期兼容成本低。
-- 后续 upstream AionUI intake 仍可通过 `upstream=https://github.com/iOfficeAI/AionUi` 完成，不因为 repo 改名而丢失同步能力。
+## 为什么不用旧 rename-in-place 路线
 
-新建全新 `one-person-lab-app` repo 只作为备选：当必须保留 `opl-aion-shell` 作为冻结 archive、需要重新定义可见历史、或 GitHub repo rename 因权限 / 发布策略被阻塞时才使用。新建 repo 的成本更高，因为需要搬迁 release、secrets、branch protection、Actions、issues/PR 链接和本地 checkout。
+2026-05-15 发现当前 GitHub `one-person-lab-app` 是由 AionUI-derived `opl-aion-shell` 直接改名而来，因此 GitHub contributor 图会被 AionUI 历史贡献者占满。即使后续清理当前 contributor 视图，只要继续在同一 App 仓吸收 upstream AionUI 历史，问题会反复出现。
 
-## 目标
+最终策略改为：
 
-- 降低 `one-person-lab` 主仓复杂度，让它保持 framework-first：开发者、运行依赖环境、合同、CLI、runtime 和全面测试。
-- 让 App 仓变成 user-first：安装包、页面体验、图文教程、首启、更新、截图、用户帮助和可见状态。
-- 保留 AionUI upstream 跟随能力，避免把 AionUI 目录搬入后变成普通 vendored code。
-- 支持 AionUI 2.0 或其他 GUI 基座的并行试验：新基座先在 `shells/<candidate>/` 调试，验证通过后再切换 active shell。
-- 保持 OPL Framework、One Person Lab App 和 Foundry Agents 三层 truth owner 不漂移。
-
-## 非目标
-
-- 本计划不把 App 变成 runtime owner。
-- 本计划不复制 `opl install`、module install、skill sync、runtime manager、Temporal provider 或 domain truth 逻辑。
-- 本计划不要求 MAS/MAG/RCA 改变 direct skill path 或 domain authority。
-- 本计划不要求一次性切换 release source-of-truth；发布迁移应分阶段完成。
-- 本计划不把 AionUI upstream 文档纳入 OPL docs lifecycle governance。
+- 保留 `opl-aion-shell` 作为 AionUI/OPL shell 专用仓，承接 upstream intake 和 shell overlay。
+- 新建或替换出一个干净 `one-person-lab-app` 仓，只保留 App-owned history。
+- App 仓通过 `contracts/app-shell-adapter.json`、`scripts/ensure-active-shell.mjs` 和 `shells/aionui` 外部 checkout 消费 shell，而不是 vendor shell 源码历史。
 
 ## 仓库职责
 
@@ -65,454 +51,173 @@ one-person-lab-app/             # One Person Lab App
 - Temporal-backed family runtime provider、stage attempt ledger、human gate、resume、dead-letter、provider proof 和 runtime projection。
 - `contracts/`、shared helper、domain discovery、standard domain-agent skeleton、module install、skill sync、package/runtime payload manifest。
 - Framework 级测试矩阵：typecheck、fast/meta/artifact/fresh-install、runtime/provider、contracts、domain descriptor parity。
-
-只保留薄 App 关系：
-
-- App release discovery / install surface。
+- App release discovery / install consumer surface。
 - App 可消费的 machine-readable runtime / system / module / agent / workspace / session / progress / artifact 输出。
-- App/workbench 目标和 authority boundary 的 framework-side 文档。
+- Full DMG payload source：runtime/CLI/contracts 内容来源。
 
 不再持有：
 
-- GUI source fork。
-- Electron builder policy。
-- App 页面状态测试。
-- App screenshot / visual tutorial。
-- App updater metadata 生成细节。
+- App release/upload/build workflow。
+- 标准 DMG、Full DMG、updater metadata 或 GitHub Release 发布入口。
+- GUI source fork、Electron builder policy、App 页面状态测试、截图教程或用户教程。
 - AionUI upstream intake 的实现目录。
+
+### `opl-aion-shell`
+
+持有：
+
+- 当前 OPL 品牌 AionUI shell 源码。
+- AionUI upstream remote、upstream intake、冲突解决和 OPL overlay 退役审计。
+- Shell-local build scripts、Electron builder config、packaged runtime validation、bridge/runtime wiring、branding 和 GUI implementation。
+- Shell-local tests、i18n、typecheck、lint、Docker/WebUI build 输入和 package validation。
+
+不持有：
+
+- App repo 的干净产品历史。
+- App GitHub Release 发布入口、updater metadata source-of-truth 或用户教程 canonical 文档。
+- OPL Framework runtime truth 或 MAS/MAG/RCA domain truth。
 
 ### `one-person-lab-app`
 
 持有：
 
-- One Person Lab App 的产品定义、用户文档、截图教程、发布说明和支持文档。
+- One Person Lab App 的产品定义、README、用户文档、截图教程、发布说明和支持文档。
 - App release contract、shell adapter contract、页面状态测试矩阵、首启测试矩阵。
-- 标准 App 包、Full first-install 包、updater metadata、packaged runtime validation。
-- Electron / WebUI / accessibility / Playwright 页面状态测试。
-- 当前 GUI shell adapter：`shells/aionui/`。
-- 候选 GUI shell lab：例如 `shells/aionui-next/`。
+- 标准 App 包、Full first-install 包、updater metadata、GitHub Release 上传、GUI smoke 和用户教程。
+- App-root release wrapper、release asset normalization、Full package manifest、standard updater metadata guard。
+- `shells/aionui` 外部 checkout 入口，但不追踪 AionUI 源码历史。
 
 不持有：
 
 - OPL Framework runtime truth。
 - Domain truth、quality verdict、publication/fundability/visual/export authority。
 - OPL provider implementation、generic queue、generic stage runner 或 domain memory body。
+- AionUI upstream history 或 contributors。
 
-## Repo 策略选择
+## Clean App Repo 规则
 
-| 方案 | 结论 | 适用场景 | 成本 / 风险 |
-| --- | --- | --- | --- |
-| **A. 改名现有 `gaofeng21cn/opl-aion-shell` 为 `gaofeng21cn/one-person-lab-app`** | 推荐 | 当前默认路径。现有仓已经不是 GitHub fork，且已承载 App 发布、验证和产品主线。 | 需要更新 remote、README、workflow、release 文案、`opl install` asset discovery。旧 URL 依赖需要确认 GitHub redirect 足够。 |
-| B. 新建全新 `one-person-lab-app`，导入 `opl-aion-shell` 历史 | 备选 | 需要把旧仓冻结为 archive，或 repo rename 无权限 / 不符合发布策略。 | 需要重新设置 secrets、branch protection、Actions、Release、issue/PR 管理；历史和旧链接迁移成本更高。 |
-| C. 保留 `opl-aion-shell` 名称，只在仓内移动到 `shells/aionui` | 不推荐作为最终态 | 只适合短期技术预演。 | 顶层 repo 名仍把 App 产品身份绑定到 AionUI，长期认知问题没有解决。 |
+`one-person-lab-app` 默认分支必须保持 clean App-owned history：
 
-因此，本文后续“建立 `one-person-lab-app`”默认指 **rename 现有 repo**，不是新建空仓。只有在明确选择方案 B 时，才按新仓导入路径执行。
+- `shells/aionui` 必须在 `.gitignore` 中。
+- `git ls-files shells/aionui` 应为 `0`。
+- App contract 声明 shell source 为 `gaofeng21cn/opl-aion-shell`。
+- 默认验证先执行 `npm run ensure:shell`，再跑 App-root contracts / release / smoke lanes。
+- App repo 可使用本地 symlink 指向 `/Users/gaofeng/workspace/opl-aion-shell`，CI 中使用 checkout action 拉取 `gaofeng21cn/opl-aion-shell` 到 `shells/aionui`。
 
-## 目标目录形态
-
-```text
-one-person-lab-app/
-  AGENTS.md
-  README.md
-  README.zh-CN.md
-  docs/
-    README.md
-    status.md
-    release/
-    testing/
-    user-guides/
-    screenshots/
-    history/
-  contracts/
-    app-shell-adapter.json
-    app-release-channel.json
-    app-page-state-matrix.json
-    app-first-run-test-matrix.json
-  scripts/
-    package-app
-    prepare-release-assets
-    validate-release
-    validate-active-shell
-  shells/
-    aionui/
-      AGENTS.md
-      package.json
-      electron-builder.yml
-      src/
-      scripts/
-    aionui-next/
-      AGENTS.md
-      ...
-```
-
-顶层 `contracts/app-shell-adapter.json` 应只声明 active shell、shell root、upstream family、release role 和 validation command，不把 AionUI 的内部结构变成 App 顶层 truth。
-
-示例语义：
-
-```json
-{
-  "active_shell": "aionui",
-  "shell_root": "shells/aionui",
-  "upstream_family": "AionUI",
-  "release_role": "stable_app_shell",
-  "validation": [
-    "install",
-    "typecheck",
-    "test",
-    "packaged_runtime_validation",
-    "app_startup_smoke"
-  ]
-}
-```
-
-## AionUI upstream 跟随规则
-
-`shells/aionui/` 不作为普通 vendor 目录维护。它必须保留 upstream-backed 维护能力：
-
-1. 迁移时使用 history-preserving 方式，例如 `git filter-repo --to-subdirectory-filter shells/aionui`、`git subtree` 或等价的 prefix-preserving import。
-2. `shells/aionui/AGENTS.md` 明确该目录服从 AionUI upstream intake 规则、OPL overlay 边界和验证矩阵。
-3. upstream AionUI 更新进入独立 intake 分支或 worktree，先吸收 upstream，再重放 / 收缩 OPL overlay。
-4. OPL-specific 改动应集中在 adapter、bridge、branding、packaging policy、runtime surface 调用和页面集成层，避免把业务逻辑散落到大量 upstream 原文件。
-5. 每次 upstream intake 都要做本地补丁退役审计：upstream 已覆盖的深补丁删除或收缩成薄 adapter。
-6. 稳定 shell 和实验 shell 分开：`shells/aionui/` 维护当前发布线，`shells/aionui-next/` 可用于 AionUI 2.0 这类大版本适配。
-
-迁移后的推荐 remote 命名：
+当前本机 clean App repo：
 
 ```text
-origin    git@github.com:gaofeng21cn/one-person-lab-app.git
-upstream  https://github.com/iOfficeAI/AionUi
+/Users/gaofeng/workspace/one-person-lab-app
+shells/aionui -> /Users/gaofeng/workspace/opl-aion-shell
 ```
 
-如果短期仍保留 `gaofeng` remote，也应在迁移收口时统一成 `origin=one-person-lab-app`、`upstream=AionUI`，避免 “origin 是上游 / gaofeng 是产品仓” 的旧 fork-style 读法继续污染 App repo。
+旧 history-rich App checkout 已收进本机隐藏备份：
 
-## AionUI 2.0 或新 GUI 基座策略
-
-大版本升级不直接覆盖稳定 shell。推荐流程：
-
-1. 新建 `shells/aionui-next/` 或 `shells/<new-gui>/`。
-2. 接入同一组 OPL CLI / machine-readable surfaces。
-3. 映射 `system`、`engines`、`modules`、`agents`、`workspaces`、`sessions`、`progress`、`artifacts`。
-4. 实现 App 必需页面：运行状态、设置、环境、模块、技能、关于页、首启状态、更新状态。
-5. 跑类型检查、单元测试、i18n、packaged runtime validation、页面状态测试、真实 App startup smoke。
-6. 更新 `contracts/app-shell-adapter.json` 的 active shell。
-7. 只在新 shell 发布验证完成后，退役旧 shell 或迁入 `docs/history/` 记录。
-
-这个流程让 AionUI 2.0 适配可以并行进行，不影响当前稳定用户包和 updater 通道。
-
-## 落地流程
-
-迁移分七个阶段执行。每个阶段都要有退出条件和回滚点，不把 repo rename、目录移动、release 切换和 AionUI 2.0 适配压成一次性大改。
-
-### 0. 冻结迁移基线
-
-状态：已完成。目的：确认当前 App 仓可以安全作为 rename / restructure 起点。
-
-动作：
-
-- 确认 `one-person-lab` 当前文档已经记录 Framework/App split。
-- 确认 App 仓工作区干净或只含已归属的迁移改动。
-- 记录当前 product main branch、latest release tag、当前 App 版本、GUI/AionUI baseline、Full 包状态和本机安装版状态。
-- 运行当前 App 仓 baseline 验证：i18n、typecheck、test、lint、packaged runtime validation、标准 package build、真实 App smoke。
-
-退出条件：
-
-- 当前 App 仓能从 `origin/main` 构建并验证。
-- 当前 `one-person-lab` release / install 路径有回滚参考。
-- 记录一份 migration baseline note，包含 commit id、release id、验证命令和已知未完成项。
-
-回滚点：
-
-- 不改 GitHub repo 名。
-- 不移动目录。
-- 继续使用旧 `opl-aion-shell` redirect 发布路径。
-
-### 1. GitHub repo 改名
-
-状态：已完成。目的：先把顶层产品身份改正，再做目录重组。
-
-动作：
-
-- GitHub 仓已从 `gaofeng21cn/opl-aion-shell` rename 为 `gaofeng21cn/one-person-lab-app`。
-- 本地 remote 已更新：产品仓 `origin` 指向 `git@github.com:gaofeng21cn/one-person-lab-app.git`，AionUI upstream remote 指向 `https://github.com/iOfficeAI/AionUi`。
-- 本机 checkout 已从 `/Users/gaofeng/workspace/opl-aion-shell` 改名为 `/Users/gaofeng/workspace/one-person-lab-app`。
-- 保留旧 URL redirect 兼容窗口，但新文档和脚本不再新增 `opl-aion-shell` 作为产品仓名。
-- 检查 GitHub Actions secrets、branch protection、Release、workflow permissions 是否随 rename 保留。
-
-退出条件：
-
-- `git fetch` / `git push --dry-run` 指向新 repo 名。
-- GitHub Release 和 Actions 可见。
-- `one-person-lab` 文档仍把当前发布路径写成兼容阶段，不宣称 release source-of-truth 已切换。
-
-回滚点：
-
-- GitHub repo 可改回 `opl-aion-shell`。
-- 本地 remote 可恢复旧 URL。
-
-### 2. App 顶层 skeleton 落地
-
-目的：把 App 产品层放在仓顶层，但暂时不移动 AionUI 源码。
-
-动作：
-
-- 新增 / 重写 App 顶层 `README*`、`docs/README.md`、`docs/status.md`、`docs/release/`、`docs/testing/`、`docs/user-guides/`、`contracts/`。
-- 新增 `contracts/app-shell-adapter.json`，先指向当前根目录或临时 shell root。
-- 新增顶层 `scripts/validate-active-shell`，先代理当前 shell 的既有验证命令。
-- 标记当前 AionUI-root 仍处于 pre-prefix compatibility window。
-
-退出条件：
-
-- App 顶层文档已经能说明 App 产品身份、Framework dependency、active shell、release channel 和测试矩阵。
-- 顶层验证脚本能调用现有 shell 验证。
-- 用户下载 / updater / Full 包语义没有变化。
-
-回滚点：
-
-- 删除新增 App 顶层 skeleton，保持现有布局。
-
-### 3. 将当前 AionUI fork 移入 `shells/aionui/`
-
-状态：已完成。2026-05-15 追加验证确认 `shells/aionui`
-arm64 打包会从 App 仓根目录的 `packaged-runtimes/opl-full-runtime`
-写入 packaged app，并通过 packaged runtime scan。
-
-目的：完成顶层 App 产品层与 AionUI shell adapter 的物理分层。
-
-推荐技术路径：
-
-- 在迁移分支内把当前 AionUI-root 文件移动到 `shells/aionui/`。
-- 保留 App 顶层 skeleton、`contracts/`、`docs/`、`scripts/` 在 repo root。
-- 对 package manager、workspace、electron-builder、workflow、script path、asset path、test path 做最小路径修正。
-- 新增 `shells/aionui/AGENTS.md`，冻结 upstream intake、OPL overlay、验证和禁止复制 runtime truth 的规则。
-
-可选技术实现：
-
-```bash
-# 方案 3A：在现有历史上做一次普通 move，保留 Git 对 rename 的追踪。
-# 适合保留完整 repo history，同时让未来 git log --follow 能追踪多数文件。
-mkdir -p shells/aionui
-git mv <aionui-root-files> shells/aionui/
-
-# 方案 3B：用 filter-repo 生成带 prefix 的历史，再合入 App 顶层 skeleton。
-# 适合想让整个 AionUI 历史天然位于 shells/aionui/，但需要更严格的仓库重写流程。
-git filter-repo --to-subdirectory-filter shells/aionui
+```text
+/Users/gaofeng/workspace/.opl-migration-backups/one-person-lab-app-history-rich-backup-20260515
 ```
 
-默认推荐 3A：**rename 现有 repo + 普通 `git mv` 到 `shells/aionui/`**。它不重写公开历史，GitHub Release / PR / commit link 风险最低；上游 AionUI 更新仍通过 remote + intake 分支解决。只有当历史展示必须天然带 prefix 时，才选择 3B。
+## Release 边界
 
-退出条件：
+App repo 独占：
 
-- `contracts/app-shell-adapter.json` 指向 `shells/aionui`。
-- 顶层 App 脚本能进入 `shells/aionui` 执行 install/build/test/package。
-- packaged runtime validation 和真实 App smoke 通过。
-- AionUI upstream intake 文档已指向 `shells/aionui/AGENTS.md`。
+- 标准 DMG / ZIP / platform packages。
+- Full 版 DMG。
+- `latest*.yml` updater metadata。
+- GitHub Release asset upload。
+- GUI smoke、VM smoke、Docker/WebUI install docs 和用户图文教程。
 
-回滚点：
+Framework repo 只保留：
 
-- 在迁移分支回退本阶段 commit。
-- 若已合并但未发布，可 revert 目录移动 commit。
+- App release discovery / install consumer surface。
+- Full 版 DMG 需要的 runtime/CLI/contracts payload source。
+- App 可消费的 CLI JSON、contracts、runtime snapshot、provider receipts 和 domain-owned projections。
 
-### 4. Release / installer 兼容切换
+Full 包在用户侧等价于 Full 版 DMG。Framework 是 Full DMG 内 runtime/CLI/contracts 的内容来源，不拥有 App 发布流程。
 
-状态：兼容阶段已验证。2026-05-15 本机构建
-`One-Person-Lab-26.5.15-mac-arm64.dmg` / ZIP，替换
-`/Applications/One Person Lab.app` 后真实 GUI smoke 通过；release asset
-normalizer 在真实 macOS arm64 26.5.15 artifact + mock Windows/Linux matrix
-下通过，且 standard updater metadata 继续排除 Full first-install assets。
+## AionUI Upstream 跟随
 
-目的：保持用户安装不破，同时让 App repo 开始成为 App 包 source-of-truth。
+`opl-aion-shell` 是唯一 upstream-following shell 仓：
 
-动作：
+- `origin` 指向 `git@github.com:gaofeng21cn/opl-aion-shell.git`。
+- `upstream` 指向 `https://github.com/iOfficeAI/AionUi.git`。
+- AionUI upstream 更新进入显式 upstream-intake branch / worktree。
+- 每次 intake 都比较 upstream delta、OPL overlay delta 和本地 dirty delta。
+- OPL-specific 改动集中在 branding、Codex-default runtime wiring、environment management、release/update metadata、bridge adapters 和 packaging policy。
+- upstream 已覆盖的本地深补丁应删除或收缩成薄 adapter。
 
-- App repo 顶层 scripts 生成标准 App 包、Full first-install 包和 updater metadata。
-- `one-person-lab-app` 是用户下载 release 面、标准 DMG、Full 版 DMG 与 updater metadata 的唯一 owner。
-- 更新 `opl install` / GUI release discovery，使其读取 App repo release asset；Framework 不保留 App release/upload/build workflow。
-- 明确 standard updater 不能引用 Full 包。
+App repo 不直接吸收 upstream AionUI commit；它只更新 active shell ref / checkout / release wrapper 以及 App-level contract。
 
-退出条件：
+## 远端迁移顺序
 
-- 标准 App updater 只看到标准资产。
-- Full first-install 包有显式 `Full` 命名和 payload validation。
-- `opl install` 能找到当前平台 App 包。
-- 旧 `opl-aion-shell` 名称只作为 redirect / history / migration note 出现。
+远端操作属于破坏性/可见发布面变更，应单独确认后执行：
 
-回滚点：
+1. 将当前 history-rich GitHub `gaofeng21cn/one-person-lab-app` 改回或迁成 `gaofeng21cn/opl-aion-shell`。
+2. 新建干净 `gaofeng21cn/one-person-lab-app`。
+3. 推送本地 clean App repo 到新的 `one-person-lab-app`。
+4. 推送本地 `opl-aion-shell` shell-root 形态到 `opl-aion-shell`。
+5. 删除、废弃或标记迁移前误发在污染 App repo 上的测试 release，例如 `v26.5.15`。
+6. 在 clean App repo 上重新发布当天最新版，作为标准 DMG / Full DMG / updater metadata / GitHub Release 的迁移后 smoke。
 
-- 回滚只能通过回退本次发布迁移 commit 或重新发布 App repo artifact 完成；Framework 不恢复 App 发布入口。
+## 验证矩阵
 
-### 5. AionUI 2.0 / next shell 并行适配
-
-目的：证明新拓扑能承载大版本 GUI 迁移。
-
-动作：
-
-- 在 `shells/aionui-next/` 或 `shells/aionui-v2-lab/` 接入 AionUI 2.0。
-- 不影响 `shells/aionui/` 稳定发布线。
-- 新 shell 使用同一组 App 顶层 contracts 和 OPL machine-readable surfaces。
-- 通过 App 页面状态矩阵、packaged runtime validation、真实 App smoke 后，才切 active shell。
-
-退出条件：
-
-- stable shell 和 next shell 可并存。
-- active shell contract 是唯一切换点。
-- 旧 shell 可退役或保留为 history/provenance，不污染 App 顶层。
-
-回滚点：
-
-- 删除或冻结 `shells/aionui-next/`。
-- active shell 继续指向 `shells/aionui/`。
-
-### 6. 收口与旧名退役
-
-状态：已完成当前文档与本地路径收口；旧 `opl-aion-shell` 只保留为
-history / redirect / migration note。剩余 release source-of-truth 切换仍按
-App release manifest / Framework release discovery 兼容阶段推进。
-
-目的：让新拓扑成为默认事实。
-
-动作：
-
-- 更新 `one-person-lab` README / status / install docs，把 App repo 写成 `one-person-lab-app`。
-- 更新 `opl install`、release docs、GitHub Actions、badges、screenshots、user guides 中的旧仓名。
-- `opl-aion-shell` 只作为历史旧名、GitHub redirect 或 migration note 出现。
-- 关闭临时 compatibility wording。
-
-退出条件：
-
-- 新文档不再把 `opl-aion-shell` 当作当前产品仓名。
-- App repo 顶层和 `shells/aionui` owner split 可被新维护者直接理解。
-- Framework repo 验证和 App repo 验证均通过。
-
-回滚点：
-
-- 如果 App repo source-of-truth 仍有 blocker，继续保留兼容阶段 release discovery，不切默认。
-
-## 命令级检查清单
-
-### `one-person-lab` 主仓
-
-迁移文档阶段：
-
-```bash
-git diff --check
-npm run line-budget
-npm run test:meta
-```
-
-release discovery 切换阶段：
+Framework repo：
 
 ```bash
 npm run typecheck
 npm run test:fast
 npm run test:artifact
 npm run test:fresh-install
+node scripts/test-lanes.mjs assert-coverage
+git diff --check
 ```
 
-### `one-person-lab-app` / active shell
-
-当前 App 仓 active shell 仍沿用 AionUI shell 的核心验证命令：
+App repo：
 
 ```bash
+npm run ensure:shell
+bun install --cwd shells/aionui --frozen-lockfile
+node scripts/validate-active-shell.mjs --quick
+npm run test:release-boundary
+node scripts/validate-release-boundary.mjs
+node scripts/prepare-release-assets.mjs build-artifacts release-assets
+node scripts/validate-release.mjs release-assets
+```
+
+Shell repo：
+
+```bash
+bun install --frozen-lockfile
 bun run i18n:types
 node scripts/check-i18n.js
 bunx tsc --noEmit
 bun run test
-bun run lint
 node scripts/validate-packaged-runtime.js --scan-all
+git diff --check
 ```
 
-目录重组后，顶层 App 命令应代理到 active shell：
+真实发布前还必须跑：
 
-```bash
-node scripts/validate-active-shell
-node scripts/prepare-release-assets
-node scripts/validate-release
-```
-
-真实安装 / 页面状态验证：
-
-```text
-build standard App package
-build Full first-install package
-replace /Applications/One Person Lab.app
-launch installed App
-check runtime page
-check settings overview
-check environment tab
-check about page
-check updater channel excludes Full assets
-check console/runtime errors
-```
-
-## 验证矩阵
-
-Framework repo 验证：
-
-- `scripts/verify.sh`
-- `npm test` / `npm run test:fast`
-- `npm run test:meta`
-- `npm run test:artifact`
-- `npm run test:fresh-install`
-- `npm run line-budget`
-- domain descriptor / contract parity lanes
-
-App repo 验证：
-
-- active shell dependency install。
-- i18n type generation and validation。
-- TypeScript typecheck。
-- unit / integration tests。
-- lint / format。
-- packaged runtime validation with scan-all behavior。
-- standard App package build。
+- 标准 App package build。
 - Full first-install package build and payload validation。
 - updater metadata validation：standard updater 不选择 Full 包。
-- 真实 App startup smoke。
-- 关键页面状态测试：runtime、settings overview、environment、about、update / release state、first launch readiness。
-
-跨仓验证：
-
-- App 调用 `opl system initialize`、`opl runtime snapshot`、`opl agents descriptors`、`opl modules`、`opl skill sync` 等 machine-readable surfaces。
-- App 不解析人读 Markdown 章节作为稳定接口。
-- App 不推断 domain truth、quality verdict 或 artifact authority。
-- App action routing 必须带明确 owner：OPL CLI / provider signal / domain sidecar / direct skill / manual handoff。
-
-## 文档更新范围
-
-`one-person-lab` 内当前应更新：
-
-- `docs/decisions.md`：新增 App repo split / shell adapter 子目录化决策。
-- `docs/status.md`：把当前事实和目标迁移拓扑分开写。
-- `docs/active/README.md`：收录本计划。
-- `docs/active/opl-family-development-reference.md`：更新 App / Workbench 责任与 AionUI fork 文档治理口径。
-- `docs/active/current-state-vs-ideal-gap.md`：把 App 当前差距补成 repo 拆分和 shell adapter 化差距。
-- `docs/product/README.md` 与 `docs/references/current-support/README.md`：指向本计划。
-- `docs/references/current-support/opl-gui-shell-adapter-boundary.md`：明确当前仓与目标拓扑。
-- `README*` 可在实际 repo 建立后更新用户入口；本计划阶段不强制改下载文案。
+- 真实 `/Applications/One Person Lab.app` 启动 smoke。
+- Docker/WebUI 安装流程 smoke。
+- 干净 macOS VM 首启 smoke。
 
 ## 验收标准
 
-- `one-person-lab` 文档明确 Framework repo 与 App repo 分工。
-- `opl-aion-shell` 当前事实和 `one-person-lab-app/shells/aionui` 目标拓扑不混写。
-- AionUI 明确是可替换 shell adapter，不是 App 顶层身份，也不是 OPL runtime owner。
-- 迁移计划明确默认路径是 repo rename + 普通 `git mv` 到 `shells/aionui/`；filter-repo / subtree 只在需要 prefix-preserving 历史时使用。
-- AionUI 2.0 这类大版本可走并行 `shells/*-next` 适配线。
-- App release / Full package / updater / page-state tests 归 App repo；Framework repo 只保留 machine-readable surfaces 和 release discovery。
-
-## 风险与控制
-
-| 风险 | 控制 |
-| --- | --- |
-| AionUI 搬入后变成普通 vendor 目录 | 使用 repo rename + `git mv` 的可追踪移动，保留 upstream intake 规则和 `shells/aionui/AGENTS.md`；需要 prefix 历史时再用 filter-repo / subtree。 |
-| App repo 顶层被 AionUI 规则主导 | 顶层只放 App product/release/testing contracts；AionUI 规则限制在 `shells/aionui/`。 |
-| updater 误选 Full 包 | App repo release contract 明确 standard updater 只引用标准 App asset 和 `latest*.yml`。 |
-| Framework/App 发布切换破坏用户安装 | 分阶段迁移，先保留 `one-person-lab` Release 用户入口，再切 source-of-truth。 |
-| GUI 2.0 大版本升级影响稳定用户 | 使用 `shells/aionui-next/` 并行适配，通过验证后再切 active shell。 |
-| App 复制 runtime 或 domain truth | App 只能消费 OPL CLI / machine-readable outputs 和 domain-owned projection refs；action routing 必须 owner-aware。 |
+- 本地顶层目录是 `one-person-lab`、`opl-aion-shell`、`one-person-lab-app`。
+- `one-person-lab-app` 默认分支只追踪 App-owned 文件，不追踪 `shells/aionui`。
+- `one-person-lab-app` contributor 图不被 AionUI 历史污染。
+- `opl-aion-shell` 保留 AionUI 历史、contributors 和 upstream-following 能力。
+- Framework repo 不保留 App release/upload/build workflow。
+- App repo 独占标准 DMG、Full DMG、updater metadata、GitHub Release、GUI smoke 和用户教程。
+- Framework 只作为 App 可消费机器接口 provider 和 Full DMG payload source。
 
 ## 下一步
 
-1. 持续维护 `one-person-lab-app` 顶层 App 文档、合同、release wrapper、page-state 与 first-run test matrix。
-2. `one-person-lab` 继续只保留 Framework truth、App release discovery consumer surface 和 App/workbench 消费边界，不恢复 GUI source fork 或 App 发布入口。
-3. 发布前固定跑 App 仓 active shell 验证、release asset validation、packaged runtime validation 和真实 `/Applications/One Person Lab.app` 启动 smoke。
-4. AionUI upstream 变化只通过显式 intake 分支吸收；OPL overlay 保持在 branding、runtime bridge、packaging policy、release/update metadata 和页面集成层。
+1. 完成远端 repo rename/create/push 迁移，并在 clean App repo 上重新发布最新版测试 release。
+2. 在 App repo 重新跑标准 DMG、Full DMG、release mock、真实 GUI smoke、Docker/WebUI 和干净 VM 首启流程。
+3. 在 App repo 更新 macOS App 图文教程，沿用之前教程逻辑，但引用迁移后 clean release 和新截图。
+4. 保持 `opl-aion-shell` upstream intake 只在 shell repo 发生；App repo 只更新 active shell checkout/ref 和 App-owned release/test/user docs。
