@@ -122,7 +122,10 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.deepEqual(contract.result_surface.suite_kinds, [
     'agent_lab_sample_suite',
     'agent_lab_longline_suite',
+    'agent_lab_external_suite',
   ]);
+  assert.equal(contract.external_suite_runner_surface.surface_kind, 'opl_agent_lab_external_suite_run');
+  assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
   assert.equal(contract.longline_surface.surface_kind, 'opl_agent_lab_longline_summary');
   assert.equal(contract.longline_surface.suite_kind, 'agent_lab_longline_suite');
   assert.equal(contract.complete_control_plane_surface.surface_kind, 'opl_agent_lab_complete_control_plane');
