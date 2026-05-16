@@ -1,0 +1,119 @@
+{
+  "contract_kind": "opl_agent_lab_contract.v1",
+  "surface_kind": "opl_agent_lab_contract",
+  "owner": "one-person-lab",
+  "scope": "framework-level agent evaluation, recovery, quality-ref projection, and improvement control plane",
+  "contract_version": "opl-agent-lab.v1",
+  "input_surfaces": [
+    "agent_lab_task_manifest",
+    "agent_trajectory_refs",
+    "domain_quality_scorecard_refs",
+    "recovery_probe_refs",
+    "failure_taxonomy_refs",
+    "improvement_candidate_refs",
+    "promotion_gate_refs"
+  ],
+  "required_observations": [
+    "task_manifests_observed",
+    "agent_trajectories_observed",
+    "recovery_probes_observed",
+    "domain_quality_scorecard_refs_observed",
+    "failure_taxonomy_observed",
+    "improvement_candidates_observed",
+    "promotion_gates_observed",
+    "no_memory_body_observed",
+    "forbidden_authority_flags_all_false"
+  ],
+  "result_surface": {
+    "surface_kind": "opl_agent_lab_suite_result",
+    "statuses": [
+      "passed",
+      "blocked"
+    ],
+    "summary_fields": [
+      "task_count",
+      "run_count",
+      "passed_run_count",
+      "blocked_run_count",
+      "recovery_probe_count",
+      "recovery_passed_count",
+      "scorecard_passed_count",
+      "improvement_candidate_count",
+      "promotable_candidate_count",
+      "memory_body_observed",
+      "forbidden_authority_flag_count"
+    ],
+    "ref_fields": [
+      "task_refs",
+      "trajectory_refs",
+      "recovery_probe_refs",
+      "domain_quality_scorecard_refs",
+      "scorer_refs",
+      "oracle_refs",
+      "improvement_candidate_refs",
+      "promotion_gate_refs",
+      "artifact_refs",
+      "receipt_refs"
+    ]
+  },
+  "agent_lab_proves": [
+    "OPL can normalize domain-declared evaluation task manifests",
+    "OPL can carry agent trajectory refs without reading private domain truth bodies",
+    "OPL can project recovery probes for resume, retry, dead-letter repair, human gate resume, and artifact restore",
+    "OPL can aggregate domain-owned quality scorecard refs without authorizing quality verdicts",
+    "OPL can turn run evidence into improvement candidates and promotion gates",
+    "OPL can fail closed on memory body payloads and forbidden authority claims"
+  ],
+  "agent_lab_does_not_prove": [
+    "live soak completion",
+    "domain ready verdict",
+    "publication verdict",
+    "fundability verdict",
+    "visual quality verdict",
+    "artifact mutation success",
+    "memory body application",
+    "writeback accept or reject decision",
+    "default agent configuration promotion without explicit gate"
+  ],
+  "domain_retained_authority": [
+    "domain truth",
+    "domain quality verdict",
+    "domain artifact authority",
+    "domain memory body",
+    "writeback accept/reject decision",
+    "owner receipt",
+    "typed blocker",
+    "publication/fundability/visual judgment"
+  ],
+  "forbidden_authority": [
+    "domain truth write",
+    "memory body write",
+    "memory writeback accept/reject verdict",
+    "domain ready verdict",
+    "quality/export verdict",
+    "domain artifact mutation",
+    "default agent promotion without gate"
+  ],
+  "external_framework_policy": {
+    "primary_eval_runner": "Inspect AI adapter optional",
+    "task_standard_reference": "METR task standard pattern only",
+    "observability_exports": [
+      "OpenTelemetry/OpenInference-compatible trace refs",
+      "Inspect log refs",
+      "Phoenix/Langfuse-compatible dataset and run refs"
+    ],
+    "rl_training_boundary": "downstream consumer only after stable trajectory and reward surfaces"
+  },
+  "authority_boundary": {
+    "opl": "agent_lab_eval_improvement_control_plane_refs_only",
+    "domain": "truth_quality_artifact_memory_body_and_owner_receipt_authority",
+    "can_write_domain_truth": false,
+    "can_write_memory_body": false,
+    "can_accept_or_reject_memory_writeback": false,
+    "can_authorize_domain_ready": false,
+    "can_authorize_quality_verdict": false,
+    "can_authorize_export_verdict": false,
+    "can_mutate_domain_artifact": false,
+    "can_promote_default_agent_without_gate": false
+  }
+}

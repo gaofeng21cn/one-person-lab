@@ -1,0 +1,145 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+import {
+  buildSampleAgentLabSuite,
+  runAgentLabSuite,
+} from '../../src/agent-lab.ts';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..', '..');
+
+function readJson(relativePath: string) {
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
+}
+
+test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring, and promotion gates without domain authority', () => {
+  const result = runAgentLabSuite(buildSampleAgentLabSuite());
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_suite_result');
+  assert.equal(result.version, 'opl-agent-lab.v1');
+  assert.equal(result.status, 'passed');
+  assert.equal(result.summary.task_count, 3);
+  assert.equal(result.summary.run_count, 3);
+  assert.equal(result.summary.passed_run_count, 3);
+  assert.equal(result.summary.blocked_run_count, 0);
+  assert.equal(result.summary.recovery_probe_count, 5);
+  assert.equal(result.summary.recovery_passed_count, 5);
+  assert.equal(result.summary.scorecard_passed_count, 3);
+  assert.equal(result.summary.improvement_candidate_count, 3);
+  assert.equal(result.summary.promotable_candidate_count, 3);
+  assert.equal(result.summary.forbidden_authority_flag_count, 0);
+  assert.equal(result.summary.memory_body_observed, false);
+  assert.deepEqual(result.missing_observations, []);
+
+  for (const observation of Object.values(result.observations)) {
+    assert.equal(observation, true);
+  }
+
+  assert.deepEqual(result.domain_summary.map((entry) => entry.domain_id), [
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+  ]);
+  assert.deepEqual(result.refs.domain_quality_scorecard_refs, [
+    'quality-scorecard:mas/paper-repair-smoke',
+    'quality-scorecard:mag/grant-section-smoke',
+    'quality-scorecard:rca/visual-deliverable-smoke',
+  ]);
+  assert.ok(result.refs.recovery_probe_refs.includes('recovery-probe:common/resume-after-interruption'));
+  assert.ok(result.refs.improvement_candidate_refs.includes('improvement-candidate:mag/stage-policy-tightening'));
+  assert.ok(result.refs.promotion_gate_refs.includes('promotion-gate:rca/visual-route-smoke'));
+  assert.equal(result.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.authority_boundary.can_authorize_export_verdict, false);
+  assert.equal(result.authority_boundary.can_write_memory_body, false);
+
+  const masRun = result.runs.find((entry) => entry.domain_id === 'med-autoscience');
+  assert.ok(masRun);
+  assert.equal(masRun.status, 'passed');
+  assert.deepEqual(masRun.failure_taxonomy, []);
+  assert.equal(masRun.trajectory.agent_executor, 'codex_cli');
+  assert.equal(masRun.trajectory.stage_attempt_refs[0], 'stage-attempt:mas/paper-repair-smoke');
+  assert.equal(masRun.scorecard.domain_owned, true);
+  assert.equal(masRun.scorecard.opl_scorecard_role, 'scorecard_ref_projection_only');
+});
+
+test('Agent Lab blocks memory body payloads instead of treating them as OPL-applied learning', () => {
+  const suite = buildSampleAgentLabSuite();
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    trajectory: {
+      ...suite.tasks[0].trajectory,
+      memory_body: 'domain memory body must stay out of OPL Agent Lab',
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.observations.no_memory_body_observed, false);
+  assert.equal(result.summary.memory_body_observed, true);
+  assert.ok(result.missing_observations.includes('no_memory_body_observed'));
+  assert.equal(result.authority_boundary.can_write_memory_body, false);
+});
+
+test('Agent Lab blocks forbidden OPL authority claims in task manifests or scorecards', () => {
+  const suite = buildSampleAgentLabSuite();
+  suite.tasks[1] = {
+    ...suite.tasks[1],
+    scorecard: {
+      ...suite.tasks[1].scorecard,
+      authority_boundary: {
+        ...suite.tasks[1].scorecard.authority_boundary,
+        can_authorize_quality_verdict: true,
+      },
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.observations.forbidden_authority_flags_all_false, false);
+  assert.equal(result.summary.forbidden_authority_flag_count, 1);
+  assert.deepEqual(result.refs.forbidden_authority_flags, [
+    'task:agent-lab-task:mag/grant-section-smoke:scorecard.authority_boundary.can_authorize_quality_verdict',
+  ]);
+  assert.ok(result.missing_observations.includes('forbidden_authority_flags_all_false'));
+});
+
+test('Agent Lab contract is tracked and exported as an OPL framework surface', () => {
+  const contract = readJson('contracts/opl-framework/agent-lab-contract.json');
+  const packageJson = readJson('package.json');
+
+  assert.equal(contract.contract_kind, 'opl_agent_lab_contract.v1');
+  assert.equal(contract.surface_kind, 'opl_agent_lab_contract');
+  assert.equal(contract.contract_version, 'opl-agent-lab.v1');
+  assert.equal(packageJson.exports['./agent-lab'], './dist/agent-lab.js');
+
+  for (const observation of [
+    'task_manifests_observed',
+    'agent_trajectories_observed',
+    'recovery_probes_observed',
+    'domain_quality_scorecard_refs_observed',
+    'failure_taxonomy_observed',
+    'improvement_candidates_observed',
+    'promotion_gates_observed',
+    'no_memory_body_observed',
+    'forbidden_authority_flags_all_false',
+  ]) {
+    assert.ok(contract.required_observations.includes(observation));
+  }
+
+  for (const retainedAuthority of [
+    'domain truth',
+    'domain quality verdict',
+    'domain artifact authority',
+    'domain memory body',
+    'writeback accept/reject decision',
+  ]) {
+    assert.ok(contract.domain_retained_authority.includes(retainedAuthority));
+  }
+});
