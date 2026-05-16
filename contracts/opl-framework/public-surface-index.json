@@ -150,6 +150,10 @@
         },
         {
           "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/functional-agent-runtime-harness-contract.json"
+        },
+        {
+          "ref_kind": "machine_contract",
           "ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json"
         }
       ],
