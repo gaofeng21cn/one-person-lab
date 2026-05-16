@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `development_reference`
 State: `active_support`
 Machine boundary: this is a human-readable development roadmap. Machine-readable truth must live in `contracts/`, source code, CLI/API behavior, runtime ledgers, or domain-owned manifests.
-Date: `2026-05-14`
+Date: `2026-05-16`
 
 ## 结论
 
@@ -141,7 +141,7 @@ Date: `2026-05-14`
 | 目标项 | 当前距离 |
 | --- | --- |
 | OPL 作为完整智能体框架 | 控制面、合同、队列、attempt ledger、Temporal provider code、repo-native Temporal live residency proof、本机 managed production proof、Codex runner repo/test harness、typed closeout gate、snapshot/workbench 已落地；MAS 三篇真实 paper line 已证明 read-only typed closeout 可被 OPL 消费，MAS/MAG/RCA task-bound bridge 已证明同一 typed queue 可接收 typed blocker、receipt refs 与 no-regression evidence refs。还差长时 domain activity soak、human gate/resume 进入 domain owner chain 的运行证明、周期性 Temporal SLO 和生产 cutover。 |
-| MAS/MAG/RCA 迁移到统一 skeleton | 已完成 OPL skeleton validation 机制和三仓 manifest/adapter 校验；下一步是逐仓 physical skeleton layout audit、path compatibility audit、direct skill / OPL-hosted parity 的持续回归，以及真实产物根 locator 的 restore/provenance proof。 |
+| MAS/MAG/RCA 迁移到统一 skeleton | 已完成 OPL skeleton validation 机制和三仓 manifest/adapter 校验；下一步是逐仓 physical skeleton layout audit、direct skill / OPL-hosted parity 的持续回归、no-active-caller proof，以及真实产物根 locator 的 restore/provenance proof。 |
 | Domain memory | MAS/MAG/RCA 标准 memory descriptor 均 resolved；MAS 已有 publication-route workspace apply closure，DM002 read-only proof 已显示 consumed memory ref 与 MAS-owned writeback receipt refs。还差真实 provider-hosted stage entry retrieval、workspace/runtime memory body migration、三仓 accepted/rejected writeback receipt 泛化和按 domain/stage 分组的 operator view。 |
 | Lifecycle primitives | OPL shared schema/locator 已有，MAS 经验已经分类为 framework_generic / mas_domain_specific；还差跨 domain cleanup/restore/retention 的 guarded apply proof。 |
 | Operator product experience | CLI/App 已能读 stage attempt workbench，Aion 已能发送 human gate / resume / dead-letter repair signal；Temporal worker/signal/query 代码路径已有 live proof，还差 provider deployment readiness、真实 MAS domain 执行证明、domain drilldown 与 memory refs 分组操作面。 |
@@ -531,7 +531,7 @@ Codex CLI 负责：
 
 - MAS、MAG、RCA 都能在不经过 OPL 的 direct skill path 下继续工作。
 - OPL-hosted path 和 direct skill path 读取同一 descriptor、skill refs、quality gate refs、sidecar receipt refs 和 artifact locator refs。
-- 任何物理目录移动前都有 path compatibility audit、restore/provenance proof、focused tests 和 rollback plan。
+- 任何物理目录移动前都有 direct skill / OPL-hosted parity、restore/provenance proof、focused tests、no-active-caller proof 和 rollback plan。
 - 目录重组不得把 domain truth 迁到 OPL，也不得把 OPL provider state 写回 workspace / runtime artifact root 中的 domain final artifacts。
 
 ### Master P3. Human Gate、用户插入指令与 Resume
