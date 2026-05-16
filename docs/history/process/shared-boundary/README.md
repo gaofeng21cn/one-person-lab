@@ -1,13 +1,12 @@
 # Shared Boundary 过程历史
 
-[English](./README.md) | **中文**
-
 Owner: `One Person Lab`
 Purpose: archived shared-boundary framing material
 State: `history`
 Machine boundary: 仅做人读 provenance。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 与当前 active docs。
 
 本目录保留原 `Shared Foundation` 与 `Shared Foundation Ownership` 页面。它们仍有效的 owner split 已吸收到当前 owner surface。
+旧页面里的双语、旧路径和旧命名只按历史来源读取；`docs/**` 当前只维护中文 canonical 内容。
 
 当前真相现在看：
 

@@ -53,7 +53,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/source/` | 通用 workspace/source intake shell、locator、source readiness projection、source truth transport | workspace/source intake boundary。domain source semantics 留在 MAS/MAG/RCA。 |
 | `docs/policies/` | 稳定治理规则、运行纪律、repo-local 维护规则 | docs lifecycle policy。硬约束仍以 core five 和 contracts 为准。 |
 | `docs/specs/` | 当前仍有效的 domain admission、shared boundary、runtime/product boundary 规格支撑 | domain onboarding、shared runtime/domain contracts。 |
-| `docs/references/` | north-star、positioning、integration、governance、verification、operating support | runtime substrate、convergence governance、current support、domain admission、examples、operating governance。 |
+| `docs/references/` | north-star、positioning、integration、governance、verification、operating support | runtime substrate、convergence governance、current support、domain admission、operating governance。旧 examples / matrix 语料已进入 history。 |
 | `docs/history/` | retired route、completed plans、tombstone、provenance、process archive | gateway/federation/frontdoor/OMX/runtime-substrate/process history。 |
 
 ## 当前长期文档台账
@@ -82,11 +82,27 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/specs/*` | `active_spec_support` | 当前仍有效的 domain admission、shared runtime/domain 和 boundary specs。 | 保持 specs 支撑；机器合同仍回 `contracts/`。 |
 | `docs/references/runtime-substrate/opl-family-agent-ideal-state.md` | `active_support` | OPL Framework、Foundry Agents 与 App 的 north-star 目标态。 | 主参考；不能写成当前完成事实。 |
 | `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` | `active_support` | stage-led framework roadmap、runtime substrate 与旧面退役顺序。 | 保持 roadmap；状态需服从 core five 和 fresh evidence。 |
+| `docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md` | `active_support` | Temporal-backed provider 生产在线必需 substrate 的支撑计划和证据读法。 | 保持 provider 支撑；不能替代 domain owner soak 或 domain verdict。 |
+| `docs/references/runtime-substrate/family-executor-adapter-defaults.md` | `active_support` | 默认 `Codex CLI` 与显式非默认 executor adapter 边界。 | 保持 executor 边界；`hermes_agent` 只能是显式非默认 backend。 |
+| `docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md` | `history_boundary_support` | Hermes 命名/迁移边界和旧 Hermes-first 误读 provenance。 | 因 stale-compat guard 与 executor 边界仍保留路径；不得读作 provider/readiness/Gateway/compatibility 计划。 |
+| `docs/references/runtime-substrate/hermes-agent-executor-evaluation.md` | `support_reference` | `hermes_agent` 显式非默认 executor adapter 的评估条件。 | 不影响默认 executor，不声明行为等价。 |
+| `docs/references/runtime-substrate/opl-managed-runtime-three-layer-contract.md` | `contract_linked_support` | shared managed-runtime 三层 owner split 的人读边界。 | 因 machine contract / tests 仍引用而保留路径；旧 Hermes/upstream runtime owner 读法已过时。 |
+| `docs/references/runtime-substrate/opl-runtime-manager-target.md` | `support_reference` | Runtime Manager 的 provider readiness、native helper、state index 与 operator projection 边界。 | 只做产品级管理与投影支撑；不替代 provider 或 domain truth。 |
 | `docs/references/current-support/*` | `support_reference` | 安装、GUI/WebUI、release、skills、测试和质量操作参考。 | 保持支撑参考；行为 truth 回命令、合同和 artifact。 |
 | `docs/references/convergence-governance/*` | `support_reference_or_rollout_record` | 收敛治理、外部学习、intake 模板和 dated rollout 记录。 | 有效规则上提；dated 记录不当 current plan。 |
 | `docs/references/operating-governance/*` | `support_reference` | quality、operator projection、memory governance 和 family governance 支撑。 | 保持支撑参考；gateway-derived 旧 matrix 留 history。 |
 | `docs/references/domain-admission/*` | `support_reference` | candidate backlog 和准入支撑参考。 | 保持 reference；正式准入规则回 specs。 |
 | `docs/history/**` | `history_or_tombstone` | 退役路线、完成计划、frontdoor/gateway/federation/OMX/process provenance。 | 不作为 active owner；有用结论先吸收再保留原文。 |
+
+## 2026-05-17 内容审计收口
+
+本轮以 `docs/active/opl-family-development-reference.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md` 和 `docs/active/current-state-vs-ideal-gap.md` 为主参考，复核 OPL 非 history 层文档：
+
+- `docs/references/README.md` 不再列不存在的 `examples-corpora/` reference 分区；旧 gateway / routed-action / operating record corpus 只从 `docs/history/compatibility/gateway-federation/examples-corpora/` 进入。
+- `docs/references/runtime-substrate/README.md` 将 legacy evaluation references 限定为 runtime/provider/executor 边界审计材料，旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述不能恢复为 active plan、active interface 或 compatibility promise。
+- `docs/history/**/README.md` 去掉 docs 层旧双语自指入口，统一写明历史双语方案、旧路径和旧命令只按 provenance 阅读；`docs/**` 当前只维护中文 canonical 内容。
+- `hermes-agent-truth-reset-and-target-state.md` 保留在 reference 层只因为它仍是 executor/stale-compat 边界 guard 的人读锚点；它的生命周期是 `history_boundary_support`，不是 provider 目标态。
+- `opl-managed-runtime-three-layer-contract.md` 保留在 reference 层是因为 machine contract 与测试仍链接三层 owner split；它不是旧 managed-runtime 计划，也不保留 Hermes provider 兼容面。
 
 ## 四仓目录状态
 

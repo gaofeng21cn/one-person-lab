@@ -1,12 +1,11 @@
 # Runtime Substrate 历史归档
 
-[English](./README.md) | **中文**
-
 Status: `historical_archive`
 Owner: `One Person Lab`
 Machine boundary: 仅人读历史归档；机器可读行为必须使用 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 或 `human_doc:*` 语义标识。
 
 本目录收纳已经被 2026-05-11 framework-first 定位吸收或取代的 runtime / product-entry / migration 整文档。它们仍保留来源追溯价值，但不再作为当前 backlog、roadmap、runtime contract 或 product-entry 计划执行。
+旧文档中的双语方案、旧路径和旧命令只保留为 provenance；`docs/**` 当前只维护中文 canonical 内容。
 
 当前入口：
 
