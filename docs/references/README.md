@@ -19,10 +19,9 @@
 | 目录 | 角色 |
 | --- | --- |
 | `current-support/` | 当前操作支撑参考。 |
-| `runtime-substrate/` | Runtime substrate、product-entry、Hermes 与 Runtime Manager 参考。 |
+| `runtime-substrate/` | 当前 runtime/provider/executor 支撑参考，以及少量仍需靠近 current roadmap 的迁移边界评估。 |
 | `convergence-governance/` | Family 收敛、文档生命周期、intake 模板与状态对齐。 |
 | `domain-admission/` | 当前仍有效的 candidate backlog 与 domain onboarding support。已完成 tranche、Phase 1/2 activation package 和 owner-line 记录进入 `docs/history/process/domain-admission/`。 |
-| `examples-corpora/` | 当前仍有效的样例语料。旧 gateway/routed-action/operating record corpus 已进入 `docs/history/compatibility/gateway-federation/examples-corpora/`。 |
 | `operating-governance/` | 当前仍有效的质量、operator projection 与 family governance support。旧 gateway-derived surface authority/lifecycle/review/publish matrix 已进入 `docs/history/compatibility/gateway-federation/operating-governance/`。 |
 
 除 README 或经 [文档组合治理](../docs_portfolio_consolidation.md) 明确承认的新顶层生命周期索引外，不再在 `docs/references/` 根目录新增 loose Markdown。
@@ -73,9 +72,9 @@
 保留给迁移回顾和 tombstone 语境的 superseded / legacy references。复用任何内容前，先按 [OPL 开发文档组合整理](../active/development-document-portfolio.md) 判断内容块当前归属：
 
 - [Runtime Substrate 历史归档](../history/runtime-substrate/README.md)：已吸收的早期 direct-entry、Hermes-first、host-agent-only、managed-runtime checklist、vertical online-agent platform 与 MAS cutover 整文档。
-- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md) 和 [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)：这些文档是当前 Hermes 边界 / 评估背景。`hermes_agent` 仍是 canonical 显式非默认 executor adapter/backend；`hermes_legacy` 是非法 provider selection；旧 Hermes provider / proof-provider / readiness / Gateway 语料只归 diagnostic、fixture、negative guard 或 provenance。
+- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md) 和 [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)：前者记录 Hermes 命名边界、旧 Hermes-first 误读来源和迁移 provenance；后者评估当前有效的 `hermes_agent` 显式非默认 executor adapter/backend。二者都不能作为 provider、readiness、Gateway、compatibility surface 或默认执行路径恢复依据。
   较早的 benchmark 已迁入 [Runtime Substrate 历史归档](../history/runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)。
-- [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.md)：较早的 managed runtime 三层参考；有效内容以 runtime 命名与边界合同为准。
+- [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.md)：只保留三层 owner split 的历史支撑读法；当前 owner、provider 和 executor 边界以核心五件套、runtime 命名合同、stage-led roadmap 与 Temporal provider 计划为准。
 
 ## 四、Domain admission 参考
 
