@@ -52,6 +52,17 @@
 - 只观察：generic adapter list、dashboard layout、configuration hot reload 和 adaptive tuning UX。它们可以提示 OPL App / workbench 如何展示状态，但不改变 OPL Framework 的 owner split。
 - 明确拒绝：automatic graceful degradation、字符串规则触发 retry、runtime-local plugin discovery、adapter subprocess wrapper 和默认 `~/.hermes` state path。OPL 的高价值知识工作不能通过 generic fallback 宣称成功；预算不足、工具失败或 quality blocker 应进入 typed blocker / human gate / owner receipt，而不是自动降级成低质量交付。
 
+### Non-Core Pattern Absorption 2026-05-16
+
+这些外部机制不是完全不能学，但只能以 OPL 边界内的低风险形态吸收：
+
+- `generic fallback`：可转成 `degraded_attempt` 或 `alternative_route_proposal`，必须带 blocker、evidence gap 和 owner receipt ref；不能自动标记成功，不能绕过 typed blocker、human gate 或 domain owner receipt。
+- `string rule retry`：可转成 typed SLO / retry policy schema，字段必须包含 trigger kind、metric source、cooldown、max attempts、owner、allowed action 和 receipt refs；规则解析失败必须 fail-closed。
+- `generic event bus`：只吸收事件分类和观测字段，导出为只读 projection；真实状态仍以 OPL stage attempt ledger、Temporal history/proof、typed queue、closeout packet 和 domain-owned receipt 为准。
+- `runtime adapter`：只保留显式 executor adapter registry；每个 adapter 必须有 capability boundary、receipt shape、tool-event proof、timeout / closeout rule 和 fail-closed gate，不能共享“process started = success”的泛化成功语义。
+
+对应合同入口已经落到 `contracts/opl-framework/family-runtime-attempt-contract.json` 的 `external_stability_pattern_policy` 和 `contracts/opl-framework/family-product-operator-projection.json` 的 `external_stability_learning_policy`。学习方向保持为 control-loop 分类、观测指标、SLO/告警表达、budget projection 和 dashboard 组织；不把通用兜底执行机制引入 OPL core。
+
 后续若要落地，只应开 OPL-owned 小 lane：
 
 1. 在 runtime snapshot / production closeout 上增加 family control-loop summary，展示 trigger、decision owner、action route、receipt ref、cooldown 和 blocker。

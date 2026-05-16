@@ -77,9 +77,46 @@ test('family product operator projection preserves Codex-default runtime and pre
     'domain quality authority',
     'executor auto-degradation',
     'domain action execution from observability',
+    'generic fallback completion',
+    'string rule retry execution',
+    'generic event bus truth source',
+    'generic runtime adapter success semantics',
   ]) {
     assert.ok((contract.non_goals as string[]).includes(nonGoal));
   }
+});
+
+test('family product operator projection documents safe learning from rejected generic runtime mechanisms', () => {
+  const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
+  const policy = contract.external_stability_learning_policy as Record<string, any>;
+
+  for (const allowed of [
+    'control_loop_classification',
+    'observed_usage_budget_projection',
+    'typed_slo_retry_policy_language',
+    'read_only_event_and_alert_projection',
+    'dashboard_grouping_vocabulary',
+  ]) {
+    assert.ok(policy.allowed_learning.includes(allowed));
+  }
+  for (const rejected of [
+    'generic_fallback_completion',
+    'string_rule_retry_execution',
+    'generic_event_bus_as_truth',
+    'generic_runtime_adapter_success_semantics',
+  ]) {
+    assert.ok(policy.not_core_runtime_mechanisms.includes(rejected));
+  }
+
+  assert.equal(policy.allowed_degraded_surface.surface, 'degraded_attempt_or_alternative_route_proposal');
+  assert.equal(policy.allowed_degraded_surface.can_mark_success, false);
+  assert.ok(policy.allowed_degraded_surface.required_operator_fields.includes('blocker'));
+  assert.ok(policy.allowed_degraded_surface.required_operator_fields.includes('evidence_gap'));
+  assert.ok(policy.allowed_degraded_surface.required_operator_fields.includes('owner_receipt_ref'));
+  assert.equal(
+    policy.operator_stability_definition,
+    'failure_is_classified_recoverable_and_auditable_without_pretending_quality_completion',
+  );
 });
 
 test('test:meta includes OPL family external orchestration contract tests', () => {
