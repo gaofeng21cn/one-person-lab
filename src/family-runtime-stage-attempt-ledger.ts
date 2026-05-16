@@ -5,6 +5,7 @@ import {
   type FamilyRuntimeProviderKind,
   type TemporalStageAttemptSignalKind,
 } from './family-runtime-types.ts';
+import { buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -143,6 +144,10 @@ export function createStageAttemptTable(db: DatabaseSync) {
 }
 
 export function stageAttemptToPayload(row: StageAttemptRow) {
+  const retryBudget = parseJsonObject(row.retry_budget_json);
+  const providerRun = parseJsonObject(row.provider_run_json);
+  const activityEvents = parseJsonList(row.activity_events_json);
+  const routeImpact = parseJsonObject(row.route_impact_json);
   return {
     stage_attempt_id: row.stage_attempt_id,
     idempotency_key: row.idempotency_key,
@@ -157,14 +162,24 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     checkpoint_refs: parseJsonList(row.checkpoint_refs_json),
     closeout_refs: parseJsonList(row.closeout_refs_json),
     human_gate_refs: parseJsonList(row.human_gate_refs_json),
-    retry_budget: parseJsonObject(row.retry_budget_json),
+    retry_budget: retryBudget,
     attempt_count: row.attempt_count,
     task_id: row.task_id,
     blocked_reason: row.blocked_reason,
     provider_receipt: parseJsonObject(row.provider_receipt_json),
-    provider_run: parseJsonObject(row.provider_run_json),
-    activity_events: parseJsonList(row.activity_events_json),
-    route_impact: parseJsonObject(row.route_impact_json),
+    provider_run: providerRun,
+    activity_events: activityEvents,
+    route_impact: routeImpact,
+    usage_projection: buildStageAttemptUsageProjection({
+      stageAttemptId: row.stage_attempt_id,
+      status: row.status,
+      blockedReason: row.blocked_reason,
+      retryBudget,
+      attemptCount: row.attempt_count,
+      providerRun,
+      activityEvents,
+      routeImpact,
+    }),
     closeout_receipt_status: row.closeout_receipt_status,
     authority_boundary: {
       opl: 'attempt_control_metadata_and_projection_only',

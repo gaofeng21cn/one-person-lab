@@ -11,12 +11,14 @@ import { buildFamilyStageListEntry, buildFamilyStagesList } from './family-stage
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import { buildProviderReadiness } from './production-functional-closeout-provider-readiness.ts';
+import { productionCloseoutActionRouteRefs } from './production-functional-closeout-action-route.ts';
 import { buildProductionEvidenceReadiness } from './production-functional-closeout-evidence-readiness.ts';
 import { buildProductionCloseoutControlLoopSummary } from './production-functional-closeout-control-loop.ts';
 import {
   masGuardedApplyOwnerReceiptRefs,
   masGuardedApplyTypedBlockers,
 } from './production-functional-closeout-mas-guarded-evidence.ts';
+import { summarizeProductionCloseoutUsage } from './production-functional-closeout-usage.ts';
 import {
   buildProviderContinuousProof,
   providerProofStatusIsCurrentlyProven,
@@ -201,18 +203,6 @@ function summarizeOperatorActionRouting(
       resume_ledger: signalEntriesByAttempt.get(attempt.stage_attempt_id) ?? [],
     };
   }));
-}
-
-function actionRouteRefs(
-  actions: Array<{
-    route_target_kind: string;
-    command_or_surface_ref: string;
-  }>,
-  targetKind: string,
-) {
-  return uniqueStrings(actions
-    .filter((action) => action.route_target_kind === targetKind)
-    .map((action) => action.command_or_surface_ref));
 }
 
 function closeoutPacketForAttempt(
@@ -422,6 +412,7 @@ function summarizeAttemptEvidence(
   const memoryRefEvidence = closeoutMemoryRefEvidence(closeouts, domainIds);
   const operatorActionRouting = summarizeOperatorActionRouting(attempts, closeouts, signals);
   const genericProjections = summarizeGenericProjections(attempts, closeouts, signals);
+  const usageProjection = summarizeProductionCloseoutUsage(attempts);
   const transitionBridgeEvidence = genericProjections.projections.transition_bridge_evidence;
   const domainBreakdown = domainIds.map((domainId) => {
     const domainAttempts = attempts.filter((attempt) => attempt.domain_id === domainId);
@@ -456,10 +447,10 @@ function summarizeAttemptEvidence(
       rejected_write_count: domainMemory?.rejected_write_count ?? 0,
       operator_action_route_count: domainActions.length,
       operator_action_route_refs: uniqueStrings(domainActions.map((action) => action.command_or_surface_ref)),
-      operator_app_surface_route_refs: actionRouteRefs(domainActions, 'app_surface'),
-      operator_provider_signal_route_refs: actionRouteRefs(domainActions, 'provider_signal'),
-      operator_domain_sidecar_route_refs: actionRouteRefs(domainActions, 'domain_sidecar'),
-      operator_direct_skill_route_refs: actionRouteRefs(domainActions, 'direct_skill'),
+      operator_app_surface_route_refs: productionCloseoutActionRouteRefs(domainActions, 'app_surface'),
+      operator_provider_signal_route_refs: productionCloseoutActionRouteRefs(domainActions, 'provider_signal'),
+      operator_domain_sidecar_route_refs: productionCloseoutActionRouteRefs(domainActions, 'domain_sidecar'),
+      operator_direct_skill_route_refs: productionCloseoutActionRouteRefs(domainActions, 'direct_skill'),
       transition_bridge_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
         attempt.evidence.receipt_refs
       )),
@@ -509,6 +500,7 @@ function summarizeAttemptEvidence(
       rejected_write_count: memoryRefEvidence.rejected_write_count,
       opl_writes_memory_body: false,
     },
+    usage_projection: usageProjection,
     operator_action_routing_summary: operatorActionRouting.summary,
     transition_bridge_evidence_summary: transitionBridgeEvidence.summary,
     control_loop_summary: controlLoopSummary,

@@ -735,6 +735,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       conflict_or_blocker_envelopes: conflictOrBlockerEnvelopes,
       operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
+      usage_projection: attempt.usage_projection,
       operator_visibility: {
         provider_kind: attempt.provider_kind,
         attempt_id: attempt.stage_attempt_id,
@@ -766,6 +767,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         dead_letter: taskDeadLetterForAttempt(db, attempt),
         canonical_outcome: canonicalOutcome,
         operator_conflicts: conflictOrBlockerEnvelopes,
+        usage_projection: attempt.usage_projection,
         authority_boundary: {
           opl: 'attempt_control_metadata_projection_only',
           domain: 'truth_quality_artifact_gate_owner',
