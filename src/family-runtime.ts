@@ -803,6 +803,9 @@ export async function runFamilyRuntime(args: string[]) {
           created: result.created,
           idempotent_noop: result.idempotent_noop,
           attempt,
+          conflict_or_blocker_envelopes: 'conflict_or_blocker_envelopes' in result
+            ? result.conflict_or_blocker_envelopes
+            : [],
           temporal_start,
         },
       };

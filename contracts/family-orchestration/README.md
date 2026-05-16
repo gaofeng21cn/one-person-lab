@@ -70,6 +70,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - shared lifecycle receipt surface for dry-run / apply / verify actions, manifest refs, checksums, and restore proof
 - `family-owner-route.schema.json`
   - shared owner-route envelope for `route_epoch`, `source_fingerprint`, next owner, allowed actions, idempotency key, and handoff / projection refs
+- `family-conflict-envelope.schema.json`
+  - shared Conflict / Blocker Envelope for duplicate tasks, owner conflicts, evidence blockers, quality blockers, human gates, retry/dead-letter, incomplete identity, and closeout receipt conflicts; OPL routes, projects, and audits fail-closed while domain agents keep ready / quality / artifact verdict authority
 
 ## Runtime Continuity Freeze
 
@@ -127,6 +129,14 @@ The shared control surfaces are:
   - records route epoch, source fingerprint, next owner, allowed actions, idempotency key, and handoff / projection refs
 
 `family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. Stage attempt query now also projects a locator-only lifecycle primitive: workspace/runtime/artifact roots, indexed closeout or consumed refs, declared restore refs, and the cleanup gate. That projection is intentionally read-only; `OPL` may index refs and show missing restore proof, but it cannot apply retention, delete artifacts, restore workspace contents, or write domain truth. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`. Likewise, `domain_memory_descriptor` exposes locator / freshness / receipt refs only; it does not move memory content or writeback authority into `OPL`.
+
+## Conflict / Blocker Envelope Freeze
+
+`family-conflict-envelope.schema.json` is the single blocker and conflict vocabulary for queue, stage attempt, closeout, and App/operator projection. Anything that cannot continue, cannot confirm completion, or has conflicting claims is projected as `kind=opl_conflict_or_blocker.v1` rather than letting each layer invent local status terms.
+
+The canonical classifications are `duplicate_task`, `authority_conflict`, `evidence_blocker`, `quality_blocker`, `human_gate`, `execution_retryable`, `identity_incomplete`, and `receipt_conflict`. Attempt outcomes are projected into the small set `completed_with_receipt`, `blocked`, `waiting_for_human`, `retry_scheduled`, `dead_lettered`, and `conflict_fail_closed`.
+
+`provider completed` and `executor completed` mean only that the runtime substrate or selected executor finished. Domain progress still requires a domain owner receipt / accepted verdict. App/operator surfaces consume `operator_conflicts[]` directly and show whether the task is a duplicate, what is blocked, who owns resolution, whether retry is available, and what user action is needed.
 
 ## Runtime Supervision Freeze
 
@@ -225,4 +235,5 @@ This directory does not:
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
 - [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)
 - [`family-owner-route.schema.json`](./family-owner-route.schema.json)
+- [`family-conflict-envelope.schema.json`](./family-conflict-envelope.schema.json)
 - [`family-product-entry-manifest-v2.schema.json`](./family-product-entry-manifest-v2.schema.json)

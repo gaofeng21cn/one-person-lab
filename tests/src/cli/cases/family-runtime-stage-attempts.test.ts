@@ -39,6 +39,18 @@ test('family-runtime stage attempt create is idempotent by semantic attempt key 
     assert.equal(second.family_runtime_stage_attempt.created, false);
     assert.equal(second.family_runtime_stage_attempt.idempotent_noop, true);
     assert.equal(
+      second.family_runtime_stage_attempt.conflict_or_blocker_envelopes[0].classification,
+      'duplicate_task',
+    );
+    assert.equal(
+      second.family_runtime_stage_attempt.conflict_or_blocker_envelopes[0].identity.source_fingerprint,
+      'sha256:scout',
+    );
+    assert.equal(
+      second.family_runtime_stage_attempt.conflict_or_blocker_envelopes[0].identity.idempotency_key,
+      first.family_runtime_stage_attempt.attempt.idempotency_key,
+    );
+    assert.equal(
       second.family_runtime_stage_attempt.attempt.stage_attempt_id,
       first.family_runtime_stage_attempt.attempt.stage_attempt_id,
     );
@@ -56,6 +68,52 @@ test('family-runtime stage attempt create is idempotent by semantic attempt key 
     assert.notEqual(
       first.family_runtime_stage_attempt.attempt.idempotency_key,
       third.family_runtime_stage_attempt.attempt.idempotency_key,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt query exposes blocked identity as typed envelopes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-blocked-envelope-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'closeout',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--source-fingerprint',
+      'sha256:blocked-closeout',
+      '--blocked-reason',
+      'typed_closeout_packet_required',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+    const stageQuery = query.family_runtime_stage_attempt_query.stage_attempt_query;
+
+    assert.equal(stageQuery.canonical_outcome, 'blocked');
+    assert.equal(
+      stageQuery.conflict_or_blocker_envelopes[0].kind,
+      'opl_conflict_or_blocker.v1',
+    );
+    assert.equal(
+      stageQuery.conflict_or_blocker_envelopes.some((envelope: { classification: string }) =>
+        envelope.classification === 'evidence_blocker'
+      ),
+      true,
+    );
+    assert.equal(
+      stageQuery.operator_visibility.operator_conflicts.some((envelope: { reason: string }) =>
+        envelope.reason === 'typed_closeout_packet_required'
+      ),
+      true,
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -209,6 +267,12 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       humanGateQuery.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.human_gate_ledger[0].payload.reason,
       'needs_human_review',
     );
+    assert.equal(
+      humanGateQuery.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.operator_conflicts.some(
+        (envelope: { classification: string }) => envelope.classification === 'human_gate',
+      ),
+      true,
+    );
     assert.equal(resumed.family_runtime_stage_attempt_signal.attempt.status, 'queued');
     assert.equal(userInstruction.family_runtime_stage_attempt_signal.signal.signal_kind, 'user_instruction');
     assert.equal(fixtureRun.family_runtime_stage_attempt_fixture_run.provider_fixture_run.provider_completion, 'completed');
@@ -256,6 +320,19 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.rejected_writes[0].reason,
       'domain_truth_write_forbidden',
+    );
+    assert.equal(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.canonical_outcome, 'completed_with_receipt');
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.operator_conflicts.some(
+        (envelope: { classification: string }) => envelope.classification === 'authority_conflict',
+      ),
+      true,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.conflict_or_blocker_envelopes.some(
+        (envelope: { reason: string }) => envelope.reason === 'domain_truth_write_forbidden',
+      ),
+      true,
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.artifact_gallery.gallery_scope,
@@ -404,6 +481,10 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.domain_ready_verdict,
       'domain_gate_pending',
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion_is_domain_ready,
+      false,
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -639,6 +720,13 @@ db.close();`,
     assert.equal(visibility.dead_letter.reason, 'retry_budget_exhausted');
     assert.equal(visibility.dead_letter.task.status, 'dead_letter');
     assert.equal(visibility.dead_letter.task.last_error, 'planned failure');
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.canonical_outcome, 'dead_lettered');
+    assert.equal(
+      visibility.operator_conflicts.some((envelope: { classification: string }) =>
+        envelope.classification === 'execution_retryable'
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

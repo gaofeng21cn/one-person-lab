@@ -157,6 +157,22 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(snapshot.stage_attempt_workbench.summary.operator_conflict_count, 2);
+    assert.equal(snapshot.stage_attempt_workbench.operator_conflicts.length, 2);
+    assert.equal(snapshot.operator_conflicts.length, 2);
+    assert.equal(
+      snapshot.operator_conflicts.some((envelope: { classification: string; authority_boundary: { provider_completion_is_domain_ready: boolean } }) =>
+        envelope.classification === 'evidence_blocker'
+        && envelope.authority_boundary.provider_completion_is_domain_ready === false
+      ),
+      true,
+    );
+    assert.equal(
+      snapshot.stage_attempt_workbench.attempts[0].operator_conflicts.some((envelope: { classification: string }) =>
+        envelope.classification === 'authority_conflict'
+      ),
+      true,
+    );
     assert.equal(snapshot.stage_attempt_workbench.groups.by_domain.medautoscience.total, 1);
     assert.deepEqual(snapshot.stage_attempt_workbench.filter_metadata.group_keys, ['domain_id', 'stage_id', 'status']);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].provider_kind, 'local_sqlite');
@@ -901,6 +917,20 @@ db.close();`,
     assert.equal(gated.filter_keys.resume_available, true);
     assert.equal(deadLetter.dead_letter.reason, 'retry_budget_exhausted');
     assert.deepEqual(deadLetter.attention_flags, ['dead_lettered', 'blocked']);
+    assert.equal(workbench.operator_conflicts.length >= 2, true);
+    assert.equal(output.runtime_tray_snapshot.operator_conflicts.length >= 2, true);
+    assert.equal(
+      output.runtime_tray_snapshot.operator_conflicts.some((envelope: { classification: string; status: string }) =>
+        envelope.classification === 'human_gate' && envelope.status === 'waiting_for_human'
+      ),
+      true,
+    );
+    assert.equal(
+      output.runtime_tray_snapshot.operator_conflicts.some((envelope: { classification: string; status: string }) =>
+        envelope.classification === 'execution_retryable' && envelope.status === 'dead_lettered'
+      ),
+      true,
+    );
     assert.equal(deadLetter.review_repair_queue.summary.dead_letter_count, 1);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

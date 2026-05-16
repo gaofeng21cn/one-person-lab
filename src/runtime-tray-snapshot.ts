@@ -314,6 +314,35 @@ function sortItems(left: RuntimeTrayItem, right: RuntimeTrayItem) {
   return left.project_label.localeCompare(right.project_label) || left.item_id.localeCompare(right.item_id);
 }
 
+function operatorConflictsFromItem(item: RuntimeTrayItem) {
+  return Array.isArray(item.operator_conflicts)
+    ? item.operator_conflicts.filter((entry): entry is JsonRecord => (
+        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+      ))
+    : [];
+}
+
+function operatorConflictsFromWorkbench(workbench: JsonRecord) {
+  const direct = Array.isArray(workbench.operator_conflicts)
+    ? workbench.operator_conflicts.filter((entry): entry is JsonRecord => (
+        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+      ))
+    : [];
+  if (direct.length > 0) {
+    return direct;
+  }
+  const attempts = Array.isArray(workbench.attempts)
+    ? workbench.attempts.filter((entry): entry is JsonRecord => (
+        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+      ))
+    : [];
+  return attempts.flatMap((attempt) => Array.isArray(attempt.operator_conflicts)
+    ? attempt.operator_conflicts.filter((entry): entry is JsonRecord => (
+        typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+      ))
+    : []);
+}
+
 function profileForMasWorkspace(workspaceRoot: string) {
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   try {
@@ -629,6 +658,25 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
     ...stageAttemptItems,
     providerProofItem,
   ];
+  const operatorConflicts = [
+    ...operatorConflictsFromWorkbench(stageAttemptWorkbench),
+    ...items.flatMap(operatorConflictsFromItem),
+  ].filter((entry, index, entries) => {
+    const key = JSON.stringify([
+      entry.kind,
+      entry.classification,
+      entry.status,
+      entry.reason,
+      (entry.subject as JsonRecord | undefined)?.stage_attempt_id,
+    ]);
+    return entries.findIndex((candidate) => JSON.stringify([
+      candidate.kind,
+      candidate.classification,
+      candidate.status,
+      candidate.reason,
+      (candidate.subject as JsonRecord | undefined)?.stage_attempt_id,
+    ]) === key) === index;
+  });
   const runningItems = items.filter((entry) => entry.lane === 'running').sort(sortItems);
   const attentionItems = items.filter((entry) => entry.lane === 'attention').sort(sortItems);
   const recentItems = items.filter((entry) => entry.lane === 'recent').sort(sortItems);
@@ -668,6 +716,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       attention_items: attentionItems,
       recent_items: recentItems,
       action_counts: actionCounts,
+      operator_conflicts: operatorConflicts,
       stage_attempt_workbench: stageAttemptWorkbench,
       provider_continuous_proof: providerContinuousProof,
       native_helper_execution_envelope: nativeHelperExecutionEnvelope,

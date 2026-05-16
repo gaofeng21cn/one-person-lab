@@ -766,6 +766,7 @@ test('family persistence lifecycle owner-route and supervision schemas freeze sh
   const lifecycleSchema = readJson('contracts/family-orchestration/family-lifecycle-ledger.schema.json');
   const ownerRouteSchema = readJson('contracts/family-orchestration/family-owner-route.schema.json');
   const supervisionSchema = readJson('contracts/family-orchestration/family-runtime-supervision.schema.json');
+  const conflictEnvelopeSchema = readJson('contracts/family-orchestration/family-conflict-envelope.schema.json');
 
   assert.deepEqual(
     (persistenceSchema.properties as Json).surface_kind,
@@ -810,6 +811,41 @@ test('family persistence lifecycle owner-route and supervision schemas freeze sh
     ((((supervisionSchema.properties as Json).read_only_authority_boundary as Json).properties as Json).authority as Json).const,
     'read_only_projection',
   );
+
+  assert.deepEqual(
+    (conflictEnvelopeSchema.properties as Json).kind,
+    { const: 'opl_conflict_or_blocker.v1' },
+  );
+  assert.deepEqual(
+    ((conflictEnvelopeSchema.properties as Json).classification as Json).enum,
+    [
+      'duplicate_task',
+      'authority_conflict',
+      'evidence_blocker',
+      'quality_blocker',
+      'human_gate',
+      'execution_retryable',
+      'identity_incomplete',
+      'receipt_conflict',
+    ],
+  );
+  assert.deepEqual(
+    ((conflictEnvelopeSchema.properties as Json).owner as Json).enum,
+    ['opl_runtime', 'domain_agent', 'human', 'infrastructure'],
+  );
+  assert.deepEqual(
+    ((conflictEnvelopeSchema.properties as Json).status as Json).enum,
+    ['blocked', 'waiting_for_human', 'retry_scheduled', 'dead_lettered', 'conflict_fail_closed', 'deduplicated'],
+  );
+  assert.ok((conflictEnvelopeSchema.required as string[]).includes('allowed_next_actions'));
+  assert.ok((conflictEnvelopeSchema.required as string[]).includes('forbidden_actions'));
+  assert.ok((conflictEnvelopeSchema.required as string[]).includes('authority_boundary'));
+  const subjectRequired = (((conflictEnvelopeSchema.$defs as Json).subject as Json).required as string[]);
+  assert.deepEqual(subjectRequired, ['domain', 'stage_id', 'task_kind', 'source_fingerprint', 'idempotency_key']);
+  const boundaryProperties = (((conflictEnvelopeSchema.properties as Json).authority_boundary as Json).properties as Json);
+  assert.deepEqual(boundaryProperties.provider_completion_is_domain_ready, { const: false });
+  assert.deepEqual(boundaryProperties.can_write_domain_truth, { const: false });
+  assert.deepEqual(boundaryProperties.can_fallback_complete, { const: false });
 });
 
 test('family domain memory contracts freeze locator and writeback receipt authority boundaries', () => {

@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-conflict-envelope.schema.json",
+  "title": "OPL Family Conflict Or Blocker Envelope",
+  "description": "Shared fail-closed envelope for duplicate tasks, owner conflicts, evidence blockers, quality blockers, human gates, retry/dead-letter outcomes, incomplete identity, and closeout receipt conflicts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "subject",
+    "classification",
+    "owner",
+    "authority",
+    "status",
+    "reason",
+    "evidence_refs",
+    "allowed_next_actions",
+    "forbidden_actions",
+    "operator_label",
+    "operator_questions",
+    "authority_boundary"
+  ],
+  "properties": {
+    "kind": {
+      "const": "opl_conflict_or_blocker.v1"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "identity": {
+      "$ref": "#/$defs/subject"
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "duplicate_task",
+        "authority_conflict",
+        "evidence_blocker",
+        "quality_blocker",
+        "human_gate",
+        "execution_retryable",
+        "identity_incomplete",
+        "receipt_conflict"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "enum": [
+        "opl_runtime",
+        "domain_agent",
+        "human",
+        "infrastructure"
+      ]
+    },
+    "authority": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "blocked",
+        "waiting_for_human",
+        "retry_scheduled",
+        "dead_lettered",
+        "conflict_fail_closed",
+        "deduplicated"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "allowed_next_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "forbidden_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "operator_label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operator_questions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "duplicate_task",
+        "current_blocker",
+        "authority_owner",
+        "automatic_retry",
+        "user_action_required"
+      ],
+      "properties": {
+        "duplicate_task": {
+          "type": "boolean"
+        },
+        "current_blocker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "automatic_retry": {
+          "type": "string",
+          "enum": [
+            "available",
+            "exhausted",
+            "not_applicable"
+          ]
+        },
+        "user_action_required": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl",
+        "domain",
+        "provider_completion_is_domain_ready",
+        "can_write_domain_truth",
+        "can_fallback_complete"
+      ],
+      "properties": {
+        "opl": {
+          "const": "route_project_audit_only"
+        },
+        "domain": {
+          "const": "truth_quality_artifact_gate_owner"
+        },
+        "provider_completion_is_domain_ready": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_fallback_complete": {
+          "const": false
+        }
+      }
+    },
+    "fail_closed": {
+      "const": true
+    }
+  },
+  "$defs": {
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "stage_id",
+        "task_kind",
+        "source_fingerprint",
+        "idempotency_key"
+      ],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_fingerprint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_attempt_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "kind": "opl_conflict_or_blocker.v1",
+      "subject": {
+        "domain": "mas",
+        "stage_id": "paper_autonomy/guarded-apply",
+        "task_kind": "paper_autonomy/guarded-apply",
+        "source_fingerprint": "sha256:example",
+        "idempotency_key": "mas:dm002:guarded-apply:example",
+        "stage_attempt_id": "sat_example",
+        "task_id": "frt_example",
+        "source_refs": [
+          "mas://controller_decisions/latest.json"
+        ]
+      },
+      "identity": {
+        "domain": "mas",
+        "stage_id": "paper_autonomy/guarded-apply",
+        "task_kind": "paper_autonomy/guarded-apply",
+        "source_fingerprint": "sha256:example",
+        "idempotency_key": "mas:dm002:guarded-apply:example",
+        "stage_attempt_id": "sat_example",
+        "task_id": "frt_example",
+        "source_refs": [
+          "mas://controller_decisions/latest.json"
+        ]
+      },
+      "classification": "evidence_blocker",
+      "owner": "domain_agent",
+      "authority": "mas",
+      "status": "blocked",
+      "reason": "medical_paper_readiness_missing",
+      "evidence_refs": [
+        "mas://controller_decisions/latest.json",
+        "opl://stage_attempts/sat_example"
+      ],
+      "allowed_next_actions": [
+        "retry_after_owner_receipt",
+        "request_human_review",
+        "dead_letter"
+      ],
+      "forbidden_actions": [
+        "mark_domain_ready",
+        "write_domain_truth",
+        "fallback_complete"
+      ],
+      "operator_label": "证据不足，不能继续交付",
+      "operator_questions": {
+        "duplicate_task": false,
+        "current_blocker": "medical_paper_readiness_missing",
+        "authority_owner": "mas",
+        "automatic_retry": "not_applicable",
+        "user_action_required": null
+      },
+      "authority_boundary": {
+        "opl": "route_project_audit_only",
+        "domain": "truth_quality_artifact_gate_owner",
+        "provider_completion_is_domain_ready": false,
+        "can_write_domain_truth": false,
+        "can_fallback_complete": false
+      }
+    }
+  ]
+}
