@@ -66,6 +66,8 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 涉及 MAS/MAG/RCA 的领域经验记忆、路线套路、视觉模式或模板边界时，先读
 [Family Domain Memory Governance](./references/operating-governance/family-domain-memory-governance.md)；
 该入口只治理 framework 与 domain owner 边界，不把领域内容上收到 OPL。
+涉及开发 checkout 与运行生成物隔离时，先读
+[运行生成物隔离政策](./policies/runtime-artifact-hygiene-policy.md)。
 
 ## 生命周期组合
 

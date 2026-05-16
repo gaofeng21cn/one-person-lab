@@ -23,6 +23,23 @@ case "$lane" in
     ;;
   family)
     npm run family:shared-release -- check
+    family_tmp_cleanup=0
+    if [ -n "${OPL_FAMILY_PYTHON_TMP_ROOT:-}" ]; then
+      family_tmp_root="${OPL_FAMILY_PYTHON_TMP_ROOT}"
+    else
+      family_tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/opl-family-python.XXXXXX")"
+      family_tmp_cleanup=1
+    fi
+    cleanup_family_tmp() {
+      if [ "${family_tmp_cleanup}" = "1" ]; then
+        rm -rf "${family_tmp_root}"
+      fi
+    }
+    trap cleanup_family_tmp EXIT
+    mkdir -p "${family_tmp_root}"
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-${family_tmp_root}/pycache}" \
+    PYTEST_ADDOPTS="${PYTEST_ADDOPTS:-} -p no:cacheprovider -o cache_dir=${family_tmp_root}/pytest-cache" \
     PYTHONPATH=python/opl-harness-shared/src \
       pytest \
       python/opl-harness-shared/tests/test_family_shared_release.py \
