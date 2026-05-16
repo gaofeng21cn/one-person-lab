@@ -150,6 +150,16 @@ test('OPL harness pytest cache defaults outside the checkout', () => {
   assert.match(pyproject, /cache_dir = "\/tmp\/opl-harness-shared-pytest-cache"/);
 });
 
+test('node test lanes propagate Python cache isolation to spawned tests', () => {
+  const testLanes = read('scripts/test-lanes.mjs');
+
+  assert.match(testLanes, /opl-node-test-python-cache-/);
+  assert.match(testLanes, /PYTHONDONTWRITEBYTECODE/);
+  assert.match(testLanes, /PYTHONPYCACHEPREFIX/);
+  assert.match(testLanes, /-p no:cacheprovider/);
+  assert.match(testLanes, /cache_dir=\$\{path\.join\(pythonCacheRoot, 'pytest-cache'\)\}/);
+});
+
 test('native helper prebuild script handles platform executable names', () => {
   const prebuildScript = read('scripts/native-helper-prebuild.mjs');
   const cacheScript = read('scripts/native-helper-cache.mjs');

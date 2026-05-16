@@ -2,8 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const pythonCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-python-cache-'));
 
 const nodeTest = (files, options = {}) => ({
   kind: 'node-test',
@@ -153,7 +155,17 @@ function spawnStep(commandName, args) {
   return spawnSync(commandName, args, {
     cwd: repoRoot,
     stdio: 'inherit',
-    env: { ...process.env, NODE_NO_WARNINGS: '1' },
+    env: {
+      ...process.env,
+      NODE_NO_WARNINGS: '1',
+      PYTHONDONTWRITEBYTECODE: process.env.PYTHONDONTWRITEBYTECODE || '1',
+      PYTHONPYCACHEPREFIX: process.env.PYTHONPYCACHEPREFIX || path.join(pythonCacheRoot, 'pycache'),
+      PYTEST_ADDOPTS: [
+        process.env.PYTEST_ADDOPTS || '',
+        '-p no:cacheprovider',
+        `-o cache_dir=${path.join(pythonCacheRoot, 'pytest-cache')}`,
+      ].filter(Boolean).join(' '),
+    },
   });
 }
 
