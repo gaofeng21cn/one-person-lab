@@ -83,6 +83,53 @@
     ],
     "authority_boundary": "refs-only projection; OPL cannot authorize domain truth, quality verdicts, artifact mutation, memory body writes, or owner receipts"
   },
+  "complete_control_plane_surface": {
+    "surface_kind": "opl_agent_lab_complete_control_plane",
+    "status": "ready_for_opl_native_use",
+    "eval_adapters": [
+      "opl-native-agent-lab",
+      "inspect-ai",
+      "metr-task-standard"
+    ],
+    "observability_exports": [
+      "opl-runtime-observability-export",
+      "openinference-opentelemetry",
+      "langfuse",
+      "phoenix"
+    ],
+    "optimizer_loop_fields": [
+      "candidate_kinds",
+      "loop_steps",
+      "pattern_refs",
+      "rl_boundary"
+    ],
+    "readiness_fields": [
+      "complete_control_plane_ready",
+      "ready_to_connect_inspect_ai_adapter",
+      "ready_to_export_observability_refs",
+      "ready_to_emit_optimizer_candidate_refs",
+      "ready_to_emit_rl_transition_refs",
+      "automatic_model_training_ready",
+      "automatic_default_agent_promotion_ready",
+      "app_workbench_consumption_ready"
+    ]
+  },
+  "meta_agent_builder_surface": {
+    "surface_kind": "opl_meta_agent_builder_plan",
+    "agent_id": "opl-foundry-agent-builder",
+    "stage_ids": [
+      "intent-intake",
+      "web-experience-research",
+      "stage-decomposition",
+      "agent-skeleton-build",
+      "eval-suite-build",
+      "baseline-run",
+      "optimizer-iteration",
+      "baseline-delivery",
+      "online-learning"
+    ],
+    "authority_boundary": "build and optimize OPL-compatible agent packages through explicit gates; cannot write domain truth or promote default agents without gate"
+  },
   "agent_lab_proves": [
     "OPL can normalize domain-declared evaluation task manifests",
     "OPL can carry agent trajectory refs without reading private domain truth bodies",
@@ -90,6 +137,8 @@
     "OPL can aggregate domain-owned quality scorecard refs without authorizing quality verdicts",
     "OPL can turn run evidence into improvement candidates and promotion gates",
     "OPL can centralize cross-domain longline soak orchestration and recovery projections while leaving domain scorer and owner authority in domain repos",
+    "OPL can expose a complete eval adapter, observability export, and optimizer-loop control plane without requiring external services in core",
+    "OPL can describe a meta-agent builder plan that creates and optimizes OPL-compatible agents through explicit gates",
     "OPL can fail closed on memory body payloads and forbidden authority claims"
   ],
   "agent_lab_does_not_prove": [
@@ -101,7 +150,8 @@
     "artifact mutation success",
     "memory body application",
     "writeback accept or reject decision",
-    "default agent configuration promotion without explicit gate"
+    "default agent configuration promotion without explicit gate",
+    "automatic model training or weight deployment"
   ],
   "domain_retained_authority": [
     "domain truth",
