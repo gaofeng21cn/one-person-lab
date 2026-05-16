@@ -34,6 +34,10 @@ function attentionFlags(attempt: JsonRecord) {
   return stringList(attempt.attention_flags, 12);
 }
 
+function operatorConflicts(attempt: JsonRecord) {
+  return recordList(attempt.operator_conflicts);
+}
+
 function domainReadyVerdict(attempt: JsonRecord) {
   return firstString(completionBoundary(attempt).domain_ready_verdict);
 }
@@ -64,13 +68,13 @@ function statusLabel(attempt: JsonRecord) {
     return 'Stage attempt 等待用户确认';
   }
   if (flags.includes('dead_lettered')) {
-    return 'Stage attempt 已进入 dead letter';
+    return '已重试用尽，进入待处理';
   }
   if (flags.includes('blocked') || status === 'blocked') {
-    return 'Stage attempt 被阻塞';
+    return operatorConflicts(attempt)[0]?.operator_label as string ?? '证据不足，不能继续交付';
   }
   if (flags.includes('rejected_writes')) {
-    return 'Memory writeback 被 domain 拒绝';
+    return '回执冲突，已停止覆盖';
   }
   if (verdict === 'domain_gate_pending') {
     return 'Provider 已完成，domain gate 待确认';
@@ -90,8 +94,10 @@ function summaryForAttempt(attempt: JsonRecord) {
   const verdict = domainReadyVerdict(attempt);
   const consumedMemoryRefs = stringList(attempt.consumed_memory_refs, 4);
   const writebackReceiptRefs = stringList(attempt.writeback_receipt_refs, 4);
+  const conflictSummary = operatorConflicts(attempt)[0]?.operator_label;
   const parts = [
     `${stage} / ${status}`,
+    typeof conflictSummary === 'string' ? conflictSummary : null,
     verdict ? `domain verdict: ${verdict}` : null,
     consumedMemoryRefs.length > 0 ? `memory refs: ${consumedMemoryRefs.length}` : null,
     writebackReceiptRefs.length > 0 ? `writeback receipts: ${writebackReceiptRefs.length}` : null,
@@ -152,6 +158,7 @@ export function buildStageAttemptTrayItems(input: {
       detail_summary: summaryForAttempt(attempt),
       next_action_summary: actionForAttempt(attempt, lane).action_summary,
       blockers: attentionFlags(attempt),
+      operator_conflicts: operatorConflicts(attempt),
       stage_attempt_workbench: {
         surface_kind: 'opl_stage_attempt_operator_item_projection',
         provider_completion_is_domain_ready: false,
@@ -164,6 +171,7 @@ export function buildStageAttemptTrayItems(input: {
         consumed_memory_refs: stringList(attempt.consumed_memory_refs, 8),
         writeback_receipt_refs: stringList(attempt.writeback_receipt_refs, 8),
         rejected_writes: recordList(attempt.rejected_writes),
+        operator_conflicts: operatorConflicts(attempt),
         route_decision_graph: record(attempt.route_decision_graph),
         review_repair_queue: record(attempt.review_repair_queue),
         quality_readiness: record(attempt.quality_readiness),

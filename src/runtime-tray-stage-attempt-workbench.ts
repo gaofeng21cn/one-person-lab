@@ -4,6 +4,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import {
+  buildFamilyConflictSubject,
+  buildStageAttemptConflictOrBlockerEnvelopes,
+  canonicalOutcomeForStageAttempt,
+} from './family-conflict-envelope.ts';
+import {
   inspectFamilyRuntimeProviderWithLifecycle,
   isFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
@@ -57,6 +62,10 @@ function stringList(value: unknown[]) {
 
 function recordList(value: unknown[]) {
   return value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry));
+}
+
+function recordListFromUnknown(value: unknown) {
+  return Array.isArray(value) ? recordList(value) : [];
 }
 
 function latestActivity(events: JsonRecord[]) {
@@ -141,6 +150,17 @@ function attemptProjection(
   const consumedMemoryRefs = stringList(Array.isArray(latestCloseout?.consumed_memory_refs) ? latestCloseout.consumed_memory_refs : []);
   const writebackReceiptRefs = stringList(Array.isArray(latestCloseout?.writeback_receipt_refs) ? latestCloseout.writeback_receipt_refs : []);
   const rejectedWrites = Array.isArray(latestCloseout?.rejected_writes) ? latestCloseout.rejected_writes : [];
+  const sourceRefs = stringList(Array.isArray(workspaceLocator.source_refs) ? workspaceLocator.source_refs : []);
+  const subject = buildFamilyConflictSubject({
+    domain: row.domain_id,
+    stageId: row.stage_id,
+    taskKind: row.stage_id,
+    sourceFingerprint: row.source_fingerprint,
+    idempotencyKey: row.idempotency_key,
+    stageAttemptId: row.stage_attempt_id,
+    taskId: row.task_id,
+    sourceRefs,
+  });
   const controlledApplyContract = buildFamilyRuntimeControlledApplyContract({
     domainId: row.domain_id,
     stageId: row.stage_id,
@@ -178,6 +198,24 @@ function attemptProjection(
     ...writebackReceiptRefs,
   ];
   const currentProviderReadiness = currentProviderReadinessProjection(providerKindForRow(row), providerReadiness);
+  const conflictOrBlockerEnvelopes = buildStageAttemptConflictOrBlockerEnvelopes({
+    subject,
+    attemptStatus: row.status,
+    blockedReason: row.blocked_reason,
+    humanGateRefs,
+    humanGateLedger,
+    deadLetter,
+    rejectedWrites: recordList(rejectedWrites),
+    domainReadyVerdict,
+    closeoutRefs,
+    closeoutReceiptStatus: row.closeout_receipt_status,
+    routeImpact,
+  });
+  const canonicalOutcome = canonicalOutcomeForStageAttempt({
+    attemptStatus: row.status,
+    closeoutRefs,
+    closeoutReceiptStatus: row.closeout_receipt_status,
+  });
   const genericProjections = buildAttemptGenericProjections({
     stage_attempt_id: row.stage_attempt_id,
     domain_id: row.domain_id,
@@ -228,9 +266,13 @@ function attemptProjection(
     closeout_refs: closeoutRefs,
     artifact_refs: artifactRefs,
     closeout_receipt_status: row.closeout_receipt_status,
+    canonical_outcome: canonicalOutcome,
     domain_ready_verdict: domainReadyVerdict,
     rejected_writes: rejectedWrites,
     route_impact: routeImpact,
+    conflict_or_blocker_envelopes: conflictOrBlockerEnvelopes,
+    operator_conflicts: conflictOrBlockerEnvelopes,
+    operator_label: conflictOrBlockerEnvelopes[0]?.operator_label ?? null,
     ...genericProjections,
     next_owner: nextOwner,
     human_gate_refs: humanGateRefs,
@@ -393,6 +435,7 @@ function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: Sta
 }
 
 function workbenchMetadata(attempts: StageAttemptProjection[]) {
+  const operatorConflicts = attempts.flatMap((attempt) => recordListFromUnknown(attempt.operator_conflicts));
   const attentionCounters = {
     total: attempts.filter(projectionHasAttention).length,
     human_gate_count: attempts.filter(projectionHasHumanGate).length,
@@ -415,10 +458,12 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       attention_counters: attentionCounters,
       memory_ref_counters: memoryRefCounters(attempts),
       ...buildWorkbenchGenericProjections(attempts),
+      operator_conflict_count: operatorConflicts.length,
       human_gate_count: attentionCounters.human_gate_count,
       resume_count: attentionCounters.resume_count,
       dead_letter_count: attentionCounters.dead_letter_count,
     },
+    operator_conflicts: operatorConflicts,
     groups,
     filter_metadata: {
       group_keys: ['domain_id', 'stage_id', 'status'],
@@ -464,6 +509,7 @@ const EMPTY_WORKBENCH_METADATA = {
     by_stage: {},
     by_status: {},
   },
+  operator_conflicts: [],
   filter_metadata: {
     group_keys: ['domain_id', 'stage_id', 'status'],
     attention_flags: ['human_gate', 'resume_available', 'dead_lettered', 'blocked', 'rejected_writes'],

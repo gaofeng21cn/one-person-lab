@@ -19,6 +19,13 @@ import {
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import {
+  buildDuplicateTaskEnvelope,
+  buildFamilyConflictSubject,
+  buildReceiptConflictEnvelope,
+  buildStageAttemptConflictOrBlockerEnvelopes,
+  canonicalOutcomeForStageAttempt,
+} from './family-conflict-envelope.ts';
+import {
   getStageAttemptRow,
   inspectStageAttemptPayload,
   listStageAttemptCloseouts,
@@ -187,10 +194,25 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       SELECT * FROM stage_attempts WHERE idempotency_key = ? ORDER BY created_at ASC LIMIT 1
     `).get(idempotencyKey) as StageAttemptRow | undefined;
     if (existing) {
+      const attempt = stageAttemptToPayload(existing);
       return {
         created: false,
         idempotent_noop: true,
-        attempt: stageAttemptToPayload(existing),
+        attempt,
+        conflict_or_blocker_envelopes: [
+          buildDuplicateTaskEnvelope({
+            subject: buildFamilyConflictSubject({
+              domain: attempt.domain_id,
+              stageId: attempt.stage_id,
+              taskKind: attempt.stage_id,
+              sourceFingerprint: attempt.source_fingerprint,
+              idempotencyKey: attempt.idempotency_key,
+              stageAttemptId: attempt.stage_attempt_id,
+              taskId: attempt.task_id,
+            }),
+            existingAttemptRef: `opl://stage_attempts/${attempt.stage_attempt_id}`,
+          }),
+        ],
       };
     }
   }
@@ -431,6 +453,15 @@ export function ingestStageAttemptCloseout(
   `).get(closeoutId) as StageAttemptCloseoutRow | undefined;
   if (existingCloseout) {
     if (existingCloseout.stage_attempt_id !== input.stageAttemptId || existingCloseout.packet_json !== packetJson) {
+      const subject = buildFamilyConflictSubject({
+        domain: attempt.domain_id,
+        stageId: attempt.stage_id,
+        taskKind: attempt.stage_id,
+        sourceFingerprint: attempt.source_fingerprint,
+        idempotencyKey: attempt.idempotency_key,
+        stageAttemptId: attempt.stage_attempt_id,
+        taskId: attempt.task_id,
+      });
       throw new FrameworkContractError(
         'contract_shape_invalid',
         'Stage closeout id already exists with a different typed closeout packet.',
@@ -439,6 +470,14 @@ export function ingestStageAttemptCloseout(
           stage_attempt_id: input.stageAttemptId,
           existing_stage_attempt_id: existingCloseout.stage_attempt_id,
           required: ['unique closeout_id per typed packet'],
+          receipt_conflict: buildReceiptConflictEnvelope({
+            subject,
+            reason: 'stage_closeout_id_already_exists_with_different_packet',
+            evidenceRefs: [
+              `opl://stage_attempt_closeouts/${closeoutId}`,
+              `opl://stage_attempts/${input.stageAttemptId}`,
+            ],
+          }),
         },
       );
     }
@@ -590,6 +629,16 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
   const consumedMemoryRefs = stringListFrom(latestCloseout?.consumed_memory_refs);
   const writebackReceiptRefs = stringListFrom(latestCloseout?.writeback_receipt_refs);
   const rejectedWrites = recordListFrom(latestCloseout?.rejected_writes);
+  const subject = buildFamilyConflictSubject({
+    domain: attempt.domain_id,
+    stageId: attempt.stage_id,
+    taskKind: attempt.stage_id,
+    sourceFingerprint: attempt.source_fingerprint,
+    idempotencyKey: attempt.idempotency_key,
+    stageAttemptId: attempt.stage_attempt_id,
+    taskId: attempt.task_id,
+    sourceRefs: stringListFrom(attempt.workspace_locator.source_refs),
+  });
   const domainReadyVerdict = typeof latestCloseout?.domain_ready_verdict === 'string'
     ? latestCloseout.domain_ready_verdict
     : null;
@@ -649,6 +698,24 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: null,
   });
+  const conflictOrBlockerEnvelopes = buildStageAttemptConflictOrBlockerEnvelopes({
+    subject,
+    attemptStatus: attempt.status,
+    blockedReason: attempt.blocked_reason,
+    humanGateRefs: stringListFrom(attempt.human_gate_refs),
+    humanGateLedger,
+    deadLetter: taskDeadLetterForAttempt(db, attempt),
+    rejectedWrites,
+    domainReadyVerdict,
+    closeoutRefs,
+    closeoutReceiptStatus: attempt.closeout_receipt_status,
+    routeImpact: attempt.route_impact,
+  });
+  const canonicalOutcome = canonicalOutcomeForStageAttempt({
+    attemptStatus: attempt.status,
+    closeoutRefs,
+    closeoutReceiptStatus: attempt.closeout_receipt_status,
+  });
   return {
     stage_attempt_query: {
       surface_kind: 'stage_attempt_query',
@@ -664,6 +731,9 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       codex_stage_activity: buildCodexStageActivityInput({ attempt }),
       lifecycle_primitives: lifecyclePrimitives,
       controlled_apply_contract: controlledApplyContract,
+      canonical_outcome: canonicalOutcome,
+      conflict_or_blocker_envelopes: conflictOrBlockerEnvelopes,
+      operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
       operator_visibility: {
         provider_kind: attempt.provider_kind,
@@ -694,6 +764,8 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         user_instructions: userInstructionLedger,
         resume_signals: resumeLedger,
         dead_letter: taskDeadLetterForAttempt(db, attempt),
+        canonical_outcome: canonicalOutcome,
+        operator_conflicts: conflictOrBlockerEnvelopes,
         authority_boundary: {
           opl: 'attempt_control_metadata_projection_only',
           domain: 'truth_quality_artifact_gate_owner',

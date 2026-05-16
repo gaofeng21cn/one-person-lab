@@ -70,6 +70,8 @@
   - 冻结 lifecycle receipt surface，覆盖 dry-run / apply / verify action、manifest ref、checksum 与 restore proof
 - `family-owner-route.schema.json`
   - 冻结 owner-route envelope，覆盖 `route_epoch`、`source_fingerprint`、next owner、allowed actions、idempotency key，以及 handoff / projection refs
+- `family-conflict-envelope.schema.json`
+  - 冻结统一 Conflict / Blocker Envelope，覆盖重复任务、owner 冲突、证据 blocker、质量 blocker、human gate、retry/dead-letter、identity incomplete 与 closeout receipt conflict；OPL 只路由、投影和 fail-closed 审计，domain agent 继续持有 ready / quality / artifact verdict
 
 ## Runtime Continuity Freeze
 
@@ -131,6 +133,23 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
   - 记录 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs
 
 `family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。stage attempt query 现在也会投影 locator-only lifecycle primitive：workspace/runtime/artifact roots、已索引的 closeout 或 consumed refs、已声明的 restore refs 以及 cleanup gate。这个投影严格只读；`OPL` 可以索引 refs 并显示缺失的 restore proof，但不能 apply retention、删除 artifact、恢复 workspace 内容或写入 domain truth。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。同理，`domain_memory_descriptor` 只暴露 locator / freshness / receipt refs，不把 memory content 或 writeback authority 移入 `OPL`。
+
+## Conflict / Blocker Envelope Freeze
+
+`family-conflict-envelope.schema.json` 是 queue、stage attempt、closeout 和 App/operator projection 的统一阻塞与冲突语法。所有“跑不下去 / 不能确认完成 / 两边说法冲突”的情况都应投影成 `kind=opl_conflict_or_blocker.v1` 的结构化记录，而不是在 queue、attempt、closeout 和 App 里各自发明状态词。
+
+canonical classification 固定为：
+
+- `duplicate_task`：同一任务重复触发，按 `source_fingerprint + idempotency_key` 合并并返回 existing attempt。
+- `authority_conflict`：owner boundary 或 forbidden write 冲突，fail-closed，等待 domain descriptor / owner receipt 修复。
+- `evidence_blocker`：证据不足，生成 typed blocker，投影给 App/operator。
+- `quality_blocker`：质量不达标，路由回 domain quality gate。
+- `human_gate`：需要用户或上层决策，attempt 等待 approval/resume signal。
+- `execution_retryable`：可恢复执行失败，消耗 retry budget，超限进入 dead-letter。
+- `identity_incomplete`：缺少 domain / task kind / stage / source fingerprint / idempotency key 等关键 identity，直接 blocker，不猜测。
+- `receipt_conflict`：完成回执冲突，保留冲突 refs，fail-closed，不覆盖旧 truth。
+
+对应 attempt outcome 只投影为少数状态：`completed_with_receipt`、`blocked`、`waiting_for_human`、`retry_scheduled`、`dead_lettered`、`conflict_fail_closed`。`provider completed` 与 `executor completed` 只说明运行 substrate 或执行器结束；只有 domain owner receipt / verdict 到位，才能说 domain 工作推进。App/operator 直接消费 `operator_conflicts[]`，只展示重复任务、当前卡点、解决 authority、能否自动重试和是否需要用户动作；它不根据底层状态自行推断 domain verdict。
 
 ## Runtime Supervision Freeze
 
@@ -228,4 +247,5 @@ MAS 的 `publication_route_memory`、MAG 的 grant strategy memory、RCA 的 vis
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
 - [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)
 - [`family-owner-route.schema.json`](./family-owner-route.schema.json)
+- [`family-conflict-envelope.schema.json`](./family-conflict-envelope.schema.json)
 - [`family-product-entry-manifest-v2.schema.json`](./family-product-entry-manifest-v2.schema.json)

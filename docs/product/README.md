@@ -16,6 +16,8 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 - [OPL 公开界面索引](./opl-public-surface-index.md)
 - [当前支撑参考索引](../references/current-support/README.md)
 
+App / operator workbench 对冲突与阻塞只消费 `runtime_tray_snapshot.operator_conflicts[]` 和 item-level `operator_conflicts[]`。它显示重复任务、当前卡点、解决 authority、自动重试状态和用户动作需求；不从底层 queue、attempt 或 closeout 字段自行推断 domain verdict。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |

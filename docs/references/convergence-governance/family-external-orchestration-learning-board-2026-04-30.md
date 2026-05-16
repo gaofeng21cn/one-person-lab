@@ -39,6 +39,24 @@
 | --- | --- | --- | --- |
 | `Ageniti/Ageniti@db92c0a` | `adopt_family_contract` | 借鉴 action contract 到 CLI / HTTP / MCP / OpenAI / React 多 surface 派生、side-effect / idempotency / confirmation / visibility 元数据、统一 envelope 与 streaming event 语义，用于补强 OPL family 对 domain capability surface 的 machine-readable 描述。 | 不把 Ageniti 作为默认 runtime、scheduler、memory、hosted execution 或 domain authority；`@ageniti/core` 仍处 `0.x` 早期阶段，只允许作为 optional prototype / domain template 观察，不进入 OPL core dependency。 |
 | `Biajin-PKU/research-harness@006ab44` | `limited adopt_family_contract + adopt_domain_template + reject_as_dependency` | OPL 只吸收 domain-neutral 语言：stage boundary gate、provenance receipt、primitive/action registry、typed artifact refs、resume/checkpoint 和 human review checkpoint，映射到已有 stage control plane、action catalog、attempt ledger、handoff 与 operator projection。 | MAS 可把 literature review、claim/evidence、citation/number verification、adversarial review 等作为 domain template 参考；MAG/RCA 只借 stage-gated artifact proof 形式。拒绝引入 RH 代码、Python package、SQLite `pool.db` schema、auto-runner、HTTP API、web dashboard 或 MCP server 作为 OPL 依赖；PolyForm Noncommercial license 进一步要求只保留学习记录，不复制实现。 |
+| `Jiaqi-Guo-0114/cybernetics-agent@4c5a6ee` | `limited adopt_family_contract + watch_only + reject_as_dependency` | 借鉴它把 agent operation 拆成 feedback loop、stability、system identification、budget control、information flow、adaptive tuning 和 hierarchy control 的可读分类；其中最适合 OPL 的是 family control-loop / SLO taxonomy、stage conversion / bottleneck metrics、budget and rate-limit projection、OpenMetrics-style observability、event / alert history 查询这几类 machine-readable projection 语言。 | 不引入 `cybernetics-agent` Python 包、CLI、dashboard、event bus、SQLite schema、plugin loader 或 generic Codex / Claude / Hermes adapters；OPL 继续以 Temporal-backed provider、Codex CLI first-class executor、stage attempt ledger 和 domain-owned truth 为当前 runtime truth。它的 retry / fallback / auto-tuning 只能作为观测和 proposal 语言参考，不得替代 fail-closed typed blocker、human gate、domain owner receipt 或 domain quality verdict。 |
+
+## Cybernetics Agent Intake 2026-05-16
+
+`Jiaqi-Guo-0114/cybernetics-agent` 当前公开版本为 `0.6.3`，本次复核 clone commit 为 `4c5a6ee46fb06fe876a53072bc17d26abf0292bf`。项目定位是 framework-agnostic Python enhancement layer，源码围绕 `CyberneticsContext`、事件总线、模块状态、metrics、SQLite event store、alert manager 和若干 framework / CLI adapter 组织。
+
+对 OPL 有用的是分类和投影语言，不是 runtime implementation：
+
+- 可吸收为 family contract / projection 候选：`control_loop` 语义可以映射为 `trigger -> decision/proposal -> action route -> owner receipt -> cooldown/depth`；`system identification` 可映射为跨 domain stage conversion、latency、retry/dead-letter、human-gate 和 bottleneck read model；`optimal control` 可映射为 stage attempt 的 token / cost / API / cadence budget projection；`OpenMetrics` 与 event / alert history 可作为 operator observability 输出格式参考。
+- 已有等价或更强 OPL surface：Temporal provider、typed family queue、stage attempt ledger、closeout packet、provider SLO receipt、domain-memory receipt refs、operator workbench、artifact / restore proof 和 runtime snapshot 已覆盖它的大部分 runtime control 目标；这些面不需要再引入一层 generic event bus。
+- 只观察：generic adapter list、dashboard layout、configuration hot reload 和 adaptive tuning UX。它们可以提示 OPL App / workbench 如何展示状态，但不改变 OPL Framework 的 owner split。
+- 明确拒绝：automatic graceful degradation、字符串规则触发 retry、runtime-local plugin discovery、adapter subprocess wrapper 和默认 `~/.hermes` state path。OPL 的高价值知识工作不能通过 generic fallback 宣称成功；预算不足、工具失败或 quality blocker 应进入 typed blocker / human gate / owner receipt，而不是自动降级成低质量交付。
+
+后续若要落地，只应开 OPL-owned 小 lane：
+
+1. 在 runtime snapshot / production closeout 上增加 family control-loop summary，展示 trigger、decision owner、action route、receipt ref、cooldown 和 blocker。
+2. 在 stage attempt ledger 上增加 budget / usage projection，先读 Codex runner 和 domain sidecar 已有 token / cost / duration refs，不新增执行路径。
+3. 增加只读 OpenMetrics / JSON observability export，来源限定为 OPL ledger、Temporal proof receipt、domain-owned projection refs 和 App workbench read model。
 
 ## Research Harness Closeout Calibration 2026-05-12
 

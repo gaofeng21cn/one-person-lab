@@ -289,6 +289,14 @@ test('stage attempt closeout ledger is idempotent and fails closed on conflictin
         assert.equal(error.code, 'contract_shape_invalid');
         assert.ok(error.details);
         assert.equal(error.details.closeout_id, 'closeout:review-final');
+        assert.equal(
+          (error.details.receipt_conflict as Record<string, unknown>).classification,
+          'receipt_conflict',
+        );
+        assert.equal(
+          (error.details.receipt_conflict as Record<string, unknown>).fail_closed,
+          true,
+        );
         return true;
       },
     );
