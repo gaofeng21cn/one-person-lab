@@ -4,6 +4,7 @@ import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-en
 import { buildProductEntryDoctor, runProductEntryResume } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
+import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../observability-export.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../agent-executor.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
@@ -19,7 +20,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -236,6 +237,24 @@ export function buildInternalCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime snapshot']);
         return buildRuntimeTraySnapshot(getContracts());
+      },
+    },
+    'runtime observability-export': {
+      usage: 'opl runtime observability-export [--format json|openmetrics]',
+      summary:
+        'Export read-only runtime observability counters from provider proofs, stage attempts, memory receipts, and SLO receipts.',
+      examples: [
+        'opl runtime observability-export',
+        'opl runtime observability-export --format openmetrics',
+      ],
+      handler: async (args) => {
+        const parsed = parseObservabilityExportArgs(args, commandSpecs['runtime observability-export']);
+        const exportPayload = await buildObservabilityExport(getContracts(), { format: parsed.format });
+        if (parsed.format === 'openmetrics') {
+          process.stdout.write(renderObservabilityOpenMetrics(exportPayload));
+          return { __handled: true as const };
+        }
+        return { observability_export: exportPayload };
       },
     },
     'runtime index': {
