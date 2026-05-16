@@ -116,6 +116,8 @@ OPL Framework 的长期职责是持有所有 domain-neutral、可跨垂类复用
 
 MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry Agents 的上收边界：domain agent 应成为 `Domain Knowledge / Authority Pack`，OPL Framework 应提供可复用的通用运行与产品外围。MAG 在这条边界上补充了 grant-specific 证据：funding/call intake、TODO/显式唤醒、grant strategy memory、submission-ready package、route/decision drilldown 和质量/导出投影都需要通用 transport 与 workbench 壳，但不能把 fundability、authoring quality 或 export verdict 交给 OPL。RCA 在这条边界上补充了 visual-deliverable 证据：source/workspace intake、artifact gallery、route/decision map、review/repair queue、export handoff、native helper execution 和 screenshot/export proof 都需要通用 envelope 与 workbench 壳，但不能把 visual direction、review verdict、export verdict 或 canonical artifact authority 交给 OPL。
 
+理想态的 private functional audit 不是一句“domain repo 没有私有功能”声明。每个 OPL-compatible Foundry Agent 都必须暴露代码路径级清单，至少记录 `module_id`、owner/classification、`code_paths`、`active_callers`、`active_caller_status`、`migration_action`，并在保留 domain 内时写明 `retention_reason` 或 `cannot_absorb_reason`。OPL 统一读模型负责把这些模块归一到 OPL replacement、domain thin adapter、domain authority 或 retire/tombstone；domain repo 负责持续收薄 active caller 和删除退役面。MAS 的 SQLite/lifecycle store、MAG 的 local runtime journal / attempt ledger、RCA 的 managed-run/session store 这类历史实现，只有在 refs-only adapter、domain authority 或 diagnostic proof 语境中可以保留，不能作为 domain-owned generic platform 继续扩展。
+
 | 通用能力 | OPL Framework 理想职责 | Domain Agent 理想职责 |
 | --- | --- | --- |
 | Provider-backed workflow | 提供 stage attempt、workflow id、query/signal、heartbeat、retry/dead-letter、restart recovery 和 provider receipt。 | 声明 stage、entry condition、allowed task、domain closeout、owner receipt 和 forbidden writes。 |
