@@ -10,7 +10,7 @@ Date: `2026-05-16`
 
 - `定位`：本文是 OPL family 的 active gap / implementation order，不是 north-star 目标态本身；目标态回到 `opl-family-agent-ideal-state.md` 和各 domain ideal-state 文档。
 - `当前实态`：只把 fresh CLI、runtime ledger、代码审计和 domain-owned manifest 作为当前状态证据；不把未跑出的 long soak 或未迁移代码写成已完成。
-- `最短路径`：功能上收、迁移、清理和 template 抽取先于大规模 integration/live soak；当前第一切口是 OPL standard skeleton/checklist、OPL scheduler/supervision primitive、MAS scheduler migration / retirement。
+- `最短路径`：功能上收、迁移、清理和 template 抽取先于大规模 integration/live soak；当前 P0 切口已经落到 OPL `family_scheduler_replacement` contract / Runtime Manager projection，并推进 MAS 默认 scheduler façade 迁移。后续按 consumer migration、no-active-caller / physical retirement、focused integration proof 收口。
 - `验收顺序`：每个功能迁移先跑 focused replacement proof、direct/hosted parity、receipt refs 对账、no-forbidden-write 和 no-active-caller proof；cross-repo integration、provider SLO 和 live soak 是后置生产验收。
 - `禁写口径`：OPL 可以声明 framework functional closure / live-soak-ready 时，仍不能声明 MAS paper closure、MAG grant closure、RCA visual closure 或 App/domain truth ownership 完成。
 
@@ -39,9 +39,9 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 2026-05-16 fresh 校准后，四个评估问题的当前判断如下：
 
-- 定位和边界：文档与主要 contract 已经足够清晰，OPL 是 framework/runtime/development owner，MAS/MAG/RCA 是 domain truth / quality / artifact authority owner；但 MAS 仍保留 `MAS supervision scheduler contract`、local LaunchAgent / 300 秒 tick 和 `runtime-ensure-supervision` 这类功能层运行面，说明边界在代码层还没有完全收干净。
+- 定位和边界：文档与主要 contract 已经足够清晰，OPL 是 framework/runtime/development owner，MAS/MAG/RCA 是 domain truth / quality / artifact authority owner；P0 已把默认 scheduler owner 收到 OPL `opl_provider_runtime_manager` / `opl_family_runtime_provider` replacement。MAS 仍保留显式 `--manager local` legacy diagnostic / cleanup adapter、LaunchAgent 代码和 300 秒 tick 作为退役前证据面，说明边界已从“默认 owner 混杂”推进到“legacy diagnostic physical retirement pending”。
 - OPL 完整性：OPL 当前已具备完整智能体运行、开发框架的主体骨架：三仓 descriptor/stage/action/memory 均 resolved，Temporal provider 显式 ready，production closeout 为 `functional_closure_ready_for_live_soak`。它仍未达到理想生产态，因为 live soak、长时 provider SLO、真实 domain owner chain、memory body/writeback apply、lifecycle apply 和 App 人用 drilldown 仍缺足量真实证据。
-- 功能上收：MAG/RCA 已更接近 `Domain Knowledge / Authority Pack + thin program surface`；MAS 仍有最明显的功能残留，尤其是本机 supervision scheduler / LaunchAgent / outer supervision SLO 输入仍由 MAS 管。当前不能回答“功能层面全部都上收到了 OPL”；正确状态是“主要共享边界已写清，部分 framework primitives 已上收，MAS scheduler/supervision 与各仓真实 long-soak/lifecycle/memory apply 仍待上收或证据闭合”。
+- 功能上收：MAG/RCA 已更接近 `Domain Knowledge / Authority Pack + thin program surface`，并已按 consumer thinning 口径消费 OPL replacement，不新增 repo-owned daemon。MAS 默认 scheduler/status/bootstrap façade 已迁到 OPL replacement；剩余功能尾巴是显式 local diagnostic / cleanup path 的 no-active-caller proof、物理退役和 Portal/workbench wording 彻底清理。当前可以回答“默认 scheduler 功能面已上收”，但还不能回答“所有功能层面都完全理想”：真实 long-soak、lifecycle/memory apply、artifact/package receipt 和旧面物理删除仍待证据闭合。
 - 目录范本：三仓都已有 OPL-family canonical docs taxonomy、`agent/` anchor、contracts/runtime-program 或 runtime contracts、plugins/app skill、runtime/sidecar 或 projection surface，并被 OPL 识别为 physical skeleton evidence observed；但 MAS/MAG/RCA 的物理实现目录仍保留各自历史结构和语言栈，不足以直接作为“复制即可”的新 Agent scaffold。当前可作为范本的是 owner boundary、docs taxonomy、descriptor/stage/action/memory/artifact locator 合同和 no-forbidden-write 纪律，而不是完全统一的目录树。
 
 ## Fresh Evidence 2026-05-16
@@ -53,8 +53,9 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 | `./bin/opl agents list --json` | `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`physical_skeleton_evidence_observed_count=3`、`production_closure_gap_count=12`、`provider_temporal_residency_gap_status=closed_by_fresh_proven_proof` | 三仓仍是 descriptor/skeleton aligned；还不是 production closure 全闭合。 |
 | `OPL_FAMILY_RUNTIME_PROVIDER=temporal ./bin/opl family-runtime status --json` | `configured_provider=temporal`、`provider_ready=true`、`full_online_ready=true`、`durable_online_ready=true`、worker/service ready | OPL Temporal provider 骨架可用；provider ready 仍不能替代 domain ready。 |
 | `./bin/opl framework production-closeout --json` | `status=functional_closure_ready_for_live_soak`、`typed_blocker_count=0`、`live_soak_gate.claims_live_soak_complete=false`、required evidence 包括 long-window SLO、real domain owner-chain、memory/writeback apply 和 lifecycle receipts | OPL 已达 functional closure / live-soak-ready，但还不能写成理想生产态完成。 |
-| MAS scheduler code/contracts | `supervision_scheduler.py` / `local_adapter.py` 仍固定 MAS-owned scheduler、local LaunchAgent backend、300 秒 tick；CLI 和 test-lane manifest 仍暴露 supervision status/ensure/remove | MAS 仍有功能层 scheduler 残留，是当前 family 边界最明显未上收项。 |
-| MAG/RCA read-only audit | MAG/RCA 未发现类似 MAS local LaunchAgent scheduler 的默认运行 owner 残留；两仓主要保留 domain package 薄程序面和 receipt/projection surface | MAG/RCA 更接近目标边界，但真实 long-soak、memory/lifecycle apply 和通用 scaffold 抽取仍未完成。 |
+| OPL scheduler replacement contract | `contracts/opl-framework/runtime-manager-contract.json` 与 `src/runtime-manager.ts` 已暴露 `family_scheduler_replacement`：owner 为 `opl_provider_runtime_manager`，adapter 为 `opl_family_runtime_provider`，命令面覆盖 provider SLO tick、domain registration intake、family runtime tick 和 runtime manager projection；authority boundary 禁止 OPL 写 domain truth、安装 domain daemon、写 memory body 或下质量/export verdict。 | OPL replacement owner 已 landed；它是 MAS/MAG/RCA consumer migration 的前置替代面，不是 domain ready / live soak 证明。 |
+| MAS scheduler migration | MAS 默认 `runtime-supervision-status`、`runtime-ensure-supervision`、`runtime-remove-supervision` 和 `workspace bootstrap` 迁到 `--manager opl` / OPL replacement；`local_adapter.py` / LaunchAgent / 300 秒 tick 只保留显式 `--manager local` legacy diagnostic / cleanup。 | MAS 默认活跃 owner 已迁移；剩余差距是 no-active-caller proof、Portal/product-entry/workbench wording 全清、legacy physical retirement 和真实 paper-line long soak。 |
+| MAG/RCA consumer thinning | MAG 已在 main 上声明 `mag_consumer_thinning_contract` 并消费 OPL `family_scheduler_replacement`；RCA 已把 sidecar/action/status 投影收敛为 consumer projection，同时保留 visual deliverable internal DAG。 | MAG/RCA 更接近目标边界，但真实 long-soak、memory/lifecycle apply、artifact-producing owner receipt 和通用 scaffold 抽取仍未完成。 |
 
 ## Fresh Evidence 2026-05-15
 
@@ -160,7 +161,7 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 
 ### 需要完善
 
-1. 先迁移或退役 MAS-owned scheduler / supervision：把 local LaunchAgent / 300 秒 tick、scheduler lifecycle CLI、outer-supervision SLO contract owner、job registry/latest-run projection 收到 OPL provider / runtime manager；MAS 保留 paper-progress SLO 语义、owner receipt、typed blocker 和 safe action refs。
+1. 先迁移或退役 MAS-owned scheduler / supervision：OPL replacement owner 与 MAS 默认 façade 迁移已落地；下一步只允许做显式 local legacy diagnostic / cleanup 的 no-active-caller proof、Portal/product-entry/workbench wording cleanup、LaunchAgent physical retirement 和 provenance/tombstone 保留。MAS 保留 paper-progress SLO 语义、owner receipt、typed blocker 和 safe action refs。
 2. 将 MAS-specific 的通用能力需求逐项压回 OPL/App 通用壳：memory locator/index、artifact lifecycle、route graph shell、attention queue、workbench navigation、observability/SLO、repair command projection 和 App drilldown 已有 read-model 基础；下一步先补通用壳与 owner 字段，而不是让 MAS 继续维护第二套通用工作台。
 3. 扩展 publication-route memory 的真实 accepted/rejected receipts，保持 memory body 和 accept/reject authority 在 MAS workspace/runtime root；OPL/App 只展示 MAS 输出的 body-free refs、分组、freshness 和 review summary。
 4. 把 stage review locator proof 与 Portal/Workbench read-only 展示接到 OPL-owned workbench / provider shell；UI 只展示 MAS owner refs，不把 provider completion 写成 publication ready。
@@ -282,7 +283,7 @@ MAS、MAG 与 RCA 理想目标态进一步校准了 family 边界：通用 runti
 1. `Functional absorption and retirement first`
    先把已经明确的功能边界差距逐项落地：generic scheduler / supervision cadence、provider SLO tick、queue / attempt ledger、generic transition runner、workspace/source intake shell、memory locator/writeback transport、artifact/package lifecycle shell、route/review/workbench 壳、observability 和 repair projection 都应归 OPL Framework / App；MAS/MAG/RCA 只保留 domain truth、domain transition spec、quality/export verdict、owner receipt 和薄 sidecar / projection adapter。
 2. `MAS scheduler migration / retirement`
-   MAS local LaunchAgent / 300 秒 supervision tick 是最明显的功能层残留。先设计 OPL-owned scheduler/provider replacement，迁移 status/ensure/remove 入口和 contract owner，保留 MAS owner receipt / blocker / safe action refs，再用 replacement proof 与 no-active-caller proof 退役 MAS-owned active scheduler path。
+   OPL-owned scheduler/provider replacement 与 MAS status/ensure/remove 默认迁移已完成本轮 P0。接下来只做 replacement proof 回归、no-active-caller proof、显式 local cleanup proof、Portal/workbench wording cleanup 和 MAS-owned active scheduler path 物理退役；不能把 LaunchAgent scheduler 重新扩展成 MAS 长期产品内核。
 3. `OPL generic primitives hardening`
    用当前已落地的 descriptor、stage/action/memory、provider-backed attempt 和 typed closeout ledger，把通用 primitive 做成可复用壳：workspace/source intake、memory locator、artifact lifecycle、transition bridge、attention queue、operator action routing、provider SLO、repair command 和 App drilldown。这里先补功能面，不等待三仓真实长时 soak 才开始。
 4. `Domain repo scaffold/template extraction`
