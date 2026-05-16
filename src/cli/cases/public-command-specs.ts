@@ -1,6 +1,8 @@
+import fs from 'node:fs';
+
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { buildCompleteAgentLabControlPlane } from '../../agent-lab-complete.ts';
-import { agentLabRefSummary, buildLonglineAgentLabResult, buildSampleAgentLabResult } from '../../agent-lab.ts';
+import { agentLabRefSummary, buildLonglineAgentLabResult, buildSampleAgentLabResult, runAgentLabSuite, type AgentLabSuite } from '../../agent-lab.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
@@ -92,6 +94,68 @@ function buildAgentLabCompletePayload() {
   return {
     version: 'g2',
     agent_lab_complete: buildCompleteAgentLabControlPlane(),
+  };
+}
+
+function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
+  let suitePath: string | null = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--suite') {
+      throw buildUsageError(`Unknown option for agent-lab run: ${token}.`, spec, { option: token });
+    }
+
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError('Missing value for option: --suite.', spec, { option: '--suite' });
+    }
+    suitePath = value;
+    index += 1;
+  }
+
+  if (!suitePath) {
+    throw buildUsageError('agent-lab run requires --suite <suite.json>.', spec, { option: '--suite' });
+  }
+
+  return { suitePath };
+}
+
+function readAgentLabSuiteFile(suitePath: string): AgentLabSuite {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(suitePath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new FrameworkContractError('contract_file_missing', `Agent Lab suite file is missing: ${suitePath}.`, {
+        file: suitePath,
+      });
+    }
+    throw error;
+  }
+
+  try {
+    return JSON.parse(raw) as AgentLabSuite;
+  } catch (error) {
+    throw new FrameworkContractError('contract_json_invalid', `Agent Lab suite file contains invalid JSON: ${suitePath}.`, {
+      file: suitePath,
+      cause: error instanceof Error ? error.message : 'JSON parsing failed unexpectedly.',
+    });
+  }
+}
+
+function buildAgentLabRunPayload(args: string[], spec: CommandSpec) {
+  const { suitePath } = parseAgentLabRunArgs(args, spec);
+  const suiteResult = runAgentLabSuite(readAgentLabSuiteFile(suitePath));
+  return {
+    version: 'g2',
+    agent_lab_run: {
+      surface_id: 'opl_agent_lab_external_suite_run',
+      suite_path: suitePath,
+      suite_result: suiteResult,
+      ref_summary: agentLabRefSummary(suiteResult),
+      authority_boundary: suiteResult.authority_boundary,
+    },
   };
 }
 
@@ -440,6 +504,13 @@ export function buildPublicCommandSpecs(
         assertNoArgs(args, publicCommandSpecs['agent-lab complete']);
         return buildAgentLabCompletePayload();
       },
+    },
+    'agent-lab run': {
+      usage: 'opl agent-lab run --suite <suite.json>',
+      summary: 'Run an external OPL-compatible Agent Lab suite JSON through the native refs-only control plane.',
+      examples: ['opl agent-lab run --suite ./agent-lab-suite.json --json'],
+      group: 'framework',
+      handler: (args) => buildAgentLabRunPayload(args, publicCommandSpecs['agent-lab run']),
     },
     'packages manifest': packagesManifestSpec,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
