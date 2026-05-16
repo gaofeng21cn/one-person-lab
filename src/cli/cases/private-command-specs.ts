@@ -6,7 +6,7 @@ import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-mana
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../observability-export.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
-import { buildStandardDomainAgentScaffold } from '../../standard-domain-agent-scaffold.ts';
+import { buildStandardDomainAgentScaffold, buildStandardDomainAgentScaffoldValidation } from '../../standard-domain-agent-scaffold.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../agent-executor.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
@@ -23,6 +23,62 @@ import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, build
 import type { FrameworkContracts } from '../../types.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
+
+function parseAgentsScaffoldArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const parsed: {
+    targetDir?: string;
+    domainId?: string;
+    domainLabel?: string;
+    force?: boolean;
+    validateRepoDir?: string;
+  } = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    switch (token) {
+      case '--target-dir':
+        parsed.targetDir = args[++index];
+        break;
+      case '--domain-id':
+        parsed.domainId = args[++index];
+        break;
+      case '--domain-label':
+        parsed.domainLabel = args[++index];
+        break;
+      case '--force':
+        parsed.force = true;
+        break;
+      case '--validate':
+        parsed.validateRepoDir = args[++index];
+        break;
+      default:
+        throw buildUsageError(`Unknown option for agents scaffold command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    if (['--target-dir', '--domain-id', '--domain-label', '--validate'].includes(token) && !args[index]) {
+      throw buildUsageError(`Missing value for ${token}.`, spec, { option: token });
+    }
+  }
+
+  if (parsed.validateRepoDir && (parsed.targetDir || parsed.domainId || parsed.domainLabel || parsed.force)) {
+    throw buildUsageError('--validate cannot be combined with scaffold generation options.', spec, {
+      mutually_exclusive: ['--validate', '--target-dir', '--domain-id', '--domain-label', '--force'],
+    });
+  }
+
+  if (parsed.force && !parsed.targetDir) {
+    throw buildUsageError('--force requires --target-dir.', spec, {
+      required: ['--target-dir'],
+    });
+  }
+
+  return parsed;
+}
 
 export function buildInternalCommandSpecs(
   parsedInput: ParsedCliInput,
@@ -269,13 +325,20 @@ export function buildInternalCommandSpecs(
       },
     },
     'agents scaffold': {
-      usage: 'opl agents scaffold',
+      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>]',
       summary:
-        'Show the OPL-owned standard domain-agent scaffold, generic primitive owner map, and legacy retirement checklist.',
-      examples: ['opl agents scaffold'],
+        'Show, generate, or validate the OPL-owned standard domain-agent scaffold without owning domain truth.',
+      examples: [
+        'opl agents scaffold',
+        'opl agents scaffold --target-dir /tmp/new-agent --domain-id award-foundry',
+        'opl agents scaffold --validate /tmp/new-agent',
+      ],
       handler: (args) => {
-        assertNoArgs(args, commandSpecs['agents scaffold']);
-        return buildStandardDomainAgentScaffold();
+        const parsed = parseAgentsScaffoldArgs(args, commandSpecs['agents scaffold']);
+        if (parsed.validateRepoDir) {
+          return buildStandardDomainAgentScaffoldValidation({ repoDir: parsed.validateRepoDir });
+        }
+        return buildStandardDomainAgentScaffold(parsed);
       },
     },
     'family-runtime': {
