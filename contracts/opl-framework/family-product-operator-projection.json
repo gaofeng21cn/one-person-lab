@@ -19,8 +19,27 @@
     "human_gate_reason",
     "source_refs",
     "freshness",
-    "owner_split"
+    "owner_split",
+    "control_loop_summary",
+    "usage_projection",
+    "resource_pressure",
+    "observability_export"
   ],
+  "runtime_observability_export": {
+    "command": "opl runtime observability-export [--format json|openmetrics]",
+    "formats": [
+      "json",
+      "openmetrics"
+    ],
+    "source_surfaces": [
+      "opl_runtime_ledger",
+      "temporal_provider_proof_receipts",
+      "runtime_tray_snapshot",
+      "stage_attempt_workbench",
+      "domain_owned_projection_refs"
+    ],
+    "authority": "read_only_non_authoritative"
+  },
   "preserved_runtime_semantics": [
     "Codex-default session/runtime",
     "explicit domain activation",
@@ -32,7 +51,9 @@
     "session kernel ownership",
     "memory kernel ownership",
     "domain runtime truth ownership",
-    "domain quality authority"
+    "domain quality authority",
+    "executor auto-degradation",
+    "domain action execution from observability"
   ],
   "fail_closed_rules": [
     "source_refs_required",
@@ -41,4 +62,3 @@
     "domain_owned_proof_or_eval_required_for_quality_closure"
   ]
 }
-

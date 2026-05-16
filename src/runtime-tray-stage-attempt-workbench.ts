@@ -583,26 +583,26 @@ function memoryRefCounters(attempts: StageAttemptProjection[]) {
   });
 }
 
-function attemptControlLoop(attempt: StageAttemptProjection) {
+function attemptControlLoop(attempt: StageAttemptProjection): JsonRecord {
   return isRecord(attempt.control_loop_summary) ? attempt.control_loop_summary : {};
 }
 
-function attemptControlLoopState(attempt: StageAttemptProjection) {
+function attemptControlLoopState(attempt: StageAttemptProjection): JsonRecord {
   const summary = attemptControlLoop(attempt);
   return isRecord(summary.state) ? summary.state : {};
 }
 
-function attemptControlLoopDecision(attempt: StageAttemptProjection) {
+function attemptControlLoopDecision(attempt: StageAttemptProjection): JsonRecord {
   const summary = attemptControlLoop(attempt);
   return isRecord(summary.decision) ? summary.decision : {};
 }
 
-function attemptControlLoopActionRoute(attempt: StageAttemptProjection) {
+function attemptControlLoopActionRoute(attempt: StageAttemptProjection): JsonRecord {
   const summary = attemptControlLoop(attempt);
   return isRecord(summary.action_route) ? summary.action_route : {};
 }
 
-function attemptControlLoopReceipts(attempt: StageAttemptProjection) {
+function attemptControlLoopReceipts(attempt: StageAttemptProjection): JsonRecord {
   const summary = attemptControlLoop(attempt);
   return isRecord(summary.receipts) ? summary.receipts : {};
 }
@@ -739,7 +739,9 @@ const EMPTY_WORKBENCH_METADATA = {
       attempts_with_consumed_memory_refs: 0,
       attempts_with_writeback_receipt_refs: 0,
     },
+    usage_projection: summarizeStageAttemptUsageProjections([], 'stage_attempt_workbench'),
     ...buildWorkbenchGenericProjections([]),
+    control_loop_summary: buildWorkbenchControlLoopSummary([]),
     human_gate_count: 0,
     resume_count: 0,
     dead_letter_count: 0,

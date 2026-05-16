@@ -62,6 +62,7 @@
     "consumed_memory_refs",
     "writeback_receipt_refs",
     "route_impact",
+    "usage_projection",
     "closeout_receipt_status",
     "authority_boundary"
   ],
@@ -75,7 +76,11 @@
     "reconciliation_status",
     "last_observed_projection",
     "operator_visibility",
-    "completion_boundary"
+    "completion_boundary",
+    "control_loop_summary",
+    "usage_projection",
+    "resource_pressure",
+    "observability_export"
   ],
   "provider_lifecycle_contract": {
     "temporal": {
@@ -114,11 +119,11 @@
     "required_for_completed_status": true,
     "free_text_closeout_accepted": false,
     "tracked_refs": [
-    "closeout_refs",
-    "consumed_refs",
-    "consumed_memory_refs",
-    "writeback_receipt_refs",
-    "rejected_writes",
+      "closeout_refs",
+      "consumed_refs",
+      "consumed_memory_refs",
+      "writeback_receipt_refs",
+      "rejected_writes",
       "route_impact",
       "next_owner",
       "domain_ready_verdict"
@@ -140,11 +145,29 @@
     "closeout_refs",
     "closeout_receipt_status",
     "route_impact",
+    "usage_projection",
     "rejected_writes",
     "next_owner",
     "human_gate_refs",
     "dead_letter"
   ],
+  "stability_projection_fields": [
+    "control_loop_summary",
+    "usage_projection",
+    "resource_pressure",
+    "runtime_observability_export"
+  ],
+  "stability_projection_authority_boundary": {
+    "projection_role": "read_only_operator_stability_projection",
+    "can_execute_domain_action": false,
+    "can_change_executor": false,
+    "can_auto_degrade": false,
+    "can_write_domain_truth": false,
+    "can_write_domain_memory_body": false,
+    "can_authorize_domain_ready": false,
+    "can_authorize_quality_verdict": false,
+    "provider_completion_is_domain_ready": false
+  },
   "reconciliation_statuses": [
     "fresh",
     "stale",
