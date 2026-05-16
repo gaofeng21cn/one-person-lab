@@ -262,6 +262,118 @@ function lifecycleStatus(statuses: string[]) {
   return 'substrate_refs_missing';
 }
 
+function refCount(projection: ReturnType<typeof buildGenericSubstrateProjection>) {
+  return {
+    workspace_ref_count: projection.workspace_refs.refs.length + (projection.workspace.workspace_locator ? 1 : 0),
+    source_ref_count: projection.source_refs.refs.length,
+    artifact_ref_count: projection.artifact_refs.refs.length,
+    memory_ref_count: projection.memory_refs.refs.length,
+  };
+}
+
+function workbenchStatusGroups(projections: Array<ReturnType<typeof buildGenericSubstrateProjection>>) {
+  const groups: Record<string, string[]> = {};
+  for (const projection of projections) {
+    groups[projection.projection_status] = groups[projection.projection_status] ?? [];
+    groups[projection.projection_status].push(projection.project_id);
+  }
+  return groups;
+}
+
+function sidecarStatusGroups(projections: Array<ReturnType<typeof buildGenericSubstrateProjection>>) {
+  const groups: Record<string, string[]> = {};
+  for (const projection of projections) {
+    const status = projection.sidecar_substrate_adapter.status;
+    groups[status] = groups[status] ?? [];
+    groups[status].push(projection.project_id);
+  }
+  return groups;
+}
+
+function refWorkbenchEntry(
+  projection: ReturnType<typeof buildGenericSubstrateProjection>,
+  family: 'workspace' | 'source' | 'artifact' | 'memory',
+  ref: JsonRecord,
+) {
+  return {
+    project_id: projection.project_id,
+    project: projection.project,
+    target_domain_id: projection.target_domain_id,
+    ref_family: family,
+    ref_id: optionalString(ref.ref_id) ?? optionalString(ref.role) ?? optionalString(ref.label),
+    role: optionalString(ref.role),
+    label: optionalString(ref.label),
+    ref_kind: optionalString(ref.ref_kind)
+      ?? (isRecord(ref.ref) ? optionalString(ref.ref.ref_kind) : null)
+      ?? optionalString(ref.kind),
+    ref: optionalString(ref.ref)
+      ?? (isRecord(ref.ref) ? optionalString(ref.ref.ref) : null)
+      ?? optionalString(ref.path),
+    exists: typeof ref.exists === 'boolean' ? ref.exists : null,
+    body_included: ref.body_included === true,
+    write_permitted: ref.write_permitted === true,
+    opaque_to_opl: ref.opaque_to_opl !== false,
+    index_only: ref.index_only !== false,
+    study_id: optionalString(ref.study_id),
+    lifecycle_role: optionalString(ref.lifecycle_role),
+    inspect_command: `opl substrate projection --domain ${projection.project_id}`,
+  };
+}
+
+function workspaceWorkbenchRefs(projection: ReturnType<typeof buildGenericSubstrateProjection>) {
+  const locatorRef = projection.workspace.workspace_locator
+    ? [{
+        ref_id: 'workspace_locator',
+        role: 'workspace_locator',
+        ref_kind: 'workspace_path',
+        ref: projection.workspace.workspace_root,
+        exists: null,
+        body_included: false,
+        write_permitted: false,
+        opaque_to_opl: true,
+        index_only: true,
+        lifecycle_role: projection.workspace.lifecycle_role,
+      }]
+    : [];
+  return [...locatorRef, ...projection.workspace_refs.refs]
+    .map((ref) => refWorkbenchEntry(projection, 'workspace', ref));
+}
+
+function sourceWorkbenchRefs(projection: ReturnType<typeof buildGenericSubstrateProjection>) {
+  return projection.source_refs.refs.map((ref) => refWorkbenchEntry(projection, 'source', ref));
+}
+
+function artifactWorkbenchRefs(projection: ReturnType<typeof buildGenericSubstrateProjection>) {
+  return projection.artifact_refs.refs.map((ref) => refWorkbenchEntry(projection, 'artifact', ref));
+}
+
+function memoryWorkbenchRefs(projection: ReturnType<typeof buildGenericSubstrateProjection>) {
+  return projection.memory_refs.refs.map((ref) => refWorkbenchEntry(projection, 'memory', ref));
+}
+
+function buildDomainWorkbench(projection: ReturnType<typeof buildGenericSubstrateProjection>) {
+  const counts = refCount(projection);
+  return {
+    project_id: projection.project_id,
+    project: projection.project,
+    target_domain_id: projection.target_domain_id,
+    manifest_status: projection.manifest_status,
+    projection_status: projection.projection_status,
+    sidecar_substrate_adapter_status: projection.sidecar_substrate_adapter.status,
+    sidecar_export_env_name: projection.sidecar_substrate_adapter.env_name,
+    ref_counts: counts,
+    status_by_ref_family: {
+      workspace: projection.workspace.status,
+      source: projection.source_refs.status,
+      artifact: projection.artifact_refs.status,
+      memory: projection.memory_refs.status,
+    },
+    inspect_command: `opl substrate projection --domain ${projection.project_id}`,
+    authority_boundary: projection.authority_boundary,
+    non_authority_flags: projection.non_authority_flags,
+  };
+}
+
 export function buildGenericSubstrateProjection(entry: DomainManifestCatalogEntry) {
   const manifest = entry.manifest;
   const sidecarSubstrate = readSidecarSubstrateAdapter(entry);
@@ -432,6 +544,98 @@ export function buildGenericSubstrateProjectionList(contracts: FrameworkContract
       notes: [
         'This is an OPL-owned index/projection over domain-declared workspace, source, artifact, and memory refs.',
         'OPL carries locators and lifecycle status only; domain agents retain truth/body/verdict/authority.',
+      ],
+    },
+  };
+}
+
+export function buildGenericSubstrateWorkbench(contracts: FrameworkContracts) {
+  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+  const projections = catalog.projects.map(buildGenericSubstrateProjection);
+  const refCounts = projections.map(refCount);
+  const refFamilies = {
+    workspace: projections.flatMap(workspaceWorkbenchRefs),
+    source: projections.flatMap(sourceWorkbenchRefs),
+    artifact: projections.flatMap(artifactWorkbenchRefs),
+    memory: projections.flatMap(memoryWorkbenchRefs),
+  };
+
+  return {
+    version: 'g2',
+    generic_substrate_workbench: {
+      surface_kind: 'opl_generic_substrate_workbench',
+      workbench_version: 'opl-generic-substrate-workbench.v1',
+      workbench_role: 'operator_and_app_drilldown_projection',
+      summary: {
+        total_projects_count: projections.length,
+        resolved_manifest_count: projections.filter((projection) => projection.manifest_status === 'resolved').length,
+        substrate_refs_resolved_count: projections.filter((projection) =>
+          projection.projection_status === 'substrate_refs_resolved'
+        ).length,
+        substrate_refs_partial_count: projections.filter((projection) =>
+          projection.projection_status === 'substrate_refs_partial'
+        ).length,
+        substrate_refs_missing_count: projections.filter((projection) =>
+          projection.projection_status === 'substrate_refs_missing'
+        ).length,
+        blocked_count: projections.filter((projection) =>
+          projection.projection_status === 'blocked_by_manifest_status'
+          || projection.projection_status === 'blocked_by_sidecar_export'
+        ).length,
+        sidecar_adapter_resolved_count: projections.filter((projection) =>
+          projection.sidecar_substrate_adapter.status === 'resolved'
+        ).length,
+        sidecar_adapter_blocked_count: projections.filter((projection) =>
+          projection.sidecar_substrate_adapter.status === 'blocked'
+        ).length,
+        workspace_ref_count: refCounts.reduce((sum, count) => sum + count.workspace_ref_count, 0),
+        source_ref_count: refCounts.reduce((sum, count) => sum + count.source_ref_count, 0),
+        artifact_ref_count: refCounts.reduce((sum, count) => sum + count.artifact_ref_count, 0),
+        memory_ref_count: refCounts.reduce((sum, count) => sum + count.memory_ref_count, 0),
+      },
+      groups: {
+        by_domain: Object.fromEntries(projections.map((projection) => [
+          projection.project_id,
+          buildDomainWorkbench(projection),
+        ])),
+        by_projection_status: workbenchStatusGroups(projections),
+        by_sidecar_status: sidecarStatusGroups(projections),
+        by_ref_family: refFamilies,
+      },
+      authority_boundary: {
+        opl_owns: [
+          'locator_index',
+          'ref_transport',
+          'lifecycle_projection',
+          'operator_projection',
+          'workbench_grouping',
+        ],
+        domain_agent_owns: [
+          'workspace_truth',
+          'source_truth_body',
+          'artifact_body',
+          'artifact_authority',
+          'memory_body',
+          'memory_writeback_accept_reject',
+          'domain_truth',
+          'quality_verdict',
+          'publication_fundability_visual_verdict',
+        ],
+      },
+      non_authority_flags: {
+        opl_reads_memory_body: false,
+        opl_writes_memory_body: false,
+        opl_applies_memory_writeback: false,
+        opl_writes_domain_truth: false,
+        opl_interprets_source_truth: false,
+        opl_mutates_artifact_body: false,
+        opl_owns_artifact_authority: false,
+        opl_authorizes_quality_verdict: false,
+        opl_authorizes_publication_or_fundability_verdict: false,
+      },
+      notes: [
+        'This workbench groups existing substrate projections for App/operator drilldown.',
+        'Refs remain opaque/index-only; follow inspect_command back to the domain-owned projection before reading any domain truth.',
       ],
     },
   };

@@ -169,6 +169,88 @@ function masSubstrateSidecarPayload() {
   };
 }
 
+function genericSubstrateSidecarPayload(input: {
+  surfaceKind: string;
+  version: string;
+  workspaceRoot: string;
+  sourceRole: string;
+  sourceRef: string;
+  artifactRole: string;
+  artifactRef: string;
+  memoryRole: string;
+  memoryRef: string;
+  domainOwns: string[];
+}) {
+  return {
+    opl_substrate_adapter: {
+      surface_kind: input.surfaceKind,
+      version: input.version,
+      mode: 'opaque_index_only_refs',
+      workspace_refs: [
+        {
+          role: 'workspace_root',
+          ref_kind: 'workspace_path',
+          ref: input.workspaceRoot,
+          exists: true,
+          body_included: false,
+          write_permitted: false,
+          opaque_to_opl: true,
+          index_only: true,
+        },
+      ],
+      source_refs: [
+        {
+          role: input.sourceRole,
+          ref_kind: 'workspace_relative_path',
+          ref: input.sourceRef,
+          exists: true,
+          body_included: false,
+          write_permitted: false,
+          opaque_to_opl: true,
+          index_only: true,
+        },
+      ],
+      artifact_refs: [
+        {
+          role: input.artifactRole,
+          ref_kind: 'workspace_relative_path',
+          ref: input.artifactRef,
+          exists: true,
+          body_included: false,
+          write_permitted: false,
+          opaque_to_opl: true,
+          index_only: true,
+        },
+      ],
+      memory_refs: [
+        {
+          role: input.memoryRole,
+          ref_kind: 'workspace_relative_path',
+          ref: input.memoryRef,
+          exists: true,
+          body_included: false,
+          write_permitted: false,
+          opaque_to_opl: true,
+          index_only: true,
+        },
+      ],
+      projection_policy: {
+        body_included: false,
+        opl_may_index: true,
+        opl_may_write_domain_truth: false,
+        opl_may_write_memory_body: false,
+      },
+      authority_boundary: {
+        domain_owns: input.domainOwns,
+        opl_owns: ['locator', 'index', 'lifecycle', 'projection'],
+        can_write_domain_truth: false,
+        can_write_memory_body: false,
+        can_mutate_artifact_body: false,
+      },
+    },
+  };
+}
+
 test('generic substrate projection indexes MAS-like workspace, source, artifact, and memory refs without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -328,5 +410,113 @@ test('generic substrate projection list reports partial substrate when memory re
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('generic substrate workbench groups family refs for App and operator drilldown without body authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-workbench-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = withMasLikeMemoryDescriptor(fixtures.medautoscience);
+  const masSidecar = createSidecarExportFixture(masSubstrateSidecarPayload());
+  const magSidecar = createSidecarExportFixture(genericSubstrateSidecarPayload({
+    surfaceKind: 'mag_opl_generic_substrate_adapter',
+    version: 'mag-opl-generic-substrate-adapter.v1',
+    workspaceRoot: '/fixtures/med-autogrant/workspace',
+    sourceRole: 'grant_workspace_truth',
+    sourceRef: 'workspace/nsfc-demo-001/source/latest.json',
+    artifactRole: 'grant_package',
+    artifactRef: 'workspace/nsfc-demo-001/artifacts/package/latest.zip',
+    memoryRole: 'grant_strategy_memory',
+    memoryRef: 'workspace/nsfc-demo-001/memory/strategy/latest.json',
+    domainOwns: ['grant_truth', 'fundability_verdict', 'package_authority', 'memory_body'],
+  }));
+  const rcaSidecar = createSidecarExportFixture(genericSubstrateSidecarPayload({
+    surfaceKind: 'rca_opl_generic_substrate_adapter',
+    version: 'rca-opl-generic-substrate-adapter.v1',
+    workspaceRoot: '/fixtures/redcube/workspace',
+    sourceRole: 'managed_run_truth',
+    sourceRef: 'runtime-state/managed-runs/latest.json',
+    artifactRole: 'visual_deliverable',
+    artifactRef: 'deliverables/latest/final.pptx',
+    memoryRole: 'visual_review_memory',
+    memoryRef: 'runtime-state/memory/review/latest.json',
+    domainOwns: ['visual_truth', 'layout_verdict', 'artifact_authority', 'memory_body'],
+  }));
+
+  try {
+    [
+      ['medautoscience', masManifest],
+      ['medautogrant', fixtures.medautogrant],
+      ['redcube', fixtures.redcube],
+    ].forEach(([project, manifest]) => {
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        project as string,
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(manifest as JsonRecord),
+      ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    });
+
+    const output = runCli(['substrate', 'workbench'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: masSidecar.exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: magSidecar.exportPath,
+      OPL_FAMILY_RUNTIME_REDCUBE_EXPORT: rcaSidecar.exportPath,
+    });
+    const workbench = output.generic_substrate_workbench;
+
+    assert.equal(workbench.surface_kind, 'opl_generic_substrate_workbench');
+    assert.equal(workbench.workbench_role, 'operator_and_app_drilldown_projection');
+    assert.equal(workbench.summary.total_projects_count, 3);
+    assert.equal(workbench.summary.resolved_manifest_count, 3);
+    assert.equal(workbench.summary.sidecar_adapter_resolved_count, 3);
+    assert.equal(workbench.groups.by_domain.medautoscience.sidecar_substrate_adapter_status, 'resolved');
+    assert.equal(workbench.groups.by_domain.medautogrant.sidecar_substrate_adapter_status, 'resolved');
+    assert.equal(workbench.groups.by_domain.redcube.sidecar_substrate_adapter_status, 'resolved');
+    assert.equal(workbench.groups.by_domain.medautogrant.inspect_command, 'opl substrate projection --domain medautogrant');
+    assert.equal(workbench.groups.by_domain.redcube.status_by_ref_family.artifact, 'resolved');
+    assert.ok(workbench.groups.by_projection_status.substrate_refs_resolved.includes('medautoscience'));
+    assert.ok(workbench.groups.by_projection_status.substrate_refs_resolved.includes('medautogrant'));
+    assert.ok(workbench.groups.by_projection_status.substrate_refs_resolved.includes('redcube'));
+    assert.ok(workbench.groups.by_sidecar_status.resolved.includes('medautoscience'));
+    assert.ok(workbench.groups.by_sidecar_status.resolved.includes('medautogrant'));
+    assert.ok(workbench.groups.by_sidecar_status.resolved.includes('redcube'));
+    assert.ok(workbench.groups.by_ref_family.workspace.some(
+      (entry: { project_id: string; ref_id: string }) =>
+        entry.project_id === 'redcube' && entry.ref_id === 'workspace_locator',
+    ));
+    assert.ok(workbench.groups.by_ref_family.source.some(
+      (entry: { project_id: string; role: string }) =>
+        entry.project_id === 'medautoscience' && entry.role === 'runtime_supervision_truth',
+    ));
+    assert.ok(workbench.groups.by_ref_family.artifact.some(
+      (entry: { project_id: string; role: string }) =>
+        entry.project_id === 'medautogrant' && entry.role === 'grant_package',
+    ));
+    assert.ok(workbench.groups.by_ref_family.artifact.some(
+      (entry: { project_id: string; role: string }) =>
+        entry.project_id === 'redcube' && entry.role === 'visual_deliverable',
+    ));
+    assert.ok(workbench.groups.by_ref_family.memory.some(
+      (entry: { project_id: string; ref_id: string }) =>
+        entry.project_id === 'medautoscience' && entry.ref_id === 'mas_publication_route_memory',
+    ));
+    assert.equal(workbench.non_authority_flags.opl_reads_memory_body, false);
+    assert.equal(workbench.non_authority_flags.opl_writes_domain_truth, false);
+    assert.equal(workbench.non_authority_flags.opl_mutates_artifact_body, false);
+    assert.equal(workbench.non_authority_flags.opl_owns_artifact_authority, false);
+    assert.equal(workbench.non_authority_flags.opl_authorizes_quality_verdict, false);
+    assert.equal(workbench.non_authority_flags.opl_authorizes_publication_or_fundability_verdict, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masSidecar.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magSidecar.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaSidecar.fixtureRoot, { recursive: true, force: true });
   }
 });
