@@ -18,3 +18,4 @@ Machine boundary: 人读索引。硬约束仍以核心五件套、contracts、sc
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
 | --- | --- | --- | --- |
 | `docs-lifecycle-policy.md` | `active_policy` | OPL docs governance owner | 固定 canonical docs taxonomy、中文 canonical 规则和 direct-retirement 政策；硬约束需要同步上提到核心五件套或机器合同。 |
+| `runtime-artifact-hygiene-policy.md` | `active_policy` | OPL framework governance owner | 固定 OPL family 开发 checkout 与运行生成物隔离纪律；具体守门由各仓 clean runner、验证入口、pytest 配置和 repo hygiene 测试承担。 |

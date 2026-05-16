@@ -22,3 +22,6 @@ namespaces = false
 
 [tool.setuptools.package-data]
 "opl_harness_shared.contracts" = ["*.json"]
+
+[tool.pytest.ini_options]
+cache_dir = "/tmp/opl-harness-shared-pytest-cache"
