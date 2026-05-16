@@ -66,7 +66,7 @@ Domain repo 不应长期维护 generic scheduler、generic queue、generic attem
 
 ### App / Workbench 负责
 
-One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录。当前 GUI shell 实现来自独立 `one-person-lab-app` 产品仓的 `shells/aionui/`，该目录作为 upstream-backed AionUI shell adapter 维护。拆分 closeout 见 [One Person Lab App 仓库拆分 Closeout](./one-person-lab-app-repo-split-plan.md)。
+One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录。当前 GUI shell 实现来自独立 `one-person-lab-app` 产品仓的 `shells/aionui/`，该目录作为 upstream-backed AionUI shell adapter 维护。拆分 closeout 已归档到 [One Person Lab App 仓库拆分 Closeout](../history/process/plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)；当前 App/workbench 边界以 `docs/product/`、App 仓合同和真实 release artifact 为准。
 
 它的产品工作台职责是：
 

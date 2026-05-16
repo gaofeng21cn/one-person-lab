@@ -45,6 +45,8 @@
 - [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md)
 - [OPL 当前开发线路](./active/current-development-lines.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.md)
+- [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md)
+- [OPL 与 Foundry Agents 理想目标态](./references/runtime-substrate/opl-family-agent-ideal-state.md)
 - [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [Runtime Substrate 参考索引](./references/runtime-substrate/README.md)
@@ -109,6 +111,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - [合同目录说明](../contracts/README.md)
 - [OPL 公开界面索引](./product/opl-public-surface-index.md)
 - [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)
+- [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.md)
 - [活跃支撑文档索引](./active/README.md)
 

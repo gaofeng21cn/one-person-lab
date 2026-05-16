@@ -10,7 +10,7 @@
 
 因此，未来切换到其他 GUI 的目标不是重写 OPL，而是替换当前 GUI adapter。只要新 GUI 消费同一组 OPL CLI / machine-readable surfaces，切换成本应主要集中在 UI adapter、打包和发布链路，不应扩散到 MAS/MAG/RCA 或 OPL runtime；MDS 只保留为 MAS 显式声明的可选 companion。
 
-App 仓库拆分的活跃 closeout 见 [One Person Lab App 仓库拆分计划](../../active/one-person-lab-app-repo-split-plan.md)。该计划要求避免把 AionUI 历史合入 App 默认分支：`one-person-lab-app/shells/aionui` 必须是外部 checkout，history-preserving upstream intake、shell-local `AGENTS.md` 和 OPL overlay 退役审计留在 `opl-aion-shell`。
+App 仓库拆分 closeout 已归档到 [One Person Lab App 仓库拆分 Closeout](../../history/process/plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)。当前维护规则是避免把 AionUI 历史合入 App 默认分支：`one-person-lab-app/shells/aionui` 必须是外部 checkout，history-preserving upstream intake、shell-local `AGENTS.md` 和 OPL overlay 退役审计留在 `opl-aion-shell`。
 
 ## 当前分工
 

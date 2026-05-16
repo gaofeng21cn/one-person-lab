@@ -28,3 +28,7 @@
 
 当前仍留在 `docs/specs/` 的只有活跃 runtime / product-boundary 规格；如果 specs 索引为空，说明当前规格真相已经收敛到核心五件套、`docs/active/`、runtime-substrate roadmap 和机器可读合同。
 新增一次性规划材料在完成、被取代或退出活跃工作面后，应迁入本目录。
+
+近期归档：
+
+- [2026-05-15 One Person Lab App 仓库拆分 Closeout](./plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)：记录 Framework repo、clean App repo 与 upstream-backed GUI shell repo 的拆分 closeout；当前 App/workbench 边界回到 `docs/product/`、App 仓合同和真实 release artifact。

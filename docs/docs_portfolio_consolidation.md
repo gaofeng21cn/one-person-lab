@@ -56,6 +56,38 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/references/` | north-star、positioning、integration、governance、verification、operating support | runtime substrate、convergence governance、current support、domain admission、examples、operating governance。 |
 | `docs/history/` | retired route、completed plans、tombstone、provenance、process archive | gateway/federation/frontdoor/OMX/runtime-substrate/process history。 |
 
+## 当前长期文档台账
+
+维护者审阅 `docs/**` 时，以本台账判断每份长期文档的唯一职责。台账没有列出的 loose 文档需要先归入某个 owner 文档、子目录索引、reference/history，或在本文补充职责后再扩写。
+
+| 文档 | 生命周期 | 唯一职责 | 当前处置 |
+| --- | --- | --- | --- |
+| `docs/README.md` | `active_index` | 文档入口、阅读顺序、当前 truth 去向和历史入口导航。 | 保持入口索引；不承载新计划正文。 |
+| `docs/project.md` | `active_truth` | 项目公开角色、产品分层和 admitted domain 总览。 | 核心五件套；current truth 优先。 |
+| `docs/status.md` | `active_truth` | 当前状态、fresh evidence、完成边界和下一步验证口径。 | 核心五件套；旧计划不得覆盖。 |
+| `docs/architecture.md` | `active_truth` | 顶层 runtime、activation、contract、domain-agent 和 App/workbench 边界。 | 核心五件套；当前架构 owner。 |
+| `docs/invariants.md` | `active_truth` | 硬约束、不可破坏边界和 fail-closed 规则。 | 核心五件套；长期规则优先上提到这里。 |
+| `docs/decisions.md` | `active_truth_with_history_notes` | 仍有效决策和被 supersede 决策的当前读法。 | 核心五件套；旧决策必须标明 superseded。 |
+| `docs/active/opl-family-development-reference.md` | `active_support` | OPL 系列项目开发主参考、owner 分层、上收判断和 direct-retirement 规则。 | 保持主参考；不替代单仓 truth。 |
+| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | 对照理想态的 family-level 当前差距、执行顺序和验收顺序。 | 保持 active plan；fresh evidence 需与机器面同步。 |
+| `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
+| `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、evidence gate 与功能 follow-through owner。 | 保持 active plan；承接 2026-05-14 closeout 后续。 |
+| `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
+| `docs/public/*` | `public_support` | 公开 roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog。 |
+| `docs/product/README.md` 与 `docs/product/opl-public-surface-index.md` | `active_support` | App/workbench、operator/product entry、public surface 与 action routing 边界。 | 保持 product 支撑；App release truth 回 App 仓和 artifact。 |
+| `docs/runtime/opl-runtime-naming-and-boundary-contract.md` | `active_support` | Codex-default executor、Temporal provider、explicit executor adapter 与 retired runtime vocabulary 边界。 | 保持 runtime 支撑；机器 truth 回 contracts/source/CLI/runtime ledger。 |
+| `docs/delivery/artifact-package-lifecycle-boundary.md` | `active_support` | 通用 artifact/package/export lifecycle shell 与 domain delivery authority split。 | 保持 delivery 支撑；不写 domain verdict。 |
+| `docs/source/workspace-source-intake-boundary.md` | `active_support` | 通用 workspace/source intake shell 与 domain source semantics split。 | 保持 source 支撑；不写领域 source truth。 |
+| `docs/policies/docs-lifecycle-policy.md` | `active_policy` | docs taxonomy、中文 canonical 和 direct-retirement 政策。 | 保持 policy；硬约束必要时同步 `invariants.md`。 |
+| `docs/specs/*` | `active_spec_support` | 当前仍有效的 domain admission、shared runtime/domain 和 boundary specs。 | 保持 specs 支撑；机器合同仍回 `contracts/`。 |
+| `docs/references/runtime-substrate/opl-family-agent-ideal-state.md` | `active_support` | OPL Framework、Foundry Agents 与 App 的 north-star 目标态。 | 主参考；不能写成当前完成事实。 |
+| `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` | `active_support` | stage-led framework roadmap、runtime substrate 与旧面退役顺序。 | 保持 roadmap；状态需服从 core five 和 fresh evidence。 |
+| `docs/references/current-support/*` | `support_reference` | 安装、GUI/WebUI、release、skills、测试和质量操作参考。 | 保持支撑参考；行为 truth 回命令、合同和 artifact。 |
+| `docs/references/convergence-governance/*` | `support_reference_or_rollout_record` | 收敛治理、外部学习、intake 模板和 dated rollout 记录。 | 有效规则上提；dated 记录不当 current plan。 |
+| `docs/references/operating-governance/*` | `support_reference` | quality、operator projection、memory governance 和 family governance 支撑。 | 保持支撑参考；gateway-derived 旧 matrix 留 history。 |
+| `docs/references/domain-admission/*` | `support_reference` | candidate backlog 和准入支撑参考。 | 保持 reference；正式准入规则回 specs。 |
+| `docs/history/**` | `history_or_tombstone` | 退役路线、完成计划、frontdoor/gateway/federation/OMX/process provenance。 | 不作为 active owner；有用结论先吸收再保留原文。 |
+
 ## 四仓目录状态
 
 | 仓库 | 当前判断 |

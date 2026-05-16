@@ -12,7 +12,7 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 当前入口先看：
 
 - [OPL 系列项目开发主参考](../active/opl-family-development-reference.md)
-- [One Person Lab App 仓库拆分计划](../active/one-person-lab-app-repo-split-plan.md)
+- [One Person Lab App 仓库拆分 Closeout](../history/process/plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)
 - [OPL 公开界面索引](./opl-public-surface-index.md)
 - [当前支撑参考索引](../references/current-support/README.md)
 
