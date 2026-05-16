@@ -13,3 +13,9 @@ Machine boundary: 人读索引。机器真相继续归 workspace registry、sour
 - [OPL 运行模型](../public/operating-model.md)
 - [共享运行时合同](../specs/shared-runtime-contract.md)
 - [共享领域合同](../specs/shared-domain-contract.md)
+
+## 内容
+
+| 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
+| --- | --- | --- | --- |
+| `workspace-source-intake-boundary.md` | `active_support` | OPL source/workspace shell owner | 只解释通用 workspace/source locator、registry、transport、freshness 和 App/workbench projection 边界；domain source semantics 和 readiness verdict 回 MAS/MAG/RCA。 |

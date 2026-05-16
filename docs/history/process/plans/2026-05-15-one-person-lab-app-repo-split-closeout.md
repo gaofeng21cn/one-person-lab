@@ -2,9 +2,11 @@
 
 Owner: `One Person Lab`
 Purpose: `app_repo_split_closeout`
-State: `active_closeout`
+State: `history_closeout`
 Machine boundary: 本文是人读迁移 closeout 与后续维护边界，不是机器接口。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、release artifact、runtime ledger、provider receipt 和 App 仓自己的 release / test contract。
 Date: `2026-05-15`
+
+Lifecycle: 本文记录 2026-05-15 App 仓库拆分 closeout 和剩余远端迁移检查项。当前 App/workbench owner boundary 回到 `docs/product/`、`docs/references/current-support/opl-gui-shell-adapter-boundary.md`、核心五件套、App 仓合同和真实 release artifact；本文不再作为 active plan 扩写。
 
 ## 结论
 

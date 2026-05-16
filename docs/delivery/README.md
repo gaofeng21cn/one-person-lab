@@ -12,3 +12,9 @@ Machine boundary: 人读索引。机器真相继续归合同、源码、artifact
 - [OPL 系列项目开发主参考](../active/opl-family-development-reference.md)
 - [共享运行时合同](../specs/shared-runtime-contract.md)
 - [共享领域合同](../specs/shared-domain-contract.md)
+
+## 内容
+
+| 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
+| --- | --- | --- | --- |
+| `artifact-package-lifecycle-boundary.md` | `active_support` | OPL delivery lifecycle shell owner | 只解释通用 artifact/package/export locator、refs、restore/retention 和 projection 边界；domain artifact 内容、ready/export verdict 和 mutation authority 回 MAS/MAG/RCA。 |

@@ -12,3 +12,9 @@ Machine boundary: 人读索引。硬约束仍以核心五件套、contracts、sc
 - [硬约束](../invariants.md)
 - [关键决策](../decisions.md)
 - [文档组合治理](../docs_portfolio_consolidation.md)
+
+## 内容
+
+| 文件 | 生命周期状态 | 当前 owner | 阅读规则 |
+| --- | --- | --- | --- |
+| `docs-lifecycle-policy.md` | `active_policy` | OPL docs governance owner | 固定 canonical docs taxonomy、中文 canonical 规则和 direct-retirement 政策；硬约束需要同步上提到核心五件套或机器合同。 |
