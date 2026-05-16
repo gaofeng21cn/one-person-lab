@@ -65,6 +65,23 @@
       "/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration"
     ]
   },
+  "standard_domain_agent_scaffold": {
+    "surface_kind": "opl_standard_domain_agent_scaffold",
+    "version": "standard-domain-agent-scaffold.v1",
+    "owner": "one-person-lab",
+    "state": "template_contract_available",
+    "command": "opl agents scaffold",
+    "contract_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
+    "generation_policy": {
+      "scaffold_command_is_read_only": true,
+      "creates_files": false,
+      "copy_existing_domain_repo_as_template": false
+    },
+    "authority_boundary": {
+      "opl": "framework_runtime_development_primitives_contracts_read_models_projection_and_checklist_owner",
+      "domain_agent": "domain_truth_quality_export_artifact_memory_body_and_owner_receipt_authority"
+    }
+  },
   "non_goals": [
     "not_a_domain_runtime_truth_owner",
     "not_a_domain_quality_verdict_owner",

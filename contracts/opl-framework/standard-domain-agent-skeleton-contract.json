@@ -49,5 +49,95 @@
   "authority_boundary": {
     "opl": "framework_transport_and_projection_only",
     "domain_agent": "truth_quality_artifact_owner"
+  },
+  "new_agent_scaffold": {
+    "surface_kind": "opl_standard_domain_agent_scaffold",
+    "version": "standard-domain-agent-scaffold.v1",
+    "owner": "one-person-lab",
+    "state": "template_contract_available",
+    "command": "opl agents scaffold",
+    "generation_policy": {
+      "scaffold_command_is_read_only": true,
+      "creates_files": false,
+      "copy_existing_domain_repo_as_template": false
+    },
+    "docs_taxonomy": [
+      "active",
+      "public",
+      "product",
+      "runtime",
+      "delivery",
+      "source",
+      "policies",
+      "specs",
+      "references",
+      "history"
+    ],
+    "required_contract_surfaces": [
+      "domain_agent_descriptor",
+      "product_entry_manifest",
+      "stage_control_plane",
+      "family_action_catalog",
+      "domain_memory_descriptor_locator",
+      "artifact_locator_contract",
+      "owner_receipt_contract",
+      "quality_or_export_gate_refs",
+      "physical_skeleton_follow_through",
+      "legacy_retirement_tombstone_proof"
+    ],
+    "opl_owned_generic_primitives": [
+      "scheduler_supervision_cadence",
+      "provider_slo_and_wakeup_transport",
+      "queue_attempt_ledger",
+      "generic_transition_runner",
+      "workspace_source_intake_shell",
+      "memory_locator_writeback_transport",
+      "artifact_package_lifecycle_shell",
+      "operator_workbench_drilldown_shell",
+      "observability_repair_projection"
+    ],
+    "domain_retained_thin_surfaces": [
+      "domain_truth",
+      "domain_transition_spec",
+      "domain_stage_descriptors",
+      "domain_action_metadata",
+      "quality_or_export_verdict",
+      "artifact_authority",
+      "memory_body",
+      "owner_receipt",
+      "typed_blocker",
+      "sidecar_or_projection_adapter",
+      "domain_entry_and_tests"
+    ],
+    "forbidden_domain_generic_owner_roles": [
+      "generic_scheduler_owner",
+      "generic_daemon_owner",
+      "generic_lifecycle_owner",
+      "generic_queue_owner",
+      "generic_attempt_ledger_owner",
+      "generic_state_machine_runner_owner",
+      "generic_workspace_source_intake_owner",
+      "generic_memory_transport_owner",
+      "generic_artifact_gallery_owner",
+      "generic_operator_workbench_owner",
+      "generic_observability_slo_owner"
+    ],
+    "retirement_gate_required_evidence": [
+      "replacement_contract_available",
+      "active_callers_migrated",
+      "no_active_default_caller",
+      "direct_and_opl_hosted_parity",
+      "provenance_or_history_tombstone",
+      "no_retained_legacy_compatibility_entry"
+    ],
+    "required_verification": [
+      "direct_skill_path_parity",
+      "opl_hosted_path_parity",
+      "no_forbidden_write",
+      "no_active_generic_owner_caller",
+      "replacement_or_no_regression_evidence",
+      "receipt_ref_reconciliation",
+      "git_diff_check"
+    ]
   }
 }
