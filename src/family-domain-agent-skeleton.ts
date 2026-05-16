@@ -389,10 +389,10 @@ function buildPhysicalSkeletonLayoutAudit(args: {
           : 'locator_surface_declared',
     issues: args.issues,
     next_evidence_required: [
-      'path_compatibility_audit',
       'direct_skill_path_parity',
       'opl_hosted_path_parity',
       'restore_provenance_proof',
+      'no_active_caller_proof',
       'no_forbidden_artifact_blob_proof',
     ],
     authority_boundary: {
