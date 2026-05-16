@@ -64,6 +64,7 @@
 
 - [OPL 开发文档组合整理](../active/development-document-portfolio.md)：旧 runtime / product-entry / migration 文档按内容吸收、保留、降级、退役或归档的当前入口。
 - [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.md)：完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架、domain-agent 边界、语言/runtime 取舍和旧面退役的总入口。
+- [OPL Agent Lab 控制面边界](../runtime/opl-agent-lab-control-plane.md)：Framework 内部统一 eval / improvement control plane 的 runtime 支撑说明；只组织 refs、evidence、owner route 和 follow-up projection，不持有 domain truth、quality verdict 或 artifact authority。
 - [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.md)：provider-backed production online runtime 必需 substrate 的当前支撑计划。
 - [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)：Runtime Manager、provider readiness、native helper 和 state index 边界的当前支撑目标。
 - [OPL 与 Foundry Agents 理想目标态](./runtime-substrate/opl-family-agent-ideal-state.md)：OPL Framework、Foundry Agents 与 One Person Lab App 的目标分层参考，也承载 App Runtime Workbench / 运行状态页的人用工作台理想形态。

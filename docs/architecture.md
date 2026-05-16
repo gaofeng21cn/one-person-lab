@@ -31,6 +31,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 App repo 通过 `opl-aion-shell` 提供的 GUI shell 都消费同一套 runtime truth
 - OPL hosted integration 是 OPL 产品级管理/诊断/投影层；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel
 - family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只服务 dev/CI/offline diagnostic baseline，`hermes_agent` 是显式非默认 executor adapter/backend；旧 Hermes provider / Gateway 语料只作为 proof、provenance、diagnostic、fixture 或负向 guard 读取，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
+- OPL Agent Lab 属于 Framework 内部 eval / improvement control plane：它把 descriptor、stage attempt、provider receipt、domain-owned eval/proof refs 和 operator blocker 组织成 lab run、improvement candidate、acceptance evidence 与 follow-up projection；它不接管 MAS/MAG/RCA 的 domain truth、quality verdict、artifact authority、memory body 或 owner receipt authority
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
 - `opl install` 默认安装或复用 Codex、family runtime provider、MAS/MAG/RCA domain modules 与推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
 - 首启 readiness 分为 Core、Domain modules、family runtime provider 三层；Full OPL readiness 要求三层都 ready
@@ -102,6 +103,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
 - `opl status runtime` 顶层报告 provider-backed family runtime、provider set 与 OPL-managed session ledger；旧 Hermes diagnostics、recent sessions 镜像与 process usage 不再作为 active runtime status 字段
 - `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
+- `opl agent lab` 目标控制面：统一组织 framework-level eval run、improvement candidate、acceptance evidence、owner route 和 follow-up projection；它只引用 domain-owned proof/eval/receipt/artifact locator，不产生 domain ready、quality、publication、fundability、visual 或 export verdict
 - 可选 Rust `OPL native helper` 的 registry，例如 system probe、native doctor、runtime watch、artifact indexer、state indexer
 - Rust helper 的 package lifecycle：`native:build`、`native:doctor`、`native:repair`、`native:test`，以及随 npm package 分发的 Cargo workspace 与 helper 脚本
 - Rust helper 的 prebuild/cache lifecycle：优先消费匹配平台与 crate version 的 prebuild manifest，把 binaries 安装进 `OPL_STATE_DIR` cache；缺失或无效时回到本地 Cargo build
@@ -114,6 +116,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - domain truth / quality verdict / artifact authority
 - domain memory body 或 memory accept/reject decision
 - domain truth
+- domain-owned eval/proof 结论或 owner receipt authority
 - concrete executor
 - domain stage pack 内部专家判断
 - provider system-service lifecycle implementation beyond invoking supported install/repair/status commands
