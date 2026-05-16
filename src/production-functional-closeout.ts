@@ -12,6 +12,7 @@ import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-cont
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import { buildProviderReadiness } from './production-functional-closeout-provider-readiness.ts';
 import { buildProductionEvidenceReadiness } from './production-functional-closeout-evidence-readiness.ts';
+import { buildProductionCloseoutControlLoopSummary } from './production-functional-closeout-control-loop.ts';
 import {
   masGuardedApplyOwnerReceiptRefs,
   masGuardedApplyTypedBlockers,
@@ -422,6 +423,65 @@ function summarizeAttemptEvidence(
   const operatorActionRouting = summarizeOperatorActionRouting(attempts, closeouts, signals);
   const genericProjections = summarizeGenericProjections(attempts, closeouts, signals);
   const transitionBridgeEvidence = genericProjections.projections.transition_bridge_evidence;
+  const domainBreakdown = domainIds.map((domainId) => {
+    const domainAttempts = attempts.filter((attempt) => attempt.domain_id === domainId);
+    const domainContracts = domainAttempts.map(contractForAttempt);
+    const domainLifecycleProofs = domainAttempts.map(lifecycleForAttempt);
+    const domainLifecycleRefs = lifecycleProofRefs(domainLifecycleProofs);
+    const domainMemory = memoryRefEvidence.domains.find((entry) => entry.domain_id === domainId);
+    const domainActions = operatorActionRouting.actions.filter((action) => action.domain_id === domainId);
+    const domainTransitionBridgeAttempts = transitionBridgeEvidence.attempts.filter((attempt) =>
+      attempt.domain_id === domainId
+    );
+    return {
+      domain_id: domainId,
+      attempt_count: domainAttempts.length,
+      closeout_packet_count: domainMemory?.closeout_count ?? 0,
+      controlled_apply_statuses: domainContracts.map((contract) => contract.apply_status),
+      owner_receipt_refs: uniqueStrings([
+        ...domainContracts.flatMap((contract) => contract.owner_receipt_refs),
+        ...masGuardedApplyOwnerReceiptRefs(domainAttempts),
+      ]),
+      no_regression_evidence_refs: domainContracts.flatMap((contract) => contract.no_regression_evidence_refs),
+      typed_blockers: [
+        ...domainContracts.flatMap((contract) => contract.typed_blockers),
+        ...masGuardedApplyTypedBlockers(domainAttempts),
+      ],
+      lifecycle_apply_statuses: domainLifecycleProofs.map((proof) => proof.apply_status),
+      lifecycle_restore_refs: domainLifecycleRefs.restore_refs,
+      lifecycle_domain_receipt_refs: domainLifecycleRefs.domain_receipt_refs,
+      consumed_refs: domainMemory?.consumed_refs ?? [],
+      consumed_memory_refs: domainMemory?.consumed_memory_refs ?? [],
+      writeback_receipt_refs: domainMemory?.writeback_receipt_refs ?? [],
+      rejected_write_count: domainMemory?.rejected_write_count ?? 0,
+      operator_action_route_count: domainActions.length,
+      operator_action_route_refs: uniqueStrings(domainActions.map((action) => action.command_or_surface_ref)),
+      operator_app_surface_route_refs: actionRouteRefs(domainActions, 'app_surface'),
+      operator_provider_signal_route_refs: actionRouteRefs(domainActions, 'provider_signal'),
+      operator_domain_sidecar_route_refs: actionRouteRefs(domainActions, 'domain_sidecar'),
+      operator_direct_skill_route_refs: actionRouteRefs(domainActions, 'direct_skill'),
+      transition_bridge_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+        attempt.evidence.receipt_refs
+      )),
+      transition_bridge_owner_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+        attempt.evidence.owner_receipt_refs
+      )),
+      transition_bridge_no_regression_evidence_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+        attempt.evidence.no_regression_evidence_refs
+      )),
+      transition_bridge_typed_blocker_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
+        attempt.evidence.typed_blocker_refs
+      )),
+      transition_bridge_typed_blocker_count: domainTransitionBridgeAttempts.reduce((count, attempt) =>
+        count + attempt.evidence.typed_blocker_count, 0
+      ),
+    };
+  });
+  const controlLoopSummary = buildProductionCloseoutControlLoopSummary({
+    attempts,
+    domainBreakdown,
+    operatorActionRouting,
+  });
   return {
     surface_kind: 'opl_stage_attempt_functional_closeout_evidence',
     ledger_attempt_count: attempts.length,
@@ -451,6 +511,7 @@ function summarizeAttemptEvidence(
     },
     operator_action_routing_summary: operatorActionRouting.summary,
     transition_bridge_evidence_summary: transitionBridgeEvidence.summary,
+    control_loop_summary: controlLoopSummary,
     generic_projection_summary: genericProjections.summary,
     generic_projections: genericProjections,
     operator_action_routing: {
@@ -462,60 +523,7 @@ function summarizeAttemptEvidence(
       actions: operatorActionRouting.actions,
       authority_boundary: operatorActionRouting.authority_boundary,
     },
-    domain_breakdown: domainIds.map((domainId) => {
-      const domainAttempts = attempts.filter((attempt) => attempt.domain_id === domainId);
-      const domainContracts = domainAttempts.map(contractForAttempt);
-      const domainLifecycleProofs = domainAttempts.map(lifecycleForAttempt);
-      const domainLifecycleRefs = lifecycleProofRefs(domainLifecycleProofs);
-      const domainMemory = memoryRefEvidence.domains.find((entry) => entry.domain_id === domainId);
-      const domainActions = operatorActionRouting.actions.filter((action) => action.domain_id === domainId);
-      const domainTransitionBridgeAttempts = transitionBridgeEvidence.attempts.filter((attempt) =>
-        attempt.domain_id === domainId
-      );
-      return {
-        domain_id: domainId,
-        attempt_count: domainAttempts.length,
-        closeout_packet_count: domainMemory?.closeout_count ?? 0,
-        controlled_apply_statuses: domainContracts.map((contract) => contract.apply_status),
-        owner_receipt_refs: uniqueStrings([
-          ...domainContracts.flatMap((contract) => contract.owner_receipt_refs),
-          ...masGuardedApplyOwnerReceiptRefs(domainAttempts),
-        ]),
-        no_regression_evidence_refs: domainContracts.flatMap((contract) => contract.no_regression_evidence_refs),
-        typed_blockers: [
-          ...domainContracts.flatMap((contract) => contract.typed_blockers),
-          ...masGuardedApplyTypedBlockers(domainAttempts),
-        ],
-        lifecycle_apply_statuses: domainLifecycleProofs.map((proof) => proof.apply_status),
-        lifecycle_restore_refs: domainLifecycleRefs.restore_refs,
-        lifecycle_domain_receipt_refs: domainLifecycleRefs.domain_receipt_refs,
-        consumed_refs: domainMemory?.consumed_refs ?? [],
-        consumed_memory_refs: domainMemory?.consumed_memory_refs ?? [],
-        writeback_receipt_refs: domainMemory?.writeback_receipt_refs ?? [],
-        rejected_write_count: domainMemory?.rejected_write_count ?? 0,
-        operator_action_route_count: domainActions.length,
-        operator_action_route_refs: uniqueStrings(domainActions.map((action) => action.command_or_surface_ref)),
-        operator_app_surface_route_refs: actionRouteRefs(domainActions, 'app_surface'),
-        operator_provider_signal_route_refs: actionRouteRefs(domainActions, 'provider_signal'),
-        operator_domain_sidecar_route_refs: actionRouteRefs(domainActions, 'domain_sidecar'),
-        operator_direct_skill_route_refs: actionRouteRefs(domainActions, 'direct_skill'),
-        transition_bridge_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
-          attempt.evidence.receipt_refs
-        )),
-        transition_bridge_owner_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
-          attempt.evidence.owner_receipt_refs
-        )),
-        transition_bridge_no_regression_evidence_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
-          attempt.evidence.no_regression_evidence_refs
-        )),
-        transition_bridge_typed_blocker_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
-          attempt.evidence.typed_blocker_refs
-        )),
-        transition_bridge_typed_blocker_count: domainTransitionBridgeAttempts.reduce((count, attempt) =>
-          count + attempt.evidence.typed_blocker_count, 0
-        ),
-      };
-    }),
+    domain_breakdown: domainBreakdown,
     memory_ref_evidence: memoryRefEvidence,
     authority_boundary: {
       opl_writes_domain_truth: false,
