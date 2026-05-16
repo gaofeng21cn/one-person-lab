@@ -64,6 +64,7 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   const files = [
     'contracts/opl-framework/runtime-manager-contract.json',
     'contracts/opl-framework/family-runtime-attempt-contract.json',
+    'contracts/opl-framework/functional-agent-runtime-harness-contract.json',
     'contracts/opl-framework/family-runtime-online-substrate-contract.json',
     'contracts/opl-framework/fresh-install-test-matrix.json',
   ];
@@ -170,6 +171,17 @@ test('package.json exports the unified domain-agent descriptor read model', () =
   );
   assert.equal(
     fs.existsSync(path.join(repoRoot, 'src/family-domain-agent-descriptor.ts')),
+    true,
+  );
+});
+
+test('package.json exports the OPL functional agent runtime harness', () => {
+  assert.equal(
+    packageJson.exports?.['./functional-agent-runtime-harness'],
+    './dist/functional-agent-runtime-harness.js',
+  );
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'src/functional-agent-runtime-harness.ts')),
     true,
   );
 });

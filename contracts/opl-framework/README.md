@@ -9,6 +9,7 @@ It is repo-tracked because the current framework needs stable machine-readable i
 - admitted domain-agent / Foundry package catalog projection
 - provider-backed runtime attempts
 - domain-neutral transition table runner and matrix evaluation
+- functional agent runtime harness coverage for queue, typed closeout, refs-only memory writeback, human gate, retry, dead-letter, and repair transitions
 - framework runtime dependency location for OPL-compatible agents
 - Runtime Manager readiness and state projection
 - optional native-helper lifecycle checks
@@ -31,7 +32,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 ## How To Read This Directory
 
 - `workstreams.json`, `domains.json`, `stage-selection-vocabulary.json`, `task-topology.json`, and `public-surface-index.json` define the active stage-led framework selection surface, the Framework / App / Foundry product-layer owner split, and the `opl_framework_locator` surface used by OPL-compatible agents to locate their external framework runtime dependency.
-- `family-runtime-online-substrate-contract.json`, `family-runtime-attempt-contract.json`, `family-transition-runner-contract.json`, `standard-domain-agent-skeleton-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active provider-backed runtime/control-plane contracts. `family-runtime-online-substrate-contract.json` also declares the Temporal provider SLO cadence action envelope used to route supervised production proof execution without authorizing domain readiness.
+- `family-runtime-online-substrate-contract.json`, `family-runtime-attempt-contract.json`, `family-transition-runner-contract.json`, `functional-agent-runtime-harness-contract.json`, `standard-domain-agent-skeleton-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active provider-backed runtime/control-plane contracts. `functional-agent-runtime-harness-contract.json` proves constructed and domain-declared functional chains without authorizing live soak or domain readiness. `family-runtime-online-substrate-contract.json` also declares the Temporal provider SLO cadence action envelope used to route supervised production proof execution without authorizing domain readiness.
 - `family-executor-adapter-defaults.json` remains useful as a shared executor contract.
 - retired gateway, federation, routed-action, onboarding, acceptance, governance, and example corpora live outside this active contract root.
 
@@ -46,6 +47,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - `family-runtime-online-substrate-contract.json`
 - `family-runtime-attempt-contract.json`
 - `family-transition-runner-contract.json`
+- `functional-agent-runtime-harness-contract.json`
 - `standard-domain-agent-skeleton-contract.json`
 - `fresh-install-test-matrix.json`
 - `public-surface-index.json`
@@ -55,7 +57,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 
 - treat this directory as the active OPL framework contract set
 - treat `opl framework locate` / `opl_framework_locator` as the stable way for standalone OPL-compatible agents to find their external OPL Framework dependency
-- treat Runtime Manager, family runtime attempt, family transition runner, and standard domain-agent skeleton contracts as active for the provider-backed family runtime line
+- treat Runtime Manager, family runtime attempt, family transition runner, functional agent runtime harness, and standard domain-agent skeleton contracts as active for the provider-backed family runtime line
 - keep domain truth owned by the linked domain repositories, not by this directory
 - Foundry Agents should declare and adapt to these framework contracts instead of vendoring or forking their own OPL runtime truth
 - treat One Person Lab App as a projection consumer and workbench surface, not as a runtime provider or domain authority

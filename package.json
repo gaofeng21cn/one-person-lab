@@ -7,6 +7,7 @@
     "./automation-companions": "./dist/automation-companions.js",
     "./family-action-catalog": "./dist/family-action-catalog.js",
     "./family-domain-agent-descriptor": "./dist/family-domain-agent-descriptor.js",
+    "./functional-agent-runtime-harness": "./dist/functional-agent-runtime-harness.js",
     "./family-transition-runner": "./dist/family-transition-runner.js",
     "./family-shared-release": "./dist/family-shared-release.js",
     "./family-domain-catalog": "./dist/family-domain-catalog.js",

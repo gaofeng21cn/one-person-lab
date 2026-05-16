@@ -16,6 +16,7 @@
 - `contracts/opl-framework/README.md`：这些 active JSON contract 的人类可读说明
 - `contracts/opl-framework/runtime-manager-contract.json`：当前 OPL Runtime Manager 产品控制面合同；它冻结 OPL 如何管理 provider-backed family runtime、typed family queue、stage attempt ledger、domain dispatch、可选 native helper lifecycle、高频状态索引、prebuild/cache 策略与 freshness 口径，同时明确不复制 runtime kernel
 - `contracts/opl-framework/family-runtime-online-substrate-contract.json`：provider-backed family runtime 合同；它冻结 `local_sqlite` 与 `temporal` 的 owner split、queue state、stage attempt ledger、degraded diagnostic mode 与 forbidden authority
+- `contracts/opl-framework/functional-agent-runtime-harness-contract.json`：OPL functional agent runtime harness 合同；它冻结构造状态机、domain-declared transition matrix、queue/stage attempt、typed closeout、refs-only memory writeback、human gate、retry/dead-letter 与 repair route 的功能性验证边界，同时明确 harness pass 不等于 live soak、domain ready、quality/export verdict 或 memory body apply
 - `contracts/opl-framework/native-helper-contract.json`：OPL Rust native helper 的 JSON stdio 合同；它冻结 `opl-sysprobe`、`opl-doctor-native`、`opl-runtime-watch`、`opl-artifact-indexer` 与 `opl-state-indexer` 的输入输出边界，以及 helper 的 build / doctor / repair / prebuild / package 分发面
 - `contracts/opl-framework/fresh-install-test-matrix.json`：OPL fresh install 与 GUI 首启验证矩阵；它冻结 CLI clean-room 场景、首启 JSONL 日志、GUI accessibility labels 与 VM 工件要求
 - `contracts/family-orchestration/*.schema.json`：跨 active 四仓线（`one-person-lab` + `MAS` + `MAG` + `RCA`）统一的 family orchestration companion schemas
