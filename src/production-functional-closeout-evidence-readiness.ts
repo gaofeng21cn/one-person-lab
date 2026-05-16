@@ -47,6 +47,7 @@ type AttemptEvidence = {
   controlled_apply_summary: SummaryProjection;
   lifecycle_guarded_apply_summary: SummaryProjection;
   memory_ref_summary: SummaryProjection;
+  usage_projection?: SummaryProjection;
   transition_bridge_evidence_summary: SummaryProjection;
   domain_breakdown: AttemptEvidenceDomain[];
 };
@@ -60,6 +61,10 @@ type ProductionEvidenceReadinessInput = {
 
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function isSummaryRecord(value: unknown): value is SummaryProjection {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function domainRefsOrTypedBlockers(domain: AttemptEvidenceDomain) {
@@ -126,6 +131,7 @@ function readinessGates(input: ProductionEvidenceReadinessInput) {
 
 export function buildProductionEvidenceReadiness(input: ProductionEvidenceReadinessInput) {
   const pendingGates = readinessGates(input);
+  const usageProjection = input.attemptEvidence.usage_projection ?? {};
   const domains = input.attemptEvidence.domain_breakdown.map((domain) => ({
     domain_id: domain.domain_id,
     coverage_status: domainCoverageStatus(domain),
@@ -188,7 +194,28 @@ export function buildProductionEvidenceReadiness(input: ProductionEvidenceReadin
       controlled_apply: input.attemptEvidence.controlled_apply_summary,
       lifecycle_guarded_apply: input.attemptEvidence.lifecycle_guarded_apply_summary,
       memory_refs: input.attemptEvidence.memory_ref_summary,
+      usage_projection: usageProjection,
       transition_bridge: input.attemptEvidence.transition_bridge_evidence_summary,
+    },
+    resource_pressure: {
+      surface_kind: 'opl_operator_resource_pressure_signal',
+      projection_scope: 'production_evidence_readiness',
+      usage_observed_attempt_count: numberValue(usageProjection.resource_usage_observed_attempt_count),
+      retry_budget_pressure_attempt_count: numberValue(usageProjection.retry_pressure_attempt_count),
+      retry_budget_exhausted_count: numberValue(usageProjection.retry_budget_exhausted_count),
+      token: isSummaryRecord(usageProjection.token) ? usageProjection.token : {},
+      cost: isSummaryRecord(usageProjection.cost) ? usageProjection.cost : {},
+      api_calls: isSummaryRecord(usageProjection.api_calls) ? usageProjection.api_calls : {},
+      duration: isSummaryRecord(usageProjection.duration) ? usageProjection.duration : {},
+      source_refs: Array.isArray(usageProjection.source_refs) ? usageProjection.source_refs : [],
+      authority_boundary: {
+        opl: 'observed_usage_pressure_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        can_change_executor: false,
+        can_auto_degrade: false,
+        can_execute_domain_action: false,
+        can_authorize_domain_ready: false,
+      },
     },
     domain_coverage: {
       domain_count: domains.length,

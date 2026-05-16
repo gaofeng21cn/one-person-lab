@@ -178,6 +178,7 @@ export function buildStageAttemptTrayItems(input: {
         observability_slo: record(attempt.observability_slo),
         workspace_source_intake: record(attempt.workspace_source_intake),
         memory_locator_index: record(attempt.memory_locator_index),
+        usage_projection: record(attempt.usage_projection),
         package_export_lifecycle: record(attempt.package_export_lifecycle),
         action_routing: record(attempt.action_routing),
         transition_bridge_evidence: record(attempt.transition_bridge_evidence),
