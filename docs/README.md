@@ -44,7 +44,6 @@
 - [OPL 系列项目开发主参考](./active/opl-family-development-reference.md)
 - [OPL Family 内容级文档收敛](./references/convergence-governance/family-content-level-docs-consolidation-2026-05-11.md)
 - [OPL 当前开发线路](./active/current-development-lines.md)
-- [OPL 元智能体开发计划](./active/opl-meta-agent-builder-plan.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.md)
 - [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md)
 - [OPL 与 Foundry Agents 理想目标态](./references/runtime-substrate/opl-family-agent-ideal-state.md)

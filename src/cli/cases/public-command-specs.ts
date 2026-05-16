@@ -1,5 +1,5 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { buildAgentBuilderMetaAgentPlan, buildCompleteAgentLabControlPlane } from '../../agent-lab-complete.ts';
+import { buildCompleteAgentLabControlPlane } from '../../agent-lab-complete.ts';
 import { agentLabRefSummary, buildLonglineAgentLabResult, buildSampleAgentLabResult } from '../../agent-lab.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
@@ -92,13 +92,6 @@ function buildAgentLabCompletePayload() {
   return {
     version: 'g2',
     agent_lab_complete: buildCompleteAgentLabControlPlane(),
-  };
-}
-
-function buildAgentBuilderMetaAgentPayload() {
-  return {
-    version: 'g2',
-    agent_builder_meta_agent: buildAgentBuilderMetaAgentPlan(),
   };
 }
 
@@ -446,16 +439,6 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['agent-lab complete']);
         return buildAgentLabCompletePayload();
-      },
-    },
-    'agents meta-builder plan': {
-      usage: 'opl agents meta-builder plan',
-      summary: 'Show the OPL meta-agent plan for building, testing, optimizing, and delivering new agents.',
-      examples: ['opl agents meta-builder plan', 'opl agents meta-builder plan --json'],
-      group: 'framework',
-      handler: (args) => {
-        assertNoArgs(args, publicCommandSpecs['agents meta-builder plan']);
-        return buildAgentBuilderMetaAgentPayload();
       },
     },
     'packages manifest': packagesManifestSpec,
