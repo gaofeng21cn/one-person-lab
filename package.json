@@ -6,6 +6,7 @@
   "exports": {
     "./automation-companions": "./dist/automation-companions.js",
     "./agent-lab": "./dist/agent-lab.js",
+    "./agent-lab-complete": "./dist/agent-lab-complete.js",
     "./family-action-catalog": "./dist/family-action-catalog.js",
     "./family-domain-agent-descriptor": "./dist/family-domain-agent-descriptor.js",
     "./functional-agent-runtime-harness": "./dist/functional-agent-runtime-harness.js",
