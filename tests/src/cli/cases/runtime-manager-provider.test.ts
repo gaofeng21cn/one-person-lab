@@ -55,6 +55,23 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       output.runtime_manager.registration_registry.required_domain_registration_fields.includes('state_index_inputs'),
       true,
     );
+    assert.equal(output.runtime_manager.standard_domain_agent_scaffold.surface_kind, 'opl_standard_domain_agent_scaffold');
+    assert.equal(output.runtime_manager.standard_domain_agent_scaffold.owner, 'one-person-lab');
+    assert.equal(output.runtime_manager.standard_domain_agent_scaffold.generation_policy.creates_files, false);
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.opl_owned_generic_primitives
+        .some((primitive: { primitive_id: string }) => primitive.primitive_id === 'queue_attempt_ledger'),
+      true,
+    );
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.forbidden_domain_generic_owner_roles
+        .includes('generic_scheduler_owner'),
+      true,
+    );
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.domain_retained_thin_surfaces.includes('owner_receipt'),
+      true,
+    );
     assert.equal(output.runtime_manager.native_helper_target.status, 'contracted_optional_rust_helpers');
     assert.equal(output.runtime_manager.native_helper_target.language, 'rust');
     assert.equal(output.runtime_manager.native_helper_target.protocol.transport, 'cli_stdio');
@@ -79,6 +96,10 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
+    assert.equal(
+      runtimeManagerContract.standard_domain_agent_scaffold.surface_kind,
+      output.runtime_manager.standard_domain_agent_scaffold.surface_kind,
+    );
     assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

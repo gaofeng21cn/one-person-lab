@@ -138,3 +138,51 @@ test('standard domain-agent skeleton contract keeps repo source separate from re
   assert.equal((contract.artifact_boundary as Record<string, unknown>).artifact_roots_are_locators, true);
   assert.ok(((contract.artifact_boundary as Record<string, string[]>).opl_forbidden_content).includes('quality_verdict'));
 });
+
+test('standard domain-agent scaffold contract forbids domain-owned generic framework primitives', () => {
+  const contract = readJson('contracts/opl-framework/standard-domain-agent-skeleton-contract.json');
+  const scaffold = contract.new_agent_scaffold as Record<string, any>;
+
+  assert.equal(scaffold.surface_kind, 'opl_standard_domain_agent_scaffold');
+  assert.equal(scaffold.owner, 'one-person-lab');
+  assert.equal(scaffold.command, 'opl agents scaffold');
+  assert.equal(scaffold.generation_policy.scaffold_command_is_read_only, true);
+  assert.equal(scaffold.generation_policy.creates_files, false);
+  assert.deepEqual(scaffold.docs_taxonomy, [
+    'active',
+    'public',
+    'product',
+    'runtime',
+    'delivery',
+    'source',
+    'policies',
+    'specs',
+    'references',
+    'history',
+  ]);
+  for (const primitive of [
+    'scheduler_supervision_cadence',
+    'provider_slo_and_wakeup_transport',
+    'queue_attempt_ledger',
+    'generic_transition_runner',
+    'workspace_source_intake_shell',
+    'memory_locator_writeback_transport',
+    'artifact_package_lifecycle_shell',
+    'operator_workbench_drilldown_shell',
+    'observability_repair_projection',
+  ]) {
+    assert.ok(scaffold.opl_owned_generic_primitives.includes(primitive));
+  }
+  for (const forbiddenRole of [
+    'generic_scheduler_owner',
+    'generic_queue_owner',
+    'generic_attempt_ledger_owner',
+    'generic_operator_workbench_owner',
+  ]) {
+    assert.ok(scaffold.forbidden_domain_generic_owner_roles.includes(forbiddenRole));
+  }
+  assert.ok(scaffold.domain_retained_thin_surfaces.includes('domain_truth'));
+  assert.ok(scaffold.domain_retained_thin_surfaces.includes('owner_receipt'));
+  assert.ok(scaffold.retirement_gate_required_evidence.includes('no_active_default_caller'));
+  assert.ok(scaffold.required_verification.includes('git_diff_check'));
+});

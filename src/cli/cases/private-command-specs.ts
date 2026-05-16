@@ -5,6 +5,7 @@ import { buildProductEntryDoctor, runProductEntryResume } from '../../product-en
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
+import { buildStandardDomainAgentScaffold } from '../../standard-domain-agent-scaffold.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../agent-executor.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
@@ -246,6 +247,16 @@ export function buildInternalCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime index']);
         return buildNativeIndexSummary();
+      },
+    },
+    'agents scaffold': {
+      usage: 'opl agents scaffold',
+      summary:
+        'Show the OPL-owned standard domain-agent scaffold, generic primitive owner map, and legacy retirement checklist.',
+      examples: ['opl agents scaffold'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['agents scaffold']);
+        return buildStandardDomainAgentScaffold();
       },
     },
     'family-runtime': {

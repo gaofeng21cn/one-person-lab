@@ -151,6 +151,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl system reconcile-modules',
         'opl actions list',
         'opl agents list',
+        'opl agents scaffold',
         'opl agents descriptors',
         'opl agents descriptor --domain mas',
         'opl domain-memory list',

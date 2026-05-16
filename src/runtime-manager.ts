@@ -4,6 +4,7 @@ import {
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
+import { buildStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -398,6 +399,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
           'non_goals',
         ],
       },
+      standard_domain_agent_scaffold: buildStandardDomainAgentScaffold().standard_domain_agent_scaffold,
       native_helper_target: {
         status: 'contracted_optional_rust_helpers',
         language: 'rust',

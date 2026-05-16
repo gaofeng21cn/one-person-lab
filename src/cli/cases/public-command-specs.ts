@@ -575,6 +575,11 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildFamilyAgentInspect(getContracts(), args),
     },
+    'agents scaffold': cloneCommandSpec(commandSpecs['agents scaffold'], {
+      usage: 'opl agents scaffold',
+      examples: ['opl agents scaffold'],
+      group: 'domain',
+    }),
     'agents descriptors': {
       usage: 'opl agents descriptors',
       summary: 'List unified domain-agent descriptors projected from entry, stage, action, memory, skill, runtime, and artifact refs.',
