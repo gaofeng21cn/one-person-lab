@@ -134,6 +134,10 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 
 `family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。stage attempt query 现在也会投影 locator-only lifecycle primitive：workspace/runtime/artifact roots、已索引的 closeout 或 consumed refs、已声明的 restore refs 以及 cleanup gate。这个投影严格只读；`OPL` 可以索引 refs 并显示缺失的 restore proof，但不能 apply retention、删除 artifact、恢复 workspace 内容或写入 domain truth。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。同理，`domain_memory_descriptor` 只暴露 locator / freshness / receipt refs，不把 memory content 或 writeback authority 移入 `OPL`。
 
+`family-runtime-lifecycle-index` 是这一边界下 OPL-owned refs-only SQLite sidecar index。它只在 OPL state root 下记录 domain id、surface id、source ref、receipt ref、checksum 和 opaque payload refs；它不是 domain truth store、memory body store、quality verdict store、artifact authority 或 package/export readiness store。MAS 这类历史 runtime lifecycle SQLite 实现，在 OPL replacement 存在后必须归类为 domain sidecar reference adapter 或 file-authority refs，不能再声明为 domain-owned generic persistence engine。
+
+`functional_privatization_audit` 是 OPL-owned 统一读模型，用来归一化 domain repo 自声明的非知识层功能模块。OPL 接受 MAS `functional_consumer_boundary`、MAG `mag_consumer_thinning_contract.privatized_functional_module_audit`、RCA `runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit` 和标准 scaffold `functional_privatization_audit` 等 repo-local 形状。每个模块会被归为 `opl_owned_replacement`、`domain_thin_adapter`、`domain_authority` 或 `retire_tombstone`；如果 domain repo 声明 generic runtime owner，或把证据不足的 production soak 写成完成，就进入 blocker。
+
 ## Conflict / Blocker Envelope Freeze
 
 `family-conflict-envelope.schema.json` 是 queue、stage attempt、closeout 和 App/operator projection 的统一阻塞与冲突语法。所有“跑不下去 / 不能确认完成 / 两边说法冲突”的情况都应投影成 `kind=opl_conflict_or_blocker.v1` 的结构化记录，而不是在 queue、attempt、closeout 和 App 里各自发明状态词。

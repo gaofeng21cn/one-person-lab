@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `family_development_reference`
 State: `active_support`
 Machine boundary: 本文是人读开发参考。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Date: `2026-05-14`
+Date: `2026-05-16`
 
 ## 结论
 
@@ -34,6 +34,7 @@ OPL 仓负责所有 domain-neutral、跨 MAS/MAG/RCA 可复用、服务长期运
 - provider-backed stage runtime、Temporal provider、stage attempt ledger、queue、retry/dead-letter、signal/query、human gate transport 和 resume token；
 - workspace/source intake shell、workspace registry、runtime artifact root locator、artifact locator、package/export lifecycle shell、restore/retention/migration ledger；
 - domain memory locator/index、body-free inventory、writeback proposal/receipt transport、freshness 与 operator grouping；
+- generic persistence / runtime lifecycle SQLite index、refs-only sidecar index、functional privatization audit read model、checksum/receipt ref registry 和 legacy diagnostic/tombstone projection；
 - operator projection、attention queue、route/decision graph shell、review/repair queue shell、quality/readiness projection shell、observability/SLO 和 repair command projection；
 - module install/update、skill sync、domain discovery、standard domain-agent skeleton、contract validation、no-forbidden-write proof 和 family release/shared helper；
 - One Person Lab App 需要消费的通用 workbench contracts、action routing shell、runtime snapshot 和 drilldown 语义。
@@ -47,6 +48,7 @@ OPL 不负责 domain truth、domain quality verdict、publication/fundability/vi
 - stage activity bridge：OPL 负责从 typed queue 到 provider-backed stage attempt、sidecar dispatch、typed closeout ledger、owner receipt refs 与 typed blocker 的通用传输；真实 MAS paper、MAG grant、RCA visual owner receipt chain 继续由 domain owner 闭合。
 - App / workbench 产品化：OPL App 负责把 workspace/source intake、artifact gallery、package/export lifecycle、route graph、review/repair queue、quality/readiness、observability/SLO、memory locator 和 action routing 这组通用 projection 做成人用 drilldown；domain repo 只提供 refs、verdict refs、route nodes/edges 和 receipts。
 - memory / artifact / lifecycle transport：OPL 可实现 locator、body-free inventory、writeback proposal / receipt transport、retention / restore ledger 和 provenance shell；memory body、accept/reject、artifact mutation 和 package/export verdict 必须回到 domain receipt。
+- functional privatization audit：OPL 持有统一读模型，读取 MAS/MAG/RCA manifest 里的私有化功能模块清单，并把每项归为 OPL replacement、domain thin adapter、domain authority 或 retire/tombstone；domain repo 不能把 scheduler、persistence、native helper envelope、review/repair transport 等通用外围写成自己的长期 owner。
 - physical skeleton / legacy follow-through gate：OPL 负责 no-active-caller、replacement parity、provenance retention、history/tombstone、no-retained-legacy-entry 与 delete readiness 的只读门禁；实际文件移动或删除由对应 repo owner 在 parity / provenance 证据齐备后执行。
 
 ### Domain repo 负责
@@ -60,7 +62,7 @@ MAS/MAG/RCA 这类 Foundry Agent repo 负责领域大脑、领域交付 authorit
 - direct app skill path、domain CLI/MCP/API、descriptor、contract/schema、thin sidecar export/dispatch adapter、domain projection builder、domain transition spec/table、quality gate、artifact locator contract、receipt schema、tests 和 typed blocker；
 - direct path 与 OPL-hosted path 的语义等价、no-forbidden-write、no-regression evidence 和 owner-chain 证据。
 
-Domain repo 不应长期维护 generic scheduler、generic queue、generic attempt ledger、generic state-machine runner、generic workspace/source intake、generic memory locator、generic artifact lifecycle、generic workbench、generic observability 或跨 domain App shell。需要 OPL 托管运行时，domain repo 声明 stage pack、transition spec、authority refs、receipt schema、projection builder 和 thin sidecar / adapter，由 OPL Framework 承载运行、恢复、排队、唤醒、投影和审计。
+Domain repo 不应长期维护 generic scheduler、generic queue、generic attempt ledger、generic state-machine runner、generic workspace/source intake、generic memory locator、generic persistence engine、generic SQLite lifecycle index、generic artifact lifecycle、generic workbench、generic observability 或跨 domain App shell。需要 OPL 托管运行时，domain repo 声明 stage pack、transition spec、authority refs、receipt schema、projection builder、functional privatization audit 和 thin sidecar / adapter，由 OPL Framework 承载运行、恢复、排队、唤醒、索引、投影和审计。MAS 历史上的 `runtime_lifecycle.sqlite` 这类设计只可作为 domain sidecar reference adapter / file authority refs 继续被 OPL 消费，不能再作为 MAS-owned generic persistence layer 扩展。
 
 单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。目录结构应与 OPL family taxonomy 保持同名一致，代码内部结构可以按领域实现差异保留，但 OPL-facing skeleton、docs taxonomy 和 owner boundary 应统一。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 
@@ -84,6 +86,7 @@ App 不持有 OPL runtime，不持有 domain truth，也不把 provider completi
 | --- | --- |
 | 是否能被 MAS/MAG/RCA 两个以上 domain 复用？ | 优先进入 OPL/shared primitive。 |
 | 是否只是 transport、locator、index、ledger、projection、receipt ref、operator shell、UI shell 或 SLO？ | 优先进入 OPL/App。 |
+| 是否是为了减少小文件、做 lifecycle/ref registry、projection cache 或 SQLite sidecar index？ | 优先进入 OPL refs-only persistence/lifecycle primitive；domain repo 只保留 file authority 与 receipt refs。 |
 | 是否会判断研究路线、基金 fundability、视觉方向、质量、memory accept/reject 或 artifact/export readiness？ | 留在 domain repo。 |
 | 是否会写真实 workspace artifact、memory body、manuscript、proposal、deck 或 package？ | 必须由 domain owner receipt 授权；OPL 只持 refs/ledger/projection。 |
 | 是否只是旧 provider、旧 gateway、旧 wrapper、旧 alias 或旧 aggregate test 的兼容入口？ | 迁移 active caller 后直接删除或归档，不保留兼容层。 |

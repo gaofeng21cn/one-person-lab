@@ -11,6 +11,9 @@ import type {
   FamilyTransitionMatrixResult,
   FamilyTransitionSpec,
 } from '../family-transition-runner.ts';
+import type {
+  FunctionalPrivatizationAudit,
+} from '../functional-privatization-audit.ts';
 import type { GrantTransitionOracle } from '../family-transition-oracle-ingestion.ts';
 import type { VisualTransitionSpec } from '../family-transition-visual-ingestion.ts';
 
@@ -511,6 +514,7 @@ export interface NormalizedDomainManifest {
   physical_skeleton_follow_through: JsonRecord | null;
   legacy_retirement_tombstone_proof: JsonRecord | null;
   runtime_residue_retirement: JsonRecord | null;
+  functional_privatization_audit: FunctionalPrivatizationAudit;
   runtime_inventory: NormalizedRuntimeInventory | null;
   task_lifecycle: NormalizedTaskLifecycle | null;
   runtime_control: NormalizedRuntimeControl | null;

@@ -2,6 +2,9 @@ import {
   isRecord,
   normalizeRecordList,
 } from './shared-utils.ts';
+import {
+  buildFunctionalPrivatizationAudit,
+} from '../functional-privatization-audit.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -38,5 +41,6 @@ export function normalizeFunctionalClosureSurfaces(manifest: JsonRecord) {
     runtime_residue_retirement: isRecord(manifest.runtime_residue_retirement)
       ? manifest.runtime_residue_retirement
       : null,
+    functional_privatization_audit: buildFunctionalPrivatizationAudit(manifest),
   };
 }

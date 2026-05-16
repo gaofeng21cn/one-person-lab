@@ -358,12 +358,107 @@ function withDescriptorSurfaces(payload: JsonRecord, options: {
   );
 }
 
+function withFunctionalConsumerBoundary(payload: JsonRecord) {
+  return attachManifestSurface(payload, 'functional_consumer_boundary', {
+    surface_kind: 'mas_functional_consumer_boundary',
+    target_domain_id: 'med-autoscience',
+    functional_surface_classification: {
+      A_opl_owned_mas_consumes: [
+        'runtime_lifecycle_sqlite_reference_adapter',
+        'runtime_storage_maintenance',
+      ],
+      B_mas_domain_authority: [
+        'study_truth',
+        'publication_quality_verdict',
+      ],
+      C_retire_when_replaced_or_uncalled: [
+        'local_launchd_scheduler_install_path',
+      ],
+    },
+    runtime_lifecycle_sqlite_role: {
+      replacement_expectation: {
+        expected_replacements: [
+          'opl_runtime_lifecycle_index_contract',
+          'opl_artifact_lifecycle_storage_audit_shell',
+        ],
+      },
+    },
+  });
+}
+
+function withPrivatizedFunctionalModuleAudit(payload: JsonRecord) {
+  return attachManifestSurface(payload, 'mag_consumer_thinning_contract', {
+    privatized_functional_module_audit: {
+      surface_kind: 'mag_privatized_functional_module_audit',
+      target_domain_id: 'med-autogrant',
+      opl_owned_generic_primitive_consumers: [
+        {
+          module_id: 'session_ledger_attention_queue',
+          classification: 'opl_owned_generic_primitive_consumer',
+          owner: 'one-person-lab',
+          mag_role: 'wakeup_refs_and_safe_action_provider',
+          current_surface_refs: ['/product_entry_manifest/session_continuity'],
+          opl_expected_primitives: ['session_ledger', 'typed_attention_queue'],
+          mag_retained_authority: ['safe_action_refs'],
+        },
+      ],
+      mag_owned_grant_authority_surfaces: [
+        {
+          module_id: 'fundability_quality_export_verdicts',
+          classification: 'mag_owned_grant_truth_receipt_verdict',
+          owner: 'med-autogrant',
+          mag_role: 'verdict_authority_owner',
+          current_surface_refs: ['/product_entry_manifest/grant_authoring_readiness'],
+          opl_expected_primitives: ['refs_only_quality_readiness_projection_shell'],
+          mag_retained_authority: ['fundability_verdict'],
+        },
+      ],
+      retire_or_tombstone_surfaces: [
+        {
+          module_id: 'repo_owned_scheduler_daemon',
+          classification: 'retire_tombstone',
+          owner: 'none_active',
+          active_caller_allowed: false,
+          evidence_refs: ['docs/status.md#retired'],
+        },
+      ],
+      opl_must_absorb_code_surfaces: ['operator_workbench_shell'],
+    },
+  });
+}
+
+function withRcaFunctionalAudit(payload: JsonRecord) {
+  return attachManifestSurface(payload, 'privatized_functional_module_audit', {
+    surface_kind: 'rca_privatized_functional_module_audit',
+    target_domain_id: 'redcube_ai',
+    modules: [
+      {
+        module_id: 'native_helper_envelope_wrapper',
+        classification: 'opl_owned_generic_envelope_rca_owned_helper_implementation',
+        owner: 'one-person-lab',
+        surface_ref: '/native_ppt_operator_ux',
+        opl_generic_primitive: 'native_helper_generic_envelope',
+        rca_scope: 'python_native_helper_implementation',
+      },
+      {
+        module_id: 'artifact_gallery_handoff_shell',
+        classification: 'rca_owned_visual_domain_authority',
+        owner: 'redcube_ai',
+        surface_ref: '/artifact_locator_contract',
+        opl_generic_primitive: 'artifact_lifecycle',
+        rca_retained_authority: ['artifact_authority'],
+      },
+    ],
+    opl_owned_generic_primitives: ['native_helper_generic_envelope', 'artifact_lifecycle'],
+  });
+}
+
 test('unified domain-agent descriptors aggregate entry, stage, action, memory, skill, and runtime refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-descriptor-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const manifests = {
-    medautoscience: withDescriptorSurfaces(fixtures.medautoscience, {
+    medautoscience: withFunctionalConsumerBoundary(withDescriptorSurfaces(fixtures.medautoscience, {
       agentId: 'mas',
       targetDomainId: 'med-autoscience',
       owner: 'MedAutoScience',
@@ -371,9 +466,9 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       stageId: 'idea',
       memoryRefId: 'mas_publication_route_memory',
       memoryFamily: 'publication_route_memory',
-    }),
+    })),
     medautogrant: withGrantTransitionOracle(
-      withDescriptorSurfaces(fixtures.medautogrant, {
+      withPrivatizedFunctionalModuleAudit(withDescriptorSurfaces(fixtures.medautogrant, {
         agentId: 'mag',
         targetDomainId: 'med-autogrant',
         owner: 'MedAutoGrant',
@@ -381,9 +476,9 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         stageId: 'revision',
         memoryRefId: 'mag_grant_strategy_memory',
         memoryFamily: 'grant_strategy_memory',
-      }),
+      })),
     ),
-    redcube: withDescriptorSurfaces(fixtures.redcube, {
+    redcube: withRcaFunctionalAudit(withDescriptorSurfaces(fixtures.redcube, {
       agentId: 'rca',
       targetDomainId: 'redcube_ai',
       owner: 'RedCubeAI',
@@ -391,7 +486,7 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       stageId: 'artifact_creation',
       memoryRefId: 'rca_visual_pattern_memory',
       memoryFamily: 'visual_pattern_memory',
-    }),
+    })),
   };
 
   try {
@@ -423,6 +518,11 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.physical_skeleton_audit_pending_count, 0);
     assert.equal(list.family_agent_descriptors.summary.provider_temporal_residency_gap_status, 'closed_by_fresh_proven_proof');
     assert.equal(list.family_agent_descriptors.summary.production_closure_gap_count, 12);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_audit_resolved_count, 3);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_module_count, 10);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_owned_replacement_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_domain_authority_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_retire_tombstone_count, 2);
 
     const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -480,6 +580,20 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       'docs/policies/mas_publication_route_memory.md',
     );
     assert.equal(mas.family_agent_descriptor.skill_catalog.skill_count, 2);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.total_module_count, 5);
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
+        .migration_class,
+      'opl_owned_replacement',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'local_launchd_scheduler_install_path')
+        .active_caller_allowed,
+      false,
+    );
     assert.equal(mas.family_agent_descriptor.runtime_surfaces.runtime_inventory.status, 'resolved');
     assert.equal(mas.family_agent_descriptor.runtime_surfaces.session_continuity.status, 'resolved');
     assert.equal(mas.family_agent_descriptor.runtime_surfaces.progress_projection.status, 'resolved');
@@ -528,6 +642,35 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(
       mag.family_agent_descriptor.descriptor_refs.grant_transition_oracle.ref,
       '/grant_transition_oracle',
+    );
+    assert.equal(mag.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
+    assert.equal(
+      mag.family_agent_descriptor.functional_privatization_audit.required_opl_replacement_primitives.includes(
+        'operator_workbench_shell',
+      ),
+      true,
+    );
+    assert.equal(
+      mag.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'fundability_quality_export_verdicts')
+        .migration_class,
+      'domain_authority',
+    );
+
+    const rca = runCli(['agents', 'descriptor', '--domain', 'rca'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(rca.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
+    assert.equal(
+      rca.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')
+        .migration_class,
+      'opl_owned_replacement',
+    );
+    assert.equal(
+      rca.family_agent_descriptor.functional_privatization_audit.authority_boundary.opl_can_write_domain_truth,
+      false,
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
