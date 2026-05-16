@@ -173,6 +173,20 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       ),
       true,
     );
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.surface_kind, 'opl_stage_attempt_control_loop_summary');
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.projection_scope, 'stage_attempt_workbench');
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.attempt_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.route_decision_attempt_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.action_route_count, 13);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.receipt_ref_count, 2);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.blocker_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.human_gate_count, 0);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.summary.dead_letter_count, 0);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.authority_boundary.can_execute_domain_action, false);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.authority_boundary.can_write_domain_truth, false);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.stage_attempt_workbench.groups.by_domain.medautoscience.total, 1);
     assert.deepEqual(snapshot.stage_attempt_workbench.filter_metadata.group_keys, ['domain_id', 'stage_id', 'status']);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].provider_kind, 'local_sqlite');
@@ -264,6 +278,32 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       true,
     );
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].action_routing.authority_boundary.can_execute_domain_action, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.projection_scope, 'stage_attempt');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.trigger.source_fingerprint, 'sha256:analysis-source');
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.trigger.stage_packet_refs, [
+      'packet:analysis',
+    ]);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.decision.decision, 'bounded_repair');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.action_route.next_owner, 'med-autoscience');
+    assert.equal(
+      snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.action_route.route_refs.includes(
+        'domain_owner:med-autoscience',
+      ),
+      true,
+    );
+    assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.receipts.receipt_refs, [
+      'receipt:analysis-closeout',
+      'memory-writeback:receipt-1',
+    ]);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.retry_budget.attempt_count, 1);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.retry_budget.retry_budget.max_attempts, 3);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.state.blocker_status, 'blocked_by_attention');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.state.human_gate, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.state.dead_letter, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.authority_boundary.can_execute_domain_action, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.authority_boundary.can_write_domain_truth, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].control_loop_summary.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].filter_keys.domain_id, 'medautoscience');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].filter_keys.has_consumed_memory_refs, true);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].filter_keys.has_writeback_receipt_refs, true);
@@ -320,6 +360,15 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(attemptItem.stage_attempt_workbench.action_routing.routing_scope, 'stage_attempt');
     assert.equal(attemptItem.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
     assert.equal(attemptItem.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
+    assert.equal(attemptItem.stage_attempt_workbench.control_loop_summary.receipts.receipt_refs[0], 'receipt:analysis-closeout');
+    assert.equal(
+      attemptItem.stage_attempt_workbench.control_loop_summary.action_route.route_refs.includes(
+        'medautosci sidecar dispatch --task <task.json> --format json',
+      ),
+      true,
+    );
+    assert.equal(attemptItem.stage_attempt_workbench.control_loop_summary.authority_boundary.can_execute_domain_action, false);
+    assert.equal(attemptItem.stage_attempt_workbench.control_loop_summary.authority_boundary.can_write_domain_truth, false);
     assert.equal(attemptItem.stage_attempt_workbench.authority_boundary.opl_writes_memory_body, false);
     assert.equal(
       attemptItem.stage_attempt_workbench.authority_boundary.provider_completion_is_domain_ready,

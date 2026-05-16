@@ -76,6 +76,18 @@ function hasEntries(value: unknown) {
   return Array.isArray(value) && value.length > 0;
 }
 
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stringListFrom(value: unknown) {
+  return Array.isArray(value) ? stringList(value) : [];
+}
+
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
 function attemptHasHumanGate(row: StageAttemptWorkbenchRow, humanGateRefs: string[], humanGateLedger: JsonRecord[]) {
   return row.status === 'human_gate' || humanGateRefs.length > 0 || humanGateLedger.length > 0;
 }
@@ -89,6 +101,159 @@ function sourceRefs(queueDb: string): RuntimeTraySourceRef[] {
 
 function providerKindForRow(row: StageAttemptWorkbenchRow): FamilyRuntimeProviderKind | null {
   return isFamilyRuntimeProviderKind(row.provider_kind) ? row.provider_kind : null;
+}
+
+function stringRefsFromRecord(value: JsonRecord, keys: string[]) {
+  return uniqueStrings(keys.flatMap((key) => {
+    const entry = value[key];
+    return typeof entry === 'string' ? [entry] : stringListFrom(entry);
+  }));
+}
+
+function stagePacketRefs(activityEvents: JsonRecord[]) {
+  return uniqueStrings(activityEvents
+    .map((event) => optionalString(event.stage_packet_ref))
+    .filter((ref): ref is string => Boolean(ref)));
+}
+
+function signalRefs(signals: JsonRecord[]) {
+  return signals.map((signal) => ({
+    signal_id: optionalString(signal.signal_id),
+    signal_kind: optionalString(signal.signal_kind),
+    source: optionalString(signal.source),
+  })).filter((signal) => signal.signal_id || signal.signal_kind || signal.source);
+}
+
+function actionRouteRefs(actionRouting: JsonRecord) {
+  return uniqueStrings(recordList(Array.isArray(actionRouting.actions) ? actionRouting.actions : [])
+    .map((action) => optionalString(action.command_or_surface_ref))
+    .filter((ref): ref is string => Boolean(ref)));
+}
+
+function controlLoopAuthorityBoundary() {
+  return {
+    opl: 'refs_only_control_loop_projection',
+    domain: 'truth_quality_action_receipt_owner',
+    provider: 'runtime_completion_owner_not_domain_ready_owner',
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_write_domain_memory_body: false,
+    can_authorize_domain_ready: false,
+    can_authorize_quality_verdict: false,
+    provider_completion_is_domain_ready: false,
+  };
+}
+
+function blockerStatus(input: {
+  attentionFlags: string[];
+  isHumanGate: boolean;
+  isDeadLetter: boolean;
+  isBlocked: boolean;
+}) {
+  if (input.isDeadLetter) {
+    return 'dead_lettered';
+  }
+  if (input.isHumanGate) {
+    return 'human_gate';
+  }
+  if (input.isBlocked || input.attentionFlags.length > 0) {
+    return 'blocked_by_attention';
+  }
+  return 'clear';
+}
+
+function buildAttemptControlLoopSummary(input: {
+  row: StageAttemptWorkbenchRow;
+  routeImpact: JsonRecord;
+  latestCloseout: JsonRecord | null;
+  activityEvents: JsonRecord[];
+  signals: JsonRecord[];
+  nextOwner: string;
+  closeoutRefs: string[];
+  writebackReceiptRefs: string[];
+  rejectedWrites: unknown[];
+  attentionFlags: string[];
+  humanGateRefs: string[];
+  isHumanGate: boolean;
+  isDeadLetter: boolean;
+  isBlocked: boolean;
+  actionRouting: JsonRecord;
+  deadLetter: JsonRecord | null;
+}) {
+  const receiptRefs = uniqueStrings([
+    ...input.closeoutRefs,
+    ...input.writebackReceiptRefs,
+    ...stringRefsFromRecord(input.routeImpact, [
+      'receipt_ref',
+      'receipt_refs',
+      'owner_receipt_ref',
+      'owner_receipt_refs',
+      'no_regression_evidence_ref',
+      'no_regression_evidence_refs',
+    ]),
+  ]);
+  const routeRefs = actionRouteRefs(input.actionRouting);
+  const sourceSignalRefs = signalRefs(input.signals);
+  const retryBudget = parseRecord(input.row.retry_budget_json);
+  const state = {
+    status: input.row.status,
+    blocker_status: blockerStatus(input),
+    blocker_count: input.rejectedWrites.length + (input.isBlocked ? 1 : 0) + (input.isHumanGate ? 1 : 0)
+      + (input.isDeadLetter ? 1 : 0),
+    attention_flags: input.attentionFlags,
+    human_gate: input.isHumanGate,
+    human_gate_refs: input.humanGateRefs,
+    dead_letter: input.isDeadLetter,
+    dead_letter_reason: optionalString(input.deadLetter?.reason),
+  };
+  return {
+    surface_kind: 'opl_stage_attempt_control_loop_summary',
+    projection_scope: 'stage_attempt',
+    projection_policy: 'refs_only_no_domain_action_no_domain_truth',
+    stage_attempt_id: input.row.stage_attempt_id,
+    domain_id: input.row.domain_id,
+    stage_id: input.row.stage_id,
+    trigger: {
+      source_fingerprint: input.row.source_fingerprint,
+      stage_packet_refs: stagePacketRefs(input.activityEvents),
+      source_signal_refs: sourceSignalRefs,
+      source_signal_count: sourceSignalRefs.length,
+    },
+    decision: {
+      decision: optionalString(input.routeImpact.decision),
+      proposal_refs: stringRefsFromRecord(input.routeImpact, ['proposal_ref', 'proposal_refs']),
+      route_impact_refs: stringRefsFromRecord(input.routeImpact, [
+        'quality_refs',
+        'readiness_refs',
+        'slo_ref',
+        'package_refs',
+        'export_refs',
+        'gap_report_refs',
+        'handoff_refs',
+      ]),
+      domain_ready_verdict: optionalString(input.latestCloseout?.domain_ready_verdict)
+        ?? optionalString(input.routeImpact.domain_ready_verdict),
+    },
+    action_route: {
+      next_owner: input.nextOwner,
+      route_refs: routeRefs,
+      route_count: routeRefs.length,
+      execution_policy: 'route_only_no_execution',
+    },
+    receipts: {
+      receipt_refs: receiptRefs,
+      receipt_ref_count: receiptRefs.length,
+      closeout_refs: input.closeoutRefs,
+      writeback_receipt_refs: input.writebackReceiptRefs,
+    },
+    retry_budget: {
+      attempt_count: input.row.attempt_count,
+      retry_budget: retryBudget,
+      max_attempts: typeof retryBudget.max_attempts === 'number' ? retryBudget.max_attempts : null,
+    },
+    state,
+    authority_boundary: controlLoopAuthorityBoundary(),
+  };
 }
 
 function currentProviderReadinessProjection(
@@ -241,6 +406,24 @@ function attemptProjection(
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: currentProviderReadiness,
   });
+  const controlLoopSummary = buildAttemptControlLoopSummary({
+    row,
+    routeImpact,
+    latestCloseout,
+    activityEvents,
+    signals,
+    nextOwner,
+    closeoutRefs,
+    writebackReceiptRefs,
+    rejectedWrites,
+    attentionFlags,
+    humanGateRefs,
+    isHumanGate,
+    isDeadLetter,
+    isBlocked,
+    actionRouting: genericProjections.action_routing,
+    deadLetter,
+  });
 
   return {
     stage_attempt_id: row.stage_attempt_id,
@@ -290,6 +473,7 @@ function attemptProjection(
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: currentProviderReadiness,
+    control_loop_summary: controlLoopSummary,
     filter_keys: {
       domain_id: row.domain_id,
       stage_id: row.stage_id,
@@ -381,6 +565,65 @@ function memoryRefCounters(attempts: StageAttemptProjection[]) {
   });
 }
 
+function attemptControlLoop(attempt: StageAttemptProjection) {
+  return isRecord(attempt.control_loop_summary) ? attempt.control_loop_summary : {};
+}
+
+function attemptControlLoopState(attempt: StageAttemptProjection) {
+  const summary = attemptControlLoop(attempt);
+  return isRecord(summary.state) ? summary.state : {};
+}
+
+function attemptControlLoopDecision(attempt: StageAttemptProjection) {
+  const summary = attemptControlLoop(attempt);
+  return isRecord(summary.decision) ? summary.decision : {};
+}
+
+function attemptControlLoopActionRoute(attempt: StageAttemptProjection) {
+  const summary = attemptControlLoop(attempt);
+  return isRecord(summary.action_route) ? summary.action_route : {};
+}
+
+function attemptControlLoopReceipts(attempt: StageAttemptProjection) {
+  const summary = attemptControlLoop(attempt);
+  return isRecord(summary.receipts) ? summary.receipts : {};
+}
+
+function buildWorkbenchControlLoopSummary(attempts: StageAttemptProjection[], projectionScope = 'stage_attempt_workbench') {
+  const receiptRefs = uniqueStrings(attempts.flatMap((attempt) =>
+    stringListFrom(attemptControlLoopReceipts(attempt).receipt_refs)
+  ));
+  const routeRefs = uniqueStrings(attempts.flatMap((attempt) =>
+    stringListFrom(attemptControlLoopActionRoute(attempt).route_refs)
+  ));
+  return {
+    surface_kind: 'opl_stage_attempt_control_loop_summary',
+    projection_scope: projectionScope,
+    projection_policy: 'refs_only_no_domain_action_no_domain_truth',
+    summary: {
+      attempt_count: attempts.length,
+      route_decision_attempt_count: attempts.filter((attempt) =>
+        Boolean(optionalString(attemptControlLoopDecision(attempt).decision))
+      ).length,
+      action_route_count: routeRefs.length,
+      receipt_ref_count: receiptRefs.length,
+      blocker_count: attempts.reduce((count, attempt) =>
+        count + Number(attemptControlLoopState(attempt).blocker_count ?? 0), 0
+      ),
+      human_gate_count: attempts.filter((attempt) =>
+        attemptControlLoopState(attempt).human_gate === true
+      ).length,
+      dead_letter_count: attempts.filter((attempt) =>
+        attemptControlLoopState(attempt).dead_letter === true
+      ).length,
+    },
+    receipt_refs: receiptRefs,
+    action_route_refs: routeRefs,
+    attempt_refs: attempts.map((attempt) => `/stage_attempt_workbench/attempts/${attempt.stage_attempt_id}`),
+    authority_boundary: controlLoopAuthorityBoundary(),
+  };
+}
+
 function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: StageAttemptProjection) => string) {
   return attempts.reduce<Record<string, JsonRecord>>((groups, attempt) => {
     const key = keyFor(attempt);
@@ -459,6 +702,7 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       memory_ref_counters: memoryRefCounters(attempts),
       ...buildWorkbenchGenericProjections(attempts),
       operator_conflict_count: operatorConflicts.length,
+      control_loop_summary: buildWorkbenchControlLoopSummary(attempts),
       human_gate_count: attentionCounters.human_gate_count,
       resume_count: attentionCounters.resume_count,
       dead_letter_count: attentionCounters.dead_letter_count,
@@ -540,10 +784,11 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       observability_slo: EMPTY_WORKBENCH_METADATA.summary.observability_slo,
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
-      package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
-      action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
-      transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
-      source_refs: sourceRefs(queueDb),
+    package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
+    action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
+    transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
+    control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
+    source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -583,6 +828,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
       action_routing: metadata.summary.action_routing,
       transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
+      control_loop_summary: metadata.summary.control_loop_summary,
       attempts,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
@@ -607,6 +853,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
+      control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
