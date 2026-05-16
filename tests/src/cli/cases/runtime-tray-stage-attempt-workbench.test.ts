@@ -854,6 +854,12 @@ db.close();`,
     assert.equal(workbench.summary.memory_ref_counters.writeback_receipt_ref_count, 1);
     assert.equal(workbench.summary.memory_ref_counters.attempts_with_consumed_memory_refs, 1);
     assert.equal(workbench.summary.memory_ref_counters.attempts_with_writeback_receipt_refs, 1);
+    assert.equal(workbench.summary.usage_projection.surface_kind, 'opl_stage_attempt_usage_projection_summary');
+    assert.equal(workbench.summary.usage_projection.observed_attempt_count, 3);
+    assert.equal(workbench.summary.usage_projection.retry_pressure_attempt_count, 1);
+    assert.equal(workbench.summary.usage_projection.retry_budget_exhausted_count, 1);
+    assert.equal(workbench.summary.usage_projection.retry_budget_unknown_count, 0);
+    assert.equal(workbench.summary.usage_projection.source_ref_count, 3);
     assert.equal(workbench.artifact_gallery.gallery_scope, 'stage_attempt_workbench');
     assert.equal(workbench.artifact_gallery.summary.attempt_count, 3);
     assert.equal(workbench.artifact_gallery.summary.attempt_with_artifact_ref_count, 1);
@@ -880,9 +886,11 @@ db.close();`,
     assert.equal(workbench.action_routing.authority_boundary.can_execute_provider_signal, false);
     assert.equal(workbench.groups.by_domain.medautoscience.total, 1);
     assert.equal(workbench.groups.by_domain.medautoscience.memory_ref_counters.consumed_memory_ref_count, 2);
+    assert.equal(workbench.groups.by_domain.medautoscience.usage_projection.observed_attempt_count, 1);
     assert.equal(workbench.groups.by_domain.redcube.human_gate_count, 1);
     assert.equal(workbench.groups.by_domain.redcube.resume_count, 1);
     assert.equal(workbench.groups.by_domain.medautogrant.dead_letter_count, 1);
+    assert.equal(workbench.groups.by_domain.medautogrant.usage_projection.retry_budget_exhausted_count, 1);
     assert.equal(workbench.groups.by_status.human_gate.attempt_ids[0], gatedAttemptId);
     assert.equal(workbench.groups.by_status.dead_lettered.attempt_ids[0], deadLetterAttemptId);
 
@@ -898,6 +906,16 @@ db.close();`,
     assert.equal(gated.review_repair_queue.summary.human_gate_count, 1);
     assert.deepEqual(gated.review_repair_queue.items[0].human_gate_refs, ['gate:review']);
     assert.equal(gated.filter_keys.human_gate, true);
+    assert.equal(deadLetter.usage_projection.retry_budget.pressure_status, 'retry_budget_exhausted');
+    assert.equal(deadLetter.usage_projection.retry_budget.observed_count, 1);
+    assert.equal(deadLetter.filter_keys.retry_budget_pressure, true);
+    assert.equal(workbench.filter_metadata.usage_projection_flags.includes('retry_budget_pressure'), true);
+    const deadLetterItem = [...output.runtime_tray_snapshot.attention_items, ...output.runtime_tray_snapshot.recent_items]
+      .find((item: { item_id: string }) => item.item_id === `opl:stage-attempt:${deadLetterAttemptId}`);
+    assert.equal(
+      deadLetterItem.stage_attempt_workbench.usage_projection.retry_budget.pressure_status,
+      'retry_budget_exhausted',
+    );
     assert.equal(gated.filter_keys.resume_available, true);
     assert.equal(deadLetter.dead_letter.reason, 'retry_budget_exhausted');
     assert.deepEqual(deadLetter.attention_flags, ['dead_lettered', 'blocked']);

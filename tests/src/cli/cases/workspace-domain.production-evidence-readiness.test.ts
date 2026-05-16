@@ -73,6 +73,8 @@ test('framework production-closeout counts MAS guarded-apply receipts as refs-on
         target_studies: ['DM002'],
         authority_boundary: 'mas_owner_guarded_apply_only',
       }),
+      '--retry-budget',
+      '{"max_attempts":2,"cadence_ref":"cadence:mas-guarded"}',
       '--source-fingerprint',
       'source:dm002-owner-receipt',
     ], {
@@ -100,6 +102,18 @@ test('framework production-closeout counts MAS guarded-apply receipts as refs-on
           guarded_apply_status: 'mas_owner_apply_receipt_observed',
           provider_attempt_state: 'mas_owner_receipt_present',
           receipt_ref: 'artifacts/runtime/opl_family_sidecar/dispatch_receipts/dm002-owner.json',
+          usage_projection: {
+            usage_ref: 'usage:dm002-owner',
+            token_usage: {
+              input_tokens: 600,
+              output_tokens: 220,
+              total_tokens: 820,
+            },
+            estimated_cost_usd: 0.18,
+            api_call_count: 2,
+            duration_ms: 240000,
+            cadence_ref: 'cadence:mas-guarded',
+          },
           typed_blocker_count: 0,
           forbidden_write_guard_result: 'fail_closed_no_forbidden_writes',
           writes_performed: false,
@@ -132,6 +146,8 @@ test('framework production-closeout counts MAS guarded-apply receipts as refs-on
         target_studies: ['DM003'],
         authority_boundary: 'mas_owner_guarded_apply_only',
       }),
+      '--retry-budget',
+      '{"max_attempts":1}',
       '--source-fingerprint',
       'source:dm003-typed-blocker',
     ], {
@@ -192,6 +208,15 @@ test('framework production-closeout counts MAS guarded-apply receipts as refs-on
     assert.equal(mas.coverage_status, 'owner_chain_ref_or_typed_blocker_observed');
     assert.equal(mas.owner_receipt_ref_count, 1);
     assert.equal(mas.typed_blocker_count, 1);
+    assert.equal(readiness.stage_attempt_evidence.usage_projection.retry_budget_exhausted_count, 1);
+    assert.equal(readiness.resource_pressure.surface_kind, 'opl_operator_resource_pressure_signal');
+    assert.equal(readiness.resource_pressure.usage_observed_attempt_count, 1);
+    assert.equal(readiness.resource_pressure.retry_budget_pressure_attempt_count, 2);
+    assert.equal(readiness.resource_pressure.retry_budget_exhausted_count, 1);
+    assert.equal(readiness.resource_pressure.token.total_tokens_observed, 820);
+    assert.equal(readiness.resource_pressure.cost.estimated_cost_usd_observed, 0.18);
+    assert.equal(readiness.resource_pressure.authority_boundary.can_change_executor, false);
+    assert.equal(readiness.resource_pressure.authority_boundary.can_auto_degrade, false);
     assert.equal(
       readiness.pending_gates.includes('domain_owner_chain_refs_or_typed_blockers'),
       false,
