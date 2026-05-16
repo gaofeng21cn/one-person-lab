@@ -45,9 +45,17 @@ test('family product operator projection answers operator status questions with 
     'source_refs',
     'freshness',
     'owner_split',
+    'control_loop_summary',
+    'usage_projection',
+    'resource_pressure',
+    'observability_export',
   ]) {
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
+  const observability = contract.runtime_observability_export as Record<string, unknown>;
+  assert.equal(observability.command, 'opl runtime observability-export [--format json|openmetrics]');
+  assert.deepEqual(observability.formats, ['json', 'openmetrics']);
+  assert.equal(observability.authority, 'read_only_non_authoritative');
 });
 
 test('family product operator projection preserves Codex-default runtime and prevents local scheduler takeover', () => {
@@ -67,6 +75,8 @@ test('family product operator projection preserves Codex-default runtime and pre
     'memory kernel ownership',
     'domain runtime truth ownership',
     'domain quality authority',
+    'executor auto-degradation',
+    'domain action execution from observability',
   ]) {
     assert.ok((contract.non_goals as string[]).includes(nonGoal));
   }

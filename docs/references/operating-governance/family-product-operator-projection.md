@@ -29,6 +29,10 @@ Operator projection 必须表达：
 - `source_refs`
 - `freshness`
 - `owner_split`
+- `control_loop_summary`
+- `usage_projection`
+- `resource_pressure`
+- `observability_export`
 
 ## Runtime Semantics
 
@@ -48,6 +52,9 @@ Operator projection 必须表达：
 - 下一次应查看哪个 domain-owned source ref。
 - human gate 的原因和请求入口。
 - 质量门是 domain-owned closed、failed、blocked 还是 stale。
+- 控制回路当前是正常推进、human gate、dead letter、blocker，还是只有 route/receipt refs 可读。
+- token / cost / API / duration / cadence / retry budget 是否已有已观测压力信号。
+- 是否需要把当前 runtime/stage/SLO counters 以 JSON 或 OpenMetrics 导出给外部监控。
 
 ## Fail-Closed Rules
 
@@ -55,3 +62,17 @@ Operator projection 必须表达：
 - `freshness` 过期时，不能显示为 completed / passed。
 - `owner_split` 缺失时，不能把 `OPL` 投影当成 domain truth。
 - 缺少 domain-owned proof 或 eval pointer 时，不能关闭质量门。
+- `usage_projection` 和 `resource_pressure` 只能报告已观测数据；缺失值不能估算，不能触发 executor auto-degradation。
+- `control_loop_summary` 只能汇总 trigger、decision、action route、receipt refs 和 blocker/human-gate/dead-letter 状态；不能执行 domain action 或写 domain truth。
+- `observability_export` 只能读取 OPL ledger、provider proof receipts、runtime snapshot、stage attempt workbench 和 domain-owned projection refs；不能授权 repair、ready、quality 或 artifact/export verdict。
+
+## Runtime Observability Export
+
+当前 CLI surface 是：
+
+```bash
+opl runtime observability-export
+opl runtime observability-export --format openmetrics
+```
+
+导出内容包括 provider readiness/proof counts、stage attempt counts、human gate / dead letter / blocker counters、memory writeback receipt/rejection counters 和 provider SLO receipt history。它是只读运维面，作用是让 App/operator 或外部监控更早发现不稳定信号，不是调度器、自动修复器或 domain verdict authority。

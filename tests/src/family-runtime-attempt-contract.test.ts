@@ -55,6 +55,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'consumed_memory_refs',
     'writeback_receipt_refs',
     'route_impact',
+    'usage_projection',
     'closeout_receipt_status',
     'authority_boundary',
   ]) {
@@ -70,6 +71,10 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'last_observed_projection',
     'operator_visibility',
     'completion_boundary',
+    'control_loop_summary',
+    'usage_projection',
+    'resource_pressure',
+    'observability_export',
   ]) {
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
@@ -101,9 +106,24 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'writeback_receipt_refs',
     'closeout_receipt_status',
     'route_impact',
+    'usage_projection',
   ]) {
     assert.ok((contract.operator_visibility_fields as string[]).includes(field));
   }
+  for (const field of [
+    'control_loop_summary',
+    'usage_projection',
+    'resource_pressure',
+    'runtime_observability_export',
+  ]) {
+    assert.ok((contract.stability_projection_fields as string[]).includes(field));
+  }
+  const stabilityBoundary = contract.stability_projection_authority_boundary as Record<string, unknown>;
+  assert.equal(stabilityBoundary.can_execute_domain_action, false);
+  assert.equal(stabilityBoundary.can_change_executor, false);
+  assert.equal(stabilityBoundary.can_auto_degrade, false);
+  assert.equal(stabilityBoundary.can_write_domain_truth, false);
+  assert.equal(stabilityBoundary.can_authorize_quality_verdict, false);
 });
 
 test('family runtime attempt contract keeps OPL runtime manager observability-only', () => {
