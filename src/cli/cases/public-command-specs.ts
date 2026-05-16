@@ -1,5 +1,5 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { agentLabRefSummary, buildSampleAgentLabResult } from '../../agent-lab.ts';
+import { agentLabRefSummary, buildLonglineAgentLabResult, buildSampleAgentLabResult } from '../../agent-lab.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
@@ -65,6 +65,19 @@ function buildAgentLabSamplePayload() {
       sample_result: sampleResult,
       ref_summary: agentLabRefSummary(sampleResult),
       authority_boundary: sampleResult.authority_boundary,
+    },
+  };
+}
+
+function buildAgentLabLonglinePayload() {
+  const suiteResult = buildLonglineAgentLabResult();
+  return {
+    version: 'g2',
+    agent_lab_longline: {
+      surface_id: 'opl_agent_lab_longline_suite',
+      suite_result: suiteResult,
+      ref_summary: agentLabRefSummary(suiteResult),
+      authority_boundary: suiteResult.authority_boundary,
     },
   };
 }
@@ -393,6 +406,16 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['agent-lab sample']);
         return buildAgentLabSamplePayload();
+      },
+    },
+    'agent-lab longline': {
+      usage: 'opl agent-lab longline',
+      summary: 'Show the central Agent Lab longline suite for MAS/MAG/RCA soak and recovery test consolidation.',
+      examples: ['opl agent-lab longline', 'opl agent-lab longline --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agent-lab longline']);
+        return buildAgentLabLonglinePayload();
       },
     },
     'packages manifest': packagesManifestSpec,

@@ -93,14 +93,53 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 
 它不替代这些 surface，也不新建平行 runtime。Agent Lab 只把 eval / improvement 的组织语言收敛到 OPL 内部，避免 MAS/MAG/RCA 各自重复实现一套跨域评估控制面。
 
-## 初始落地顺序
+## 已落地入口
 
-Agent Lab 的落地顺序应从只读、refs-only、无 authority 的 surface 开始：
+当前 Agent Lab 已经从边界文档推进到可运行的 refs-only control plane：
 
-1. 定义 `agent_lab_eval_run`、`agent_lab_improvement_candidate`、`agent_lab_acceptance_evidence` 和 `agent_lab_projection` 的最小 machine-readable contract。
-2. 用现有 descriptor、stage attempt ledger、provider receipt、domain-owned eval/proof refs 生成只读 lab projection。
-3. 先覆盖 framework regression、direct-skill parity、no-forbidden-write、provider SLO、descriptor drift 和 task-bound bridge evidence。
-4. 再接入 MAS/MAG/RCA 各自 owner 提供的质量或交付 proof refs，并保持 domain verdict 回 domain owner。
-5. 最后把 operator follow-up 接入 typed queue / App workbench，但只路由动作，不越权执行 domain truth mutation。
+- 机器合同：`contracts/opl-framework/agent-lab-contract.json`。
+- TypeScript surface：`src/agent-lab.ts`，并通过 package export `./agent-lab` 暴露。
+- CLI sample：`opl agent-lab sample --json`，输出 MAS/MAG/RCA 三个 fixture task 的 eval run、recovery probe、domain-owned scorecard refs、improvement candidate 和 promotion gate。
+- CLI longline：`opl agent-lab longline --json`，输出 MAS/MAG/RCA 三个 provider-hosted longline task、七个 recovery probe、跨仓 no-forbidden-write gate 和 repo test reduction guidance。
 
-当前文档只冻结边界和入口。实际合同、CLI、App projection 和验证 lane 落地后，应同步更新 `docs/status.md`、`docs/architecture.md`、`docs/runtime/README.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`，并在需要时把机器合同放入 `contracts/`。
+`opl agent-lab longline --json` 是当前统一长线测试 read-model 入口。它可用于判断哪些“浸润/长线测试编排”已经能由 OPL 承接；它不能把 longline suite `passed` 升级成 MAS/MAG/RCA 的 publication、fundability、visual quality 或 export verdict。
+
+当前 longline suite 覆盖：
+
+| Domain | OPL 承接的长线面 | Domain 仍保留的 authority |
+| --- | --- | --- |
+| `med-autoscience` | provider-hosted guarded apply soak orchestration；resume/retry/dead-letter recovery probe；no-forbidden-write cross-domain regression | publication-quality scorer；owner receipt fixture；paper artifact authority checks |
+| `med-autogrant` | controlled grant-stage soak orchestration；receipt reconciliation projection；no-forbidden-write cross-domain regression | fundability scorer；grant owner receipt fixture；proposal artifact authority checks |
+| `redcube-ai` | controlled visual-stage soak orchestration；hosted-attempt reconciliation projection；no-forbidden-write cross-domain regression | visual quality scorer；render/export owner receipt fixture；artifact authority checks |
+
+## 各仓测试收敛规则
+
+Agent Lab 的价值是把各仓重复维护的 framework-level 长线测试收敛到 OPL，并让 domain repo 的测试回到领域 authority 本身。
+
+应迁入 OPL Agent Lab 的测试：
+
+- provider-hosted long soak / controlled soak 编排；
+- interruption resume、retry、dead-letter repair、human gate resume、artifact restore 这类恢复探针；
+- OPL typed queue / stage attempt / provider receipt / hosted-attempt reconciliation 投影；
+- cross-domain no-forbidden-write、no-memory-body、no-artifact-mutation regression；
+- improvement candidate / promotion gate 的 refs-only projection。
+
+应继续留在 domain repo 的测试：
+
+- MAS publication / review / study truth scorer；
+- MAG fundability / grant strategy scorer；
+- RCA visual quality / render-export scorer；
+- domain owner receipt fixture、typed blocker fixture 和 owner-signed transition spec；
+- artifact package / export / submission authority；
+- memory body apply、writeback accept/reject 和 domain truth mutation。
+
+因此，各仓可以删除或降级自己维护的 OPL-hosted soak 编排重复测试，但不能删除 domain-owned scorer、receipt、artifact authority、truth mutation 和 quality gate 测试。
+
+## 继续落地顺序
+
+下一步应围绕已落地 CLI 与合同做增量，而不是再新建平行 harness：
+
+1. App/workbench 消费 `opl agent-lab longline --json` 的 read model，展示 longline tasks、recovery probes、promotion gates 和 repo test disposition。
+2. MAS/MAG/RCA 将计划中的 provider-hosted soak / recovery orchestration 测试引用到 OPL Agent Lab longline suite，保留 domain authority 测试。
+3. 当真实长时 domain owner chain 产生新的 owner receipt refs 时，只更新 Agent Lab 输入 refs 和 domain-owned proof refs，不把 receipt body 复制到 OPL。
+4. promotion gate 只允许推动 framework config / branch candidate，不允许 OPL 直接改写 domain truth、artifact、memory body 或默认 agent 配置。
