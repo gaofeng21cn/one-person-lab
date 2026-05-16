@@ -5,6 +5,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  buildAgentBuilderMetaAgentPlan,
+  buildCompleteAgentLabControlPlane,
+} from '../../src/agent-lab-complete.ts';
+import {
   buildLonglineAgentLabSuite,
   buildSampleAgentLabSuite,
   runAgentLabSuite,
@@ -124,6 +128,10 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   ]);
   assert.equal(contract.longline_surface.surface_kind, 'opl_agent_lab_longline_summary');
   assert.equal(contract.longline_surface.suite_kind, 'agent_lab_longline_suite');
+  assert.equal(contract.complete_control_plane_surface.surface_kind, 'opl_agent_lab_complete_control_plane');
+  assert.ok(contract.complete_control_plane_surface.eval_adapters.includes('inspect-ai'));
+  assert.ok(contract.complete_control_plane_surface.observability_exports.includes('langfuse'));
+  assert.equal(contract.meta_agent_builder_surface.agent_id, 'opl-foundry-agent-builder');
   assert.ok(contract.longline_surface.summary_fields.includes('ready_to_reduce_domain_longline_tests'));
   assert.ok(contract.longline_surface.repo_test_candidates_to_move_to_opl.includes(
     'provider-hosted soak orchestration',
@@ -218,4 +226,59 @@ test('Agent Lab longline suite centralizes planned MAS, MAG, and RCA soak tests 
   assert.ok(result.refs.domain_quality_scorecard_refs.includes('quality-scorecard:longline/rca-visual-no-regression'));
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.authority_boundary.can_mutate_domain_artifact, false);
+});
+
+test('Agent Lab complete control plane exposes eval adapters, observability exports, and optimizer boundary', () => {
+  const result = buildCompleteAgentLabControlPlane();
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_complete_control_plane');
+  assert.equal(result.status, 'ready_for_opl_native_use');
+  assert.equal(result.readiness.complete_control_plane_ready, true);
+  assert.equal(result.readiness.ready_to_connect_inspect_ai_adapter, true);
+  assert.equal(result.readiness.ready_to_export_observability_refs, true);
+  assert.equal(result.readiness.ready_to_emit_optimizer_candidate_refs, true);
+  assert.equal(result.readiness.ready_to_emit_rl_transition_refs, true);
+  assert.equal(result.readiness.automatic_model_training_ready, false);
+  assert.equal(result.readiness.automatic_default_agent_promotion_ready, false);
+  assert.equal(result.readiness.app_workbench_consumption_ready, false);
+  assert.ok(result.eval_adapters.some((entry) => entry.adapter_id === 'inspect-ai'));
+  assert.ok(result.eval_adapters.some((entry) => entry.adapter_id === 'metr-task-standard'));
+  assert.ok(result.observability_exports.some((entry) => entry.export_id === 'langfuse'));
+  assert.ok(result.observability_exports.some((entry) => entry.export_id === 'phoenix'));
+  assert.deepEqual(result.optimizer_loop.loop_steps, [
+    'collect_trajectory_refs',
+    'freeze_dataset_or_longline_suite',
+    'score_with_domain_owned_scorecard_refs',
+    'generate_candidate_config_or_branch',
+    'run_regression_and_recovery_gates',
+    'promote_only_through_explicit_gate',
+    'record_online_learning_refs',
+  ]);
+  assert.equal(result.optimizer_loop.rl_boundary.can_emit_transition_refs, true);
+  assert.equal(result.optimizer_loop.rl_boundary.can_train_or_deploy_model_weights, false);
+  assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
+});
+
+test('OPL meta-agent builder plan covers intent, research, construction, eval, optimization, delivery, and learning', () => {
+  const result = buildAgentBuilderMetaAgentPlan();
+
+  assert.equal(result.surface_kind, 'opl_meta_agent_builder_plan');
+  assert.equal(result.agent_id, 'opl-foundry-agent-builder');
+  assert.equal(result.status, 'plan_ready_on_agent_lab_complete_control_plane');
+  assert.deepEqual(result.stages.map((entry) => entry.stage_id), [
+    'intent-intake',
+    'web-experience-research',
+    'stage-decomposition',
+    'agent-skeleton-build',
+    'eval-suite-build',
+    'baseline-run',
+    'optimizer-iteration',
+    'baseline-delivery',
+    'online-learning',
+  ]);
+  assert.ok(result.baseline_acceptance_gates.includes('agent_lab_suite_passed'));
+  assert.ok(result.baseline_acceptance_gates.includes('no_forbidden_write_proof_passed'));
+  assert.equal(result.online_learning_policy.status, 'gated_continuous_learning_refs_only');
+  assert.equal(result.online_learning_policy.can_write_domain_memory_body, false);
+  assert.equal(result.online_learning_policy.can_promote_default_agent_without_gate, false);
 });
