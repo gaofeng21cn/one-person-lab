@@ -4,10 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  buildAgentBuilderMetaAgentPlan,
-  buildCompleteAgentLabControlPlane,
-} from '../../src/agent-lab-complete.ts';
+import { buildCompleteAgentLabControlPlane } from '../../src/agent-lab-complete.ts';
 import {
   buildLonglineAgentLabSuite,
   buildSampleAgentLabSuite,
@@ -131,7 +128,6 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(contract.complete_control_plane_surface.surface_kind, 'opl_agent_lab_complete_control_plane');
   assert.ok(contract.complete_control_plane_surface.eval_adapters.includes('inspect-ai'));
   assert.ok(contract.complete_control_plane_surface.observability_exports.includes('langfuse'));
-  assert.equal(contract.meta_agent_builder_surface.agent_id, 'opl-foundry-agent-builder');
   assert.ok(contract.longline_surface.summary_fields.includes('ready_to_reduce_domain_longline_tests'));
   assert.ok(contract.longline_surface.repo_test_candidates_to_move_to_opl.includes(
     'provider-hosted soak orchestration',
@@ -257,28 +253,4 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.optimizer_loop.rl_boundary.can_emit_transition_refs, true);
   assert.equal(result.optimizer_loop.rl_boundary.can_train_or_deploy_model_weights, false);
   assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
-});
-
-test('OPL meta-agent builder plan covers intent, research, construction, eval, optimization, delivery, and learning', () => {
-  const result = buildAgentBuilderMetaAgentPlan();
-
-  assert.equal(result.surface_kind, 'opl_meta_agent_builder_plan');
-  assert.equal(result.agent_id, 'opl-foundry-agent-builder');
-  assert.equal(result.status, 'plan_ready_on_agent_lab_complete_control_plane');
-  assert.deepEqual(result.stages.map((entry) => entry.stage_id), [
-    'intent-intake',
-    'web-experience-research',
-    'stage-decomposition',
-    'agent-skeleton-build',
-    'eval-suite-build',
-    'baseline-run',
-    'optimizer-iteration',
-    'baseline-delivery',
-    'online-learning',
-  ]);
-  assert.ok(result.baseline_acceptance_gates.includes('agent_lab_suite_passed'));
-  assert.ok(result.baseline_acceptance_gates.includes('no_forbidden_write_proof_passed'));
-  assert.equal(result.online_learning_policy.status, 'gated_continuous_learning_refs_only');
-  assert.equal(result.online_learning_policy.can_write_domain_memory_body, false);
-  assert.equal(result.online_learning_policy.can_promote_default_agent_without_gate, false);
 });

@@ -114,22 +114,6 @@
       "app_workbench_consumption_ready"
     ]
   },
-  "meta_agent_builder_surface": {
-    "surface_kind": "opl_meta_agent_builder_plan",
-    "agent_id": "opl-foundry-agent-builder",
-    "stage_ids": [
-      "intent-intake",
-      "web-experience-research",
-      "stage-decomposition",
-      "agent-skeleton-build",
-      "eval-suite-build",
-      "baseline-run",
-      "optimizer-iteration",
-      "baseline-delivery",
-      "online-learning"
-    ],
-    "authority_boundary": "build and optimize OPL-compatible agent packages through explicit gates; cannot write domain truth or promote default agents without gate"
-  },
   "agent_lab_proves": [
     "OPL can normalize domain-declared evaluation task manifests",
     "OPL can carry agent trajectory refs without reading private domain truth bodies",
@@ -138,7 +122,6 @@
     "OPL can turn run evidence into improvement candidates and promotion gates",
     "OPL can centralize cross-domain longline soak orchestration and recovery projections while leaving domain scorer and owner authority in domain repos",
     "OPL can expose a complete eval adapter, observability export, and optimizer-loop control plane without requiring external services in core",
-    "OPL can describe a meta-agent builder plan that creates and optimizes OPL-compatible agents through explicit gates",
     "OPL can fail closed on memory body payloads and forbidden authority claims"
   ],
   "agent_lab_does_not_prove": [
