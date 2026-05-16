@@ -192,6 +192,23 @@ test('framework production-closeout counts MAS guarded-apply receipts as refs-on
     assert.equal(mas.coverage_status, 'owner_chain_ref_or_typed_blocker_observed');
     assert.equal(mas.owner_receipt_ref_count, 1);
     assert.equal(mas.typed_blocker_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.surface_kind, 'opl_stage_attempt_control_loop_summary');
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.projection_scope, 'production_functional_closeout');
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.summary.attempt_count, 2);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.summary.receipt_ref_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.summary.blocker_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.summary.domain_with_action_route_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.summary.domain_with_blocker_count, 1);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.summary.action_route_count > 0, true);
+    assert.equal(
+      closeout.stage_attempt_evidence.control_loop_summary.source_refs.includes(
+        '/stage_attempt_evidence/domain_breakdown/medautoscience',
+      ),
+      true,
+    );
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.authority_boundary.can_execute_domain_action, false);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.authority_boundary.can_write_domain_truth, false);
+    assert.equal(closeout.stage_attempt_evidence.control_loop_summary.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(
       readiness.pending_gates.includes('domain_owner_chain_refs_or_typed_blockers'),
       false,
