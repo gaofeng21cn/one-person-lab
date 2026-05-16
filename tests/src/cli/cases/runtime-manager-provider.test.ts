@@ -20,6 +20,25 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       'local_sqlite',
       'temporal',
     ]);
+    assert.equal(output.runtime_manager.family_scheduler_replacement.surface_kind, 'opl_family_scheduler_replacement');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.scheduler_owner, 'opl_provider_runtime_manager');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.cadence_owner, 'provider_backed_family_runtime');
+    assert.deepEqual(output.runtime_manager.family_scheduler_replacement.allowed_opl_targets, [
+      'provider_slo_tick',
+      'domain_registration_intake',
+      'family_runtime_tick',
+      'runtime_manager_projection',
+    ]);
+    assert.equal(
+      output.runtime_manager.family_scheduler_replacement.managed_domains[0].legacy_scheduler_owner,
+      'mas_supervision_scheduler',
+    );
+    assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_install_domain_daemon, false);
+    assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_memory_body, false);
+    assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.provider_slo_tick, 'opl family-runtime provider-slo tick --provider temporal');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.family_runtime_tick, 'opl family-runtime tick --source provider-scheduler --hydrate');
     assert.equal(output.runtime_manager.provider_runtime.selected_provider, 'local_sqlite');
     assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
     assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_stage_runtime_registration_registry');
@@ -55,6 +74,11 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       nativeHelperContract.helpers.map((helper: { helper_id: string }) => helper.helper_id),
       output.runtime_manager.native_helper_target.helpers.map((helper: { helper_id: string }) => helper.helper_id),
     );
+    const runtimeManagerContract = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/runtime-manager-contract.json'), 'utf8'),
+    );
+    assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
+    assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
     assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
