@@ -4,7 +4,15 @@ Owner: `One Person Lab`
 Purpose: `north_star_reference`
 State: `active_support`
 Machine boundary: 本文是人读目标态参考。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Date: `2026-05-13`
+Date: `2026-05-16`
+
+## 文档读法
+
+- `定位`：本文只写 OPL family 的 north-star 目标态和长期 owner boundary；当前完成度、验证计数和实施计划回到 gap plan、status、roadmap 与机器面。
+- `当前实态校准`：带日期的校准段只记录当前代码或 fresh evidence，不把目标态写成已完成事实。
+- `Owner 边界`：OPL 持有 framework/runtime/development primitives；MAS/MAG/RCA 持有 domain truth、quality/export verdict、artifact authority、memory body 和 owner receipt。
+- `最短路径`：先冻结 standard domain-agent skeleton 与 OPL generic primitives，再迁移/退役 domain repo 中的通用功能残留，随后做 focused parity / no-forbidden-write / receipt 对账，最后跑 integration、provider SLO 和 live soak。
+- `禁写口径`：provider ready、descriptor aligned、skeleton evidence observed 或 provider completion 都不能写成 domain ready、publication-ready、fundability-ready、visual-ready 或 production soak complete。
 
 ## 结论
 
@@ -19,6 +27,12 @@ Date: `2026-05-13`
 `One Person Lab App` 是面向普通用户的桌面端或 Web 端工作台。它消费 OPL Framework 与 Foundry Agents 的投影，让用户看见任务、阶段、进度、阻塞、人类确认点、交付物和下一步动作。App 不持有 domain truth，也不复制 OPL runtime 或 domain runtime。
 
 本文描述目标态，不替代当前状态判断。当前落地程度和剩余闭环以 [OPL 当前状态](../../status.md)、[OPL 架构](../../architecture.md)、[OPL Stage-Led Agent Framework Roadmap](./opl-stage-led-agent-framework-roadmap.md) 与 [OPL 生产级框架闭环差距矩阵](../../active/production-framework-closure-gap-matrix.md) 为准。
+
+2026-05-16 校准：当前代码已经证明 OPL 不是单纯入口聚合，而是具备 descriptor discovery、stage plane、action catalog、domain memory locator、typed family queue、provider-backed stage attempt、Temporal worker/service readiness、production closeout read model 和 App/workbench 投影接口的框架主干。`./bin/opl agents list --json` 当前显示三仓 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`physical_skeleton_evidence_observed_count=3`、`production_closure_gap_count=12`；`OPL_FAMILY_RUNTIME_PROVIDER=temporal ./bin/opl family-runtime status --json` 显示 Temporal provider `provider_ready=true`、`full_online_ready=true`、`durable_online_ready=true`。这说明 OPL 已接近“完整智能体运行、开发框架”的可用骨架，但理想态仍要求把 family-level scheduler / wakeup / supervision 这类功能面从 domain repo 中收干净，并用真实长时 owner-chain receipts、memory/lifecycle apply receipts 和 App drilldown 证明生产闭环。
+
+同日发现的反例也要进入目标态边界：MAS repo 当前仍有 MAS-owned local supervision scheduler，默认 `local_launchd_on_macos` / `300` 秒 tick，并通过 `runtime-supervision-status`、`runtime-ensure-supervision`、`runtime-remove-supervision` 管理本机监管 job。这可以作为 MAS standalone/local diagnostic 迁移桥存在，但不符合 Foundry Agent 的理想终态；理想终态下，周期唤醒、supervision cadence、provider SLO 和通用运行监管应由 OPL Framework / provider 层持有，MAS 只返回医学 owner receipt、typed blocker、route/quality/artifact refs。
+
+执行顺序也属于目标态的一部分：已知的功能迁移、上收、清理和 template 抽取应先做，focused parity / no-forbidden-write / receipt 对账随后验证，cross-repo integration、长时 provider SLO 和 live soak 放在最后作为生产验收。不能把几乎不可一次性完成的超级大测试写成所有已知功能补足之前的门槛。
 
 ## 产品分层
 
