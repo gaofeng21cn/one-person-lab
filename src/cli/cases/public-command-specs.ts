@@ -32,6 +32,10 @@ import {
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
+import {
+  buildGenericSubstrateProjectionInspect,
+  buildGenericSubstrateProjectionList,
+} from '../../generic-substrate-projection.ts';
 import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import {
@@ -647,6 +651,23 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents descriptor --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyAgentDescriptorInspect(getContracts(), args),
+    },
+    'substrate projections': {
+      usage: 'opl substrate projections',
+      summary: 'List framework-owned workspace, source, artifact, and memory substrate projections from domain manifests.',
+      examples: ['opl substrate projections'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['substrate projections']);
+        return buildGenericSubstrateProjectionList(getContracts());
+      },
+    },
+    'substrate projection': {
+      usage: 'opl substrate projection --domain <domain>',
+      summary: 'Inspect one framework-owned substrate projection without reading domain truth, artifact bodies, or memory bodies.',
+      examples: ['opl substrate projection --domain mas'],
+      group: 'domain',
+      handler: (args) => buildGenericSubstrateProjectionInspect(getContracts(), args),
     },
     'domain-memory list': {
       usage: 'opl domain-memory list',

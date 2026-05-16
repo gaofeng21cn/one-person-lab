@@ -1,0 +1,66 @@
+{
+  "contract_kind": "opl_generic_workspace_data_memory_substrate_projection_contract.v1",
+  "surface_kind": "opl_generic_substrate_projection_contract",
+  "owner": "one-person-lab",
+  "scope": "framework-owned locator, index, lifecycle, and projection surface for domain-declared workspace, source, artifact, and memory refs",
+  "contract_version": "opl-generic-substrate-projection.v1",
+  "input_surfaces": [
+    "domain_manifest.workspace_locator",
+    "domain_manifest.source_provenance",
+    "domain_manifest.artifact_inventory",
+    "domain_manifest.domain_memory_descriptor",
+    "domain_manifest.generic_substrate_refs",
+    "domain_sidecar_export.opl_substrate_adapter"
+  ],
+  "projection_surface": {
+    "surface_kind": "opl_generic_substrate_projection",
+    "required_sections": [
+      "workspace",
+      "source_refs",
+      "artifact_refs",
+      "memory_refs",
+      "lifecycle_projection",
+      "authority_boundary",
+      "non_authority_flags"
+    ]
+  },
+  "framework_owns": [
+    "workspace_locator_index",
+    "source_ref_index",
+    "artifact_ref_index",
+    "memory_ref_index",
+    "lifecycle_projection",
+    "operator_projection",
+    "manifest_ref_transport"
+  ],
+  "domain_agent_owns": [
+    "workspace_truth",
+    "source_truth_body",
+    "artifact_body",
+    "artifact_authority",
+    "memory_body",
+    "memory_writeback_accept_reject",
+    "domain_truth",
+    "quality_verdict",
+    "publication_fundability_visual_verdict"
+  ],
+  "forbidden_opl_authority": [
+    "domain truth write",
+    "memory body read or write as framework truth",
+    "memory writeback accept or reject verdict",
+    "artifact content mutation",
+    "artifact authority mutation",
+    "source truth interpretation",
+    "quality verdict",
+    "publication, fundability, or visual readiness verdict"
+  ],
+  "lifecycle_policy": {
+    "opl_can_index_refs": true,
+    "opl_can_project_lifecycle_status": true,
+    "opl_can_transport_refs_to_runtime_or_app": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_apply_memory_writeback": false,
+    "opl_can_mutate_artifacts": false,
+    "opl_can_authorize_domain_ready": false
+  }
+}
