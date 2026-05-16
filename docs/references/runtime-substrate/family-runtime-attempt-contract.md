@@ -31,6 +31,15 @@
 - `released` 表示该 attempt 不再持有 workspace / route claim，可以由 domain repo 重新调度或升级 human gate。
 - `blocked` 必须携带 `human_gate_reason`、`quality_gate_reason` 或 `runtime_owner_mismatch`。
 
+## External Stability Pattern Policy
+
+`cybernetics-agent` 一类外部 agent wrapper 的 fallback、字符串 retry、event bus 和 runtime adapter 不是完全不能学；它们不能作为 `OPL` core runtime 成功语义照搬。`OPL` 的稳定性定义是失败能被准确分类、可恢复、可审计，并且不会伪装成高质量完成。
+
+- `generic_fallback` 只能进入 `degraded_attempt` 或 `alternative_route_proposal`。它必须携带 blocker、evidence gap 和 owner receipt ref；不能标记 `fallback_complete`，不能绕过质量门或 domain authority。
+- `string_rule_retry` 只能升级为 typed SLO / retry policy schema。规则必须有 trigger kind、metric source、cooldown、max attempts、owner、allowed action 和 receipt refs；解析失败必须 fail-closed。
+- `generic_event_bus` 只能作为只读 event classification / alert projection。真实状态仍以 stage attempt ledger、Temporal workflow history、typed queue、typed closeout packet 和 domain-owned receipt 为准；event stream 不能成为第二真相源。
+- `generic_runtime_adapter` 只能落到显式 executor adapter registry。每个 adapter 必须声明 capability boundary、receipt shape、tool-event proof、timeout rule、typed closeout rule 和 fail-closed gate；不能把“能启动进程”解释为行为等价、质量等价或 resume 等价。
+
 ## Workspace Isolation
 
 - attempt 必须携带 owner repo 与 workspace boundary，防止跨 repo 写入。

@@ -168,6 +168,85 @@
     "can_authorize_quality_verdict": false,
     "provider_completion_is_domain_ready": false
   },
+  "external_stability_pattern_policy": {
+    "policy_kind": "opl_external_stability_pattern_intake.v1",
+    "core_runtime_import_allowed": false,
+    "patterns": [
+      {
+        "pattern": "generic_fallback",
+        "allowed_absorption": [
+          "degraded_attempt",
+          "alternative_route_proposal"
+        ],
+        "required_refs": [
+          "blocker_ref",
+          "evidence_gap_ref",
+          "owner_receipt_ref"
+        ],
+        "forbidden_core_semantics": [
+          "fallback_complete",
+          "quality_gate_bypass",
+          "domain_authority_bypass",
+          "silent_success_on_degraded_evidence"
+        ]
+      },
+      {
+        "pattern": "string_rule_retry",
+        "allowed_absorption": [
+          "typed_slo_retry_policy_schema"
+        ],
+        "required_schema_fields": [
+          "trigger_kind",
+          "metric_source",
+          "cooldown",
+          "max_attempts",
+          "owner",
+          "allowed_action",
+          "receipt_refs"
+        ],
+        "parse_failure": "fail_closed"
+      },
+      {
+        "pattern": "generic_event_bus",
+        "allowed_absorption": [
+          "read_only_event_classification_projection"
+        ],
+        "truth_sources": [
+          "opl_stage_attempt_ledger",
+          "temporal_workflow_history",
+          "typed_queue",
+          "typed_closeout_packet",
+          "domain_owned_receipt"
+        ],
+        "forbidden_core_semantics": [
+          "second_truth_source",
+          "event_stream_as_authority",
+          "event_replay_over_domain_receipt"
+        ]
+      },
+      {
+        "pattern": "generic_runtime_adapter",
+        "allowed_absorption": [
+          "explicit_executor_adapter_registry"
+        ],
+        "required_adapter_contract": [
+          "capability_boundary",
+          "receipt_shape",
+          "tool_event_proof",
+          "timeout_rule",
+          "typed_closeout_rule",
+          "fail_closed_gate"
+        ],
+        "forbidden_core_semantics": [
+          "subprocess_started_equals_success",
+          "executor_behavior_equivalence",
+          "executor_quality_equivalence",
+          "resume_equivalence_without_proof"
+        ]
+      }
+    ],
+    "stability_definition": "failure_classified_recoverable_auditable_without_quality_downgrade"
+  },
   "reconciliation_statuses": [
     "fresh",
     "stale",

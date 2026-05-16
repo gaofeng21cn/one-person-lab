@@ -15,6 +15,12 @@ function readJson(relativePath: string) {
   return JSON.parse(read(relativePath)) as Record<string, unknown>;
 }
 
+function requirePattern(patterns: Map<string, Record<string, any>>, pattern: string) {
+  const value = patterns.get(pattern);
+  assert.ok(value, `missing external stability pattern: ${pattern}`);
+  return value;
+}
+
 test('family runtime attempt contract documents attempt, retry, workspace, and reconciliation fields', () => {
   const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
@@ -147,6 +153,43 @@ test('family runtime attempt contract rejects external required scheduler entrie
   for (const unsupported of ['Linear', 'Symphony scheduler', 'external issue tracker']) {
     assert.ok((contract.unsupported_required_entries as string[]).includes(unsupported));
   }
+});
+
+test('family runtime attempt contract treats external stability mechanisms as typed proposals or read-only projections', () => {
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
+  const policy = contract.external_stability_pattern_policy as Record<string, any>;
+  const patterns = new Map((policy.patterns as Record<string, any>[]).map((entry) => [entry.pattern, entry]));
+
+  assert.equal(policy.core_runtime_import_allowed, false);
+  assert.equal(policy.stability_definition, 'failure_classified_recoverable_auditable_without_quality_downgrade');
+
+  const fallback = requirePattern(patterns, 'generic_fallback');
+  assert.ok(fallback.allowed_absorption.includes('degraded_attempt'));
+  assert.ok(fallback.allowed_absorption.includes('alternative_route_proposal'));
+  assert.ok(fallback.required_refs.includes('owner_receipt_ref'));
+  assert.ok(fallback.forbidden_core_semantics.includes('fallback_complete'));
+  assert.ok(fallback.forbidden_core_semantics.includes('silent_success_on_degraded_evidence'));
+
+  const retry = requirePattern(patterns, 'string_rule_retry');
+  assert.ok(retry.allowed_absorption.includes('typed_slo_retry_policy_schema'));
+  assert.ok(retry.required_schema_fields.includes('trigger_kind'));
+  assert.ok(retry.required_schema_fields.includes('metric_source'));
+  assert.ok(retry.required_schema_fields.includes('receipt_refs'));
+  assert.equal(retry.parse_failure, 'fail_closed');
+
+  const eventBus = requirePattern(patterns, 'generic_event_bus');
+  assert.ok(eventBus.allowed_absorption.includes('read_only_event_classification_projection'));
+  assert.ok(eventBus.truth_sources.includes('opl_stage_attempt_ledger'));
+  assert.ok(eventBus.truth_sources.includes('domain_owned_receipt'));
+  assert.ok(eventBus.forbidden_core_semantics.includes('second_truth_source'));
+
+  const adapter = requirePattern(patterns, 'generic_runtime_adapter');
+  assert.ok(adapter.allowed_absorption.includes('explicit_executor_adapter_registry'));
+  assert.ok(adapter.required_adapter_contract.includes('receipt_shape'));
+  assert.ok(adapter.required_adapter_contract.includes('tool_event_proof'));
+  assert.ok(adapter.required_adapter_contract.includes('fail_closed_gate'));
+  assert.ok(adapter.forbidden_core_semantics.includes('subprocess_started_equals_success'));
+  assert.ok(adapter.forbidden_core_semantics.includes('executor_quality_equivalence'));
 });
 
 test('standard domain-agent skeleton contract keeps repo source separate from real artifacts', () => {

@@ -65,6 +65,16 @@ Operator projection 必须表达：
 - `usage_projection` 和 `resource_pressure` 只能报告已观测数据；缺失值不能估算，不能触发 executor auto-degradation。
 - `control_loop_summary` 只能汇总 trigger、decision、action route、receipt refs 和 blocker/human-gate/dead-letter 状态；不能执行 domain action 或写 domain truth。
 - `observability_export` 只能读取 OPL ledger、provider proof receipts、runtime snapshot、stage attempt workbench 和 domain-owned projection refs；不能授权 repair、ready、quality 或 artifact/export verdict。
+- 外部 generic fallback 只能显示为 `degraded_attempt` 或 `alternative_route_proposal`；operator 面必须同时展示 blocker、evidence gap、owner receipt ref 和 next surface，不能显示为 completed / passed。
+- 字符串 retry 规则不能直接驱动执行；只有 typed SLO / retry policy schema 且 parse 成功时才可成为 proposal 或 supervised action envelope，解析失败必须 fail-closed。
+- 通用 event bus 只能贡献 event / alert 分类字段；operator projection 的 truth source 仍是 OPL ledger、Temporal proof、typed closeout 和 domain-owned receipt。
+- 通用 runtime adapter 只能作为显式非默认 executor adapter 展示；operator 面不能把 adapter process started 写成行为、质量或 resume 等价。
+
+## External Stability Learning
+
+本轮从 `cybernetics-agent` 继续吸收的是稳定性表达，不是通用兜底执行机制。可学习项包括 control-loop 分类、已观测 usage / budget projection、typed SLO / retry policy 语言、只读 event / alert projection 和 dashboard grouping vocabulary。
+
+不进入核心运行机制的项包括 generic fallback completion、string-rule retry execution、generic event bus as truth、generic runtime adapter success semantics。对 OPL 来说，稳定性不是“失败也产出点东西”，而是“失败被准确分类、可恢复、可审计，并且不会伪装成高质量完成”。
 
 ## Runtime Observability Export
 

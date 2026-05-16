@@ -40,6 +40,32 @@
     ],
     "authority": "read_only_non_authoritative"
   },
+  "external_stability_learning_policy": {
+    "allowed_learning": [
+      "control_loop_classification",
+      "observed_usage_budget_projection",
+      "typed_slo_retry_policy_language",
+      "read_only_event_and_alert_projection",
+      "dashboard_grouping_vocabulary"
+    ],
+    "not_core_runtime_mechanisms": [
+      "generic_fallback_completion",
+      "string_rule_retry_execution",
+      "generic_event_bus_as_truth",
+      "generic_runtime_adapter_success_semantics"
+    ],
+    "allowed_degraded_surface": {
+      "surface": "degraded_attempt_or_alternative_route_proposal",
+      "can_mark_success": false,
+      "required_operator_fields": [
+        "blocker",
+        "evidence_gap",
+        "owner_receipt_ref",
+        "next_surface_ref"
+      ]
+    },
+    "operator_stability_definition": "failure_is_classified_recoverable_and_auditable_without_pretending_quality_completion"
+  },
   "preserved_runtime_semantics": [
     "Codex-default session/runtime",
     "explicit domain activation",
@@ -53,7 +79,11 @@
     "domain runtime truth ownership",
     "domain quality authority",
     "executor auto-degradation",
-    "domain action execution from observability"
+    "domain action execution from observability",
+    "generic fallback completion",
+    "string rule retry execution",
+    "generic event bus truth source",
+    "generic runtime adapter success semantics"
   ],
   "fail_closed_rules": [
     "source_refs_required",
