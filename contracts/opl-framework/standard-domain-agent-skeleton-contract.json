@@ -59,6 +59,10 @@
     "generation_policy": {
       "scaffold_command_is_read_only": true,
       "creates_files": false,
+      "default_mode": "describe_without_target_dir",
+      "write_requires_explicit_target_dir": true,
+      "generate_command": "opl agents scaffold --target-dir <path> --domain-id <id>",
+      "validate_command": "opl agents scaffold --validate <repo-dir>",
       "copy_existing_domain_repo_as_template": false
     },
     "docs_taxonomy": [
