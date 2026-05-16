@@ -26,7 +26,7 @@ Date: `2026-05-16`
 
 完整 Agent Lab 是理想态中的开发与强化学习控制面。它不是 domain agent，也不是训练平台本身；它负责把任务定义、轨迹 refs、恢复探针、domain-owned scorer refs、失败分类、candidate、promotion gate、observability refs 和 online learning refs 统一成 OPL 可审计 read model。Inspect AI、METR task standard、Langfuse、Phoenix、DSPy、TextGrad 或 Agent Lightning 这类外部项目只能作为 adapter、trace backend、optimizer 或 RL consumer 接入；OPL core 继续持有 refs-only control plane，不把外部 eval log、trace store、reward model 或 optimizer 输出升级为 domain verdict 或默认 agent promotion。
 
-基于这个边界，`meta-agent` 是下一个目标态 Foundry Agent：它面向“用 OPL 开发新的高价值知识交付智能体”。它本身也是 Foundry Agent，但它的交付物是一个达到 baseline 要求的 OPL-compatible agent package / repo。它的默认 stage chain 是：
+基于这个边界，`opl-meta-agent` 是下一个目标态 Foundry Agent：它面向“用 OPL 开发新的高价值知识交付智能体”。它本身属于 meta-agent 类型的 Foundry Agent，但它的交付物是一个达到 baseline 要求的 OPL-compatible agent package / repo。它的默认 stage chain 是：
 
 ```text
 intent intake
@@ -40,7 +40,7 @@ intent intake
   -> online learning
 ```
 
-这个 meta-agent 可以理解用户意图、检索目标领域的公开经验、拆解专家步骤、构建 descriptor / stage / action / memory / quality / artifact contract、生成 agent skeleton、通过 Agent Lab 运行 baseline、产出 prompt / skill / stage policy / tool policy candidate，并在显式 gate 后交付 baseline。后续持续在线学习只能以 trajectory refs、human/domain owner labels、scorecard refs 和 candidate refs 的形式进入 Agent Lab；不能直接写 domain memory body、不能无 gate 改默认 agent 配置、不能训练或部署模型权重作为 OPL core 行为。
+这个 OPL-compatible meta-agent 可以理解用户意图、检索目标领域的公开经验、拆解专家步骤、构建 descriptor / stage / action / memory / quality / artifact contract、生成 agent skeleton、通过 Agent Lab 运行 baseline、产出 prompt / skill / stage policy / tool policy candidate，并在显式 gate 后交付 baseline。后续持续在线学习只能以 trajectory refs、human/domain owner labels、scorecard refs 和 candidate refs 的形式进入 Agent Lab；不能直接写 domain memory body、不能无 gate 改默认 agent 配置、不能训练或部署模型权重作为 OPL core 行为。
 
 `One Person Lab App` 是面向普通用户的桌面端或 Web 端工作台。它消费 OPL Framework 与 Foundry Agents 的投影，让用户看见任务、阶段、进度、阻塞、人类确认点、交付物和下一步动作。App 不持有 domain truth，也不复制 OPL runtime 或 domain runtime。
 
