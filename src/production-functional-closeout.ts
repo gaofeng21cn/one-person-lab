@@ -20,6 +20,7 @@ import {
   buildProviderContinuousProof,
   providerProofStatusIsCurrentlyProven,
 } from './family-runtime-provider-continuous-proof.ts';
+import { summarizeStageAttemptUsageProjections } from './family-runtime-stage-attempt-usage.ts';
 import {
   listStageAttemptCloseouts,
   listStageAttemptSignals,
@@ -421,6 +422,10 @@ function summarizeAttemptEvidence(
   const memoryRefEvidence = closeoutMemoryRefEvidence(closeouts, domainIds);
   const operatorActionRouting = summarizeOperatorActionRouting(attempts, closeouts, signals);
   const genericProjections = summarizeGenericProjections(attempts, closeouts, signals);
+  const usageProjection = summarizeStageAttemptUsageProjections(
+    attempts.map((attempt) => attempt.usage_projection),
+    'production_functional_closeout',
+  );
   const transitionBridgeEvidence = genericProjections.projections.transition_bridge_evidence;
   return {
     surface_kind: 'opl_stage_attempt_functional_closeout_evidence',
@@ -449,6 +454,7 @@ function summarizeAttemptEvidence(
       rejected_write_count: memoryRefEvidence.rejected_write_count,
       opl_writes_memory_body: false,
     },
+    usage_projection: usageProjection,
     operator_action_routing_summary: operatorActionRouting.summary,
     transition_bridge_evidence_summary: transitionBridgeEvidence.summary,
     generic_projection_summary: genericProjections.summary,

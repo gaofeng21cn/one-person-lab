@@ -665,6 +665,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       lifecycle_primitives: lifecyclePrimitives,
       controlled_apply_contract: controlledApplyContract,
       ...genericProjections,
+      usage_projection: attempt.usage_projection,
       operator_visibility: {
         provider_kind: attempt.provider_kind,
         attempt_id: attempt.stage_attempt_id,
@@ -694,6 +695,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         user_instructions: userInstructionLedger,
         resume_signals: resumeLedger,
         dead_letter: taskDeadLetterForAttempt(db, attempt),
+        usage_projection: attempt.usage_projection,
         authority_boundary: {
           opl: 'attempt_control_metadata_projection_only',
           domain: 'truth_quality_artifact_gate_owner',

@@ -4,6 +4,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 import {
+  buildStageAttemptUsageProjection,
+  summarizeStageAttemptUsageProjections,
+} from './family-runtime-stage-attempt-usage.ts';
+import {
   inspectFamilyRuntimeProviderWithLifecycle,
   isFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
@@ -178,6 +182,16 @@ function attemptProjection(
     ...writebackReceiptRefs,
   ];
   const currentProviderReadiness = currentProviderReadinessProjection(providerKindForRow(row), providerReadiness);
+  const usageProjection = buildStageAttemptUsageProjection({
+    stageAttemptId: row.stage_attempt_id,
+    status: row.status,
+    blockedReason: row.blocked_reason,
+    retryBudget: parseRecord(row.retry_budget_json),
+    attemptCount: row.attempt_count,
+    providerRun,
+    activityEvents,
+    routeImpact,
+  });
   const genericProjections = buildAttemptGenericProjections({
     stage_attempt_id: row.stage_attempt_id,
     domain_id: row.domain_id,
@@ -231,6 +245,7 @@ function attemptProjection(
     domain_ready_verdict: domainReadyVerdict,
     rejected_writes: rejectedWrites,
     route_impact: routeImpact,
+    usage_projection: usageProjection,
     ...genericProjections,
     next_owner: nextOwner,
     human_gate_refs: humanGateRefs,
@@ -259,6 +274,9 @@ function attemptProjection(
       dead_lettered: isDeadLetter,
       has_consumed_memory_refs: consumedMemoryRefs.length > 0,
       has_writeback_receipt_refs: writebackReceiptRefs.length > 0,
+      retry_budget_pressure: ['retry_budget_pressure', 'retry_budget_exhausted'].includes(
+        usageProjection.retry_budget.pressure_status,
+      ),
       ...transitionBridgeFilterKeys(genericProjections),
     },
     attention_flags: attentionFlags,
@@ -340,56 +358,29 @@ function memoryRefCounters(attempts: StageAttemptProjection[]) {
 }
 
 function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: StageAttemptProjection) => string) {
-  return attempts.reduce<Record<string, JsonRecord>>((groups, attempt) => {
+  const grouped = attempts.reduce<Record<string, StageAttemptProjection[]>>((groups, attempt) => {
     const key = keyFor(attempt);
-    const group = groups[key] ?? {
-      key,
-      total: 0,
-      attempt_ids: [],
-      by_status: {},
-      attention_count: 0,
-      human_gate_count: 0,
-      resume_count: 0,
-      dead_letter_count: 0,
-      memory_ref_counters: {
-        consumed_memory_ref_count: 0,
-        writeback_receipt_ref_count: 0,
-        attempts_with_consumed_memory_refs: 0,
-        attempts_with_writeback_receipt_refs: 0,
-      },
-    };
-    const attemptIds = Array.isArray(group.attempt_ids) ? group.attempt_ids : [];
-    const byStatus = group.by_status && typeof group.by_status === 'object' && !Array.isArray(group.by_status)
-      ? group.by_status as Record<string, number>
-      : {};
-    const counters = group.memory_ref_counters as Record<string, number>;
-    const consumedMemoryRefs = Array.isArray(attempt.consumed_memory_refs) ? attempt.consumed_memory_refs : [];
-    const writebackReceiptRefs = Array.isArray(attempt.writeback_receipt_refs) ? attempt.writeback_receipt_refs : [];
-
-    attemptIds.push(attempt.stage_attempt_id);
-    byStatus[attempt.local_status] = (byStatus[attempt.local_status] ?? 0) + 1;
-    counters.consumed_memory_ref_count += consumedMemoryRefs.length;
-    counters.writeback_receipt_ref_count += writebackReceiptRefs.length;
-    if (consumedMemoryRefs.length > 0) {
-      counters.attempts_with_consumed_memory_refs += 1;
-    }
-    if (writebackReceiptRefs.length > 0) {
-      counters.attempts_with_writeback_receipt_refs += 1;
-    }
-
-    groups[key] = {
-      ...group,
-      total: Number(group.total) + 1,
-      attempt_ids: attemptIds,
-      by_status: byStatus,
-      attention_count: Number(group.attention_count) + (projectionHasAttention(attempt) ? 1 : 0),
-      human_gate_count: Number(group.human_gate_count) + (projectionHasHumanGate(attempt) ? 1 : 0),
-      resume_count: Number(group.resume_count) + (projectionHasResume(attempt) ? 1 : 0),
-      dead_letter_count: Number(group.dead_letter_count) + (projectionIsDeadLetter(attempt) ? 1 : 0),
-      memory_ref_counters: counters,
-    };
+    groups[key] = [...(groups[key] ?? []), attempt];
     return groups;
   }, {});
+  return Object.fromEntries(Object.entries(grouped).map(([key, groupAttempts]) => [
+    key,
+    {
+      key,
+      total: groupAttempts.length,
+      attempt_ids: groupAttempts.map((attempt) => attempt.stage_attempt_id),
+      by_status: countBy(groupAttempts, (attempt) => attempt.local_status),
+      attention_count: groupAttempts.filter(projectionHasAttention).length,
+      human_gate_count: groupAttempts.filter(projectionHasHumanGate).length,
+      resume_count: groupAttempts.filter(projectionHasResume).length,
+      dead_letter_count: groupAttempts.filter(projectionIsDeadLetter).length,
+      memory_ref_counters: memoryRefCounters(groupAttempts),
+      usage_projection: summarizeStageAttemptUsageProjections(
+        groupAttempts.map((attempt) => attempt.usage_projection),
+        'stage_attempt_group',
+      ),
+    },
+  ]));
 }
 
 function workbenchMetadata(attempts: StageAttemptProjection[]) {
@@ -414,6 +405,10 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       attention_count: attentionCounters.total,
       attention_counters: attentionCounters,
       memory_ref_counters: memoryRefCounters(attempts),
+      usage_projection: summarizeStageAttemptUsageProjections(
+        attempts.map((attempt) => attempt.usage_projection),
+        'stage_attempt_workbench',
+      ),
       ...buildWorkbenchGenericProjections(attempts),
       human_gate_count: attentionCounters.human_gate_count,
       resume_count: attentionCounters.resume_count,
@@ -424,6 +419,7 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       group_keys: ['domain_id', 'stage_id', 'status'],
       attention_flags: ['human_gate', 'resume_available', 'dead_lettered', 'blocked', 'rejected_writes'],
       memory_ref_flags: ['has_consumed_memory_refs', 'has_writeback_receipt_refs'],
+      usage_projection_flags: ['retry_budget_pressure'],
       transition_bridge_flags: [
         'has_transition_bridge',
         'has_transition_owner_receipt_refs',
@@ -468,6 +464,7 @@ const EMPTY_WORKBENCH_METADATA = {
     group_keys: ['domain_id', 'stage_id', 'status'],
     attention_flags: ['human_gate', 'resume_available', 'dead_lettered', 'blocked', 'rejected_writes'],
     memory_ref_flags: ['has_consumed_memory_refs', 'has_writeback_receipt_refs'],
+    usage_projection_flags: ['retry_budget_pressure'],
     transition_bridge_flags: [
       'has_transition_bridge',
       'has_transition_owner_receipt_refs',
@@ -494,6 +491,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       observability_slo: EMPTY_WORKBENCH_METADATA.summary.observability_slo,
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
+      usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
@@ -534,6 +532,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       observability_slo: metadata.summary.observability_slo,
       workspace_source_intake: metadata.summary.workspace_source_intake,
       memory_locator_index: metadata.summary.memory_locator_index,
+      usage_projection: metadata.summary.usage_projection,
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
       action_routing: metadata.summary.action_routing,
       transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
@@ -558,6 +557,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       observability_slo: EMPTY_WORKBENCH_METADATA.summary.observability_slo,
       workspace_source_intake: EMPTY_WORKBENCH_METADATA.summary.workspace_source_intake,
       memory_locator_index: EMPTY_WORKBENCH_METADATA.summary.memory_locator_index,
+      usage_projection: EMPTY_WORKBENCH_METADATA.summary.usage_projection,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
