@@ -16,6 +16,12 @@ export type FunctionalPrivatizationAuditItem = {
   current_surface_refs: string[];
   expected_opl_primitives: string[];
   retained_domain_authority: string[];
+  code_paths: string[];
+  active_callers: string[];
+  active_caller_status: string | null;
+  migration_action: string | null;
+  retention_reason: string | null;
+  cannot_absorb_reason: string | null;
   active_caller_allowed: boolean;
   tombstone_required: boolean;
   blocker: string | null;
@@ -51,6 +57,16 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
   version: 'opl-functional-privatization-audit.v1',
   owner: 'one-person-lab',
   purpose: 'Normalize domain-declared non-knowledge functional module audits into one OPL replacement/readout surface.',
+  module_inventory_fields: [
+    'module_id',
+    'classification',
+    'code_paths',
+    'active_callers',
+    'active_caller_status',
+    'migration_action',
+    'retention_reason',
+    'cannot_absorb_reason',
+  ],
   accepted_source_fields: [
     'functional_privatization_audit',
     'privatized_functional_module_audit',
@@ -159,6 +175,7 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   if (
     text === 'opl_owned_generic_primitive_consumer'
     || text === 'A_opl_owned_mas_consumes'
+    || text === 'split_owner_boundary'
     || text === 'opl_owned_generic_envelope_rca_owned_helper_implementation'
     || text === 'opl_owned_observability_stability_read_model_consumed_by_rca'
   ) {
@@ -216,13 +233,46 @@ function itemFromRecord(
     ].filter((entry): entry is string => Boolean(entry))),
     expected_opl_primitives: expectedOplPrimitives,
     retained_domain_authority: retainedDomainAuthority,
+    code_paths: unique([
+      ...stringList(record.code_paths),
+      ...stringList(record.codePaths),
+      stringValue(record.code_path),
+      stringValue(record.codePath),
+    ].filter((entry): entry is string => Boolean(entry))),
+    active_callers: unique([
+      ...stringList(record.active_callers),
+      ...stringList(record.activeCallers),
+      stringValue(record.active_caller),
+      stringValue(record.activeCaller),
+    ].filter((entry): entry is string => Boolean(entry))),
+    active_caller_status:
+      stringValue(record.active_caller_status)
+      ?? stringValue(record.activeCallerStatus),
+    migration_action:
+      stringValue(record.migration_action)
+      ?? stringValue(record.migrationAction),
+    retention_reason:
+      stringValue(record.retention_reason)
+      ?? stringValue(record.retentionReason),
+    cannot_absorb_reason:
+      stringValue(record.cannot_absorb_reason)
+      ?? stringValue(record.cannotAbsorbReason),
     active_caller_allowed: activeCallerAllowed,
     tombstone_required: Boolean(record.tombstone_required) || itemClass === 'retire_tombstone',
     blocker,
   };
 }
 
+function itemsFromModuleInventory(source: JsonRecord, sourcePath: string) {
+  return recordList(source.functional_module_inventory)
+    .map((entry) => itemFromRecord(entry, `${sourcePath}.functional_module_inventory`, 'domain_thin_adapter'));
+}
+
 function itemsFromMasBoundary(source: JsonRecord) {
+  const inventoryItems = itemsFromModuleInventory(source, 'functional_consumer_boundary');
+  if (inventoryItems.length > 0) {
+    return inventoryItems;
+  }
   const classification = isRecord(source.functional_surface_classification)
     ? source.functional_surface_classification
     : {};

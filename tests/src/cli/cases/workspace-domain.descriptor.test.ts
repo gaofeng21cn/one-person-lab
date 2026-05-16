@@ -362,6 +362,67 @@ function withFunctionalConsumerBoundary(payload: JsonRecord) {
   return attachManifestSurface(payload, 'functional_consumer_boundary', {
     surface_kind: 'mas_functional_consumer_boundary',
     target_domain_id: 'med-autoscience',
+    functional_module_inventory: [
+      {
+        module_id: 'runtime_lifecycle_sqlite_reference_adapter',
+        classification: 'A_opl_owned_mas_consumes',
+        owner: 'one-person-lab',
+        code_paths: ['src/med_autoscience/runtime_protocol/runtime_lifecycle_store.py'],
+        active_callers: ['medautosci sidecar export'],
+        active_caller_status: 'refs_only_adapter_active',
+        migration_action: 'consume_opl_lifecycle_index_and_keep_domain_receipt_refs_only',
+        retention_reason: 'MAS may index paper-owner receipts without owning a generic persistence engine.',
+        opl_expected_primitives: [
+          'opl_runtime_lifecycle_index_contract',
+          'opl_artifact_lifecycle_storage_audit_shell',
+        ],
+      },
+      {
+        module_id: 'runtime_storage_maintenance',
+        classification: 'A_opl_owned_mas_consumes',
+        owner: 'one-person-lab',
+        code_paths: ['src/med_autoscience/controllers/runtime_storage_maintenance.py'],
+        active_callers: ['medautosci runtime storage-maintenance'],
+        active_caller_status: 'domain_cleanup_shell_active_until_opl_replacement_proof',
+        migration_action: 'move generic storage audit and cleanup policy to OPL lifecycle primitive',
+        retention_reason: 'MAS can keep only study workspace receipt refs and paper artifact authority.',
+        opl_expected_primitives: ['opl_artifact_lifecycle_storage_audit_shell'],
+      },
+      {
+        module_id: 'study_truth',
+        classification: 'domain_authority',
+        owner: 'med-autoscience',
+        code_paths: ['src/med_autoscience/controllers/study_truth_kernel.py'],
+        active_callers: ['MAS controller owner route'],
+        active_caller_status: 'domain_authority_active',
+        migration_action: 'retain_in_mas',
+        cannot_absorb_reason: 'Medical study truth and publication route decisions are domain authority, not framework state.',
+        retained_domain_authority: ['study_truth'],
+      },
+      {
+        module_id: 'publication_quality_verdict',
+        classification: 'domain_authority',
+        owner: 'med-autoscience',
+        code_paths: ['src/med_autoscience/controllers/study_progress_parts/publication_runtime.py'],
+        active_callers: ['AI reviewer and publication gate'],
+        active_caller_status: 'domain_authority_active',
+        migration_action: 'retain_in_mas',
+        cannot_absorb_reason: 'OPL cannot authorize medical publication readiness or manuscript quality.',
+        retained_domain_authority: ['publication_quality_verdict'],
+      },
+      {
+        module_id: 'local_launchd_scheduler_install_path',
+        classification: 'retire_tombstone',
+        owner: 'none_active',
+        code_paths: ['src/med_autoscience/controllers/supervision_scheduler_parts/local_adapter.py'],
+        active_callers: ['explicit --manager local status/remove cleanup only'],
+        active_caller_status: 'cleanup_diagnostic_only_no_default_caller',
+        migration_action: 'delete_after_no_active_caller_and_replacement_proof',
+        retention_reason: 'Temporary cleanup diagnostics may remove legacy LaunchAgent artifacts.',
+        active_caller_allowed: false,
+        tombstone_required: true,
+      },
+    ],
     functional_surface_classification: {
       A_opl_owned_mas_consumes: [
         'runtime_lifecycle_sqlite_reference_adapter',
@@ -397,6 +458,10 @@ function withPrivatizedFunctionalModuleAudit(payload: JsonRecord) {
           classification: 'opl_owned_generic_primitive_consumer',
           owner: 'one-person-lab',
           mag_role: 'wakeup_refs_and_safe_action_provider',
+          code_paths: ['src/med_autogrant/product_entry_parts/consumer_thinning.py'],
+          active_callers: ['product-entry manifest', 'sidecar export'],
+          active_caller_status: 'thin_adapter_active',
+          migration_action: 'consume_opl_attention_queue_and_keep_grant_safe_action_refs',
           current_surface_refs: ['/product_entry_manifest/session_continuity'],
           opl_expected_primitives: ['session_ledger', 'typed_attention_queue'],
           mag_retained_authority: ['safe_action_refs'],
@@ -434,8 +499,12 @@ function withRcaFunctionalAudit(payload: JsonRecord) {
     modules: [
       {
         module_id: 'native_helper_envelope_wrapper',
-        classification: 'opl_owned_generic_envelope_rca_owned_helper_implementation',
+        classification: 'split_owner_boundary',
         owner: 'one-person-lab',
+        codePaths: ['packages/redcube-runtime-protocol/src/python-native-helper.ts'],
+        activeCallers: ['RCA product sidecar guarded actions'],
+        activeCallerStatus: 'generic_envelope_should_be_opl_owned_helper_impl_retained_in_rca',
+        migrationAction: 'move generic helper envelope to OPL and retain visual helper implementation in RCA',
         surface_ref: '/native_ppt_operator_ux',
         opl_generic_primitive: 'native_helper_generic_envelope',
         rca_scope: 'python_native_helper_implementation',
@@ -588,6 +657,24 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .migration_class,
       'opl_owned_replacement',
     );
+    assert.deepEqual(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
+        .code_paths,
+      ['src/med_autoscience/runtime_protocol/runtime_lifecycle_store.py'],
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
+        .migration_action,
+      'consume_opl_lifecycle_index_and_keep_domain_receipt_refs_only',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'publication_quality_verdict')
+        .cannot_absorb_reason,
+      'OPL cannot authorize medical publication readiness or manuscript quality.',
+    );
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'local_launchd_scheduler_install_path')
@@ -656,6 +743,12 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .migration_class,
       'domain_authority',
     );
+    assert.deepEqual(
+      mag.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'session_ledger_attention_queue')
+        .code_paths,
+      ['src/med_autogrant/product_entry_parts/consumer_thinning.py'],
+    );
 
     const rca = runCli(['agents', 'descriptor', '--domain', 'rca'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -667,6 +760,18 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')
         .migration_class,
       'opl_owned_replacement',
+    );
+    assert.deepEqual(
+      rca.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')
+        .active_callers,
+      ['RCA product sidecar guarded actions'],
+    );
+    assert.equal(
+      rca.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')
+        .migration_action,
+      'move generic helper envelope to OPL and retain visual helper implementation in RCA',
     );
     assert.equal(
       rca.family_agent_descriptor.functional_privatization_audit.authority_boundary.opl_can_write_domain_truth,
