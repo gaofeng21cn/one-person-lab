@@ -35,6 +35,7 @@ import {
 import {
   buildGenericSubstrateProjectionInspect,
   buildGenericSubstrateProjectionList,
+  buildGenericSubstrateWorkbench,
 } from '../../generic-substrate-projection.ts';
 import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../types.ts';
@@ -668,6 +669,16 @@ export function buildPublicCommandSpecs(
       examples: ['opl substrate projection --domain mas'],
       group: 'domain',
       handler: (args) => buildGenericSubstrateProjectionInspect(getContracts(), args),
+    },
+    'substrate workbench': {
+      usage: 'opl substrate workbench',
+      summary: 'Group substrate refs by domain, status, and ref family for App/operator drilldown without reading domain bodies.',
+      examples: ['opl substrate workbench'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['substrate workbench']);
+        return buildGenericSubstrateWorkbench(getContracts());
+      },
     },
     'domain-memory list': {
       usage: 'opl domain-memory list',

@@ -24,6 +24,25 @@
       "non_authority_flags"
     ]
   },
+  "workbench_surface": {
+    "surface_kind": "opl_generic_substrate_workbench",
+    "role": "operator_and_app_drilldown_projection",
+    "required_sections": [
+      "summary",
+      "groups.by_domain",
+      "groups.by_projection_status",
+      "groups.by_sidecar_status",
+      "groups.by_ref_family",
+      "authority_boundary",
+      "non_authority_flags"
+    ],
+    "allowed_grouping_axes": [
+      "domain",
+      "projection_status",
+      "sidecar_status",
+      "ref_family"
+    ]
+  },
   "framework_owns": [
     "workspace_locator_index",
     "source_ref_index",
@@ -31,6 +50,7 @@
     "memory_ref_index",
     "lifecycle_projection",
     "operator_projection",
+    "workbench_grouping",
     "manifest_ref_transport"
   ],
   "domain_agent_owns": [
