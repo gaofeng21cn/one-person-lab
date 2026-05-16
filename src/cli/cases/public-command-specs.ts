@@ -1,4 +1,5 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
+import { agentLabRefSummary, buildSampleAgentLabResult } from '../../agent-lab.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
@@ -56,32 +57,14 @@ async function readStdinText() {
 }
 
 function buildAgentLabSamplePayload() {
+  const sampleResult = buildSampleAgentLabResult();
   return {
     version: 'g2',
     agent_lab_sample: {
       surface_id: 'opl_agent_lab_framework_sample',
-      sample_run_result: {
-        status: 'sample_ready',
-        executor_kind: 'codex_cli',
-        stage_runtime: 'provider_backed_stage_runtime',
-      },
-      manifest_refs: [
-        {
-          ref_kind: 'framework_surface',
-          surface_id: 'agent_lab_framework_surface',
-          authority: 'opl_framework',
-        },
-        {
-          ref_kind: 'domain_manifest_projection',
-          surface_id: 'family_product_entry_manifest_v2',
-          authority: 'domain_agent',
-        },
-      ],
-      authority_boundary: {
-        framework_authority: 'OPL owns activation, stage runtime routing, read-model projection, and receipt boundaries.',
-        domain_authority: 'MAS, MAG, and RCA own domain truth, artifact authority, and quality verdicts.',
-        sample_scope: 'read_model_only',
-      },
+      sample_result: sampleResult,
+      ref_summary: agentLabRefSummary(sampleResult),
+      authority_boundary: sampleResult.authority_boundary,
     },
   };
 }

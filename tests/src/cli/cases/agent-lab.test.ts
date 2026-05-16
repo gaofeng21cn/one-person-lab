@@ -5,24 +5,15 @@ test('agent-lab sample exposes a minimal framework read-model sample', () => {
 
   assert.equal(output.version, 'g2');
   assert.equal(output.agent_lab_sample.surface_id, 'opl_agent_lab_framework_sample');
-  assert.equal(output.agent_lab_sample.sample_run_result.status, 'sample_ready');
-  assert.equal(output.agent_lab_sample.sample_run_result.executor_kind, 'codex_cli');
-  assert.equal(output.agent_lab_sample.sample_run_result.stage_runtime, 'provider_backed_stage_runtime');
-  assert.deepEqual(output.agent_lab_sample.manifest_refs, [
-    {
-      ref_kind: 'framework_surface',
-      surface_id: 'agent_lab_framework_surface',
-      authority: 'opl_framework',
-    },
-    {
-      ref_kind: 'domain_manifest_projection',
-      surface_id: 'family_product_entry_manifest_v2',
-      authority: 'domain_agent',
-    },
+  assert.equal(output.agent_lab_sample.sample_result.surface_kind, 'opl_agent_lab_suite_result');
+  assert.equal(output.agent_lab_sample.sample_result.status, 'passed');
+  assert.equal(output.agent_lab_sample.sample_result.summary.task_count, 3);
+  assert.equal(output.agent_lab_sample.sample_result.summary.recovery_probe_count, 5);
+  assert.deepEqual(output.agent_lab_sample.ref_summary.scorecard_refs, [
+    'quality-scorecard:mas/paper-repair-smoke',
+    'quality-scorecard:mag/grant-section-smoke',
+    'quality-scorecard:rca/visual-deliverable-smoke',
   ]);
-  assert.deepEqual(output.agent_lab_sample.authority_boundary, {
-    framework_authority: 'OPL owns activation, stage runtime routing, read-model projection, and receipt boundaries.',
-    domain_authority: 'MAS, MAG, and RCA own domain truth, artifact authority, and quality verdicts.',
-    sample_scope: 'read_model_only',
-  });
+  assert.equal(output.agent_lab_sample.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_sample.authority_boundary.can_write_memory_body, false);
 });
