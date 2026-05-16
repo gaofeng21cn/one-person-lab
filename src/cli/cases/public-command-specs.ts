@@ -55,6 +55,37 @@ async function readStdinText() {
   return input;
 }
 
+function buildAgentLabSamplePayload() {
+  return {
+    version: 'g2',
+    agent_lab_sample: {
+      surface_id: 'opl_agent_lab_framework_sample',
+      sample_run_result: {
+        status: 'sample_ready',
+        executor_kind: 'codex_cli',
+        stage_runtime: 'provider_backed_stage_runtime',
+      },
+      manifest_refs: [
+        {
+          ref_kind: 'framework_surface',
+          surface_id: 'agent_lab_framework_surface',
+          authority: 'opl_framework',
+        },
+        {
+          ref_kind: 'domain_manifest_projection',
+          surface_id: 'family_product_entry_manifest_v2',
+          authority: 'domain_agent',
+        },
+      ],
+      authority_boundary: {
+        framework_authority: 'OPL owns activation, stage runtime routing, read-model projection, and receipt boundaries.',
+        domain_authority: 'MAS, MAG, and RCA own domain truth, artifact authority, and quality verdicts.',
+        sample_scope: 'read_model_only',
+      },
+    },
+  };
+}
+
 export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
   getContracts: () => FrameworkContracts,
@@ -369,6 +400,16 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['framework production-closeout']);
         return buildProductionFunctionalCloseout(getContracts());
+      },
+    },
+    'agent-lab sample': {
+      usage: 'opl agent-lab sample',
+      summary: 'Show the minimal Agent Lab framework sample read-model surface and authority boundary.',
+      examples: ['opl agent-lab sample', 'opl agent-lab sample --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agent-lab sample']);
+        return buildAgentLabSamplePayload();
       },
     },
     'packages manifest': packagesManifestSpec,
