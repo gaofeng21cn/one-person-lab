@@ -576,8 +576,12 @@ export function buildPublicCommandSpecs(
       handler: (args) => buildFamilyAgentInspect(getContracts(), args),
     },
     'agents scaffold': cloneCommandSpec(commandSpecs['agents scaffold'], {
-      usage: 'opl agents scaffold',
-      examples: ['opl agents scaffold'],
+      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>]',
+      examples: [
+        'opl agents scaffold',
+        'opl agents scaffold --target-dir /tmp/new-agent --domain-id award-foundry',
+        'opl agents scaffold --validate /tmp/new-agent',
+      ],
       group: 'domain',
     }),
     'agents descriptors': {
