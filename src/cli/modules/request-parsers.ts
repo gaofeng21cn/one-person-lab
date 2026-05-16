@@ -5,6 +5,7 @@ import type {
   DashboardCliInput,
   DomainLaunchStrategy,
   LaunchDomainCliInput,
+  ObservabilityExportCliInput,
   ProductEntryCliInput,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
@@ -403,6 +404,39 @@ function parseRuntimeManagerActionArgs(
   return { mode };
 }
 
+function parseObservabilityExportArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): ObservabilityExportCliInput {
+  const parsed: ObservabilityExportCliInput = { format: 'json' };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--format') {
+      throw buildUsageError(`Unknown option for runtime observability-export: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+    if (value !== 'json' && value !== 'openmetrics') {
+      throw buildUsageError('runtime observability-export --format must be json or openmetrics.', spec, {
+        option: token,
+        value,
+      });
+    }
+    parsed.format = value;
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function parseSessionLedgerArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -734,6 +768,7 @@ export {
   parsePositiveInteger,
   parseProductEntryArgs,
   parseResumeArgs,
+  parseObservabilityExportArgs,
   parseRuntimeManagerActionArgs,
   parseRuntimeStatusArgs,
   parseSkillPackArgs,
