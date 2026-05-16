@@ -73,6 +73,10 @@ type RuntimeManagerActionCliInput = {
   mode: 'dry_run' | 'apply';
 };
 
+type ObservabilityExportCliInput = {
+  format: 'json' | 'openmetrics';
+};
+
 type SessionLedgerCliInput = {
   limit?: number;
 };
@@ -193,6 +197,7 @@ export type {
   OplEngineCliInput,
   OplModuleExecCliInput,
   OplModuleCliInput,
+  ObservabilityExportCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,
   ParsedCliInput,
