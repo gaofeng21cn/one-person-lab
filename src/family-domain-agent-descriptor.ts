@@ -449,6 +449,32 @@ function buildArtifactInventoryProjection(manifest: NormalizedDomainManifest | n
   };
 }
 
+function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
+  const audit = manifest?.functional_privatization_audit ?? null;
+  return {
+    status: componentStatus(entry, audit?.status === 'resolved'),
+    source_field: audit?.source_field ?? null,
+    target_domain_id: audit?.target_domain_id ?? manifest?.target_domain_id ?? null,
+    summary: audit?.summary ?? {
+      total_module_count: 0,
+      opl_owned_replacement_count: 0,
+      domain_thin_adapter_count: 0,
+      domain_authority_count: 0,
+      retire_tombstone_count: 0,
+      blocker_count: 0,
+    },
+    required_opl_replacement_primitives: audit?.required_opl_replacement_primitives ?? [],
+    blockers: audit?.blockers ?? ['functional_privatization_audit_missing'],
+    modules: audit?.modules ?? [],
+    authority_boundary: audit?.authority_boundary ?? {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      domain_can_claim_generic_runtime_owner: false,
+    },
+  };
+}
+
 function buildAutomationProjection(manifest: NormalizedDomainManifest | null, entry: DomainManifestCatalogEntry) {
   const automation = manifest?.automation;
   return {
@@ -495,6 +521,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
   const domainMemory = buildDomainMemoryProjection(entry);
   const skillCatalog = buildSkillProjection(manifest, entry);
   const runtimeSurfaces = buildRuntimeProjection(manifest, entry);
+  const functionalPrivatizationAudit = buildFunctionalPrivatizationProjection(manifest, entry);
   const readinessStatus = buildReadinessSummary([
     entryProjection,
     { status: skeleton.status },
@@ -534,6 +561,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
     domain_memory_descriptor: domainMemory,
     skill_catalog: skillCatalog,
     runtime_surfaces: runtimeSurfaces,
+    functional_privatization_audit: functionalPrivatizationAudit,
     descriptor_refs: buildDescriptorRefs(manifest),
     authority_boundary: {
       opl_role: 'descriptor_discovery_projection_transport_and_runtime_lifecycle_only',
@@ -640,6 +668,29 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
           0,
         ),
         provider_temporal_residency_gap_status: descriptorProviderResidencyGapStatus(descriptors),
+        functional_privatization_audit_resolved_count: descriptors.filter((descriptor) =>
+          descriptor.functional_privatization_audit.status === 'resolved'
+        ).length,
+        functional_privatization_module_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.total_module_count,
+          0,
+        ),
+        functional_privatization_opl_owned_replacement_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.opl_owned_replacement_count,
+          0,
+        ),
+        functional_privatization_domain_authority_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.domain_authority_count,
+          0,
+        ),
+        functional_privatization_retire_tombstone_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.retire_tombstone_count,
+          0,
+        ),
+        functional_privatization_blocker_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.blocker_count,
+          0,
+        ),
       },
       descriptors,
       notes: [

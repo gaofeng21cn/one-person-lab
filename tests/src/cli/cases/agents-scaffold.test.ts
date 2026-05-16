@@ -37,6 +37,11 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
       'artifact_package_lifecycle_shell',
       'operator_workbench_drilldown_shell',
       'observability_repair_projection',
+      'generic_persistence_store',
+      'runtime_lifecycle_sqlite_index_contract',
+      'native_helper_generic_envelope',
+      'review_repair_transport',
+      'functional_privatization_audit_read_model',
     ],
   );
   assert.equal(scaffold.domain_retained_thin_surfaces.includes('domain_truth'), true);
@@ -44,6 +49,13 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.domain_retained_thin_surfaces.includes('owner_receipt'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_scheduler_owner'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_attempt_ledger_owner'), true);
+  assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_persistence_engine_owner'), true);
+  assert.equal(scaffold.required_contract_surfaces.includes('functional_privatization_audit'), true);
+  assert.equal(scaffold.required_verification.includes('functional_privatization_audit_no_generic_owner'), true);
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.surface_kind,
+    'opl_functional_privatization_audit_contract',
+  );
   assert.equal(scaffold.retirement_gate.delete_policy, 'delete_or_history_tombstone_only');
   assert.equal(scaffold.retirement_gate.opl_can_execute_domain_repo_delete, false);
   assert.equal(scaffold.authority_boundary.opl_can_write_domain_truth, false);
@@ -73,6 +85,7 @@ test('agents scaffold can generate and validate a standard thin domain-agent ske
     assert.equal(generated.write_summary.written_count, generated.template_files.length);
     assert.equal(generated.write_summary.skipped_existing_count, 0);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/domain_descriptor.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
 
     const descriptor = JSON.parse(
@@ -80,11 +93,17 @@ test('agents scaffold can generate and validate a standard thin domain-agent ske
     );
     assert.equal(descriptor.domain_id, 'award-foundry');
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
+    const functionalAudit = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/functional_privatization_audit.json'), 'utf8'),
+    );
+    assert.equal(functionalAudit.surface_kind, 'functional_privatization_audit');
+    assert.equal(functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner, false);
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
     assert.equal(validated.mode, 'validate');
     assert.equal(validated.state, 'validated');
     assert.equal(validated.validation.status, 'passed');
+    assert.equal(validated.validation.functional_privatization_audit_required, true);
     assert.deepEqual(validated.validation.blockers, []);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });

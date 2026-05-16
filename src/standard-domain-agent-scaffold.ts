@@ -88,6 +88,36 @@ const OPL_OWNED_GENERIC_PRIMITIVES = [
     replacement_surface: 'observability_slo_projection',
     domain_policy: 'own_domain_blocker_and_safe_repair_hints',
   },
+  {
+    primitive_id: 'generic_persistence_store',
+    owner: 'one-person-lab',
+    replacement_surface: 'family_persistence_policy_and_runtime_store',
+    domain_policy: 'own_file_authority_or_refs_only_sidecar_index',
+  },
+  {
+    primitive_id: 'runtime_lifecycle_sqlite_index_contract',
+    owner: 'one-person-lab',
+    replacement_surface: 'family_runtime_lifecycle_index_contract',
+    domain_policy: 'do_not_claim_generic_sqlite_persistence_engine',
+  },
+  {
+    primitive_id: 'native_helper_generic_envelope',
+    owner: 'one-person-lab',
+    replacement_surface: 'native_helper_contract_and_execution_envelope',
+    domain_policy: 'own_helper_implementation_only',
+  },
+  {
+    primitive_id: 'review_repair_transport',
+    owner: 'one-person-lab',
+    replacement_surface: 'family_conflict_blocker_and_repair_projection',
+    domain_policy: 'own_domain_review_export_or_quality_decision',
+  },
+  {
+    primitive_id: 'functional_privatization_audit_read_model',
+    owner: 'one-person-lab',
+    replacement_surface: 'opl_functional_privatization_audit',
+    domain_policy: 'declare_module_boundary_without_owning_generic_runtime',
+  },
 ] as const;
 
 const DOMAIN_RETAINED_THIN_SURFACES = [
@@ -116,6 +146,10 @@ const FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES = [
   'generic_artifact_gallery_owner',
   'generic_operator_workbench_owner',
   'generic_observability_slo_owner',
+  'generic_persistence_engine_owner',
+  'generic_sqlite_lifecycle_owner',
+  'generic_native_helper_envelope_owner',
+  'generic_review_repair_transport_owner',
 ] as const;
 
 const REQUIRED_CONTRACT_SURFACES = [
@@ -129,6 +163,7 @@ const REQUIRED_CONTRACT_SURFACES = [
   'quality_or_export_gate_refs',
   'physical_skeleton_follow_through',
   'legacy_retirement_tombstone_proof',
+  'functional_privatization_audit',
 ] as const;
 
 const REQUIRED_VERIFICATION = [
@@ -139,6 +174,7 @@ const REQUIRED_VERIFICATION = [
   'replacement_or_no_regression_evidence',
   'receipt_ref_reconciliation',
   'git_diff_check',
+  'functional_privatization_audit_no_generic_owner',
 ] as const;
 
 const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
@@ -264,6 +300,26 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       }),
     },
     {
+      path: 'contracts/functional_privatization_audit.json',
+      content: json({
+        surface_kind: 'functional_privatization_audit',
+        schema_version: 1,
+        domain_id: domainId,
+        marker: SCAFFOLD_MARKER,
+        classification_policy: 'domain_declares_non_knowledge_functional_modules_for_opl_unified_audit',
+        opl_owned_replacement_surfaces: OPL_OWNED_GENERIC_PRIMITIVES.map((primitive) => primitive.primitive_id),
+        domain_allowed_roles: DOMAIN_RETAINED_THIN_SURFACES,
+        forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
+        modules: [],
+        authority_boundary: {
+          opl_can_write_domain_truth: false,
+          opl_can_write_memory_body: false,
+          opl_can_authorize_quality_or_export: false,
+          domain_can_claim_generic_runtime_owner: false,
+        },
+      }),
+    },
+    {
       path: 'runtime/sidecar/README.md',
       content: `# ${domainLabel} Runtime Sidecar\n\nExpose thin sidecar/projection adapters here. Do not implement a generic scheduler, daemon, queue, attempt ledger, transition runner, workbench, or memory transport in this repo.\n`,
     },
@@ -359,6 +415,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/memory_descriptor.json',
     'contracts/artifact_locator_contract.json',
     'contracts/owner_receipt_contract.json',
+    'contracts/functional_privatization_audit.json',
   ];
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
   const actionCatalog = readJsonFile(path.join(repoDir, 'contracts/action_catalog.json'));
@@ -394,6 +451,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       missing_contract_files: missingContractFiles,
       missing_forbidden_role_guards: missingForbiddenRoleGuards,
       authority_violations: authorityViolations,
+      functional_privatization_audit_required: true,
       blockers,
       authority_boundary: {
         opl_can_write_domain_truth: false,
@@ -506,6 +564,25 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
         ],
         delete_policy: 'delete_or_history_tombstone_only',
         opl_can_execute_domain_repo_delete: false,
+      },
+      functional_privatization_audit_contract: {
+        surface_kind: 'opl_functional_privatization_audit_contract',
+        version: 'opl-functional-privatization-audit.v1',
+        owner: 'one-person-lab',
+        accepted_source_fields: [
+          'functional_privatization_audit',
+          'privatized_functional_module_audit',
+          'functional_consumer_boundary',
+          'mag_consumer_thinning_contract.privatized_functional_module_audit',
+          'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
+        ],
+        migration_classes: [
+          'opl_owned_replacement',
+          'domain_thin_adapter',
+          'domain_authority',
+          'retire_tombstone',
+        ],
+        audit_policy: 'OPL indexes module boundaries and replacement expectations without taking domain truth authority.',
       },
       required_verification: REQUIRED_VERIFICATION,
       template_files: templateFiles.map((file) => file.path),

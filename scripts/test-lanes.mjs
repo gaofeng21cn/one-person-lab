@@ -38,6 +38,7 @@ const lanes = {
       'tests/src/family-runtime-attempt-contract.test.ts',
       'tests/src/family-transition-runner.test.ts',
       'tests/src/functional-agent-runtime-harness.test.ts',
+      'tests/src/family-runtime-lifecycle-index.test.ts',
       'tests/src/agent-lab.test.ts',
       'tests/src/generic-substrate-projection.test.ts',
       'tests/src/family-runtime-codex-stage-runner.test.ts',
