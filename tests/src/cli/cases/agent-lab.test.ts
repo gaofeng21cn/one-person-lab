@@ -50,22 +50,13 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.ok(output.agent_lab_complete.observability_exports.some((entry: any) => entry.export_id === 'phoenix'));
 });
 
-test('agents meta-builder plan exposes the OPL agent-building meta-agent program', () => {
-  const output = runCli(['agents', 'meta-builder', 'plan', '--json']);
+test('agent-lab command surface does not embed the independent meta-agent product', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+  const examples = output.help.examples as string[];
 
-  assert.equal(output.version, 'g2');
-  assert.equal(output.agent_builder_meta_agent.surface_kind, 'opl_meta_agent_builder_plan');
-  assert.equal(output.agent_builder_meta_agent.agent_id, 'opl-foundry-agent-builder');
-  assert.deepEqual(output.agent_builder_meta_agent.stages.map((entry: any) => entry.stage_id), [
-    'intent-intake',
-    'web-experience-research',
-    'stage-decomposition',
-    'agent-skeleton-build',
-    'eval-suite-build',
-    'baseline-run',
-    'optimizer-iteration',
-    'baseline-delivery',
-    'online-learning',
-  ]);
-  assert.equal(output.agent_builder_meta_agent.online_learning_policy.can_promote_default_agent_without_gate, false);
+  assert.equal(commands.some((command: string) => command.includes('meta-builder')), false);
+  assert.equal(commands.some((command: string) => command.includes('meta-agent')), false);
+  assert.equal(examples.some((example) => example.includes('meta-builder')), false);
+  assert.equal(examples.some((example) => example.includes('meta-agent')), false);
 });

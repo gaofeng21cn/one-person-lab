@@ -71,7 +71,6 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/active/opl-family-development-reference.md` | `active_support` | OPL 系列项目开发主参考、owner 分层、上收判断和 direct-retirement 规则。 | 保持主参考；不替代单仓 truth。 |
 | `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | 对照理想态的 family-level 当前差距、执行顺序和验收顺序。 | 保持 active plan；fresh evidence 需与机器面同步。 |
 | `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
-| `docs/active/opl-meta-agent-builder-plan.md` | `active_plan` | 基于完整 Agent Lab control plane 的元智能体开发计划；定义用 OPL 开发、测试、优化和持续学习新 Foundry Agent 的阶段链路。 | 保持 active plan；机器入口回到 `opl agent-lab complete --json` 和 `opl agents meta-builder plan --json`。 |
 | `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、evidence gate 与功能 follow-through owner。 | 保持 active plan；承接 2026-05-14 closeout 后续。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
 | `docs/public/*` | `public_support` | 公开 roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog。 |
