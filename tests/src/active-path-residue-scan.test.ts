@@ -105,6 +105,30 @@ test('active operator closeout surfaces keep the current provider-backed boundar
   ].forEach(assertCurrentBoundary);
 });
 
+test('active gap docs do not freeze stale checkout or compatibility-audit baselines', () => {
+  const scannedActiveDocs = [
+    'docs/active/current-development-lines.md',
+    'docs/active/current-state-vs-ideal-gap.md',
+    'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md',
+  ];
+  const forbiddenPatterns = [
+    /四仓根 checkout 都在 `main\.\.\.origin\/main` 且 clean/,
+    /path compatibility audit/i,
+  ];
+  const violations: string[] = [];
+
+  for (const relativePath of scannedActiveDocs) {
+    const content = read(relativePath);
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(content)) {
+        violations.push(`${relativePath}: ${pattern}`);
+      }
+    }
+  }
+
+  assert.deepEqual(violations, []);
+});
+
 test('root help fast-start examples stay on the current Codex-default path', () => {
   const helpOutput = read('src/cli/modules/help-output.ts');
 
