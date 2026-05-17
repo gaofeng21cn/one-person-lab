@@ -10,7 +10,7 @@
 - provider-backed runtime attempt
 - domain-neutral transition table runner 与 matrix evaluation
 - functional agent runtime harness 覆盖 queue、typed closeout、refs-only memory writeback、human gate、retry、dead-letter 与 repair transitions
-- domain pack compiler 只读编译 admitted domain pack，投影 OPL-owned CLI / MCP / product-entry / sidecar / status / workbench / harness generated-surface handoff
+- domain pack compiler 与 generated interface 只读模型编译 admitted domain pack 或标准智能体仓合同，投影 OPL-owned CLI / MCP / Skill / product-entry / OpenAI / AI SDK / sidecar / status / workbench / harness generated-surface handoff
 - 通用 workspace / source / artifact / memory substrate 投影与 App/operator workbench 分组，同时不把 domain truth / body / verdict / authority 移入 OPL
 - OPL-compatible agent 的 framework 运行依赖定位
 - Runtime Manager readiness 与状态投影
@@ -34,7 +34,7 @@
 ## 这个目录应该怎么读
 
 - `workstreams.json`、`domains.json`、`stage-selection-vocabulary.json`、`task-topology.json` 和 `public-surface-index.json` 定义当前活跃的 stage-led framework 选择面、Framework / App / Foundry 的产品层 owner split，以及 OPL-compatible agents 用来定位外部 framework 运行依赖的 `opl_framework_locator` surface。
-- `family-runtime-online-substrate-contract.json`、`family-runtime-attempt-contract.json`、`family-transition-runner-contract.json`、`functional-agent-runtime-harness-contract.json`、`domain-pack-compiler-contract.json`、`generic-substrate-projection-contract.json`、`standard-domain-agent-skeleton-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime / generated-surface 主线的活跃机器合同。`functional-agent-runtime-harness-contract.json` 证明构造与 domain-declared 功能链路，但不授权 live soak 或 domain readiness。`domain-pack-compiler-contract.json` 定义 `opl agents pack-compiler` 只读把 descriptor、stage/action/memory/transition、runtime surface 和 `functional_privatization_audit` 编译成 OPL-owned generated-surface handoff projection；它不生成 domain handler，不写 domain truth / memory body / artifact，也不授权 quality 或 export verdict。`generic-substrate-projection-contract.json` 定义 OPL 对 domain-declared workspace、source、artifact、memory refs 的 locator / index / lifecycle projection，以及 App/operator drilldown workbench 分组；它不读取或写入 domain truth / body / verdict / authority。`family-runtime-online-substrate-contract.json` 同时声明 Temporal provider SLO cadence action envelope，用于路由 supervised production proof 执行，但不授权 domain readiness。
+- `family-runtime-online-substrate-contract.json`、`family-runtime-attempt-contract.json`、`family-transition-runner-contract.json`、`functional-agent-runtime-harness-contract.json`、`domain-pack-compiler-contract.json`、`generic-substrate-projection-contract.json`、`standard-domain-agent-skeleton-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 provider-backed family runtime / generated-surface 主线的活跃机器合同。`functional-agent-runtime-harness-contract.json` 证明构造与 domain-declared 功能链路，但不授权 live soak 或 domain readiness。`domain-pack-compiler-contract.json` 定义 `opl agents pack-compiler` 和 `opl agents interfaces` 只读把 descriptor、标准仓 action/stage 合同、runtime surface 和 `functional_privatization_audit` 投影成 OPL-owned generated-surface 与 generated interface bundle。这些命令可从同一份 canonical action/stage metadata 派生 CLI、MCP、Skill、product-entry、OpenAI 和 AI SDK 描述；它们不生成 domain handler，不写 domain truth / memory body / artifact，也不授权 quality 或 export verdict。`generic-substrate-projection-contract.json` 定义 OPL 对 domain-declared workspace、source、artifact、memory refs 的 locator / index / lifecycle projection，以及 App/operator drilldown workbench 分组；它不读取或写入 domain truth / body / verdict / authority。`family-runtime-online-substrate-contract.json` 同时声明 Temporal provider SLO cadence action envelope，用于路由 supervised production proof 执行，但不授权 domain readiness。
 - `family-executor-adapter-defaults.json` 继续作为共享 executor 合同使用。
 - 已退役的 gateway、federation、routed-action、onboarding、acceptance、governance 与 example corpora 不再保留在这个活跃 contract root 中。
 
@@ -60,7 +60,7 @@
 
 - 本目录按活跃 OPL framework contract set 读取
 - `opl framework locate` / `opl_framework_locator` 是 standalone OPL-compatible agents 找到外部 OPL Framework 依赖环境的稳定入口
-- Runtime Manager、family runtime attempt、family transition runner、functional agent runtime harness、domain pack compiler 与 standard domain-agent skeleton 合同按 provider-backed family runtime / generated-surface 主线活跃依据读取
+- Runtime Manager、family runtime attempt、family transition runner、functional agent runtime harness、domain pack compiler、generated interface bundle 与 standard domain-agent skeleton 合同按 provider-backed family runtime / generated-surface 主线活跃依据读取
 - domain truth 继续归对应 domain 仓所有，而不是归这个目录所有
 - Foundry Agents 应声明并适配这些 framework contracts；不应 vendored / fork 一份 OPL runtime 作为独立真相
 - One Person Lab App 按 projection consumer 和工作台 surface 读取；它不是 runtime provider 或 domain authority
