@@ -470,6 +470,9 @@ function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManife
       retire_tombstone_count: 0,
       active_private_generic_residue_count: 0,
       blocker_count: 0,
+      default_watchlist_count: 0,
+      default_hidden_cleared_count: 0,
+      default_watchlist_module_ids: [],
     },
     required_opl_replacement_primitives: audit?.required_opl_replacement_primitives ?? [],
     blockers: audit?.blockers ?? ['functional_privatization_audit_missing'],
@@ -740,6 +743,17 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
         functional_privatization_blocker_count: descriptors.reduce(
           (total, descriptor) => total + descriptor.functional_privatization_audit.summary.blocker_count,
           0,
+        ),
+        functional_privatization_default_watchlist_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.default_watchlist_count,
+          0,
+        ),
+        functional_privatization_default_hidden_cleared_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.default_hidden_cleared_count,
+          0,
+        ),
+        functional_privatization_default_watchlist_module_ids: descriptors.flatMap((descriptor) =>
+          descriptor.functional_privatization_audit.summary.default_watchlist_module_ids
         ),
       },
       descriptors,

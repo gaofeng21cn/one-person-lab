@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../contracts.ts';
+import { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../managed-shell-command-env.ts';
 import { normalizeCommandOutput } from '../terminal.ts';
 
 export type CommandResult = {
@@ -187,12 +188,19 @@ export function runJsonShellCommand(command: string | null, cwd: string) {
     };
   }
 
-  const result = spawnSync('/bin/bash', ['-lc', command], {
-    cwd,
-    encoding: 'utf8',
-    env: process.env,
-    maxBuffer: 10 * 1024 * 1024,
-  });
+  const commandCwd = prepareManagedShellCommandCwd(cwd, command);
+  const result = (() => {
+    try {
+      return spawnSync('/bin/bash', ['-lc', command], {
+        cwd: commandCwd.cwd,
+        encoding: 'utf8',
+        env: buildManagedShellCommandEnv(cwd),
+        maxBuffer: 10 * 1024 * 1024,
+      });
+    } finally {
+      commandCwd.cleanup();
+    }
+  })();
 
   if (result.error || (result.status ?? 1) !== 0) {
     const failure = normalizeCommandOutput(result.stdout ?? '', result.stderr ?? result.error?.message ?? '');

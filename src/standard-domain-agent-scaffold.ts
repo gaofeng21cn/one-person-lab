@@ -156,6 +156,17 @@ const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
   version: 'opl-domain-private-functional-surface-admission.v1',
   owner: 'one-person-lab',
   default_posture: 'forbidden_until_classified_and_receipted',
+  default_review_view: {
+    attention_required: [
+      'blocker',
+      'opl_replacement_pending',
+      'migration_bridge_pending',
+      'legacy_tombstone_pending',
+      'diagnostic_cleanup_path_still_active',
+      'tombstone_has_active_caller',
+    ],
+    hidden_by_default: ['cleared_or_stable_boundary'],
+  },
   mature_system_pattern: {
     platform_role: 'spec_status_reconcile_durable_runtime_state_store_sidecar_and_generated_surface_owner',
     domain_role: 'declarative_pack_policy_schema_fixture_and_minimal_authority_function_owner',
@@ -939,7 +950,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
           'diagnostic_cleanup_path',
           'provenance_or_fixture',
         ],
-        audit_policy: 'OPL indexes module boundaries and replacement expectations without taking domain truth authority.',
+        audit_policy: 'OPL defaults to the attention_required watchlist from structured blockers, migration classes, and active-caller flags; cleared/stable boundary entries stay in the full module inventory for traceability.',
       },
       private_functional_surface_admission_policy: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
       required_verification: REQUIRED_VERIFICATION,

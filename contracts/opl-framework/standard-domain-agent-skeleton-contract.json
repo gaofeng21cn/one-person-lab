@@ -193,6 +193,19 @@
       "version": "opl-domain-private-functional-surface-admission.v1",
       "owner": "one-person-lab",
       "default_posture": "forbidden_until_classified_and_receipted",
+      "default_review_view": {
+        "attention_required": [
+          "blocker",
+          "opl_replacement_pending",
+          "migration_bridge_pending",
+          "legacy_tombstone_pending",
+          "diagnostic_cleanup_path_still_active",
+          "tombstone_has_active_caller"
+        ],
+        "hidden_by_default": [
+          "cleared_or_stable_boundary"
+        ]
+      },
       "allowed_private_surface_classes": [
         "minimal_authority_function",
         "refs_only_domain_adapter",

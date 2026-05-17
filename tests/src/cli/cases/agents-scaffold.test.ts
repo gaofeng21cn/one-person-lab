@@ -74,6 +74,18 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     'forbidden_until_classified_and_receipted',
   );
   assert.equal(
+    scaffold.private_functional_surface_admission_policy.default_review_view.attention_required.includes(
+      'tombstone_has_active_caller',
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.default_review_view.hidden_by_default.includes(
+      'cleared_or_stable_boundary',
+    ),
+    true,
+  );
+  assert.equal(
     scaffold.private_functional_surface_admission_policy.allowed_private_surface_classes.some(
       (surfaceClass: { class_id: string; long_term_allowed: boolean }) =>
         surfaceClass.class_id === 'minimal_authority_function' && surfaceClass.long_term_allowed === true,
