@@ -151,6 +151,148 @@ const MINIMAL_AUTHORITY_FUNCTIONS = [
   'domain_specific_native_helper_implementation',
 ] as const;
 
+const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
+  surface_kind: 'opl_domain_private_functional_surface_admission_policy',
+  version: 'opl-domain-private-functional-surface-admission.v1',
+  owner: 'one-person-lab',
+  default_posture: 'forbidden_until_classified_and_receipted',
+  mature_system_pattern: {
+    platform_role: 'spec_status_reconcile_durable_runtime_state_store_sidecar_and_generated_surface_owner',
+    domain_role: 'declarative_pack_policy_schema_fixture_and_minimal_authority_function_owner',
+  },
+  allowed_private_surface_classes: [
+    {
+      class_id: 'minimal_authority_function',
+      long_term_allowed: true,
+      interface_shape: 'runtime/authority_functions/<function> plus contract-declared receipt schema',
+      allowed_when: [
+        'decision_requires_domain_truth_or_quality_export_authority',
+        'logic_cannot_be_reliably_expressed_as_policy_table_schema_or_fixture',
+      ],
+      required_fields: [
+        'function_id',
+        'code_paths',
+        'active_callers',
+        'cannot_absorb_reason',
+        'receipt_schema_ref',
+        'no_forbidden_write_evidence_ref',
+      ],
+      examples: MINIMAL_AUTHORITY_FUNCTIONS,
+    },
+    {
+      class_id: 'refs_only_domain_adapter',
+      long_term_allowed: true,
+      interface_shape: 'contracts and runtime projections that return opaque refs, owner receipts, typed blockers, or no-regression refs',
+      allowed_when: [
+        'domain_retains_truth_body_or_artifact_authority',
+        'OPL_generic_shell_needs_locator_or_receipt_refs',
+      ],
+      required_fields: [
+        'adapter_id',
+        'source_contract_ref',
+        'returned_ref_kinds',
+        'forbidden_payload_classes',
+        'authority_boundary',
+      ],
+      examples: [
+        'domain_memory_descriptor_locator',
+        'artifact_locator_contract',
+        'owner_receipt_contract',
+        'source_readiness_refs',
+      ],
+    },
+    {
+      class_id: 'temporary_migration_bridge',
+      long_term_allowed: false,
+      interface_shape: 'generated_surface_handoff with active caller inventory and replacement target',
+      allowed_when: [
+        'OPL_generated_or_replacement_surface_exists_or_is_in_same_program',
+        'active_callers_are_named_and_migration_is_scheduled',
+      ],
+      required_fields: [
+        'bridge_id',
+        'replacement_surface_ref',
+        'active_callers',
+        'migration_action',
+        'retirement_gate_ref',
+        'no_active_default_caller_evidence_ref',
+      ],
+      examples: [
+        'legacy_sidecar_shell_before_pack_compiler_cutover',
+        'repo_local_status_wrapper_before_OPL_status_generation',
+      ],
+    },
+    {
+      class_id: 'diagnostic_cleanup_path',
+      long_term_allowed: false,
+      interface_shape: 'explicit opt-in status/remove/inspect command with no install, trigger, schedule, or default caller',
+      allowed_when: [
+        'needed_to_remove_or_inspect_legacy_runtime_state',
+        'not_used_by_default_direct_or_OPL_hosted_path',
+      ],
+      required_fields: [
+        'diagnostic_id',
+        'explicit_flag_or_command',
+        'blocked_default_action',
+        'no_active_default_caller_evidence_ref',
+        'tombstone_ref',
+      ],
+      examples: [
+        'MAS --manager local status/remove legacy LaunchAgent cleanup',
+      ],
+    },
+    {
+      class_id: 'provenance_or_fixture',
+      long_term_allowed: true,
+      interface_shape: 'history/tombstone reference or deterministic fixture with no runtime owner claim',
+      allowed_when: [
+        'needed_for_regression_or_parity_or_source_provenance',
+        'not_called_by_default_runtime_or_generated_surface',
+      ],
+      required_fields: [
+        'fixture_or_history_ref',
+        'active_caller_status',
+        'runtime_owner_claim',
+      ],
+      examples: [
+        'legacy_provider_tombstone',
+        'historical_parity_fixture',
+      ],
+    },
+  ],
+  forbidden_private_surface_classes: [
+    'generic_scheduler_or_daemon',
+    'generic_queue_or_attempt_ledger',
+    'generic_state_machine_runner',
+    'generic_persistence_or_sqlite_lifecycle_engine',
+    'generic_cli_mcp_product_wrapper',
+    'generic_sidecar_or_status_workbench_shell',
+    'generic_session_store',
+    'generic_workspace_source_intake_shell',
+    'generic_memory_transport',
+    'generic_artifact_package_lifecycle_shell',
+    'generic_review_repair_transport',
+    'generic_native_helper_execution_envelope',
+    'generic_observability_slo_runtime',
+  ],
+  required_interfaces_for_private_surface_request: [
+    'functional_privatization_audit.modules[]',
+    'contracts/pack_compiler_input.json',
+    'contracts/generated_surface_handoff.json',
+    'contracts/owner_receipt_contract.json',
+    'contracts/private_functional_surface_policy.json',
+  ],
+  required_evidence_before_retaining_private_surface: [
+    'code_paths',
+    'active_callers',
+    'active_caller_status',
+    'cannot_absorb_reason_or_retirement_gate',
+    'receipt_schema_or_fixture_ref',
+    'no_forbidden_write_evidence',
+    'direct_and_opl_hosted_parity_or_explicit_non_default_diagnostic_scope',
+  ],
+} as const;
+
 const DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED = [
   'domain_truth',
   'domain_transition_spec',
@@ -482,6 +624,7 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
         },
         opl_owned_replacement_surfaces: OPL_OWNED_GENERIC_PRIMITIVES.map((primitive) => primitive.primitive_id),
         opl_generated_surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
+        private_functional_surface_admission_policy: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
         declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
         minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
         domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
@@ -496,8 +639,16 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       }),
     },
     {
+      path: 'contracts/private_functional_surface_policy.json',
+      content: json({
+        ...PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
+        domain_id: domainId,
+        marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
       path: 'runtime/authority_functions/README.md',
-      content: `# ${domainLabel} Authority Functions\n\nKeep only minimal domain authority functions here: quality/export verdict authorization, artifact mutation authorization, memory accept/reject decisions, source readiness verdicts, owner receipt signing, or domain-specific native helper implementation.\n`,
+      content: `# ${domainLabel} Authority Functions\n\nKeep only minimal domain authority functions here: quality/export verdict authorization, artifact mutation authorization, memory accept/reject decisions, source readiness verdicts, owner receipt signing, or domain-specific native helper implementation. Every retained function needs a cannot-absorb reason, receipt schema, active caller list, and no-forbidden-write evidence.\n`,
     },
     {
       path: 'runtime/native_helpers/README.md',
@@ -594,6 +745,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/artifact_locator_contract.json',
     'contracts/owner_receipt_contract.json',
     'contracts/functional_privatization_audit.json',
+    'contracts/private_functional_surface_policy.json',
   ];
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
   const actionCatalog = readJsonFile(path.join(repoDir, 'contracts/action_catalog.json'));
@@ -784,6 +936,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
         ],
         audit_policy: 'OPL indexes module boundaries and replacement expectations without taking domain truth authority.',
       },
+      private_functional_surface_admission_policy: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
       required_verification: REQUIRED_VERIFICATION,
       template_files: templateFiles.map((file) => file.path),
       write_plan: writePlan,
