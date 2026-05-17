@@ -17,6 +17,7 @@
 - `OPL native helper` 与高频状态索引只能加速系统探测、artifact discovery、session/progress/artifact projection，不得替代 admitted domain 仓自己的 durable truth。
 - `OPL` 的 shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态和路由信号；不得替 MAS/MAG/RCA 或未来 domain 持有 AI-first 作者判断、审稿判断、质量裁决或 ready verdict。
 - `OPL` 可以上收 family-level stage descriptor、skill / prompt / evaluation refs、handoff 与 projection 语义；不得把 stage 控制面实现成替代 `Codex CLI` 自主拆解、创作、审核或 domain-owned quality gate 的硬编码流程引擎。
+- `OPL` 可以上收 stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata，作为通用 framework primitive 和 App/operator 投影；不得据此持有 domain truth、publication / fundability / visual verdict、artifact authority、domain audit body、direct skill path 或最终质量裁决。
 - `OPL` 可以上收 domain memory locator、stage `knowledge_refs`、migration plan ref、seed corpus ref、writeback proposal refs、router receipt refs、freshness 与 operator projection；不得持有 domain memory 正文，不得执行 memory body migration，不得接受或拒绝 memory writeback，不得把 memory card 提升为 evidence / review / grant / visual / artifact truth，也不得据此生成 publication、fundability、visual quality 或 artifact readiness verdict。
 - `OPL` 文档中的 MAS stage 抽象只能作为跨仓投影维度；不得直接覆盖 MAS 现有 route contract、stage 名称、stage 数量、controller truth 或 publication / quality authority。
 - MAS v2 wording 必须保持 `MAS` 为独立 `domain agent` 与单一 domain app skill owner；`OPL` 只能消费 MAS-owned entry/projection truth，不得把 MAS runtime、controller truth、quality authority 或 publication gate 收归 OPL。

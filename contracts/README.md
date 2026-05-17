@@ -20,6 +20,7 @@
 - `contracts/opl-framework/native-helper-contract.json`：OPL Rust native helper 的 JSON stdio 合同；它冻结 `opl-sysprobe`、`opl-doctor-native`、`opl-runtime-watch`、`opl-artifact-indexer` 与 `opl-state-indexer` 的输入输出边界，以及 helper 的 build / doctor / repair / prebuild / package 分发面
 - `contracts/opl-framework/fresh-install-test-matrix.json`：OPL fresh install 与 GUI 首启验证矩阵；它冻结 CLI clean-room 场景、首启 JSONL 日志、GUI accessibility labels 与 VM 工件要求
 - `contracts/family-orchestration/*.schema.json`：跨 active 四仓线（`one-person-lab` + `MAS` + `MAG` + `RCA`）统一的 family orchestration companion schemas
+- `contracts/family-orchestration/family-stage-integrity-metadata.schema.json`：OPL-owned stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion；它只做通用 framework metadata projection，不持有 MAS/MAG/RCA domain truth、质量裁决、publication/fundability/visual authority、artifact authority 或 direct skill path
 - `contracts/family-orchestration/README*.md`：这些 family orchestration schema 的人类可读说明
 
 围绕这些 machine-readable contract 的上位共享合同，当前统一在 `docs/` 层维护：

@@ -1,0 +1,479 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-stage-integrity-metadata.schema.json",
+  "title": "OPL Family Stage Integrity Metadata",
+  "description": "Domain-neutral stage-level integrity, citation-support, evidence-handoff, data-access, and human-checkpoint metadata. OPL owns discovery, transport, projection, and fail-closed routing only; domain agents keep domain truth, quality verdicts, publication/fundability/visual judgment, artifact authority, and direct skill paths.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "metadata_id",
+    "target_domain_id",
+    "stage_id",
+    "owner",
+    "integrity_policy",
+    "citation_support",
+    "evidence_handoff",
+    "data_access",
+    "human_checkpoints",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_stage_integrity_metadata"
+    },
+    "version": {
+      "const": "family-stage-integrity-metadata.v1"
+    },
+    "metadata_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_pattern_refs": {
+      "type": "array",
+      "description": "Optional provenance refs for external patterns that inspired this metadata shape. These are references only, never runtime dependencies.",
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    },
+    "integrity_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "status",
+        "required_checks",
+        "blocking_levels",
+        "check_result_refs"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "active",
+            "blocked",
+            "retired"
+          ]
+        },
+        "required_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "stage_integrity",
+              "citation_support",
+              "claim_reference_alignment",
+              "data_access",
+              "evidence_handoff",
+              "human_checkpoint"
+            ]
+          }
+        },
+        "blocking_levels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "none",
+              "warn",
+              "human_gate",
+              "fail_closed"
+            ]
+          }
+        },
+        "check_result_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        }
+      }
+    },
+    "citation_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "support_mode",
+        "claim_registry_refs",
+        "citation_audit_refs",
+        "unsupported_claim_policy"
+      ],
+      "properties": {
+        "support_mode": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "claim_ref_alignment_required",
+            "citation_locator_required",
+            "domain_declared"
+          ]
+        },
+        "claim_registry_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "citation_audit_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "unsupported_claim_policy": {
+          "type": "string",
+          "enum": [
+            "none",
+            "warn",
+            "human_gate",
+            "fail_closed"
+          ]
+        }
+      }
+    },
+    "evidence_handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoff_mode",
+        "required_evidence_refs",
+        "receipt_refs",
+        "next_owner"
+      ],
+      "properties": {
+        "handoff_mode": {
+          "type": "string",
+          "enum": [
+            "refs_only",
+            "domain_adapter_projection",
+            "human_checkpoint"
+          ]
+        },
+        "required_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "receipt_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "next_owner": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "data_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "access_level",
+        "source_refs",
+        "body_included",
+        "write_permitted"
+      ],
+      "properties": {
+        "access_level": {
+          "type": "string",
+          "enum": [
+            "none",
+            "metadata_only",
+            "verified_refs_only",
+            "domain_authorized"
+          ]
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "body_included": {
+          "const": false
+        },
+        "write_permitted": {
+          "const": false
+        }
+      }
+    },
+    "human_checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "checkpoint_id",
+          "checkpoint_kind",
+          "required",
+          "gate_ref"
+        ],
+        "properties": {
+          "checkpoint_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checkpoint_kind": {
+            "type": "string",
+            "enum": [
+              "stage_continue",
+              "integrity_exception",
+              "evidence_gap",
+              "publication_or_export_gate",
+              "custom"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "gate_ref": {
+            "$ref": "#/$defs/ref"
+          }
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "domain_role",
+        "adapter_role",
+        "forbidden_opl_authority",
+        "can_write_domain_truth",
+        "can_authorize_quality_verdict",
+        "can_authorize_publication_verdict",
+        "can_authorize_fundability_verdict",
+        "can_authorize_visual_quality_verdict",
+        "can_mutate_artifact_body",
+        "can_override_direct_skill_path"
+      ],
+      "properties": {
+        "opl_role": {
+          "const": "framework_metadata_projection_owner"
+        },
+        "domain_role": {
+          "const": "truth_quality_artifact_and_direct_skill_owner"
+        },
+        "adapter_role": {
+          "type": "string",
+          "enum": [
+            "domain_projection_adapter",
+            "thin_sidecar_export",
+            "direct_skill_path"
+          ]
+        },
+        "forbidden_opl_authority": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "domain_truth_owner",
+              "quality_verdict_owner",
+              "publication_authority",
+              "fundability_authority",
+              "visual_quality_authority",
+              "artifact_authority",
+              "memory_body_owner",
+              "direct_skill_path_owner"
+            ]
+          }
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_authorize_publication_verdict": {
+          "const": false
+        },
+        "can_authorize_fundability_verdict": {
+          "const": false
+        },
+        "can_authorize_visual_quality_verdict": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_override_direct_skill_path": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "family_stage_integrity_metadata",
+      "version": "family-stage-integrity-metadata.v1",
+      "metadata_id": "research_stage_integrity_metadata",
+      "target_domain_id": "example-domain",
+      "stage_id": "write",
+      "owner": "one-person-lab",
+      "source_pattern_refs": [
+        {
+          "ref_kind": "external_pattern",
+          "ref": "Imbad0202/academic-research-skills:academic-pipeline",
+          "role": "clean_room_pattern_reference",
+          "label": "integrity and checkpoint metadata pattern"
+        }
+      ],
+      "integrity_policy": {
+        "policy_id": "stage_integrity_policy",
+        "status": "active",
+        "required_checks": [
+          "stage_integrity",
+          "citation_support",
+          "evidence_handoff",
+          "data_access",
+          "human_checkpoint"
+        ],
+        "blocking_levels": [
+          "human_gate",
+          "fail_closed"
+        ],
+        "check_result_refs": [
+          {
+            "ref_kind": "surface_kind",
+            "ref": "domain_stage_integrity_report",
+            "role": "domain_owned_integrity_result"
+          }
+        ]
+      },
+      "citation_support": {
+        "support_mode": "claim_ref_alignment_required",
+        "claim_registry_refs": [
+          {
+            "ref_kind": "surface_kind",
+            "ref": "domain_claim_registry",
+            "role": "claim_registry"
+          }
+        ],
+        "citation_audit_refs": [
+          {
+            "ref_kind": "surface_kind",
+            "ref": "domain_citation_audit_report",
+            "role": "citation_support_audit"
+          }
+        ],
+        "unsupported_claim_policy": "fail_closed"
+      },
+      "evidence_handoff": {
+        "handoff_mode": "refs_only",
+        "required_evidence_refs": [
+          {
+            "ref_kind": "surface_kind",
+            "ref": "domain_evidence_ledger",
+            "role": "stage_evidence"
+          }
+        ],
+        "receipt_refs": [
+          {
+            "ref_kind": "surface_kind",
+            "ref": "domain_owner_receipt",
+            "role": "handoff_receipt"
+          }
+        ],
+        "next_owner": "domain_agent"
+      },
+      "data_access": {
+        "access_level": "verified_refs_only",
+        "source_refs": [
+          {
+            "ref_kind": "workspace_locator",
+            "ref": "workspace://domain/stage/source_refs",
+            "role": "verified_source_refs"
+          }
+        ],
+        "body_included": false,
+        "write_permitted": false
+      },
+      "human_checkpoints": [
+        {
+          "checkpoint_id": "integrity_exception_review",
+          "checkpoint_kind": "integrity_exception",
+          "required": true,
+          "gate_ref": {
+            "ref_kind": "family_human_gate_id",
+            "ref": "integrity_exception_review_gate",
+            "role": "human_gate"
+          }
+        }
+      ],
+      "authority_boundary": {
+        "opl_role": "framework_metadata_projection_owner",
+        "domain_role": "truth_quality_artifact_and_direct_skill_owner",
+        "adapter_role": "domain_projection_adapter",
+        "forbidden_opl_authority": [
+          "domain_truth_owner",
+          "quality_verdict_owner",
+          "publication_authority",
+          "fundability_authority",
+          "visual_quality_authority",
+          "artifact_authority",
+          "memory_body_owner",
+          "direct_skill_path_owner"
+        ],
+        "can_write_domain_truth": false,
+        "can_authorize_quality_verdict": false,
+        "can_authorize_publication_verdict": false,
+        "can_authorize_fundability_verdict": false,
+        "can_authorize_visual_quality_verdict": false,
+        "can_mutate_artifact_body": false,
+        "can_override_direct_skill_path": false
+      }
+    }
+  ]
+}

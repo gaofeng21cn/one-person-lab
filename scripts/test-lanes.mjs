@@ -41,6 +41,7 @@ const lanes = {
       'tests/src/family-runtime-lifecycle-index.test.ts',
       'tests/src/agent-lab.test.ts',
       'tests/src/generic-substrate-projection.test.ts',
+      'tests/src/family-stage-integrity-metadata-contract.test.ts',
       'tests/src/family-runtime-codex-stage-runner.test.ts',
       'tests/src/family-runtime-temporal-provider.test.ts',
       'tests/src/agent-executor.test.ts',
