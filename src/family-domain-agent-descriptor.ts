@@ -755,6 +755,19 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
         functional_privatization_default_watchlist_module_ids: descriptors.flatMap((descriptor) =>
           descriptor.functional_privatization_audit.summary.default_watchlist_module_ids
         ),
+        functional_privatization_semantic_equivalence_review_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.semantic_equivalence_review_count,
+          0,
+        ),
+        functional_privatization_semantic_equivalence_cleared_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.semantic_equivalence_cleared_count,
+          0,
+        ),
+        functional_privatization_semantic_equivalence_review_module_ids: descriptors.flatMap((descriptor) =>
+          descriptor.functional_privatization_audit.summary.semantic_equivalence_review_module_ids
+        ),
       },
       descriptors,
       notes: [

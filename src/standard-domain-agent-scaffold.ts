@@ -166,6 +166,12 @@ const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
       'tombstone_has_active_caller',
     ],
     hidden_by_default: ['cleared_or_stable_boundary'],
+    semantic_equivalence_review_required_when: [
+      'active_caller_status_or_migration_action_says_pending',
+      'active_caller_status_or_migration_action_says_should_move',
+      'active_caller_status_or_migration_action_says_active_private',
+      'active_caller_status_or_migration_action_says_handoff_required',
+    ],
   },
   mature_system_pattern: {
     platform_role: 'spec_status_reconcile_durable_runtime_state_store_sidecar_and_generated_surface_owner',

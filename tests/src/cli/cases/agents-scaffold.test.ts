@@ -86,6 +86,12 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(
+    scaffold.private_functional_surface_admission_policy.default_review_view
+      .semantic_equivalence_review_required_when
+      .includes('active_caller_status_or_migration_action_says_active_private'),
+    true,
+  );
+  assert.equal(
     scaffold.private_functional_surface_admission_policy.allowed_private_surface_classes.some(
       (surfaceClass: { class_id: string; long_term_allowed: boolean }) =>
         surfaceClass.class_id === 'minimal_authority_function' && surfaceClass.long_term_allowed === true,

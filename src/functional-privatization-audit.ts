@@ -36,6 +36,8 @@ export type FunctionalPrivatizationAuditItem = {
   blocker: string | null;
   audit_visibility: FunctionalPrivatizationAuditVisibility;
   audit_reason: string;
+  semantic_equivalence_status: 'cleared_by_boundary' | 'review_required';
+  semantic_equivalence_reason: string;
 };
 
 export type FunctionalPrivatizationAudit = {
@@ -62,6 +64,9 @@ export type FunctionalPrivatizationAudit = {
     default_watchlist_count: number;
     default_hidden_cleared_count: number;
     default_watchlist_module_ids: string[];
+    semantic_equivalence_review_count: number;
+    semantic_equivalence_cleared_count: number;
+    semantic_equivalence_review_module_ids: string[];
   };
   modules: FunctionalPrivatizationAuditItem[];
   required_opl_replacement_primitives: string[];
@@ -135,6 +140,9 @@ const EMPTY_SUMMARY = {
   default_watchlist_count: 0,
   default_hidden_cleared_count: 0,
   default_watchlist_module_ids: [],
+  semantic_equivalence_review_count: 0,
+  semantic_equivalence_cleared_count: 0,
+  semantic_equivalence_review_module_ids: [],
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -276,7 +284,7 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
 
 type FunctionalPrivatizationAuditItemDraft = Omit<
   FunctionalPrivatizationAuditItem,
-  'audit_visibility' | 'audit_reason'
+  'audit_visibility' | 'audit_reason' | 'semantic_equivalence_status' | 'semantic_equivalence_reason'
 >;
 
 function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
@@ -303,11 +311,38 @@ function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
 
 function withAuditVisibility(item: FunctionalPrivatizationAuditItemDraft): FunctionalPrivatizationAuditItem {
   const reason = attentionReason(item);
+  const semanticEquivalenceReason = semanticEquivalenceReviewReason(item);
   return {
     ...item,
     audit_visibility: reason ? 'attention_required' : 'hidden_by_default',
     audit_reason: reason ?? 'cleared_or_stable_boundary',
+    semantic_equivalence_status: semanticEquivalenceReason ? 'review_required' : 'cleared_by_boundary',
+    semantic_equivalence_reason: semanticEquivalenceReason ?? 'cleared_by_current_owner_boundary',
   };
+}
+
+function semanticEquivalenceReviewReason(item: FunctionalPrivatizationAuditItemDraft) {
+  const statusText = [
+    item.active_caller_status,
+    item.migration_action,
+    item.module_id,
+  ]
+    .filter((entry): entry is string => Boolean(entry))
+    .join(' ')
+    .toLowerCase();
+  if (
+    statusText.includes('active_private')
+    || statusText.includes('mixed_generic')
+    || statusText.includes('pending')
+    || statusText.includes('should_move')
+    || statusText.includes('should_derive')
+    || statusText.includes('handoff_required')
+    || statusText.includes('until_opl')
+    || statusText.includes('lifecycle_candidate')
+  ) {
+    return 'active_caller_wording_requires_opl_semantic_equivalence_proof';
+  }
+  return null;
 }
 
 function itemFromRecord(
@@ -488,6 +523,9 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
     || item.migration_class === 'temporary_migration_bridge'
   ).length;
   const watchlistItems = items.filter((item) => item.audit_visibility === 'attention_required');
+  const semanticEquivalenceReviewItems = items.filter((item) =>
+    item.semantic_equivalence_status === 'review_required'
+  );
   return {
     summary: {
       total_module_count: items.length,
@@ -517,6 +555,9 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
       default_watchlist_count: watchlistItems.length,
       default_hidden_cleared_count: items.length - watchlistItems.length,
       default_watchlist_module_ids: watchlistItems.map((item) => item.module_id),
+      semantic_equivalence_review_count: semanticEquivalenceReviewItems.length,
+      semantic_equivalence_cleared_count: items.length - semanticEquivalenceReviewItems.length,
+      semantic_equivalence_review_module_ids: semanticEquivalenceReviewItems.map((item) => item.module_id),
     },
     blockers,
   };

@@ -17,6 +17,8 @@ OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + minim
 
 默认审计视图只显示 `attention_required`。已经证明是 OPL hosted/generated surface、声明式 pack、最小 authority function、refs-only adapter、无默认 caller 的 diagnostic cleanup path 或 provenance/fixture 的项目，进入完整追溯清单但默认折叠。只有 blocker、仍需 replacement / migration / tombstone 的项目、仍 active 的 diagnostic cleanup path，或 tombstone 仍有 active caller 的项目，才进入默认 watchlist。
 
+审计还要区分语义等价。`default_watchlist=0` 只说明没有结构性 blocker 或长期 generic owner claim；若 `semantic_equivalence_review_count>0`，说明 active caller 仍需要证明已消费 OPL primitive、OPL generated/hosted surface，或已退成 no-active-caller cleanup/provenance。语义等价未清零前，不能写成“所有功能都已经物理依赖 OPL 实现”。
+
 ## 成熟系统参考
 
 外部成熟系统给出的共同模式是平台持有通用运行基座，应用只提交 spec、policy、handler 或 authority output：
