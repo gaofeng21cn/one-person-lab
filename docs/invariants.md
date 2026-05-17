@@ -26,7 +26,7 @@
 - `OPL` 持有 family-level 开发与运行框架、通用状态机、stage attempt lifecycle、queue/wakeup、resume/human gate、workspace/artifact/memory locator、operator projection 和 App/workbench shell。MAS/MAG/RCA 不维护平行的通用 runtime 模块；需要运行能力时通过 OPL Framework 托管。
 - `OPL` 不替代各个领域仓的智能体逻辑、domain truth、quality verdict、artifact authority、memory body 或 domain transition semantics。
 - OPL family 的目标态高于当前实现分布。MAS/MAG/RCA 当前存在的私有 scheduler、runner、session store、SQLite/lifecycle、workspace/source intake、memory/artifact transport、workbench、sidecar/status/product wrapper 或 generated wrapper，只能作为迁移输入；不得因为已有 active caller 就写成长期合理。
-- 标准 OPL Agent 必须收敛到 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`。私有功能面只能作为明确例外保留，且必须有接口、receipt/blocker/ref 输出边界、active caller、不能上收原因、no-forbidden-write 证据和退役/复审门。
+- 标准 OPL Agent 必须收敛到 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。stage 定义、domain policy、quality/export verdict、artifact authority、memory accept/reject 和 owner receipt signer 属于标准 pack 或 OPL authority ABI，不算私有平台污染；repo-local 通用 runtime、状态机、持久化、调度、展示、transport、lifecycle 或 observability residue 只能作为明确例外保留，且必须有接口、receipt/blocker/ref 输出边界、active caller、不能上收原因、no-forbidden-write 证据和退役/复审门。
 - 当 OPL primitive、pack compiler 或 App shell 还不够成熟时，应在 OPL 层定义缺口、必要时调研外部成熟系统，并把结论沉淀为 OPL generic primitive / generated surface / policy；不得让 MAS/MAG/RCA 各自复制私有平台。
 - 文档和计划必须先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案；处理清楚 active caller、替代 surface、provenance 和必要证据后，不保留历史兼容面。
 

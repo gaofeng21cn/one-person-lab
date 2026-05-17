@@ -14,6 +14,10 @@ export type FunctionalPrivatizationMigrationClass =
   | 'retire_tombstone';
 
 export type FunctionalPrivatizationAuditVisibility = 'attention_required' | 'hidden_by_default';
+export type FunctionalPrivatizationStandardizationLayer =
+  | 'standard_domain_pack_inventory'
+  | 'authority_function_inventory'
+  | 'private_platform_residue_inventory';
 
 export type FunctionalPrivatizationAuditItem = {
   module_id: string;
@@ -36,6 +40,8 @@ export type FunctionalPrivatizationAuditItem = {
   blocker: string | null;
   audit_visibility: FunctionalPrivatizationAuditVisibility;
   audit_reason: string;
+  standardization_layer: FunctionalPrivatizationStandardizationLayer;
+  standardization_layer_reason: string;
   semantic_equivalence_status: 'cleared_by_boundary' | 'review_required';
   semantic_equivalence_reason: string;
 };
@@ -64,11 +70,20 @@ export type FunctionalPrivatizationAudit = {
     default_watchlist_count: number;
     default_hidden_cleared_count: number;
     default_watchlist_module_ids: string[];
+    standard_domain_pack_inventory_count: number;
+    authority_function_inventory_count: number;
+    private_platform_residue_inventory_count: number;
+    standard_domain_pack_module_ids: string[];
+    authority_function_module_ids: string[];
+    private_platform_residue_module_ids: string[];
     semantic_equivalence_review_count: number;
     semantic_equivalence_cleared_count: number;
     semantic_equivalence_review_module_ids: string[];
   };
   modules: FunctionalPrivatizationAuditItem[];
+  standard_domain_pack_inventory: FunctionalPrivatizationAuditItem[];
+  authority_function_inventory: FunctionalPrivatizationAuditItem[];
+  private_platform_residue_inventory: FunctionalPrivatizationAuditItem[];
   required_opl_replacement_primitives: string[];
   blockers: string[];
   authority_boundary: {
@@ -93,6 +108,13 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
     'migration_action',
     'retention_reason',
     'cannot_absorb_reason',
+    'standardization_layer',
+    'standardization_layer_reason',
+  ],
+  standardization_layers: [
+    'standard_domain_pack_inventory',
+    'authority_function_inventory',
+    'private_platform_residue_inventory',
   ],
   accepted_source_fields: [
     'functional_privatization_audit',
@@ -140,6 +162,12 @@ const EMPTY_SUMMARY = {
   default_watchlist_count: 0,
   default_hidden_cleared_count: 0,
   default_watchlist_module_ids: [],
+  standard_domain_pack_inventory_count: 0,
+  authority_function_inventory_count: 0,
+  private_platform_residue_inventory_count: 0,
+  standard_domain_pack_module_ids: [],
+  authority_function_module_ids: [],
+  private_platform_residue_module_ids: [],
   semantic_equivalence_review_count: 0,
   semantic_equivalence_cleared_count: 0,
   semantic_equivalence_review_module_ids: [],
@@ -284,7 +312,12 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
 
 type FunctionalPrivatizationAuditItemDraft = Omit<
   FunctionalPrivatizationAuditItem,
-  'audit_visibility' | 'audit_reason' | 'semantic_equivalence_status' | 'semantic_equivalence_reason'
+  | 'audit_visibility'
+  | 'audit_reason'
+  | 'standardization_layer'
+  | 'standardization_layer_reason'
+  | 'semantic_equivalence_status'
+  | 'semantic_equivalence_reason'
 >;
 
 function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
@@ -312,12 +345,37 @@ function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
 function withAuditVisibility(item: FunctionalPrivatizationAuditItemDraft): FunctionalPrivatizationAuditItem {
   const reason = attentionReason(item);
   const semanticEquivalenceReason = semanticEquivalenceReviewReason(item);
+  const standardization = standardizationLayer(item);
   return {
     ...item,
     audit_visibility: reason ? 'attention_required' : 'hidden_by_default',
     audit_reason: reason ?? 'cleared_or_stable_boundary',
+    standardization_layer: standardization.layer,
+    standardization_layer_reason: standardization.reason,
     semantic_equivalence_status: semanticEquivalenceReason ? 'review_required' : 'cleared_by_boundary',
     semantic_equivalence_reason: semanticEquivalenceReason ?? 'cleared_by_current_owner_boundary',
+  };
+}
+
+function standardizationLayer(item: FunctionalPrivatizationAuditItemDraft): {
+  layer: FunctionalPrivatizationStandardizationLayer;
+  reason: string;
+} {
+  if (item.migration_class === 'declarative_pack') {
+    return {
+      layer: 'standard_domain_pack_inventory',
+      reason: 'domain_supplied_standard_pack_content_not_private_platform',
+    };
+  }
+  if (item.migration_class === 'minimal_authority_function' || item.migration_class === 'domain_authority') {
+    return {
+      layer: 'authority_function_inventory',
+      reason: 'domain_authority_function_behind_opl_standard_interface',
+    };
+  }
+  return {
+    layer: 'private_platform_residue_inventory',
+    reason: 'requires_opl_generated_hosted_surface_refs_only_adapter_or_retirement_gate',
   };
 }
 
@@ -526,6 +584,15 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
   const semanticEquivalenceReviewItems = items.filter((item) =>
     item.semantic_equivalence_status === 'review_required'
   );
+  const standardDomainPackItems = items.filter((item) =>
+    item.standardization_layer === 'standard_domain_pack_inventory'
+  );
+  const authorityFunctionItems = items.filter((item) =>
+    item.standardization_layer === 'authority_function_inventory'
+  );
+  const privatePlatformResidueItems = items.filter((item) =>
+    item.standardization_layer === 'private_platform_residue_inventory'
+  );
   return {
     summary: {
       total_module_count: items.length,
@@ -555,11 +622,20 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
       default_watchlist_count: watchlistItems.length,
       default_hidden_cleared_count: items.length - watchlistItems.length,
       default_watchlist_module_ids: watchlistItems.map((item) => item.module_id),
+      standard_domain_pack_inventory_count: standardDomainPackItems.length,
+      authority_function_inventory_count: authorityFunctionItems.length,
+      private_platform_residue_inventory_count: privatePlatformResidueItems.length,
+      standard_domain_pack_module_ids: standardDomainPackItems.map((item) => item.module_id),
+      authority_function_module_ids: authorityFunctionItems.map((item) => item.module_id),
+      private_platform_residue_module_ids: privatePlatformResidueItems.map((item) => item.module_id),
       semantic_equivalence_review_count: semanticEquivalenceReviewItems.length,
       semantic_equivalence_cleared_count: items.length - semanticEquivalenceReviewItems.length,
       semantic_equivalence_review_module_ids: semanticEquivalenceReviewItems.map((item) => item.module_id),
     },
     blockers,
+    standardDomainPackItems,
+    authorityFunctionItems,
+    privatePlatformResidueItems,
   };
 }
 
@@ -575,6 +651,9 @@ export function buildFunctionalPrivatizationAudit(
       target_domain_id: null,
       summary: EMPTY_SUMMARY,
       modules: [],
+      standard_domain_pack_inventory: [],
+      authority_function_inventory: [],
+      private_platform_residue_inventory: [],
       required_opl_replacement_primitives: [],
       blockers: ['functional_privatization_audit_missing'],
       authority_boundary: {
@@ -595,6 +674,9 @@ export function buildFunctionalPrivatizationAudit(
       target_domain_id: stringValue(manifest.target_domain_id),
       summary: EMPTY_SUMMARY,
       modules: [],
+      standard_domain_pack_inventory: [],
+      authority_function_inventory: [],
+      private_platform_residue_inventory: [],
       required_opl_replacement_primitives: [],
       blockers: ['functional_privatization_audit_missing'],
       authority_boundary: {
@@ -614,7 +696,13 @@ export function buildFunctionalPrivatizationAudit(
     ...stringList(source.opl_must_absorb_code_surfaces),
     ...stringList(source.opl_owned_generic_primitives),
   ]);
-  const { summary, blockers } = summarize(modules);
+  const {
+    summary,
+    blockers,
+    standardDomainPackItems,
+    authorityFunctionItems,
+    privatePlatformResidueItems,
+  } = summarize(modules);
   return {
     surface_kind: 'opl_functional_privatization_audit',
     version: 'opl-functional-privatization-audit.v1',
@@ -623,6 +711,9 @@ export function buildFunctionalPrivatizationAudit(
     target_domain_id: stringValue(source.target_domain_id) ?? stringValue(manifest.target_domain_id),
     summary,
     modules,
+    standard_domain_pack_inventory: standardDomainPackItems,
+    authority_function_inventory: authorityFunctionItems,
+    private_platform_residue_inventory: privatePlatformResidueItems,
     required_opl_replacement_primitives: requiredOplReplacementPrimitives,
     blockers,
     authority_boundary: {

@@ -212,6 +212,50 @@
           "active_caller_status_or_migration_action_says_handoff_required"
         ]
       },
+      "taxonomy_layers": {
+        "standard_domain_pack_inventory": {
+          "purpose": "Stage/action/transition/policy/schema/knowledge/fixture content that a clean OPL agent is expected to provide.",
+          "private_surface": false,
+          "owner": "domain_agent",
+          "opl_role": "schema_validation_pack_compilation_generated_surface_and_hosted_runtime"
+        },
+        "authority_function_inventory": {
+          "purpose": "Domain decisions that cannot be moved to OPL without moving truth, quality/export verdict, artifact authority, memory body, or owner receipt authority.",
+          "private_surface": false,
+          "owner": "domain_agent",
+          "opl_role": "standard_authority_function_abi_call_envelope_receipt_projection_and_no_forbidden_write_guard",
+          "abi": {
+            "input": [
+              "stage_attempt_ref",
+              "source_refs",
+              "artifact_refs",
+              "memory_refs",
+              "policy_refs",
+              "prior_receipt_refs"
+            ],
+            "output": [
+              "verdict",
+              "owner_receipt",
+              "typed_blocker",
+              "safe_action_refs",
+              "no_forbidden_write_evidence_ref"
+            ],
+            "forbidden_outputs": [
+              "generic_runtime_state",
+              "queue_or_attempt_ledger_mutation",
+              "session_store_mutation",
+              "scheduler_installation",
+              "OPL_lifecycle_store_write"
+            ]
+          }
+        },
+        "private_platform_residue_inventory": {
+          "purpose": "Anything that looks like a private runtime/platform shell and must be generated, hosted, reduced to refs-only output, or retired.",
+          "private_surface": true,
+          "owner": "one-person-lab_or_retirement_gate",
+          "opl_role": "replacement_or_generated_surface_owner"
+        }
+      },
       "allowed_private_surface_classes": [
         "minimal_authority_function",
         "refs_only_domain_adapter",
