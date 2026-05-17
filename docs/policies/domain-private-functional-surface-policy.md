@@ -7,15 +7,15 @@ Machine boundary: 本文是人读治理规则。机器口径以 `contracts/opl-f
 
 ## 结论
 
-OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + minimal authority functions`。MAS、MAG、RCA 现有代码证明，历史上 domain repo 很容易把 scheduler、SQLite lifecycle、session store、sidecar、status、workbench、review/repair、artifact lifecycle 和 observability 都做成私有实现；这些不能作为新 Agent 模板。
+OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。MAS、MAG、RCA 现有代码证明，历史上 domain repo 很容易把 scheduler、SQLite lifecycle、session store、sidecar、status、workbench、review/repair、artifact lifecycle 和 observability 都做成私有实现；这些不能作为新 Agent 模板。
 
-新 Agent 默认不得实现私有 runtime / platform 功能。任何私有功能面必须先进入 `functional_privatization_audit`，并被归类为下面五类之一；否则视为边界违规。
+新 Agent 默认不得实现私有 runtime / platform 功能。`functional_privatization_audit` 审计的是所有容易被误读为“功能面”的 domain 代码路径，但机器口径先把它拆成三层：标准 domain pack、标准 authority function、私有 platform residue。只有第三层才是真正需要上收、生成、收薄或退役的私有功能面。
 
 本政策按理想态优先执行。当前 MAS/MAG/RCA 已存在的私有实现不自动获得长期豁免；它们只是迁移清单。为了清洁的标准 OPL Agent 形态，四个 repo 都可以重构，旧 caller 可以迁移，旧模块可以删除。例外必须是小而明确的接口，不是整块私有平台。
 
-`allowed_private_surface_classes` 不是鼓励保留私有功能面，而是例外准入表。长期允许的 `minimal_authority_function` 也必须尽量先尝试声明化；只有无法用 policy/table/schema/fixture/receipt contract 表达的领域裁决，才保留函数。`refs_only_domain_adapter` 只能返回 locator、opaque refs、owner receipts、typed blockers 或 no-regression refs；它不是私有运行时、私有工作台或私有 transport。
+`allowed_private_surface_classes` 不是鼓励保留私有平台实现，而是第三层 residue 的处置表。长期允许的 authority function 也必须尽量先尝试声明化；只有无法用 policy/table/schema/fixture/receipt contract 表达的领域裁决，才保留函数，并且必须通过 OPL 标准 ABI 返回 verdict、owner receipt、typed blocker 或 safe action refs。`refs_only_domain_adapter` 只能返回 locator、opaque refs、owner receipts、typed blockers 或 no-regression refs；它不是私有运行时、私有工作台或私有 transport。
 
-默认审计视图只显示 `attention_required`。已经证明是 OPL hosted/generated surface、声明式 pack、最小 authority function、refs-only adapter、无默认 caller 的 diagnostic cleanup path 或 provenance/fixture 的项目，进入完整追溯清单但默认折叠。只有 blocker、仍需 replacement / migration / tombstone 的项目、仍 active 的 diagnostic cleanup path，或 tombstone 仍有 active caller 的项目，才进入默认 watchlist。
+默认审计视图只显示 `attention_required`。标准 pack 和标准 authority function 进入完整追溯清单，但不算私有平台污染；已经证明是 OPL hosted/generated surface、声明式 pack、authority function、refs-only adapter、无默认 caller 的 diagnostic cleanup path 或 provenance/fixture 的项目，默认折叠。只有 blocker、仍需 replacement / migration / tombstone 的项目、仍 active 的 diagnostic cleanup path，或 tombstone 仍有 active caller 的项目，才进入默认 watchlist。
 
 审计还要区分语义等价。`default_watchlist=0` 只说明没有结构性 blocker 或长期 generic owner claim；若 `semantic_equivalence_review_count>0`，说明 active caller 仍需要证明已消费 OPL primitive、OPL generated/hosted surface，或已退成 no-active-caller cleanup/provenance。语义等价未清零前，不能写成“所有功能都已经物理依赖 OPL 实现”。
 
@@ -31,11 +31,29 @@ OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + minim
 
 OPL 的对应设计是：OPL 持有 stage attempt、queue、attempt ledger、transition runner、memory/artifact locator、generated surface、workbench 和 observability；domain repo 只保留领域真相、判断和回执。
 
+## 三层审计 taxonomy
+
+`functional_privatization_audit` 的核心目标不是把 stage 定义、domain policy 或 quality verdict 都标成私有功能，而是给所有“看起来像功能代码”的路径一个可审计归位：
+
+| 层级 | 是否私有功能面 | 长期 owner | OPL 管理方式 | 例子 |
+| --- | --- | --- | --- | --- |
+| `standard_domain_pack_inventory` | 否 | domain agent | schema validation、pack compilation、generated / hosted runtime | stage 定义、transition table、action metadata、policy、rubric、knowledge、fixture、receipt schema |
+| `authority_function_inventory` | 否 | domain agent | 标准 ABI、call envelope、receipt projection、no-forbidden-write guard | publication quality verdict、grant fundability/export verdict、visual review/export verdict、artifact mutation authorization、memory accept/reject、owner receipt signer |
+| `private_platform_residue_inventory` | 是 | OPL replacement 或 retirement gate | OPL generated/hosted surface、refs-only 收薄、diagnostic cleanup 或 tombstone | scheduler、queue/attempt ledger、session store、SQLite lifecycle engine、workbench/status shell、memory/artifact transport、native helper envelope、observability/SLO runtime |
+
+因此，标准 OPL 智能体不是“没有代码”，而是代码只能落在标准 domain pack 或标准 authority ABI 里。凡是实现了通用运行平台、状态机、持久化、调度、展示、transport、lifecycle 或 observability 的模块，都必须进入 `private_platform_residue_inventory`，不能用“历史上已经写在 domain 仓里”作为长期保留理由。
+
+Authority function 的标准 ABI 固定为：
+
+- 输入：`stage_attempt_ref`、`source_refs`、`artifact_refs`、`memory_refs`、`policy_refs`、`prior_receipt_refs`。
+- 输出：`verdict`、`owner_receipt`、`typed_blocker`、`safe_action_refs`、`no_forbidden_write_evidence_ref`。
+- 禁止输出：`generic_runtime_state`、`queue_or_attempt_ledger_mutation`、`session_store_mutation`、`scheduler_installation`、`OPL_lifecycle_store_write`。
+
 ## 允许的私有功能面
 
 | 类别 | 长期允许 | 接口形态 | 必要性 |
 | --- | --- | --- | --- |
-| `minimal_authority_function` | 是 | `runtime/authority_functions/<function>` + receipt schema | 领域裁决无法可靠声明化，例如 publication quality、fundability/export verdict、visual review/export verdict、artifact mutation authorization、memory accept/reject、source readiness、owner receipt signing 或 domain-native helper implementation。 |
+| `minimal_authority_function` | 是，但属于 `authority_function_inventory` 而非私有 platform residue | `runtime/authority_functions/<function>` + receipt schema + OPL 标准 ABI | 领域裁决无法可靠声明化，例如 publication quality、fundability/export verdict、visual review/export verdict、artifact mutation authorization、memory accept/reject、source readiness、owner receipt signing 或 domain-native helper implementation。 |
 | `refs_only_domain_adapter` | 是 | contract / projection 只返回 opaque refs、owner receipt、typed blocker、no-regression refs | OPL generic shell 需要 locator 或 receipt refs，但 memory body、artifact body、quality/export verdict 仍归 domain。 |
 | `temporary_migration_bridge` | 否 | `generated_surface_handoff` + active caller inventory + replacement target | OPL generated/replacement surface 正在同一 program 内替换旧手写 shell；必须有迁移动作和退役门。 |
 | `diagnostic_cleanup_path` | 否 | 显式 opt-in status/remove/inspect；不得 install、trigger、schedule 或成为 default caller | 仅用于检查或移除旧 runtime 状态，例如 MAS legacy local LaunchAgent cleanup。 |

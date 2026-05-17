@@ -92,6 +92,24 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(
+    scaffold.private_functional_surface_admission_policy.taxonomy_layers.standard_domain_pack_inventory.private_surface,
+    false,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.taxonomy_layers.authority_function_inventory
+      .abi.output.includes('owner_receipt'),
+    true,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.taxonomy_layers.private_platform_residue_inventory.private_surface,
+    true,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.taxonomy_layers.authority_function_inventory
+      .abi.forbidden_outputs.includes('queue_or_attempt_ledger_mutation'),
+    true,
+  );
+  assert.equal(
     scaffold.private_functional_surface_admission_policy.allowed_private_surface_classes.some(
       (surfaceClass: { class_id: string; long_term_allowed: boolean }) =>
         surfaceClass.class_id === 'minimal_authority_function' && surfaceClass.long_term_allowed === true,
@@ -134,6 +152,14 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.functional_privatization_audit_contract.migration_classes.includes('declarative_pack'), true);
   assert.equal(
     scaffold.functional_privatization_audit_contract.migration_classes.includes('minimal_authority_function'),
+    true,
+  );
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.module_inventory_fields.includes('standardization_layer'),
+    true,
+  );
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.standardization_layers.includes('private_platform_residue_inventory'),
     true,
   );
   assert.equal(scaffold.retirement_gate.delete_policy, 'delete_or_history_tombstone_only');

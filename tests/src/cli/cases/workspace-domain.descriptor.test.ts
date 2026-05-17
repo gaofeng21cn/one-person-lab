@@ -655,6 +655,39 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_hidden_cleared_count, 15);
     assert.deepEqual(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_module_ids, []);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_standard_domain_pack_inventory_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_authority_function_inventory_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_private_platform_residue_inventory_count, 7);
+    assert.deepEqual(
+      [...list.family_agent_descriptors.summary.functional_privatization_standard_domain_pack_module_ids].sort(),
+      [
+        'grant_stage_policy_pack',
+        'runtime_storage_maintenance',
+        'study_stage_policy_pack',
+        'visual_stage_policy_pack',
+      ],
+    );
+    assert.deepEqual(
+      [...list.family_agent_descriptors.summary.functional_privatization_authority_function_module_ids].sort(),
+      [
+        'fundability_quality_export_verdicts',
+        'publication_quality_verdict',
+        'study_truth',
+        'visual_review_export_verdict',
+      ],
+    );
+    assert.deepEqual(
+      [...list.family_agent_descriptors.summary.functional_privatization_private_platform_residue_module_ids].sort(),
+      [
+        'artifact_gallery_handoff_shell',
+        'grant_sidecar_status_shell',
+        'local_launchd_scheduler_install_path',
+        'native_helper_envelope_wrapper',
+        'repo_owned_scheduler_daemon',
+        'runtime_lifecycle_sqlite_reference_adapter',
+        'session_ledger_attention_queue',
+      ],
+    );
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_review_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_cleared_count, 15);
     assert.deepEqual(
@@ -724,6 +757,27 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_hidden_cleared_count, 6);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.semantic_equivalence_review_count, 0);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.semantic_equivalence_cleared_count, 6);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.standard_domain_pack_inventory_count, 2);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.authority_function_inventory_count, 2);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.private_platform_residue_inventory_count, 2);
+    assert.deepEqual(
+      mas.family_agent_descriptor.functional_privatization_audit.standard_domain_pack_inventory.map(
+        (module: { module_id: string }) => module.module_id,
+      ),
+      ['runtime_storage_maintenance', 'study_stage_policy_pack'],
+    );
+    assert.deepEqual(
+      mas.family_agent_descriptor.functional_privatization_audit.authority_function_inventory.map(
+        (module: { module_id: string }) => module.module_id,
+      ),
+      ['study_truth', 'publication_quality_verdict'],
+    );
+    assert.deepEqual(
+      mas.family_agent_descriptor.functional_privatization_audit.private_platform_residue_inventory.map(
+        (module: { module_id: string }) => module.module_id,
+      ),
+      ['runtime_lifecycle_sqlite_reference_adapter', 'local_launchd_scheduler_install_path'],
+    );
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
@@ -762,9 +816,27 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     );
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'study_stage_policy_pack')
+        .standardization_layer,
+      'standard_domain_pack_inventory',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'study_truth')
         .migration_class,
       'minimal_authority_function',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'study_truth')
+        .standardization_layer,
+      'authority_function_inventory',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
+        .standardization_layer,
+      'private_platform_residue_inventory',
     );
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules

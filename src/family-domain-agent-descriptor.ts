@@ -473,10 +473,22 @@ function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManife
       default_watchlist_count: 0,
       default_hidden_cleared_count: 0,
       default_watchlist_module_ids: [],
+      standard_domain_pack_inventory_count: 0,
+      authority_function_inventory_count: 0,
+      private_platform_residue_inventory_count: 0,
+      standard_domain_pack_module_ids: [],
+      authority_function_module_ids: [],
+      private_platform_residue_module_ids: [],
+      semantic_equivalence_review_count: 0,
+      semantic_equivalence_cleared_count: 0,
+      semantic_equivalence_review_module_ids: [],
     },
     required_opl_replacement_primitives: audit?.required_opl_replacement_primitives ?? [],
     blockers: audit?.blockers ?? ['functional_privatization_audit_missing'],
     modules: audit?.modules ?? [],
+    standard_domain_pack_inventory: audit?.standard_domain_pack_inventory ?? [],
+    authority_function_inventory: audit?.authority_function_inventory ?? [],
+    private_platform_residue_inventory: audit?.private_platform_residue_inventory ?? [],
     authority_boundary: audit?.authority_boundary ?? {
       opl_can_write_domain_truth: false,
       opl_can_write_memory_body: false,
@@ -754,6 +766,30 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
         ),
         functional_privatization_default_watchlist_module_ids: descriptors.flatMap((descriptor) =>
           descriptor.functional_privatization_audit.summary.default_watchlist_module_ids
+        ),
+        functional_privatization_standard_domain_pack_inventory_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.standard_domain_pack_inventory_count,
+          0,
+        ),
+        functional_privatization_authority_function_inventory_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.authority_function_inventory_count,
+          0,
+        ),
+        functional_privatization_private_platform_residue_inventory_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.private_platform_residue_inventory_count,
+          0,
+        ),
+        functional_privatization_standard_domain_pack_module_ids: descriptors.flatMap((descriptor) =>
+          descriptor.functional_privatization_audit.summary.standard_domain_pack_module_ids
+        ),
+        functional_privatization_authority_function_module_ids: descriptors.flatMap((descriptor) =>
+          descriptor.functional_privatization_audit.summary.authority_function_module_ids
+        ),
+        functional_privatization_private_platform_residue_module_ids: descriptors.flatMap((descriptor) =>
+          descriptor.functional_privatization_audit.summary.private_platform_residue_module_ids
         ),
         functional_privatization_semantic_equivalence_review_count: descriptors.reduce(
           (total, descriptor) =>
