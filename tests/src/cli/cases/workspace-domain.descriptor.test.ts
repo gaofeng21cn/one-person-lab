@@ -655,6 +655,12 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_hidden_cleared_count, 15);
     assert.deepEqual(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_module_ids, []);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_review_count, 0);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_cleared_count, 15);
+    assert.deepEqual(
+      list.family_agent_descriptors.summary.functional_privatization_semantic_equivalence_review_module_ids,
+      [],
+    );
 
     const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -716,6 +722,8 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.total_module_count, 6);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_watchlist_count, 0);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_hidden_cleared_count, 6);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.semantic_equivalence_review_count, 0);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.semantic_equivalence_cleared_count, 6);
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')

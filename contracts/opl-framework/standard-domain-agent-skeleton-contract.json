@@ -204,6 +204,12 @@
         ],
         "hidden_by_default": [
           "cleared_or_stable_boundary"
+        ],
+        "semantic_equivalence_review_required_when": [
+          "active_caller_status_or_migration_action_says_pending",
+          "active_caller_status_or_migration_action_says_should_move",
+          "active_caller_status_or_migration_action_says_active_private",
+          "active_caller_status_or_migration_action_says_handoff_required"
         ]
       },
       "allowed_private_surface_classes": [

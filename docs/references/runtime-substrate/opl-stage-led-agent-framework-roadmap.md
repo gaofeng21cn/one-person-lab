@@ -50,7 +50,7 @@ Date: `2026-05-16`
 
 ## 2026-05-14 当前落地评估
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface；stage、domain-memory descriptor 与 standard domain-agent skeleton discovery / validation 当前均已在 MAS/MAG/RCA 三仓 resolved/aligned。Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench、Aion 白名单 signal bridge 和本机 managed Temporal service / worker proof 入口均已落地。2026-05-15 fresh proof 显示 Temporal provider view 为 `full_online_ready=true` / `durable_online_ready=true`，`residency proof --provider temporal --production` 返回 `production_residency_proven`，latest proof 可进入 runtime ledger 并被 closeout gate / MAS hydrate 使用。task-bound provider bridge 当前 ledger `total=18` / `completed=18`：MAS 有 6 条 guarded-apply closeout refs，最新 DM002 run 已消费 MAS owner stable blocker receipt；MAG sidecar receipt ingestion 和 RCA no-regression evidence ingestion 也已进入同一 OPL typed queue。当前 production closure 的优先级是继续证明 MAS 三篇真实 paper line 的 owner-chain guarded apply progress evidence，MAG/RCA grant/visual long soak 后移但不得让 descriptor/index 退化。
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface；stage、domain-memory descriptor 与 standard domain-agent skeleton discovery / validation 当前均已在 MAS/MAG/RCA 三仓 resolved/aligned。Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench、Aion 白名单 signal bridge和本机 managed Temporal service / worker proof 入口均已落地。2026-05-17 fresh proof 显示 Temporal provider view 为 `full_online_ready=true` / `durable_online_ready=true`，`residency proof --provider temporal --production` 返回 `production_residency_proven`，latest proof 可进入 runtime ledger 并被 closeout gate / MAS hydrate 使用；provider continuous proof 当前为 `latest_proof_proven` / `fresh` / `proof_fresh`。task-bound provider bridge 当前 ledger `total=21` / `completed=21`：MAS `9`、MAG `11`、RCA `1`；MAG sidecar receipt ingestion、MAS owner stable blocker receipt 和 RCA no-regression evidence ingestion 均已进入同一 OPL typed queue。当前 production closure 的优先级是继续证明 MAS 三篇真实 paper line 的 owner-chain guarded apply progress evidence，MAG/RCA grant/visual long soak 后移但不得让 descriptor/index 退化。
 
 2026-05-14 fresh CLI / proof 读模型校准：
 
@@ -59,7 +59,7 @@ Date: `2026-05-16`
 - `node dist/cli.js domain-memory list --json`：`resolved_memory_descriptor_count=3`、`missing_memory_descriptor_count=0`。MAS 的 `mas_publication_route_memory`、MAG 的 `mag_grant_strategy_memory`、RCA 的 `rca_visual_pattern_memory` 均已按标准 `family_domain_memory_ref.v1` 被解析；OPL 只读取 locator / freshness / migration plan / seed corpus / receipt locator，不读取 memory 正文。
 - `OPL_FAMILY_RUNTIME_PROVIDER=temporal ./bin/opl family-runtime status --json`：本机 managed Temporal service / worker 当前可达，`full_online_ready=true` / `durable_online_ready=true`。
 - `opl family-runtime residency proof --provider temporal --production`：返回 `production_residency_proven`，并验证 service reachable、worker ready、completed attempt、restart re-query、signal history、typed-closeout required、missing closeout blocked、retry/dead-letter boundary 和 domain-truth boundary。
-- provider-hosted task-bound attempt bridge：ledger `total=18` / `completed=18`，MAS 6 条 guarded-apply closeout refs 中最新 DM002 run 已 ingest owner stable blocker receipt，MAG/RCA 分别 ingest product sidecar receipt refs 与 no-regression evidence refs。
+- provider-hosted task-bound attempt bridge：ledger `total=21` / `completed=21`，MAS `9` 条 guarded-apply closeout refs 中已 ingest owner stable blocker receipt，MAG `11` 条 product sidecar / lifecycle / grant-stage receipt refs 与 RCA `1` 条 no-regression evidence ref 也已进入同一 OPL typed queue。
 
 2026-05-12 MAS paper-line read-only proof 校准：
 
@@ -139,7 +139,7 @@ Date: `2026-05-16`
 
 ## 离理想生产级框架还有多远
 
-如果把理想状态定义为“OPL 可以生产级托管 MAS/MAG/RCA 的长时间 stage attempt，同时 direct skill path 等价、domain truth 不迁出、旧默认面退役干净”，当前大约处在 `65-75% framework landed / 25-35% production closure remaining`。这个比例不是测试分数，只是工程层完成度判断：
+如果把理想状态定义为“OPL 可以生产级托管 MAS/MAG/RCA 的长时间 stage attempt，同时 direct skill path 等价、domain truth 不迁出、旧默认面退役干净”，当前处在 `functional_closure_ready_for_live_soak`。这个状态不是测试分数，只是工程层完成度判断：
 
 | 目标项 | 当前距离 |
 | --- | --- |
@@ -152,7 +152,7 @@ Date: `2026-05-16`
 
 下一步不应再新增平行总计划。直接按以下闭环推进：
 
-1. `OPL production residency`：真实 Temporal server/worker 启动、readiness、restart/re-query、retry/dead-letter、worker lifecycle proof。
+1. `OPL production residency SLO`：真实 Temporal server/worker 已完成 fresh readiness / restart / re-query / retry-dead-letter / worker lifecycle proof；后续聚焦长窗口 SLO、连续 proof cadence 和真实 domain owner-chain 不退化。
 2. `MAS paper-line production soak`：以 DM002/DM003/Obesity 的 read-only closeout projection 为基线，继续证明 MAS sidecar / owner receipt、artifact delta 或 typed blocker 能经 provider-backed attempt 被 OPL/Aion 看到且不越权写 MAS truth；guarded apply 只能由 MAS owner gate 放行。
 3. `Codex activity runner production soak`：先用 MAS stage attempt 校准 Codex CLI long-running activity、heartbeat、checkpoint、progress/cost sampling、typed closeout ingestion 和 domain owner receipt；MAG/RCA controlled soak 后移。
 4. `Domain memory apply proof`：保持 memory body 和 accept/reject 在 domain，本轮先证明 MAS publication-route memory consumed/writeback receipt；MAG/RCA 之后做 controlled grant / visual memory proof。
