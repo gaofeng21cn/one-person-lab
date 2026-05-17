@@ -73,9 +73,16 @@ const qualityDetailsActionPatterns = [
 ];
 
 const nativeHelperPrebuildWorkflowPatterns = [
+  /include-linux:/,
+  /include-windows:/,
+  /Plan native helper prebuilds/,
+  /platforms='\["macos-latest"'/,
+  /inputs\.include-linux/,
+  /inputs\.include-windows/,
   /macos-latest/,
   /ubuntu-latest/,
   /windows-latest/,
+  /fromJson\(needs\.plan-native-helper-prebuilds\.outputs\.matrix\)/,
   /cargo build --release --workspace/,
   /npm run native:prebuild-pack -- --source-dir target\/release/,
   /npm run native:prebuild-check -- --prebuild-root dist\/native-helper-prebuilds/,

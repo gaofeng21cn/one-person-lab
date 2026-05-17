@@ -2,6 +2,17 @@ name: Native Helper Prebuilds
 
 on:
   workflow_dispatch:
+    inputs:
+      include-linux:
+        description: Build Linux native helper prebuilds
+        required: false
+        default: 'false'
+        type: boolean
+      include-windows:
+        description: Build Windows native helper prebuilds
+        required: false
+        default: 'false'
+        type: boolean
   pull_request:
     paths:
       - Cargo.lock
@@ -27,17 +38,37 @@ permissions:
   packages: write
 
 jobs:
+  plan-native-helper-prebuilds:
+    name: Plan native helper prebuilds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+
+    steps:
+      - name: Select prebuild platforms
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          platforms='["macos-latest"'
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.include-linux }}" = "true" ]; then
+            platforms="${platforms},\"ubuntu-latest\""
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.include-windows }}" = "true" ]; then
+            platforms="${platforms},\"windows-latest\""
+          fi
+          platforms="${platforms}]"
+          printf 'matrix={"os":%s}\n' "$platforms" >> "$GITHUB_OUTPUT"
+
   pack-native-helper:
     name: Pack native helper prebuild (${{ matrix.os }})
+    needs: plan-native-helper-prebuilds
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
-          - windows-latest
+      matrix: ${{ fromJson(needs.plan-native-helper-prebuilds.outputs.matrix) }}
 
     steps:
       - name: Checkout
