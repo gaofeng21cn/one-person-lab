@@ -65,6 +65,40 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'), true);
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.surface_kind,
+    'opl_domain_private_functional_surface_admission_policy',
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.default_posture,
+    'forbidden_until_classified_and_receipted',
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.allowed_private_surface_classes.some(
+      (surfaceClass: { class_id: string; long_term_allowed: boolean }) =>
+        surfaceClass.class_id === 'minimal_authority_function' && surfaceClass.long_term_allowed === true,
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.allowed_private_surface_classes.some(
+      (surfaceClass: { class_id: string; long_term_allowed: boolean }) =>
+        surfaceClass.class_id === 'temporary_migration_bridge' && surfaceClass.long_term_allowed === false,
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.forbidden_private_surface_classes.includes(
+      'generic_persistence_or_sqlite_lifecycle_engine',
+    ),
+    true,
+  );
+  assert.equal(
+    scaffold.private_functional_surface_admission_policy.required_evidence_before_retaining_private_surface.includes(
+      'cannot_absorb_reason_or_retirement_gate',
+    ),
+    true,
+  );
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_scheduler_owner'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_attempt_ledger_owner'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_persistence_engine_owner'), true);
@@ -116,6 +150,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/pack_compiler_input.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/policies/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/authority_functions/README.md')), true);
@@ -144,6 +179,10 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       fs.readFileSync(path.join(targetDir, 'contracts/functional_privatization_audit.json'), 'utf8'),
     );
     assert.equal(functionalAudit.surface_kind, 'functional_privatization_audit');
+    assert.equal(
+      functionalAudit.private_functional_surface_admission_policy.default_posture,
+      'forbidden_until_classified_and_receipted',
+    );
     assert.deepEqual(functionalAudit.classification_policy.accepted_migration_classes, [
       'opl_owned_replacement',
       'opl_generated_surface',
@@ -152,6 +191,15 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'retire_tombstone',
     ]);
     assert.equal(functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner, false);
+    const privateSurfacePolicy = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json'), 'utf8'),
+    );
+    assert.equal(privateSurfacePolicy.surface_kind, 'opl_domain_private_functional_surface_admission_policy');
+    assert.equal(privateSurfacePolicy.domain_id, 'award-foundry');
+    assert.equal(
+      privateSurfacePolicy.forbidden_private_surface_classes.includes('generic_cli_mcp_product_wrapper'),
+      true,
+    );
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
     assert.equal(validated.mode, 'validate');

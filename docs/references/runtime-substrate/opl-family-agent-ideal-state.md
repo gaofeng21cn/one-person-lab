@@ -11,6 +11,7 @@ Date: `2026-05-16`
 - `定位`：本文只写 OPL family 的 north-star 目标态和长期 owner boundary；当前完成度、验证计数和实施计划回到 gap plan、status、roadmap 与机器面。
 - `当前实态校准`：带日期的校准段只记录当前代码或 fresh evidence，不把目标态写成已完成事实。
 - `Owner 边界`：OPL 持有 framework/runtime/development primitives；MAS/MAG/RCA 持有 domain truth、quality/export verdict、artifact authority、memory body 和 owner receipt。
+- `目标态优先`：当前 MAS/MAG/RCA 已经手写的 runtime、sidecar、status、workbench、session、memory/artifact lifecycle 或 CLI/MCP/product shell 只能作为迁移输入，不是目标态约束。标准 OPL Agent 默认由 OPL pack compiler / generated surface 承载通用外壳，domain repo 只保留声明式 pack 和极少数 authority function。
 - `最短路径`：先把目标收紧为 OPL-hosted `Declarative Domain Pack`：OPL 提供 pack compiler、generated sidecar / CLI / MCP / product-entry / workbench、generic runtime primitives、functional harness 和 legacy retirement gate；domain repo 默认只提交声明式 stage / policy / schema / knowledge / receipt contract 和极少量 domain authority function。当前 P0 已落地 OPL `family_scheduler_replacement`、`functional-agent-runtime-harness`、`functional_privatization_audit`、`family-runtime-lifecycle-index` refs-only SQLite sidecar index 和完整 `Agent Lab` 控制面，后续迁移/退役 domain repo 中仍手写的通用功能残留，随后做 focused parity / no-forbidden-write / receipt 对账，最后跑 integration、provider SLO 和 live soak。
 - `禁写口径`：provider ready、descriptor aligned、skeleton evidence observed 或 provider completion 都不能写成 domain ready、publication-ready、fundability-ready、visual-ready 或 production soak complete。
 
@@ -21,6 +22,10 @@ Date: `2026-05-16`
 `MAS`、`MAG`、`RCA` 以及未来 Patent、Award、Thesis、Review 等 `Foundry Agents` 是基于 OPL Framework 开发的垂类智能体。它们持有领域知识、stage 语义、领域真相、质量 verdict 与交付 authority；它们复用 OPL 的运行外围能力，不重复维护 scheduler、queue、attempt ledger、workspace lifecycle、artifact index、memory locator、generic persistence engine、SQLite lifecycle index、resume token、operator projection 这类通用模块。
 
 换句话说，理想 Foundry Agent 是 `Declarative Domain Pack + minimal authority functions`，不是自带一套运行平台，也不应长期手写一层通用 thin program surface。开发、运行、托管、恢复、排队、唤醒、状态机执行、工作区生命周期、文件生命周期、App/workbench 投影、CLI/MCP/product-entry/sidecar 外壳和跨 domain 审计都应由 OPL Framework / One Person Lab App 生成或托管；Foundry Agent 默认只声明 stage 内需要做什么、使用哪些 knowledge / prompt / skill refs、如何判断质量、谁能写 truth、哪些 artifact 可变更、以及完成或阻塞时返回什么 receipt。只有在领域裁决无法可靠声明化时，domain repo 才保留最小 authority function，例如 quality verdict、artifact mutation authorization、memory accept/reject、source readiness verdict、owner receipt signer 或 domain-specific native helper implementation；每个保留函数都必须有 `cannot_absorb_reason`、active caller、receipt schema 和 no-forbidden-write proof。
+
+这个目标态高于当前实现。MAS/MAG/RCA 今天存在的私有 scheduler、session store、SQLite index、managed runner、workspace/source intake、memory/artifact lifecycle、operator projection、native-helper envelope、sidecar、status wrapper 或 product shell，不因为“已经能跑”而成为长期设计。它们要么被 OPL primitive / pack compiler / App shell 吸收，要么被收薄成 refs-only adapter 或 authority function，要么在 active caller 迁移后直接删除或归档。例外必须被写成可审计接口，不允许用笼统的“domain 需要”保留整块私有平台。
+
+如果某个目标能力在当前 OPL 中还没有足够优雅的实现，处理方式是先在 OPL 层定义缺口和调研 lane。可以参考 Kubernetes、Temporal、LangGraph、Dapr、OpenAI Agents SDK、Airflow 等成熟系统的 spec/status/reconcile、durable workflow、checkpoint/store、building blocks、tools/handoff/trace 和 DAG/executor 分层模式；调研结论必须转化为 OPL generic primitive、pack compiler contract、generated surface 或 App/workbench 设计，不回流为每个 domain repo 的私有 runtime。
 
 2026-05-17 顶层设计收紧参考了几类成熟系统模式：Kubernetes controller 把 desired spec、current status 和 reconcile controller 分离；Temporal 把 durable workflow、恢复、重试和长时间状态放在 runtime；LangGraph 把 graph checkpoint、thread state 和跨 thread store 作为运行层能力；Dapr 以 sidecar / building blocks 把 state、pub/sub、workflow、jobs 等通用外围放到应用代码之外；OpenAI Agents SDK 把 tools、handoffs 和 tracing 做成结构化运行 surface。这些模式共同支持 OPL 的目标形态：domain repo 提交可验证 spec / policy / schema / receipt，而不是继续保留私有 scheduler、ledger、SQLite lifecycle engine、workbench、sidecar adapter 或状态机 runner。OPL 应提供 `Agent Pack Compiler`，从 domain pack 生成或装配 CLI、MCP、Skill/product-entry metadata、sidecar export/dispatch、status/read model、functional harness cases 和 App drilldown；手写 domain adapter 只能作为迁移桥或无法声明化的 authority boundary。
 
@@ -118,7 +123,7 @@ OPL Framework 的长期职责是持有所有 domain-neutral、可跨垂类复用
 
 MAS、MAG 与 RCA 理想目标态进一步明确了一条适用于所有 Foundry Agents 的上收边界：domain agent 应成为 `Declarative Domain Pack + minimal authority functions`，OPL Framework 应提供可复用的通用运行、生成外壳和产品外围。MAG 在这条边界上补充了 grant-specific 证据：funding/call intake、TODO/显式唤醒、grant strategy memory、submission-ready package、route/decision drilldown 和质量/导出投影都需要通用 transport 与 workbench 壳，但不能把 fundability、authoring quality 或 export verdict 交给 OPL。RCA 在这条边界上补充了 visual-deliverable 证据：source/workspace intake、artifact gallery、route/decision map、review/repair queue、export handoff、native helper execution 和 screenshot/export proof 都需要通用 envelope 与 workbench 壳，但不能把 visual direction、review verdict、export verdict 或 canonical artifact authority 交给 OPL。
 
-理想态的 private functional audit 不是一句“domain repo 没有私有功能”声明。每个 OPL-compatible Foundry Agent 都必须暴露代码路径级清单，至少记录 `module_id`、owner/classification、`code_paths`、`active_callers`、`active_caller_status`、`migration_action`，并在保留 domain 内时写明 `retention_reason` 或 `cannot_absorb_reason`。OPL 统一读模型负责把这些模块归一到 OPL replacement / generated surface、declarative pack、minimal authority function 或 retire/tombstone；domain repo 负责持续收薄 active caller 和删除退役面。MAS 的 SQLite/lifecycle store、MAG 的 local runtime journal / attempt ledger、RCA 的 managed-run/session store 这类历史实现，只有在 refs-only adapter、domain authority 或 diagnostic proof 语境中可以保留，不能作为 domain-owned generic platform 继续扩展；长期目标是由 OPL lifecycle/attempt/session primitives 替代，domain 只保留 authority refs。
+理想态的 private functional audit 不是一句“domain repo 没有私有功能”声明。每个 OPL-compatible Foundry Agent 都必须暴露代码路径级清单，至少记录 `module_id`、owner/classification、`code_paths`、`active_callers`、`active_caller_status`、`migration_action`，并在保留 domain 内时写明 `retention_reason` 或 `cannot_absorb_reason`。OPL 统一读模型负责把这些模块归一到 OPL replacement / generated surface、declarative pack、minimal authority function、refs-only adapter、temporary migration bridge、diagnostic cleanup path 或 retire/tombstone；domain repo 负责持续收薄 active caller 和删除退役面。MAS 的 SQLite/lifecycle store、MAG 的 local runtime journal / attempt ledger、RCA 的 managed-run/session store 这类历史实现，只有在 refs-only adapter、domain authority、显式 legacy cleanup diagnostic 或 provenance/fixture 语境中可以保留，不能作为 domain-owned generic platform 继续扩展；长期目标是由 OPL lifecycle/attempt/session primitives 替代，domain 只保留 authority refs。准入规则由 `docs/policies/domain-private-functional-surface-policy.md`、`contracts/opl-framework/standard-domain-agent-skeleton-contract.json` 和每个 scaffold 生成的 `contracts/private_functional_surface_policy.json` 固定。
 
 | 通用能力 | OPL Framework 理想职责 | Domain Agent 理想职责 |
 | --- | --- | --- |
@@ -180,6 +185,8 @@ OPL 负责 stage 的发现、排队、唤醒、恢复、投影和审计。Stage 
 ## Foundry Agents 的理想职责
 
 垂类 Agent 的目标是把领域专业性做好，把通用运行外围和生成外壳交给 OPL。它们保留 domain package 必需的声明式 pack 和最小 authority functions，但不承担 generic framework/runtime，也不长期手写可由 OPL pack compiler 派生的薄程序面。
+
+判断标准按目标态执行，而不是按当前仓库形态执行。一个现有模块只要承担跨 domain transport、ledger、index、lifecycle、workbench、runner、scheduler、session、status、generated wrapper、review/repair transport、native-helper envelope 或 observability，就默认是 OPL 上收或 generated surface 替换候选。只有直接作出 publication/fundability/visual/export verdict、memory accept/reject、artifact mutation authorization、source readiness verdict、owner receipt signing 或 domain-native helper mutation 的最小部分，才可能保留在 domain。
 
 每个 Foundry Agent 应持有：
 
