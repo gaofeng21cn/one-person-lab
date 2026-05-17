@@ -73,6 +73,25 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       output.runtime_manager.standard_domain_agent_scaffold.domain_retained_thin_surfaces.includes('owner_receipt'),
       true,
     );
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.declarative_domain_pack.includes('owner_receipt_schema'),
+      true,
+    );
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.minimal_authority_functions.includes(
+        'quality_or_export_verdict_authorizer',
+      ),
+      true,
+    );
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.pack_compiler_contract.generated_surface_owner,
+      'one-person-lab',
+    );
+    assert.equal(
+      output.runtime_manager.standard_domain_agent_scaffold.opl_generated_surfaces
+        .some((surface: { surface_id: string }) => surface.surface_id === 'product_entry_manifest'),
+      true,
+    );
     assert.equal(output.runtime_manager.native_helper_target.status, 'contracted_optional_rust_helpers');
     assert.equal(output.runtime_manager.native_helper_target.language, 'rust');
     assert.equal(output.runtime_manager.native_helper_target.protocol.transport, 'cli_stdio');
