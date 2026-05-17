@@ -341,6 +341,45 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.deepEqual(mas.domain_pack_compiler.blocker_reasons, []);
   assert.equal(mas.domain_pack_compiler.pack_compiler_input_projection.generated_surface_owner, 'one-person-lab');
   assert.equal(mas.domain_pack_compiler.pack_compiler_input_projection.domain_repo_can_own_generated_surface, false);
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.surface_kind, 'opl_generated_agent_interface_bundle');
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.owner, 'one-person-lab');
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.domain_repo_can_own_generated_surface, false);
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.status, 'ready');
+  assert.deepEqual(mas.domain_pack_compiler.generated_interface_bundle.generated_from, [
+    'family_action_catalog',
+    'family_stage_control_plane',
+    'domain_memory_descriptor',
+    'runtime_surfaces',
+    'functional_privatization_audit',
+  ]);
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.mcp.descriptors[0].name, 'study_packet');
+  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.skill.descriptors[0].command_contract_id, 'study_packet');
+  assert.equal(
+    mas.domain_pack_compiler.generated_interface_bundle.product_entry.descriptors[0].command,
+    'MedAutoScience product study_packet',
+  );
+  assert.equal(
+    mas.domain_pack_compiler.generated_interface_bundle.openai_tool.descriptors[0].function.name,
+    'study_packet',
+  );
+  assert.deepEqual(
+    mas.domain_pack_compiler.generated_interface_bundle.stage_routes[0],
+    {
+      stage_id: 'study_stage',
+      allowed_action_refs: ['study_packet'],
+      authority_owner: 'MedAutoScience',
+    },
+  );
+  assert.equal(
+    mas.domain_pack_compiler.generated_interface_bundle.authority_boundary.generated_interface_can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    mas.domain_pack_compiler.generated_interface_bundle.authority_boundary
+      .generated_interface_can_authorize_quality_or_export,
+    false,
+  );
   assert.equal(
     mas.domain_pack_compiler.generated_surface_handoff.generated_surfaces.some(
       (surface: { surface_id: string; status: string }) =>
@@ -412,4 +451,181 @@ test('domain pack compiler blocks generated handoff when a domain still declares
       .active_private_generic_residue_count,
     1,
   );
+});
+
+test('generated interfaces command exposes one OPL-owned interface bundle from the same action catalog', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  bindFamilyManifests(env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(bundle.surface_kind, 'opl_generated_agent_interface_bundle');
+  assert.equal(bundle.owner, 'one-person-lab');
+  assert.equal(bundle.domain_repo_can_own_generated_surface, false);
+  assert.equal(bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
+  assert.equal(bundle.mcp.descriptors[0].name, 'study_packet');
+  assert.equal(bundle.skill.descriptors[0].command_contract_id, 'study_packet');
+  assert.equal(bundle.product_entry.descriptors[0].action_key, 'study_packet');
+  assert.equal(bundle.openai_tool.descriptors[0].function.name, 'study_packet');
+  assert.equal(bundle.ai_sdk.descriptors[0].name, 'study_packet');
+  assert.equal(bundle.authority_boundary.generated_interface_can_write_memory_body, false);
+  assert.equal(bundle.authority_boundary.generated_interface_can_mutate_artifacts, false);
+
+  const mcpOnly = runCli(['agents', 'interfaces', '--domain', 'mas', '--format', 'mcp'], env)
+    .generated_agent_interfaces;
+  assert.equal(mcpOnly.selected_format, 'mcp');
+  assert.equal(mcpOnly.mcp.descriptors[0].name, 'study_packet');
+  assert.equal('cli' in mcpOnly, false);
+  assert.equal('skill' in mcpOnly, false);
+  assert.deepEqual(mcpOnly.stage_routes, []);
+});
+
+test('generated interfaces can compile a standard agent repo contract pack without private wrappers', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interface-repo-'));
+  fs.mkdirSync(path.join(targetDir, 'contracts'), { recursive: true });
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'domain_descriptor.json'),
+    `${JSON.stringify({
+      surface_kind: 'domain_agent_descriptor',
+      schema_version: 1,
+      domain_id: 'sample-brief-agent',
+      domain_label: 'Sample Brief Agent',
+      authority_boundary: {
+        opl_can_write_domain_truth: false,
+        opl_can_write_memory_body: false,
+        opl_can_authorize_quality_or_export: false,
+      },
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'action_catalog.json'),
+    `${JSON.stringify({
+      surface_kind: 'family_action_catalog',
+      version: 'family-action-catalog.v1',
+      catalog_id: 'sample_brief_agent_action_catalog',
+      target_domain_id: 'sample-brief-agent',
+      owner: 'SampleBriefAgent',
+      authority_boundary: {
+        opl_role: 'generated_interface_projection_only',
+      },
+      actions: [
+        {
+          action_id: 'draft_brief',
+          title: 'Draft brief',
+          summary: 'Draft a source-grounded brief.',
+          owner: 'SampleBriefAgent',
+          effect: 'mutating',
+          source_command: {
+            command: 'sample-brief-agent draft --workspace-root <workspace_root>',
+            surface_kind: 'domain_cli',
+          },
+          input_schema_ref: 'contracts/draft-brief.input.schema.json',
+          output_schema_ref: 'contracts/draft-brief.output.schema.json',
+          workspace_locator_fields: ['workspace_root'],
+          human_gate_ids: ['brief_owner_review'],
+          supported_surfaces: {
+            cli: {
+              command: 'sample-brief-agent draft --workspace-root <workspace_root>',
+              surface_kind: 'domain_cli',
+            },
+            mcp: {
+              tool_name: 'sample_brief_agent_draft_brief',
+              surface_kind: 'domain_mcp_descriptor',
+              descriptor_only: true,
+              public_runtime: false,
+            },
+            skill: {
+              command_contract_id: 'sample_brief_agent.draft_brief',
+              surface_kind: 'domain_skill_contract',
+            },
+            product_entry: {
+              action_key: 'draft_brief',
+              command: 'sample-brief-agent product draft --workspace-root <workspace_root>',
+              surface_kind: 'domain_product_entry',
+            },
+            openai: { tool_name: 'sample_brief_agent_draft_brief' },
+            ai_sdk: { tool_name: 'sample_brief_agent_draft_brief' },
+          },
+          authority_boundary: {
+            opl_can_write_domain_truth: false,
+          },
+        },
+      ],
+      notes: [],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'stage_control_plane.json'),
+    `${JSON.stringify({
+      surface_kind: 'family_stage_control_plane',
+      version: 'family-stage-control-plane.v1',
+      plane_id: 'sample_brief_agent_stage_plane',
+      target_domain_id: 'sample-brief-agent',
+      owner: 'SampleBriefAgent',
+      authority_boundary: {
+        opl_role: 'projection_only',
+      },
+      stages: [
+        {
+          stage_id: 'brief-draft',
+          stage_kind: 'creation',
+          title: 'Brief draft',
+          summary: 'Draft the brief.',
+          goal: 'Draft a source-grounded brief.',
+          owner: 'SampleBriefAgent',
+          domain_stage_refs: ['brief-draft'],
+          inputs: [],
+          knowledge_refs: [],
+          skills: [],
+          prompt_refs: [],
+          allowed_action_refs: ['draft_brief'],
+          outputs: [],
+          evaluation: [],
+          handoff: null,
+          source_refs: [],
+          authority_boundary: {
+            domain_truth_owner: 'SampleBriefAgent',
+          },
+        },
+      ],
+      notes: [],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'functional_privatization_audit.json'),
+    `${JSON.stringify({
+      surface_kind: 'functional_privatization_audit',
+      target_domain_id: 'sample-brief-agent',
+      modules: [
+        {
+          module_id: 'sample_brief_stage_pack',
+          classification: 'declarative_pack',
+          owner: 'SampleBriefAgent',
+        },
+        {
+          module_id: 'sample_brief_owner_receipt_signer',
+          classification: 'minimal_authority_function',
+          owner: 'SampleBriefAgent',
+          cannot_absorb_reason: 'OPL cannot sign target domain owner receipts.',
+        },
+      ],
+    })}\n`,
+  );
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', targetDir]).generated_agent_interfaces;
+  assert.equal(bundle.source_kind, 'standard_agent_repo_contracts');
+  assert.equal(bundle.repo_dir, targetDir);
+  assert.equal(bundle.status, 'ready');
+  assert.equal(bundle.owner, 'one-person-lab');
+  assert.equal(bundle.domain_repo_can_own_generated_surface, false);
+  assert.equal(bundle.cli.descriptors[0].action_id, 'draft_brief');
+  assert.equal(bundle.mcp.descriptors[0].descriptor_only, true);
+  assert.equal(bundle.product_entry.descriptors[0].command, 'sample-brief-agent product draft --workspace-root <workspace_root>');
+  assert.deepEqual(bundle.stage_routes[0], {
+    stage_id: 'brief-draft',
+    allowed_action_refs: ['draft_brief'],
+    authority_owner: 'SampleBriefAgent',
+  });
 });

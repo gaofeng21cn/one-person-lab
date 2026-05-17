@@ -227,6 +227,7 @@ function buildActionCatalogProjection(entry: DomainManifestCatalogEntry) {
     supported_surface_kinds: supportedSurfaceKinds,
     parity: catalog ? buildFamilyActionCatalogParity(catalog, entry.manifest) : null,
     authority_boundary: catalog?.authority_boundary ?? null,
+    raw_descriptor: catalog,
   };
 }
 
@@ -247,6 +248,7 @@ function buildStageControlPlaneProjection(entry: DomainManifestCatalogEntry) {
     action_ref_count: plane?.stages.reduce((total, stage) => total + stage.allowed_action_refs.length, 0) ?? 0,
     parity: plane ? buildFamilyStageControlPlaneParity(plane, entry.manifest) : null,
     authority_boundary: plane?.authority_boundary ?? null,
+    raw_descriptor: plane,
   };
 }
 

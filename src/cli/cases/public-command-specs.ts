@@ -30,6 +30,7 @@ import {
   buildFamilyAgentDescriptorList,
 } from '../../family-domain-agent-descriptor.ts';
 import {
+  buildGeneratedAgentInterfaces,
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
 } from '../../domain-pack-compiler.ts';
@@ -718,6 +719,17 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents pack-compiler inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildDomainPackCompilerInspect(getContracts(), args),
+    },
+    'agents interfaces': {
+      usage: 'opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
+      summary: 'Generate the unified OPL-owned CLI, MCP, Skill, product-entry, and tool interface bundle from a domain pack or standard agent repo.',
+      examples: [
+        'opl agents interfaces --domain mas',
+        'opl agents interfaces --repo-dir /path/to/opl-compatible-agent',
+        'opl agents interfaces --domain redcube --format mcp',
+      ],
+      group: 'domain',
+      handler: (args) => buildGeneratedAgentInterfaces(getContracts(), args),
     },
     'substrate projections': {
       usage: 'opl substrate projections',
