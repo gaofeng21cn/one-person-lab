@@ -55,6 +55,7 @@
 - 根层 `README*` 是否保留公开双语入口，由产品分发和 public 需求单独决定。
 - OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy：`active/public/product/runtime/delivery/source/policies/specs/references/history`；目录是否保留按长期生命周期职责判断，不按当前文件数量判断。
 - OPL 文档持有全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；MAS/MAG/RCA 只在各自仓维护本仓 truth、gap、authority、direct/hosted 边界和上收候选。
+- 理想态差距和开发计划默认拆开写 `功能/结构差距` 与 `测试/证据差距`；不能把“功能本身未完成”和“功能已在但缺少测试/真实证据”混在同一差距项里。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
 - `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
 - 退役定位只能放在 `docs/history/**` 的 archive / tombstone 语境中；active docs 提到 gateway、federation、frontdoor 等旧路线时，必须同时指向当前 truth owner。
@@ -67,6 +68,7 @@
 - 没有明确必要不要新增依赖。
 - 修改 machine-readable contracts、公开边界、默认 docs 入口、文档骨架或 active domain-agent wording 时，必须同步更新文档、contracts 与相关测试。
 - 叙述性 `README*`、`docs/**` 和参考文档不作为脚本/测试的断言对象；可以测试 machine-readable contract、schema、CLI/API 行为、生成产物结构与路径，但不要用测试固定文档措辞、章节或状态文案。
+- 默认验证入口、Python clean runner、Node-triggered Python helper 和 build/proof 命令必须把 bytecode、pytest cache、`uv sync` project venv、安装/同步副产物和 runtime artifact 导向仓库外部；禁止在开发 checkout 生成 `.venv`、`__pycache__`、`.pytest_cache` 或 `*.egg-info` 后再靠测试清理兜底。
 - 默认最小验证入口是 `scripts/verify.sh`。
 - 默认 smoke 是 `npm test` / `npm run test:fast`。
 - `npm run test:meta` 与 `npm run test:artifact` 是显式 lane。

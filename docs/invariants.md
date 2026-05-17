@@ -12,7 +12,7 @@
 - `hermes_agent` 可作为显式非默认 executor adapter/backend。该 adapter 不得被写成 provider、provider proof surface、readiness path、MAS/MAG/RCA domain truth、quality、artifact、publication gate 或默认 concrete executor owner，也不得被 fork/vendor 成 OPL 私有 runtime kernel。
 - OPL 应上收 domain-neutral 的智能体运行外围能力：stage attempt ledger、typed queue、checkpoint / closeout / receipt、source fingerprint / idempotency、artifact index、file lifecycle、retention、restore proof、migration ledger、workspace lifecycle、human gate / resume token 和 operator projection。任何上收都必须保留 domain truth owner 不变。
 - MAS/MAG/RCA 的目标接入形态是统一 `domain-agent skeleton`：`agent/`、`contracts/`、`runtime/`、`docs/` 这些 repo-source 边界应可由 OPL 发现、校验和托管；artifact locator / index / retention / restore proof 只以 contract 和 receipt ref 暴露，真实运行产物必须在 workspace / runtime artifact root。domain 内部业务实现、语言和 quality gate 可以不同。
-- OPL family 开发 checkout 不承载运行生成物。默认验证入口、Python clean runner、Node-triggered Python helper 和 build/proof 命令必须把 `__pycache__`、`.pytest_cache`、`*.egg-info`、临时 build 输出和 runtime artifact 导向仓库外的系统临时目录、用户级 runtime-state、workspace 或 runtime artifact root；`.gitignore` 和 repo hygiene 只作为兜底守门。
+- OPL family 开发 checkout 不承载运行生成物。默认验证入口、Python clean runner、Node-triggered Python helper 和 build/proof 命令必须把 `__pycache__`、`.pytest_cache`、`*.egg-info`、`uv sync` project venv、安装/同步副产物、临时 build 输出和 runtime artifact 导向仓库外的系统临时目录、用户级 runtime-state、workspace 或 runtime artifact root；`.gitignore` 和 repo hygiene 只作为兜底守门。
 - MAS 已验证的 SQLite / file lifecycle / restore-proof 经验只能作为 OPL framework primitive 的参考实现和 parity oracle。OPL 可以持有 lifecycle metadata、artifact locator、retention receipt、restore proof 和 migration ledger；不得复制 MAS study truth、publication verdict、evidence/review ledger 或 manuscript/package authority。
 - `OPL native helper` 与高频状态索引只能加速系统探测、artifact discovery、session/progress/artifact projection，不得替代 admitted domain 仓自己的 durable truth。
 - `OPL` 的 shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态和路由信号；不得替 MAS/MAG/RCA 或未来 domain 持有 AI-first 作者判断、审稿判断、质量裁决或 ready verdict。
@@ -48,6 +48,7 @@
 - 参考级与历史文档不得反向改写公开主线。
 - 文档生命周期状态按内容角色判断，长期落点服从 canonical docs taxonomy。若一份文档内容已经是过时计划、旧 topology、旧入口或旧 provider 判断，即使它仍在 `docs/references/` 或被索引引用，也必须标注为 superseded / retired / tombstone 语境，并指向当前 owner surface。
 - 叙述性 `README*`、`docs/**` 与参考文档不得被脚本或测试固定措辞、标题、段落或具体 prose path；需要机器约束时使用 contract/schema/source surface、CLI/API 行为、生成 artifact 或 `human_doc:*` 语义标识。
+- 理想态差距、gap plan 和开发计划必须把 `功能/结构差距` 与 `测试/证据差距` 分开维护；真实运行证据、soak、coverage、no-forbidden-write proof 或 regression proof 不得被写成同一条未完成的功能缺口。
 
 ## 合同面
 
