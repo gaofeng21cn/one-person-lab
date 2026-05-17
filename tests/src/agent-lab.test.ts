@@ -4,7 +4,12 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { buildCompleteAgentLabControlPlane } from '../../src/agent-lab-complete.ts';
+import {
+  buildAgentLabExportEnvelope,
+  buildAgentLabOptimizeResult,
+  buildAgentLabWorkbenchReadModel,
+  buildCompleteAgentLabControlPlane,
+} from '../../src/agent-lab-complete.ts';
 import {
   buildLonglineAgentLabSuite,
   buildSampleAgentLabSuite,
@@ -239,7 +244,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_rl_transition_refs, true);
   assert.equal(result.readiness.automatic_model_training_ready, false);
   assert.equal(result.readiness.automatic_default_agent_promotion_ready, false);
-  assert.equal(result.readiness.app_workbench_consumption_ready, false);
+  assert.equal(result.readiness.app_workbench_consumption_ready, true);
   assert.ok(result.eval_adapters.some((entry) => entry.adapter_id === 'inspect-ai'));
   assert.ok(result.eval_adapters.some((entry) => entry.adapter_id === 'metr-task-standard'));
   assert.ok(result.observability_exports.some((entry) => entry.export_id === 'langfuse'));
@@ -255,5 +260,55 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   ]);
   assert.equal(result.optimizer_loop.rl_boundary.can_emit_transition_refs, true);
   assert.equal(result.optimizer_loop.rl_boundary.can_train_or_deploy_model_weights, false);
+  assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
+});
+
+test('Agent Lab workbench read model is ready for App consumption without taking domain authority', () => {
+  const result = buildAgentLabWorkbenchReadModel();
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_workbench_read_model');
+  assert.equal(result.status, 'ready_for_app_workbench_consumption');
+  assert.equal(result.app_workbench_consumption_ready, true);
+  assert.equal(result.observability_export_readiness.ready_to_export_observability_refs, true);
+  assert.equal(result.observability_export_readiness.upload_external_service, false);
+  assert.equal(result.observability_export_readiness.reads_domain_body, false);
+  assert.equal(result.optimizer_candidates.length, 6);
+  assert.equal(result.promotion_gates.length, 6);
+  assert.equal(result.online_learning_refs.transitions.length, 6);
+  assert.equal(result.online_learning_refs.can_train_or_deploy_model_weights, false);
+  assert.equal(result.online_learning_refs.can_promote_default_agent_without_gate, false);
+  assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('Agent Lab export envelope maps refs to connector payloads without uploading or reading domain bodies', () => {
+  const inspect = buildAgentLabExportEnvelope('inspect-ai');
+  const openinference = buildAgentLabExportEnvelope('openinference');
+  const langfuse = buildAgentLabExportEnvelope('langfuse');
+  const phoenix = buildAgentLabExportEnvelope('phoenix');
+  const json = buildAgentLabExportEnvelope('json');
+
+  assert.equal(inspect.surface_kind, 'opl_agent_lab_export_envelope');
+  assert.equal(inspect.target, 'inspect-ai');
+  assert.equal(inspect.upload_external_service, false);
+  assert.equal(inspect.reads_domain_body, false);
+  assert.equal((inspect.connector_payload as any).tasks.length, 6);
+  assert.equal((openinference.connector_payload as any).traces.length, 4);
+  assert.equal((langfuse.connector_payload as any).datasets.length, 2);
+  assert.equal((phoenix.connector_payload as any).experiments.length, 2);
+  assert.equal((json.connector_payload as any).suite_results.length, 2);
+  assert.equal(inspect.authority_boundary.can_authorize_export_verdict, false);
+});
+
+test('Agent Lab optimize returns gated candidate and RL transition refs without training or default promotion', () => {
+  const result = buildAgentLabOptimizeResult(buildSampleAgentLabSuite());
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_optimize_result');
+  assert.equal(result.status, 'gated_candidate_set_ready');
+  assert.equal(result.suite_result.status, 'passed');
+  assert.equal(result.gated_optimizer_candidate_set.candidate_count, 3);
+  assert.equal(result.gated_optimizer_candidate_set.promotable_candidate_count, 3);
+  assert.equal(result.rl_transition_refs.transition_count, 3);
+  assert.equal(result.automatic_model_training_ready, false);
+  assert.equal(result.automatic_default_agent_promotion_ready, false);
   assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
 });
