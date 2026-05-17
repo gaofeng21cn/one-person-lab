@@ -184,11 +184,14 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       'forbidden_until_classified_and_receipted',
     );
     assert.deepEqual(functionalAudit.classification_policy.accepted_migration_classes, [
-      'opl_owned_replacement',
+      'opl_hosted_surface',
       'opl_generated_surface',
       'declarative_pack',
       'minimal_authority_function',
-      'retire_tombstone',
+      'refs_only_domain_adapter',
+      'temporary_migration_bridge',
+      'diagnostic_cleanup_path',
+      'provenance_or_fixture',
     ]);
     assert.equal(functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner, false);
     const privateSurfacePolicy = JSON.parse(
