@@ -1,4 +1,10 @@
-import { buildLonglineAgentLabResult, buildSampleAgentLabResult } from './agent-lab.ts';
+import {
+  agentLabRefSummary,
+  buildLonglineAgentLabResult,
+  buildSampleAgentLabResult,
+  runAgentLabSuite,
+  type AgentLabSuite,
+} from './agent-lab.ts';
 import { stableId } from './family-runtime-ids.ts';
 
 const AUTHORITY_BOUNDARY = {
@@ -112,7 +118,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_rl_transition_refs: true,
     automatic_model_training_ready: false,
     automatic_default_agent_promotion_ready: false,
-    app_workbench_consumption_ready: false,
+    app_workbench_consumption_ready: true,
   };
 
   return {
@@ -134,6 +140,223 @@ export function buildCompleteAgentLabControlPlane() {
       'ungated default agent promotion',
       'model training or weight deployment inside OPL core',
     ],
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+type AgentLabSuiteResult = ReturnType<typeof runAgentLabSuite>;
+export type AgentLabExportTarget = 'inspect-ai' | 'openinference' | 'langfuse' | 'phoenix' | 'json';
+
+function suiteResults() {
+  return {
+    sample: buildSampleAgentLabResult(),
+    longline: buildLonglineAgentLabResult(),
+  };
+}
+
+function optimizerCandidates(results: AgentLabSuiteResult[]) {
+  return results.flatMap((result) =>
+    result.runs.map((run) => ({
+      candidate_ref: run.improvement_candidate.candidate_ref,
+      candidate_kind: run.improvement_candidate.candidate_kind,
+      target_ref: run.improvement_candidate.target_ref,
+      source_suite_id: result.suite_id,
+      source_run_id: run.run_id,
+      domain_id: run.domain_id,
+      evidence_refs: run.improvement_candidate.evidence_refs,
+      allowed_change_scope: run.improvement_candidate.allowed_change_scope,
+      promotion_gate_ref: run.improvement_candidate.promotion_gate_ref,
+      gate_status: run.promotion_gate.gate_status,
+      candidate_status: run.status === 'passed' && run.promotion_gate.gate_status === 'passed'
+        ? 'gated_candidate_ready'
+        : 'blocked',
+      authority_boundary: AUTHORITY_BOUNDARY,
+    })));
+}
+
+function promotionGates(results: AgentLabSuiteResult[]) {
+  return results.flatMap((result) =>
+    result.runs.map((run) => ({
+      gate_ref: run.promotion_gate.gate_ref,
+      source_suite_id: result.suite_id,
+      source_run_id: run.run_id,
+      domain_id: run.domain_id,
+      gate_status: run.promotion_gate.gate_status,
+      required_refs: run.promotion_gate.required_refs,
+      regression_suite_refs: run.promotion_gate.regression_suite_refs,
+      no_forbidden_write_proof_refs: run.promotion_gate.no_forbidden_write_proof_refs,
+      can_promote_default_agent: false,
+      authority_boundary: AUTHORITY_BOUNDARY,
+    })));
+}
+
+function rlTransitionRefs(results: AgentLabSuiteResult[]) {
+  return results.flatMap((result) =>
+    result.runs.map((run) => ({
+      transition_ref: stableId('oalrt', [
+        result.suite_id,
+        run.task_id,
+        run.trajectory.trajectory_ref,
+        run.scorecard.scorecard_ref,
+        run.promotion_gate.gate_ref,
+      ]),
+      source_suite_id: result.suite_id,
+      source_run_id: run.run_id,
+      trajectory_ref: run.trajectory.trajectory_ref,
+      run_ref: run.trajectory.run_ref,
+      scorecard_ref: run.scorecard.scorecard_ref,
+      reward_authority_ref: run.scorecard.scorecard_ref,
+      promotion_gate_ref: run.promotion_gate.gate_ref,
+      status: run.status === 'passed' ? 'transition_ref_ready' : 'blocked',
+      can_train_or_deploy_model_weights: false,
+      can_promote_default_agent_without_gate: false,
+      authority_boundary: AUTHORITY_BOUNDARY,
+    })));
+}
+
+export function buildAgentLabWorkbenchReadModel() {
+  const complete = buildCompleteAgentLabControlPlane();
+  const { sample, longline } = suiteResults();
+  const results = [sample, longline];
+
+  return {
+    surface_kind: 'opl_agent_lab_workbench_read_model',
+    version: 'opl-agent-lab.v1.workbench',
+    read_model_id: stableId('oalwb', [complete.control_plane_id, sample.result_id, longline.result_id]),
+    status: 'ready_for_app_workbench_consumption',
+    app_workbench_consumption_ready: true,
+    source_results: {
+      complete_control_plane_ref: complete.control_plane_id,
+      sample_suite_ref: sample.result_id,
+      longline_suite_ref: longline.result_id,
+      sample_ref_summary: agentLabRefSummary(sample),
+      longline_ref_summary: agentLabRefSummary(longline),
+    },
+    eval_adapters: complete.eval_adapters,
+    observability_export_readiness: {
+      ready_to_export_observability_refs: complete.readiness.ready_to_export_observability_refs,
+      exports: complete.observability_exports,
+      upload_external_service: false,
+      reads_domain_body: false,
+    },
+    optimizer_candidates: optimizerCandidates(results),
+    promotion_gates: promotionGates(results),
+    online_learning_refs: {
+      transition_refs_ready: true,
+      transitions: rlTransitionRefs(results),
+      reward_authority: complete.optimizer_loop.rl_boundary.reward_authority,
+      can_train_or_deploy_model_weights: false,
+      can_promote_default_agent_without_gate: false,
+    },
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+function connectorPayload(target: AgentLabExportTarget, results: AgentLabSuiteResult[]) {
+  const runs = results.flatMap((result) =>
+    result.runs.map((run) => ({ result, run })));
+
+  if (target === 'inspect-ai') {
+    return {
+      tasks: runs.map(({ run }) => ({
+        task_ref: run.task_id,
+        solver_ref: run.agent_entry_ref,
+        scorer_refs: run.scorer_refs,
+        eval_log_ref: run.trajectory.trajectory_ref,
+      })),
+    };
+  }
+
+  if (target === 'openinference') {
+    return {
+      traces: runs.flatMap(({ run }) =>
+        (run.trajectory.trace_refs ?? []).map((traceRef) => ({
+          trace_ref: traceRef,
+          trajectory_ref: run.trajectory.trajectory_ref,
+          tool_call_refs: run.trajectory.tool_call_refs,
+          stage_attempt_refs: run.trajectory.stage_attempt_refs,
+        }))),
+    };
+  }
+
+  if (target === 'langfuse') {
+    return {
+      datasets: results.map((result) => ({
+        dataset_ref: `dataset-ref:agent-lab/${result.suite_id}`,
+        run_refs: result.runs.map((run) => run.trajectory.run_ref),
+        scorecard_refs: result.refs.domain_quality_scorecard_refs,
+      })),
+    };
+  }
+
+  if (target === 'phoenix') {
+    return {
+      experiments: results.map((result) => ({
+        experiment_ref: `experiment-ref:agent-lab/${result.suite_id}`,
+        openinference_trace_refs: result.runs.flatMap((run) => run.trajectory.trace_refs ?? []),
+        evaluator_refs: result.refs.scorer_refs,
+      })),
+    };
+  }
+
+  return {
+    suite_results: results.map((result) => ({
+      suite_id: result.suite_id,
+      result_id: result.result_id,
+      status: result.status,
+      ref_summary: agentLabRefSummary(result),
+    })),
+  };
+}
+
+export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
+  const complete = buildCompleteAgentLabControlPlane();
+  const { sample, longline } = suiteResults();
+  const results = [sample, longline];
+
+  return {
+    surface_kind: 'opl_agent_lab_export_envelope',
+    version: 'opl-agent-lab.v1.export',
+    export_id: stableId('oalx', [target, sample.result_id, longline.result_id]),
+    target,
+    status: 'ready_for_connector_consumption_refs_only',
+    upload_external_service: false,
+    reads_domain_body: false,
+    source_refs: {
+      complete_control_plane_ref: complete.control_plane_id,
+      suite_result_refs: results.map((result) => result.result_id),
+      trajectory_refs: results.flatMap((result) => result.refs.trajectory_refs),
+      scorecard_refs: results.flatMap((result) => result.refs.domain_quality_scorecard_refs),
+      promotion_gate_refs: results.flatMap((result) => result.refs.promotion_gate_refs),
+    },
+    connector_payload: connectorPayload(target, results),
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
+  const suiteResult = runAgentLabSuite(input);
+  const candidates = optimizerCandidates([suiteResult]);
+  const transitions = rlTransitionRefs([suiteResult]);
+
+  return {
+    surface_kind: 'opl_agent_lab_optimize_result',
+    version: 'opl-agent-lab.v1.optimize',
+    optimize_id: stableId('oalo', [suiteResult.result_id, candidates, transitions]),
+    status: suiteResult.status === 'passed' ? 'gated_candidate_set_ready' : 'blocked',
+    suite_result: suiteResult,
+    gated_optimizer_candidate_set: {
+      candidate_count: candidates.length,
+      promotable_candidate_count: candidates.filter((candidate) =>
+        candidate.candidate_status === 'gated_candidate_ready').length,
+      candidates,
+    },
+    rl_transition_refs: {
+      transition_count: transitions.length,
+      transitions,
+    },
+    automatic_model_training_ready: false,
+    automatic_default_agent_promotion_ready: false,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
 }
