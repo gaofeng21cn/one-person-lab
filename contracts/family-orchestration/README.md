@@ -49,6 +49,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
 - `family-stage-control-plane.schema.json`
   - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, and authority boundary
+- `family-stage-integrity-metadata.schema.json`
+  - shared stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only
 - `family-domain-memory-ref.schema.json`
   - locator-only reference for domain-owned memory packs, including memory family, pack ref, stage applicability, retrieval/writeback/receipt/recall refs, freshness, and forbidden OPL authority
 - `family-domain-memory-writeback.schema.json`
@@ -175,6 +177,14 @@ OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, p
 The contract records stage goal, domain-owned stage refs, input/output refs, knowledge refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, memory content, review verdicts, quality authority, and artifacts.
 
 For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
+
+## Stage Integrity Metadata Freeze
+
+`family-stage-integrity-metadata.schema.json` absorbs the useful academic-research workflow pattern of explicit integrity checks, citation-support audit refs, evidence handoff, verified data-access metadata, and human checkpoints. It is a companion metadata surface for stage packets and product-entry manifests; it is not a paper-reviewer, publication gate, fundability gate, visual-quality gate, or runtime dependency on `academic-research-skills`.
+
+`OPL` owns the schema, discovery, transport, projection, and fail-closed routing vocabulary. `MAS`, `MAG`, `RCA`, and future Foundry Agents may expose thin domain projections or adapters into this shape. The domain repositories keep the underlying truth, audit bodies, evidence ledgers, review judgments, quality verdicts, publication / fundability / visual authority, artifact authority, owner receipts, and direct skill paths.
+
+The required authority boundary is explicit: OPL can index refs, show missing support, route a human checkpoint, and carry handoff receipts, but it cannot write domain truth, mutate artifact bodies, accept publication readiness, replace a domain direct skill path, or authorize any domain verdict.
 
 ## Domain Memory Ref / Writeback Freeze
 

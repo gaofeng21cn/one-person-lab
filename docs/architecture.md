@@ -208,6 +208,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `family-action-graph` 继续描述 stage / action 拓扑、入口、出口、checkpoint 与 human gate。
 - `family-action-catalog` 继续描述可调用 action metadata 和多 surface descriptor。
 - `family-stage-control-plane` 只声明 stage descriptor、skill / prompt / evaluation refs、handoff refs 与 authority boundary，不新建完整流程引擎。
+- `family-stage-integrity-metadata` 只声明 stage-level integrity、citation-support、evidence-handoff、data-access 与 human-checkpoint metadata；这是从 academic research workflow 中吸收的通用模式，不是 MAS publication gate、MAG fundability gate、RCA visual-quality gate，也不接管任何 domain 的 direct skill path。
 - `opl stages list|inspect` 只做 discovery、inspection 与 parity，不执行 stage。
 - `OPL` 只做 shared vocabulary、manifest discovery、parity、projection 与 typed queue dispatch，不执行 stage 内部专家动作。
 - `MAS`、`RCA`、`MAG` 继续持有各自的写作、视觉设计、基金策略、审稿、publication / deliverable / package gate 与最终质量判断。
