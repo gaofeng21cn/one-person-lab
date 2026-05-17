@@ -6,7 +6,8 @@
   "contract_version": "opl-domain-pack-compiler.v1",
   "cli_surfaces": [
     "opl agents pack-compiler",
-    "opl agents pack-compiler inspect --domain <domain>"
+    "opl agents pack-compiler inspect --domain <domain>",
+    "opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]"
   ],
   "input_surfaces": [
     "family_agent_descriptor.entry",
@@ -30,6 +31,36 @@
       "workbench_drilldown",
       "functional_harness_cases"
     ]
+  },
+  "generated_interface_bundle": {
+    "surface_kind": "opl_generated_agent_interface_bundle",
+    "version": "opl-generated-agent-interface-bundle.v1",
+    "owner": "one-person-lab",
+    "generated_surface_owner": "one-person-lab",
+    "domain_repo_can_own_generated_surface": false,
+    "formats": [
+      "cli",
+      "mcp",
+      "skill",
+      "product-entry",
+      "openai",
+      "ai-sdk"
+    ],
+    "derived_from": [
+      "family_action_catalog",
+      "family_stage_control_plane",
+      "domain_memory_descriptor",
+      "runtime_surfaces",
+      "functional_privatization_audit"
+    ],
+    "repo_dir_mode": "reads standard contracts/action_catalog.json and contracts/stage_control_plane.json without executing target repo private wrappers",
+    "authority_boundary": {
+      "generated_interface_can_write_domain_truth": false,
+      "generated_interface_can_write_memory_body": false,
+      "generated_interface_can_authorize_quality_or_export": false,
+      "generated_interface_can_mutate_artifacts": false,
+      "generated_interface_routes_to_minimal_authority_functions_by_receipt_contract": true
+    }
   },
   "ready_conditions": [
     "domain_manifest_resolved",

@@ -1,8 +1,30 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { FrameworkContractError } from './contracts.ts';
 import { buildFamilyAgentDescriptorList } from './family-domain-agent-descriptor.ts';
+import {
+  buildFamilyActionCatalogParity,
+  projectFamilyActionCatalog,
+} from './family-action-catalog.ts';
+import type {
+  FamilyActionCatalog,
+  FamilyActionExportFormat,
+} from './family-action-catalog-contract.ts';
+import {
+  normalizeFamilyActionCatalog,
+} from './family-action-catalog-contract.ts';
+import type { FamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
+import {
+  normalizeFamilyStageControlPlane,
+} from './family-stage-control-plane-contract.ts';
+import {
+  buildFunctionalPrivatizationAudit,
+} from './functional-privatization-audit.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
+type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
 
 const GENERATED_SURFACES = [
   {
@@ -81,6 +103,61 @@ function parseInspectArgs(args: string[]) {
   return { domain };
 }
 
+function parseInterfaceArgs(args: string[]) {
+  let domain = '';
+  let repoDir = '';
+  let format: GeneratedInterfaceFormat | 'all' = 'all';
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--domain' && args[index + 1]) {
+      domain = args[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--repo-dir' && args[index + 1]) {
+      repoDir = args[index + 1];
+      index += 1;
+      continue;
+    }
+    if (token === '--format' && args[index + 1]) {
+      format = normalizeInterfaceFormat(args[index + 1]);
+      index += 1;
+      continue;
+    }
+    throw new FrameworkContractError('cli_usage_error', `Unknown generated interface option: ${token}.`, {
+      usage:
+        'opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
+    });
+  }
+  if (!domain && !repoDir) {
+    throw new FrameworkContractError('cli_usage_error', 'generated interfaces require --domain or --repo-dir.', {
+      required_one_of: ['--domain', '--repo-dir'],
+    });
+  }
+  if (domain && repoDir) {
+    throw new FrameworkContractError('cli_usage_error', 'generated interfaces accept either --domain or --repo-dir, not both.', {
+      mutually_exclusive: ['--domain', '--repo-dir'],
+    });
+  }
+  return { domain, repoDir, format };
+}
+
+function normalizeInterfaceFormat(value: string): GeneratedInterfaceFormat | 'all' {
+  if (value === 'all') {
+    return 'all';
+  }
+  if (value === 'cli' || value === 'mcp' || value === 'skill' || value === 'openai' || value === 'ai-sdk') {
+    return value;
+  }
+  if (value === 'product-entry' || value === 'product_entry') {
+    return 'product-entry';
+  }
+  throw new FrameworkContractError('cli_usage_error', `Unsupported generated interface format: ${value}.`, {
+    format: value,
+    allowed_formats: ['all', 'cli', 'mcp', 'skill', 'product-entry', 'openai', 'ai-sdk'],
+  });
+}
+
 function statusOf(value: unknown) {
   return isRecord(value) ? optionalString(value.status) : null;
 }
@@ -154,6 +231,258 @@ function minimalAuthorityFunctionRefs(descriptor: JsonRecord) {
     }));
 }
 
+function rawDescriptorSurface<T>(descriptor: JsonRecord, key: string): T | null {
+  const surface = isRecord(descriptor[key]) ? descriptor[key] as JsonRecord : null;
+  if (!surface) {
+    return null;
+  }
+  const raw = surface.raw_descriptor;
+  return isRecord(raw) ? raw as T : null;
+}
+
+function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
+  return stageControlPlane?.stages.map((stage) => ({
+    stage_id: stage.stage_id,
+    allowed_action_refs: stage.allowed_action_refs,
+    authority_owner: stage.owner,
+  })) ?? [];
+}
+
+function buildProductEntryDescriptors(catalog: FamilyActionCatalog) {
+  return catalog.actions.map((action) => ({
+    action_key: action.supported_surfaces.product_entry?.action_key ?? action.action_id,
+    command: action.supported_surfaces.product_entry?.command ?? action.source_command.command,
+    surface_kind: action.supported_surfaces.product_entry?.surface_kind ?? action.source_command.surface_kind,
+    summary: action.summary,
+    requires: action.workspace_locator_fields,
+    effect: action.effect,
+  }));
+}
+
+function formatDescriptorBlock(
+  catalog: FamilyActionCatalog | null,
+  format: GeneratedInterfaceFormat,
+) {
+  if (!catalog) {
+    return {
+      format,
+      owner: 'one-person-lab',
+      status: 'blocked_missing_family_action_catalog',
+      descriptors: [],
+    };
+  }
+  if (format === 'product-entry') {
+    return {
+      format,
+      owner: 'one-person-lab',
+      status: 'ready',
+      descriptors: buildProductEntryDescriptors(catalog),
+    };
+  }
+  return {
+    format,
+    owner: 'one-person-lab',
+    status: 'ready',
+    descriptors: projectFamilyActionCatalog(catalog, format),
+  };
+}
+
+function buildGeneratedInterfaceBundle(
+  descriptor: JsonRecord,
+  compilerStatus: string,
+  selectedFormat: GeneratedInterfaceFormat | 'all' = 'all',
+) {
+  const catalog = rawDescriptorSurface<FamilyActionCatalog>(descriptor, 'family_action_catalog');
+  const stageControlPlane = rawDescriptorSurface<FamilyStageControlPlane>(descriptor, 'family_stage_control_plane');
+  const formats: GeneratedInterfaceFormat[] = ['cli', 'mcp', 'skill', 'product-entry', 'openai', 'ai-sdk'];
+  const include = (format: GeneratedInterfaceFormat) => selectedFormat === 'all' || selectedFormat === format;
+  const block = (format: GeneratedInterfaceFormat) => formatDescriptorBlock(catalog, format);
+  const blocks = Object.fromEntries(
+    formats
+      .filter(include)
+      .map((format) => [
+        format === 'product-entry'
+          ? 'product_entry'
+          : format === 'openai'
+            ? 'openai_tool'
+            : format === 'ai-sdk'
+              ? 'ai_sdk'
+              : format,
+        block(format),
+      ])
+  );
+
+  return {
+    surface_kind: 'opl_generated_agent_interface_bundle',
+    version: 'opl-generated-agent-interface-bundle.v1',
+    owner: 'one-person-lab',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    status: compilerStatus,
+    selected_format: selectedFormat,
+    project_id: optionalString(descriptor.project_id),
+    target_domain_id: optionalString(descriptor.target_domain_id),
+    agent_id: optionalString(descriptor.agent_id),
+    generated_from: [
+      'family_action_catalog',
+      'family_stage_control_plane',
+      'domain_memory_descriptor',
+      'runtime_surfaces',
+      'functional_privatization_audit',
+    ],
+    ...blocks,
+    stage_routes: include('product-entry') || selectedFormat === 'all'
+      ? buildStageRoutes(stageControlPlane)
+      : [],
+    parity: catalog ? buildFamilyActionCatalogParity(catalog) : null,
+    authority_boundary: {
+      generated_interface_can_write_domain_truth: false,
+      generated_interface_can_write_memory_body: false,
+      generated_interface_can_authorize_quality_or_export: false,
+      generated_interface_can_mutate_artifacts: false,
+      generated_interface_routes_to_minimal_authority_functions_by_receipt_contract: true,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
+function readRepoJson(repoDir: string, relativePath: string) {
+  const filePath = path.join(repoDir, relativePath);
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    throw new FrameworkContractError('contract_json_invalid', `Invalid JSON in ${relativePath}.`, {
+      repo_dir: repoDir,
+      relative_path: relativePath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function normalizeRepoActionCatalog(repoDir: string, value: unknown) {
+  if (!value) {
+    return null;
+  }
+  try {
+    return normalizeFamilyActionCatalog(value);
+  } catch (error) {
+    throw new FrameworkContractError('contract_shape_invalid', 'contracts/action_catalog.json is not a valid family-action-catalog.v1 contract.', {
+      repo_dir: repoDir,
+      relative_path: 'contracts/action_catalog.json',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function normalizeRepoStageControlPlane(repoDir: string, value: unknown) {
+  if (!value) {
+    return null;
+  }
+  try {
+    return normalizeFamilyStageControlPlane(value);
+  } catch (error) {
+    throw new FrameworkContractError('contract_shape_invalid', 'contracts/stage_control_plane.json is not a valid family-stage-control-plane.v1 contract.', {
+      repo_dir: repoDir,
+      relative_path: 'contracts/stage_control_plane.json',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function buildRepoContractDescriptor(repoDirInput: string) {
+  const repoDir = path.resolve(repoDirInput);
+  if (!fs.existsSync(repoDir) || !fs.statSync(repoDir).isDirectory()) {
+    throw new FrameworkContractError('cli_usage_error', `Generated interface repo dir does not exist: ${repoDir}`, {
+      repo_dir: repoDir,
+    });
+  }
+
+  const domainDescriptor = readRepoJson(repoDir, 'contracts/domain_descriptor.json') ?? {};
+  const actionCatalog = normalizeRepoActionCatalog(repoDir, readRepoJson(repoDir, 'contracts/action_catalog.json'));
+  const stageControlPlane = normalizeRepoStageControlPlane(
+    repoDir,
+    readRepoJson(repoDir, 'contracts/stage_control_plane.json'),
+  );
+  const functionalAuditRaw = readRepoJson(repoDir, 'contracts/functional_privatization_audit.json');
+  const targetDomainId =
+    actionCatalog?.target_domain_id
+    ?? stageControlPlane?.target_domain_id
+    ?? optionalString((domainDescriptor as JsonRecord).domain_id)
+    ?? path.basename(repoDir);
+  const functionalAudit = buildFunctionalPrivatizationAudit({
+    target_domain_id: targetDomainId,
+    functional_privatization_audit: functionalAuditRaw ?? undefined,
+  });
+  const blockerReasons = [
+    actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
+    stageControlPlane ? null : 'missing_or_invalid_contract:contracts/stage_control_plane.json',
+    genericResidueBlocked(functionalAudit.summary)
+      ? 'functional_privatization_audit_has_generic_residue_or_blocker'
+      : null,
+  ].filter((reason): reason is string => Boolean(reason));
+  const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
+
+  return {
+    descriptor: {
+      project_id: targetDomainId,
+      project: optionalString((domainDescriptor as JsonRecord).domain_label) ?? targetDomainId,
+      target_domain_id: targetDomainId,
+      agent_id: optionalString((domainDescriptor as JsonRecord).domain_id) ?? targetDomainId,
+      family_action_catalog: {
+        status: actionCatalog ? 'resolved' : 'missing',
+        raw_descriptor: actionCatalog,
+      },
+      family_stage_control_plane: {
+        status: stageControlPlane ? 'resolved' : 'missing',
+        raw_descriptor: stageControlPlane,
+      },
+      functional_privatization_audit: {
+        status: functionalAudit.status,
+        summary: functionalAudit.summary,
+        modules: functionalAudit.modules,
+      },
+    },
+    repoDir,
+    status,
+    blockerReasons,
+  };
+}
+
+function selectGeneratedInterfaceBundleFormat(bundle: JsonRecord, selectedFormat: GeneratedInterfaceFormat | 'all') {
+  if (selectedFormat === 'all') {
+    return bundle;
+  }
+  const selectedKey =
+    selectedFormat === 'product-entry'
+      ? 'product_entry'
+      : selectedFormat === 'openai'
+        ? 'openai_tool'
+        : selectedFormat === 'ai-sdk'
+          ? 'ai_sdk'
+          : selectedFormat;
+  const selectedBlock = bundle[selectedKey];
+  return {
+    surface_kind: bundle.surface_kind,
+    version: bundle.version,
+    owner: bundle.owner,
+    generated_surface_owner: bundle.generated_surface_owner,
+    domain_repo_can_own_generated_surface: bundle.domain_repo_can_own_generated_surface,
+    status: bundle.status,
+    selected_format: selectedFormat,
+    project_id: bundle.project_id,
+    target_domain_id: bundle.target_domain_id,
+    agent_id: bundle.agent_id,
+    generated_from: bundle.generated_from,
+    [selectedKey]: selectedBlock,
+    stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
+    parity: bundle.parity,
+    authority_boundary: bundle.authority_boundary,
+  };
+}
+
 function surfaceProjection(descriptor: JsonRecord, surface: typeof GENERATED_SURFACES[number]) {
   const missing = surface.required_descriptor_surfaces.filter((required) =>
     !descriptorSurfaceResolved(descriptor, required)
@@ -214,6 +543,7 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
         surface.status === 'blocked_missing_descriptor_surface'
       ).length,
     },
+    generated_interface_bundle: buildGeneratedInterfaceBundle(descriptor, status),
     authority_boundary: {
       opl_can_write_domain_truth: false,
       opl_can_write_memory_body: false,
@@ -295,5 +625,47 @@ export function buildDomainPackCompilerInspect(contracts: FrameworkContracts, ar
       ...selected,
       surface_kind: 'opl_domain_pack_compiler_inspection',
     },
+  };
+}
+
+export function buildGeneratedAgentInterfaces(contracts: FrameworkContracts, args: string[]) {
+  const { domain, repoDir, format } = parseInterfaceArgs(args);
+  if (repoDir) {
+    const repoProjection = buildRepoContractDescriptor(repoDir);
+    const bundle = {
+      ...buildGeneratedInterfaceBundle(repoProjection.descriptor, repoProjection.status, format),
+      source_kind: 'standard_agent_repo_contracts',
+      repo_dir: repoProjection.repoDir,
+      blocker_reasons: repoProjection.blockerReasons,
+    };
+    return {
+      version: 'g2',
+      generated_agent_interfaces: selectGeneratedInterfaceBundleFormat(bundle as JsonRecord, format),
+    };
+  }
+
+  const normalized = normalizeDomainSelection(domain);
+  const domains = buildCompilerDomains(contracts);
+  const selected = domains.find((candidate) =>
+    candidate.project_id === normalized
+    || candidate.project === normalized
+    || candidate.target_domain_id === domain
+    || candidate.target_domain_id === normalized
+    || candidate.agent_id === domain
+    || candidate.agent_id === normalized
+  );
+  if (!selected) {
+    throw new FrameworkContractError('cli_usage_error', `Unknown generated interface domain: ${domain}.`, {
+      domain,
+      allowed_domains: domains.map((candidate) => candidate.project_id),
+    });
+  }
+
+  return {
+    version: 'g2',
+    generated_agent_interfaces: selectGeneratedInterfaceBundleFormat(
+      selected.generated_interface_bundle as unknown as JsonRecord,
+      format,
+    ),
   };
 }
