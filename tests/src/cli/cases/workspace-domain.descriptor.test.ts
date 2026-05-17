@@ -365,7 +365,7 @@ function withFunctionalConsumerBoundary(payload: JsonRecord) {
     functional_module_inventory: [
       {
         module_id: 'runtime_lifecycle_sqlite_reference_adapter',
-        classification: 'A_opl_owned_mas_consumes',
+        classification: 'opl_owned_replacement',
         owner: 'one-person-lab',
         code_paths: ['src/med_autoscience/runtime_protocol/runtime_lifecycle_store.py'],
         active_callers: ['medautosci sidecar export'],
@@ -379,34 +379,44 @@ function withFunctionalConsumerBoundary(payload: JsonRecord) {
       },
       {
         module_id: 'runtime_storage_maintenance',
-        classification: 'A_opl_owned_mas_consumes',
+        classification: 'opl_generated_surface',
         owner: 'one-person-lab',
         code_paths: ['src/med_autoscience/controllers/runtime_storage_maintenance.py'],
         active_callers: ['medautosci runtime storage-maintenance'],
         active_caller_status: 'domain_cleanup_shell_active_until_opl_replacement_proof',
-        migration_action: 'move generic storage audit and cleanup policy to OPL lifecycle primitive',
+        migration_action: 'replace generic storage audit and cleanup shell with OPL generated lifecycle surface',
         retention_reason: 'MAS can keep only study workspace receipt refs and paper artifact authority.',
-        opl_expected_primitives: ['opl_artifact_lifecycle_storage_audit_shell'],
+        opl_expected_primitives: ['opl_artifact_lifecycle_storage_audit_shell', 'pack_compiler_generated_surface'],
+      },
+      {
+        module_id: 'study_stage_policy_pack',
+        classification: 'declarative_pack',
+        owner: 'med-autoscience',
+        code_paths: ['agent/stages', 'agent/policies'],
+        active_callers: ['OPL pack compiler input'],
+        active_caller_status: 'declarative_pack_active',
+        migration_action: 'declare stages policies memory refs and fixtures for OPL generated surfaces',
+        retained_domain_authority: ['study_stage_policy_pack'],
       },
       {
         module_id: 'study_truth',
-        classification: 'domain_authority',
+        classification: 'minimal_authority_function',
         owner: 'med-autoscience',
         code_paths: ['src/med_autoscience/controllers/study_truth_kernel.py'],
         active_callers: ['MAS controller owner route'],
         active_caller_status: 'domain_authority_active',
-        migration_action: 'retain_in_mas',
+        migration_action: 'retain_as_minimal_authority_function',
         cannot_absorb_reason: 'Medical study truth and publication route decisions are domain authority, not framework state.',
         retained_domain_authority: ['study_truth'],
       },
       {
         module_id: 'publication_quality_verdict',
-        classification: 'domain_authority',
+        classification: 'minimal_authority_function',
         owner: 'med-autoscience',
         code_paths: ['src/med_autoscience/controllers/study_progress_parts/publication_runtime.py'],
         active_callers: ['AI reviewer and publication gate'],
         active_caller_status: 'domain_authority_active',
-        migration_action: 'retain_in_mas',
+        migration_action: 'retain_as_minimal_authority_function',
         cannot_absorb_reason: 'OPL cannot authorize medical publication readiness or manuscript quality.',
         retained_domain_authority: ['publication_quality_verdict'],
       },
@@ -426,12 +436,8 @@ function withFunctionalConsumerBoundary(payload: JsonRecord) {
     functional_surface_classification: {
       A_opl_owned_mas_consumes: [
         'runtime_lifecycle_sqlite_reference_adapter',
-        'runtime_storage_maintenance',
       ],
-      B_mas_domain_authority: [
-        'study_truth',
-        'publication_quality_verdict',
-      ],
+      B_mas_domain_authority: [],
       C_retire_when_replaced_or_uncalled: [
         'local_launchd_scheduler_install_path',
       ],
@@ -455,7 +461,7 @@ function withPrivatizedFunctionalModuleAudit(payload: JsonRecord) {
       opl_owned_generic_primitive_consumers: [
         {
           module_id: 'session_ledger_attention_queue',
-          classification: 'opl_owned_generic_primitive_consumer',
+          classification: 'opl_owned_replacement',
           owner: 'one-person-lab',
           mag_role: 'wakeup_refs_and_safe_action_provider',
           code_paths: ['src/med_autogrant/product_entry_parts/consumer_thinning.py'],
@@ -470,7 +476,7 @@ function withPrivatizedFunctionalModuleAudit(payload: JsonRecord) {
       mag_owned_grant_authority_surfaces: [
         {
           module_id: 'fundability_quality_export_verdicts',
-          classification: 'mag_owned_grant_truth_receipt_verdict',
+          classification: 'minimal_authority_function',
           owner: 'med-autogrant',
           mag_role: 'verdict_authority_owner',
           current_surface_refs: ['/product_entry_manifest/grant_authoring_readiness'],
@@ -479,6 +485,24 @@ function withPrivatizedFunctionalModuleAudit(payload: JsonRecord) {
         },
       ],
       retire_or_tombstone_surfaces: [
+        {
+          module_id: 'grant_stage_policy_pack',
+          classification: 'declarative_pack',
+          owner: 'med-autogrant',
+          code_paths: ['agent/stages', 'agent/policies'],
+          active_callers: ['OPL pack compiler input'],
+          active_caller_status: 'declarative_pack_active',
+          migration_action: 'declare grant stages policies package refs and authority schemas for generated surfaces',
+          mag_retained_authority: ['grant_stage_policy_pack'],
+        },
+        {
+          module_id: 'grant_sidecar_status_shell',
+          classification: 'opl_generated_surface',
+          owner: 'one-person-lab',
+          active_caller_status: 'generated_surface_handoff_active',
+          migration_action: 'replace hand-written sidecar/status shell with OPL generated surface handoff',
+          opl_expected_primitives: ['pack_compiler_generated_surface'],
+        },
         {
           module_id: 'repo_owned_scheduler_daemon',
           classification: 'retire_tombstone',
@@ -499,7 +523,7 @@ function withRcaFunctionalAudit(payload: JsonRecord) {
     modules: [
       {
         module_id: 'native_helper_envelope_wrapper',
-        classification: 'split_owner_boundary',
+        classification: 'opl_owned_replacement',
         owner: 'one-person-lab',
         codePaths: ['packages/redcube-runtime-protocol/src/python-native-helper.ts'],
         activeCallers: ['RCA product sidecar guarded actions'],
@@ -511,11 +535,29 @@ function withRcaFunctionalAudit(payload: JsonRecord) {
       },
       {
         module_id: 'artifact_gallery_handoff_shell',
-        classification: 'rca_owned_visual_domain_authority',
-        owner: 'redcube_ai',
+        classification: 'opl_generated_surface',
+        owner: 'one-person-lab',
         surface_ref: '/artifact_locator_contract',
         opl_generic_primitive: 'artifact_lifecycle',
+        migration_action: 'replace generic artifact gallery handoff shell with OPL generated surface',
+      },
+      {
+        module_id: 'visual_stage_policy_pack',
+        classification: 'declarative_pack',
+        owner: 'redcube_ai',
+        codePaths: ['agent/stages', 'agent/policies'],
+        activeCallers: ['OPL pack compiler input'],
+        activeCallerStatus: 'declarative_pack_active',
+        migrationAction: 'declare visual stages policies review routes and fixtures for generated surfaces',
+        rca_retained_authority: ['visual_stage_policy_pack'],
+      },
+      {
+        module_id: 'visual_review_export_verdict',
+        classification: 'minimal_authority_function',
+        owner: 'redcube_ai',
+        surface_ref: '/visual_review_state',
         rca_retained_authority: ['artifact_authority'],
+        cannot_absorb_reason: 'OPL cannot authorize visual direction, review verdict, export verdict, or canonical artifact authority.',
       },
     ],
     opl_owned_generic_primitives: ['native_helper_generic_envelope', 'artifact_lifecycle'],
@@ -588,9 +630,12 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.provider_temporal_residency_gap_status, 'closed_by_fresh_proven_proof');
     assert.equal(list.family_agent_descriptors.summary.production_closure_gap_count, 12);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_audit_resolved_count, 3);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_module_count, 10);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_owned_replacement_count, 4);
-    assert.equal(list.family_agent_descriptors.summary.functional_privatization_domain_authority_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_module_count, 15);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_owned_replacement_count, 3);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_opl_generated_surface_count, 3);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_declarative_pack_count, 3);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_minimal_authority_function_count, 4);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_domain_authority_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_retire_tombstone_count, 2);
 
     const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
@@ -650,7 +695,7 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     );
     assert.equal(mas.family_agent_descriptor.skill_catalog.skill_count, 2);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
-    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.total_module_count, 5);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.total_module_count, 6);
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
@@ -674,6 +719,24 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .find((module: { module_id: string }) => module.module_id === 'publication_quality_verdict')
         .cannot_absorb_reason,
       'OPL cannot authorize medical publication readiness or manuscript quality.',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'runtime_storage_maintenance')
+        .migration_class,
+      'opl_generated_surface',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'study_stage_policy_pack')
+        .migration_class,
+      'declarative_pack',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'study_truth')
+        .migration_class,
+      'minimal_authority_function',
     );
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
@@ -741,7 +804,13 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       mag.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'fundability_quality_export_verdicts')
         .migration_class,
-      'domain_authority',
+      'minimal_authority_function',
+    );
+    assert.equal(
+      mag.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'grant_sidecar_status_shell')
+        .migration_class,
+      'opl_generated_surface',
     );
     assert.deepEqual(
       mag.family_agent_descriptor.functional_privatization_audit.modules
@@ -760,6 +829,18 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')
         .migration_class,
       'opl_owned_replacement',
+    );
+    assert.equal(
+      rca.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'artifact_gallery_handoff_shell')
+        .migration_class,
+      'opl_generated_surface',
+    );
+    assert.equal(
+      rca.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'visual_review_export_verdict')
+        .migration_class,
+      'minimal_authority_function',
     );
     assert.deepEqual(
       rca.family_agent_descriptor.functional_privatization_audit.modules
