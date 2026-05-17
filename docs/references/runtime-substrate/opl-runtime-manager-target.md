@@ -23,7 +23,7 @@ Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / su
 
 Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS paper autonomy tasks 现在作为该规则的参考实现：`paper_autonomy/repair-recheck`、`paper_autonomy/ai-reviewer-recheck`、`paper_autonomy/gate-replay` 和 `paper_autonomy/route-decision` 会在 OPL 队列与 dispatch 文件中保留 source refs、next owner、callable surface、source fingerprint 与 idempotency key，但实际 repair、AI reviewer、gate replay、route decision 仍由 MAS owner surface 执行和落账。
 
-当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS paper autonomy projection、MAG/RCA sidecar task hydration，以及 migration provider stopped -> repair -> ready 的 fixture 验收。MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是 Temporal-backed provider pilot、provider abstraction cutover、真实 provider long-run soak，以及真实 MAS paper controlled apply 到最终投稿级交付；这些必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
+当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS paper autonomy projection、MAG/RCA sidecar task hydration，以及 migration provider stopped -> repair -> ready 的 fixture 验收。Temporal-backed provider pilot / provider abstraction cutover 已推进到 repo-native live proof、本机 managed production proof、provider continuous proof projection、provider SLO cadence receipt 和 task-bound stage attempt bridge；MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是真实 provider long-run SLO、真实 MAS/MAG/RCA domain owner-chain soak、workspace/runtime memory body 或 writeback apply receipt、artifact/lifecycle apply receipt，以及真实 MAS paper controlled apply 到最终投稿级交付；这些均是测试/证据差距，必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
 
 ## 当前要落地的最小面
 
@@ -43,7 +43,7 @@ Domain task hydration 是另一个显式授权面：domain sidecar export 可以
 - `opl install` 默认安装/复用 family runtime provider；`--no-online-runtime` 只用于开发/离线 degraded diagnostics。
 - Codex CLI、已准入 domain modules 与 family runtime provider 三层都 ready 时，Full OPL readiness 才完整通过。
 - provider 未 ready 表示 Full online runtime degraded；本地 CLI/status/manifest 可继续输出诊断。
-- 迁移期 Hermes cron bridge 的 desired script 是 `opl family-runtime tick --source hermes-cron --hydrate`。没有 `--hydrate` 的 cron 只能消费已有队列，不能把 domain read-model blocker 自动转换成 executable task。Temporal provider 落地后，该 wakeup 语义应迁到 workflow/activity/signal/query contract。
+- 迁移期 Hermes cron bridge 的 desired script 是 `opl family-runtime tick --source hermes-cron --hydrate`。没有 `--hydrate` 的 cron 只能消费已有队列，不能把 domain read-model blocker 自动转换成 executable task。当前 Temporal-backed provider 路径已经提供 workflow/activity/signal/query contract；后续不再把 Hermes cron bridge 扩展成 provider、readiness path 或长期 wakeup substrate。
 
 ## Domain Registration Registry
 
@@ -118,4 +118,4 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 - 上游升级、许可、稳定性或平台适配成为产品级风险
 - 跨 domain 事务性编排无法通过 external runtime provider 合理表达
 
-在这些 gate 出现前，正确路线是 `external provider, managed by OPL product packaging`，优先实现 Temporal-backed provider pilot。
+在这些 gate 出现前，正确路线是 `external provider, managed by OPL product packaging`。Temporal-backed provider pilot / abstraction cutover 已落地为当前 required production substrate；后续优先补真实 long-run SLO、domain owner-chain receipt、workspace memory/lifecycle receipt 和 App/operator drilldown evidence，不升级为 OPL 自有完整长期常驻 sidecar。
