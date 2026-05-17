@@ -7,15 +7,15 @@ Machine boundary: 本文是人读政策。机器约束由各仓 `scripts/verify.
 
 ## 目标
 
-OPL 系列仓库的开发 checkout 只承载 repo-source、合同、测试和文档。测试、验证、build、proof 或本地运行产生的 Python bytecode、pytest cache、egg-info、build 输出、session 状态、receipt 实例和交付物实例，都必须进入系统临时目录、用户级 runtime-state、workspace 或 runtime artifact root。
+OPL 系列仓库的开发 checkout 只承载 repo-source、合同、测试和文档。测试、验证、build、proof 或本地运行产生的 Python bytecode、pytest cache、egg-info、`uv sync` project venv、安装/同步副产物、build 输出、session 状态、receipt 实例和交付物实例，都必须进入系统临时目录、用户级 runtime-state、workspace 或 runtime artifact root。
 
 这条规则用于从源头减少二次污染：验证入口应默认把生成物导向仓库外部，而不是先允许写入开发目录，再依赖测试或人工清理发现问题。
 
 ## Family 级纪律
 
 - OPL 持有 family 级生成物隔离纪律，并把它作为 admitted domain agent 的接入要求之一。
-- MAS、MAG、RCA 和后续 domain agent 必须提供 repo-local clean runner 或等价机制，让默认验证入口不会把 `__pycache__`、`.pytest_cache`、`*.egg-info`、`dist/`、`build/`、`out/` 写入开发 checkout。
-- Python 测试入口必须显式设置 `PYTHONDONTWRITEBYTECODE`、`PYTHONPYCACHEPREFIX` 和 pytest `cache_dir`，或通过 repo-local `sitecustomize.py` / clean runner 达成同等效果。
+- MAS、MAG、RCA 和后续 domain agent 必须提供 repo-local clean runner 或等价机制，让默认验证入口不会把 `.venv`、`__pycache__`、`.pytest_cache`、`*.egg-info`、`dist/`、`build/`、`out/` 写入开发 checkout。
+- Python 测试入口必须显式设置 `PYTHONDONTWRITEBYTECODE`、`PYTHONPYCACHEPREFIX`、pytest `cache_dir` 和仓外 project venv 路径；使用 `uv sync` 时必须通过 `UV_PROJECT_ENVIRONMENT` 或等价机制把 project venv 指向临时目录。
 - Python package 测试不得为了验证本仓代码而把当前项目安装回源码目录；需要依赖同步时，应使用不安装项目本体的环境同步方式，并通过 `PYTHONPATH` 或等价源码入口读取待测代码。
 - Node、shell、native helper 或 product-entry 测试只要会启动 Python 子进程，也必须继承同一套仓外 cache 环境。
 
@@ -28,6 +28,6 @@ OPL 系列仓库的开发 checkout 只承载 repo-source、合同、测试和文
 
 ## 守门口径
 
-`.gitignore` 和 repo hygiene 测试是兜底守门，不是主要治理手段。若一次验证后开发 checkout 出现 `__pycache__`、`.pytest_cache` 或 `*.egg-info`，应修启动入口、环境传播或 build/sync 方式；清理已有生成物只是收口步骤。
+`.gitignore` 和 repo hygiene 测试是兜底守门，不是主要治理手段。若一次验证后开发 checkout 出现 `.venv`、`__pycache__`、`.pytest_cache` 或 `*.egg-info`，应修启动入口、环境传播或 build/sync 方式；清理已有生成物只是收口步骤。
 
 长期规则需要冻结时，同步上提到 `docs/invariants.md` 或相应机器合同；本文件负责解释维护纪律和落地口径。

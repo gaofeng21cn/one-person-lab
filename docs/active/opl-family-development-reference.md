@@ -68,6 +68,8 @@ Domain repo 不应长期维护 generic scheduler、generic queue、generic attem
 
 单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。目录结构应与 OPL family taxonomy 保持同名一致，代码内部结构可以按领域实现差异保留，但 OPL-facing skeleton、docs taxonomy 和 owner boundary 应统一。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 
+gap plan 和开发计划的差距项必须拆成两类：`功能/结构差距` 记录 owner 边界、模块归属、接口退役、generated surface、目录/合同/调用链仍未到目标态的部分；`测试/证据差距` 记录真实 workspace receipt、provider-hosted apply、live soak、coverage、no-forbidden-write proof、regression proof、App drilldown evidence 等验收缺口。已经具备功能但缺少真实证据时，只能写进测试/证据差距；不能混写成“功能还没做”。
+
 ### App / Workbench 负责
 
 One Person Lab App / Workbench 的目标、消费合同和边界由 OPL 主仓负责记录。当前 GUI shell 实现来自独立 `one-person-lab-app` 产品仓的 `shells/aionui/`，该目录作为 upstream-backed AionUI shell adapter 维护。拆分 closeout 已归档到 [One Person Lab App 仓库拆分 Closeout](../history/process/plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)；当前 App/workbench 边界以 `docs/product/`、App 仓合同和真实 release artifact 为准。
