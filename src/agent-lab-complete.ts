@@ -21,6 +21,33 @@ const AUTHORITY_BOUNDARY = {
   can_train_or_deploy_model_weights: false,
 };
 
+const MECHANISM_EDITABLE_SURFACES = [
+  {
+    surface_ref: 'mechanism-surface:agent-lab/stage-policy',
+    surface_kind: 'stage_policy_ref',
+    edit_scope: 'candidate_ref_only',
+    owner_route_ref: 'owner-route:opl/framework-stage-policy',
+  },
+  {
+    surface_ref: 'mechanism-surface:agent-lab/tool-policy',
+    surface_kind: 'tool_policy_ref',
+    edit_scope: 'candidate_ref_only',
+    owner_route_ref: 'owner-route:opl/framework-tool-policy',
+  },
+  {
+    surface_ref: 'mechanism-surface:agent-lab/prompt',
+    surface_kind: 'prompt_ref',
+    edit_scope: 'candidate_ref_only',
+    owner_route_ref: 'owner-route:domain-owner/prompt-review',
+  },
+  {
+    surface_ref: 'mechanism-surface:agent-lab/rubric-gap',
+    surface_kind: 'rubric_gap_ref',
+    edit_scope: 'candidate_ref_only',
+    owner_route_ref: 'owner-route:domain-owner/quality-rubric',
+  },
+];
+
 export function buildCompleteAgentLabControlPlane() {
   const sampleResult = buildSampleAgentLabResult();
   const longlineResult = buildLonglineAgentLabResult();
@@ -83,17 +110,26 @@ export function buildCompleteAgentLabControlPlane() {
     },
   ];
   const optimizerLoop = {
-    surface_kind: 'opl_agent_lab_optimizer_loop',
-    status: 'control_plane_ready_external_optimizer_optional',
+    surface_kind: 'opl_agent_lab_evolution_harness',
+    status: 'mechanism_editing_control_plane_ready',
     candidate_kinds: ['prompt', 'skill', 'stage_policy', 'tool_policy', 'few_shot_examples', 'rubric_gap'],
+    mechanism_object: {
+      mechanism_ref: 'mechanism:agent-lab/default-stage-led-agent-mechanism',
+      mechanism_version: 'opl-agent-lab-mechanism.v1',
+      editable_surfaces: MECHANISM_EDITABLE_SURFACES,
+      promotion_mode: 'explicit_gate_required',
+      refs_only: true,
+    },
     loop_steps: [
       'collect_trajectory_refs',
       'freeze_dataset_or_longline_suite',
       'score_with_domain_owned_scorecard_refs',
-      'generate_candidate_config_or_branch',
+      'select_mechanism_editable_surface_refs',
+      'emit_meta_edit_receipt_ref',
+      'generate_next_mechanism_candidate_ref',
       'run_regression_and_recovery_gates',
       'promote_only_through_explicit_gate',
-      'record_online_learning_refs',
+      'record_evolution_segment_refs',
     ],
     pattern_refs: [
       'dspy:mipro/bootstrap-few-shot',
@@ -114,6 +150,8 @@ export function buildCompleteAgentLabControlPlane() {
     core_requires_langfuse_or_phoenix: false,
     ready_to_connect_inspect_ai_adapter: true,
     ready_to_export_observability_refs: true,
+    ready_to_emit_mechanism_read_model: true,
+    ready_to_emit_evolution_segments: true,
     ready_to_emit_optimizer_candidate_refs: true,
     ready_to_emit_rl_transition_refs: true,
     automatic_model_training_ready: false,
@@ -131,6 +169,7 @@ export function buildCompleteAgentLabControlPlane() {
     eval_adapters: evalAdapters,
     observability_exports: observabilityExports,
     optimizer_loop: optimizerLoop,
+    mechanism_control_plane: buildAgentLabMechanismReadModel(),
     readiness,
     non_goals: [
       'domain truth mutation',
@@ -146,6 +185,10 @@ export function buildCompleteAgentLabControlPlane() {
 
 type AgentLabSuiteResult = ReturnType<typeof runAgentLabSuite>;
 export type AgentLabExportTarget = 'inspect-ai' | 'openinference' | 'langfuse' | 'phoenix' | 'json';
+
+function unique(values: string[]) {
+  return [...new Set(values)];
+}
 
 function suiteResults() {
   return {
@@ -240,6 +283,7 @@ export function buildAgentLabWorkbenchReadModel() {
       reads_domain_body: false,
     },
     optimizer_candidates: optimizerCandidates(results),
+    mechanism: buildAgentLabMechanismReadModel(),
     promotion_gates: promotionGates(results),
     online_learning_refs: {
       transition_refs_ready: true,
@@ -248,6 +292,159 @@ export function buildAgentLabWorkbenchReadModel() {
       can_train_or_deploy_model_weights: false,
       can_promote_default_agent_without_gate: false,
     },
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function buildAgentLabMechanismReadModel() {
+  const mechanismRef = 'mechanism:agent-lab/default-stage-led-agent-mechanism';
+  const mechanismVersion = 'opl-agent-lab-mechanism.v1';
+  const candidateRef = 'mechanism-candidate:agent-lab/default-stage-led-agent-mechanism/next';
+
+  return {
+    surface_kind: 'opl_agent_lab_mechanism_read_model',
+    version: mechanismVersion,
+    mechanism_ref: mechanismRef,
+    mechanism_version: mechanismVersion,
+    status: 'mechanism_editable_refs_ready',
+    editable_surfaces: MECHANISM_EDITABLE_SURFACES,
+    meta_edit_receipt: {
+      receipt_ref: stableId('oalmr', [mechanismRef, mechanismVersion, MECHANISM_EDITABLE_SURFACES]),
+      receipt_kind: 'mechanism_meta_edit_receipt_ref',
+      source_refs: [
+        'contract:opl-framework/agent-lab-contract',
+        'human_doc:docs/runtime/opl-agent-lab-control-plane',
+      ],
+      writes_domain_truth: false,
+      writes_memory_body: false,
+      mutates_artifact: false,
+      trains_or_deploys_model_weights: false,
+      promotes_default_agent: false,
+    },
+    evolution_segment: {
+      segment_ref: stableId('oalms', [mechanismRef, mechanismVersion, 'baseline']),
+      segment_kind: 'mechanism_baseline_segment_ref',
+      source_suite_refs: ['suite:opl-agent-lab-sample-suite', 'suite:opl-agent-lab-longline-suite'],
+      trajectory_refs: [
+        'trajectory:mas/paper-repair-smoke',
+        'trajectory:mag/grant-section-smoke',
+        'trajectory:rca/visual-deliverable-smoke',
+      ],
+      scorecard_refs: [
+        'quality-scorecard:mas/paper-repair-smoke',
+        'quality-scorecard:mag/grant-section-smoke',
+        'quality-scorecard:rca/visual-deliverable-smoke',
+      ],
+    },
+    evidence_delta: {
+      delta_ref: stableId('oalmd', [mechanismRef, mechanismVersion, 'baseline']),
+      added_evidence_refs: [],
+      blocked_evidence_refs: [],
+      unchanged_evidence_refs: [
+        'no-forbidden-write:mas/agent-lab-fixture',
+        'no-forbidden-write:mag/agent-lab-fixture',
+        'no-forbidden-write:rca/agent-lab-fixture',
+      ],
+      domain_truth_delta_written: false,
+      memory_body_delta_written: false,
+      artifact_delta_written: false,
+    },
+    next_mechanism_candidate: {
+      candidate_ref: candidateRef,
+      candidate_version: 'opl-agent-lab-mechanism-candidate.v1',
+      candidate_status: 'candidate_ref_ready_explicit_gate_required',
+      mechanism_ref: mechanismRef,
+      editable_surface_refs: MECHANISM_EDITABLE_SURFACES.map((surface) => surface.surface_ref),
+      proposed_edit_refs: [
+        'mechanism-edit-ref:agent-lab/stage-policy-tightening',
+        'mechanism-edit-ref:agent-lab/tool-policy-tightening',
+        'mechanism-edit-ref:agent-lab/rubric-gap-routing',
+      ],
+      required_gate_refs: ['promotion-gate:agent-lab/mechanism-candidate-explicit-review'],
+      default_promotion: false,
+    },
+    refs_only: true,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
+  const suiteResult = runAgentLabSuite(input);
+  const mechanism = buildAgentLabMechanismReadModel();
+  const candidates = optimizerCandidates([suiteResult]);
+  const transitions = rlTransitionRefs([suiteResult]);
+  const trajectoryRefs = suiteResult.refs.trajectory_refs;
+  const scorecardRefs = suiteResult.refs.domain_quality_scorecard_refs;
+  const candidateRefs = candidates.map((candidate) => candidate.candidate_ref);
+  const transitionRefs = transitions.map((transition) => transition.transition_ref);
+
+  return {
+    surface_kind: 'opl_agent_lab_evolution_result',
+    version: 'opl-agent-lab.v1.evolution',
+    evolution_id: stableId('oale', [
+      suiteResult.result_id,
+      mechanism.mechanism_ref,
+      mechanism.mechanism_version,
+      candidateRefs,
+      transitionRefs,
+    ]),
+    status: suiteResult.status === 'passed' ? 'next_mechanism_candidate_ready' : 'blocked',
+    suite_result: suiteResult,
+    mechanism_ref: mechanism.mechanism_ref,
+    mechanism_version: mechanism.mechanism_version,
+    editable_surfaces: mechanism.editable_surfaces,
+    meta_edit_receipt: {
+      ...mechanism.meta_edit_receipt,
+      source_refs: [
+        ...mechanism.meta_edit_receipt.source_refs,
+        suiteResult.result_id,
+        ...suiteResult.refs.promotion_gate_refs,
+      ],
+    },
+    evolution_segment: {
+      segment_ref: stableId('oales', [suiteResult.result_id, trajectoryRefs, scorecardRefs, candidateRefs]),
+      segment_kind: 'mechanism_suite_evolution_segment_ref',
+      source_suite_ref: suiteResult.result_id,
+      mechanism_ref: mechanism.mechanism_ref,
+      trajectory_refs: trajectoryRefs,
+      scorecard_refs: scorecardRefs,
+      improvement_candidate_refs: candidateRefs,
+      rl_transition_refs: transitionRefs,
+    },
+    evidence_delta: {
+      delta_ref: stableId('oaled', [
+        suiteResult.result_id,
+        suiteResult.refs.receipt_refs,
+        suiteResult.refs.promotion_gate_refs,
+        suiteResult.refs.forbidden_authority_flags,
+      ]),
+      suite_status: suiteResult.status,
+      added_evidence_refs: [
+        suiteResult.result_id,
+        ...suiteResult.refs.receipt_refs,
+        ...suiteResult.refs.promotion_gate_refs,
+      ],
+      blocked_evidence_refs: suiteResult.status === 'passed'
+        ? []
+        : [...suiteResult.missing_observations, ...suiteResult.refs.forbidden_authority_flags],
+      domain_truth_delta_written: false,
+      memory_body_delta_written: false,
+      artifact_delta_written: false,
+    },
+    next_mechanism_candidate: {
+      ...mechanism.next_mechanism_candidate,
+      candidate_ref: stableId('oalmc', [suiteResult.result_id, candidateRefs, transitionRefs]),
+      source_candidate_refs: candidateRefs,
+      source_transition_refs: transitionRefs,
+      required_gate_refs: unique([
+        ...mechanism.next_mechanism_candidate.required_gate_refs,
+        ...suiteResult.refs.promotion_gate_refs,
+      ]),
+      default_promotion: false,
+    },
+    automatic_model_training_ready: false,
+    automatic_default_agent_promotion_ready: false,
+    refs_only: true,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
 }

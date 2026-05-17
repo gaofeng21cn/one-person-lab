@@ -68,6 +68,23 @@ test('agent-lab workbench exposes the App-ready read model', () => {
   assert.equal(output.agent_lab_workbench.authority_boundary.can_write_domain_truth, false);
 });
 
+test('agent-lab mechanism exposes a first-class refs-only mechanism object', () => {
+  const output = runCli(['agent-lab', 'mechanism', '--json']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.agent_lab_mechanism.surface_kind, 'opl_agent_lab_mechanism_read_model');
+  assert.equal(output.agent_lab_mechanism.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
+  assert.equal(output.agent_lab_mechanism.mechanism_version, 'opl-agent-lab-mechanism.v1');
+  assert.equal(output.agent_lab_mechanism.editable_surfaces.length, 4);
+  assert.equal(output.agent_lab_mechanism.meta_edit_receipt.writes_domain_truth, false);
+  assert.equal(output.agent_lab_mechanism.meta_edit_receipt.writes_memory_body, false);
+  assert.equal(output.agent_lab_mechanism.meta_edit_receipt.mutates_artifact, false);
+  assert.equal(output.agent_lab_mechanism.evolution_segment.segment_kind, 'mechanism_baseline_segment_ref');
+  assert.equal(output.agent_lab_mechanism.evidence_delta.domain_truth_delta_written, false);
+  assert.equal(output.agent_lab_mechanism.next_mechanism_candidate.default_promotion, false);
+  assert.equal(output.agent_lab_mechanism.refs_only, true);
+});
+
 test('agent-lab export emits refs-only connector envelopes for optional targets', () => {
   const inspect = runCli(['agent-lab', 'export', '--target', 'inspect-ai', '--json']);
   const openinference = runCli(['agent-lab', 'export', '--target', 'openinference', '--json']);
@@ -271,6 +288,108 @@ test('agent-lab optimize runs an external suite into gated candidate and RL tran
     assert.equal(output.agent_lab_optimize.automatic_model_training_ready, false);
     assert.equal(output.agent_lab_optimize.automatic_default_agent_promotion_ready, false);
     assert.equal(output.agent_lab_optimize.authority_boundary.can_promote_default_agent_without_gate, false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evolve runs an external suite into a refs-only mechanism evolution segment', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-evolve-suite-'));
+  const suitePath = path.join(tmpDir, 'suite.json');
+  const suite = {
+    suite_id: 'opl-meta-agent-evolution-suite',
+    suite_kind: 'agent_lab_external_suite',
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_authorize_quality_verdict: false,
+      can_promote_default_agent_without_gate: false,
+    },
+    tasks: [
+      {
+        task_id: 'agent-lab-task:opl-meta-agent/evolution-candidate',
+        domain_id: 'opl-meta-agent',
+        task_family: 'agent_mechanism_evolution',
+        environment: {
+          environment_kind: 'fixture',
+          workspace_locator_ref: 'workspace-locator:opl-meta-agent/evolution',
+          sandbox_policy: 'fixture_only_no_artifact_mutation',
+          network_policy: 'offline',
+        },
+        instructions_ref: 'instructions:opl-meta-agent/evolution',
+        agent_entry_ref: 'domain-agent-entry:evolution-agent',
+        stage_refs: ['stage:evolution/baseline'],
+        oracle_refs: ['oracle:evolution/baseline-valid'],
+        scorer_refs: ['scorer:evolution/acceptance'],
+        recovery_probes: [
+          {
+            probe_ref: 'recovery-probe:evolution/resume',
+            probe_kind: 'resume_after_interruption',
+            expected_status: 'passed',
+            observed_status: 'passed',
+            source_refs: ['receipt:evolution/resume'],
+          },
+        ],
+        trajectory: {
+          trajectory_ref: 'trajectory:evolution/candidate',
+          run_ref: 'run:evolution/candidate',
+          agent_executor: 'codex_cli',
+          stage_attempt_refs: ['stage-attempt:evolution/candidate'],
+          tool_call_refs: ['tool-call:evolution/run-suite'],
+          artifact_refs: ['artifact-ref:evolution/config-locator'],
+          receipt_refs: ['owner-receipt:evolution/baseline'],
+          repair_refs: ['repair-ref:evolution/no-current-repair'],
+          trace_refs: ['trace-ref:evolution/candidate'],
+        },
+        scorecard: {
+          scorecard_ref: 'quality-scorecard:evolution/baseline',
+          domain_owned: true,
+          opl_scorecard_role: 'scorecard_ref_projection_only',
+          passed: true,
+          metric_refs: ['metric-ref:evolution/pass'],
+          evidence_refs: ['evidence-ref:evolution/baseline'],
+          review_refs: ['review-ref:evolution/domain-owner'],
+          quality_gate_refs: ['quality-gate:evolution/owner'],
+        },
+        improvement_candidate: {
+          candidate_ref: 'improvement-candidate:evolution/stage-policy',
+          candidate_kind: 'stage_policy',
+          target_ref: 'stage-policy-ref:evolution/default',
+          evidence_refs: ['failure-taxonomy:evolution/no-current-failure'],
+          allowed_change_scope: 'branch_only',
+          promotion_gate_ref: 'promotion-gate:evolution/candidate',
+        },
+        promotion_gate: {
+          gate_ref: 'promotion-gate:evolution/candidate',
+          gate_status: 'passed',
+          required_refs: ['quality-scorecard:evolution/baseline'],
+          regression_suite_refs: ['regression-suite:evolution/baseline'],
+          no_forbidden_write_proof_refs: ['no-forbidden-write:evolution/baseline'],
+        },
+      },
+    ],
+  };
+
+  try {
+    fs.writeFileSync(suitePath, `${JSON.stringify(suite, null, 2)}\n`);
+    const output = runCli(['agent-lab', 'evolve', '--suite', suitePath, '--json']);
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.agent_lab_evolve.surface_kind, 'opl_agent_lab_evolution_result');
+    assert.equal(output.agent_lab_evolve.status, 'next_mechanism_candidate_ready');
+    assert.equal(output.agent_lab_evolve.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
+    assert.equal(output.agent_lab_evolve.editable_surfaces.length, 4);
+    assert.equal(output.agent_lab_evolve.meta_edit_receipt.writes_domain_truth, false);
+    assert.equal(output.agent_lab_evolve.meta_edit_receipt.writes_memory_body, false);
+    assert.equal(output.agent_lab_evolve.meta_edit_receipt.mutates_artifact, false);
+    assert.equal(output.agent_lab_evolve.evolution_segment.segment_kind, 'mechanism_suite_evolution_segment_ref');
+    assert.equal(output.agent_lab_evolve.evidence_delta.domain_truth_delta_written, false);
+    assert.equal(output.agent_lab_evolve.evidence_delta.memory_body_delta_written, false);
+    assert.equal(output.agent_lab_evolve.evidence_delta.artifact_delta_written, false);
+    assert.equal(output.agent_lab_evolve.next_mechanism_candidate.default_promotion, false);
+    assert.equal(output.agent_lab_evolve.automatic_model_training_ready, false);
+    assert.equal(output.agent_lab_evolve.automatic_default_agent_promotion_ready, false);
+    assert.equal(output.agent_lab_evolve.refs_only, true);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
