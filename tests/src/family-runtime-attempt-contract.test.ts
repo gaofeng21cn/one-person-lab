@@ -233,6 +233,7 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'artifact_package_lifecycle_shell',
     'operator_workbench_drilldown_shell',
     'observability_repair_projection',
+    'pack_compiler_generated_surface',
   ]) {
     assert.ok(scaffold.opl_owned_generic_primitives.includes(primitive));
   }
@@ -241,11 +242,19 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'generic_queue_owner',
     'generic_attempt_ledger_owner',
     'generic_operator_workbench_owner',
+    'generated_surface_owner_in_domain_repo',
   ]) {
     assert.ok(scaffold.forbidden_domain_generic_owner_roles.includes(forbiddenRole));
   }
-  assert.ok(scaffold.domain_retained_thin_surfaces.includes('domain_truth'));
-  assert.ok(scaffold.domain_retained_thin_surfaces.includes('owner_receipt'));
+  assert.ok(scaffold.declarative_domain_pack.includes('domain_truth_schema'));
+  assert.ok(scaffold.declarative_domain_pack.includes('owner_receipt_schema'));
+  assert.ok(scaffold.minimal_authority_functions.includes('quality_or_export_verdict_authorizer'));
+  assert.equal(scaffold.pack_compiler_contract.generated_surface_owner, 'one-person-lab');
+  assert.ok(scaffold.generated_surface_contract.surfaces.includes('cli'));
+  assert.ok(scaffold.required_contract_surfaces.includes('pack_compiler_input'));
+  assert.ok(scaffold.required_contract_surfaces.includes('generated_surface_handoff'));
+  assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'));
   assert.ok(scaffold.retirement_gate_required_evidence.includes('no_active_default_caller'));
   assert.ok(scaffold.required_verification.includes('git_diff_check'));
+  assert.ok(scaffold.required_verification.includes('generated_surface_handoff_parity'));
 });

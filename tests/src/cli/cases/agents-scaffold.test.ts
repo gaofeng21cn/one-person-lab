@@ -41,20 +41,48 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
       'runtime_lifecycle_sqlite_index_contract',
       'native_helper_generic_envelope',
       'review_repair_transport',
+      'pack_compiler_generated_surface',
       'functional_privatization_audit_read_model',
     ],
   );
-  assert.equal(scaffold.domain_retained_thin_surfaces.includes('domain_truth'), true);
-  assert.equal(scaffold.domain_retained_thin_surfaces.includes('quality_or_export_verdict'), true);
-  assert.equal(scaffold.domain_retained_thin_surfaces.includes('owner_receipt'), true);
+  assert.equal(scaffold.declarative_domain_pack.includes('stage_descriptors'), true);
+  assert.equal(scaffold.declarative_domain_pack.includes('owner_receipt_schema'), true);
+  assert.equal(scaffold.minimal_authority_functions.includes('quality_or_export_verdict_authorizer'), true);
+  assert.equal(scaffold.minimal_authority_functions.includes('memory_accept_reject_decider'), true);
+  assert.equal(scaffold.pack_compiler_contract.generated_surface_owner, 'one-person-lab');
+  assert.equal(
+    scaffold.opl_generated_surfaces.some((surface: { surface_id: string }) => surface.surface_id === 'cli'),
+    true,
+  );
+  assert.equal(
+    scaffold.opl_generated_surfaces.some((surface: { surface_id: string }) => surface.surface_id === 'mcp'),
+    true,
+  );
+  assert.equal(
+    scaffold.opl_generated_surfaces.some((surface: { surface_id: string }) =>
+      surface.surface_id === 'status_read_model'
+    ),
+    true,
+  );
+  assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_scheduler_owner'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_attempt_ledger_owner'), true);
   assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generic_persistence_engine_owner'), true);
+  assert.equal(scaffold.forbidden_domain_generic_owner_roles.includes('generated_surface_owner_in_domain_repo'), true);
+  assert.equal(scaffold.required_contract_surfaces.includes('pack_compiler_input'), true);
+  assert.equal(scaffold.required_contract_surfaces.includes('generated_surface_handoff'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('functional_privatization_audit'), true);
   assert.equal(scaffold.required_verification.includes('functional_privatization_audit_no_generic_owner'), true);
+  assert.equal(scaffold.required_verification.includes('generated_surface_handoff_parity'), true);
   assert.equal(
     scaffold.functional_privatization_audit_contract.surface_kind,
     'opl_functional_privatization_audit_contract',
+  );
+  assert.equal(scaffold.functional_privatization_audit_contract.migration_classes.includes('opl_generated_surface'), true);
+  assert.equal(scaffold.functional_privatization_audit_contract.migration_classes.includes('declarative_pack'), true);
+  assert.equal(
+    scaffold.functional_privatization_audit_contract.migration_classes.includes('minimal_authority_function'),
+    true,
   );
   assert.equal(scaffold.retirement_gate.delete_policy, 'delete_or_history_tombstone_only');
   assert.equal(scaffold.retirement_gate.opl_can_execute_domain_repo_delete, false);
@@ -63,7 +91,7 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.authority_boundary.domain_can_own_generic_scheduler_or_queue, false);
 });
 
-test('agents scaffold can generate and validate a standard thin domain-agent skeleton', () => {
+test('agents scaffold can generate and validate a declarative pack domain-agent skeleton', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-'));
 
   try {
@@ -85,18 +113,44 @@ test('agents scaffold can generate and validate a standard thin domain-agent ske
     assert.equal(generated.write_summary.written_count, generated.template_files.length);
     assert.equal(generated.write_summary.skipped_existing_count, 0);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/domain_descriptor.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/pack_compiler_input.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/policies/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'runtime/authority_functions/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'runtime/native_helpers/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'runtime/fixtures/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'runtime/sidecar/README.md')), false);
 
     const descriptor = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/domain_descriptor.json'), 'utf8'),
     );
     assert.equal(descriptor.domain_id, 'award-foundry');
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
+    const packCompilerInput = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/pack_compiler_input.json'), 'utf8'),
+    );
+    assert.equal(packCompilerInput.surface_kind, 'opl_domain_pack_compiler_input');
+    assert.equal(packCompilerInput.generated_surface_owner, 'one-person-lab');
+    assert.equal(packCompilerInput.domain_pack_owner, 'award-foundry');
+    const generatedSurfaceHandoff = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
+    );
+    assert.equal(generatedSurfaceHandoff.surface_kind, 'opl_generated_surface_handoff');
+    assert.equal(generatedSurfaceHandoff.generated_surface_owner, 'one-person-lab');
+    assert.equal(generatedSurfaceHandoff.domain_repo_can_own_generated_surface, false);
     const functionalAudit = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/functional_privatization_audit.json'), 'utf8'),
     );
     assert.equal(functionalAudit.surface_kind, 'functional_privatization_audit');
+    assert.deepEqual(functionalAudit.classification_policy.accepted_migration_classes, [
+      'opl_owned_replacement',
+      'opl_generated_surface',
+      'declarative_pack',
+      'minimal_authority_function',
+      'retire_tombstone',
+    ]);
     assert.equal(functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner, false);
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;

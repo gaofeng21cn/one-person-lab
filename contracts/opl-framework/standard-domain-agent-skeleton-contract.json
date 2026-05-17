@@ -79,6 +79,8 @@
     ],
     "required_contract_surfaces": [
       "domain_agent_descriptor",
+      "pack_compiler_input",
+      "generated_surface_handoff",
       "product_entry_manifest",
       "stage_control_plane",
       "family_action_catalog",
@@ -98,7 +100,13 @@
       "memory_locator_writeback_transport",
       "artifact_package_lifecycle_shell",
       "operator_workbench_drilldown_shell",
-      "observability_repair_projection"
+      "observability_repair_projection",
+      "generic_persistence_store",
+      "runtime_lifecycle_sqlite_index_contract",
+      "native_helper_generic_envelope",
+      "review_repair_transport",
+      "pack_compiler_generated_surface",
+      "functional_privatization_audit_read_model"
     ],
     "domain_retained_thin_surfaces": [
       "domain_truth",
@@ -124,7 +132,16 @@
       "generic_memory_transport_owner",
       "generic_artifact_gallery_owner",
       "generic_operator_workbench_owner",
-      "generic_observability_slo_owner"
+      "generic_observability_slo_owner",
+      "generic_persistence_engine_owner",
+      "generic_sqlite_lifecycle_owner",
+      "generic_native_helper_envelope_owner",
+      "generic_review_repair_transport_owner",
+      "generic_cli_mcp_product_wrapper_owner",
+      "generic_sidecar_owner",
+      "generic_session_store_owner",
+      "generic_status_workbench_owner",
+      "generated_surface_owner_in_domain_repo"
     ],
     "retirement_gate_required_evidence": [
       "replacement_contract_available",
@@ -141,7 +158,81 @@
       "no_active_generic_owner_caller",
       "replacement_or_no_regression_evidence",
       "receipt_ref_reconciliation",
-      "git_diff_check"
+      "git_diff_check",
+      "functional_privatization_audit_no_generic_owner",
+      "pack_compiler_input_schema_check",
+      "generated_surface_handoff_parity",
+      "generated_surface_no_domain_owner"
+    ],
+    "declarative_domain_pack": [
+      "domain_truth_schema",
+      "stage_descriptors",
+      "transition_table",
+      "action_metadata",
+      "knowledge_refs",
+      "prompt_refs",
+      "skill_refs",
+      "policy_tables",
+      "quality_rubric_refs",
+      "artifact_authority_contract",
+      "memory_policy",
+      "owner_receipt_schema",
+      "domain_fixtures"
+    ],
+    "minimal_authority_functions": [
+      "quality_or_export_verdict_authorizer",
+      "artifact_mutation_authorizer",
+      "memory_accept_reject_decider",
+      "source_readiness_verdict",
+      "owner_receipt_signer",
+      "domain_specific_native_helper_implementation"
+    ],
+    "pack_compiler_contract": {
+      "surface_kind": "opl_domain_pack_compiler_contract",
+      "version": "opl-domain-pack-compiler.v1",
+      "owner": "one-person-lab",
+      "generated_surface_owner": "one-person-lab",
+      "input_contract": "contracts/pack_compiler_input.json",
+      "handoff_contract": "contracts/generated_surface_handoff.json",
+      "domain_repo_can_own_generated_surface": false,
+      "generated_surfaces": [
+        "cli",
+        "mcp",
+        "product_entry_manifest",
+        "sidecar_export_dispatch",
+        "status_read_model",
+        "workbench_drilldown",
+        "functional_harness_cases"
+      ]
+    },
+    "generated_surface_contract": {
+      "surface_kind": "opl_generated_surface_contract",
+      "version": "opl-generated-surface.v1",
+      "owner": "one-person-lab",
+      "generated_surface_owner": "one-person-lab",
+      "domain_repo_can_own_generated_surface": false,
+      "surfaces": [
+        "cli",
+        "mcp",
+        "product_entry_manifest",
+        "sidecar_export_dispatch",
+        "status_read_model",
+        "workbench_drilldown",
+        "functional_harness_cases"
+      ]
+    },
+    "domain_retained_thin_surfaces_deprecated": [
+      "domain_truth",
+      "domain_transition_spec",
+      "domain_stage_descriptors",
+      "domain_action_metadata",
+      "quality_or_export_verdict",
+      "artifact_authority",
+      "memory_body",
+      "owner_receipt",
+      "typed_blocker",
+      "sidecar_or_projection_adapter",
+      "domain_entry_and_tests"
     ]
   }
 }
