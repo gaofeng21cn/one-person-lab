@@ -2,6 +2,9 @@ type JsonRecord = Record<string, unknown>;
 
 export type FunctionalPrivatizationMigrationClass =
   | 'opl_owned_replacement'
+  | 'opl_generated_surface'
+  | 'declarative_pack'
+  | 'minimal_authority_function'
   | 'domain_thin_adapter'
   | 'domain_authority'
   | 'retire_tombstone';
@@ -36,6 +39,9 @@ export type FunctionalPrivatizationAudit = {
   summary: {
     total_module_count: number;
     opl_owned_replacement_count: number;
+    opl_generated_surface_count: number;
+    declarative_pack_count: number;
+    minimal_authority_function_count: number;
     domain_thin_adapter_count: number;
     domain_authority_count: number;
     retire_tombstone_count: number;
@@ -76,6 +82,9 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
   ],
   migration_classes: [
     'opl_owned_replacement',
+    'opl_generated_surface',
+    'declarative_pack',
+    'minimal_authority_function',
     'domain_thin_adapter',
     'domain_authority',
     'retire_tombstone',
@@ -92,6 +101,9 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
 const EMPTY_SUMMARY = {
   total_module_count: 0,
   opl_owned_replacement_count: 0,
+  opl_generated_surface_count: 0,
+  declarative_pack_count: 0,
+  minimal_authority_function_count: 0,
   domain_thin_adapter_count: 0,
   domain_authority_count: 0,
   retire_tombstone_count: 0,
@@ -160,6 +172,16 @@ function selectedAuditSource(manifest: JsonRecord) {
 function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   const text = stringValue(value);
   if (
+    text === 'opl_owned_replacement'
+    || text === 'opl_owned_generic_primitive_consumer'
+    || text === 'A_opl_owned_mas_consumes'
+    || text === 'split_owner_boundary'
+    || text === 'opl_owned_generic_envelope_rca_owned_helper_implementation'
+    || text === 'opl_owned_observability_stability_read_model_consumed_by_rca'
+  ) {
+    return 'opl_owned_replacement';
+  }
+  if (
     text === 'domain_authority'
     || text === 'mag_owned_grant_truth_receipt_verdict'
     || text === 'rca_owned_visual_domain_authority'
@@ -169,17 +191,30 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   if (text === 'domain_thin_adapter') {
     return 'domain_thin_adapter';
   }
-  if (text === 'retire_tombstone' || text === 'retire_when_replaced_or_uncalled') {
-    return 'retire_tombstone';
+  if (
+    text === 'opl_generated_surface'
+    || text === 'generated_surface'
+    || text === 'generated_surface_handoff'
+    || text === 'opl_generated_cli_mcp_product_sidecar_status'
+  ) {
+    return 'opl_generated_surface';
   }
   if (
-    text === 'opl_owned_generic_primitive_consumer'
-    || text === 'A_opl_owned_mas_consumes'
-    || text === 'split_owner_boundary'
-    || text === 'opl_owned_generic_envelope_rca_owned_helper_implementation'
-    || text === 'opl_owned_observability_stability_read_model_consumed_by_rca'
+    text === 'declarative_pack'
+    || text === 'domain_declarative_pack'
+    || text === 'stage_policy_schema_fixture_pack'
   ) {
-    return 'opl_owned_replacement';
+    return 'declarative_pack';
+  }
+  if (
+    text === 'minimal_authority_function'
+    || text === 'domain_minimal_authority_function'
+    || text === 'authority_function'
+  ) {
+    return 'minimal_authority_function';
+  }
+  if (text === 'retire_tombstone' || text === 'retire_when_replaced_or_uncalled') {
+    return 'retire_tombstone';
   }
   return 'domain_thin_adapter';
 }
@@ -198,7 +233,11 @@ function itemFromRecord(
   const currentOwner =
     stringValue(record.owner)
     ?? (record.rca_owned_visual_domain_authority === true ? 'redcube_ai' : null)
-    ?? (itemClass === 'opl_owned_replacement' ? 'one-person-lab' : null);
+    ?? (
+      itemClass === 'opl_owned_replacement' || itemClass === 'opl_generated_surface'
+        ? 'one-person-lab'
+        : null
+    );
   const expectedOplPrimitives = unique([
     ...stringList(record.opl_expected_primitives),
     ...stringList(record.expected_opl_primitives),
@@ -222,7 +261,10 @@ function itemFromRecord(
     source,
     migration_class: itemClass,
     current_owner: currentOwner,
-    opl_replacement_owner: itemClass === 'opl_owned_replacement' ? 'one-person-lab' : null,
+    opl_replacement_owner:
+      itemClass === 'opl_owned_replacement' || itemClass === 'opl_generated_surface'
+        ? 'one-person-lab'
+        : null,
     domain_allowed_role:
       stringValue(record.mag_role)
       ?? stringValue(record.rca_scope)
@@ -339,6 +381,11 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
     summary: {
       total_module_count: items.length,
       opl_owned_replacement_count: items.filter((item) => item.migration_class === 'opl_owned_replacement').length,
+      opl_generated_surface_count: items.filter((item) => item.migration_class === 'opl_generated_surface').length,
+      declarative_pack_count: items.filter((item) => item.migration_class === 'declarative_pack').length,
+      minimal_authority_function_count: items.filter((item) =>
+        item.migration_class === 'minimal_authority_function'
+      ).length,
       domain_thin_adapter_count: items.filter((item) => item.migration_class === 'domain_thin_adapter').length,
       domain_authority_count: items.filter((item) => item.migration_class === 'domain_authority').length,
       retire_tombstone_count: items.filter((item) => item.migration_class === 'retire_tombstone').length,

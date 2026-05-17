@@ -113,6 +113,12 @@ const OPL_OWNED_GENERIC_PRIMITIVES = [
     domain_policy: 'own_domain_review_export_or_quality_decision',
   },
   {
+    primitive_id: 'pack_compiler_generated_surface',
+    owner: 'one-person-lab',
+    replacement_surface: 'opl_domain_pack_compiler_and_generated_surface_handoff',
+    domain_policy: 'declare_pack_inputs_and_authority_functions_only',
+  },
+  {
     primitive_id: 'functional_privatization_audit_read_model',
     owner: 'one-person-lab',
     replacement_surface: 'opl_functional_privatization_audit',
@@ -120,7 +126,32 @@ const OPL_OWNED_GENERIC_PRIMITIVES = [
   },
 ] as const;
 
-const DOMAIN_RETAINED_THIN_SURFACES = [
+const DECLARATIVE_DOMAIN_PACK = [
+  'domain_truth_schema',
+  'stage_descriptors',
+  'transition_table',
+  'action_metadata',
+  'knowledge_refs',
+  'prompt_refs',
+  'skill_refs',
+  'policy_tables',
+  'quality_rubric_refs',
+  'artifact_authority_contract',
+  'memory_policy',
+  'owner_receipt_schema',
+  'domain_fixtures',
+] as const;
+
+const MINIMAL_AUTHORITY_FUNCTIONS = [
+  'quality_or_export_verdict_authorizer',
+  'artifact_mutation_authorizer',
+  'memory_accept_reject_decider',
+  'source_readiness_verdict',
+  'owner_receipt_signer',
+  'domain_specific_native_helper_implementation',
+] as const;
+
+const DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED = [
   'domain_truth',
   'domain_transition_spec',
   'domain_stage_descriptors',
@@ -141,6 +172,10 @@ const FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES = [
   'generic_queue_owner',
   'generic_attempt_ledger_owner',
   'generic_state_machine_runner_owner',
+  'generic_cli_mcp_product_wrapper_owner',
+  'generic_sidecar_owner',
+  'generic_session_store_owner',
+  'generic_status_workbench_owner',
   'generic_workspace_source_intake_owner',
   'generic_memory_transport_owner',
   'generic_artifact_gallery_owner',
@@ -150,10 +185,13 @@ const FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES = [
   'generic_sqlite_lifecycle_owner',
   'generic_native_helper_envelope_owner',
   'generic_review_repair_transport_owner',
+  'generated_surface_owner_in_domain_repo',
 ] as const;
 
 const REQUIRED_CONTRACT_SURFACES = [
   'domain_agent_descriptor',
+  'pack_compiler_input',
+  'generated_surface_handoff',
   'product_entry_manifest',
   'stage_control_plane',
   'family_action_catalog',
@@ -174,10 +212,92 @@ const REQUIRED_VERIFICATION = [
   'replacement_or_no_regression_evidence',
   'receipt_ref_reconciliation',
   'git_diff_check',
+  'pack_compiler_input_schema_check',
+  'generated_surface_handoff_parity',
+  'generated_surface_no_domain_owner',
   'functional_privatization_audit_no_generic_owner',
 ] as const;
 
 const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
+
+const OPL_GENERATED_SURFACES = [
+  {
+    surface_id: 'cli',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/pack_compiler_input.json',
+    domain_policy: 'domain_repo_declares_actions_stages_and_authority_receipts_only',
+  },
+  {
+    surface_id: 'mcp',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/pack_compiler_input.json',
+    domain_policy: 'domain_repo_does_not_handwrite_generic_tool_shell',
+  },
+  {
+    surface_id: 'product_entry_manifest',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/pack_compiler_input.json',
+    domain_policy: 'domain_repo_declares_product_entry_refs_and_domain_authority_refs',
+  },
+  {
+    surface_id: 'sidecar_export_dispatch',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/pack_compiler_input.json',
+    domain_policy: 'domain_repo_implements_only_domain_authority_function_targets',
+  },
+  {
+    surface_id: 'status_read_model',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/generated_surface_handoff.json',
+    domain_policy: 'domain_repo_returns_receipts_refs_and_typed_blockers',
+  },
+  {
+    surface_id: 'workbench_drilldown',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/generated_surface_handoff.json',
+    domain_policy: 'domain_repo_does_not_own_generic_operator_workbench',
+  },
+  {
+    surface_id: 'functional_harness_cases',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/pack_compiler_input.json',
+    domain_policy: 'domain_repo_supplies_fixtures_expected_receipts_and_forbidden_write_assertions',
+  },
+] as const;
+
+const PACK_COMPILER_CONTRACT = {
+  surface_kind: 'opl_domain_pack_compiler_contract',
+  version: 'opl-domain-pack-compiler.v1',
+  owner: 'one-person-lab',
+  generated_surface_owner: 'one-person-lab',
+  input_contract: 'contracts/pack_compiler_input.json',
+  handoff_contract: 'contracts/generated_surface_handoff.json',
+  domain_pack_owner_field: 'domain_pack_owner',
+  domain_repo_can_own_generated_surface: false,
+  allowed_domain_inputs: [
+    'declarative_domain_pack',
+    'minimal_authority_functions',
+    'domain_fixtures',
+    'owner_receipt_schema',
+    'no_forbidden_write_assertions',
+  ],
+  generated_surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
+} as const;
+
+const GENERATED_SURFACE_CONTRACT = {
+  surface_kind: 'opl_generated_surface_contract',
+  version: 'opl-generated-surface.v1',
+  owner: 'one-person-lab',
+  generated_surface_owner: 'one-person-lab',
+  domain_repo_can_own_generated_surface: false,
+  surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
+  authority_boundary: {
+    generated_surface_can_write_domain_truth: false,
+    generated_surface_can_write_memory_body: false,
+    generated_surface_can_authorize_quality_or_export: false,
+    generated_surface_can_call_minimal_authority_function_with_receipt_contract: true,
+  },
+} as const;
 
 function normalizeDomainId(value: string | undefined) {
   return (value || 'new-domain-agent')
@@ -219,6 +339,10 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       content: `# ${domainLabel} Quality Gates\n\nQuality, readiness, and export verdicts are owned by this domain agent. OPL only projects refs and receipts.\n`,
     },
     {
+      path: 'agent/policies/README.md',
+      content: `# ${domainLabel} Policies\n\nDeclare policy tables, authority boundaries, and pack compiler inputs here. Generic CLI, MCP, sidecar, status, and workbench shells are generated or hosted by OPL.\n`,
+    },
+    {
       path: 'contracts/domain_descriptor.json',
       content: json({
         surface_kind: 'domain_agent_descriptor',
@@ -232,6 +356,46 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
           opl_can_authorize_quality_or_export: false,
           domain_owns_truth_quality_artifact_memory_and_receipts: true,
         },
+      }),
+    },
+    {
+      path: 'contracts/pack_compiler_input.json',
+      content: json({
+        surface_kind: 'opl_domain_pack_compiler_input',
+        schema_version: 1,
+        domain_id: domainId,
+        domain_pack_owner: domainId,
+        generated_surface_owner: 'one-person-lab',
+        declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
+        minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
+        generated_surfaces_requested: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
+        domain_repo_can_own_generated_surface: false,
+        marker: SCAFFOLD_MARKER,
+        authority_boundary: {
+          opl_can_write_domain_truth: false,
+          opl_can_write_memory_body: false,
+          opl_can_authorize_quality_or_export: false,
+          domain_can_claim_generated_surface_owner: false,
+        },
+      }),
+    },
+    {
+      path: 'contracts/generated_surface_handoff.json',
+      content: json({
+        surface_kind: 'opl_generated_surface_handoff',
+        schema_version: 1,
+        domain_id: domainId,
+        generated_surface_owner: 'one-person-lab',
+        domain_repo_can_own_generated_surface: false,
+        source_contract_ref: 'contracts/pack_compiler_input.json',
+        generated_surfaces: OPL_GENERATED_SURFACES,
+        required_domain_handoff: [
+          'owner_receipt_schema',
+          'typed_blocker_schema',
+          'minimal_authority_function_refs',
+          'no_forbidden_write_evidence',
+        ],
+        marker: SCAFFOLD_MARKER,
       }),
     },
     {
@@ -306,9 +470,21 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
         schema_version: 1,
         domain_id: domainId,
         marker: SCAFFOLD_MARKER,
-        classification_policy: 'domain_declares_non_knowledge_functional_modules_for_opl_unified_audit',
+        classification_policy: {
+          rule: 'domain_declares_non_knowledge_functional_modules_for_opl_unified_audit',
+          accepted_migration_classes: [
+            'opl_owned_replacement',
+            'opl_generated_surface',
+            'declarative_pack',
+            'minimal_authority_function',
+            'retire_tombstone',
+          ],
+        },
         opl_owned_replacement_surfaces: OPL_OWNED_GENERIC_PRIMITIVES.map((primitive) => primitive.primitive_id),
-        domain_allowed_roles: DOMAIN_RETAINED_THIN_SURFACES,
+        opl_generated_surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
+        declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
+        minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
+        domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
         forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
         modules: [],
         authority_boundary: {
@@ -320,16 +496,16 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       }),
     },
     {
-      path: 'runtime/sidecar/README.md',
-      content: `# ${domainLabel} Runtime Sidecar\n\nExpose thin sidecar/projection adapters here. Do not implement a generic scheduler, daemon, queue, attempt ledger, transition runner, workbench, or memory transport in this repo.\n`,
+      path: 'runtime/authority_functions/README.md',
+      content: `# ${domainLabel} Authority Functions\n\nKeep only minimal domain authority functions here: quality/export verdict authorization, artifact mutation authorization, memory accept/reject decisions, source readiness verdicts, owner receipt signing, or domain-specific native helper implementation.\n`,
     },
     {
-      path: 'runtime/projection_builders/README.md',
-      content: `# ${domainLabel} Projection Builders\n\nBuild domain-owned projections and owner receipt refs for OPL to read. Keep artifact bodies and memory bodies out of OPL state.\n`,
+      path: 'runtime/native_helpers/README.md',
+      content: `# ${domainLabel} Native Helpers\n\nPlace domain-specific helper implementations here only when they cannot be represented as declarative pack inputs. OPL owns the generic helper envelope and execution contract.\n`,
     },
     {
-      path: 'runtime/lifecycle_adapters/README.md',
-      content: `# ${domainLabel} Lifecycle Adapters\n\nDomain lifecycle adapters return owner receipts or typed blockers. OPL owns the generic lifecycle shell only.\n`,
+      path: 'runtime/fixtures/README.md',
+      content: `# ${domainLabel} Runtime Fixtures\n\nStore focused harness fixtures and expected owner receipts here. Runtime artifacts, memory bodies, and deliverable blobs stay in workspace/runtime roots.\n`,
     },
     {
       path: 'docs/project.md',
@@ -337,7 +513,7 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
     },
     {
       path: 'docs/status.md',
-      content: `# ${domainLabel} Status\n\nCurrent state: scaffolded domain authority pack with thin program surface. Production evidence must come from domain-owned receipts and focused OPL-hosted/direct parity verification.\n`,
+      content: `# ${domainLabel} Status\n\nCurrent state: scaffolded declarative domain pack with minimal authority functions. Production evidence must come from domain-owned receipts and focused OPL-hosted/direct parity verification.\n`,
     },
     {
       path: 'docs/architecture.md',
@@ -349,7 +525,7 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
     },
     {
       path: 'docs/decisions.md',
-      content: `# ${domainLabel} Decisions\n\n- Adopt OPL standard domain-agent scaffold v1.\n- Keep this repo as a domain authority pack plus thin program surface.\n`,
+      content: `# ${domainLabel} Decisions\n\n- Adopt OPL standard domain-agent scaffold v1.\n- Keep this repo as a declarative domain pack plus minimal authority functions.\n`,
     },
   ];
 }
@@ -410,6 +586,8 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const forbiddenPresentDirs = ['artifacts'].filter((dir) => fs.existsSync(path.join(repoDir, dir)));
   const requiredContractFiles = [
     'contracts/domain_descriptor.json',
+    'contracts/pack_compiler_input.json',
+    'contracts/generated_surface_handoff.json',
     'contracts/stage_control_plane.json',
     'contracts/action_catalog.json',
     'contracts/memory_descriptor.json',
@@ -425,10 +603,24 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const missingForbiddenRoleGuards = FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES.filter((role) => !forbiddenRoles.includes(role));
   const descriptor = readJsonFile(path.join(repoDir, 'contracts/domain_descriptor.json'));
   const authority = descriptor?.authority_boundary || {};
+  const packCompilerInput = readJsonFile(path.join(repoDir, 'contracts/pack_compiler_input.json'));
+  const generatedSurfaceHandoff = readJsonFile(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
   const authorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
     authority.opl_can_write_memory_body === false ? null : 'opl_can_write_memory_body_must_be_false',
     authority.opl_can_authorize_quality_or_export === false ? null : 'opl_can_authorize_quality_or_export_must_be_false',
+    packCompilerInput?.generated_surface_owner === 'one-person-lab'
+      ? null
+      : 'pack_compiler_generated_surface_owner_must_be_opl',
+    packCompilerInput?.domain_repo_can_own_generated_surface === false
+      ? null
+      : 'pack_compiler_domain_repo_generated_surface_owner_must_be_false',
+    generatedSurfaceHandoff?.generated_surface_owner === 'one-person-lab'
+      ? null
+      : 'generated_surface_handoff_owner_must_be_opl',
+    generatedSurfaceHandoff?.domain_repo_can_own_generated_surface === false
+      ? null
+      : 'generated_surface_handoff_domain_owner_must_be_false',
   ].filter(Boolean);
   const blockers = [
     ...missingRequiredDirs.map((item) => `missing_required_dir:${item}`),
@@ -550,7 +742,13 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       docs_taxonomy: DOCS_TAXONOMY,
       required_contract_surfaces: REQUIRED_CONTRACT_SURFACES,
       opl_owned_generic_primitives: OPL_OWNED_GENERIC_PRIMITIVES,
-      domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES,
+      declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
+      minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
+      pack_compiler_contract: PACK_COMPILER_CONTRACT,
+      generated_surface_contract: GENERATED_SURFACE_CONTRACT,
+      opl_generated_surfaces: OPL_GENERATED_SURFACES,
+      domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
+      domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
       forbidden_domain_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
       retirement_gate: {
         surface_kind: 'opl_legacy_retirement_gate_checklist',
@@ -578,7 +776,9 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
         ],
         migration_classes: [
           'opl_owned_replacement',
-          'domain_thin_adapter',
+          'opl_generated_surface',
+          'declarative_pack',
+          'minimal_authority_function',
           'domain_authority',
           'retire_tombstone',
         ],
