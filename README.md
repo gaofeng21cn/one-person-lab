@@ -51,6 +51,7 @@ The chain is straightforward: build and run domain agents with One Person Lab, t
 
 | Product line | Current agent | Best for | Typical deliverables |
 | --- | --- | --- | --- |
+| `Agent Foundry` | [`OPL Meta Agent`](https://github.com/gaofeng21cn/opl-meta-agent) | Building new agents, taking over external-agent testing, mechanism self-evolution | Agent baselines, Agent Lab suites, mechanism patch proposals |
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, analysis, manuscript preparation | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision preparation | Proposals, outlines, revision packs |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defenses, project materials | Slide decks, scripts, presentation packages |
@@ -73,6 +74,7 @@ To develop a new domain agent, debug the CLI, or integrate runtime surfaces, ope
 
 - Improve the desktop App first-install package, update channel, and cross-platform release workflow.
 - Expand the stage-led runtime with stronger recovery, retry, human approval, and progress projection.
+- Use OPL Meta Agent as the Agent Foundry entry for building new domain agents, taking over testing for existing agents, and organizing Agent Lab mechanism evolution.
 - Stabilize the Research, Grant, and Presentation Foundry user experience.
 - Bring Patent, Award, Thesis, and Review work into the same product family.
 - Unify module installation, skill sync, artifact browsing, and workspace recovery across domain agents.
