@@ -272,6 +272,73 @@ test('domain manifests executes manifest_command with a bash-compatible shell', 
   }
 });
 
+test('domain manifests executes managed shell commands with checkout-clean python and uv env', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-clean-env-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-clean-env-workspace-'));
+  const manifestPath = path.join(stateRoot, 'manifest.json');
+  const commandPath = path.join(stateRoot, 'assert-clean-env.cjs');
+  const manifest = loadFamilyManifestFixtures().medautoscience;
+
+  try {
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, 'utf8');
+    fs.writeFileSync(
+      commandPath,
+      `const fs = require('node:fs');\n`
+        + `const path = require('node:path');\n`
+        + `const workspacePath = ${JSON.stringify(workspacePath)};\n`
+        + `function fail(message) { console.error(message); process.exit(9); }\n`
+        + `function assertExternalEnv(name) {\n`
+        + `  const value = process.env[name];\n`
+        + `  if (!value) fail(name + ' is not set');\n`
+        + `  const resolved = path.resolve(value);\n`
+        + `  if (resolved === workspacePath || resolved.startsWith(workspacePath + path.sep)) {\n`
+        + `    fail(name + ' points inside the managed workspace: ' + value);\n`
+        + `  }\n`
+        + `}\n`
+        + `if (process.env.PYTHONDONTWRITEBYTECODE !== '1') fail('PYTHONDONTWRITEBYTECODE is not enabled');\n`
+        + `assertExternalEnv('PYTHONPYCACHEPREFIX');\n`
+        + `assertExternalEnv('UV_PROJECT_ENVIRONMENT');\n`
+        + `assertExternalEnv('UV_CACHE_DIR');\n`
+        + `assertExternalEnv('XDG_CACHE_HOME');\n`
+        + `assertExternalEnv('PIP_CACHE_DIR');\n`
+        + `assertExternalEnv('OPL_DOMAIN_COMMAND_TMP_ROOT');\n`
+        + `assertExternalEnv('MAS_CLEAN_RUNNER_TMP_ROOT');\n`
+        + `assertExternalEnv('MAG_CLEAN_RUNNER_TMP_ROOT');\n`
+        + `assertExternalEnv('RCA_CLEAN_RUNNER_TMP_ROOT');\n`
+        + `assertExternalEnv('MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT');\n`
+        + `if (!process.env.PYTEST_ADDOPTS?.includes('cache_dir=')) fail('PYTEST_ADDOPTS lacks external cache dir');\n`
+        + `process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8'));\n`,
+      'utf8',
+    );
+
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      workspacePath,
+      '--manifest-command',
+      `${process.execPath} ${shellSingleQuote(commandPath)}`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.manifest_kind, 'med_autoscience_product_entry_manifest');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('start returns the selected domain-agent start surface for a bound project', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
   const fixtures = loadFamilyManifestFixtures();

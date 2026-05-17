@@ -652,6 +652,9 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_domain_authority_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_retire_tombstone_count, 0);
     assert.equal(list.family_agent_descriptors.summary.functional_privatization_active_private_generic_residue_count, 0);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_count, 0);
+    assert.equal(list.family_agent_descriptors.summary.functional_privatization_default_hidden_cleared_count, 15);
+    assert.deepEqual(list.family_agent_descriptors.summary.functional_privatization_default_watchlist_module_ids, []);
 
     const mas = runCli(['agents', 'descriptor', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -711,6 +714,8 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
     assert.equal(mas.family_agent_descriptor.skill_catalog.skill_count, 2);
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.status, 'resolved');
     assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.total_module_count, 6);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_watchlist_count, 0);
+    assert.equal(mas.family_agent_descriptor.functional_privatization_audit.summary.default_hidden_cleared_count, 6);
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
@@ -758,6 +763,12 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .find((module: { module_id: string }) => module.module_id === 'local_launchd_scheduler_install_path')
         .active_caller_allowed,
       false,
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'local_launchd_scheduler_install_path')
+        .audit_visibility,
+      'hidden_by_default',
     );
     assert.equal(mas.family_agent_descriptor.runtime_surfaces.runtime_inventory.status, 'resolved');
     assert.equal(mas.family_agent_descriptor.runtime_surfaces.session_continuity.status, 'resolved');

@@ -15,6 +15,8 @@ OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + minim
 
 `allowed_private_surface_classes` 不是鼓励保留私有功能面，而是例外准入表。长期允许的 `minimal_authority_function` 也必须尽量先尝试声明化；只有无法用 policy/table/schema/fixture/receipt contract 表达的领域裁决，才保留函数。`refs_only_domain_adapter` 只能返回 locator、opaque refs、owner receipts、typed blockers 或 no-regression refs；它不是私有运行时、私有工作台或私有 transport。
 
+默认审计视图只显示 `attention_required`。已经证明是 OPL hosted/generated surface、声明式 pack、最小 authority function、refs-only adapter、无默认 caller 的 diagnostic cleanup path 或 provenance/fixture 的项目，进入完整追溯清单但默认折叠。只有 blocker、仍需 replacement / migration / tombstone 的项目、仍 active 的 diagnostic cleanup path，或 tombstone 仍有 active caller 的项目，才进入默认 watchlist。
+
 ## 成熟系统参考
 
 外部成熟系统给出的共同模式是平台持有通用运行基座，应用只提交 spec、policy、handler 或 authority output：

@@ -1,6 +1,10 @@
 import { spawnSync } from 'node:child_process';
 
 import type { WorkspaceBinding } from '../workspace-registry.ts';
+import {
+  buildManagedShellCommandEnv,
+  prepareManagedShellCommandCwd,
+} from '../managed-shell-command-env.ts';
 import { normalizeManifest } from './normalizers.ts';
 import { isRecord } from './shared-utils.ts';
 import type { DomainManifestCatalogEntry } from './types.ts';
@@ -63,13 +67,18 @@ function buildCommandFailureEntry(
 }
 
 function executeManifestCommand(binding: WorkspaceBinding, manifestCommand: string, timeoutMs: number) {
-  return spawnSync('/bin/bash', ['-lc', manifestCommand], {
-    cwd: binding.workspace_path,
-    encoding: 'utf8',
-    env: process.env,
-    maxBuffer: 10 * 1024 * 1024,
-    timeout: timeoutMs,
-  });
+  const commandCwd = prepareManagedShellCommandCwd(binding.workspace_path, manifestCommand);
+  try {
+    return spawnSync('/bin/bash', ['-lc', manifestCommand], {
+      cwd: commandCwd.cwd,
+      encoding: 'utf8',
+      env: buildManagedShellCommandEnv(binding.workspace_path),
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: timeoutMs,
+    });
+  } finally {
+    commandCwd.cleanup();
+  }
 }
 
 function buildResolvedManifestEntry(

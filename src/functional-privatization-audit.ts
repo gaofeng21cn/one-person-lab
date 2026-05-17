@@ -13,6 +13,8 @@ export type FunctionalPrivatizationMigrationClass =
   | 'domain_authority'
   | 'retire_tombstone';
 
+export type FunctionalPrivatizationAuditVisibility = 'attention_required' | 'hidden_by_default';
+
 export type FunctionalPrivatizationAuditItem = {
   module_id: string;
   source: string;
@@ -32,6 +34,8 @@ export type FunctionalPrivatizationAuditItem = {
   active_caller_allowed: boolean;
   tombstone_required: boolean;
   blocker: string | null;
+  audit_visibility: FunctionalPrivatizationAuditVisibility;
+  audit_reason: string;
 };
 
 export type FunctionalPrivatizationAudit = {
@@ -55,6 +59,9 @@ export type FunctionalPrivatizationAudit = {
     retire_tombstone_count: number;
     active_private_generic_residue_count: number;
     blocker_count: number;
+    default_watchlist_count: number;
+    default_hidden_cleared_count: number;
+    default_watchlist_module_ids: string[];
   };
   modules: FunctionalPrivatizationAuditItem[];
   required_opl_replacement_primitives: string[];
@@ -125,6 +132,9 @@ const EMPTY_SUMMARY = {
   retire_tombstone_count: 0,
   active_private_generic_residue_count: 0,
   blocker_count: 0,
+  default_watchlist_count: 0,
+  default_hidden_cleared_count: 0,
+  default_watchlist_module_ids: [],
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -264,6 +274,42 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   return 'temporary_migration_bridge';
 }
 
+type FunctionalPrivatizationAuditItemDraft = Omit<
+  FunctionalPrivatizationAuditItem,
+  'audit_visibility' | 'audit_reason'
+>;
+
+function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
+  if (item.blocker) {
+    return 'blocker';
+  }
+  if (item.migration_class === 'opl_owned_replacement') {
+    return 'opl_replacement_pending';
+  }
+  if (item.migration_class === 'temporary_migration_bridge') {
+    return 'migration_bridge_pending';
+  }
+  if (item.migration_class === 'retire_tombstone') {
+    return 'legacy_tombstone_pending';
+  }
+  if (item.migration_class === 'diagnostic_cleanup_path' && item.active_caller_allowed) {
+    return 'diagnostic_cleanup_path_still_active';
+  }
+  if (item.tombstone_required && item.active_caller_allowed) {
+    return 'tombstone_has_active_caller';
+  }
+  return null;
+}
+
+function withAuditVisibility(item: FunctionalPrivatizationAuditItemDraft): FunctionalPrivatizationAuditItem {
+  const reason = attentionReason(item);
+  return {
+    ...item,
+    audit_visibility: reason ? 'attention_required' : 'hidden_by_default',
+    audit_reason: reason ?? 'cleared_or_stable_boundary',
+  };
+}
+
 function itemFromRecord(
   record: JsonRecord,
   source: string,
@@ -307,7 +353,7 @@ function itemFromRecord(
     stringValue(record.blocker)
     ?? (record.claims_opl_replacement_exists === false ? 'opl_replacement_evidence_pending' : null)
     ?? (record.declares_production_soak_complete === true ? 'invalid_live_soak_claim' : null);
-  return {
+  return withAuditVisibility({
     module_id: moduleId,
     source,
     migration_class: itemClass,
@@ -358,7 +404,7 @@ function itemFromRecord(
       || itemClass === 'retire_tombstone'
       || itemClass === 'provenance_or_fixture',
     blocker,
-  };
+  });
 }
 
 function itemsFromModuleInventory(source: JsonRecord, sourcePath: string) {
@@ -441,6 +487,7 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
     item.migration_class === 'opl_owned_replacement'
     || item.migration_class === 'temporary_migration_bridge'
   ).length;
+  const watchlistItems = items.filter((item) => item.audit_visibility === 'attention_required');
   return {
     summary: {
       total_module_count: items.length,
@@ -467,6 +514,9 @@ function summarize(items: FunctionalPrivatizationAuditItem[]) {
       retire_tombstone_count: items.filter((item) => item.migration_class === 'retire_tombstone').length,
       active_private_generic_residue_count: activePrivateGenericResidueCount,
       blocker_count: blockers.length,
+      default_watchlist_count: watchlistItems.length,
+      default_hidden_cleared_count: items.length - watchlistItems.length,
+      default_watchlist_module_ids: watchlistItems.map((item) => item.module_id),
     },
     blockers,
   };
