@@ -1,7 +1,13 @@
 import fs from 'node:fs';
 
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { buildCompleteAgentLabControlPlane } from '../../agent-lab-complete.ts';
+import {
+  buildAgentLabExportEnvelope,
+  buildAgentLabOptimizeResult,
+  buildAgentLabWorkbenchReadModel,
+  buildCompleteAgentLabControlPlane,
+  type AgentLabExportTarget,
+} from '../../agent-lab-complete.ts';
 import { agentLabRefSummary, buildLonglineAgentLabResult, buildSampleAgentLabResult, runAgentLabSuite, type AgentLabSuite } from '../../agent-lab.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
@@ -97,13 +103,20 @@ function buildAgentLabCompletePayload() {
   };
 }
 
-function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
+function buildAgentLabWorkbenchPayload() {
+  return {
+    version: 'g2',
+    agent_lab_workbench: buildAgentLabWorkbenchReadModel(),
+  };
+}
+
+function parseAgentLabSuiteArgs(args: string[], spec: CommandSpec, commandName: string) {
   let suitePath: string | null = null;
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token !== '--suite') {
-      throw buildUsageError(`Unknown option for agent-lab run: ${token}.`, spec, { option: token });
+      throw buildUsageError(`Unknown option for agent-lab ${commandName}: ${token}.`, spec, { option: token });
     }
 
     const value = args[index + 1];
@@ -115,10 +128,44 @@ function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
   }
 
   if (!suitePath) {
-    throw buildUsageError('agent-lab run requires --suite <suite.json>.', spec, { option: '--suite' });
+    throw buildUsageError(`agent-lab ${commandName} requires --suite <suite.json>.`, spec, { option: '--suite' });
   }
 
   return { suitePath };
+}
+
+function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
+  return parseAgentLabSuiteArgs(args, spec, 'run');
+}
+
+function parseAgentLabExportArgs(args: string[], spec: CommandSpec) {
+  let target: AgentLabExportTarget | null = null;
+  const allowedTargets = new Set(['inspect-ai', 'openinference', 'langfuse', 'phoenix', 'json']);
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--target') {
+      throw buildUsageError(`Unknown option for agent-lab export: ${token}.`, spec, { option: token });
+    }
+
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError('Missing value for option: --target.', spec, { option: '--target' });
+    }
+    if (!allowedTargets.has(value)) {
+      throw buildUsageError(`Unsupported agent-lab export target: ${value}.`, spec, { option: '--target' });
+    }
+    target = value as AgentLabExportTarget;
+    index += 1;
+  }
+
+  if (!target) {
+    throw buildUsageError('agent-lab export requires --target <inspect-ai|openinference|langfuse|phoenix|json>.', spec, {
+      option: '--target',
+    });
+  }
+
+  return { target };
 }
 
 function readAgentLabSuiteFile(suitePath: string): AgentLabSuite {
@@ -155,6 +202,25 @@ function buildAgentLabRunPayload(args: string[], spec: CommandSpec) {
       suite_result: suiteResult,
       ref_summary: agentLabRefSummary(suiteResult),
       authority_boundary: suiteResult.authority_boundary,
+    },
+  };
+}
+
+function buildAgentLabExportPayload(args: string[], spec: CommandSpec) {
+  const { target } = parseAgentLabExportArgs(args, spec);
+  return {
+    version: 'g2',
+    agent_lab_export: buildAgentLabExportEnvelope(target),
+  };
+}
+
+function buildAgentLabOptimizePayload(args: string[], spec: CommandSpec) {
+  const { suitePath } = parseAgentLabSuiteArgs(args, spec, 'optimize');
+  return {
+    version: 'g2',
+    agent_lab_optimize: {
+      suite_path: suitePath,
+      ...buildAgentLabOptimizeResult(readAgentLabSuiteFile(suitePath)),
     },
   };
 }
@@ -504,6 +570,33 @@ export function buildPublicCommandSpecs(
         assertNoArgs(args, publicCommandSpecs['agent-lab complete']);
         return buildAgentLabCompletePayload();
       },
+    },
+    'agent-lab workbench': {
+      usage: 'opl agent-lab workbench',
+      summary: 'Show the App/workbench-ready Agent Lab read model across eval, observability, optimizer, and learning refs.',
+      examples: ['opl agent-lab workbench --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agent-lab workbench']);
+        return buildAgentLabWorkbenchPayload();
+      },
+    },
+    'agent-lab export': {
+      usage: 'opl agent-lab export --target <inspect-ai|openinference|langfuse|phoenix|json>',
+      summary: 'Emit a refs-only Agent Lab export envelope for optional external connectors without uploading data.',
+      examples: [
+        'opl agent-lab export --target inspect-ai --json',
+        'opl agent-lab export --target openinference --json',
+      ],
+      group: 'framework',
+      handler: (args) => buildAgentLabExportPayload(args, publicCommandSpecs['agent-lab export']),
+    },
+    'agent-lab optimize': {
+      usage: 'opl agent-lab optimize --suite <suite.json>',
+      summary: 'Run an external suite and emit gated optimizer candidate and RL transition refs without training or promotion.',
+      examples: ['opl agent-lab optimize --suite ./agent-lab-suite.json --json'],
+      group: 'framework',
+      handler: (args) => buildAgentLabOptimizePayload(args, publicCommandSpecs['agent-lab optimize']),
     },
     'agent-lab run': {
       usage: 'opl agent-lab run --suite <suite.json>',
