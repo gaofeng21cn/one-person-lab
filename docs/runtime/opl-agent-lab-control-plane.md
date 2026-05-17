@@ -8,7 +8,7 @@ Machine boundary: 本文是人读 runtime 支撑说明。机器真相继续归 `
 
 ## 定位
 
-`OPL Agent Lab` 是 OPL Framework 内部统一的 eval / improvement control plane。它面向 framework 维护者、operator 和 App/workbench read model，统一组织跨 domain agent 的能力评估、回归观察、改进候选、实验证据和 follow-up 任务。
+`OPL Agent Lab` 是 OPL Framework 内部统一的 eval / improvement / evolution harness control plane。它面向 framework 维护者、operator 和 App/workbench read model，统一组织跨 domain agent 的能力评估、回归观察、机制编辑候选、实验证据和 follow-up 任务。
 
 它属于 OPL runtime / control plane，不是新的 domain agent、不是新的 product truth store，也不是 MAS/MAG/RCA 之上的质量裁判。
 
@@ -18,13 +18,14 @@ Machine boundary: 本文是人读 runtime 支撑说明。机器真相继续归 `
 - 把跨 domain 的评估问题转成可审计的 lab run、improvement candidate、acceptance evidence 和 follow-up queue item。
 - 为 App/workbench 提供可读的改进看板、回归风险、验证状态和下一步动作。
 - 维护 framework-level 问题归因：runtime/provider/executor/control-plane 问题归 OPL；domain truth、quality gate、artifact authority 问题回 domain owner。
+- 把 `mechanism` 作为一等对象表达：只记录 mechanism ref、version、editable surface refs、meta edit receipt ref、evolution segment ref、evidence delta ref 和 next mechanism candidate ref。
 
 Agent Lab 的最小语义链路是：
 
 ```text
 runtime / descriptor / domain-owned proof refs
   -> OPL Agent Lab eval run
-  -> improvement candidate
+  -> mechanism / improvement candidate
   -> framework or domain owner route
   -> typed evidence / receipt refs
   -> status / workbench projection
@@ -68,6 +69,8 @@ Agent Lab 可以持有：
 
 - `agent_lab_eval_run`：一次评估运行的目标、输入 refs、执行环境、rubric 和结果摘要；
 - `agent_lab_improvement_candidate`：需要改进的 framework 或 domain owner 路由项；
+- `agent_lab_mechanism_read_model`：一等机制对象，包含 mechanism ref/version、可编辑 surface refs、meta edit receipt、evolution segment、evidence delta 和 next mechanism candidate；
+- `agent_lab_evolution_result`：外部 suite 驱动的一段 mechanism evolution envelope，只输出 refs-only candidate 与证据 delta；
 - `agent_lab_acceptance_evidence`：验收证据 refs、通过/阻断原因和后续 gate；
 - `agent_lab_projection`：给 CLI/App/workbench 的 read-only 改进看板；
 - `agent_lab_follow_up_queue_item`：进入 OPL typed queue 或 domain owner backlog 的后续动作引用。
@@ -104,8 +107,10 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 - CLI complete：`opl agent-lab complete --json`，输出完整 Agent Lab control plane：OPL-native suite runner、Inspect AI optional adapter contract、METR task-standard reference、OpenInference/OpenTelemetry trace refs、Langfuse/Phoenix optional connector refs、optimizer loop 和 RL transition boundary。
 - CLI external suite：`opl agent-lab run --suite <suite.json> --json`，运行 domain agent 或 OPL-compatible meta-agent 仓生成的 OPL-compatible Agent Lab suite JSON，返回同一套 refs-only suite result、ref summary 和 authority boundary。
 - CLI workbench：`opl agent-lab workbench --json`，把 complete / sample / longline / run 语义规整成 App/workbench 可直接消费的 read model，包含 eval adapters、observability export readiness、optimizer candidates、promotion gates、online learning refs 和 authority boundary，并显式返回 `app_workbench_consumption_ready=true`。
+- CLI mechanism：`opl agent-lab mechanism --json`，输出 first-class mechanism read model，包含 `mechanism_ref`、`mechanism_version`、`editable_surfaces`、`meta_edit_receipt`、`evolution_segment`、`evidence_delta` 和 `next_mechanism_candidate`。该入口严格 refs-only，不写 domain truth、memory body、artifact，不训练权重，不默认 promotion。
 - CLI export：`opl agent-lab export --target <inspect-ai|openinference|langfuse|phoenix|json> --json`，输出 connector 可消费的 refs-only export envelope。该命令只整理 refs 和 connector-shaped metadata，不上传外部服务，不读取 domain body。
 - CLI optimize：`opl agent-lab optimize --suite <suite.json> --json`，运行外部 suite 后输出 gated optimizer candidate set 和 RL transition refs。该命令不训练或部署权重，不推广 default agent，不写 memory body，也不覆盖 domain owner verdict。
+- CLI evolve：`opl agent-lab evolve --suite <suite.json> --json`，运行外部 suite 后输出 mechanism evolution segment、meta edit receipt、evidence delta 和 next mechanism candidate。该命令只产生 candidate refs 和 evidence delta refs；promotion 仍必须经过显式 gate。
 
 `opl agent-lab longline --json` 是当前统一长线测试 read-model 入口。它可用于判断哪些“浸润/长线测试编排”已经能由 OPL 承接；它不能把 longline suite `passed` 升级成 MAS/MAG/RCA 的 publication、fundability、visual quality 或 export verdict。
 
@@ -117,9 +122,13 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 
 `opl agent-lab workbench --json` 是 App/workbench 机器面入口。它消费 OPL-native complete control plane、sample suite 和 longline suite 的 refs-only 结果，把 eval adapters、observability export readiness、optimizer candidates、promotion gates 和 online learning transition refs 聚合为一个 read model。App 可以据此展示候选、gate 和 connector readiness；App 不能把这些 refs 升级成 domain quality verdict、artifact readiness、memory apply 或 default agent promotion。
 
+`opl agent-lab mechanism --json` 是 mechanism 机器面入口。它把可编辑机制面限定在 stage policy、tool policy、prompt ref 和 rubric gap ref 这类 refs-only surface 上，并用 meta edit receipt 记录“可编辑机制对象已被识别”的事实。这个 receipt 不是 owner receipt，不接受或拒绝 memory writeback，也不授权 domain ready、quality verdict、artifact mutation、model training 或 default promotion。
+
 `opl agent-lab export --target ... --json` 是 optional connector 机器面入口。`inspect-ai` target 输出 task / solver / scorer / eval log refs；`openinference` target 输出 trace / trajectory / tool-call / stage-attempt refs；`langfuse` target 输出 dataset / run / scorecard refs；`phoenix` target 输出 experiment / trace / evaluator refs；`json` target 输出通用 suite result refs。所有 target 都返回 `upload_external_service=false` 和 `reads_domain_body=false`。
 
 `opl agent-lab optimize --suite <suite.json> --json` 是 optimizer/RL 机器面入口。它先按 `run` 同一规则验证 suite，再输出 gated optimizer candidate set 和 RL transition refs。candidate 只可作为 candidate config、candidate branch 或 manual review 项进入后续 gate；transition refs 只供下游 RL consumer 使用。OPL core 不在这里训练或部署模型权重，也不会自动 promote default agent。
+
+`opl agent-lab evolve --suite <suite.json> --json` 是 evolution harness 机器面入口。它先按 `run` 同一规则验证 suite，再把 suite evidence 映射为 mechanism evolution segment、evidence delta 和 next mechanism candidate。它输出的 `next_mechanism_candidate` 只是候选 ref 集合，不能改写当前机制默认版本；是否采用必须经 promotion gate、人审或 domain owner route 明确放行。
 
 当前 complete control plane 的状态：
 
@@ -131,6 +140,8 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 | OpenInference / OpenTelemetry refs | `trace_ref_contract_ready` | 输出 trace / span refs，不上传 domain truth。 |
 | Langfuse / Phoenix | `optional_connector_pending_export_contract_ready` | connector 可后接，当前只冻结 dataset/run/experiment/evaluator refs。 |
 | Optimizer loop | `control_plane_ready_external_optimizer_optional` | 可产生 prompt/skill/stage/tool-policy candidate refs。 |
+| Mechanism read model | `mechanism_editable_refs_ready` | `opl agent-lab mechanism --json` 输出一等机制对象、editable surface refs、meta edit receipt、evolution segment、evidence delta 和 next candidate。 |
+| Evolution harness | `next_mechanism_candidate_ready` | `opl agent-lab evolve --suite ... --json` 输出 mechanism evolution segment，不写 domain truth/memory/artifact，不训练权重，不默认 promotion。 |
 | RL boundary | `downstream_ready_after_stable_trajectory_and_reward_surfaces` | 可输出 transition refs；不在 OPL core 训练或部署模型权重。 |
 | App/workbench read model | `ready_for_app_workbench_consumption` | `opl agent-lab workbench --json` 输出完整 read model，`app_workbench_consumption_ready=true`。 |
 | Optional connector export | `ready_for_connector_consumption_refs_only` | `opl agent-lab export --target ... --json` 输出 refs-only envelope，不上传外部服务，不读 domain body。 |

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildAgentLabExportEnvelope,
+  buildAgentLabEvolutionResult,
+  buildAgentLabMechanismReadModel,
   buildAgentLabOptimizeResult,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
@@ -131,6 +133,16 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   ]);
   assert.equal(contract.external_suite_runner_surface.surface_kind, 'opl_agent_lab_external_suite_run');
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
+  assert.equal(contract.mechanism_surface.surface_kind, 'opl_agent_lab_mechanism_read_model');
+  assert.equal(contract.mechanism_surface.cli, 'opl agent-lab mechanism');
+  assert.ok(contract.mechanism_surface.fields.includes('mechanism_ref'));
+  assert.ok(contract.mechanism_surface.fields.includes('next_mechanism_candidate'));
+  assert.equal(contract.evolution_surface.surface_kind, 'opl_agent_lab_evolution_result');
+  assert.equal(contract.evolution_surface.cli, 'opl agent-lab evolve --suite <suite.json>');
+  assert.equal(contract.evolution_surface.refs_only, true);
+  assert.equal(contract.evolution_surface.writes_domain_truth, false);
+  assert.equal(contract.evolution_surface.writes_memory_body, false);
+  assert.equal(contract.evolution_surface.mutates_artifact, false);
   assert.equal(contract.longline_surface.surface_kind, 'opl_agent_lab_longline_summary');
   assert.equal(contract.longline_surface.suite_kind, 'agent_lab_longline_suite');
   assert.equal(contract.complete_control_plane_surface.surface_kind, 'opl_agent_lab_complete_control_plane');
@@ -240,6 +252,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.complete_control_plane_ready, true);
   assert.equal(result.readiness.ready_to_connect_inspect_ai_adapter, true);
   assert.equal(result.readiness.ready_to_export_observability_refs, true);
+  assert.equal(result.readiness.ready_to_emit_mechanism_read_model, true);
+  assert.equal(result.readiness.ready_to_emit_evolution_segments, true);
   assert.equal(result.readiness.ready_to_emit_optimizer_candidate_refs, true);
   assert.equal(result.readiness.ready_to_emit_rl_transition_refs, true);
   assert.equal(result.readiness.automatic_model_training_ready, false);
@@ -253,11 +267,15 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'collect_trajectory_refs',
     'freeze_dataset_or_longline_suite',
     'score_with_domain_owned_scorecard_refs',
-    'generate_candidate_config_or_branch',
+    'select_mechanism_editable_surface_refs',
+    'emit_meta_edit_receipt_ref',
+    'generate_next_mechanism_candidate_ref',
     'run_regression_and_recovery_gates',
     'promote_only_through_explicit_gate',
-    'record_online_learning_refs',
+    'record_evolution_segment_refs',
   ]);
+  assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
+  assert.equal(result.mechanism_control_plane.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
   assert.equal(result.optimizer_loop.rl_boundary.can_emit_transition_refs, true);
   assert.equal(result.optimizer_loop.rl_boundary.can_train_or_deploy_model_weights, false);
   assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
@@ -272,12 +290,64 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.observability_export_readiness.ready_to_export_observability_refs, true);
   assert.equal(result.observability_export_readiness.upload_external_service, false);
   assert.equal(result.observability_export_readiness.reads_domain_body, false);
+  assert.equal(result.mechanism.surface_kind, 'opl_agent_lab_mechanism_read_model');
+  assert.equal(result.mechanism.refs_only, true);
   assert.equal(result.optimizer_candidates.length, 6);
   assert.equal(result.promotion_gates.length, 6);
   assert.equal(result.online_learning_refs.transitions.length, 6);
   assert.equal(result.online_learning_refs.can_train_or_deploy_model_weights, false);
   assert.equal(result.online_learning_refs.can_promote_default_agent_without_gate, false);
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('Agent Lab mechanism read model makes mechanism editable surfaces first-class without write authority', () => {
+  const result = buildAgentLabMechanismReadModel();
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_mechanism_read_model');
+  assert.equal(result.version, 'opl-agent-lab-mechanism.v1');
+  assert.equal(result.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
+  assert.equal(result.mechanism_version, 'opl-agent-lab-mechanism.v1');
+  assert.equal(result.editable_surfaces.length, 4);
+  assert.ok(result.editable_surfaces.some((surface) => surface.surface_kind === 'stage_policy_ref'));
+  assert.equal(result.meta_edit_receipt.receipt_kind, 'mechanism_meta_edit_receipt_ref');
+  assert.equal(result.meta_edit_receipt.writes_domain_truth, false);
+  assert.equal(result.meta_edit_receipt.writes_memory_body, false);
+  assert.equal(result.meta_edit_receipt.mutates_artifact, false);
+  assert.equal(result.meta_edit_receipt.trains_or_deploys_model_weights, false);
+  assert.equal(result.meta_edit_receipt.promotes_default_agent, false);
+  assert.equal(result.evolution_segment.segment_kind, 'mechanism_baseline_segment_ref');
+  assert.equal(result.evidence_delta.domain_truth_delta_written, false);
+  assert.equal(result.evidence_delta.memory_body_delta_written, false);
+  assert.equal(result.evidence_delta.artifact_delta_written, false);
+  assert.equal(result.next_mechanism_candidate.default_promotion, false);
+  assert.equal(result.refs_only, true);
+  assert.equal(result.authority_boundary.can_write_domain_truth, false);
+});
+
+test('Agent Lab evolution result emits mechanism candidate refs without domain truth, memory, artifact, weight, or promotion writes', () => {
+  const result = buildAgentLabEvolutionResult(buildSampleAgentLabSuite());
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_evolution_result');
+  assert.equal(result.status, 'next_mechanism_candidate_ready');
+  assert.equal(result.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
+  assert.equal(result.mechanism_version, 'opl-agent-lab-mechanism.v1');
+  assert.equal(result.editable_surfaces.length, 4);
+  assert.equal(result.meta_edit_receipt.writes_domain_truth, false);
+  assert.equal(result.meta_edit_receipt.writes_memory_body, false);
+  assert.equal(result.meta_edit_receipt.mutates_artifact, false);
+  assert.equal(result.evolution_segment.segment_kind, 'mechanism_suite_evolution_segment_ref');
+  assert.equal(result.evidence_delta.suite_status, 'passed');
+  assert.equal(result.evidence_delta.blocked_evidence_refs.length, 0);
+  assert.equal(result.evidence_delta.domain_truth_delta_written, false);
+  assert.equal(result.evidence_delta.memory_body_delta_written, false);
+  assert.equal(result.evidence_delta.artifact_delta_written, false);
+  assert.equal(result.next_mechanism_candidate.source_candidate_refs.length, 3);
+  assert.equal(result.next_mechanism_candidate.source_transition_refs.length, 3);
+  assert.equal(result.next_mechanism_candidate.default_promotion, false);
+  assert.equal(result.automatic_model_training_ready, false);
+  assert.equal(result.automatic_default_agent_promotion_ready, false);
+  assert.equal(result.refs_only, true);
+  assert.equal(result.authority_boundary.can_train_or_deploy_model_weights, false);
 });
 
 test('Agent Lab export envelope maps refs to connector payloads without uploading or reading domain bodies', () => {
