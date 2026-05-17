@@ -30,6 +30,10 @@ import {
   buildFamilyAgentDescriptorList,
 } from '../../family-domain-agent-descriptor.ts';
 import {
+  buildDomainPackCompilerInspect,
+  buildDomainPackCompilerList,
+} from '../../domain-pack-compiler.ts';
+import {
   buildFamilyAgentInspect,
   buildFamilyAgentsList,
 } from '../../family-domain-agent-skeleton.ts';
@@ -697,6 +701,23 @@ export function buildPublicCommandSpecs(
       examples: ['opl agents descriptor --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyAgentDescriptorInspect(getContracts(), args),
+    },
+    'agents pack-compiler': {
+      usage: 'opl agents pack-compiler',
+      summary: 'List OPL-owned generated-surface handoff projections compiled from admitted domain packs.',
+      examples: ['opl agents pack-compiler'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agents pack-compiler']);
+        return buildDomainPackCompilerList(getContracts());
+      },
+    },
+    'agents pack-compiler inspect': {
+      usage: 'opl agents pack-compiler inspect --domain <domain>',
+      summary: 'Inspect one OPL-owned generated-surface handoff projection without moving domain authority into OPL.',
+      examples: ['opl agents pack-compiler inspect --domain mas'],
+      group: 'domain',
+      handler: (args) => buildDomainPackCompilerInspect(getContracts(), args),
     },
     'substrate projections': {
       usage: 'opl substrate projections',

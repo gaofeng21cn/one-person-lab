@@ -1,0 +1,86 @@
+{
+  "contract_kind": "opl_domain_pack_compiler_contract.v1",
+  "surface_kind": "opl_domain_pack_compiler_contract",
+  "owner": "one-person-lab",
+  "scope": "framework-owned read model that compiles admitted domain packs into generated-surface handoff projections",
+  "contract_version": "opl-domain-pack-compiler.v1",
+  "cli_surfaces": [
+    "opl agents pack-compiler",
+    "opl agents pack-compiler inspect --domain <domain>"
+  ],
+  "input_surfaces": [
+    "family_agent_descriptor.entry",
+    "family_agent_descriptor.family_action_catalog",
+    "family_agent_descriptor.family_stage_control_plane",
+    "family_agent_descriptor.domain_memory_descriptor",
+    "family_agent_descriptor.family_transition",
+    "family_agent_descriptor.runtime_surfaces",
+    "family_agent_descriptor.functional_privatization_audit"
+  ],
+  "generated_surface_projection": {
+    "surface_kind": "opl_generated_surface_handoff_projection",
+    "generated_surface_owner": "one-person-lab",
+    "domain_repo_can_own_generated_surface": false,
+    "generated_surfaces": [
+      "cli",
+      "mcp",
+      "product_entry_manifest",
+      "sidecar_export_dispatch",
+      "status_read_model",
+      "workbench_drilldown",
+      "functional_harness_cases"
+    ]
+  },
+  "ready_conditions": [
+    "domain_manifest_resolved",
+    "required_descriptor_surfaces_resolved",
+    "functional_privatization_summary.opl_owned_replacement_count == 0",
+    "functional_privatization_summary.temporary_migration_bridge_count == 0",
+    "functional_privatization_summary.retire_tombstone_count == 0",
+    "functional_privatization_summary.active_private_generic_residue_count == 0",
+    "functional_privatization_summary.blocker_count == 0"
+  ],
+  "blocked_conditions": [
+    "domain_manifest_not_resolved",
+    "missing_descriptor_surface",
+    "functional_privatization_audit_has_generic_residue_or_blocker"
+  ],
+  "framework_owns": [
+    "generated_surface_handoff_projection",
+    "descriptor_surface_readiness_projection",
+    "generated_cli_mcp_product_entry_sidecar_status_workbench_harness_metadata",
+    "generic_runtime_surface_admission_gate",
+    "functional_privatization_blocker_projection"
+  ],
+  "domain_agent_owns": [
+    "domain_truth",
+    "domain_stage_semantics",
+    "domain_transition_table",
+    "quality_verdict",
+    "publication_fundability_visual_verdict",
+    "artifact_authority",
+    "memory_body",
+    "memory_writeback_accept_reject",
+    "owner_receipt",
+    "typed_blocker",
+    "minimal_authority_function_implementation"
+  ],
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_accept_or_reject_memory_writeback": false,
+    "opl_can_authorize_quality_or_export": false,
+    "opl_can_mutate_artifacts": false,
+    "provider_completion_is_domain_ready": false,
+    "domain_repo_can_own_generated_surface": false,
+    "generated_surface_can_call_minimal_authority_function_with_receipt_contract": true
+  },
+  "non_goals": [
+    "domain handler generation",
+    "domain truth migration",
+    "domain memory body migration",
+    "quality or export verdict generation",
+    "artifact mutation",
+    "production live soak proof"
+  ]
+}

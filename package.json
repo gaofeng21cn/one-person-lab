@@ -9,6 +9,7 @@
     "./agent-lab-complete": "./dist/agent-lab-complete.js",
     "./family-action-catalog": "./dist/family-action-catalog.js",
     "./family-domain-agent-descriptor": "./dist/family-domain-agent-descriptor.js",
+    "./domain-pack-compiler": "./dist/domain-pack-compiler.js",
     "./functional-agent-runtime-harness": "./dist/functional-agent-runtime-harness.js",
     "./family-runtime-lifecycle-index": "./dist/family-runtime-lifecycle-index.js",
     "./generic-substrate-projection": "./dist/generic-substrate-projection.js",

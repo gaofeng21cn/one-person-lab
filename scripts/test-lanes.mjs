@@ -64,6 +64,7 @@ const lanes = {
       'tests/src/cli/cases/agent-lab.test.ts',
       'tests/src/cli/cases/agent-executor-cli.test.ts',
       'tests/src/cli/cases/agents-scaffold.test.ts',
+      'tests/src/cli/cases/domain-pack-compiler.test.ts',
       'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
       'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',
       'tests/src/cli/cases/runtime-tray-provider-continuous-proof.test.ts',
