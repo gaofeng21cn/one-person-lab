@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import {
   buildAgentLabExportEnvelope,
+  buildAgentLabEvolutionResult,
+  buildAgentLabMechanismReadModel,
   buildAgentLabOptimizeResult,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
@@ -107,6 +109,13 @@ function buildAgentLabWorkbenchPayload() {
   return {
     version: 'g2',
     agent_lab_workbench: buildAgentLabWorkbenchReadModel(),
+  };
+}
+
+function buildAgentLabMechanismPayload() {
+  return {
+    version: 'g2',
+    agent_lab_mechanism: buildAgentLabMechanismReadModel(),
   };
 }
 
@@ -221,6 +230,17 @@ function buildAgentLabOptimizePayload(args: string[], spec: CommandSpec) {
     agent_lab_optimize: {
       suite_path: suitePath,
       ...buildAgentLabOptimizeResult(readAgentLabSuiteFile(suitePath)),
+    },
+  };
+}
+
+function buildAgentLabEvolvePayload(args: string[], spec: CommandSpec) {
+  const { suitePath } = parseAgentLabSuiteArgs(args, spec, 'evolve');
+  return {
+    version: 'g2',
+    agent_lab_evolve: {
+      suite_path: suitePath,
+      ...buildAgentLabEvolutionResult(readAgentLabSuiteFile(suitePath)),
     },
   };
 }
@@ -581,6 +601,16 @@ export function buildPublicCommandSpecs(
         return buildAgentLabWorkbenchPayload();
       },
     },
+    'agent-lab mechanism': {
+      usage: 'opl agent-lab mechanism',
+      summary: 'Show the refs-only first-class mechanism object and editable mechanism surfaces.',
+      examples: ['opl agent-lab mechanism --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['agent-lab mechanism']);
+        return buildAgentLabMechanismPayload();
+      },
+    },
     'agent-lab export': {
       usage: 'opl agent-lab export --target <inspect-ai|openinference|langfuse|phoenix|json>',
       summary: 'Emit a refs-only Agent Lab export envelope for optional external connectors without uploading data.',
@@ -597,6 +627,13 @@ export function buildPublicCommandSpecs(
       examples: ['opl agent-lab optimize --suite ./agent-lab-suite.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabOptimizePayload(args, publicCommandSpecs['agent-lab optimize']),
+    },
+    'agent-lab evolve': {
+      usage: 'opl agent-lab evolve --suite <suite.json>',
+      summary: 'Run an external suite and emit a refs-only mechanism evolution segment without domain writes or promotion.',
+      examples: ['opl agent-lab evolve --suite ./agent-lab-suite.json --json'],
+      group: 'framework',
+      handler: (args) => buildAgentLabEvolvePayload(args, publicCommandSpecs['agent-lab evolve']),
     },
     'agent-lab run': {
       usage: 'opl agent-lab run --suite <suite.json>',
