@@ -154,6 +154,14 @@
         },
         {
           "ref_kind": "machine_contract",
+          "ref": "contracts/opl-framework/domain-pack-compiler-contract.json"
+        },
+        {
+          "ref_kind": "machine_cli",
+          "ref": "opl agents pack-compiler"
+        },
+        {
+          "ref_kind": "machine_contract",
           "ref": "contracts/opl-framework/managed-runtime-three-layer-contract.json"
         }
       ],
@@ -161,7 +169,7 @@
         "opl_domain_agent_catalog"
       ],
       "notes": [
-        "Defines provider-backed stage attempt runtime and OPL Runtime Manager boundaries."
+        "Defines provider-backed stage attempt runtime, OPL Runtime Manager boundaries, and OPL-owned generated-surface handoff projections compiled from admitted domain packs."
       ]
     },
     {
