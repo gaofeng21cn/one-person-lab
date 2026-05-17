@@ -25,6 +25,10 @@
 - 当 admitted domain 吸收外部 companion 能力时，OPL 只上收 domain-neutral control-plane 原则与 discovery refs；可保留能力必须落到 domain-owned surface，外部 companion 必须降级为显式 audit/diagnostic/intake/oracle 引用，并记录 source ref/hash、capability classification、license refs、owner boundary、parity proof 与 no-history contributor audit。
 - `OPL` 持有 family-level 开发与运行框架、通用状态机、stage attempt lifecycle、queue/wakeup、resume/human gate、workspace/artifact/memory locator、operator projection 和 App/workbench shell。MAS/MAG/RCA 不维护平行的通用 runtime 模块；需要运行能力时通过 OPL Framework 托管。
 - `OPL` 不替代各个领域仓的智能体逻辑、domain truth、quality verdict、artifact authority、memory body 或 domain transition semantics。
+- OPL family 的目标态高于当前实现分布。MAS/MAG/RCA 当前存在的私有 scheduler、runner、session store、SQLite/lifecycle、workspace/source intake、memory/artifact transport、workbench、sidecar/status/product wrapper 或 generated wrapper，只能作为迁移输入；不得因为已有 active caller 就写成长期合理。
+- 标准 OPL Agent 必须收敛到 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`。私有功能面只能作为明确例外保留，且必须有接口、receipt/blocker/ref 输出边界、active caller、不能上收原因、no-forbidden-write 证据和退役/复审门。
+- 当 OPL primitive、pack compiler 或 App shell 还不够成熟时，应在 OPL 层定义缺口、必要时调研外部成熟系统，并把结论沉淀为 OPL generic primitive / generated surface / policy；不得让 MAS/MAG/RCA 各自复制私有平台。
+- 文档和计划必须先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案；处理清楚 active caller、替代 surface、provenance 和必要证据后，不保留历史兼容面。
 
 ## 当前公开产品模型
 
@@ -50,6 +54,8 @@
 - 文档生命周期状态按内容角色判断，长期落点服从 canonical docs taxonomy。若一份文档内容已经是过时计划、旧 topology、旧入口或旧 provider 判断，即使它仍在 `docs/references/` 或被索引引用，也必须标注为 superseded / retired / tombstone 语境，并指向当前 owner surface。
 - 叙述性 `README*`、`docs/**` 与参考文档不得被脚本或测试固定措辞、标题、段落或具体 prose path；需要机器约束时使用 contract/schema/source surface、CLI/API 行为、生成 artifact 或 `human_doc:*` 语义标识。
 - 理想态差距、gap plan 和开发计划必须把 `功能/结构差距` 与 `测试/证据差距` 分开维护；真实运行证据、soak、coverage、no-forbidden-write proof 或 regression proof 不得被写成同一条未完成的功能缺口。
+- `功能/结构差距` 以标准 OPL Agent 目标态为准；不符合目标态的现有通用功能面，即使当前可运行，也必须写成上收、generated surface 替换、收薄或退役对象。
+- `当前实际` 只能作为迁移起点、风险和证据来源；不得反向约束理想态，不得把现有私有实现包装成长期设计。
 
 ## 合同面
 

@@ -15,6 +15,18 @@ OPL 系列项目的理想态、差距和完善计划按两层维护：
 
 这份文档是 OPL 系列项目开发的总读法。它不替代各仓的当前状态、机器合同、运行证据或单仓计划；它只固定“计划放在哪里、谁负责什么、哪些内容上收、过时面如何处理、docs 目录如何按角色对齐”。
 
+## 目标态优先原则
+
+OPL family 的最高优先级是目标架构，而不是迁就当前实现分布。理想形态是：`OPL Framework` 成为完整的智能体开发、运行、托管、恢复、状态、记忆、文件生命周期、审计、评估和工作台框架；`MAS`、`MAG`、`RCA` 以及后续 domain repo 都是标准化 OPL Agent。现有 MAS/MAG/RCA 里已经实现的 scheduler、runner、session store、SQLite lifecycle、workspace/source intake、memory transport、artifact lifecycle、workbench、CLI/MCP/product-entry/sidecar/status wrapper 等私有功能面，只能作为迁移输入和重构清单，不能反过来定义理想态。
+
+文档的基本方法是先设置理想态，再找差距。差距不是为了替现状找妥协理由，而是为了明确哪些现状必须被上收、重构、收薄、删除或归档。为了理想态，可以革命式替换旧结构，不限于渐进式修补；旧东西只要不属于目标形态，就不应以兼容性为理由继续污染 active surface。改革只服务于能直达理想态的路径；不能直达时，优先重构、替换、删除或归档。
+
+标准 OPL Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`。domain repo 默认提交 stage graph、prompt/skill/knowledge refs、policy table、domain schema、transition table、artifact/source/memory policy、receipt schema、fixtures、tests 和必要的 authority function；CLI、MCP、Skill/product-entry metadata、sidecar、status/read model、workbench、harness、queue、attempt ledger、generic transition runner、runtime lifecycle、operator projection 和 App drilldown 默认由 OPL Framework / One Person Lab App 生成、托管或提供通用 primitive。
+
+私有功能面是例外，不是默认。只有在领域裁决无法可靠声明化，或必须由 domain 持有 truth / artifact / memory body / quality-export authority 时，才允许保留最小 authority function 或 refs-only boundary adapter。每个例外必须写清 `cannot_absorb_reason`、接口输入输出、返回 receipt/blocker/ref 的形态、active caller、no-forbidden-write 证据、direct/hosted 语义边界和后续复审/退役门。缺少这些证据时，文档和计划应把它写成功能/结构差距，而不是写成合理保留项。
+
+为了清洁目标态，四个 repo 都可以重构。旧接口、旧 alias、旧 wrapper、旧 facade、旧聚合测试、旧文档入口和旧 runtime owner 只要不是目标态的一部分，就迁移 active caller 后直接退役或进入 history/tombstone；不为了照顾现状保留兼容面。如果当前 OPL primitive、pack compiler 或 App shell 还不够优雅，应先把缺口上收到 OPL 层；必要时可以系统调研成熟框架和外部实现模式，再把结论沉淀成 OPL primitive / generated surface / policy，而不是让 MAS/MAG/RCA 各自复制一套私有平台。
+
 ## 主参考阅读顺序
 
 | 层级 | 入口 | 作用 |
@@ -65,6 +77,8 @@ MAS/MAG/RCA 这类 Foundry Agent repo 负责领域大脑、领域交付 authorit
 Domain repo 不应长期维护 generic scheduler、generic queue、generic attempt ledger、generic state-machine runner、generic workspace/source intake、generic memory locator、generic persistence engine、generic SQLite lifecycle index、generic artifact lifecycle、generic workbench、generic observability 或跨 domain App shell。需要 OPL 托管运行时，domain repo 声明 stage pack、transition spec、authority refs、receipt schema、projection builder、functional privatization audit 和 thin sidecar / adapter，由 OPL Framework 承载运行、恢复、排队、唤醒、索引、投影和审计。MAS 历史上的 `runtime_lifecycle.sqlite` 这类设计只可作为 domain sidecar reference adapter / file authority refs 继续被 OPL 消费，不能再作为 MAS-owned generic persistence layer 扩展。
 
 反向盘点时，默认把 domain repo 中超出“定义 stage、知识/提示/质量 gate、domain receipt、thin sidecar/projection adapter”的模块列入 functional privatization inventory。若它是 transport、ledger、index、lifecycle、workbench、scheduler、runner、source intake、memory locator、artifact shell、review/repair envelope、native helper envelope 或 CLI/MCP/product shell，就先假定应上收到 OPL；只有当它直接承载领域判断、artifact/export authority、memory body/accept-reject、owner receipt 或 domain-specific helper implementation 时，才允许保留在 domain，并必须写清不能上收的原因。
+
+这条判断不以“当前代码已经这么写了”为理由让步。当前实现可以被大幅重构、移动、删除或由 OPL generated surface 替换；单仓计划里所谓 direct path、sidecar、product-entry、projection builder 或 status wrapper，默认先视为 migration bridge，只有无法声明化且确实属于 domain authority 的部分才保留为长期接口。
 
 单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。目录结构应与 OPL family taxonomy 保持同名一致，代码内部结构可以按领域实现差异保留，但 OPL-facing skeleton、docs taxonomy 和 owner boundary 应统一。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 

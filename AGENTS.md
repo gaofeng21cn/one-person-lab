@@ -17,6 +17,9 @@
 - 第一优先级：保持 `Codex CLI first-class executor -> explicit OPL activation -> provider-backed stage runtime / typed queue when durable orchestration is needed -> selected domain agent entry` 这条当前主链路；domain app skill 的 direct path 仍是一等入口，其他 executor 只通过显式 adapter 进入。
 - 第二优先级：把 shared modules / contracts / indexes 的共享边界放在 domain 仓之上，同时保留 domain-owned truth。
 - 第三优先级：保证 public docs、machine-readable contracts、reference docs 与 active domain agent 状态同步，不制造第二真相源。
+- OPL family 以理想目标态为最高优先级：OPL 是完整智能体开发/运行框架，MAS/MAG/RCA 是标准化 OPL Agent。当前 domain 仓内已经存在的私有 scheduler、runner、session store、lifecycle、workbench、sidecar/status/product wrapper 等实现，只能作为迁移输入，不能反过来定义长期架构。
+- 标准 OPL Agent 默认是 `Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions`；私有功能面是例外，必须写清接口、active caller、不能上收原因、receipt/blocker/ref 输出边界和退役门。
+- 开发文档先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案，不以兼容为理由保留历史污染面。
 - repo-tracked 源码与测试默认都应保持文件边界清晰，优先控制在 `1000` 行以内；超过 `1500` 行应视为明确的拆分信号，而不是继续堆叠实现。
 - 新增能力或继续重构时，优先采用稳定薄入口加 `parts/`、`cases/`、`modules/` 等子模块拆分；不要把新逻辑继续堆回单个超长文件。
 - 若文档提到 `Hermes-Agent`，必须明确它指的是上游外部 runtime 项目 / 服务；仓内自写的 shim、pilot、helper 或过渡 scaffold，不得写成“已接入 Hermes-Agent”。
@@ -56,6 +59,7 @@
 - OPL、MAS、MAG、RCA 采用同名 canonical docs taxonomy：`active/public/product/runtime/delivery/source/policies/specs/references/history`；目录是否保留按长期生命周期职责判断，不按当前文件数量判断。
 - OPL 文档持有全局目标、全局差距、shared primitive 上收边界、App/workbench 目标、domain admission 与跨仓开发顺序；MAS/MAG/RCA 只在各自仓维护本仓 truth、gap、authority、direct/hosted 边界和上收候选。
 - 理想态差距和开发计划默认拆开写 `功能/结构差距` 与 `测试/证据差距`；不能把“功能本身未完成”和“功能已在但缺少测试/真实证据”混在同一差距项里。
+- `功能/结构差距` 按目标态判断，不按现有实现是否可用判断；凡现有功能面应由 OPL primitive / pack compiler / App shell 承担，就写成上收、generated surface 替换、收薄或退役差距。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
 - `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
 - 退役定位只能放在 `docs/history/**` 的 archive / tombstone 语境中；active docs 提到 gateway、federation、frontdoor 等旧路线时，必须同时指向当前 truth owner。

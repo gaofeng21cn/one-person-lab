@@ -2,10 +2,14 @@ type JsonRecord = Record<string, unknown>;
 
 export type FunctionalPrivatizationMigrationClass =
   | 'opl_owned_replacement'
+  | 'opl_hosted_surface'
   | 'opl_generated_surface'
   | 'declarative_pack'
   | 'minimal_authority_function'
-  | 'domain_thin_adapter'
+  | 'refs_only_domain_adapter'
+  | 'temporary_migration_bridge'
+  | 'diagnostic_cleanup_path'
+  | 'provenance_or_fixture'
   | 'domain_authority'
   | 'retire_tombstone';
 
@@ -39,12 +43,17 @@ export type FunctionalPrivatizationAudit = {
   summary: {
     total_module_count: number;
     opl_owned_replacement_count: number;
+    opl_hosted_surface_count: number;
     opl_generated_surface_count: number;
     declarative_pack_count: number;
     minimal_authority_function_count: number;
-    domain_thin_adapter_count: number;
+    refs_only_domain_adapter_count: number;
+    temporary_migration_bridge_count: number;
+    diagnostic_cleanup_path_count: number;
+    provenance_or_fixture_count: number;
     domain_authority_count: number;
     retire_tombstone_count: number;
+    active_private_generic_residue_count: number;
     blocker_count: number;
   };
   modules: FunctionalPrivatizationAuditItem[];
@@ -81,11 +90,14 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
     'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
   ],
   migration_classes: [
-    'opl_owned_replacement',
+    'opl_hosted_surface',
     'opl_generated_surface',
     'declarative_pack',
     'minimal_authority_function',
-    'domain_thin_adapter',
+    'refs_only_domain_adapter',
+    'temporary_migration_bridge',
+    'diagnostic_cleanup_path',
+    'provenance_or_fixture',
     'domain_authority',
     'retire_tombstone',
   ],
@@ -101,12 +113,17 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
 const EMPTY_SUMMARY = {
   total_module_count: 0,
   opl_owned_replacement_count: 0,
+  opl_hosted_surface_count: 0,
   opl_generated_surface_count: 0,
   declarative_pack_count: 0,
   minimal_authority_function_count: 0,
-  domain_thin_adapter_count: 0,
+  refs_only_domain_adapter_count: 0,
+  temporary_migration_bridge_count: 0,
+  diagnostic_cleanup_path_count: 0,
+  provenance_or_fixture_count: 0,
   domain_authority_count: 0,
   retire_tombstone_count: 0,
+  active_private_generic_residue_count: 0,
   blocker_count: 0,
 };
 
@@ -181,6 +198,9 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   ) {
     return 'opl_owned_replacement';
   }
+  if (text === 'opl_hosted_surface' || text === 'hosted_surface') {
+    return 'opl_hosted_surface';
+  }
   if (
     text === 'domain_authority'
     || text === 'mag_owned_grant_truth_receipt_verdict'
@@ -188,8 +208,13 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   ) {
     return 'domain_authority';
   }
-  if (text === 'domain_thin_adapter') {
-    return 'domain_thin_adapter';
+  if (
+    text === 'domain_thin_adapter'
+    || text === 'refs_only_adapter'
+    || text === 'refs_only_domain_adapter'
+    || text === 'refs_only_projection'
+  ) {
+    return 'refs_only_domain_adapter';
   }
   if (
     text === 'opl_generated_surface'
@@ -201,6 +226,8 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   }
   if (
     text === 'declarative_pack'
+    || text === 'declarative_pack_surface'
+    || text === 'declarative_pack_generated_surface'
     || text === 'domain_declarative_pack'
     || text === 'stage_policy_schema_fixture_pack'
   ) {
@@ -213,10 +240,28 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   ) {
     return 'minimal_authority_function';
   }
+  if (text === 'temporary_migration_bridge' || text === 'migration_bridge') {
+    return 'temporary_migration_bridge';
+  }
+  if (
+    text === 'diagnostic_cleanup_path'
+    || text === 'legacy_cleanup_no_active_caller_gate'
+    || text === 'cleanup_diagnostic_path'
+  ) {
+    return 'diagnostic_cleanup_path';
+  }
+  if (
+    text === 'provenance_or_fixture'
+    || text === 'legacy_proof_tombstone'
+    || text === 'history_tombstone'
+    || text === 'provenance_fixture'
+  ) {
+    return 'provenance_or_fixture';
+  }
   if (text === 'retire_tombstone' || text === 'retire_when_replaced_or_uncalled') {
     return 'retire_tombstone';
   }
-  return 'domain_thin_adapter';
+  return 'temporary_migration_bridge';
 }
 
 function itemFromRecord(
@@ -229,12 +274,17 @@ function itemFromRecord(
     ?? stringValue(record.surface_id)
     ?? stringValue(record.primitive)
     ?? 'unknown_functional_module';
-  const itemClass = record.classification ? migrationClass(record.classification) : fallbackClass;
+  const itemClass =
+    record.migration_class || record.migrationClass || record.classification
+      ? migrationClass(record.migration_class ?? record.migrationClass ?? record.classification)
+      : fallbackClass;
   const currentOwner =
     stringValue(record.owner)
     ?? (record.rca_owned_visual_domain_authority === true ? 'redcube_ai' : null)
     ?? (
-      itemClass === 'opl_owned_replacement' || itemClass === 'opl_generated_surface'
+      itemClass === 'opl_owned_replacement'
+        || itemClass === 'opl_hosted_surface'
+        || itemClass === 'opl_generated_surface'
         ? 'one-person-lab'
         : null
     );
@@ -250,6 +300,7 @@ function itemFromRecord(
   ]);
   const activeCallerAllowed =
     itemClass !== 'retire_tombstone'
+    && itemClass !== 'provenance_or_fixture'
     && record.active_caller_allowed !== false
     && record.compatibility_alias_allowed !== false;
   const blocker =
@@ -262,7 +313,9 @@ function itemFromRecord(
     migration_class: itemClass,
     current_owner: currentOwner,
     opl_replacement_owner:
-      itemClass === 'opl_owned_replacement' || itemClass === 'opl_generated_surface'
+      itemClass === 'opl_owned_replacement'
+        || itemClass === 'opl_hosted_surface'
+        || itemClass === 'opl_generated_surface'
         ? 'one-person-lab'
         : null,
     domain_allowed_role:
@@ -300,14 +353,17 @@ function itemFromRecord(
       stringValue(record.cannot_absorb_reason)
       ?? stringValue(record.cannotAbsorbReason),
     active_caller_allowed: activeCallerAllowed,
-    tombstone_required: Boolean(record.tombstone_required) || itemClass === 'retire_tombstone',
+    tombstone_required:
+      Boolean(record.tombstone_required)
+      || itemClass === 'retire_tombstone'
+      || itemClass === 'provenance_or_fixture',
     blocker,
   };
 }
 
 function itemsFromModuleInventory(source: JsonRecord, sourcePath: string) {
   return recordList(source.functional_module_inventory)
-    .map((entry) => itemFromRecord(entry, `${sourcePath}.functional_module_inventory`, 'domain_thin_adapter'));
+    .map((entry) => itemFromRecord(entry, `${sourcePath}.functional_module_inventory`, 'temporary_migration_bridge'));
 }
 
 function itemsFromMasBoundary(source: JsonRecord) {
@@ -364,31 +420,52 @@ function itemsFromMasBoundary(source: JsonRecord) {
 
 function itemsFromStructuredAudit(source: JsonRecord) {
   const modules = [
-    ...recordList(source.modules).map((entry) => itemFromRecord(entry, 'modules', 'domain_thin_adapter')),
+    ...recordList(source.modules).map((entry) => itemFromRecord(entry, 'modules', 'temporary_migration_bridge')),
     ...recordList(source.opl_owned_generic_primitive_consumers).map((entry) =>
       itemFromRecord(entry, 'opl_owned_generic_primitive_consumers', 'opl_owned_replacement')),
+    ...recordList(source.declarative_pack_surfaces).map((entry) =>
+      itemFromRecord(entry, 'declarative_pack_surfaces', 'declarative_pack')),
+    ...recordList(source.refs_only_adapter_surfaces).map((entry) =>
+      itemFromRecord(entry, 'refs_only_adapter_surfaces', 'refs_only_domain_adapter')),
     ...recordList(source.mag_owned_grant_authority_surfaces).map((entry) =>
-      itemFromRecord(entry, 'mag_owned_grant_authority_surfaces', 'domain_authority')),
+      itemFromRecord(entry, 'mag_owned_grant_authority_surfaces', 'minimal_authority_function')),
     ...recordList(source.retire_or_tombstone_surfaces).map((entry) =>
-      itemFromRecord(entry, 'retire_or_tombstone_surfaces', 'retire_tombstone')),
+      itemFromRecord(entry, 'retire_or_tombstone_surfaces', 'provenance_or_fixture')),
   ];
   return modules;
 }
 
 function summarize(items: FunctionalPrivatizationAuditItem[]) {
   const blockers = unique(items.map((item) => item.blocker).filter((entry): entry is string => Boolean(entry)));
+  const activePrivateGenericResidueCount = items.filter((item) =>
+    item.migration_class === 'opl_owned_replacement'
+    || item.migration_class === 'temporary_migration_bridge'
+  ).length;
   return {
     summary: {
       total_module_count: items.length,
       opl_owned_replacement_count: items.filter((item) => item.migration_class === 'opl_owned_replacement').length,
+      opl_hosted_surface_count: items.filter((item) => item.migration_class === 'opl_hosted_surface').length,
       opl_generated_surface_count: items.filter((item) => item.migration_class === 'opl_generated_surface').length,
       declarative_pack_count: items.filter((item) => item.migration_class === 'declarative_pack').length,
       minimal_authority_function_count: items.filter((item) =>
         item.migration_class === 'minimal_authority_function'
       ).length,
-      domain_thin_adapter_count: items.filter((item) => item.migration_class === 'domain_thin_adapter').length,
+      refs_only_domain_adapter_count: items.filter((item) =>
+        item.migration_class === 'refs_only_domain_adapter'
+      ).length,
+      temporary_migration_bridge_count: items.filter((item) =>
+        item.migration_class === 'temporary_migration_bridge'
+      ).length,
+      diagnostic_cleanup_path_count: items.filter((item) =>
+        item.migration_class === 'diagnostic_cleanup_path'
+      ).length,
+      provenance_or_fixture_count: items.filter((item) =>
+        item.migration_class === 'provenance_or_fixture'
+      ).length,
       domain_authority_count: items.filter((item) => item.migration_class === 'domain_authority').length,
       retire_tombstone_count: items.filter((item) => item.migration_class === 'retire_tombstone').length,
+      active_private_generic_residue_count: activePrivateGenericResidueCount,
       blocker_count: blockers.length,
     },
     blockers,

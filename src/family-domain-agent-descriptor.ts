@@ -458,12 +458,17 @@ function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManife
     summary: audit?.summary ?? {
       total_module_count: 0,
       opl_owned_replacement_count: 0,
+      opl_hosted_surface_count: 0,
       opl_generated_surface_count: 0,
       declarative_pack_count: 0,
       minimal_authority_function_count: 0,
-      domain_thin_adapter_count: 0,
+      refs_only_domain_adapter_count: 0,
+      temporary_migration_bridge_count: 0,
+      diagnostic_cleanup_path_count: 0,
+      provenance_or_fixture_count: 0,
       domain_authority_count: 0,
       retire_tombstone_count: 0,
+      active_private_generic_residue_count: 0,
       blocker_count: 0,
     },
     required_opl_replacement_primitives: audit?.required_opl_replacement_primitives ?? [],
@@ -682,6 +687,10 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
           (total, descriptor) => total + descriptor.functional_privatization_audit.summary.opl_owned_replacement_count,
           0,
         ),
+        functional_privatization_opl_hosted_surface_count: descriptors.reduce(
+          (total, descriptor) => total + descriptor.functional_privatization_audit.summary.opl_hosted_surface_count,
+          0,
+        ),
         functional_privatization_opl_generated_surface_count: descriptors.reduce(
           (total, descriptor) => total + descriptor.functional_privatization_audit.summary.opl_generated_surface_count,
           0,
@@ -695,12 +704,37 @@ export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
             total + descriptor.functional_privatization_audit.summary.minimal_authority_function_count,
           0,
         ),
+        functional_privatization_refs_only_domain_adapter_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.refs_only_domain_adapter_count,
+          0,
+        ),
+        functional_privatization_temporary_migration_bridge_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.temporary_migration_bridge_count,
+          0,
+        ),
+        functional_privatization_diagnostic_cleanup_path_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.diagnostic_cleanup_path_count,
+          0,
+        ),
+        functional_privatization_provenance_or_fixture_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.provenance_or_fixture_count,
+          0,
+        ),
         functional_privatization_domain_authority_count: descriptors.reduce(
           (total, descriptor) => total + descriptor.functional_privatization_audit.summary.domain_authority_count,
           0,
         ),
         functional_privatization_retire_tombstone_count: descriptors.reduce(
           (total, descriptor) => total + descriptor.functional_privatization_audit.summary.retire_tombstone_count,
+          0,
+        ),
+        functional_privatization_active_private_generic_residue_count: descriptors.reduce(
+          (total, descriptor) =>
+            total + descriptor.functional_privatization_audit.summary.active_private_generic_residue_count,
           0,
         ),
         functional_privatization_blocker_count: descriptors.reduce(
