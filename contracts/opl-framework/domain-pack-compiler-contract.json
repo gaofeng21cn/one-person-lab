@@ -25,6 +25,7 @@
     "generated_surfaces": [
       "cli",
       "mcp",
+      "skill",
       "product_entry_manifest",
       "sidecar_export_dispatch",
       "status_read_model",
@@ -51,15 +52,52 @@
       "family_stage_control_plane",
       "domain_memory_descriptor",
       "runtime_surfaces",
-      "functional_privatization_audit"
+      "functional_privatization_audit",
+      "generated_surface_handoff",
+      "product_entry_manifest_descriptor",
+      "sidecar_descriptor"
     ],
-    "repo_dir_mode": "reads standard contracts/action_catalog.json and contracts/stage_control_plane.json without executing target repo private wrappers",
+    "repo_dir_mode": "reads standard contracts/action_catalog.json, contracts/stage_control_plane.json, contracts/generated_surface_handoff.json, contracts/pack_compiler_input.json, contracts/memory_descriptor.json, and contracts/functional_privatization_audit.json without executing target repo private wrappers",
+    "descriptor_blocks": [
+      "cli",
+      "mcp",
+      "skill",
+      "product_entry",
+      "product_status",
+      "product_session",
+      "sidecar",
+      "workbench",
+      "openai_tool",
+      "ai_sdk",
+      "active_caller_target_proof",
+      "source_contract_consumption"
+    ],
     "authority_boundary": {
       "generated_interface_can_write_domain_truth": false,
       "generated_interface_can_write_memory_body": false,
       "generated_interface_can_authorize_quality_or_export": false,
       "generated_interface_can_mutate_artifacts": false,
       "generated_interface_routes_to_minimal_authority_functions_by_receipt_contract": true
+    },
+    "active_caller_target_proof": {
+      "surface_kind": "opl_generated_surface_active_caller_target_proof",
+      "source_surfaces": [
+        "generated_surface_handoff",
+        "functional_privatization_audit"
+      ],
+      "allowed_ready_targets": [
+        "opl_generated_surface",
+        "opl_hosted_surface",
+        "mas_domain_handler_target",
+        "mas_refs_only_domain_adapter_target"
+      ],
+      "authority_boundary": {
+        "opl_can_generate_domain_handler": false,
+        "opl_can_write_domain_truth": false,
+        "opl_can_authorize_quality_or_export": false,
+        "opl_can_mutate_artifacts": false,
+        "mas_domain_handler_target_allowed": true
+      }
     }
   },
   "ready_conditions": [
