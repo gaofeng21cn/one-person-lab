@@ -31,6 +31,12 @@ runtime / descriptor / domain-owned proof refs
   -> status / workbench projection
 ```
 
+## Developer Mode 关系
+
+Developer Mode 是 OPL App / system settings 的产品开关，不是 Agent Lab 的新底层 contract。当前 `opl system` 与 `opl system initialize` 已暴露 `developer_mode` surface，复用既有 `developer_supervisor` system action，让 App 设置页能读取当前配置、GitHub identity 状态、repo authority 汇总、repair route、settings endpoint、system action endpoint、request fields 和 payload template。
+
+这个 surface 说明“用户是否允许 OPL 暴露受监督的开发者检查与修复路由”，并以 fail-closed 方式投影当前 GitHub 身份、repo 权限和 direct-fix / fork-PR / mixed / observe-only 路由。它不代表真实 owner repo 直接修复提交、non-owner fork PR 或 Agent Lab 外围 AI 巡检 closeout 已经完成；这些仍必须由对应 repo worktree、branch、PR、verification 和 evidence refs 证明后再写入 Agent Lab / App read model。
+
 ## 权限边界
 
 Agent Lab 明确不持有：

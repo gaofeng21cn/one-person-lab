@@ -59,6 +59,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
   const updateChannel = readOplUpdateChannel();
   const endpoints = buildOplEndpoints();
   const environment = environmentPayload.system_environment;
+  const developerMode = environment.developer_mode;
   const moduleSummary = modulesPayload.modules.summary;
   const defaultModuleTotal = moduleSummary.default_modules_count ?? moduleSummary.total_modules_count;
   const defaultModuleInstalled = moduleSummary.installed_default_modules_count ?? moduleSummary.installed_modules_count;
@@ -280,6 +281,19 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       action_endpoint: endpoints.system_initialize,
       action: reviewInitializeAction,
     },
+    {
+      item_id: 'developer_mode',
+      label: 'Developer Mode',
+      status: developerMode.enabled === 'off' ? 'disabled' : developerMode.setting_status,
+      required: false,
+      blocking: false,
+      section_id: 'settings',
+      detail_summary:
+        'Expose the App settings switch for supervised developer inspection and repository repair routing.',
+      endpoint: endpoints.system_settings,
+      action_endpoint: endpoints.system_action,
+      action: developerMode.action,
+    },
   ];
 
   const requiredChecklist = checklist.filter((item) => item.required);
@@ -397,6 +411,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       settings: {
         interaction_mode: settings.interaction_mode,
         execution_mode: settings.execution_mode,
+        developer_mode: developerMode,
         endpoint: endpoints.system_settings,
         action_endpoint: endpoints.system_settings,
       },
@@ -424,6 +439,12 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
           {
             action_id: 'developer_supervisor',
             endpoint: endpoints.system_action,
+            label: developerMode.action.label,
+            description: developerMode.action.description,
+            section_id: developerMode.action.section_id,
+            method: developerMode.action.method,
+            request_fields: developerMode.action.request_fields,
+            payload_template: developerMode.action.payload_template,
           },
           {
             action_id: 'repair_native_helpers',
@@ -446,6 +467,7 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
       notes: [
         'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
         'Workspace root and update channel are stored in OPL-managed state files.',
+        'Developer Mode settings are exposed through the same developer_supervisor system action used by CLI/system settings; GitHub identity, repository authority, and Agent Lab repair routing are projected on the developer_mode surface.',
         'A configured family runtime provider is required for Full OPL readiness. Local CLI/status surfaces can still report degraded diagnostics when the online provider is missing or disabled.',
         'The OPL desktop GUI is an OPL-branded App maintained in one-person-lab-app, with the active AionUI adapter under shells/aionui; the upstream AionUI app is not itself the OPL GUI.',
       ],

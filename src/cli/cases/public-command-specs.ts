@@ -215,11 +215,11 @@ export function buildPublicCommandSpecs(
 
   const systemDeveloperSupervisorSpec: CommandSpec = {
     usage:
-      'opl system developer-supervisor [--enabled <auto|on|off>] [--mode <external_observe|developer_apply_safe>] [--auto-enable-github-login <login>]',
+      'opl system developer-supervisor [--enabled <auto|on|off>] [--mode <external_observe|developer_apply_safe>] [--auto-enable-github-login <login>|--github-login <login>]',
     summary: 'Read or update the local OPL family developer supervisor config.',
     examples: [
       'opl system developer-supervisor',
-      'opl system developer-supervisor --enabled on --mode developer_apply_safe',
+      'opl system developer-supervisor --enabled on --mode developer_apply_safe --github-login gaofeng21cn',
     ],
     group: 'system',
     handler: async (args) => {

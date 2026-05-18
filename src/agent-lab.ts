@@ -140,6 +140,8 @@ const AGENT_LAB_AUTHORITY_BOUNDARY = {
   can_authorize_quality_verdict: false,
   can_authorize_export_verdict: false,
   can_mutate_domain_artifact: false,
+  can_write_owner_receipt: false,
+  can_modify_managed_runtime: false,
   can_promote_default_agent_without_gate: false,
 };
 
@@ -151,9 +153,13 @@ const FORBIDDEN_TRUE_AUTHORITY_FLAGS = [
   'can_authorize_quality_verdict',
   'can_authorize_export_verdict',
   'can_mutate_domain_artifact',
+  'can_write_owner_receipt',
+  'can_modify_managed_runtime',
   'can_promote_default_agent_without_gate',
   'opl_can_write_domain_truth',
   'opl_can_write_memory_body',
+  'opl_can_write_owner_receipt',
+  'opl_can_modify_managed_runtime',
   'opl_can_authorize_domain_ready',
   'opl_can_authorize_quality_verdict',
   'opl_can_authorize_export_verdict',

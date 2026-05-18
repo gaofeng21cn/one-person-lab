@@ -17,8 +17,28 @@ const AUTHORITY_BOUNDARY = {
   can_authorize_quality_verdict: false,
   can_authorize_export_verdict: false,
   can_mutate_domain_artifact: false,
+  can_write_owner_receipt: false,
+  can_modify_managed_runtime: false,
   can_promote_default_agent_without_gate: false,
   can_train_or_deploy_model_weights: false,
+};
+
+const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
+  ...AUTHORITY_BOUNDARY,
+  opl: 'agent_lab_developer_mode_patrol_repair_route_projection_refs_only',
+  can_emit_issue_or_blocker_refs: true,
+  can_emit_candidate_fix_refs: true,
+  can_emit_repo_worktree_branch_refs: true,
+  can_emit_pr_refs: true,
+  can_emit_acceptance_evidence_refs: true,
+  can_emit_follow_up_queue_item_refs: true,
+  writes_domain_truth: false,
+  writes_domain_artifact: false,
+  writes_memory_body: false,
+  writes_quality_verdict: false,
+  writes_owner_receipt: false,
+  modifies_managed_runtime: false,
+  writes_follow_up_queue_body: false,
 };
 
 const MECHANISM_EDITABLE_SURFACES = [
@@ -154,10 +174,12 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_evolution_segments: true,
     ready_to_emit_optimizer_candidate_refs: true,
     ready_to_emit_rl_transition_refs: true,
+    ready_to_emit_developer_mode_repair_routes: true,
     automatic_model_training_ready: false,
     automatic_default_agent_promotion_ready: false,
     app_workbench_consumption_ready: true,
   };
+  const developerModeRepairRoutes = buildDeveloperModeAgentLabRepairRouteReadModel();
 
   return {
     surface_kind: 'opl_agent_lab_complete_control_plane',
@@ -170,6 +192,7 @@ export function buildCompleteAgentLabControlPlane() {
     observability_exports: observabilityExports,
     optimizer_loop: optimizerLoop,
     mechanism_control_plane: buildAgentLabMechanismReadModel(),
+    developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
     non_goals: [
       'domain truth mutation',
@@ -178,6 +201,7 @@ export function buildCompleteAgentLabControlPlane() {
       'memory body application',
       'ungated default agent promotion',
       'model training or weight deployment inside OPL core',
+      'domain truth, artifact, memory body, quality verdict, owner receipt, or managed runtime mutation from developer-mode patrol routes',
     ],
     authority_boundary: AUTHORITY_BOUNDARY,
   };
@@ -257,15 +281,119 @@ function rlTransitionRefs(results: AgentLabSuiteResult[]) {
     })));
 }
 
+export function buildDeveloperModeAgentLabRepairRouteReadModel() {
+  const routes = [
+    {
+      route_ref: 'developer-mode-repair-route:mas/repo-developer-direct-fix',
+      route_mode: 'repo_developer_direct_fix',
+      route_status: 'candidate_fix_ref_ready',
+      domain_id: 'med-autoscience',
+      repo_ref: 'github-repo:gaofeng21cn/med-autoscience',
+      issue_ref: 'issue-ref:mas/agent-call-interface-blocker',
+      blocker_ref: 'blocker-ref:mas/agent-call-interface-regression',
+      owner_route_ref: 'owner-route:med-autoscience/repo-developer',
+      github_actor_ref: 'github-user:gaofeng21cn',
+      repo_developer_match_required: true,
+      candidate_fix_ref: 'candidate-fix-ref:mas/agent-call-interface-blocker',
+      repo_worktree_ref: 'repo-worktree-ref:med-autoscience/codex/developer-mode-repair',
+      branch_ref: 'git-branch-ref:med-autoscience/codex/developer-mode-repair',
+      pr_ref: 'github-pr-ref:med-autoscience/developer-mode-repair-review',
+      acceptance_evidence_ref: 'acceptance-evidence-ref:mas/agent-call-interface-tests',
+      follow_up_queue_item_ref: 'queue-item-ref:agent-lab/developer-mode/mas-agent-call-interface-blocker',
+      authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+    },
+    {
+      route_ref: 'developer-mode-repair-route:rca/fork-pr',
+      route_mode: 'fork_pull_request',
+      route_status: 'pull_request_ref_ready',
+      domain_id: 'redcube-ai',
+      repo_ref: 'github-repo:redcube-ai/redcube-ai',
+      issue_ref: 'issue-ref:rca/patrol-render-blocker',
+      blocker_ref: 'blocker-ref:rca/render-review-regression',
+      owner_route_ref: 'owner-route:redcube-ai/fork-pr',
+      github_actor_ref: 'github-user:developer-mode-operator',
+      repo_developer_match_required: false,
+      candidate_fix_ref: 'candidate-fix-ref:rca/patrol-render-blocker',
+      repo_worktree_ref: 'repo-worktree-ref:redcube-ai/fork/codex/developer-mode-patrol',
+      branch_ref: 'git-branch-ref:fork/redcube-ai/codex/developer-mode-patrol',
+      pr_ref: 'github-pr-ref:redcube-ai/patrol-render-blocker',
+      acceptance_evidence_ref: 'acceptance-evidence-ref:rca/render-review-regression-tests',
+      follow_up_queue_item_ref: 'queue-item-ref:agent-lab/developer-mode/rca-render-review-regression',
+      authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+    },
+  ];
+
+  return {
+    surface_kind: 'opl_agent_lab_developer_mode_repair_route_read_model',
+    version: 'opl-agent-lab.v1.developer-mode-repair-route',
+    read_model_id: stableId('oaldmr', [routes]),
+    status: 'ready_for_developer_mode_patrol_consumption',
+    developer_mode_required: true,
+    refs_only: true,
+    inputs: {
+      issue_or_blocker_ref: 'issue-ref | blocker-ref',
+      github_identity_ref: 'github-user-ref',
+      repo_authority_ref: 'repo-authority-ref',
+      patrol_observation_ref: 'agent-lab-patrol-observation-ref',
+    },
+    route_policy: {
+      repo_developer_match: 'route_to_repo_developer_direct_fix_branch',
+      no_repo_developer_match: 'route_to_fork_pull_request',
+      developer_mode_disabled: 'projection_visible_but_execution_not_eligible',
+      acceptance_required_before_apply: true,
+    },
+    patrol_projection: {
+      patrol_ref: 'agent-lab-patrol-ref:developer-mode/default',
+      patrol_scope: 'peripheral_ai_inspection_for_agent_call_failures',
+      route_outputs: [
+        'issue_ref',
+        'blocker_ref',
+        'owner_route_ref',
+        'candidate_fix_ref',
+        'repo_worktree_ref',
+        'branch_ref',
+        'pr_ref',
+        'acceptance_evidence_ref',
+        'follow_up_queue_item_ref',
+      ],
+    },
+    routes,
+    summary: {
+      route_count: routes.length,
+      direct_owner_route_count: routes.filter((route) => route.route_mode === 'repo_developer_direct_fix').length,
+      fork_pr_route_count: routes.filter((route) => route.route_mode === 'fork_pull_request').length,
+      issue_ref_count: unique(routes.map((route) => route.issue_ref)).length,
+      blocker_ref_count: unique(routes.map((route) => route.blocker_ref)).length,
+      follow_up_queue_item_ref_count: unique(routes.map((route) => route.follow_up_queue_item_ref)).length,
+    },
+    non_authority_outputs: {
+      writes_domain_truth: false,
+      writes_domain_artifact: false,
+      writes_memory_body: false,
+      writes_quality_verdict: false,
+      writes_owner_receipt: false,
+      modifies_managed_runtime: false,
+      writes_follow_up_queue_body: false,
+    },
+    authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+  };
+}
+
 export function buildAgentLabWorkbenchReadModel() {
   const complete = buildCompleteAgentLabControlPlane();
   const { sample, longline } = suiteResults();
   const results = [sample, longline];
+  const developerModeRepairRoutes = buildDeveloperModeAgentLabRepairRouteReadModel();
 
   return {
     surface_kind: 'opl_agent_lab_workbench_read_model',
     version: 'opl-agent-lab.v1.workbench',
-    read_model_id: stableId('oalwb', [complete.control_plane_id, sample.result_id, longline.result_id]),
+    read_model_id: stableId('oalwb', [
+      complete.control_plane_id,
+      sample.result_id,
+      longline.result_id,
+      developerModeRepairRoutes.read_model_id,
+    ]),
     status: 'ready_for_app_workbench_consumption',
     app_workbench_consumption_ready: true,
     source_results: {
@@ -285,6 +413,7 @@ export function buildAgentLabWorkbenchReadModel() {
     optimizer_candidates: optimizerCandidates(results),
     mechanism: buildAgentLabMechanismReadModel(),
     promotion_gates: promotionGates(results),
+    developer_mode_repair_routes: developerModeRepairRoutes,
     online_learning_refs: {
       transition_refs_ready: true,
       transitions: rlTransitionRefs(results),

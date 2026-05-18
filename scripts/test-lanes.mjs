@@ -72,6 +72,7 @@ const lanes = {
       'tests/src/cli/cases/runtime-tray-provider-continuous-proof.test.ts',
       'tests/src/cli/cases/runtime-observability-export.test.ts',
       'tests/src/cli/cases/runtime-manager-provider.test.ts',
+      'tests/src/cli/cases/runtime-lifecycle-operator.test.ts',
       'tests/src/family-domain-quality-projection-contract.test.ts',
       'tests/src/family-incident-learning-loop.test.ts',
       'tests/src/family-product-operator-projection.test.ts',
