@@ -46,6 +46,57 @@ export const GENERATED_SURFACES = [
   },
 ] as const;
 
+const GENERATED_WRAPPER_DESCRIPTOR_SCOPE = [
+  {
+    surface_id: 'cli',
+    block_key: 'cli',
+    target_surface_id: 'cli',
+    descriptor_kind: 'opl_generated_cli_descriptor',
+  },
+  {
+    surface_id: 'mcp',
+    block_key: 'mcp',
+    target_surface_id: 'mcp',
+    descriptor_kind: 'opl_generated_mcp_descriptor',
+  },
+  {
+    surface_id: 'skill',
+    block_key: 'skill',
+    target_surface_id: 'skill',
+    descriptor_kind: 'opl_generated_skill_descriptor',
+  },
+  {
+    surface_id: 'product_entry',
+    block_key: 'product_entry',
+    target_surface_id: 'product_entry',
+    descriptor_kind: 'opl_generated_product_entry_descriptor',
+  },
+  {
+    surface_id: 'product_status',
+    block_key: 'product_status',
+    target_surface_id: 'product_status',
+    descriptor_kind: 'opl_generated_product_status_descriptor',
+  },
+  {
+    surface_id: 'product_session',
+    block_key: 'product_session',
+    target_surface_id: 'product_session',
+    descriptor_kind: 'opl_generated_product_session_descriptor',
+  },
+  {
+    surface_id: 'sidecar',
+    block_key: 'sidecar',
+    target_surface_id: 'sidecar',
+    descriptor_kind: 'opl_generated_sidecar_descriptor',
+  },
+  {
+    surface_id: 'workbench',
+    block_key: 'workbench',
+    target_surface_id: 'workbench',
+    descriptor_kind: 'opl_hosted_workbench_descriptor',
+  },
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -300,6 +351,10 @@ function generatedSurfaceTargetAllowed(targetKind: string) {
     'domain_handler_target',
     'refs_only_domain_adapter_target',
   ].includes(targetKind);
+}
+
+function blockStatusIsReady(status: string | null) {
+  return Boolean(status) && !status?.startsWith('blocked');
 }
 
 function generatedSurfaceProofStatus(surface: JsonRecord | null, module: JsonRecord | null) {
@@ -559,6 +614,83 @@ function buildActiveCallerCutoverProof(
   };
 }
 
+function buildGeneratedWrapperBundle(
+  blocks: JsonRecord,
+  generatedBlocksReady: boolean,
+  targetProof: ReturnType<typeof buildActiveCallerTargetProof>,
+) {
+  const targetBySurface = new Map(
+    targetProof.surface_targets.map((target) => [target.surface_id, target]),
+  );
+  const descriptorScope = GENERATED_WRAPPER_DESCRIPTOR_SCOPE.map((scope) => {
+    const block = isRecord(blocks[scope.block_key]) ? blocks[scope.block_key] as JsonRecord : null;
+    const target = targetBySurface.get(scope.target_surface_id);
+    const status = optionalString(block?.status);
+    const targetStatus = optionalString(target?.proof_status);
+    const targetKind = optionalString(target?.target_kind);
+    const blockers = [
+      blockStatusIsReady(status) ? null : `blocked_descriptor:${scope.surface_id}`,
+      targetStatus?.startsWith('blocked') ? `blocked_target:${scope.surface_id}` : null,
+      !targetKind || generatedSurfaceTargetAllowed(targetKind) ? null : `unsupported_target:${scope.surface_id}`,
+    ].filter((entry): entry is string => Boolean(entry));
+    return {
+      surface_id: scope.surface_id,
+      descriptor_kind: scope.descriptor_kind,
+      owner: 'one-person-lab',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      domain_repo_role: 'domain_handler_target_or_refs_only_adapter',
+      status: blockers.length === 0 ? 'ready' : 'blocked',
+      blockers,
+      block_key: scope.block_key,
+      descriptor_status: status,
+      active_caller_target_kind: targetKind,
+      active_caller_proof_status: targetStatus,
+      active_caller_module_id: optionalString(target?.active_caller_module_id),
+      target_boundary: {
+        allowed_target_kinds: [
+          'domain_handler_target',
+          'refs_only_domain_adapter_target',
+          'opl_generated_surface',
+          'opl_hosted_surface',
+        ],
+        domain_handler_target_allowed: true,
+        refs_only_domain_adapter_target_allowed: true,
+      },
+    };
+  });
+  const blockers = descriptorScope.flatMap((scope) => scope.blockers);
+  return {
+    surface_kind: 'opl_generated_hosted_wrapper_bundle_descriptor',
+    version: 'opl-generated-hosted-wrapper-bundle.v1',
+    owner: 'one-person-lab',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    domain_repo_declared_as_generated_wrapper_owner: false,
+    status:
+      generatedBlocksReady && targetProof.status === 'ready' && blockers.length === 0
+        ? 'ready'
+        : 'blocked',
+    blockers,
+    descriptor_scope: descriptorScope,
+    descriptor_scope_ids: descriptorScope.map((scope) => scope.surface_id),
+    descriptor_owner_policy: 'OPL owns generated and hosted wrapper descriptors; domain repos declare pack inputs and expose handler targets or refs-only adapters.',
+    domain_repo_role_policy: 'domain_handler_target_or_refs_only_adapter',
+    scope_claim:
+      'generated_hosted_descriptor_ownership_only_not_live_soak_domain_ready_or_artifact_owner_receipt',
+    claims_live_soak_complete: false,
+    claims_domain_ready: false,
+    claims_artifact_producing_owner_receipt: false,
+    authority_boundary: {
+      generated_wrapper_can_write_domain_truth: false,
+      generated_wrapper_can_write_memory_body: false,
+      generated_wrapper_can_authorize_quality_or_export: false,
+      generated_wrapper_can_mutate_artifacts: false,
+      generated_wrapper_routes_to_domain_handler_or_refs_only_adapter: true,
+    },
+  };
+}
+
 export function buildGeneratedInterfaceBundle(
   descriptor: JsonRecord,
   compilerStatus: string,
@@ -589,6 +721,28 @@ export function buildGeneratedInterfaceBundle(
     return isRecord(value) && optionalString(value.status) === 'ready';
   });
   const activeCallerTargetProof = buildActiveCallerTargetProof(descriptor);
+  const productStatus = {
+    surface_kind: 'opl_generated_product_status_descriptor',
+    owner: 'one-person-lab',
+    status: catalog ? 'ready_from_family_action_catalog' : 'blocked_missing_family_action_catalog',
+    descriptor_source_surfaces: ['family_action_catalog', 'runtime_surfaces'],
+    descriptors: buildProductStatusDescriptors(catalog),
+    authority_boundary: {
+      product_status_can_write_domain_truth: false,
+      product_status_can_authorize_quality_or_export: false,
+      product_status_reads_refs_only: true,
+    },
+  };
+  const productSession = buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane);
+  const sidecar = buildSidecarDescriptorBlock(catalog, descriptor);
+  const workbench = buildWorkbenchDescriptorBlock(stageControlPlane, descriptor);
+  const wrapperBlocks = {
+    ...blocks,
+    product_status: productStatus,
+    product_session: productSession,
+    sidecar,
+    workbench,
+  };
 
   return {
     surface_kind: 'opl_generated_agent_interface_bundle',
@@ -619,21 +773,11 @@ export function buildGeneratedInterfaceBundle(
       generatedBlockKeys,
       activeCallerTargetProof,
     ),
-    product_status: {
-      surface_kind: 'opl_generated_product_status_descriptor',
-      owner: 'one-person-lab',
-      status: catalog ? 'ready_from_family_action_catalog' : 'blocked_missing_family_action_catalog',
-      descriptor_source_surfaces: ['family_action_catalog', 'runtime_surfaces'],
-      descriptors: buildProductStatusDescriptors(catalog),
-      authority_boundary: {
-        product_status_can_write_domain_truth: false,
-        product_status_can_authorize_quality_or_export: false,
-        product_status_reads_refs_only: true,
-      },
-    },
-    product_session: buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane),
-    sidecar: buildSidecarDescriptorBlock(catalog, descriptor),
-    workbench: buildWorkbenchDescriptorBlock(stageControlPlane, descriptor),
+    generated_wrapper_bundle: buildGeneratedWrapperBundle(wrapperBlocks, generatedBlocksReady, activeCallerTargetProof),
+    product_status: productStatus,
+    product_session: productSession,
+    sidecar,
+    workbench,
     active_caller_target_proof: activeCallerTargetProof,
     stage_routes: include('product-entry') || selectedFormat === 'all'
       ? buildStageRoutes(stageControlPlane)
@@ -684,6 +828,7 @@ export function selectGeneratedInterfaceBundleFormat(
     product_session: bundle.product_session,
     sidecar: bundle.sidecar,
     workbench: bundle.workbench,
+    generated_wrapper_bundle: bundle.generated_wrapper_bundle,
     active_caller_cutover_proof: bundle.active_caller_cutover_proof,
     active_caller_target_proof: bundle.active_caller_target_proof,
     stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
