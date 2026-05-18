@@ -16,7 +16,7 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 - [OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md)
 - [Runtime Substrate 参考索引](../references/runtime-substrate/README.md)
 
-当前 runtime conflict / blocker 机器语法统一在 `contracts/family-orchestration/family-conflict-envelope.schema.json`。`stage_attempt_query`、`stage_attempt_workbench` 和 `runtime_tray_snapshot.operator_conflicts[]` 只投影 envelope 与 refs；OPL 不把 provider/executor completion 解释成 domain ready、quality 或 artifact verdict。
+当前 runtime conflict / blocker 机器语法统一在 `contracts/family-orchestration/family-conflict-envelope.schema.json`。`stage_attempt_query`、`stage_attempt_workbench`、`runtime_tray_snapshot.operator_conflicts[]` 与 `runtime_tray_snapshot.app_operator_drilldown` 只投影 envelope、refs、owner-aware action route 与 App drilldown targets；OPL 不把 provider/executor completion 解释成 domain ready、quality、readiness、artifact 或 export verdict。
 
 ## 内容
 
