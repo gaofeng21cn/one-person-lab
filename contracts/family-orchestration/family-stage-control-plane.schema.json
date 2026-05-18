@@ -222,6 +222,21 @@
             "minLength": 1
           },
           "description": "Machine-readable refs to runtime boundary events recorded by the domain/runtime owner; OPL checks declaration completeness only and does not emit these events."
+        },
+        "runtime_assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Operational assumptions that must be monitored at runtime, such as source freshness, provider SLO, boundary failure rate, or artifact locator freshness. OPL projects these assumptions but does not turn them into domain verdicts."
+        },
+        "monitor_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs to domain-owned or OPL-owned monitor projections that make runtime assumptions visible to App/operator surfaces."
         }
       }
     },

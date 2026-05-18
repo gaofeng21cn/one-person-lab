@@ -129,6 +129,8 @@ function buildStagePlane(overrides: {
           ensures: overrides.authorEnsures ?? ['draft_ready'],
           boundary_assumptions: [],
           properties: ['deterministic_handoff_refs'],
+          runtime_assumptions: [],
+          monitor_refs: [],
         },
         trust_boundary: {
           lane: 'domain_agent',
@@ -167,6 +169,8 @@ function buildStagePlane(overrides: {
           boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
           properties: [],
           runtime_event_refs: overrides.reviewRuntimeEventRefs ?? ['runtime_event:publication_review.gate_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [],
         },
         trust_boundary: {
           lane: 'human_gate',
