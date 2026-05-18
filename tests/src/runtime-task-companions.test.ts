@@ -283,7 +283,7 @@ test('family owner route carries epoch, source fingerprint, and idempotency toke
     handoff_refs: [
       {
         ref_kind: 'cli',
-        ref: 'uv run python -m med_autogrant grant-user-loop --input <workspace> --task-intent <intent>',
+        ref: 'uv run python -m med_autogrant product user-loop --input <workspace> --task-intent <intent>',
       },
     ],
     projection_refs: [

@@ -417,12 +417,20 @@ function normalizeRuntimeControl(
   requireSurfaceKind(value.surface_kind, 'runtime_control', 'runtime_control');
   const sessionLocator = isRecord(value.session_locator) ? value.session_locator : {};
   const restorePoint = isRecord(value.restore_point) ? value.restore_point : {};
+  const restorePointResumeSurface =
+    optionalString(restorePoint.resume_surface_kind)
+      || optionalString(restorePoint.resume_surface_ref)
+      || optionalString(restorePoint.resume_command)
+      ? {
+          surface_kind: optionalString(restorePoint.resume_surface_kind) ?? 'opl_generated_session_resume',
+          summary: optionalString(restorePoint.summary) ?? 'Resume via the OPL generated session surface.',
+          command: optionalString(restorePoint.resume_command),
+          surface_ref: optionalString(restorePoint.resume_surface_ref),
+        }
+      : null;
   const resumeSurface =
     normalizeRuntimeControlSurfaceDescriptor(
-      controlSurfaces.resume ?? value.resume_surface ?? {
-        surface_kind: optionalString(restorePoint.resume_surface_kind) ?? 'runtime_resume',
-        command: optionalString(restorePoint.resume_command),
-      },
+      controlSurfaces.resume ?? value.resume_surface ?? restorePointResumeSurface,
       'runtime_control.resume',
       'Resume the current repo-owned runtime session.',
       optionalString(restorePoint.resume_command) ?? null,
@@ -512,8 +520,7 @@ function normalizeRuntimeControl(
           ? `${optionalString(restorePoint.session_id)}:${optionalString(restorePoint.lifecycle_stage)}`
           : null
       )
-      ?? optionalString(restorePoint.journal_path)
-      ?? optionalString(restorePoint.resume_command)
+      ?? optionalString(restorePoint.resume_surface_ref)
       ?? options.taskLifecycle?.checkpoint_summary?.checkpoint_id
       ?? null,
     control_gate_ids:
@@ -579,21 +586,6 @@ function normalizeSessionContinuity(
   }
 
   requireSurfaceKind(value.surface_kind, 'session_continuity', 'session_continuity');
-  const runtimeEntries = isRecord(value.runtime_entries) ? value.runtime_entries : null;
-  const runtimeRun = isRecord(runtimeEntries?.runtime_run)
-    ? buildInlineTaskSurfaceDescriptor({
-        surface_kind: requireString(runtimeEntries.runtime_run.surface_kind, 'session_continuity.runtime_entries.runtime_run.surface_kind'),
-        summary: requireString(runtimeEntries.runtime_run.summary, 'session_continuity.runtime_entries.runtime_run.summary'),
-        command: optionalString(runtimeEntries.runtime_run.command),
-      })
-    : null;
-  const runtimeResume = isRecord(runtimeEntries?.runtime_resume)
-    ? buildInlineTaskSurfaceDescriptor({
-        surface_kind: requireString(runtimeEntries.runtime_resume.surface_kind, 'session_continuity.runtime_entries.runtime_resume.surface_kind'),
-        summary: requireString(runtimeEntries.runtime_resume.summary, 'session_continuity.runtime_entries.runtime_resume.summary'),
-        command: optionalString(runtimeEntries.runtime_resume.command),
-      })
-    : null;
   const descriptorCommand = optionalString(value.session_command_template);
   const descriptorRestoreSurface = descriptorCommand
     ? buildInlineTaskSurfaceDescriptor({
@@ -610,14 +602,23 @@ function normalizeSessionContinuity(
       step_id: options.productEntryOverview?.progress_surface?.step_id ?? null,
     })
     ?? null;
+  const repoOwnedTruth = isRecord(value.repo_owned_truth) ? value.repo_owned_truth : null;
+  const generatedSessionSurfaceRef = optionalString(value.generated_session_surface_ref);
+  const generatedResumeSurfaceRef = optionalString(value.generated_resume_surface_ref);
+  const domainAuthoritySurfaceRef = optionalString(value.domain_authority_surface_ref);
+  const generatedSessionProjection =
+    repoOwnedTruth || generatedSessionSurfaceRef || generatedResumeSurfaceRef || domainAuthoritySurfaceRef
+      ? {
+          ...(repoOwnedTruth ?? {}),
+          ...(generatedSessionSurfaceRef ? { generated_session_surface_ref: generatedSessionSurfaceRef } : {}),
+          ...(generatedResumeSurfaceRef ? { generated_resume_surface_ref: generatedResumeSurfaceRef } : {}),
+          ...(domainAuthoritySurfaceRef ? { domain_authority_surface_ref: domainAuthoritySurfaceRef } : {}),
+        }
+      : null;
   const domainProjection =
     isRecord(value.domain_projection)
       ? value.domain_projection
-      : isRecord(value.repo_owned_truth)
-        ? value.repo_owned_truth
-        : isRecord(value.runtime_entries)
-          ? value.runtime_entries
-          : null;
+      : generatedSessionProjection;
 
   return {
     surface_kind: 'session_continuity',
@@ -650,8 +651,7 @@ function normalizeSessionContinuity(
       ?? optionalString(value.entry_session_id),
     run_id: optionalString(value.run_id),
     entry_surface:
-      normalizeTaskSurfaceDescriptor(value.entry_surface, 'session_continuity.entry_surface')
-      ?? runtimeRun,
+      normalizeTaskSurfaceDescriptor(value.entry_surface, 'session_continuity.entry_surface'),
     progress_surface:
       normalizeTaskSurfaceDescriptor(value.progress_surface, 'session_continuity.progress_surface')
       ?? derivedProgressSurface,
@@ -660,7 +660,6 @@ function normalizeSessionContinuity(
       ?? descriptorRestoreSurface,
     restore_surface:
       normalizeTaskSurfaceDescriptor(value.restore_surface, 'session_continuity.restore_surface')
-      ?? runtimeResume
       ?? descriptorRestoreSurface
       ?? options.taskLifecycle?.resume_surface
       ?? null,
