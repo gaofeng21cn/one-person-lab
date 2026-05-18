@@ -258,6 +258,59 @@ test('family stage admission blocks effect boundaries without runtime event refs
   );
 });
 
+test('family stage admission blocks runtime guards without runtime event refs', () => {
+  const plane = buildStagePlane();
+  const stage = plane.stages[0];
+  assert.ok(stage.trust_boundary);
+  stage.trust_boundary = {
+    ...stage.trust_boundary,
+    records_runtime_events: true,
+    runtime_guard_required: true,
+  };
+
+  const review = buildFamilyStageAdmissionReview(plane, {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'blocked');
+  assert.deepEqual(review.stage_results[0]?.runtime_event_refs, []);
+  assert.ok(
+    review.findings.some((finding) =>
+      finding.code === 'runtime_guard_missing_runtime_event_refs'
+      && finding.runtime_event_refs_missing_reason === 'runtime_guard_required is true but runtime_event_refs is empty on trust_boundary and stage_contract',
+    ),
+  );
+});
+
+test('family stage admission blocks runtime guards without event recording', () => {
+  const plane = buildStagePlane();
+  const stage = plane.stages[0];
+  assert.ok(stage.trust_boundary);
+  assert.ok(stage.stage_contract);
+  stage.trust_boundary = {
+    ...stage.trust_boundary,
+    runtime_guard_required: true,
+    records_runtime_events: false,
+    runtime_event_refs: ['runtime_event:manuscript_authoring.owner_receipt_recorded'],
+  };
+  stage.stage_contract = {
+    ...stage.stage_contract,
+    runtime_event_refs: ['runtime_event:manuscript_authoring.owner_receipt_recorded'],
+  };
+
+  const review = buildFamilyStageAdmissionReview(plane, {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'blocked');
+  assert.ok(
+    review.findings.some((finding) =>
+      finding.code === 'runtime_guard_without_event_recording'
+      && finding.runtime_event_refs_missing_reason === 'runtime_guard_required is true but records_runtime_events is not true',
+    ),
+  );
+});
+
 test('family stage admission schema freezes OPL non-authority read model', () => {
   const schema = readJson('contracts/family-orchestration/family-stage-admission.schema.json');
   const properties = schema.properties as Record<string, JsonRecord>;

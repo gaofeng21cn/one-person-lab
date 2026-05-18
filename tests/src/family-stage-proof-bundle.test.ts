@@ -252,6 +252,8 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
     trust_lane: 'human_gate',
     required: true,
     satisfied_by_records_runtime_events: true,
+    runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
+    satisfied_by_runtime_event_refs: true,
     reason: 'effect_boundary_requires_replayable_runtime_events',
   });
   assert.deepEqual(bundle.test_proof_refs.map((ref) => ref.ref), [

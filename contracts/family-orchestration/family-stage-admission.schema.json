@@ -182,7 +182,7 @@
             "type": "string",
             "minLength": 1
           },
-          "description": "Runtime event declaration refs surfaced for effect-boundary audit/replay checks; OPL does not emit these events."
+          "description": "Runtime event declaration refs surfaced for effect-boundary and runtime-guard audit/replay checks; OPL does not emit these events."
         },
         "finding_count": {
           "type": "integer",
