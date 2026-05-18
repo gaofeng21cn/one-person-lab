@@ -663,8 +663,78 @@ function safeActionRefs(actionRefs: ReturnType<typeof operatorActionRoutingRefs>
         domain_id: ref.domain_id,
         source_ref: ref.source_ref,
         can_execute: false,
-      })),
+    })),
   ]);
+}
+
+function appExecutionBridge(
+  actionRefs: ReturnType<typeof operatorActionRoutingRefs>,
+  periodicRefs: ReturnType<typeof periodicExecutionRefs>,
+  lifecycleRefs: ReturnType<typeof lifecycleLedgerRefs>,
+) {
+  const safeActionRoutes = actionRefs.filter((ref) => ref.execution_policy === 'opl_safe_action_shell');
+  const supervisedPeriodicCommands = periodicRefs.refs.filter((ref) => (
+    ref.execution_policy === 'operator_or_infrastructure_supervised'
+    || ref.execution_policy === 'provider_backed_no_domain_daemon'
+  ));
+  return {
+    surface_kind: 'opl_app_operator_execution_bridge',
+    bridge_owner: 'one-person-lab',
+    consumer: 'one_person_lab_app_operator_workbench',
+    action_execution_surface: 'opl runtime action execute',
+    lifecycle_apply_surface: 'opl runtime lifecycle apply',
+    lifecycle_reconcile_surface: 'opl runtime lifecycle reconcile',
+    provider_scheduler_surface: 'opl family-runtime scheduler',
+    route_submission_policy: {
+      direct_domain_action_execution_allowed: false,
+      domain_routes_are_queued_for_approval: true,
+      provider_signal_routes_emit_provider_receipts: true,
+      opl_cli_routes_can_execute_framework_queries: true,
+      app_surface_routes_are_projection_only: true,
+    },
+    safe_action_routes: safeActionRoutes.map((ref) => ({
+      action_id: ref.action_id,
+      action_kind: ref.action_kind,
+      owner: ref.owner,
+      route_target_kind: ref.route_target_kind,
+      stage_attempt_id: ref.stage_attempt_id,
+      domain_id: ref.domain_id,
+      stage_id: ref.stage_id,
+      execution_surface: ref.execution_surface,
+      submit_via: 'opl runtime action execute',
+      dry_run_supported: true,
+      approve_domain_action_supported: ref.owner === 'domain',
+      can_submit_to_safe_action_shell: true,
+      can_execute_domain_action_directly: false,
+    })),
+    supervised_command_refs: supervisedPeriodicCommands.map((ref) => ({
+      ref: ref.ref,
+      role: ref.role,
+      provider_kind: ref.provider_kind,
+      schedule_id: ref.schedule_id,
+      execution_policy: ref.execution_policy,
+      expected_surface_kind: 'expected_surface_kind' in ref ? ref.expected_surface_kind : null,
+      supervision_required: true,
+    })),
+    lifecycle_bridge: {
+      index_ref_count: lifecycleRefs.summary.lifecycle_index_ref_count,
+      restore_proof_ref_count: lifecycleRefs.summary.restore_proof_ref_count,
+      domain_artifact_mutation_receipt_ref_count:
+        lifecycleRefs.summary.domain_artifact_mutation_receipt_ref_count,
+      cleanup_apply_ready: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
+      domain_delete_ready: lifecycleRefs.summary.lifecycle_delete_can_execute,
+      domain_delete_executed_by_opl: false,
+      reconcile_status: lifecycleRefs.summary.lifecycle_reconcile_status,
+    },
+    summary: {
+      safe_action_route_count: safeActionRoutes.length,
+      supervised_periodic_command_count: supervisedPeriodicCommands.length,
+      lifecycle_index_ref_count: lifecycleRefs.summary.lifecycle_index_ref_count,
+      cleanup_apply_ready: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
+      domain_delete_ready: lifecycleRefs.summary.lifecycle_delete_can_execute,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
 }
 
 function functionalPrivatizationSummary(projects: DomainManifestCatalogEntry[]) {
@@ -751,6 +821,7 @@ export function buildAppOperatorDrilldown(input: {
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
   const lifecycleRefs = lifecycleLedgerRefs();
   const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
+  const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
@@ -800,6 +871,10 @@ export function buildAppOperatorDrilldown(input: {
       artifact_ref_count: refFamilies.summary.artifact_ref_count,
       ref_family_memory_ref_count: refFamilies.summary.memory_ref_count,
       safe_action_ref_count: safeActions.length,
+      app_execution_bridge_safe_action_route_count:
+        executionBridge.summary.safe_action_route_count,
+      app_execution_bridge_supervised_periodic_command_count:
+        executionBridge.summary.supervised_periodic_command_count,
       lifecycle_index_ref_count: lifecycleRefs.summary.lifecycle_index_ref_count,
       lifecycle_restore_proof_ref_count: lifecycleRefs.summary.restore_proof_ref_count,
       lifecycle_domain_artifact_mutation_receipt_ref_count:
@@ -873,6 +948,7 @@ export function buildAppOperatorDrilldown(input: {
       refs: safeActions,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    app_execution_bridge: executionBridge,
     lifecycle_ledger_refs: lifecycleRefs,
     domain_projection_refs: {
       surface_kind: 'opl_app_drilldown_domain_projection_refs',

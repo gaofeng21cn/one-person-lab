@@ -292,6 +292,7 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   if (
     text === 'diagnostic_cleanup_path'
     || text === 'legacy_cleanup_no_active_caller_gate'
+    || text === 'legacy_cleanup_physical_retired'
     || text === 'cleanup_diagnostic_path'
   ) {
     return 'diagnostic_cleanup_path';
