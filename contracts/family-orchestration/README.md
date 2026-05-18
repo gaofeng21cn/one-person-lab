@@ -13,6 +13,8 @@ These contracts absorb useful orchestration ideas from tools such as `CrewAI` in
 
 They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, AI SDK, and product-entry descriptors from one app-action definition. OPL adopts that pattern as a family contract, not as a `@ageniti/core` runtime dependency.
 
+They also absorb the useful GraphFlow / GFL pattern of admitting a statically checkable stage-pack core, composing stages through `requires` / `ensures`, and keeping AI, human, external-system, artifact, memory, and domain-verdict effects behind runtime-enforced boundaries. OPL adopts this as contract vocabulary only; GraphFlow / GFL is not an OPL runtime, provider, executor, planner, stage runner, or domain authority dependency.
+
 ## Ownership Boundary
 
 `one-person-lab` owns:
@@ -176,6 +178,10 @@ OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, p
 
 The contract records stage goal, domain-owned stage refs, input/output refs, knowledge refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, memory content, review verdicts, quality authority, and artifacts.
 
+The GraphFlow / GFL absorption maps here as stage-pack admission vocabulary. The stage control plane and companion surfaces form the `verified_static_core`: stage identity, owner, goal, input/output refs, `requires`, `ensures`, knowledge refs, skill / prompt / evaluation refs, allowed action refs, handoff, trust lane, authority boundary, launch profile, and selected executor binding. Passing admission only means the stage pack can be launched through the OPL queue / provider / executor path.
+
+Runtime effects remain in the `runtime_enforced_boundary`: executor output, human approval, external-system responses, artifact mutation, memory writeback, domain quality / publication / fundability / visual verdicts, and owner receipts. Unsatisfied composition, stale evidence, owner conflicts, receipt conflicts, or missing executor binding must become a conflict envelope, human gate, or route-back. `Codex CLI` remains the default executor; non-default adapters require explicit selection plus independent receipt and audit evidence.
+
 For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
 
 ## Stage Integrity Metadata Freeze
@@ -212,6 +218,7 @@ This directory does not:
 
 - standardize one LLM wrapper
 - standardize one `Crew` / `Agent` / `Memory` runtime object model
+- introduce a GraphFlow / GFL runtime, graph engine, planner, stage runner, or executor
 - pin a specific model family
 - redefine `OPL` as the runtime owner of domain-owned truth
 - imply cross-repo runtime-core ingest has already happened
