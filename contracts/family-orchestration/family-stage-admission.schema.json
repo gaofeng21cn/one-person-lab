@@ -147,6 +147,7 @@
         "trust_lane",
         "static_check_eligible",
         "effect_boundary",
+        "runtime_event_refs",
         "finding_count",
         "blocker_count",
         "warning_count"
@@ -174,6 +175,14 @@
         },
         "effect_boundary": {
           "type": "boolean"
+        },
+        "runtime_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Runtime event declaration refs surfaced for effect-boundary audit/replay checks; OPL does not emit these events."
         },
         "finding_count": {
           "type": "integer",
@@ -224,6 +233,10 @@
         "action_id": {
           "type": "string",
           "minLength": 1
+        },
+        "runtime_event_refs_missing_reason": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }
@@ -250,6 +263,7 @@
           "trust_lane": "domain_agent",
           "static_check_eligible": true,
           "effect_boundary": false,
+          "runtime_event_refs": [],
           "finding_count": 0,
           "blocker_count": 0,
           "warning_count": 0
