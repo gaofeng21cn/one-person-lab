@@ -8,7 +8,7 @@ Date: `2026-05-19`
 
 ## 当前判断
 
-如果把理想状态定义为“OPL 能生产级托管 MAS/MAG/RCA 的长时间 stage attempt，同时 direct skill path 等价、domain truth 不迁出、旧默认面退役干净”，当前只能写成：framework/control-plane 与 closeout read model 已进入 live-soak-ready 基础面；MAS/MAG/RCA 已有可被 OPL 识别和消费的标准 Agent 迁移输入；三仓 stage proof-bundle admission 已达到 18/18 admitted；MAS 5 个结构 follow-through 已关闭，并已通过 `runtime_transport_handoff_projection` 把 runner / worker lease / supervisor / SQLite sidecar 的 generic owner 机器化归 OPL；MAG/RCA 的 repo-side generated/handler boundary 更干净，但三仓仍缺 production default caller / App / owner-chain / live-soak evidence。
+如果把理想状态定义为“OPL 能生产级托管 MAS/MAG/RCA 的长时间 stage attempt，同时 direct skill path 等价、domain truth 不迁出、旧默认面退役干净”，当前只能写成：framework/control-plane 与 closeout read model 已进入 live-soak-ready 基础面；MAS/MAG/RCA 已有可被 OPL 识别和消费的标准 Agent 迁移输入；三仓 stage proof-bundle admission 已达到 18/18 admitted；MAS 5 个结构 follow-through 已关闭，并已通过 `runtime_transport_handoff_projection` 把 runner / worker lease / supervisor / SQLite sidecar 的 generic owner 机器化归 OPL；MAG repo-side handler/ref-only/authority boundary 已闭合；RCA repo-side generated/handler boundary、8 项结构差距和 legacy physical cleanup 已按 OPL consumer 口径闭合。三仓仍缺 production default caller / App / owner-chain / live-soak evidence；MAS 仍缺 physical delete/archive/tombstone closeout；MAG 仍缺 external evidence request / legacy runtime cleanup gate；RCA 仍缺 production evidence tail / naming hygiene tail。
 
 已经成立的是 OPL framework 骨架和读模型：Temporal provider、OPL-owned provider scheduler cadence/tick surface、typed queue、stage attempt ledger、typed closeout、safe runtime action shell、lifecycle refs-only index、App/operator drilldown read model、provider proof/readiness projection、functional runtime harness、generic substrate projection、transition runner/read model、domain pack compiler active-caller proof、Agent Lab 和 private functional audit。
 
@@ -22,7 +22,7 @@ Fresh runtime evidence（2026-05-19）补上了 App/operator 对 domain evidence
 - One Person Lab App root contract 与 AionUI runtime 页面已消费 OPL App/operator drilldown read model；剩余是真实用户路径、截图/发布包证据和长时 operator evidence；
 - lifecycle / artifact / memory locator 与三仓结构收敛、真实 workspace receipt long-soak 仍需持续对账；
 - Temporal provider SLO / repair cadence 已有真实 schedule install/trigger/tick receipt，但还缺长窗口持续证据；
-- MAS 机器合同中的 active generic residue / classification gate 已关闭，runtime runner、worker lease、supervisor 和 SQLite lifecycle writer 已由 handoff 投影收成 OPL generic runtime 的 domain bridge / refs-only sidecar / diagnostic；严格物理纯净模板目标下，MAS 仍需对不再需要的 active-path residue 做 no-active-caller、OPL parity、domain receipt parity 后的删除、archive 或 tombstone，workbench/status/product projection 还需要 production/App caller evidence；MAG/RCA 还需要按 no-active-caller proof 做 remaining legacy cleanup evidence；
+- MAS 机器合同中的 active generic residue / classification gate 已关闭，runtime runner、worker lease、supervisor 和 SQLite lifecycle writer 已由 handoff 投影收成 OPL generic runtime 的 domain bridge / refs-only sidecar / diagnostic；严格物理纯净模板目标下，MAS 仍需对不再需要的 active-path residue 做 no-active-caller、OPL parity、domain receipt parity 后的删除、archive 或 tombstone，workbench/status/product projection 还需要 production/App caller evidence；MAG 还需要按 no-active-caller proof 做 external evidence request 和 legacy runtime cleanup gate；RCA 已闭合 legacy physical cleanup，剩 naming hygiene 与 production evidence tail；
 - MAS/MAG/RCA 的真实 owner receipt chain、memory body/writeback apply、artifact mutation receipt 和 controlled long soak 仍需 scaleout。
 
 过程性 proof、receipt 事件、具体 task id 和阶段 closeout 摘要不放在本矩阵，统一归档到 [OPL family 文档过程归档 2026-05](../history/process/plans/2026-05-18-opl-family-doc-process-history.md)。
@@ -66,7 +66,7 @@ OPL 已具备完整生产级智能体框架的控制面骨架，并已进入 liv
 
 ## 下一跳顺序
 
-1. `generated_surface_production_consumption` for MAS/MAG/RCA
+1. `external_generated_surface_production_evidence` for MAS/MAG/RCA：repo-side generated/handler target consumption 已闭合；下一步补外部 default caller、App、release/dist、live owner-chain 和 direct/hosted parity 证据。
 2. `MAS physical thinning closeout`：runtime handoff projection 已落地，继续完成 runner / worker lease / supervisor / workbench projection / SQLite lifecycle writer 的 no-active-caller、parity、delete/archive/tombstone
 3. `App/operator drilldown GUI evidence`
 4. `App managed-environment startup maintenance`
@@ -76,7 +76,8 @@ OPL 已具备完整生产级智能体框架的控制面骨架，并已进入 liv
 8. `transition owner receipt / no-regression evidence on OPL bridge`
 9. `domain memory/lifecycle apply generalization`
 10. `MAG/RCA controlled soak`
-11. `physical skeleton layout`
-12. `legacy physical retirement`
+11. `RCA naming contract hygiene tail`
+12. `physical skeleton layout`
+13. `legacy physical retirement`
 
 每一步都必须留下 repo-native verification、domain owner receipt、no-regression evidence 或 typed blocker；没有 fresh evidence 不写完成。
