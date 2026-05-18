@@ -24,8 +24,8 @@
     "analysis_queue_manifest_refs",
     "research_wiki_refs",
     "runtime_event_ledger_refs",
-    "provider_executor_switch_hygiene_refs",
-    "claim_assurance_refs"
+    "provider_switch_hygiene_refs",
+    "claim_assurance_map_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -116,8 +116,8 @@
       "reviewer_direct_evidence_refs",
       "analysis_queue_manifest_refs",
       "runtime_event_ledger_refs",
-      "provider_executor_switch_hygiene_refs",
-      "claim_assurance_refs",
+      "provider_switch_hygiene_refs",
+      "claim_assurance_map_refs",
       "target_editable_surface_refs",
       "evidence_delta_refs"
     ],
@@ -125,8 +125,8 @@
       "research_memory_graph",
       "analysis_queue_manifest",
       "runtime_event_ledger",
-      "provider_executor_switch_hygiene",
-      "claim_assurance"
+      "provider_switch_hygiene",
+      "claim_assurance_map"
     ],
     "forbidden_payloads": [
       "body",

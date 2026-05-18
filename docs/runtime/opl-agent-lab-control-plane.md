@@ -120,7 +120,7 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - App/workbench operator action refs、human gate refs、dead-letter / retry / blocker refs；
 - regression、soak、fixture、parity、direct-skill equivalence 和 no-forbidden-write evidence。
 - usage logs、failed route refs、research wiki refs、experiment / analysis queue manifest refs。
-- MAS suite 投影的 typed body-free mechanism evolution refs：`runtime_event_ledger_refs`、`provider_executor_switch_hygiene_refs`、`claim_assurance_refs`，以及对应的 `runtime_event_ledger`、`provider_executor_switch_hygiene`、`claim_assurance` 只读 refs surface。
+- MAS suite 投影的 typed body-free mechanism evolution refs：`runtime_event_ledger_refs`、`provider_switch_hygiene_refs`、`claim_assurance_map_refs`，以及对应的 `runtime_event_ledger`、`provider_switch_hygiene`、`claim_assurance_map` 只读 refs surface。
 
 允许输出：
 
@@ -177,7 +177,7 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 - CLI export：`opl agent-lab export --target <inspect-ai|openinference|langfuse|phoenix|json> --json`，输出 connector 可消费的 refs-only export envelope。该命令只整理 refs 和 connector-shaped metadata，不上传外部服务，不读取 domain body。
 - CLI optimize：`opl agent-lab optimize --suite <suite.json> --json`，运行外部 suite 后输出 risk-classified optimizer candidate set、review refs、version ledger refs 和 RL transition refs。该命令不训练或部署权重，不写 memory body，也不覆盖 domain owner verdict；低风险可 auto-promote，中风险经独立 AI approve、tests pass 和 canary 后自动推广，高风险只输出 owner/human gate route。
 - CLI evolve：`opl agent-lab evolve --suite <suite.json> --json`，运行外部 suite 后输出 mechanism evolution segment、meta edit receipt、evidence delta 和 next mechanism candidate。candidate refs 会进入同一套风险分级 promotion pipeline；低风险和中风险不得退化成默认人工挑选，高风险不得由 OPL 自动推广。
-- MAS typed mechanism inputs：`opl agent-lab run/optimize/evolve --suite <suite.json> --json` 会读取 suite 中 body-free 的 `runtime_event_ledger`、`provider_executor_switch_hygiene` 和 `claim_assurance` refs surface，并把其中 refs 汇总进 mechanism evolution input refs、candidate source refs 和 evidence delta。该入口只接受 refs 与 typed metadata，不读取或写入 MAS body/truth/artifact/owner receipt。
+- MAS typed mechanism inputs：`opl agent-lab run/optimize/evolve --suite <suite.json> --json` 会读取 suite 中 body-free 的 `runtime_event_ledger`、`provider_switch_hygiene` 和 `claim_assurance_map` refs surface，并把其中 refs 汇总进 mechanism evolution input refs、candidate source refs 和 evidence delta。该入口只接受 refs 与 typed metadata，不读取或写入 MAS body/truth/artifact/owner receipt。
 
 `opl agent-lab longline --json` 是当前统一长线测试 read-model 入口。它可用于判断哪些“浸润/长线测试编排”已经能由 OPL 承接；它不能把 longline suite `passed` 升级成 MAS/MAG/RCA 的 publication、fundability、visual quality 或 export verdict。
 
