@@ -54,7 +54,7 @@
 - `family-stage-admission.schema.json`
   - 冻结 OPL-owned stage admission read model，覆盖 stage contract、trust lane、effect boundary / runtime-guard runtime-event requirement、composition obligation、admission finding 与 OPL non-authority boundary
 - `family-stage-proof-bundle.schema.json`
-  - 冻结轻量 proof-carrying stage-pack bundle，供 OPL 调度 / 准入消费 composition obligation、assumption、receipt ref、runtime-event requirement、test / proof ref、blocker 与 OPL non-authority boundary
+  - 冻结轻量 proof-carrying stage-pack bundle，供 OPL 调度 / 准入消费 composition obligation、assumption、receipt ref、runtime-event requirement、test / proof ref、blocker、`proof_runtime_metrics` 与 OPL non-authority boundary；这些 metrics 只做 scheduling / operator observability，不是 domain ready、quality、receipt 或 artifact verdict
 - `family-domain-memory-ref.schema.json`
   - 冻结 domain-owned memory pack 的 locator-only 引用，覆盖 memory family、pack ref、stage applicability、retrieval/writeback/receipt/recall refs、freshness 与 OPL forbidden authority
 - `family-domain-memory-writeback.schema.json`

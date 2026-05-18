@@ -264,6 +264,26 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
     'artifacts/manuscript-draft-proof.json',
     'tests/publication-review.test.ts',
   ]);
+  assert.deepEqual(bundle.proof_runtime_metrics, {
+    composition_obligation_count: 1,
+    runtime_event_requirement_count: 1,
+    satisfied_runtime_event_ref_count: 1,
+    expected_receipt_ref_count: 3,
+    test_proof_ref_count: 2,
+    blocker_count: 0,
+    warning_count: 0,
+    authority_boundary: {
+      opl_role: 'scheduling_operator_observability_only',
+      domain_role: 'truth_quality_receipt_and_artifact_authority',
+      can_execute_stage: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_mutate_artifact_body: false,
+      can_accept_or_reject_owner_receipt: false,
+      metrics_are_domain_verdict: false,
+    },
+  });
 });
 
 test('stage proof bundle exposes missing composition and does not mark blocked proof as passed', () => {
@@ -280,6 +300,9 @@ test('stage proof bundle exposes missing composition and does not mark blocked p
   assert.ok(bundle.blocking_reasons.some((finding) => finding.code === 'composition_obligation_not_satisfied'));
   assert.deepEqual(bundle.composition_obligations[0]?.missing, ['draft_ready']);
   assert.equal(bundle.composition_obligations[0]?.status, 'missing');
+  assert.equal(bundle.proof_runtime_metrics.composition_obligation_count, 1);
+  assert.equal(bundle.proof_runtime_metrics.blocker_count, 1);
+  assert.equal(bundle.proof_runtime_metrics.authority_boundary.metrics_are_domain_verdict, false);
 });
 
 test('stage proof bundle exposes needs-contracts admission without pretending proof passed', () => {
@@ -294,6 +317,8 @@ test('stage proof bundle exposes needs-contracts admission without pretending pr
   assert.equal(bundle.authority_boundary.proof_passed, false);
   assert.ok(bundle.blocking_reasons.some((finding) => finding.code === 'missing_stage_contract'));
   assert.ok(bundle.stage_results.some((result) => result.status === 'needs_contracts'));
+  assert.equal(bundle.proof_runtime_metrics.blocker_count, 0);
+  assert.equal(bundle.proof_runtime_metrics.warning_count, 1);
 });
 
 test('stage proof bundle schema freezes authority boundary away from domain truth and artifact body', () => {
@@ -303,9 +328,22 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   const authorityProperties = authoritySchema.properties as Record<string, JsonRecord>;
   const examples = schema.examples as JsonRecord[];
   const authority = examples[0]?.authority_boundary as JsonRecord;
+  const metricsSchema = properties.proof_runtime_metrics as JsonRecord;
+  const metrics = examples[0]?.proof_runtime_metrics as JsonRecord;
+  const metricsAuthority = metrics.authority_boundary as JsonRecord;
 
   assert.equal(properties.surface_kind.const, 'opl_stage_pack_proof_bundle');
   assert.equal(properties.version.const, 'opl-stage-pack-proof-bundle.v1');
+  assert.equal((metricsSchema.description as string).includes('operator observability'), true);
+  assert.equal(metrics.composition_obligation_count, 1);
+  assert.equal(metrics.runtime_event_requirement_count, 1);
+  assert.equal(metrics.satisfied_runtime_event_ref_count, 1);
+  assert.equal(metrics.expected_receipt_ref_count, 1);
+  assert.equal(metrics.test_proof_ref_count, 1);
+  assert.equal(metricsAuthority.opl_role, 'scheduling_operator_observability_only');
+  assert.equal(metricsAuthority.metrics_are_domain_verdict, false);
+  assert.equal(metricsAuthority.can_authorize_domain_ready, false);
+  assert.equal(metricsAuthority.can_authorize_quality_verdict, false);
   assert.equal(authorityProperties.opl_role.const, 'proof_bundle_projection_owner');
   assert.equal(authorityProperties.domain_role.const, 'truth_quality_receipt_and_artifact_authority');
   assert.equal(authority.can_execute_stage, false);
