@@ -65,6 +65,36 @@ async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
 }
 
+async function queryTemporalStageAttemptReadModel(attempt: ReturnType<typeof queryStageAttempt>['stage_attempt_query']['attempt']) {
+  if (attempt.provider_kind !== 'temporal') {
+    return null;
+  }
+  try {
+    return await (await temporalProviderModule()).queryTemporalStageAttemptWorkflow(attempt);
+  } catch (error) {
+    if (
+      error instanceof FrameworkContractError
+      && error.code === 'contract_shape_invalid'
+      && error.message.includes('OPL_TEMPORAL_ADDRESS')
+    ) {
+      return {
+        surface_kind: 'temporal_stage_attempt_query_unavailable',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        status: 'unavailable',
+        reason: 'temporal_address_not_configured',
+        error: error.toJSON().error,
+        authority_boundary: {
+          opl: 'local_stage_attempt_ledger_projection_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      };
+    }
+    throw error;
+  }
+}
+
 async function buildStatusPayload(
   db: DatabaseSync,
   paths = familyRuntimePaths(),
@@ -868,9 +898,7 @@ export async function runFamilyRuntime(args: string[]) {
     if (parsed.mode === 'attempt_query') {
       const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
       const attempt = localQuery.stage_attempt_query.attempt;
-      const temporal_query = attempt.provider_kind === 'temporal'
-        ? await (await temporalProviderModule()).queryTemporalStageAttemptWorkflow(attempt)
-        : null;
+      const temporal_query = await queryTemporalStageAttemptReadModel(attempt);
       return {
         version: 'g2',
         family_runtime_stage_attempt_query: {

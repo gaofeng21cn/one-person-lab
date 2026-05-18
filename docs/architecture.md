@@ -28,6 +28,8 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `One Person Lab App` 是 user-facing workbench：它消费 Framework 的 runtime/activation truth 和 domain-owned projection，不成为 domain runtime、quality verdict 或 artifact authority
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
+- 涉及知识交付、专家判断或正式质量裁决的复杂步骤必须保持为独立 stage，例如 MAS AI 审稿、publication quality review、MAG fundability review、RCA visual review；不得把这类工作折叠成另一个 stage 的函数、helper 或后处理
+- AI-first quality gate 是独立审核任务：执行 attempt 产出 artifacts / refs / closeout packet，审核 attempt 只读取这些显式输入和必要上下游 refs，产出 gate receipt / typed blocker / route-back；同一个 `Codex CLI` attempt 不能在同一上下文里自审并推进下一 stage
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 App repo 通过 `opl-aion-shell` 提供的 GUI shell 都消费同一套 runtime truth
 - OPL hosted integration 是 OPL 产品级管理/诊断/投影层；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel
 - family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只服务 dev/CI/offline diagnostic baseline，`hermes_agent` 是显式非默认 executor adapter/backend；旧 Hermes provider / Gateway 语料只作为 proof、provenance、diagnostic、fixture 或负向 guard 读取，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
@@ -199,6 +201,10 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 #### Family Stage Control Plane
 
 `Family Stage Control Plane` 是 `MAS` stage 化经验上升后的 family 级 shared descriptor / discovery surface。它把程序责任限制在阶段目标、skill / prompt / evaluation refs、输入输出、handoff、receipt、projection 与 authority boundary 上，把阶段内部的专家拆解、创作、审核、修订和诊断继续交给被选中的 Agent executor 与 domain-owned AI workflow。阶段的粒度应接近人类专家真实推进复杂工作的方式，而不是把开放式知识工作压成固定脚本节点。
+
+复杂知识交付步骤的默认建模单位是 stage，而不是函数。MAS 的 AI reviewer、publication quality review、RCA 的 visual review、MAG 的 proposal / fundability review 这类步骤需要有自己的 goal、inputs、prompt / skill refs、evaluation refs、outputs、handoff 与 receipt；authority function 只能签发最小领域 verdict、owner receipt、typed blocker 或 safe action refs，不能暗中承载完整审稿、质量评估或修订建议生成流程。
+
+Stage progression 的 AI-first quality gate 需要独立 reviewer / gate attempt。执行 attempt 与审核 attempt 必须分开调度、分开上下文、分开 receipt；审核 attempt 只能基于显式 refs 和产物判断是否进入下一 stage。缺少独立 gate receipt、gate evidence stale、审核 attempt 与执行 attempt 相同或共享污染上下文时，`family-stage-control-plane` 与下游 projection 都应把 progression 视为 blocked / route-back，而不是 ready。
 
 在顶层定位上，这就是 OPL 对标 DeerFlow、LangGraph、Temporal、Dify、AutoGen、CrewAI 等 agent / workflow framework 时的核心差异：这些框架通常以 LLM 调用、agent 节点、tool call 或 workflow activity 作为原子能力；OPL family framework 以 domain stage 作为语义调度单元，以 Agent executor 作为最小执行单位。`Codex CLI` 是当前第一公民 executor，其他 executor adapter 可以接入但需显式选择并接受回执/审计约束。OPL 因此提供 durable state、queue、handoff、approval、retry、projection 和 observability，并以高价值知识工作的全自动交付为目标，但不替 domain agent 生成领域判断。
 

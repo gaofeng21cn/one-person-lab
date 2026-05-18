@@ -15,6 +15,10 @@ OPL-compatible Foundry Agent 的默认形态是 `Declarative Domain Pack + OPL g
 
 `allowed_private_surface_classes` 不是鼓励保留私有平台实现，而是第三层 residue 的处置表。长期允许的 authority function 也必须尽量先尝试声明化；只有无法用 policy/table/schema/fixture/receipt contract 表达的领域裁决，才保留函数，并且必须通过 OPL 标准 ABI 返回 verdict、owner receipt、typed blocker 或 safe action refs。`refs_only_domain_adapter` 只能返回 locator、opaque refs、owner receipts、typed blockers 或 no-regression refs；它不是私有运行时、私有工作台或私有 transport。
 
+Authority function 不能成为复杂知识交付流程的隐藏容器。凡是需要阅读材料、形成审稿意见、判断科学/基金/视觉质量、提出修订建议、决定是否进入下一阶段的工作，都必须先建模为 domain-owned stage 或 review stage；函数只能在 stage 边界签发最小 verdict / receipt / blocker / safe action refs。MAS 的 AI reviewer、publication quality review、MAG 的 fundability review、RCA 的 visual review 都属于 stage 级工作，不应被塞进其他 stage 的 helper 或后处理里。
+
+AI-first quality gate 也不能由执行 attempt 自己闭环。标准 OPL Agent 必须把执行任务和审核任务分成独立 agent task / stage attempt：执行任务产出 artifact refs、source refs、closeout packet 和 owner receipt；审核任务在新上下文中读取这些显式输入，签发 gate receipt、typed blocker 或 route-back。缺少独立审核 receipt、审核证据 stale、或审核与执行来自同一 attempt 时，不能把结果归入 `authority_function_inventory` 的已通过 gate。
+
 默认审计视图只显示 `attention_required`。标准 pack 和标准 authority function 进入完整追溯清单，但不算私有平台污染；已经证明是 OPL hosted/generated surface、声明式 pack、authority function、refs-only adapter、无默认 caller 的 diagnostic cleanup path 或 provenance/fixture 的项目，默认折叠。只有 blocker、仍需 replacement / migration / tombstone 的项目、仍 active 的 diagnostic cleanup path，或 tombstone 仍有 active caller 的项目，才进入默认 watchlist。
 
 审计还要区分语义等价。`default_watchlist=0` 只说明没有结构性 blocker 或长期 generic owner claim；若 `semantic_equivalence_review_count>0`，说明 active caller 仍需要证明已消费 OPL primitive、OPL generated/hosted surface，或已退成 no-active-caller cleanup/provenance。语义等价未清零前，不能写成“所有功能都已经物理依赖 OPL 实现”。
@@ -42,6 +46,8 @@ OPL 的对应设计是：OPL 持有 stage attempt、queue、attempt ledger、tra
 | `private_platform_residue_inventory` | 是 | OPL replacement 或 retirement gate | OPL generated/hosted surface、refs-only 收薄、diagnostic cleanup 或 tombstone | scheduler、queue/attempt ledger、session store、SQLite lifecycle engine、workbench/status shell、memory/artifact transport、native helper envelope、observability/SLO runtime |
 
 因此，标准 OPL 智能体不是“没有代码”，而是代码只能落在标准 domain pack 或标准 authority ABI 里。凡是实现了通用运行平台、状态机、持久化、调度、展示、transport、lifecycle 或 observability 的模块，都必须进入 `private_platform_residue_inventory`，不能用“历史上已经写在 domain 仓里”作为长期保留理由。
+
+标准 domain pack 中的 stage / review 定义应优先表达复杂知识工作；标准 authority ABI 只表达边界裁决。用函数承载完整 AI 审稿、质量审核、revision planning 或 deliverable review，会同时破坏 stage 可观察性和 AI-first gate 的独立性，应按建模错误处理，而不是按允许的 `minimal_authority_function` 处理。
 
 Authority function 的标准 ABI 固定为：
 

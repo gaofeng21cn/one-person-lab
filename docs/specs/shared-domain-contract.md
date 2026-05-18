@@ -49,6 +49,8 @@
 5. gate semantics
    - gate 必须具备明确身份、证据输入与状态输出
    - 不能把未冻结的判断写成已通过 gate 的事实
+   - 涉及知识交付或正式质量判断的 gate 必须有独立 stage / review surface；不能藏在执行 stage 内部函数里
+   - stage progression 的 AI-first gate 必须由独立审核任务签发 receipt；同一执行 attempt 的自审不能作为进入下一 stage 的依据
 
 6. no-bypass
    - 顶层与跨域 activation 只能指向 domain-agent entry
@@ -56,6 +58,7 @@
 
 7. AI-first 质量边界
    - 创作判断、科学判断、审稿判断与交付质量判断继续由各 domain 拥有的 AI artifact 持有
+   - 执行与审核必须分离成两个智能体任务：执行任务产出 artifact / refs / closeout，审核任务基于这些显式输入产出 gate receipt、typed blocker 或 route-back
    - shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态与路由信号
    - `OPL` 不能把 projection-only 或 scorecard-only 信号提升成 domain-ready verdict
 

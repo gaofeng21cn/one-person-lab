@@ -7,6 +7,7 @@
 - `Codex CLI` 是 OPL 的受管 runtime dependency：OPL 必须检测实际命中的 binary、版本、最低版本策略和 PATH 候选；同版本兼容 wrapper / alias 归并到当前有效入口，低于当前最低版本或当前命中版本无法解析的 Codex CLI 只能进入 `attention_needed`，不得被报告为 ready。
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
 - 大型任务必须按 stage 作为可观察、可恢复、可审计的工作单元推进；不得把开放式知识工作降级成只靠硬编码步骤或固定脚本后处理的流程。
+- 涉及知识交付、专家判断或正式交付质量的复杂步骤必须是 first-class stage，例如 AI 审稿、publication quality review、fundability review、visual review、revision/rebuttal review；不得把这类流程作为另一个 stage 内部的普通函数、helper、后处理或 authority function 暗中完成。
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层和 typed family queue owner，不得被写成 domain scheduler、domain truth owner、domain quality owner、domain artifact owner 或 concrete executor。
 - family runtime provider 负责 stage-attempt durability、wakeup、retry/dead-letter、human-gate transport、status query 与 execution history。生产在线路径必须由 Temporal-backed provider 承接；缺少 Temporal service、worker 或 readiness proof 时，OPL production readiness 必须 fail-closed 为可修复 blocker，而不是退回 local provider 宣称在线可用。
 - `hermes_agent` 可作为显式非默认 executor adapter/backend。该 adapter 不得被写成 provider、provider proof surface、readiness path、MAS/MAG/RCA domain truth、quality、artifact、publication gate 或默认 concrete executor owner，也不得被 fork/vendor 成 OPL 私有 runtime kernel。
@@ -18,6 +19,7 @@
 - `OPL` 的 shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态和路由信号；不得替 MAS/MAG/RCA 或未来 domain 持有 AI-first 作者判断、审稿判断、质量裁决或 ready verdict。
 - `OPL` 可以上收 family-level stage descriptor、skill / prompt / evaluation refs、handoff 与 projection 语义；不得把 stage 控制面实现成替代 `Codex CLI` 自主拆解、创作、审核或 domain-owned quality gate 的硬编码流程引擎。
 - `OPL` 可以上收 stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata，作为通用 framework primitive 和 App/operator 投影；不得据此持有 domain truth、publication / fundability / visual verdict、artifact authority、domain audit body、direct skill path 或最终质量裁决。
+- AI-first quality gate 必须由独立 reviewer / gate stage attempt 完成。执行与审核必须是两个独立的智能体任务，具备独立上下文、输入 refs、closeout / gate receipt 与 owner；不得让同一个 `Codex CLI` attempt 在同一上下文里先执行再自审并放行。缺少独立 gate receipt、gate evidence stale 或出现 self-review attempt 时，stage progression 必须 fail-closed。
 - `OPL` 可以上收 domain memory locator、stage `knowledge_refs`、migration plan ref、seed corpus ref、writeback proposal refs、router receipt refs、freshness 与 operator projection；不得持有 domain memory 正文，不得执行 memory body migration，不得接受或拒绝 memory writeback，不得把 memory card 提升为 evidence / review / grant / visual / artifact truth，也不得据此生成 publication、fundability、visual quality 或 artifact readiness verdict。
 - `OPL` 文档中的 MAS stage 抽象只能作为跨仓投影维度；不得直接覆盖 MAS 现有 route contract、stage 名称、stage 数量、controller truth 或 publication / quality authority。
 - MAS v2 wording 必须保持 `MAS` 为独立 `domain agent` 与单一 domain app skill owner；`OPL` 只能消费 MAS-owned entry/projection truth，不得把 MAS runtime、controller truth、quality authority 或 publication gate 收归 OPL。
