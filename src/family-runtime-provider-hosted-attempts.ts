@@ -7,6 +7,7 @@ import {
   createStageAttempt,
   listStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
+import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -88,6 +89,11 @@ function providerHostedTaskDeclared(payload: Record<string, unknown>) {
     || isRecord(payload.controlled_stage_attempt)
     || isRecord(payload.controlled_stage_attempt_projection)
     || isRecord(payload.controlled_soak_no_regression_attempt);
+}
+
+function stageAdmissionRequired(payload: Record<string, unknown>) {
+  return payload.opl_stage_launch_admission_required === true
+    || payload.require_stage_admission === true;
 }
 
 function familyTransitionResult(payload: Record<string, unknown>) {
@@ -239,6 +245,15 @@ export function ensureProviderHostedStageAttempt(
   if (!stageId) {
     return null;
   }
+  const admissionGate = buildStageAdmissionLaunchGate({
+    domainId: row.domain_id,
+    stageId,
+    taskKind: row.task_kind,
+    taskId: row.task_id,
+    sourceFingerprint: expectedSourceFingerprint,
+    idempotencyKey: expectedSourceFingerprint,
+    requireAdmission: stageAdmissionRequired(payload),
+  });
   const result = createStageAttempt(db, {
     domainId: row.domain_id,
     stageId,
@@ -247,12 +262,15 @@ export function ensureProviderHostedStageAttempt(
     sourceFingerprint: expectedSourceFingerprint,
     executorKind: 'domain_sidecar',
     taskId: row.task_id,
+    blockedReason: admissionGate.blocked_reason ?? undefined,
   });
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
     eventType: result.idempotent_noop
       ? 'stage_attempt_idempotent_noop'
+      : admissionGate.status === 'blocked'
+        ? 'stage_attempt_blocked_by_admission_gate'
       : 'stage_attempt_created_for_provider_hosted_task',
     source: 'opl-family-runtime',
     payload: {
@@ -260,6 +278,7 @@ export function ensureProviderHostedStageAttempt(
       stage_id: stageId,
       provider_kind: result.attempt.provider_kind,
       task_kind: row.task_kind,
+      stage_launch_admission_gate: admissionGate,
     },
   });
   return result.attempt;

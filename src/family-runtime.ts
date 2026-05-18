@@ -60,6 +60,10 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
+import {
+  blockTaskForStageAdmissionGate,
+  buildStageAdmissionLaunchGate,
+} from './family-runtime-stage-admission-gate.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import {
@@ -105,12 +109,18 @@ async function queryTemporalStageAttemptReadModel(attempt: ReturnType<typeof que
 function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
+  const payload = input.requireStageAdmission
+    ? {
+        ...input.payload,
+        opl_stage_launch_admission_required: true,
+      }
+    : input.payload;
   if (dedupeKey) {
     const existing = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
       | FamilyRuntimeTaskRow
       | undefined;
     if (existing) {
-      const exportedPayloadJson = JSON.stringify(input.payload);
+      const exportedPayloadJson = JSON.stringify(payload);
       const exportedTaskChanged = existing.payload_json !== exportedPayloadJson
         || existing.task_kind !== input.taskKind
         || existing.domain_id !== input.domainId;
@@ -179,7 +189,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     input.domainId,
     input.taskKind,
     dedupeKey,
-    input.payload,
+    payload,
     createdAt,
   ]);
   const status: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
@@ -187,7 +197,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     task_id: taskId,
     domain_id: input.domainId,
     task_kind: input.taskKind,
-    payload_json: JSON.stringify(input.payload),
+    payload_json: JSON.stringify(payload),
     dedupe_key: dedupeKey,
     priority: input.priority ?? 0,
     status,
@@ -297,7 +307,10 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     });
     return { task_id: row.task_id, status: 'blocked', reason: 'domain_forbidden_write', stage_attempts: stageAttempts };
   }
-  ensureProviderHostedStageAttempt(db, row, payload);
+  const providerHostedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
+  if (providerHostedAttempt?.status === 'blocked' && providerHostedAttempt.blocked_reason?.startsWith('stage_admission_')) {
+    return blockTaskForStageAdmissionGate(db, row, providerHostedAttempt);
+  }
   const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
     attempt.status === 'queued'
     || attempt.status === 'running'
@@ -790,27 +803,43 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_create') {
-      const stageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
+      const defaultStageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
       });
+      const requiredStageAdmissionGate = parsed.input.requireStageAdmission
+        ? buildStageAdmissionLaunchGate({
+            domainId: parsed.input.domainId,
+            stageId: parsed.input.stageId,
+            taskKind: parsed.input.stageId,
+            taskId: parsed.input.taskId,
+            sourceFingerprint: parsed.input.sourceFingerprint,
+            requireAdmission: true,
+          })
+        : null;
+      const stageLaunchAdmissionGate = requiredStageAdmissionGate ?? defaultStageLaunchAdmissionGate;
+      const blockedReason =
+        requiredStageAdmissionGate?.blocked_reason
+        ?? parsed.input.blockedReason
+        ?? defaultStageLaunchAdmissionGate.block_reason
+        ?? undefined;
       const result = createStageAttempt(db, {
         ...parsed.input,
-        blockedReason:
-          parsed.input.blockedReason
-          ?? stageLaunchAdmissionGate.block_reason
-          ?? undefined,
+        blockedReason,
         launchAdmissionGate: stageLaunchAdmissionGate,
       });
       const { attempt } = result;
+      const stageLaunchBlockedByAdmission =
+        requiredStageAdmissionGate?.status === 'blocked'
+        || defaultStageLaunchAdmissionGate.gate_action === 'block_stage_launch';
       const temporal_start = parsed.input.start
-        && stageLaunchAdmissionGate.gate_action !== 'block_stage_launch'
+        && attempt.status !== 'blocked'
           ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt)
         : null;
       insertEvent(db, {
         taskId: attempt.task_id,
         domainId: parsed.input.domainId,
-        eventType: stageLaunchAdmissionGate.gate_action === 'block_stage_launch'
+        eventType: stageLaunchBlockedByAdmission
           ? 'stage_attempt_launch_admission_blocked'
           : parsed.input.start
           ? 'stage_attempt_temporal_started'
@@ -838,7 +867,7 @@ export async function runFamilyRuntime(args: string[]) {
           stage_launch_admission_gate: stageLaunchAdmissionGate,
           conflict_or_blocker_envelopes: 'conflict_or_blocker_envelopes' in result
             ? result.conflict_or_blocker_envelopes
-            : [],
+            : requiredStageAdmissionGate?.conflict_or_blocker_envelopes ?? [],
           temporal_start,
         },
       };

@@ -24,6 +24,7 @@ export type EnqueueInput = {
   priority?: number;
   source?: string;
   requiresApproval?: boolean;
+  requireStageAdmission?: boolean;
 };
 
 export type FamilyRuntimeCommandInput =
@@ -104,7 +105,7 @@ export type FamilyRuntimeCommandInput =
       closeoutRefs?: string[];
       humanGateRefs?: string[];
       blockedReason?: string;
-      launchAdmissionGate?: Record<string, unknown>;
+      requireStageAdmission?: boolean;
       newAttempt?: boolean;
       start?: boolean;
     };
@@ -662,6 +663,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     let executorKind: string | undefined;
     let taskId: string | undefined;
     let blockedReason: string | undefined;
+    let requireStageAdmission = false;
     let newAttempt = false;
     let start = false;
     const checkpointRefs: string[] = [];
@@ -674,6 +676,8 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         newAttempt = true;
       } else if (token === '--start') {
         start = true;
+      } else if (token === '--require-stage-admission') {
+        requireStageAdmission = true;
       } else if (token === '--domain' && value) {
         domainId = assertDomainId(value);
         index += 1;
@@ -751,6 +755,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         closeoutRefs,
         humanGateRefs,
         blockedReason,
+        requireStageAdmission,
         newAttempt,
         start,
       },
@@ -842,11 +847,14 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     let priority = 0;
     let source = 'opl-cli';
     let requiresApproval = false;
+    let requireStageAdmission = false;
     for (let index = 0; index < rest.length; index += 1) {
       const token = rest[index];
       const value = rest[index + 1];
       if (token === '--requires-approval') {
         requiresApproval = true;
+      } else if (token === '--require-stage-admission') {
+        requireStageAdmission = true;
       } else if (token === '--domain' && value) {
         domainId = assertDomainId(value);
         index += 1;
@@ -896,6 +904,7 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         priority,
         source,
         requiresApproval,
+        requireStageAdmission,
       },
     };
   }
