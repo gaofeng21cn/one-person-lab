@@ -182,6 +182,8 @@ function inspectTrustBoundary(stage: FamilyStageDescriptor, findings: FamilyStag
 
   const laneIsEffectBoundary = EFFECT_BOUNDARY_LANES.has(trust.lane);
   const effectBoundary = readBoolean(trust.effect_boundary) || laneIsEffectBoundary;
+  const runtimeGuardRequired = trust.runtime_guard_required === true;
+  const runtimeEventDeclarationRequired = effectBoundary || runtimeGuardRequired;
   const runtimeEventRefs = readRuntimeEventRefs(stage);
   if (effectBoundary && trust.records_runtime_events !== true) {
     pushFinding(findings, {
@@ -192,6 +194,15 @@ function inspectTrustBoundary(stage: FamilyStageDescriptor, findings: FamilyStag
       runtime_event_refs_missing_reason: 'records_runtime_events is not true',
     });
   }
+  if (!effectBoundary && runtimeGuardRequired && trust.records_runtime_events !== true) {
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'runtime_guard_without_event_recording',
+      message: 'Runtime-guarded stages must record runtime events before OPL can launch or advance the stage.',
+      stage_id: stage.stage_id,
+      runtime_event_refs_missing_reason: 'runtime_guard_required is true but records_runtime_events is not true',
+    });
+  }
   if (effectBoundary && runtimeEventRefs.length === 0) {
     pushFinding(findings, {
       severity: 'blocker',
@@ -199,6 +210,15 @@ function inspectTrustBoundary(stage: FamilyStageDescriptor, findings: FamilyStag
       message: 'Effect boundary stages must declare machine-readable runtime_event_refs for audit and replay.',
       stage_id: stage.stage_id,
       runtime_event_refs_missing_reason: 'runtime_event_refs is empty on trust_boundary and stage_contract',
+    });
+  }
+  if (!effectBoundary && runtimeEventDeclarationRequired && runtimeEventRefs.length === 0) {
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'runtime_guard_missing_runtime_event_refs',
+      message: 'Runtime-guarded stages must declare machine-readable runtime_event_refs for audit, retry, and handoff.',
+      stage_id: stage.stage_id,
+      runtime_event_refs_missing_reason: 'runtime_guard_required is true but runtime_event_refs is empty on trust_boundary and stage_contract',
     });
   }
   if (effectBoundary && trust.static_check_eligible === true) {
