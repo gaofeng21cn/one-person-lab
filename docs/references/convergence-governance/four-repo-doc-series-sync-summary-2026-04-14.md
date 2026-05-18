@@ -13,7 +13,7 @@
 
 ## 本轮统一落地项
 
-- 四仓统一采用同名清单：`docs/references/series-doc-governance-checklist.md`
+- 四仓统一采用同名清单：`docs/references/governance/series-doc-governance-checklist.md`
 - `OPL` 中央新增 `npm run audit:doc-series`，用于巡检四仓 docs surface 是否漂移
 - `OPL` 中央新增 `docs/references/four-repo-doc-intake-template.md`，作为后续 cross-repo docs intake 的统一起手模板
 - 四仓默认 docs 入口继续收口为根层 `README*` + `docs/README.md` + 核心五件套

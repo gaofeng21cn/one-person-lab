@@ -34,7 +34,7 @@
 - [Family Docs 生命周期治理落地记录，2026-05-09](./convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.md)
 - [OPL Family 内容级文档收敛，2026-05-11](./convergence-governance/family-content-level-docs-consolidation-2026-05-11.md)
 - [OPL 产品分层与 Foundry Agent 发布形态落地记录，2026-05-12](./convergence-governance/opl-product-layer-foundry-agent-rollout-2026-05-12.md)
-- [系列项目文档治理清单](./convergence-governance/series-doc-governance-checklist.md)
+- [系列项目文档治理清单](./governance/series-doc-governance-checklist.md)
 - [四仓文档 intake 模板](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 执行看板](./convergence-governance/contract-convergence-v1-execution-board.md)
 - [生态状态矩阵](./convergence-governance/ecosystem-status-matrix.md)
