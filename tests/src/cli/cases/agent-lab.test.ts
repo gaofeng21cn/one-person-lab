@@ -394,8 +394,8 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
           reviewer_direct_evidence_refs: ['review-ref:mas/dm002/ai-reviewer-direct-evidence'],
           analysis_queue_manifest_refs: ['file-ref:study/artifacts/analysis_queue/latest.json'],
           runtime_event_ledger_refs: ['runtime-event-ledger:mas/dm002/stage-events'],
-          provider_executor_switch_hygiene_refs: ['switch-hygiene:mas/dm002/provider-executor'],
-          claim_assurance_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
+          provider_switch_hygiene_refs: ['provider-switch-hygiene:mas/dm002/provider-executor'],
+          claim_assurance_map_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
           target_editable_surface_refs: ['mechanism-edit-ref:mas/analysis-campaign-queue-routing'],
           evidence_delta_refs: ['evidence-ref:mas/dm002/reviewer-routeback'],
           runtime_event_ledger: {
@@ -409,22 +409,22 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
             executor_event_refs: ['executor-event:codex/mas-dm002-reviewer-repair'],
             blocker_refs: ['blocker-ref:mas/dm002/no-current-blocker'],
           },
-          provider_executor_switch_hygiene: {
-            surface_kind: 'mas_provider_executor_switch_hygiene_refs',
-            hygiene_kind: 'body_free_provider_executor_switch_hygiene_refs',
+          provider_switch_hygiene: {
+            surface_kind: 'mas_provider_switch_hygiene_refs',
+            hygiene_kind: 'body_free_provider_switch_hygiene_refs',
             body_included: false,
-            provider_switch_hygiene_refs: ['provider-switch-hygiene:mas/dm002/local-to-temporal'],
-            executor_switch_hygiene_refs: ['executor-switch-hygiene:mas/dm002/codex-default'],
+            provider_switch_hygiene_refs: ['provider-provider-switch-hygiene:mas/dm002/local-to-temporal'],
+            executor_switch_hygiene_refs: ['executor-provider-switch-hygiene:mas/dm002/codex-default'],
             provider_refs: ['provider-ref:temporal/mas-dm002'],
             executor_refs: ['executor-ref:codex-cli/mas-dm002'],
             switch_receipt_refs: ['switch-receipt:mas/dm002/provider-executor'],
             no_downgrade_proof_refs: ['no-downgrade-proof:mas/dm002/provider-executor'],
           },
-          claim_assurance: {
-            surface_kind: 'mas_claim_assurance_refs',
-            assurance_kind: 'body_free_claim_assurance_refs',
+          claim_assurance_map: {
+            surface_kind: 'mas_claim_assurance_map_refs',
+            assurance_kind: 'body_free_claim_assurance_map_refs',
             body_included: false,
-            claim_assurance_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
+            claim_assurance_map_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
             claim_refs: ['claim-ref:hdl-unit-contamination'],
             direct_evidence_refs: ['direct-evidence-ref:mas/dm002/hdl-unit-contamination'],
             reviewer_receipt_refs: ['reviewer-receipt:mas/dm002/claim-assurance'],
@@ -493,7 +493,7 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
       'runtime-event-ledger:mas/dm002/stage-events',
     ));
     assert.ok(output.agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs.includes(
-      'provider-switch-hygiene:mas/dm002/local-to-temporal',
+      'provider-provider-switch-hygiene:mas/dm002/local-to-temporal',
     ));
     assert.ok(output.agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs.includes(
       'claim-assurance:mas/dm002/no-unbacked-claims',
@@ -505,11 +505,11 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
     assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.runtime_event_ledger
       .body_included, false);
     assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs
-      .provider_executor_switch_hygiene.body_included, false);
-    assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.claim_assurance
+      .provider_switch_hygiene.body_included, false);
+    assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.claim_assurance_map
       .body_included, false);
     assert.ok(output.agent_lab_evolve.log_driven_mechanism_candidates.log_evidence.source_refs.includes(
-      'provider-switch-hygiene:mas/dm002/local-to-temporal',
+      'provider-provider-switch-hygiene:mas/dm002/local-to-temporal',
     ));
     assert.ok(output.agent_lab_evolve.evidence_delta.added_evidence_refs.includes(
       'claim-assurance:mas/dm002/no-unbacked-claims',
