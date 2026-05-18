@@ -113,7 +113,7 @@ test('family domain catalog derives parity status from manifests and active bind
       domain_entry_contract: {
         entry_adapter: 'MedAutoGrantDomainEntry',
         service_safe_surface_kind: 'service-safe-domain-entry-command',
-        command_contracts: [{ command: 'runtime-run' }],
+        command_contracts: [{ command: 'product-status' }],
         domain_agent_entry_spec: {
           agent_id: 'mag',
           title: 'Med Auto Grant',

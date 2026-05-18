@@ -32,6 +32,12 @@ const forbiddenTerms = [
   ['compatibility', '_aliases'].join(''),
   ['legacy', '_boundary_terms'].join(''),
   ['mcp', '-stdio'].join(''),
+  ['runtime', '-', 'run'].join(''),
+  ['runtime', '-', 'resume'].join(''),
+  ['runtime', '_entries'].join(''),
+  ['session', '_journal', '_root'].join(''),
+  ['local', '_run', '_journal'].join(''),
+  ['stage', '_action', '_envelope', '_kind'].join(''),
 ];
 
 const textFileExtensions = new Set([

@@ -24,40 +24,40 @@
       "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json"
     },
     "recommended_shell": "grant_user_loop",
-    "recommended_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+    "recommended_command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
     "product_entry_surface": {
       "shell_key": "product_entry_surface",
-      "command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "surface_kind": "product_entry_surface",
       "summary": "当前 direct grant product product entry 先暴露前台入口、user loop、projection 与 shared handoff。"
     },
     "operator_loop_surface": {
       "shell_key": "grant_user_loop",
-      "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "surface_kind": "grant_user_loop",
       "summary": "当前 operator loop 以 grant-user-loop 作为 direct grant user inbox shell，在同一入口下汇总 progress、route action 与 mainline snapshot。"
     },
     "operator_loop_actions": {
       "open_loop": {
-        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "surface_kind": "grant_user_loop",
         "summary": "进入当前 direct grant user inbox shell。",
         "requires": []
       },
       "inspect_progress": {
-        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "surface_kind": "grant_progress",
         "summary": "读取当前 workspace 的阶段摘要、checkpoint 与下一步。",
         "requires": []
       },
       "inspect_cockpit": {
-        "command": "uv run python -m med_autogrant grant-cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "surface_kind": "grant_cockpit",
         "summary": "查看主线 snapshot、对象面和当前 route action 汇总。",
         "requires": []
       },
       "build_direct_entry": {
-        "command": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "surface_kind": "grant_direct_entry",
         "summary": "把用户意图组合成当前 grant direct-entry contract。",
         "requires": [
@@ -74,7 +74,7 @@
       "active_phase": "P4 mature direct grant product entry",
       "active_tranche": "P4.D critique Codex CLI autonomous-mode executor landing",
       "next_focus": [
-        "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
+        "继续把 grant user loop 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
         "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 provider-backed runtime 上不漂移。"
       ]
     },
@@ -85,8 +85,8 @@
     "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
     "domain_entry_contract": {
       "entry_adapter": "MedAutoGrantDomainEntry",
-      "service_safe_surface_kind": "grant_direct_entry",
-      "product_entry_builder_command": "build-product-entry",
+      "service_safe_surface_kind": "service-safe-domain-entry-command",
+      "product_entry_builder_command": "product build-entry",
       "supported_entry_modes": [
         "direct",
         "opl-handoff"
@@ -215,33 +215,33 @@
     },
     "product_entry_shell": {
       "product_entry_surface": {
-        "command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "surface_kind": "product_entry_surface"
       },
       "grant_progress": {
-        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "surface_kind": "grant_progress"
       },
       "grant_cockpit": {
-        "command": "uv run python -m med_autogrant grant-cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "surface_kind": "grant_cockpit"
       },
       "grant_direct_entry": {
-        "command": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "surface_kind": "grant_direct_entry"
       },
       "grant_user_loop": {
-        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "surface_kind": "grant_user_loop"
       }
     },
     "shared_handoff": {
       "direct_entry_builder": {
-        "command": "uv run python -m med_autogrant build-product-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --entry-mode direct --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product build-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --entry-mode direct --task-intent <describe-task-intent> --format json",
         "entry_mode": "direct"
       },
       "opl_handoff_builder": {
-        "command": "uv run python -m med_autogrant build-product-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --entry-mode opl-handoff --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product build-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --entry-mode opl-handoff --task-intent <describe-task-intent> --format json",
         "entry_mode": "opl-handoff"
       }
     },
@@ -253,7 +253,7 @@
         {
           "mode_id": "open_product_entry",
           "title": "Open grant product entry",
-          "command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
           "surface_kind": "product_entry_surface",
           "summary": "打开当前 direct grant product entry。",
           "requires": []
@@ -261,7 +261,7 @@
         {
           "mode_id": "continue_grant_loop",
           "title": "Continue current grant loop",
-          "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+          "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
           "surface_kind": "grant_user_loop",
           "summary": "进入当前 direct grant user inbox shell。",
           "requires": [
@@ -271,7 +271,7 @@
         {
           "mode_id": "build_direct_entry",
           "title": "Build direct entry",
-          "command": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+          "command": "uv run python -m med_autogrant product direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
           "surface_kind": "grant_direct_entry",
           "summary": "把用户意图组合成当前 grant direct-entry contract。",
           "requires": [
@@ -291,23 +291,23 @@
     "product_entry_overview": {
       "surface_kind": "product_entry_overview",
       "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",
-      "product_entry_command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-      "recommended_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
-      "operator_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "product_entry_command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "operator_loop_command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "progress_surface": {
         "surface_kind": "grant_progress",
-        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "step_id": "inspect_progress"
       },
       "resume_surface": {
         "surface_kind": "grant_user_loop",
-        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "session_locator_field": "grant_run_id",
         "checkpoint_locator_field": "lifecycle_stage"
       },
       "recommended_step_id": "open_product_entry",
       "next_focus": [
-        "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
+        "继续把 grant user loop 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
         "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 provider-backed runtime 上不漂移。"
       ],
       "remaining_gaps_count": 2,
@@ -319,8 +319,8 @@
       "surface_kind": "product_entry_preflight",
       "summary": "当前 direct grant product entry 的前置检查已通过，可以先复核 workspace 与主线，再进入 product product entry。",
       "ready_to_try_now": true,
-      "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-      "recommended_start_command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_check_command": "uv run python -m med_autogrant workspace validate --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "blocking_check_ids": [],
       "checks": [
         {
@@ -329,7 +329,7 @@
           "status": "pass",
           "blocking": true,
           "summary": "workspace document schema 与 runtime constraints 均通过。",
-          "command": "uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+          "command": "uv run python -m med_autogrant workspace validate --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
         },
         {
           "check_id": "provider_backed_owner_line",
@@ -345,7 +345,7 @@
           "status": "pass",
           "blocking": true,
           "summary": "direct product entry contract 已 landed，可由 product-status / manifest 直接消费。",
-          "command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+          "command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
         },
         {
           "check_id": "submission_ready_export_gate",
@@ -353,7 +353,7 @@
           "status": "warn",
           "blocking": false,
           "summary": "当前 stage 还未到 submission-ready export gate；这不阻止进入 product entry，但后续仍需继续主线推进。",
-          "command": "uv run python -m med_autogrant build-submission-ready-package --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --output-dir <output-dir> --format json"
+          "command": "uv run python -m med_autogrant package submission-ready --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --output-dir <output-dir> --format json"
         }
       ]
     },
@@ -365,9 +365,9 @@
       "fully_automatic": false,
       "summary": "当前可以作为 Agent 协同的 CLI/controller 标书写作主线使用，但还不是无需人工材料、无需判断、可直接交付的全自动国自然标书产品。",
       "recommended_start_surface": "product_entry_surface",
-      "recommended_start_command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "recommended_loop_surface": "grant_user_loop",
-      "recommended_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "recommended_loop_command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "blocking_gaps": [
         "还不是 mature direct grant Web UI / hosted runtime。",
         "还不能在缺少用户真实材料、前期结果和图片素材时全自动生成可信标书。",
@@ -383,9 +383,9 @@
       "user_experience_level": "usable_for_agent_assisted_cli_authoring_not_yet_polished_product",
       "summary": "当前可以作为 Agent 协同的 CLI/controller 标书写作主线使用；对材料齐备的 workspace 已能导出本地 submission-ready 交付包。",
       "recommended_start_surface": "product_entry_surface",
-      "recommended_start_command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "recommended_loop_surface": "grant_user_loop",
-      "recommended_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "recommended_loop_command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "workflow_coverage": [
         {
           "step_id": "accumulation_direction_screening",
@@ -494,13 +494,13 @@
       "progress_surface": {
         "surface_kind": "grant_progress",
         "summary": "读取当前 workspace 的阶段摘要、checkpoint 与下一步。",
-        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "step_id": "inspect_progress"
       },
       "resume_surface": {
         "surface_kind": "grant_user_loop",
         "summary": "继续当前 direct grant user inbox shell。",
-        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "locator_fields": [
           "grant_run_id"
         ]
@@ -529,29 +529,16 @@
     "session_continuity": {
       "surface_kind": "session_continuity",
       "version": 1,
-      "summary": "显式锚定 session locator 与 journal durable anchor，避免依赖默认 journal 推断。",
+      "summary": "显式锚定 grant session locator，并把通用 session shell 交给 OPL generated surface。",
       "session_locator_field": "grant_run_id",
       "session_handle_kind": "grant_run_id",
       "session_id": "grant-run-nsfc-demo-001-baseline-001",
-      "journal_path": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json",
-      "runtime_state_contract": {
-        "session_journal_root": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/",
-        "substrate_state_db_path_template": "$CODEX_HOME/projects/med-autogrant/runtime-state/hermes/state.db"
-      },
+      "session_owner": "one-person-lab",
+      "generated_session_surface_ref": "opl://generated-surfaces/mag/product-entry-session",
+      "generated_resume_surface_ref": "opl://generated-surfaces/mag/product-entry-session#resume",
+      "domain_authority_surface_ref": "/product_entry_manifest/owner_receipt_contract",
       "workspace_id": "nsfc-demo-001",
       "lifecycle_stage": "critique",
-      "runtime_entries": {
-        "runtime_run": {
-          "command": "uv run python -m med_autogrant runtime-run --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
-          "surface_kind": "runtime_run",
-          "summary": "用显式 --journal 启动或继续当前 workspace 的 runtime run。"
-        },
-        "runtime_resume": {
-          "command": "uv run python -m med_autogrant runtime-resume --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
-          "surface_kind": "runtime_resume",
-          "summary": "用显式 --journal 恢复当前 session。"
-        }
-      },
       "repo_owned_truth": {
         "workspace_surface_kind": "nsfc_workspace",
         "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
@@ -571,7 +558,7 @@
       "projection": {
         "current_stage": "critique",
         "current_stage_summary": "当前 critique grant loop 可以继续通过同一 grant user loop 进入 revision 决策。",
-        "next_system_action": "先进入 grant-user-loop 继续 revision 决策。",
+        "next_system_action": "先进入 grant user loop 继续 revision 决策。",
         "current_blockers": []
       },
       "truth_anchors": {
@@ -582,17 +569,17 @@
         },
         "stage_route_report": {
           "ref_kind": "command",
-          "ref": "uv run python -m med_autogrant stage-route-report --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "ref": "uv run python -m med_autogrant workspace route-report --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
           "label": "stage-route-report (derives from workspace truth)"
         },
         "summarize_workspace": {
           "ref_kind": "command",
-          "ref": "uv run python -m med_autogrant summarize-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "ref": "uv run python -m med_autogrant workspace summarize --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
           "label": "summarize-workspace (derives from workspace truth)"
         },
         "inspect_progress": {
           "ref_kind": "command",
-          "ref": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "ref": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
           "label": "grant-progress (projection surface)"
         }
       }
@@ -628,10 +615,10 @@
     "runtime_control": {
       "surface_kind": "runtime_control",
       "version": 2,
-      "summary": "repo-owned runtime control reference：显式导出 owner 语义、restore point、progress/artifact/approval surface 与 direct-entry locator。",
-      "runtime_owner": "provider_backed_family_runtime",
+      "summary": "OPL generated runtime/session control reference：MAG 只导出 locator、progress/artifact/approval surface 与 direct-entry authority refs。",
+      "runtime_owner": "one-person-lab",
       "domain_owner": "med-autogrant",
-      "executor_owner": "med-autogrant",
+      "executor_owner": "codex_cli",
       "session_locator": {
         "locator_field": "grant_run_id",
         "locator_value": "grant-run-nsfc-demo-001-baseline-001",
@@ -642,40 +629,48 @@
         "session_id": "grant-run-nsfc-demo-001-baseline-001",
         "workspace_id": "nsfc-demo-001",
         "lifecycle_stage": "critique",
-        "journal_path": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json",
-        "resume_command": "uv run python -m med_autogrant runtime-resume --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
-        "resume_surface_kind": "runtime_resume"
+        "session_owner": "one-person-lab",
+        "resume_surface_ref": "opl://generated-surfaces/mag/product-entry-session#resume",
+        "resume_surface_kind": "opl_generated_session_resume",
+        "domain_authority_surface_ref": "/product_entry_manifest/owner_receipt_contract"
+      },
+      "semantic_closure": {
+        "surface_kind": "runtime_control_semantic_closure",
+        "authoring_continuity": "same_funding_call_task",
+        "funding_call_lock": "nsfc-2026-general",
+        "quality_closure_surface": "grant-quality-closure-dossier",
+        "submission_ready_gate": "package_submission_ready_strict_export_gate",
+        "closure_ref": "/product_entry_manifest/grant_authoring_readiness"
       },
       "progress_surface": {
         "surface_kind": "grant_progress",
-        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "ref_kind": "json_pointer",
         "ref": "/product_entry_manifest/progress_projection",
         "summary": "当前 grant progress projection surface。"
       },
       "artifact_pickup_surface": {
         "surface_kind": "artifact_inventory",
-        "command": "uv run python -m med_autogrant summarize-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "command": "uv run python -m med_autogrant workspace summarize --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
         "ref_kind": "json_pointer",
         "ref": "/product_entry_manifest/artifact_inventory",
         "summary": "当前 workspace artifact pickup index surface。"
       },
       "approval_control_surface": {
         "surface_kind": "grant_user_loop",
-        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "ref_kind": "json_pointer",
         "ref": "/product_entry_manifest/operator_loop_surface",
         "summary": "当前人工 gate / control action 入口。"
       },
       "direct_entry": {
         "surface_kind": "grant_direct_entry",
-        "command": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "command": "uv run python -m med_autogrant product direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
         "ref_kind": "json_pointer",
         "ref": "/product_entry_manifest/product_entry_shell/grant_direct_entry",
         "summary": "直接导出当前 grant direct-entry command 与 locator。"
       },
       "domain_projection": {
-        "journal_path": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json",
         "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json"
       }
     },
@@ -691,7 +686,7 @@
           "distribution_mode": "repo_tracked",
           "target_surface_kind": "product_entry_surface",
           "description": "打开当前 direct grant product entry。",
-          "command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
           "readiness": "landed",
           "tags": [
             "product entry",
@@ -702,7 +697,7 @@
             "skill_entry": "med-autogrant",
             "skill_semantics": "domain_app",
             "entry_shell_key": "product_entry_surface",
-            "entry_command": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+            "entry_command": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
             "recommended_shell": "product_entry_surface",
             "supporting_shell_keys": [
               "grant_progress",
@@ -711,25 +706,29 @@
               "grant_user_loop"
             ],
             "shell_commands": {
-              "product_entry_surface": "uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-              "grant_progress": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-              "grant_cockpit": "uv run python -m med_autogrant grant-cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-              "grant_direct_entry": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
-              "grant_user_loop": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json"
+              "product_entry_surface": "uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "grant_progress": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "grant_cockpit": "uv run python -m med_autogrant workspace cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "grant_direct_entry": "uv run python -m med_autogrant product direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+              "grant_user_loop": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json"
             },
             "runtime_continuity": {
               "surface_kind": "skill_runtime_continuity",
-              "runtime_owner": "provider_backed_family_runtime",
+              "runtime_owner": "one-person-lab",
               "domain_owner": "med-autogrant",
-              "executor_owner": "med-autogrant",
+              "executor_owner": "codex_cli",
+              "authoring_continuity": "same_funding_call_task",
+              "funding_call_lock": "nsfc-2026-general",
+              "quality_closure_surface": "grant-quality-closure-dossier",
+              "submission_ready_gate": "package_submission_ready_strict_export_gate",
               "session_locator_field": "grant_run_id",
               "session_surface_ref": "/product_entry_manifest/session_continuity",
               "progress_surface_ref": "/product_entry_manifest/progress_projection",
               "artifact_surface_ref": "/product_entry_manifest/artifact_inventory",
               "restore_point_surface_ref": "/product_entry_manifest/runtime_control/restore_point",
-              "recommended_resume_command": "uv run python -m med_autogrant runtime-resume --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
-              "recommended_progress_command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-              "recommended_artifact_command": "uv run python -m med_autogrant summarize-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+              "recommended_resume_command": "opl://generated-surfaces/mag/product-entry-session#resume",
+              "recommended_progress_command": "uv run python -m med_autogrant workspace progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "recommended_artifact_command": "uv run python -m med_autogrant workspace summarize --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
             }
           }
         },
@@ -741,7 +740,7 @@
           "distribution_mode": "repo_tracked",
           "target_surface_kind": "grant_user_loop",
           "description": "继续当前 direct grant user inbox shell。",
-          "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+          "command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
           "readiness": "landed",
           "tags": [
             "grant",
@@ -803,7 +802,7 @@
             "continue current grant loop",
             "preserve critique to revision truth"
           ],
-          "target_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json"
+          "target_command": "uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json"
         },
         {
           "surface_kind": "automation_descriptor",
@@ -819,7 +818,7 @@
             "build submission-ready package",
             "respect material completeness gate"
           ],
-          "target_command": "uv run python -m med_autogrant build-submission-ready-package --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --output-dir <output-dir> --format json"
+          "target_command": "uv run python -m med_autogrant package submission-ready --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --output-dir <output-dir> --format json"
         }
       ],
       "readiness_summary": "Revision route follow-up 已 ready，submission-ready export 继续保持 tracked follow-on。"
@@ -827,7 +826,7 @@
     "product_entry_status": {
       "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",
       "next_focus": [
-        "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
+        "继续把 grant user loop 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
         "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 provider-backed runtime 上不漂移。"
       ],
       "remaining_gaps_count": 2

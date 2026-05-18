@@ -166,7 +166,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.family_orchestration.event_envelope_surface.ref, '/product_entry_manifest/recommended_command');
     assert.equal(medautogrant.manifest.product_entry_readiness.verdict, 'agent_assisted_ready_not_product_grade');
     assert.equal(medautogrant.manifest.product_entry_readiness.usable_now, true);
-    assert.equal(medautogrant.manifest.product_entry_readiness.recommended_loop_command, 'uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json');
+    assert.equal(medautogrant.manifest.product_entry_readiness.recommended_loop_command, 'uv run python -m med_autogrant product user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json');
     assert.equal(medautogrant.manifest.grant_authoring_readiness.surface_kind, 'grant_authoring_readiness');
     assert.equal(medautogrant.manifest.grant_authoring_readiness.workflow_coverage[0].step_id, 'accumulation_direction_screening');
     assert.equal(medautogrant.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
@@ -179,7 +179,11 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.task_lifecycle.checkpoint_summary.status, 'critique');
     assert.equal(medautogrant.manifest.session_continuity.surface_kind, 'session_continuity');
     assert.equal(medautogrant.manifest.session_continuity.session_id, 'grant-run-nsfc-demo-001-baseline-001');
-    assert.equal(medautogrant.manifest.session_continuity.restore_surface.surface_kind, 'runtime_resume');
+    assert.equal(medautogrant.manifest.session_continuity.restore_surface.surface_kind, 'grant_user_loop');
+    assert.equal(
+      medautogrant.manifest.session_continuity.domain_projection.generated_resume_surface_ref,
+      'opl://generated-surfaces/mag/product-entry-session#resume',
+    );
     assert.equal(medautogrant.manifest.progress_projection.surface_kind, 'progress_projection');
     assert.equal(medautogrant.manifest.progress_projection.current_status, 'critique');
     assert.equal(medautogrant.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
@@ -187,7 +191,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.runtime_control.surface_kind, 'runtime_control');
     assert.equal(medautogrant.manifest.runtime_control.status, 'resumable');
     assert.equal(medautogrant.manifest.runtime_control.restore_point, 'grant-run-nsfc-demo-001-baseline-001:critique');
-    assert.equal(medautogrant.manifest.runtime_control.control_surfaces.resume.surface_kind, 'runtime_resume');
+    assert.equal(medautogrant.manifest.runtime_control.control_surfaces.resume.surface_kind, 'opl_generated_session_resume');
     assert.equal(medautogrant.manifest.runtime_control.control_surfaces.approval.surface_kind, 'grant_user_loop');
     assert.equal(medautogrant.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(medautogrant.manifest.skill_catalog.skills.length, 2);
@@ -196,7 +200,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.automation.automations[0].target_surface_kind, 'grant_user_loop');
     assert.equal(
       medautogrant.manifest.product_entry_preflight.recommended_check_command,
-      'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
+      'uv run python -m med_autogrant workspace validate --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
     );
     assert.equal(medautogrant.manifest.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(medautogrant.manifest.product_entry_start.recommended_mode_id, 'open_product_entry');
@@ -428,7 +432,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.family_action_graph_edge_count, 1);
     assert.equal(grantEntry.product_entry_readiness_verdict, 'agent_assisted_ready_not_product_grade');
     assert.equal(grantEntry.product_entry_readiness_usable_now, true);
-    assert.equal(grantEntry.product_entry_readiness_start_command, 'uv run python -m med_autogrant product-status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json');
+    assert.equal(grantEntry.product_entry_readiness_start_command, 'uv run python -m med_autogrant product status --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json');
     assert.equal(grantEntry.product_entry_preflight.ready_to_try_now, true);
     assert.equal(grantEntry.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(grantEntry.product_entry_start.recommended_mode_id, 'open_product_entry');
@@ -439,7 +443,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.active_binding_locator.url, null);
     assert.equal(
       grantEntry.product_entry_preflight.recommended_check_command,
-      'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
+      'uv run python -m med_autogrant workspace validate --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
     );
     assert.deepEqual(grantEntry.product_entry_preflight_blocking_check_ids, []);
     assert.equal(grantEntry.product_entry_preflight_checks_count, 4);
@@ -459,8 +463,8 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.skill_runtime_continuity_status, 'ready');
     assert.equal(grantEntry.skill_runtime_continuity_session_locator_field, 'grant_run_id');
     assert.equal(grantEntry.skill_runtime_continuity_progress_surface_ref, '/product_entry_manifest/progress_projection');
-    assert.match(grantEntry.skill_runtime_continuity_resume_command, /runtime-resume/);
-    assert.match(grantEntry.skill_runtime_continuity_artifact_command, /summarize-workspace/);
+    assert.equal(grantEntry.skill_runtime_continuity_resume_command, 'opl://generated-surfaces/mag/product-entry-session#resume');
+    assert.match(grantEntry.skill_runtime_continuity_artifact_command, /workspace summarize/);
     assert.equal(grantEntry.domain_entry_contract.entry_adapter, 'MedAutoGrantDomainEntry');
     assert.equal(grantEntry.domain_agent_entry_id, 'mag');
     assert.equal(grantEntry.domain_agent_entry_entry_command, 'product-status');

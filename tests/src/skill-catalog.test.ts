@@ -47,7 +47,7 @@ test('skill catalog helpers normalize shared command and skill descriptors', () 
     distribution_mode: 'repo_tracked',
     surface_kind: 'grant_user_loop',
     description: 'Continue the current grant authoring loop.',
-    command: 'uv run python -m med_autogrant grant-user-loop --input <workspace>',
+    command: 'uv run python -m med_autogrant product user-loop --input <workspace>',
     readiness: 'landed',
     tags: ['grant', 'authoring', 'checkpoint'],
   });
