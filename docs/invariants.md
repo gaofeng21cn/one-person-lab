@@ -80,7 +80,7 @@
 ## 目标优先级
 
 - 一旦系列项目的目标形态已经明确，新增投入默认服务该目标形态。
-- 旧执行形态只能作为迁移桥、兼容层、回归基线或历史记录存在。
+- 旧执行形态只能作为迁移桥、回归基线或历史记录存在；替代面成熟后直接退役，不保留兼容层。
 - 当前主线禁止重新把旧本地 Product API / UI-adapter 公开语义拉回产品入口。
 - 当前主线禁止恢复 `MAS` 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS 的分发与安装表述必须继续落在 OPL module / Packages / git checkout / sibling repo 更新路径上，MDS 相关内容只能作为 MAS-declared optional companion provenance / audit / oracle / intake 引用出现。
 
