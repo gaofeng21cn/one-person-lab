@@ -251,15 +251,19 @@ exit 0
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       OPL_HERMES_BIN: path.join(codexFixtureRoot, 'retired-hermes'),
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
     });
 
     assert.equal(output.version, 'g2');
     assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
     assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
-    assert.equal(output.product_entry.ready, true);
+    assert.equal(output.product_entry.ready, false);
     assert.equal(output.product_entry.local_entry_ready, true);
-    assert.equal(output.product_entry.online_runtime_ready, true);
-    assert.equal(output.product_entry.family_runtime_provider_ready, true);
+    assert.equal(output.product_entry.online_runtime_ready, false);
+    assert.equal(output.product_entry.configured_provider, 'temporal');
+    assert.equal(output.product_entry.family_runtime_provider_ready, false);
     assert.equal(Object.hasOwn(output.product_entry, 'messaging_gateway_ready'), false);
     assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
     assert.match(output.product_entry.notes[0], /opl exec/);
@@ -267,7 +271,7 @@ exit 0
     assert.match(output.product_entry.notes[1], /opl skill sync/);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
     assert.match(output.product_entry.notes[2], /non-default executors are explicit stage\/request selections/);
-    assert.deepEqual(output.product_entry.issues, []);
+    assert.deepEqual(output.product_entry.issues, ['temporal_runtime_not_configured']);
     assert.equal(output.validation.status, 'valid');
   } finally {
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
@@ -284,18 +288,21 @@ exit 0
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       PATH: fixtureRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
     });
 
     assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
-    assert.equal(output.product_entry.ready, true);
+    assert.equal(output.product_entry.ready, false);
     assert.equal(output.product_entry.local_entry_ready, true);
-    assert.equal(output.product_entry.online_runtime_ready, true);
-    assert.equal(output.product_entry.configured_provider, 'local_sqlite');
-    assert.equal(output.product_entry.family_runtime_provider_ready, true);
+    assert.equal(output.product_entry.online_runtime_ready, false);
+    assert.equal(output.product_entry.configured_provider, 'temporal');
+    assert.equal(output.product_entry.family_runtime_provider_ready, false);
     assert.equal(Object.hasOwn(output.product_entry, 'messaging_gateway_ready'), false);
     assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
     assert.match(output.product_entry.notes[2], /configured family runtime provider/);
-    assert.deepEqual(output.product_entry.issues, []);
+    assert.deepEqual(output.product_entry.issues, ['temporal_runtime_not_configured']);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -457,13 +464,16 @@ test('status runtime reports provider-backed runtime status and the OPL session 
   try {
     const output = runCli(['status', 'runtime', '--limit', '2'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
     });
 
     assert.equal(output.version, 'g2');
     assert.equal(output.runtime_status.runtime_substrate, 'provider_backed_family_runtime');
-    assert.equal(output.runtime_status.configured_provider, 'local_sqlite');
-    assert.equal(output.runtime_status.family_runtime_providers.selected_provider, 'local_sqlite');
-    assert.equal(output.runtime_status.family_runtime_providers.providers.local_sqlite.ready, true);
+    assert.equal(output.runtime_status.configured_provider, 'temporal');
+    assert.equal(output.runtime_status.family_runtime_providers.selected_provider, 'temporal');
+    assert.equal(output.runtime_status.family_runtime_providers.providers.temporal.ready, false);
     assert.equal(output.runtime_status.managed_session_ledger.summary.entry_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

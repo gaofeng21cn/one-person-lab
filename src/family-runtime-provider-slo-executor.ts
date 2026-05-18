@@ -21,6 +21,34 @@ function cadenceAction(projection: ReturnType<typeof buildProviderContinuousProo
   return projection.operator_slo_repair_loop.operator_cadence_action;
 }
 
+function repairReceipt(input: {
+  trigger: string;
+  status: 'skipped' | 'blocked' | 'executed';
+  nextRepairCommand?: string | null;
+  blockerIds?: string[];
+}) {
+  return {
+    surface_kind: 'opl_temporal_provider_slo_repair_receipt',
+    provider_kind: 'temporal',
+    trigger: input.trigger,
+    repair_status: input.status,
+    cadence_owner: 'provider_backed_family_runtime',
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'supervised_command_receipt_only',
+    command: 'opl family-runtime residency proof --provider temporal --production',
+    blocker_ids: input.blockerIds ?? [],
+    next_repair_command: input.nextRepairCommand ?? null,
+    can_execute_domain_repair: false,
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+      can_execute_domain_repair: false,
+    },
+  };
+}
+
 function skippedReceipt(input: {
   projection: ReturnType<typeof buildProviderContinuousProof>;
   force: boolean;
@@ -32,10 +60,15 @@ function skippedReceipt(input: {
     command: action.command,
     execution_owner: 'operator_or_infrastructure',
     execution_policy: 'supervised_command_receipt_only',
+    supervised_cadence_receipt: true,
     execution_status: 'skipped',
     receipt_status: 'skipped',
     receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
     skip_reason: input.force ? null : 'cadence_current',
+    repair_receipt: repairReceipt({
+      trigger: input.force ? 'forced' : 'cadence_current',
+      status: 'skipped',
+    }),
     proof_slo_status: input.projection.proof_slo_status,
     proof_freshness_status: input.projection.proof_freshness_status,
     continuous_proof_status: input.projection.continuous_proof_status,
@@ -95,6 +128,8 @@ export async function runTemporalProviderSloTick(
   const receipt = temporalProviderSloExecutionReceipt({
     proof,
     persistedProofRef,
+    trigger: before.proof_slo_status,
+    force: input.force === true,
   });
   insertEvent(db, {
     eventType: 'temporal_residency_proof',

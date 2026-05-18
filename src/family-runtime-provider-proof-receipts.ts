@@ -25,17 +25,82 @@ export function persistTemporalProductionProof(paths: RuntimePaths, proof: Tempo
   return paths.latest_temporal_production_proof;
 }
 
+function recordOrNull(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+}
+
+function productionProofRepairAction(proof: TemporalResidencyProof) {
+  const productionProof = recordOrNull(proof.production_residency_proof);
+  const blocker = recordOrNull(productionProof?.blocker);
+  const repairAction = recordOrNull(blocker?.repair_action);
+  return {
+    action_id: typeof repairAction?.action_id === 'string' ? repairAction.action_id : null,
+    next_command: typeof repairAction?.next_command === 'string' ? repairAction.next_command : null,
+  };
+}
+
+export function temporalProviderSloRepairReceipt(input: {
+  proof: TemporalResidencyProof;
+  trigger: string;
+  force?: boolean;
+}) {
+  const receipt = residencyProofReceipt(input.proof);
+  const productionProof = recordOrNull(input.proof.production_residency_proof);
+  const repairAction = productionProofRepairAction(input.proof);
+  const receiptStatus = typeof receipt.receipt_status === 'string' ? receipt.receipt_status : null;
+  const blocked = receiptStatus !== 'proven';
+  return {
+    surface_kind: 'opl_temporal_provider_slo_repair_receipt',
+    provider_kind: 'temporal',
+    trigger: input.force ? 'forced' : input.trigger,
+    repair_status: blocked ? 'blocked' : 'executed',
+    cadence_owner: 'provider_backed_family_runtime',
+    execution_owner: 'operator_or_infrastructure',
+    execution_policy: 'supervised_command_receipt_only',
+    command: TEMPORAL_PRODUCTION_PROOF_COMMAND,
+    closeout_status: input.proof.closeout_status,
+    receipt_status: receiptStatus,
+    blocker_ids: stringArray(productionProof?.blockers),
+    next_repair_command: blocked ? repairAction.next_command : null,
+    repair_action_id: blocked ? repairAction.action_id : 'none',
+    can_execute_domain_repair: false,
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+      can_execute_domain_repair: false,
+    },
+  };
+}
+
 export function temporalProviderSloExecutionReceipt(input: {
   proof: TemporalResidencyProof;
   persistedProofRef: string | null;
+  trigger?: string;
+  force?: boolean;
 }) {
   const receipt = residencyProofReceipt(input.proof);
+  const repairReceipt = temporalProviderSloRepairReceipt({
+    proof: input.proof,
+    trigger: input.trigger ?? 'proof_slo_due',
+    force: input.force,
+  });
   return {
     surface_kind: 'opl_temporal_provider_slo_execution_receipt',
     provider_kind: 'temporal',
     command: TEMPORAL_PRODUCTION_PROOF_COMMAND,
     execution_owner: 'operator_or_infrastructure',
     execution_policy: 'supervised_command_receipt_only',
+    supervised_cadence_receipt: true,
     cadence_action: {
       action_id: 'temporal-provider-production-proof-cadence',
       action_kind: 'provider_slo_cadence_execution',
@@ -58,6 +123,7 @@ export function temporalProviderSloExecutionReceipt(input: {
     closeout_status: input.proof.closeout_status,
     receipt_status: receipt.receipt_status,
     receipt_kind: receipt.receipt_kind,
+    repair_receipt: repairReceipt,
     persisted_proof_ref: input.persistedProofRef,
     proves_only: 'temporal_service_worker_residency_cadence_execution',
     authority_boundary: {

@@ -106,7 +106,10 @@
     "authority_boundary"
   ],
   "degraded_diagnostic_mode": {
-    "selected_provider_when_unconfigured": "local_sqlite",
+    "selected_provider_when_unconfigured": "temporal",
+    "explicit_local_provider": "local_sqlite",
+    "local_provider_role": "dev_ci_offline_diagnostic_baseline",
+    "temporal_unready_policy": "fail_closed_blocked",
     "full_online_ready": false,
     "allowed_surfaces": [
       "local status",
