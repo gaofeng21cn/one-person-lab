@@ -333,7 +333,7 @@ export async function runOplTurnkeyInstall(
       ? await runFamilyRuntime(['status'])
       : await runFamilyRuntime(['install']);
     const onlineManagementActions = runtimeManagerAction.runtime_manager_action.executed_actions.filter(
-      (action) => action.action_lane === 'online_runtime',
+      (action) => action.action_lane === 'online_runtime' && action.status !== 'blocked_manual_configuration_required',
     );
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('runtime_manager_repair_completed', {

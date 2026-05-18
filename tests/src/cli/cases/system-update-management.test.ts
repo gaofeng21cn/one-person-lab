@@ -15,7 +15,9 @@ test('system ignores retired Hermes env outside family runtime provider selectio
     );
 
     assert.equal(Object.hasOwn(output.system.core_engines, 'hermes'), false);
-    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
+    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'temporal');
+    assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'attention_needed');
+    assert.equal(output.system.core_engines.family_runtime_provider.status, 'provider_code_landed_unconfigured');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -74,7 +76,7 @@ exit 1
       };
     };
 
-    assert.equal(output.system.overall_status, 'ready');
+    assert.equal(output.system.overall_status, 'attention_needed');
     assert.equal(output.system.core_engines.codex.version_status, 'compatible');
     assert.equal(output.system.core_engines.codex.health_status, 'ready');
     assert.deepEqual(output.system.core_engines.codex.issues, []);

@@ -8,6 +8,7 @@
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
 - 大型任务必须按 stage 作为可观察、可恢复、可审计的工作单元推进；不得把开放式知识工作降级成只靠硬编码步骤或固定脚本后处理的流程。
 - 涉及知识交付、专家判断或正式交付质量的复杂步骤必须是 first-class stage，例如 AI 审稿、publication quality review、fundability review、visual review、revision/rebuttal review；不得把这类流程作为另一个 stage 内部的普通函数、helper、后处理或 authority function 暗中完成。
+- 每个标准 OPL Agent stage 必须声明本 stage 的 prompt、tools、knowledge 和 quality gate。tools 可以包含 OPL 通用工具、domain skill、必要私有功能和 native helper；knowledge 可以包含 source refs、memory refs、经验卡、rubric、policy 和 prior receipt refs；quality gate 必须说明本 stage 如何被独立审核、何时 route-back、何时允许 handoff。
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层和 typed family queue owner，不得被写成 domain scheduler、domain truth owner、domain quality owner、domain artifact owner 或 concrete executor。
 - family runtime provider 负责 stage-attempt durability、wakeup、retry/dead-letter、human-gate transport、status query 与 execution history。生产在线路径必须由 Temporal-backed provider 承接；缺少 Temporal service、worker 或 readiness proof 时，OPL production readiness 必须 fail-closed 为可修复 blocker，而不是退回 local provider 宣称在线可用。
 - `hermes_agent` 可作为显式非默认 executor adapter/backend。该 adapter 不得被写成 provider、provider proof surface、readiness path、MAS/MAG/RCA domain truth、quality、artifact、publication gate 或默认 concrete executor owner，也不得被 fork/vendor 成 OPL 私有 runtime kernel。
@@ -27,6 +28,13 @@
 - 当 admitted domain 吸收外部 companion 能力时，OPL 只上收 domain-neutral control-plane 原则与 discovery refs；可保留能力必须落到 domain-owned surface，外部 companion 必须降级为显式 audit/diagnostic/intake/oracle 引用，并记录 source ref/hash、capability classification、license refs、owner boundary、parity proof 与 no-history contributor audit。
 - `OPL` 持有 family-level 开发与运行框架、通用状态机、stage attempt lifecycle、queue/wakeup、resume/human gate、workspace/artifact/memory locator、operator projection 和 App/workbench shell。MAS/MAG/RCA 不维护平行的通用 runtime 模块；需要运行能力时通过 OPL Framework 托管。
 - `OPL` 不替代各个领域仓的智能体逻辑、domain truth、quality verdict、artifact authority、memory body 或 domain transition semantics。
+- 普通用户路径和 One Person Lab App 必须默认使用 OPL-managed environment：managed modules、managed skills、Codex plugin metadata、runtime tools 与 provider state 是 App 产品入口的运行真相；不得依赖开发者工作区 checkout 是否最新、是否 clean 或处于哪个实验分支。
+- developer checkout 只能作为显式开发/调试 override 使用。override 必须通过环境变量、开发模式开关、workspace registry 或 App 明示状态表达，并且 App / CLI 必须能说明当前命中的 checkout。没有显式 override 时，不得让 sibling workspace 或 repo-local 实验分支反向定义 App 运行依赖。
+- App 启动维护可以自动更新 clean 的 OPL-managed checkout，并在成功后运行 module health check、skill sync 与 Codex-visible plugin / skill metadata freshness check；遇到 dirty、ahead、diverged、no upstream、health check 失败或 cache 刷新需要重启时，必须 fail-closed 为可见的人工处理状态，不得静默覆盖、回滚或用开发仓污染 managed runtime。
+- Codex-visible skill/plugin cache 只是当前 active managed source 的投影；它不能成为第二真相源。需要刷新或重启 Codex App 才能加载新 metadata 时，App 应明确提示或提供受控刷新入口。
+- `OPL Developer Mode` 必须是显式系统级配置和 App 可见设置。安装流程可以在检测到配置的 GitHub developer login 时默认开启；其他用户也必须能在 App 设置或 CLI 中手动开启、关闭或改成只观察模式。当前命中状态、配置来源和 GitHub 身份不得隐式推断。
+- Developer Mode 只授权开发与修复路由，不改变普通用户 managed runtime 的真相源。若 authenticated GitHub identity 对目标 repo 具备直接写权限，智能体在调用过程中发现 framework / domain repo 问题时可以进入 repo 层修复、提交和 owner-visible 审计路径；若没有直接写权限，只允许走 fork / branch / pull request 路径。
+- Developer Mode 开启时可以默认启用外围 AI 巡检，但巡检必须通过 OPL Agent Lab 或等价 refs-only control plane 输出 issue、evidence、owner route、candidate fix 或 PR refs；不得静默写 domain truth、artifact、memory body、quality verdict 或 managed runtime。
 - OPL family 的目标态高于当前实现分布。MAS/MAG/RCA 当前存在的私有 scheduler、runner、session store、SQLite/lifecycle、workspace/source intake、memory/artifact transport、workbench、sidecar/status/product wrapper 或 generated wrapper，只能作为迁移输入；不得因为已有 active caller 就写成长期合理。
 - 标准 OPL Agent 必须收敛到 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。stage 定义、domain policy、quality/export verdict、artifact authority、memory accept/reject 和 owner receipt signer 属于标准 pack 或 OPL authority ABI，不算私有平台污染；repo-local 通用 runtime、状态机、持久化、调度、展示、transport、lifecycle 或 observability residue 只能作为明确例外保留，且必须有接口、receipt/blocker/ref 输出边界、active caller、不能上收原因、no-forbidden-write 证据和退役/复审门。
 - 当 OPL primitive、pack compiler 或 App shell 还不够成熟时，应在 OPL 层定义缺口、必要时调研外部成熟系统，并把结论沉淀为 OPL generic primitive / generated surface / policy；不得让 MAS/MAG/RCA 各自复制私有平台。

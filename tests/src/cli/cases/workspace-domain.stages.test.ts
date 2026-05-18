@@ -647,6 +647,14 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
     );
     assert.equal(mag.family_agent.physical_skeleton_follow_through_gate.delete_gate.delete_ready, true);
     assert.equal(mag.family_agent.physical_skeleton_follow_through_gate.delete_gate.can_execute_delete, false);
+    assert.equal(
+      mag.family_agent.physical_skeleton_follow_through_gate.delete_gate.can_execute_domain_physical_delete,
+      false,
+    );
+    assert.equal(
+      mag.family_agent.physical_skeleton_follow_through_gate.delete_gate.opl_cleanup_apply_can_execute,
+      true,
+    );
     assert.deepEqual(
       mas.family_agent.production_closure_gaps.map((gap: { gap_id: string }) => gap.gap_id),
       [

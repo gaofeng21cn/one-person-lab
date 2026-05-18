@@ -941,8 +941,9 @@ db.close();`,
     assert.equal(workbench.action_routing.summary.app_surface_route_count, 30);
     assert.equal(workbench.action_routing.summary.provider_signal_route_count, 2);
     assert.equal(workbench.action_routing.summary.domain_sidecar_route_count, 3);
+    assert.equal(workbench.action_routing.summary.execution_policy, 'opl_safe_action_shell');
     assert.equal(workbench.action_routing.authority_boundary.can_execute_domain_action, false);
-    assert.equal(workbench.action_routing.authority_boundary.can_execute_provider_signal, false);
+    assert.equal(workbench.action_routing.authority_boundary.can_execute_direct_skill, false);
     assert.equal(workbench.groups.by_domain.medautoscience.total, 1);
     assert.equal(workbench.groups.by_domain.medautoscience.memory_ref_counters.consumed_memory_ref_count, 2);
     assert.equal(workbench.groups.by_domain.redcube.human_gate_count, 1);

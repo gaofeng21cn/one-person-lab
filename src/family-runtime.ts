@@ -60,7 +60,10 @@ import {
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
-import { runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
+import {
+  reconcileFamilyRuntimeLifecycleRefs,
+  runFamilyRuntimeLifecycleApply,
+} from './family-runtime-lifecycle-index.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -730,8 +733,13 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_doctor: {
           surface_id: 'opl_family_runtime_doctor',
-          doctor_status: status.readiness.provider_ready ? 'ready' : 'degraded',
-          blockers: status.readiness.degraded_reason ? [status.readiness.degraded_reason] : [],
+          doctor_status: status.readiness.full_online_ready ? 'ready' : 'degraded',
+          blockers: [
+            ...(status.readiness.degraded_reason ? [status.readiness.degraded_reason] : []),
+            ...(status.readiness.local_sqlite_is_dev_ci_offline_only
+              ? ['local_sqlite_is_dev_ci_offline_only']
+              : []),
+          ],
           repair_command: `opl family-runtime repair --provider ${status.configured_provider}`,
           status,
         },
@@ -916,6 +924,12 @@ export async function runFamilyRuntime(args: string[]) {
       return {
         version: 'g2',
         family_runtime_lifecycle_apply: runFamilyRuntimeLifecycleApply(parsed.input),
+      };
+    }
+    if (parsed.mode === 'lifecycle_reconcile') {
+      return {
+        version: 'g2',
+        family_runtime_lifecycle_reconcile: reconcileFamilyRuntimeLifecycleRefs(parsed.input),
       };
     }
     if (parsed.mode === 'enqueue') {

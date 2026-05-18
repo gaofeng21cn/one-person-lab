@@ -9,6 +9,7 @@ import {
   familyRuntimeLifecycleIndexPaths,
   readFamilyRuntimeLifecycleRefs,
   recordFamilyRuntimeLifecycleRef,
+  reconcileFamilyRuntimeLifecycleRefs,
   runFamilyRuntimeLifecycleApply,
 } from '../../src/family-runtime-lifecycle-index.ts';
 
@@ -234,5 +235,69 @@ test('family runtime lifecycle verify reads an applied cleanup receipt', () => {
     assert.deepEqual(verified.verified_receipts[0].restore_proof_refs, [
       'restore-proof:mas:runtime-lifecycle',
     ]);
+  });
+});
+
+test('family runtime lifecycle reconcile detects missing and stale refs without delete authority', () => {
+  withTempState(() => {
+    recordFamilyRuntimeLifecycleRef({
+      domain_id: 'med-autoscience',
+      surface_id: 'artifact_lifecycle_receipt',
+      surface_role: 'domain_artifact_mutation_receipt_ref',
+      source_ref: 'mas://artifact/current-package',
+      receipt_ref: 'mas://receipt/artifact-cleanup',
+      payload: {
+        restore_proof_refs: ['restore-proof:mas-package'],
+        domain_artifact_mutation_receipt_refs: ['mas://receipt/artifact-cleanup'],
+      },
+    });
+
+    const reconciled = reconcileFamilyRuntimeLifecycleRefs({
+      target_domain_id: 'med-autoscience',
+      expected_source_refs: ['mas://artifact/current-package'],
+      expected_receipt_refs: ['mas://receipt/artifact-cleanup'],
+      expected_restore_proof_refs: ['restore-proof:mas-package'],
+      expected_domain_artifact_mutation_receipt_refs: ['mas://receipt/artifact-cleanup'],
+    });
+
+    assert.equal(reconciled.status, 'reconciled');
+    assert.equal(reconciled.summary.drift_detected, false);
+    assert.equal(reconciled.summary.can_execute_delete, false);
+    assert.equal(reconciled.summary.can_execute_domain_physical_delete, false);
+    assert.equal(reconciled.summary.opl_cleanup_apply_can_execute, true);
+    assert.equal(reconciled.delete_ready_proof.proof_status, 'domain_owner_receipt_refs_observed');
+    assert.equal(reconciled.delete_ready_proof.can_execute_delete, false);
+    assert.equal(reconciled.delete_ready_proof.can_execute_domain_physical_delete, false);
+    assert.equal(reconciled.delete_ready_proof.opl_cleanup_apply_ready, true);
+    assert.equal(
+      reconciled.delete_ready_proof.opl_cleanup_apply_surface,
+      'opl family-runtime lifecycle apply --mode apply',
+    );
+    assert.equal(reconciled.authority_boundary.opl_can_delete_domain_repo_files, false);
+    assert.equal(reconciled.authority_boundary.opl_can_write_cleanup_ledger_receipts, true);
+
+    const inferred = reconcileFamilyRuntimeLifecycleRefs({
+      target_domain_id: 'med-autoscience',
+    });
+
+    assert.equal(inferred.summary.expected_ref_count, 0);
+    assert.equal(inferred.summary.opl_cleanup_apply_can_execute, true);
+    assert.equal(inferred.delete_ready_proof.proof_status, 'domain_owner_receipt_refs_observed');
+
+    const drift = reconcileFamilyRuntimeLifecycleRefs({
+      target_domain_id: 'med-autoscience',
+      expected_source_refs: ['mas://artifact/current-package', 'mas://artifact/missing'],
+      expected_domain_artifact_mutation_receipt_refs: ['mas://receipt/artifact-cleanup', 'mas://receipt/missing'],
+      max_age_ms: 0,
+      now: '2999-01-01T00:00:00.000Z',
+    });
+
+    assert.equal(drift.status, 'drift_detected');
+    assert.deepEqual(drift.missing_refs.source_refs, ['mas://artifact/missing']);
+    assert.deepEqual(drift.missing_refs.domain_artifact_mutation_receipt_refs, ['mas://receipt/missing']);
+    assert.equal(drift.summary.stale_ref_count, 1);
+    assert.equal(drift.delete_ready_proof.proof_status, 'blocked_lifecycle_drift_detected');
+    assert.equal(drift.summary.can_execute_delete, false);
+    assert.equal(drift.summary.opl_cleanup_apply_can_execute, false);
   });
 });

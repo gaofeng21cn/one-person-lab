@@ -23,7 +23,20 @@ OPL family 的最高优先级是目标架构，而不是迁就当前实现分布
 
 标准 OPL Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。domain repo 默认提交 stage graph、prompt/skill/knowledge refs、policy table、domain schema、transition table、artifact/source/memory policy、receipt schema、fixtures、tests 和必要的 authority function；CLI、MCP、Skill/product-entry metadata、sidecar、status/read model、workbench、harness、queue、attempt ledger、generic transition runner、runtime lifecycle、operator projection 和 App drilldown 默认由 OPL Framework / One Person Lab App 生成、托管或提供通用 primitive。
 
+OPL 是知识工程驱动的智能体开发运行框架。标准 OPL Agent 必须把复杂工作先拆成 stage，并为每个 stage 明确：
+
+- `prompt`：执行、修订、handoff、review/audit 所需提示词。
+- `tools`：OPL 通用工具、domain skill、必要私有功能和 native helper；私有功能例如 MAS 绘图 / 统计 / artifact materialization helper，只能作为 stage 工具或 authority function 暴露，不能替代 stage。
+- `knowledge`：领域知识、source refs、memory refs、经验卡、rubric、policy、fixture 和 prior receipt refs。
+- `quality gate`：什么算本 stage 做好，谁有权放行进入下一 stage，输出什么 review/audit receipt、typed blocker 或 route-back。
+
+涉及创作、评估、评审、路线判断、fundability、publication readiness、visual direction、review/export verdict、memory accept/reject 或 artifact mutation authorization 的工作必须 AI-first。程序可以校验 schema、物化 artifact、签 receipt、阻止越权、投影 refs；不能把函数返回值、scorecard、regex、截图机械检查、schema completeness、controller route、provider completion 或脚本退出码升级为 ready verdict。Stage 执行 AI 与 Stage 质控 AI 必须是两个独立智能体任务；它们可以都用 `Codex CLI`，但必须独立 invocation、独立上下文、独立 task record 和独立 receipt，缺少独立 gate receipt 时 fail closed。
+
 私有平台 residue 是例外，不是默认。stage 定义、domain policy、quality/export verdict、artifact authority、memory accept/reject 和 owner receipt signer 这类内容如果走标准 pack 或 OPL authority function ABI，就属于标准智能体自定义点，不应被审计成污染面。只有 repo-local 通用运行平台、状态机、持久化、调度、展示、transport、lifecycle 或 observability 这类 residue，才必须写清 `cannot_absorb_reason`、接口输入输出、返回 receipt/blocker/ref 的形态、active caller、no-forbidden-write 证据、direct/hosted 语义边界和后续复审/退役门。缺少这些证据时，文档和计划应把它写成功能/结构差距，而不是写成合理保留项。
+
+`opl agents interfaces --repo-dir <domain> --json` 返回 generated interface `ready` 时，只能说明 OPL 能从 domain-owned metadata 生成描述并路由到 domain handler target。这个 ready 不是 production caller migration、wrapper retirement、App/workbench GUI、真实 hosted attempt、legacy physical cleanup 或 domain ready 的完成证明。文档里凡写到 generated surface，都必须把 descriptor ready、production consumption、active caller migration、physical retirement 和 live evidence 分开。
+
+当前不能把 descriptor ready、classification closed、selected proof passed 或 App/read-model proof 写成标准 OPL Agent 结构 closure。MAS/MAG/RCA 仍需按各自 gap plan 判断是否完成 generated surface production consumption、active caller migration、refs-only thinning、App/workbench productization、lifecycle reconciliation、private authority AI-first audit 和 legacy cleanup。证据门可以证明目标结构可用，但不能替代目标结构本身的迁移、上收、收薄、删除或产品化。
 
 为了清洁目标态，四个 repo 都可以重构。旧接口、旧 alias、旧 wrapper、旧 facade、旧聚合测试、旧文档入口和旧 runtime owner 只要不是目标态的一部分，就迁移 active caller 后直接退役或进入 history/tombstone；不为了照顾现状保留兼容面。如果当前 OPL primitive、pack compiler 或 App shell 还不够优雅，应先把缺口上收到 OPL 层；必要时可以系统调研成熟框架和外部实现模式，再把结论沉淀成 OPL primitive / generated surface / policy，而不是让 MAS/MAG/RCA 各自复制一套私有平台。
 
@@ -80,9 +93,15 @@ Domain repo 不应长期维护 generic scheduler、generic queue、generic attem
 
 这条判断不以“当前代码已经这么写了”为理由让步。当前实现可以被大幅重构、移动、删除或由 OPL generated surface 替换；单仓计划里所谓 direct path、sidecar、product-entry、projection builder 或 status wrapper，默认先视为 migration bridge，只有无法声明化且确实属于 domain authority 的部分才保留为长期接口。
 
+必要私有函数必须逐项审计。质量、创作、评审、路线判断、fundability、publication readiness、visual direction、review/export verdict、memory accept/reject 和 artifact mutation authorization，默认适合 AI-first stage output 或独立 reviewer/auditor attempt；程序只能做 validator、materializer、receipt signer、guard、refs projection 或 domain-native helper implementation。函数返回值、scorecard、schema completeness、regex、截图机械检查、controller route、provider completion 或脚本退出码都不能替代 AI-first verdict。若某个函数必须保留，单仓 gap plan 必须写清 active caller、cannot absorb reason、输入输出、receipt/blocker/ref 返回、AI-first record 要求、no-forbidden-write 和退役门。
+
 单仓文档只写本仓目标、当前差距、与 OPL 的 owner boundary、哪些能力应上收、哪些能力必须保留在本仓。目录结构应与 OPL family taxonomy 保持同名一致，代码内部结构可以按领域实现差异保留，但 OPL-facing skeleton、docs taxonomy 和 owner boundary 应统一。不在 MAS 文档维护 MAG/RCA backlog，不在 MAG 文档维护 MAS/RCA backlog，不在 RCA 文档维护 MAS/MAG backlog。
 
 gap plan 和开发计划的差距项必须拆成两类：`功能/结构差距` 记录 owner 边界、模块归属、接口退役、generated surface、目录/合同/调用链仍未到目标态的部分；`测试/证据差距` 记录真实 workspace receipt、provider-hosted apply、live soak、coverage、no-forbidden-write proof、regression proof、App drilldown evidence 等验收缺口。已经具备功能但缺少真实证据时，只能写进测试/证据差距；不能混写成“功能还没做”。
+
+反过来，classification surface closed、descriptor aligned、generated descriptor ready、selected proof passed 或 no-regression fixture passed，也不能把仍未完成的生产 caller 迁移、App/workbench 产品化、refs-only 收薄、legacy physical retirement、source_ref refresh 或私有函数 AI-first 审计吞进测试/证据差距。只要目标 owner、调用链、物理代码路径或文档目录职责还未到理想态，就继续是功能/结构差距。
+
+当某个 domain 的结构 closure 未来被真实迁移和 no-active-caller proof 明确关闭时，后续文档才可以把剩余验收改写为测试/证据差距。不能提前把 descriptor ready、classification closed、no-regression fixture、read-model proof 或 provider proof 写成结构 closure。
 
 ### App / Workbench 负责
 

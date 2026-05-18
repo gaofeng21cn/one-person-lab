@@ -328,8 +328,8 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(list.domain_pack_compiler.summary.total_domain_count, 3);
   assert.equal(list.domain_pack_compiler.summary.ready_domain_count, 3);
   assert.equal(list.domain_pack_compiler.summary.blocked_domain_count, 0);
-  assert.equal(list.domain_pack_compiler.summary.generated_surface_count, 21);
-  assert.equal(list.domain_pack_compiler.summary.generated_surface_ready_count, 21);
+  assert.equal(list.domain_pack_compiler.summary.generated_surface_count, 24);
+  assert.equal(list.domain_pack_compiler.summary.generated_surface_ready_count, 24);
   assert.equal(list.domain_pack_compiler.summary.domain_generated_surface_owner_claim_count, 0);
   assert.equal(list.domain_pack_compiler.authority_boundary.opl_owns_generated_surfaces, true);
   assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
@@ -351,6 +351,9 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
     'domain_memory_descriptor',
     'runtime_surfaces',
     'functional_privatization_audit',
+    'generated_surface_handoff',
+    'product_entry_manifest_descriptor',
+    'sidecar_descriptor',
   ]);
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.mcp.descriptors[0].name, 'study_packet');
@@ -453,7 +456,7 @@ test('domain pack compiler blocks generated handoff when a domain still declares
   );
 });
 
-test('generated interfaces command exposes one OPL-owned interface bundle from the same action catalog', () => {
+test('generated interfaces command exposes descriptors but blocks cutover without handoff proof', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-state-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
@@ -464,13 +467,15 @@ test('generated interfaces command exposes one OPL-owned interface bundle from t
   assert.equal(bundle.surface_kind, 'opl_generated_agent_interface_bundle');
   assert.equal(bundle.owner, 'one-person-lab');
   assert.equal(bundle.domain_repo_can_own_generated_surface, false);
-  assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
+  assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
   assert.equal(bundle.active_caller_cutover_proof.generated_surface_owner, 'one-person-lab');
   assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
+  assert.equal(bundle.active_caller_cutover_proof.active_caller_target_proof_status, 'blocked');
+  assert.equal(bundle.active_caller_cutover_proof.blocked_target_count > 0, true);
   assert.equal(bundle.active_caller_cutover_proof.blocker_reasons.length, 0);
   assert.equal(
     bundle.active_caller_cutover_proof.domain_handler_targets_only,
-    true,
+    false,
   );
   assert.deepEqual(bundle.active_caller_cutover_proof.forbidden_generated_authority, [
     'domain_truth_write',
@@ -494,6 +499,154 @@ test('generated interfaces command exposes one OPL-owned interface bundle from t
   assert.equal('cli' in mcpOnly, false);
   assert.equal('skill' in mcpOnly, false);
   assert.deepEqual(mcpOnly.stage_routes, []);
+});
+
+test('generated interfaces keep active caller cutover blocked while repo-local migration bridges remain', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-bridge-blocked-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const bridgeMas = attachManifestSurface(
+    attachManifestSurface(
+      withPackCompilerReadySurfaces(fixtures.medautoscience, {
+        agentId: 'mas',
+        targetDomainId: 'med-autoscience',
+        owner: 'MedAutoScience',
+        actionId: 'study_packet',
+        stageId: 'study_stage',
+        memoryRefId: 'mas_publication_route_memory',
+      }),
+      'functional_privatization_audit',
+      {
+        surface_kind: 'functional_privatization_audit',
+        target_domain_id: 'med-autoscience',
+        modules: [
+          {
+            module_id: 'repo_local_product_wrapper_bridge',
+            classification: 'temporary_migration_bridge',
+            owner: 'med-autoscience',
+            code_paths: ['src/med_autoscience/cli.py'],
+            active_callers: ['medautosci product-status'],
+            active_caller_status: 'repo-local wrapper migration_bridge_pending',
+            migration_action: 'cut over active caller to OPL generated product status surface',
+          },
+        ],
+      },
+    ),
+    'generated_surface_handoff',
+    {
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      handoff_surfaces: [
+        {
+          surface_id: 'status_read_model',
+          current_paths: ['src/med_autoscience/cli.py'],
+          current_role: 'repo-local wrapper migration bridge',
+          target_role: 'opl_generated_product_status_surface',
+        },
+      ],
+    },
+  );
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(bridgeMas),
+  ], env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
+  assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
+  assert.equal(bundle.active_caller_cutover_proof.blocked_target_count >= 1, true);
+  assert.equal(bundle.active_caller_cutover_proof.blocked_surface_ids.includes('status_read_model'), true);
+  assert.equal(bundle.active_caller_cutover_proof.domain_handler_targets_only, false);
+  assert.equal(bundle.active_caller_target_proof.status, 'blocked');
+  assert.equal(bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'status_read_model',
+  ).proof_status, 'blocked_active_caller_not_cut_over');
+});
+
+test('generated interfaces fail closed when active caller target kind is not proven', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-unknown-target-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const unknownTargetMas = attachManifestSurface(
+    attachManifestSurface(
+      withPackCompilerReadySurfaces(fixtures.medautoscience, {
+        agentId: 'mas',
+        targetDomainId: 'med-autoscience',
+        owner: 'MedAutoScience',
+        actionId: 'study_packet',
+        stageId: 'study_stage',
+        memoryRefId: 'mas_publication_route_memory',
+      }),
+      'functional_privatization_audit',
+      {
+        surface_kind: 'functional_privatization_audit',
+        target_domain_id: 'med-autoscience',
+        modules: [
+          {
+            module_id: 'ambiguous_status_module',
+            classification: 'declarative_pack_generated_surface',
+            owner: 'med-autoscience',
+            code_paths: ['src/med_autoscience/status.py'],
+            active_callers: ['status readout'],
+            active_caller_status: 'declared active caller',
+            migration_action: 'declared active caller target',
+          },
+        ],
+      },
+    ),
+    'generated_surface_handoff',
+    {
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      handoff_surfaces: [
+        {
+          surface_id: 'status_read_model',
+          current_paths: ['src/med_autoscience/status.py'],
+          current_role: 'declared active caller',
+          target_role: 'status descriptor',
+        },
+      ],
+    },
+  );
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(unknownTargetMas),
+  ], env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
+  assert.equal(bundle.active_caller_target_proof.status, 'blocked');
+  assert.equal(
+    bundle.active_caller_cutover_proof.blocked_surface_ids.includes('status_read_model'),
+    true,
+  );
+  const statusTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'status_read_model',
+  );
+  assert.equal(statusTarget.proof_status, 'blocked_active_caller_target_not_proven');
+  assert.equal(statusTarget.target_kind, 'descriptor_declared_target');
 });
 
 test('generated interfaces can compile a standard agent repo contract pack without private wrappers', () => {
@@ -619,12 +772,151 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           owner: 'SampleBriefAgent',
         },
         {
+          module_id: 'sample_brief_generated_wrappers',
+          classification: 'declarative_pack_generated_surface',
+          owner: 'SampleBriefAgent',
+          code_paths: [
+            'agent/cli.ts',
+            'agent/mcp.ts',
+            'agent/product-entry.ts',
+          ],
+          active_callers: [
+            'OPL generated CLI',
+            'OPL generated MCP',
+            'OPL generated Skill',
+            'OPL generated product-entry',
+            'OPL generated status read model',
+          ],
+          active_caller_status: 'domain_handlers_active_opl_generated_wrapper_metadata_consumed',
+          migration_action: 'derive_wrapper_metadata_from_declarative_pack_and_opl_generated_surfaces',
+          retained_domain_authority: [
+            'domain_action_handler',
+            'owner_receipt',
+          ],
+        },
+        {
+          module_id: 'sample_brief_sidecar_adapter',
+          classification: 'declarative_pack_generated_surface',
+          owner: 'SampleBriefAgent',
+          code_paths: ['runtime/sidecar.ts'],
+          active_callers: ['OPL generated sidecar dispatch'],
+          active_caller_status: 'opl_generated_sidecar_surface_targets_domain_handler',
+          migration_action: 'declare_sidecar_descriptor_for_opl_generated_dispatch_surface',
+          retained_domain_authority: ['owner_receipt'],
+        },
+        {
+          module_id: 'sample_brief_workbench_projection',
+          classification: 'declarative_pack_generated_surface',
+          owner: 'SampleBriefAgent',
+          code_paths: ['runtime/workbench.ts'],
+          active_callers: ['OPL hosted workbench'],
+          active_caller_status: 'opl_hosted_workbench_surface_consumes_domain_projection_refs',
+          migration_action: 'declare_workbench_projection_inputs_for_opl_app_generated_shell',
+          retained_domain_authority: ['status_projection_refs'],
+        },
+        {
+          module_id: 'sample_brief_functional_harness',
+          classification: 'declarative_pack_generated_surface',
+          owner: 'SampleBriefAgent',
+          code_paths: ['runtime/harness.ts'],
+          active_callers: ['OPL functional harness'],
+          active_caller_status: 'opl_generated_functional_harness_cases_target_domain_handler',
+          migration_action: 'derive_harness_cases_from_declarative_pack_and_opl_functional_runtime_harness',
+          retained_domain_authority: ['fixture_oracle_refs'],
+        },
+        {
           module_id: 'sample_brief_owner_receipt_signer',
           classification: 'minimal_authority_function',
           owner: 'SampleBriefAgent',
           cannot_absorb_reason: 'OPL cannot sign target domain owner receipts.',
         },
       ],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'generated_surface_handoff.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'sample-brief-agent',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      generated_surfaces: [
+        { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'sidecar_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
+      ],
+      handoff_surfaces: [
+        {
+          surface_id: 'cli',
+          current_paths: ['agent/cli.ts'],
+          current_role: 'domain_handler_target',
+          target_role: 'opl_generated_command_surface',
+        },
+        {
+          surface_id: 'mcp',
+          current_paths: ['agent/mcp.ts'],
+          current_role: 'domain_handler_target',
+          target_role: 'opl_generated_mcp_descriptor_surface',
+        },
+        {
+          surface_id: 'skill',
+          current_paths: ['agent/skill.ts'],
+          current_role: 'domain_handler_target',
+          target_role: 'opl_generated_skill_descriptor_surface',
+        },
+        {
+          surface_id: 'product_entry_manifest',
+          current_paths: ['agent/product-entry.ts'],
+          current_role: 'domain_handler_target',
+          target_role: 'opl_generated_product_entry_surface',
+        },
+        {
+          surface_id: 'status_read_model',
+          current_paths: ['agent/status.ts'],
+          current_role: 'domain_projection_refs',
+          target_role: 'opl_generated_status_read_model_surface',
+        },
+        {
+          surface_id: 'sidecar_export_dispatch',
+          current_paths: ['runtime/sidecar.ts'],
+          current_role: 'sidecar_adapter',
+          target_role: 'opl_generated_sidecar_handoff_surface',
+        },
+        {
+          surface_id: 'workbench_drilldown',
+          current_paths: ['runtime/workbench.ts'],
+          current_role: 'projection_refs',
+          target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
+        },
+        {
+          surface_id: 'functional_harness_cases',
+          current_paths: ['runtime/harness.ts'],
+          current_role: 'oracle_fixture_refs',
+          target_role: 'opl_generated_functional_harness_cases',
+        },
+      ],
+      required_domain_handoff: [
+        'owner_receipt_schema',
+        'typed_blocker_schema',
+        'minimal_authority_function_refs',
+        'no_forbidden_write_evidence',
+      ],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'pack_compiler_input.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_domain_pack_compiler_input',
+      domain_id: 'sample-brief-agent',
+      domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
     })}\n`,
   );
 
@@ -645,4 +937,54 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     allowed_action_refs: ['draft_brief'],
     authority_owner: 'SampleBriefAgent',
   });
+  assert.equal(bundle.source_contract_consumption.status, 'ready');
+  assert.equal(
+    bundle.source_contract_consumption.consumed_contracts.find(
+      (contract: { contract_id: string }) => contract.contract_id === 'generated_surface_handoff',
+    ).status,
+    'resolved',
+  );
+  assert.equal(
+    bundle.source_contract_consumption.consumed_contracts.find(
+      (contract: { contract_id: string }) => contract.contract_id === 'product_entry_manifest_descriptor',
+    ).status,
+    'resolved_from_family_action_catalog',
+  );
+  assert.equal(
+    bundle.source_contract_consumption.consumed_contracts.find(
+      (contract: { contract_id: string }) => contract.contract_id === 'sidecar_descriptor',
+    ).status,
+    'resolved_from_generated_surface_handoff',
+  );
+  assert.equal(bundle.product_status.status, 'ready_from_family_action_catalog');
+  assert.equal(bundle.product_session.status, 'ready_from_session_continuity_or_stage_control_plane');
+  assert.equal(bundle.sidecar.status, 'ready');
+  assert.equal(bundle.workbench.status, 'ready_from_stage_control_plane');
+  assert.equal(bundle.active_caller_target_proof.status, 'ready');
+  assert.equal(bundle.active_caller_target_proof.blocked_target_count, 0);
+  const cliTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'cli',
+  );
+  assert.equal(cliTarget.target_kind, 'opl_generated_surface');
+  assert.equal(cliTarget.active_caller_module_id, 'sample_brief_generated_wrappers');
+  const sidecarTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'sidecar_export_dispatch',
+  );
+  assert.equal(sidecarTarget.target_kind, 'opl_generated_surface');
+  assert.equal(sidecarTarget.active_caller_module_id, 'sample_brief_sidecar_adapter');
+  const workbenchTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'workbench_drilldown',
+  );
+  assert.equal(workbenchTarget.target_kind, 'opl_hosted_surface');
+  assert.equal(workbenchTarget.active_caller_module_id, 'sample_brief_workbench_projection');
+  assert.equal(bundle.authority_boundary.generated_interface_can_write_domain_truth, false);
+  assert.equal(bundle.authority_boundary.generated_interface_can_mutate_artifacts, false);
+  assert.equal(
+    bundle.active_caller_target_proof.authority_boundary.opl_can_generate_domain_handler,
+    false,
+  );
+  assert.equal(
+    bundle.active_caller_target_proof.authority_boundary.domain_handler_target_allowed,
+    true,
+  );
 });

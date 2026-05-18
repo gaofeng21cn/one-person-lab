@@ -420,7 +420,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.summary.execution_policy,
-      'route_only_no_execution',
+      'opl_safe_action_shell',
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.actions.some((action: {
@@ -434,6 +434,10 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.authority_boundary.can_execute_domain_action,
+      false,
+    );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.action_routing.authority_boundary.can_execute_direct_skill,
       false,
     );
     assert.deepEqual(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.lifecycle_primitives.artifact_locator_index, {

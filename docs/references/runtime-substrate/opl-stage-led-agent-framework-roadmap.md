@@ -4,17 +4,17 @@ Owner: `One Person Lab`
 Purpose: `development_reference`
 State: `active_support`
 Machine boundary: this is a human-readable development roadmap. Machine-readable truth must live in `contracts/`, source code, CLI/API behavior, runtime ledgers, or domain-owned manifests.
-Date: `2026-05-16`
+Date: `2026-05-18`
 
 ## 结论
 
-`OPL` 的目标定位应统一为 stage-led、以 Agent executor 为最小执行单位的 family agent framework。
+`OPL` 的目标定位应统一为知识工程驱动、stage-led、以 Agent executor 为最小执行单位的 family agent framework。
 
 它对标的是 DeerFlow、Dify、LangGraph、AutoGen、CrewAI、Temporal 这类 agent / workflow framework 的工程层能力，但核心差异是：OPL 不把单个 LLM 调用或轻量 agent node 当成主要原子步骤，而是把 `Codex CLI` 作为默认强执行器，把 domain `stage` 作为可观察、可恢复、可审计的语义工作单元。
 
 `MAS`、`MAG`、`RCA` 是运行在这个 family framework 上的独立 domain agents。它们可以被 OPL 托管、唤醒、排队、投影和恢复，也可以继续通过 Codex App 的单一 app skill 直接调用。OPL 不成为这些 domain 的领域大脑、truth owner、quality gate 或 artifact authority。
 
-理想目标是：OPL 提供统一 `domain-agent skeleton`，把所有智能体运行外围能力上收到 framework；MAS、MAG、RCA 按同一套 repo-source 目录、contract 和 lifecycle 接入，只提供领域 stage 定义、提示词、工具/Skill、知识面、质控 gate、artifact locator contract 与 domain truth authority。不同 domain 的业务内部不要求完全同构，但对 OPL 暴露的 skeleton、descriptor、sidecar、receipt schema、projection builder 和生命周期语义应同构。真实论文、基金、PPT、运行日志、receipt 实例和中间产物属于 workspace / runtime artifact root，不属于 domain repo 源码目录。
+理想目标是：OPL 提供统一 `domain-agent skeleton`，把所有智能体运行外围能力上收到 framework；MAS、MAG、RCA 按同一套 repo-source 目录、contract 和 lifecycle 接入，只提供领域 stage 定义、提示词、工具/Skill、知识面、质控 gate、artifact locator contract 与 domain truth authority。每个标准 Agent stage 都必须声明执行提示词、可用工具、知识 / memory refs、输入输出、handoff 和“本 stage 怎么算做好”的 quality gate。涉及创作、评估、评审、路线判断、fundability、publication readiness、visual direction、review/export verdict、memory accept/reject 或 artifact mutation authorization 的工作必须 AI-first；程序只做 validator、materializer、receipt signer、guard 和 refs projection。Stage 执行 AI 与 Stage 质控 AI 必须是两个独立智能体任务，可以同用 `Codex CLI` executor，但必须独立 invocation、独立上下文、独立 task record 和独立 receipt。不同 domain 的业务内部不要求完全同构，但对 OPL 暴露的 skeleton、descriptor、sidecar、receipt schema、projection builder 和生命周期语义应同构。真实论文、基金、PPT、运行日志、receipt 实例和中间产物属于 workspace / runtime artifact root，不属于 domain repo 源码目录。
 
 ## 总入口
 

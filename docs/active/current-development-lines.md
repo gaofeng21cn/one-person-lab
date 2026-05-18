@@ -7,9 +7,9 @@ Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts
 
 ## 当前结论
 
-OPL 当前开发继续按 framework-first 执行：先把 OPL 做成完整智能体开发/运行框架，再让 MAS/MAG/RCA 迁成标准 OPL Agents，并用真实 domain owner receipt / long soak 验收目标结构。
+OPL 当前开发继续按 Codex-default、provider-backed、framework-first 执行：先把 OPL 做成完整智能体开发/运行框架，再让 MAS/MAG/RCA 迁成标准 OPL Agents，并用真实 domain owner receipt / long soak 验收目标结构。
 
-当前 OPL 已有 framework/control-plane、Temporal provider、stage attempt ledger、typed queue、typed closeout、production closeout read model、domain descriptor aggregation、functional runtime harness、generic substrate projection、Agent Lab、pack compiler handoff 和 managed clean runner。它们说明 OPL 的通用底座已经存在，但仍不代表 production domain owner chain、App 工作台、generated caller migration 或 legacy physical cleanup 完成。
+当前 OPL 已有 framework/control-plane、Temporal provider、stage attempt ledger、typed queue、typed closeout、production closeout read model、domain descriptor aggregation、functional runtime harness、generic substrate projection、Agent Lab、pack compiler handoff、App/operator drilldown read model 与 App runtime 页面消费路径、managed clean runner。它们说明 OPL 的通用底座已经存在，但仍不代表 production domain owner chain、App 发布包/截图/长时证据、generated caller migration 或 legacy / provenance / diagnostic cleanup 完成。
 
 dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要已经归档到 [OPL family 文档过程归档 2026-05](../history/process/plans/2026-05-18-opl-family-doc-process-history.md)。本文只保留当前顺序和 owner 边界。
 
@@ -31,7 +31,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要已经
    把 framework-generic 能力上收到 OPL，把 domain truth 留在 domain。满足 replacement parity、no-active-caller、provenance/history/tombstone 和 no-forbidden-write 证据后，旧模块、接口、alias、facade、wrapper 和 compatibility tests 直接退役。
 
 6. `opl_app_runtime_workbench`
-   将 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、quality/readiness、SLO、transition bridge evidence 和 owner-aware action routing 做成人可用工作台。
+   将 provider readiness、stage attempt、route graph、review/repair queue、source refs、artifact refs、memory refs、quality/readiness、SLO、transition bridge evidence 和 owner-aware action routing 做成人可用工作台，并补齐真实用户路径、截图、发布包和长时 operator evidence。
 
 7. `domain_soak_and_acceptance`
    MAS 先完成真实 paper-line provider apply 证据；MAG/RCA 再分别完成 controlled grant / visual stage attempt、owner receipt / no-regression evidence 和 long SLO。
@@ -47,7 +47,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要已经
 | `generated_surface` | OPL pack compiler / generated surface | 从 domain descriptor/stage/action/memory/transition/receipt metadata 派生 entry/status/sidecar/workbench/harness，并迁移生产 caller。 |
 | `domain_private_residue` | OPL functional audit + domain repos | 按 OPL replacement、generated surface、refs-only adapter、minimal authority function、tombstone 分类收薄或删除。 |
 | `lifecycle_memory_artifact` | OPL primitive + domain owner receipt | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 |
-| `app_workbench` | One Person Lab App / OPL product surface | 消费 provider/domain refs，展示状态、阻塞、owner、下一步和 safe actions，不做 domain truth owner。 |
+| `app_workbench` | One Person Lab App / OPL product surface | 已有 `app_operator_drilldown` runtime 页面消费路径；继续补真实用户路径、截图、发布包和长时证据，不做 domain truth owner。 |
 | `legacy_cleanup` | OPL gate + domain repo owner | replacement proof 和 no-active-caller proof 后直接删除或 tombstone，不保留兼容面。 |
 
 ## 合并与退役规则
@@ -71,7 +71,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要已经
 | `mas_paper_autonomy_acceptance` | 多条真实 paper line 产出 MAS owner receipt、artifact/gate/reviewer/route/human-gate/stop-loss progress evidence 或 stable typed blocker，且 OPL 不写 MAS truth。 |
 | `domain_framework_migration` | MAS/MAG/RCA 通过统一 descriptor/skeleton/locator/receipt 接入；direct path 与 OPL-hosted path 保持语义等价和 no-forbidden-write。 |
 | `feature_partition_and_retirement` | 旧默认依赖、legacy compat、重复 UI、过时 manager surface 完成分类、替代和退役；无 active caller 的旧面已经删除或 tombstone。 |
-| `opl_app_runtime_workbench` | App/workbench 能按 owner drill down provider、stage attempt、domain refs、memory/artifact/source refs、SLO、repair 和 safe actions。 |
+| `opl_app_runtime_workbench` | App/workbench 能按 owner drill down provider、stage attempt、domain refs、memory/artifact/source refs、SLO、repair 和 safe actions，并有截图/发布包/长时 evidence。 |
 | `domain_soak_and_acceptance` | MAS/MAG/RCA 在迁移后目标形态下各自产出真实 progress delta、quality gate movement、human gate、stop-loss、domain owner receipt、no-regression evidence 或 typed blocker。 |
 
 ## 文档落点
