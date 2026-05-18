@@ -11,6 +11,17 @@ import type { FamilyStageControlPlane } from '../family-stage-control-plane-cont
 type JsonRecord = Record<string, unknown>;
 export type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
 
+export const GENERATED_INTERFACE_SOURCE_REFS = [
+  'family_action_catalog',
+  'family_stage_control_plane',
+  'domain_memory_descriptor',
+  'runtime_surfaces',
+  'functional_privatization_audit',
+  'generated_surface_handoff',
+  'product_entry_manifest_descriptor',
+  'sidecar_descriptor',
+] as const;
+
 export const GENERATED_SURFACES = [
   {
     surface_id: 'cli',
@@ -755,16 +766,7 @@ export function buildGeneratedInterfaceBundle(
     project_id: optionalString(descriptor.project_id),
     target_domain_id: optionalString(descriptor.target_domain_id),
     agent_id: optionalString(descriptor.agent_id),
-    generated_from: [
-      'family_action_catalog',
-      'family_stage_control_plane',
-      'domain_memory_descriptor',
-      'runtime_surfaces',
-      'functional_privatization_audit',
-      'generated_surface_handoff',
-      'product_entry_manifest_descriptor',
-      'sidecar_descriptor',
-    ],
+    generated_from: GENERATED_INTERFACE_SOURCE_REFS,
     ...blocks,
     active_caller_cutover_proof: buildActiveCallerCutoverProof(
       descriptor,

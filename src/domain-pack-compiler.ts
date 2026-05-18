@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -14,6 +15,7 @@ import {
 } from './functional-privatization-audit.ts';
 import {
   buildGeneratedInterfaceBundle,
+  GENERATED_INTERFACE_SOURCE_REFS,
   GENERATED_SURFACES,
   selectGeneratedInterfaceBundleFormat,
 } from './domain-pack-compiler/generated-interface-read-model.ts';
@@ -188,6 +190,143 @@ function genericResidueBlocked(summary: JsonRecord) {
     || numberField(summary, 'retire_tombstone_count') > 0
     || numberField(summary, 'active_private_generic_residue_count') > 0
     || numberField(summary, 'blocker_count') > 0;
+}
+
+function stableJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'null';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(',')}]`;
+  }
+  const record = value as JsonRecord;
+  return `{${Object.keys(record)
+    .filter((key) => record[key] !== undefined)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+    .join(',')}}`;
+}
+
+function sha256Fingerprint(value: unknown) {
+  return `sha256:${crypto.createHash('sha256').update(stableJson(value)).digest('hex')}`;
+}
+
+function observedDriftManifest(descriptor: JsonRecord) {
+  const direct = isRecord(descriptor.generated_artifact_drift_manifest)
+    ? descriptor.generated_artifact_drift_manifest
+    : null;
+  const packCompilerInput = isRecord(descriptor.pack_compiler_input_contract)
+    ? descriptor.pack_compiler_input_contract
+    : null;
+  const handoff = isRecord(descriptor.generated_surface_handoff_contract)
+    ? descriptor.generated_surface_handoff_contract
+    : null;
+  return {
+    manifest:
+      direct
+      ?? (isRecord(packCompilerInput?.generated_artifact_drift_manifest)
+        ? packCompilerInput.generated_artifact_drift_manifest
+        : null)
+      ?? (isRecord(handoff?.generated_artifact_drift_manifest)
+        ? handoff.generated_artifact_drift_manifest
+        : null),
+    refs: [
+      direct ? 'family_agent_descriptor.generated_artifact_drift_manifest' : null,
+      isRecord(packCompilerInput?.generated_artifact_drift_manifest)
+        ? 'pack_compiler_input_contract.generated_artifact_drift_manifest'
+        : null,
+      isRecord(handoff?.generated_artifact_drift_manifest)
+        ? 'generated_surface_handoff_contract.generated_artifact_drift_manifest'
+        : null,
+    ].filter((ref): ref is string => Boolean(ref)),
+  };
+}
+
+function buildGeneratedArtifactSourceInputs(descriptor: JsonRecord) {
+  return {
+    project_id: optionalString(descriptor.project_id),
+    target_domain_id: optionalString(descriptor.target_domain_id),
+    agent_id: optionalString(descriptor.agent_id),
+    generated_from: GENERATED_INTERFACE_SOURCE_REFS,
+    source_descriptor_surfaces: {
+      family_action_catalog: descriptor.family_action_catalog,
+      family_stage_control_plane: descriptor.family_stage_control_plane,
+      domain_memory_descriptor: descriptor.domain_memory_descriptor,
+      family_transition: descriptor.family_transition,
+      runtime_surfaces: descriptor.runtime_surfaces,
+      functional_privatization_audit: descriptor.functional_privatization_audit,
+      generated_surface_handoff: descriptor.generated_surface_handoff_contract,
+      pack_compiler_input: descriptor.pack_compiler_input_contract,
+      product_entry_manifest_descriptor: descriptor.product_entry_manifest_descriptor,
+      sidecar_descriptor: descriptor.sidecar_descriptor,
+      session_continuity: descriptor.session_continuity_contract,
+      source_contract_consumption: descriptor.source_contract_consumption,
+    },
+  };
+}
+
+function buildGeneratedArtifactDriftManifest(
+  descriptor: JsonRecord,
+  generatedInterfaceBundle: JsonRecord,
+  compilerStatus: string,
+  blockerReasons: string[],
+) {
+  const sourceInputs = buildGeneratedArtifactSourceInputs(descriptor);
+  const domainPackSourceInputsFingerprint = sha256Fingerprint(sourceInputs);
+  const generatedBundleFingerprint = sha256Fingerprint(generatedInterfaceBundle);
+  const observed = observedDriftManifest(descriptor);
+  const observedSourceFingerprint =
+    optionalString(observed.manifest?.domain_pack_source_inputs_fingerprint)
+    ?? optionalString(observed.manifest?.source_inputs_fingerprint);
+  const observedBundleFingerprint =
+    optionalString(observed.manifest?.generated_bundle_fingerprint)
+    ?? optionalString(observed.manifest?.generated_artifact_bundle_fingerprint);
+  const driftFindings = [
+    ...blockerReasons.map((reason) => `compiler_blocker:${reason}`),
+    observedSourceFingerprint && observedSourceFingerprint !== domainPackSourceInputsFingerprint
+      ? 'domain_pack_source_inputs_fingerprint_changed'
+      : null,
+    observedBundleFingerprint && observedBundleFingerprint !== generatedBundleFingerprint
+      ? 'generated_bundle_fingerprint_changed'
+      : null,
+  ].filter((finding): finding is string => Boolean(finding));
+
+  return {
+    surface_kind: 'opl_generated_artifact_drift_manifest',
+    version: 'opl-generated-artifact-drift-manifest.v1',
+    owner: 'one-person-lab',
+    status: compilerStatus === 'ready' && driftFindings.length === 0 ? 'aligned' : 'drift_detected',
+    target_domain_id: optionalString(descriptor.target_domain_id) ?? optionalString(descriptor.project_id),
+    agent_id: optionalString(descriptor.agent_id),
+    generated_surface_owner: 'one-person-lab',
+    domain_pack_source_inputs_fingerprint: domainPackSourceInputsFingerprint,
+    generated_bundle_fingerprint: generatedBundleFingerprint,
+    fingerprint_algorithm: 'sha256:stable-json',
+    generated_from: GENERATED_INTERFACE_SOURCE_REFS,
+    source_input_refs: [
+      'family_agent_descriptor.family_action_catalog',
+      'family_agent_descriptor.family_stage_control_plane',
+      'family_agent_descriptor.domain_memory_descriptor',
+      'family_agent_descriptor.runtime_surfaces',
+      'family_agent_descriptor.functional_privatization_audit',
+      'family_agent_descriptor.generated_surface_handoff_contract',
+      'family_agent_descriptor.product_entry_manifest_descriptor',
+      'family_agent_descriptor.sidecar_descriptor',
+    ],
+    observed_manifest_refs: observed.refs,
+    observed_domain_pack_source_inputs_fingerprint: observedSourceFingerprint,
+    observed_generated_bundle_fingerprint: observedBundleFingerprint,
+    drift_findings: driftFindings,
+    authority_boundary: {
+      opl_owns_generated_surfaces: true,
+      opl_owns_domain_truth: false,
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      opl_can_mutate_domain_artifacts: false,
+      domain_truth_owner: optionalString(descriptor.target_domain_id) ?? optionalString(descriptor.project_id),
+    },
+  };
 }
 
 function minimalAuthorityFunctionRefs(descriptor: JsonRecord) {
@@ -444,6 +583,7 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
     ...missingRequired.map((surface) => `missing_descriptor_surface:${surface}`),
   ].filter((reason): reason is string => reason !== null);
   const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
+  const generatedInterfaceBundle = buildGeneratedInterfaceBundle(descriptor, status);
 
   return {
     surface_kind: 'opl_domain_pack_compiler_projection',
@@ -480,7 +620,13 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
         surface.status === 'blocked_missing_descriptor_surface'
       ).length,
     },
-    generated_interface_bundle: buildGeneratedInterfaceBundle(descriptor, status),
+    generated_interface_bundle: generatedInterfaceBundle,
+    generated_artifact_drift_manifest: buildGeneratedArtifactDriftManifest(
+      descriptor,
+      generatedInterfaceBundle as JsonRecord,
+      status,
+      [...new Set(blockerReasons)],
+    ),
     authority_boundary: {
       opl_can_write_domain_truth: false,
       opl_can_write_memory_body: false,
@@ -524,6 +670,12 @@ export function buildDomainPackCompilerList(contracts: FrameworkContracts) {
         ),
         domain_generated_surface_owner_claim_count: domains.filter((domain) =>
           domain.generated_surface_handoff.domain_repo_can_own_generated_surface
+        ).length,
+        generated_artifact_drift_aligned_count: domains.filter((domain) =>
+          domain.generated_artifact_drift_manifest.status === 'aligned'
+        ).length,
+        generated_artifact_drift_detected_count: domains.filter((domain) =>
+          domain.generated_artifact_drift_manifest.status === 'drift_detected'
         ).length,
       },
       domains,
