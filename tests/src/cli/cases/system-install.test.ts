@@ -759,7 +759,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
   }
 });
 
-test('install command reuses only the default Codex runtime dependency', () => {
+test('install command reuses only the default Codex engine and reports Temporal provider setup', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-engines-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
   const codexConfigFixture = createCodexConfigFixture();
@@ -796,7 +796,7 @@ test('install command reuses only the default Codex runtime dependency', () => {
     );
     assert.deepEqual(
       output.install.runtime_manager_action.executed_actions.map((entry) => entry.action_id),
-      [],
+      ['configure_temporal_provider'],
     );
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
