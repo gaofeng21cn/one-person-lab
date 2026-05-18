@@ -251,9 +251,15 @@ test('family stage control plane is resolved from domain manifests as read-only 
     });
     assert.equal(list.family_stages.summary.resolved_planes_count, 3);
     assert.equal(list.family_stages.summary.stages_count, 3);
+    assert.equal(list.family_stages.summary.needs_contracts_stages_count, 3);
     assert.deepEqual(
       list.family_stages.stages.map((entry: { stage_id: string }) => entry.stage_id).sort(),
       ['artifact_creation', 'manuscript_authoring', 'proposal_authoring'],
+    );
+    assert.equal(
+      list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'manuscript_authoring')
+        ?.admission_status,
+      'needs_contracts',
     );
 
     const inspect = runCli(['stages', 'inspect', '--domain', 'mas', '--stage', 'manuscript_authoring'], {
@@ -271,6 +277,8 @@ test('family stage control plane is resolved from domain manifests as read-only 
     ]);
     assert.equal(inspect.family_stage.stage.authority_boundary.opl_role, 'projection_consumer_only');
     assert.equal(inspect.family_stage.parity.status, 'aligned');
+    assert.equal(inspect.family_stage.admission.status, 'needs_contracts');
+    assert.equal(inspect.family_stage.admission.inspected_stage.status, 'needs_contracts');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

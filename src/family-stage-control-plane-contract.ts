@@ -19,6 +19,32 @@ export interface FamilyStageSurfaceRef {
   label?: string;
 }
 
+export type FamilyStageTrustLane =
+  | 'opl_framework'
+  | 'domain_agent'
+  | 'codex_executor'
+  | 'ai_decision'
+  | 'human_gate'
+  | 'external_system'
+  | 'app_projection';
+
+export interface FamilyStageTrustBoundary extends JsonRecord {
+  lane: FamilyStageTrustLane;
+  static_check_eligible?: boolean;
+  effect_boundary?: boolean;
+  records_runtime_events?: boolean;
+  owner_receipt_required?: boolean;
+  human_gate_required?: boolean;
+  runtime_guard_required?: boolean;
+}
+
+export interface FamilyStageContract extends JsonRecord {
+  requires: string[];
+  ensures: string[];
+  boundary_assumptions: string[];
+  properties: string[];
+}
+
 export interface FamilyStageDescriptor {
   stage_id: string;
   stage_kind: FamilyStageKind;
@@ -38,6 +64,8 @@ export interface FamilyStageDescriptor {
   source_refs: FamilyStageSurfaceRef[];
   freshness: JsonRecord | null;
   action_parity: JsonRecord | null;
+  stage_contract: FamilyStageContract | null;
+  trust_boundary: FamilyStageTrustBoundary | null;
   authority_boundary: JsonRecord;
 }
 
@@ -121,12 +149,72 @@ const FAMILY_STAGE_KINDS = new Set<string>([
   'domain_specific',
 ]);
 
+const FAMILY_STAGE_TRUST_LANES = new Set<string>([
+  'opl_framework',
+  'domain_agent',
+  'codex_executor',
+  'ai_decision',
+  'human_gate',
+  'external_system',
+  'app_projection',
+]);
+
 function normalizeStageKind(value: unknown, field: string): FamilyStageKind {
   const text = requireString(value, field);
   if (!FAMILY_STAGE_KINDS.has(text)) {
     throw new Error(`${field} has unsupported stage kind: ${text}`);
   }
   return text as FamilyStageKind;
+}
+
+function optionalBoolean(record: JsonRecord, key: string, field: string) {
+  const value = record[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'boolean') {
+    throw new Error(`${field}.${key} must be a boolean.`);
+  }
+  return value;
+}
+
+function normalizeStageContract(value: unknown): FamilyStageContract | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    ...value,
+    requires: readStringList(value.requires),
+    ensures: readStringList(value.ensures),
+    boundary_assumptions: readStringList(value.boundary_assumptions),
+    properties: readStringList(value.properties),
+  };
+}
+
+function normalizeTrustBoundary(value: unknown, field: string): FamilyStageTrustBoundary | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const lane = requireString(value.lane, `${field}.lane`);
+  if (!FAMILY_STAGE_TRUST_LANES.has(lane)) {
+    throw new Error(`${field}.lane has unsupported trust lane: ${lane}`);
+  }
+  const staticCheckEligible = optionalBoolean(value, 'static_check_eligible', field);
+  const effectBoundary = optionalBoolean(value, 'effect_boundary', field);
+  const recordsRuntimeEvents = optionalBoolean(value, 'records_runtime_events', field);
+  const ownerReceiptRequired = optionalBoolean(value, 'owner_receipt_required', field);
+  const humanGateRequired = optionalBoolean(value, 'human_gate_required', field);
+  const runtimeGuardRequired = optionalBoolean(value, 'runtime_guard_required', field);
+  return {
+    ...value,
+    lane: lane as FamilyStageTrustLane,
+    ...(staticCheckEligible === undefined ? {} : { static_check_eligible: staticCheckEligible }),
+    ...(effectBoundary === undefined ? {} : { effect_boundary: effectBoundary }),
+    ...(recordsRuntimeEvents === undefined ? {} : { records_runtime_events: recordsRuntimeEvents }),
+    ...(ownerReceiptRequired === undefined ? {} : { owner_receipt_required: ownerReceiptRequired }),
+    ...(humanGateRequired === undefined ? {} : { human_gate_required: humanGateRequired }),
+    ...(runtimeGuardRequired === undefined ? {} : { runtime_guard_required: runtimeGuardRequired }),
+  };
 }
 
 function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilyStageDescriptor {
@@ -157,6 +245,8 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     source_refs: normalizeSurfaceRefs(value.source_refs, `${field}.source_refs`),
     freshness: isRecord(value.freshness) ? value.freshness : null,
     action_parity: isRecord(value.action_parity) ? value.action_parity : null,
+    stage_contract: normalizeStageContract(value.stage_contract),
+    trust_boundary: normalizeTrustBoundary(value.trust_boundary, `${field}.trust_boundary`),
     authority_boundary: boundary,
   };
 }

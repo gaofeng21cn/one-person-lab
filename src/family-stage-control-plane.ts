@@ -7,6 +7,13 @@ import type {
   FamilyStageDescriptor,
   FamilyStageKind,
 } from './family-stage-control-plane-contract.ts';
+import {
+  buildFamilyStageAdmissionReview,
+} from './family-stage-admission.ts';
+import type {
+  FamilyStageAdmissionReview,
+  FamilyStageAdmissionStageResult,
+} from './family-stage-admission.ts';
 export {
   normalizeFamilyStageControlPlane,
 } from './family-stage-control-plane-contract.ts';
@@ -33,6 +40,8 @@ export interface FamilyStageListEntry {
   knowledge_ref_count: number;
   source_ref_count: number;
   freshness: JsonRecord | null;
+  trust_lane: string | null;
+  admission_status: string | null;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -96,6 +105,7 @@ export function buildFamilyStageListEntry(
   entry: DomainManifestCatalogEntry,
   plane: FamilyStageControlPlane,
   stage: FamilyStageDescriptor,
+  admissionStage: FamilyStageAdmissionStageResult | null = null,
 ): FamilyStageListEntry {
   return {
     project_id: entry.project_id,
@@ -111,6 +121,8 @@ export function buildFamilyStageListEntry(
     knowledge_ref_count: stage.knowledge_refs.length,
     source_ref_count: stage.source_refs.length,
     freshness: stage.freshness,
+    trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
+    admission_status: admissionStage?.status ?? null,
   };
 }
 
@@ -140,15 +152,28 @@ function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalog
   });
   const stages = catalog.projects.flatMap((entry) => {
     const plane = resolvePlaneFromEntry(entry);
-    return plane
-      ? plane.stages.map((stage) => buildFamilyStageListEntry(entry, plane, stage))
-      : [];
+    if (!plane) {
+      return [];
+    }
+    const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+    const admissionByStage = new Map(admission.stage_results.map((stage) => [stage.stage_id, stage]));
+    return plane.stages.map((stage) => buildFamilyStageListEntry(
+      entry,
+      plane,
+      stage,
+      admissionByStage.get(stage.stage_id) ?? null,
+    ));
+  });
+  const admissions = catalog.projects.flatMap((entry) => {
+    const plane = resolvePlaneFromEntry(entry);
+    return plane ? [buildFamilyStageAdmissionReview(plane, entry.manifest)] : [];
   });
 
   return {
     domain_manifests: catalog,
     domains,
     stages,
+    admissions,
   };
 }
 
@@ -162,6 +187,18 @@ export function buildFamilyStagesList(contracts: FrameworkContracts, options: Ma
         total_projects_count: index.domains.length,
         resolved_planes_count: index.domains.filter((entry) => entry.ready).length,
         stages_count: index.stages.length,
+        admitted_stages_count: index.admissions.reduce(
+          (total, admission) => total + admission.summary.admitted_stages_count,
+          0,
+        ),
+        blocked_stages_count: index.admissions.reduce(
+          (total, admission) => total + admission.summary.blocked_stages_count,
+          0,
+        ),
+        needs_contracts_stages_count: index.admissions.reduce(
+          (total, admission) => total + admission.summary.needs_contracts_stages_count,
+          0,
+        ),
       },
       domains: index.domains,
       stages: index.stages,
@@ -235,6 +272,9 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
   const parsed = parseOptionArgs(args, ['domain', 'stage']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   const stage = findStage(plane, parsed.stage);
+  const admission: FamilyStageAdmissionReview = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const inspectedStageAdmission =
+    admission.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
   return {
     version: 'g2',
     family_stage: {
@@ -258,6 +298,10 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
         authority_boundary: stage.authority_boundary,
       },
       parity: buildFamilyStageControlPlaneParity(plane, entry.manifest),
+      admission: {
+        ...admission,
+        inspected_stage: inspectedStageAdmission,
+      },
     },
   };
 }
