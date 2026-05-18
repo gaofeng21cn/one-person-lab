@@ -30,6 +30,7 @@ export type OplSystemAction =
   | 'reinstall_support'
   | 'update'
   | 'reconcile_modules'
+  | 'startup_maintenance'
   | 'update_channel'
   | 'developer_supervisor'
   | 'repair_native_helpers';

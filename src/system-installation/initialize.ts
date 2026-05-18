@@ -437,6 +437,18 @@ export async function buildOplInitialize(contracts: FrameworkContracts) {
             endpoint: endpoints.system_action,
           },
           {
+            action_id: 'startup_maintenance',
+            endpoint: endpoints.system_action,
+            label: 'Run startup maintenance',
+            description: 'Refresh clean OPL-managed modules, domain plugin/skill cache, and App reload guidance without touching domain truth.',
+            section_id: 'system',
+            method: 'POST',
+            request_fields: [],
+            payload_template: {
+              action: 'startup_maintenance',
+            },
+          },
+          {
             action_id: 'developer_supervisor',
             endpoint: endpoints.system_action,
             label: developerMode.action.label,
