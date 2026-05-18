@@ -121,7 +121,8 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 3. Runtime、product、source、delivery、policy、spec 这类长期 owner 内容进入对应 canonical 目录。
 4. 目标态、外部学习、governance、verification、operator support 进入 `docs/references/`，不得写成 current truth。
 5. 已完成计划、旧路线、旧接口、旧 provider、旧 gateway/frontdoor/federation、旧 compatibility 叙事进入 `docs/history/` 或 tombstone。
-6. 如果历史文件仍因 `human_doc:*`、absolute evidence、audit path 或 contract-linked reader context 需要 path stability，先用 README/index 标清生命周期，物理迁移后置。
+6. 如果文件仍有 current subsection、contract-linked reader context 或 active support role，可以留在 current/support 层并用 README/index 标清生命周期。
+7. 如果文件已被判定为纯历史、纯 activation package、纯 fail-closed tranche、纯旧 provider proof 或纯 tombstone，不再靠 path stability 留在 current/support 层；先把有效结论吸收到当前 owner，再物理移动到 `docs/history/**`。
 
 ## Direct Retirement
 
