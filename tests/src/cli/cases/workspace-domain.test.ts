@@ -7,3 +7,4 @@ import './workspace-domain.stages.real-smoke.test.ts';
 import './workspace-domain.memory.test.ts';
 import './workspace-domain.descriptor.test.ts';
 import './workspace-domain.lifecycle-cleanup.test.ts';
+import './workspace-domain.external-evidence.test.ts';
