@@ -430,6 +430,8 @@
         "trust_lane",
         "required",
         "satisfied_by_records_runtime_events",
+        "runtime_event_refs",
+        "satisfied_by_runtime_event_refs",
         "reason"
       ],
       "properties": {
@@ -451,6 +453,17 @@
           "type": "boolean"
         },
         "satisfied_by_records_runtime_events": {
+          "type": "boolean"
+        },
+        "runtime_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Machine-readable runtime event refs the stage declares for replay, retry, audit, and handoff. OPL checks declaration completeness only and does not emit these events."
+        },
+        "satisfied_by_runtime_event_refs": {
           "type": "boolean"
         },
         "reason": {
@@ -585,6 +598,10 @@
           "trust_lane": "human_gate",
           "required": true,
           "satisfied_by_records_runtime_events": true,
+          "runtime_event_refs": [
+            "runtime_event:publication_review.gate_recorded"
+          ],
+          "satisfied_by_runtime_event_refs": true,
           "reason": "effect_boundary_requires_replayable_runtime_events"
         }
       ],
