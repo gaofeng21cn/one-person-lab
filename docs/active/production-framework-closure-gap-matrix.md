@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: 记录 OPL 距离完整生产级智能体框架的当前差距、证据门和下一跳闭环。
 State: `active_plan`
 Machine boundary: 本文是人读 gap matrix。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 与真实 workspace / App evidence。
-Date: `2026-05-18`
+Date: `2026-05-19`
 
 ## 当前判断
 
@@ -14,13 +14,15 @@ Date: `2026-05-18`
 
 Fresh runtime evidence（2026-05-18）已经把 provider cadence 从“命令面存在”推进到“本机真实 receipt 存在”：默认 `family-runtime status` 选中 `temporal` 且 managed service / worker ready；Temporal schedule `opl-family-runtime-provider-scheduler` 已创建，`scheduler trigger` 已返回 triggered，`scheduler tick --provider temporal --force` 已生成新的 `production_residency_proven` SLO execution receipt。`family-runtime status.periodic_execution` 与 `runtime app-operator-drilldown.periodic_execution_refs` 已把 scheduler cadence、provider SLO receipt 和 domain-daemon replacement policy 投成机器读面。`local_sqlite` 只有显式选择时作为 dev/CI/offline diagnostic baseline，不能替代 production provider 或 domain daemon。本机 `launchctl list` 与 `~/Library/LaunchAgents` fresh check 未发现 MAS / MedAutoScience supervision scheduler label 或 plist；MAS 旧 local scheduler 只能作为 cleanup diagnostic / tombstone 处理。
 
+Fresh runtime evidence（2026-05-19）补上了 App/operator 对 domain evidence 与 cleanup plan 的消费面：`runtime app-operator-drilldown` 现在会投影 domain 声明的 external evidence request、remaining evidence gate、OPL replacement expectation、replacement coverage，以及 physical skeleton follow-through gate 生成的 legacy cleanup executable plan、apply/verify 命令和 no-domain-delete authority。
+
 仍未闭合的是 MAS/MAG/RCA production consumption、App 真实用户证据和真实 owner-chain：
 
 - MAS 已关闭 `functional_structure_gap_count=0` 的结构 follow-through；MAS/MAG/RCA 的 effect-boundary stage admission 当前均为 admitted；MAG/RCA repo-side generated/handler target consumption 已闭合，但外部默认 caller、App 消费和 live owner-chain evidence 仍需 scaleout；
 - One Person Lab App root contract 与 AionUI runtime 页面已消费 OPL App/operator drilldown read model；剩余是真实用户路径、截图/发布包证据和长时 operator evidence；
 - lifecycle / artifact / memory locator 与三仓结构收敛、真实 workspace receipt long-soak 仍需持续对账；
 - Temporal provider SLO / repair cadence 已有真实 schedule install/trigger/tick receipt，但还缺长窗口持续证据；
-- MAS repo 内 active caller cutover、refs-only 收薄、physical retirement、App/workbench 与 lifecycle 对账已作为结构 closure gate 关闭；MAG/RCA 还需要按 no-active-caller proof 做 remaining legacy cleanup evidence；
+- MAS 机器合同中的 active generic residue / classification gate 已关闭，但严格物理纯净模板目标下，MAS repo-local runtime runner、worker lease、supervisor/workbench projection 和 SQLite lifecycle writer 仍是需要上收或收薄的功能/结构跟进项；MAG/RCA 还需要按 no-active-caller proof 做 remaining legacy cleanup evidence；
 - MAS/MAG/RCA 的真实 owner receipt chain、memory body/writeback apply、artifact mutation receipt 和 controlled long soak 仍需 scaleout。
 
 过程性 proof、receipt 事件、具体 task id 和阶段 closeout 摘要不放在本矩阵，统一归档到 [OPL family 文档过程归档 2026-05](../history/process/plans/2026-05-18-opl-family-doc-process-history.md)。
@@ -32,7 +34,7 @@ Fresh runtime evidence（2026-05-18）已经把 provider cadence 从“命令面
 | `production_temporal_residency` | Temporal 是 production required provider；`local_sqlite` 已降为 dev/CI/offline diagnostic baseline；provider proof/status/readiness 可读；本机 Temporal schedule 已安装并可 trigger/tick，fresh SLO receipt 为 `production_residency_proven`。 | 自动或受监督 cadence 的长窗口、overdue repair execution receipt、restart/re-query/signal/history 长窗口证据和真实 domain attempt 压测仍未闭合。 | Temporal production proof 按 cadence 持续可重复通过，并用长窗口 SLO 证明 service/worker/workflow/query/signal/history/restart recovery 不退化。 |
 | `stage_launch_admission_gate` | `family-stage-admission` read model 已接入 `family-runtime attempt create`；声明 stage 的 admission blocker 会进入 blocked attempt，`--require-stage-admission` 已在 attempt start 与 provider-hosted tick 路径阻断 executor/domain dispatch；`needs_contracts` warning 会进入 attempt activity events；`opl stages proof-bundle --domain <domain>` 已输出 admission、runtime-event、idempotency 与 expected receipt obligation bundle；MAS/MAG/RCA 当前 18 个 stage 均为 `admitted`。未声明旧 stage 只作为 legacy/diagnostic attempt metadata，不能当作标准 OPL Agent production launch evidence。 | selected executor binding 和真实 consumed refs / expected receipt refs 的 production caller scaleout 仍需进入 queue/provider/App 可见证据；当前 gate 已阻断明确 blocker，并已机器化 stage pack obligation projection，但还缺真实 production caller 链路的持续证明。 | 每个 production stage attempt 在启动前都有 stage pack admission、executor binding、idempotency、consumed refs、expected receipt refs 和 owner boundary proof；不满足时产出 typed blocker / human gate / route-back。 |
 | `generated_surface_production_consumption` | `domain-pack-compiler` 已能投影 CLI/MCP/product-entry/sidecar/status/workbench/harness handoff metadata 与 active-caller proof；MAS/MAG/RCA generated interface descriptor 均可读；MAS/MAG/RCA repo-side generated/handler target consumption 已闭合。 | MAG/RCA 还缺外部默认 caller / App / live owner-chain evidence；MAS 还缺真实 provider / App / owner receipt evidence，不是 domain ready。 | MAG/RCA 用 release/dist/default caller evidence、App evidence 和 live owner receipt chain 证明生产消费；MAS 用 paper-line provider/app evidence 证明迁移后目标边界持续成立。 |
-| `app_operator_drilldown` | runtime snapshot、stage attempt、substrate projection、transition evidence、lifecycle refs、safe action routing 和 production closeout readiness 已有 CLI/runtime read model；One Person Lab App root contract 已绑定 `runtime_tray_snapshot.app_operator_drilldown`，AionUI runtime 页面已接入 `AppOperatorDrilldown` 组件；`app_execution_bridge` 已把可提交 route 指向 `opl runtime action execute`，并声明 domain route 只 queue/approval、不直接执行 domain action。 | 真实用户路径、截图/发布包证据、长时 operator evidence、release artifact 证据和三仓 owner-aware drilldown 消费仍需闭合。 | App/workbench 能按 owner 展示 provider、attempt、source/artifact/memory refs、blocker、repair 和 action routing，并且不产生 domain verdict；App 的执行动作必须经 OPL safe-action shell、provider receipt 或 lifecycle apply/reconcile surface；发布包和截图证据证明该路径可用。 |
+| `app_operator_drilldown` | runtime snapshot、stage attempt、substrate projection、transition evidence、lifecycle refs、safe action routing 和 production closeout readiness 已有 CLI/runtime read model；One Person Lab App root contract 已绑定 `runtime_tray_snapshot.app_operator_drilldown`，AionUI runtime 页面已接入 `AppOperatorDrilldown` 组件；`app_execution_bridge` 已把可提交 route 指向 `opl runtime action execute`，并声明 domain route 只 queue/approval、不直接执行 domain action；`domain_evidence_request_refs` 与 `domain_legacy_cleanup_plan_refs` 已把 domain request/gate/replacement coverage 和 legacy cleanup apply/verify plan 投给 App/operator。 | 真实用户路径、截图/发布包证据、长时 operator evidence、release artifact 证据和三仓 owner-aware drilldown 消费仍需闭合。 | App/workbench 能按 owner 展示 provider、attempt、source/artifact/memory refs、blocker、repair、evidence request、cleanup plan 和 action routing，并且不产生 domain verdict；App 的执行动作必须经 OPL safe-action shell、provider receipt 或 lifecycle apply/reconcile surface；发布包和截图证据证明该路径可用。 |
 | `app_managed_environment_startup_maintenance` | `opl modules`、`opl module update` 和 `opl skill sync` 已能手动维护 OPL-managed modules、Codex skills 与 plugin metadata projection；产品口径已固定为 App managed environment 优先，developer checkout 显式 override。 | App 启动时还未形成自动 freshness check、clean-only update、health check、skill sync、plugin cache freshness 和 restart/reload 提示的完整用户路径。 | App 启动维护默认检查 managed environment；clean managed checkout 可自动 fast-forward 并同步投影；dirty/ahead/diverged/no-upstream/health-failed/restart-required 进入可见人工处理状态，不静默覆盖 developer checkout 或 managed runtime。 |
 | `developer_mode_agent_lab_repair_route` | `opl system developer-supervisor` 已有系统级配置入口；`developer_mode` projection 已能检测 GitHub identity、repo permission，并计算 direct repo fix / fork PR / mixed / observe-only 路由；`opl system`、`opl system initialize` 和 App settings surface 已暴露同一个 `developer_supervisor` action；Agent Lab workbench 已输出 refs-only repair route read model。 | 真实 repo 问题上的 owner direct-fix 与 non-owner fork/PR closeout 证据尚未形成；这属于 live exercise/evidence gap，不是配置或 projection 缺口。 | Developer Mode 开启后，任务默认可触发 Agent Lab 外围巡检；有 repo 权限时走受控 worktree/branch 修复提交和 owner-visible evidence；无 repo 权限时走 fork / PR；全程不改变 managed runtime truth，不写 domain truth。 |
 | `mas_paper_line_guarded_apply_soak` | MAS 三条真实 paper line 已有 OPL-ingestable refs/read-only evidence；OPL 禁止写 MAS truth 的边界可见。 | 多条真实 paper line 的 provider-hosted apply、owner receipt、progress delta、AI reviewer/gate/artifact movement、human gate 或 stable typed blocker 仍需 scaleout。 | MAS 每条主线都产出 owner receipt、progress delta 或 typed blocker；OPL 只持 attempt/proof/ref，不写 `publication_eval`、`controller_decisions`、artifact gate、review ledger、memory body 或 final verdict。 |
@@ -42,7 +44,7 @@ Fresh runtime evidence（2026-05-18）已经把 provider cadence 从“命令面
 | `lifecycle_guarded_apply` | OPL lifecycle schema / locator / refs-only index、guarded apply 和 restore/cleanup proof refs 已存在，domain 仓暴露 guarded apply proof 或 receipt requirement refs。 | cleanup/restore/retention 与真实 workspace artifact mutation receipt 的持续对账还未闭合；replacement proof 不等于 lifecycle reconciliation 已完成。 | OPL-owned ledger/locator 只写 framework refs；domain-owned artifact mutation 必须返回 domain receipt 或 typed blocker。 |
 | `generic_state_machine_runner` | OPL 已有 domain-neutral transition schema、runner、matrix runner、receipt/projection envelope 和 refs-only transition bridge projection。 | MAS/MAG/RCA 真实 sidecar dispatch 后的 accepted owner receipt、typed blocker/no-regression evidence 和 long-soak matrix evidence 仍需 scaleout。 | Domain 提供 transition table、guard、oracle fixture、typed blocker 和 owner receipt；OPL 只执行 spec、审计 matrix、hydrate provider task 和投影 refs。 |
 | `physical_skeleton_layout` | OPL read model 能区分 descriptor readiness、skeleton audit、repo-source anchor evidence 和 production closure gaps。 | 三仓破坏性目录迁移未执行；直接移动仍可能破坏 direct skill path、provenance refs 或 workspace boundary。 | direct/hosted parity、restore/provenance proof、focused tests 与 no-forbidden-write proof 稳定后，逐仓迁移 repo-source schema/adapter/builder/prompt/skill/knowledge refs；workspace artifacts 不迁入 repo skeleton。 |
-| `legacy_active_path_retirement` | 默认语义已转为 Codex-default executor + Temporal-backed provider；旧名只允许在 diagnostic、fixture、provenance、history 或 negative guard 语境中出现。 | Hermes/Gateway/frontdoor/local-manager/MDS/default-compat 仍可能有物理残留或文档残留。 | replacement proof 与 no-active-caller proof 同时通过后，删除 active residue 或迁入 history/tombstone；不保留兼容接口。 |
+| `legacy_active_path_retirement` | 默认语义已转为 Codex-default executor + Temporal-backed provider；旧名只允许在 diagnostic、fixture、provenance、history 或 negative guard 语境中出现；physical skeleton gate 已能生成 `agents legacy-cleanup apply` 可消费的 plan，App drilldown 已能显示 ready/blocked plan、apply/verify 命令和 no-delete authority。 | Hermes/Gateway/frontdoor/local-manager/MDS/default-compat 仍可能有物理残留或文档残留；domain repo active 文件删除必须由对应 domain owner 执行并返回 receipt，不能由 OPL 直接删。 | replacement proof 与 no-active-caller proof 同时通过后，删除 active residue 或迁入 history/tombstone；OPL 写自身 cleanup ledger / tombstone ref，domain repo 物理删除由 domain owner receipt 证明，不保留兼容接口。 |
 | `executor_adapter_hygiene` | `codex_cli` 是默认 executor；`hermes_agent`、Claude Code 等是显式非默认 adapter。 | 非默认 adapter 的 receipt gate、tool-event proof、timeout、closeout 和 fail-closed 仍需按 route 验证；旧 Hermes provider/readiness/Gateway 词汇不得回流。 | 非默认 adapter 只证明连接和回执，不承诺 domain quality；旧 provider/Gateway/compat 面清理到 history/tombstone。 |
 
 ## 统一口径
@@ -60,20 +62,21 @@ OPL 已具备完整生产级智能体框架的控制面骨架，并已进入 liv
 - 不能把 Developer Mode repair route read model 写成真实 repo direct-fix / fork-PR closeout 证据已完成。
 - private functional audit 分类完成等于代码路径物理清零。
 - provider completion 等于 domain ready、quality ready、fundability ready、visual ready 或 export ready。
-- 不能把 MAS descriptor ready、read model、provider proof、replacement proof 或 generated bundle ready 单独写成 MAS 功能/结构差距归零；MAS 结构闭合必须来自 closure gate proof refs，live paper evidence 仍单独验收。
+- 不能把 MAS descriptor ready、read model、provider proof、replacement proof、generated bundle ready 或机器合同 gap count 为 0 单独写成 MAS 物理纯净模板已完成；MAS 仍要清 runner/supervisor/workbench/SQLite lifecycle writer 这类 repo-local generic-adjacent 实现，live paper evidence 也单独验收。
 
 ## 下一跳顺序
 
 1. `generated_surface_production_consumption` for MAS/MAG/RCA
-2. `App/operator drilldown GUI evidence`
-3. `App managed-environment startup maintenance`
-4. `Developer Mode direct-fix / fork-PR live closeout evidence`
-5. `MAS paper-line guarded apply scaleout`
-6. `Temporal provider continuous proof / SLO cadence long-window evidence`
-7. `transition owner receipt / no-regression evidence on OPL bridge`
-8. `domain memory/lifecycle apply generalization`
-9. `MAG/RCA controlled soak`
-10. `physical skeleton layout`
-11. `legacy physical retirement`
+2. `MAS physical thinning`：runner / worker lease / supervisor / workbench projection / SQLite lifecycle writer 上收或收薄
+3. `App/operator drilldown GUI evidence`
+4. `App managed-environment startup maintenance`
+5. `Developer Mode direct-fix / fork-PR live closeout evidence`
+6. `MAS paper-line guarded apply scaleout`
+7. `Temporal provider continuous proof / SLO cadence long-window evidence`
+8. `transition owner receipt / no-regression evidence on OPL bridge`
+9. `domain memory/lifecycle apply generalization`
+10. `MAG/RCA controlled soak`
+11. `physical skeleton layout`
+12. `legacy physical retirement`
 
 每一步都必须留下 repo-native verification、domain owner receipt、no-regression evidence 或 typed blocker；没有 fresh evidence 不写完成。

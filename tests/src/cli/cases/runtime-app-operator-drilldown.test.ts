@@ -45,6 +45,102 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       package_lifecycle_ref: 'mas://artifacts/package-lifecycle/latest.json',
     },
   };
+  masManifest.functional_privatization_audit = {
+    target_domain_id: 'medautoscience',
+    modules: [
+      {
+        module_id: 'app_workbench_package_ref_consumption',
+        migration_class: 'refs_only_adapter',
+        owner: 'med-autoscience',
+      },
+    ],
+    bridge_exit_gate: {
+      remaining_evidence_gate_ids: ['real_package_lifecycle_receipt'],
+      remaining_bridge_module_ids: ['package_lifecycle_adapter'],
+    },
+    mag_consumer_thinning_contract: {
+      external_evidence_request_pack: {
+        request_pack_id: 'mas.external_evidence_request_pack.fixture',
+        owner: 'med-autoscience',
+        request_owner: 'med-autoscience',
+        requested_from: ['one-person-lab', 'codex_app'],
+        policy: 'request_refs_receipt_shapes_and_parity_only_no_runtime_implementation',
+        requests: [
+          {
+            request_id: 'app_workbench_package_ref_consumption',
+            status: 'requested_not_received',
+            required_evidence_refs: ['mas://artifacts/package-lifecycle/latest.json'],
+            required_return_shapes: ['domain_owner_receipt', 'typed_blocker'],
+            required_receipt_shapes: ['lifecycle_receipt_ref'],
+            forbidden_payload_classes: ['domain_truth_body', 'artifact_body'],
+            accepted_payload_policy: 'refs_receipts_and_shape_metadata_only',
+            source_pointer: '/functional_privatization_audit/mag_consumer_thinning_contract/external_evidence_request_pack/requests/0',
+          },
+        ],
+      },
+      opl_replacement_expectations: [
+        {
+          primitive_id: 'artifact_package_lifecycle_shell',
+          owner: 'one-person-lab',
+          state: 'external_replacement_contract_expected',
+          opl_provides: ['package_lifecycle_shell', 'restore_ref_index'],
+          mag_keeps: ['domain_owner_receipt'],
+          implemented_in_mag: false,
+        },
+      ],
+    },
+  };
+  masManifest.standard_domain_agent_skeleton = {
+    surface_kind: 'standard_domain_agent_skeleton',
+    version: 'standard-domain-agent-skeleton.v1',
+    agent_id: 'mas',
+    repo_source_boundary: {
+      required_dirs: ['agent', 'contracts', 'runtime', 'docs'],
+      forbidden_dirs: ['artifacts'],
+    },
+    artifact_boundary: {
+      repo_contains_real_artifacts: false,
+      artifact_roots_are_locators: true,
+      workspace_artifact_locator_refs: ['workspace:/artifacts'],
+      runtime_artifact_locator_refs: ['runtime:/receipts'],
+    },
+    artifact_locator_contract: {
+      surface_kind: 'artifact_locator_contract',
+      locator_model: 'workspace_runtime_artifact_root',
+    },
+    authority_boundary: {
+      opl: 'framework_transport_and_projection_only',
+      domain: 'truth_quality_artifact_owner',
+    },
+  };
+  masManifest.physical_skeleton_follow_through = {
+    surface_kind: 'mas_physical_skeleton_follow_through',
+    status: 'minimum_repo_source_anchors_landed',
+    source_refs: [
+      'agent/README.md',
+      'contracts/README.md',
+      'runtime/README.md',
+      'docs/status.md',
+    ],
+    direct_skill_parity_refs: ['proof:mas:direct-skill-parity'],
+    opl_hosted_parity_refs: ['proof:mas:opl-hosted-parity'],
+    replacement_parity_refs: ['proof:mas:replacement-parity'],
+    provenance_refs: ['docs/history/runtime-substrate/mas-local-runtime-tombstone.md'],
+    legacy_active_path_policy: 'physically_removed_or_history_tombstone_only',
+    legacy_active_path_residue: [
+      {
+        path_family: 'default MAS local scheduler',
+        state: 'tombstone_only',
+        evidence_ref: 'docs/history/runtime-substrate/mas-local-scheduler-tombstone.md',
+      },
+    ],
+  };
+  masManifest.legacy_retirement_tombstone_proof = {
+    status: 'no_active_default_caller_proven',
+    active_default_callers: [],
+    tombstone_refs: ['docs/history/runtime-substrate/mas-local-scheduler-tombstone.md'],
+    source_refs: ['docs/decisions.md#temporal-runtime'],
+  };
 
   try {
     runCli([
@@ -145,6 +241,18 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
+    assert.equal(drilldown.summary.domain_external_evidence_request_count, 1);
+    assert.equal(drilldown.summary.domain_open_evidence_request_count, 1);
+    assert.equal(drilldown.summary.domain_remaining_evidence_gate_count, 1);
+    assert.equal(drilldown.summary.domain_opl_replacement_expectation_count, 1);
+    assert.equal(drilldown.summary.domain_replacement_surface_available_count, 1);
+    assert.equal(drilldown.summary.domain_remaining_bridge_module_count, 1);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_plan_count, 1);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_ready_plan_count, 1);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_blocked_plan_count, 0);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_action_count, 1);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_opl_apply_ready_count, 1);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_delete_ready_count, 0);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);
@@ -173,7 +281,43 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       true,
     );
     assert.equal(
+      drilldown.domain_evidence_request_refs.replacement_expectations.some(
+        (ref: { ref: string; coverage: { coverage_status: string } }) =>
+          ref.ref === 'artifact_package_lifecycle_shell'
+          && ref.coverage.coverage_status === 'opl_replacement_surface_available',
+      ),
+      true,
+    );
+    assert.equal(
       drilldown.periodic_execution_refs.authority_boundary.can_write_domain_truth,
+      false,
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.surface_kind,
+      'opl_app_drilldown_domain_legacy_cleanup_plan_refs',
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].plan_status,
+      'ready',
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].domain_delete_can_execute,
+      false,
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].apply_command,
+      'opl agents legacy-cleanup apply --domain mas --mode apply --source-ref opl://agents/med-autoscience/legacy-cleanup-plan',
+    );
+    assert.deepEqual(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].action_refs[0].replacement_parity_refs,
+      [
+        'proof:mas:replacement-parity',
+        'proof:mas:direct-skill-parity',
+        'proof:mas:opl-hosted-parity',
+      ],
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.authority_boundary.can_move_or_delete_domain_repo_files,
       false,
     );
 
@@ -236,7 +380,43 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       true,
     );
     assert.equal(
+      drilldown.domain_evidence_request_refs.external_requests.some(
+        (ref: { request_id: string; required_return_shapes: string[] }) =>
+          ref.request_id === 'app_workbench_package_ref_consumption'
+          && ref.required_return_shapes.includes('domain_owner_receipt'),
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.evidence_gates.some(
+        (ref: { ref: string }) => ref.ref === 'real_package_lifecycle_receipt',
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.replacement_expectations.some(
+        (ref: { ref: string; state: string }) =>
+          ref.ref === 'artifact_package_lifecycle_shell'
+          && ref.state === 'external_replacement_contract_expected',
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.remaining_bridge_modules.some(
+        (ref: { ref: string }) => ref.ref === 'package_lifecycle_adapter',
+      ),
+      true,
+    );
+    assert.equal(
       snapshot.source_refs.some((ref: { role: string }) => ref.role === 'app_operator_drilldown'),
+      true,
+    );
+    assert.equal(
+      snapshot.source_refs.some((ref: { role: string }) => ref.role === 'domain_evidence_request_refs'),
+      true,
+    );
+    assert.equal(
+      snapshot.source_refs.some((ref: { role: string }) => ref.role === 'domain_legacy_cleanup_plan_refs'),
       true,
     );
   } finally {
