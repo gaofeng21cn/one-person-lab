@@ -1,0 +1,612 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-proof-bundle.schema.json",
+  "title": "OPL Stage Pack Proof Bundle",
+  "description": "Lightweight proof-carrying bundle projected from a family stage control plane, optional action catalog, and admission review. It exposes machine-readable obligations and blockers for OPL scheduling/admission without introducing a heavy prover or granting OPL domain truth authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "identity",
+    "admission_status",
+    "admission_summary",
+    "stage_results",
+    "blocking_reasons",
+    "composition_obligations",
+    "boundary_assumptions",
+    "idempotency_assumptions",
+    "expected_receipt_refs",
+    "runtime_event_requirements",
+    "test_proof_refs",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_stage_pack_proof_bundle"
+    },
+    "version": {
+      "const": "opl-stage-pack-proof-bundle.v1"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_pack_id",
+        "plane_id",
+        "target_domain_id",
+        "plane_owner",
+        "stage_ids",
+        "action_catalog_id"
+      ],
+      "properties": {
+        "stage_pack_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plane_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_domain_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plane_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "action_catalog_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "admission_status": {
+      "$ref": "#/$defs/admission_status"
+    },
+    "admission_summary": {
+      "$ref": "#/$defs/admission_summary"
+    },
+    "stage_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_result"
+      }
+    },
+    "blocking_reasons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "composition_obligations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/composition_obligation"
+      }
+    },
+    "boundary_assumptions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_assumptions"
+      }
+    },
+    "idempotency_assumptions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_assumptions"
+      }
+    },
+    "expected_receipt_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expected_receipt_ref"
+      }
+    },
+    "runtime_event_requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/runtime_event_requirement"
+      }
+    },
+    "test_proof_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_surface_ref"
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "domain_role",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body",
+        "can_accept_or_reject_owner_receipt",
+        "proof_passed"
+      ],
+      "properties": {
+        "opl_role": {
+          "const": "proof_bundle_projection_owner"
+        },
+        "domain_role": {
+          "const": "truth_quality_receipt_and_artifact_authority"
+        },
+        "can_execute_stage": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_domain_ready": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_accept_or_reject_owner_receipt": {
+          "const": false
+        },
+        "proof_passed": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "admission_status": {
+      "type": "string",
+      "enum": [
+        "admitted",
+        "needs_contracts",
+        "blocked"
+      ]
+    },
+    "trust_lane": {
+      "type": "string",
+      "enum": [
+        "opl_framework",
+        "domain_agent",
+        "codex_executor",
+        "ai_decision",
+        "human_gate",
+        "external_system",
+        "app_projection"
+      ]
+    },
+    "admission_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stages_count",
+        "admitted_stages_count",
+        "blocked_stages_count",
+        "needs_contracts_stages_count",
+        "blockers_count",
+        "warnings_count"
+      ],
+      "properties": {
+        "stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "admitted_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_contracts_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockers_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "stage_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "status",
+        "trust_lane",
+        "static_check_eligible",
+        "effect_boundary",
+        "finding_count",
+        "blocker_count",
+        "warning_count"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "#/$defs/admission_status"
+        },
+        "trust_lane": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/trust_lane"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "static_check_eligible": {
+          "type": "boolean"
+        },
+        "effect_boundary": {
+          "type": "boolean"
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "blocker",
+            "warning"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string"
+        },
+        "target_stage_id": {
+          "type": "string"
+        },
+        "action_id": {
+          "type": "string"
+        }
+      }
+    },
+    "composition_obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edge_id",
+        "upstream_stage_id",
+        "downstream_stage_id",
+        "upstream_ensures",
+        "downstream_requires",
+        "satisfied_by",
+        "missing",
+        "status"
+      ],
+      "properties": {
+        "edge_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "upstream_stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "downstream_stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "upstream_ensures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "downstream_requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "satisfied_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "satisfied",
+            "missing"
+          ]
+        }
+      }
+    },
+    "stage_assumptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "assumptions"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "expected_receipt_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "ref",
+        "reason"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "runtime_event_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "trust_lane",
+        "required",
+        "satisfied_by_records_runtime_events",
+        "reason"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trust_lane": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/trust_lane"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "satisfied_by_records_runtime_events": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "surface_ref_value": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
+    },
+    "stage_surface_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stage_id",
+        "ref"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref_kind": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/surface_ref_value"
+        },
+        "role": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_stage_pack_proof_bundle",
+      "version": "opl-stage-pack-proof-bundle.v1",
+      "identity": {
+        "stage_pack_id": "med-autoscience:mas_stage_control_plane",
+        "plane_id": "mas_stage_control_plane",
+        "target_domain_id": "med-autoscience",
+        "plane_owner": "med-autoscience",
+        "stage_ids": [
+          "manuscript_authoring",
+          "publication_review"
+        ],
+        "action_catalog_id": "mas_stage_actions"
+      },
+      "admission_status": "admitted",
+      "admission_summary": {
+        "stages_count": 2,
+        "admitted_stages_count": 2,
+        "blocked_stages_count": 0,
+        "needs_contracts_stages_count": 0,
+        "blockers_count": 0,
+        "warnings_count": 0
+      },
+      "stage_results": [
+        {
+          "stage_id": "manuscript_authoring",
+          "status": "admitted",
+          "trust_lane": "domain_agent",
+          "static_check_eligible": true,
+          "effect_boundary": false,
+          "finding_count": 0,
+          "blocker_count": 0,
+          "warning_count": 0
+        }
+      ],
+      "blocking_reasons": [],
+      "composition_obligations": [
+        {
+          "edge_id": "manuscript_authoring->publication_review",
+          "upstream_stage_id": "manuscript_authoring",
+          "downstream_stage_id": "publication_review",
+          "upstream_ensures": [
+            "draft_ready"
+          ],
+          "downstream_requires": [
+            "draft_ready"
+          ],
+          "satisfied_by": [
+            "draft_ready"
+          ],
+          "missing": [],
+          "status": "satisfied"
+        }
+      ],
+      "boundary_assumptions": [
+        {
+          "stage_id": "publication_review",
+          "assumptions": [
+            "reviewer_judgment_recorded_as_receipt"
+          ]
+        }
+      ],
+      "idempotency_assumptions": [
+        {
+          "stage_id": "manuscript_authoring",
+          "assumptions": [
+            "deterministic_handoff_refs"
+          ]
+        }
+      ],
+      "expected_receipt_refs": [
+        {
+          "stage_id": "publication_review",
+          "ref": "owner_receipt:publication_review",
+          "reason": "stage_trust_boundary_owner_receipt_required"
+        }
+      ],
+      "runtime_event_requirements": [
+        {
+          "stage_id": "publication_review",
+          "trust_lane": "human_gate",
+          "required": true,
+          "satisfied_by_records_runtime_events": true,
+          "reason": "effect_boundary_requires_replayable_runtime_events"
+        }
+      ],
+      "test_proof_refs": [
+        {
+          "stage_id": "publication_review",
+          "ref_kind": "test",
+          "ref": "tests/publication-review.test.ts",
+          "role": "proof_ref"
+        }
+      ],
+      "authority_boundary": {
+        "opl_role": "proof_bundle_projection_owner",
+        "domain_role": "truth_quality_receipt_and_artifact_authority",
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false,
+        "can_accept_or_reject_owner_receipt": false,
+        "proof_passed": true
+      }
+    }
+  ]
+}
