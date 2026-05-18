@@ -214,6 +214,14 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "runtime_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Machine-readable refs to runtime boundary events recorded by the domain/runtime owner; OPL checks declaration completeness only and does not emit these events."
         }
       }
     },
@@ -244,6 +252,14 @@
         },
         "records_runtime_events": {
           "type": "boolean"
+        },
+        "runtime_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Machine-readable refs to replayable/auditable runtime events for effect-boundary stages; this is a declaration surface, not an OPL event emitter."
         },
         "owner_receipt_required": {
           "type": "boolean"

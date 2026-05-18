@@ -18,6 +18,7 @@ export interface FamilyStageAdmissionFinding {
   stage_id?: string;
   target_stage_id?: string;
   action_id?: string;
+  runtime_event_refs_missing_reason?: string;
 }
 
 export interface FamilyStageAdmissionStageResult {
@@ -26,6 +27,7 @@ export interface FamilyStageAdmissionStageResult {
   trust_lane: FamilyStageTrustLane | null;
   static_check_eligible: boolean;
   effect_boundary: boolean;
+  runtime_event_refs: string[];
   finding_count: number;
   blocker_count: number;
   warning_count: number;
@@ -180,12 +182,23 @@ function inspectTrustBoundary(stage: FamilyStageDescriptor, findings: FamilyStag
 
   const laneIsEffectBoundary = EFFECT_BOUNDARY_LANES.has(trust.lane);
   const effectBoundary = readBoolean(trust.effect_boundary) || laneIsEffectBoundary;
+  const runtimeEventRefs = readRuntimeEventRefs(stage);
   if (effectBoundary && trust.records_runtime_events !== true) {
     pushFinding(findings, {
       severity: 'blocker',
       code: 'effect_boundary_without_event_recording',
       message: 'Effect boundary stages must record runtime events for replay, audit, and route-back.',
       stage_id: stage.stage_id,
+      runtime_event_refs_missing_reason: 'records_runtime_events is not true',
+    });
+  }
+  if (effectBoundary && runtimeEventRefs.length === 0) {
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'effect_boundary_missing_runtime_event_refs',
+      message: 'Effect boundary stages must declare machine-readable runtime_event_refs for audit and replay.',
+      stage_id: stage.stage_id,
+      runtime_event_refs_missing_reason: 'runtime_event_refs is empty on trust_boundary and stage_contract',
     });
   }
   if (effectBoundary && trust.static_check_eligible === true) {
@@ -196,6 +209,13 @@ function inspectTrustBoundary(stage: FamilyStageDescriptor, findings: FamilyStag
       stage_id: stage.stage_id,
     });
   }
+}
+
+function readRuntimeEventRefs(stage: FamilyStageDescriptor) {
+  return Array.from(new Set([
+    ...readStringList(stage.trust_boundary?.runtime_event_refs),
+    ...readStringList(stage.stage_contract?.runtime_event_refs),
+  ]));
 }
 
 function inspectStageContract(stage: FamilyStageDescriptor, findings: FamilyStageAdmissionFinding[]) {
@@ -392,6 +412,7 @@ function stageResult(stage: FamilyStageDescriptor, findings: FamilyStageAdmissio
     trust_lane: stage.trust_boundary?.lane ?? null,
     static_check_eligible: stage.trust_boundary?.static_check_eligible === true,
     effect_boundary: effectBoundary,
+    runtime_event_refs: readRuntimeEventRefs(stage),
     finding_count: stageFindings.length,
     blocker_count: blockerCount,
     warning_count: warningCount,

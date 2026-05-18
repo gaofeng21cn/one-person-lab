@@ -33,6 +33,7 @@ export interface FamilyStageTrustBoundary extends JsonRecord {
   static_check_eligible?: boolean;
   effect_boundary?: boolean;
   records_runtime_events?: boolean;
+  runtime_event_refs?: string[];
   owner_receipt_required?: boolean;
   human_gate_required?: boolean;
   runtime_guard_required?: boolean;
@@ -43,6 +44,7 @@ export interface FamilyStageContract extends JsonRecord {
   ensures: string[];
   boundary_assumptions: string[];
   properties: string[];
+  runtime_event_refs?: string[];
 }
 
 export interface FamilyStageDescriptor {
@@ -188,6 +190,7 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     ensures: readStringList(value.ensures),
     boundary_assumptions: readStringList(value.boundary_assumptions),
     properties: readStringList(value.properties),
+    runtime_event_refs: readStringList(value.runtime_event_refs),
   };
 }
 
@@ -202,6 +205,7 @@ function normalizeTrustBoundary(value: unknown, field: string): FamilyStageTrust
   const staticCheckEligible = optionalBoolean(value, 'static_check_eligible', field);
   const effectBoundary = optionalBoolean(value, 'effect_boundary', field);
   const recordsRuntimeEvents = optionalBoolean(value, 'records_runtime_events', field);
+  const runtimeEventRefs = readStringList(value.runtime_event_refs);
   const ownerReceiptRequired = optionalBoolean(value, 'owner_receipt_required', field);
   const humanGateRequired = optionalBoolean(value, 'human_gate_required', field);
   const runtimeGuardRequired = optionalBoolean(value, 'runtime_guard_required', field);
@@ -211,6 +215,7 @@ function normalizeTrustBoundary(value: unknown, field: string): FamilyStageTrust
     ...(staticCheckEligible === undefined ? {} : { static_check_eligible: staticCheckEligible }),
     ...(effectBoundary === undefined ? {} : { effect_boundary: effectBoundary }),
     ...(recordsRuntimeEvents === undefined ? {} : { records_runtime_events: recordsRuntimeEvents }),
+    ...(runtimeEventRefs.length === 0 ? {} : { runtime_event_refs: runtimeEventRefs }),
     ...(ownerReceiptRequired === undefined ? {} : { owner_receipt_required: ownerReceiptRequired }),
     ...(humanGateRequired === undefined ? {} : { human_gate_required: humanGateRequired }),
     ...(runtimeGuardRequired === undefined ? {} : { runtime_guard_required: runtimeGuardRequired }),

@@ -89,6 +89,7 @@ function buildStagePlane(overrides: {
   authorEnsures?: string[];
   reviewRequires?: string[];
   reviewRecordsRuntimeEvents?: boolean;
+  reviewRuntimeEventRefs?: string[];
   cycle?: boolean;
 } = {}): FamilyStageControlPlane {
   return {
@@ -165,12 +166,14 @@ function buildStagePlane(overrides: {
           ensures: ['review_receipt_ready'],
           boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
           properties: [],
+          runtime_event_refs: overrides.reviewRuntimeEventRefs ?? ['runtime_event:publication_review.gate_recorded'],
         },
         trust_boundary: {
           lane: 'human_gate',
           static_check_eligible: false,
           effect_boundary: true,
           records_runtime_events: overrides.reviewRecordsRuntimeEvents ?? true,
+          runtime_event_refs: overrides.reviewRuntimeEventRefs ?? ['runtime_event:publication_review.gate_recorded'],
           owner_receipt_required: true,
           human_gate_required: true,
         },
@@ -196,6 +199,7 @@ test('family stage admission admits contracted static core and recorded boundary
   assert.equal(review.stage_results[0]?.trust_lane, 'domain_agent');
   assert.equal(review.stage_results[0]?.static_check_eligible, true);
   assert.equal(review.stage_results[1]?.effect_boundary, true);
+  assert.deepEqual(review.stage_results[1]?.runtime_event_refs, ['runtime_event:publication_review.gate_recorded']);
   assert.equal(review.authority_boundary.can_write_domain_truth, false);
   assert.equal(review.authority_boundary.can_authorize_quality_verdict, false);
 });
@@ -234,6 +238,26 @@ test('family stage admission blocks effect boundaries without replayable event r
   );
 });
 
+test('family stage admission blocks effect boundaries without runtime event refs', () => {
+  const review = buildFamilyStageAdmissionReview(
+    buildStagePlane({
+      reviewRuntimeEventRefs: [],
+    }),
+    {
+      family_action_catalog: buildActionCatalog(),
+    },
+  );
+
+  assert.equal(review.status, 'blocked');
+  assert.deepEqual(review.stage_results[1]?.runtime_event_refs, []);
+  assert.ok(
+    review.findings.some((finding) =>
+      finding.code === 'effect_boundary_missing_runtime_event_refs'
+      && finding.runtime_event_refs_missing_reason === 'runtime_event_refs is empty on trust_boundary and stage_contract',
+    ),
+  );
+});
+
 test('family stage admission schema freezes OPL non-authority read model', () => {
   const schema = readJson('contracts/family-orchestration/family-stage-admission.schema.json');
   const properties = schema.properties as Record<string, JsonRecord>;
@@ -248,4 +272,8 @@ test('family stage admission schema freezes OPL non-authority read model', () =>
   assert.equal(authority.can_authorize_domain_ready, false);
   assert.equal(authority.can_authorize_quality_verdict, false);
   assert.equal(authority.can_mutate_artifact_body, false);
+  const stageResultRequired = (((schema.$defs as JsonRecord).stage_result as JsonRecord).required as string[]);
+  const findingProperties = (((schema.$defs as JsonRecord).finding as JsonRecord).properties as JsonRecord);
+  assert.ok(stageResultRequired.includes('runtime_event_refs'));
+  assert.equal(Boolean(findingProperties.runtime_event_refs_missing_reason), true);
 });
