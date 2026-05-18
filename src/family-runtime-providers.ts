@@ -43,8 +43,10 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
   if (kind === 'local_sqlite') {
     return {
       provider_kind: kind,
-      provider_role: 'development_and_offline_provider',
+      provider_role: 'dev_ci_offline_diagnostic_baseline',
       deep_inspection: 'selected_provider_only',
+      production_online_readiness_provider: false,
+      fail_closed_when_used_for_production: true,
     };
   }
   if (kind === 'temporal') {
@@ -52,6 +54,8 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
       provider_kind: kind,
       provider_role: 'production_required_substrate',
       deep_inspection: 'selected_provider_only',
+      production_online_readiness_provider: true,
+      fail_closed_when_unready: true,
     };
   }
   return {
@@ -110,7 +114,7 @@ export function resolveFamilyRuntimeProviderKind(
   }
   const configured = process.env.OPL_FAMILY_RUNTIME_PROVIDER?.trim();
   if (!configured) {
-    return 'local_sqlite';
+    return 'temporal';
   }
   if (isFamilyRuntimeProviderKind(configured)) {
     return configured;
@@ -280,7 +284,10 @@ export function inspectFamilyRuntimeProviders(selected: FamilyRuntimeProviderKin
     allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
     default_resolution: {
       env: 'OPL_FAMILY_RUNTIME_PROVIDER',
-      fallback: 'local_sqlite',
+      fallback: 'temporal',
+      production_required_provider: 'temporal',
+      local_sqlite_role: 'dev_ci_offline_diagnostic_baseline',
+      fail_closed_when_temporal_not_ready: true,
     },
     providers: {
       [selected]: inspectFamilyRuntimeProvider(selected),
@@ -301,7 +308,10 @@ export async function inspectFamilyRuntimeProvidersWithLifecycle(
     allowed_providers: [...FAMILY_RUNTIME_PROVIDER_KINDS],
     default_resolution: {
       env: 'OPL_FAMILY_RUNTIME_PROVIDER',
-      fallback: 'local_sqlite',
+      fallback: 'temporal',
+      production_required_provider: 'temporal',
+      local_sqlite_role: 'dev_ci_offline_diagnostic_baseline',
+      fail_closed_when_temporal_not_ready: true,
     },
     providers: {
       [selected]: await inspectFamilyRuntimeProviderWithLifecycle(selected, paths, options),

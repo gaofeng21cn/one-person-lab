@@ -72,6 +72,9 @@ test('status dashboard aggregates current OPL management surfaces into one view'
   try {
     const output = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
       PATH: process.env.PATH ?? '',
     });
     const previousEnv = {
@@ -110,7 +113,7 @@ test('status dashboard aggregates current OPL management surfaces into one view'
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
-    assert.equal(output.dashboard.runtime_status.configured_provider, 'local_sqlite');
+    assert.equal(output.dashboard.runtime_status.configured_provider, 'temporal');
     assert.equal(output.dashboard.runtime_status.managed_session_ledger.sessions.length, 0);
     assert.equal(Object.hasOwn(output.dashboard.runtime_status, 'recent_sessions'), false);
     assert.equal(Object.hasOwn(output.dashboard.runtime_status, 'hermes_diagnostics'), false);

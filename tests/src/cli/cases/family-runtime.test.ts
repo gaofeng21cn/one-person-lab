@@ -41,16 +41,23 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
 test('family-runtime status exposes provider-backed stage attempt runtime and SQLite queue path', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-state-'));
   try {
-    const output = runCli(['family-runtime', 'status'], familyRuntimeEnv(stateRoot));
+    const output = runCli(['family-runtime', 'status'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }));
     assert.equal(output.family_runtime.provider_model, 'provider_backed_stage_attempt_runtime');
-    assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
+    assert.equal(output.family_runtime.configured_provider, 'temporal');
     assert.deepEqual(output.family_runtime.provider_runtime.allowed_providers, [
       'local_sqlite',
       'temporal',
     ]);
-    assert.equal(output.family_runtime.readiness.provider_ready, true);
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
     assert.equal(output.family_runtime.readiness.full_online_ready, false);
-    assert.equal(output.family_runtime.readiness.degraded, false);
+    assert.equal(output.family_runtime.readiness.degraded, true);
+    assert.equal(output.family_runtime.readiness.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(output.family_runtime.provider_runtime.default_resolution.fallback, 'temporal');
+    assert.equal(output.family_runtime.provider_runtime.default_resolution.fail_closed_when_temporal_not_ready, true);
     assert.equal(output.family_runtime.state.queue_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
     assert.equal(output.family_runtime.state.queue_schema_version, 2);
     assert.equal(fs.existsSync(output.family_runtime.state.queue_db), true);
@@ -119,7 +126,11 @@ test('bin/opl routes family-runtime commands into the OPL CLI instead of Codex p
           ...process.env,
           NODE_NO_WARNINGS: '1',
           OPL_SKIP_SKILL_SYNC: '1',
-          ...familyRuntimeEnv(stateRoot),
+          ...familyRuntimeEnv(stateRoot, {
+            OPL_FAMILY_RUNTIME_PROVIDER: '',
+            OPL_TEMPORAL_ADDRESS: '',
+            TEMPORAL_ADDRESS: '',
+          }),
         },
       },
     );
@@ -128,7 +139,8 @@ test('bin/opl routes family-runtime commands into the OPL CLI instead of Codex p
     const output = JSON.parse(result.stdout);
     assert.equal(output.family_runtime.surface_id, 'opl_family_runtime');
     assert.equal(output.family_runtime.provider_model, 'provider_backed_stage_attempt_runtime');
-    assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
+    assert.equal(output.family_runtime.configured_provider, 'temporal');
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

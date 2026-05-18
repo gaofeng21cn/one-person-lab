@@ -185,6 +185,30 @@ const FAMILY_SCHEDULER_REPLACEMENT = {
   },
 } as const;
 
+const DAEMON_POLICY = {
+  surface_kind: 'opl_runtime_manager_daemon_policy',
+  local_daemon_added: false,
+  opl_domain_daemon_installation_allowed: false,
+  cadence_owner: 'provider_backed_family_runtime',
+  runtime_kernel_owner: 'provider_backed_family_runtime',
+  provider_backed_cadence_surface: 'opl family-runtime provider-slo tick --provider temporal',
+  domain_launchagent_policy: {
+    medautoscience: 'legacy_diagnostic_cleanup_only',
+    medautogrant: 'not_installed_or_maintained_by_opl',
+    redcube: 'not_installed_or_maintained_by_opl',
+  },
+  allowed_domain_daemon_role: 'legacy_diagnostic_cleanup_only',
+  sidecar_promotion_gate:
+    'Only promote beyond provider adapters if configured providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
+  authority_boundary: {
+    can_install_opl_daemon: false,
+    can_install_domain_daemon: false,
+    can_maintain_domain_daemon: false,
+    can_start_legacy_domain_launchagent: false,
+    can_record_provider_cadence_receipt: true,
+  },
+} as const;
+
 const NATIVE_HELPER_PROTOCOL = {
   version: 'opl_native_helper.v1',
   language: 'rust',
@@ -378,6 +402,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         configured_provider: selectedProvider,
         allowed_providers: providers.allowed_providers,
       },
+      daemon_policy: DAEMON_POLICY,
       provider_runtime: providers,
       reconcile,
       registration_registry: {
