@@ -54,6 +54,27 @@ export interface FamilyStageProofBundleRuntimeEventRequirement {
   reason: string;
 }
 
+export interface FamilyStageProofBundleRuntimeMetrics {
+  composition_obligation_count: number;
+  runtime_event_requirement_count: number;
+  satisfied_runtime_event_ref_count: number;
+  expected_receipt_ref_count: number;
+  test_proof_ref_count: number;
+  blocker_count: number;
+  warning_count: number;
+  authority_boundary: {
+    opl_role: 'scheduling_operator_observability_only';
+    domain_role: 'truth_quality_receipt_and_artifact_authority';
+    can_execute_stage: false;
+    can_write_domain_truth: false;
+    can_authorize_domain_ready: false;
+    can_authorize_quality_verdict: false;
+    can_mutate_artifact_body: false;
+    can_accept_or_reject_owner_receipt: false;
+    metrics_are_domain_verdict: false;
+  };
+}
+
 export interface FamilyStageProofBundle {
   surface_kind: 'opl_stage_pack_proof_bundle';
   version: 'opl-stage-pack-proof-bundle.v1';
@@ -75,6 +96,7 @@ export interface FamilyStageProofBundle {
   expected_receipt_refs: FamilyStageProofBundleExpectedReceiptRef[];
   runtime_event_requirements: FamilyStageProofBundleRuntimeEventRequirement[];
   test_proof_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  proof_runtime_metrics: FamilyStageProofBundleRuntimeMetrics;
   authority_boundary: {
     opl_role: 'proof_bundle_projection_owner';
     domain_role: 'truth_quality_receipt_and_artifact_authority';
@@ -268,6 +290,38 @@ function buildTestProofRefs(plane: FamilyStageControlPlane): Array<FamilyStageSu
     })));
 }
 
+function buildProofRuntimeMetrics(
+  admissionReview: FamilyStageAdmissionReview,
+  compositionObligations: FamilyStageProofBundleCompositionObligation[],
+  runtimeEventRequirements: FamilyStageProofBundleRuntimeEventRequirement[],
+  expectedReceiptRefs: FamilyStageProofBundleExpectedReceiptRef[],
+  testProofRefs: Array<FamilyStageSurfaceRef & { stage_id: string }>,
+): FamilyStageProofBundleRuntimeMetrics {
+  const requiredRuntimeEventRequirements = runtimeEventRequirements.filter((requirement) => requirement.required);
+  return {
+    composition_obligation_count: compositionObligations.length,
+    runtime_event_requirement_count: requiredRuntimeEventRequirements.length,
+    satisfied_runtime_event_ref_count: requiredRuntimeEventRequirements
+      .filter((requirement) => requirement.satisfied_by_runtime_event_refs)
+      .reduce((count, requirement) => count + requirement.runtime_event_refs.length, 0),
+    expected_receipt_ref_count: expectedReceiptRefs.length,
+    test_proof_ref_count: testProofRefs.length,
+    blocker_count: admissionReview.summary.blockers_count,
+    warning_count: admissionReview.summary.warnings_count,
+    authority_boundary: {
+      opl_role: 'scheduling_operator_observability_only',
+      domain_role: 'truth_quality_receipt_and_artifact_authority',
+      can_execute_stage: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_mutate_artifact_body: false,
+      can_accept_or_reject_owner_receipt: false,
+      metrics_are_domain_verdict: false,
+    },
+  };
+}
+
 export function buildFamilyStageProofBundle(
   plane: FamilyStageControlPlane,
   options: BuildFamilyStageProofBundleOptions = {},
@@ -278,6 +332,10 @@ export function buildFamilyStageProofBundle(
     actionCatalog ? { family_action_catalog: actionCatalog } : null,
   );
   const proofPassed = admissionReview.status === 'admitted';
+  const compositionObligations = buildCompositionObligations(plane);
+  const expectedReceiptRefs = buildExpectedReceiptRefs(plane, actionCatalog);
+  const runtimeEventRequirements = buildRuntimeEventRequirements(plane);
+  const testProofRefs = buildTestProofRefs(plane);
 
   return {
     surface_kind: 'opl_stage_pack_proof_bundle',
@@ -294,12 +352,19 @@ export function buildFamilyStageProofBundle(
     admission_summary: admissionReview.summary,
     stage_results: admissionReview.stage_results,
     blocking_reasons: proofPassed ? [] : admissionReview.findings,
-    composition_obligations: buildCompositionObligations(plane),
+    composition_obligations: compositionObligations,
     boundary_assumptions: plane.stages.map(readBoundaryAssumptions),
     idempotency_assumptions: plane.stages.map(readIdempotencyAssumptions),
-    expected_receipt_refs: buildExpectedReceiptRefs(plane, actionCatalog),
-    runtime_event_requirements: buildRuntimeEventRequirements(plane),
-    test_proof_refs: buildTestProofRefs(plane),
+    expected_receipt_refs: expectedReceiptRefs,
+    runtime_event_requirements: runtimeEventRequirements,
+    test_proof_refs: testProofRefs,
+    proof_runtime_metrics: buildProofRuntimeMetrics(
+      admissionReview,
+      compositionObligations,
+      runtimeEventRequirements,
+      expectedReceiptRefs,
+      testProofRefs,
+    ),
     authority_boundary: {
       opl_role: 'proof_bundle_projection_owner',
       domain_role: 'truth_quality_receipt_and_artifact_authority',

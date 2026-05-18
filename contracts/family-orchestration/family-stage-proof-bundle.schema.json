@@ -19,6 +19,7 @@
     "expected_receipt_refs",
     "runtime_event_requirements",
     "test_proof_refs",
+    "proof_runtime_metrics",
     "authority_boundary"
   ],
   "properties": {
@@ -129,6 +130,9 @@
       "items": {
         "$ref": "#/$defs/stage_surface_ref"
       }
+    },
+    "proof_runtime_metrics": {
+      "$ref": "#/$defs/proof_runtime_metrics"
     },
     "authority_boundary": {
       "type": "object",
@@ -512,6 +516,98 @@
           "type": "string"
         }
       }
+    },
+    "proof_runtime_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Scale-oriented counts derived from the proof bundle for OPL scheduling and operator observability only. These metrics do not authorize a domain ready, quality, receipt, or artifact verdict.",
+      "required": [
+        "composition_obligation_count",
+        "runtime_event_requirement_count",
+        "satisfied_runtime_event_ref_count",
+        "expected_receipt_ref_count",
+        "test_proof_ref_count",
+        "blocker_count",
+        "warning_count",
+        "authority_boundary"
+      ],
+      "properties": {
+        "composition_obligation_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtime_event_requirement_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "satisfied_runtime_event_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected_receipt_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "test_proof_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "authority_boundary": {
+          "$ref": "#/$defs/proof_runtime_metrics_authority_boundary"
+        }
+      }
+    },
+    "proof_runtime_metrics_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "domain_role",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body",
+        "can_accept_or_reject_owner_receipt",
+        "metrics_are_domain_verdict"
+      ],
+      "properties": {
+        "opl_role": {
+          "const": "scheduling_operator_observability_only"
+        },
+        "domain_role": {
+          "const": "truth_quality_receipt_and_artifact_authority"
+        },
+        "can_execute_stage": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_domain_ready": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        },
+        "can_accept_or_reject_owner_receipt": {
+          "const": false
+        },
+        "metrics_are_domain_verdict": {
+          "const": false
+        }
+      }
     }
   },
   "examples": [
@@ -613,6 +709,26 @@
           "role": "proof_ref"
         }
       ],
+      "proof_runtime_metrics": {
+        "composition_obligation_count": 1,
+        "runtime_event_requirement_count": 1,
+        "satisfied_runtime_event_ref_count": 1,
+        "expected_receipt_ref_count": 1,
+        "test_proof_ref_count": 1,
+        "blocker_count": 0,
+        "warning_count": 0,
+        "authority_boundary": {
+          "opl_role": "scheduling_operator_observability_only",
+          "domain_role": "truth_quality_receipt_and_artifact_authority",
+          "can_execute_stage": false,
+          "can_write_domain_truth": false,
+          "can_authorize_domain_ready": false,
+          "can_authorize_quality_verdict": false,
+          "can_mutate_artifact_body": false,
+          "can_accept_or_reject_owner_receipt": false,
+          "metrics_are_domain_verdict": false
+        }
+      },
       "authority_boundary": {
         "opl_role": "proof_bundle_projection_owner",
         "domain_role": "truth_quality_receipt_and_artifact_authority",
