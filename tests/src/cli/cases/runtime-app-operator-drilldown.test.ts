@@ -139,6 +139,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.quality_ref_count, 1);
     assert.equal(drilldown.summary.readiness_ref_count, 1);
     assert.equal(drilldown.summary.provider_slo_action_count, 1);
+    assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
     assert.equal(drilldown.summary.operator_action_route_count, 13);
     assert.equal(drilldown.summary.operator_executable_route_count, 3);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
@@ -161,6 +162,20 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'opl family-runtime residency proof --provider temporal --production',
     );
     assert.equal(drilldown.provider_slo_operator_action_refs.refs[0].execution_owner, 'operator_or_infrastructure');
+    assert.equal(drilldown.periodic_execution_refs.surface_kind, 'opl_app_drilldown_periodic_execution_refs');
+    assert.equal(drilldown.periodic_execution_refs.schedule_id, 'opl-family-runtime-provider-scheduler');
+    assert.equal(
+      drilldown.periodic_execution_refs.refs.some(
+        (ref: { role: string; ref: string }) =>
+          ref.role === 'scheduler_tick_provider_slo_and_queue_dispatch'
+          && ref.ref === 'opl family-runtime scheduler tick --provider temporal',
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.periodic_execution_refs.authority_boundary.can_write_domain_truth,
+      false,
+    );
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',

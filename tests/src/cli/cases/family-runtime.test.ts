@@ -58,6 +58,13 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.readiness.degraded_reason, 'temporal_runtime_not_configured');
     assert.equal(output.family_runtime.provider_runtime.default_resolution.fallback, 'temporal');
     assert.equal(output.family_runtime.provider_runtime.default_resolution.fail_closed_when_temporal_not_ready, true);
+    assert.equal(output.family_runtime.periodic_execution.surface_kind, 'opl_family_runtime_periodic_execution_summary');
+    assert.equal(output.family_runtime.periodic_execution.status, 'blocked_provider_not_ready');
+    assert.equal(output.family_runtime.periodic_execution.scheduler_owner, 'opl_provider_runtime_manager');
+    assert.equal(output.family_runtime.periodic_execution.cadence_owner, 'provider_backed_family_runtime');
+    assert.equal(output.family_runtime.periodic_execution.selected_provider_can_replace_domain_daemons, false);
+    assert.equal(output.family_runtime.periodic_execution.status_command, 'opl family-runtime scheduler status --provider temporal');
+    assert.equal(output.family_runtime.periodic_execution.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.family_runtime.state.queue_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
     assert.equal(output.family_runtime.state.queue_schema_version, 2);
     assert.equal(fs.existsSync(output.family_runtime.state.queue_db), true);
@@ -239,6 +246,9 @@ test('family-runtime local provider status does not inspect a bad Hermes binary 
     assert.equal(output.family_runtime.readiness.durable_online_ready, false);
     assert.equal(output.family_runtime.readiness.local_sqlite_is_dev_ci_offline_only, true);
     assert.equal(output.family_runtime.readiness.selected_provider_can_replace_domain_daemons, false);
+    assert.equal(output.family_runtime.periodic_execution.status, 'dev_offline_provider_cannot_replace_domain_daemons');
+    assert.equal(output.family_runtime.periodic_execution.local_sqlite_role, 'dev_ci_offline_diagnostic_baseline_only');
+    assert.equal(output.family_runtime.periodic_execution.blocker.blocker_id, 'local_sqlite_is_dev_ci_offline_only');
     assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.ready, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
