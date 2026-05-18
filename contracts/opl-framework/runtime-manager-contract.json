@@ -22,7 +22,8 @@
     ],
     "default_resolution": {
       "env": "OPL_FAMILY_RUNTIME_PROVIDER",
-      "fallback": "local_sqlite"
+      "fallback": "temporal",
+      "fail_closed_when_temporal_not_ready": true
     },
     "production_required_provider": "temporal",
     "production_candidate": "temporal",
@@ -309,6 +310,27 @@
       "active_domain_callers_must_use_replacement_owner": true,
       "legacy_domain_scheduler_must_be_explicit_diagnostic_or_tombstone": true,
       "no_active_launchagent_install_from_domain_default": true
+    }
+  },
+  "daemon_policy": {
+    "surface_kind": "opl_runtime_manager_daemon_policy",
+    "local_daemon_added": false,
+    "opl_domain_daemon_installation_allowed": false,
+    "cadence_owner": "provider_backed_family_runtime",
+    "runtime_kernel_owner": "provider_backed_family_runtime",
+    "provider_backed_cadence_surface": "opl family-runtime provider-slo tick --provider temporal",
+    "domain_launchagent_policy": {
+      "medautoscience": "legacy_diagnostic_cleanup_only",
+      "medautogrant": "not_installed_or_maintained_by_opl",
+      "redcube": "not_installed_or_maintained_by_opl"
+    },
+    "allowed_domain_daemon_role": "legacy_diagnostic_cleanup_only",
+    "authority_boundary": {
+      "can_install_opl_daemon": false,
+      "can_install_domain_daemon": false,
+      "can_maintain_domain_daemon": false,
+      "can_start_legacy_domain_launchagent": false,
+      "can_record_provider_cadence_receipt": true
     }
   },
   "tray_snapshot_projection": {
