@@ -13,6 +13,8 @@ These contracts absorb useful orchestration ideas from tools such as `CrewAI` in
 
 They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, AI SDK, and product-entry descriptors from one app-action definition. OPL adopts that pattern as a family contract, not as a `@ageniti/core` runtime dependency.
 
+They also absorb the useful GraphFlow / GFL pattern of admitting a statically checkable stage-pack core, composing stages through `requires` / `ensures`, and keeping AI, human, external-system, artifact, memory, and domain-verdict effects behind runtime-enforced boundaries. OPL adopts this as contract vocabulary only; GraphFlow / GFL is not an OPL runtime, provider, executor, planner, stage runner, or domain authority dependency.
+
 ## Ownership Boundary
 
 `one-person-lab` owns:
@@ -49,6 +51,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
 - `family-stage-control-plane.schema.json`
   - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, and authority boundary
+- `family-stage-admission.schema.json`
+  - OPL-owned stage admission read model for stage contracts, trust lanes, effect-boundary runtime-event requirements, composition obligations, admission findings, and OPL non-authority boundaries
 - `family-stage-integrity-metadata.schema.json`
   - shared stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only
 - `family-domain-memory-ref.schema.json`
@@ -176,6 +180,10 @@ OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, p
 
 The contract records stage goal, domain-owned stage refs, input/output refs, knowledge refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, memory content, review verdicts, quality authority, and artifacts.
 
+The GraphFlow / GFL absorption maps here as stage-pack admission vocabulary. `family-stage-control-plane` plus `family-stage-admission` form the `verified_static_core` read model: stage identity, owner, goal, input/output refs, `requires`, `ensures`, knowledge refs, skill / prompt / evaluation refs, allowed action refs, handoff, trust lane, authority boundary, composition findings, and effect-boundary findings. `opl stages list|inspect` projects this admission state. Passing admission only means the stage pack can become a launch candidate for the OPL queue / provider / executor path.
+
+Runtime effects remain in the `runtime_enforced_boundary`: executor output, human approval, external-system responses, artifact mutation, memory writeback, domain quality / publication / fundability / visual verdicts, and owner receipts. Unsatisfied composition, stale evidence, owner conflicts, receipt conflicts, or missing executor binding must become a conflict envelope, human gate, or route-back. `Codex CLI` remains the default executor; non-default adapters require explicit selection plus independent receipt and audit evidence.
+
 For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
 
 ## Stage Integrity Metadata Freeze
@@ -212,6 +220,7 @@ This directory does not:
 
 - standardize one LLM wrapper
 - standardize one `Crew` / `Agent` / `Memory` runtime object model
+- introduce a GraphFlow / GFL runtime, graph engine, planner, stage runner, or executor
 - pin a specific model family
 - redefine `OPL` as the runtime owner of domain-owned truth
 - imply cross-repo runtime-core ingest has already happened
