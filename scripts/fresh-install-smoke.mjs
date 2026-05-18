@@ -126,7 +126,7 @@ function assertInitializeState(output, expected) {
   assert.equal(initialize.setup_flow.phase, expected.phase);
   assert.deepEqual(initialize.setup_flow.blocking_items.sort(), [...expected.blocking].sort());
   assert.equal(initialize.first_run_log.surface_id, 'opl_first_run_log');
-  assert.equal(initialize.online_management.blocking, false);
+  assert.equal(initialize.online_management.blocking, expected.onlineManagementBlocking ?? false);
   if (expected.fullOnlineBlocking !== undefined) {
     assert.equal(initialize.online_management.full_online_blocking, expected.fullOnlineBlocking);
   }
@@ -172,9 +172,10 @@ function cleanUserMissingCodex(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex', 'codex_config', 'domain_modules'],
-    onlineManagementStatus: 'ready',
-    fullOnlineBlocking: false,
+    blocking: ['codex', 'codex_config', 'domain_modules', 'family_runtime_provider'],
+    onlineManagementBlocking: true,
+    onlineManagementStatus: 'initializing',
+    fullOnlineBlocking: true,
   });
   return { observations: { overall_state: output.system_initialize.overall_state } };
 }
@@ -185,9 +186,10 @@ function compatibleCodexMissingModules(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex_config', 'domain_modules'],
-    onlineManagementStatus: 'ready',
-    fullOnlineBlocking: false,
+    blocking: ['codex_config', 'domain_modules', 'family_runtime_provider'],
+    onlineManagementBlocking: true,
+    onlineManagementStatus: 'initializing',
+    fullOnlineBlocking: true,
   });
   return { observations: { codex_version: output.system_initialize.core_engines.codex.parsed_version } };
 }
@@ -198,9 +200,10 @@ function outdatedCodex(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex', 'codex_config', 'domain_modules'],
-    onlineManagementStatus: 'ready',
-    fullOnlineBlocking: false,
+    blocking: ['codex', 'codex_config', 'domain_modules', 'family_runtime_provider'],
+    onlineManagementBlocking: true,
+    onlineManagementStatus: 'initializing',
+    fullOnlineBlocking: true,
   });
   assert.equal(output.system_initialize.core_engines.codex.version_status, 'outdated');
   return { observations: { codex_issue: output.system_initialize.core_engines.codex.issues[0] } };
@@ -213,12 +216,13 @@ function readyBaseline(root) {
   createGitModuleFixtures(env.OPL_MODULES_ROOT);
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
-    phase: 'review',
-    blocking: [],
-    onlineManagementStatus: 'ready',
-    fullOnlineBlocking: false,
+    phase: 'environment',
+    blocking: ['family_runtime_provider'],
+    onlineManagementBlocking: true,
+    onlineManagementStatus: 'initializing',
+    fullOnlineBlocking: true,
   });
-  assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+  assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
   return { observations: { installed_modules_count: output.system_initialize.module_summary.installed_modules_count } };
 }
 

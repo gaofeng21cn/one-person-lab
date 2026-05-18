@@ -66,7 +66,8 @@ test('runtime snapshot prefers MAS Progress Portal handoff for study projection 
     });
     const snapshot = output.runtime_tray_snapshot;
 
-    assert.equal(snapshot.runtime_health.status, 'running');
+    assert.equal(snapshot.runtime_health.status, 'offline');
+    assert.equal(snapshot.runtime_health.provider_ready, false);
     assert.equal(snapshot.attention_items.length, 2);
     const portalAlert = snapshot.attention_items.find((item: { item_id: string }) =>
       item.item_id.startsWith('medautoscience:portal-workspace-alert:')

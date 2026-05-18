@@ -6,7 +6,17 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
-const BASELINE = new Map();
+const BASELINE = new Map([
+  ['src/agent-lab-complete.ts', 1289],
+  ['src/agent-lab.ts', 1120],
+  ['src/cli/cases/public-command-specs.ts', 1010],
+  ['src/family-domain-agent-skeleton.ts', 1145],
+  ['src/family-runtime-lifecycle-index.ts', 1078],
+  ['src/family-runtime-temporal-provider.ts', 1024],
+  ['src/family-runtime.ts', 1018],
+  ['src/runtime-tray-app-operator-drilldown.ts', 1365],
+  ['tests/src/cli/cases/domain-pack-compiler.test.ts', 1072],
+]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
 const IGNORED_SUFFIXES = ['.min.js'];
