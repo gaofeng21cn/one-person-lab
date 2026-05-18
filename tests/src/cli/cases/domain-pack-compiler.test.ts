@@ -464,6 +464,20 @@ test('generated interfaces command exposes one OPL-owned interface bundle from t
   assert.equal(bundle.surface_kind, 'opl_generated_agent_interface_bundle');
   assert.equal(bundle.owner, 'one-person-lab');
   assert.equal(bundle.domain_repo_can_own_generated_surface, false);
+  assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
+  assert.equal(bundle.active_caller_cutover_proof.generated_surface_owner, 'one-person-lab');
+  assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
+  assert.equal(bundle.active_caller_cutover_proof.blocker_reasons.length, 0);
+  assert.equal(
+    bundle.active_caller_cutover_proof.domain_handler_targets_only,
+    true,
+  );
+  assert.deepEqual(bundle.active_caller_cutover_proof.forbidden_generated_authority, [
+    'domain_truth_write',
+    'memory_body_write',
+    'quality_or_export_verdict',
+    'artifact_mutation',
+  ]);
   assert.equal(bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
   assert.equal(bundle.mcp.descriptors[0].name, 'study_packet');
   assert.equal(bundle.skill.descriptors[0].command_contract_id, 'study_packet');
@@ -620,6 +634,9 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   assert.equal(bundle.status, 'ready');
   assert.equal(bundle.owner, 'one-person-lab');
   assert.equal(bundle.domain_repo_can_own_generated_surface, false);
+  assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
+  assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
+  assert.equal(bundle.active_caller_cutover_proof.domain_handler_targets_only, true);
   assert.equal(bundle.cli.descriptors[0].action_id, 'draft_brief');
   assert.equal(bundle.mcp.descriptors[0].descriptor_only, true);
   assert.equal(bundle.product_entry.descriptors[0].command, 'sample-brief-agent product draft --workspace-root <workspace_root>');
