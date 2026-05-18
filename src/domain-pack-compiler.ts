@@ -311,6 +311,17 @@ function buildGeneratedInterfaceBundle(
         block(format),
       ])
   );
+  const blockerReasons = Array.isArray(descriptor.blocker_reasons)
+    ? descriptor.blocker_reasons.filter((reason): reason is string => typeof reason === 'string')
+    : [];
+  const generatedBlockKeys = Object.keys(blocks);
+  const generatedBlocksReady = generatedBlockKeys.every((key) => {
+    const value = blocks[key];
+    return isRecord(value) && optionalString(value.status) === 'ready';
+  });
+  const targetDomainId = optionalString(descriptor.target_domain_id)
+    ?? optionalString(descriptor.project_id)
+    ?? 'unknown';
 
   return {
     surface_kind: 'opl_generated_agent_interface_bundle',
@@ -330,6 +341,26 @@ function buildGeneratedInterfaceBundle(
       'runtime_surfaces',
       'functional_privatization_audit',
     ],
+    active_caller_cutover_proof: {
+      surface_kind: 'opl_generated_surface_active_caller_cutover_proof',
+      status: compilerStatus === 'ready' && generatedBlocksReady
+        ? 'cutover_to_opl_generated_or_domain_handler_targets'
+        : 'blocked',
+      generated_surface_owner: 'one-person-lab',
+      target_domain_id: targetDomainId,
+      generated_blocks_ready: generatedBlocksReady,
+      generated_block_keys: generatedBlockKeys,
+      blocker_reasons: blockerReasons,
+      domain_handler_targets_only: compilerStatus === 'ready' && generatedBlocksReady,
+      domain_handler_target_policy: 'Generated descriptors route to domain action handler targets by receipt contract.',
+      forbidden_generated_authority: [
+        'domain_truth_write',
+        'memory_body_write',
+        'quality_or_export_verdict',
+        'artifact_mutation',
+      ],
+      authority_boundary_ref: 'generated_agent_interfaces.authority_boundary',
+    },
     ...blocks,
     stage_routes: include('product-entry') || selectedFormat === 'all'
       ? buildStageRoutes(stageControlPlane)
@@ -476,6 +507,7 @@ function selectGeneratedInterfaceBundleFormat(bundle: JsonRecord, selectedFormat
     target_domain_id: bundle.target_domain_id,
     agent_id: bundle.agent_id,
     generated_from: bundle.generated_from,
+    active_caller_cutover_proof: bundle.active_caller_cutover_proof,
     [selectedKey]: selectedBlock,
     stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
     parity: bundle.parity,

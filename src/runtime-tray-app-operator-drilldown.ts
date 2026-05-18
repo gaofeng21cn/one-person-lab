@@ -1,4 +1,5 @@
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
+import { readFamilyRuntimeLifecycleRefs } from './family-runtime-lifecycle-index.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 
@@ -65,6 +66,41 @@ function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]
     seen.add(key);
     return true;
   });
+}
+
+function nestedRef(value: unknown) {
+  return isRecord(value) && typeof value.ref === 'string' && value.ref.trim().length > 0
+    ? value.ref.trim()
+    : null;
+}
+
+function typedBlockerId(value: JsonRecord) {
+  return stringValue(value.blocker_id)
+    ?? stringValue(value.blocker_kind)
+    ?? stringValue(value.reason)
+    ?? JSON.stringify(value);
+}
+
+function uniqueBlockers(values: JsonRecord[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const key = typedBlockerId(value);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function refsFromRecord(value: JsonRecord, keys: string[]) {
+  return uniqueStrings(keys.flatMap((key) => {
+    const entry = value[key];
+    if (typeof entry === 'string') {
+      return [entry];
+    }
+    return stringList(entry);
+  }));
 }
 
 function routeGraphRefs(attempts: JsonRecord[]): DrilldownRef[] {
@@ -278,6 +314,262 @@ function domainProjectionRefs(domainProjectionIngestion: JsonRecord) {
   ));
 }
 
+function transitionBridgeEvidence(attempt: JsonRecord) {
+  return record(attempt.transition_bridge_evidence);
+}
+
+function controlledApplyContract(attempt: JsonRecord) {
+  return record(attempt.controlled_apply_contract);
+}
+
+function lifecycleGuardedApply(attempt: JsonRecord) {
+  return record(record(attempt.lifecycle_primitives).guarded_apply_proof);
+}
+
+function ownerReceiptRefs(attempts: JsonRecord[], domainProjectionIngestion: JsonRecord) {
+  return uniqueRefs([
+    ...attempts.flatMap((attempt) => {
+      const stageAttemptId = stringValue(attempt.stage_attempt_id);
+      const controlled = controlledApplyContract(attempt);
+      const transitionEvidence = record(transitionBridgeEvidence(attempt).evidence);
+      const routeImpact = record(attempt.route_impact);
+      return [
+        ...stringList(controlled.owner_receipt_refs).map((ref) => ({
+          ref,
+          role: 'controlled_apply_owner_receipt',
+          domain_id: stringValue(attempt.domain_id),
+          stage_id: stringValue(attempt.stage_id),
+          stage_attempt_id: stageAttemptId,
+        })),
+        ...stringList(transitionEvidence.owner_receipt_refs).map((ref) => ({
+          ref,
+          role: 'transition_owner_receipt',
+          domain_id: stringValue(attempt.domain_id),
+          stage_id: stringValue(attempt.stage_id),
+          stage_attempt_id: stageAttemptId,
+        })),
+        ...refsFromRecord(routeImpact, [
+          'owner_receipt_ref',
+          'owner_receipt_refs',
+          'domain_owner_receipt_ref',
+          'domain_owner_receipt_refs',
+        ]).map((ref) => ({
+          ref,
+          role: 'route_impact_owner_receipt',
+          domain_id: stringValue(attempt.domain_id),
+          stage_id: stringValue(attempt.stage_id),
+          stage_attempt_id: stageAttemptId,
+        })),
+      ];
+    }),
+    ...recordList(domainProjectionIngestion.items).flatMap((item) =>
+      stringList(item.owner_receipt_refs).map((ref) => ({
+        ref,
+        role: 'domain_projection_owner_receipt',
+        domain_id: stringValue(item.domain_id),
+        source_surface: stringValue(item.source_surface),
+      }))
+    ),
+  ]);
+}
+
+function typedBlockerRefs(attempts: JsonRecord[], domainProjectionIngestion: JsonRecord) {
+  const refs = uniqueRefs([
+    ...attempts.flatMap((attempt) => {
+      const stageAttemptId = stringValue(attempt.stage_attempt_id);
+      const transitionEvidence = record(transitionBridgeEvidence(attempt).evidence);
+      const routeImpact = record(attempt.route_impact);
+      return [
+        ...stringList(transitionEvidence.typed_blocker_refs).map((ref) => ({
+          ref,
+          role: 'transition_typed_blocker',
+          domain_id: stringValue(attempt.domain_id),
+          stage_id: stringValue(attempt.stage_id),
+          stage_attempt_id: stageAttemptId,
+        })),
+        ...refsFromRecord(routeImpact, ['typed_blocker_ref', 'typed_blocker_refs']).map((ref) => ({
+          ref,
+          role: 'route_impact_typed_blocker',
+          domain_id: stringValue(attempt.domain_id),
+          stage_id: stringValue(attempt.stage_id),
+          stage_attempt_id: stageAttemptId,
+        })),
+      ];
+    }),
+    ...recordList(domainProjectionIngestion.items).flatMap((item) =>
+      stringList(item.typed_blocker_refs).map((ref) => ({
+        ref,
+        role: 'domain_projection_typed_blocker',
+        domain_id: stringValue(item.domain_id),
+        source_surface: stringValue(item.source_surface),
+      }))
+    ),
+  ]);
+  const blockers = uniqueBlockers([
+    ...attempts.flatMap((attempt) => [
+      ...recordList(record(transitionBridgeEvidence(attempt).evidence).typed_blockers),
+      ...recordList(record(attempt.route_impact).typed_blockers),
+      ...recordList(controlledApplyContract(attempt).typed_blockers),
+      ...recordList(lifecycleGuardedApply(attempt).actions)
+        .map((action) => record(action.blocker))
+        .filter((blocker) => Object.keys(blocker).length > 0),
+    ]),
+    ...recordList(domainProjectionIngestion.items).flatMap((item) => recordList(item.typed_blockers)),
+  ]);
+  return { refs, blockers };
+}
+
+function freshnessRefs(attempts: JsonRecord[], domainProjectionIngestion: JsonRecord) {
+  return uniqueRefs([
+    ...attempts
+      .map((attempt) => ({
+        ref: `/stage_attempt_workbench/attempts/${stringValue(attempt.stage_attempt_id)}/freshness`,
+        role: 'stage_attempt_freshness',
+        domain_id: stringValue(attempt.domain_id),
+        stage_id: stringValue(attempt.stage_id),
+        stage_attempt_id: stringValue(attempt.stage_attempt_id),
+        source_fingerprint: stringValue(attempt.source_fingerprint),
+        updated_at: stringValue(attempt.updated_at),
+      }))
+      .filter((entry): entry is {
+        ref: string;
+        role: string;
+        domain_id: string | null;
+        stage_id: string | null;
+        stage_attempt_id: string | null;
+        source_fingerprint: string | null;
+        updated_at: string | null;
+      } => Boolean(entry.stage_attempt_id) && (Boolean(entry.source_fingerprint) || Boolean(entry.updated_at))),
+    ...recordList(domainProjectionIngestion.items).flatMap((item) => {
+      const freshness = record(item.freshness);
+      const sourceRefValue = stringValue(freshness.source_ref) ?? stringValue(freshness.ref);
+      const status = stringValue(freshness.status);
+      if (!sourceRefValue && !status) {
+        return [];
+      }
+      return [{
+        ref: sourceRefValue ?? `${stringValue(item.pointer) ?? 'domain_projection'}#freshness`,
+        role: 'domain_projection_freshness',
+        domain_id: stringValue(item.domain_id),
+        source_surface: stringValue(item.source_surface),
+        status,
+      }];
+    }),
+  ]);
+}
+
+function refFamilyRefs(workbench: JsonRecord) {
+  const workspace = record(workbench.workspace_source_intake);
+  const artifacts = record(workbench.artifact_gallery);
+  const memory = record(workbench.memory_locator_index);
+  const sourceRefs = uniqueRefs([
+    ...stringList(workspace.source_refs).map((ref) => ({ ref, role: 'source_ref' })),
+    ...stringList(workspace.material_refs).map((ref) => ({ ref, role: 'material_ref' })),
+    ...stringList(workspace.missing_material_attention_refs).map((ref) => ({
+      ref,
+      role: 'missing_material_ref',
+    })),
+  ]);
+  const artifactRefs = uniqueRefs(recordList(artifacts.items)
+    .map((item) => ({
+      ref: stringValue(item.ref),
+      role: stringValue(item.item_kind) ?? 'artifact_or_receipt_ref',
+      domain_id: stringValue(item.domain_id),
+      stage_id: stringValue(item.stage_id),
+      stage_attempt_id: stringValue(item.stage_attempt_id),
+    }))
+    .filter((entry): entry is {
+      ref: string;
+      role: string;
+      domain_id: string | null;
+      stage_id: string | null;
+      stage_attempt_id: string | null;
+    } => Boolean(entry.ref)));
+  const memoryRefs = uniqueRefs([
+    ...stringList(memory.consumed_memory_refs).map((ref) => ({ ref, role: 'consumed_memory_ref' })),
+    ...stringList(memory.writeback_receipt_refs).map((ref) => ({
+      ref,
+      role: 'memory_writeback_receipt_ref',
+    })),
+  ]);
+  return {
+    surface_kind: 'opl_app_drilldown_ref_family_refs',
+    source_refs: {
+      refs: sourceRefs,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    artifact_refs: {
+      refs: artifactRefs,
+      content_policy: 'locator_only_no_artifact_content',
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    memory_refs: {
+      refs: memoryRefs,
+      projection_policy: 'memory_refs_only_no_memory_body',
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    summary: {
+      source_ref_count: sourceRefs.length,
+      artifact_ref_count: artifactRefs.length,
+      memory_ref_count: memoryRefs.length,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function lifecycleLedgerRefs() {
+  const index = readFamilyRuntimeLifecycleRefs();
+  const refs = recordList(index.refs);
+  const restoreProofRefs = uniqueStrings(refs.flatMap((entry) =>
+    stringList(record(entry.payload).restore_proof_refs)
+  )).sort();
+  const domainArtifactMutationReceiptRefs = uniqueStrings(refs.flatMap((entry) =>
+    stringList(record(entry.payload).domain_artifact_mutation_receipt_refs)
+  )).sort();
+  return {
+    surface_kind: 'opl_app_drilldown_lifecycle_ledger_refs',
+    projection_policy: 'opl_owned_lifecycle_index_refs_only',
+    lifecycle_index_db: stringValue(index.lifecycle_index_db),
+    refs: refs.map((entry) => ({
+      ref: stringValue(entry.ref_id),
+      role: stringValue(entry.surface_role) ?? 'lifecycle_index_ref',
+      domain_id: stringValue(entry.domain_id),
+      surface_id: stringValue(entry.surface_id),
+      source_ref: stringValue(entry.source_ref),
+      receipt_ref: stringValue(entry.receipt_ref),
+      checksum: stringValue(entry.checksum),
+      updated_at: stringValue(entry.updated_at),
+    })).filter((entry) => entry.ref),
+    restore_proof_refs: restoreProofRefs,
+    domain_artifact_mutation_receipt_refs: domainArtifactMutationReceiptRefs,
+    summary: {
+      lifecycle_index_ref_count: refs.length,
+      restore_proof_ref_count: restoreProofRefs.length,
+      domain_artifact_mutation_receipt_ref_count: domainArtifactMutationReceiptRefs.length,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function safeActionRefs(actionRefs: ReturnType<typeof operatorActionRoutingRefs>, lifecycleRefs: ReturnType<typeof lifecycleLedgerRefs>) {
+  return uniqueRefs([
+    ...actionRefs.map((ref) => ({
+      ...ref,
+      role: `route:${ref.role}`,
+      can_execute: false,
+    })),
+    ...lifecycleRefs.refs
+      .filter((ref) => ref.receipt_ref)
+      .map((ref) => ({
+        ref: ref.receipt_ref as string,
+        role: 'lifecycle_cleanup_receipt_ref',
+        domain_id: ref.domain_id,
+        source_ref: ref.source_ref,
+        can_execute: false,
+      })),
+  ]);
+}
+
 function functionalPrivatizationSummary(projects: DomainManifestCatalogEntry[]) {
   const summaries: FunctionalPrivatizationSummaryRecord[] = projects.flatMap((project) => {
     if (project.status !== 'resolved' || !project.manifest) {
@@ -342,12 +634,19 @@ export function buildAppOperatorDrilldown(input: {
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const actionRefs = operatorActionRoutingRefs(input.stageAttemptWorkbench);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
+  const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
+  const typedBlockers = typedBlockerRefs(attempts, input.domainProjectionIngestion);
+  const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
+  const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
+  const lifecycleRefs = lifecycleLedgerRefs();
+  const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
     sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
     sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
+    sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
   ]);
 
   return {
@@ -378,6 +677,18 @@ export function buildAppOperatorDrilldown(input: {
       provider_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'provider').length,
       domain_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'domain').length,
       user_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'user').length,
+      owner_receipt_ref_count: ownerReceipts.length,
+      typed_blocker_ref_count: typedBlockers.refs.length,
+      typed_blocker_count: typedBlockers.blockers.length,
+      freshness_signal_count: freshness.length,
+      source_ref_count: refFamilies.summary.source_ref_count,
+      artifact_ref_count: refFamilies.summary.artifact_ref_count,
+      ref_family_memory_ref_count: refFamilies.summary.memory_ref_count,
+      safe_action_ref_count: safeActions.length,
+      lifecycle_index_ref_count: lifecycleRefs.summary.lifecycle_index_ref_count,
+      lifecycle_restore_proof_ref_count: lifecycleRefs.summary.restore_proof_ref_count,
+      lifecycle_domain_artifact_mutation_receipt_ref_count:
+        lifecycleRefs.summary.domain_artifact_mutation_receipt_ref_count,
       functional_privatization_default_watchlist_count: functionalSummary.default_watchlist_count,
       functional_privatization_semantic_equivalence_review_count:
         functionalSummary.semantic_equivalence_review_count,
@@ -419,6 +730,29 @@ export function buildAppOperatorDrilldown(input: {
       refs: actionRefs,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    owner_receipt_refs: {
+      surface_kind: 'opl_app_drilldown_owner_receipt_refs',
+      refs: ownerReceipts,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    typed_blocker_refs: {
+      surface_kind: 'opl_app_drilldown_typed_blocker_refs',
+      refs: typedBlockers.refs,
+      blockers: typedBlockers.blockers,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    freshness_refs: {
+      surface_kind: 'opl_app_drilldown_freshness_refs',
+      refs: freshness,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    ref_family_refs: refFamilies,
+    safe_action_refs: {
+      surface_kind: 'opl_app_drilldown_safe_action_refs',
+      refs: safeActions,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+    lifecycle_ledger_refs: lifecycleRefs,
     domain_projection_refs: {
       surface_kind: 'opl_app_drilldown_domain_projection_refs',
       refs: domainRefs,
