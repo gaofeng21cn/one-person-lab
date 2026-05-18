@@ -4,6 +4,7 @@ import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-en
 import { buildProductEntryDoctor, runProductEntryResume } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
+import { runRuntimeOperatorActionExecute } from '../../runtime-operator-action-execution.ts';
 import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../observability-export.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { buildStandardDomainAgentScaffold, buildStandardDomainAgentScaffoldValidation } from '../../standard-domain-agent-scaffold.ts';
@@ -309,6 +310,16 @@ export function buildInternalCommandSpecs(
         };
       },
     },
+    'runtime action execute': {
+      usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
+      summary:
+        'Execute an App/operator action route through the OPL-owned safe action shell without taking domain truth authority.',
+      examples: [
+        'opl runtime action execute --action action:sat_demo:attempt-query',
+        'opl runtime action execute --action action:sat_demo:domain-repair-command:0 --payload \'{"reason":"operator_selected"}\'',
+      ],
+      handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args),
+    },
     'runtime observability-export': {
       usage: 'opl runtime observability-export [--format json|openmetrics]',
       summary:
@@ -356,7 +367,7 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export [options]',
       summary:
         'Manage the provider-backed OPL family runtime queue, stage attempts, notifications, approvals, and events.',
       examples: [
@@ -376,6 +387,11 @@ export function buildInternalCommandSpecs(
         'opl family-runtime worker start --provider temporal',
         'opl family-runtime residency proof --provider temporal [--live|--production]',
         'opl family-runtime provider-slo tick --provider temporal',
+        'opl family-runtime scheduler install --provider temporal',
+        'opl family-runtime scheduler status --provider temporal',
+        'opl family-runtime scheduler trigger --provider temporal',
+        'opl family-runtime scheduler remove --provider temporal',
+        'opl family-runtime scheduler tick --provider temporal',
         'opl family-runtime tick --source temporal-worker --hydrate',
         'opl family-runtime queue list',
       ],

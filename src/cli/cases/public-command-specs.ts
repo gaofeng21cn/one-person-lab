@@ -552,6 +552,11 @@ export function buildPublicCommandSpecs(
         'opl family-runtime tick --source provider-cron --hydrate',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
         'opl family-runtime provider-slo tick --provider temporal',
+        'opl family-runtime scheduler install --provider temporal',
+        'opl family-runtime scheduler status --provider temporal',
+        'opl family-runtime scheduler trigger --provider temporal',
+        'opl family-runtime scheduler remove --provider temporal',
+        'opl family-runtime scheduler tick --provider temporal',
       ],
       group: 'runtime',
     }),
@@ -939,6 +944,14 @@ export function buildPublicCommandSpecs(
     'runtime app-operator-drilldown': cloneCommandSpec(commandSpecs['runtime app-operator-drilldown'], {
       usage: 'opl runtime app-operator-drilldown',
       examples: ['opl runtime app-operator-drilldown', 'opl runtime app-operator-drilldown --json'],
+      group: 'runtime',
+    }),
+    'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
+      usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
+      examples: [
+        'opl runtime action execute --action action:sat_demo:attempt-query',
+        'opl runtime action execute --action action:sat_demo:domain-repair-command:0 --dry-run',
+      ],
       group: 'runtime',
     }),
     'runtime observability-export': cloneCommandSpec(commandSpecs['runtime observability-export'], {

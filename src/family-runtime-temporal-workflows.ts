@@ -4,19 +4,23 @@ import type {
   TemporalStageAttemptSignalPayload,
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
+  TemporalSchedulerTickWorkflowInput,
+  TemporalSchedulerTickWorkflowState,
 } from './family-runtime-temporal.ts';
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   domainSidecarDispatchActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
+  schedulerTickActivity(input: TemporalSchedulerTickWorkflowInput): Promise<Record<string, unknown>>;
 };
 
 export const stageAttemptQuery = defineQuery<TemporalStageAttemptWorkflowState>('StageAttemptQuery');
+export const schedulerTickQuery = defineQuery<TemporalSchedulerTickWorkflowState>('SchedulerTickQuery');
 export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('HumanGateSignal');
 export const userInstructionSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('UserInstructionSignal');
 export const resumeSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('ResumeSignal');
 
-const { codexStageActivity, domainSidecarDispatchActivity } = proxyActivities<StageAttemptActivities>({
+const { codexStageActivity, domainSidecarDispatchActivity, schedulerTickActivity } = proxyActivities<StageAttemptActivities>({
   startToCloseTimeout: '10 minutes',
   heartbeatTimeout: '30 seconds',
   retry: {
@@ -196,5 +200,50 @@ export async function StageAttemptWorkflow(
   }
 
   await condition(() => false, '1 second');
+  return state;
+}
+
+export async function SchedulerTickWorkflow(
+  input: TemporalSchedulerTickWorkflowInput,
+): Promise<TemporalSchedulerTickWorkflowState> {
+  let state: TemporalSchedulerTickWorkflowState = {
+    surface_kind: 'temporal_scheduler_tick_query',
+    provider_kind: 'temporal',
+    status: 'registered',
+    tick_source: input.tick_source,
+    started_at: nowIso(),
+    updated_at: nowIso(),
+    receipt: null,
+    error: null,
+    authority_boundary: {
+      opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  setHandler(schedulerTickQuery, () => state);
+
+  try {
+    state = {
+      ...state,
+      status: 'running',
+      updated_at: nowIso(),
+    };
+    const receipt = await schedulerTickActivity(input);
+    state = {
+      ...state,
+      status: 'completed',
+      updated_at: nowIso(),
+      receipt,
+    };
+  } catch (error) {
+    state = {
+      ...state,
+      status: 'failed',
+      updated_at: nowIso(),
+      error: error instanceof Error ? error.message : String(error),
+    };
+    throw error;
+  }
+
   return state;
 }

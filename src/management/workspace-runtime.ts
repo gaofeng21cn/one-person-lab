@@ -48,9 +48,18 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
       runtime_substrate: 'provider_backed_family_runtime',
       configured_provider: providerKind,
       family_runtime_providers: familyRuntimeProviders,
+      production_provider_policy: {
+        required_provider: 'temporal',
+        configured_provider_role: familyRuntimeProviders.provider_catalog[providerKind]?.provider_role ?? 'unknown',
+        local_sqlite_is_dev_ci_offline_only: providerKind === 'local_sqlite',
+        domain_daemon_policy: 'domain_launchagents_and_repo_local_supervision_ticks_are_legacy_cleanup_or_diagnostic_only',
+        scheduler_replacement_surface: 'opl family-runtime scheduler install|status|trigger|remove --provider temporal',
+      },
       managed_session_ledger: ledger,
       notes: [
         'Runtime status is provider-backed and uses provider surfaces plus the OPL-managed session ledger.',
+        'Temporal is the required production provider; local_sqlite is only the dev/CI/offline diagnostic ledger.',
+        'Domain LaunchAgent or repo-local supervision daemons must be retired or kept as explicit diagnostics after OPL scheduler replacement is installed.',
         'The managed session ledger adds OPL-owned event attribution, but does not claim kernel-global exact per-session billing.',
         'Workspace and project orchestration sit above the configured family runtime provider.',
       ],

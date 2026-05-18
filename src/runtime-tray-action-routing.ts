@@ -20,7 +20,8 @@ type OperatorActionRoute = {
   stage_attempt_id: string;
   domain_id: string;
   stage_id: string;
-  execution_policy: 'route_only_no_execution';
+  execution_policy: 'route_only_no_execution' | 'opl_safe_action_shell';
+  execution_surface?: string;
 };
 
 function optionalString(value: unknown) {
@@ -39,6 +40,13 @@ function stringList(value: unknown) {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function executableRouteFields() {
+  return {
+    execution_policy: 'opl_safe_action_shell' as const,
+    execution_surface: 'opl runtime action execute',
+  };
 }
 
 function stageAttemptSurfaceRef(attempt: ActionRoutingAttempt, projectionName: string) {
@@ -76,7 +84,7 @@ function repairCommandRoutes(attempt: ActionRoutingAttempt): OperatorActionRoute
     stage_attempt_id: attempt.stage_attempt_id,
     domain_id: attempt.domain_id,
     stage_id: attempt.stage_id,
-    execution_policy: 'route_only_no_execution',
+    ...executableRouteFields(),
   }));
 }
 
@@ -95,7 +103,7 @@ function directSkillRoutes(attempt: ActionRoutingAttempt): OperatorActionRoute[]
     stage_attempt_id: attempt.stage_attempt_id,
     domain_id: attempt.domain_id,
     stage_id: attempt.stage_id,
-    execution_policy: 'route_only_no_execution',
+    ...executableRouteFields(),
   }));
 }
 
@@ -109,7 +117,7 @@ function providerSignalRoutes(attempt: ActionRoutingAttempt): OperatorActionRout
     stage_attempt_id: attempt.stage_attempt_id,
     domain_id: attempt.domain_id,
     stage_id: attempt.stage_id,
-    execution_policy: 'route_only_no_execution' as const,
+    ...executableRouteFields(),
   }));
   const resumeRoutes = attempt.resume_ledger
     .map((entry) => entry.payload)
@@ -125,7 +133,7 @@ function providerSignalRoutes(attempt: ActionRoutingAttempt): OperatorActionRout
       stage_attempt_id: attempt.stage_attempt_id,
       domain_id: attempt.domain_id,
       stage_id: attempt.stage_id,
-      execution_policy: 'route_only_no_execution' as const,
+      ...executableRouteFields(),
     }));
   return [...humanGateRoutes, ...resumeRoutes];
 }
@@ -143,7 +151,7 @@ function domainOwnerRoute(attempt: ActionRoutingAttempt): OperatorActionRoute[] 
     stage_attempt_id: attempt.stage_attempt_id,
     domain_id: attempt.domain_id,
     stage_id: attempt.stage_id,
-    execution_policy: 'route_only_no_execution',
+    ...executableRouteFields(),
   }];
 }
 
@@ -170,7 +178,10 @@ function routeSummary(actions: OperatorActionRoute[], attemptCount: number) {
     provider_signal_route_count: countByTarget('provider_signal'),
     domain_sidecar_route_count: countByTarget('domain_sidecar'),
     direct_skill_route_count: countByTarget('direct_skill'),
-    execution_policy: 'route_only_no_execution',
+    execution_policy: actions.some((action) => action.execution_policy === 'opl_safe_action_shell')
+      ? 'opl_safe_action_shell'
+      : 'route_only_no_execution',
+    executable_route_count: actions.filter((action) => action.execution_policy === 'opl_safe_action_shell').length,
   };
 }
 
@@ -185,7 +196,7 @@ export function buildAttemptOperatorActionRouting(attempt: ActionRoutingAttempt)
       stage_attempt_id: attempt.stage_attempt_id,
       domain_id: attempt.domain_id,
       stage_id: attempt.stage_id,
-      execution_policy: 'route_only_no_execution',
+      ...executableRouteFields(),
     },
     appSurfaceRoute(attempt, 'projection_drilldown:workspace_source_intake', 'workspace_source_intake'),
     appSurfaceRoute(attempt, 'projection_drilldown:memory_locator_index', 'memory_locator_index'),
@@ -220,7 +231,8 @@ export function buildAttemptOperatorActionRouting(attempt: ActionRoutingAttempt)
       provider: 'provider_signal_receipt_owner',
       domain: 'domain_sidecar_direct_skill_and_truth_owner',
       can_execute_domain_action: false,
-      can_execute_provider_signal: false,
+      can_enqueue_domain_action: true,
+      can_execute_provider_signal: true,
       can_execute_direct_skill: false,
       can_write_domain_truth: false,
       provider_completion_is_domain_ready: false,
@@ -244,7 +256,8 @@ export function buildWorkbenchOperatorActionRouting(attempts: ActionRoutingAttem
       provider: 'provider_signal_receipt_owner',
       domain: 'domain_sidecar_direct_skill_and_truth_owner',
       can_execute_domain_action: false,
-      can_execute_provider_signal: false,
+      can_enqueue_domain_action: true,
+      can_execute_provider_signal: true,
       can_execute_direct_skill: false,
       can_write_domain_truth: false,
       provider_completion_is_domain_ready: false,

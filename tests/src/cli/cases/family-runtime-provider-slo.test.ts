@@ -230,3 +230,67 @@ test('family-runtime provider-slo tick persists blocked repair receipt when prod
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime scheduler tick owns provider cadence and queue dispatch without installing domain daemons', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-tick-'));
+  try {
+    insertProvenTemporalProofEvent(stateRoot);
+    const tick = runCli([
+      'family-runtime',
+      'scheduler',
+      'tick',
+      '--provider',
+      'temporal',
+      '--limit',
+      '1',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    })).family_runtime_scheduler_tick;
+
+    assert.equal(tick.surface_kind, 'opl_family_runtime_scheduler_tick');
+    assert.equal(tick.scheduler_owner, 'opl_provider_runtime_manager');
+    assert.equal(tick.cadence_owner, 'provider_backed_family_runtime');
+    assert.equal(tick.provider_kind, 'temporal');
+    assert.equal(tick.provider_slo.provider_slo_execution_receipt.receipt_status, 'skipped');
+    assert.equal(tick.queue_tick.source, 'opl-provider-scheduler');
+    assert.equal(tick.queue_tick.hydration.source, 'opl-provider-scheduler:hydrate');
+    assert.equal(tick.authority_boundary.can_install_domain_daemon, false);
+    assert.equal(tick.authority_boundary.can_write_domain_truth, false);
+
+    const events = runCli(['family-runtime', 'events', 'export'], familyRuntimeEnv(stateRoot));
+    assert.equal(
+      events.family_runtime_events.events.some((event: { event_type: string }) =>
+        event.event_type === 'opl_scheduler_tick_completed'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime scheduler cadence is OPL-owned and fail-closed when Temporal is not ready', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-cadence-'));
+  try {
+    const cadence = runCli([
+      'family-runtime',
+      'scheduler',
+      'status',
+      '--provider',
+      'temporal',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    })).family_runtime_scheduler_cadence;
+
+    assert.equal(cadence.surface_kind, 'opl_family_runtime_scheduler_cadence');
+    assert.equal(cadence.scheduler_owner, 'opl_provider_runtime_manager');
+    assert.equal(cadence.cadence_owner, 'provider_backed_family_runtime');
+    assert.equal(cadence.status, 'blocked_provider_not_ready');
+    assert.equal(cadence.authority_boundary.can_install_domain_daemon, false);
+    assert.equal(cadence.blocker.next_repair_command.includes('opl family-runtime service start --provider temporal'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

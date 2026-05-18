@@ -474,6 +474,12 @@ test('status runtime reports provider-backed runtime status and the OPL session 
     assert.equal(output.runtime_status.configured_provider, 'temporal');
     assert.equal(output.runtime_status.family_runtime_providers.selected_provider, 'temporal');
     assert.equal(output.runtime_status.family_runtime_providers.providers.temporal.ready, false);
+    assert.equal(output.runtime_status.production_provider_policy.required_provider, 'temporal');
+    assert.equal(output.runtime_status.production_provider_policy.local_sqlite_is_dev_ci_offline_only, false);
+    assert.equal(
+      output.runtime_status.production_provider_policy.scheduler_replacement_surface,
+      'opl family-runtime scheduler install|status|trigger|remove --provider temporal',
+    );
     assert.equal(output.runtime_status.managed_session_ledger.summary.entry_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

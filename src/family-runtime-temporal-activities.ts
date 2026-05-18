@@ -1,6 +1,7 @@
 import { heartbeat } from '@temporalio/activity';
 
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
+import { runFamilyRuntime } from './family-runtime.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   runAgentStageRunner,
@@ -85,4 +86,28 @@ export async function domainSidecarDispatchActivity(input: TemporalStageAttemptW
       domain: 'sidecar_dispatch_and_receipt_owner',
     },
   };
+}
+
+export async function schedulerTickActivity(input: {
+  provider_kind: 'temporal';
+  tick_source?: string;
+  force?: boolean;
+  limit?: number;
+  hydrate?: boolean;
+}) {
+  heartbeat({
+    provider_kind: input.provider_kind,
+    tick_source: input.tick_source ?? 'temporal-schedule',
+    limit: input.limit ?? 10,
+  });
+  return await runFamilyRuntime([
+    'scheduler',
+    'tick',
+    '--provider',
+    input.provider_kind,
+    ...(input.force ? ['--force'] : []),
+    '--limit',
+    String(input.limit ?? 10),
+    ...(input.hydrate === false ? ['--no-hydrate'] : []),
+  ]);
 }

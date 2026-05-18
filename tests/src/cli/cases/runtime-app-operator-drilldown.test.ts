@@ -124,7 +124,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'does_not_read_or_store_memory_body',
       'does_not_read_or_mutate_artifact_body',
       'does_not_authorize_quality_readiness_or_export_verdict',
-      'does_not_execute_domain_or_provider_actions',
+      'does_not_directly_execute_domain_actions',
     ]);
 
     assert.equal(drilldown.summary.stage_attempt_count, 1);
@@ -140,6 +140,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.readiness_ref_count, 1);
     assert.equal(drilldown.summary.provider_slo_action_count, 1);
     assert.equal(drilldown.summary.operator_action_route_count, 13);
+    assert.equal(drilldown.summary.operator_executable_route_count, 3);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -165,7 +166,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',
     );
     assert.equal(domainRoute.owner, 'domain');
-    assert.equal(domainRoute.execution_policy, 'route_only_no_execution');
+    assert.equal(domainRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(domainRoute.execution_surface, 'opl runtime action execute');
     assert.equal(domainRoute.can_execute, false);
     assert.equal(
       drilldown.operator_action_routing_refs.refs.some(
@@ -475,6 +477,121 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
       'restore-proof:mas-package',
     ]);
     assert.equal(drilldown.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime action execute routes domain actions through the OPL typed queue instead of direct domain execution', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'write',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts"}',
+      '--task',
+      'task-action-execute',
+      '--source-fingerprint',
+      'sha256:action-execute-domain',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"repair_command":"medautosci sidecar dispatch --task <task.json> --format json"}}',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const execution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      `action:${attemptId}:domain-repair-command:0`,
+      '--payload',
+      '{"reason":"operator_selected"}',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(execution.surface_kind, 'opl_runtime_operator_action_execution');
+    assert.equal(execution.execution.execution_kind, 'domain_action_typed_queue_handoff');
+    assert.equal(execution.execution.execution_status, 'queued');
+    assert.equal(execution.execution.approval_policy, 'queued_waiting_approval');
+    assert.equal(execution.authority_boundary.can_write_domain_truth, false);
+    assert.equal(execution.route.execution_policy, 'opl_safe_action_shell');
+    assert.equal(execution.route.execution_surface, 'opl runtime action execute');
+    assert.equal(execution.execution.result.family_runtime_enqueue.task.status, 'waiting_approval');
+    assert.equal(
+      execution.execution.result.family_runtime_enqueue.task.payload.command_or_surface_ref,
+      'medautosci sidecar dispatch --task <task.json> --format json',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime action execute can execute OPL-owned attempt query routes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-query-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const attempt = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'draft',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mag"}',
+      '--source-fingerprint',
+      'sha256:action-execute-query',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
+
+    const execution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      `action:${attemptId}:attempt-query`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(execution.execution.execution_kind, 'opl_cli_internal');
+    assert.equal(execution.execution.execution_status, 'executed');
+    assert.equal(
+      execution.execution.result.family_runtime_stage_attempt_query.stage_attempt_query.attempt.stage_attempt_id,
+      attemptId,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

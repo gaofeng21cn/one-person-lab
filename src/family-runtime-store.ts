@@ -85,6 +85,7 @@ export function familyRuntimePaths() {
     queue_db: path.join(root, 'queue.sqlite'),
     dispatch_dir: path.join(root, 'dispatch'),
     proof_dir: path.join(root, 'proofs'),
+    scheduler_dir: path.join(root, 'scheduler'),
     latest_temporal_production_proof: path.join(root, 'proofs', 'latest-temporal-production-proof.json'),
   };
 }
@@ -94,6 +95,7 @@ export function openQueueDb() {
   fs.mkdirSync(paths.root, { recursive: true });
   fs.mkdirSync(paths.dispatch_dir, { recursive: true });
   fs.mkdirSync(paths.proof_dir, { recursive: true });
+  fs.mkdirSync(paths.scheduler_dir, { recursive: true });
   const db = new DatabaseSync(paths.queue_db);
   db.exec(`
     PRAGMA journal_mode = WAL;
