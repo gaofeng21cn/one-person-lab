@@ -6,6 +6,8 @@ import test from 'node:test';
 
 import {
   listFamilyRuntimeLifecycleRefs,
+  familyRuntimeLifecycleIndexPaths,
+  readFamilyRuntimeLifecycleRefs,
   recordFamilyRuntimeLifecycleRef,
   runFamilyRuntimeLifecycleApply,
 } from '../../src/family-runtime-lifecycle-index.ts';
@@ -55,6 +57,21 @@ test('family runtime lifecycle index records refs-only SQLite sidecar entries wi
     assert.equal(listed.refs[0].payload.restore_ref, 'mas://restore/run-1');
     assert.equal(listed.authority_boundary.domain_artifact_authority_preserved, true);
     assert.equal(fs.existsSync(listed.lifecycle_index_db), true);
+  });
+});
+
+test('family runtime lifecycle index read model does not create missing ledger files', () => {
+  withTempState(() => {
+    const paths = familyRuntimeLifecycleIndexPaths();
+    assert.equal(fs.existsSync(paths.lifecycle_index_db), false);
+
+    const listed = readFamilyRuntimeLifecycleRefs({ domain_id: 'med-autoscience' });
+
+    assert.equal(listed.status, 'missing');
+    assert.equal(listed.summary.total_ref_count, 0);
+    assert.equal(listed.summary.filtered_domain_id, 'med-autoscience');
+    assert.equal(fs.existsSync(paths.lifecycle_index_db), false);
+    assert.equal(listed.authority_boundary.opl_can_write_domain_truth, false);
   });
 });
 

@@ -50,6 +50,63 @@ function collectSourceRefs(value: unknown): string[] {
   });
 }
 
+function collectRefsByKey(value: unknown, keys: Set<string>): string[] {
+  if (typeof value === 'string') {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectRefsByKey(entry, keys));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  return Object.entries(value).flatMap(([key, nestedValue]) => {
+    if (keys.has(key)) {
+      if (typeof nestedValue === 'string') {
+        return [nestedValue];
+      }
+      if (Array.isArray(nestedValue)) {
+        return nestedValue.filter((entry): entry is string => (
+          typeof entry === 'string' && entry.trim().length > 0
+        ));
+      }
+    }
+    return collectRefsByKey(nestedValue, keys);
+  });
+}
+
+function collectRecordsByKey(value: unknown, key: string): JsonRecord[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectRecordsByKey(entry, key));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  return Object.entries(value).flatMap(([entryKey, nestedValue]) => {
+    if (entryKey === key && Array.isArray(nestedValue)) {
+      return nestedValue.filter(isRecord);
+    }
+    return collectRecordsByKey(nestedValue, key);
+  });
+}
+
+function freshnessProjection(projection: JsonRecord) {
+  if (isRecord(projection.freshness)) {
+    return projection.freshness;
+  }
+  const freshnessStatus = optionalString(projection.freshness_status);
+  const freshnessRef = optionalString(projection.freshness_ref);
+  if (!freshnessStatus && !freshnessRef) {
+    return null;
+  }
+  return {
+    status: freshnessStatus,
+    source_ref: freshnessRef,
+  };
+}
+
 function domainProjectionSources(manifest: NormalizedDomainManifest): DomainProjectionSource[] {
   return [
     {
@@ -139,6 +196,18 @@ function buildItems(entries: DomainManifestCatalogEntry[]) {
         pointer: source.pointer,
         projection_surface_kind: projectionSurfaceKind(source.projection),
         source_refs: uniqueStrings(collectSourceRefs(source.projection)),
+        owner_receipt_refs: uniqueStrings(collectRefsByKey(source.projection, new Set([
+          'owner_receipt_ref',
+          'owner_receipt_refs',
+          'domain_owner_receipt_ref',
+          'domain_owner_receipt_refs',
+        ]))),
+        typed_blocker_refs: uniqueStrings(collectRefsByKey(source.projection, new Set([
+          'typed_blocker_ref',
+          'typed_blocker_refs',
+        ]))),
+        typed_blockers: collectRecordsByKey(source.projection, 'typed_blockers'),
+        freshness: freshnessProjection(source.projection),
         has_domain_projection_body: true,
         body_policy: 'domain_owned_body_not_read_by_opl',
       }));

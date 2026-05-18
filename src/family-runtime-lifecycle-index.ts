@@ -220,13 +220,7 @@ export function recordFamilyRuntimeLifecycleRef(input: LifecycleIndexRecordInput
       status: 'recorded',
       ref_id: refId,
       lifecycle_index_db: paths.lifecycle_index_db,
-      authority_boundary: {
-        storage_role: 'sqlite_sidecar_index',
-        opl_can_write_domain_truth: false,
-        opl_can_write_memory_body: false,
-        opl_can_authorize_quality_or_export: false,
-        domain_artifact_authority_preserved: true,
-      },
+      authority_boundary: lifecycleIndexAuthorityBoundary(),
     };
   } finally {
     db.close();
@@ -244,6 +238,61 @@ function parsePayload(value: string) {
   }
 }
 
+function lifecycleIndexAuthorityBoundary() {
+  return {
+    storage_role: 'sqlite_sidecar_index',
+    opl_can_write_domain_truth: false,
+    opl_can_write_memory_body: false,
+    opl_can_authorize_quality_or_export: false,
+    domain_artifact_authority_preserved: true,
+  };
+}
+
+type LifecycleRefRow = {
+  ref_id: string;
+  domain_id: string;
+  surface_id: string;
+  surface_role: string;
+  source_ref: string;
+  receipt_ref: string | null;
+  checksum: string | null;
+  payload_json: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function lifecycleIndexPayload(input: {
+  refs: LifecycleRefRow[];
+  lifecycleIndexDb: string;
+  domainId?: string;
+  status?: 'resolved' | 'missing';
+}) {
+  const refs = input.refs.map((row) => ({
+    ref_id: row.ref_id,
+    domain_id: row.domain_id,
+    surface_id: row.surface_id,
+    surface_role: row.surface_role,
+    source_ref: row.source_ref,
+    receipt_ref: row.receipt_ref,
+    checksum: row.checksum,
+    payload: parsePayload(row.payload_json),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
+  return {
+    surface_kind: 'family_runtime_lifecycle_index',
+    owner: 'one-person-lab',
+    status: input.status ?? 'resolved',
+    lifecycle_index_db: input.lifecycleIndexDb,
+    summary: {
+      total_ref_count: refs.length,
+      filtered_domain_id: input.domainId?.trim() || null,
+    },
+    refs,
+    authority_boundary: lifecycleIndexAuthorityBoundary(),
+  };
+}
+
 export function listFamilyRuntimeLifecycleRefs(input: { domain_id?: string } = {}) {
   const { db, paths } = openFamilyRuntimeLifecycleIndexDb();
   try {
@@ -254,47 +303,41 @@ export function listFamilyRuntimeLifecycleRefs(input: { domain_id?: string } = {
       : db.prepare(`
         SELECT * FROM lifecycle_refs ORDER BY updated_at DESC, ref_id ASC
       `).all();
-    const refs = (rows as Array<{
-      ref_id: string;
-      domain_id: string;
-      surface_id: string;
-      surface_role: string;
-      source_ref: string;
-      receipt_ref: string | null;
-      checksum: string | null;
-      payload_json: string;
-      created_at: string;
-      updated_at: string;
-    }>).map((row) => ({
-      ref_id: row.ref_id,
-      domain_id: row.domain_id,
-      surface_id: row.surface_id,
-      surface_role: row.surface_role,
-      source_ref: row.source_ref,
-      receipt_ref: row.receipt_ref,
-      checksum: row.checksum,
-      payload: parsePayload(row.payload_json),
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    }));
-    return {
-      surface_kind: 'family_runtime_lifecycle_index',
-      owner: 'one-person-lab',
-      status: 'resolved',
-      lifecycle_index_db: paths.lifecycle_index_db,
-      summary: {
-        total_ref_count: refs.length,
-        filtered_domain_id: input.domain_id?.trim() || null,
-      },
-      refs,
-      authority_boundary: {
-        storage_role: 'sqlite_sidecar_index',
-        opl_can_write_domain_truth: false,
-        opl_can_write_memory_body: false,
-        opl_can_authorize_quality_or_export: false,
-        domain_artifact_authority_preserved: true,
-      },
-    };
+    return lifecycleIndexPayload({
+      refs: rows as LifecycleRefRow[],
+      lifecycleIndexDb: paths.lifecycle_index_db,
+      domainId: input.domain_id,
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export function readFamilyRuntimeLifecycleRefs(input: { domain_id?: string } = {}) {
+  const paths = familyRuntimeLifecycleIndexPaths();
+  if (!fs.existsSync(paths.lifecycle_index_db)) {
+    return lifecycleIndexPayload({
+      refs: [],
+      lifecycleIndexDb: paths.lifecycle_index_db,
+      domainId: input.domain_id,
+      status: 'missing',
+    });
+  }
+
+  const db = new DatabaseSync(paths.lifecycle_index_db, { readOnly: true });
+  try {
+    const rows = input.domain_id?.trim()
+      ? db.prepare(`
+        SELECT * FROM lifecycle_refs WHERE domain_id = ? ORDER BY updated_at DESC, ref_id ASC
+      `).all(input.domain_id.trim())
+      : db.prepare(`
+        SELECT * FROM lifecycle_refs ORDER BY updated_at DESC, ref_id ASC
+      `).all();
+    return lifecycleIndexPayload({
+      refs: rows as LifecycleRefRow[],
+      lifecycleIndexDb: paths.lifecycle_index_db,
+      domainId: input.domain_id,
+    });
   } finally {
     db.close();
   }
