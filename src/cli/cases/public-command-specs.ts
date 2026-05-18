@@ -954,6 +954,22 @@ export function buildPublicCommandSpecs(
       ],
       group: 'runtime',
     }),
+    'runtime lifecycle apply': cloneCommandSpec(commandSpecs['runtime lifecycle apply'], {
+      usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>] [--receipt-ref <ref>]',
+      examples: [
+        'opl runtime lifecycle apply --mode dry-run --domain medautogrant --action \'{"action_id":"mark-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/tombstone"}\'',
+        'opl runtime lifecycle apply --mode verify --domain medautogrant',
+      ],
+      group: 'runtime',
+    }),
+    'runtime lifecycle reconcile': cloneCommandSpec(commandSpecs['runtime lifecycle reconcile'], {
+      usage: 'opl runtime lifecycle reconcile [--domain <domain_id>] [--expected-source-ref <ref>] [--expected-receipt-ref <ref>] [--expected-restore-proof-ref <ref>] [--expected-domain-artifact-mutation-receipt-ref <ref>] [--max-age-ms <n>]',
+      examples: [
+        'opl runtime lifecycle reconcile --domain medautogrant --expected-source-ref mag://package/run-1',
+        'opl runtime lifecycle reconcile --domain medautogrant --expected-restore-proof-ref restore-proof:mag-package',
+      ],
+      group: 'runtime',
+    }),
     'runtime observability-export': cloneCommandSpec(commandSpecs['runtime observability-export'], {
       usage: 'opl runtime observability-export [--format json|openmetrics]',
       examples: [
