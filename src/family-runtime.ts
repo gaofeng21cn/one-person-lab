@@ -59,6 +59,7 @@ import {
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
+import { runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -722,6 +723,12 @@ export async function runFamilyRuntime(args: string[]) {
         family_runtime_provider_slo_tick: await runTemporalProviderSloTick(db, paths, {
           force: parsed.force,
         }),
+      };
+    }
+    if (parsed.mode === 'lifecycle_apply') {
+      return {
+        version: 'g2',
+        family_runtime_lifecycle_apply: runFamilyRuntimeLifecycleApply(parsed.input),
       };
     }
     if (parsed.mode === 'enqueue') {

@@ -164,6 +164,26 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   );
   assert.equal(scaffold.retirement_gate.delete_policy, 'delete_or_history_tombstone_only');
   assert.equal(scaffold.retirement_gate.opl_can_execute_domain_repo_delete, false);
+  assert.equal(scaffold.retirement_gate.executable_plan_surface, 'family_runtime_lifecycle_apply');
+  assert.deepEqual(scaffold.retirement_gate.executable_when, [
+    'full_no_active_caller',
+    'replacement_parity',
+    'provenance_proof',
+    'history_or_tombstone',
+    'no_retained_legacy_entry',
+  ]);
+  assert.deepEqual(scaffold.retirement_gate.allowed_opl_apply_scopes, [
+    'opl_owned_runtime_ref',
+    'opl_owned_index_ref',
+    'opl_owned_provenance_ref',
+    'opl_owned_tombstone_ref',
+  ]);
+  assert.deepEqual(scaffold.retirement_gate.forbidden_apply_scopes, [
+    'domain_truth',
+    'memory_body',
+    'artifact_body',
+    'source_repo_active_file',
+  ]);
   assert.equal(scaffold.authority_boundary.opl_can_write_domain_truth, false);
   assert.equal(scaffold.authority_boundary.opl_can_authorize_domain_quality_or_export, false);
   assert.equal(scaffold.authority_boundary.domain_can_own_generic_scheduler_or_queue, false);

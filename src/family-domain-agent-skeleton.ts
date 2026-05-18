@@ -620,6 +620,69 @@ function retiredEntryResidueEvidence(manifest: DomainManifestCatalogEntry['manif
   };
 }
 
+function buildLegacyCleanupPlan(
+  manifest: DomainManifestCatalogEntry['manifest'],
+  deleteReady: boolean,
+  blockedReasons: string[],
+) {
+  const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
+    ? manifest.physical_skeleton_follow_through
+    : null;
+  const tombstone = isRecord(manifest?.legacy_retirement_tombstone_proof)
+    ? manifest.legacy_retirement_tombstone_proof
+    : null;
+  const residueEntries = readRecordList(followThrough?.legacy_active_path_residue);
+  const fallbackTombstoneRefs = uniqueStrings([
+    ...readRefsFromFields(tombstone, ['tombstone_refs', 'history_refs', 'source_refs']),
+    ...readRefsFromFields(followThrough, ['tombstone_refs', 'history_refs', 'provenance_refs']),
+  ]);
+  const actions = residueEntries.map((entry, index) => {
+    const evidenceRefs = readPhysicalRootEvidenceRefs(entry);
+    const pathFamily = optionalString(entry.path_family)
+      ?? optionalString(entry.path)
+      ?? optionalString(entry.ref)
+      ?? `legacy_entry_${index + 1}`;
+    const state = optionalString(entry.state) ?? 'legacy_entry_declared';
+    return {
+      action_id: `legacy-cleanup-${index + 1}`,
+      action_kind: state === 'physically_removed_from_active_source'
+        ? 'record_domain_owner_handoff_receipt'
+        : 'mark_opl_legacy_entry_tombstoned',
+      owner_scope: state === 'physically_removed_from_active_source'
+        ? 'domain_owner_handoff_receipt_ref'
+        : 'opl_owned_tombstone_ref',
+      target_ref: pathFamily,
+      state,
+      restore_proof_refs: uniqueStrings([
+        ...evidenceRefs,
+        ...fallbackTombstoneRefs,
+      ]),
+      domain_repo_delete_requires_owner_receipt: true,
+      opl_writes_domain_repo_active_files: false,
+      opl_writes_domain_truth: false,
+      opl_writes_memory_body: false,
+      opl_writes_artifact_body: false,
+    };
+  });
+
+  return {
+    surface_kind: 'opl_legacy_cleanup_executable_plan',
+    mode: 'controlled_opl_lifecycle_apply_plan',
+    plan_status: deleteReady ? 'ready' : 'blocked',
+    source_surface: 'physical_skeleton_follow_through_gate',
+    required_apply_surface: 'family_runtime_lifecycle_apply',
+    blocked_reasons: blockedReasons,
+    actions,
+    owner_handoff_required_for_domain_repo_delete: true,
+    authority_boundary: {
+      opl_can_move_or_delete_domain_repo_files: false,
+      opl_can_mark_opl_owned_legacy_refs: true,
+      opl_can_write_cleanup_ledger_receipts: true,
+      domain_repo_delete_requires_owner_receipt: true,
+    },
+  };
+}
+
 function buildPhysicalSkeletonFollowThroughGate(
   manifest: DomainManifestCatalogEntry['manifest'],
   physicalSkeletonLayoutAudit: ReturnType<typeof buildPhysicalSkeletonLayoutAudit>,
@@ -646,6 +709,7 @@ function buildPhysicalSkeletonFollowThroughGate(
       : null,
   ].filter((entry): entry is string => Boolean(entry));
   const deleteReady = blockedReasons.length === 0;
+  const executableCleanupPlan = buildLegacyCleanupPlan(manifest, deleteReady, blockedReasons);
   return {
     surface_kind: 'opl_physical_skeleton_follow_through_gate',
     gate_scope: 'repo_source_physical_skeleton_and_legacy_retirement',
@@ -666,8 +730,9 @@ function buildPhysicalSkeletonFollowThroughGate(
       can_execute_delete: false,
       can_create_retained_legacy_entry: false,
     },
+    executable_cleanup_plan: executableCleanupPlan,
     authority_boundary: {
-      opl_role: 'read_only_follow_through_gate',
+      opl_role: 'controlled_lifecycle_apply_plan_owner',
       domain_role: 'repo_layout_and_legacy_surface_owner',
       can_move_files: false,
       can_delete_files: false,

@@ -61,6 +61,77 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
   }
 });
 
+test('family-runtime lifecycle apply exposes dry-run apply and verify modes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-lifecycle-apply-'));
+  try {
+    const dryRun = runCli([
+      'family-runtime',
+      'lifecycle',
+      'apply',
+      '--mode',
+      'dry-run',
+      '--domain',
+      'medautogrant',
+      '--source-ref',
+      'mag://legacy-cleanup/plan-1',
+      '--action',
+      JSON.stringify({
+        action_id: 'mark-opl-tombstone',
+        action_kind: 'cleanup',
+        owner_scope: 'opl_owned_tombstone_ref',
+        target_ref: 'opl://history/mag/gateway-tombstone',
+        restore_proof_refs: ['restore-proof:mag:gateway-tombstone'],
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    assert.equal(dryRun.family_runtime_lifecycle_apply.mode, 'dry-run');
+    assert.equal(dryRun.family_runtime_lifecycle_apply.status, 'dry_run_ready');
+    assert.equal(dryRun.family_runtime_lifecycle_apply.summary.writes_performed, false);
+
+    const applied = runCli([
+      'family-runtime',
+      'lifecycle',
+      'apply',
+      '--mode',
+      'apply',
+      '--domain',
+      'medautogrant',
+      '--source-ref',
+      'mag://legacy-cleanup/plan-1',
+      '--manifest-ref',
+      'manifest:mag:lifecycle',
+      '--action',
+      JSON.stringify({
+        action_id: 'mark-opl-tombstone',
+        action_kind: 'cleanup',
+        owner_scope: 'opl_owned_tombstone_ref',
+        target_ref: 'opl://history/mag/gateway-tombstone',
+        restore_proof_refs: ['restore-proof:mag:gateway-tombstone'],
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    assert.equal(applied.family_runtime_lifecycle_apply.status, 'applied');
+    assert.equal(applied.family_runtime_lifecycle_apply.cleanup_receipts.length, 1);
+
+    const verified = runCli([
+      'family-runtime',
+      'lifecycle',
+      'apply',
+      '--mode',
+      'verify',
+      '--domain',
+      'medautogrant',
+      '--receipt-ref',
+      applied.family_runtime_lifecycle_apply.receipt_ref,
+    ], familyRuntimeEnv(stateRoot));
+
+    assert.equal(verified.family_runtime_lifecycle_apply.status, 'verified');
+    assert.equal(verified.family_runtime_lifecycle_apply.summary.verified_receipt_count, 1);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime local provider status does not inspect a bad Hermes binary path', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-local-provider-'));
   try {

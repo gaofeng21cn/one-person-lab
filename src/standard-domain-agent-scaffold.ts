@@ -742,6 +742,26 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
           'no_retained_legacy_compatibility_entry',
         ],
         delete_policy: 'delete_or_history_tombstone_only',
+        executable_plan_surface: 'family_runtime_lifecycle_apply',
+        executable_when: [
+          'full_no_active_caller',
+          'replacement_parity',
+          'provenance_proof',
+          'history_or_tombstone',
+          'no_retained_legacy_entry',
+        ],
+        allowed_opl_apply_scopes: [
+          'opl_owned_runtime_ref',
+          'opl_owned_index_ref',
+          'opl_owned_provenance_ref',
+          'opl_owned_tombstone_ref',
+        ],
+        forbidden_apply_scopes: [
+          'domain_truth',
+          'memory_body',
+          'artifact_body',
+          'source_repo_active_file',
+        ],
         opl_can_execute_domain_repo_delete: false,
       },
       functional_privatization_audit_contract: {
