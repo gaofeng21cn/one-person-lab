@@ -2,6 +2,10 @@ import { FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import {
+  runFamilyRuntimeLifecycleApply,
+  type LifecycleApplyMode,
+} from './family-runtime-lifecycle-index.ts';
+import {
   applyProviderClosureEvidence,
   providerClosureEvidence,
   providerResidencyGapStatus,
@@ -624,6 +628,10 @@ function buildLegacyCleanupPlan(
   manifest: DomainManifestCatalogEntry['manifest'],
   deleteReady: boolean,
   blockedReasons: string[],
+  evidence: {
+    noActiveCallerRefs: string[];
+    replacementParityRefs: string[];
+  },
 ) {
   const followThrough = isRecord(manifest?.physical_skeleton_follow_through)
     ? manifest.physical_skeleton_follow_through
@@ -657,6 +665,25 @@ function buildLegacyCleanupPlan(
         ...evidenceRefs,
         ...fallbackTombstoneRefs,
       ]),
+      domain_owner_handoff_receipt_refs:
+        state === 'physically_removed_from_active_source'
+          ? uniqueStrings([
+              ...readRefsFromFields(entry, [
+                'domain_owner_handoff_receipt_ref',
+                'domain_owner_handoff_receipt_refs',
+                'domain_owner_cleanup_receipt_ref',
+                'domain_owner_cleanup_receipt_refs',
+              ]),
+              ...readRefsFromFields(tombstone, [
+                'domain_owner_handoff_receipt_ref',
+                'domain_owner_handoff_receipt_refs',
+                'domain_owner_cleanup_receipt_ref',
+                'domain_owner_cleanup_receipt_refs',
+              ]),
+            ])
+          : [],
+      no_active_caller_refs: uniqueStrings(evidence.noActiveCallerRefs),
+      replacement_parity_refs: uniqueStrings(evidence.replacementParityRefs),
       domain_repo_delete_requires_owner_receipt: true,
       opl_writes_domain_repo_active_files: false,
       opl_writes_domain_truth: false,
@@ -709,7 +736,10 @@ function buildPhysicalSkeletonFollowThroughGate(
       : null,
   ].filter((entry): entry is string => Boolean(entry));
   const deleteReady = blockedReasons.length === 0;
-  const executableCleanupPlan = buildLegacyCleanupPlan(manifest, deleteReady, blockedReasons);
+  const executableCleanupPlan = buildLegacyCleanupPlan(manifest, deleteReady, blockedReasons, {
+    noActiveCallerRefs: noActiveCaller.evidence_refs,
+    replacementParityRefs: replacementParity.evidence_refs,
+  });
   return {
     surface_kind: 'opl_physical_skeleton_follow_through_gate',
     gate_scope: 'repo_source_physical_skeleton_and_legacy_retirement',
@@ -885,8 +915,10 @@ type ManifestCatalogOptions = {
   providerContinuousProof?: ProviderContinuousProof;
 };
 
-function findAgentEntry(contracts: FrameworkContracts, domain: string) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+function findAgentEntry(contracts: FrameworkContracts, domain: string, options: ManifestCatalogOptions = {}) {
+  const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
+  }).domain_manifests;
   const normalized = normalizeDomainSelection(domain);
   const entry = catalog.projects.find((candidate) =>
     candidate.project_id === normalized
@@ -923,6 +955,40 @@ function parseInspectArgs(args: string[]) {
     });
   }
   return { domain };
+}
+
+function parseLegacyCleanupApplyArgs(args: string[]) {
+  let domain = '';
+  let mode: LifecycleApplyMode = 'dry-run';
+  let sourceRef: string | undefined;
+  let receiptRef: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--domain' && value) {
+      domain = value;
+      index += 1;
+    } else if (token === '--mode' && (value === 'dry-run' || value === 'apply' || value === 'verify')) {
+      mode = value;
+      index += 1;
+    } else if (token === '--source-ref' && value) {
+      sourceRef = value;
+      index += 1;
+    } else if (token === '--receipt-ref' && value) {
+      receiptRef = value;
+      index += 1;
+    } else {
+      throw new FrameworkContractError('cli_usage_error', `Unknown agents legacy-cleanup apply option: ${token}.`, {
+        usage: 'opl agents legacy-cleanup apply --domain <domain> [--mode dry-run|apply|verify] [--source-ref <ref>] [--receipt-ref <ref>]',
+      });
+    }
+  }
+  if (!domain) {
+    throw new FrameworkContractError('cli_usage_error', 'agents legacy-cleanup apply requires --domain.', {
+      required: ['--domain'],
+    });
+  }
+  return { domain, mode, sourceRef, receiptRef };
 }
 
 export function buildFamilyAgentsList(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
@@ -972,6 +1038,108 @@ export function buildFamilyAgentInspect(contracts: FrameworkContracts, args: str
     family_agent: {
       surface_kind: 'opl_standard_domain_agent_skeleton_inspection',
       ...buildStandardDomainAgentSkeletonInspection(entry, providerContinuousProof),
+    },
+  };
+}
+
+export function runFamilyAgentLegacyCleanupApply(
+  contracts: FrameworkContracts,
+  args: string[],
+  options: ManifestCatalogOptions = {},
+) {
+  const parsed = parseLegacyCleanupApplyArgs(args);
+  const entry = findAgentEntry(contracts, parsed.domain, options);
+  const inspection = buildStandardDomainAgentSkeletonInspection(
+    entry,
+    options.providerContinuousProof ?? readProviderContinuousProof(),
+  );
+  const plan = inspection.physical_skeleton_follow_through_gate.executable_cleanup_plan;
+  const domainId = inspection.project_id ?? inspection.target_domain_id ?? parsed.domain;
+  const sourceRef = parsed.sourceRef
+    ?? `opl://agents/${domainId}/legacy-cleanup-plan`;
+
+  if (parsed.mode === 'verify') {
+    return {
+      version: 'g2',
+      family_agent_legacy_cleanup_apply: {
+        surface_kind: 'opl_family_agent_legacy_cleanup_apply',
+        target_domain_id: domainId,
+        plan_status: plan.plan_status,
+        source_surface: 'physical_skeleton_follow_through_gate',
+        plan,
+        lifecycle_apply: runFamilyRuntimeLifecycleApply({
+          mode: 'verify',
+          target_domain_id: domainId,
+          source_ref: sourceRef,
+          receipt_ref: parsed.receiptRef,
+        }),
+        authority_boundary: {
+          opl_can_move_or_delete_domain_repo_files: false,
+          opl_can_write_cleanup_ledger_receipts: true,
+          domain_repo_delete_requires_owner_receipt: true,
+        },
+      },
+    };
+  }
+
+  const planActions = Array.isArray(plan.actions) ? plan.actions : [];
+  if (plan.plan_status !== 'ready') {
+    return {
+      version: 'g2',
+      family_agent_legacy_cleanup_apply: {
+        surface_kind: 'opl_family_agent_legacy_cleanup_apply',
+        target_domain_id: domainId,
+        plan_status: plan.plan_status,
+        source_surface: 'physical_skeleton_follow_through_gate',
+        plan,
+        lifecycle_apply: {
+          surface_kind: 'opl_family_runtime_lifecycle_apply',
+          mode: parsed.mode,
+          target_domain_id: domainId,
+          source_ref: sourceRef,
+          status: 'blocked',
+          writes_performed: false,
+          actions: [],
+          summary: {
+            requested_action_count: planActions.length,
+            safe_action_count: 0,
+            blocked_action_count: planActions.length,
+            blocked_reasons: Array.isArray(plan.blocked_reasons) ? plan.blocked_reasons : [],
+          },
+          blocker: {
+            blocker_kind: 'legacy_cleanup_safety_gate',
+            blocker_id: 'legacy_cleanup_plan_not_ready_for_apply',
+            required_owner: 'domain_agent_or_operator',
+          },
+        },
+        authority_boundary: {
+          opl_can_move_or_delete_domain_repo_files: false,
+          opl_can_write_cleanup_ledger_receipts: true,
+          domain_repo_delete_requires_owner_receipt: true,
+        },
+      },
+    };
+  }
+  const lifecycleApply = runFamilyRuntimeLifecycleApply({
+    mode: parsed.mode,
+    target_domain_id: domainId,
+    source_ref: sourceRef,
+    actions: planActions,
+  });
+  return {
+    version: 'g2',
+    family_agent_legacy_cleanup_apply: {
+      surface_kind: 'opl_family_agent_legacy_cleanup_apply',
+      target_domain_id: domainId,
+      plan_status: plan.plan_status,
+      source_surface: 'physical_skeleton_follow_through_gate',
+      plan,
+      lifecycle_apply: lifecycleApply,
+      authority_boundary: {
+        opl_can_move_or_delete_domain_repo_files: false,
+        opl_can_write_cleanup_ledger_receipts: true,
+        domain_repo_delete_requires_owner_receipt: true,
+      },
     },
   };
 }

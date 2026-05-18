@@ -68,6 +68,206 @@ const MECHANISM_EDITABLE_SURFACES = [
   },
 ];
 
+const AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY = 'risk_tiered_after_independent_ai_review';
+const MECHANISM_REF = 'mechanism:agent-lab/default-stage-led-agent-mechanism';
+const MECHANISM_VERSION = 'opl-agent-lab-mechanism.v1';
+const NEXT_MECHANISM_VERSION = 'opl-agent-lab-mechanism.v1.canary.1';
+const ROLLBACK_TARGET_REF = `mechanism-version-ref:${MECHANISM_VERSION}`;
+
+const MECHANISM_RISK_TIERS = {
+  low_risk: {
+    examples: ['prompt wording', 'rubric clarification', 'workbench display metadata', 'suite metadata'],
+    auto_promotion: 'auto_promote_to_stable',
+    required_gates: [
+      'independent_ai_review',
+      'regression_suite_passed',
+      'no_forbidden_write_proof',
+      'rollback_target_ref',
+    ],
+  },
+  medium_risk: {
+    examples: ['stage policy', 'tool policy', 'retry policy', 'dead-letter policy', 'memory retrieval policy'],
+    auto_promotion: 'auto_promote_to_canary',
+    required_gates: [
+      'independent_ai_review',
+      'regression_suite_passed',
+      'canary_observation',
+      'no_forbidden_write_proof',
+      'rollback_target_ref',
+    ],
+  },
+  high_risk: {
+    examples: [
+      'domain truth',
+      'publication verdict',
+      'fundability verdict',
+      'visual quality verdict',
+      'artifact mutation',
+      'memory accept/reject',
+      'credential policy',
+      'network policy',
+      'write policy',
+    ],
+    auto_promotion: 'blocked_route_owner_or_human_gate',
+    required_gates: ['domain_owner_or_human_gate'],
+  },
+};
+
+function buildIndependentAiReviewReceipt(input: {
+  mechanismRef?: string;
+  mechanismVersion?: string;
+  candidateRef?: string;
+  riskTier?: 'low_risk' | 'medium_risk' | 'high_risk';
+  sourceRefs?: string[];
+} = {}) {
+  const mechanismRef = input.mechanismRef ?? MECHANISM_REF;
+  const mechanismVersion = input.mechanismVersion ?? MECHANISM_VERSION;
+  const candidateRef = input.candidateRef ?? 'mechanism-candidate:agent-lab/default-stage-led-agent-mechanism/next';
+  const riskTier = input.riskTier ?? 'medium_risk';
+  const verdict = riskTier === 'high_risk'
+    ? 'blocked_route_owner_or_human_gate'
+    : 'approved_for_risk_tiered_auto_promotion';
+
+  return {
+    receipt_ref: stableId('oaliar', [mechanismRef, mechanismVersion, candidateRef, riskTier, input.sourceRefs ?? []]),
+    receipt_kind: 'independent_ai_review_receipt_ref',
+    reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
+    review_context_inherits_executor_context: false,
+    verdict,
+    risk_tier: riskTier,
+    source_refs: input.sourceRefs ?? [
+      'contract:opl-framework/agent-lab-contract',
+      'suite:opl-agent-lab-sample-suite',
+      'suite:opl-agent-lab-longline-suite',
+    ],
+    reviewed_refs: [
+      mechanismRef,
+      mechanismVersion,
+      candidateRef,
+      'contract:opl-framework/agent-lab-contract',
+      'no-forbidden-write:agent-lab/mechanism-policy',
+    ],
+    blocks_domain_truth_write: true,
+    blocks_memory_body_write: true,
+    blocks_artifact_mutation: true,
+    blocks_owner_receipt_write: true,
+  };
+}
+
+function buildMechanismPromotionPolicy(independentReviewRef: string) {
+  return {
+    policy_ref: 'mechanism-promotion-policy:agent-lab/risk-tiered-auto-promotion',
+    automatic_mechanism_promotion_ready: true,
+    default_mode: 'risk_tiered_auto_promotion_with_independent_ai_review',
+    human_gate_default_required: false,
+    risk_tiers: MECHANISM_RISK_TIERS,
+    required_gate_refs: [
+      independentReviewRef,
+      'regression-suite:agent-lab/mechanism-promotion',
+      'no-forbidden-write:agent-lab/mechanism-policy',
+      ROLLBACK_TARGET_REF,
+    ],
+    high_risk_owner_or_human_gate_required: true,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+function buildMechanismVersionLedger(sourceRefs: string[] = []) {
+  return {
+    ledger_ref: stableId('oalmvl', [MECHANISM_REF, MECHANISM_VERSION, NEXT_MECHANISM_VERSION, sourceRefs]),
+    current_version: MECHANISM_VERSION,
+    candidate_version: NEXT_MECHANISM_VERSION,
+    versions: [
+      {
+        version_ref: ROLLBACK_TARGET_REF,
+        mechanism_version: MECHANISM_VERSION,
+        status: 'stable',
+        rollback_eligible: true,
+      },
+      {
+        version_ref: `mechanism-version-ref:${NEXT_MECHANISM_VERSION}`,
+        mechanism_version: NEXT_MECHANISM_VERSION,
+        status: 'canary',
+        rollback_eligible: true,
+      },
+    ],
+  };
+}
+
+function buildMechanismRollback(sourceRefs: string[] = []) {
+  return {
+    rollback_ref: stableId('oalmrb', [MECHANISM_REF, MECHANISM_VERSION, NEXT_MECHANISM_VERSION, sourceRefs]),
+    rollback_target_ref: ROLLBACK_TARGET_REF,
+    rollback_command_ref: 'command-ref:opl-agent-lab/mechanism-rollback',
+    rollback_available: true,
+    restores_version: MECHANISM_VERSION,
+  };
+}
+
+function buildMechanismPromotionDecision(input: {
+  suiteStatus?: 'passed' | 'blocked';
+  riskTier?: 'low_risk' | 'medium_risk' | 'high_risk';
+  independentReview?: ReturnType<typeof buildIndependentAiReviewReceipt>;
+  sourceRefs?: string[];
+} = {}) {
+  const suiteStatus = input.suiteStatus ?? 'passed';
+  const riskTier = input.riskTier ?? 'medium_risk';
+  const independentReview = input.independentReview ?? buildIndependentAiReviewReceipt({ riskTier });
+  const gatesPassed = suiteStatus === 'passed' && independentReview.verdict === 'approved_for_risk_tiered_auto_promotion';
+  const promotionDecision = !gatesPassed
+    ? 'blocked'
+    : MECHANISM_RISK_TIERS[riskTier].auto_promotion;
+  const promotedToStatus = promotionDecision === 'auto_promote_to_stable'
+    ? 'stable'
+    : promotionDecision === 'auto_promote_to_canary'
+      ? 'canary'
+      : 'blocked';
+
+  return {
+    automatic_mechanism_promotion_ready: gatesPassed && riskTier !== 'high_risk',
+    risk_tier: riskTier,
+    promotion_decision: promotionDecision,
+    independent_ai_review_ref: independentReview.receipt_ref,
+    promotion_receipt_ref: `mechanism-promotion-receipt:${stableId('oalmpr', [
+      MECHANISM_REF,
+      NEXT_MECHANISM_VERSION,
+      promotionDecision,
+      input.sourceRefs ?? [],
+    ])}`,
+    rollback_target_ref: ROLLBACK_TARGET_REF,
+    canary: {
+      required: riskTier === 'medium_risk',
+      status: promotedToStatus === 'canary' ? 'active' : 'not_required',
+      observation_ref: 'canary-observation-ref:agent-lab/mechanism-auto-promotion',
+    },
+    high_risk_owner_or_human_gate_required: riskTier === 'high_risk',
+    promoted_to_status: promotedToStatus,
+    source_refs: input.sourceRefs ?? [],
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+function buildMechanismPromotionReceipt(decision: ReturnType<typeof buildMechanismPromotionDecision>) {
+  return {
+    receipt_ref: decision.promotion_receipt_ref,
+    receipt_kind: 'mechanism_promotion_receipt_ref',
+    mechanism_ref: MECHANISM_REF,
+    from_version: MECHANISM_VERSION,
+    to_version: NEXT_MECHANISM_VERSION,
+    risk_tier: decision.risk_tier,
+    promotion_decision: decision.promotion_decision,
+    promoted_to_status: decision.promoted_to_status,
+    independent_ai_review_ref: decision.independent_ai_review_ref,
+    rollback_target_ref: decision.rollback_target_ref,
+    writes_domain_truth: false,
+    writes_memory_body: false,
+    mutates_artifact: false,
+    writes_owner_receipt: false,
+    trains_or_deploys_model_weights: false,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
 export function buildCompleteAgentLabControlPlane() {
   const sampleResult = buildSampleAgentLabResult();
   const longlineResult = buildLonglineAgentLabResult();
@@ -131,24 +331,31 @@ export function buildCompleteAgentLabControlPlane() {
   ];
   const optimizerLoop = {
     surface_kind: 'opl_agent_lab_evolution_harness',
-    status: 'mechanism_editing_control_plane_ready',
+    status: 'mechanism_auto_promotion_control_plane_ready',
     candidate_kinds: ['prompt', 'skill', 'stage_policy', 'tool_policy', 'few_shot_examples', 'rubric_gap'],
     mechanism_object: {
-      mechanism_ref: 'mechanism:agent-lab/default-stage-led-agent-mechanism',
-      mechanism_version: 'opl-agent-lab-mechanism.v1',
+      mechanism_ref: MECHANISM_REF,
+      mechanism_version: MECHANISM_VERSION,
       editable_surfaces: MECHANISM_EDITABLE_SURFACES,
-      promotion_mode: 'explicit_gate_required',
+      promotion_mode: 'risk_tiered_auto_promotion_with_independent_ai_review',
+      promotion_policy_ref: 'mechanism-promotion-policy:agent-lab/risk-tiered-auto-promotion',
       refs_only: true,
     },
     loop_steps: [
       'collect_trajectory_refs',
+      'collect_usage_and_blocker_event_refs',
+      'optional_web_research_for_mechanism_context',
       'freeze_dataset_or_longline_suite',
       'score_with_domain_owned_scorecard_refs',
       'select_mechanism_editable_surface_refs',
       'emit_meta_edit_receipt_ref',
       'generate_next_mechanism_candidate_ref',
+      'classify_mechanism_change_risk',
+      'run_independent_ai_review_without_shared_context',
       'run_regression_and_recovery_gates',
-      'promote_only_through_explicit_gate',
+      'auto_promote_low_and_medium_risk_with_versioned_canary',
+      'route_high_risk_to_owner_or_human_gate',
+      'record_rollback_target_ref',
       'record_evolution_segment_refs',
     ],
     pattern_refs: [
@@ -175,8 +382,9 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_optimizer_candidate_refs: true,
     ready_to_emit_rl_transition_refs: true,
     ready_to_emit_developer_mode_repair_routes: true,
+    automatic_mechanism_promotion_ready: true,
     automatic_model_training_ready: false,
-    automatic_default_agent_promotion_ready: false,
+    automatic_default_agent_promotion_ready: AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
     app_workbench_consumption_ready: true,
   };
   const developerModeRepairRoutes = buildDeveloperModeAgentLabRepairRouteReadModel();
@@ -223,22 +431,42 @@ function suiteResults() {
 
 function optimizerCandidates(results: AgentLabSuiteResult[]) {
   return results.flatMap((result) =>
-    result.runs.map((run) => ({
-      candidate_ref: run.improvement_candidate.candidate_ref,
-      candidate_kind: run.improvement_candidate.candidate_kind,
-      target_ref: run.improvement_candidate.target_ref,
-      source_suite_id: result.suite_id,
-      source_run_id: run.run_id,
-      domain_id: run.domain_id,
-      evidence_refs: run.improvement_candidate.evidence_refs,
-      allowed_change_scope: run.improvement_candidate.allowed_change_scope,
-      promotion_gate_ref: run.improvement_candidate.promotion_gate_ref,
-      gate_status: run.promotion_gate.gate_status,
-      candidate_status: run.status === 'passed' && run.promotion_gate.gate_status === 'passed'
-        ? 'gated_candidate_ready'
-        : 'blocked',
-      authority_boundary: AUTHORITY_BOUNDARY,
-    })));
+    result.runs.map((run) => {
+      const riskTier = run.improvement_candidate.candidate_kind === 'prompt' ? 'low_risk' : 'medium_risk';
+      const independentReview = buildIndependentAiReviewReceipt({
+        candidateRef: run.improvement_candidate.candidate_ref,
+        riskTier,
+        sourceRefs: [result.result_id, run.run_id, ...run.improvement_candidate.evidence_refs],
+      });
+      const promotionDecision = buildMechanismPromotionDecision({
+        suiteStatus: run.status,
+        riskTier,
+        independentReview,
+        sourceRefs: [result.result_id, run.run_id, run.promotion_gate.gate_ref],
+      });
+      return {
+        candidate_ref: run.improvement_candidate.candidate_ref,
+        candidate_kind: run.improvement_candidate.candidate_kind,
+        target_ref: run.improvement_candidate.target_ref,
+        source_suite_id: result.suite_id,
+        source_run_id: run.run_id,
+        domain_id: run.domain_id,
+        risk_tier: riskTier,
+        evidence_refs: run.improvement_candidate.evidence_refs,
+        allowed_change_scope: run.improvement_candidate.allowed_change_scope,
+        promotion_gate_ref: run.improvement_candidate.promotion_gate_ref,
+        gate_status: run.promotion_gate.gate_status,
+        independent_ai_review_ref: independentReview.receipt_ref,
+        promotion_decision: promotionDecision.promotion_decision,
+        promotion_receipt_ref: promotionDecision.promotion_receipt_ref,
+        rollback_target_ref: promotionDecision.rollback_target_ref,
+        candidate_status: run.status === 'passed' && run.promotion_gate.gate_status === 'passed'
+          ? 'gated_candidate_ready'
+          : 'blocked',
+        automatic_mechanism_promotion_ready: promotionDecision.automatic_mechanism_promotion_ready,
+        authority_boundary: AUTHORITY_BOUNDARY,
+      };
+    }));
 }
 
 function promotionGates(results: AgentLabSuiteResult[]) {
@@ -426,17 +654,30 @@ export function buildAgentLabWorkbenchReadModel() {
 }
 
 export function buildAgentLabMechanismReadModel() {
-  const mechanismRef = 'mechanism:agent-lab/default-stage-led-agent-mechanism';
-  const mechanismVersion = 'opl-agent-lab-mechanism.v1';
+  const mechanismRef = MECHANISM_REF;
+  const mechanismVersion = MECHANISM_VERSION;
   const candidateRef = 'mechanism-candidate:agent-lab/default-stage-led-agent-mechanism/next';
+  const independentReview = buildIndependentAiReviewReceipt({ candidateRef, riskTier: 'medium_risk' });
+  const mechanismPromotionPolicy = buildMechanismPromotionPolicy(independentReview.receipt_ref);
+  const mechanismVersionLedger = buildMechanismVersionLedger();
+  const rollback = buildMechanismRollback();
+  const promotionDecision = buildMechanismPromotionDecision({
+    riskTier: 'medium_risk',
+    independentReview,
+    sourceRefs: ['suite:opl-agent-lab-sample-suite', 'suite:opl-agent-lab-longline-suite'],
+  });
 
   return {
     surface_kind: 'opl_agent_lab_mechanism_read_model',
     version: mechanismVersion,
     mechanism_ref: mechanismRef,
     mechanism_version: mechanismVersion,
-    status: 'mechanism_editable_refs_ready',
+    status: 'mechanism_auto_promotion_ready_with_independent_ai_review',
     editable_surfaces: MECHANISM_EDITABLE_SURFACES,
+    mechanism_promotion_policy: mechanismPromotionPolicy,
+    mechanism_version_ledger: mechanismVersionLedger,
+    independent_ai_review_receipt: independentReview,
+    rollback,
     meta_edit_receipt: {
       receipt_ref: stableId('oalmr', [mechanismRef, mechanismVersion, MECHANISM_EDITABLE_SURFACES]),
       receipt_kind: 'mechanism_meta_edit_receipt_ref',
@@ -480,17 +721,22 @@ export function buildAgentLabMechanismReadModel() {
     },
     next_mechanism_candidate: {
       candidate_ref: candidateRef,
-      candidate_version: 'opl-agent-lab-mechanism-candidate.v1',
-      candidate_status: 'candidate_ref_ready_explicit_gate_required',
+      candidate_version: NEXT_MECHANISM_VERSION,
+      candidate_status: 'auto_promotable_canary_ready',
       mechanism_ref: mechanismRef,
+      risk_tier: promotionDecision.risk_tier,
       editable_surface_refs: MECHANISM_EDITABLE_SURFACES.map((surface) => surface.surface_ref),
       proposed_edit_refs: [
         'mechanism-edit-ref:agent-lab/stage-policy-tightening',
         'mechanism-edit-ref:agent-lab/tool-policy-tightening',
         'mechanism-edit-ref:agent-lab/rubric-gap-routing',
       ],
-      required_gate_refs: ['promotion-gate:agent-lab/mechanism-candidate-explicit-review'],
-      default_promotion: false,
+      required_gate_refs: mechanismPromotionPolicy.required_gate_refs,
+      independent_ai_review_ref: independentReview.receipt_ref,
+      promotion_decision: promotionDecision.promotion_decision,
+      promotion_receipt_ref: promotionDecision.promotion_receipt_ref,
+      rollback_target_ref: promotionDecision.rollback_target_ref,
+      default_promotion: true,
     },
     refs_only: true,
     authority_boundary: AUTHORITY_BOUNDARY,
@@ -506,6 +752,18 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
   const scorecardRefs = suiteResult.refs.domain_quality_scorecard_refs;
   const candidateRefs = candidates.map((candidate) => candidate.candidate_ref);
   const transitionRefs = transitions.map((transition) => transition.transition_ref);
+  const independentReview = buildIndependentAiReviewReceipt({
+    candidateRef: mechanism.next_mechanism_candidate.candidate_ref,
+    riskTier: 'medium_risk',
+    sourceRefs: [suiteResult.result_id, ...suiteResult.refs.promotion_gate_refs],
+  });
+  const mechanismPromotionDecision = buildMechanismPromotionDecision({
+    suiteStatus: suiteResult.status,
+    riskTier: 'medium_risk',
+    independentReview,
+    sourceRefs: [suiteResult.result_id, ...candidateRefs, ...transitionRefs],
+  });
+  const promotionReceipt = buildMechanismPromotionReceipt(mechanismPromotionDecision);
 
   return {
     surface_kind: 'opl_agent_lab_evolution_result',
@@ -517,11 +775,15 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
       candidateRefs,
       transitionRefs,
     ]),
-    status: suiteResult.status === 'passed' ? 'next_mechanism_candidate_ready' : 'blocked',
+    status: suiteResult.status === 'passed' ? 'mechanism_auto_promoted_to_canary' : 'blocked',
     suite_result: suiteResult,
     mechanism_ref: mechanism.mechanism_ref,
     mechanism_version: mechanism.mechanism_version,
     editable_surfaces: mechanism.editable_surfaces,
+    mechanism_promotion_decision: mechanismPromotionDecision,
+    independent_ai_review_receipt: independentReview,
+    promotion_receipt: promotionReceipt,
+    rollback: buildMechanismRollback([suiteResult.result_id, ...candidateRefs]),
     meta_edit_receipt: {
       ...mechanism.meta_edit_receipt,
       source_refs: [
@@ -569,10 +831,15 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
         ...mechanism.next_mechanism_candidate.required_gate_refs,
         ...suiteResult.refs.promotion_gate_refs,
       ]),
-      default_promotion: false,
+      risk_tier: mechanismPromotionDecision.risk_tier,
+      promotion_decision: mechanismPromotionDecision.promotion_decision,
+      promotion_receipt_ref: mechanismPromotionDecision.promotion_receipt_ref,
+      rollback_target_ref: mechanismPromotionDecision.rollback_target_ref,
+      default_promotion: true,
     },
     automatic_model_training_ready: false,
-    automatic_default_agent_promotion_ready: false,
+    automatic_mechanism_promotion_ready: mechanismPromotionDecision.automatic_mechanism_promotion_ready,
+    automatic_default_agent_promotion_ready: AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
     refs_only: true,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
@@ -664,6 +931,8 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
   const suiteResult = runAgentLabSuite(input);
   const candidates = optimizerCandidates([suiteResult]);
   const transitions = rlTransitionRefs([suiteResult]);
+  const autoPromotableCandidates = candidates.filter((candidate) =>
+    candidate.automatic_mechanism_promotion_ready);
 
   return {
     surface_kind: 'opl_agent_lab_optimize_result',
@@ -675,14 +944,16 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
       candidate_count: candidates.length,
       promotable_candidate_count: candidates.filter((candidate) =>
         candidate.candidate_status === 'gated_candidate_ready').length,
+      auto_promotable_candidate_count: autoPromotableCandidates.length,
       candidates,
     },
     rl_transition_refs: {
       transition_count: transitions.length,
       transitions,
     },
+    automatic_mechanism_promotion_ready: suiteResult.status === 'passed' && autoPromotableCandidates.length > 0,
     automatic_model_training_ready: false,
-    automatic_default_agent_promotion_ready: false,
+    automatic_default_agent_promotion_ready: AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
 }

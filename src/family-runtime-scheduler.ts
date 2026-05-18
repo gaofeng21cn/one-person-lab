@@ -74,6 +74,12 @@ export async function runTemporalSchedulerCadenceCommand(
       : input.mode === 'scheduler_trigger'
         ? await temporal.triggerTemporalSchedulerCadence(paths)
         : await temporal.inspectTemporalSchedulerCadence(paths);
+  const health = input.mode === 'scheduler_status' && 'health' in action
+    ? action.health as Record<string, unknown>
+    : null;
+  const status = health?.health_status === 'attention_required'
+    ? 'attention_required'
+    : 'ok';
   insertEvent(db, {
     eventType: `temporal_scheduler_${input.mode.replace('scheduler_', '')}`,
     source: 'opl-cli',
@@ -85,8 +91,12 @@ export async function runTemporalSchedulerCadenceCommand(
     cadence_owner: 'provider_backed_family_runtime',
     scheduler_owner: 'opl_provider_runtime_manager',
     command: input.mode,
-    status: 'ok',
+    status,
     action,
+    ...(health ? {
+      health,
+      repair_action: health.repair_action ?? null,
+    } : {}),
     provider_runtime: provider,
     replaces_domain_daemon_surface: {
       medautoscience: 'local LaunchAgent / supervision tick is cleanup-only legacy residue',

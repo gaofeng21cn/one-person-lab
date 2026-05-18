@@ -17,7 +17,7 @@ export type LifecycleIndexRecordInput = {
   payload?: JsonRecord;
 };
 
-type LifecycleApplyMode = 'dry-run' | 'apply' | 'verify';
+export type LifecycleApplyMode = 'dry-run' | 'apply' | 'verify';
 
 export type LifecycleApplyActionInput = {
   action_id: string;
@@ -26,6 +26,9 @@ export type LifecycleApplyActionInput = {
   target_ref: string;
   restore_proof_refs?: string[];
   domain_artifact_mutation_receipt_refs?: string[];
+  domain_owner_handoff_receipt_refs?: string[];
+  no_active_caller_refs?: string[];
+  replacement_parity_refs?: string[];
   manifest_ref?: string;
   checksum?: string;
 };
@@ -56,6 +59,9 @@ type NormalizedLifecycleApplyAction = {
   target_ref: string;
   restore_proof_refs: string[];
   domain_artifact_mutation_receipt_refs: string[];
+  domain_owner_handoff_receipt_refs: string[];
+  no_active_caller_refs: string[];
+  replacement_parity_refs: string[];
   manifest_ref: string | null;
   checksum: string | null;
 };
@@ -78,6 +84,19 @@ type LifecycleApplyDecision = NormalizedLifecycleApplyAction & {
   };
 };
 
+type LifecycleApplySummary = {
+  safe_action_count: number;
+  unsafe_action_count: number;
+  cleanup_receipt_count: number;
+  restore_proof_ref_count: number;
+  domain_artifact_mutation_receipt_ref_count: number;
+  domain_owner_handoff_receipt_ref_count: number;
+  no_active_caller_ref_count: number;
+  replacement_parity_ref_count: number;
+  verified_receipt_count: number;
+  writes_performed: boolean;
+};
+
 const OPL_OWNED_APPLY_SCOPES = new Set([
   'opl_owned_runtime_ref',
   'opl_owned_index_ref',
@@ -89,6 +108,12 @@ const DOMAIN_RECEIPT_REF_SCOPES = new Set([
   'domain_owned_artifact_receipt_ref',
   'domain_artifact_mutation_receipt_ref',
   'domain_owner_handoff_receipt_ref',
+]);
+
+const LEGACY_CLEANUP_ACTION_KINDS = new Set([
+  'record_domain_owner_handoff_receipt',
+  'mark_opl_legacy_entry_tombstoned',
+  'legacy_cleanup',
 ]);
 
 const FORBIDDEN_APPLY_SCOPES = new Set([
@@ -404,6 +429,8 @@ export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInp
       [
         'domain_artifact_mutation_receipt_ref',
         'domain_artifact_mutation_receipt_refs',
+        'domain_owner_handoff_receipt_ref',
+        'domain_owner_handoff_receipt_refs',
         'domain_owner_receipt_ref',
         'domain_owner_receipt_refs',
       ],
@@ -565,6 +592,15 @@ function normalizeLifecycleActions(actions: unknown[] | undefined): NormalizedLi
     domain_artifact_mutation_receipt_refs: normalizeStringList(
       isRecord(action) ? action.domain_artifact_mutation_receipt_refs : undefined,
     ),
+    domain_owner_handoff_receipt_refs: normalizeStringList(
+      isRecord(action) ? action.domain_owner_handoff_receipt_refs : undefined,
+    ),
+    no_active_caller_refs: normalizeStringList(
+      isRecord(action) ? action.no_active_caller_refs : undefined,
+    ),
+    replacement_parity_refs: normalizeStringList(
+      isRecord(action) ? action.replacement_parity_refs : undefined,
+    ),
     manifest_ref: normalizeOptionalText(isRecord(action) && typeof action.manifest_ref === 'string'
       ? action.manifest_ref
       : null),
@@ -595,10 +631,16 @@ function decideLifecycleAction(
   },
 ): LifecycleApplyDecision {
   const restoreProofRefs = action.restore_proof_refs;
-  const domainReceiptRefs = action.domain_artifact_mutation_receipt_refs;
+  const domainReceiptRefs = uniqueStrings([
+    ...action.domain_artifact_mutation_receipt_refs,
+    ...action.domain_owner_handoff_receipt_refs,
+  ]);
   const safeOplScope = OPL_OWNED_APPLY_SCOPES.has(action.owner_scope);
   const domainReceiptScope = DOMAIN_RECEIPT_REF_SCOPES.has(action.owner_scope);
   const forbiddenScope = FORBIDDEN_APPLY_SCOPES.has(action.owner_scope);
+  const legacyCleanupAction = LEGACY_CLEANUP_ACTION_KINDS.has(action.action_kind);
+  const hasNoActiveCallerProof = action.no_active_caller_refs.length > 0;
+  const hasReplacementParityProof = action.replacement_parity_refs.length > 0;
   const receiptRef = lifecycleApplyReceiptRef({
     targetDomainId: input.targetDomainId,
     sourceRef: input.sourceRef,
@@ -623,6 +665,30 @@ function decideLifecycleAction(
           : 'unsupported_lifecycle_apply_scope',
         owner_scope: action.owner_scope,
         required_owner: 'domain_agent',
+      },
+    };
+  }
+
+  if (
+    legacyCleanupAction
+    && (safeOplScope || domainReceiptScope)
+    && (!hasNoActiveCallerProof || !hasReplacementParityProof)
+  ) {
+    return {
+      ...action,
+      receipt_ref: receiptRef,
+      decision: 'blocked',
+      writes_domain_truth: false,
+      writes_memory_body: false,
+      writes_artifact_body: false,
+      writes_source_repo_active_file: false,
+      blocker: {
+        blocker_kind: 'legacy_cleanup_safety_gate',
+        blocker_id: !hasNoActiveCallerProof
+          ? 'no_active_caller_ref_required_before_legacy_cleanup_apply'
+          : 'replacement_parity_ref_required_before_legacy_cleanup_apply',
+        owner_scope: action.owner_scope,
+        required_owner: 'domain_agent_or_operator',
       },
     };
   }
@@ -669,18 +735,48 @@ function decideLifecycleAction(
       target_ref: action.target_ref,
       restore_proof_refs: restoreProofRefs,
       domain_artifact_mutation_receipt_refs: domainReceiptRefs,
+      domain_owner_handoff_receipt_refs: action.domain_owner_handoff_receipt_refs,
+      no_active_caller_refs: action.no_active_caller_refs,
+      replacement_parity_refs: action.replacement_parity_refs,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,
         opl_can_write_artifact_body: false,
         opl_can_write_source_repo_active_file: false,
+        opl_can_move_or_delete_domain_repo_files: false,
+        domain_repo_delete_requires_owner_receipt: true,
         domain_artifact_authority_preserved: true,
       },
     },
   };
 }
 
-function summarizeLifecycleApply(actions: LifecycleApplyDecision[], writesPerformed: boolean) {
+function emptyLifecycleApplySummary(input: {
+  restoreProofRefCount?: number;
+  domainArtifactMutationReceiptRefCount?: number;
+  domainOwnerHandoffReceiptRefCount?: number;
+  noActiveCallerRefCount?: number;
+  replacementParityRefCount?: number;
+  verifiedReceiptCount?: number;
+} = {}): LifecycleApplySummary {
+  return {
+    safe_action_count: 0,
+    unsafe_action_count: 0,
+    cleanup_receipt_count: 0,
+    restore_proof_ref_count: input.restoreProofRefCount ?? 0,
+    domain_artifact_mutation_receipt_ref_count: input.domainArtifactMutationReceiptRefCount ?? 0,
+    domain_owner_handoff_receipt_ref_count: input.domainOwnerHandoffReceiptRefCount ?? 0,
+    no_active_caller_ref_count: input.noActiveCallerRefCount ?? 0,
+    replacement_parity_ref_count: input.replacementParityRefCount ?? 0,
+    verified_receipt_count: input.verifiedReceiptCount ?? 0,
+    writes_performed: false,
+  };
+}
+
+function summarizeLifecycleApply(
+  actions: LifecycleApplyDecision[],
+  writesPerformed: boolean,
+): LifecycleApplySummary {
   const safeActions = actions.filter((action) => action.decision === 'safe_to_apply');
   const unsafeActions = actions.filter((action) => action.decision === 'blocked');
   const cleanupReceipts = safeActions
@@ -695,6 +791,15 @@ function summarizeLifecycleApply(actions: LifecycleApplyDecision[], writesPerfor
       .length,
     domain_artifact_mutation_receipt_ref_count: cleanupReceipts
       .flatMap((receipt) => normalizeStringList(receipt.domain_artifact_mutation_receipt_refs))
+      .length,
+    domain_owner_handoff_receipt_ref_count: cleanupReceipts
+      .flatMap((receipt) => normalizeStringList(receipt.domain_owner_handoff_receipt_refs))
+      .length,
+    no_active_caller_ref_count: cleanupReceipts
+      .flatMap((receipt) => normalizeStringList(receipt.no_active_caller_refs))
+      .length,
+    replacement_parity_ref_count: cleanupReceipts
+      .flatMap((receipt) => normalizeStringList(receipt.replacement_parity_refs))
       .length,
     verified_receipt_count: 0,
     writes_performed: writesPerformed,
@@ -772,6 +877,11 @@ function verifyLifecycleApply(input: LifecycleApplyInput) {
         domain_artifact_mutation_receipt_refs: normalizeStringList(
           receipt.domain_artifact_mutation_receipt_refs,
         ),
+        domain_owner_handoff_receipt_refs: normalizeStringList(
+          receipt.domain_owner_handoff_receipt_refs,
+        ),
+        no_active_caller_refs: normalizeStringList(receipt.no_active_caller_refs),
+        replacement_parity_refs: normalizeStringList(receipt.replacement_parity_refs),
         receipt,
         created_at: row.created_at,
       };
@@ -787,17 +897,22 @@ function verifyLifecycleApply(input: LifecycleApplyInput) {
       actions: [],
       cleanup_receipts: [],
       verified_receipts: verifiedReceipts,
-      summary: {
-        safe_action_count: 0,
-        unsafe_action_count: 0,
-        cleanup_receipt_count: 0,
-        restore_proof_ref_count: verifiedReceipts.flatMap((receipt) => receipt.restore_proof_refs).length,
-        domain_artifact_mutation_receipt_ref_count: verifiedReceipts
+      summary: emptyLifecycleApplySummary({
+        restoreProofRefCount: verifiedReceipts.flatMap((receipt) => receipt.restore_proof_refs).length,
+        domainArtifactMutationReceiptRefCount: verifiedReceipts
           .flatMap((receipt) => receipt.domain_artifact_mutation_receipt_refs)
           .length,
-        verified_receipt_count: verifiedReceipts.length,
-        writes_performed: false,
-      },
+        domainOwnerHandoffReceiptRefCount: verifiedReceipts
+          .flatMap((receipt) => receipt.domain_owner_handoff_receipt_refs)
+          .length,
+        noActiveCallerRefCount: verifiedReceipts
+          .flatMap((receipt) => receipt.no_active_caller_refs)
+          .length,
+        replacementParityRefCount: verifiedReceipts
+          .flatMap((receipt) => receipt.replacement_parity_refs)
+          .length,
+        verifiedReceiptCount: verifiedReceipts.length,
+      }),
       authority_boundary: lifecycleApplyAuthorityBoundary(),
     };
   } finally {
@@ -814,6 +929,8 @@ function lifecycleApplyAuthorityBoundary() {
     opl_can_write_memory_body: false,
     opl_can_write_artifact_body: false,
     opl_can_write_source_repo_active_file: false,
+    opl_can_move_or_delete_domain_repo_files: false,
+    domain_repo_delete_requires_owner_receipt: true,
     domain_artifact_authority_preserved: true,
   };
 }
@@ -925,6 +1042,15 @@ export function runFamilyRuntimeLifecycleApply(input: LifecycleApplyInput) {
           ),
           domain_artifact_mutation_receipt_refs: cleanupReceipts.flatMap((receipt) =>
             normalizeStringList(receipt.domain_artifact_mutation_receipt_refs)
+          ),
+          domain_owner_handoff_receipt_refs: cleanupReceipts.flatMap((receipt) =>
+            normalizeStringList(receipt.domain_owner_handoff_receipt_refs)
+          ),
+          no_active_caller_refs: cleanupReceipts.flatMap((receipt) =>
+            normalizeStringList(receipt.no_active_caller_refs)
+          ),
+          replacement_parity_refs: cleanupReceipts.flatMap((receipt) =>
+            normalizeStringList(receipt.replacement_parity_refs)
           ),
         },
         createdAt,

@@ -1,7 +1,10 @@
 import { actionContext, noActionContext } from './runtime-tray-action.ts';
 import type { RuntimeTrayItem, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { sourceRef } from './runtime-tray-snapshot-utils.ts';
-import type { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
+import {
+  providerProofStatusIsCurrentlyProven,
+  type buildProviderContinuousProof,
+} from './family-runtime-provider-continuous-proof.ts';
 
 type ProviderContinuousProof = ReturnType<typeof buildProviderContinuousProof>;
 
@@ -39,8 +42,12 @@ function proofSourceRefs(): RuntimeTraySourceRef[] {
   ];
 }
 
-export function buildProviderProofTrayItem(proof: ProviderContinuousProof): RuntimeTrayItem {
+export function buildProviderProofTrayItem(proof: ProviderContinuousProof): RuntimeTrayItem | null {
   const proofFresh = proof.proof_slo_status === 'proof_fresh';
+  if (proofFresh && providerProofStatusIsCurrentlyProven(proof.continuous_proof_status)) {
+    return null;
+  }
+  const labelStatus = proofFresh ? proof.continuous_proof_status : proof.proof_slo_status;
   return {
     item_id: 'opl:provider-continuous-proof:temporal',
     project_id: 'opl',
@@ -48,7 +55,7 @@ export function buildProviderProofTrayItem(proof: ProviderContinuousProof): Runt
     lane: proofFresh ? 'recent' : 'attention',
     title: 'Temporal provider proof',
     status: proof.continuous_proof_status,
-    status_label: proofStatusLabel(proof.proof_slo_status),
+    status_label: proofStatusLabel(labelStatus),
     summary: proofSummary(proof),
     updated_at: null,
     command: 'opl family-runtime residency proof --provider temporal --production',

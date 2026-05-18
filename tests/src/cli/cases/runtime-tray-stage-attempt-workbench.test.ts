@@ -315,65 +315,63 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.native_helper_execution_envelope.helper_indexes[0].result_surface_kind, 'native_state_index');
     assert.equal(snapshot.native_helper_execution_envelope.authority_boundary.can_execute_helper_without_operator, false);
     assert.equal(snapshot.native_helper_execution_envelope.authority_boundary.can_mutate_domain_artifact, false);
-    const attemptItem = snapshot.attention_items.find((item: { item_id: string }) =>
+    const trayAttemptItem = snapshot.attention_items.find((item: { item_id: string }) =>
       item.item_id === `opl:stage-attempt:${attempt.family_runtime_stage_attempt.attempt.stage_attempt_id}`
     );
+    const attemptItem = snapshot.stage_attempt_workbench.attempts.find((item: { stage_attempt_id: string }) =>
+      item.stage_attempt_id === attempt.family_runtime_stage_attempt.attempt.stage_attempt_id
+    );
+    assert.equal(trayAttemptItem, undefined);
     assert.ok(attemptItem);
-    assert.equal(attemptItem.project_id, 'medautoscience');
-    assert.equal(attemptItem.action_owner, 'opl');
-    assert.equal(attemptItem.action_kind, 'quality_gate');
-    assert.equal(attemptItem.command, `opl family-runtime attempt query ${attempt.family_runtime_stage_attempt.attempt.stage_attempt_id}`);
-    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
-    assert.equal(attemptItem.stage_attempt_workbench.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
-    assert.deepEqual(attemptItem.stage_attempt_workbench.consumed_memory_refs, ['memory:route-policy']);
-    assert.deepEqual(attemptItem.stage_attempt_workbench.writeback_receipt_refs, ['memory-writeback:receipt-1']);
-    assert.equal(attemptItem.stage_attempt_workbench.lifecycle_primitives.artifact_locator_index.content_policy, 'locator_only_no_artifact_content');
-    assert.equal(attemptItem.stage_attempt_workbench.lifecycle_primitives.restore_proof.opl_cleanup_allowed, false);
-    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.renderer_role, 'generic_artifact_gallery_handoff_shell');
-    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.summary.content_policy, 'locator_only_no_artifact_content');
-    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.authority_boundary.can_mutate_artifact, false);
+    assert.equal(attemptItem.domain_id, 'medautoscience');
+    assert.equal(attemptItem.completion_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(attemptItem.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
+    assert.deepEqual(attemptItem.consumed_memory_refs, ['memory:route-policy']);
+    assert.deepEqual(attemptItem.writeback_receipt_refs, ['memory-writeback:receipt-1']);
+    assert.equal(attemptItem.lifecycle_primitives.artifact_locator_index.content_policy, 'locator_only_no_artifact_content');
+    assert.equal(attemptItem.lifecycle_primitives.restore_proof.opl_cleanup_allowed, false);
+    assert.equal(attemptItem.artifact_gallery.renderer_role, 'generic_artifact_gallery_handoff_shell');
+    assert.equal(attemptItem.artifact_gallery.summary.content_policy, 'locator_only_no_artifact_content');
+    assert.equal(attemptItem.artifact_gallery.authority_boundary.can_mutate_artifact, false);
     assert.equal(
-      attemptItem.stage_attempt_workbench.lifecycle_primitives.authority_boundary.domain,
+      attemptItem.lifecycle_primitives.authority_boundary.domain,
       'artifact_content_retention_restore_authority',
     );
     assert.equal(
-      attemptItem.stage_attempt_workbench.controlled_apply_contract.no_forbidden_write_proof.opl_writes_domain_artifact,
+      attemptItem.controlled_apply_contract.no_forbidden_write_proof.opl_writes_domain_artifact,
       false,
     );
-    assert.equal(attemptItem.stage_attempt_workbench.rejected_writes[0].reason, 'domain_truth_write_forbidden');
-    assert.equal(attemptItem.stage_attempt_workbench.route_decision_graph.renderer_role, 'generic_route_decision_graph_shell');
-    assert.equal(attemptItem.stage_attempt_workbench.route_decision_graph.summary.route_decision_ref_observed, true);
-    assert.equal(attemptItem.stage_attempt_workbench.route_decision_graph.authority_boundary.can_infer_route_decision, false);
-    assert.equal(attemptItem.stage_attempt_workbench.review_repair_queue.transport_role, 'generic_review_repair_transport');
-    assert.equal(attemptItem.stage_attempt_workbench.review_repair_queue.summary.rejected_write_count, 1);
-    assert.equal(attemptItem.stage_attempt_workbench.review_repair_queue.authority_boundary.can_decide_repair, false);
-    assert.equal(attemptItem.stage_attempt_workbench.quality_readiness.renderer_role, 'generic_quality_readiness_projection_shell');
-    assert.equal(attemptItem.stage_attempt_workbench.quality_readiness.authority_boundary.can_authorize_submission_readiness, false);
-    assert.equal(attemptItem.stage_attempt_workbench.observability_slo.transport_role, 'generic_observability_slo_repair_command_projection');
-    assert.equal(attemptItem.stage_attempt_workbench.observability_slo.authority_boundary.can_execute_repair_command, false);
-    assert.equal(attemptItem.stage_attempt_workbench.workspace_source_intake.shell_role, 'generic_workspace_source_intake_shell');
-    assert.equal(attemptItem.stage_attempt_workbench.workspace_source_intake.authority_boundary.can_select_domain_profile, false);
-    assert.equal(attemptItem.stage_attempt_workbench.memory_locator_index.index_role, 'generic_memory_locator_index_shell');
-    assert.equal(attemptItem.stage_attempt_workbench.memory_locator_index.authority_boundary.can_accept_or_reject_writeback, false);
-    assert.equal(attemptItem.stage_attempt_workbench.package_export_lifecycle.shell_role, 'generic_package_export_lifecycle_shell');
-    assert.equal(attemptItem.stage_attempt_workbench.package_export_lifecycle.authority_boundary.can_authorize_package_readiness, false);
-    assert.equal(attemptItem.stage_attempt_workbench.action_routing.routing_scope, 'stage_attempt');
-    assert.equal(attemptItem.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
-    assert.equal(attemptItem.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
-    assert.equal(attemptItem.stage_attempt_workbench.control_loop_summary.receipts.receipt_refs[0], 'receipt:analysis-closeout');
+    assert.equal(attemptItem.rejected_writes[0].reason, 'domain_truth_write_forbidden');
+    assert.equal(attemptItem.route_decision_graph.renderer_role, 'generic_route_decision_graph_shell');
+    assert.equal(attemptItem.route_decision_graph.summary.route_decision_ref_observed, true);
+    assert.equal(attemptItem.route_decision_graph.authority_boundary.can_infer_route_decision, false);
+    assert.equal(attemptItem.review_repair_queue.transport_role, 'generic_review_repair_transport');
+    assert.equal(attemptItem.review_repair_queue.summary.rejected_write_count, 1);
+    assert.equal(attemptItem.review_repair_queue.authority_boundary.can_decide_repair, false);
+    assert.equal(attemptItem.quality_readiness.renderer_role, 'generic_quality_readiness_projection_shell');
+    assert.equal(attemptItem.quality_readiness.authority_boundary.can_authorize_submission_readiness, false);
+    assert.equal(attemptItem.observability_slo.transport_role, 'generic_observability_slo_repair_command_projection');
+    assert.equal(attemptItem.observability_slo.authority_boundary.can_execute_repair_command, false);
+    assert.equal(attemptItem.workspace_source_intake.shell_role, 'generic_workspace_source_intake_shell');
+    assert.equal(attemptItem.workspace_source_intake.authority_boundary.can_select_domain_profile, false);
+    assert.equal(attemptItem.memory_locator_index.index_role, 'generic_memory_locator_index_shell');
+    assert.equal(attemptItem.memory_locator_index.authority_boundary.can_accept_or_reject_writeback, false);
+    assert.equal(attemptItem.package_export_lifecycle.shell_role, 'generic_package_export_lifecycle_shell');
+    assert.equal(attemptItem.package_export_lifecycle.authority_boundary.can_authorize_package_readiness, false);
+    assert.equal(attemptItem.action_routing.routing_scope, 'stage_attempt');
+    assert.equal(attemptItem.action_routing.summary.domain_sidecar_route_count, 2);
+    assert.equal(attemptItem.action_routing.authority_boundary.can_execute_domain_action, false);
+    assert.equal(attemptItem.control_loop_summary.receipts.receipt_refs[0], 'receipt:analysis-closeout');
     assert.equal(
-      attemptItem.stage_attempt_workbench.control_loop_summary.action_route.route_refs.includes(
+      attemptItem.control_loop_summary.action_route.route_refs.includes(
         'medautosci sidecar dispatch --task <task.json> --format json',
       ),
       true,
     );
-    assert.equal(attemptItem.stage_attempt_workbench.control_loop_summary.authority_boundary.can_execute_domain_action, false);
-    assert.equal(attemptItem.stage_attempt_workbench.control_loop_summary.authority_boundary.can_write_domain_truth, false);
-    assert.equal(attemptItem.stage_attempt_workbench.authority_boundary.opl_writes_memory_body, false);
-    assert.equal(
-      attemptItem.stage_attempt_workbench.authority_boundary.provider_completion_is_domain_ready,
-      false,
-    );
+    assert.equal(attemptItem.control_loop_summary.authority_boundary.can_execute_domain_action, false);
+    assert.equal(attemptItem.control_loop_summary.authority_boundary.can_write_domain_truth, false);
+    assert.equal(attemptItem.authority_boundary.opl, 'attempt_control_metadata_projection_only');
+    assert.equal(attemptItem.completion_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'stage_attempt_workbench'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -443,15 +441,16 @@ test('runtime snapshot exposes route-impact no-regression evidence in operator w
     const workbenchAttempt = snapshot.stage_attempt_workbench.attempts.find(
       (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
     );
-    const attemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
+    const trayAttemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
       (item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptId}`,
     );
 
+    assert.equal(trayAttemptItem, undefined);
     assert.equal(workbenchAttempt.controlled_apply_contract.apply_status, 'no_regression_evidence_observed');
     assert.deepEqual(workbenchAttempt.controlled_apply_contract.no_regression_evidence_refs, [
       'receipt:mag:no-regression',
     ]);
-    assert.deepEqual(attemptItem.stage_attempt_workbench.controlled_apply_contract.no_regression_evidence_refs, [
+    assert.deepEqual(workbenchAttempt.controlled_apply_contract.no_regression_evidence_refs, [
       'receipt:mag:no-regression',
     ]);
     assert.equal(
@@ -461,7 +460,7 @@ test('runtime snapshot exposes route-impact no-regression evidence in operator w
       true,
     );
     assert.equal(
-      attemptItem.stage_attempt_workbench.artifact_gallery.items.some((item: { ref: string }) =>
+      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
         item.ref === 'receipt:mag:no-regression'
       ),
       true,
@@ -475,7 +474,7 @@ test('runtime snapshot exposes route-impact no-regression evidence in operator w
       true,
     );
     assert.equal(
-      attemptItem.stage_attempt_workbench.action_routing.actions.some((action: { route_target_kind: string; command_or_surface_ref: string }) =>
+      workbenchAttempt.action_routing.actions.some((action: { route_target_kind: string; command_or_surface_ref: string }) =>
         action.route_target_kind === 'direct_skill' &&
         action.command_or_surface_ref === 'medautogrant product-entry status --format json'
       ),
@@ -483,7 +482,7 @@ test('runtime snapshot exposes route-impact no-regression evidence in operator w
     );
     assert.equal(workbenchAttempt.action_routing.authority_boundary.can_execute_direct_skill, false);
     assert.equal(workbenchAttempt.controlled_apply_contract.no_forbidden_write_proof.opl_writes_domain_artifact, false);
-    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
+    assert.equal(workbenchAttempt.completion_boundary.provider_completion_is_domain_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -555,10 +554,11 @@ test('runtime snapshot exposes lifecycle guarded-apply receipt refs in operator 
     const workbenchAttempt = snapshot.stage_attempt_workbench.attempts.find(
       (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
     );
-    const attemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
+    const trayAttemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
       (item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptId}`,
     );
 
+    assert.equal(trayAttemptItem, undefined);
     assert.equal(workbenchAttempt.lifecycle_primitives.guarded_apply_proof.apply_status, 'domain_receipt_observed');
     assert.equal(
       workbenchAttempt.lifecycle_primitives.guarded_apply_proof.summary.domain_receipt_observed_count,
@@ -590,17 +590,17 @@ test('runtime snapshot exposes lifecycle guarded-apply receipt refs in operator 
     assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.lifecycle_restore_ref_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.lifecycle_domain_receipt_ref_count, 1);
     assert.equal(
-      attemptItem.stage_attempt_workbench.artifact_gallery.items.some((item: { ref: string }) =>
+      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
         item.ref === 'receipt:rca:lifecycle-cleanup'
       ),
       true,
     );
     assert.equal(
-      attemptItem.stage_attempt_workbench.lifecycle_primitives.guarded_apply_proof.apply_status,
+      workbenchAttempt.lifecycle_primitives.guarded_apply_proof.apply_status,
       'domain_receipt_observed',
     );
-    assert.equal(attemptItem.stage_attempt_workbench.artifact_gallery.authority_boundary.can_mutate_artifact, false);
-    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
+    assert.equal(workbenchAttempt.artifact_gallery.authority_boundary.can_mutate_artifact, false);
+    assert.equal(workbenchAttempt.completion_boundary.provider_completion_is_domain_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -692,10 +692,11 @@ test('runtime snapshot exposes transition bridge owner evidence as refs-only ope
     const workbenchAttempt = snapshot.stage_attempt_workbench.attempts.find(
       (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
     );
-    const attemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
+    const trayAttemptItem = [...snapshot.attention_items, ...snapshot.recent_items, ...snapshot.running_items].find(
       (item: { item_id: string }) => item.item_id === `opl:stage-attempt:${attemptId}`,
     );
 
+    assert.equal(trayAttemptItem, undefined);
     assert.equal(snapshot.stage_attempt_workbench.transition_bridge_evidence.projection_scope, 'stage_attempt_workbench');
     assert.equal(
       snapshot.stage_attempt_workbench.transition_bridge_evidence.summary.attempt_with_transition_bridge_count,
@@ -750,14 +751,14 @@ test('runtime snapshot exposes transition bridge owner evidence as refs-only ope
       true,
     );
     assert.equal(
-      attemptItem.stage_attempt_workbench.transition_bridge_evidence.evidence.owner_receipt_refs[0],
+      workbenchAttempt.transition_bridge_evidence.evidence.owner_receipt_refs[0],
       'mag-owner-receipt:intake_handoff_receipt',
     );
     assert.equal(
-      attemptItem.stage_attempt_workbench.transition_bridge_evidence.authority_boundary.can_write_domain_truth,
+      workbenchAttempt.transition_bridge_evidence.authority_boundary.can_write_domain_truth,
       false,
     );
-    assert.equal(attemptItem.stage_attempt_workbench.provider_completion_is_domain_ready, false);
+    assert.equal(workbenchAttempt.completion_boundary.provider_completion_is_domain_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -899,6 +900,11 @@ db.close();`,
     const gated = workbench.attempts.find((attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === gatedAttemptId);
     const completed = workbench.attempts.find((attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === completedAttemptId);
     const deadLetter = workbench.attempts.find((attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === deadLetterAttemptId);
+    const trayItems = [
+      ...output.runtime_tray_snapshot.running_items,
+      ...output.runtime_tray_snapshot.attention_items,
+      ...output.runtime_tray_snapshot.recent_items,
+    ];
 
     assert.equal(workbench.provider_completion_is_domain_ready, false);
     assert.equal(workbench.summary.total, 3);
@@ -957,6 +963,9 @@ db.close();`,
     assert.equal(completed.filter_keys.status, 'completed');
     assert.equal(completed.filter_keys.has_consumed_memory_refs, true);
     assert.equal(completed.filter_keys.has_writeback_receipt_refs, true);
+    assert.equal(trayItems.some((item: { item_id: string }) => item.item_id === `opl:stage-attempt:${completedAttemptId}`), false);
+    assert.equal(trayItems.some((item: { item_id: string }) => item.item_id === `opl:stage-attempt:${gatedAttemptId}`), true);
+    assert.equal(trayItems.some((item: { item_id: string }) => item.item_id === `opl:stage-attempt:${deadLetterAttemptId}`), true);
     assert.equal(gated.human_gate_ledger[0].payload.reason, 'operator_review');
     assert.equal(gated.user_instruction_ledger[0].payload.instruction_ref, 'user:review-note');
     assert.equal(gated.resume_ledger[0].payload.resume_token, 'resume:review');

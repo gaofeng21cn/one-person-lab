@@ -238,6 +238,8 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
   runningManifest.task_lifecycle = {
     ...(runningManifest.task_lifecycle as Record<string, unknown>),
     status: 'running',
+    session_id: 'mas-study-session-002',
+    run_id: 'mas-run-002',
     human_gate_ids: [],
     summary: 'MAS study runtime is actively processing the current study.',
   };
@@ -245,6 +247,7 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     ...(runningManifest.progress_projection as Record<string, unknown>),
     current_status: 'in_progress',
     runtime_status: 'ready',
+    session_id: 'mas-study-session-002',
     headline: 'MAS study runtime is actively processing the current study.',
     attention_items: [],
     human_gate_ids: [],
@@ -286,11 +289,14 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
   attentionManifest.task_lifecycle = {
     ...(attentionManifest.task_lifecycle as Record<string, unknown>),
     status: 'operator_review_requested',
+    session_id: 'redcube-entry-session-001',
+    run_id: 'redcube-run-001',
     human_gate_ids: ['redcube_operator_review_gate'],
     summary: 'RCA deliverable loop is waiting for operator review.',
   };
   attentionManifest.progress_projection = {
     ...(attentionManifest.progress_projection as Record<string, unknown>),
+    session_id: 'redcube-entry-session-001',
     attention_items: ['Review the generated deck before continuing.'],
   };
 
@@ -302,6 +308,8 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
       status: 'completed',
       task_id: 'mag-completed-route',
       task_kind: 'grant_authoring_loop',
+      session_id: null,
+      run_id: null,
       summary: 'MAG critique route completed and is ready for archive review.',
       human_gate_ids: [],
     },
@@ -309,6 +317,7 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
       ...(((recentManifest.product_entry_manifest as Record<string, unknown>)?.progress_projection as Record<string, unknown>) ?? {}),
       current_status: 'completed',
       runtime_status: 'ready',
+      session_id: null,
       headline: 'MAG critique route completed and is ready for archive review.',
       attention_items: [],
       human_gate_ids: [],
@@ -361,6 +370,7 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
       OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const snapshot = output.runtime_tray_snapshot;
+    const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
 
     assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
@@ -381,9 +391,8 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     const providerProofItem = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal');
     assert.equal(providerProofItem.action_owner, 'infrastructure');
     assert.equal(providerProofItem.provider_continuous_proof.continuous_proof_status, 'no_proof_observed');
-    assert.equal(snapshot.recent_items.length, 1);
-    assert.equal(snapshot.recent_items[0].project_id, 'medautogrant');
-    assert.equal(snapshot.recent_items[0].action_owner, 'none');
+    assert.equal(snapshot.recent_items.length, 0);
+    assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'medautogrant'), false);
     assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 1 });
     assert.equal(
       snapshot.managed_domain_provider_states.surface_kind,
@@ -436,6 +445,90 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     assert.equal(snapshot.daemon_policy.runtime_kernel_owner, 'provider_backed_family_runtime');
     assert.equal(typeof snapshot.daemon_policy.sidecar_promotion_gate, 'string');
     assert.equal(snapshot.daemon_policy.sidecar_promotion_gate.includes('task'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot keeps demo and descriptor-only domain manifests out of current tray lanes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-descriptor-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-descriptor-workspace-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  fs.mkdirSync(path.join(workspaceRoot, 'mag', 'examples'), { recursive: true });
+  fs.mkdirSync(path.join(workspaceRoot, 'redcube'), { recursive: true });
+  const demoGrantPath = path.join(workspaceRoot, 'mag', 'examples', 'nsfc_workspace_p2c_critique.json');
+  fs.writeFileSync(demoGrantPath, '{}\n');
+
+  const magDemoManifest = structuredClone(fixtures.medautogrant);
+  magDemoManifest.product_entry_manifest = {
+    ...((magDemoManifest.product_entry_manifest as Record<string, unknown>) ?? {}),
+    workspace_locator: {
+      workspace_surface_kind: 'nsfc_workspace',
+      workspace_root: demoGrantPath,
+      workspace_path: demoGrantPath,
+    },
+    task_lifecycle: {
+      ...(((magDemoManifest.product_entry_manifest as Record<string, unknown>)?.task_lifecycle as Record<string, unknown>) ?? {}),
+      task_id: 'nsfc-demo-001:draft-v1',
+      status: 'forward_progress',
+      session_id: 'grant-run-nsfc-demo-001-baseline-001',
+      run_id: 'grant-run-nsfc-demo-001-baseline-001',
+      human_gate_ids: ['mag_route_gate_revision'],
+    },
+    progress_projection: {
+      ...(((magDemoManifest.product_entry_manifest as Record<string, unknown>)?.progress_projection as Record<string, unknown>) ?? {}),
+      current_status: 'critique',
+      runtime_status: 'healthy',
+      session_id: 'grant-run-nsfc-demo-001-baseline-001',
+      attention_items: ['demo critique residue'],
+      human_gate_ids: ['mag_route_gate_revision'],
+    },
+  };
+
+  const redcubeDescriptorManifest = structuredClone(fixtures.redcube);
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      path.join(workspaceRoot, 'mag'),
+      '--manifest-command',
+      buildManifestCommand(magDemoManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      path.join(workspaceRoot, 'redcube'),
+      '--manifest-command',
+      buildManifestCommand(redcubeDescriptorManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const snapshot = output.runtime_tray_snapshot;
+    const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
+
+    assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'medautogrant'), false);
+    assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'redcube'), false);
+    assert.equal(snapshot.attention_items.length, 1);
+    assert.equal(snapshot.attention_items[0].item_id, 'opl:provider-continuous-proof:temporal');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -640,7 +733,7 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
 
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
     assert.equal(snapshot.runtime_health.label, '需用户处理');
-    assert.equal(snapshot.attention_items.length, 3);
+    assert.equal(snapshot.attention_items.length, 2);
     const dm002Item = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:study:002-dm-china-us-mortality-attribution');
     assert.equal(dm002Item.active_run_id, 'run-002');
     assert.equal(dm002Item.status_label, '运行中：分析补充');
@@ -664,7 +757,7 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     assert.equal(snapshot.recent_items[0].requires_user_action, true);
     assert.equal(snapshot.recent_items[0].action_kind, 'handoff_review');
     assert.deepEqual(snapshot.recent_items[0].blockers, []);
-    assert.deepEqual(snapshot.action_counts, { user: 2, opl: 1, infrastructure: 1 });
+    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 1, infrastructure: 1 });
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

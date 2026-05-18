@@ -46,8 +46,10 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.status, 'ready_for_opl_native_use');
   assert.equal(output.agent_lab_complete.readiness.ready_to_connect_inspect_ai_adapter, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_optimizer_candidate_refs, true);
+  assert.equal(output.agent_lab_complete.readiness.automatic_mechanism_promotion_ready, true);
   assert.equal(output.agent_lab_complete.readiness.automatic_model_training_ready, false);
-  assert.equal(output.agent_lab_complete.readiness.automatic_default_agent_promotion_ready, false);
+  assert.equal(output.agent_lab_complete.readiness.automatic_default_agent_promotion_ready,
+    'risk_tiered_after_independent_ai_review');
   assert.equal(output.agent_lab_complete.readiness.app_workbench_consumption_ready, true);
   assert.ok(output.agent_lab_complete.eval_adapters.some((entry: any) => entry.adapter_id === 'inspect-ai'));
   assert.ok(output.agent_lab_complete.observability_exports.some((entry: any) => entry.export_id === 'phoenix'));
@@ -81,7 +83,11 @@ test('agent-lab mechanism exposes a first-class refs-only mechanism object', () 
   assert.equal(output.agent_lab_mechanism.meta_edit_receipt.mutates_artifact, false);
   assert.equal(output.agent_lab_mechanism.evolution_segment.segment_kind, 'mechanism_baseline_segment_ref');
   assert.equal(output.agent_lab_mechanism.evidence_delta.domain_truth_delta_written, false);
-  assert.equal(output.agent_lab_mechanism.next_mechanism_candidate.default_promotion, false);
+  assert.equal(output.agent_lab_mechanism.mechanism_promotion_policy.automatic_mechanism_promotion_ready, true);
+  assert.equal(output.agent_lab_mechanism.independent_ai_review_receipt.review_context_inherits_executor_context,
+    false);
+  assert.equal(output.agent_lab_mechanism.next_mechanism_candidate.default_promotion, true);
+  assert.equal(output.agent_lab_mechanism.next_mechanism_candidate.promotion_decision, 'auto_promote_to_canary');
   assert.equal(output.agent_lab_mechanism.refs_only, true);
 });
 
@@ -284,9 +290,12 @@ test('agent-lab optimize runs an external suite into gated candidate and RL tran
     assert.equal(output.agent_lab_optimize.surface_kind, 'opl_agent_lab_optimize_result');
     assert.equal(output.agent_lab_optimize.status, 'gated_candidate_set_ready');
     assert.equal(output.agent_lab_optimize.gated_optimizer_candidate_set.candidate_count, 1);
+    assert.equal(output.agent_lab_optimize.gated_optimizer_candidate_set.auto_promotable_candidate_count, 1);
     assert.equal(output.agent_lab_optimize.rl_transition_refs.transition_count, 1);
+    assert.equal(output.agent_lab_optimize.automatic_mechanism_promotion_ready, true);
     assert.equal(output.agent_lab_optimize.automatic_model_training_ready, false);
-    assert.equal(output.agent_lab_optimize.automatic_default_agent_promotion_ready, false);
+    assert.equal(output.agent_lab_optimize.automatic_default_agent_promotion_ready,
+      'risk_tiered_after_independent_ai_review');
     assert.equal(output.agent_lab_optimize.authority_boundary.can_promote_default_agent_without_gate, false);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -376,9 +385,13 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
 
     assert.equal(output.version, 'g2');
     assert.equal(output.agent_lab_evolve.surface_kind, 'opl_agent_lab_evolution_result');
-    assert.equal(output.agent_lab_evolve.status, 'next_mechanism_candidate_ready');
+    assert.equal(output.agent_lab_evolve.status, 'mechanism_auto_promoted_to_canary');
     assert.equal(output.agent_lab_evolve.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
     assert.equal(output.agent_lab_evolve.editable_surfaces.length, 4);
+    assert.equal(output.agent_lab_evolve.mechanism_promotion_decision.promotion_decision, 'auto_promote_to_canary');
+    assert.equal(output.agent_lab_evolve.independent_ai_review_receipt.review_context_inherits_executor_context,
+      false);
+    assert.equal(output.agent_lab_evolve.promotion_receipt.promoted_to_status, 'canary');
     assert.equal(output.agent_lab_evolve.meta_edit_receipt.writes_domain_truth, false);
     assert.equal(output.agent_lab_evolve.meta_edit_receipt.writes_memory_body, false);
     assert.equal(output.agent_lab_evolve.meta_edit_receipt.mutates_artifact, false);
@@ -386,9 +399,12 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
     assert.equal(output.agent_lab_evolve.evidence_delta.domain_truth_delta_written, false);
     assert.equal(output.agent_lab_evolve.evidence_delta.memory_body_delta_written, false);
     assert.equal(output.agent_lab_evolve.evidence_delta.artifact_delta_written, false);
-    assert.equal(output.agent_lab_evolve.next_mechanism_candidate.default_promotion, false);
+    assert.equal(output.agent_lab_evolve.next_mechanism_candidate.default_promotion, true);
+    assert.equal(output.agent_lab_evolve.next_mechanism_candidate.promotion_decision, 'auto_promote_to_canary');
+    assert.equal(output.agent_lab_evolve.automatic_mechanism_promotion_ready, true);
     assert.equal(output.agent_lab_evolve.automatic_model_training_ready, false);
-    assert.equal(output.agent_lab_evolve.automatic_default_agent_promotion_ready, false);
+    assert.equal(output.agent_lab_evolve.automatic_default_agent_promotion_ready,
+      'risk_tiered_after_independent_ai_review');
     assert.equal(output.agent_lab_evolve.refs_only, true);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

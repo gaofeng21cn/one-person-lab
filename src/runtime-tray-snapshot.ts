@@ -134,6 +134,57 @@ function collectHumanGateIds(manifest: NormalizedDomainManifest) {
   ].filter((value) => value.trim().length > 0);
 }
 
+function concreteRuntimeLocator(value: unknown) {
+  const locator = optionalString(value);
+  if (!locator) {
+    return null;
+  }
+  const normalized = locator.trim().toLowerCase();
+  if (!normalized || normalized.includes('<') || normalized.includes('>')) {
+    return null;
+  }
+  return locator;
+}
+
+function manifestRuntimeLocators(manifest: NormalizedDomainManifest) {
+  return [
+    manifest.task_lifecycle?.session_id,
+    manifest.task_lifecycle?.run_id,
+    manifest.runtime_control?.session_id,
+    manifest.runtime_control?.run_id,
+    manifest.session_continuity?.session_id,
+    manifest.session_continuity?.run_id,
+    manifest.progress_projection?.session_id,
+  ].map(concreteRuntimeLocator).filter((value): value is string => Boolean(value));
+}
+
+function manifestDemoOrExampleRefs(entry: DomainManifestCatalogEntry, manifest: NormalizedDomainManifest) {
+  const locator = (manifest.workspace_locator ?? {}) as JsonRecord;
+  const inventoryBinding = (manifest.runtime_inventory?.workspace_binding ?? {}) as JsonRecord;
+  return [
+    entry.manifest_command,
+    firstString(locator.workspace_root, locator.workspace_path, locator.input_path),
+    firstString(inventoryBinding.workspace_root, inventoryBinding.workspace_path, inventoryBinding.input_path),
+    manifest.task_lifecycle?.task_id,
+    ...manifestRuntimeLocators(manifest),
+  ].filter((value): value is string => Boolean(value));
+}
+
+function isDemoOrExampleManifest(entry: DomainManifestCatalogEntry, manifest: NormalizedDomainManifest) {
+  return manifestDemoOrExampleRefs(entry, manifest).some((value) => {
+    const normalized = value.toLowerCase();
+    return normalized.includes('/examples/') || /\bdemo\b/.test(normalized);
+  });
+}
+
+function shouldProjectResolvedManifestToTray(entry: DomainManifestCatalogEntry) {
+  const manifest = entry.manifest;
+  if (!manifest || isDemoOrExampleManifest(entry, manifest)) {
+    return false;
+  }
+  return manifestRuntimeLocators(manifest).length > 0;
+}
+
 function hasAttentionStatus(statusCodes: string[]) {
   return statusCodes.some((status) => {
     const normalized = normalizeStatusCode(status);
@@ -651,7 +702,11 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
     domainManifestProjects: domainManifests.projects,
   });
   const domainItems = domainManifests.projects
-    .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
+    .map((entry) =>
+      entry.status === 'resolved'
+        ? shouldProjectResolvedManifestToTray(entry) ? buildResolvedItem(entry) : null
+        : buildAttentionItemForUnresolved(entry)
+    )
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
   const masStudyProjection = buildMasStudyProjection(domainManifests);
   const stageAttemptItems = buildStageAttemptTrayItems({
@@ -663,7 +718,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
     ...domainItems,
     ...masStudyProjection.items,
     ...stageAttemptItems,
-    providerProofItem,
+    ...(providerProofItem ? [providerProofItem] : []),
   ];
   const operatorConflicts = [
     ...operatorConflictsFromWorkbench(stageAttemptWorkbench),

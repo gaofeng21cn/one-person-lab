@@ -143,6 +143,8 @@ test('family runtime lifecycle apply writes safe cleanup receipt and ledger refs
           owner_scope: 'opl_owned_tombstone_ref',
           target_ref: 'opl://history/mag/gateway-tombstone',
           restore_proof_refs: ['restore-proof:mag:gateway-tombstone'],
+          no_active_caller_refs: ['proof:mag:no-active-caller'],
+          replacement_parity_refs: ['proof:mag:replacement-parity'],
         },
         {
           action_id: 'record-domain-artifact-receipt',
@@ -159,6 +161,8 @@ test('family runtime lifecycle apply writes safe cleanup receipt and ledger refs
     assert.equal(applied.status, 'applied');
     assert.equal(applied.summary.safe_action_count, 2);
     assert.equal(applied.summary.domain_artifact_mutation_receipt_ref_count, 1);
+    assert.equal(applied.summary.no_active_caller_ref_count, 1);
+    assert.equal(applied.summary.replacement_parity_ref_count, 1);
     assert.equal(applied.summary.writes_performed, true);
     assert.equal(applied.cleanup_receipts.length, 2);
 
@@ -174,6 +178,83 @@ test('family runtime lifecycle apply writes safe cleanup receipt and ledger refs
     ]);
     assert.equal(cleanupReceipt?.surface_role, 'safe_cleanup_receipt');
     assert.deepEqual(cleanupReceipt?.payload.restore_proof_refs, ['restore-proof:mag:gateway-tombstone']);
+    assert.deepEqual(cleanupReceipt?.payload.no_active_caller_refs, ['proof:mag:no-active-caller']);
+    assert.deepEqual(cleanupReceipt?.payload.replacement_parity_refs, ['proof:mag:replacement-parity']);
+  });
+});
+
+test('family runtime lifecycle apply records domain-owner legacy cleanup handoff receipts only after replacement proof', () => {
+  withTempState(() => {
+    const blocked = runFamilyRuntimeLifecycleApply({
+      mode: 'apply',
+      target_domain_id: 'med-autoscience',
+      source_ref: 'mas://legacy-cleanup/plan-local-scheduler',
+      actions: [
+        {
+          action_id: 'record-mas-local-scheduler-physical-retirement',
+          action_kind: 'record_domain_owner_handoff_receipt',
+          owner_scope: 'domain_owner_handoff_receipt_ref',
+          target_ref: 'src/med_autoscience/controllers/supervision_scheduler_parts/local_adapter.py',
+          restore_proof_refs: ['docs/history/runtime/local-scheduler-tombstone.md'],
+          domain_owner_handoff_receipt_refs: ['mas://receipt/local-scheduler-retired'],
+        },
+      ],
+    });
+
+    assert.equal(blocked.status, 'blocked');
+    assert.equal(blocked.summary.unsafe_action_count, 1);
+    assert.equal(blocked.summary.writes_performed, false);
+    assert.equal(
+      blocked.actions[0].blocker?.blocker_id,
+      'no_active_caller_ref_required_before_legacy_cleanup_apply',
+    );
+
+    const applied = runFamilyRuntimeLifecycleApply({
+      mode: 'apply',
+      target_domain_id: 'med-autoscience',
+      source_ref: 'mas://legacy-cleanup/plan-local-scheduler',
+      actions: [
+        {
+          action_id: 'record-mas-local-scheduler-physical-retirement',
+          action_kind: 'record_domain_owner_handoff_receipt',
+          owner_scope: 'domain_owner_handoff_receipt_ref',
+          target_ref: 'src/med_autoscience/controllers/supervision_scheduler_parts/local_adapter.py',
+          restore_proof_refs: ['docs/history/runtime/local-scheduler-tombstone.md'],
+          domain_owner_handoff_receipt_refs: ['mas://receipt/local-scheduler-retired'],
+          no_active_caller_refs: ['proof:mas:local-scheduler-no-active-caller'],
+          replacement_parity_refs: ['proof:opl:temporal-scheduler-replacement'],
+        },
+      ],
+    });
+
+    assert.equal(applied.status, 'applied');
+    assert.equal(applied.summary.safe_action_count, 1);
+    assert.equal(applied.summary.domain_owner_handoff_receipt_ref_count, 1);
+    assert.equal(applied.summary.no_active_caller_ref_count, 1);
+    assert.equal(applied.summary.replacement_parity_ref_count, 1);
+    const cleanupReceipt = applied.cleanup_receipts[0];
+    assert.ok(cleanupReceipt);
+    const authorityBoundary = cleanupReceipt.authority_boundary as Record<string, unknown>;
+    assert.equal(
+      authorityBoundary.opl_can_move_or_delete_domain_repo_files,
+      false,
+    );
+    assert.equal(
+      authorityBoundary.domain_repo_delete_requires_owner_receipt,
+      true,
+    );
+
+    const reconciled = reconcileFamilyRuntimeLifecycleRefs({
+      target_domain_id: 'med-autoscience',
+      expected_domain_artifact_mutation_receipt_refs: ['mas://receipt/local-scheduler-retired'],
+      expected_restore_proof_refs: ['docs/history/runtime/local-scheduler-tombstone.md'],
+    });
+
+    assert.equal(reconciled.status, 'reconciled');
+    assert.equal(reconciled.summary.opl_cleanup_apply_can_execute, true);
+    assert.deepEqual(reconciled.actual_refs.domain_artifact_mutation_receipt_refs, [
+      'mas://receipt/local-scheduler-retired',
+    ]);
   });
 });
 
@@ -218,6 +299,8 @@ test('family runtime lifecycle verify reads an applied cleanup receipt', () => {
           owner_scope: 'opl_owned_index_ref',
           target_ref: 'opl://lifecycle-index/mas/runtime-lifecycle',
           restore_proof_refs: ['restore-proof:mas:runtime-lifecycle'],
+          no_active_caller_refs: ['proof:mas:index-no-active-caller'],
+          replacement_parity_refs: ['proof:mas:index-replacement-parity'],
         },
       ],
     });
