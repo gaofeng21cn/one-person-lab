@@ -280,6 +280,7 @@ function operatorActionRoutingRefs(workbench: JsonRecord) {
       owner: stringValue(action.action_owner),
       route_target_kind: stringValue(action.route_target_kind),
       execution_policy: stringValue(action.execution_policy),
+      execution_surface: stringValue(action.execution_surface),
       stage_attempt_id: stringValue(action.stage_attempt_id),
       domain_id: stringValue(action.domain_id),
       stage_id: stringValue(action.stage_id),
@@ -293,6 +294,7 @@ function operatorActionRoutingRefs(workbench: JsonRecord) {
       owner: string | null;
       route_target_kind: string | null;
       execution_policy: string | null;
+      execution_surface: string | null;
       stage_attempt_id: string | null;
       domain_id: string | null;
       stage_id: string | null;
@@ -673,6 +675,9 @@ export function buildAppOperatorDrilldown(input: {
       readiness_ref_count: qualityRefs.readiness_refs.length,
       provider_slo_action_count: providerActionRefs.length,
       operator_action_route_count: actionRefs.length,
+      operator_executable_route_count: actionRefs.filter((ref) => (
+        ref.execution_policy === 'opl_safe_action_shell'
+      )).length,
       opl_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'opl').length,
       provider_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'provider').length,
       domain_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'domain').length,
@@ -766,7 +771,7 @@ export function buildAppOperatorDrilldown(input: {
       'does_not_read_or_store_memory_body',
       'does_not_read_or_mutate_artifact_body',
       'does_not_authorize_quality_readiness_or_export_verdict',
-      'does_not_execute_domain_or_provider_actions',
+      'does_not_directly_execute_domain_actions',
     ],
   };
 }

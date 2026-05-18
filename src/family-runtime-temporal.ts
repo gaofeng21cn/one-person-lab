@@ -1,8 +1,10 @@
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
+export const SCHEDULER_TICK_WORKFLOW_NAME = 'SchedulerTickWorkflow';
 export const CODEX_STAGE_ACTIVITY_NAME = 'CodexStageActivity';
 export const DOMAIN_SIDECAR_DISPATCH_ACTIVITY_NAME = 'DomainSidecarDispatchActivity';
+export const SCHEDULER_TICK_ACTIVITY_NAME = 'SchedulerTickActivity';
 export const DEFAULT_TEMPORAL_TASK_QUEUE = 'opl-stage-attempts';
 
 export const TEMPORAL_STAGE_ATTEMPT_SIGNALS = [
@@ -76,13 +78,38 @@ export type TemporalStageAttemptWorkflowState = {
   };
 };
 
+export type TemporalSchedulerTickWorkflowInput = {
+  provider_kind: 'temporal';
+  tick_source: string;
+  force?: boolean;
+  limit?: number;
+  hydrate?: boolean;
+};
+
+export type TemporalSchedulerTickWorkflowState = {
+  surface_kind: 'temporal_scheduler_tick_query';
+  provider_kind: 'temporal';
+  status: 'registered' | 'running' | 'completed' | 'failed';
+  tick_source: string;
+  started_at: string;
+  updated_at: string;
+  receipt: Record<string, unknown> | null;
+  error: string | null;
+  authority_boundary: {
+    opl: 'scheduler_cadence_queue_and_provider_slo_owner';
+    domain: 'truth_quality_artifact_gate_owner';
+  };
+};
+
 export function buildTemporalStageAttemptWorkflowContract() {
   return {
     provider_kind: 'temporal',
     workflow_name: STAGE_ATTEMPT_WORKFLOW_NAME,
+    scheduler_tick_workflow_name: SCHEDULER_TICK_WORKFLOW_NAME,
     activity_names: {
       codex_stage_activity: CODEX_STAGE_ACTIVITY_NAME,
       domain_sidecar_dispatch_activity: DOMAIN_SIDECAR_DISPATCH_ACTIVITY_NAME,
+      scheduler_tick_activity: SCHEDULER_TICK_ACTIVITY_NAME,
     },
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],
     queries: [...TEMPORAL_STAGE_ATTEMPT_QUERIES],
