@@ -13,6 +13,7 @@ import { runOplEngineAction } from './engine-actions.ts';
 import { buildOplDeveloperModeSurface } from './developer-mode.ts';
 import { buildOplEnvironment } from './environment.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
+import { runOplStartupMaintenance } from './startup-maintenance.ts';
 import type {
   OplSystemAction,
   OplSystemActionInput,
@@ -276,6 +277,10 @@ export async function runOplSystemAction(
 
   if (action === 'reconcile_modules') {
     return runOplSystemModuleReconcile(contracts);
+  }
+
+  if (action === 'startup_maintenance') {
+    return runOplStartupMaintenance(contracts);
   }
 
   if (action === 'developer_supervisor') {
