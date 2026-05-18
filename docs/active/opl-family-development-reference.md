@@ -34,7 +34,7 @@ OPL family 的最高优先级是目标架构，而不是迁就当前实现分布
 | OPL 全局目标态 | [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md) | 定义 OPL Framework、Foundry Agents、One Person Lab App、workspace/runtime artifact root 的 north-star。 |
 | OPL 全局差距 | [OPL Family 当前状态与理想目标差距](./current-state-vs-ideal-gap.md) | 记录 family-level 当前状态、production closure 缺口、全局完善顺序。 |
 | OPL 当前路线 | [OPL 当前开发线路](./current-development-lines.md) 与 [OPL Stage-Led Agent Framework Roadmap](../references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md) | 说明 framework-first 执行顺序、Temporal provider、standard domain-agent skeleton 与旧路线退役纪律。 |
-| OPL 生产闭环矩阵 | [生产级框架闭环差距矩阵](./production-framework-closure-gap-matrix.md) | 承接跨仓 owner receipt、memory/lifecycle apply、operator workbench、legacy retirement 和 live soak gate；2026-05-14 一次性 functional closure plan 的活跃 follow-through 现在回到本矩阵。 |
+| OPL 生产闭环矩阵 | [生产级框架闭环差距矩阵](./production-framework-closure-gap-matrix.md) | 承接跨仓 owner receipt、memory/lifecycle apply、operator workbench、legacy retirement、live soak gate 和当前功能/结构 owner；过程性计划归 history。 |
 | 单仓目标与计划 | 各 repo 的 `docs/references/*ideal*`、`docs/status.md`、`docs/active/`、`docs/runtime/`、`docs/delivery/` 或 `docs/source/` | 只维护本仓 domain truth、authority、direct/hosted 边界、单仓差距和上收清单；旧 `program` / `plans` / `capabilities` 目录不再作为默认落点。 |
 
 ## Owner 分层
@@ -130,7 +130,7 @@ App 顶层 `docs/` 应纳入 One Person Lab App 的产品文档、release、test
 
 | 目录 | 角色 | 迁移/保留规则 |
 | --- | --- | --- |
-| `docs/active/` | 当前执行、当前计划、当前差距、active baton 与 closeout evidence | MAS 旧 `program/`、MAG 旧 `plans/`、RCA 旧 `program/` 已按各仓审计迁入 `active/` 或 history；后续 active material 直接落这里。 |
+| `docs/active/` | 当前执行、当前计划、当前差距、active baton 与完成门槛 | MAS 旧 `program/`、MAG 旧 `plans/`、RCA 旧 `program/` 的 current 内容已迁入 `active/`；历史过程进入 history，后续 active material 直接落这里。 |
 | `docs/public/` | 公开叙事、用户第一阅读层、roadmap/task map、对外定位 | MAG 根层 public allowlist、App localized `readme/` 由 `public/README*` 收口，不直接删除。 |
 | `docs/product/` | 人类/operator 入口、product entry、workbench、quickstart、profile、发布协作 | OPL 维护 App/workbench 的消费目标和合同；domain repo 的 direct skill/product entry 指南落这里。 |
 | `docs/runtime/` | runtime topology、control plane、projection/read model、provider/executor 边界、watch/repair 语义 | root `contracts/` 仍是机器合同目录；`docs/runtime/` 只做人读说明和当前 runtime owner 索引。 |
