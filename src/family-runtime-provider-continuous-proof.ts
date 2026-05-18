@@ -125,6 +125,24 @@ function executionReceiptSummary(input: {
   };
 }
 
+function repairReceiptSummary(input: {
+  latestExecutionPayload: Record<string, unknown> | null;
+}) {
+  const repairReceipt = isRecord(input.latestExecutionPayload?.repair_receipt)
+    ? input.latestExecutionPayload.repair_receipt
+    : null;
+  if (!repairReceipt) {
+    return null;
+  }
+  return {
+    trigger: optionalString(repairReceipt.trigger),
+    repair_status: optionalString(repairReceipt.repair_status),
+    cadence_owner: optionalString(repairReceipt.cadence_owner),
+    next_repair_command: optionalString(repairReceipt.next_repair_command),
+    can_execute_domain_repair: repairReceipt.can_execute_domain_repair === true,
+  };
+}
+
 function countReceiptField(events: ProviderRuntimeEvent[], fieldName: string, expected: string) {
   return events.filter((event) => {
     const payload = eventPayload(event);
@@ -278,6 +296,9 @@ function executionReceiptProjection(input: {
     latest_event_created_at: input.latestExecution?.created_at ?? null,
     latest_event_age_seconds: eventAgeSeconds(input.latestExecution?.created_at ?? null),
     latest_receipt_summary: executionReceiptSummary({
+      latestExecutionPayload: input.latestExecutionPayload,
+    }),
+    latest_repair_receipt: repairReceiptSummary({
       latestExecutionPayload: input.latestExecutionPayload,
     }),
     executed_count: countReceiptField(input.executionEvents, 'execution_status', 'executed'),

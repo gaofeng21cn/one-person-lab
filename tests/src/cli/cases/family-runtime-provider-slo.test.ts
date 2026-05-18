@@ -75,6 +75,11 @@ test('family-runtime provider-slo tick executes production proof when provider S
     assert.equal(tick.skipped, false);
     assert.equal(tick.before.proof_slo_status, 'proof_blocker_observed');
     assert.equal(tick.provider_slo_execution_receipt.execution_status, 'executed');
+    assert.equal(tick.provider_slo_execution_receipt.supervised_cadence_receipt, true);
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.repair_status, 'blocked');
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.trigger, 'proof_blocker_observed');
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.cadence_owner, 'provider_backed_family_runtime');
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.can_execute_domain_repair, false);
     assert.equal(tick.provider_slo_execution_receipt.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(tick.authority_boundary.can_write_domain_truth, false);
 
@@ -114,6 +119,10 @@ test('family-runtime provider-slo tick skips fresh cadence without rerunning pro
     assert.equal(skippedTick.before.proof_slo_status, 'proof_fresh');
     assert.equal(skippedTick.provider_slo_execution_receipt.receipt_status, 'skipped');
     assert.equal(skippedTick.provider_slo_execution_receipt.skip_reason, 'cadence_current');
+    assert.equal(skippedTick.provider_slo_execution_receipt.supervised_cadence_receipt, true);
+    assert.equal(skippedTick.provider_slo_execution_receipt.repair_receipt.repair_status, 'skipped');
+    assert.equal(skippedTick.provider_slo_execution_receipt.repair_receipt.trigger, 'cadence_current');
+    assert.equal(skippedTick.provider_slo_execution_receipt.repair_receipt.next_repair_command, null);
     assert.equal(
       skippedTick.provider_slo_execution_receipt.cadence_action.dispatch_status,
       'cadence_current',
@@ -149,6 +158,7 @@ test('family-runtime provider-slo tick skips fresh cadence without rerunning pro
     assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.event_count, 2);
     assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.skipped_count, 2);
     assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.executed_count, 0);
+    assert.equal(secondSkippedTick.after.operator_slo_repair_loop.execution_receipts.latest_repair_receipt.repair_status, 'skipped');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -175,12 +185,47 @@ test('family-runtime provider-slo tick force reruns proof even when cadence is c
     assert.equal(forced.force, true);
     assert.equal(forced.before.proof_slo_status, 'proof_fresh');
     assert.equal(forced.provider_slo_execution_receipt.execution_status, 'executed');
+    assert.equal(forced.provider_slo_execution_receipt.repair_receipt.repair_status, 'blocked');
+    assert.equal(forced.provider_slo_execution_receipt.repair_receipt.trigger, 'forced');
 
     const events = runCli(['family-runtime', 'events', 'export'], familyRuntimeEnv(stateRoot));
     const proofEvents = events.family_runtime_events.events.filter((event: { event_type: string }) =>
       event.event_type === 'temporal_residency_proof'
     );
     assert.equal(proofEvents.length, 2);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider-slo tick persists blocked repair receipt when production proof cannot run', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-blocked-'));
+  try {
+    const tick = runCli([
+      'family-runtime',
+      'provider-slo',
+      'tick',
+      '--provider',
+      'temporal',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    })).family_runtime_provider_slo_tick;
+
+    assert.equal(tick.execution_status, 'executed');
+    assert.equal(tick.skipped, false);
+    assert.equal(tick.provider_slo_execution_receipt.execution_status, 'executed');
+    assert.equal(tick.provider_slo_execution_receipt.receipt_status, 'blocked');
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.repair_status, 'blocked');
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.trigger, 'no_proof_observed');
+    assert.equal(
+      tick.provider_slo_execution_receipt.repair_receipt.blocker_ids.includes('temporal_runtime_not_configured'),
+      true,
+    );
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.next_repair_command, 'opl family-runtime service start --provider temporal');
+    assert.equal(tick.provider_slo_execution_receipt.repair_receipt.can_execute_domain_repair, false);
+    assert.equal(tick.after.operator_slo_repair_loop.execution_receipts.blocked_count, 1);
+    assert.equal(tick.after.operator_slo_repair_loop.execution_receipts.latest_repair_receipt.repair_status, 'blocked');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

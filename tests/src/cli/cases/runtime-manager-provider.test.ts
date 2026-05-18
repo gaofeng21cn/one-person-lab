@@ -6,16 +6,19 @@ test('runtime manager reports OPL control plane over provider-backed family runt
   try {
     const output = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
     });
 
     assert.equal(output.version, 'g2');
     assert.equal(output.runtime_manager.surface_id, 'opl_runtime_manager');
     assert.equal(output.runtime_manager.layer_role, 'product_control_plane_over_provider_backed_family_runtime');
-    assert.equal(output.runtime_manager.status, 'ready');
+    assert.equal(output.runtime_manager.status, 'provider_code_landed_unconfigured');
     assert.equal(output.runtime_manager.owner_split.online_runtime_substrate_owner, 'provider_backed_family_runtime');
     assert.equal(output.runtime_manager.owner_split.product_control_plane_owner, 'one-person-lab');
     assert.equal(output.runtime_manager.family_runtime_queue.provider_model, 'provider_backed_stage_attempt_runtime');
+    assert.equal(output.runtime_manager.family_runtime_queue.configured_provider, 'temporal');
     assert.deepEqual(output.runtime_manager.family_runtime_queue.allowed_providers, [
       'local_sqlite',
       'temporal',
@@ -23,6 +26,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.family_scheduler_replacement.surface_kind, 'opl_family_scheduler_replacement');
     assert.equal(output.runtime_manager.family_scheduler_replacement.scheduler_owner, 'opl_provider_runtime_manager');
     assert.equal(output.runtime_manager.family_scheduler_replacement.cadence_owner, 'provider_backed_family_runtime');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.configured_provider, 'temporal');
     assert.deepEqual(output.runtime_manager.family_scheduler_replacement.allowed_opl_targets, [
       'provider_slo_tick',
       'domain_registration_intake',
@@ -39,7 +43,16 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_memory_body, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.provider_slo_tick, 'opl family-runtime provider-slo tick --provider temporal');
     assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.family_runtime_tick, 'opl family-runtime tick --source provider-scheduler --hydrate');
-    assert.equal(output.runtime_manager.provider_runtime.selected_provider, 'local_sqlite');
+    assert.equal(output.runtime_manager.provider_runtime.selected_provider, 'temporal');
+    assert.equal(output.runtime_manager.provider_runtime.default_resolution.fallback, 'temporal');
+    assert.equal(output.runtime_manager.provider_runtime.default_resolution.local_sqlite_role, 'dev_ci_offline_diagnostic_baseline');
+    assert.equal(output.runtime_manager.provider_runtime.providers.temporal.ready, false);
+    assert.equal(output.runtime_manager.provider_runtime.providers.temporal.details.worker_readiness.blockers.includes('temporal_runtime_not_configured'), true);
+    assert.equal(output.runtime_manager.reconcile.recommended_actions[0].action_id, 'configure_temporal_provider');
+    assert.equal(output.runtime_manager.daemon_policy.local_daemon_added, false);
+    assert.equal(output.runtime_manager.daemon_policy.opl_domain_daemon_installation_allowed, false);
+    assert.equal(output.runtime_manager.daemon_policy.cadence_owner, 'provider_backed_family_runtime');
+    assert.equal(output.runtime_manager.daemon_policy.domain_launchagent_policy.medautoscience, 'legacy_diagnostic_cleanup_only');
     assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
     assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_stage_runtime_registration_registry');
     assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
@@ -121,6 +134,39 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       output.runtime_manager.standard_domain_agent_scaffold.surface_kind,
     );
     assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime status defaults to temporal production provider and blocks instead of falling back to local sqlite', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-provider-'));
+
+  try {
+    const output = runCli(['family-runtime', 'status'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }).family_runtime;
+
+    assert.equal(output.configured_provider, 'temporal');
+    assert.equal(output.readiness.provider_ready, false);
+    assert.equal(output.readiness.full_online_ready, false);
+    assert.equal(output.readiness.durable_online_ready, false);
+    assert.equal(output.readiness.degraded, true);
+    assert.equal(output.provider_runtime.default_resolution.fallback, 'temporal');
+    assert.equal(output.provider_runtime.default_resolution.fail_closed_when_temporal_not_ready, true);
+    assert.equal(output.provider_runtime.providers.temporal.status, 'provider_code_landed_unconfigured');
+    assert.equal(
+      output.provider_runtime.providers.temporal.details.worker_readiness.temporal_service_lifecycle.service_status,
+      'not_configured',
+    );
+    assert.equal(
+      output.provider_runtime.provider_catalog.local_sqlite.provider_role,
+      'dev_ci_offline_diagnostic_baseline',
+    );
+    assert.equal(output.provider_runtime.provider_catalog.local_sqlite.production_online_readiness_provider, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -681,6 +681,7 @@ export async function runFamilyRuntime(args: string[]) {
       const sloExecutionReceipt = temporalProviderSloExecutionReceipt({
         proof,
         persistedProofRef,
+        trigger: 'manual_residency_proof',
       });
       insertEvent(db, {
         eventType: 'temporal_residency_proof',

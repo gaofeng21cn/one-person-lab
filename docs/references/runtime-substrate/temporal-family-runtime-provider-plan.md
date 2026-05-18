@@ -66,7 +66,7 @@ Provider 层不持有：
 
 交付：
 
-- 已冻结 provider 枚举：`local_sqlite`、`temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 只服务 dev/CI/offline diagnostic baseline。`hermes_legacy` 已退役为非法 provider selection，旧配置必须 fail-closed。
+- 已冻结 provider 枚举：`local_sqlite`、`temporal`，其中 `temporal` 是 production required provider；无显式 provider 选择时默认解析到 `temporal`，未配置 Temporal service / worker / production proof 时 fail-closed。`local_sqlite` 只服务显式 dev/CI/offline diagnostic baseline，不参与 production online readiness。`hermes_legacy` 已退役为非法 provider selection，旧配置必须 fail-closed。
 - 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code、repo-native live residency proof 与本机 managed production proof 已落地；`opl family-runtime service start|status|stop --provider temporal` 已作为本机托管 Temporal service lifecycle 入口落地，`opl family-runtime residency proof --provider temporal --production` 可消费本机 managed service + worker state。未配置、服务不可达、launcher 缺失、worker 未 ready 或 worker transport probe 失败时均 fail-closed；2026-05-17 fresh 本机 managed service/worker 已 ready 且 production proof 已通过，provider continuous proof 当前为 `latest_proof_proven` / `fresh` / `proof_fresh`。真实 MAS domain soak 仍属 P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。

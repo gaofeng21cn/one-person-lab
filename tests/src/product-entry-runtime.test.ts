@@ -68,17 +68,21 @@ exit 0
     const doctor = withEnv(
       {
         OPL_CODEX_BIN: codexFixture.binaryPath,
+        OPL_FAMILY_RUNTIME_PROVIDER: undefined,
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
       },
       () => buildProductEntryDoctor(validateFrameworkContracts(contractsDir)),
     );
 
     assert.equal(doctor.product_entry.entry_surface, 'opl_local_product_entry_shell');
     assert.equal(doctor.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
-    assert.equal(doctor.product_entry.ready, true);
+    assert.equal(doctor.product_entry.ready, false);
     assert.equal(doctor.product_entry.local_entry_ready, true);
-    assert.equal(doctor.product_entry.online_runtime_ready, true);
-    assert.equal(doctor.product_entry.configured_provider, 'local_sqlite');
-    assert.equal(doctor.product_entry.family_runtime_provider_ready, true);
+    assert.equal(doctor.product_entry.online_runtime_ready, false);
+    assert.equal(doctor.product_entry.configured_provider, 'temporal');
+    assert.equal(doctor.product_entry.family_runtime_provider_ready, false);
+    assert.equal(doctor.product_entry.family_runtime_provider.degraded_reason, 'temporal_runtime_not_configured');
     assert.equal(Object.hasOwn(doctor.product_entry, 'messaging_gateway_ready'), false);
     assert.equal(Object.hasOwn(doctor.product_entry, 'hermes'), false);
     assert.match(doctor.product_entry.notes.join('\n'), /configured family runtime provider/);
