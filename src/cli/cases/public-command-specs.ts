@@ -550,6 +550,7 @@ export function buildPublicCommandSpecs(
         'opl family-runtime status',
         'opl family-runtime repair',
         'opl family-runtime tick --source provider-cron --hydrate',
+        'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
         'opl family-runtime provider-slo tick --provider temporal',
       ],
       group: 'runtime',
