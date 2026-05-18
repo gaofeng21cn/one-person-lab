@@ -817,6 +817,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         ...(masManagedProviderProjection
           ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
           : []),
+        ...appOperatorDrilldown.source_refs,
         ...domainProjectionIngestion.source_refs,
         ...masStudyProjection.source_refs,
       ]),

@@ -46,6 +46,53 @@ export type FunctionalPrivatizationAuditItem = {
   semantic_equivalence_reason: string;
 };
 
+export type FunctionalExternalEvidenceRequest = {
+  request_id: string;
+  status: string;
+  required_evidence_refs: string[];
+  required_return_shapes: string[];
+  required_receipt_shapes: string[];
+  forbidden_payload_classes: string[];
+  accepted_payload_policy: string | null;
+  source_pointer: string | null;
+};
+
+export type FunctionalExternalEvidenceRequestPack = {
+  surface_kind: 'opl_external_evidence_request_pack_projection';
+  request_pack_id: string | null;
+  owner: string | null;
+  request_owner: string | null;
+  requested_from: string[];
+  policy: string | null;
+  requests: FunctionalExternalEvidenceRequest[];
+  summary: {
+    request_count: number;
+    open_request_count: number;
+  };
+};
+
+export type FunctionalEvidenceGateProjection = {
+  surface_kind: 'opl_domain_evidence_gate_projection';
+  status: 'empty' | 'evidence_gates_open';
+  remaining_evidence_gate_ids: string[];
+  remaining_bridge_module_ids: string[];
+  source_refs: string[];
+  summary: {
+    remaining_evidence_gate_count: number;
+    remaining_bridge_module_count: number;
+  };
+};
+
+export type FunctionalOplReplacementExpectation = {
+  primitive_id: string;
+  owner: string | null;
+  state: string | null;
+  opl_provides: string[];
+  domain_keeps: string[];
+  implemented_in_domain: boolean | null;
+  source_pointer: string;
+};
+
 export type FunctionalPrivatizationAudit = {
   surface_kind: 'opl_functional_privatization_audit';
   version: 'opl-functional-privatization-audit.v1';
@@ -85,6 +132,9 @@ export type FunctionalPrivatizationAudit = {
   authority_function_inventory: FunctionalPrivatizationAuditItem[];
   private_platform_residue_inventory: FunctionalPrivatizationAuditItem[];
   required_opl_replacement_primitives: string[];
+  external_evidence_request_pack: FunctionalExternalEvidenceRequestPack | null;
+  evidence_gate_projection: FunctionalEvidenceGateProjection;
+  opl_replacement_expectations: FunctionalOplReplacementExpectation[];
   blockers: string[];
   authority_boundary: {
     opl_can_write_domain_truth: false;
@@ -207,6 +257,148 @@ function nestedRecord(root: JsonRecord, path: string[]) {
     current = current[key];
   }
   return isRecord(current) ? current : null;
+}
+
+function externalEvidenceRequestPack(source: JsonRecord, manifest: JsonRecord) {
+  const pack =
+    nestedRecord(source, ['mag_consumer_thinning_contract', 'external_evidence_request_pack'])
+    ?? nestedRecord(source, ['external_evidence_request_pack'])
+    ?? nestedRecord(manifest, ['mag_consumer_thinning_contract', 'external_evidence_request_pack'])
+    ?? nestedRecord(manifest, ['product_entry_manifest', 'mag_consumer_thinning_contract', 'external_evidence_request_pack']);
+  if (!pack) {
+    return null;
+  }
+  const requests = recordList(pack.requests).map((request) => ({
+    request_id:
+      stringValue(request.request_id)
+      ?? stringValue(request.gate_id)
+      ?? stringValue(request.id)
+      ?? 'unknown_external_evidence_request',
+    status:
+      stringValue(request.status)
+      ?? stringValue(request.request_status)
+      ?? 'requested_not_received',
+    required_evidence_refs: unique([
+      ...stringList(request.required_evidence_refs),
+      ...stringList(request.required_refs),
+      ...stringList(request.required_source_refs),
+    ]),
+    required_return_shapes: unique([
+      ...stringList(request.required_return_shapes),
+      ...stringList(request.allowed_return_shapes),
+    ]),
+    required_receipt_shapes: unique([
+      ...stringList(request.required_receipt_shapes),
+      ...stringList(request.required_receipts),
+      ...stringList(request.required_receipt_refs),
+    ]),
+    forbidden_payload_classes: unique([
+      ...stringList(request.forbidden_payload_classes),
+      ...stringList(request.forbidden_completion_claims),
+      ...stringList(request.forbidden_payloads),
+    ]),
+    accepted_payload_policy: stringValue(request.accepted_payload_policy),
+    source_pointer: stringValue(request.source_pointer) ?? stringValue(request.request_ref),
+  }));
+  return {
+    surface_kind: 'opl_external_evidence_request_pack_projection',
+    request_pack_id: stringValue(pack.request_pack_id),
+    owner: stringValue(pack.owner),
+    request_owner: stringValue(pack.request_owner),
+    requested_from: stringList(pack.requested_from),
+    policy: stringValue(pack.policy),
+    requests,
+    summary: {
+      request_count: requests.length,
+      open_request_count: requests.filter((request) => (
+        request.status !== 'received'
+        && request.status !== 'complete'
+        && request.status !== 'verified'
+      )).length,
+    },
+  } satisfies FunctionalExternalEvidenceRequestPack;
+}
+
+function evidenceGateProjection(source: JsonRecord) {
+  const sourceRefs: string[] = [];
+  const collect = (recordValue: JsonRecord | null, pointer: string) => {
+    if (!recordValue) {
+      return {
+        evidenceGateIds: [] as string[],
+        bridgeModuleIds: [] as string[],
+      };
+    }
+    sourceRefs.push(pointer);
+    return {
+      evidenceGateIds: stringList(recordValue.remaining_evidence_gate_ids),
+      bridgeModuleIds: stringList(recordValue.remaining_bridge_module_ids),
+    };
+  };
+  const projections = [
+    collect(nestedRecord(source, ['functional_structure_gap_closure']), '/functional_structure_gap_closure'),
+    collect(nestedRecord(source, ['bridge_exit_gate']), '/bridge_exit_gate'),
+    collect(
+      nestedRecord(source, ['generated_interface_consumption', 'bridge_exit_gate']),
+      '/generated_interface_consumption/bridge_exit_gate',
+    ),
+    collect(
+      nestedRecord(source, ['mag_consumer_thinning_contract', 'generated_surface_handoff', 'bridge_exit_gate']),
+      '/mag_consumer_thinning_contract/generated_surface_handoff/bridge_exit_gate',
+    ),
+  ];
+  const remainingEvidenceGateIds = unique(projections.flatMap((projection) => projection.evidenceGateIds));
+  const remainingBridgeModuleIds = unique(projections.flatMap((projection) => projection.bridgeModuleIds));
+  return {
+    surface_kind: 'opl_domain_evidence_gate_projection',
+    status: remainingEvidenceGateIds.length > 0 || remainingBridgeModuleIds.length > 0
+      ? 'evidence_gates_open'
+      : 'empty',
+    remaining_evidence_gate_ids: remainingEvidenceGateIds,
+    remaining_bridge_module_ids: remainingBridgeModuleIds,
+    source_refs: unique(sourceRefs),
+    summary: {
+      remaining_evidence_gate_count: remainingEvidenceGateIds.length,
+      remaining_bridge_module_count: remainingBridgeModuleIds.length,
+    },
+  } satisfies FunctionalEvidenceGateProjection;
+}
+
+function oplReplacementExpectations(source: JsonRecord, manifest: JsonRecord) {
+  const expectations =
+    recordList(nestedRecord(source, ['mag_consumer_thinning_contract'])?.opl_replacement_expectations);
+  const manifestExpectations =
+    recordList(nestedRecord(manifest, ['mag_consumer_thinning_contract'])?.opl_replacement_expectations);
+  const productManifestExpectations =
+    recordList(
+      nestedRecord(manifest, ['product_entry_manifest', 'mag_consumer_thinning_contract'])
+        ?.opl_replacement_expectations,
+    );
+  return [
+    ...expectations,
+    ...manifestExpectations,
+    ...productManifestExpectations,
+  ]
+    .map((entry) => ({
+      primitive_id:
+        stringValue(entry.primitive_id)
+        ?? stringValue(entry.primitive)
+        ?? 'unknown_opl_replacement_primitive',
+      owner: stringValue(entry.owner),
+      state: stringValue(entry.state),
+      opl_provides: stringList(entry.opl_provides),
+      domain_keeps: unique([
+        ...stringList(entry.mag_keeps),
+        ...stringList(entry.domain_keeps),
+        ...stringList(entry.rca_keeps),
+      ]),
+      implemented_in_domain:
+        typeof entry.implemented_in_mag === 'boolean'
+          ? entry.implemented_in_mag
+          : typeof entry.implemented_in_domain === 'boolean'
+            ? entry.implemented_in_domain
+            : null,
+      source_pointer: '/mag_consumer_thinning_contract/opl_replacement_expectations',
+    } satisfies FunctionalOplReplacementExpectation));
 }
 
 function selectedAuditSource(manifest: JsonRecord) {
@@ -656,6 +848,19 @@ export function buildFunctionalPrivatizationAudit(
       authority_function_inventory: [],
       private_platform_residue_inventory: [],
       required_opl_replacement_primitives: [],
+      external_evidence_request_pack: null,
+      evidence_gate_projection: {
+        surface_kind: 'opl_domain_evidence_gate_projection',
+        status: 'empty',
+        remaining_evidence_gate_ids: [],
+        remaining_bridge_module_ids: [],
+        source_refs: [],
+        summary: {
+          remaining_evidence_gate_count: 0,
+          remaining_bridge_module_count: 0,
+        },
+      },
+      opl_replacement_expectations: [],
       blockers: ['functional_privatization_audit_missing'],
       authority_boundary: {
         opl_can_write_domain_truth: false,
@@ -679,6 +884,19 @@ export function buildFunctionalPrivatizationAudit(
       authority_function_inventory: [],
       private_platform_residue_inventory: [],
       required_opl_replacement_primitives: [],
+      external_evidence_request_pack: null,
+      evidence_gate_projection: {
+        surface_kind: 'opl_domain_evidence_gate_projection',
+        status: 'empty',
+        remaining_evidence_gate_ids: [],
+        remaining_bridge_module_ids: [],
+        source_refs: [],
+        summary: {
+          remaining_evidence_gate_count: 0,
+          remaining_bridge_module_count: 0,
+        },
+      },
+      opl_replacement_expectations: [],
       blockers: ['functional_privatization_audit_missing'],
       authority_boundary: {
         opl_can_write_domain_truth: false,
@@ -704,6 +922,9 @@ export function buildFunctionalPrivatizationAudit(
     authorityFunctionItems,
     privatePlatformResidueItems,
   } = summarize(modules);
+  const evidencePack = externalEvidenceRequestPack(source, manifest);
+  const gates = evidenceGateProjection(source);
+  const replacementExpectations = oplReplacementExpectations(source, manifest);
   return {
     surface_kind: 'opl_functional_privatization_audit',
     version: 'opl-functional-privatization-audit.v1',
@@ -716,6 +937,9 @@ export function buildFunctionalPrivatizationAudit(
     authority_function_inventory: authorityFunctionItems,
     private_platform_residue_inventory: privatePlatformResidueItems,
     required_opl_replacement_primitives: requiredOplReplacementPrimitives,
+    external_evidence_request_pack: evidencePack,
+    evidence_gate_projection: gates,
+    opl_replacement_expectations: replacementExpectations,
     blockers,
     authority_boundary: {
       opl_can_write_domain_truth: false,
