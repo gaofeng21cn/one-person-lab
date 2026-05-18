@@ -13,6 +13,8 @@
 
 这里也吸收 `Ageniti` 最有价值的思想：用一个 app action 定义派生 CLI、MCP、Skill、OpenAI、AI SDK 与 product-entry descriptor。OPL family 采用的是这个 contract 模式，不把 `@ageniti/core` 引入为 runtime dependency。
 
+这里进一步吸收 GraphFlow / GFL 论文中可复用的流程验证模式：先把可静态检查的 stage pack core 准入，再用 `requires` / `ensures` 组合 stage，并把 AI、人、外部系统、artifact mutation、memory writeback 与 domain verdict 放进运行时强制边界。OPL 采用的是这个 stage admission / trust-lane 语言，不引入 GraphFlow / GFL runtime dependency，也不把 GraphFlow 写成 provider、executor、planner、stage runner 或 domain authority。
+
 ## 归属边界
 
 `one-person-lab` 在这里负责：
@@ -188,6 +190,10 @@ canonical classification 固定为：
 
 这个 contract 记录 stage goal、domain-owned stage refs、输入/输出 refs、knowledge refs、skill refs、prompt refs、evaluation refs、handoff metadata、allowed action refs 与 authority boundary。`OPL` 持有 schema、manifest discovery、parity check 和只读 `opl stages list|inspect` 命令。各 domain 仓继续持有实际 route contract、stage execution、memory content、review verdict、quality authority 与 artifacts。
 
+GraphFlow / GFL 的吸收点在这里落成 stage pack admission 规则：`family-stage-control-plane` 和 companion surfaces 共同形成 `verified_static_core`，用于检查 stage id、owner、goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane、authority boundary、launch profile 与 selected executor binding 是否自洽。准入通过只表示 stage pack 可以被 OPL queue / provider / executor 启动；AI 输出、人类批准、外部系统返回、artifact mutation、memory writeback、domain quality / publication / fundability / visual verdict 和 owner receipt 仍属于 `runtime_enforced_boundary`。
+
+`requires` / `ensures` 组合规则只能由显式 refs、human gate decision 或 owner receipt 满足；组合缺口、证据过期、owner 冲突、receipt 冲突或 executor binding 缺失必须进入 `family-conflict-envelope` / human gate / route-back。OPL 可以选择并绑定 executor 来启动已准入 stage pack，默认 executor 仍是 `Codex CLI`；非默认 executor adapter 必须由 stage pack、domain route 或显式 runtime switch 声明，并产出独立 receipt / audit / fail-closed 证据。
+
 对 `MAS` 来说，这意味着在既有 `scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` route contract 之上做 inventory 与 descriptor projection，不重命名或替换这些 route。对 `RCA` 和 `MAG` 来说，第一轮吸收应保持为现有视觉交付与基金写作 surface 上的轻量 stage-pack projection。
 
 ## Domain Memory Ref / Writeback Freeze
@@ -216,6 +222,7 @@ MAS 的 `publication_route_memory`、MAG 的 grant strategy memory、RCA 的 vis
 
 - 统一某一套 LLM wrapper
 - 统一某一套 `Crew` / `Agent` / `Memory` runtime object model
+- 引入 GraphFlow / GFL runtime、graph engine、planner、stage runner 或 executor
 - 固定某个具体模型家族
 - 把 `OPL` 改写成 domain-owned truth 的 runtime owner
 - 暗示跨仓 runtime core ingest 已经完成
