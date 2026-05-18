@@ -40,6 +40,8 @@ export interface FamilyStageListEntry {
   allowed_action_refs: string[];
   knowledge_ref_count: number;
   source_ref_count: number;
+  runtime_assumption_count: number;
+  monitor_ref_count: number;
   freshness: JsonRecord | null;
   trust_lane: string | null;
   admission_status: string | null;
@@ -145,6 +147,8 @@ export function buildFamilyStageListEntry(
     allowed_action_refs: stage.allowed_action_refs,
     knowledge_ref_count: stage.knowledge_refs.length,
     source_ref_count: stage.source_refs.length,
+    runtime_assumption_count: stage.stage_contract?.runtime_assumptions.length ?? 0,
+    monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
     freshness: stage.freshness,
     trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
     admission_status: admissionStage?.status ?? null,
@@ -433,6 +437,13 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
         handoff: stage.handoff,
         source_refs: stage.source_refs,
         freshness: stage.freshness,
+        runtime_assumptions: stage.stage_contract?.runtime_assumptions ?? [],
+        monitor_refs: stage.stage_contract?.monitor_refs ?? [],
+        monitor_summary: {
+          runtime_assumption_count: stage.stage_contract?.runtime_assumptions.length ?? 0,
+          monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
+          authority_boundary: 'projection_only_no_domain_verdict_authority',
+        },
         authority_boundary: stage.authority_boundary,
       },
       parity: buildFamilyStageControlPlaneParity(plane, entry.manifest),

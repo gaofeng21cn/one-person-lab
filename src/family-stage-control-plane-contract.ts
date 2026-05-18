@@ -45,6 +45,8 @@ export interface FamilyStageContract extends JsonRecord {
   boundary_assumptions: string[];
   properties: string[];
   runtime_event_refs?: string[];
+  runtime_assumptions: string[];
+  monitor_refs: FamilyStageSurfaceRef[];
 }
 
 export interface FamilyStageDescriptor {
@@ -191,6 +193,8 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     boundary_assumptions: readStringList(value.boundary_assumptions),
     properties: readStringList(value.properties),
     runtime_event_refs: readStringList(value.runtime_event_refs),
+    runtime_assumptions: readStringList(value.runtime_assumptions),
+    monitor_refs: normalizeSurfaceRefs(value.monitor_refs, 'stage_contract.monitor_refs'),
   };
 }
 

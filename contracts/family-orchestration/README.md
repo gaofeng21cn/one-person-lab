@@ -50,7 +50,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-action-catalog.schema.json`
   - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
 - `family-stage-control-plane.schema.json`
-  - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, and authority boundary
+  - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, runtime-assumption monitor refs, and authority boundary
 - `family-stage-admission.schema.json`
   - OPL-owned stage admission read model for stage contracts, trust lanes, effect-boundary runtime-event requirements, composition obligations, admission findings, and OPL non-authority boundaries
 - `family-stage-proof-bundle.schema.json`
@@ -180,9 +180,11 @@ OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, p
 
 `family-stage-control-plane.schema.json` is the family stage descriptor companion raised from the MAS Stage-Led Autonomy experience. It is intentionally a descriptor and projection surface, not a workflow engine.
 
-The contract records stage goal, domain-owned stage refs, input/output refs, knowledge refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, memory content, review verdicts, quality authority, and artifacts.
+The contract records stage goal, domain-owned stage refs, input/output refs, knowledge refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, runtime assumptions, monitor refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, memory content, review verdicts, quality authority, and artifacts.
 
 The GraphFlow / GFL absorption maps here as stage-pack admission vocabulary. `family-stage-control-plane` plus `family-stage-admission` form the `verified_static_core` read model: stage identity, owner, goal, input/output refs, `requires`, `ensures`, knowledge refs, skill / prompt / evaluation refs, allowed action refs, handoff, trust lane, authority boundary, composition findings, and effect-boundary findings. `opl stages list|inspect` projects this admission state. Passing admission only means the stage pack can become a launch candidate for the OPL queue / provider / executor path.
+
+The GraphFlow / GFL operational-assumption monitor pattern lands here as two lightweight fields: `runtime_assumptions` declares assumptions that must remain visible during launch and runtime, such as source freshness, provider SLO, boundary failure rate, or artifact locator freshness; `monitor_refs` points at domain-owned or OPL-owned monitor projections so App/operator surfaces can see auditable monitor sources. OPL projects the refs and counts only; it does not turn monitor results into domain truth, quality verdicts, publication / fundability / visual verdicts, or artifact authority.
 
 Runtime effects remain in the `runtime_enforced_boundary`: executor output, human approval, external-system responses, artifact mutation, memory writeback, domain quality / publication / fundability / visual verdicts, and owner receipts. Unsatisfied composition, stale evidence, owner conflicts, receipt conflicts, or missing executor binding must become a conflict envelope, human gate, or route-back. `Codex CLI` remains the default executor; non-default adapters require explicit selection plus independent receipt and audit evidence.
 

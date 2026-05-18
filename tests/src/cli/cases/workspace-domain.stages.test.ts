@@ -76,6 +76,10 @@ function buildStageControlPlane(targetDomainId: string, stageId: string, options
           next_owner: options.owner,
           resume_surface_ref: '/product_entry_manifest/session_continuity',
         },
+        stage_contract: {
+          runtime_assumptions: ['source_freshness_within_domain_policy', 'provider_slo_current_before_launch'],
+          monitor_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/runtime_inventory', role: 'runtime_assumption_monitor' }],
+        },
         authority_boundary: {
           domain_truth_owner: options.owner,
           opl_role: 'projection_consumer_only',
@@ -256,11 +260,10 @@ test('family stage control plane is resolved from domain manifests as read-only 
       list.family_stages.stages.map((entry: { stage_id: string }) => entry.stage_id).sort(),
       ['artifact_creation', 'manuscript_authoring', 'proposal_authoring'],
     );
-    assert.equal(
-      list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'manuscript_authoring')
-        ?.admission_status,
-      'needs_contracts',
-    );
+    const manuscriptStage = list.family_stages.stages.find((entry: { stage_id: string }) => entry.stage_id === 'manuscript_authoring');
+    assert.equal(manuscriptStage?.admission_status, 'needs_contracts');
+    assert.equal(manuscriptStage?.runtime_assumption_count, 2);
+    assert.equal(manuscriptStage?.monitor_ref_count, 1);
 
     const inspect = runCli(['stages', 'inspect', '--domain', 'mas', '--stage', 'manuscript_authoring'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -276,6 +279,14 @@ test('family stage control plane is resolved from domain manifests as read-only 
       },
     ]);
     assert.equal(inspect.family_stage.stage.authority_boundary.opl_role, 'projection_consumer_only');
+    const projection = inspect.family_stage.workbench_projection;
+    assert.deepEqual(projection.runtime_assumptions, ['source_freshness_within_domain_policy', 'provider_slo_current_before_launch']);
+    assert.deepEqual(projection.monitor_refs, [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/runtime_inventory', role: 'runtime_assumption_monitor' }]);
+    assert.deepEqual(projection.monitor_summary, {
+      runtime_assumption_count: 2,
+      monitor_ref_count: 1,
+      authority_boundary: 'projection_only_no_domain_verdict_authority',
+    });
     assert.equal(inspect.family_stage.parity.status, 'aligned');
     assert.equal(inspect.family_stage.admission.status, 'needs_contracts');
     assert.equal(inspect.family_stage.admission.inspected_stage.status, 'needs_contracts');
