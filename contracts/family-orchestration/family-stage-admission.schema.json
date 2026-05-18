@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-admission.schema.json",
+  "title": "OPL Family Stage Admission Review",
+  "description": "OPL-owned read model for checking stage contracts, trust lanes, and composition obligations before a stage pack is treated as admitted. It does not execute stages or grant domain truth authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "plane_id",
+    "target_domain_id",
+    "status",
+    "summary",
+    "stage_results",
+    "findings",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_stage_admission_review"
+    },
+    "version": {
+      "const": "family-stage-admission-review.v1"
+    },
+    "plane_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "$ref": "#/$defs/admission_status"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stages_count",
+        "admitted_stages_count",
+        "blocked_stages_count",
+        "needs_contracts_stages_count",
+        "blockers_count",
+        "warnings_count"
+      ],
+      "properties": {
+        "stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "admitted_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_contracts_stages_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockers_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "stage_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_result"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": {
+          "const": "admission_projection_and_contract_checker"
+        },
+        "can_execute_stage": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_domain_ready": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "admission_status": {
+      "type": "string",
+      "enum": [
+        "admitted",
+        "needs_contracts",
+        "blocked"
+      ]
+    },
+    "trust_lane": {
+      "type": "string",
+      "enum": [
+        "opl_framework",
+        "domain_agent",
+        "codex_executor",
+        "ai_decision",
+        "human_gate",
+        "external_system",
+        "app_projection"
+      ]
+    },
+    "stage_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "status",
+        "trust_lane",
+        "static_check_eligible",
+        "effect_boundary",
+        "finding_count",
+        "blocker_count",
+        "warning_count"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "#/$defs/admission_status"
+        },
+        "trust_lane": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/trust_lane"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "static_check_eligible": {
+          "type": "boolean"
+        },
+        "effect_boundary": {
+          "type": "boolean"
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "blocker",
+            "warning"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "family_stage_admission_review",
+      "version": "family-stage-admission-review.v1",
+      "plane_id": "mas_stage_control_plane",
+      "target_domain_id": "med-autoscience",
+      "status": "admitted",
+      "summary": {
+        "stages_count": 1,
+        "admitted_stages_count": 1,
+        "blocked_stages_count": 0,
+        "needs_contracts_stages_count": 0,
+        "blockers_count": 0,
+        "warnings_count": 0
+      },
+      "stage_results": [
+        {
+          "stage_id": "manuscript_authoring",
+          "status": "admitted",
+          "trust_lane": "domain_agent",
+          "static_check_eligible": true,
+          "effect_boundary": false,
+          "finding_count": 0,
+          "blocker_count": 0,
+          "warning_count": 0
+        }
+      ],
+      "findings": [],
+      "authority_boundary": {
+        "opl_role": "admission_projection_and_contract_checker",
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}

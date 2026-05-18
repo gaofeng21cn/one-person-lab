@@ -85,7 +85,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - 引擎注册表
 - 模块注册表
 - 智能体注册表
-- stage descriptor、skill / prompt / evaluation refs、handoff envelope、receipt 与 authority boundary discovery
+- stage descriptor、stage pack admission、requires / ensures composition、skill / prompt / evaluation refs、trust lane、handoff envelope、receipt 与 authority boundary discovery
 - shared module / contract / index registration
 - family skill pack discovery / sync
 - 显式 domain contract dispatch
@@ -205,6 +205,21 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 复杂知识交付步骤的默认建模单位是 stage，而不是函数。MAS 的 AI reviewer、publication quality review、RCA 的 visual review、MAG 的 proposal / fundability review 这类步骤需要有自己的 goal、inputs、prompt / skill refs、evaluation refs、outputs、handoff 与 receipt；authority function 只能签发最小领域 verdict、owner receipt、typed blocker 或 safe action refs，不能暗中承载完整审稿、质量评估或修订建议生成流程。
 
 Stage progression 的 AI-first quality gate 需要独立 reviewer / gate attempt。执行 attempt 与审核 attempt 必须分开调度、分开上下文、分开 receipt；审核 attempt 只能基于显式 refs 和产物判断是否进入下一 stage。缺少独立 gate receipt、gate evidence stale、审核 attempt 与执行 attempt 相同或共享污染上下文时，`family-stage-control-plane` 与下游 projection 都应把 progression 视为 blocked / route-back，而不是 ready。
+
+#### Stage Pack Admission 与 Trust Lanes
+
+GraphFlow / GFL 论文中值得 OPL 吸收的是把可静态验证的流程核心和运行时信任边界拆开的模式。OPL 只吸收这个 contract pattern，不引入 GraphFlow / GFL runtime dependency，不把 GraphFlow graph engine、planner 或 executor 作为 OPL 的 provider、stage runner 或 domain authority。
+
+OPL 的 stage pack admission 应形成独立准入门：一个可启动的 stage pack 必须声明 stage id、owner、stage goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane、authority boundary、launch profile 和 selected executor binding。准入通过只表示这个 pack 可以进入 OPL queue / provider / executor 启动路径，不表示 domain task 已完成、artifact 已可信、memory writeback 已接受或质量 gate 已通过。
+
+`requires` / `ensures` 是 stage 间组合的 contract 语言：下游 stage 的 `requires` 必须能由上游 `ensures`、显式 source / artifact / memory refs、human gate 决策或 owner receipt 满足；缺少匹配、证据过期、owner 冲突或 receipt 冲突时，组合必须进入 typed blocker / route-back / human gate，而不是由 OPL 猜测补齐。这个组合检查服务 admission、handoff 和 App/operator projection，不替代 domain route contract 或质量判断。
+
+OPL 采用两层 trust lane：
+
+- `verified_static_core`：stage descriptor 形状、id、owner、requires / ensures、输入输出 ref shape、allowed action refs、executor binding、authority boundary、manifest provenance 和 schema/parity check。这里可以被 OPL 静态验证或在 admission 时 fail-closed。
+- `runtime_enforced_boundary`：Agent executor 输出、LLM 判断、人类批准、外部系统返回、artifact mutation、memory writeback、domain quality / publication / fundability / visual verdict、owner receipt 和 long-running provider history。这里只能通过独立 attempt、receipt、gate、typed blocker、SLO 和 no-forbidden-write proof 运行时约束，不能写成静态证明已经保证。
+
+Agent 选择、绑定和启动必须发生在已准入 stage pack 之上。默认 selected executor 是 `Codex CLI`；`hermes_agent`、`claude_code` 或其他 executor 只有在 stage pack、domain route 或显式 runtime switch 声明后才能绑定。启动包必须携带 admitted stage pack ref、selected executor、provider attempt id、workspace/runtime roots、identity / idempotency key、consumed refs、authority boundary 和 expected receipt refs；executor 完成只代表 attempt 结束，只有 domain owner receipt / gate receipt 到位才代表 stage progression 可继续。
 
 在顶层定位上，这就是 OPL 对标 DeerFlow、LangGraph、Temporal、Dify、AutoGen、CrewAI 等 agent / workflow framework 时的核心差异：这些框架通常以 LLM 调用、agent 节点、tool call 或 workflow activity 作为原子能力；OPL family framework 以 domain stage 作为语义调度单元，以 Agent executor 作为最小执行单位。`Codex CLI` 是当前第一公民 executor，其他 executor adapter 可以接入但需显式选择并接受回执/审计约束。OPL 因此提供 durable state、queue、handoff、approval、retry、projection 和 observability，并以高价值知识工作的全自动交付为目标，但不替 domain agent 生成领域判断。
 
