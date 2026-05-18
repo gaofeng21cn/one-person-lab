@@ -320,6 +320,56 @@ export function buildInternalCommandSpecs(
       ],
       handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args),
     },
+    'runtime lifecycle apply': {
+      usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>] [--receipt-ref <ref>]',
+      summary:
+        'Expose the App/operator lifecycle apply surface while reusing the OPL family-runtime lifecycle ledger.',
+      examples: [
+        'opl runtime lifecycle apply --mode dry-run --domain medautogrant --action \'{"action_id":"mark-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/tombstone"}\'',
+        'opl runtime lifecycle apply --mode verify --domain medautogrant',
+      ],
+      handler: async (args) => {
+        const output = await runFamilyRuntime(['lifecycle', 'apply', ...args]);
+        if (!('family_runtime_lifecycle_apply' in output)) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'family-runtime lifecycle apply did not return lifecycle apply output.',
+            {
+              command: 'runtime lifecycle apply',
+              output_keys: Object.keys(output),
+            },
+          );
+        }
+        return {
+          runtime_lifecycle_apply: output.family_runtime_lifecycle_apply,
+        };
+      },
+    },
+    'runtime lifecycle reconcile': {
+      usage: 'opl runtime lifecycle reconcile [--domain <domain_id>] [--expected-source-ref <ref>] [--expected-receipt-ref <ref>] [--expected-restore-proof-ref <ref>] [--expected-domain-artifact-mutation-receipt-ref <ref>] [--max-age-ms <n>]',
+      summary:
+        'Expose the App/operator lifecycle reconciliation surface without giving OPL domain delete authority.',
+      examples: [
+        'opl runtime lifecycle reconcile --domain medautogrant --expected-source-ref mag://package/run-1',
+        'opl runtime lifecycle reconcile --domain medautogrant --expected-restore-proof-ref restore-proof:mag-package',
+      ],
+      handler: async (args) => {
+        const output = await runFamilyRuntime(['lifecycle', 'reconcile', ...args]);
+        if (!('family_runtime_lifecycle_reconcile' in output)) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'family-runtime lifecycle reconcile did not return lifecycle reconcile output.',
+            {
+              command: 'runtime lifecycle reconcile',
+              output_keys: Object.keys(output),
+            },
+          );
+        }
+        return {
+          runtime_lifecycle_reconcile: output.family_runtime_lifecycle_reconcile,
+        };
+      },
+    },
     'runtime observability-export': {
       usage: 'opl runtime observability-export [--format json|openmetrics]',
       summary:
