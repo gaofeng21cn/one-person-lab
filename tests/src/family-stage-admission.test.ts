@@ -131,6 +131,9 @@ function buildStagePlane(overrides: {
           properties: ['deterministic_handoff_refs'],
           runtime_assumptions: [],
           monitor_refs: [],
+          source_scope_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
         },
         trust_boundary: {
           lane: 'domain_agent',
@@ -171,6 +174,9 @@ function buildStagePlane(overrides: {
           runtime_event_refs: overrides.reviewRuntimeEventRefs ?? ['runtime_event:publication_review.gate_recorded'],
           runtime_assumptions: [],
           monitor_refs: [],
+          source_scope_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
         },
         trust_boundary: {
           lane: 'human_gate',

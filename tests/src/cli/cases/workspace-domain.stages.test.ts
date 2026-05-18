@@ -3,7 +3,6 @@ import { spawnSync } from 'node:child_process';
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
-
 function buildStageControlPlane(targetDomainId: string, stageId: string, options: {
   owner: string;
   title: string;
@@ -79,6 +78,9 @@ function buildStageControlPlane(targetDomainId: string, stageId: string, options
         stage_contract: {
           runtime_assumptions: ['source_freshness_within_domain_policy', 'provider_slo_current_before_launch'],
           monitor_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/runtime_inventory', role: 'runtime_assumption_monitor' }],
+          source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/source_provenance', role: 'launch_source_scope' }],
+          artifact_scope_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/artifact_inventory', role: 'launch_artifact_scope' }],
+          workspace_scope_refs: [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/workspace_locator', role: 'launch_workspace_scope' }],
         },
         authority_boundary: {
           domain_truth_owner: options.owner,
@@ -264,6 +266,10 @@ test('family stage control plane is resolved from domain manifests as read-only 
     assert.equal(manuscriptStage?.admission_status, 'needs_contracts');
     assert.equal(manuscriptStage?.runtime_assumption_count, 2);
     assert.equal(manuscriptStage?.monitor_ref_count, 1);
+    assert.equal(manuscriptStage?.source_scope_ref_count, 1);
+    assert.equal(manuscriptStage?.artifact_scope_ref_count, 1);
+    assert.equal(manuscriptStage?.workspace_scope_ref_count, 1);
+    assert.equal(manuscriptStage?.guarantee_mode, 'static_admission_only');
 
     const inspect = runCli(['stages', 'inspect', '--domain', 'mas', '--stage', 'manuscript_authoring'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -280,13 +286,11 @@ test('family stage control plane is resolved from domain manifests as read-only 
     ]);
     assert.equal(inspect.family_stage.stage.authority_boundary.opl_role, 'projection_consumer_only');
     const projection = inspect.family_stage.workbench_projection;
+    assert.deepEqual(projection.scope_refs.summary, { source_scope_ref_count: 1, artifact_scope_ref_count: 1, workspace_scope_ref_count: 1 });
     assert.deepEqual(projection.runtime_assumptions, ['source_freshness_within_domain_policy', 'provider_slo_current_before_launch']);
     assert.deepEqual(projection.monitor_refs, [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/runtime_inventory', role: 'runtime_assumption_monitor' }]);
-    assert.deepEqual(projection.monitor_summary, {
-      runtime_assumption_count: 2,
-      monitor_ref_count: 1,
-      authority_boundary: 'projection_only_no_domain_verdict_authority',
-    });
+    assert.deepEqual(projection.guarantee_summary.modes, ['static_admission_only', 'domain_owned_judgment', 'observability_only']);
+    assert.deepEqual(projection.monitor_summary, { runtime_assumption_count: 2, monitor_ref_count: 1, authority_boundary: 'projection_only_no_domain_verdict_authority' });
     assert.equal(inspect.family_stage.parity.status, 'aligned');
     assert.equal(inspect.family_stage.admission.status, 'needs_contracts');
     assert.equal(inspect.family_stage.admission.inspected_stage.status, 'needs_contracts');

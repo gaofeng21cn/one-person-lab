@@ -47,6 +47,9 @@ export interface FamilyStageContract extends JsonRecord {
   runtime_event_refs?: string[];
   runtime_assumptions: string[];
   monitor_refs: FamilyStageSurfaceRef[];
+  source_scope_refs: FamilyStageSurfaceRef[];
+  artifact_scope_refs: FamilyStageSurfaceRef[];
+  workspace_scope_refs: FamilyStageSurfaceRef[];
 }
 
 export interface FamilyStageDescriptor {
@@ -195,6 +198,9 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     runtime_event_refs: readStringList(value.runtime_event_refs),
     runtime_assumptions: readStringList(value.runtime_assumptions),
     monitor_refs: normalizeSurfaceRefs(value.monitor_refs, 'stage_contract.monitor_refs'),
+    source_scope_refs: normalizeSurfaceRefs(value.source_scope_refs, 'stage_contract.source_scope_refs'),
+    artifact_scope_refs: normalizeSurfaceRefs(value.artifact_scope_refs, 'stage_contract.artifact_scope_refs'),
+    workspace_scope_refs: normalizeSurfaceRefs(value.workspace_scope_refs, 'stage_contract.workspace_scope_refs'),
   };
 }
 
