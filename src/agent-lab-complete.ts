@@ -21,6 +21,9 @@ const AUTHORITY_BOUNDARY = {
   can_modify_managed_runtime: false,
   can_promote_default_agent_without_gate: false,
   can_train_or_deploy_model_weights: false,
+  can_write_shared_submission_action: false,
+  can_push_shared_submission_action: false,
+  can_authorize_submission_action: false,
 };
 
 const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {

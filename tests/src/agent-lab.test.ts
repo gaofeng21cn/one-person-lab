@@ -152,11 +152,89 @@ test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for ev
       runtime_event_ledger_refs: ['runtime-event-ledger:mas/dm002/stage-events'],
       provider_switch_hygiene_refs: ['provider-switch-hygiene:mas/dm002/provider-executor'],
       claim_assurance_map_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
+      helper_skill_drift_guard_refs: ['helper-skill-drift-guard:aris/codex-skill-resolver'],
+      assurance_contract_refs: ['assurance-contract:aris/submission-gate'],
+      adversarial_review_gate_refs: ['adversarial-review-gate:aris/cross-model-review'],
+      experiment_queue_recovery_refs: ['experiment-queue-recovery:aris/retry-wave'],
+      publication_aftercare_plan_refs: ['publication-aftercare-plan:aris/resubmit-talk-package'],
       target_editable_surface_refs: ['mechanism-edit-ref:mas/analysis-campaign-queue-routing'],
       evidence_delta_refs: ['evidence-ref:mas/dm002/reviewer-routeback'],
       independent_ai_review_receipt_ref: 'ai-reviewer-receipt:mas/dm002/mechanism-direct-evidence-review',
       version_ledger_ref: 'mechanism-version-ledger:mas/dm002/medical-manuscript-quality',
       rollback_ref: 'mechanism-rollback-ref:mas/agent-lab-medical-manuscript-quality',
+      helper_skill_drift_guard: {
+        surface_kind: 'aris_helper_skill_drift_guard_refs',
+        guard_kind: 'body_free_skill_resolver_drift_guard',
+        body_included: false,
+        policy_mode: 'fail_closed',
+        helper_resolver_chain_refs: ['helper-resolver-chain:aris/codex-skill-mirror'],
+        source_commit_pin_refs: ['source-commit-pin:aris/skills-codex'],
+        drift_test_refs: ['drift-test:aris/codex-skill-mirror'],
+        backfill_command_refs: ['backfill-command:aris/install-aris-codex-reconcile'],
+        advisory_policy_refs: ['advisory-policy:aris/local-skill-reconcile'],
+        fail_closed_policy_refs: ['fail-closed-policy:aris/skill-source-drift'],
+        guard_refs: ['guard-ref:aris/no-silent-helper-drift'],
+        resolver_chain: [
+          {
+            resolver_ref: 'resolver-ref:aris/codex-skill-symlink',
+            layer: 'codex_skill_mirror',
+            policy_mode: 'fail_closed',
+          },
+        ],
+      },
+      assurance_contract: {
+        surface_kind: 'aris_assurance_contract_refs',
+        contract_kind: 'body_free_submission_assurance_contract',
+        body_included: false,
+        assurance_contract_refs: ['assurance-contract:aris/submission-gate'],
+        input_hash_refs: ['input-hash-ref:aris/current-package'],
+        external_verifier_refs: ['external-verifier-ref:aris/cspaper-signal'],
+        currentness_proof_refs: ['currentness-proof-ref:aris/no-stale-provider-switch'],
+        assurance_trace_refs: ['assurance-trace-ref:aris/submission-audit'],
+        submission_gate_refs: ['submission-gate-ref:aris/conference-ready'],
+        no_silent_skip_proof_refs: ['no-silent-skip-proof-ref:aris/assurance-gate'],
+      },
+      adversarial_review_gate: {
+        surface_kind: 'aris_adversarial_review_gate_refs',
+        gate_kind: 'body_free_cross_model_review_gate',
+        body_included: false,
+        adversarial_review_gate_refs: ['adversarial-review-gate:aris/cross-model-review'],
+        attack_thread_refs: ['attack-thread-ref:aris/reviewer-model-family'],
+        defense_thread_refs: ['defense-thread-ref:aris/executor-revision'],
+        judge_receipt_refs: ['judge-receipt-ref:aris/no-shared-context'],
+        negative_evidence_refs: ['negative-evidence-ref:aris/claim-killed-by-seed-study'],
+        unresolved_attack_refs: ['unresolved-attack-ref:aris/no-current-attack'],
+        blocker_refs: ['blocker-ref:aris/no-current-review-blocker'],
+        debate_trace_refs: ['debate-trace-ref:aris/cross-model-review-loop'],
+      },
+      experiment_queue_recovery: {
+        surface_kind: 'aris_experiment_queue_recovery_refs',
+        recovery_kind: 'body_free_experiment_queue_recovery',
+        body_included: false,
+        experiment_queue_recovery_refs: ['experiment-queue-recovery:aris/retry-wave'],
+        queue_refs: ['queue-ref:aris/experiment-wave'],
+        state_refs: ['queue-state-ref:aris/retry-ready'],
+        retry_refs: ['retry-ref:aris/resource-failure-redrive'],
+        retry_reason_refs: ['retry-reason-ref:aris/preempted-gpu'],
+        resource_failure_refs: ['resource-failure-ref:aris/remote-gpu-evicted'],
+        wave_gate_refs: ['wave-gate-ref:aris/next-ablation-wave'],
+        stale_worker_cleanup_refs: ['stale-worker-cleanup-ref:aris/worker-lease-expired'],
+        crash_recovery_refs: ['crash-recovery-ref:aris/experiment-process-restart'],
+        budget_guard_refs: ['budget-guard-ref:aris/max-gpu-hours'],
+      },
+      publication_aftercare_plan: {
+        surface_kind: 'aris_publication_aftercare_plan_refs',
+        plan_kind: 'body_free_publication_aftercare_refs',
+        body_included: false,
+        publication_aftercare_plan_refs: ['publication-aftercare-plan:aris/resubmit-talk-package'],
+        resubmission_plan_refs: ['resubmission-plan-ref:aris/new-venue-route'],
+        venue_route_refs: ['venue-route-ref:aris/neurips-to-iclr'],
+        talk_package_refs: ['talk-package-ref:aris/beamer-pptx'],
+        slides_polish_refs: ['slides-polish-ref:aris/reviewer-facing-talk'],
+        overleaf_sync_refs: ['overleaf-sync-ref:aris/no-write-from-opl'],
+        author_handoff_refs: ['author-handoff-ref:aris/final-human-submit'],
+        external_suite_task_refs: ['external-suite-task-ref:aris/aftercare-smoke'],
+      },
       runtime_event_ledger: {
         surface_kind: 'mas_runtime_event_ledger_refs',
         ledger_kind: 'body_free_runtime_event_ledger_refs',
@@ -243,9 +321,23 @@ test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for ev
   assert.ok(mechanismInputs.runtime_event_ledger);
   assert.ok(mechanismInputs.provider_switch_hygiene);
   assert.ok(mechanismInputs.claim_assurance_map);
+  assert.ok(mechanismInputs.helper_skill_drift_guard);
+  assert.ok(mechanismInputs.assurance_contract);
+  assert.ok(mechanismInputs.adversarial_review_gate);
+  assert.ok(mechanismInputs.experiment_queue_recovery);
+  assert.ok(mechanismInputs.publication_aftercare_plan);
   assert.equal(mechanismInputs.runtime_event_ledger.body_included, false);
   assert.equal(mechanismInputs.provider_switch_hygiene.body_included, false);
   assert.equal(mechanismInputs.claim_assurance_map.body_included, false);
+  assert.equal(mechanismInputs.helper_skill_drift_guard.body_included, false);
+  assert.equal(mechanismInputs.assurance_contract.body_included, false);
+  assert.equal(mechanismInputs.adversarial_review_gate.body_included, false);
+  assert.equal(mechanismInputs.experiment_queue_recovery.body_included, false);
+  assert.equal(mechanismInputs.publication_aftercare_plan.body_included, false);
+  assert.equal(mechanismInputs.helper_skill_drift_guard.can_execute_helper, false);
+  assert.equal(mechanismInputs.assurance_contract.can_authorize_submission_action, false);
+  assert.equal(mechanismInputs.adversarial_review_gate.can_authorize_quality_verdict, false);
+  assert.equal(mechanismInputs.publication_aftercare_plan.can_push_submission, false);
   assert.deepEqual(mechanismInputs.research_memory_graph.claim_refs, [
     'claim-ref:hdl-unit-contamination',
   ]);
@@ -259,6 +351,12 @@ test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for ev
     'provider-provider-switch-hygiene:mas/dm002/local-to-temporal',
   ));
   assert.ok(result.refs.mechanism_evolution_input_refs.includes('claim-assurance:mas/dm002/no-unbacked-claims'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('helper-resolver-chain:aris/codex-skill-mirror'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('assurance-contract:aris/submission-gate'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('attack-thread-ref:aris/reviewer-model-family'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('queue-ref:aris/experiment-wave'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('talk-package-ref:aris/beamer-pptx'));
+  assert.equal(result.refs.mechanism_evolution_input_refs.includes(''), false);
   assert.equal(result.authority_boundary.can_write_memory_body, false);
 });
 
@@ -280,6 +378,11 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.input_surfaces.includes('runtime_event_ledger_refs'));
   assert.ok(contract.input_surfaces.includes('provider_switch_hygiene_refs'));
   assert.ok(contract.input_surfaces.includes('claim_assurance_map_refs'));
+  assert.ok(contract.input_surfaces.includes('helper_skill_drift_guard_refs'));
+  assert.ok(contract.input_surfaces.includes('assurance_contract_refs'));
+  assert.ok(contract.input_surfaces.includes('adversarial_review_gate_refs'));
+  assert.ok(contract.input_surfaces.includes('experiment_queue_recovery_refs'));
+  assert.ok(contract.input_surfaces.includes('publication_aftercare_plan_refs'));
   assert.equal(contract.mechanism_evolution_input_surface.surface_kind,
     'opl_agent_lab_mechanism_evolution_input_refs');
   assert.equal(contract.mechanism_evolution_input_surface.refs_only, true);
@@ -288,15 +391,34 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'provider_switch_hygiene_refs',
   ));
   assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('claim_assurance_map_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('helper_skill_drift_guard_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('assurance_contract_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('adversarial_review_gate_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('experiment_queue_recovery_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('publication_aftercare_plan_refs'));
   assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes('runtime_event_ledger'));
   assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes(
     'provider_switch_hygiene',
   ));
   assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes('claim_assurance_map'));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes(
+    'helper_skill_drift_guard',
+  ));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes('assurance_contract'));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes(
+    'adversarial_review_gate',
+  ));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes(
+    'experiment_queue_recovery',
+  ));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes(
+    'publication_aftercare_plan',
+  ));
   assert.ok(contract.mechanism_evolution_input_surface.consumer_outputs.includes(
     'agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs',
   ));
   assert.ok(contract.mechanism_evolution_input_surface.forbidden_payloads.includes('owner_receipt_body'));
+  assert.ok(contract.mechanism_evolution_input_surface.forbidden_payloads.includes('shared_submission_action'));
   assert.equal(contract.mechanism_surface.surface_kind, 'opl_agent_lab_mechanism_read_model');
   assert.equal(contract.mechanism_surface.cli, 'opl agent-lab mechanism');
   assert.ok(contract.mechanism_surface.fields.includes('mechanism_ref'));
@@ -374,6 +496,11 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(contract.log_driven_candidate_surface.refs_only, true);
   assert.ok(contract.log_driven_candidate_surface.input_refs.includes('usage_log_refs'));
   assert.ok(contract.log_driven_candidate_surface.candidate_kinds.includes('workflow_default'));
+  assert.equal(contract.export_surface.surface_kind, 'opl_agent_lab_export_envelope');
+  assert.ok(contract.export_surface.source_ref_groups.includes('integration_contract_refs'));
+  assert.ok(contract.export_surface.source_ref_groups.includes('review_trace_refs'));
+  assert.ok(contract.export_surface.source_ref_groups.includes('review_evidence_refs'));
+  assert.ok(contract.export_surface.source_ref_groups.includes('log_mined_candidate_refs'));
   assert.ok(contract.longline_surface.summary_fields.includes('ready_to_reduce_domain_longline_tests'));
   assert.ok(contract.longline_surface.repo_test_candidates_to_move_to_opl.includes(
     'provider-hosted soak orchestration',
@@ -745,6 +872,10 @@ test('Agent Lab export envelope maps refs to connector payloads without uploadin
   assert.equal((langfuse.connector_payload as any).datasets.length, 2);
   assert.equal((phoenix.connector_payload as any).experiments.length, 2);
   assert.equal((json.connector_payload as any).suite_results.length, 2);
+  assert.equal(inspect.source_refs.integration_contract_refs.length, 3);
+  assert.equal(inspect.source_refs.review_trace_refs.length, 3);
+  assert.equal(inspect.source_refs.log_mined_candidate_refs.length, 4);
+  assert.ok(inspect.source_refs.review_evidence_refs.includes('evidence-ref:agent-lab/no-forbidden-write-proof'));
   assert.equal(inspect.authority_boundary.can_authorize_export_verdict, false);
 });
 

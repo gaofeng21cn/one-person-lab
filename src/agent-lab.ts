@@ -144,6 +144,9 @@ const AGENT_LAB_AUTHORITY_BOUNDARY = {
   can_write_owner_receipt: false,
   can_modify_managed_runtime: false,
   can_promote_default_agent_without_gate: false,
+  can_write_shared_submission_action: false,
+  can_push_shared_submission_action: false,
+  can_authorize_submission_action: false,
 };
 
 const FORBIDDEN_TRUE_AUTHORITY_FLAGS = [
@@ -157,6 +160,9 @@ const FORBIDDEN_TRUE_AUTHORITY_FLAGS = [
   'can_write_owner_receipt',
   'can_modify_managed_runtime',
   'can_promote_default_agent_without_gate',
+  'can_write_shared_submission_action',
+  'can_push_shared_submission_action',
+  'can_authorize_submission_action',
   'opl_can_write_domain_truth',
   'opl_can_write_memory_body',
   'opl_can_write_owner_receipt',
@@ -164,6 +170,9 @@ const FORBIDDEN_TRUE_AUTHORITY_FLAGS = [
   'opl_can_authorize_domain_ready',
   'opl_can_authorize_quality_verdict',
   'opl_can_authorize_export_verdict',
+  'opl_can_write_shared_submission_action',
+  'opl_can_push_shared_submission_action',
+  'opl_can_authorize_submission_action',
 ];
 
 const FORBIDDEN_MEMORY_BODY_KEYS = [
@@ -186,6 +195,10 @@ function stringList(value: unknown) {
 
 function unique(values: string[]) {
   return [...new Set(values)];
+}
+
+function policyMode(value: unknown) {
+  return value === 'advisory' || value === 'fail_closed' ? value : undefined;
 }
 
 function hasForbiddenMemoryBody(value: unknown): boolean {
@@ -295,6 +308,111 @@ function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
       no_unbacked_claim_proof_refs: stringList(inputs.claim_assurance_map.no_unbacked_claim_proof_refs),
     }
     : undefined;
+  const helperSkillDriftGuard = isRecord(inputs.helper_skill_drift_guard)
+    ? {
+      surface_kind: inputs.helper_skill_drift_guard.surface_kind,
+      guard_kind: inputs.helper_skill_drift_guard.guard_kind,
+      body_included: inputs.helper_skill_drift_guard.body_included === true,
+      policy_mode: policyMode(inputs.helper_skill_drift_guard.policy_mode),
+      helper_resolver_chain_refs: stringList(inputs.helper_skill_drift_guard.helper_resolver_chain_refs),
+      source_commit_pin_refs: stringList(inputs.helper_skill_drift_guard.source_commit_pin_refs),
+      drift_test_refs: stringList(inputs.helper_skill_drift_guard.drift_test_refs),
+      backfill_command_refs: stringList(inputs.helper_skill_drift_guard.backfill_command_refs),
+      advisory_policy_refs: stringList(inputs.helper_skill_drift_guard.advisory_policy_refs),
+      fail_closed_policy_refs: stringList(inputs.helper_skill_drift_guard.fail_closed_policy_refs),
+      guard_refs: stringList(inputs.helper_skill_drift_guard.guard_refs),
+      resolver_chain: Array.isArray(inputs.helper_skill_drift_guard.resolver_chain)
+        ? inputs.helper_skill_drift_guard.resolver_chain
+          .filter(isRecord)
+          .map((entry) => ({
+            resolver_ref: typeof entry.resolver_ref === 'string' ? entry.resolver_ref : undefined,
+            layer: typeof entry.layer === 'string' ? entry.layer : undefined,
+            source_commit_pin_ref: typeof entry.source_commit_pin_ref === 'string'
+              ? entry.source_commit_pin_ref
+              : undefined,
+            drift_test_ref: typeof entry.drift_test_ref === 'string' ? entry.drift_test_ref : undefined,
+            backfill_command_ref: typeof entry.backfill_command_ref === 'string'
+              ? entry.backfill_command_ref
+              : undefined,
+            policy_mode: policyMode(entry.policy_mode),
+          }))
+          .filter((entry) => entry.resolver_ref)
+        : [],
+      can_execute_helper: false,
+      can_modify_helper_source: false,
+      can_execute_backfill_command: false,
+    }
+    : undefined;
+  const assuranceContract = isRecord(inputs.assurance_contract)
+    ? {
+      surface_kind: inputs.assurance_contract.surface_kind,
+      contract_kind: inputs.assurance_contract.contract_kind,
+      body_included: inputs.assurance_contract.body_included === true,
+      assurance_contract_refs: stringList(inputs.assurance_contract.assurance_contract_refs),
+      input_hash_refs: stringList(inputs.assurance_contract.input_hash_refs),
+      external_verifier_refs: stringList(inputs.assurance_contract.external_verifier_refs),
+      currentness_proof_refs: stringList(inputs.assurance_contract.currentness_proof_refs),
+      assurance_trace_refs: stringList(inputs.assurance_contract.assurance_trace_refs),
+      submission_gate_refs: stringList(inputs.assurance_contract.submission_gate_refs),
+      no_silent_skip_proof_refs: stringList(inputs.assurance_contract.no_silent_skip_proof_refs),
+      can_authorize_quality_verdict: false,
+      can_authorize_submission_action: false,
+    }
+    : undefined;
+  const adversarialReviewGate = isRecord(inputs.adversarial_review_gate)
+    ? {
+      surface_kind: inputs.adversarial_review_gate.surface_kind,
+      gate_kind: inputs.adversarial_review_gate.gate_kind,
+      body_included: inputs.adversarial_review_gate.body_included === true,
+      adversarial_review_gate_refs: stringList(inputs.adversarial_review_gate.adversarial_review_gate_refs),
+      attack_thread_refs: stringList(inputs.adversarial_review_gate.attack_thread_refs),
+      defense_thread_refs: stringList(inputs.adversarial_review_gate.defense_thread_refs),
+      judge_receipt_refs: stringList(inputs.adversarial_review_gate.judge_receipt_refs),
+      negative_evidence_refs: stringList(inputs.adversarial_review_gate.negative_evidence_refs),
+      unresolved_attack_refs: stringList(inputs.adversarial_review_gate.unresolved_attack_refs),
+      blocker_refs: stringList(inputs.adversarial_review_gate.blocker_refs),
+      debate_trace_refs: stringList(inputs.adversarial_review_gate.debate_trace_refs),
+      can_authorize_quality_verdict: false,
+    }
+    : undefined;
+  const experimentQueueRecovery = isRecord(inputs.experiment_queue_recovery)
+    ? {
+      surface_kind: inputs.experiment_queue_recovery.surface_kind,
+      recovery_kind: inputs.experiment_queue_recovery.recovery_kind,
+      body_included: inputs.experiment_queue_recovery.body_included === true,
+      experiment_queue_recovery_refs: stringList(
+        inputs.experiment_queue_recovery.experiment_queue_recovery_refs,
+      ),
+      queue_refs: stringList(inputs.experiment_queue_recovery.queue_refs),
+      state_refs: stringList(inputs.experiment_queue_recovery.state_refs),
+      retry_refs: stringList(inputs.experiment_queue_recovery.retry_refs),
+      retry_reason_refs: stringList(inputs.experiment_queue_recovery.retry_reason_refs),
+      resource_failure_refs: stringList(inputs.experiment_queue_recovery.resource_failure_refs),
+      wave_gate_refs: stringList(inputs.experiment_queue_recovery.wave_gate_refs),
+      stale_worker_cleanup_refs: stringList(inputs.experiment_queue_recovery.stale_worker_cleanup_refs),
+      crash_recovery_refs: stringList(inputs.experiment_queue_recovery.crash_recovery_refs),
+      budget_guard_refs: stringList(inputs.experiment_queue_recovery.budget_guard_refs),
+    }
+    : undefined;
+  const publicationAftercarePlan = isRecord(inputs.publication_aftercare_plan)
+    ? {
+      surface_kind: inputs.publication_aftercare_plan.surface_kind,
+      plan_kind: inputs.publication_aftercare_plan.plan_kind,
+      body_included: inputs.publication_aftercare_plan.body_included === true,
+      publication_aftercare_plan_refs: stringList(
+        inputs.publication_aftercare_plan.publication_aftercare_plan_refs,
+      ),
+      resubmission_plan_refs: stringList(inputs.publication_aftercare_plan.resubmission_plan_refs),
+      venue_route_refs: stringList(inputs.publication_aftercare_plan.venue_route_refs),
+      talk_package_refs: stringList(inputs.publication_aftercare_plan.talk_package_refs),
+      slides_polish_refs: stringList(inputs.publication_aftercare_plan.slides_polish_refs),
+      overleaf_sync_refs: stringList(inputs.publication_aftercare_plan.overleaf_sync_refs),
+      author_handoff_refs: stringList(inputs.publication_aftercare_plan.author_handoff_refs),
+      external_suite_task_refs: stringList(inputs.publication_aftercare_plan.external_suite_task_refs),
+      can_push_submission: false,
+      can_authorize_submission_action: false,
+    }
+    : undefined;
 
   return {
     surface_kind: inputs.surface_kind,
@@ -308,6 +426,11 @@ function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
     runtime_event_ledger_refs: stringList(inputs.runtime_event_ledger_refs),
     provider_switch_hygiene_refs: stringList(inputs.provider_switch_hygiene_refs),
     claim_assurance_map_refs: stringList(inputs.claim_assurance_map_refs),
+    helper_skill_drift_guard_refs: stringList(inputs.helper_skill_drift_guard_refs),
+    assurance_contract_refs: stringList(inputs.assurance_contract_refs),
+    adversarial_review_gate_refs: stringList(inputs.adversarial_review_gate_refs),
+    experiment_queue_recovery_refs: stringList(inputs.experiment_queue_recovery_refs),
+    publication_aftercare_plan_refs: stringList(inputs.publication_aftercare_plan_refs),
     target_editable_surface_refs: stringList(inputs.target_editable_surface_refs),
     evidence_delta_refs: stringList(inputs.evidence_delta_refs),
     independent_ai_review_receipt_ref: typeof inputs.independent_ai_review_receipt_ref === 'string'
@@ -320,11 +443,21 @@ function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
     runtime_event_ledger: runtimeEventLedger,
     provider_switch_hygiene: providerExecutorSwitchHygiene,
     claim_assurance_map: claimAssurance,
+    helper_skill_drift_guard: helperSkillDriftGuard,
+    assurance_contract: assuranceContract,
+    adversarial_review_gate: adversarialReviewGate,
+    experiment_queue_recovery: experimentQueueRecovery,
+    publication_aftercare_plan: publicationAftercarePlan,
     body_included: researchMemoryGraph?.body_included === true
       || analysisQueueManifest?.body_included === true
       || runtimeEventLedger?.body_included === true
       || providerExecutorSwitchHygiene?.body_included === true
-      || claimAssurance?.body_included === true,
+      || claimAssurance?.body_included === true
+      || helperSkillDriftGuard?.body_included === true
+      || assuranceContract?.body_included === true
+      || adversarialReviewGate?.body_included === true
+      || experimentQueueRecovery?.body_included === true
+      || publicationAftercarePlan?.body_included === true,
     authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
   };
 }
@@ -341,6 +474,11 @@ function mechanismEvolutionInputRefs(value: ReturnType<typeof mechanismEvolution
     ...value.runtime_event_ledger_refs,
     ...value.provider_switch_hygiene_refs,
     ...value.claim_assurance_map_refs,
+    ...value.helper_skill_drift_guard_refs,
+    ...value.assurance_contract_refs,
+    ...value.adversarial_review_gate_refs,
+    ...value.experiment_queue_recovery_refs,
+    ...value.publication_aftercare_plan_refs,
     ...value.target_editable_surface_refs,
     ...value.evidence_delta_refs,
     ...(value.independent_ai_review_receipt_ref ? [value.independent_ai_review_receipt_ref] : []),
@@ -379,6 +517,52 @@ function mechanismEvolutionInputRefs(value: ReturnType<typeof mechanismEvolution
     ...(value.claim_assurance_map?.contradiction_refs ?? []),
     ...(value.claim_assurance_map?.uncertainty_refs ?? []),
     ...(value.claim_assurance_map?.no_unbacked_claim_proof_refs ?? []),
+    ...(value.helper_skill_drift_guard?.helper_resolver_chain_refs ?? []),
+    ...(value.helper_skill_drift_guard?.source_commit_pin_refs ?? []),
+    ...(value.helper_skill_drift_guard?.drift_test_refs ?? []),
+    ...(value.helper_skill_drift_guard?.backfill_command_refs ?? []),
+    ...(value.helper_skill_drift_guard?.advisory_policy_refs ?? []),
+    ...(value.helper_skill_drift_guard?.fail_closed_policy_refs ?? []),
+    ...(value.helper_skill_drift_guard?.guard_refs ?? []),
+    ...(value.helper_skill_drift_guard?.resolver_chain.flatMap((entry) => [
+      entry.resolver_ref ?? '',
+      entry.source_commit_pin_ref ?? '',
+      entry.drift_test_ref ?? '',
+      entry.backfill_command_ref ?? '',
+    ]) ?? []),
+    ...(value.assurance_contract?.assurance_contract_refs ?? []),
+    ...(value.assurance_contract?.input_hash_refs ?? []),
+    ...(value.assurance_contract?.external_verifier_refs ?? []),
+    ...(value.assurance_contract?.currentness_proof_refs ?? []),
+    ...(value.assurance_contract?.assurance_trace_refs ?? []),
+    ...(value.assurance_contract?.submission_gate_refs ?? []),
+    ...(value.assurance_contract?.no_silent_skip_proof_refs ?? []),
+    ...(value.adversarial_review_gate?.adversarial_review_gate_refs ?? []),
+    ...(value.adversarial_review_gate?.attack_thread_refs ?? []),
+    ...(value.adversarial_review_gate?.defense_thread_refs ?? []),
+    ...(value.adversarial_review_gate?.judge_receipt_refs ?? []),
+    ...(value.adversarial_review_gate?.negative_evidence_refs ?? []),
+    ...(value.adversarial_review_gate?.unresolved_attack_refs ?? []),
+    ...(value.adversarial_review_gate?.blocker_refs ?? []),
+    ...(value.adversarial_review_gate?.debate_trace_refs ?? []),
+    ...(value.experiment_queue_recovery?.experiment_queue_recovery_refs ?? []),
+    ...(value.experiment_queue_recovery?.queue_refs ?? []),
+    ...(value.experiment_queue_recovery?.state_refs ?? []),
+    ...(value.experiment_queue_recovery?.retry_refs ?? []),
+    ...(value.experiment_queue_recovery?.retry_reason_refs ?? []),
+    ...(value.experiment_queue_recovery?.resource_failure_refs ?? []),
+    ...(value.experiment_queue_recovery?.wave_gate_refs ?? []),
+    ...(value.experiment_queue_recovery?.stale_worker_cleanup_refs ?? []),
+    ...(value.experiment_queue_recovery?.crash_recovery_refs ?? []),
+    ...(value.experiment_queue_recovery?.budget_guard_refs ?? []),
+    ...(value.publication_aftercare_plan?.publication_aftercare_plan_refs ?? []),
+    ...(value.publication_aftercare_plan?.resubmission_plan_refs ?? []),
+    ...(value.publication_aftercare_plan?.venue_route_refs ?? []),
+    ...(value.publication_aftercare_plan?.talk_package_refs ?? []),
+    ...(value.publication_aftercare_plan?.slides_polish_refs ?? []),
+    ...(value.publication_aftercare_plan?.overleaf_sync_refs ?? []),
+    ...(value.publication_aftercare_plan?.author_handoff_refs ?? []),
+    ...(value.publication_aftercare_plan?.external_suite_task_refs ?? []),
   ]);
 }
 
