@@ -43,6 +43,17 @@ export type FamilyRuntimeCommandInput =
   }
   | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
   | { mode: 'provider_slo_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean }
+  | {
+    mode: 'lifecycle_apply';
+    input: {
+      mode: 'dry-run' | 'apply' | 'verify';
+      target_domain_id: string;
+      source_ref?: string;
+      manifest_ref?: string;
+      receipt_ref?: string;
+      actions?: Record<string, unknown>[];
+    };
+  }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
@@ -304,6 +315,71 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       }
     }
     return { mode: 'provider_slo_tick', providerKind, force };
+  }
+  if (mode === 'lifecycle' && rest[0] === 'apply') {
+    let applyMode: 'dry-run' | 'apply' | 'verify' = 'dry-run';
+    let domainId = '';
+    let sourceRef: string | undefined;
+    let manifestRef: string | undefined;
+    let receiptRef: string | undefined;
+    const actions: Record<string, unknown>[] = [];
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--mode' && (value === 'dry-run' || value === 'apply' || value === 'verify')) {
+        applyMode = value;
+        index += 1;
+      } else if (token === '--domain' && value) {
+        domainId = assertDomainId(value);
+        index += 1;
+      } else if (token === '--source-ref' && value) {
+        sourceRef = value;
+        index += 1;
+      } else if (token === '--manifest-ref' && value) {
+        manifestRef = value;
+        index += 1;
+      } else if (token === '--receipt-ref' && value) {
+        receiptRef = value;
+        index += 1;
+      } else if (token === '--action' && value) {
+        actions.push(parsePayload(value));
+        index += 1;
+      } else if (token === '--action-file' && value) {
+        actions.push(parsePayload(fs.readFileSync(path.resolve(value), 'utf8')));
+        index += 1;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime lifecycle apply option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>] [--receipt-ref <ref>]',
+        });
+      }
+    }
+    if (!domainId) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply requires --domain.', {
+        required: ['--domain'],
+      });
+    }
+    if (applyMode !== 'verify' && actions.length === 0) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply requires at least one --action outside verify mode.', {
+        required: ['--action'],
+      });
+    }
+    if (applyMode === 'verify' && actions.length > 0) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle apply --mode verify reads receipts and cannot include --action.', {
+        mutually_exclusive: ['--mode verify', '--action'],
+      });
+    }
+    return {
+      mode: 'lifecycle_apply',
+      input: {
+        mode: applyMode,
+        target_domain_id: domainId,
+        source_ref: sourceRef,
+        manifest_ref: manifestRef,
+        receipt_ref: receiptRef,
+        actions,
+      },
+    };
   }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };
@@ -696,6 +772,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|intake|tick|enqueue|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }

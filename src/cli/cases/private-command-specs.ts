@@ -350,6 +350,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime status',
         'opl family-runtime status --provider temporal',
         'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
+        'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
         'opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator \'{"workspace_root":"/tmp/mas"}\'',
         'opl family-runtime attempt create --domain medautoscience --stage scout --provider temporal --workspace-locator \'{"workspace_root":"/tmp/mas"}\' --start',
         'opl family-runtime attempt start <stage_attempt_id>',
