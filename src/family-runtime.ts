@@ -11,12 +11,15 @@ import {
 import {
   ensureFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
-  inspectFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
-import { buildTemporalWorkerLifecycleContract } from './family-runtime-temporal-readiness.ts';
 import { runTemporalServiceCommand } from './family-runtime-temporal-service-command.ts';
+import {
+  runSchedulerTick,
+  runTemporalSchedulerCadenceCommand,
+} from './family-runtime-scheduler.ts';
+import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
 import {
   createStageAttempt,
   inspectStageAttempt,
@@ -41,7 +44,6 @@ import {
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
   DEFAULT_MAX_ATTEMPTS,
-  QUEUE_SCHEMA_VERSION,
   familyRuntimePaths,
   inspectTask,
   insertEvent,
@@ -97,149 +99,6 @@ async function queryTemporalStageAttemptReadModel(attempt: ReturnType<typeof que
     }
     throw error;
   }
-}
-
-async function runTemporalSchedulerCadenceCommand(
-  db: DatabaseSync,
-  paths: ReturnType<typeof familyRuntimePaths>,
-  input: {
-    mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger';
-    providerKind?: FamilyRuntimeProviderKind;
-  },
-) {
-  const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
-  if (providerKind !== 'temporal') {
-    throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler cadence supports only --provider temporal.', {
-      provider_kind: providerKind,
-      allowed_provider_kinds: ['temporal'],
-    });
-  }
-  const provider = await inspectFamilyRuntimeProvidersWithLifecycle(providerKind, paths, {
-    managedProviderProjection: readMasManagedProviderProjection(),
-  });
-  const selected = provider.providers.temporal;
-  if (!selected?.ready) {
-    return {
-      surface_kind: 'opl_family_runtime_scheduler_cadence',
-      provider_kind: providerKind,
-      cadence_owner: 'provider_backed_family_runtime',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      command: input.mode,
-      status: 'blocked_provider_not_ready',
-      provider_runtime: provider,
-      blocker: {
-        blocker_kind: 'platform_dependency',
-        blocker_id: selected?.degraded_reason ?? 'temporal_provider_not_ready',
-        next_repair_command: 'opl family-runtime service start --provider temporal && opl family-runtime worker start --provider temporal',
-      },
-      authority_boundary: {
-        can_install_domain_daemon: false,
-        can_write_domain_truth: false,
-        can_authorize_quality_verdict: false,
-        can_authorize_export_verdict: false,
-      },
-    };
-  }
-  const temporal = await temporalProviderModule();
-  const action = input.mode === 'scheduler_install'
-    ? await temporal.ensureTemporalSchedulerCadence(paths)
-    : input.mode === 'scheduler_remove'
-      ? await temporal.removeTemporalSchedulerCadence(paths)
-      : input.mode === 'scheduler_trigger'
-        ? await temporal.triggerTemporalSchedulerCadence(paths)
-        : await temporal.inspectTemporalSchedulerCadence(paths);
-  insertEvent(db, {
-    eventType: `temporal_scheduler_${input.mode.replace('scheduler_', '')}`,
-    source: 'opl-cli',
-    payload: action,
-  });
-  return {
-    surface_kind: 'opl_family_runtime_scheduler_cadence',
-    provider_kind: providerKind,
-    cadence_owner: 'provider_backed_family_runtime',
-    scheduler_owner: 'opl_provider_runtime_manager',
-    command: input.mode,
-    status: 'ok',
-    action,
-    provider_runtime: provider,
-    replaces_domain_daemon_surface: {
-      medautoscience: 'local LaunchAgent / supervision tick is cleanup-only legacy residue',
-      medautogrant: 'repo-local runtime journal cadence is not a production scheduler',
-      redcube: 'repo-local sidecar/session supervision is handler diagnostic only',
-    },
-    authority_boundary: {
-      can_install_domain_daemon: false,
-      can_write_domain_truth: false,
-      can_write_domain_memory_body: false,
-      can_authorize_quality_verdict: false,
-      can_authorize_export_verdict: false,
-    },
-  };
-}
-
-async function buildStatusPayload(
-  db: DatabaseSync,
-  paths = familyRuntimePaths(),
-  requestedProvider = resolveFamilyRuntimeProviderKind(),
-) {
-  const selectedProvider = resolveFamilyRuntimeProviderKind(requestedProvider);
-  const providerRuntime = await inspectFamilyRuntimeProvidersWithLifecycle(selectedProvider, paths, {
-    managedProviderProjection: readMasManagedProviderProjection(),
-  });
-  const provider = providerRuntime.providers[selectedProvider]
-    ?? (() => {
-      throw new FrameworkContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
-        selected_provider: selectedProvider,
-      });
-    })();
-  const fullOnlineReady = selectedProvider !== 'local_sqlite' && provider.ready;
-
-  return {
-    version: 'g2',
-    family_runtime: {
-      surface_id: 'opl_family_runtime',
-      provider_model: 'provider_backed_stage_attempt_runtime',
-      configured_provider: selectedProvider,
-      state: {
-        state_dir: paths.state_dir,
-        runtime_dir: paths.root,
-        queue_db: paths.queue_db,
-        queue_schema_version: QUEUE_SCHEMA_VERSION,
-      },
-      readiness: {
-        provider_ready: provider.ready,
-        full_online_ready: fullOnlineReady,
-        durable_online_ready: fullOnlineReady,
-        production_provider_required: 'temporal',
-        selected_provider_role: providerRuntime.provider_catalog[selectedProvider]?.provider_role ?? 'unknown',
-        local_sqlite_is_dev_ci_offline_only: selectedProvider === 'local_sqlite',
-        selected_provider_can_replace_domain_daemons: selectedProvider === 'temporal' && provider.ready,
-        degraded: !provider.ready,
-        degraded_reason: provider.degraded_reason,
-      },
-      provider_runtime: {
-        ...providerRuntime,
-        selected: provider,
-        temporal_worker_lifecycle: selectedProvider === 'temporal'
-          ? buildTemporalWorkerLifecycleContract()
-          : null,
-      },
-      opl_owner: {
-        queue: 'typed_family_queue',
-        stage_attempt_ledger: 'provider_attempt_control_metadata_only',
-        dispatch: 'domain_adapter_dispatch',
-        notification_policy: 'all_delivery_events_are_written_to_local_inbox_first',
-        forbidden_authority: [
-          'domain_truth',
-          'domain_quality_verdict',
-          'domain_artifact_or_publication_gate',
-        ],
-      },
-      domain_adapters: DOMAIN_ADAPTERS,
-      queue: queueSummary(db),
-      stage_attempts: stageAttemptSummary(db),
-    },
-  };
 }
 
 function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
@@ -620,62 +479,6 @@ function runTick(
   };
 }
 
-async function runSchedulerTick(
-  db: DatabaseSync,
-  paths: ReturnType<typeof familyRuntimePaths>,
-  input: {
-    providerKind?: FamilyRuntimeProviderKind;
-    force?: boolean;
-    limit?: number;
-    hydrate?: boolean;
-  },
-) {
-  const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
-  if (providerKind !== 'temporal') {
-    throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler tick currently supports only --provider temporal.', {
-      provider_kind: providerKind,
-      allowed_provider_kinds: ['temporal'],
-    });
-  }
-  const source = 'opl-provider-scheduler';
-  const providerSlo = await runTemporalProviderSloTick(db, paths, {
-    force: input.force ?? false,
-  });
-  const queueTick = runTick(db, paths, source, input.limit ?? 10, input.hydrate ?? true);
-  insertEvent(db, {
-    eventType: 'opl_scheduler_tick_completed',
-    source,
-    payload: {
-      provider_kind: providerKind,
-      force: input.force ?? false,
-      hydrate: input.hydrate ?? true,
-      limit: input.limit ?? 10,
-      provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
-      queue_selected_count: queueTick.selected_count,
-      queue_dispatches_count: queueTick.dispatches.length,
-    },
-  });
-  return {
-    surface_kind: 'opl_family_runtime_scheduler_tick',
-    scheduler_owner: 'opl_provider_runtime_manager',
-    cadence_owner: 'provider_backed_family_runtime',
-    provider_kind: providerKind,
-    tick_source: source,
-    provider_slo: providerSlo,
-    queue_tick: queueTick,
-    authority_boundary: {
-      opl: 'scheduler_cadence_queue_and_provider_slo_owner',
-      domain: 'truth_quality_artifact_gate_owner',
-      can_install_domain_daemon: false,
-      can_write_domain_truth: false,
-      can_write_domain_memory_body: false,
-      can_authorize_quality_verdict: false,
-      can_authorize_export_verdict: false,
-      provider_completion_is_domain_ready: false,
-    },
-  };
-}
-
 function approveTask(
   db: DatabaseSync,
   input: { taskId: string; decision: 'approve' | 'deny'; reason?: string },
@@ -725,10 +528,10 @@ export async function runFamilyRuntime(args: string[]) {
   const { db, paths } = openQueueDb();
   try {
     if (parsed.mode === 'status') {
-      return await buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
+      return await buildFamilyRuntimeStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
     }
     if (parsed.mode === 'doctor') {
-      const status = (await buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind))).family_runtime;
+      const status = (await buildFamilyRuntimeStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind))).family_runtime;
       return {
         version: 'g2',
         family_runtime_doctor: {
@@ -906,7 +709,12 @@ export async function runFamilyRuntime(args: string[]) {
     if (parsed.mode === 'scheduler_tick') {
       return {
         version: 'g2',
-        family_runtime_scheduler_tick: await runSchedulerTick(db, paths, parsed),
+        family_runtime_scheduler_tick: await runSchedulerTick(
+          db,
+          paths,
+          parsed,
+          (source, limit, hydrate) => runTick(db, paths, source, limit, hydrate),
+        ),
       };
     }
     if (
