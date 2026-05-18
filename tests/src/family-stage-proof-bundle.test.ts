@@ -324,11 +324,12 @@ test('stage proof bundle exposes needs-contracts admission without pretending pr
 test('stage proof bundle schema freezes authority boundary away from domain truth and artifact body', () => {
   const schema = readJson('contracts/family-orchestration/family-stage-proof-bundle.schema.json');
   const properties = schema.properties as Record<string, JsonRecord>;
+  const defs = schema.$defs as Record<string, JsonRecord>;
   const authoritySchema = properties.authority_boundary as JsonRecord;
   const authorityProperties = authoritySchema.properties as Record<string, JsonRecord>;
   const examples = schema.examples as JsonRecord[];
   const authority = examples[0]?.authority_boundary as JsonRecord;
-  const metricsSchema = properties.proof_runtime_metrics as JsonRecord;
+  const metricsSchema = defs.proof_runtime_metrics as JsonRecord;
   const metrics = examples[0]?.proof_runtime_metrics as JsonRecord;
   const metricsAuthority = metrics.authority_boundary as JsonRecord;
 

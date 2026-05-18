@@ -1,0 +1,94 @@
+import {
+  assert,
+  buildManifestCommand,
+  createFamilyContractsFixtureRoot,
+  fs,
+  loadFamilyManifestFixtures,
+  os,
+  path,
+  repoRoot,
+  runCli,
+  test,
+} from '../helpers.ts';
+import {
+  attachManifestSurface,
+  bindFamilyManifests,
+  withPackCompilerReadySurfaces,
+} from './domain-pack-compiler-fixtures.ts';
+
+test('domain pack compiler emits aligned generated artifact drift manifests for admitted packs', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-drift-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  bindFamilyManifests(env);
+
+  const list = runCli(['agents', 'pack-compiler'], env);
+  assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_aligned_count, 3);
+  assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_detected_count, 0);
+
+  const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+  const driftManifest = mas.domain_pack_compiler.generated_artifact_drift_manifest;
+  assert.equal(driftManifest.surface_kind, 'opl_generated_artifact_drift_manifest');
+  assert.equal(driftManifest.status, 'aligned');
+  assert.equal(driftManifest.domain_pack_source_inputs_fingerprint.startsWith('sha256:'), true);
+  assert.equal(driftManifest.generated_bundle_fingerprint.startsWith('sha256:'), true);
+  assert.deepEqual(driftManifest.generated_from, mas.domain_pack_compiler.generated_interface_bundle.generated_from);
+  assert.deepEqual(driftManifest.drift_findings, []);
+  assert.equal(driftManifest.authority_boundary.opl_owns_generated_surfaces, true);
+  assert.equal(driftManifest.authority_boundary.opl_owns_domain_truth, false);
+  assert.equal(driftManifest.authority_boundary.opl_can_write_domain_truth, false);
+});
+
+test('domain pack compiler marks generated artifact drift when blockers remain', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-drift-blocked-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const blockedMas = attachManifestSurface(
+    withPackCompilerReadySurfaces(fixtures.medautoscience, {
+      agentId: 'mas',
+      targetDomainId: 'med-autoscience',
+      owner: 'MedAutoScience',
+      actionId: 'study_packet',
+      stageId: 'study_stage',
+      memoryRefId: 'mas_publication_route_memory',
+    }),
+    'functional_privatization_audit',
+    {
+      surface_kind: 'functional_privatization_audit',
+      target_domain_id: 'med-autoscience',
+      modules: [
+        {
+          module_id: 'repo_owned_generic_scheduler',
+          classification: 'generic_scheduler_or_daemon',
+          owner: 'med-autoscience',
+          code_paths: ['src/med_autoscience/controllers/supervision_scheduler.py'],
+          active_callers: ['default runtime'],
+          active_caller_status: 'active_default_caller',
+          migration_action: 'must move scheduler owner to OPL',
+        },
+      ],
+    },
+  );
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(blockedMas),
+  ], env);
+
+  const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+  assert.equal(mas.domain_pack_compiler.generated_artifact_drift_manifest.status, 'drift_detected');
+  assert.equal(
+    mas.domain_pack_compiler.generated_artifact_drift_manifest.drift_findings.includes(
+      'compiler_blocker:functional_privatization_audit_has_generic_residue_or_blocker',
+    ),
+    true,
+  );
+});

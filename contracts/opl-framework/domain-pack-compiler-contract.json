@@ -101,6 +101,39 @@
       }
     }
   },
+  "generated_artifact_drift_manifest": {
+    "surface_kind": "opl_generated_artifact_drift_manifest",
+    "version": "opl-generated-artifact-drift-manifest.v1",
+    "owner": "one-person-lab",
+    "status_values": [
+      "aligned",
+      "drift_detected"
+    ],
+    "fingerprints": {
+      "algorithm": "sha256:stable-json",
+      "domain_pack_source_inputs_fingerprint": "fingerprint over descriptor/source inputs consumed by the pack compiler",
+      "generated_bundle_fingerprint": "fingerprint over the current OPL generated interface bundle"
+    },
+    "generated_from": [
+      "family_action_catalog",
+      "family_stage_control_plane",
+      "domain_memory_descriptor",
+      "runtime_surfaces",
+      "functional_privatization_audit",
+      "generated_surface_handoff",
+      "product_entry_manifest_descriptor",
+      "sidecar_descriptor"
+    ],
+    "drift_detection_policy": "aligned when the current generated bundle is produced from resolved compiler inputs and any observed manifest fingerprints match the current fingerprints; drift_detected when compiler blockers exist or observed fingerprints differ",
+    "authority_boundary": {
+      "opl_owns_generated_surfaces": true,
+      "opl_owns_domain_truth": false,
+      "opl_can_write_domain_truth": false,
+      "opl_can_write_memory_body": false,
+      "opl_can_authorize_quality_or_export": false,
+      "opl_can_mutate_domain_artifacts": false
+    }
+  },
   "ready_conditions": [
     "domain_manifest_resolved",
     "required_descriptor_surfaces_resolved",
@@ -117,6 +150,7 @@
   ],
   "framework_owns": [
     "generated_surface_handoff_projection",
+    "generated_artifact_drift_manifest",
     "descriptor_surface_readiness_projection",
     "generated_cli_mcp_product_entry_sidecar_status_workbench_harness_metadata",
     "generic_runtime_surface_admission_gate",
