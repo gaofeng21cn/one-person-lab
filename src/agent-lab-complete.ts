@@ -727,6 +727,13 @@ function optimizerCandidates(results: AgentLabSuiteResult[]) {
         domain_id: run.domain_id,
         risk_tier: riskTier,
         evidence_refs: run.improvement_candidate.evidence_refs,
+        source_refs: unique([
+          result.result_id,
+          run.run_id,
+          ...run.improvement_candidate.evidence_refs,
+          ...run.mechanism_evolution_input_refs,
+        ]),
+        mechanism_evolution_input_refs: run.mechanism_evolution_input_refs,
         allowed_change_scope: run.improvement_candidate.allowed_change_scope,
         promotion_gate_ref: run.improvement_candidate.promotion_gate_ref,
         gate_status: run.promotion_gate.gate_status,
