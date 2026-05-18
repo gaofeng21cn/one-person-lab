@@ -139,6 +139,90 @@ test('family-runtime lifecycle apply exposes dry-run apply and verify modes', ()
   }
 });
 
+test('family-runtime lifecycle reconcile exposes refs-only drift and delete-ready proof', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-lifecycle-reconcile-'));
+  try {
+    runCli([
+      'family-runtime',
+      'lifecycle',
+      'apply',
+      '--mode',
+      'apply',
+      '--domain',
+      'medautogrant',
+      '--source-ref',
+      'mag://package/run-1',
+      '--action',
+      JSON.stringify({
+        action_id: 'record-domain-package-receipt',
+        action_kind: 'artifact_receipt_index',
+        owner_scope: 'domain_artifact_mutation_receipt_ref',
+        target_ref: 'mag://package/submission.zip',
+        restore_proof_refs: ['restore-proof:mag-package'],
+        domain_artifact_mutation_receipt_refs: ['mag://receipt/package-cleanup'],
+      }),
+    ], familyRuntimeEnv(stateRoot));
+
+    const reconciled = runCli([
+      'family-runtime',
+      'lifecycle',
+      'reconcile',
+      '--domain',
+      'medautogrant',
+      '--expected-source-ref',
+      'mag://package/run-1',
+      '--expected-domain-artifact-mutation-receipt-ref',
+      'mag://receipt/package-cleanup',
+      '--expected-restore-proof-ref',
+      'restore-proof:mag-package',
+    ], familyRuntimeEnv(stateRoot));
+
+    assert.equal(reconciled.family_runtime_lifecycle_reconcile.status, 'reconciled');
+    assert.equal(reconciled.family_runtime_lifecycle_reconcile.summary.drift_detected, false);
+    assert.equal(reconciled.family_runtime_lifecycle_reconcile.summary.can_execute_delete, false);
+    assert.equal(
+      reconciled.family_runtime_lifecycle_reconcile.summary.can_execute_domain_physical_delete,
+      false,
+    );
+    assert.equal(reconciled.family_runtime_lifecycle_reconcile.summary.opl_cleanup_apply_can_execute, true);
+    assert.equal(
+      reconciled.family_runtime_lifecycle_reconcile.delete_ready_proof.proof_status,
+      'domain_owner_receipt_refs_observed',
+    );
+    assert.equal(
+      reconciled.family_runtime_lifecycle_reconcile.delete_ready_proof.opl_cleanup_apply_ready,
+      true,
+    );
+    assert.equal(
+      reconciled.family_runtime_lifecycle_reconcile.authority_boundary.opl_can_delete_domain_repo_files,
+      false,
+    );
+
+    const drift = runCli([
+      'family-runtime',
+      'lifecycle',
+      'reconcile',
+      '--domain',
+      'medautogrant',
+      '--expected-source-ref',
+      'mag://package/missing',
+    ], familyRuntimeEnv(stateRoot));
+
+    assert.equal(drift.family_runtime_lifecycle_reconcile.status, 'drift_detected');
+    assert.deepEqual(
+      drift.family_runtime_lifecycle_reconcile.missing_refs.source_refs,
+      ['mag://package/missing'],
+    );
+    assert.equal(
+      drift.family_runtime_lifecycle_reconcile.delete_ready_proof.proof_status,
+      'blocked_lifecycle_drift_detected',
+    );
+    assert.equal(drift.family_runtime_lifecycle_reconcile.summary.opl_cleanup_apply_can_execute, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime local provider status does not inspect a bad Hermes binary path', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-local-provider-'));
   try {
@@ -151,7 +235,32 @@ test('family-runtime local provider status does not inspect a bad Hermes binary 
 
     assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
     assert.equal(output.family_runtime.readiness.provider_ready, true);
+    assert.equal(output.family_runtime.readiness.full_online_ready, false);
+    assert.equal(output.family_runtime.readiness.durable_online_ready, false);
+    assert.equal(output.family_runtime.readiness.local_sqlite_is_dev_ci_offline_only, true);
+    assert.equal(output.family_runtime.readiness.selected_provider_can_replace_domain_daemons, false);
     assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.ready, true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime doctor degrades explicit local sqlite because it cannot replace domain daemons', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-local-doctor-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'doctor', '--provider', 'local_sqlite'],
+      familyRuntimeEnv(stateRoot),
+    );
+
+    assert.equal(output.family_runtime_doctor.doctor_status, 'degraded');
+    assert.deepEqual(output.family_runtime_doctor.blockers, ['local_sqlite_is_dev_ci_offline_only']);
+    assert.equal(output.family_runtime_doctor.status.readiness.provider_ready, true);
+    assert.equal(output.family_runtime_doctor.status.readiness.full_online_ready, false);
+    assert.equal(
+      output.family_runtime_doctor.status.readiness.selected_provider_can_replace_domain_daemons,
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

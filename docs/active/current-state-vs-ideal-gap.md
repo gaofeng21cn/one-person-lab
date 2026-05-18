@@ -17,86 +17,102 @@ Date: `2026-05-18`
 
 OPL family 的目标形态已经明确：`OPL Framework` 是完整智能体开发/运行框架；`One Person Lab App` 是面向人的工作台；`MAS`、`MAG`、`RCA` 是基于 OPL 的标准 Foundry Agents。标准 Agent 目标形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。
 
-当前 OPL 已具备 framework 主干：domain descriptor / stage / action / memory discovery、Temporal-backed provider code、typed family queue、stage attempt ledger、typed closeout、production closeout read model、functional runtime harness、generic substrate projection、domain pack compiler handoff、private functional audit read model、Agent Lab 控制面和 checkout-clean command runner。Temporal 是 production online runtime 的必需 provider；`local_sqlite` 只能作为 dev/CI/offline diagnostic baseline，不是生产 daemon 或 readiness fallback。
+当前 OPL 已具备 framework 主干：domain descriptor / stage / action / memory discovery、Temporal-backed provider code、OPL-owned provider scheduler cadence/tick surface、typed family queue、stage attempt ledger、typed closeout、safe runtime action shell、lifecycle refs-only SQLite index、App/operator drilldown read model、production closeout read model、functional runtime harness、generic substrate projection、domain pack compiler active-caller proof、private functional audit read model、Agent Lab 控制面和 checkout-clean command runner。Temporal 是 production online runtime 的必需 provider；`local_sqlite` 只能作为 dev/CI/offline diagnostic baseline，不是生产 daemon 或 readiness fallback。
 
-当前仍不能写成“功能/结构差距为 0”。OPL 的通用 read model 和 pack compiler handoff 已经说明“应该怎么看”和“应该怎么生成”，但 generated surface 还没有成为四仓生产默认 caller，App/workbench drilldown 还没有产品化，provider SLO / repair cadence 还没有长期自动或受监督闭环，domain repo 内仍有迁移桥和 legacy residue 需要 active caller cutover、refs-only 收薄、物理删除或 tombstone。
+当前仍不能写成“family 全部功能/结构差距为 0”。Fresh OPL CLI 证据显示，MAS/MAG/RCA 的 `opl_generated_agent_interface_bundle.status=ready`，并且 generated blocks 覆盖 CLI、MCP、Skill、product-entry、OpenAI tool 和 AI SDK。这只表示 OPL 能从 domain-owned action / stage / memory / audit source 生成接口描述，且生成描述只路由到 domain handler target；它不表示生产默认 caller 已全面迁走，也不表示旧 repo-local CLI/MCP/product-entry/sidecar/status/session/workbench/lifecycle 面已经退役。
 
-MAS/MAG/RCA 当前均已被 OPL 识别为标准 domain agent 的消费方，但三仓仍保留各自历史私有功能实现。它们可以为了目标态重构；不能以“已有 active caller”为理由保留通用平台面。保留在 domain 内的程序面必须能解释为领域 truth、quality/export verdict、artifact mutation authorization、memory accept/reject、source readiness、owner receipt signer 或 domain-native helper implementation，并走 OPL 标准 ABI。
+OPL 的通用 read model、pack compiler proof、scheduler cadence/tick、safe action shell 和 lifecycle index 已经落成 framework surface；本机 fresh evidence 已显示 `opl family-runtime status` 默认选中 `temporal`，Temporal managed service / worker ready，`local_sqlite` 只有显式 env / 参数选择时才进入 dev/CI/offline diagnostic path；`opl family-runtime scheduler install --provider temporal` 已创建 `opl-family-runtime-provider-scheduler`，`scheduler trigger` 已返回 triggered，`scheduler tick --provider temporal --force` 已生成新的 `production_residency_proven` provider SLO execution receipt 并通过 OPL typed queue dispatch domain tasks；`launchctl list` 与 `~/Library/LaunchAgents` fresh check 未发现 MAS / MedAutoScience supervision scheduler label 或 plist。这些 proof 是 framework substrate 和迁移输入，不等于 MAS/MAG/RCA 已成为结构完全闭合的标准 OPL Agent；三仓仍需要把生产默认 caller、App/workbench 消费、lifecycle / artifact / memory 对账、private platform residue 和 legacy cleanup 继续收敛到目标态。
+
+MAS/MAG/RCA 当前均已被 OPL 识别为标准 domain agent 的消费方。MAS 已关闭未分类 generic owner 回流，`classification_gap_count=0`、`active_private_generic_residue_count=0`，但仍有 5 个功能/结构 follow-through gate：generated surface active caller cutover、refs-only adapter thinning、legacy cleanup physical retirement、OPL App/workbench drilldown 和 lifecycle locator/retention/restore ledger reconciliation。MAG 当前 repo-side handler / refs-only / authority boundary 已闭合，剩外部默认 caller、App 消费、live soak 和 owner receipt scaleout 证据。RCA 当前 generated/hosted shell 消费边界已闭合，剩 controlled visual-stage long soak 和 legacy physical cleanup 证据。不能以“已有 active caller”为理由保留通用平台面。保留在 domain 内的程序面必须能解释为领域 truth、quality/export verdict、artifact mutation authorization、memory accept/reject、source readiness、owner receipt signer 或 domain-native helper implementation，并走 OPL 标准 ABI。
 
 ## OPL 功能/结构差距
 
 | 差距 | 当前状态 | 完成口径 |
 | --- | --- | --- |
-| Production provider 默认面 | `temporal` 是 production required provider；`local_sqlite` 已降为 dev/CI/offline diagnostic baseline。 | 保持生产默认只走 Temporal/provider-backed path；旧 daemon/local path 只保留诊断或退役清理语境。 |
-| Generated surface production consumption | `domain-pack-compiler` 已能投影 CLI/MCP/product-entry/sidecar/status/workbench/harness handoff metadata。 | 让 MAS/MAG/RCA 的生产默认 caller 消费 OPL generated/hosted surface；domain repo 手写 wrapper 退成 domain handler、refs-only adapter 或删除。 |
-| App / workbench drilldown | OPL 已有 route/attempt/substrate/evidence read model。 | App 做成人可用的 route graph、review queue、artifact gallery、package/export lifecycle、memory refs、functional privatization audit、quality/readiness、SLO 和 owner-aware action routing。 |
-| Lifecycle / artifact / memory shell | refs-only lifecycle index、generic substrate projection 和 domain receipt refs 已有基础。 | OPL-owned locator/retention/restore ledger、refs-only SQLite index 与 domain-owned artifact mutation / memory writeback receipt 持续对账。 |
-| Provider SLO / repair cadence | provider proof 和 SLO receipt projection 已可读。 | 建立自动或受监督 cadence、overdue repair execution receipt、restart/re-query/signal/history 长窗口证据。 |
-| Domain private platform residue | `functional_privatization_audit` 已分类 MAS/MAG/RCA 的标准 pack、authority function 与 private platform residue。 | 对 private platform residue 执行 OPL 上收、generated surface 替换、refs-only 收薄、diagnostic cleanup 或 tombstone；不保留兼容 alias/facade。 |
-| Legacy physical cleanup | physical skeleton / legacy cleanup gate 已机器化条件。 | 在 replacement parity、no-active-caller、provenance/history/tombstone 证据齐备后，逐项物理删除 active-path residue 或迁入 tombstone。 |
+| Production provider 默认面 | `temporal` 是 production required provider；fresh CLI 显示默认 `configured_provider=temporal` 且 managed service / worker ready；显式 `OPL_FAMILY_RUNTIME_PROVIDER=local_sqlite` 时 `full_online_ready=false`、`selected_provider_can_replace_domain_daemons=false`。 | 保持生产默认只走 Temporal/provider-backed path；旧 daemon/local path 只保留诊断或退役清理语境。 |
+| Generated surface production consumption | `domain-pack-compiler` 已能投影 CLI/MCP/product-entry/sidecar/status/workbench/harness handoff metadata 与 active-caller target proof；MAS/MAG/RCA generated descriptor 均可读。MAG/RCA repo-side generated/handler target consumption 已闭合；MAS 仍把 generated surface active caller cutover 列为 5 个 functional follow-through gate 之一。descriptor ready / active-caller target proof 只能证明可迁移、可路由、可 fail closed，不等于 live owner chain、domain ready 或 long soak 完成。 | MAS 关闭 5 个 functional follow-through gate；MAG/RCA 继续补外部 default caller / App / live evidence；domain repo 手写 wrapper 退成 domain handler、refs-only adapter、必要 authority function 或删除。 |
+| App / workbench drilldown | OPL CLI/runtime 已有 route/attempt/source/artifact/memory/quality/SLO/safe action read model；One Person Lab App root contract 已绑定 `runtime_tray_snapshot.app_operator_drilldown`，AionUI runtime 页面已接入 `AppOperatorDrilldown` 组件消费该 read model。当前仍缺稳定页面级工作台、真实用户路径、发布包/截图证据和 domain owner-aware drilldown 消费。 | App 继续补真实用户路径、截图/发布包证据和长时 operator evidence；domain repo 不复制通用工作台，只暴露 owner truth / receipt / refs。 |
+| App managed environment startup maintenance | 产品路径口径已收敛为 App / OPL-managed modules 优先，developer checkout 只能显式 override；`opl module update` 与 `opl skill sync` 已能手动更新 managed modules、Codex skills 和 plugin metadata projection。 | App 启动维护自动检查 managed modules、skills、plugin cache 和 provider state；clean managed checkout 可自动 fast-forward、health check、skill sync 和刷新投影；dirty/ahead/diverged/no-upstream/health-failed/restart-required 必须进入可见人工处理状态。 |
+| Developer Mode / Agent Lab repair route | `opl system developer-supervisor` 已提供 OPL state 级配置入口，默认包含 `developer_apply_safe` 模式和 `gaofeng21cn` 自动开启 login 候选；Agent Lab 已是 framework-level eval / improvement control plane。 | App 设置页暴露 Developer Mode 开关；安装期检测 GitHub login 可默认开启；任务默认可挂外围 AI 巡检；repo developer / collaborator 可进入受控 repo 修复提交路径，非 developer 走 fork / PR；Agent Lab 输出 evidence、owner route、candidate fix 和 PR refs，不写 domain truth 或 managed runtime。 |
+| Lifecycle / artifact / memory shell | refs-only lifecycle index、guarded apply、restore/cleanup proof refs、generic substrate projection 和 domain receipt refs 已有基础。当前证明的是 OPL 可以持有 locator/index/proof refs，不等于三仓 lifecycle、artifact mutation 与 memory writeback 已完成目标态对账。 | MAS/MAG/RCA 都在真实 workspace 中持续对账 OPL-owned locator/retention/restore ledger 与 domain-owned artifact mutation / memory writeback receipt。 |
+| Provider SLO / repair cadence | provider proof 和 SLO receipt projection 已可读；Temporal schedule `opl-family-runtime-provider-scheduler` 已在本机创建，`scheduler trigger` 返回 triggered，`scheduler tick --provider temporal --force` 已生成 fresh `production_residency_proven` SLO receipt。 | 长窗口内持续证明 schedule cadence、overdue repair execution receipt、restart/re-query/signal/history 和 domain owner-chain dispatch 不退化。 |
+| Domain private platform residue | `functional_privatization_audit` 已分类 MAS/MAG/RCA 的标准 pack、authority function 与 private platform residue。MAS 分类与禁回流已清零，但 functional follow-through 仍为 5；MAG/RCA repo-side边界更干净，但 live evidence / physical cleanup 仍未全部闭合。 | 对 MAS/MAG/RCA 剩余 private platform residue 执行 OPL 上收、generated surface 替换、refs-only 收薄、diagnostic cleanup 或 tombstone；不保留兼容 alias/facade。 |
+| Necessary private authority function audit | 三仓均有 private functional surface policy 或 functional privatization audit。 | 对 MAS/MAG/RCA 的 retained functions 逐项证明 AI-first boundary、active caller、cannot absorb reason、receipt/blocker/ref 输出、no-forbidden-write 和退役门；质量、创作、评审、路线判断不允许由机械函数替代 stage output。 |
+| Legacy physical cleanup | physical skeleton / legacy cleanup gate 已机器化条件；MAS local LaunchAgent 当前没有本机 active label / plist；MAS repo 内相关路径只能保留 explicit cleanup diagnostic / tombstone 角色。 | 在 replacement parity、no-active-caller、provenance/history/tombstone 证据齐备后，继续清理 MAG/RCA active-path residue；MAS 同类事项只作为 cleanup diagnostic、tombstone/provenance 或 regression follow-up 阅读。 |
 | New Agent scaffold / template | `opl agents scaffold` 和 standard skeleton contract 已能描述/校验目标骨架。 | 将 scaffold、pack compiler、private surface policy 和 verification lane 用作新 Agent 默认开发路径，并用真实新 Agent 消费验证。 |
 
-## MAS 功能/结构差距
+## MAS 功能/结构差距与证据门
 
-MAS 理想形态是医学研究 `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal authority functions`。当前 MAS 已完成 default scheduler owner 迁到 OPL replacement，并把 functional consumer boundary 投影到 manifest、sidecar 和 supervision projection；但这只是分类和禁回流 guard。
+MAS 理想形态是医学研究 `Declarative Medical Research Pack + OPL generated/hosted surfaces + minimal authority functions`。当前 MAS 已关闭未分类 generic owner 回流，`classification_gap_count=0`、`active_private_generic_residue_count=0`；当前 `functional_structure_gap_count=5`，不能写成 MAS 标准化 OPL Agent 结构 gap 已关闭为 0。
 
 MAS 当前功能/结构差距仍包括：
 
-- OPL generated surface active caller cutover 尚未完成，MAS hand-written CLI/MCP/Skill/product-entry/sidecar/status/workbench/projection shell 仍是迁移桥。
-- SQLite/lifecycle、paper outbox、storage maintenance、workspace/source intake、publication-route memory transport、artifact lifecycle、Portal/workbench、terminal/log projection、runtime supervisor scan/dispatch loop 仍需 refs-only 收薄或上收到 OPL primitive。
-- local LaunchAgent/status/remove cleanup diagnostic 与 workspace-local wrappers 仍需 physical retirement 或 tombstone。
-- OPL App drilldown 与 lifecycle locator/retention/restore ledger 对账仍未产品化。
-- AI-first quality gate 必须保持 executor agent 与 reviewer/auditor agent 分离；程序只能校验、持久化、签 receipt、阻止越权，不能用规则或 fallback 替代医学质量判断。
+- 生产默认 caller 需要继续迁到 OPL generated/hosted CLI、MCP、Skill/product-entry、sidecar、status、session、workbench 和 harness；repo-local wrapper 只能退成 domain handler、refs-only adapter、必要 authority function 或 tombstone。
+- App/workbench drilldown 需要由 OPL/App 承接为人用工作台，MAS 只提供 source/artifact/memory refs、quality verdict、owner receipt 和 human gate refs。
+- lifecycle / artifact / memory 需要持续对账 OPL-owned locator/retention/restore ledger 与 MAS-owned artifact mutation、memory accept/reject 和 publication-route receipt。
+- private functions 需要逐项证明是 domain-native helper 或 authority function，例如绘图、统计、artifact materialization、publication quality、source readiness、memory decision 和 owner receipt signer；能由 OPL primitive 或 AI-first stage 承接的，不保留 MAS 私有平台面。
+
+MAS 当前测试/证据差距包括：
+
+- 多条真实 paper line 的 provider-hosted guarded apply、progress delta、AI reviewer update、artifact delta、human gate、stop-loss 或 stable typed blocker。
+- Temporal/provider 长窗口下 MAS owner-chain dispatch、restart/re-query/signal/history 和 no-forbidden-write proof。
+- MAS memory / artifact / lifecycle 在真实 workspace 中形成 accepted/rejected writeback、cleanup/restore/retention 和 artifact mutation receipt。
+- publication quality、AI reviewer decision、artifact mutation authorization、publication-route memory accept/reject 和 source readiness 继续由独立 reviewer/auditor 或 AI-first record 证明；程序只做校验、物化、签 receipt 和越权阻断。
 
 ## MAG 功能/结构差距
 
 MAG 理想形态是基金申请 `Declarative Grant Pack + OPL generated/hosted surfaces + minimal authority functions`。当前 MAG 已有 direct app skill、domain entry、product-entry、sidecar、6-stage control plane、receipt writer、lifecycle guarded apply、grant transition oracle 和 consumer/thinning contract。
 
-MAG 当前功能/结构差距仍包括：
+MAG 当前 repo-side handler / refs-only / authority boundary 已闭合；剩余不应写成 MAG 仍持有通用 framework owner。MAG 当前仍需补的是外部默认 caller、App 消费、controlled live soak、owner receipt scaleout 和 legacy cleanup evidence：
 
-- OPL generated surface 尚未生产消费，hand-written product/status/user-loop/sidecar/grouped CLI/projection/lifecycle adapter 仍需迁到 generated surface。
+- OPL generated interface descriptor 已 ready，但 hand-written product/status/user-loop/sidecar/grouped CLI/projection/lifecycle adapter 仍是迁移桥；生产默认 caller 仍需迁到 generated surface 或 domain handler target。
 - Workspace/source intake shell、grant strategy memory locator/writeback transport、package/export lifecycle shell、route/quality/status/product wrapper、operator workbench、observability/SLO 仍需由 OPL/App 承接。
 - Submission-ready package 和 export verdict 继续归 MAG；OPL/App 只能显示 package refs、gap report、manual portal boundary 和 owner receipt。
 - Legacy runtime/journal/probe/compat residue 仍需 no-active-caller scan、replacement parity、provenance proof 和 physical cleanup。
+- 必要私有函数仍需逐项 AI-first guard：fundability、authoring quality/export、package authority、memory accept/reject、transition oracle 和 owner receipt 留在 MAG；质量/创作/评审 verdict 必须由 AI-first grant stage artifact 支撑，代码只做 schema validator、materializer、receipt signer、guard 和 refs projection。
 
 ## RCA 功能/结构差距
 
 RCA 理想形态是视觉交付 `Declarative Visual Pack + OPL generated/hosted surfaces + minimal authority functions`。当前 RCA 已有 direct route、service-safe domain entry、product sidecar、visual transition spec/evaluator、workspace receipt inventory、operator evidence readiness、stability read-model consumer projection 和 private functional audit。
 
-RCA 当前功能/结构差距仍包括：
+RCA 当前 generated/hosted shell consumption 已闭合；剩余不应写成 RCA 仍持有长期通用 framework owner。RCA 当前仍需补的是 controlled visual-stage long soak、workspace receipt scaleout、legacy physical cleanup 和 owner-chain evidence：
 
-- OPL generated surface 未生产消费，repo-local CLI/MCP/product-entry/session/sidecar/status/workbench wrapper 的 active caller 仍需迁到 OPL generated/hosted surface。
+- OPL generated interface descriptor 已 ready，但 repo-local CLI/MCP/product-entry/session/sidecar/status/workbench wrapper 的 active caller 仍需迁到 OPL generated/hosted surface 或收成 domain handler target。
 - Focused hosted attempt 仍需接成真实 hosted path；transition receipt fixture 只是对账形状 proof。
 - Artifact gallery/handoff shell、review/repair transport、workspace/source shell、native-helper generic envelope、operator projection/App drilldown、lifecycle/receipt inventory 仍需由 OPL/App 承接。
 - Managed-run/session store、attempt/state-machine runner、artifact export lifecycle 等当前只能作为 refs-only adapter、visual authority implementation 或迁移桥阅读。
 - Legacy compatibility residue 仍需 replacement proof、no-active-caller proof 和 physical cleanup。
+- 必要私有函数仍需逐项 AI-first guard：source readiness、communication/visual direction、review/export verdict、artifact mutation authorization、visual memory accept/reject、owner receipt signer 和 native helper implementation 留在 RCA；故事、视觉方向、页面判断、review verdict 和 repair judgment 必须由 AI-authored stage artifact 持有，机械检查只表达 blocker 与 rerun target。
 
 ## 测试/证据差距
 
 | 证据门 | 当前读法 | 完成口径 |
 | --- | --- | --- |
 | OPL provider long SLO | Temporal production proof 可证明当前 provider residency。 | 长窗口 cadence、repair execution receipt、restart/re-query/signal/history 和 operator SLO 证据稳定。 |
-| MAS real paper apply | 已有 read-only / stable blocker / receipt consumption 证据。 | 多条真实 paper line 产生 progress delta、AI reviewer update、artifact delta、human gate、stop-loss 或 stable typed blocker，并保留 no-forbidden-write proof。 |
+| MAS real paper apply | 已有 read-only / stable blocker / receipt consumption 证据；这证明边界可读，不证明 production caller、App/workbench、lifecycle/memory/artifact 对账已结构闭合。 | 多条真实 paper line 产生 progress delta、AI reviewer update、artifact delta、human gate、stop-loss 或 stable typed blocker，并保留 no-forbidden-write proof。 |
 | MAG controlled grant soak | 已有 receipt reconciliation 和 transition oracle proof surface。 | 真实 OPL-hosted grant-stage attempt 持续返回 owner receipt、typed blocker 或 no-regression evidence。 |
 | RCA controlled visual soak | 已有 transition/evidence fixture 和 refs-only projection。 | 真实 artifact-producing owner receipt、visual memory body reuse、workspace receipt scaleout 和 no-regression evidence 形成重复 proof。 |
-| Memory / artifact apply | OPL 只能读 refs，domain 持有 body 和 verdict。 | MAS/MAG/RCA 在真实 workspace 中形成 accepted/rejected memory writeback、cleanup/restore/retention、artifact mutation receipt 和 operator drilldown。 |
+| Memory / artifact apply | OPL 只能读 refs，domain 持有 body 和 verdict；descriptor、read model 或 provider proof 不等于真实 workspace apply 已完成。 | MAS/MAG/RCA 在真实 workspace 中形成 accepted/rejected memory writeback、cleanup/restore/retention、artifact mutation receipt 和 operator drilldown。 |
 | Cross-family regression | 三仓都有 consumer boundary。 | generated surface caller migration 后，direct/hosted parity、no-forbidden-write、legacy no-active-caller 和 release/dist consumption 反复通过。 |
 
 ## 最短实施顺序
 
 1. 固定 production provider 口径：Temporal 是生产必需 substrate；local provider 与旧 daemon 只保留 dev/CI/offline diagnostic 或 cleanup 语境。
-2. 完成 OPL generated surface 的生产消费：从 domain descriptor / stage / action / memory / transition / receipt metadata 派生 CLI、MCP、Skill/product-entry、sidecar、status、session、workbench 和 harness，并迁走 domain repo 手写 wrapper 的 active caller。
-3. 按 `functional_privatization_audit` 逐项收薄 domain private platform residue：能由 OPL 承接的迁走，不能声明化的收成最小 authority function，无 active caller 的旧面直接删除或 tombstone。
-4. 产品化 OPL App/workbench：让人能 drill down route graph、attempt、source refs、artifact refs、memory refs、quality/readiness、SLO、repair 和 owner-aware action。
-5. 接通 lifecycle / artifact / memory 持续对账：OPL 只写自有 locator/index/ledger，domain 写 owner receipt、artifact mutation receipt、memory accept/reject receipt。
-6. 完成 physical skeleton / legacy cleanup：replacement parity、no-active-caller、provenance 和 tombstone 条件齐备后，不保留兼容入口。
-7. 最后跑长时 provider/domain/App 验收：MAS paper、MAG grant、RCA visual 依次扩大到真实 workspace 和长窗口 SLO。
+2. 对 MAS/MAG/RCA 完成 OPL generated surface 的生产消费：从 domain descriptor / stage / action / memory / transition / receipt metadata 派生 CLI、MCP、Skill/product-entry、sidecar、status、session、workbench 和 harness，并迁走 domain repo 手写 wrapper 的 active caller。
+3. 按 `functional_privatization_audit` 逐项清 MAS/MAG/RCA private platform residue：能由 OPL 承接的迁走，不能声明化的收成最小 authority function，无 active caller 的旧面直接删除或 tombstone。
+4. 验证 One Person Lab App GUI 对 `app_operator_drilldown` 的真实用户路径、截图/发布包证据和长时 operator evidence；OPL/App 已有 read model 与 runtime 页面接入，但仍需成为三仓标准 Agent 的稳定 operator surface。
+5. 产品化 App startup managed-environment maintenance：默认使用 OPL-managed modules，developer checkout 只显式 override；启动时对 clean managed checkout 自动 update / health check / skill sync / plugin cache freshness，异常时 fail-closed 给人工处理。
+6. 产品化 Developer Mode / Agent Lab repair route：系统配置、App 开关、GitHub 身份/权限检测、外围 AI 巡检、repo fix / commit 和 fork / PR 路由形成一条可审计路径。
+7. 在真实 workspace 中扩展 lifecycle / artifact / memory 持续对账：OPL 只写自有 locator/index/ledger，domain 写 owner receipt、artifact mutation receipt、memory accept/reject receipt。
+8. 完成 MAS/MAG/RCA physical skeleton / legacy cleanup：replacement parity、no-active-caller、provenance 和 tombstone 条件齐备后，不保留兼容入口。
+9. 最后跑长时 provider/domain/App 验收：MAS paper、MAG grant、RCA visual 依次扩大到真实 workspace 和长窗口 SLO。
 
 ## 当前不能写成
 
 - 不能写成 `local_sqlite` 是 production online readiness path；它只是 dev/CI/offline diagnostic baseline。
 - 不能写成 Temporal provider proof 等于 MAS paper closure、MAG grant readiness 或 RCA visual ready。
 - 不能写成 private functional audit 分类完成就等于物理代码路径清零。
-- 不能把 OPL pack compiler handoff read model 写成 generated surface 已生产消费。
+- 不能把 OPL pack compiler handoff read model 写成 MAS/MAG/RCA generated surface 已生产消费。
+- 不能把 MAS descriptor ready、read model、provider proof、replacement proof 或 generated bundle ready 写成 MAS 功能/结构差距归零。
 - 不能把 fixture、focused proof、no-regression evidence 或 typed blocker 写成真实 long soak 完成。
 - 不能为了兼容保留旧模块、旧接口、旧测试、旧 CLI alias、facade 或 wrapper；active caller 迁走后直接删除或进入 history/tombstone。

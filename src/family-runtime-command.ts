@@ -56,6 +56,17 @@ export type FamilyRuntimeCommandInput =
       actions?: Record<string, unknown>[];
     };
   }
+  | {
+    mode: 'lifecycle_reconcile';
+    input: {
+      target_domain_id?: string;
+      expected_source_refs?: string[];
+      expected_receipt_refs?: string[];
+      expected_restore_proof_refs?: string[];
+      expected_domain_artifact_mutation_receipt_refs?: string[];
+      max_age_ms?: number | null;
+    };
+  }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
@@ -442,6 +453,58 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         manifest_ref: manifestRef,
         receipt_ref: receiptRef,
         actions,
+      },
+    };
+  }
+  if (mode === 'lifecycle' && rest[0] === 'reconcile') {
+    let domainId: FamilyRuntimeDomainId | undefined;
+    let maxAgeMs: number | null | undefined;
+    const expectedSourceRefs: string[] = [];
+    const expectedReceiptRefs: string[] = [];
+    const expectedRestoreProofRefs: string[] = [];
+    const expectedDomainArtifactMutationReceiptRefs: string[] = [];
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--domain' && value) {
+        domainId = assertDomainId(value);
+        index += 1;
+      } else if (token === '--expected-source-ref' && value) {
+        expectedSourceRefs.push(value);
+        index += 1;
+      } else if (token === '--expected-receipt-ref' && value) {
+        expectedReceiptRefs.push(value);
+        index += 1;
+      } else if (token === '--expected-restore-proof-ref' && value) {
+        expectedRestoreProofRefs.push(value);
+        index += 1;
+      } else if (token === '--expected-domain-artifact-mutation-receipt-ref' && value) {
+        expectedDomainArtifactMutationReceiptRefs.push(value);
+        index += 1;
+      } else if (token === '--max-age-ms' && value) {
+        maxAgeMs = Number.parseInt(value, 10);
+        index += 1;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime lifecycle reconcile option: ${token}.`, {
+          option: token,
+          usage: 'opl family-runtime lifecycle reconcile [--domain <domain_id>] [--expected-source-ref <ref>] [--expected-receipt-ref <ref>] [--expected-restore-proof-ref <ref>] [--expected-domain-artifact-mutation-receipt-ref <ref>] [--max-age-ms <n>]',
+        });
+      }
+    }
+    if (maxAgeMs !== undefined && maxAgeMs !== null && (!Number.isInteger(maxAgeMs) || maxAgeMs < 0)) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime lifecycle reconcile --max-age-ms must be a non-negative integer.', {
+        max_age_ms: maxAgeMs,
+      });
+    }
+    return {
+      mode: 'lifecycle_reconcile',
+      input: {
+        target_domain_id: domainId,
+        expected_source_refs: expectedSourceRefs,
+        expected_receipt_refs: expectedReceiptRefs,
+        expected_restore_proof_refs: expectedRestoreProofRefs,
+        expected_domain_artifact_mutation_receipt_refs: expectedDomainArtifactMutationReceiptRefs,
+        max_age_ms: maxAgeMs ?? null,
       },
     };
   }

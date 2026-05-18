@@ -85,6 +85,10 @@ exit 1
             provider_kind: string;
             health_status: string;
             status: string;
+            degraded_reason: string | null;
+            details: {
+              worker_ready: boolean;
+            };
           };
         };
         native_helpers: {
@@ -118,7 +122,7 @@ exit 1
     };
 
     assert.equal(output.system.surface_id, 'opl_system');
-    assert.equal(output.system.overall_status, 'ready');
+    assert.equal(output.system.overall_status, 'attention_needed');
     assert.equal(output.system.core_engines.codex.installed, true);
     assert.equal(output.system.core_engines.codex.version, 'codex-cli 0.125.0');
     assert.equal(output.system.core_engines.codex.parsed_version, '0.125.0');
@@ -138,8 +142,11 @@ exit 1
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.deepEqual(output.system.core_engines.codex.diagnostics, []);
     assert.equal(Object.hasOwn(output.system.core_engines, 'hermes'), false);
-    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'local_sqlite');
-    assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'ready');
+    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'temporal');
+    assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'attention_needed');
+    assert.equal(output.system.core_engines.family_runtime_provider.status, 'provider_code_landed_unconfigured');
+    assert.equal(output.system.core_engines.family_runtime_provider.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(output.system.core_engines.family_runtime_provider.details.worker_ready, false);
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
     assert.equal(output.system.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
     assert.equal(output.system.native_helpers.runtime.discovery.repair_command, 'npm run native:repair');
@@ -397,7 +404,10 @@ exit 1
     assert.equal(output.system_initialize.setup_flow.is_first_run, false);
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
     assert.equal(output.system_initialize.setup_flow.phase, 'modules');
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['domain_modules']);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, [
+      'family_runtime_provider',
+      'domain_modules',
+    ]);
     assert.equal(
       output.system_initialize.setup_flow.progress.ready_required_count <
       output.system_initialize.setup_flow.progress.total_required_count,
@@ -638,8 +648,8 @@ exit 1
       install: {
         runtime_manager_action: {
           status: string;
-          non_blocking_actions: Array<{ action_id: string; status: string }>;
-          background_actions: Array<{ action_id: string; status: string }>;
+        non_blocking_actions: Array<{ action_id: string; status: string; blocking?: boolean }>;
+        background_actions: Array<{ action_id: string; status: string; blocking?: boolean }>;
           executed_actions: Array<{
             action_id: string;
             status: string;
@@ -666,8 +676,8 @@ exit 1
             [key: string]: unknown;
           };
         };
-        background_actions: Array<{ action_id: string; status: string }>;
-        non_blocking_actions: Array<{ action_id: string; status: string }>;
+        background_actions: Array<{ action_id: string; status: string; blocking?: boolean }>;
+        non_blocking_actions: Array<{ action_id: string; status: string; blocking?: boolean }>;
         first_run_log_events: Array<{
           event_type: string;
           payload: Record<string, unknown>;
@@ -676,22 +686,28 @@ exit 1
     };
 
     assert.equal(fs.existsSync(retiredGatewayState), false);
-    assert.equal(output.install.runtime_manager_action.status, 'completed');
-    assert.deepEqual(output.install.runtime_manager_action.executed_actions, []);
+    assert.equal(output.install.runtime_manager_action.status, 'completed_with_attention');
+    assert.deepEqual(output.install.runtime_manager_action.executed_actions.map((action) => [
+      action.action_id,
+      action.status,
+      action.blocking,
+    ]), [
+      ['configure_temporal_provider', 'blocked_manual_configuration_required', true],
+    ]);
     assert.deepEqual(output.install.runtime_manager_action.non_blocking_actions, []);
     assert.deepEqual(output.install.runtime_manager_action.background_actions, []);
     assert.deepEqual(output.install.non_blocking_actions, []);
     assert.deepEqual(output.install.background_actions, []);
     assert.equal(
       output.install.runtime_manager_action.after.reconcile.checked_surfaces.provider_runtime,
-      'ready',
+      'provider_code_landed_unconfigured',
     );
     assert.equal(Object.hasOwn(output.install.runtime_manager_action.after.reconcile.checked_surfaces, 'hermes_diagnostics'), false);
     assert.equal(Object.hasOwn(output.install.system_initialize.core_engines, 'hermes'), false);
-    assert.equal(output.install.system_initialize.online_management.status, 'ready');
-    assert.equal(output.install.system_initialize.online_management.blocking, false);
-    assert.equal(output.install.system_initialize.online_management.full_online_blocking, false);
-    assert.equal(output.install.system_initialize.online_management.ready, true);
+    assert.equal(output.install.system_initialize.online_management.status, 'initializing');
+    assert.equal(output.install.system_initialize.online_management.blocking, true);
+    assert.equal(output.install.system_initialize.online_management.full_online_blocking, true);
+    assert.equal(output.install.system_initialize.online_management.ready, false);
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_started'
@@ -707,7 +723,7 @@ exit 1
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'runtime_manager_repair_completed'
-        && entry.payload.status === 'completed'
+        && entry.payload.status === 'completed_with_attention'
       ),
       true,
     );

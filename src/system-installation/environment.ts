@@ -1,5 +1,10 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
-import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
+import { familyRuntimePaths } from '../family-runtime-store.ts';
+import { readMasManagedProviderProjection } from '../family-runtime-mas-managed-provider-projection.ts';
+import {
+  inspectFamilyRuntimeProviderWithLifecycle,
+  resolveFamilyRuntimeProviderKind,
+} from '../family-runtime-providers.ts';
 import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
 import type { FrameworkContracts } from '../types.ts';
@@ -13,7 +18,11 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
   const codexDefaultProfile = readBundledCodexDefaultProfile();
   const codexBinary = resolveCodexVersion();
   const providerKind = resolveFamilyRuntimeProviderKind();
-  const familyRuntimeProvider = inspectFamilyRuntimeProvider(providerKind);
+  const familyRuntimeProvider = await inspectFamilyRuntimeProviderWithLifecycle(
+    providerKind,
+    familyRuntimePaths(),
+    { managedProviderProjection: readMasManagedProviderProjection() },
+  );
   const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildOplModules().modules;
   const moduleSummary = modulesPayload.summary;
@@ -32,8 +41,9 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
       : codexBinary.installed
         ? 'attention_needed'
         : 'missing';
+  const familyRuntimeProviderHealthStatus = familyRuntimeProvider.ready ? 'ready' : 'attention_needed';
   const overallStatus =
-    codexHealthStatus === 'ready'
+    codexHealthStatus === 'ready' && familyRuntimeProviderHealthStatus === 'ready'
       ? 'ready'
       : 'attention_needed';
 
@@ -66,7 +76,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
         family_runtime_provider: {
           provider_kind: providerKind,
           required_for: 'full_opl_family_runtime_readiness',
-          health_status: familyRuntimeProvider.ready ? 'ready' : 'attention_needed',
+          health_status: familyRuntimeProviderHealthStatus,
           status: familyRuntimeProvider.status,
           degraded_reason: familyRuntimeProvider.degraded_reason,
           capabilities: familyRuntimeProvider.capabilities,

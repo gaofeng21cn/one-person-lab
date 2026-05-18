@@ -680,6 +680,14 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       false,
     );
     assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.delete_gate.can_execute_domain_physical_delete,
+      false,
+    );
+    assert.equal(
+      mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.delete_gate.opl_cleanup_apply_can_execute,
+      true,
+    );
+    assert.equal(
       mas.family_agent_descriptor.standard_domain_agent_skeleton.physical_skeleton_follow_through_gate.delete_gate.can_create_retained_legacy_entry,
       false,
     );

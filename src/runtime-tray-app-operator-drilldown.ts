@@ -1,5 +1,8 @@
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
-import { readFamilyRuntimeLifecycleRefs } from './family-runtime-lifecycle-index.ts';
+import {
+  readFamilyRuntimeLifecycleRefs,
+  reconcileFamilyRuntimeLifecycleRefs,
+} from './family-runtime-lifecycle-index.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 
@@ -14,6 +17,17 @@ type DrilldownRef = {
 
 type FunctionalPrivatizationSummaryRecord = {
   total_module_count?: unknown;
+  opl_owned_replacement_count?: unknown;
+  opl_hosted_surface_count?: unknown;
+  opl_generated_surface_count?: unknown;
+  declarative_pack_count?: unknown;
+  minimal_authority_function_count?: unknown;
+  refs_only_domain_adapter_count?: unknown;
+  temporary_migration_bridge_count?: unknown;
+  diagnostic_cleanup_path_count?: unknown;
+  provenance_or_fixture_count?: unknown;
+  domain_authority_count?: unknown;
+  retire_tombstone_count?: unknown;
   default_watchlist_count?: unknown;
   default_watchlist_module_ids?: unknown;
   active_private_generic_residue_count?: unknown;
@@ -521,6 +535,7 @@ function refFamilyRefs(workbench: JsonRecord) {
 
 function lifecycleLedgerRefs() {
   const index = readFamilyRuntimeLifecycleRefs();
+  const reconcile = reconcileFamilyRuntimeLifecycleRefs();
   const refs = recordList(index.refs);
   const restoreProofRefs = uniqueStrings(refs.flatMap((entry) =>
     stringList(record(entry.payload).restore_proof_refs)
@@ -548,7 +563,15 @@ function lifecycleLedgerRefs() {
       lifecycle_index_ref_count: refs.length,
       restore_proof_ref_count: restoreProofRefs.length,
       domain_artifact_mutation_receipt_ref_count: domainArtifactMutationReceiptRefs.length,
+      lifecycle_reconcile_status: stringValue(reconcile.status),
+      lifecycle_reconcile_missing_ref_count: numberValue(record(reconcile.summary).missing_ref_count),
+      lifecycle_reconcile_extra_ref_count: numberValue(record(reconcile.summary).extra_ref_count),
+      lifecycle_reconcile_stale_ref_count: numberValue(record(reconcile.summary).stale_ref_count),
+      lifecycle_delete_ready_proof_status: stringValue(record(reconcile.delete_ready_proof).proof_status),
+      lifecycle_delete_can_execute: record(reconcile.summary).can_execute_domain_physical_delete === true,
+      lifecycle_opl_cleanup_apply_can_execute: record(reconcile.summary).opl_cleanup_apply_can_execute === true,
     },
+    reconcile_projection: reconcile,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -586,6 +609,19 @@ function functionalPrivatizationSummary(projects: DomainManifestCatalogEntry[]) 
     projection_policy: 'summary_only_no_domain_code_mutation',
     resolved_domain_count: summaries.length,
     total_module_count: sum('total_module_count'),
+    by_migration_class: {
+      opl_owned_replacement_count: sum('opl_owned_replacement_count'),
+      opl_hosted_surface_count: sum('opl_hosted_surface_count'),
+      opl_generated_surface_count: sum('opl_generated_surface_count'),
+      declarative_pack_count: sum('declarative_pack_count'),
+      minimal_authority_function_count: sum('minimal_authority_function_count'),
+      refs_only_domain_adapter_count: sum('refs_only_domain_adapter_count'),
+      temporary_migration_bridge_count: sum('temporary_migration_bridge_count'),
+      diagnostic_cleanup_path_count: sum('diagnostic_cleanup_path_count'),
+      provenance_or_fixture_count: sum('provenance_or_fixture_count'),
+      domain_authority_count: sum('domain_authority_count'),
+      retire_tombstone_count: sum('retire_tombstone_count'),
+    },
     default_watchlist_count: sum('default_watchlist_count'),
     default_watchlist_module_ids: uniqueStrings(summaries.flatMap((summary) =>
       stringList(summary.default_watchlist_module_ids)
@@ -694,6 +730,11 @@ export function buildAppOperatorDrilldown(input: {
       lifecycle_restore_proof_ref_count: lifecycleRefs.summary.restore_proof_ref_count,
       lifecycle_domain_artifact_mutation_receipt_ref_count:
         lifecycleRefs.summary.domain_artifact_mutation_receipt_ref_count,
+      lifecycle_reconcile_missing_ref_count: lifecycleRefs.summary.lifecycle_reconcile_missing_ref_count,
+      lifecycle_reconcile_extra_ref_count: lifecycleRefs.summary.lifecycle_reconcile_extra_ref_count,
+      lifecycle_reconcile_stale_ref_count: lifecycleRefs.summary.lifecycle_reconcile_stale_ref_count,
+      lifecycle_delete_can_execute: lifecycleRefs.summary.lifecycle_delete_can_execute,
+      lifecycle_opl_cleanup_apply_can_execute: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
       functional_privatization_default_watchlist_count: functionalSummary.default_watchlist_count,
       functional_privatization_semantic_equivalence_review_count:
         functionalSummary.semantic_equivalence_review_count,

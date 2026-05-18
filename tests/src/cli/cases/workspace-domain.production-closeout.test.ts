@@ -474,7 +474,7 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.rejected_write_count, 1);
     assert.equal(closeout.stage_attempt_evidence.memory_ref_summary.opl_writes_memory_body, false);
     assert.equal(closeout.stage_attempt_evidence.operator_action_routing.surface_kind, 'opl_operator_action_routing_projection');
-    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.summary.execution_policy, 'route_only_no_execution');
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.summary.execution_policy, 'opl_safe_action_shell');
     assert.equal(closeout.stage_attempt_evidence.operator_action_routing.summary.direct_skill_route_count, 2);
     assert.equal(
       closeout.stage_attempt_evidence.operator_action_routing.actions.some((action: {
@@ -486,6 +486,7 @@ test('framework production-closeout reports functional blockers without taking d
       ),
       true,
     );
+    assert.equal(closeout.stage_attempt_evidence.operator_action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(closeout.stage_attempt_evidence.operator_action_routing.authority_boundary.can_execute_direct_skill, false);
     assert.equal(closeout.stage_attempt_evidence.operator_action_routing.authority_boundary.can_write_domain_truth, false);
     assert.equal(closeout.stage_attempt_evidence.authority_boundary.opl_executes_operator_action_routes, false);
@@ -654,6 +655,14 @@ test('framework production-closeout reports functional blockers without taking d
     );
     assert.equal(mag.physical_skeleton_follow_through_gate.delete_gate.delete_ready, true);
     assert.equal(mag.physical_skeleton_follow_through_gate.delete_gate.can_execute_delete, false);
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.delete_gate.can_execute_domain_physical_delete,
+      false,
+    );
+    assert.equal(
+      mag.physical_skeleton_follow_through_gate.delete_gate.opl_cleanup_apply_can_execute,
+      true,
+    );
     assert.equal(mag.physical_skeleton_follow_through_gate.delete_gate.can_create_retained_legacy_entry, false);
     assert.equal(
       mag.production_closure_gaps.find((gap: { gap_id: string }) =>

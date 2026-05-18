@@ -4,58 +4,23 @@ import path from 'node:path';
 import { FrameworkContractError } from './contracts.ts';
 import { buildFamilyAgentDescriptorList } from './family-domain-agent-descriptor.ts';
 import {
-  buildFamilyActionCatalogParity,
-  projectFamilyActionCatalog,
-} from './family-action-catalog.ts';
-import type {
-  FamilyActionCatalog,
-  FamilyActionExportFormat,
-} from './family-action-catalog-contract.ts';
-import {
   normalizeFamilyActionCatalog,
 } from './family-action-catalog-contract.ts';
-import type { FamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 import {
   normalizeFamilyStageControlPlane,
 } from './family-stage-control-plane-contract.ts';
 import {
   buildFunctionalPrivatizationAudit,
 } from './functional-privatization-audit.ts';
+import {
+  buildGeneratedInterfaceBundle,
+  GENERATED_SURFACES,
+  selectGeneratedInterfaceBundleFormat,
+} from './domain-pack-compiler/generated-interface-read-model.ts';
+import type { GeneratedInterfaceFormat } from './domain-pack-compiler/generated-interface-read-model.ts';
 import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
-type GeneratedInterfaceFormat = FamilyActionExportFormat | 'product-entry';
-
-const GENERATED_SURFACES = [
-  {
-    surface_id: 'cli',
-    required_descriptor_surfaces: ['family_action_catalog'],
-  },
-  {
-    surface_id: 'mcp',
-    required_descriptor_surfaces: ['family_action_catalog'],
-  },
-  {
-    surface_id: 'product_entry_manifest',
-    required_descriptor_surfaces: ['entry', 'family_action_catalog', 'family_stage_control_plane'],
-  },
-  {
-    surface_id: 'sidecar_export_dispatch',
-    required_descriptor_surfaces: ['family_action_catalog', 'functional_privatization_audit'],
-  },
-  {
-    surface_id: 'status_read_model',
-    required_descriptor_surfaces: ['entry', 'runtime_surfaces', 'domain_memory_descriptor'],
-  },
-  {
-    surface_id: 'workbench_drilldown',
-    required_descriptor_surfaces: ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
-  },
-  {
-    surface_id: 'functional_harness_cases',
-    required_descriptor_surfaces: ['family_transition', 'functional_privatization_audit'],
-  },
-] as const;
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -63,6 +28,19 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function stringList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => optionalString(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
 function normalizeDomainSelection(value: string) {
@@ -231,152 +209,6 @@ function minimalAuthorityFunctionRefs(descriptor: JsonRecord) {
     }));
 }
 
-function rawDescriptorSurface<T>(descriptor: JsonRecord, key: string): T | null {
-  const surface = isRecord(descriptor[key]) ? descriptor[key] as JsonRecord : null;
-  if (!surface) {
-    return null;
-  }
-  const raw = surface.raw_descriptor;
-  return isRecord(raw) ? raw as T : null;
-}
-
-function buildStageRoutes(stageControlPlane: FamilyStageControlPlane | null) {
-  return stageControlPlane?.stages.map((stage) => ({
-    stage_id: stage.stage_id,
-    allowed_action_refs: stage.allowed_action_refs,
-    authority_owner: stage.owner,
-  })) ?? [];
-}
-
-function buildProductEntryDescriptors(catalog: FamilyActionCatalog) {
-  return catalog.actions.map((action) => ({
-    action_key: action.supported_surfaces.product_entry?.action_key ?? action.action_id,
-    command: action.supported_surfaces.product_entry?.command ?? action.source_command.command,
-    surface_kind: action.supported_surfaces.product_entry?.surface_kind ?? action.source_command.surface_kind,
-    summary: action.summary,
-    requires: action.workspace_locator_fields,
-    effect: action.effect,
-  }));
-}
-
-function formatDescriptorBlock(
-  catalog: FamilyActionCatalog | null,
-  format: GeneratedInterfaceFormat,
-) {
-  if (!catalog) {
-    return {
-      format,
-      owner: 'one-person-lab',
-      status: 'blocked_missing_family_action_catalog',
-      descriptors: [],
-    };
-  }
-  if (format === 'product-entry') {
-    return {
-      format,
-      owner: 'one-person-lab',
-      status: 'ready',
-      descriptors: buildProductEntryDescriptors(catalog),
-    };
-  }
-  return {
-    format,
-    owner: 'one-person-lab',
-    status: 'ready',
-    descriptors: projectFamilyActionCatalog(catalog, format),
-  };
-}
-
-function buildGeneratedInterfaceBundle(
-  descriptor: JsonRecord,
-  compilerStatus: string,
-  selectedFormat: GeneratedInterfaceFormat | 'all' = 'all',
-) {
-  const catalog = rawDescriptorSurface<FamilyActionCatalog>(descriptor, 'family_action_catalog');
-  const stageControlPlane = rawDescriptorSurface<FamilyStageControlPlane>(descriptor, 'family_stage_control_plane');
-  const formats: GeneratedInterfaceFormat[] = ['cli', 'mcp', 'skill', 'product-entry', 'openai', 'ai-sdk'];
-  const include = (format: GeneratedInterfaceFormat) => selectedFormat === 'all' || selectedFormat === format;
-  const block = (format: GeneratedInterfaceFormat) => formatDescriptorBlock(catalog, format);
-  const blocks = Object.fromEntries(
-    formats
-      .filter(include)
-      .map((format) => [
-        format === 'product-entry'
-          ? 'product_entry'
-          : format === 'openai'
-            ? 'openai_tool'
-            : format === 'ai-sdk'
-              ? 'ai_sdk'
-              : format,
-        block(format),
-      ])
-  );
-  const blockerReasons = Array.isArray(descriptor.blocker_reasons)
-    ? descriptor.blocker_reasons.filter((reason): reason is string => typeof reason === 'string')
-    : [];
-  const generatedBlockKeys = Object.keys(blocks);
-  const generatedBlocksReady = generatedBlockKeys.every((key) => {
-    const value = blocks[key];
-    return isRecord(value) && optionalString(value.status) === 'ready';
-  });
-  const targetDomainId = optionalString(descriptor.target_domain_id)
-    ?? optionalString(descriptor.project_id)
-    ?? 'unknown';
-
-  return {
-    surface_kind: 'opl_generated_agent_interface_bundle',
-    version: 'opl-generated-agent-interface-bundle.v1',
-    owner: 'one-person-lab',
-    generated_surface_owner: 'one-person-lab',
-    domain_repo_can_own_generated_surface: false,
-    status: compilerStatus,
-    selected_format: selectedFormat,
-    project_id: optionalString(descriptor.project_id),
-    target_domain_id: optionalString(descriptor.target_domain_id),
-    agent_id: optionalString(descriptor.agent_id),
-    generated_from: [
-      'family_action_catalog',
-      'family_stage_control_plane',
-      'domain_memory_descriptor',
-      'runtime_surfaces',
-      'functional_privatization_audit',
-    ],
-    active_caller_cutover_proof: {
-      surface_kind: 'opl_generated_surface_active_caller_cutover_proof',
-      status: compilerStatus === 'ready' && generatedBlocksReady
-        ? 'cutover_to_opl_generated_or_domain_handler_targets'
-        : 'blocked',
-      generated_surface_owner: 'one-person-lab',
-      target_domain_id: targetDomainId,
-      generated_blocks_ready: generatedBlocksReady,
-      generated_block_keys: generatedBlockKeys,
-      blocker_reasons: blockerReasons,
-      domain_handler_targets_only: compilerStatus === 'ready' && generatedBlocksReady,
-      domain_handler_target_policy: 'Generated descriptors route to domain action handler targets by receipt contract.',
-      forbidden_generated_authority: [
-        'domain_truth_write',
-        'memory_body_write',
-        'quality_or_export_verdict',
-        'artifact_mutation',
-      ],
-      authority_boundary_ref: 'generated_agent_interfaces.authority_boundary',
-    },
-    ...blocks,
-    stage_routes: include('product-entry') || selectedFormat === 'all'
-      ? buildStageRoutes(stageControlPlane)
-      : [],
-    parity: catalog ? buildFamilyActionCatalogParity(catalog) : null,
-    authority_boundary: {
-      generated_interface_can_write_domain_truth: false,
-      generated_interface_can_write_memory_body: false,
-      generated_interface_can_authorize_quality_or_export: false,
-      generated_interface_can_mutate_artifacts: false,
-      generated_interface_routes_to_minimal_authority_functions_by_receipt_contract: true,
-      provider_completion_is_domain_ready: false,
-    },
-  };
-}
-
 function readRepoJson(repoDir: string, relativePath: string) {
   const filePath = path.join(repoDir, relativePath);
   if (!fs.existsSync(filePath)) {
@@ -438,15 +270,43 @@ function buildRepoContractDescriptor(repoDirInput: string) {
     readRepoJson(repoDir, 'contracts/stage_control_plane.json'),
   );
   const functionalAuditRaw = readRepoJson(repoDir, 'contracts/functional_privatization_audit.json');
+  const generatedSurfaceHandoffRaw = readRepoJson(repoDir, 'contracts/generated_surface_handoff.json');
+  const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
+  const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
+  const functionalBoundary = isRecord(functionalAuditRaw) && isRecord(functionalAuditRaw.functional_consumer_boundary)
+    ? functionalAuditRaw.functional_consumer_boundary
+    : null;
+  const boundaryGeneratedHandoff = isRecord(functionalBoundary?.generated_surface_handoff)
+    ? functionalBoundary.generated_surface_handoff
+    : null;
+  const generatedSurfaceHandoff =
+    generatedSurfaceHandoffRaw || boundaryGeneratedHandoff
+      ? {
+          ...(isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : {}),
+          ...(isRecord(boundaryGeneratedHandoff) ? {
+            mas_functional_consumer_handoff_status: boundaryGeneratedHandoff.status,
+            active_caller_cutover_status: boundaryGeneratedHandoff.active_caller_cutover_status,
+            production_consumption_status: boundaryGeneratedHandoff.production_consumption_status,
+            handoff_surfaces: recordList(boundaryGeneratedHandoff.handoff_surfaces),
+          } : {}),
+        }
+      : null;
   const targetDomainId =
     actionCatalog?.target_domain_id
     ?? stageControlPlane?.target_domain_id
     ?? optionalString((domainDescriptor as JsonRecord).domain_id)
     ?? path.basename(repoDir);
-  const functionalAudit = buildFunctionalPrivatizationAudit({
-    target_domain_id: targetDomainId,
-    functional_privatization_audit: functionalAuditRaw ?? undefined,
-  });
+  const functionalAuditManifest =
+    functionalBoundary
+      ? {
+          target_domain_id: targetDomainId,
+          functional_consumer_boundary: functionalBoundary,
+        }
+      : {
+          target_domain_id: targetDomainId,
+          functional_privatization_audit: functionalAuditRaw ?? undefined,
+        };
+  const functionalAudit = buildFunctionalPrivatizationAudit(functionalAuditManifest);
   const blockerReasons = [
     actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
     stageControlPlane ? null : 'missing_or_invalid_contract:contracts/stage_control_plane.json',
@@ -462,6 +322,53 @@ function buildRepoContractDescriptor(repoDirInput: string) {
       project: optionalString((domainDescriptor as JsonRecord).domain_label) ?? targetDomainId,
       target_domain_id: targetDomainId,
       agent_id: optionalString((domainDescriptor as JsonRecord).domain_id) ?? targetDomainId,
+      source_contract_consumption: {
+        surface_kind: 'opl_repo_contract_consumption_projection',
+        repo_dir: repoDir,
+        status: status,
+        consumed_contracts: [
+          {
+            contract_id: 'domain_descriptor',
+            path: 'contracts/domain_descriptor.json',
+            status: Object.keys(domainDescriptor as JsonRecord).length > 0 ? 'resolved' : 'missing',
+          },
+          {
+            contract_id: 'action_catalog',
+            path: 'contracts/action_catalog.json',
+            status: actionCatalog ? 'resolved' : 'missing',
+          },
+          {
+            contract_id: 'stage_control_plane',
+            path: 'contracts/stage_control_plane.json',
+            status: stageControlPlane ? 'resolved' : 'missing',
+          },
+          {
+            contract_id: 'generated_surface_handoff',
+            path: 'contracts/generated_surface_handoff.json',
+            status: generatedSurfaceHandoff ? 'resolved' : 'missing',
+          },
+          {
+            contract_id: 'product_entry_manifest_descriptor',
+            path: 'contracts/action_catalog.json',
+            status: actionCatalog ? 'resolved_from_family_action_catalog' : 'missing',
+          },
+          {
+            contract_id: 'sidecar_descriptor',
+            path: 'contracts/generated_surface_handoff.json',
+            status: generatedSurfaceHandoff ? 'resolved_from_generated_surface_handoff' : 'missing',
+          },
+          {
+            contract_id: 'pack_compiler_input',
+            path: 'contracts/pack_compiler_input.json',
+            status: packCompilerInput ? 'resolved' : 'missing',
+          },
+          {
+            contract_id: 'functional_privatization_audit',
+            path: 'contracts/functional_privatization_audit.json',
+            status: functionalAudit.status,
+          },
+        ],
+      },
       family_action_catalog: {
         status: actionCatalog ? 'resolved' : 'missing',
         raw_descriptor: actionCatalog,
@@ -469,6 +376,37 @@ function buildRepoContractDescriptor(repoDirInput: string) {
       family_stage_control_plane: {
         status: stageControlPlane ? 'resolved' : 'missing',
         raw_descriptor: stageControlPlane,
+      },
+      generated_surface_handoff_contract: generatedSurfaceHandoff,
+      pack_compiler_input_contract: packCompilerInput,
+      product_entry_manifest_descriptor: {
+        status: actionCatalog && stageControlPlane ? 'resolved_from_repo_contracts' : 'missing_required_repo_contract',
+        source_refs: [
+          'contracts/domain_descriptor.json',
+          'contracts/action_catalog.json',
+          'contracts/stage_control_plane.json',
+          'contracts/functional_privatization_audit.json',
+        ],
+        product_entry_manifest_contract_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
+      },
+      sidecar_descriptor: {
+        status: generatedSurfaceHandoff ? 'resolved_from_generated_surface_handoff' : 'missing_generated_surface_handoff',
+        source_refs: [
+          'contracts/generated_surface_handoff.json',
+          'contracts/action_catalog.json',
+          'contracts/functional_privatization_audit.json',
+        ],
+      },
+      session_continuity_contract: packCompilerInput
+        ? {
+            status: 'resolved_from_pack_compiler_input',
+            surface_kind: 'session_continuity',
+            source_ref: 'contracts/pack_compiler_input.json',
+          }
+        : null,
+      domain_memory_descriptor: {
+        status: memoryDescriptor ? 'resolved' : 'missing',
+        raw_descriptor: memoryDescriptor,
       },
       functional_privatization_audit: {
         status: functionalAudit.status,
@@ -479,39 +417,6 @@ function buildRepoContractDescriptor(repoDirInput: string) {
     repoDir,
     status,
     blockerReasons,
-  };
-}
-
-function selectGeneratedInterfaceBundleFormat(bundle: JsonRecord, selectedFormat: GeneratedInterfaceFormat | 'all') {
-  if (selectedFormat === 'all') {
-    return bundle;
-  }
-  const selectedKey =
-    selectedFormat === 'product-entry'
-      ? 'product_entry'
-      : selectedFormat === 'openai'
-        ? 'openai_tool'
-        : selectedFormat === 'ai-sdk'
-          ? 'ai_sdk'
-          : selectedFormat;
-  const selectedBlock = bundle[selectedKey];
-  return {
-    surface_kind: bundle.surface_kind,
-    version: bundle.version,
-    owner: bundle.owner,
-    generated_surface_owner: bundle.generated_surface_owner,
-    domain_repo_can_own_generated_surface: bundle.domain_repo_can_own_generated_surface,
-    status: bundle.status,
-    selected_format: selectedFormat,
-    project_id: bundle.project_id,
-    target_domain_id: bundle.target_domain_id,
-    agent_id: bundle.agent_id,
-    generated_from: bundle.generated_from,
-    active_caller_cutover_proof: bundle.active_caller_cutover_proof,
-    [selectedKey]: selectedBlock,
-    stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
-    parity: bundle.parity,
-    authority_boundary: bundle.authority_boundary,
   };
 }
 

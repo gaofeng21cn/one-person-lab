@@ -177,6 +177,19 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       true,
     );
     assert.equal(drilldown.functional_privatization_audit_summary.total_module_count >= 0, true);
+    assert.equal(typeof drilldown.functional_privatization_audit_summary.by_migration_class, 'object');
+    assert.equal(
+      drilldown.functional_privatization_audit_summary.by_migration_class.temporary_migration_bridge_count >= 0,
+      true,
+    );
+    assert.equal(
+      drilldown.functional_privatization_audit_summary.by_migration_class.domain_authority_count >= 0,
+      true,
+    );
+    assert.equal(
+      drilldown.functional_privatization_audit_summary.by_migration_class.refs_only_domain_adapter_count >= 0,
+      true,
+    );
     assert.equal(drilldown.functional_privatization_audit_summary.default_watchlist_count, 0);
     assert.equal(drilldown.functional_privatization_audit_summary.semantic_equivalence_review_count, 0);
     assert.equal(
@@ -414,6 +427,11 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
     assert.equal(drilldown.summary.typed_blocker_count, 3);
     assert.equal(drilldown.summary.lifecycle_index_ref_count, 2);
     assert.equal(drilldown.summary.lifecycle_restore_proof_ref_count, 2);
+    assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
+    assert.equal(drilldown.summary.lifecycle_reconcile_extra_ref_count, 0);
+    assert.equal(drilldown.summary.lifecycle_reconcile_stale_ref_count, 0);
+    assert.equal(drilldown.summary.lifecycle_delete_can_execute, false);
+    assert.equal(drilldown.summary.lifecycle_opl_cleanup_apply_can_execute, true);
     assert.equal(drilldown.summary.safe_action_ref_count >= 2, true);
     assert.equal(drilldown.summary.freshness_signal_count >= 1, true);
 
@@ -476,6 +494,15 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
       'restore-proof:mas-index',
       'restore-proof:mas-package',
     ]);
+    assert.equal(drilldown.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
+    assert.equal(
+      drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
+      false,
+    );
+    assert.equal(
+      drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
+      true,
+    );
     assert.equal(drilldown.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
