@@ -16,7 +16,7 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 - [OPL 公开界面索引](./opl-public-surface-index.md)
 - [当前支撑参考索引](../references/current-support/README.md)
 
-App / operator workbench 对冲突与阻塞只消费 `runtime_tray_snapshot.operator_conflicts[]` 和 item-level `operator_conflicts[]`。它显示重复任务、当前卡点、解决 authority、自动重试状态和用户动作需求；不从底层 queue、attempt 或 closeout 字段自行推断 domain verdict。
+App / operator workbench 对 drilldown、冲突与阻塞优先消费 `runtime_tray_snapshot.app_operator_drilldown`、`runtime_tray_snapshot.operator_conflicts[]` 和 item-level `operator_conflicts[]`。`app_operator_drilldown` 是 OPL-owned machine read model：它聚合 route graph / decision map refs、review/repair queue items、artifact gallery / package / export lifecycle refs、memory / writeback refs、functional privatization audit summary、quality/readiness refs、provider SLO 与 operator action routing refs。App 只展示这些 refs、owner 和 action route，不读取 memory body、artifact body，不写 domain truth，不下 quality/readiness/export verdict。
 
 ## 内容
 

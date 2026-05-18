@@ -22,6 +22,7 @@ import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
 import { buildDomainProjectionIngestion } from './runtime-tray-domain-projection-ingestion.ts';
+import { buildAppOperatorDrilldown } from './runtime-tray-app-operator-drilldown.ts';
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',
@@ -643,6 +644,12 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
   const providerContinuousProof = buildRuntimeProviderContinuousProof();
   const nativeHelperExecutionEnvelope = buildNativeHelperExecutionEnvelope();
   const domainProjectionIngestion = buildDomainProjectionIngestion(domainManifests.projects);
+  const appOperatorDrilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench,
+    providerContinuousProof,
+    domainProjectionIngestion,
+    domainManifestProjects: domainManifests.projects,
+  });
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
@@ -721,6 +728,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
       provider_continuous_proof: providerContinuousProof,
       native_helper_execution_envelope: nativeHelperExecutionEnvelope,
       domain_projection_ingestion: domainProjectionIngestion,
+      app_operator_drilldown: appOperatorDrilldown,
       managed_domain_provider_states: {
         surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
         role: 'app_status_read_model_only',
@@ -750,6 +758,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
         sourceRef('/provider_continuous_proof', 'provider_continuous_proof'),
         sourceRef('/native_helper_execution_envelope', 'native_helper_execution_envelope'),
         sourceRef('/domain_projection_ingestion', 'domain_projection_ingestion'),
+        sourceRef('/app_operator_drilldown', 'app_operator_drilldown'),
         ...(masManagedProviderProjection
           ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
           : []),
