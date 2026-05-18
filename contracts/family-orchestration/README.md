@@ -53,6 +53,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, and authority boundary
 - `family-stage-admission.schema.json`
   - OPL-owned stage admission read model for stage contracts, trust lanes, effect-boundary runtime-event requirements, composition obligations, admission findings, and OPL non-authority boundaries
+- `family-stage-proof-bundle.schema.json`
+  - lightweight proof-carrying stage-pack bundle for OPL scheduling / admission consumption, carrying composition obligations, assumptions, receipt refs, runtime-event requirements, test / proof refs, blockers, and OPL non-authority boundaries
 - `family-stage-integrity-metadata.schema.json`
   - shared stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only
 - `family-domain-memory-ref.schema.json`
