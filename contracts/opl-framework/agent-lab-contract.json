@@ -162,6 +162,10 @@
       "evolution_segment",
       "evidence_delta",
       "next_mechanism_candidate",
+      "mechanism_promotion_policy",
+      "mechanism_version_ledger",
+      "independent_ai_review_receipt",
+      "rollback",
       "refs_only",
       "authority_boundary"
     ],
@@ -171,7 +175,58 @@
       "prompt_ref",
       "rubric_gap_ref"
     ],
-    "authority_boundary": "mechanism is a first-class refs-only object; editable surfaces and next candidates are references only and cannot write domain truth, memory body, artifacts, model weights, owner receipts, or default promotion"
+    "automatic_mechanism_promotion_ready": true,
+    "risk_tiers": {
+      "low_risk": {
+        "auto_promotion": "auto_promote_to_stable"
+      },
+      "medium_risk": {
+        "auto_promotion": "auto_promote_to_canary"
+      },
+      "high_risk": {
+        "auto_promotion": "blocked_route_owner_or_human_gate"
+      }
+    },
+    "mechanism_promotion_policy": {
+      "policy_ref": "mechanism-promotion-policy:agent-lab/risk-tiered-auto-promotion",
+      "automatic_mechanism_promotion_ready": true,
+      "automatic_model_training_ready": false,
+      "risk_tiers": "low_risk auto-promotes to stable; medium_risk auto-promotes to canary; high_risk routes to owner or human gate",
+      "independent_ai_review_receipt_required": true,
+      "promotion_receipt_required": true,
+      "rollback_target_required": true,
+      "no_forbidden_write_proof_required": true,
+      "canary_required_before_full_promotion": true
+    },
+    "mechanism_version_ledger": {
+      "ledger_ref": "mechanism-version-ledger:agent-lab/default-stage-led-agent-mechanism",
+      "required_refs": [
+        "previous_mechanism_version_ref",
+        "candidate_mechanism_version_ref",
+        "promoted_mechanism_version_ref",
+        "promotion_receipt_ref",
+        "rollback_target_ref"
+      ]
+    },
+    "independent_ai_review_receipt": {
+      "receipt_kind": "independent_ai_review_receipt_ref",
+      "required_fields": [
+        "reviewer_agent_ref",
+        "reviewed_mechanism_candidate_ref",
+        "risk_tier",
+        "review_status",
+        "forbidden_write_scan_ref",
+        "owner_or_human_gate_ref"
+      ]
+    },
+    "rollback": {
+      "required_refs": [
+        "rollback_target_ref",
+        "rollback_receipt_ref",
+        "previous_mechanism_version_ref"
+      ]
+    },
+    "authority_boundary": "mechanism is a first-class risk-tiered object; low and medium risk mechanism changes can auto-promote through canary after independent AI review, promotion receipt, rollback target, and no-forbidden-write proof; high risk changes route to owner or human gate and cannot write domain truth, memory body, artifacts, model weights, owner receipts, credential policy, network policy, or write policy"
   },
   "export_surface": {
     "surface_kind": "opl_agent_lab_export_envelope",
@@ -195,12 +250,24 @@
     "outputs": [
       "suite_result",
       "gated_optimizer_candidate_set",
+      "risk_tiered_mechanism_candidate_set",
       "rl_transition_refs",
+      "independent_ai_review_receipt_ref",
+      "promotion_receipt_ref",
+      "rollback_target_ref",
+      "no_forbidden_write_proof_ref",
       "authority_boundary"
     ],
+    "refs_only": true,
     "automatic_model_training_ready": false,
-    "automatic_default_agent_promotion_ready": false,
-    "authority_boundary": "optimization emits gated candidate refs and RL transition refs only; it cannot train or deploy weights, promote default agents, write memory bodies, or override domain owner verdicts"
+    "automatic_mechanism_promotion_ready": true,
+    "writes_domain_truth": false,
+    "writes_memory_body": false,
+    "mutates_artifact": false,
+    "writes_owner_receipt": false,
+    "can_accept_or_reject_memory_writeback": false,
+    "risk_policy": "low and medium risk mechanism candidates can auto-promote to canary only with independent AI review receipt, promotion receipt, rollback target, and no-forbidden-write proof; high risk candidates route to owner or human gate",
+    "authority_boundary": "optimization emits risk-tiered mechanism candidate refs, canary promotion receipt refs, rollback target refs, no-forbidden-write proof refs, and RL transition refs only; it cannot train or deploy weights, write domain truth, write memory bodies, mutate artifacts, write owner receipts, accept or reject memory writeback, override domain owner verdicts, or mutate credential, network, or write policy"
   },
   "evolution_surface": {
     "surface_kind": "opl_agent_lab_evolution_result",
@@ -214,6 +281,14 @@
       "evolution_segment",
       "evidence_delta",
       "next_mechanism_candidate",
+      "mechanism_promotion_decision",
+      "independent_ai_review_receipt_ref",
+      "independent_ai_review_receipt",
+      "promotion_receipt_ref",
+      "promotion_receipt",
+      "rollback_target_ref",
+      "rollback",
+      "no_forbidden_write_proof_ref",
       "suite_result",
       "authority_boundary"
     ],
@@ -221,9 +296,13 @@
     "writes_domain_truth": false,
     "writes_memory_body": false,
     "mutates_artifact": false,
+    "requires_independent_ai_review": true,
+    "writes_owner_receipt": false,
+    "can_accept_or_reject_memory_writeback": false,
     "automatic_model_training_ready": false,
-    "automatic_default_agent_promotion_ready": false,
-    "authority_boundary": "evolution emits mechanism candidate refs and evidence-delta refs only; it cannot write domain truth, memory body, artifacts, owner receipts, model weights, or default promotion"
+    "automatic_mechanism_promotion_ready": true,
+    "risk_policy": "low and medium risk mechanism changes can auto-promote through canary only with independent AI review receipt, promotion receipt, rollback target, and no-forbidden-write proof; high risk changes route to owner or human gate",
+    "authority_boundary": "evolution emits mechanism candidate refs, evidence-delta refs, independent AI review receipt refs, canary promotion receipt refs, rollback target refs, and no-forbidden-write proof refs; it cannot write domain truth, memory body, artifacts, owner receipts, model weights, credential policy, network policy, write policy, or domain owner receipts"
   },
   "complete_control_plane_surface": {
     "surface_kind": "opl_agent_lab_complete_control_plane",
@@ -255,7 +334,7 @@
       "ready_to_emit_rl_transition_refs",
       "ready_to_emit_developer_mode_repair_routes",
       "automatic_model_training_ready",
-      "automatic_default_agent_promotion_ready",
+      "automatic_mechanism_promotion_ready",
       "app_workbench_consumption_ready"
     ]
   },
@@ -271,6 +350,8 @@
     "OPL can expose Developer Mode patrol repair routes as refs-only issue, blocker, owner route, candidate fix, worktree, branch, PR, acceptance evidence, and follow-up queue item projections",
     "OPL can emit refs-only export envelopes for optional Inspect AI, OpenInference, Langfuse, Phoenix, and JSON consumers without uploading data",
     "OPL can run an external suite into gated optimizer candidate refs and RL transition refs without training weights or promoting a default agent",
+    "OPL can auto-promote low and medium risk mechanism changes through canary when independent AI review, promotion receipt, rollback target, and no-forbidden-write proof are present",
+    "OPL can route high risk mechanism changes to owner or human gate instead of applying them automatically",
     "OPL can treat mechanism as a first-class refs-only object with editable surface refs, meta edit receipt refs, evolution segment refs, evidence delta refs, and next mechanism candidate refs",
     "OPL can fail closed on memory body payloads and forbidden authority claims"
   ],
@@ -285,8 +366,8 @@
     "writeback accept or reject decision",
     "developer-mode repair merged, accepted, or applied by OPL",
     "managed runtime mutation through Developer Mode patrol projection",
-    "default agent configuration promotion without explicit gate",
-    "mechanism candidate promotion without explicit gate",
+    "default agent configuration promotion",
+    "high risk mechanism candidate promotion without owner or human gate",
     "automatic model training or weight deployment"
   ],
   "domain_retained_authority": [
@@ -305,11 +386,17 @@
     "memory writeback accept/reject verdict",
     "domain ready verdict",
     "quality/export verdict",
+    "publication verdict",
+    "fundability verdict",
+    "visual quality verdict",
     "owner receipt write",
     "domain artifact mutation",
     "managed runtime mutation",
     "default agent promotion without gate",
-    "mechanism candidate promotion without explicit gate"
+    "high risk mechanism candidate promotion without owner or human gate",
+    "credential policy mutation",
+    "network policy mutation",
+    "write policy mutation"
   ],
   "external_framework_policy": {
     "primary_eval_runner": "Inspect AI adapter optional",

@@ -1,7 +1,20 @@
-import { buildFamilyAgentsList } from '../../../../src/family-domain-agent-skeleton.ts';
+import {
+  buildFamilyAgentsList,
+  runFamilyAgentLegacyCleanupApply,
+} from '../../../../src/family-domain-agent-skeleton.ts';
 import type { DomainManifestCatalogEntry } from '../../../../src/domain-manifest/types.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
-import { assert, test } from '../helpers.ts';
+import {
+  assert,
+  buildManifestCommand,
+  createFamilyContractsFixtureRoot,
+  fs,
+  os,
+  path,
+  repoRoot,
+  runCli,
+  test,
+} from '../helpers.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -151,6 +164,7 @@ function manifestWithCleanupResidue() {
           path_family: 'default Gateway active path',
           state: 'physically_removed_from_active_source',
           evidence_ref: 'docs/decisions.md#temporal-runtime',
+          domain_owner_handoff_receipt_refs: ['mag://receipt/gateway-retired'],
         },
       ],
     },
@@ -161,6 +175,15 @@ function manifestWithCleanupResidue() {
       source_refs: ['docs/decisions.md#temporal-runtime'],
     },
   } as JsonRecord;
+}
+
+function manifestWithBlockedCleanupResidue() {
+  const manifest = manifestWithCleanupResidue();
+  const followThrough = manifest.physical_skeleton_follow_through as JsonRecord;
+  delete followThrough.replacement_parity_refs;
+  delete followThrough.direct_skill_parity_refs;
+  delete followThrough.opl_hosted_parity_refs;
+  return manifest;
 }
 
 test('legacy cleanup gate emits executable OPL lifecycle apply plan without domain repo delete authority', () => {
@@ -209,4 +232,193 @@ test('legacy cleanup gate emits executable OPL lifecycle apply plan without doma
   );
   assert.equal(plan.authority_boundary.opl_can_move_or_delete_domain_repo_files, false);
   assert.equal(plan.authority_boundary.opl_can_write_cleanup_ledger_receipts, true);
+  assert.deepEqual(plan.actions[0].no_active_caller_refs, [
+    'docs/decisions.md#temporal-runtime',
+    'agent/README.md',
+    'contracts/README.md',
+    'runtime/README.md',
+    'docs/status.md',
+    'docs/history/specs/hermes-tombstone.md',
+  ]);
+  assert.deepEqual(plan.actions[0].replacement_parity_refs, [
+    'proof:mag:replacement-parity',
+    'proof:mag:direct-skill-parity',
+    'proof:mag:opl-hosted-parity',
+  ]);
+  assert.deepEqual(plan.actions[1].domain_owner_handoff_receipt_refs, [
+    'mag://receipt/gateway-retired',
+  ]);
+});
+
+test('agents legacy-cleanup apply records controlled cleanup receipts from the skeleton gate', () => {
+  const previous = process.env.OPL_STATE_DIR;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-legacy-cleanup-'));
+  process.env.OPL_STATE_DIR = stateRoot;
+  const domainManifests: NonNullable<Parameters<typeof buildFamilyAgentsList>[1]>['domainManifests'] = {
+    summary: {
+      total_projects_count: 1,
+      active_bindings_count: 1,
+      manifest_configured_count: 1,
+      resolved_count: 1,
+      failed_count: 0,
+    },
+    projects: [
+      {
+        project_id: 'medautogrant',
+        project: 'med-autogrant',
+        binding_id: 'fixture-mag',
+        workspace_path: '/tmp/mag',
+        manifest_command: 'fixture',
+        status: 'resolved',
+        manifest: manifestWithCleanupResidue() as unknown as DomainManifestCatalogEntry['manifest'],
+        error: null,
+      },
+    ],
+    notes: [],
+  };
+  try {
+    const apply = runFamilyAgentLegacyCleanupApply(contracts, [
+      '--domain',
+      'mag',
+      '--mode',
+      'apply',
+      '--source-ref',
+      'mag://legacy-cleanup/physical-gate',
+    ], { domainManifests });
+
+    const lifecycleApply = apply.family_agent_legacy_cleanup_apply.lifecycle_apply as JsonRecord;
+    const lifecycleApplySummary = lifecycleApply.summary as JsonRecord;
+    assert.equal(apply.family_agent_legacy_cleanup_apply.plan_status, 'ready');
+    assert.equal(lifecycleApply.status, 'applied');
+    assert.equal(lifecycleApplySummary.safe_action_count, 2);
+    assert.equal(
+      lifecycleApplySummary.domain_owner_handoff_receipt_ref_count,
+      1,
+    );
+    assert.equal(
+      apply.family_agent_legacy_cleanup_apply.authority_boundary.opl_can_move_or_delete_domain_repo_files,
+      false,
+    );
+    const applyReceiptRef = lifecycleApply.receipt_ref;
+    if (typeof applyReceiptRef !== 'string') {
+      throw new Error('Expected lifecycle apply to return a batch receipt ref.');
+    }
+
+    const verified = runFamilyAgentLegacyCleanupApply(contracts, [
+      '--domain',
+      'mag',
+      '--mode',
+      'verify',
+      '--receipt-ref',
+      applyReceiptRef,
+    ], { domainManifests });
+
+    const verifiedLifecycleApply = verified.family_agent_legacy_cleanup_apply.lifecycle_apply as JsonRecord;
+    const verifiedSummary = verifiedLifecycleApply.summary as JsonRecord;
+    assert.equal(verifiedLifecycleApply.status, 'verified');
+    assert.equal(
+      verifiedSummary.verified_receipt_count,
+      1,
+    );
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previous;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('agents legacy-cleanup apply blocks a non-ready skeleton cleanup plan', () => {
+  const previous = process.env.OPL_STATE_DIR;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-legacy-cleanup-blocked-'));
+  process.env.OPL_STATE_DIR = stateRoot;
+  const domainManifests: NonNullable<Parameters<typeof buildFamilyAgentsList>[1]>['domainManifests'] = {
+    summary: {
+      total_projects_count: 1,
+      active_bindings_count: 1,
+      manifest_configured_count: 1,
+      resolved_count: 1,
+      failed_count: 0,
+    },
+    projects: [
+      {
+        project_id: 'medautogrant',
+        project: 'med-autogrant',
+        binding_id: 'fixture-mag',
+        workspace_path: '/tmp/mag',
+        manifest_command: 'fixture',
+        status: 'resolved',
+        manifest: manifestWithBlockedCleanupResidue() as unknown as DomainManifestCatalogEntry['manifest'],
+        error: null,
+      },
+    ],
+    notes: [],
+  };
+  try {
+    const apply = runFamilyAgentLegacyCleanupApply(contracts, [
+      '--domain',
+      'mag',
+      '--mode',
+      'apply',
+      '--source-ref',
+      'mag://legacy-cleanup/physical-gate',
+    ], { domainManifests });
+
+    const lifecycleApply = apply.family_agent_legacy_cleanup_apply.lifecycle_apply as JsonRecord;
+    const lifecycleApplySummary = lifecycleApply.summary as JsonRecord;
+    const blocker = lifecycleApply.blocker as JsonRecord;
+    assert.equal(apply.family_agent_legacy_cleanup_apply.plan_status, 'blocked');
+    assert.equal(lifecycleApply.status, 'blocked');
+    assert.equal(lifecycleApply.writes_performed, false);
+    assert.equal(
+      blocker.blocker_id,
+      'legacy_cleanup_plan_not_ready_for_apply',
+    );
+    assert.deepEqual(
+      lifecycleApplySummary.blocked_reasons,
+      ['missing_replacement_parity_evidence'],
+    );
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previous;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('agents legacy-cleanup apply is wired through the public command dispatcher', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-legacy-cleanup-cli-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautogrant',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(manifestWithBlockedCleanupResidue()),
+  ], env);
+  const dispatched = runCli([
+    'agents',
+    'legacy-cleanup',
+    'apply',
+    '--domain',
+    'mag',
+    '--mode',
+    'apply',
+    '--source-ref',
+    'mag://legacy-cleanup/public-dispatch',
+  ], env);
+
+  assert.equal(dispatched.family_agent_legacy_cleanup_apply.plan_status, 'blocked');
+  assert.equal(dispatched.family_agent_legacy_cleanup_apply.lifecycle_apply.status, 'blocked');
+  assert.equal(dispatched.family_agent_legacy_cleanup_apply.lifecycle_apply.writes_performed, false);
+  fs.rmSync(stateRoot, { recursive: true, force: true });
 });

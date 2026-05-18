@@ -18,6 +18,10 @@ function attemptStatus(attempt: JsonRecord) {
   return firstString(attempt.local_status, attempt.workflow_status, attempt.status) ?? 'unknown';
 }
 
+function closeoutReceiptStatus(attempt: JsonRecord) {
+  return firstString(attempt.closeout_receipt_status);
+}
+
 function attemptStage(attempt: JsonRecord) {
   return firstString(attempt.stage_id) ?? 'unknown-stage';
 }
@@ -58,6 +62,20 @@ function laneForAttempt(attempt: JsonRecord): RuntimeTrayLane {
     return 'running';
   }
   return 'recent';
+}
+
+function isAcceptedTerminalCloseout(attempt: JsonRecord) {
+  return attemptStatus(attempt) === 'completed'
+    && closeoutReceiptStatus(attempt) === 'accepted_typed_closeout';
+}
+
+function shouldProjectAttemptToTray(attempt: JsonRecord) {
+  if (isAcceptedTerminalCloseout(attempt)) {
+    return false;
+  }
+  const status = attemptStatus(attempt);
+  return ['queued', 'running', 'checkpointed', 'blocked', 'dead_lettered', 'failed', 'human_gate'].includes(status)
+    || hasOperatorAttention(attempt);
 }
 
 function statusLabel(attempt: JsonRecord) {
@@ -134,7 +152,7 @@ export function buildStageAttemptTrayItems(input: {
   sourceRefs: RuntimeTraySourceRef[];
 }): RuntimeTrayItem[] {
   const attempts = recordList(input.workbench.attempts);
-  return attempts.map((attempt) => {
+  return attempts.filter(shouldProjectAttemptToTray).map((attempt) => {
     const id = attemptId(attempt);
     const domainId = attemptDomain(attempt);
     const stageId = attemptStage(attempt);

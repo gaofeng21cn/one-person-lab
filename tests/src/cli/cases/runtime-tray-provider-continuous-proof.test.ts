@@ -197,7 +197,7 @@ test('runtime snapshot workbench shows current managed Temporal readiness withou
   }
 });
 
-test('runtime snapshot lists proven provider continuous proof as recent operator evidence', () => {
+test('runtime snapshot keeps fresh proven provider proof in the provider read model only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-proven-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   try {
@@ -245,41 +245,37 @@ db.close();`,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const snapshot = output.runtime_tray_snapshot;
-    const proofItem = snapshot.recent_items.find((item: { item_id: string }) =>
-      item.item_id === 'opl:provider-continuous-proof:temporal'
-    );
+    const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
 
     assert.equal(snapshot.provider_continuous_proof.continuous_proof_status, 'all_observed_proofs_proven');
-    assert.equal(proofItem.status, 'all_observed_proofs_proven');
-    assert.equal(proofItem.action_owner, 'none');
-    assert.equal(proofItem.requires_user_action, false);
-    assert.equal(proofItem.provider_continuous_proof.latest_closeout_status, 'production_residency_proven');
-    assert.equal(proofItem.provider_continuous_proof.slo_execution_receipt_event_count, 0);
-    assert.equal(proofItem.provider_continuous_proof.latest_event_created_at, proofCreatedAt);
-    assert.equal(typeof proofItem.provider_continuous_proof.latest_event_age_seconds, 'number');
-    assert.equal(proofItem.provider_continuous_proof.proof_freshness_status, 'fresh');
-    assert.equal(proofItem.provider_continuous_proof.proof_slo_status, 'proof_fresh');
-    assert.equal(proofItem.provider_continuous_proof.operator_slo_repair_loop.repair_state, 'cadence_current');
+    assert.equal(snapshot.provider_continuous_proof.latest_closeout_status, 'production_residency_proven');
+    assert.equal(snapshot.provider_continuous_proof.slo_execution_receipt_event_count, 0);
+    assert.equal(snapshot.provider_continuous_proof.latest_event_created_at, proofCreatedAt);
+    assert.equal(typeof snapshot.provider_continuous_proof.latest_event_age_seconds, 'number');
+    assert.equal(snapshot.provider_continuous_proof.proof_freshness_status, 'fresh');
+    assert.equal(snapshot.provider_continuous_proof.proof_slo_status, 'proof_fresh');
+    assert.equal(snapshot.provider_continuous_proof.operator_slo_repair_loop.repair_state, 'cadence_current');
     assert.equal(
-      proofItem.provider_continuous_proof.operator_slo_repair_loop.latest_receipt_summary.receipt_status,
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.latest_receipt_summary.receipt_status,
       'proven',
     );
     assert.equal(
-      proofItem.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.event_count,
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.event_count,
       0,
     );
     assert.equal(
-      proofItem.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.executed_count,
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.execution_receipts.executed_count,
       0,
     );
     assert.equal(
-      proofItem.provider_continuous_proof.operator_slo_repair_loop.authority_boundary.can_authorize_domain_ready,
+      snapshot.provider_continuous_proof.operator_slo_repair_loop.authority_boundary.can_authorize_domain_ready,
       false,
     );
     assert.equal(
-      proofItem.provider_continuous_proof.authority_boundary.provider_completion_is_domain_ready,
+      snapshot.provider_continuous_proof.authority_boundary.provider_completion_is_domain_ready,
       false,
     );
+    assert.equal(allItems.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -350,6 +346,11 @@ db.close();`,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const proof = output.runtime_tray_snapshot.provider_continuous_proof;
+    const allItems = [
+      ...output.runtime_tray_snapshot.running_items,
+      ...output.runtime_tray_snapshot.attention_items,
+      ...output.runtime_tray_snapshot.recent_items,
+    ];
 
     assert.equal(proof.proof_event_count, 2);
     assert.equal(proof.proven_event_count, 1);
@@ -357,6 +358,7 @@ db.close();`,
     assert.equal(proof.proof_slo_status, 'proof_fresh');
     assert.equal(proof.operator_slo_repair_loop.repair_state, 'cadence_current');
     assert.equal(proof.operator_slo_repair_loop.execution_receipts.blocked_count, 0);
+    assert.equal(allItems.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

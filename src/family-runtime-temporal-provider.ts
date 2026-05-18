@@ -59,6 +59,10 @@ type TemporalWorkerState = {
 };
 
 type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
+type TemporalSchedulerInfoProjection = {
+  num_actions_skipped_overlap?: number;
+  running_actions?: unknown[];
+};
 
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
@@ -280,6 +284,54 @@ function temporalAddressForScheduler(paths: TemporalWorkerPaths) {
   return address;
 }
 
+export function buildTemporalSchedulerHealthProjection(input: {
+  scheduleStatus: string;
+  info: TemporalSchedulerInfoProjection | null;
+}) {
+  const runningActions = Array.isArray(input.info?.running_actions)
+    ? input.info.running_actions
+    : [];
+  const skippedOverlap = Number.isFinite(input.info?.num_actions_skipped_overlap)
+    ? Number(input.info?.num_actions_skipped_overlap)
+    : 0;
+  const needsAttention = input.scheduleStatus === 'active'
+    && runningActions.length > 0;
+  return {
+    surface_kind: 'temporal_scheduler_cadence_health',
+    health_status: needsAttention ? 'attention_required' : 'healthy',
+    running_action_count: runningActions.length,
+    num_actions_skipped_overlap: skippedOverlap,
+    historical_overlap_skip_observed: skippedOverlap > 0,
+    overlap_policy: 'SKIP',
+    repair_action: needsAttention
+      ? {
+          action_id: 'inspect_or_repair_stale_scheduler_tick',
+          reason: 'running_scheduler_tick_action_observed',
+          safe_first_steps: [
+            'opl family-runtime worker status --provider temporal',
+            'opl family-runtime worker stop --provider temporal',
+            'opl family-runtime worker start --provider temporal',
+            'temporal workflow describe --workflow-id <running_tick_workflow_id>',
+          ],
+          terminate_stale_workflow_requires_operator: true,
+          next_command: 'opl family-runtime scheduler status --provider temporal',
+        }
+      : {
+          action_id: 'none',
+          reason: skippedOverlap > 0
+            ? 'scheduler_cadence_healthy_historical_overlap_skip_retained'
+            : 'scheduler_cadence_healthy',
+          next_command: null,
+        },
+    authority_boundary: {
+      opl: 'scheduler_cadence_health_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_terminate_workflow_automatically: false,
+      can_write_domain_truth: false,
+    },
+  };
+}
+
 export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths, input: {
   intervalMs?: number;
   limit?: number;
@@ -377,6 +429,13 @@ export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths
           num_actions_skipped_overlap: description.info.numActionsSkippedOverlap,
           running_actions: description.info.runningActions,
         },
+        health: buildTemporalSchedulerHealthProjection({
+          scheduleStatus: description.state.paused ? 'paused' : 'active',
+          info: {
+            num_actions_skipped_overlap: description.info.numActionsSkippedOverlap,
+            running_actions: description.info.runningActions,
+          },
+        }),
       };
     } catch (error) {
       if (error instanceof ScheduleNotFoundError) {
@@ -389,6 +448,10 @@ export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths
           spec: null,
           policies: null,
           info: null,
+          health: buildTemporalSchedulerHealthProjection({
+            scheduleStatus: 'not_installed',
+            info: null,
+          }),
         };
       }
       throw error;
