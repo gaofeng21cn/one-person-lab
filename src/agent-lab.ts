@@ -251,6 +251,50 @@ function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
       manifest_refs: stringList(inputs.analysis_queue_manifest.manifest_refs),
     }
     : undefined;
+  const runtimeEventLedger = isRecord(inputs.runtime_event_ledger)
+    ? {
+      surface_kind: inputs.runtime_event_ledger.surface_kind,
+      ledger_kind: inputs.runtime_event_ledger.ledger_kind,
+      body_included: inputs.runtime_event_ledger.body_included === true,
+      event_ledger_refs: stringList(inputs.runtime_event_ledger.event_ledger_refs),
+      runtime_event_refs: stringList(inputs.runtime_event_ledger.runtime_event_refs),
+      stage_attempt_event_refs: stringList(inputs.runtime_event_ledger.stage_attempt_event_refs),
+      provider_event_refs: stringList(inputs.runtime_event_ledger.provider_event_refs),
+      executor_event_refs: stringList(inputs.runtime_event_ledger.executor_event_refs),
+      blocker_refs: stringList(inputs.runtime_event_ledger.blocker_refs),
+    }
+    : undefined;
+  const providerExecutorSwitchHygiene = isRecord(inputs.provider_executor_switch_hygiene)
+    ? {
+      surface_kind: inputs.provider_executor_switch_hygiene.surface_kind,
+      hygiene_kind: inputs.provider_executor_switch_hygiene.hygiene_kind,
+      body_included: inputs.provider_executor_switch_hygiene.body_included === true,
+      provider_switch_hygiene_refs: stringList(
+        inputs.provider_executor_switch_hygiene.provider_switch_hygiene_refs,
+      ),
+      executor_switch_hygiene_refs: stringList(
+        inputs.provider_executor_switch_hygiene.executor_switch_hygiene_refs,
+      ),
+      provider_refs: stringList(inputs.provider_executor_switch_hygiene.provider_refs),
+      executor_refs: stringList(inputs.provider_executor_switch_hygiene.executor_refs),
+      switch_receipt_refs: stringList(inputs.provider_executor_switch_hygiene.switch_receipt_refs),
+      no_downgrade_proof_refs: stringList(inputs.provider_executor_switch_hygiene.no_downgrade_proof_refs),
+    }
+    : undefined;
+  const claimAssurance = isRecord(inputs.claim_assurance)
+    ? {
+      surface_kind: inputs.claim_assurance.surface_kind,
+      assurance_kind: inputs.claim_assurance.assurance_kind,
+      body_included: inputs.claim_assurance.body_included === true,
+      claim_assurance_refs: stringList(inputs.claim_assurance.claim_assurance_refs),
+      claim_refs: stringList(inputs.claim_assurance.claim_refs),
+      direct_evidence_refs: stringList(inputs.claim_assurance.direct_evidence_refs),
+      reviewer_receipt_refs: stringList(inputs.claim_assurance.reviewer_receipt_refs),
+      contradiction_refs: stringList(inputs.claim_assurance.contradiction_refs),
+      uncertainty_refs: stringList(inputs.claim_assurance.uncertainty_refs),
+      no_unbacked_claim_proof_refs: stringList(inputs.claim_assurance.no_unbacked_claim_proof_refs),
+    }
+    : undefined;
 
   return {
     surface_kind: inputs.surface_kind,
@@ -261,6 +305,9 @@ function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
     failed_route_refs: stringList(inputs.failed_route_refs),
     reviewer_direct_evidence_refs: stringList(inputs.reviewer_direct_evidence_refs),
     analysis_queue_manifest_refs: stringList(inputs.analysis_queue_manifest_refs),
+    runtime_event_ledger_refs: stringList(inputs.runtime_event_ledger_refs),
+    provider_executor_switch_hygiene_refs: stringList(inputs.provider_executor_switch_hygiene_refs),
+    claim_assurance_refs: stringList(inputs.claim_assurance_refs),
     target_editable_surface_refs: stringList(inputs.target_editable_surface_refs),
     evidence_delta_refs: stringList(inputs.evidence_delta_refs),
     independent_ai_review_receipt_ref: typeof inputs.independent_ai_review_receipt_ref === 'string'
@@ -270,7 +317,14 @@ function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
     rollback_ref: typeof inputs.rollback_ref === 'string' ? inputs.rollback_ref : undefined,
     research_memory_graph: researchMemoryGraph,
     analysis_queue_manifest: analysisQueueManifest,
-    body_included: researchMemoryGraph?.body_included === true || analysisQueueManifest?.body_included === true,
+    runtime_event_ledger: runtimeEventLedger,
+    provider_executor_switch_hygiene: providerExecutorSwitchHygiene,
+    claim_assurance: claimAssurance,
+    body_included: researchMemoryGraph?.body_included === true
+      || analysisQueueManifest?.body_included === true
+      || runtimeEventLedger?.body_included === true
+      || providerExecutorSwitchHygiene?.body_included === true
+      || claimAssurance?.body_included === true,
     authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
   };
 }
@@ -284,6 +338,9 @@ function mechanismEvolutionInputRefs(value: ReturnType<typeof mechanismEvolution
     ...value.failed_route_refs,
     ...value.reviewer_direct_evidence_refs,
     ...value.analysis_queue_manifest_refs,
+    ...value.runtime_event_ledger_refs,
+    ...value.provider_executor_switch_hygiene_refs,
+    ...value.claim_assurance_refs,
     ...value.target_editable_surface_refs,
     ...value.evidence_delta_refs,
     ...(value.independent_ai_review_receipt_ref ? [value.independent_ai_review_receipt_ref] : []),
@@ -303,6 +360,25 @@ function mechanismEvolutionInputRefs(value: ReturnType<typeof mechanismEvolution
       item.ref ?? '',
       ...(item.source_refs ?? []),
     ]) ?? []),
+    ...(value.runtime_event_ledger?.event_ledger_refs ?? []),
+    ...(value.runtime_event_ledger?.runtime_event_refs ?? []),
+    ...(value.runtime_event_ledger?.stage_attempt_event_refs ?? []),
+    ...(value.runtime_event_ledger?.provider_event_refs ?? []),
+    ...(value.runtime_event_ledger?.executor_event_refs ?? []),
+    ...(value.runtime_event_ledger?.blocker_refs ?? []),
+    ...(value.provider_executor_switch_hygiene?.provider_switch_hygiene_refs ?? []),
+    ...(value.provider_executor_switch_hygiene?.executor_switch_hygiene_refs ?? []),
+    ...(value.provider_executor_switch_hygiene?.provider_refs ?? []),
+    ...(value.provider_executor_switch_hygiene?.executor_refs ?? []),
+    ...(value.provider_executor_switch_hygiene?.switch_receipt_refs ?? []),
+    ...(value.provider_executor_switch_hygiene?.no_downgrade_proof_refs ?? []),
+    ...(value.claim_assurance?.claim_assurance_refs ?? []),
+    ...(value.claim_assurance?.claim_refs ?? []),
+    ...(value.claim_assurance?.direct_evidence_refs ?? []),
+    ...(value.claim_assurance?.reviewer_receipt_refs ?? []),
+    ...(value.claim_assurance?.contradiction_refs ?? []),
+    ...(value.claim_assurance?.uncertainty_refs ?? []),
+    ...(value.claim_assurance?.no_unbacked_claim_proof_refs ?? []),
   ]);
 }
 

@@ -393,8 +393,45 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
           failed_route_refs: ['failed-route:mas/dm002/internal-quality-language'],
           reviewer_direct_evidence_refs: ['review-ref:mas/dm002/ai-reviewer-direct-evidence'],
           analysis_queue_manifest_refs: ['file-ref:study/artifacts/analysis_queue/latest.json'],
+          runtime_event_ledger_refs: ['runtime-event-ledger:mas/dm002/stage-events'],
+          provider_executor_switch_hygiene_refs: ['switch-hygiene:mas/dm002/provider-executor'],
+          claim_assurance_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
           target_editable_surface_refs: ['mechanism-edit-ref:mas/analysis-campaign-queue-routing'],
           evidence_delta_refs: ['evidence-ref:mas/dm002/reviewer-routeback'],
+          runtime_event_ledger: {
+            surface_kind: 'mas_runtime_event_ledger_refs',
+            ledger_kind: 'body_free_runtime_event_ledger_refs',
+            body_included: false,
+            event_ledger_refs: ['runtime-event-ledger:mas/dm002/stage-events'],
+            runtime_event_refs: ['runtime-event:mas/dm002/reviewer-routeback'],
+            stage_attempt_event_refs: ['stage-attempt-event:mas/dm002/reviewer-repair'],
+            provider_event_refs: ['provider-event:temporal/mas-dm002-replay'],
+            executor_event_refs: ['executor-event:codex/mas-dm002-reviewer-repair'],
+            blocker_refs: ['blocker-ref:mas/dm002/no-current-blocker'],
+          },
+          provider_executor_switch_hygiene: {
+            surface_kind: 'mas_provider_executor_switch_hygiene_refs',
+            hygiene_kind: 'body_free_provider_executor_switch_hygiene_refs',
+            body_included: false,
+            provider_switch_hygiene_refs: ['provider-switch-hygiene:mas/dm002/local-to-temporal'],
+            executor_switch_hygiene_refs: ['executor-switch-hygiene:mas/dm002/codex-default'],
+            provider_refs: ['provider-ref:temporal/mas-dm002'],
+            executor_refs: ['executor-ref:codex-cli/mas-dm002'],
+            switch_receipt_refs: ['switch-receipt:mas/dm002/provider-executor'],
+            no_downgrade_proof_refs: ['no-downgrade-proof:mas/dm002/provider-executor'],
+          },
+          claim_assurance: {
+            surface_kind: 'mas_claim_assurance_refs',
+            assurance_kind: 'body_free_claim_assurance_refs',
+            body_included: false,
+            claim_assurance_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
+            claim_refs: ['claim-ref:hdl-unit-contamination'],
+            direct_evidence_refs: ['direct-evidence-ref:mas/dm002/hdl-unit-contamination'],
+            reviewer_receipt_refs: ['reviewer-receipt:mas/dm002/claim-assurance'],
+            contradiction_refs: ['contradiction-ref:mas/dm002/no-current-contradiction'],
+            uncertainty_refs: ['uncertainty-ref:mas/dm002/hdl-unit-boundary'],
+            no_unbacked_claim_proof_refs: ['no-unbacked-claim-proof:mas/dm002'],
+          },
           research_memory_graph: {
             surface_kind: 'mas_research_memory_graph',
             graph_kind: 'body_free_research_memory_graph',
@@ -452,10 +489,31 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
     assert.ok(output.agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs.includes(
       'analysis-queue:hdl-harmonization',
     ));
+    assert.ok(output.agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs.includes(
+      'runtime-event-ledger:mas/dm002/stage-events',
+    ));
+    assert.ok(output.agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs.includes(
+      'provider-switch-hygiene:mas/dm002/local-to-temporal',
+    ));
+    assert.ok(output.agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs.includes(
+      'claim-assurance:mas/dm002/no-unbacked-claims',
+    ));
     assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.research_memory_graph
       .body_included, false);
     assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.analysis_queue_manifest
       .body_included, false);
+    assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.runtime_event_ledger
+      .body_included, false);
+    assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs
+      .provider_executor_switch_hygiene.body_included, false);
+    assert.equal(output.agent_lab_evolve.suite_result.runs[0].mechanism_evolution_inputs.claim_assurance
+      .body_included, false);
+    assert.ok(output.agent_lab_evolve.log_driven_mechanism_candidates.log_evidence.source_refs.includes(
+      'provider-switch-hygiene:mas/dm002/local-to-temporal',
+    ));
+    assert.ok(output.agent_lab_evolve.evidence_delta.added_evidence_refs.includes(
+      'claim-assurance:mas/dm002/no-unbacked-claims',
+    ));
     assert.equal(output.agent_lab_evolve.independent_ai_review_receipt.review_context_inherits_executor_context,
       false);
     assert.equal(output.agent_lab_evolve.promotion_receipt.promoted_to_status, 'canary');
@@ -470,6 +528,9 @@ test('agent-lab evolve runs an external suite into a refs-only mechanism evoluti
     assert.equal(output.agent_lab_evolve.next_mechanism_candidate.source_log_mined_candidate_refs.length, 4);
     assert.ok(output.agent_lab_evolve.next_mechanism_candidate.source_mechanism_evolution_input_refs.includes(
       'paper-ref:dm002-current-draft',
+    ));
+    assert.ok(output.agent_lab_evolve.next_mechanism_candidate.source_mechanism_evolution_input_refs.includes(
+      'runtime-event-ledger:mas/dm002/stage-events',
     ));
     assert.equal(output.agent_lab_evolve.next_mechanism_candidate.promotion_decision, 'auto_promote_to_canary');
     assert.equal(output.agent_lab_evolve.automatic_mechanism_promotion_ready, true);

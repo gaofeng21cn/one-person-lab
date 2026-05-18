@@ -149,11 +149,48 @@ test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for ev
       failed_route_refs: ['failed-route:mas/dm002/internal-quality-language'],
       reviewer_direct_evidence_refs: ['review-ref:mas/dm002/ai-reviewer-direct-evidence'],
       analysis_queue_manifest_refs: ['file-ref:study/artifacts/analysis_queue/latest.json'],
+      runtime_event_ledger_refs: ['runtime-event-ledger:mas/dm002/stage-events'],
+      provider_executor_switch_hygiene_refs: ['switch-hygiene:mas/dm002/provider-executor'],
+      claim_assurance_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
       target_editable_surface_refs: ['mechanism-edit-ref:mas/analysis-campaign-queue-routing'],
       evidence_delta_refs: ['evidence-ref:mas/dm002/reviewer-routeback'],
       independent_ai_review_receipt_ref: 'ai-reviewer-receipt:mas/dm002/mechanism-direct-evidence-review',
       version_ledger_ref: 'mechanism-version-ledger:mas/dm002/medical-manuscript-quality',
       rollback_ref: 'mechanism-rollback-ref:mas/agent-lab-medical-manuscript-quality',
+      runtime_event_ledger: {
+        surface_kind: 'mas_runtime_event_ledger_refs',
+        ledger_kind: 'body_free_runtime_event_ledger_refs',
+        body_included: false,
+        event_ledger_refs: ['runtime-event-ledger:mas/dm002/stage-events'],
+        runtime_event_refs: ['runtime-event:mas/dm002/reviewer-routeback'],
+        stage_attempt_event_refs: ['stage-attempt-event:mas/dm002/reviewer-repair'],
+        provider_event_refs: ['provider-event:temporal/mas-dm002-replay'],
+        executor_event_refs: ['executor-event:codex/mas-dm002-reviewer-repair'],
+        blocker_refs: ['blocker-ref:mas/dm002/no-current-blocker'],
+      },
+      provider_executor_switch_hygiene: {
+        surface_kind: 'mas_provider_executor_switch_hygiene_refs',
+        hygiene_kind: 'body_free_provider_executor_switch_hygiene_refs',
+        body_included: false,
+        provider_switch_hygiene_refs: ['provider-switch-hygiene:mas/dm002/local-to-temporal'],
+        executor_switch_hygiene_refs: ['executor-switch-hygiene:mas/dm002/codex-default'],
+        provider_refs: ['provider-ref:temporal/mas-dm002'],
+        executor_refs: ['executor-ref:codex-cli/mas-dm002'],
+        switch_receipt_refs: ['switch-receipt:mas/dm002/provider-executor'],
+        no_downgrade_proof_refs: ['no-downgrade-proof:mas/dm002/provider-executor'],
+      },
+      claim_assurance: {
+        surface_kind: 'mas_claim_assurance_refs',
+        assurance_kind: 'body_free_claim_assurance_refs',
+        body_included: false,
+        claim_assurance_refs: ['claim-assurance:mas/dm002/no-unbacked-claims'],
+        claim_refs: ['claim-ref:hdl-unit-contamination'],
+        direct_evidence_refs: ['direct-evidence-ref:mas/dm002/hdl-unit-contamination'],
+        reviewer_receipt_refs: ['reviewer-receipt:mas/dm002/claim-assurance'],
+        contradiction_refs: ['contradiction-ref:mas/dm002/no-current-contradiction'],
+        uncertainty_refs: ['uncertainty-ref:mas/dm002/hdl-unit-boundary'],
+        no_unbacked_claim_proof_refs: ['no-unbacked-claim-proof:mas/dm002'],
+      },
       research_memory_graph: {
         surface_kind: 'mas_research_memory_graph',
         graph_kind: 'body_free_research_memory_graph',
@@ -203,6 +240,12 @@ test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for ev
   assert.equal(mechanismInputs.surface_kind, 'mas_agent_lab_mechanism_evolution_inputs');
   assert.equal(mechanismInputs.research_memory_graph.body_included, false);
   assert.equal(mechanismInputs.analysis_queue_manifest.body_included, false);
+  assert.ok(mechanismInputs.runtime_event_ledger);
+  assert.ok(mechanismInputs.provider_executor_switch_hygiene);
+  assert.ok(mechanismInputs.claim_assurance);
+  assert.equal(mechanismInputs.runtime_event_ledger.body_included, false);
+  assert.equal(mechanismInputs.provider_executor_switch_hygiene.body_included, false);
+  assert.equal(mechanismInputs.claim_assurance.body_included, false);
   assert.deepEqual(mechanismInputs.research_memory_graph.claim_refs, [
     'claim-ref:hdl-unit-contamination',
   ]);
@@ -211,6 +254,11 @@ test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for ev
   ]);
   assert.ok(result.refs.mechanism_evolution_input_refs.includes('paper-ref:dm002-current-draft'));
   assert.ok(result.refs.mechanism_evolution_input_refs.includes('analysis-queue:hdl-harmonization'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('runtime-event-ledger:mas/dm002/stage-events'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes(
+    'provider-switch-hygiene:mas/dm002/local-to-temporal',
+  ));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('claim-assurance:mas/dm002/no-unbacked-claims'));
   assert.equal(result.authority_boundary.can_write_memory_body, false);
 });
 
@@ -229,6 +277,26 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.result_surface.ref_fields.includes('mechanism_evolution_input_refs'));
   assert.equal(contract.external_suite_runner_surface.surface_kind, 'opl_agent_lab_external_suite_run');
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
+  assert.ok(contract.input_surfaces.includes('runtime_event_ledger_refs'));
+  assert.ok(contract.input_surfaces.includes('provider_executor_switch_hygiene_refs'));
+  assert.ok(contract.input_surfaces.includes('claim_assurance_refs'));
+  assert.equal(contract.mechanism_evolution_input_surface.surface_kind,
+    'opl_agent_lab_mechanism_evolution_input_refs');
+  assert.equal(contract.mechanism_evolution_input_surface.refs_only, true);
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('runtime_event_ledger_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes(
+    'provider_executor_switch_hygiene_refs',
+  ));
+  assert.ok(contract.mechanism_evolution_input_surface.input_ref_groups.includes('claim_assurance_refs'));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes('runtime_event_ledger'));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes(
+    'provider_executor_switch_hygiene',
+  ));
+  assert.ok(contract.mechanism_evolution_input_surface.typed_body_free_surfaces.includes('claim_assurance'));
+  assert.ok(contract.mechanism_evolution_input_surface.consumer_outputs.includes(
+    'agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs',
+  ));
+  assert.ok(contract.mechanism_evolution_input_surface.forbidden_payloads.includes('owner_receipt_body'));
   assert.equal(contract.mechanism_surface.surface_kind, 'opl_agent_lab_mechanism_read_model');
   assert.equal(contract.mechanism_surface.cli, 'opl agent-lab mechanism');
   assert.ok(contract.mechanism_surface.fields.includes('mechanism_ref'));
