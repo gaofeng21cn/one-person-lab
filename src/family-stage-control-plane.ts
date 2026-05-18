@@ -10,6 +10,7 @@ import type {
 import {
   buildFamilyStageAdmissionReview,
 } from './family-stage-admission.ts';
+import { buildFamilyStageProofBundle } from './family-stage-proof-bundle.ts';
 import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
@@ -439,6 +440,23 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
         ...admission,
         inspected_stage: inspectedStageAdmission,
       },
+    },
+  };
+}
+
+export function buildFamilyStageProofBundleInspect(contracts: FrameworkContracts, args: string[]) {
+  const parsed = parseOptionArgs(args, ['domain']);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  return {
+    version: 'g2',
+    family_stage_proof_bundle: {
+      project_id: entry.project_id,
+      project: entry.project,
+      proof_bundle: buildFamilyStageProofBundle(plane, {
+        actionCatalog: entry.manifest?.family_action_catalog ?? null,
+        admissionReview: admission,
+      }),
     },
   };
 }

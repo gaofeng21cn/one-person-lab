@@ -279,6 +279,21 @@ test('family stage control plane is resolved from domain manifests as read-only 
     assert.equal(inspect.family_stage.parity.status, 'aligned');
     assert.equal(inspect.family_stage.admission.status, 'needs_contracts');
     assert.equal(inspect.family_stage.admission.inspected_stage.status, 'needs_contracts');
+
+    const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(
+      proofBundle.family_stage_proof_bundle.proof_bundle.surface_kind,
+      'opl_stage_pack_proof_bundle',
+    );
+    assert.equal(proofBundle.family_stage_proof_bundle.proof_bundle.identity.target_domain_id, 'med-autoscience');
+    assert.equal(proofBundle.family_stage_proof_bundle.proof_bundle.admission_status, 'needs_contracts');
+    assert.equal(
+      proofBundle.family_stage_proof_bundle.proof_bundle.authority_boundary.can_write_domain_truth,
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

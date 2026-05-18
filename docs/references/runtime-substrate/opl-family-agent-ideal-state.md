@@ -57,6 +57,7 @@ User / Codex / CLI / One Person Lab App
 
 - 提供 `opl framework locate`、module install/update、domain discovery、skill sync、contract validation、skeleton validation、pack compilation 和 release surface。
 - 提供统一 `domain-agent skeleton` 与 `Agent Pack Compiler`，从 descriptor、stage graph、action metadata、memory/artifact/source policy、receipt schema 和 authority manifest 派生 CLI、MCP、Skill/product-entry、sidecar、status、session、workbench 和 harness metadata。
+- 提供 stage pack admission 与 proof bundle projection，统一暴露 runtime-event、idempotency、composition obligation、expected receipt refs 和 no-forbidden-write 边界，供 queue/provider/App 在启动前 fail closed 消费。
 - 提供 direct path / hosted path parity、no-forbidden-write、source fingerprint、receipt idempotency、conflict fail-closed、line budget 和 repo hygiene 验证。
 
 ### 运行与长时间在线
