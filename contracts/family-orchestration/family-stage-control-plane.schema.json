@@ -170,12 +170,91 @@
           "type": "object",
           "additionalProperties": true
         },
+        "stage_contract": {
+          "$ref": "#/$defs/stage_contract"
+        },
+        "trust_boundary": {
+          "$ref": "#/$defs/trust_boundary"
+        },
         "authority_boundary": {
           "type": "object",
           "additionalProperties": true
         }
       },
       "additionalProperties": true
+    },
+    "stage_contract": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ensures": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "boundary_assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "trust_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "lane"
+      ],
+      "properties": {
+        "lane": {
+          "type": "string",
+          "enum": [
+            "opl_framework",
+            "domain_agent",
+            "codex_executor",
+            "ai_decision",
+            "human_gate",
+            "external_system",
+            "app_projection"
+          ]
+        },
+        "static_check_eligible": {
+          "type": "boolean"
+        },
+        "effect_boundary": {
+          "type": "boolean"
+        },
+        "records_runtime_events": {
+          "type": "boolean"
+        },
+        "owner_receipt_required": {
+          "type": "boolean"
+        },
+        "human_gate_required": {
+          "type": "boolean"
+        },
+        "runtime_guard_required": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "additionalProperties": true
