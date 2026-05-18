@@ -34,7 +34,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 1. 根层 `README*`：安装、启动和用户第一入口。
 2. `docs/README.md`：文档入口和当前阅读路径。
 3. 核心五件套：`project.md`、`status.md`、`architecture.md`、`invariants.md`、`decisions.md`。
-4. `docs/active/`：当前执行、当前差距、active baton 与 closeout evidence。
+4. `docs/active/`：当前执行、当前差距、active baton 与当前完成门槛。dated proof、receipt 流水和已完成 closeout 过程进入 `docs/history/**`。
 5. `docs/runtime/`、`docs/specs/`、`docs/product/`：runtime、domain admission/shared boundary、App/workbench/product-entry 支撑。
 6. `docs/source/`、`docs/delivery/`、`docs/policies/`：workspace/source、artifact/package lifecycle、稳定治理规则。
 7. `docs/references/`：目标态、收敛治理、运行支撑、domain admission、样例和操作治理参考。
@@ -45,7 +45,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | 目录 | 长期职责 | 当前 OPL 承载 |
 | --- | --- | --- |
 | `docs/` root | 文档入口、核心五件套、docs governance | `README.md`、核心五件套、本文件。 |
-| `docs/active/` | 当前执行、当前计划、当前差距、active baton、closeout evidence | family 开发主参考、当前开发线路、当前状态与理想差距、生产闭环差距矩阵、开发文档组合整理。 |
+| `docs/active/` | 当前执行、当前计划、当前差距、active baton、当前完成门槛 | family 开发主参考、当前开发线路、当前状态与理想差距、生产闭环差距矩阵、开发文档组合整理。 |
 | `docs/public/` | 仓库首页之后的公开产品方向支撑 | roadmap、task map、operating model、UHS 叙事。 |
 | `docs/product/` | One Person Lab App/workbench、operator entry、product entry、action-routing shell | public surface index 与 App/workbench 消费边界。 |
 | `docs/runtime/` | framework runtime、provider/executor、control plane、projection/read model、resume/wakeup、repair 语义 | runtime 命名与边界合同。 |
@@ -64,14 +64,14 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | --- | --- | --- | --- |
 | `docs/README.md` | `active_index` | 文档入口、阅读顺序、当前 truth 去向和历史入口导航。 | 保持入口索引；不承载新计划正文。 |
 | `docs/project.md` | `active_truth` | 项目公开角色、产品分层和 admitted domain 总览。 | 核心五件套；current truth 优先。 |
-| `docs/status.md` | `active_truth` | 当前状态、fresh evidence、完成边界和下一步验证口径。 | 核心五件套；旧计划不得覆盖。 |
+| `docs/status.md` | `active_truth` | 当前状态、完成边界、差距摘要和下一步验证口径。 | 核心五件套；旧计划和过程 proof 不得覆盖。 |
 | `docs/architecture.md` | `active_truth` | 顶层 runtime、activation、contract、domain-agent 和 App/workbench 边界。 | 核心五件套；当前架构 owner。 |
 | `docs/invariants.md` | `active_truth` | 硬约束、不可破坏边界和 fail-closed 规则。 | 核心五件套；长期规则优先上提到这里。 |
 | `docs/decisions.md` | `active_truth_with_history_notes` | 仍有效决策和被 supersede 决策的当前读法。 | 核心五件套；旧决策必须标明 superseded。 |
 | `docs/active/opl-family-development-reference.md` | `active_support` | OPL 系列项目开发主参考、owner 分层、上收判断和 direct-retirement 规则。 | 保持主参考；不替代单仓 truth。 |
-| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | 对照理想态的 family-level 当前差距、执行顺序和验收顺序。 | 保持 active plan；fresh evidence 需与机器面同步。 |
+| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | 对照理想态的 family-level 当前差距、执行顺序和验收顺序。 | 保持 active plan；只写当前状态和差距，过程证据进 history。 |
 | `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
-| `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、evidence gate 与功能 follow-through owner。 | 保持 active plan；承接 2026-05-14 closeout 后续。 |
+| `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、证据门与功能/结构当前 owner。 | 保持 active plan；不承载 dated proof 流水。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
 | `docs/public/*` | `public_support` | 公开 roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog。 |
 | `docs/product/README.md` 与 `docs/product/opl-public-surface-index.md` | `active_support` | App/workbench、operator/product entry、public surface 与 action routing 边界。 | 保持 product 支撑；App release truth 回 App 仓和 artifact。 |
@@ -94,21 +94,20 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/references/domain-admission/*` | `support_reference` | candidate backlog 和准入支撑参考。 | 保持 reference；正式准入规则回 specs。 |
 | `docs/history/**` | `history_or_tombstone` | 退役路线、完成计划、frontdoor/gateway/federation/OMX/process provenance。 | 不作为 active owner；有用结论先吸收再保留原文。 |
 
-## 2026-05-17 内容审计收口
+## 内容审计收口
 
-本轮以 `docs/active/opl-family-development-reference.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md` 和 `docs/active/current-state-vs-ideal-gap.md` 为主参考，复核 OPL 非 history 层文档：
+当前审计规则固定为：
 
-- `docs/references/README.md` 不再列不存在的 `examples-corpora/` reference 分区；旧 gateway / routed-action / operating record corpus 只从 `docs/history/compatibility/gateway-federation/examples-corpora/` 进入。
-- `docs/references/runtime-substrate/README.md` 将 legacy evaluation references 限定为 runtime/provider/executor 边界审计材料，旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述不能恢复为 active plan、active interface 或 compatibility promise。
-- `docs/history/**/README.md` 去掉 docs 层旧双语自指入口，统一写明历史双语方案、旧路径和旧命令只按 provenance 阅读；`docs/**` 当前只维护中文 canonical 内容。
-- `hermes-agent-truth-reset-and-target-state.md` 保留在 reference 层只因为它仍是 executor/stale-compat 边界 guard 的人读锚点；它的生命周期是 `history_boundary_support`，不是 provider 目标态。
-- `opl-managed-runtime-three-layer-contract.md` 保留在 reference 层是因为 machine contract 与测试仍链接三层 owner split；它不是旧 managed-runtime 计划，也不保留 Hermes provider 兼容面。
+- 主文档只记录最新情况、当前差距、当前 owner boundary 和当前完善顺序。
+- dated follow-through、closeout 流水、receipt/proof 命令摘要和阶段性校准过程进入 [OPL family 文档过程归档 2026-05](./history/process/plans/2026-05-18-opl-family-doc-process-history.md) 或其他 `docs/history/**`。
+- `docs/decisions.md` 可以保留决策日期日志，但被 supersede 的段落必须显式标注当前读法。
+- path-stable reference/spec 如果仍因 contract、human_doc 或 audit context 保留原路径，必须在索引或文件开头说明生命周期；不得恢复旧 provider、Gateway、frontdoor、compatibility、direct-entry 或 host-agent-only 叙述为 active plan。
 
 ## 四仓目录状态
 
 | 仓库 | 当前判断 |
 | --- | --- |
-| `OPL` | 完整保留 canonical 目录集合；本轮把 active 中的 runtime/spec/product 内容归位，并给 source/delivery/policies 放入真实 owner 文档。 |
+| `OPL` | 完整保留 canonical 目录集合；runtime/spec/product/source/delivery/policies 内容按当前生命周期职责归位，不按空目录或历史批次判断。 |
 | `MAS` | 完整保留 canonical 目录集合；`active/runtime/delivery/policies/references/history` 已真实承载，`product/public/source/specs` 可先保持薄索引，后续按真实 owner surface 吸收。旧 `program/`、`capabilities/` active 目录已物理退役，历史内容留在 `docs/history/`。 |
 | `MAG` | 完整保留 canonical 目录集合；真实 owner 主要在 core five、`active/`、`references/`、`specs/`、`history/`，`product/runtime/delivery/source/policies/public` 先作为职责明确的薄索引，后续小批量吸收仍 current 的内容。旧 `plans/` 已退役。 |
 | `RCA` | 完整保留 canonical 目录集合；`active/product/runtime/delivery/source/policies/references/history` 已真实承载，`public/specs` 可以保持薄索引。旧 `program/`、`plans/`、`capabilities/` 不复活成 active 目录。 |
@@ -118,7 +117,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 文档生命周期按内容判断，不按文件名、日期或目录名自动判断。维护时先拆分同一文件中的几类内容：
 
 1. 当前事实合入核心五件套、当前 owner doc、contracts/schema/source 或 runtime/generated surface。
-2. 当前执行、当前差距、active baton、closeout evidence 留在 `docs/active/`。
+2. 当前执行、当前差距、active baton 和当前完成门槛留在 `docs/active/`。
 3. Runtime、product、source、delivery、policy、spec 这类长期 owner 内容进入对应 canonical 目录。
 4. 目标态、外部学习、governance、verification、operator support 进入 `docs/references/`，不得写成 current truth。
 5. 已完成计划、旧路线、旧接口、旧 provider、旧 gateway/frontdoor/federation、旧 compatibility 叙事进入 `docs/history/` 或 tombstone。
@@ -148,7 +147,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 
 | 问题 | 决策 |
 | --- | --- |
-| 是否决定当前执行顺序、差距、baton 或 closeout evidence？ | 放 `docs/active/`。 |
+| 是否决定当前执行顺序、差距、baton 或完成门槛？ | 放 `docs/active/`。 |
 | 是否面向 public narrative / roadmap / task map / operating model？ | 放 `docs/public/`。 |
 | 是否面向 App/workbench、operator/product entry、profile 或 action routing？ | 放 `docs/product/`。 |
 | 是否解释 runtime/provider/executor/control plane/projection/watch/repair？ | 放 `docs/runtime/`。 |
