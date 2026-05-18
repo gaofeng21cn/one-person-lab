@@ -104,6 +104,7 @@ export type FamilyRuntimeCommandInput =
       closeoutRefs?: string[];
       humanGateRefs?: string[];
       blockedReason?: string;
+      launchAdmissionGate?: Record<string, unknown>;
       newAttempt?: boolean;
       start?: boolean;
     };

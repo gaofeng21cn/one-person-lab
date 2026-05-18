@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from './contracts.ts';
+import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
 import {
   DOMAIN_ADAPTERS,
   parseFamilyRuntimeCommand,
@@ -66,6 +66,7 @@ import {
   reconcileFamilyRuntimeLifecycleRefs,
   runFamilyRuntimeLifecycleApply,
 } from './family-runtime-lifecycle-index.ts';
+import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -789,15 +790,29 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_create') {
-      const result = createStageAttempt(db, parsed.input);
+      const stageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
+        domainId: parsed.input.domainId,
+        stageId: parsed.input.stageId,
+      });
+      const result = createStageAttempt(db, {
+        ...parsed.input,
+        blockedReason:
+          parsed.input.blockedReason
+          ?? stageLaunchAdmissionGate.block_reason
+          ?? undefined,
+        launchAdmissionGate: stageLaunchAdmissionGate,
+      });
       const { attempt } = result;
       const temporal_start = parsed.input.start
-        ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt)
+        && stageLaunchAdmissionGate.gate_action !== 'block_stage_launch'
+          ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt)
         : null;
       insertEvent(db, {
         taskId: attempt.task_id,
         domainId: parsed.input.domainId,
-        eventType: parsed.input.start
+        eventType: stageLaunchAdmissionGate.gate_action === 'block_stage_launch'
+          ? 'stage_attempt_launch_admission_blocked'
+          : parsed.input.start
           ? 'stage_attempt_temporal_started'
           : result.idempotent_noop
             ? 'stage_attempt_idempotent_noop'
@@ -809,6 +824,7 @@ export async function runFamilyRuntime(args: string[]) {
           provider_kind: attempt.provider_kind,
           stage_id: attempt.stage_id,
           task_id: attempt.task_id,
+          stage_launch_admission_gate: stageLaunchAdmissionGate,
           temporal_start,
         },
       });
@@ -819,6 +835,7 @@ export async function runFamilyRuntime(args: string[]) {
           created: result.created,
           idempotent_noop: result.idempotent_noop,
           attempt,
+          stage_launch_admission_gate: stageLaunchAdmissionGate,
           conflict_or_blocker_envelopes: 'conflict_or_blocker_envelopes' in result
             ? result.conflict_or_blocker_envelopes
             : [],

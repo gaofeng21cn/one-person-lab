@@ -71,6 +71,7 @@ export type StageAttemptCreateInput = {
   closeoutRefs?: string[];
   humanGateRefs?: string[];
   blockedReason?: string;
+  launchAdmissionGate?: object;
   newAttempt?: boolean;
   start?: boolean;
 };
@@ -239,6 +240,13 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     completed_at: null,
     last_heartbeat_at: null,
   };
+  const initialActivityEvents = input.launchAdmissionGate
+    ? [{
+        event_kind: 'stage_launch_admission_gate',
+        event_time: createdAt,
+        gate: input.launchAdmissionGate,
+      }]
+    : [];
   const row = {
     stage_attempt_id: stageAttemptId,
     idempotency_key: idempotencyKey,
@@ -259,7 +267,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     blocked_reason: input.blockedReason?.trim() || null,
     provider_receipt_json: JSON.stringify(providerReceipt),
     provider_run_json: JSON.stringify(providerRun),
-    activity_events_json: JSON.stringify([]),
+    activity_events_json: JSON.stringify(initialActivityEvents),
     route_impact_json: JSON.stringify({}),
     closeout_receipt_status: null,
     created_at: createdAt,

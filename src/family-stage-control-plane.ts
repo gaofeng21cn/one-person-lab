@@ -44,6 +44,30 @@ export interface FamilyStageListEntry {
   admission_status: string | null;
 }
 
+export interface FamilyStageLaunchAdmissionGate {
+  surface_kind: 'opl_family_stage_launch_admission_gate';
+  version: 'family-stage-launch-admission-gate.v1';
+  domain_id: string;
+  normalized_domain_id: string;
+  stage_id: string;
+  plane_id: string | null;
+  target_domain_id: string | null;
+  status: 'admitted' | 'needs_contracts' | 'blocked' | 'not_in_declared_control_plane' | 'missing_control_plane';
+  gate_action: 'allow_stage_launch' | 'block_stage_launch' | 'allow_legacy_unregistered_stage_attempt';
+  block_reason: string | null;
+  inspected_stage: FamilyStageAdmissionStageResult | null;
+  blocker_findings: FamilyStageAdmissionReview['findings'];
+  warning_findings: FamilyStageAdmissionReview['findings'];
+  allowed_stage_ids: string[];
+  authority_boundary: {
+    opl: 'launch_admission_gate_and_blocker_projection_only';
+    domain: 'truth_quality_artifact_gate_owner';
+    can_write_domain_truth: false;
+    can_authorize_quality_verdict: false;
+    can_mutate_artifact_body: false;
+  };
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -242,6 +266,119 @@ function findStage(plane: FamilyStageControlPlane, stageId: string) {
     });
   }
   return stage;
+}
+
+function findingsForStage(
+  admission: FamilyStageAdmissionReview,
+  stageId: string,
+  severity: 'blocker' | 'warning',
+) {
+  return admission.findings.filter((finding) => (
+    finding.severity === severity
+    && (finding.stage_id === stageId || finding.target_stage_id === stageId)
+  ));
+}
+
+export function buildFamilyStageLaunchAdmissionGate(
+  contracts: FrameworkContracts,
+  input: { domainId: string; stageId: string },
+  options: ManifestCatalogOptions = {},
+): FamilyStageLaunchAdmissionGate {
+  const normalized = normalizeDomainSelection(input.domainId);
+  const index = buildStageIndex(contracts, options);
+  const entry = index.domain_manifests.projects.find((candidate) => {
+    const plane = resolvePlaneFromEntry(candidate);
+    return candidate.project_id === normalized
+      || candidate.project === normalized
+      || plane?.target_domain_id === input.domainId
+      || plane?.target_domain_id === normalized
+      || candidate.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === normalized;
+  });
+  const plane = entry ? resolvePlaneFromEntry(entry) : null;
+  const allowedStageIds = plane?.stages.map((stage) => stage.stage_id) ?? [];
+  const authorityBoundary = {
+    opl: 'launch_admission_gate_and_blocker_projection_only' as const,
+    domain: 'truth_quality_artifact_gate_owner' as const,
+    can_write_domain_truth: false as const,
+    can_authorize_quality_verdict: false as const,
+    can_mutate_artifact_body: false as const,
+  };
+
+  if (!entry || !plane) {
+    return {
+      surface_kind: 'opl_family_stage_launch_admission_gate',
+      version: 'family-stage-launch-admission-gate.v1',
+      domain_id: input.domainId,
+      normalized_domain_id: normalized,
+      stage_id: input.stageId,
+      plane_id: plane?.plane_id ?? null,
+      target_domain_id: plane?.target_domain_id ?? null,
+      status: 'missing_control_plane',
+      gate_action: 'allow_legacy_unregistered_stage_attempt',
+      block_reason: null,
+      inspected_stage: null,
+      blocker_findings: [],
+      warning_findings: [{
+        severity: 'warning',
+        code: 'family_stage_control_plane_missing',
+        message: 'Domain does not expose a family_stage_control_plane; attempt is recorded only as legacy/diagnostic metadata, not standard OPL Agent production launch evidence.',
+        stage_id: input.stageId,
+      }],
+      allowed_stage_ids: allowedStageIds,
+      authority_boundary: authorityBoundary,
+    };
+  }
+
+  const stage = plane.stages.find((candidate) => candidate.stage_id === input.stageId) ?? null;
+  if (!stage) {
+    return {
+      surface_kind: 'opl_family_stage_launch_admission_gate',
+      version: 'family-stage-launch-admission-gate.v1',
+      domain_id: input.domainId,
+      normalized_domain_id: normalized,
+      stage_id: input.stageId,
+      plane_id: plane.plane_id,
+      target_domain_id: plane.target_domain_id,
+      status: 'not_in_declared_control_plane',
+      gate_action: 'allow_legacy_unregistered_stage_attempt',
+      block_reason: null,
+      inspected_stage: null,
+      blocker_findings: [],
+      warning_findings: [{
+        severity: 'warning',
+        code: 'stage_not_in_declared_control_plane',
+        message: 'Stage attempt is not part of the declared family stage pack; it is allowed only as legacy/diagnostic attempt metadata, not as standard OPL Agent production launch evidence.',
+        stage_id: input.stageId,
+      }],
+      allowed_stage_ids: allowedStageIds,
+      authority_boundary: authorityBoundary,
+    };
+  }
+
+  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const inspectedStage =
+    admission.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
+  const blockerFindings = findingsForStage(admission, stage.stage_id, 'blocker');
+  const warningFindings = findingsForStage(admission, stage.stage_id, 'warning');
+  const blocked = inspectedStage?.status === 'blocked' || blockerFindings.length > 0;
+
+  return {
+    surface_kind: 'opl_family_stage_launch_admission_gate',
+    version: 'family-stage-launch-admission-gate.v1',
+    domain_id: input.domainId,
+    normalized_domain_id: normalized,
+    stage_id: input.stageId,
+    plane_id: plane.plane_id,
+    target_domain_id: plane.target_domain_id,
+    status: inspectedStage?.status ?? 'blocked',
+    gate_action: blocked ? 'block_stage_launch' : 'allow_stage_launch',
+    block_reason: blocked ? `stage_launch_admission_blocked:${blockerFindings[0]?.code ?? 'blocked'}` : null,
+    inspected_stage: inspectedStage,
+    blocker_findings: blockerFindings,
+    warning_findings: warningFindings,
+    allowed_stage_ids: allowedStageIds,
+    authority_boundary: authorityBoundary,
+  };
 }
 
 function parseOptionArgs(args: string[], required: string[]) {

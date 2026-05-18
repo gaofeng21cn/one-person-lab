@@ -367,6 +367,145 @@ test('family stage parity detects allowed action refs missing from the action ca
   }
 });
 
+test('family-runtime attempt create applies family stage launch admission gate', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-launch-gate-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = withFamilyStageControlPlane(
+    fixtures.medautoscience,
+    buildStageControlPlane(
+      'med-autoscience',
+      'manuscript_authoring',
+      {
+        owner: 'med-autoscience',
+        title: 'Manuscript authoring',
+        stageKind: 'creation',
+        domainStageRefs: ['write'],
+      },
+    ),
+  );
+  const blockedRcaManifest = withFamilyStageControlPlane(
+    {
+      ...(fixtures.redcube as JsonRecord),
+      family_action_catalog: {
+        surface_kind: 'family_action_catalog',
+        version: 'family-action-catalog.v1',
+        catalog_id: 'redcube_action_catalog',
+        target_domain_id: 'redcube_ai',
+        owner: 'redcube_ai',
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+        },
+        actions: [
+          {
+            action_id: 'start_deliverable',
+            title: 'Start deliverable',
+            summary: 'Start the RedCube product-entry deliverable loop.',
+            owner: 'redcube_ai',
+            effect: 'mutating',
+            source_command: {
+              command: 'redcube product invoke',
+              surface_kind: 'product_entry',
+            },
+            input_schema_ref: 'schemas/start.input.schema.json',
+            output_schema_ref: 'schemas/start.output.schema.json',
+            workspace_locator_fields: ['workspace_root'],
+            human_gate_ids: [],
+            supported_surfaces: {
+              cli: {
+                command: 'redcube product invoke',
+                surface_kind: 'product_entry',
+              },
+              mcp: null,
+              skill: null,
+              product_entry: null,
+              openai: null,
+              ai_sdk: null,
+            },
+          },
+        ],
+        notes: [],
+      },
+    },
+    buildStageControlPlane(
+      'redcube_ai',
+      'artifact_creation',
+      {
+        owner: 'redcube_ai',
+        title: 'Artifact creation',
+        stageKind: 'creation',
+        domainStageRefs: ['author_image_pages'],
+        allowedActionRefs: ['missing_action'],
+      },
+    ),
+  );
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(blockedRcaManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const admitted = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'manuscript_authoring',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    const admittedGate = admitted.family_runtime_stage_attempt.stage_launch_admission_gate;
+    assert.equal(admitted.family_runtime_stage_attempt.attempt.status, 'queued');
+    assert.equal(admittedGate.status, 'needs_contracts');
+    assert.equal(admittedGate.gate_action, 'allow_stage_launch');
+    assert.equal(
+      admitted.family_runtime_stage_attempt.attempt.activity_events[0].event_kind,
+      'stage_launch_admission_gate',
+    );
+    assert.equal(
+      admitted.family_runtime_stage_attempt.attempt.activity_events[0].gate.stage_id,
+      'manuscript_authoring',
+    );
+
+    const blocked = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'artifact_creation',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/rca"}',
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    const blockedGate = blocked.family_runtime_stage_attempt.stage_launch_admission_gate;
+    assert.equal(blocked.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(blockedGate.gate_action, 'block_stage_launch');
+    assert.match(blocked.family_runtime_stage_attempt.attempt.blocked_reason, /missing_action_catalog_ref/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('standard domain-agent skeleton inspection requires repo-source dirs and artifact locator boundaries', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agents-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();

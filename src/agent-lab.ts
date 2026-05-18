@@ -26,6 +26,7 @@ export type AgentLabTaskManifest = {
   scorecard: AgentLabScorecard;
   improvement_candidate: AgentLabImprovementCandidate;
   promotion_gate: AgentLabPromotionGate;
+  mechanism_evolution_inputs?: JsonRecord;
   authority_boundary?: JsonRecord;
 };
 
@@ -193,8 +194,116 @@ function hasForbiddenMemoryBody(value: unknown): boolean {
   }
   return Object.entries(value).some(([key, entry]) =>
     FORBIDDEN_MEMORY_BODY_KEYS.includes(key)
+    || (key === 'body_included' && entry === true)
     || (isRecord(entry) && hasForbiddenMemoryBody(entry))
     || (Array.isArray(entry) && entry.some(hasForbiddenMemoryBody)));
+}
+
+function mechanismEvolutionInputsForTask(task: AgentLabTaskManifest) {
+  if (!isRecord(task.mechanism_evolution_inputs)) {
+    return undefined;
+  }
+  const inputs = task.mechanism_evolution_inputs;
+  const researchMemoryGraph = isRecord(inputs.research_memory_graph)
+    ? {
+      surface_kind: inputs.research_memory_graph.surface_kind,
+      graph_kind: inputs.research_memory_graph.graph_kind,
+      body_included: inputs.research_memory_graph.body_included === true,
+      manifest_refs: stringList(inputs.research_memory_graph.manifest_refs),
+      paper_refs: stringList(inputs.research_memory_graph.paper_refs),
+      claim_refs: stringList(inputs.research_memory_graph.claim_refs),
+      experiment_refs: stringList(inputs.research_memory_graph.experiment_refs),
+      failed_idea_refs: stringList(inputs.research_memory_graph.failed_idea_refs),
+      negative_result_refs: stringList(inputs.research_memory_graph.negative_result_refs),
+      reusable_rationale_refs: stringList(inputs.research_memory_graph.reusable_rationale_refs),
+      failed_route_refs: stringList(inputs.research_memory_graph.failed_route_refs),
+    }
+    : undefined;
+  const analysisQueueManifest = isRecord(inputs.analysis_queue_manifest)
+    ? {
+      surface_kind: inputs.analysis_queue_manifest.surface_kind,
+      manifest_kind: inputs.analysis_queue_manifest.manifest_kind,
+      body_included: inputs.analysis_queue_manifest.body_included === true,
+      queue_ref: typeof inputs.analysis_queue_manifest.queue_ref === 'string'
+        ? inputs.analysis_queue_manifest.queue_ref
+        : undefined,
+      state: typeof inputs.analysis_queue_manifest.state === 'string'
+        ? inputs.analysis_queue_manifest.state
+        : undefined,
+      retry_policy: isRecord(inputs.analysis_queue_manifest.retry_policy)
+        ? inputs.analysis_queue_manifest.retry_policy
+        : undefined,
+      budget: isRecord(inputs.analysis_queue_manifest.budget)
+        ? inputs.analysis_queue_manifest.budget
+        : undefined,
+      items: Array.isArray(inputs.analysis_queue_manifest.items)
+        ? inputs.analysis_queue_manifest.items
+          .filter(isRecord)
+          .map((item) => ({
+            ref: typeof item.ref === 'string' ? item.ref : undefined,
+            state: typeof item.state === 'string' ? item.state : undefined,
+            retry_count: typeof item.retry_count === 'number' ? item.retry_count : undefined,
+            budget_cost: typeof item.budget_cost === 'number' ? item.budget_cost : undefined,
+            source_refs: stringList(item.source_refs),
+          }))
+          .filter((item) => item.ref)
+        : [],
+      manifest_refs: stringList(inputs.analysis_queue_manifest.manifest_refs),
+    }
+    : undefined;
+
+  return {
+    surface_kind: inputs.surface_kind,
+    target_opl_surface: inputs.target_opl_surface,
+    target_opl_cli: inputs.target_opl_cli,
+    automatic_mechanism_promotion_route: inputs.automatic_mechanism_promotion_route,
+    research_wiki_refs: stringList(inputs.research_wiki_refs),
+    failed_route_refs: stringList(inputs.failed_route_refs),
+    reviewer_direct_evidence_refs: stringList(inputs.reviewer_direct_evidence_refs),
+    analysis_queue_manifest_refs: stringList(inputs.analysis_queue_manifest_refs),
+    target_editable_surface_refs: stringList(inputs.target_editable_surface_refs),
+    evidence_delta_refs: stringList(inputs.evidence_delta_refs),
+    independent_ai_review_receipt_ref: typeof inputs.independent_ai_review_receipt_ref === 'string'
+      ? inputs.independent_ai_review_receipt_ref
+      : undefined,
+    version_ledger_ref: typeof inputs.version_ledger_ref === 'string' ? inputs.version_ledger_ref : undefined,
+    rollback_ref: typeof inputs.rollback_ref === 'string' ? inputs.rollback_ref : undefined,
+    research_memory_graph: researchMemoryGraph,
+    analysis_queue_manifest: analysisQueueManifest,
+    body_included: researchMemoryGraph?.body_included === true || analysisQueueManifest?.body_included === true,
+    authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+  };
+}
+
+function mechanismEvolutionInputRefs(value: ReturnType<typeof mechanismEvolutionInputsForTask> | undefined) {
+  if (!value) {
+    return [];
+  }
+  return unique([
+    ...value.research_wiki_refs,
+    ...value.failed_route_refs,
+    ...value.reviewer_direct_evidence_refs,
+    ...value.analysis_queue_manifest_refs,
+    ...value.target_editable_surface_refs,
+    ...value.evidence_delta_refs,
+    ...(value.independent_ai_review_receipt_ref ? [value.independent_ai_review_receipt_ref] : []),
+    ...(value.version_ledger_ref ? [value.version_ledger_ref] : []),
+    ...(value.rollback_ref ? [value.rollback_ref] : []),
+    ...(value.research_memory_graph?.manifest_refs ?? []),
+    ...(value.research_memory_graph?.paper_refs ?? []),
+    ...(value.research_memory_graph?.claim_refs ?? []),
+    ...(value.research_memory_graph?.experiment_refs ?? []),
+    ...(value.research_memory_graph?.failed_idea_refs ?? []),
+    ...(value.research_memory_graph?.negative_result_refs ?? []),
+    ...(value.research_memory_graph?.reusable_rationale_refs ?? []),
+    ...(value.research_memory_graph?.failed_route_refs ?? []),
+    ...(value.analysis_queue_manifest?.queue_ref ? [value.analysis_queue_manifest.queue_ref] : []),
+    ...(value.analysis_queue_manifest?.manifest_refs ?? []),
+    ...(value.analysis_queue_manifest?.items.flatMap((item) => [
+      item.ref ?? '',
+      ...(item.source_refs ?? []),
+    ]) ?? []),
+  ]);
 }
 
 function collectForbiddenAuthorityFlags(records: Array<{ label: string; value: unknown }>) {
@@ -230,6 +339,7 @@ function recoveryPassed(task: AgentLabTaskManifest) {
 }
 
 function buildRun(task: AgentLabTaskManifest) {
+  const mechanismEvolutionInputs = mechanismEvolutionInputsForTask(task);
   const recoveryPassedCount = recoveryPassed(task).length;
   const recoveryProbeCount = task.recovery_probes.length;
   const failureTaxonomy = [
@@ -269,6 +379,8 @@ function buildRun(task: AgentLabTaskManifest) {
     scorecard: task.scorecard,
     improvement_candidate: task.improvement_candidate,
     promotion_gate: task.promotion_gate,
+    mechanism_evolution_inputs: mechanismEvolutionInputs,
+    mechanism_evolution_input_refs: mechanismEvolutionInputRefs(mechanismEvolutionInputs),
     authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
   };
 }
@@ -279,6 +391,7 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
   const scorecardRefs = unique(input.tasks.map((task) => task.scorecard.scorecard_ref));
   const improvementCandidateRefs = unique(input.tasks.map((task) => task.improvement_candidate.candidate_ref));
   const promotionGateRefs = unique(input.tasks.map((task) => task.promotion_gate.gate_ref));
+  const mechanismEvolutionInputRefs = unique(runs.flatMap((run) => run.mechanism_evolution_input_refs));
   const forbiddenAuthorityFlags = collectForbiddenAuthorityFlags([
     { label: 'suite:authority_boundary', value: input.authority_boundary },
     ...input.tasks.flatMap(authorityRecordsForTask),
@@ -312,6 +425,7 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       promotion_gate_refs: promotionGateRefs,
       artifact_refs: unique(input.tasks.flatMap((task) => task.trajectory.artifact_refs)),
       receipt_refs: unique(input.tasks.flatMap((task) => task.trajectory.receipt_refs)),
+      mechanism_evolution_input_refs: mechanismEvolutionInputRefs,
       forbidden_authority_flags: forbiddenAuthorityFlags,
     },
     counters: {

@@ -136,6 +136,84 @@ test('Agent Lab blocks forbidden OPL authority claims in task manifests or score
   assert.ok(result.missing_observations.includes('forbidden_authority_flags_all_false'));
 });
 
+test('Agent Lab projects MAS mechanism evolution inputs as body-free refs for evolve consumption', () => {
+  const suite = buildSampleAgentLabSuite();
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    mechanism_evolution_inputs: {
+      surface_kind: 'mas_agent_lab_mechanism_evolution_inputs',
+      target_opl_surface: 'opl_agent_lab_evolution_result',
+      target_opl_cli: 'opl agent-lab evolve --suite <suite.json> --json',
+      automatic_mechanism_promotion_route: 'risk_tiered_auto_promotion_with_independent_ai_review',
+      research_wiki_refs: ['file-ref:study/artifacts/research_wiki/latest.json'],
+      failed_route_refs: ['failed-route:mas/dm002/internal-quality-language'],
+      reviewer_direct_evidence_refs: ['review-ref:mas/dm002/ai-reviewer-direct-evidence'],
+      analysis_queue_manifest_refs: ['file-ref:study/artifacts/analysis_queue/latest.json'],
+      target_editable_surface_refs: ['mechanism-edit-ref:mas/analysis-campaign-queue-routing'],
+      evidence_delta_refs: ['evidence-ref:mas/dm002/reviewer-routeback'],
+      independent_ai_review_receipt_ref: 'ai-reviewer-receipt:mas/dm002/mechanism-direct-evidence-review',
+      version_ledger_ref: 'mechanism-version-ledger:mas/dm002/medical-manuscript-quality',
+      rollback_ref: 'mechanism-rollback-ref:mas/agent-lab-medical-manuscript-quality',
+      research_memory_graph: {
+        surface_kind: 'mas_research_memory_graph',
+        graph_kind: 'body_free_research_memory_graph',
+        body_included: false,
+        manifest_refs: ['file-ref:study/artifacts/research_wiki/latest.json'],
+        paper_refs: ['paper-ref:dm002-current-draft'],
+        claim_refs: ['claim-ref:hdl-unit-contamination'],
+        experiment_refs: ['experiment-ref:external-validation-replay'],
+        failed_idea_refs: ['failed-idea:mechanical-completeness-gate'],
+        negative_result_refs: ['negative-result:uncalibrated-risk-collapse'],
+        reusable_rationale_refs: ['rationale-ref:ai-reviewer-quality-route-back'],
+        failed_route_refs: ['failed-route:internal-quality-language'],
+      },
+      analysis_queue_manifest: {
+        surface_kind: 'mas_analysis_queue_manifest',
+        manifest_kind: 'body_free_analysis_queue_manifest',
+        body_included: false,
+        queue_ref: 'analysis-queue:dm002/reviewer-repair',
+        state: 'active',
+        retry_policy: {
+          policy_ref: 'retry-policy:mas/analysis-campaign/manual-owner-retry',
+          max_retry_count: 2,
+        },
+        budget: { budget_ref: 'analysis-budget:dm002/reviewer-repair', max_cost: 8 },
+        items: [
+          {
+            ref: 'analysis-queue:hdl-harmonization',
+            state: 'ready',
+            retry_count: 1,
+            budget_cost: 3,
+            source_refs: ['review-ref:hdl-harmonization'],
+          },
+        ],
+        manifest_refs: ['file-ref:study/artifacts/analysis_queue/latest.json'],
+      },
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+  const masRun = result.runs.find((entry) => entry.domain_id === 'med-autoscience');
+
+  assert.ok(masRun);
+  const mechanismInputs = masRun.mechanism_evolution_inputs;
+  assert.ok(mechanismInputs);
+  assert.ok(mechanismInputs.research_memory_graph);
+  assert.ok(mechanismInputs.analysis_queue_manifest);
+  assert.equal(mechanismInputs.surface_kind, 'mas_agent_lab_mechanism_evolution_inputs');
+  assert.equal(mechanismInputs.research_memory_graph.body_included, false);
+  assert.equal(mechanismInputs.analysis_queue_manifest.body_included, false);
+  assert.deepEqual(mechanismInputs.research_memory_graph.claim_refs, [
+    'claim-ref:hdl-unit-contamination',
+  ]);
+  assert.deepEqual(mechanismInputs.analysis_queue_manifest.items.map((item: any) => item.ref), [
+    'analysis-queue:hdl-harmonization',
+  ]);
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('paper-ref:dm002-current-draft'));
+  assert.ok(result.refs.mechanism_evolution_input_refs.includes('analysis-queue:hdl-harmonization'));
+  assert.equal(result.authority_boundary.can_write_memory_body, false);
+});
+
 test('Agent Lab contract is tracked and exported as an OPL framework surface', () => {
   const contract = readJson('contracts/opl-framework/agent-lab-contract.json');
   const packageJson = readJson('package.json');
@@ -148,6 +226,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'agent_lab_longline_suite',
     'agent_lab_external_suite',
   ]);
+  assert.ok(contract.result_surface.ref_fields.includes('mechanism_evolution_input_refs'));
   assert.equal(contract.external_suite_runner_surface.surface_kind, 'opl_agent_lab_external_suite_run');
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
   assert.equal(contract.mechanism_surface.surface_kind, 'opl_agent_lab_mechanism_read_model');
@@ -157,6 +236,9 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.mechanism_surface.fields.includes('mechanism_promotion_policy'));
   assert.ok(contract.mechanism_surface.fields.includes('mechanism_version_ledger'));
   assert.ok(contract.mechanism_surface.fields.includes('independent_ai_review_receipt'));
+  assert.ok(contract.mechanism_surface.fields.includes('integration_contracts'));
+  assert.ok(contract.mechanism_surface.fields.includes('review_trace_ledger'));
+  assert.ok(contract.mechanism_surface.fields.includes('log_driven_mechanism_candidates'));
   assert.ok(contract.mechanism_surface.fields.includes('rollback'));
   assert.equal(contract.mechanism_surface.automatic_mechanism_promotion_ready, true);
   assert.equal(contract.mechanism_surface.risk_tiers.low_risk.auto_promotion, 'auto_promote_to_stable');
@@ -188,6 +270,10 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(contract.evolution_surface.mutates_artifact, false);
   assert.equal(contract.evolution_surface.automatic_mechanism_promotion_ready, true);
   assert.equal(contract.evolution_surface.requires_independent_ai_review, true);
+  assert.ok(contract.evolution_surface.outputs.includes('integration_contracts'));
+  assert.ok(contract.evolution_surface.outputs.includes('review_trace_ledger'));
+  assert.ok(contract.evolution_surface.outputs.includes('log_driven_mechanism_candidates'));
+  assert.ok(contract.evolution_surface.outputs.includes('log_mined_candidate_refs'));
   assert.ok(contract.evolution_surface.outputs.includes('mechanism_promotion_decision'));
   assert.ok(contract.evolution_surface.outputs.includes('independent_ai_review_receipt'));
   assert.ok(contract.evolution_surface.outputs.includes('promotion_receipt'));
@@ -197,7 +283,29 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(contract.complete_control_plane_surface.surface_kind, 'opl_agent_lab_complete_control_plane');
   assert.ok(contract.complete_control_plane_surface.eval_adapters.includes('inspect-ai'));
   assert.ok(contract.complete_control_plane_surface.observability_exports.includes('langfuse'));
+  assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('log_driven_candidate_read_model'));
+  assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('integration_contract_read_model'));
+  assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('review_trace_ledger'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('automatic_mechanism_promotion_ready'));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ready_to_emit_integration_contracts'));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ready_to_emit_review_trace_ledger'));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
+    'ready_to_emit_log_driven_mechanism_candidates',
+  ));
+  assert.equal(contract.integration_contract_surface.surface_kind,
+    'opl_agent_lab_integration_contract_read_model');
+  assert.equal(contract.integration_contract_surface.refs_only, true);
+  assert.ok(contract.integration_contract_surface.required_fields.includes('activation_predicate'));
+  assert.ok(contract.integration_contract_surface.failure_outputs.includes('typed_blocker_ref'));
+  assert.equal(contract.review_trace_ledger_surface.surface_kind, 'opl_agent_lab_review_trace_ledger');
+  assert.equal(contract.review_trace_ledger_surface.refs_only, true);
+  assert.ok(contract.review_trace_ledger_surface.trace_kinds.includes('independent_ai_reviewer_trace_ref'));
+  assert.ok(contract.review_trace_ledger_surface.required_fields.includes('no_shared_context'));
+  assert.equal(contract.log_driven_candidate_surface.surface_kind,
+    'opl_agent_lab_log_driven_mechanism_candidate_read_model');
+  assert.equal(contract.log_driven_candidate_surface.refs_only, true);
+  assert.ok(contract.log_driven_candidate_surface.input_refs.includes('usage_log_refs'));
+  assert.ok(contract.log_driven_candidate_surface.candidate_kinds.includes('workflow_default'));
   assert.ok(contract.longline_surface.summary_fields.includes('ready_to_reduce_domain_longline_tests'));
   assert.ok(contract.longline_surface.repo_test_candidates_to_move_to_opl.includes(
     'provider-hosted soak orchestration',
@@ -308,6 +416,9 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_optimizer_candidate_refs, true);
   assert.equal(result.readiness.ready_to_emit_rl_transition_refs, true);
   assert.equal(result.readiness.ready_to_emit_developer_mode_repair_routes, true);
+  assert.equal(result.readiness.ready_to_emit_integration_contracts, true);
+  assert.equal(result.readiness.ready_to_emit_review_trace_ledger, true);
+  assert.equal(result.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
   assert.equal(result.readiness.automatic_mechanism_promotion_ready, true);
   assert.equal(result.readiness.automatic_model_training_ready, false);
   assert.equal(result.readiness.automatic_default_agent_promotion_ready,
@@ -322,20 +433,38 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.deepEqual(result.optimizer_loop.loop_steps, [
     'collect_trajectory_refs',
     'collect_usage_and_blocker_event_refs',
+    'mine_real_logs_into_mechanism_candidate_refs',
     'optional_web_research_for_mechanism_context',
     'freeze_dataset_or_longline_suite',
     'score_with_domain_owned_scorecard_refs',
+    'validate_cross_surface_integration_contracts',
     'select_mechanism_editable_surface_refs',
     'emit_meta_edit_receipt_ref',
     'generate_next_mechanism_candidate_ref',
     'classify_mechanism_change_risk',
     'run_independent_ai_review_without_shared_context',
+    'record_review_trace_refs',
     'run_regression_and_recovery_gates',
     'auto_promote_low_and_medium_risk_with_versioned_canary',
     'route_high_risk_to_owner_or_human_gate',
     'record_rollback_target_ref',
     'record_evolution_segment_refs',
   ]);
+  assert.equal(result.integration_contracts.surface_kind, 'opl_agent_lab_integration_contract_read_model');
+  assert.equal(result.integration_contracts.summary.contract_count, 3);
+  assert.equal(result.integration_contracts.summary.owner_route_ref_count, 3);
+  assert.equal(result.review_trace_ledger.surface_kind, 'opl_agent_lab_review_trace_ledger');
+  assert.equal(result.review_trace_ledger.summary.trace_count, 3);
+  assert.equal(result.review_trace_ledger.summary.independent_no_shared_context_count, 2);
+  assert.equal(result.log_driven_mechanism_candidates.surface_kind,
+    'opl_agent_lab_log_driven_mechanism_candidate_read_model');
+  assert.equal(result.log_driven_mechanism_candidates.summary.candidate_count, 4);
+  assert.equal(result.log_driven_mechanism_candidates.summary.high_risk_count, 0);
+  assert.equal(result.optimizer_loop.integration_contract_read_model.read_model_id,
+    result.integration_contracts.read_model_id);
+  assert.equal(result.optimizer_loop.review_trace_ledger.ledger_ref, result.review_trace_ledger.ledger_ref);
+  assert.equal(result.optimizer_loop.log_driven_candidate_read_model.read_model_id,
+    result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.optimizer_loop.mechanism_object.promotion_mode,
     'risk_tiered_auto_promotion_with_independent_ai_review');
   assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
@@ -362,6 +491,13 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.mechanism.mechanism_promotion_policy.automatic_mechanism_promotion_ready, true);
   assert.equal(result.mechanism.mechanism_version_ledger.current_version, result.mechanism.mechanism_version);
   assert.match(result.mechanism.rollback.rollback_target_ref, /^mechanism-version-ref:/);
+  assert.equal(result.integration_contracts.surface_kind, 'opl_agent_lab_integration_contract_read_model');
+  assert.equal(result.review_trace_ledger.surface_kind, 'opl_agent_lab_review_trace_ledger');
+  assert.equal(result.log_driven_mechanism_candidates.summary.candidate_count, 4);
+  assert.equal(result.source_results.integration_contract_read_model_ref, result.integration_contracts.read_model_id);
+  assert.equal(result.source_results.review_trace_ledger_ref, result.review_trace_ledger.ledger_ref);
+  assert.equal(result.source_results.log_driven_mechanism_candidate_read_model_ref,
+    result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.optimizer_candidates.length, 6);
   assert.equal(result.promotion_gates.length, 6);
   assert.equal(result.developer_mode_repair_routes.status, 'ready_for_developer_mode_patrol_consumption');
@@ -455,6 +591,12 @@ test('Agent Lab mechanism read model makes mechanism editable surfaces first-cla
   assert.equal(result.independent_ai_review_receipt.verdict, 'approved_for_risk_tiered_auto_promotion');
   assert.equal(result.mechanism_version_ledger.current_version, result.mechanism_version);
   assert.equal(result.mechanism_version_ledger.versions.length, 2);
+  assert.equal(result.integration_contracts.summary.contract_count, 3);
+  assert.equal(result.review_trace_ledger.summary.trace_count, 3);
+  assert.equal(result.review_trace_ledger.summary.independent_no_shared_context_count, 2);
+  assert.equal(result.log_driven_mechanism_candidates.summary.candidate_count, 4);
+  assert.equal(result.next_mechanism_candidate.log_mined_candidate_refs.length, 4);
+  assert.equal(result.next_mechanism_candidate.review_trace_ledger_ref, result.review_trace_ledger.ledger_ref);
   assert.match(result.rollback.rollback_target_ref, /^mechanism-version-ref:/);
   assert.equal(result.meta_edit_receipt.receipt_kind, 'mechanism_meta_edit_receipt_ref');
   assert.equal(result.meta_edit_receipt.writes_domain_truth, false);
@@ -483,6 +625,11 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   assert.equal(result.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
   assert.equal(result.mechanism_version, 'opl-agent-lab-mechanism.v1');
   assert.equal(result.editable_surfaces.length, 4);
+  assert.equal(result.integration_contracts.surface_kind, 'opl_agent_lab_integration_contract_read_model');
+  assert.equal(result.review_trace_ledger.surface_kind, 'opl_agent_lab_review_trace_ledger');
+  assert.equal(result.log_driven_mechanism_candidates.surface_kind,
+    'opl_agent_lab_log_driven_mechanism_candidate_read_model');
+  assert.equal(result.log_mined_candidate_refs.length, 4);
   assert.equal(result.mechanism_promotion_decision.automatic_mechanism_promotion_ready, true);
   assert.equal(result.mechanism_promotion_decision.promotion_decision, 'auto_promote_to_canary');
   assert.equal(result.mechanism_promotion_decision.risk_tier, 'medium_risk');
@@ -503,6 +650,8 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   assert.equal(result.evidence_delta.artifact_delta_written, false);
   assert.equal(result.next_mechanism_candidate.source_candidate_refs.length, 3);
   assert.equal(result.next_mechanism_candidate.source_transition_refs.length, 3);
+  assert.equal(result.next_mechanism_candidate.source_log_mined_candidate_refs.length, 4);
+  assert.equal(result.next_mechanism_candidate.review_trace_ledger_ref, result.review_trace_ledger.ledger_ref);
   assert.equal(result.next_mechanism_candidate.default_promotion, true);
   assert.equal(result.next_mechanism_candidate.promotion_decision, 'auto_promote_to_canary');
   assert.equal(result.automatic_model_training_ready, false);
@@ -542,6 +691,8 @@ test('Agent Lab optimize returns gated candidate and RL transition refs without 
   assert.equal(result.gated_optimizer_candidate_set.auto_promotable_candidate_count, 3);
   assert.ok(result.gated_optimizer_candidate_set.candidates.every((candidate: any) =>
     candidate.independent_ai_review_ref && candidate.rollback_target_ref));
+  assert.equal(result.log_driven_mechanism_candidates.summary.candidate_count, 4);
+  assert.equal(result.log_mined_candidate_refs.length, 4);
   assert.equal(result.rl_transition_refs.transition_count, 3);
   assert.equal(result.automatic_mechanism_promotion_ready, true);
   assert.equal(result.automatic_model_training_ready, false);
