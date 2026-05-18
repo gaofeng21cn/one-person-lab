@@ -168,7 +168,12 @@ process.stdin.on('end', () => {
 test('hermes_agent execution fails closed when the helper does not return a JSON receipt', () => {
   const helper = makeExecutable(
     'hermes-helper',
-    '#!/bin/sh\nprintf "not json\\n"\n',
+    `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on('end', () => {
+  process.stdout.write('not json\\n');
+});
+`,
   );
   try {
     assert.throws(
