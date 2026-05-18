@@ -52,7 +52,7 @@
 - `family-stage-control-plane.schema.json`
   - 冻结共享的 stage descriptor companion，覆盖 stage goal、domain stage refs、skill / prompt / evaluation refs、handoff refs 与 authority boundary
 - `family-stage-admission.schema.json`
-  - 冻结 OPL-owned stage admission read model，覆盖 stage contract、trust lane、effect boundary runtime-event requirement、composition obligation、admission finding 与 OPL non-authority boundary
+  - 冻结 OPL-owned stage admission read model，覆盖 stage contract、trust lane、effect boundary / runtime-guard runtime-event requirement、composition obligation、admission finding 与 OPL non-authority boundary
 - `family-stage-proof-bundle.schema.json`
   - 冻结轻量 proof-carrying stage-pack bundle，供 OPL 调度 / 准入消费 composition obligation、assumption、receipt ref、runtime-event requirement、test / proof ref、blocker 与 OPL non-authority boundary
 - `family-domain-memory-ref.schema.json`
@@ -194,7 +194,7 @@ canonical classification 固定为：
 
 这个 contract 记录 stage goal、domain-owned stage refs、输入/输出 refs、knowledge refs、skill refs、prompt refs、evaluation refs、handoff metadata、allowed action refs 与 authority boundary。`OPL` 持有 schema、manifest discovery、parity check 和只读 `opl stages list|inspect` 命令。各 domain 仓继续持有实际 route contract、stage execution、memory content、review verdict、quality authority 与 artifacts。
 
-GraphFlow / GFL 的吸收点在这里落成 stage pack admission 规则：`family-stage-control-plane` 和 `family-stage-admission` 共同形成 `verified_static_core` 读模型，用于检查 stage id、owner、goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane 与 authority boundary 是否自洽。`opl stages list|inspect` 会投影 admission status、composition blocker、effect-boundary blocker 与 OPL non-authority boundary。准入通过只表示 stage pack 可以进入后续 OPL queue / provider / executor 启动候选；AI 输出、人类批准、外部系统返回、artifact mutation、memory writeback、domain quality / publication / fundability / visual verdict 和 owner receipt 仍属于 `runtime_enforced_boundary`。
+GraphFlow / GFL 的吸收点在这里落成 stage pack admission 规则：`family-stage-control-plane` 和 `family-stage-admission` 共同形成 `verified_static_core` 读模型，用于检查 stage id、owner、goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane 与 authority boundary 是否自洽。`opl stages list|inspect` 会投影 admission status、composition blocker、effect-boundary / runtime-guard blocker 与 OPL non-authority boundary。准入通过只表示 stage pack 可以进入后续 OPL queue / provider / executor 启动候选；AI 输出、人类批准、外部系统返回、artifact mutation、memory writeback、domain quality / publication / fundability / visual verdict 和 owner receipt 仍属于 `runtime_enforced_boundary`。
 
 `requires` / `ensures` 组合规则只能由显式 refs、human gate decision 或 owner receipt 满足；组合缺口、证据过期、owner 冲突、receipt 冲突或 executor binding 缺失必须进入 `family-conflict-envelope` / human gate / route-back。OPL 可以选择并绑定 executor 来启动已准入 stage pack，默认 executor 仍是 `Codex CLI`；非默认 executor adapter 必须由 stage pack、domain route 或显式 runtime switch 声明，并产出独立 receipt / audit / fail-closed 证据。
 

@@ -49,6 +49,8 @@ export interface FamilyStageProofBundleRuntimeEventRequirement {
   trust_lane: FamilyStageTrustLane | null;
   required: boolean;
   satisfied_by_records_runtime_events: boolean;
+  runtime_event_refs: string[];
+  satisfied_by_runtime_event_refs: boolean;
   reason: string;
 }
 
@@ -231,11 +233,19 @@ function buildRuntimeEventRequirements(plane: FamilyStageControlPlane): FamilySt
     const effectBoundary = trust?.effect_boundary === true
       || ['ai_decision', 'human_gate', 'external_system'].includes(trust?.lane ?? '');
     const runtimeGuardRequired = trust?.runtime_guard_required === true;
+    const runtimeEventRefs = [
+      ...new Set([
+        ...readStringList(stage.trust_boundary?.runtime_event_refs),
+        ...readStringList(stage.stage_contract?.runtime_event_refs),
+      ]),
+    ];
     return {
       stage_id: stage.stage_id,
       trust_lane: trust?.lane ?? null,
       required: effectBoundary || runtimeGuardRequired,
       satisfied_by_records_runtime_events: trust?.records_runtime_events === true,
+      runtime_event_refs: runtimeEventRefs,
+      satisfied_by_runtime_event_refs: runtimeEventRefs.length > 0,
       reason: effectBoundary
         ? 'effect_boundary_requires_replayable_runtime_events'
         : runtimeGuardRequired
