@@ -15,7 +15,14 @@
     "mechanism_refs",
     "mechanism_editable_surface_refs",
     "developer_mode_patrol_refs",
-    "developer_mode_repair_route_refs"
+    "developer_mode_repair_route_refs",
+    "integration_contract_refs",
+    "review_trace_refs",
+    "usage_log_refs",
+    "tool_failure_refs",
+    "user_interrupt_refs",
+    "analysis_queue_manifest_refs",
+    "research_wiki_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -62,7 +69,8 @@
       "improvement_candidate_refs",
       "promotion_gate_refs",
       "artifact_refs",
-      "receipt_refs"
+      "receipt_refs",
+      "mechanism_evolution_input_refs"
     ]
   },
   "longline_surface": {
@@ -106,6 +114,9 @@
       "observability_export_readiness",
       "optimizer_candidates",
       "mechanism",
+      "integration_contracts",
+      "review_trace_ledger",
+      "log_driven_mechanism_candidates",
       "promotion_gates",
       "developer_mode_repair_routes",
       "online_learning_refs",
@@ -165,6 +176,9 @@
       "mechanism_promotion_policy",
       "mechanism_version_ledger",
       "independent_ai_review_receipt",
+      "integration_contracts",
+      "review_trace_ledger",
+      "log_driven_mechanism_candidates",
       "rollback",
       "refs_only",
       "authority_boundary"
@@ -228,6 +242,70 @@
     },
     "authority_boundary": "mechanism is a first-class risk-tiered object; low and medium risk mechanism changes can auto-promote through canary after independent AI review, promotion receipt, rollback target, and no-forbidden-write proof; high risk changes route to owner or human gate and cannot write domain truth, memory body, artifacts, model weights, owner receipts, credential policy, network policy, or write policy"
   },
+  "integration_contract_surface": {
+    "surface_kind": "opl_agent_lab_integration_contract_read_model",
+    "cli": "opl agent-lab complete | opl agent-lab workbench | opl agent-lab mechanism",
+    "status": "ready_for_cross_surface_integration_gates",
+    "refs_only": true,
+    "required_fields": [
+      "activation_predicate",
+      "canonical_entry_ref",
+      "artifact_verifier_ref",
+      "failure_policy",
+      "failure_outputs"
+    ],
+    "failure_outputs": [
+      "typed_blocker_ref",
+      "owner_route_ref",
+      "retry_or_dead_letter_ref",
+      "rollback_ref"
+    ],
+    "authority_boundary": "integration contracts are refs-only gates for cross skill, stage, helper, mechanism-promotion, and owner-route integration; they fail closed through typed blocker, owner route, retry/dead-letter, or rollback refs and cannot write domain truth, memory body, artifacts, quality verdicts, owner receipts, or managed runtime state"
+  },
+  "review_trace_ledger_surface": {
+    "surface_kind": "opl_agent_lab_review_trace_ledger",
+    "cli": "opl agent-lab complete | opl agent-lab workbench | opl agent-lab mechanism | opl agent-lab evolve --suite <suite.json>",
+    "status": "ready_for_mechanism_patch_replay_and_audit",
+    "refs_only": true,
+    "trace_kinds": [
+      "independent_ai_reviewer_trace_ref",
+      "web_research_trace_ref",
+      "mechanism_patch_trace_ref"
+    ],
+    "required_fields": [
+      "request_ref",
+      "response_ref",
+      "evidence_refs",
+      "reviewed_diff_ref",
+      "contract_ref",
+      "test_result_ref",
+      "reviewer_agent_ref",
+      "no_shared_context"
+    ],
+    "authority_boundary": "review trace ledger records request, response, evidence, reviewed diff, contract, test result, reviewer agent, and no-shared-context refs for replay and rollback; it cannot approve domain truth, write memory bodies, mutate artifacts, or write owner receipts"
+  },
+  "log_driven_candidate_surface": {
+    "surface_kind": "opl_agent_lab_log_driven_mechanism_candidate_read_model",
+    "cli": "opl agent-lab complete | opl agent-lab workbench | opl agent-lab mechanism | opl agent-lab optimize/evolve --suite <suite.json>",
+    "status": "ready_for_usage_log_driven_meta_optimize",
+    "refs_only": true,
+    "input_refs": [
+      "usage_log_refs",
+      "failure_mode_refs",
+      "user_interrupt_refs",
+      "convergence_iteration_refs",
+      "tool_failure_refs",
+      "blocker_refs"
+    ],
+    "candidate_kinds": [
+      "prompt",
+      "skill",
+      "rubric_gap",
+      "workflow_default"
+    ],
+    "risk_policy": "log-mined candidates enter the same low/medium/high risk promotion policy as other mechanism candidates; log signals alone never authorize high-risk surface mutation",
+    "authority_boundary": "log-driven meta optimize emits mechanism candidate refs from real usage logs, failure modes, user interrupts, convergence iterations, tool failures, and blockers; it cannot write domain truth, artifacts, memory bodies, quality verdicts, owner receipts, credential policy, network policy, write policy, or model weights"
+  },
   "export_surface": {
     "surface_kind": "opl_agent_lab_export_envelope",
     "cli": "opl agent-lab export --target <inspect-ai|openinference|langfuse|phoenix|json>",
@@ -251,6 +329,8 @@
       "suite_result",
       "gated_optimizer_candidate_set",
       "risk_tiered_mechanism_candidate_set",
+      "log_driven_mechanism_candidates",
+      "log_mined_candidate_refs",
       "rl_transition_refs",
       "independent_ai_review_receipt_ref",
       "promotion_receipt_ref",
@@ -280,6 +360,10 @@
       "meta_edit_receipt",
       "evolution_segment",
       "evidence_delta",
+      "integration_contracts",
+      "review_trace_ledger",
+      "log_driven_mechanism_candidates",
+      "log_mined_candidate_refs",
       "next_mechanism_candidate",
       "mechanism_promotion_decision",
       "independent_ai_review_receipt_ref",
@@ -318,10 +402,13 @@
       "langfuse",
       "phoenix"
     ],
-    "optimizer_loop_fields": [
+      "optimizer_loop_fields": [
       "candidate_kinds",
       "loop_steps",
       "pattern_refs",
+      "log_driven_candidate_read_model",
+      "integration_contract_read_model",
+      "review_trace_ledger",
       "rl_boundary"
     ],
     "readiness_fields": [
@@ -333,6 +420,9 @@
       "ready_to_emit_optimizer_candidate_refs",
       "ready_to_emit_rl_transition_refs",
       "ready_to_emit_developer_mode_repair_routes",
+      "ready_to_emit_integration_contracts",
+      "ready_to_emit_review_trace_ledger",
+      "ready_to_emit_log_driven_mechanism_candidates",
       "automatic_model_training_ready",
       "automatic_mechanism_promotion_ready",
       "app_workbench_consumption_ready"
@@ -348,6 +438,9 @@
     "OPL can expose a complete eval adapter, observability export, and optimizer-loop control plane without requiring external services in core",
     "OPL can expose an App/workbench-ready read model with eval adapter, observability export, optimizer candidate, promotion gate, and online learning refs",
     "OPL can expose Developer Mode patrol repair routes as refs-only issue, blocker, owner route, candidate fix, worktree, branch, PR, acceptance evidence, and follow-up queue item projections",
+    "OPL can expose integration contracts with activation predicate, canonical entry, artifact verifier, failure policy, typed blocker, owner route, retry/dead-letter, and rollback refs",
+    "OPL can record independent AI reviewer, web research, and mechanism patch trace refs with request, response, evidence, diff, contract, test result, reviewer agent, and no-shared-context refs",
+    "OPL can mine usage logs, failure modes, user interrupts, convergence iterations, tool failures, and blockers into refs-only prompt, skill, rubric, and workflow-default mechanism candidate refs",
     "OPL can emit refs-only export envelopes for optional Inspect AI, OpenInference, Langfuse, Phoenix, and JSON consumers without uploading data",
     "OPL can run an external suite into gated optimizer candidate refs and RL transition refs without training weights or promoting a default agent",
     "OPL can auto-promote low and medium risk mechanism changes through canary when independent AI review, promotion receipt, rollback target, and no-forbidden-write proof are present",
@@ -358,6 +451,8 @@
   "agent_lab_does_not_prove": [
     "live soak completion",
     "domain ready verdict",
+    "domain research memory graph body ownership",
+    "analysis queue item body ownership",
     "publication verdict",
     "fundability verdict",
     "visual quality verdict",

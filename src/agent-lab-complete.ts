@@ -268,9 +268,268 @@ function buildMechanismPromotionReceipt(decision: ReturnType<typeof buildMechani
   };
 }
 
+export function buildAgentLabIntegrationContractReadModel() {
+  const integrationContracts = [
+    {
+      contract_ref: 'integration-contract:agent-lab/stage-skill-helper',
+      integration_kind: 'cross_skill_stage_helper',
+      activation_predicate: 'stage_attempt_refs_present && domain_agent_entry_ref_present',
+      canonical_entry_ref: 'canonical-entry:opl-agent-lab/run-suite',
+      artifact_verifier_ref: 'artifact-verifier:opl-agent-lab/refs-only-suite-result',
+      failure_policy: 'typed_blocker_then_owner_route_retry_or_dead_letter',
+      failure_outputs: {
+        typed_blocker_ref: 'typed-blocker-ref:agent-lab/integration-contract-failed',
+        owner_route_ref: 'owner-route:opl/framework-agent-lab',
+        retry_or_dead_letter_ref: 'retry-or-dead-letter-ref:agent-lab/integration-contract-failed',
+        rollback_ref: 'rollback-ref:agent-lab/integration-contract-last-known-good',
+      },
+    },
+    {
+      contract_ref: 'integration-contract:agent-lab/mechanism-promotion',
+      integration_kind: 'mechanism_candidate_promotion',
+      activation_predicate: 'mechanism_candidate_ref_present && independent_ai_review_ref_present',
+      canonical_entry_ref: 'canonical-entry:opl-agent-lab/evolve',
+      artifact_verifier_ref: 'artifact-verifier:opl-agent-lab/mechanism-evolution-result',
+      failure_policy: 'block_promotion_emit_evidence_delta_and_rollback_ref',
+      failure_outputs: {
+        typed_blocker_ref: 'typed-blocker-ref:agent-lab/mechanism-promotion-blocked',
+        owner_route_ref: 'owner-route:opl/mechanism-policy-owner',
+        retry_or_dead_letter_ref: 'retry-or-dead-letter-ref:agent-lab/mechanism-promotion-blocked',
+        rollback_ref: ROLLBACK_TARGET_REF,
+      },
+    },
+    {
+      contract_ref: 'integration-contract:agent-lab/domain-owner-route',
+      integration_kind: 'domain_owner_route_projection',
+      activation_predicate: 'high_risk_surface_ref_present || forbidden_authority_flag_present',
+      canonical_entry_ref: 'canonical-entry:opl-agent-lab/owner-route-projection',
+      artifact_verifier_ref: 'artifact-verifier:opl-agent-lab/no-domain-authority-write',
+      failure_policy: 'fail_closed_with_owner_visible_blocker_ref',
+      failure_outputs: {
+        typed_blocker_ref: 'typed-blocker-ref:agent-lab/domain-owner-route-required',
+        owner_route_ref: 'owner-route:domain-owner/high-risk-surface',
+        retry_or_dead_letter_ref: 'retry-or-dead-letter-ref:agent-lab/domain-owner-route-required',
+        rollback_ref: 'rollback-ref:agent-lab/no-op-domain-authority',
+      },
+    },
+  ];
+
+  return {
+    surface_kind: 'opl_agent_lab_integration_contract_read_model',
+    version: 'opl-agent-lab.v1.integration-contracts',
+    read_model_id: stableId('oalic', [integrationContracts]),
+    status: 'ready_for_cross_surface_integration_gates',
+    refs_only: true,
+    integration_contracts: integrationContracts,
+    required_contract_fields: [
+      'activation_predicate',
+      'canonical_entry_ref',
+      'artifact_verifier_ref',
+      'failure_policy',
+      'failure_outputs',
+    ],
+    summary: {
+      contract_count: integrationContracts.length,
+      fail_closed_contract_count: integrationContracts.filter((contract) =>
+        contract.failure_policy.includes('fail_closed') || contract.failure_policy.includes('block')).length,
+      rollback_ref_count: unique(integrationContracts.map((contract) => contract.failure_outputs.rollback_ref)).length,
+      owner_route_ref_count: unique(integrationContracts.map((contract) =>
+        contract.failure_outputs.owner_route_ref)).length,
+    },
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function buildAgentLabReviewTraceLedger(sourceRefs: string[] = []) {
+  const traceEntries = [
+    {
+      trace_ref: stableId('oalrtl', ['independent-ai-review', MECHANISM_REF, sourceRefs]),
+      trace_kind: 'independent_ai_reviewer_trace_ref',
+      request_ref: 'review-request-ref:agent-lab/mechanism-candidate',
+      response_ref: 'review-response-ref:agent-lab/mechanism-candidate',
+      evidence_refs: [
+        'evidence-ref:agent-lab/no-forbidden-write-proof',
+        'evidence-ref:agent-lab/regression-suite-result',
+        ...sourceRefs,
+      ],
+      reviewed_diff_ref: 'diff-ref:agent-lab/mechanism-candidate',
+      contract_ref: 'contract:opl-framework/agent-lab-contract',
+      test_result_ref: 'test-result-ref:agent-lab/mechanism-promotion',
+      reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
+      review_context_inherits_executor_context: false,
+      no_shared_context: true,
+      writes_domain_truth: false,
+      writes_memory_body: false,
+      mutates_artifact: false,
+      writes_owner_receipt: false,
+    },
+    {
+      trace_ref: stableId('oalrtl', ['web-research', MECHANISM_REF, sourceRefs]),
+      trace_kind: 'web_research_trace_ref',
+      request_ref: 'web-research-request-ref:agent-lab/mechanism-context',
+      response_ref: 'web-research-response-ref:agent-lab/mechanism-context',
+      evidence_refs: [
+        'evidence-ref:agent-lab/external-pattern-research',
+        'source-ref:github/wanshuiyin/Auto-claude-code-research-in-sleep',
+        ...sourceRefs,
+      ],
+      reviewed_diff_ref: 'diff-ref:agent-lab/mechanism-candidate',
+      contract_ref: 'contract:opl-framework/agent-lab-contract',
+      test_result_ref: 'test-result-ref:agent-lab/external-pattern-intake',
+      reviewer_agent_ref: 'agent-ref:opl-agent-lab/research-reviewer',
+      review_context_inherits_executor_context: false,
+      no_shared_context: true,
+      writes_domain_truth: false,
+      writes_memory_body: false,
+      mutates_artifact: false,
+      writes_owner_receipt: false,
+    },
+    {
+      trace_ref: stableId('oalrtl', ['mechanism-patch', MECHANISM_REF, sourceRefs]),
+      trace_kind: 'mechanism_patch_trace_ref',
+      request_ref: 'mechanism-patch-request-ref:agent-lab/default-stage-led-agent-mechanism',
+      response_ref: 'mechanism-patch-response-ref:agent-lab/default-stage-led-agent-mechanism',
+      evidence_refs: [
+        'evidence-ref:agent-lab/log-mined-candidate',
+        'evidence-ref:agent-lab/integration-contract-check',
+        ...sourceRefs,
+      ],
+      reviewed_diff_ref: 'diff-ref:agent-lab/mechanism-candidate',
+      contract_ref: 'contract:opl-framework/agent-lab-contract',
+      test_result_ref: 'test-result-ref:agent-lab/evolution-suite',
+      reviewer_agent_ref: 'agent-ref:opl-agent-lab/mechanism-patch-generator',
+      review_context_inherits_executor_context: true,
+      no_shared_context: false,
+      writes_domain_truth: false,
+      writes_memory_body: false,
+      mutates_artifact: false,
+      writes_owner_receipt: false,
+    },
+  ];
+
+  return {
+    surface_kind: 'opl_agent_lab_review_trace_ledger',
+    version: 'opl-agent-lab.v1.review-trace-ledger',
+    ledger_ref: stableId('oalrtl', [traceEntries, sourceRefs]),
+    status: 'ready_for_mechanism_patch_replay_and_audit',
+    refs_only: true,
+    trace_entries: traceEntries,
+    summary: {
+      trace_count: traceEntries.length,
+      independent_no_shared_context_count: traceEntries.filter((entry) =>
+        entry.no_shared_context && entry.review_context_inherits_executor_context === false).length,
+      evidence_ref_count: unique(traceEntries.flatMap((entry) => entry.evidence_refs)).length,
+      request_ref_count: unique(traceEntries.map((entry) => entry.request_ref)).length,
+      response_ref_count: unique(traceEntries.map((entry) => entry.response_ref)).length,
+    },
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
+export function buildAgentLabLogDrivenMechanismCandidateReadModel(sourceRefs: string[] = []) {
+  const logEvidence = {
+    usage_log_refs: [
+      'usage-log-ref:agent-lab/stage-attempt-ledger',
+      'usage-log-ref:agent-lab/operator-workbench-actions',
+    ],
+    failure_mode_refs: [
+      'failure-mode-ref:agent-lab/retry-loop-stall',
+      'failure-mode-ref:agent-lab/owner-route-ambiguity',
+    ],
+    user_interrupt_refs: [
+      'user-interrupt-ref:agent-lab/stop-loss-request',
+      'user-interrupt-ref:agent-lab/manual-route-correction',
+    ],
+    convergence_iteration_refs: [
+      'convergence-iteration-ref:agent-lab/mechanism-candidate-round-1',
+      'convergence-iteration-ref:agent-lab/mechanism-candidate-round-2',
+    ],
+    tool_failure_refs: [
+      'tool-failure-ref:agent-lab/provider-requery-timeout',
+      'tool-failure-ref:agent-lab/connector-export-missing-ref',
+    ],
+    blocker_refs: [
+      'blocker-ref:agent-lab/forbidden-authority-claim',
+      'blocker-ref:agent-lab/missing-owner-route',
+    ],
+    source_refs: sourceRefs,
+  };
+  const candidateRefs = [
+    {
+      candidate_ref: 'mechanism-candidate-ref:agent-lab/prompt-log-driven-routing',
+      candidate_kind: 'prompt',
+      target_surface_ref: 'mechanism-surface:agent-lab/prompt',
+      risk_tier: 'low_risk',
+      evidence_refs: [
+        logEvidence.usage_log_refs[1],
+        logEvidence.user_interrupt_refs[1],
+      ],
+    },
+    {
+      candidate_ref: 'mechanism-candidate-ref:agent-lab/skill-activation-contract',
+      candidate_kind: 'skill',
+      target_surface_ref: 'mechanism-surface:agent-lab/stage-policy',
+      risk_tier: 'medium_risk',
+      evidence_refs: [
+        logEvidence.failure_mode_refs[1],
+        logEvidence.blocker_refs[1],
+      ],
+    },
+    {
+      candidate_ref: 'mechanism-candidate-ref:agent-lab/rubric-gap-direct-evidence',
+      candidate_kind: 'rubric_gap',
+      target_surface_ref: 'mechanism-surface:agent-lab/rubric-gap',
+      risk_tier: 'low_risk',
+      evidence_refs: [
+        logEvidence.failure_mode_refs[0],
+        logEvidence.convergence_iteration_refs[0],
+      ],
+    },
+    {
+      candidate_ref: 'mechanism-candidate-ref:agent-lab/workflow-default-retry-policy',
+      candidate_kind: 'workflow_default',
+      target_surface_ref: 'mechanism-surface:agent-lab/tool-policy',
+      risk_tier: 'medium_risk',
+      evidence_refs: [
+        logEvidence.tool_failure_refs[0],
+        logEvidence.convergence_iteration_refs[1],
+      ],
+    },
+  ];
+
+  return {
+    surface_kind: 'opl_agent_lab_log_driven_mechanism_candidate_read_model',
+    version: 'opl-agent-lab.v1.log-driven-candidates',
+    read_model_id: stableId('oallmc', [logEvidence, candidateRefs]),
+    status: 'ready_for_usage_log_driven_meta_optimize',
+    refs_only: true,
+    log_evidence: logEvidence,
+    candidate_refs: candidateRefs,
+    log_mined_candidate_refs: candidateRefs.map((candidate) => candidate.candidate_ref),
+    promotion_policy_ref: 'mechanism-promotion-policy:agent-lab/risk-tiered-auto-promotion',
+    summary: {
+      candidate_count: candidateRefs.length,
+      low_risk_count: candidateRefs.filter((candidate) => candidate.risk_tier === 'low_risk').length,
+      medium_risk_count: candidateRefs.filter((candidate) => candidate.risk_tier === 'medium_risk').length,
+      high_risk_count: candidateRefs.filter((candidate) => candidate.risk_tier === 'high_risk').length,
+      evidence_ref_count: unique(Object.values(logEvidence).flat()).length,
+    },
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
 export function buildCompleteAgentLabControlPlane() {
   const sampleResult = buildSampleAgentLabResult();
   const longlineResult = buildLonglineAgentLabResult();
+  const integrationContracts = buildAgentLabIntegrationContractReadModel();
+  const reviewTraceLedger = buildAgentLabReviewTraceLedger([
+    sampleResult.result_id,
+    longlineResult.result_id,
+  ]);
+  const logDrivenCandidates = buildAgentLabLogDrivenMechanismCandidateReadModel([
+    sampleResult.result_id,
+    longlineResult.result_id,
+  ]);
   const evalAdapters = [
     {
       adapter_id: 'opl-native-agent-lab',
@@ -344,14 +603,17 @@ export function buildCompleteAgentLabControlPlane() {
     loop_steps: [
       'collect_trajectory_refs',
       'collect_usage_and_blocker_event_refs',
+      'mine_real_logs_into_mechanism_candidate_refs',
       'optional_web_research_for_mechanism_context',
       'freeze_dataset_or_longline_suite',
       'score_with_domain_owned_scorecard_refs',
+      'validate_cross_surface_integration_contracts',
       'select_mechanism_editable_surface_refs',
       'emit_meta_edit_receipt_ref',
       'generate_next_mechanism_candidate_ref',
       'classify_mechanism_change_risk',
       'run_independent_ai_review_without_shared_context',
+      'record_review_trace_refs',
       'run_regression_and_recovery_gates',
       'auto_promote_low_and_medium_risk_with_versioned_canary',
       'route_high_risk_to_owner_or_human_gate',
@@ -362,7 +624,13 @@ export function buildCompleteAgentLabControlPlane() {
       'dspy:mipro/bootstrap-few-shot',
       'textgrad:textual-feedback-optimization',
       'agent-lightning:training-agent-disaggregation',
+      'aris:log-driven-meta-optimize',
+      'aris:integration-contract',
+      'aris:review-trace',
     ],
+    log_driven_candidate_read_model: logDrivenCandidates,
+    integration_contract_read_model: integrationContracts,
+    review_trace_ledger: reviewTraceLedger,
     rl_boundary: {
       status: 'downstream_ready_after_stable_trajectory_and_reward_surfaces',
       can_emit_transition_refs: true,
@@ -382,6 +650,9 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_optimizer_candidate_refs: true,
     ready_to_emit_rl_transition_refs: true,
     ready_to_emit_developer_mode_repair_routes: true,
+    ready_to_emit_integration_contracts: true,
+    ready_to_emit_review_trace_ledger: true,
+    ready_to_emit_log_driven_mechanism_candidates: true,
     automatic_mechanism_promotion_ready: true,
     automatic_model_training_ready: false,
     automatic_default_agent_promotion_ready: AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
@@ -400,6 +671,9 @@ export function buildCompleteAgentLabControlPlane() {
     observability_exports: observabilityExports,
     optimizer_loop: optimizerLoop,
     mechanism_control_plane: buildAgentLabMechanismReadModel(),
+    integration_contracts: integrationContracts,
+    review_trace_ledger: reviewTraceLedger,
+    log_driven_mechanism_candidates: logDrivenCandidates,
     developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
     non_goals: [
@@ -620,6 +894,9 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.control_plane_id,
       sample.result_id,
       longline.result_id,
+      complete.integration_contracts.read_model_id,
+      complete.review_trace_ledger.ledger_ref,
+      complete.log_driven_mechanism_candidates.read_model_id,
       developerModeRepairRoutes.read_model_id,
     ]),
     status: 'ready_for_app_workbench_consumption',
@@ -628,6 +905,9 @@ export function buildAgentLabWorkbenchReadModel() {
       complete_control_plane_ref: complete.control_plane_id,
       sample_suite_ref: sample.result_id,
       longline_suite_ref: longline.result_id,
+      integration_contract_read_model_ref: complete.integration_contracts.read_model_id,
+      review_trace_ledger_ref: complete.review_trace_ledger.ledger_ref,
+      log_driven_mechanism_candidate_read_model_ref: complete.log_driven_mechanism_candidates.read_model_id,
       sample_ref_summary: agentLabRefSummary(sample),
       longline_ref_summary: agentLabRefSummary(longline),
     },
@@ -640,6 +920,9 @@ export function buildAgentLabWorkbenchReadModel() {
     },
     optimizer_candidates: optimizerCandidates(results),
     mechanism: buildAgentLabMechanismReadModel(),
+    integration_contracts: complete.integration_contracts,
+    review_trace_ledger: complete.review_trace_ledger,
+    log_driven_mechanism_candidates: complete.log_driven_mechanism_candidates,
     promotion_gates: promotionGates(results),
     developer_mode_repair_routes: developerModeRepairRoutes,
     online_learning_refs: {
@@ -661,6 +944,15 @@ export function buildAgentLabMechanismReadModel() {
   const mechanismPromotionPolicy = buildMechanismPromotionPolicy(independentReview.receipt_ref);
   const mechanismVersionLedger = buildMechanismVersionLedger();
   const rollback = buildMechanismRollback();
+  const integrationContracts = buildAgentLabIntegrationContractReadModel();
+  const reviewTraceLedger = buildAgentLabReviewTraceLedger([
+    'suite:opl-agent-lab-sample-suite',
+    'suite:opl-agent-lab-longline-suite',
+  ]);
+  const logDrivenCandidates = buildAgentLabLogDrivenMechanismCandidateReadModel([
+    'suite:opl-agent-lab-sample-suite',
+    'suite:opl-agent-lab-longline-suite',
+  ]);
   const promotionDecision = buildMechanismPromotionDecision({
     riskTier: 'medium_risk',
     independentReview,
@@ -677,6 +969,9 @@ export function buildAgentLabMechanismReadModel() {
     mechanism_promotion_policy: mechanismPromotionPolicy,
     mechanism_version_ledger: mechanismVersionLedger,
     independent_ai_review_receipt: independentReview,
+    integration_contracts: integrationContracts,
+    review_trace_ledger: reviewTraceLedger,
+    log_driven_mechanism_candidates: logDrivenCandidates,
     rollback,
     meta_edit_receipt: {
       receipt_ref: stableId('oalmr', [mechanismRef, mechanismVersion, MECHANISM_EDITABLE_SURFACES]),
@@ -733,6 +1028,9 @@ export function buildAgentLabMechanismReadModel() {
       ],
       required_gate_refs: mechanismPromotionPolicy.required_gate_refs,
       independent_ai_review_ref: independentReview.receipt_ref,
+      integration_contract_ref: integrationContracts.integration_contracts[1].contract_ref,
+      review_trace_ledger_ref: reviewTraceLedger.ledger_ref,
+      log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
       promotion_decision: promotionDecision.promotion_decision,
       promotion_receipt_ref: promotionDecision.promotion_receipt_ref,
       rollback_target_ref: promotionDecision.rollback_target_ref,
@@ -748,6 +1046,16 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
   const mechanism = buildAgentLabMechanismReadModel();
   const candidates = optimizerCandidates([suiteResult]);
   const transitions = rlTransitionRefs([suiteResult]);
+  const integrationContracts = buildAgentLabIntegrationContractReadModel();
+  const reviewTraceLedger = buildAgentLabReviewTraceLedger([
+    suiteResult.result_id,
+    ...suiteResult.refs.promotion_gate_refs,
+  ]);
+  const logDrivenCandidates = buildAgentLabLogDrivenMechanismCandidateReadModel([
+    suiteResult.result_id,
+    ...suiteResult.refs.mechanism_evolution_input_refs,
+    ...suiteResult.refs.promotion_gate_refs,
+  ]);
   const trajectoryRefs = suiteResult.refs.trajectory_refs;
   const scorecardRefs = suiteResult.refs.domain_quality_scorecard_refs;
   const candidateRefs = candidates.map((candidate) => candidate.candidate_ref);
@@ -780,6 +1088,10 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     mechanism_ref: mechanism.mechanism_ref,
     mechanism_version: mechanism.mechanism_version,
     editable_surfaces: mechanism.editable_surfaces,
+    integration_contracts: integrationContracts,
+    review_trace_ledger: reviewTraceLedger,
+    log_driven_mechanism_candidates: logDrivenCandidates,
+    log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     mechanism_promotion_decision: mechanismPromotionDecision,
     independent_ai_review_receipt: independentReview,
     promotion_receipt: promotionReceipt,
@@ -812,6 +1124,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
       suite_status: suiteResult.status,
       added_evidence_refs: [
         suiteResult.result_id,
+        ...suiteResult.refs.mechanism_evolution_input_refs,
         ...suiteResult.refs.receipt_refs,
         ...suiteResult.refs.promotion_gate_refs,
       ],
@@ -827,6 +1140,10 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
       candidate_ref: stableId('oalmc', [suiteResult.result_id, candidateRefs, transitionRefs]),
       source_candidate_refs: candidateRefs,
       source_transition_refs: transitionRefs,
+      source_log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
+      source_mechanism_evolution_input_refs: suiteResult.refs.mechanism_evolution_input_refs,
+      integration_contract_ref: integrationContracts.integration_contracts[1].contract_ref,
+      review_trace_ledger_ref: reviewTraceLedger.ledger_ref,
       required_gate_refs: unique([
         ...mechanism.next_mechanism_candidate.required_gate_refs,
         ...suiteResult.refs.promotion_gate_refs,
@@ -931,6 +1248,10 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
   const suiteResult = runAgentLabSuite(input);
   const candidates = optimizerCandidates([suiteResult]);
   const transitions = rlTransitionRefs([suiteResult]);
+  const logDrivenCandidates = buildAgentLabLogDrivenMechanismCandidateReadModel([
+    suiteResult.result_id,
+    ...suiteResult.refs.mechanism_evolution_input_refs,
+  ]);
   const autoPromotableCandidates = candidates.filter((candidate) =>
     candidate.automatic_mechanism_promotion_ready);
 
@@ -947,6 +1268,8 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
       auto_promotable_candidate_count: autoPromotableCandidates.length,
       candidates,
     },
+    log_driven_mechanism_candidates: logDrivenCandidates,
+    log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     rl_transition_refs: {
       transition_count: transitions.length,
       transitions,

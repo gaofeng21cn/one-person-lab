@@ -502,7 +502,7 @@ test('family-runtime stage attempt ledger keeps provider dispatch separate until
       '--domain',
       'medautoscience',
       '--stage',
-      'scout',
+      'legacy_scout',
       '--provider',
       'local_sqlite',
       '--workspace-locator',
@@ -537,7 +537,7 @@ test('family-runtime stage attempt ledger keeps provider dispatch separate until
       'checkpointed',
     );
     assert.equal(task.family_runtime_task.stage_attempts.length, 1);
-    assert.equal(task.family_runtime_task.stage_attempts[0].stage_id, 'scout');
+    assert.equal(task.family_runtime_task.stage_attempts[0].stage_id, 'legacy_scout');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
