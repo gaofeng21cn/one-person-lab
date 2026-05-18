@@ -55,6 +55,22 @@ Agent Lab 可以持有：
 
 当 Agent Lab 展示 MAS/MAG/RCA 的质量、进度或交付状态时，只能引用 domain-owned eval/proof/receipt/artifact locator。它不能把 provider completion、harness pass、descriptor aligned、agent-lab score 或 OPL operator judgment 写成 domain ready verdict。
 
+## Developer Mode 与外围巡检
+
+`OPL Developer Mode` 开启时，Agent Lab 是外围 AI 巡检、问题归因和改进候选的优先承载面。Developer Mode 的系统配置由 OPL state 持有，App 设置页应暴露开关和当前模式；安装流程可以在检测到配置的 GitHub developer login 时默认开启，但用户必须能手动切换。
+
+Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 framework runtime evidence、descriptor、stage attempt refs、provider receipt、repo test evidence、operator blocker 和 domain-owned proof refs，并输出：
+
+- issue / blocker；
+- owner route；
+- candidate fix ref；
+- repo worktree / branch ref；
+- pull request ref；
+- acceptance evidence ref；
+- follow-up queue item。
+
+当 authenticated GitHub identity 对目标 repo 具备 developer / collaborator 写权限时，Developer Mode 可以把 Agent Lab candidate 路由到受控 repo 修复提交路径；没有直接写权限时，只允许生成 fork / branch / pull request。两种路径都必须保留 evidence、diff、验证命令和 owner-visible closeout；不得静默修改 managed runtime、domain truth、artifact、memory body、quality verdict 或 owner receipt。
+
 ## 输入与输出
 
 允许输入：
