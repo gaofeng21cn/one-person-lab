@@ -284,6 +284,78 @@ function providerSloRefs(providerContinuousProof: JsonRecord) {
   return uniqueRefs(commandRefs);
 }
 
+function periodicExecutionRefs(providerActionRefs: ReturnType<typeof providerSloRefs>) {
+  const scheduleId = 'opl-family-runtime-provider-scheduler';
+  const schedulerRefs = [
+    {
+      ref: 'opl family-runtime scheduler status --provider temporal',
+      role: 'scheduler_cadence_status',
+      provider_kind: 'temporal',
+      schedule_id: scheduleId,
+      cadence_owner: 'provider_backed_family_runtime',
+      scheduler_owner: 'opl_provider_runtime_manager',
+      execution_policy: 'read_only_status_projection',
+      expected_surface_kind: 'opl_family_runtime_scheduler_cadence',
+      can_execute: false,
+    },
+    {
+      ref: 'opl family-runtime scheduler install --provider temporal',
+      role: 'scheduler_cadence_install_or_update',
+      provider_kind: 'temporal',
+      schedule_id: scheduleId,
+      cadence_owner: 'provider_backed_family_runtime',
+      scheduler_owner: 'opl_provider_runtime_manager',
+      execution_policy: 'operator_or_infrastructure_supervised',
+      expected_surface_kind: 'temporal_scheduler_cadence_install_receipt',
+      can_execute: false,
+    },
+    {
+      ref: 'opl family-runtime scheduler trigger --provider temporal',
+      role: 'scheduler_cadence_manual_trigger',
+      provider_kind: 'temporal',
+      schedule_id: scheduleId,
+      cadence_owner: 'provider_backed_family_runtime',
+      scheduler_owner: 'opl_provider_runtime_manager',
+      execution_policy: 'operator_or_infrastructure_supervised',
+      expected_surface_kind: 'temporal_scheduler_cadence_trigger_receipt',
+      can_execute: false,
+    },
+    {
+      ref: 'opl family-runtime scheduler tick --provider temporal',
+      role: 'scheduler_tick_provider_slo_and_queue_dispatch',
+      provider_kind: 'temporal',
+      schedule_id: scheduleId,
+      cadence_owner: 'provider_backed_family_runtime',
+      scheduler_owner: 'opl_provider_runtime_manager',
+      execution_policy: 'provider_backed_no_domain_daemon',
+      expected_surface_kind: 'opl_family_runtime_scheduler_tick',
+      can_execute: false,
+    },
+  ];
+  return {
+    surface_kind: 'opl_app_drilldown_periodic_execution_refs',
+    projection_policy: 'provider_scheduler_refs_only_no_domain_daemon_or_truth_write',
+    schedule_id: scheduleId,
+    refs: uniqueRefs([
+      ...schedulerRefs,
+      ...providerActionRefs.map((ref) => ({
+        ...ref,
+        role: `provider_slo:${ref.role}`,
+        schedule_id: scheduleId,
+        cadence_owner: 'provider_backed_family_runtime',
+        scheduler_owner: 'opl_provider_runtime_manager',
+        can_execute: false,
+      })),
+    ]),
+    replaces_domain_daemon_surface: {
+      medautoscience: 'MAS LaunchAgent / local supervision tick is cleanup-only legacy residue.',
+      medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
+      redcube: 'RCA repo-local sidecar/session supervision is handler diagnostic only.',
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 function operatorActionRoutingRefs(workbench: JsonRecord) {
   return uniqueRefs(recordList(record(workbench.action_routing).actions)
     .map((action) => ({
@@ -670,6 +742,7 @@ export function buildAppOperatorDrilldown(input: {
   const memoryRefs = memoryWritebackRefs(input.stageAttemptWorkbench);
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
+  const periodicRefs = periodicExecutionRefs(providerActionRefs);
   const actionRefs = operatorActionRoutingRefs(input.stageAttemptWorkbench);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
@@ -710,6 +783,7 @@ export function buildAppOperatorDrilldown(input: {
       quality_ref_count: qualityRefs.quality_refs.length,
       readiness_ref_count: qualityRefs.readiness_refs.length,
       provider_slo_action_count: providerActionRefs.length,
+      periodic_execution_ref_count: periodicRefs.refs.length,
       operator_action_route_count: actionRefs.length,
       operator_executable_route_count: actionRefs.filter((ref) => (
         ref.execution_policy === 'opl_safe_action_shell'
@@ -771,6 +845,7 @@ export function buildAppOperatorDrilldown(input: {
       refs: providerActionRefs,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    periodic_execution_refs: periodicRefs,
     operator_action_routing_refs: {
       surface_kind: 'opl_app_drilldown_operator_action_routing_refs',
       refs: actionRefs,

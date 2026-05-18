@@ -65,6 +65,7 @@ User / Codex / CLI / One Person Lab App
 - Temporal-backed provider 是 production online runtime 的必需 substrate。
 - `local_sqlite` 只作为 dev/CI/offline diagnostic baseline。
 - OPL 持有 stage attempt、workflow id、activity、signal/query、heartbeat、retry/dead-letter、human gate、provider receipt、runtime event ledger 和 operator attention projection。
+- OPL runtime status 与 App/workbench 必须把 provider scheduler cadence、provider SLO receipt、repair command 和 domain-daemon replacement policy 作为同一套机器读面暴露；domain repo 不安装或维护自己的 scheduler / LaunchAgent / daemon。
 - `Codex CLI` 是当前第一公民 executor；`hermes_agent`、Claude Code 等只能作为显式非默认 executor adapter 接入，并以 receipt/audit/fail-closed 证明连接，不承诺行为或质量等价。
 
 ### 状态、记忆与文件生命周期
@@ -75,7 +76,7 @@ User / Codex / CLI / One Person Lab App
 
 ### Workbench 与 projection
 
-- OPL App/workbench 应提供 route graph、stage attempt drilldown、running/recent items、review/repair queue、artifact gallery、package/export lifecycle、memory refs、functional privatization audit、quality/readiness projection、provider SLO/repair 和 owner-aware action routing。
+- OPL App/workbench 应提供 route graph、stage attempt drilldown、running/recent items、review/repair queue、artifact gallery、package/export lifecycle、memory refs、functional privatization audit、quality/readiness projection、provider scheduler cadence、provider SLO/repair 和 owner-aware action routing。
 - App 只能展示 refs、receipt、blocked reason、next owner 和 safe action；domain verdict 必须回到 domain owner surface。
 
 ## 通用能力上收边界
