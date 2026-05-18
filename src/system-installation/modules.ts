@@ -132,6 +132,20 @@ export const DEFAULT_OPL_MODULE_IDS: readonly OplModuleId[] = DOMAIN_MODULE_SPEC
   .filter((entry) => entry.default_install)
   .map((entry) => entry.module_id);
 
+export function listDefaultOplDomainModuleSpecs(): DomainModuleSpec[] {
+  return DOMAIN_MODULE_SPECS
+    .filter((entry) => entry.default_install)
+    .map((entry) => ({
+      module_id: entry.module_id,
+      label: entry.label,
+      repo_name: entry.repo_name,
+      repo_url: entry.repo_url,
+      scope: entry.scope,
+      default_install: entry.default_install,
+      description: entry.description,
+    }));
+}
+
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 }

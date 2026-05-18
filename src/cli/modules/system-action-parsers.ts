@@ -386,6 +386,7 @@ function parseDeveloperSupervisorArgs(
         parsed.developerSupervisorMode = value;
         break;
       case '--auto-enable-github-login':
+      case '--github-login':
         parsed.developerSupervisorAutoEnableGithubLogin = value;
         break;
       default:

@@ -5,10 +5,12 @@ import {
   writeOplDeveloperSupervisorConfig,
   writeOplUpdateChannel,
 } from '../system-preferences.ts';
+import { buildOplEndpoints } from '../opl-runtime-paths.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import type { FrameworkContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
+import { buildOplDeveloperModeSurface } from './developer-mode.ts';
 import { buildOplEnvironment } from './environment.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
 import type {
@@ -296,6 +298,7 @@ export async function runOplSystemAction(
         update_channel: readOplUpdateChannel().channel,
         workspace_root: readOplWorkspaceRoot(),
         developer_supervisor: payload,
+        developer_mode: buildOplDeveloperModeSurface(buildOplEndpoints()),
         details: payload,
       },
     };

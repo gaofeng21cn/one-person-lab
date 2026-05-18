@@ -4,6 +4,7 @@ import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buil
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 import { resolveEngineActionSpec } from '../../../../src/system-installation/engine-helpers.ts';
+import { assertBlockedDeveloperModeSurface, assertDeveloperModeAction } from './developer-mode-assertions.ts';
 
 function createManagedDomainModuleFixtures(modulesRoot: string) {
   for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai']) {
@@ -60,6 +61,7 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
         PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
@@ -112,6 +114,7 @@ exit 1
           service_dependency: string;
           local_product_api_retired: boolean;
         };
+        developer_mode: any;
         managed_paths: {
           state_dir: string;
           modules_root: string;
@@ -155,6 +158,7 @@ exit 1
     assert.equal(output.system.gui_shell.strategy, 'aionui_remote_webui');
     assert.equal(output.system.gui_shell.service_dependency, 'none');
     assert.equal(output.system.gui_shell.local_product_api_retired, true);
+    assertBlockedDeveloperModeSurface(output.system.developer_mode);
     assert.match(
       output.system.managed_paths.state_dir,
       /Library\/Application Support\/OPL\/state$/,
@@ -307,6 +311,7 @@ exit 1
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: workspaceRoot,
+        OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
         PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
@@ -362,6 +367,7 @@ exit 1
         settings: {
           interaction_mode: string;
           execution_mode: string;
+          developer_mode: any;
         };
         workspace_root: {
           selected_path: string | null;
@@ -370,7 +376,13 @@ exit 1
         system: {
           update_channel: string;
           gui_shell: { local_product_api_retired: boolean };
-          actions: { action_id: string }[];
+          actions: Array<{
+            action_id: string;
+            endpoint: string;
+            method?: string;
+            request_fields?: string[];
+            payload_template?: Record<string, string> | null;
+          }>;
         };
         first_run_log: {
           surface_id: string;
@@ -394,6 +406,8 @@ exit 1
         };
         endpoints: {
           system_initialize: string;
+          system_settings: string;
+          system_action: string;
           workspace_root: string;
         };
       };
@@ -450,11 +464,17 @@ exit 1
     assert.equal(output.system_initialize.domain_modules.modules.length, 4);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
+    assertBlockedDeveloperModeSurface(output.system_initialize.settings.developer_mode);
     assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);
     assert.equal(output.system_initialize.workspace_root.health_status, 'ready');
     assert.equal(output.system_initialize.system.update_channel, 'stable');
+    const developerSupervisorAction = output.system_initialize.system.actions.find(
+      (entry) => entry.action_id === 'developer_supervisor',
+    );
+    assert.ok(developerSupervisorAction);
+    assertDeveloperModeAction(developerSupervisorAction);
     assert.equal(
-      output.system_initialize.system.actions.some((entry) => entry.action_id === 'developer_supervisor'),
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'developer_mode' && !entry.required),
       true,
     );
     assert.equal(output.system_initialize.system.gui_shell.local_product_api_retired, true);
@@ -480,6 +500,8 @@ exit 1
     assert.equal(output.system_initialize.recommended_next_action.method, 'GET');
     assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, []);
     assert.equal(output.system_initialize.endpoints.system_initialize, '/api/opl/system/initialize');
+    assert.equal(output.system_initialize.endpoints.system_settings, '/api/opl/system/settings');
+    assert.equal(output.system_initialize.endpoints.system_action, '/api/opl/system/actions');
     assert.equal(output.system_initialize.endpoints.workspace_root, '/api/opl/workspaces/root');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });

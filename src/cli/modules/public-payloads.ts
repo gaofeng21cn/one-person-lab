@@ -10,6 +10,7 @@ type OplEnvironmentProjection = {
   native_helpers: unknown;
   module_summary: unknown;
   gui_shell: unknown;
+  developer_mode: unknown;
   managed_paths: unknown;
   notes: unknown;
 };
@@ -60,6 +61,7 @@ function buildPublicSystemFromOplEnvironment(environment: OplEnvironmentProjecti
     native_helpers: environment.native_helpers,
     module_summary: environment.module_summary,
     gui_shell: environment.gui_shell,
+    developer_mode: environment.developer_mode,
     managed_paths: environment.managed_paths,
     notes: environment.notes,
   };

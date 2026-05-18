@@ -11,6 +11,7 @@ import {
   buildAgentLabOptimizeResult,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
+  buildDeveloperModeAgentLabRepairRouteReadModel,
 } from '../../src/agent-lab-complete.ts';
 import {
   buildLonglineAgentLabSuite,
@@ -97,6 +98,10 @@ test('Agent Lab blocks memory body payloads instead of treating them as OPL-appl
 
 test('Agent Lab blocks forbidden OPL authority claims in task manifests or scorecards', () => {
   const suite = buildSampleAgentLabSuite();
+  suite.authority_boundary = {
+    ...suite.authority_boundary,
+    can_modify_managed_runtime: true,
+  };
   suite.tasks[1] = {
     ...suite.tasks[1],
     scorecard: {
@@ -107,14 +112,26 @@ test('Agent Lab blocks forbidden OPL authority claims in task manifests or score
       },
     },
   };
+  suite.tasks[2] = {
+    ...suite.tasks[2],
+    promotion_gate: {
+      ...suite.tasks[2].promotion_gate,
+      authority_boundary: {
+        ...suite.tasks[2].promotion_gate.authority_boundary,
+        can_write_owner_receipt: true,
+      },
+    },
+  };
 
   const result = runAgentLabSuite(suite);
 
   assert.equal(result.status, 'blocked');
   assert.equal(result.observations.forbidden_authority_flags_all_false, false);
-  assert.equal(result.summary.forbidden_authority_flag_count, 1);
+  assert.equal(result.summary.forbidden_authority_flag_count, 3);
   assert.deepEqual(result.refs.forbidden_authority_flags, [
+    'suite:authority_boundary.can_modify_managed_runtime',
     'task:agent-lab-task:mag/grant-section-smoke:scorecard.authority_boundary.can_authorize_quality_verdict',
+    'task:agent-lab-task:rca/visual-deliverable-smoke:promotion_gate.authority_boundary.can_write_owner_receipt',
   ]);
   assert.ok(result.missing_observations.includes('forbidden_authority_flags_all_false'));
 });
@@ -137,6 +154,23 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(contract.mechanism_surface.cli, 'opl agent-lab mechanism');
   assert.ok(contract.mechanism_surface.fields.includes('mechanism_ref'));
   assert.ok(contract.mechanism_surface.fields.includes('next_mechanism_candidate'));
+  assert.equal(contract.developer_mode_repair_route_surface.surface_kind,
+    'opl_agent_lab_developer_mode_repair_route_read_model');
+  assert.equal(contract.developer_mode_repair_route_surface.cli, 'opl agent-lab workbench');
+  assert.equal(contract.developer_mode_repair_route_surface.refs_only, true);
+  assert.deepEqual(contract.developer_mode_repair_route_surface.route_modes, [
+    'repo_developer_direct_fix',
+    'fork_pull_request',
+  ]);
+  assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('candidate_fix_ref'));
+  assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('repo_worktree_ref'));
+  assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('pr_ref'));
+  assert.equal(contract.developer_mode_repair_route_surface.non_authority_outputs.writes_domain_truth, false);
+  assert.equal(contract.developer_mode_repair_route_surface.non_authority_outputs.writes_domain_artifact, false);
+  assert.equal(contract.developer_mode_repair_route_surface.non_authority_outputs.writes_memory_body, false);
+  assert.equal(contract.developer_mode_repair_route_surface.non_authority_outputs.writes_quality_verdict, false);
+  assert.equal(contract.developer_mode_repair_route_surface.non_authority_outputs.writes_owner_receipt, false);
+  assert.equal(contract.developer_mode_repair_route_surface.non_authority_outputs.modifies_managed_runtime, false);
   assert.equal(contract.evolution_surface.surface_kind, 'opl_agent_lab_evolution_result');
   assert.equal(contract.evolution_surface.cli, 'opl agent-lab evolve --suite <suite.json>');
   assert.equal(contract.evolution_surface.refs_only, true);
@@ -174,6 +208,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'domain artifact authority',
     'domain memory body',
     'writeback accept/reject decision',
+    'owner receipt',
   ]) {
     assert.ok(contract.domain_retained_authority.includes(retainedAuthority));
   }
@@ -256,6 +291,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_evolution_segments, true);
   assert.equal(result.readiness.ready_to_emit_optimizer_candidate_refs, true);
   assert.equal(result.readiness.ready_to_emit_rl_transition_refs, true);
+  assert.equal(result.readiness.ready_to_emit_developer_mode_repair_routes, true);
   assert.equal(result.readiness.automatic_model_training_ready, false);
   assert.equal(result.readiness.automatic_default_agent_promotion_ready, false);
   assert.equal(result.readiness.app_workbench_consumption_ready, true);
@@ -263,6 +299,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.ok(result.eval_adapters.some((entry) => entry.adapter_id === 'metr-task-standard'));
   assert.ok(result.observability_exports.some((entry) => entry.export_id === 'langfuse'));
   assert.ok(result.observability_exports.some((entry) => entry.export_id === 'phoenix'));
+  assert.equal(result.developer_mode_repair_routes.surface_kind,
+    'opl_agent_lab_developer_mode_repair_route_read_model');
   assert.deepEqual(result.optimizer_loop.loop_steps, [
     'collect_trajectory_refs',
     'freeze_dataset_or_longline_suite',
@@ -294,10 +332,72 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.mechanism.refs_only, true);
   assert.equal(result.optimizer_candidates.length, 6);
   assert.equal(result.promotion_gates.length, 6);
+  assert.equal(result.developer_mode_repair_routes.status, 'ready_for_developer_mode_patrol_consumption');
+  assert.equal(result.developer_mode_repair_routes.summary.route_count, 2);
   assert.equal(result.online_learning_refs.transitions.length, 6);
   assert.equal(result.online_learning_refs.can_train_or_deploy_model_weights, false);
   assert.equal(result.online_learning_refs.can_promote_default_agent_without_gate, false);
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('Agent Lab Developer Mode repair route projects patrol fixes as refs only', () => {
+  const result = buildDeveloperModeAgentLabRepairRouteReadModel();
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_developer_mode_repair_route_read_model');
+  assert.equal(result.status, 'ready_for_developer_mode_patrol_consumption');
+  assert.equal(result.developer_mode_required, true);
+  assert.equal(result.refs_only, true);
+  assert.deepEqual(result.patrol_projection.route_outputs, [
+    'issue_ref',
+    'blocker_ref',
+    'owner_route_ref',
+    'candidate_fix_ref',
+    'repo_worktree_ref',
+    'branch_ref',
+    'pr_ref',
+    'acceptance_evidence_ref',
+    'follow_up_queue_item_ref',
+  ]);
+  assert.equal(result.summary.route_count, 2);
+  assert.equal(result.summary.direct_owner_route_count, 1);
+  assert.equal(result.summary.fork_pr_route_count, 1);
+  assert.equal(result.summary.follow_up_queue_item_ref_count, 2);
+
+  for (const route of result.routes) {
+    assert.match(route.issue_ref, /^issue-ref:/);
+    assert.match(route.blocker_ref, /^blocker-ref:/);
+    assert.match(route.owner_route_ref, /^owner-route:/);
+    assert.match(route.candidate_fix_ref, /^candidate-fix-ref:/);
+    assert.match(route.repo_worktree_ref, /^repo-worktree-ref:/);
+    assert.match(route.branch_ref, /^git-branch-ref:/);
+    assert.match(route.pr_ref, /^github-pr-ref:/);
+    assert.match(route.acceptance_evidence_ref, /^acceptance-evidence-ref:/);
+    assert.match(route.follow_up_queue_item_ref, /^queue-item-ref:/);
+    assert.equal(route.authority_boundary.writes_domain_truth, false);
+    assert.equal(route.authority_boundary.writes_domain_artifact, false);
+    assert.equal(route.authority_boundary.writes_memory_body, false);
+    assert.equal(route.authority_boundary.writes_quality_verdict, false);
+    assert.equal(route.authority_boundary.writes_owner_receipt, false);
+    assert.equal(route.authority_boundary.modifies_managed_runtime, false);
+  }
+
+  const directRoute = result.routes.find((route) => route.route_mode === 'repo_developer_direct_fix');
+  const forkRoute = result.routes.find((route) => route.route_mode === 'fork_pull_request');
+  assert.ok(directRoute);
+  assert.ok(forkRoute);
+  assert.equal(directRoute.repo_developer_match_required, true);
+  assert.equal(forkRoute.repo_developer_match_required, false);
+  assert.equal(result.non_authority_outputs.writes_domain_truth, false);
+  assert.equal(result.non_authority_outputs.writes_domain_artifact, false);
+  assert.equal(result.non_authority_outputs.writes_memory_body, false);
+  assert.equal(result.non_authority_outputs.writes_quality_verdict, false);
+  assert.equal(result.non_authority_outputs.writes_owner_receipt, false);
+  assert.equal(result.non_authority_outputs.modifies_managed_runtime, false);
+  assert.equal(result.authority_boundary.can_write_domain_truth, false);
+  assert.equal(result.authority_boundary.can_write_memory_body, false);
+  assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.authority_boundary.can_write_owner_receipt, false);
+  assert.equal(result.authority_boundary.can_modify_managed_runtime, false);
 });
 
 test('Agent Lab mechanism read model makes mechanism editable surfaces first-class without write authority', () => {

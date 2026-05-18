@@ -7,8 +7,10 @@ import {
 } from '../family-runtime-providers.ts';
 import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
+import { buildOplEndpoints } from '../opl-runtime-paths.ts';
 import type { FrameworkContracts } from '../types.ts';
 
+import { buildOplDeveloperModeSurface } from './developer-mode.ts';
 import { resolveCodexVersion } from './engine-helpers.ts';
 import { buildOplModules } from './modules.ts';
 
@@ -25,6 +27,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
   );
   const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildOplModules().modules;
+  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints());
   const moduleSummary = modulesPayload.summary;
   const codexIssues = [...codexBinary.issues];
   const codexDiagnostics = [...codexBinary.diagnostics];
@@ -89,6 +92,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
         service_dependency: 'none',
         local_product_api_retired: true,
       },
+      developer_mode: developerMode,
       module_summary: moduleSummary,
       managed_paths: {
         state_dir: statePaths.state_dir,
@@ -107,6 +111,7 @@ export async function buildOplEnvironment(contracts: FrameworkContracts) {
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
+        'Developer Mode is exposed as a settings surface backed by the existing developer_supervisor system action and includes GitHub identity, repository authority, and Agent Lab repair route projections.',
       ],
     },
   };

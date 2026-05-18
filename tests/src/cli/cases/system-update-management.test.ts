@@ -18,6 +18,9 @@ test('system ignores retired Hermes env outside family runtime provider selectio
     assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'temporal');
     assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'attention_needed');
     assert.equal(output.system.core_engines.family_runtime_provider.status, 'provider_code_landed_unconfigured');
+    assert.equal(output.system.developer_mode.action.action_id, 'developer_supervisor');
+    assert.equal(output.system.developer_mode.action.endpoint, '/api/opl/system/actions');
+    assert.equal(output.system.developer_mode.surface_id, 'opl_developer_mode');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
