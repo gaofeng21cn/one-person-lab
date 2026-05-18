@@ -34,6 +34,7 @@ import {
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
 } from '../../domain-pack-compiler.ts';
+import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
 import {
   buildFamilyAgentInspect,
   buildFamilyAgentsList,
@@ -697,6 +698,7 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => runFamilyAgentLegacyCleanupApply(getContracts(), args),
     },
+    'agents evidence apply': agentsEvidenceApplySpec,
     'agents scaffold': cloneCommandSpec(commandSpecs['agents scaffold'], {
       usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>]',
       examples: [
@@ -849,9 +851,7 @@ export function buildPublicCommandSpecs(
         }
 
         const contracts = getContracts();
-        return withContractsContext(contracts, {
-          workstream: findWorkstreamOrThrow(contracts, workstreamId),
-        });
+        return withContractsContext(contracts, { workstream: findWorkstreamOrThrow(contracts, workstreamId) });
       },
     }),
     'contract domains': cloneCommandSpec(commandSpecs['list-domains'], {
@@ -872,9 +872,7 @@ export function buildPublicCommandSpecs(
         }
 
         const contracts = getContracts();
-        return withContractsContext(contracts, {
-          domain: findDomainOrThrow(contracts, domainId),
-        });
+        return withContractsContext(contracts, { domain: findDomainOrThrow(contracts, domainId) });
       },
     }),
     'contract surfaces': cloneCommandSpec(commandSpecs['list-surfaces'], {

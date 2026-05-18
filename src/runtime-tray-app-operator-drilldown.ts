@@ -9,6 +9,9 @@ import {
 import type {
   ProviderContinuousProof,
 } from './family-domain-agent-provider-closure.ts';
+import {
+  buildDomainEvidenceRequestRefs,
+} from './runtime-tray-domain-evidence-requests.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 
@@ -784,105 +787,6 @@ function functionalPrivatizationSummary(projects: DomainManifestCatalogEntry[]) 
   };
 }
 
-function domainEvidenceRequestRefs(projects: DomainManifestCatalogEntry[]) {
-  const resolvedProjects = projects.filter((project) => (
-    project.status === 'resolved' && project.manifest
-  ));
-  const externalRequests = resolvedProjects.flatMap((project) => {
-    const audit = project.manifest?.functional_privatization_audit;
-    const pack = audit?.external_evidence_request_pack;
-    if (!pack) {
-      return [];
-    }
-    return pack.requests.map((request) => ({
-      ref: request.source_pointer
-        ?? `${pack.request_pack_id ?? 'external_evidence_request_pack'}:${request.request_id}`,
-      role: 'external_evidence_request',
-      domain_id: audit.target_domain_id ?? project.project_id,
-      request_pack_id: pack.request_pack_id,
-      request_id: request.request_id,
-      request_status: request.status,
-      requested_from: pack.requested_from,
-      required_evidence_refs: request.required_evidence_refs,
-      required_return_shapes: request.required_return_shapes,
-      required_receipt_shapes: request.required_receipt_shapes,
-      forbidden_payload_classes: request.forbidden_payload_classes,
-      accepted_payload_policy: request.accepted_payload_policy,
-      source_field: audit.source_field,
-      can_execute: false,
-    }));
-  });
-  const evidenceGates = resolvedProjects.flatMap((project) => {
-    const audit = project.manifest?.functional_privatization_audit;
-    const gates = audit?.evidence_gate_projection;
-    if (!gates) {
-      return [];
-    }
-    return gates.remaining_evidence_gate_ids.map((gateId) => ({
-      ref: gateId,
-      role: 'remaining_evidence_gate',
-      domain_id: audit.target_domain_id ?? project.project_id,
-      gate_status: 'open',
-      source_refs: gates.source_refs,
-      can_execute: false,
-    }));
-  });
-  const replacementExpectations = resolvedProjects.flatMap((project) => {
-    const audit = project.manifest?.functional_privatization_audit;
-    return (audit?.opl_replacement_expectations ?? []).map((expectation) => ({
-      ref: expectation.primitive_id,
-      role: 'opl_replacement_expectation',
-      domain_id: audit?.target_domain_id ?? project.project_id,
-      owner: expectation.owner,
-      state: expectation.state,
-      opl_provides: expectation.opl_provides,
-      domain_keeps: expectation.domain_keeps,
-      implemented_in_domain: expectation.implemented_in_domain,
-      source_pointer: expectation.source_pointer,
-      coverage: replacementCoverage(expectation.primitive_id),
-      can_execute: false,
-    }));
-  });
-  const remainingBridgeModules = resolvedProjects.flatMap((project) => {
-    const audit = project.manifest?.functional_privatization_audit;
-    const gates = audit?.evidence_gate_projection;
-    if (!gates) {
-      return [];
-    }
-    return gates.remaining_bridge_module_ids.map((moduleId) => ({
-      ref: moduleId,
-      role: 'remaining_bridge_module',
-      domain_id: audit.target_domain_id ?? project.project_id,
-      module_status: 'allowed_refs_only_or_minimal_authority_until_evidence_gate_closes',
-      source_refs: gates.source_refs,
-      can_execute: false,
-    }));
-  });
-  return {
-    surface_kind: 'opl_app_drilldown_domain_evidence_request_refs',
-    projection_policy: 'domain_declared_requests_refs_only_no_domain_truth_or_verdict',
-    external_requests: uniqueRefs(externalRequests),
-    evidence_gates: uniqueRefs(evidenceGates),
-    replacement_expectations: uniqueRefs(replacementExpectations),
-    remaining_bridge_modules: uniqueRefs(remainingBridgeModules),
-    summary: {
-      external_evidence_request_count: externalRequests.length,
-      remaining_evidence_gate_count: evidenceGates.length,
-      opl_replacement_expectation_count: replacementExpectations.length,
-      remaining_bridge_module_count: remainingBridgeModules.length,
-      replacement_surface_available_count: replacementExpectations.filter((expectation) =>
-        expectation.coverage.coverage_status === 'opl_replacement_surface_available'
-      ).length,
-      open_request_count: externalRequests.filter((request) => (
-        request.request_status !== 'received'
-        && request.request_status !== 'complete'
-        && request.request_status !== 'verified'
-      )).length,
-    },
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
-}
-
 function legacyCleanupPlanRefs(
   projects: DomainManifestCatalogEntry[],
   providerContinuousProof: JsonRecord,
@@ -1186,7 +1090,10 @@ export function buildAppOperatorDrilldown(input: {
   const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
   const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
-  const evidenceRequests = domainEvidenceRequestRefs(input.domainManifestProjects);
+  const evidenceRequests = buildDomainEvidenceRequestRefs(
+    input.domainManifestProjects,
+    replacementCoverage,
+  );
   const legacyCleanupPlans = legacyCleanupPlanRefs(
     input.domainManifestProjects,
     input.providerContinuousProof,
@@ -1197,6 +1104,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
+    sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
   ]);
@@ -1264,6 +1172,14 @@ export function buildAppOperatorDrilldown(input: {
         evidenceRequests.summary.external_evidence_request_count,
       domain_open_evidence_request_count:
         evidenceRequests.summary.open_request_count,
+      domain_recorded_evidence_receipt_request_count:
+        evidenceRequests.summary.recorded_receipt_request_count,
+      domain_verified_evidence_receipt_request_count:
+        evidenceRequests.summary.verified_receipt_request_count,
+      domain_external_evidence_receipt_count:
+        evidenceRequests.summary.external_evidence_receipt_count,
+      domain_external_verified_evidence_receipt_count:
+        evidenceRequests.summary.external_verified_receipt_count,
       domain_remaining_evidence_gate_count:
         evidenceRequests.summary.remaining_evidence_gate_count,
       domain_opl_replacement_expectation_count:

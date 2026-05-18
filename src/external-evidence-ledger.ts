@@ -1,0 +1,376 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { FrameworkContractError } from './contracts.ts';
+import { resolveOplStatePaths } from './runtime-state-paths.ts';
+
+type JsonRecord = Record<string, unknown>;
+
+export type ExternalEvidenceApplyMode = 'record' | 'verify';
+
+export type ExternalEvidenceApplyInput = {
+  mode: ExternalEvidenceApplyMode;
+  domain_id: string;
+  request_id: string;
+  request_pack_id?: string | null;
+  source_ref?: string | null;
+  evidence_refs?: string[];
+  receipt_refs?: string[];
+  typed_blocker_refs?: string[];
+  no_regression_refs?: string[];
+  release_dist_refs?: string[];
+  direct_hosted_parity_refs?: string[];
+  owner_chain_refs?: string[];
+  receipt_ref?: string | null;
+};
+
+export type ExternalEvidenceReceipt = {
+  surface_kind: 'opl_external_evidence_receipt';
+  receipt_ref: string;
+  receipt_status: 'recorded' | 'verified';
+  domain_id: string;
+  request_id: string;
+  request_pack_id: string | null;
+  source_ref: string;
+  recorded_at: string;
+  evidence_refs: string[];
+  receipt_refs: string[];
+  typed_blocker_refs: string[];
+  no_regression_refs: string[];
+  release_dist_refs: string[];
+  direct_hosted_parity_refs: string[];
+  owner_chain_refs: string[];
+  authority_boundary: {
+    opl_can_write_domain_truth: false;
+    opl_can_read_memory_body: false;
+    opl_can_read_artifact_body: false;
+    opl_can_authorize_quality_or_export: false;
+    opl_records_refs_only: true;
+  };
+};
+
+type ExternalEvidenceLedger = {
+  surface_kind: 'opl_external_evidence_ledger';
+  version: 'opl-external-evidence-ledger.v1';
+  receipts: ExternalEvidenceReceipt[];
+};
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeText(value: string | null | undefined, field: string) {
+  const text = value?.trim();
+  if (!text) {
+    throw new FrameworkContractError('cli_usage_error', `agents evidence apply requires ${field}.`, {
+      required: [field],
+    });
+  }
+  return text;
+}
+
+function optionalText(value: string | null | undefined) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function uniqueStrings(values: unknown) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return [...new Set(values
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter(Boolean))];
+}
+
+function splitList(value: string | null | undefined) {
+  if (!value) {
+    return [];
+  }
+  return [...new Set(value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean))];
+}
+
+function emptyLedger(): ExternalEvidenceLedger {
+  return {
+    surface_kind: 'opl_external_evidence_ledger',
+    version: 'opl-external-evidence-ledger.v1',
+    receipts: [],
+  };
+}
+
+function ledgerPath() {
+  return resolveOplStatePaths().external_evidence_ledger_file;
+}
+
+function readLedger(): ExternalEvidenceLedger {
+  const file = ledgerPath();
+  if (!fs.existsSync(file)) {
+    return emptyLedger();
+  }
+  const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    return emptyLedger();
+  }
+  return {
+    ...emptyLedger(),
+    receipts: parsed.receipts.filter(isRecord).map((receipt) => ({
+      surface_kind: 'opl_external_evidence_receipt',
+      receipt_ref: normalizeText(String(receipt.receipt_ref ?? ''), 'receipt_ref'),
+      receipt_status: receipt.receipt_status === 'verified' ? 'verified' : 'recorded',
+      domain_id: normalizeText(String(receipt.domain_id ?? ''), 'domain_id'),
+      request_id: normalizeText(String(receipt.request_id ?? ''), 'request_id'),
+      request_pack_id: optionalText(typeof receipt.request_pack_id === 'string' ? receipt.request_pack_id : null),
+      source_ref: normalizeText(String(receipt.source_ref ?? ''), 'source_ref'),
+      recorded_at: optionalText(typeof receipt.recorded_at === 'string' ? receipt.recorded_at : null) ?? nowIso(),
+      evidence_refs: uniqueStrings(receipt.evidence_refs),
+      receipt_refs: uniqueStrings(receipt.receipt_refs),
+      typed_blocker_refs: uniqueStrings(receipt.typed_blocker_refs),
+      no_regression_refs: uniqueStrings(receipt.no_regression_refs),
+      release_dist_refs: uniqueStrings(receipt.release_dist_refs),
+      direct_hosted_parity_refs: uniqueStrings(receipt.direct_hosted_parity_refs),
+      owner_chain_refs: uniqueStrings(receipt.owner_chain_refs),
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    })),
+  };
+}
+
+function writeLedger(ledger: ExternalEvidenceLedger) {
+  const file = ledgerPath();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(ledger, null, 2)}\n`);
+}
+
+function receiptRef(input: ExternalEvidenceApplyInput) {
+  return optionalText(input.receipt_ref)
+    ?? `opl://external-evidence/${normalizeText(input.domain_id, 'domain_id')}/${normalizeText(input.request_id, 'request_id')}`;
+}
+
+function refsOnlyAuthorityBoundary(): ExternalEvidenceReceipt['authority_boundary'] {
+  return {
+    opl_can_write_domain_truth: false,
+    opl_can_read_memory_body: false,
+    opl_can_read_artifact_body: false,
+    opl_can_authorize_quality_or_export: false,
+    opl_records_refs_only: true,
+  };
+}
+
+function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceReceipt {
+  const evidence_refs = uniqueStrings(input.evidence_refs);
+  const receipt_refs = uniqueStrings(input.receipt_refs);
+  const typed_blocker_refs = uniqueStrings(input.typed_blocker_refs);
+  const no_regression_refs = uniqueStrings(input.no_regression_refs);
+  const release_dist_refs = uniqueStrings(input.release_dist_refs);
+  const direct_hosted_parity_refs = uniqueStrings(input.direct_hosted_parity_refs);
+  const owner_chain_refs = uniqueStrings(input.owner_chain_refs);
+  const evidenceRefs = [
+    ...evidence_refs,
+    ...receipt_refs,
+    ...typed_blocker_refs,
+    ...no_regression_refs,
+    ...release_dist_refs,
+    ...direct_hosted_parity_refs,
+    ...owner_chain_refs,
+  ];
+  if (input.mode === 'record' && evidenceRefs.length === 0) {
+    throw new FrameworkContractError('cli_usage_error', 'agents evidence apply --mode record requires at least one refs-only evidence input.', {
+      required_any: [
+        '--evidence-ref',
+        '--receipt-ref',
+        '--typed-blocker-ref',
+        '--no-regression-ref',
+        '--release-dist-ref',
+        '--direct-hosted-parity-ref',
+        '--owner-chain-ref',
+      ],
+    });
+  }
+  return {
+    surface_kind: 'opl_external_evidence_receipt',
+    receipt_ref: receiptRef(input),
+    receipt_status: input.mode === 'verify' ? 'verified' : 'recorded',
+    domain_id: normalizeText(input.domain_id, 'domain_id'),
+    request_id: normalizeText(input.request_id, 'request_id'),
+    request_pack_id: optionalText(input.request_pack_id),
+    source_ref: optionalText(input.source_ref) ?? `opl://external-evidence/${normalizeText(input.domain_id, 'domain_id')}/${normalizeText(input.request_id, 'request_id')}`,
+    recorded_at: nowIso(),
+    evidence_refs,
+    receipt_refs,
+    typed_blocker_refs,
+    no_regression_refs,
+    release_dist_refs,
+    direct_hosted_parity_refs,
+    owner_chain_refs,
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+export function listExternalEvidenceReceipts(filters: {
+  domain_id?: string | null;
+  request_id?: string | null;
+} = {}) {
+  const domainId = optionalText(filters.domain_id);
+  const requestId = optionalText(filters.request_id);
+  return readLedger().receipts.filter((receipt) =>
+    (!domainId || receipt.domain_id === domainId)
+    && (!requestId || receipt.request_id === requestId)
+  );
+}
+
+export function runExternalEvidenceApply(input: ExternalEvidenceApplyInput) {
+  const ledger = readLedger();
+  const receipt = normalizedReceipt(input);
+  const existingIndex = ledger.receipts.findIndex((entry) =>
+    entry.receipt_ref === receipt.receipt_ref
+    && entry.domain_id === receipt.domain_id
+    && entry.request_id === receipt.request_id
+  );
+  if (input.mode === 'verify') {
+    if (existingIndex < 0) {
+      return {
+        version: 'g2',
+        external_evidence_apply: {
+          surface_kind: 'opl_external_evidence_apply',
+          mode: input.mode,
+          status: 'blocked',
+          writes_performed: false,
+          receipt_ref: receipt.receipt_ref,
+          verified_receipt_count: 0,
+          blocker: {
+            blocker_kind: 'external_evidence_receipt_gate',
+            blocker_id: 'external_evidence_receipt_not_found',
+            required_owner: 'opl_framework_or_operator',
+          },
+          authority_boundary: refsOnlyAuthorityBoundary(),
+        },
+      };
+    }
+    const verified = {
+      ...ledger.receipts[existingIndex],
+      receipt_status: 'verified' as const,
+    };
+    ledger.receipts[existingIndex] = verified;
+    writeLedger(ledger);
+    return {
+      version: 'g2',
+      external_evidence_apply: {
+        surface_kind: 'opl_external_evidence_apply',
+        mode: input.mode,
+        status: 'verified',
+        writes_performed: true,
+        receipt_ref: verified.receipt_ref,
+        verified_receipt_count: 1,
+        receipt: verified,
+        authority_boundary: refsOnlyAuthorityBoundary(),
+      },
+    };
+  }
+  if (existingIndex >= 0) {
+    ledger.receipts[existingIndex] = receipt;
+  } else {
+    ledger.receipts.push(receipt);
+  }
+  writeLedger(ledger);
+  return {
+    version: 'g2',
+    external_evidence_apply: {
+      surface_kind: 'opl_external_evidence_apply',
+      mode: input.mode,
+      status: 'recorded',
+      writes_performed: true,
+      receipt_ref: receipt.receipt_ref,
+      recorded_receipt_count: 1,
+      receipt,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export function parseExternalEvidenceApplyArgs(args: string[]): ExternalEvidenceApplyInput {
+  const input: ExternalEvidenceApplyInput = {
+    mode: 'record',
+    domain_id: '',
+    request_id: '',
+    evidence_refs: [],
+    receipt_refs: [],
+    typed_blocker_refs: [],
+    no_regression_refs: [],
+    release_dist_refs: [],
+    direct_hosted_parity_refs: [],
+    owner_chain_refs: [],
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    const takeValue = () => {
+      if (!value || value.startsWith('--')) {
+        throw new FrameworkContractError('cli_usage_error', `Missing value for option: ${token}.`, {
+          option: token,
+        });
+      }
+      index += 1;
+      return value;
+    };
+    switch (token) {
+      case '--mode': {
+        const mode = takeValue();
+        if (mode !== 'record' && mode !== 'verify') {
+          throw new FrameworkContractError('cli_usage_error', 'agents evidence apply --mode requires record or verify.', {
+            option: token,
+          });
+        }
+        input.mode = mode;
+        break;
+      }
+      case '--domain':
+        input.domain_id = takeValue();
+        break;
+      case '--request-id':
+        input.request_id = takeValue();
+        break;
+      case '--request-pack-id':
+        input.request_pack_id = takeValue();
+        break;
+      case '--source-ref':
+        input.source_ref = takeValue();
+        break;
+      case '--receipt-ref':
+        input.receipt_ref = takeValue();
+        break;
+      case '--evidence-ref':
+        input.evidence_refs!.push(...splitList(takeValue()));
+        break;
+      case '--domain-receipt-ref':
+        input.receipt_refs!.push(...splitList(takeValue()));
+        break;
+      case '--typed-blocker-ref':
+        input.typed_blocker_refs!.push(...splitList(takeValue()));
+        break;
+      case '--no-regression-ref':
+        input.no_regression_refs!.push(...splitList(takeValue()));
+        break;
+      case '--release-dist-ref':
+        input.release_dist_refs!.push(...splitList(takeValue()));
+        break;
+      case '--direct-hosted-parity-ref':
+        input.direct_hosted_parity_refs!.push(...splitList(takeValue()));
+        break;
+      case '--owner-chain-ref':
+        input.owner_chain_refs!.push(...splitList(takeValue()));
+        break;
+      default:
+        throw new FrameworkContractError('cli_usage_error', `Unknown agents evidence apply option: ${token}.`, {
+          usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>]',
+        });
+    }
+  }
+  normalizeText(input.domain_id, 'domain_id');
+  normalizeText(input.request_id, 'request_id');
+  return input;
+}
