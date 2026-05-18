@@ -62,7 +62,7 @@ Authority function 的标准 ABI 固定为：
 | `minimal_authority_function` | 是，但属于 `authority_function_inventory` 而非私有 platform residue | `runtime/authority_functions/<function>` + receipt schema + OPL 标准 ABI | 领域裁决无法可靠声明化，例如 publication quality、fundability/export verdict、visual review/export verdict、artifact mutation authorization、memory accept/reject、source readiness、owner receipt signing 或 domain-native helper implementation。 |
 | `refs_only_domain_adapter` | 是 | contract / projection 只返回 opaque refs、owner receipt、typed blocker、no-regression refs | OPL generic shell 需要 locator 或 receipt refs，但 memory body、artifact body、quality/export verdict 仍归 domain。 |
 | `temporary_migration_bridge` | 否 | `generated_surface_handoff` + active caller inventory + replacement target | OPL generated/replacement surface 正在同一 program 内替换旧手写 shell；必须有迁移动作和退役门。 |
-| `diagnostic_cleanup_path` | 否 | 显式 opt-in status/remove/inspect；不得 install、trigger、schedule 或成为 default caller | 仅用于检查或移除旧 runtime 状态，例如 MAS legacy local LaunchAgent cleanup。 |
+| `diagnostic_cleanup_path` | 否 | 显式 opt-in status/remove/inspect；不得 install、trigger、schedule 或成为 default caller | 仅用于检查、证明或移除旧 runtime 状态，例如 MAS legacy local LaunchAgent cleanup；repo-local `legacy_cleanup_physical_retired` 也归一化到这一类，并在无 active caller 时默认折叠。 |
 | `provenance_or_fixture` | 是 | history/tombstone ref 或 deterministic fixture | 只用于回归、parity 或 source provenance；不得声明 runtime owner。 |
 
 ## 禁止的私有功能面

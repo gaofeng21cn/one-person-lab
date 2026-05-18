@@ -382,7 +382,7 @@ function withFunctionalConsumerBoundary(payload: JsonRecord) {
       },
       {
         module_id: 'local_launchd_scheduler_install_path',
-        classification: 'legacy_cleanup_no_active_caller_gate',
+        classification: 'legacy_cleanup_physical_retired',
         owner: 'none_active',
         code_paths: ['src/med_autoscience/controllers/supervision_scheduler_parts/local_adapter.py'],
         active_callers: ['explicit --manager local status/remove cleanup only'],
@@ -808,6 +808,12 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
         .find((module: { module_id: string }) => module.module_id === 'runtime_lifecycle_sqlite_reference_adapter')
         .standardization_layer,
       'private_platform_residue_inventory',
+    );
+    assert.equal(
+      mas.family_agent_descriptor.functional_privatization_audit.modules
+        .find((module: { module_id: string }) => module.module_id === 'local_launchd_scheduler_install_path')
+        .migration_class,
+      'diagnostic_cleanup_path',
     );
     assert.equal(
       mas.family_agent_descriptor.functional_privatization_audit.modules

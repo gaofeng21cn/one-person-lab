@@ -184,6 +184,28 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(domainRoute.execution_policy, 'opl_safe_action_shell');
     assert.equal(domainRoute.execution_surface, 'opl runtime action execute');
     assert.equal(domainRoute.can_execute, false);
+    assert.equal(drilldown.app_execution_bridge.surface_kind, 'opl_app_operator_execution_bridge');
+    assert.equal(drilldown.app_execution_bridge.action_execution_surface, 'opl runtime action execute');
+    assert.equal(
+      drilldown.app_execution_bridge.summary.safe_action_route_count,
+      drilldown.summary.operator_executable_route_count,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === domainRoute.action_id && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.route_submission_policy.domain_routes_are_queued_for_approval,
+      true,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.route_submission_policy.direct_domain_action_execution_allowed,
+      false,
+    );
+    assert.equal(drilldown.app_execution_bridge.authority_boundary.can_write_domain_truth, false);
     assert.equal(
       drilldown.operator_action_routing_refs.refs.some(
         (ref: { owner: string; route_target_kind: string }) =>
