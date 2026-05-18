@@ -45,6 +45,7 @@ import {
   buildFamilyDomainMemoryMigrationPlan,
 } from '../../family-domain-memory.ts';
 import {
+  buildFamilyStageProofBundleInspect,
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
@@ -817,6 +818,13 @@ export function buildPublicCommandSpecs(
       examples: ['opl stages inspect --domain medautoscience --stage manuscript_authoring'],
       group: 'domain',
       handler: (args) => buildFamilyStageInspect(getContracts(), args),
+    },
+    'stages proof-bundle': {
+      usage: 'opl stages proof-bundle --domain <domain>',
+      summary: 'Project one domain stage pack proof bundle for admission, runtime-event, idempotency, and receipt obligations.',
+      examples: ['opl stages proof-bundle --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageProofBundleInspect(getContracts(), args),
     },
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
       usage: 'opl contract validate',
