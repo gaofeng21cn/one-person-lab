@@ -936,6 +936,11 @@ export function buildPublicCommandSpecs(
       examples: ['opl runtime snapshot', 'opl runtime snapshot --json'],
       group: 'runtime',
     }),
+    'runtime app-operator-drilldown': cloneCommandSpec(commandSpecs['runtime app-operator-drilldown'], {
+      usage: 'opl runtime app-operator-drilldown',
+      examples: ['opl runtime app-operator-drilldown', 'opl runtime app-operator-drilldown --json'],
+      group: 'runtime',
+    }),
     'runtime observability-export': cloneCommandSpec(commandSpecs['runtime observability-export'], {
       usage: 'opl runtime observability-export [--format json|openmetrics]',
       examples: [

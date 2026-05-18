@@ -139,7 +139,7 @@ test('family-runtime attempt inspect projects current provider readiness separat
   }
 });
 
-test('family-runtime temporal attempt query and signal fail closed when Temporal address is not configured', () => {
+test('family-runtime temporal attempt query keeps local ledger readable when Temporal address is not configured', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-query-missing-'));
   try {
     const created = runCli([
@@ -156,40 +156,71 @@ test('family-runtime temporal attempt query and signal fail closed when Temporal
       '{"workspace_root":"/tmp/mas"}',
     ], familyRuntimeEnv(stateRoot));
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    for (const args of [
-      ['family-runtime', 'attempt', 'query', attemptId],
-      [
-        'family-runtime',
-        'attempt',
-        'signal',
-        attemptId,
-        '--kind',
-        'resume',
-        '--payload',
-        '{"reason":"operator_resume"}',
-      ],
-    ]) {
-      const result = spawnSync(process.execPath, [
-        '--experimental-strip-types',
-        path.join(repoRoot, 'src', 'cli.ts'),
-        ...args,
-      ], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          NODE_NO_WARNINGS: '1',
-          OPL_STATE_DIR: stateRoot,
-          OPL_TEMPORAL_ADDRESS: '',
-          TEMPORAL_ADDRESS: '',
-        },
-      });
-      const output = JSON.parse(result.stdout || result.stderr);
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], {
+      ...familyRuntimeEnv(stateRoot),
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    });
 
-      assert.notEqual(result.status, 0);
-      assert.equal(output.error.code, 'contract_shape_invalid');
-      assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
-    }
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.attempt.stage_attempt_id, attemptId);
+    assert.equal(query.family_runtime_stage_attempt_query.temporal_query.status, 'unavailable');
+    assert.equal(
+      query.family_runtime_stage_attempt_query.temporal_query.reason,
+      'temporal_address_not_configured',
+    );
+    assert.equal(
+      query.family_runtime_stage_attempt_query.temporal_query.authority_boundary.opl,
+      'local_stage_attempt_ledger_projection_only',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt signal fails closed when Temporal address is not configured', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-signal-missing-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'resume',
+      '--payload',
+      '{"reason":"operator_resume"}',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_STATE_DIR: stateRoot,
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      },
+    });
+    const output = JSON.parse(result.stdout || result.stderr);
+
+    assert.notEqual(result.status, 0);
+    assert.equal(output.error.code, 'contract_shape_invalid');
+    assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

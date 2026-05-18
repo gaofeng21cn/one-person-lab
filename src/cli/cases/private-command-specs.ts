@@ -296,6 +296,19 @@ export function buildInternalCommandSpecs(
         return buildRuntimeTraySnapshot(getContracts());
       },
     },
+    'runtime app-operator-drilldown': {
+      usage: 'opl runtime app-operator-drilldown',
+      summary:
+        'Project the App/operator drilldown read model from the runtime snapshot without exposing raw domain bodies.',
+      examples: ['opl runtime app-operator-drilldown', 'opl runtime app-operator-drilldown --json'],
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['runtime app-operator-drilldown']);
+        const snapshot = await buildRuntimeTraySnapshot(getContracts());
+        return {
+          app_operator_drilldown: snapshot.runtime_tray_snapshot.app_operator_drilldown,
+        };
+      },
+    },
     'runtime observability-export': {
       usage: 'opl runtime observability-export [--format json|openmetrics]',
       summary:
