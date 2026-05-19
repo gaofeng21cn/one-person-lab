@@ -131,7 +131,7 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
       ],
       current_state_claims: NO_READY_CLAIMS,
       required_boundary:
-        'Retired gateway, old operator-entry, federation, or Hermes-provider vocabulary may remain only as history, diagnostic, provenance, or explicit executor-adapter context.',
+        'Retired gateway, old operator-entry, federation, or non-default executor substrate vocabulary may remain only as history, diagnostic, provenance, or explicit executor-adapter context.',
       next_action:
         'Keep active CLI, machine contracts, and current docs free of retired vocabulary as current-truth aliases.',
     },

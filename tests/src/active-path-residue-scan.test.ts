@@ -180,7 +180,7 @@ test('default runtime and CLI source do not leak retired vocabulary on active pa
     /legacy[-_]?alias(?:es)?/i,
     /runtime[-_]?run/i,
     /runtime[-_]?resume/i,
-    /mcp-stdio/i,
+    new RegExp(['mcp', 'stdio'].join('-'), 'i'),
     /session[-_]journal[-_]root/i,
     /local[-_]run[-_]journal/i,
   ];
