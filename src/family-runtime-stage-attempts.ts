@@ -47,6 +47,7 @@ import {
   buildTemporalStageAttemptWorkflowInput,
 } from './family-runtime-temporal.ts';
 import { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-generic-projections.ts';
+import { buildAttemptHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 
 export {
   createStageAttemptTable,
@@ -715,6 +716,13 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: null,
   });
+  const humanReviewBurdenBudget = buildAttemptHumanReviewBurdenBudget({
+    targetDomainId: attempt.domain_id,
+    stageId: attempt.stage_id,
+    humanGateRefs: stringListFrom(attempt.human_gate_refs),
+    humanGateLedger,
+    routeImpact: attempt.route_impact,
+  });
   const conflictOrBlockerEnvelopes = buildStageAttemptConflictOrBlockerEnvelopes({
     subject,
     attemptStatus: attempt.status,
@@ -753,6 +761,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
       operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
       usage_projection: attempt.usage_projection,
+      human_review_burden_budget: humanReviewBurdenBudget,
       operator_visibility: {
         provider_kind: attempt.provider_kind,
         attempt_id: attempt.stage_attempt_id,
@@ -777,6 +786,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         next_owner: nextOwner,
         human_gate_refs: attempt.human_gate_refs,
         human_gate_ledger: humanGateLedger,
+        human_review_burden_budget: humanReviewBurdenBudget,
         user_instruction_ledger: userInstructionLedger,
         resume_ledger: resumeLedger,
         user_instructions: userInstructionLedger,

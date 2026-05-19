@@ -3,6 +3,10 @@ import type { FamilyActionCatalog } from './family-action-catalog-contract.ts';
 import {
   buildFamilyStageAdmissionReview,
 } from './family-stage-admission.ts';
+import {
+  buildStagePackHumanReviewBurdenBudget,
+} from './family-human-review-budget.ts';
+import type { FamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 import type {
   FamilyStageAdmissionFinding,
   FamilyStageFailureLocalization,
@@ -61,6 +65,8 @@ export interface FamilyStageProofBundleRuntimeMetrics {
   runtime_event_requirement_count: number;
   satisfied_runtime_event_ref_count: number;
   expected_receipt_ref_count: number;
+  human_review_gate_count: number;
+  blocked_human_review_gate_count: number;
   test_proof_ref_count: number;
   blocker_count: number;
   warning_count: number;
@@ -147,6 +153,7 @@ export interface FamilyStageProofBundle {
   boundary_assumptions: FamilyStageProofBundleBoundaryAssumption[];
   idempotency_assumptions: FamilyStageProofBundleIdempotencyAssumption[];
   expected_receipt_refs: FamilyStageProofBundleExpectedReceiptRef[];
+  human_review_burden_budget: FamilyHumanReviewBurdenBudget;
   runtime_event_requirements: FamilyStageProofBundleRuntimeEventRequirement[];
   test_proof_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
   proof_runtime_metrics: FamilyStageProofBundleRuntimeMetrics;
@@ -399,6 +406,7 @@ function buildProofRuntimeMetrics(
   compositionObligations: FamilyStageProofBundleCompositionObligation[],
   runtimeEventRequirements: FamilyStageProofBundleRuntimeEventRequirement[],
   expectedReceiptRefs: FamilyStageProofBundleExpectedReceiptRef[],
+  humanReviewBurdenBudget: FamilyHumanReviewBurdenBudget,
   testProofRefs: Array<FamilyStageSurfaceRef & { stage_id: string }>,
 ): FamilyStageProofBundleRuntimeMetrics {
   const requiredRuntimeEventRequirements = runtimeEventRequirements.filter((requirement) => requirement.required);
@@ -409,6 +417,8 @@ function buildProofRuntimeMetrics(
       .filter((requirement) => requirement.satisfied_by_runtime_event_refs)
       .reduce((count, requirement) => count + requirement.runtime_event_refs.length, 0),
     expected_receipt_ref_count: expectedReceiptRefs.length,
+    human_review_gate_count: humanReviewBurdenBudget.summary.gate_count,
+    blocked_human_review_gate_count: humanReviewBurdenBudget.summary.blocked_gate_count,
     test_proof_ref_count: testProofRefs.length,
     blocker_count: admissionReview.summary.blockers_count,
     warning_count: admissionReview.summary.warnings_count,
@@ -547,6 +557,7 @@ export function buildFamilyStageProofBundle(
   const proofPassed = admissionReview.status === 'admitted';
   const compositionObligations = buildCompositionObligations(plane);
   const expectedReceiptRefs = buildExpectedReceiptRefs(plane, actionCatalog);
+  const humanReviewBurdenBudget = buildStagePackHumanReviewBurdenBudget(plane, actionCatalog);
   const runtimeEventRequirements = buildRuntimeEventRequirements(plane);
   const testProofRefs = buildTestProofRefs(plane);
   const integrity = buildFamilyStagePackIntegrity(plane, actionCatalog);
@@ -572,6 +583,7 @@ export function buildFamilyStageProofBundle(
     boundary_assumptions: plane.stages.map(readBoundaryAssumptions),
     idempotency_assumptions: plane.stages.map(readIdempotencyAssumptions),
     expected_receipt_refs: expectedReceiptRefs,
+    human_review_burden_budget: humanReviewBurdenBudget,
     runtime_event_requirements: runtimeEventRequirements,
     test_proof_refs: testProofRefs,
     proof_runtime_metrics: buildProofRuntimeMetrics(
@@ -579,6 +591,7 @@ export function buildFamilyStageProofBundle(
       compositionObligations,
       runtimeEventRequirements,
       expectedReceiptRefs,
+      humanReviewBurdenBudget,
       testProofRefs,
     ),
     integrity,

@@ -8,6 +8,10 @@ import type { NormalizedDomainManifest } from './domain-manifest/types.ts';
 import {
   buildFamilyStageAssumptionLifecycleProjection,
 } from './family-stage-assumption-lifecycle.ts';
+import {
+  buildStagePackHumanReviewBurdenBudget,
+} from './family-human-review-budget.ts';
+import type { FamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -87,10 +91,13 @@ export interface FamilyStageAdmissionReview {
     verified_core_eligible_count: number;
     durable_runtime_only_count: number;
     runtime_boundary_required_count: number;
+    human_review_gate_count: number;
+    blocked_human_review_gate_count: number;
   };
   stage_results: FamilyStageAdmissionStageResult[];
   findings: FamilyStageAdmissionFinding[];
   failure_localization: FamilyStageFailureLocalization[];
+  human_review_burden_budget: FamilyHumanReviewBurdenBudget;
   authority_boundary: {
     opl_role: 'admission_projection_and_contract_checker';
     can_execute_stage: false;
@@ -531,6 +538,29 @@ function inspectActions(
   }
 }
 
+function inspectHumanReviewBurdenBudget(
+  budget: FamilyHumanReviewBurdenBudget,
+  findings: FamilyStageAdmissionFinding[],
+) {
+  for (const gate of budget.gates) {
+    if (gate.status !== 'blocked') {
+      continue;
+    }
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'human_review_gate_budget_blocked',
+      message: `Human review gate ${gate.gate_id} is missing required typed refs: ${gate.missing_refs.join(', ')}.`,
+      stage_id: gate.stage_id ?? undefined,
+      minimal_counterexample: {
+        gate_id: gate.gate_id,
+        gate_type: gate.gate_type,
+        owner: gate.owner,
+        missing_refs: gate.missing_refs,
+      },
+    });
+  }
+}
+
 function inspectReviewGate(stage: FamilyStageDescriptor, findings: FamilyStageAdmissionFinding[]) {
   if (!['review', 'publish', 'operator_gate'].includes(stage.stage_kind)) {
     return;
@@ -670,6 +700,10 @@ export function buildFamilyStageAdmissionReview(
 ): FamilyStageAdmissionReview {
   const findings: FamilyStageAdmissionFinding[] = [];
   const actionsById = actionMap(manifest?.family_action_catalog);
+  const humanReviewBurdenBudget = buildStagePackHumanReviewBurdenBudget(
+    plane,
+    manifest?.family_action_catalog ?? null,
+  );
 
   for (const stage of plane.stages) {
     inspectAuthorityBoundary(stage, findings);
@@ -681,6 +715,7 @@ export function buildFamilyStageAdmissionReview(
   inspectComposition(plane, findings);
   inspectStaticCycles(plane, findings);
   inspectRuntimeAssumptions(plane, findings);
+  inspectHumanReviewBurdenBudget(humanReviewBurdenBudget, findings);
 
   const localizedFindings = localizeFindings(findings, stageById(plane));
   const stageResults = plane.stages.map((stage) => stageResult(stage, localizedFindings));
@@ -703,10 +738,13 @@ export function buildFamilyStageAdmissionReview(
       verified_core_eligible_count: stageResults.filter((result) => result.mode_tags.verified_core_eligible).length,
       durable_runtime_only_count: stageResults.filter((result) => result.mode_tags.durable_runtime_only).length,
       runtime_boundary_required_count: stageResults.filter((result) => result.mode_tags.runtime_boundary_required).length,
+      human_review_gate_count: humanReviewBurdenBudget.summary.gate_count,
+      blocked_human_review_gate_count: humanReviewBurdenBudget.summary.blocked_gate_count,
     },
     stage_results: stageResults,
     findings: localizedFindings,
     failure_localization: buildFailureLocalization(localizedFindings),
+    human_review_burden_budget: humanReviewBurdenBudget,
     authority_boundary: {
       opl_role: 'admission_projection_and_contract_checker',
       can_execute_stage: false,
