@@ -497,6 +497,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.log_driven_candidate_surface.input_refs.includes('usage_log_refs'));
   assert.ok(contract.log_driven_candidate_surface.candidate_kinds.includes('workflow_default'));
   assert.equal(contract.export_surface.surface_kind, 'opl_agent_lab_export_envelope');
+  assert.ok(contract.export_surface.source_ref_groups.includes('complete_control_plane_ref'));
   assert.ok(contract.export_surface.source_ref_groups.includes('integration_contract_refs'));
   assert.ok(contract.export_surface.source_ref_groups.includes('review_trace_refs'));
   assert.ok(contract.export_surface.source_ref_groups.includes('review_evidence_refs'));
