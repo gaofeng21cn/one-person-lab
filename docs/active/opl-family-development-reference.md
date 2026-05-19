@@ -23,6 +23,8 @@ OPL family 的最高优先级是目标架构，而不是迁就当前实现分布
 
 标准 OPL Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。domain repo 默认提交 stage graph、prompt/skill/knowledge refs、policy table、domain schema、transition table、artifact/source/memory policy、receipt schema、fixtures、tests 和必要的 authority function；CLI、MCP、Skill/product-entry metadata、sidecar、status/read model、workbench、harness、queue、attempt ledger、generic transition runner、runtime lifecycle、operator projection 和 App drilldown 默认由 OPL Framework / One Person Lab App 生成、托管或提供通用 primitive。
 
+所有新增开发都必须遵循 AI-first, contract-light。智能体能力提升优先来自 `Codex CLI` 等 AI executor、stage pack、prompt、skill、knowledge、rubric 和 quality gate 的迭代；合同只固定 owner boundary、权限、安全、receipt、audit、blocker、recovery、projection 和 fail-closed 条件。不得把开放式规划、写作、评审、路线判断、诊断或修订逻辑塞进 OPL 机械规则、固定评分器、脚本后处理或越来越厚的 contract。
+
 真实语义必须归位到 `agent/` pack，而不是散落在 `src/`、`packages/`、旧 wrapper 或只有目录骨架的空 scaffold 里。标准 agent repo 的 `contracts/pack_compiler_input.json` 必须声明 canonical `agent/` pack root 和 `required_domain_pack_paths`；`contracts/stage_control_plane.json` 的每个 stage 必须引用真实 `agent/prompts/*`、`agent/skills/*` 或明确 skill id、`agent/knowledge/*` 与 `agent/quality_gates/*`。这些 ref 指向的文件必须存在、非空、没有占位标记，并且承载该 domain 的 prompt、stage policy、skill policy、knowledge 和 quality gate 语义。`opl agents scaffold --validate <repo>` 是这一层的机器守门；空 `agents/`、只有 README 的目录、只靠 `src/` / `packages/` 承载领域语义、或 stage 缺 prompt/skill/knowledge/evaluation refs 都不能写成标准 OPL Agent。
 
 物理源码形态也必须标准化。descriptor ready、generated interface ready、private functional audit closed 或 `functional_structure_gap_count=0` 只能证明“owner / handoff / contract 分类”正确；它不能自动证明源码已经像标准 OPL Agent 一样物理归位。标准 repo 的源码应该按长期角色分层：

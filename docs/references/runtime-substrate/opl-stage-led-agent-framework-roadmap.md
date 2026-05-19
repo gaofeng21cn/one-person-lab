@@ -14,6 +14,8 @@ Date: `2026-05-18`
 
 `MAS`、`MAG`、`RCA` 是运行在这个 family framework 上的独立 domain agents。它们可以被 OPL 托管、唤醒、排队、投影和恢复，也可以继续通过 Codex App 的单一 app skill 直接调用。OPL 不成为这些 domain 的领域大脑、truth owner、quality gate 或 artifact authority。
 
+长期原则是 AI-first, contract-light。OPL 通过 `Codex CLI` 等 AI executor、domain stage pack、prompt、skill、knowledge、rubric 和 quality gate 的迭代获得智能体进步；合同只负责 owner boundary、权限、安全、审计、receipt、阻塞、恢复和 projection。任何新增 framework primitive 都不能把开放式规划、写作、评审、路线判断或修订逻辑固化成封闭脚本，否则会削弱后续 AI 能力升级带来的收益。
+
 理想目标是：OPL 提供统一 `domain-agent skeleton`，把所有智能体运行外围能力上收到 framework；MAS、MAG、RCA 按同一套 repo-source 目录、contract 和 lifecycle 接入，只提供领域 stage 定义、提示词、工具/Skill、知识面、质控 gate、artifact locator contract 与 domain truth authority。每个标准 Agent stage 都必须声明执行提示词、可用工具、知识 / memory refs、输入输出、handoff 和“本 stage 怎么算做好”的 quality gate。涉及创作、评估、评审、路线判断、fundability、publication readiness、visual direction、review/export verdict、memory accept/reject 或 artifact mutation authorization 的工作必须 AI-first；程序只做 validator、materializer、receipt signer、guard 和 refs projection。Stage 执行 AI 与 Stage 质控 AI 必须是两个独立智能体任务，可以同用 `Codex CLI` executor，但必须独立 invocation、独立上下文、独立 task record 和独立 receipt。不同 domain 的业务内部不要求完全同构，但对 OPL 暴露的 skeleton、descriptor、sidecar、receipt schema、projection builder 和生命周期语义应同构。真实论文、基金、PPT、运行日志、receipt 实例和中间产物属于 workspace / runtime artifact root，不属于 domain repo 源码目录。
 
 ## 总入口
@@ -43,6 +45,7 @@ Date: `2026-05-18`
 开发纪律：
 
 - 新增 framework-level runtime 能力默认先进入 OPL TypeScript control plane、shared contract、provider abstraction 或 App/CLI projection。
+- 新增合同必须保持 contract-light：只固定边界、安全、权限、receipt、audit、recovery、projection 和 fail-closed 条件；不得把 AI executor 的开放式专家行为写成固定决策树、硬编码评分器或脚本后处理。
 - 新增 domain expertise、quality gate、truth reducer、artifact/package authority 默认留在对应 domain repo。
 - MAS 中已经证明可复用的 runtime 外围能力，应先拆成 `framework_generic` 与 `mas_domain_specific`；前者迁入 OPL framework，后者留在 MAS。
 - 已被退役或降级的旧面不得通过别名、帮助文案、测试 fixture 或 product wording 重新变成默认路径；确认无 active caller 后直接删除或迁入 history/tombstone。
