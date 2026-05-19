@@ -504,6 +504,7 @@ export interface NormalizedDomainManifest {
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;
   standard_domain_agent_skeleton_source_field: string | null;
+  generated_surface_handoff: JsonRecord | null;
   owner_receipt_contract: JsonRecord | null;
   domain_owner_receipt_contract: JsonRecord | null;
   managed_temporal_state_consistency: JsonRecord | null;

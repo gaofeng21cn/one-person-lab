@@ -245,9 +245,14 @@ function matchesAlias(text: string, aliases: string[]) {
 }
 
 function handoffSurfacesFromDescriptor(descriptor: JsonRecord) {
-  const handoff = isRecord(descriptor.generated_surface_handoff_contract)
-    ? descriptor.generated_surface_handoff_contract
-    : null;
+  const handoff =
+    isRecord(descriptor.generated_surface_handoff_contract)
+      ? descriptor.generated_surface_handoff_contract
+      : isRecord(descriptor.generated_surface_handoff)
+        ? descriptor.generated_surface_handoff
+        : optionalString(descriptor.surface_kind) === 'opl_generated_surface_handoff'
+          ? descriptor
+          : null;
   return [
     ...recordList(handoff?.handoff_surfaces),
     ...recordList(handoff?.generated_surfaces),

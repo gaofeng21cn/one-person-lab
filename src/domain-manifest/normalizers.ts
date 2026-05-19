@@ -983,6 +983,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
+    generated_surface_handoff: isRecord(manifest.generated_surface_handoff) ? manifest.generated_surface_handoff : null,
     ...functionalClosureSurfaces,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
