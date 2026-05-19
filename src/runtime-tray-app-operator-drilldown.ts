@@ -19,6 +19,9 @@ import {
   applyAppOperatorDrilldownDetail,
   type AppOperatorDrilldownDetailLevel,
 } from './runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+import {
+  buildDomainDispatchEvidence,
+} from './runtime-tray-app-operator-drilldown-parts/domain-dispatch-evidence.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1138,6 +1141,8 @@ export function buildAppOperatorDrilldown(input: {
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
   const typedBlockers = typedBlockerRefs(attempts, input.domainProjectionIngestion);
+  const domainDispatchEvidence = buildDomainDispatchEvidence(attempts);
+  const domainDispatchEvidenceSummary = record(domainDispatchEvidence.summary);
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
   const lifecycleRefs = lifecycleLedgerRefs();
@@ -1217,6 +1222,22 @@ export function buildAppOperatorDrilldown(input: {
       owner_receipt_ref_count: ownerReceipts.length,
       typed_blocker_ref_count: typedBlockers.refs.length,
       typed_blocker_count: typedBlockers.blockers.length,
+      domain_dispatch_evidence_domain_count:
+        numberValue(domainDispatchEvidenceSummary.domain_count),
+      domain_dispatch_evidence_attempt_count:
+        numberValue(domainDispatchEvidenceSummary.attempt_count),
+      domain_dispatch_evidence_owner_receipt_ref_count:
+        numberValue(domainDispatchEvidenceSummary.owner_receipt_ref_count),
+      domain_dispatch_evidence_typed_blocker_ref_count:
+        numberValue(domainDispatchEvidenceSummary.typed_blocker_ref_count),
+      domain_dispatch_evidence_typed_blocker_count:
+        numberValue(domainDispatchEvidenceSummary.typed_blocker_count),
+      domain_dispatch_evidence_no_regression_ref_count:
+        numberValue(domainDispatchEvidenceSummary.no_regression_evidence_ref_count),
+      domain_dispatch_evidence_memory_writeback_ref_count:
+        numberValue(domainDispatchEvidenceSummary.memory_writeback_ref_count),
+      domain_dispatch_evidence_domain_ready_claim_count:
+        numberValue(domainDispatchEvidenceSummary.domain_ready_claim_count),
       freshness_signal_count: freshness.length,
       source_ref_count: refFamilies.summary.source_ref_count,
       artifact_ref_count: refFamilies.summary.artifact_ref_count,
@@ -1340,6 +1361,7 @@ export function buildAppOperatorDrilldown(input: {
       blockers: typedBlockers.blockers,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    domain_dispatch_evidence: domainDispatchEvidence,
     freshness_refs: {
       surface_kind: 'opl_app_drilldown_freshness_refs',
       refs: freshness,

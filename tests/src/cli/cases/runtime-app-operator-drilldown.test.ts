@@ -772,6 +772,13 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
     assert.equal(drilldown.authority_boundary.can_read_artifact_body, false);
     assert.equal(drilldown.summary.owner_receipt_ref_count, 4);
     assert.equal(drilldown.summary.typed_blocker_count, 3);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_domain_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_attempt_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
     assert.equal(drilldown.summary.lifecycle_index_ref_count, 2);
     assert.equal(drilldown.summary.lifecycle_restore_proof_ref_count, 2);
     assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
@@ -805,6 +812,25 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
         blocker.blocker_id === 'domain_owned_lifecycle_receipt_required'
       ),
       true,
+    );
+    assert.equal(drilldown.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
+    assert.equal(drilldown.domain_dispatch_evidence.summary.domain_count, 1);
+    assert.equal(drilldown.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
+    assert.equal(
+      drilldown.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
+      0,
+    );
+    assert.equal(
+      drilldown.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
+      false,
+    );
+    assert.deepEqual(
+      drilldown.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs,
+      ['mas-no-regression:package'],
+    );
+    assert.deepEqual(
+      drilldown.domain_dispatch_evidence.attempts[0].writeback_receipt_refs,
+      ['memory-writeback:receipt-1'],
     );
     assert.equal(
       drilldown.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>

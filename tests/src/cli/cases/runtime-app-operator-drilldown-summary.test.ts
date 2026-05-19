@@ -81,7 +81,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.route_graph_refs.refs.length <= 10, true);
     assert.equal(summaryDrilldown.operator_action_routing_refs.refs.length <= 10, true);
     assert.equal(summaryDrilldown.production_evidence_tail_ledger.tail_items.length <= 10, true);
+    assert.equal(summaryDrilldown.domain_dispatch_evidence.attempts.length, 10);
     assert.equal(summaryDrilldown.route_graph_refs.omitted_ref_count, 2);
+    assert.equal(summaryDrilldown.domain_dispatch_evidence.omitted_ref_count, 2);
     assert.equal(
       summaryDrilldown.operator_action_routing_refs.omitted_ref_count,
       summaryDrilldown.summary.operator_action_route_count - 10,
@@ -98,6 +100,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     const fullDrilldown = fullOutput.app_operator_drilldown;
     assert.equal(fullDrilldown.detail_level, 'full');
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
+    assert.equal(fullDrilldown.domain_dispatch_evidence.attempts.length, 12);
     assert.equal(
       fullDrilldown.production_evidence_tail_ledger.tail_items.length,
       summaryDrilldown.summary.production_evidence_tail_item_count,
@@ -107,6 +110,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.operator_action_route_count,
     );
     assert.equal(fullDrilldown.route_graph_refs.omitted_ref_count, 0);
+    assert.equal(fullDrilldown.domain_dispatch_evidence.omitted_ref_count, 0);
     assert.equal(fullDrilldown.operator_action_routing_refs.omitted_ref_count, 0);
     assert.equal(fullDrilldown.production_evidence_tail_ledger.omitted_ref_count, 0);
   } finally {
