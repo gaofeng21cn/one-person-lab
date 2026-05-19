@@ -1068,6 +1068,26 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
+function providerCadenceWindowSummary(providerContinuousProof: JsonRecord) {
+  const window = record(providerContinuousProof.cadence_window);
+  return {
+    window_status: stringValue(window.window_status),
+    long_window_evidence_ready: window.long_window_evidence_ready === true,
+    expected_slo_execution_receipt_count: typeof window.expected_slo_execution_receipt_count === 'number'
+      ? window.expected_slo_execution_receipt_count
+      : 0,
+    observed_slo_execution_receipt_count: typeof window.observed_slo_execution_receipt_count === 'number'
+      ? window.observed_slo_execution_receipt_count
+      : 0,
+    missing_slo_execution_receipt_count: typeof window.missing_slo_execution_receipt_count === 'number'
+      ? window.missing_slo_execution_receipt_count
+      : 0,
+    blocked_repair_receipt_count: typeof window.blocked_repair_receipt_count === 'number'
+      ? window.blocked_repair_receipt_count
+      : 0,
+  };
+}
+
 export function buildAppOperatorDrilldown(input: {
   stageAttemptWorkbench: JsonRecord;
   providerContinuousProof: JsonRecord;
@@ -1084,6 +1104,7 @@ export function buildAppOperatorDrilldown(input: {
   const memoryRefs = memoryWritebackRefs(input.stageAttemptWorkbench);
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
+  const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const periodicRefs = periodicExecutionRefs(providerActionRefs);
   const actionRefs = operatorActionRoutingRefs(input.stageAttemptWorkbench);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
@@ -1137,6 +1158,16 @@ export function buildAppOperatorDrilldown(input: {
       quality_ref_count: qualityRefs.quality_refs.length,
       readiness_ref_count: qualityRefs.readiness_refs.length,
       provider_slo_action_count: providerActionRefs.length,
+      provider_cadence_window_status: providerCadenceWindow.window_status,
+      provider_cadence_window_long_evidence_ready: providerCadenceWindow.long_window_evidence_ready,
+      provider_cadence_window_expected_receipt_count:
+        providerCadenceWindow.expected_slo_execution_receipt_count,
+      provider_cadence_window_observed_receipt_count:
+        providerCadenceWindow.observed_slo_execution_receipt_count,
+      provider_cadence_window_missing_receipt_count:
+        providerCadenceWindow.missing_slo_execution_receipt_count,
+      provider_cadence_window_blocked_repair_receipt_count:
+        providerCadenceWindow.blocked_repair_receipt_count,
       periodic_execution_ref_count: periodicRefs.refs.length,
       operator_action_route_count: actionRefs.length,
       operator_executable_route_count: actionRefs.filter((ref) => (

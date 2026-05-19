@@ -91,6 +91,7 @@ export function buildProviderProofTrayItem(proof: ProviderContinuousProof): Runt
       latest_proof_receipt: proof.latest_proof_receipt,
       continuous_proof_status: proof.continuous_proof_status,
       proof_slo_status: proof.proof_slo_status,
+      cadence_window: proof.cadence_window,
       operator_slo_repair_loop: proof.operator_slo_repair_loop,
       required_next_action: proof.required_next_action,
       authority_boundary: proof.authority_boundary,
