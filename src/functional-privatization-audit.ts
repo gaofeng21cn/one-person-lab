@@ -634,7 +634,7 @@ function itemFromRecord(
     itemClass !== 'retire_tombstone'
     && itemClass !== 'provenance_or_fixture'
     && record.active_caller_allowed !== false
-    && record.compatibility_alias_allowed !== false;
+    && record.retired_route_alias_allowed !== false;
   const blocker =
     stringValue(record.blocker)
     ?? (record.claims_opl_replacement_exists === false ? 'opl_replacement_evidence_pending' : null)

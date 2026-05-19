@@ -76,6 +76,10 @@ function* walk(relativeRoot: string): Generator<string> {
   }
 }
 
+function scannedTextFiles(relativeRoots: string[]) {
+  return relativeRoots.flatMap((relativeRoot) => [...walk(relativeRoot)]);
+}
+
 test('active docs and root help do not advertise legacy operator paths as defaults', () => {
   const violations: string[] = [];
 
