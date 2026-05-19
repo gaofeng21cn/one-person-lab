@@ -508,6 +508,141 @@ export function buildAgentLabLogDrivenMechanismCandidateReadModel(sourceRefs: st
   };
 }
 
+export function buildAgentLabArisMaturityControlsReadModel(sourceRefs: string[] = []) {
+  const effortAssuranceAxes = {
+    surface_kind: 'opl_agent_lab_effort_assurance_axis_policy',
+    policy_ref: 'axis-policy:agent-lab/effort-assurance',
+    refs_only: true,
+    effort_axis: {
+      axis_ref: 'axis-ref:agent-lab/effort',
+      levels: ['quick_smoke', 'standard_regression', 'deep_soak', 'owner_chain_proof'],
+      selected_default_level: 'standard_regression',
+      source_refs: [
+        'suite:opl-agent-lab-sample-suite',
+        'suite:opl-agent-lab-longline-suite',
+      ],
+    },
+    assurance_axis: {
+      axis_ref: 'axis-ref:agent-lab/assurance',
+      levels: ['syntactic_ref_check', 'contract_gate', 'independent_review', 'owner_receipt_or_long_soak'],
+      selected_default_level: 'contract_gate',
+      required_for_promotion: [
+        'contract_gate',
+        'independent_review',
+        'no_forbidden_write_proof',
+      ],
+    },
+    promotion_gate_ref: 'promotion-gate:agent-lab/effort-assurance-axis',
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+  const helperInventoryDriftReport = {
+    surface_kind: 'opl_agent_lab_helper_inventory_drift_report',
+    report_ref: 'helper-inventory-drift-report:agent-lab/aris-patterns',
+    refs_only: true,
+    inventory_refs: [
+      'helper-inventory-ref:agent-lab/codex-skills',
+      'helper-inventory-ref:agent-lab/mcp-tools',
+      'helper-inventory-ref:agent-lab/local-binaries',
+    ],
+    drift_guard_refs: [
+      'drift-guard-ref:agent-lab/no-silent-helper-source-drift',
+      'drift-guard-ref:agent-lab/helper-version-pin-current',
+      'drift-guard-ref:agent-lab/helper-command-contract-current',
+    ],
+    drift_report_status: 'inventory_current_no_silent_drift',
+    fail_policy: 'fail_closed_on_missing_inventory_or_unverified_drift',
+    can_execute_helper: false,
+    source_refs: sourceRefs,
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+  const failClosedInvariants = {
+    surface_kind: 'opl_agent_lab_fail_closed_invariant_policy',
+    policy_ref: 'fail-closed-policy:agent-lab/permissions-current-date',
+    refs_only: true,
+    invariant_refs: [
+      'invariant-ref:agent-lab/permission-scope-declared',
+      'invariant-ref:agent-lab/current-date-declared',
+      'invariant-ref:agent-lab/no-silent-runtime-permission-default',
+    ],
+    required_context_refs: [
+      'context-ref:agent-lab/current-date',
+      'context-ref:agent-lab/permission-scope',
+      'context-ref:agent-lab/sandbox-policy',
+    ],
+    missing_context_policy: 'fail_closed_with_typed_blocker_ref',
+    typed_blocker_ref: 'typed-blocker-ref:agent-lab/missing-permission-or-current-date',
+    owner_route_ref: 'owner-route:opl/framework-agent-lab-context',
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+  const mcpStreamReliabilityPolicy = {
+    surface_kind: 'opl_agent_lab_mcp_stream_reliability_policy',
+    policy_ref: 'reliability-policy:agent-lab/mcp-stream',
+    refs_only: true,
+    reliability_refs: [
+      'reliability-ref:agent-lab/mcp-tool-result-contract',
+      'reliability-ref:agent-lab/stream-event-ordering',
+      'reliability-ref:agent-lab/stream-closeout-receipt',
+    ],
+    required_failure_outputs: [
+      'typed_blocker_ref',
+      'retry_or_dead_letter_ref',
+      'owner_route_ref',
+      'stream_replay_ref',
+    ],
+    no_silent_drop: true,
+    retry_policy_ref: 'retry-policy:agent-lab/mcp-stream-retry',
+    dead_letter_ref: 'dead-letter-ref:agent-lab/mcp-stream-unrecoverable',
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+
+  return {
+    surface_kind: 'opl_agent_lab_aris_maturity_controls_read_model',
+    version: 'opl-agent-lab.v1.aris-maturity-controls',
+    read_model_id: stableId('oalamc', [
+      effortAssuranceAxes,
+      helperInventoryDriftReport,
+      failClosedInvariants,
+      mcpStreamReliabilityPolicy,
+      sourceRefs,
+    ]),
+    status: 'ready_for_agent_lab_control_plane_consumption',
+    refs_only: true,
+    source_pattern_refs: [
+      'aris:v0.4.11/effort-assurance-axis',
+      'aris:v0.4.11/helper-drift-inventory-report',
+      'aris:v0.4.11/permission-current-date-fail-closed',
+      'aris:v0.4.11/mcp-stream-reliability-policy',
+    ],
+    runtime_dependency_required: false,
+    controls: {
+      effort_assurance_axes: effortAssuranceAxes,
+      helper_inventory_drift_report: helperInventoryDriftReport,
+      fail_closed_invariants: failClosedInvariants,
+      mcp_stream_reliability_policy: mcpStreamReliabilityPolicy,
+    },
+    summary: {
+      control_count: 4,
+      effort_level_count: effortAssuranceAxes.effort_axis.levels.length,
+      assurance_level_count: effortAssuranceAxes.assurance_axis.levels.length,
+      helper_inventory_ref_count: helperInventoryDriftReport.inventory_refs.length,
+      drift_guard_ref_count: helperInventoryDriftReport.drift_guard_refs.length,
+      fail_closed_invariant_count: failClosedInvariants.invariant_refs.length,
+      mcp_stream_reliability_ref_count: mcpStreamReliabilityPolicy.reliability_refs.length,
+    },
+    forbidden_payloads: [
+      'helper_body',
+      'mcp_payload_body',
+      'stream_payload_body',
+      'domain_truth',
+      'memory_body',
+      'artifact_body',
+      'owner_receipt_body',
+      'runtime_dependency',
+    ],
+    authority_boundary: AUTHORITY_BOUNDARY,
+  };
+}
+
 export function buildCompleteAgentLabControlPlane() {
   const sampleResult = buildSampleAgentLabResult();
   const longlineResult = buildLonglineAgentLabResult();
@@ -517,6 +652,10 @@ export function buildCompleteAgentLabControlPlane() {
     longlineResult.result_id,
   ]);
   const logDrivenCandidates = buildAgentLabLogDrivenMechanismCandidateReadModel([
+    sampleResult.result_id,
+    longlineResult.result_id,
+  ]);
+  const arisMaturityControls = buildAgentLabArisMaturityControlsReadModel([
     sampleResult.result_id,
     longlineResult.result_id,
   ]);
@@ -621,6 +760,7 @@ export function buildCompleteAgentLabControlPlane() {
     log_driven_candidate_read_model: logDrivenCandidates,
     integration_contract_read_model: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
+    aris_maturity_controls: arisMaturityControls,
     rl_boundary: {
       status: 'downstream_ready_after_stable_trajectory_and_reward_surfaces',
       can_emit_transition_refs: true,
@@ -643,6 +783,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_integration_contracts: true,
     ready_to_emit_review_trace_ledger: true,
     ready_to_emit_log_driven_mechanism_candidates: true,
+    ready_to_emit_aris_maturity_controls: true,
     automatic_mechanism_promotion_ready: true,
     automatic_model_training_ready: false,
     automatic_default_agent_promotion_ready: AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
@@ -664,6 +805,7 @@ export function buildCompleteAgentLabControlPlane() {
     integration_contracts: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
+    aris_maturity_controls: arisMaturityControls,
     developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
     non_goals: [
@@ -674,6 +816,7 @@ export function buildCompleteAgentLabControlPlane() {
       'ungated default agent promotion',
       'model training or weight deployment inside OPL core',
       'domain truth, artifact, memory body, quality verdict, owner receipt, or managed runtime mutation from developer-mode patrol routes',
+      'ARIS runtime dependency',
     ],
     authority_boundary: AUTHORITY_BOUNDARY,
   };
@@ -894,6 +1037,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.integration_contracts.read_model_id,
       complete.review_trace_ledger.ledger_ref,
       complete.log_driven_mechanism_candidates.read_model_id,
+      complete.aris_maturity_controls.read_model_id,
       developerModeRepairRoutes.read_model_id,
     ]),
     status: 'ready_for_app_workbench_consumption',
@@ -905,6 +1049,7 @@ export function buildAgentLabWorkbenchReadModel() {
       integration_contract_read_model_ref: complete.integration_contracts.read_model_id,
       review_trace_ledger_ref: complete.review_trace_ledger.ledger_ref,
       log_driven_mechanism_candidate_read_model_ref: complete.log_driven_mechanism_candidates.read_model_id,
+      aris_maturity_controls_ref: complete.aris_maturity_controls.read_model_id,
       sample_ref_summary: agentLabRefSummary(sample),
       longline_ref_summary: agentLabRefSummary(longline),
     },
@@ -920,6 +1065,7 @@ export function buildAgentLabWorkbenchReadModel() {
     integration_contracts: complete.integration_contracts,
     review_trace_ledger: complete.review_trace_ledger,
     log_driven_mechanism_candidates: complete.log_driven_mechanism_candidates,
+    aris_maturity_controls: complete.aris_maturity_controls,
     promotion_gates: promotionGates(results),
     developer_mode_repair_routes: developerModeRepairRoutes,
     online_learning_refs: {
@@ -950,6 +1096,10 @@ export function buildAgentLabMechanismReadModel() {
     'suite:opl-agent-lab-sample-suite',
     'suite:opl-agent-lab-longline-suite',
   ]);
+  const arisMaturityControls = buildAgentLabArisMaturityControlsReadModel([
+    'suite:opl-agent-lab-sample-suite',
+    'suite:opl-agent-lab-longline-suite',
+  ]);
   const promotionDecision = buildMechanismPromotionDecision({
     riskTier: 'medium_risk',
     independentReview,
@@ -969,6 +1119,7 @@ export function buildAgentLabMechanismReadModel() {
     integration_contracts: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
+    aris_maturity_controls: arisMaturityControls,
     rollback,
     meta_edit_receipt: {
       receipt_ref: stableId('oalmr', [mechanismRef, mechanismVersion, MECHANISM_EDITABLE_SURFACES]),
@@ -1028,6 +1179,12 @@ export function buildAgentLabMechanismReadModel() {
       integration_contract_ref: integrationContracts.integration_contracts[1].contract_ref,
       review_trace_ledger_ref: reviewTraceLedger.ledger_ref,
       log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
+      maturity_control_refs: [
+        arisMaturityControls.controls.effort_assurance_axes.policy_ref,
+        arisMaturityControls.controls.helper_inventory_drift_report.report_ref,
+        arisMaturityControls.controls.fail_closed_invariants.policy_ref,
+        arisMaturityControls.controls.mcp_stream_reliability_policy.policy_ref,
+      ],
       promotion_decision: promotionDecision.promotion_decision,
       promotion_receipt_ref: promotionDecision.promotion_receipt_ref,
       rollback_target_ref: promotionDecision.rollback_target_ref,
@@ -1052,6 +1209,10 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     suiteResult.result_id,
     ...suiteResult.refs.mechanism_evolution_input_refs,
     ...suiteResult.refs.promotion_gate_refs,
+  ]);
+  const arisMaturityControls = buildAgentLabArisMaturityControlsReadModel([
+    suiteResult.result_id,
+    ...suiteResult.refs.mechanism_evolution_input_refs,
   ]);
   const trajectoryRefs = suiteResult.refs.trajectory_refs;
   const scorecardRefs = suiteResult.refs.domain_quality_scorecard_refs;
@@ -1088,6 +1249,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     integration_contracts: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
+    aris_maturity_controls: arisMaturityControls,
     log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     mechanism_promotion_decision: mechanismPromotionDecision,
     independent_ai_review_receipt: independentReview,
@@ -1139,6 +1301,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
       source_transition_refs: transitionRefs,
       source_log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
       source_mechanism_evolution_input_refs: suiteResult.refs.mechanism_evolution_input_refs,
+      source_maturity_control_refs: arisMaturityControls.source_pattern_refs,
       integration_contract_ref: integrationContracts.integration_contracts[1].contract_ref,
       review_trace_ledger_ref: reviewTraceLedger.ledger_ref,
       required_gate_refs: unique([
@@ -1223,6 +1386,7 @@ export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
   const integrationContracts = complete.integration_contracts.integration_contracts;
   const reviewTraceEntries = complete.review_trace_ledger.trace_entries;
   const logDrivenCandidates = complete.log_driven_mechanism_candidates;
+  const arisMaturityControls = complete.aris_maturity_controls;
 
   return {
     surface_kind: 'opl_agent_lab_export_envelope',
@@ -1242,6 +1406,12 @@ export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
       review_trace_refs: reviewTraceEntries.map((entry) => entry.trace_ref),
       review_evidence_refs: unique(reviewTraceEntries.flatMap((entry) => entry.evidence_refs)),
       log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
+      aris_maturity_control_refs: [
+        arisMaturityControls.controls.effort_assurance_axes.policy_ref,
+        arisMaturityControls.controls.helper_inventory_drift_report.report_ref,
+        arisMaturityControls.controls.fail_closed_invariants.policy_ref,
+        arisMaturityControls.controls.mcp_stream_reliability_policy.policy_ref,
+      ],
     },
     connector_payload: connectorPayload(target, results),
     authority_boundary: AUTHORITY_BOUNDARY,
