@@ -16,12 +16,19 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function optionalRefString(value: unknown) {
+  if (isRecord(value)) {
+    return optionalString(value.ref);
+  }
+  return optionalString(value);
+}
+
 function stringList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
   return value
-    .map((entry) => optionalString(entry))
+    .map((entry) => optionalRefString(entry))
     .filter((entry): entry is string => Boolean(entry));
 }
 
@@ -30,20 +37,6 @@ function recordList(value: unknown) {
     return [];
   }
   return value.filter(isRecord);
-}
-
-function refObjects(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map((entry) => {
-      if (typeof entry === 'string') {
-        return entry;
-      }
-      return isRecord(entry) ? optionalString(entry.ref) : null;
-    })
-    .filter((entry): entry is string => Boolean(entry));
 }
 
 function readJsonFile(repoDir: string, relativePath: string) {
@@ -72,7 +65,7 @@ function readJsonFile(repoDir: string, relativePath: string) {
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
-    const direct = optionalString(value);
+    const direct = optionalRefString(value);
     if (direct) {
       return direct;
     }
@@ -84,8 +77,12 @@ function firstString(...values: unknown[]) {
   return null;
 }
 
+function nestedRecordOrNull(value: unknown, field: string) {
+  return isRecord(value) && isRecord(value[field]) ? value[field] : null;
+}
+
 function nestedRecord(value: unknown, field: string) {
-  return isRecord(value) && isRecord(value[field]) ? value[field] : {};
+  return nestedRecordOrNull(value, field) ?? {};
 }
 
 function productionAcceptanceFiles(repoDir: string) {
@@ -101,11 +98,33 @@ function productionAcceptanceFiles(repoDir: string) {
 
 function conformanceTailAuthorityBoundary(extra: JsonRecord = {}) {
   return {
+    ...extra,
     opl_can_write_domain_truth: false,
     opl_can_write_memory_body: false,
     opl_can_authorize_quality_or_export: false,
+    opl_can_authorize_domain_ready: false,
     conformance_report_can_claim_domain_ready: false,
-    ...extra,
+    domain_ready_claimed_by_conformance: false,
+  };
+}
+
+function structuredTailRefs(input: {
+  repoDir: string;
+  contractRef: string | null;
+  docRef: string | null;
+  verificationRef: string | null;
+  ownerRef: string | null;
+  domainId: string;
+}) {
+  return {
+    repo: { path: input.repoDir },
+    contract: input.contractRef ? { ref: input.contractRef } : null,
+    doc: input.docRef ? { ref: input.docRef } : null,
+    verification: input.verificationRef ? { ref: input.verificationRef } : null,
+    owner: {
+      domain_id: input.domainId,
+      ref: input.ownerRef,
+    },
   };
 }
 
@@ -128,10 +147,21 @@ function productionAcceptanceTailItem(
       status: 'open',
       tail_item: tailItem,
       repo_path: repoDir,
+      contract_ref: null,
       domain_owner: domainId,
+      owner_ref: domainId,
       evidence_ref: null,
       doc_ref: null,
+      verification_ref: `opl agents conformance --agent ${domainId}=${repoDir} --json`,
       next_verification_command: `opl agents conformance --agent ${domainId}=${repoDir} --json`,
+      tail_refs: structuredTailRefs({
+        repoDir,
+        contractRef: null,
+        docRef: null,
+        verificationRef: `opl agents conformance --agent ${domainId}=${repoDir} --json`,
+        ownerRef: domainId,
+        domainId,
+      }),
       authority_boundary: conformanceTailAuthorityBoundary({
         evidence_owner: 'domain_repo',
         closure_source: 'missing_domain_owned_production_acceptance_evidence',
@@ -143,27 +173,70 @@ function productionAcceptanceTailItem(
     const file = readJsonFile(repoDir, relativePath);
     const payload = isRecord(file.payload) ? file.payload : {};
     const closureEvidence = nestedRecord(payload, 'closure_evidence');
+    const domainAcceptanceReceipt = nestedRecord(payload, 'domain_acceptance_receipt');
     const evidenceTail = nestedRecord(payload, 'evidence_tail');
     const closureReceipt = nestedRecord(evidenceTail, 'closure_receipt');
-    const domainAcceptanceReceipt = nestedRecord(payload, 'domain_acceptance_receipt');
+    const visualArtifactReceiptChain = nestedRecord(payload, 'visual_artifact_receipt_chain');
     const refs = nestedRecord(payload, 'refs');
-    const typedBlockers = recordList(payload.typed_blockers);
+    const payloadTypedBlocker = nestedRecordOrNull(payload, 'typed_blocker');
+    const evidenceTailTypedBlocker = nestedRecordOrNull(evidenceTail, 'typed_blocker');
+    const typedBlockers = recordList(payload.typed_blockers)
+      .concat([payloadTypedBlocker, evidenceTailTypedBlocker].filter(isRecord));
     const typedBlockerRefs = stringList(payload.typed_blocker_refs)
       .concat(stringList(refs.typed_blocker_refs))
-      .concat(refObjects(domainAcceptanceReceipt.typed_blocker_refs));
-    const evidenceTailStatus = optionalString(payload.evidence_tail_status)
-      ?? optionalString(payload.acceptance_status)
-      ?? optionalString(evidenceTail.status)
-      ?? optionalString(domainAcceptanceReceipt.receipt_status);
-    const acceptedReturnShape = optionalString(closureEvidence.accepted_return_shape)
-      ?? optionalString(closureReceipt.return_shape);
-    const typedBlockerKind = optionalString(closureEvidence.typed_blocker_kind);
+      .concat(stringList(domainAcceptanceReceipt.typed_blocker_refs))
+      .concat(stringList(evidenceTailTypedBlocker?.blocker_refs));
+    const evidenceTailStatus = firstString(
+      payload.evidence_tail_status,
+      payload.acceptance_status,
+      evidenceTail.status,
+      nestedRecord(payload, 'consumer_contract').current_evidence_tail_status,
+    );
+    const acceptedReturnShape = firstString(
+      closureEvidence.accepted_return_shape,
+      closureReceipt.return_shape,
+      domainAcceptanceReceipt.receipt_class,
+    );
+    const typedBlockerKind = firstString(
+      closureEvidence.typed_blocker_kind,
+      evidenceTailTypedBlocker?.blocker_kind,
+    );
     const nextVerificationRef = firstString(
+      payload.next_verification_command,
+      payload.verification_command,
+      payload.next_verification_command_refs,
+      domainAcceptanceReceipt.next_verification_command_refs,
+      evidenceTailTypedBlocker?.next_verification_command_refs,
       closureEvidence.next_verification_ref,
       refs.next_verification_refs,
       refs.next_verification_command_refs,
-      payload.next_verification_command_refs,
-      domainAcceptanceReceipt.next_verification_command_refs,
+    );
+    const evidenceRef = firstString(
+      payload.evidence_ref,
+      payload.receipt_ref,
+      payload.owner_receipt_ref,
+      closureReceipt.receipt_ref,
+      domainAcceptanceReceipt.owner_receipt_refs,
+      refs.owner_receipt_refs,
+      refs.acceptance_receipt_refs,
+      payload.evidence_refs,
+      payload.receipt_refs,
+      payload.owner_receipt_refs,
+      typedBlockerRefs,
+      evidenceTailTypedBlocker?.blocker_ref,
+      refs.artifact_receipt_refs,
+      closureReceipt.artifact_receipt_refs,
+      visualArtifactReceiptChain.artifact_receipt_refs,
+      nextVerificationRef,
+    );
+    const docRef = firstString(
+      payload.doc_ref,
+      payload.documentation_ref,
+      payload.doc_refs,
+      refs.doc_refs,
+      domainAcceptanceReceipt.progress_delta_refs,
+      closureReceipt.review_export_ref,
+      visualArtifactReceiptChain.review_export_gate_refs,
     );
     const status = (
       file.status !== 'resolved'
@@ -178,76 +251,57 @@ function productionAcceptanceTailItem(
               || acceptedReturnShape === 'typed_blocker'
               || Boolean(typedBlockerKind)
           ? 'domain_owned_typed_blocker'
-          : firstString(
-            payload.evidence_ref,
-            payload.receipt_ref,
-            payload.owner_receipt_ref,
-            payload.evidence_refs,
-            payload.receipt_refs,
-            payload.owner_receipt_refs,
-            refs.owner_receipt_refs,
-            refs.acceptance_receipt_refs,
-            refs.artifact_receipt_refs,
-            refs.evidence_refs,
-            domainAcceptanceReceipt.owner_receipt_refs,
-            domainAcceptanceReceipt.progress_delta_refs,
-            closureReceipt.receipt_ref,
-            closureReceipt.artifact_receipt_refs,
-          ) && firstString(payload.doc_ref, payload.documentation_ref, payload.doc_refs)
+          : evidenceRef && docRef
             ? 'closed'
             : 'invalid_evidence'
     );
     const authority = isRecord(payload.authority_boundary) ? payload.authority_boundary : {};
+    const domainOwner = firstString(
+      payload.domain_owner,
+      payload.owner,
+      domainAcceptanceReceipt.receipt_owner,
+      closureReceipt.owner,
+      evidenceTailTypedBlocker?.owner,
+      payload.domain_id,
+    ) ?? domainId;
+    const verificationRef = firstString(
+      payload.next_verification_command,
+      payload.verification_command,
+      payload.next_verification_command_refs,
+      domainAcceptanceReceipt.next_verification_command_refs,
+      evidenceTailTypedBlocker?.next_verification_command_refs,
+      refs.next_verification_command_refs,
+      payload.next_verification_ref,
+      closureEvidence.next_verification_ref,
+      refs.next_verification_refs,
+    );
     return {
       status,
       tail_item: 'domain_owned_production_acceptance_evidence',
       repo_path: repoDir,
-      domain_owner: firstString(payload.domain_owner, payload.owner, payload.domain_id) ?? domainId,
-      evidence_ref: firstString(
-        payload.evidence_ref,
-        payload.receipt_ref,
-        payload.owner_receipt_ref,
-        refs.owner_receipt_refs,
-        refs.acceptance_receipt_refs,
-        payload.evidence_refs,
-        payload.receipt_refs,
-        payload.owner_receipt_refs,
-        typedBlockerRefs,
-        refs.artifact_receipt_refs,
-        nextVerificationRef,
-        domainAcceptanceReceipt.owner_receipt_refs,
-        domainAcceptanceReceipt.progress_delta_refs,
-        closureReceipt.receipt_ref,
-        closureReceipt.artifact_receipt_refs,
-      ),
-      doc_ref: firstString(
-        payload.doc_ref,
-        payload.documentation_ref,
-        payload.doc_refs,
-        refs.doc_refs,
-        domainAcceptanceReceipt.progress_delta_refs,
-        closureReceipt.review_export_ref,
-      ),
-      next_verification_command: firstString(
-        payload.next_verification_command,
-        payload.verification_command,
-        refs.next_verification_command_refs,
-        payload.next_verification_command_refs,
-        payload.next_verification_ref,
-        closureEvidence.next_verification_ref,
-        refs.next_verification_refs,
-        domainAcceptanceReceipt.next_verification_command_refs,
-      ),
       contract_ref: relativePath,
-      owner_ref: firstString(payload.owner, payload.domain_owner, payload.domain_id, closureReceipt.owner),
+      domain_owner: domainOwner,
+      owner_ref: domainOwner,
+      evidence_ref: evidenceRef,
+      doc_ref: docRef,
+      verification_ref: verificationRef,
+      next_verification_command: verificationRef,
+      tail_refs: structuredTailRefs({
+        repoDir,
+        contractRef: relativePath,
+        docRef,
+        verificationRef,
+        ownerRef: domainOwner,
+        domainId,
+      }),
       authority_boundary: conformanceTailAuthorityBoundary({
+        ...authority,
         evidence_owner: 'domain_repo',
         production_acceptance_ref: relativePath,
         domain_acceptance_status: evidenceTailStatus ?? optionalString(payload.status),
         accepted_return_shape: acceptedReturnShape,
         typed_blocker_kind: typedBlockerKind,
         domain_ready_claimed_by_conformance: false,
-        ...authority,
       }),
     };
   });
