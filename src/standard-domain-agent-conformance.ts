@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from './contracts.ts';
@@ -41,6 +42,13 @@ function stringList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function recordList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isRecord);
+}
+
 function unique<T>(values: T[]) {
   return [...new Set(values)];
 }
@@ -70,6 +78,36 @@ function readJsonFile(repoDir: string, relativePath: string) {
       error: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+function gitTrackedOrWalkedFiles(repoDir: string) {
+  const gitResult = spawnSync('git', ['ls-files'], {
+    cwd: repoDir,
+    encoding: 'utf8',
+  });
+  if (gitResult.status === 0 && gitResult.stdout.trim()) {
+    return gitResult.stdout.split('\n').filter(Boolean).sort();
+  }
+  return walkFiles(repoDir).sort();
+}
+
+function walkFiles(root: string, current = root): string[] {
+  if (!fs.existsSync(current)) {
+    return [];
+  }
+  return fs.readdirSync(current, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name.startsWith('.git') || entry.name === 'node_modules' || entry.name === 'dist') {
+      return [];
+    }
+    const absolutePath = path.join(current, entry.name);
+    if (entry.isDirectory()) {
+      return walkFiles(root, absolutePath);
+    }
+    if (!entry.isFile()) {
+      return [];
+    }
+    return [path.relative(root, absolutePath).split(path.sep).join('/')];
+  });
 }
 
 function readDomainId(repoDir: string, fallback: string | null) {
@@ -117,6 +155,21 @@ function collectFieldValues(value: unknown, targetField: string, currentPath = '
     const direct = field === targetField ? [{ path: fieldPath, value: fieldValue }] : [];
     return [...direct, ...collectFieldValues(fieldValue, targetField, fieldPath)];
   });
+}
+
+function collectStringValues(value: unknown, currentPath = '$'): Array<{ path: string; value: string }> {
+  if (typeof value === 'string') {
+    return [{ path: currentPath, value }];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry, index) => collectStringValues(entry, `${currentPath}[${index}]`));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  return Object.entries(value).flatMap(([field, fieldValue]) => (
+    collectStringValues(fieldValue, `${currentPath}.${field}`)
+  ));
 }
 
 function workspaceCandidatesFrom(seed: string) {
@@ -349,6 +402,412 @@ function buildPrivateSurfaceChecks(repoDir: string) {
   };
 }
 
+const ACTIVE_MORPHOLOGY_SCAN_ROOTS = [
+  'agent/',
+  'src/',
+  'packages/',
+  'apps/',
+  'scripts/',
+  'runtime/',
+  'contracts/',
+  'tests/',
+  'Makefile',
+  'package.json',
+  'pyproject.toml',
+  'docs/active/',
+  'docs/status.md',
+];
+
+const DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES = [
+  'docs/history/',
+  'docs/references/',
+  'docs/specs/',
+  'tests/legacy',
+  'tests/fixtures/legacy',
+];
+
+const REQUIRED_MAG_PHYSICAL_SURFACES = [
+  'domain_runtime',
+  'product_entry',
+  'status',
+  'user_loop',
+  'sidecar',
+  'runtime_registration',
+  'control_plane',
+  'lifecycle',
+  'memory',
+  'package',
+  'autonomy_controller',
+  'legacy_runtime_residue',
+];
+
+const REQUIRED_RCA_PHYSICAL_SURFACES = [
+  'mcp_product_entry_domain_entry',
+  'product_entry_session_store',
+  'runtime_watch_projection',
+  'product_sidecar_guarded_actions',
+  'operator_evidence_stability_projection',
+  'visual_authority_functions',
+  'legacy_managed_runtime_gateway_names',
+];
+
+const REQUIRED_META_SCRIPT_CLASSES = [
+  'authority_function_implementation_ref',
+  'smoke_helper',
+  'fixture_or_proof_helper',
+  'developer_work_order_materializer',
+];
+
+const REQUIRED_META_FORBIDDEN_SCRIPT_ROLES = [
+  'generic_runtime_owner',
+  'generic_registry_owner',
+  'app_shell_owner',
+  'agent_lab_execution_owner',
+  'promotion_gate_owner',
+  'target_domain_truth_writer',
+];
+
+const MAS_FORBIDDEN_ACTIVE_RESIDUE = [
+  'runtime_supervisor',
+  'supervision_scheduler',
+  'mas_supervision_scheduler',
+  'BRANCH_NAME',
+  'OWNED_FILES',
+  'VERIFICATION_COMMANDS',
+];
+
+const MAG_FORBIDDEN_ACTIVE_RESIDUE = [
+  'local_journal',
+  'attempt_ledger',
+  'repo_owned_scheduler',
+  'hermes_gateway_local_manager_probe',
+  'compat_facade_active_alias',
+];
+
+const RCA_FORBIDDEN_ACTIVE_RESIDUE = [
+  'GatewayActionMap',
+  'getCliGatewayActions',
+  'callGatewayTool',
+  'listGatewayTools',
+  'run_managed_deliverable',
+  'supervise_managed_run',
+  'compatibility_script',
+  'compatibilityScript',
+];
+
+const META_FORBIDDEN_ACTIVE_RESIDUE = [
+  'generic_runtime_owner',
+  'generic_registry_owner',
+  'app_shell_owner',
+  'agent_lab_execution_owner',
+  'promotion_gate_owner',
+  'target_domain_truth_writer',
+];
+
+function buildPhysicalMorphologyChecks(repoDir: string, domainId: string) {
+  const policyChecks = physicalMorphologyPolicyChecks(repoDir, domainId);
+  const forbiddenTokens = forbiddenPhysicalMorphologyTokens(domainId);
+  const forbiddenNameResidue = scanForbiddenNameResidue(repoDir, forbiddenTokens, policyChecks.allowed_residue_prefixes);
+  const blockers = unique([
+    ...policyChecks.blockers,
+    ...forbiddenNameResidue
+      .filter((entry) => entry.allowed !== true)
+      .map((entry) => `active_forbidden_name_residue:${entry.token}:${entry.path}`),
+  ]);
+  return {
+    status: blockers.length === 0 ? 'passed' : 'blocked',
+    policy_status: policyChecks.status,
+    policy_sources: policyChecks.policy_sources,
+    required_parity_gates: policyChecks.required_parity_gates,
+    allowed_tombstone_provenance_locations: policyChecks.allowed_residue_prefixes,
+    forbidden_name_residue: forbiddenNameResidue,
+    blockers,
+  };
+}
+
+function physicalMorphologyPolicyChecks(repoDir: string, domainId: string) {
+  if (domainId.includes('med-autogrant') || domainId === 'mag') {
+    return magPhysicalMorphologyPolicyChecks(repoDir);
+  }
+  if (domainId.includes('redcube') || domainId === 'rca' || domainId === 'redcube_ai') {
+    return rcaPhysicalMorphologyPolicyChecks(repoDir);
+  }
+  if (domainId.includes('opl-meta-agent')) {
+    return metaAgentPhysicalMorphologyPolicyChecks(repoDir);
+  }
+  if (domainId.includes('med-autoscience') || domainId === 'mas') {
+    return masPhysicalMorphologyPolicyChecks(repoDir);
+  }
+  return genericPhysicalMorphologyPolicyChecks(repoDir);
+}
+
+function genericPhysicalMorphologyPolicyChecks(repoDir: string) {
+  const policyFile = readJsonFile(repoDir, 'contracts/private_functional_surface_policy.json');
+  const privatePolicy = isRecord(policyFile.payload) ? policyFile.payload : null;
+  const policy = isRecord(privatePolicy?.physical_source_morphology_policy)
+    ? privatePolicy.physical_source_morphology_policy
+    : null;
+  const requiredSurfaceIds = stringList(policy?.required_surface_ids);
+  const classifications = recordList(policy?.surface_classifications);
+  const classifiedSurfaceIds = stringList(classifications.map((entry) => entry.surface_id));
+  const authority = isRecord(policy?.authority_boundary) ? policy.authority_boundary : {};
+  const blockers = [
+    policyFile.status === 'resolved' ? null : `generic_private_surface_policy_${policyFile.status}`,
+    policy ? null : 'physical_morphology_policy_not_declared',
+    requiredSurfaceIds.length > 0 ? null : 'physical_morphology_required_surface_ids_missing',
+    classifications.length > 0 ? null : 'physical_morphology_surface_classifications_missing',
+    ...requiredSurfaceIds
+      .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
+      .map((surfaceId) => `physical_morphology_surface_unclassified:${surfaceId}`),
+    authority.domain_can_claim_generic_runtime_owner === false
+      ? null
+      : 'physical_morphology_domain_can_claim_generic_runtime_owner_must_be_false',
+    authority.domain_repo_can_own_generated_surface === false
+      ? null
+      : 'physical_morphology_domain_repo_can_own_generated_surface_must_be_false',
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'declared' : 'blocked',
+    policy_sources: ['contracts/private_functional_surface_policy.json#physical_source_morphology_policy'],
+    required_parity_gates: [
+      'agent_semantic_pack_declared',
+      'generated_surfaces_owned_by_opl',
+      'minimal_authority_functions_or_refs_only_adapters_only',
+    ],
+    allowed_residue_prefixes: [
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
+      'contracts/private_functional_surface_policy.json',
+    ],
+    blockers,
+  };
+}
+
+function magPhysicalMorphologyPolicyChecks(repoDir: string) {
+  const policyFile = readJsonFile(repoDir, 'contracts/private_functional_surface_policy.json');
+  const policy = isRecord(policyFile.payload) && isRecord(policyFile.payload.physical_source_morphology_policy)
+    ? policyFile.payload.physical_source_morphology_policy
+    : null;
+  const requiredSurfaceIds = stringList(policy?.required_surface_ids);
+  const classifications = recordList(policy?.surface_classifications);
+  const classifiedSurfaceIds = stringList(classifications.map((entry) => entry.surface_id));
+  const forbiddenClasses = stringList(policy?.forbidden_residue_classes);
+  const authority = isRecord(policy?.authority_boundary) ? policy.authority_boundary : {};
+  const blockers = [
+    policyFile.status === 'resolved' ? null : `mag_private_surface_policy_${policyFile.status}`,
+    policy ? null : 'mag_physical_source_morphology_policy_missing',
+    ...REQUIRED_MAG_PHYSICAL_SURFACES
+      .filter((surfaceId) => !requiredSurfaceIds.includes(surfaceId))
+      .map((surfaceId) => `mag_physical_surface_missing:${surfaceId}`),
+    ...REQUIRED_MAG_PHYSICAL_SURFACES
+      .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
+      .map((surfaceId) => `mag_physical_surface_unclassified:${surfaceId}`),
+    ...MAG_FORBIDDEN_ACTIVE_RESIDUE
+      .filter((token) => !forbiddenClasses.includes(token))
+      .map((token) => `mag_forbidden_residue_class_missing:${token}`),
+    authority.mag_can_own_generic_runtime === false ? null : 'mag_can_own_generic_runtime_must_be_false',
+    authority.mag_can_own_generated_wrapper === false ? null : 'mag_can_own_generated_wrapper_must_be_false',
+    authority.mag_can_restore_compat_facade_active_alias === false
+      ? null
+      : 'mag_can_restore_compat_facade_active_alias_must_be_false',
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'declared' : 'blocked',
+    policy_sources: ['contracts/private_functional_surface_policy.json#physical_source_morphology_policy'],
+    required_parity_gates: [
+      'all_required_mag_surfaces_classified',
+      'forbidden_generic_runtime_reflow_false',
+      'grant_truth_and_export_verdict_remain_mag_owned',
+    ],
+    allowed_residue_prefixes: [
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
+      'docs/history/',
+    ],
+    blockers,
+  };
+}
+
+function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
+  const policyFile = readJsonFile(repoDir, 'contracts/physical_source_morphology_policy.json');
+  const policy = isRecord(policyFile.payload) ? policyFile.payload : null;
+  const classifications = recordList(policy?.active_surface_classifications);
+  const classifiedSurfaceIds = stringList(classifications.map((entry) => entry.surface_id));
+  const ownerFlagViolations = classifications.flatMap((entry) => {
+    const flags = isRecord(entry.forbidden_generic_owner_flags) ? entry.forbidden_generic_owner_flags : {};
+    return Object.entries(flags)
+      .filter(([, value]) => value !== false)
+      .map(([flag]) => `rca_forbidden_owner_flag_true:${optionalString(entry.surface_id) ?? 'unknown'}:${flag}`);
+  });
+  const blockers = [
+    policyFile.status === 'resolved' ? null : `rca_physical_source_morphology_policy_${policyFile.status}`,
+    optionalString(policy?.canonical_pack_root) === 'agent/' ? null : 'rca_canonical_pack_root_must_be_agent_slash',
+    optionalString(policy?.status) === 'active_source_classification_policy_landed'
+      ? null
+      : 'rca_physical_source_morphology_policy_status_not_landed',
+    ...REQUIRED_RCA_PHYSICAL_SURFACES
+      .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
+      .map((surfaceId) => `rca_physical_surface_unclassified:${surfaceId}`),
+    ...ownerFlagViolations,
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'declared' : 'blocked',
+    policy_sources: ['contracts/physical_source_morphology_policy.json'],
+    required_parity_gates: [
+      'mcp_product_entry_session_store_runtime_watch_sidecar_operator_evidence_classified',
+      'visual_authority_functions_not_generic_runtime',
+      'legacy_managed_runtime_gateway_names_tombstoned',
+    ],
+    allowed_residue_prefixes: [
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
+      'docs/history/',
+      'contracts/physical_source_morphology_policy.json',
+    ],
+    blockers,
+  };
+}
+
+function metaAgentPhysicalMorphologyPolicyChecks(repoDir: string) {
+  const privatePolicyFile = readJsonFile(repoDir, 'contracts/private_functional_surface_policy.json');
+  const authorityFile = readJsonFile(repoDir, 'runtime/authority_functions/meta-agent-authority-functions.json');
+  const privatePolicy = isRecord(privatePolicyFile.payload) ? privatePolicyFile.payload : null;
+  const authority = isRecord(authorityFile.payload) ? authorityFile.payload : null;
+  const scriptPolicy = isRecord(authority?.script_morphology_policy)
+    ? authority.script_morphology_policy
+    : null;
+  const allowedClasses = stringList(scriptPolicy?.allowed_classes);
+  const forbiddenRoles = stringList(scriptPolicy?.forbidden_roles);
+  const classifications = recordList(scriptPolicy?.script_classifications);
+  const scripts = gitTrackedOrWalkedFiles(repoDir).filter((file) => (
+    file.startsWith('scripts/') && file.endsWith('.mjs')
+  ));
+  const classifiedScripts = stringList(classifications.map((entry) => entry.script_ref));
+  const privateForbiddenRoles = stringList(privatePolicy?.forbidden_script_roles);
+  const blockers = [
+    privatePolicyFile.status === 'resolved' ? null : `meta_private_surface_policy_${privatePolicyFile.status}`,
+    authorityFile.status === 'resolved' ? null : `meta_authority_functions_${authorityFile.status}`,
+    scriptPolicy ? null : 'meta_script_morphology_policy_missing',
+    ...REQUIRED_META_SCRIPT_CLASSES
+      .filter((classId) => !allowedClasses.includes(classId))
+      .map((classId) => `meta_allowed_script_class_missing:${classId}`),
+    ...REQUIRED_META_FORBIDDEN_SCRIPT_ROLES
+      .filter((role) => !forbiddenRoles.includes(role) || !privateForbiddenRoles.includes(role))
+      .map((role) => `meta_forbidden_script_role_missing:${role}`),
+    ...scripts
+      .filter((script) => !classifiedScripts.includes(script))
+      .map((script) => `meta_script_unclassified:${script}`),
+    ...classifications.flatMap((entry) => (
+      stringList(entry.forbidden_roles).map((role) => (
+        `meta_script_declares_forbidden_role:${optionalString(entry.script_ref) ?? 'unknown'}:${role}`
+      ))
+    )),
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'declared' : 'blocked',
+    policy_sources: [
+      'contracts/private_functional_surface_policy.json#allowed_script_morphology_classes',
+      'runtime/authority_functions/meta-agent-authority-functions.json#script_morphology_policy',
+    ],
+    required_parity_gates: [
+      'all_scripts_classified_by_authority_manifest',
+      'scripts_only_emit_refs_or_work_orders',
+      'target_domain_truth_writer_forbidden',
+    ],
+    allowed_residue_prefixes: [
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
+      'docs/history/',
+      'contracts/private_functional_surface_policy.json',
+      'runtime/authority_functions/meta-agent-authority-functions.json',
+    ],
+    blockers,
+  };
+}
+
+function masPhysicalMorphologyPolicyChecks(repoDir: string) {
+  const auditFile = readJsonFile(repoDir, 'contracts/functional_privatization_audit.json');
+  const audit = isRecord(auditFile.payload) ? auditFile.payload : null;
+  const authority = isRecord(audit?.authority_boundary) ? audit.authority_boundary : {};
+  const blockers = [
+    auditFile.status === 'resolved' ? null : `mas_functional_privatization_audit_${auditFile.status}`,
+    authority.domain_can_claim_generic_runtime_owner === false
+      ? null
+      : 'mas_domain_can_claim_generic_runtime_owner_must_be_false',
+    authority.domain_repo_can_own_generated_surface === false
+      ? null
+      : 'mas_domain_repo_can_own_generated_surface_must_be_false',
+    authority.opl_can_write_domain_truth === false ? null : 'mas_opl_can_write_domain_truth_must_be_false',
+    authority.opl_can_write_memory_body === false ? null : 'mas_opl_can_write_memory_body_must_be_false',
+    authority.opl_can_authorize_quality_or_export === false
+      ? null
+      : 'mas_opl_can_authorize_quality_or_export_must_be_false',
+  ].filter((entry): entry is string => Boolean(entry));
+  return {
+    status: blockers.length === 0 ? 'declared' : 'blocked',
+    policy_sources: ['contracts/functional_privatization_audit.json#authority_boundary'],
+    required_parity_gates: [
+      'domain_route_active_api_cutover',
+      'old_supervisor_scheduler_names_absent_from_active_source',
+      'mas_truth_quality_artifact_authority_remains_domain_owned',
+    ],
+    allowed_residue_prefixes: [
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
+      'docs/history/',
+      'tests/legacy_negative',
+    ],
+    blockers,
+  };
+}
+
+function forbiddenPhysicalMorphologyTokens(domainId: string) {
+  if (domainId.includes('med-autogrant') || domainId === 'mag') {
+    return MAG_FORBIDDEN_ACTIVE_RESIDUE;
+  }
+  if (domainId.includes('redcube') || domainId === 'rca' || domainId === 'redcube_ai') {
+    return RCA_FORBIDDEN_ACTIVE_RESIDUE;
+  }
+  if (domainId.includes('opl-meta-agent')) {
+    return META_FORBIDDEN_ACTIVE_RESIDUE;
+  }
+  if (domainId.includes('med-autoscience') || domainId === 'mas') {
+    return MAS_FORBIDDEN_ACTIVE_RESIDUE;
+  }
+  return [];
+}
+
+function scanForbiddenNameResidue(
+  repoDir: string,
+  tokens: string[],
+  allowedPrefixes: string[],
+) {
+  if (tokens.length === 0) {
+    return [];
+  }
+  const activeFiles = gitTrackedOrWalkedFiles(repoDir).filter((relativePath) => (
+    ACTIVE_MORPHOLOGY_SCAN_ROOTS.some((root) => (
+      root.endsWith('/') ? relativePath.startsWith(root) : relativePath === root
+    ))
+  ));
+  return activeFiles.flatMap((relativePath) => {
+    const absolutePath = path.join(repoDir, relativePath);
+    let content = '';
+    try {
+      content = fs.readFileSync(absolutePath, 'utf8');
+    } catch {
+      return [];
+    }
+    return tokens.flatMap((token) => {
+      if (!content.includes(token)) {
+        return [];
+      }
+      return [{
+        token,
+        path: relativePath,
+        allowed: allowedPrefixes.some((prefix) => (
+          prefix.endsWith('/') ? relativePath.startsWith(prefix) : relativePath === prefix
+        )),
+      }];
+    });
+  });
+}
+
 function buildEvidenceTailClassification(generatedInterfaceCheck: ReturnType<typeof buildGeneratedInterfaceCheck>) {
   const tail_items = [
     generatedInterfaceCheck.claims_live_soak_complete
@@ -373,6 +832,7 @@ function buildRepoConformance(input: RepoInput) {
   const generatedSurfaceHandoffChecks = buildGeneratedSurfaceHandoffChecks(repoDir);
   const privateSurfaceChecks = buildPrivateSurfaceChecks(repoDir);
   const generatedInterfaceChecks = buildGeneratedInterfaceCheck(repoDir);
+  const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
   const evidenceTailClassification = buildEvidenceTailClassification(generatedInterfaceChecks);
   const blockers = unique([
     ...scaffoldValidation.blockers,
@@ -380,6 +840,7 @@ function buildRepoConformance(input: RepoInput) {
     ...generatedSurfaceHandoffChecks.blockers,
     ...privateSurfaceChecks.blockers,
     ...generatedInterfaceChecks.blockers,
+    ...physicalMorphologyChecks.blockers,
   ]);
 
   return {
@@ -398,6 +859,7 @@ function buildRepoConformance(input: RepoInput) {
     generated_surface_handoff_checks: generatedSurfaceHandoffChecks,
     private_surface_checks: privateSurfaceChecks,
     generated_interface_checks: generatedInterfaceChecks,
+    physical_morphology_checks: physicalMorphologyChecks,
     evidence_tail_classification: evidenceTailClassification,
   };
 }

@@ -61,6 +61,10 @@
   - 冻结 stage pack 的 source scope / cohort query / trigger / monitor-metric 闭环投影，供 scheduler / App 判断同一批 source 是否有可审计启动和监控 refs；OPL 只投影 refs 与 blocker，不评估 source truth 或引入 GraphFlow runtime
 - `family-stage-runtime-budget.schema.json`
   - 冻结 runtime reliability / capacity budget 的 refs-only 投影，覆盖 boundary count、runtime guard count、monitor / metric refs、unmonitored boundary count、expected-success 或 boundary-success-rate refs；OPL 不计算未证实概率、不授权 domain readiness、不引入 GraphFlow runtime
+- `family-stage-capacity-budget.schema.json`
+  - 冻结 provider launch / replay / event-log / guard-eval capacity 的 refs-only 投影；OPL 不调度 provider、不声明概率真值、不授权 domain readiness
+- `family-stage-domain-validity.schema.json`
+  - 冻结 launchable 或 review-gated stage 的 domain-owner review / intent validation / owner acceptance refs 投影；OPL 不签发 domain-ready、quality 或 artifact verdict
 - `family-stage-pack-registry.schema.json`
   - 冻结 stage pack library / registry 投影，按 integrity hash 记录 reusable pack refs、lifecycle status、promotion / deprecation / supersession refs、active attempt binding 与迁移策略 blocker
 - `family-stage-pack-source-spec.schema.json`

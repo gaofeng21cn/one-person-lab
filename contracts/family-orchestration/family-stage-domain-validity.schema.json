@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-domain-validity.schema.json",
+  "title": "OPL Family Stage Domain Validity Projection",
+  "description": "Refs-only domain-validity projection over a FamilyStageControlPlane. It checks that launchable or review-gated stages carry domain-owner review, intent validation, and owner acceptance refs without letting OPL issue domain-ready, quality, or artifact verdicts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "plane_id",
+    "target_domain_id",
+    "summary",
+    "stages",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_family_stage_domain_validity_projection" },
+    "version": { "const": "family-stage-domain-validity.v1" },
+    "plane_id": { "type": "string", "minLength": 1 },
+    "target_domain_id": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_count",
+        "validated_count",
+        "needs_domain_review_count",
+        "blocked_invalid_or_stale_review_count",
+        "blocker_count"
+      ],
+      "properties": {
+        "stage_count": { "type": "integer", "minimum": 0 },
+        "validated_count": { "type": "integer", "minimum": 0 },
+        "needs_domain_review_count": { "type": "integer", "minimum": 0 },
+        "blocked_invalid_or_stale_review_count": { "type": "integer", "minimum": 0 },
+        "blocker_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
+  },
+  "$defs": {
+    "surface_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ref"],
+      "properties": {
+        "ref_kind": { "type": "string", "minLength": 1 },
+        "ref": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "role": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["validated", "needs_domain_review", "blocked_invalid_or_stale_review"]
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "owner",
+        "review_status",
+        "domain_validity_required",
+        "domain_contract_review_refs",
+        "intent_validation_refs",
+        "owner_acceptance_refs",
+        "invalid_or_stale_refs",
+        "minimal_counterexamples"
+      ],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "review_status": { "$ref": "#/$defs/review_status" },
+        "domain_validity_required": { "type": "boolean" },
+        "domain_contract_review_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "intent_validation_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "owner_acceptance_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "invalid_or_stale_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "minimal_counterexamples": { "type": "array", "items": { "$ref": "#/$defs/counterexample" } }
+      }
+    },
+    "counterexample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage_id", "blocker_kind", "reason"],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "blocker_kind": {
+          "type": "string",
+          "enum": ["missing_domain_validity_refs", "invalid_or_stale_domain_validity_ref"]
+        },
+        "missing_ref_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["domain_contract_review_ref", "intent_validation_ref", "owner_acceptance_ref"]
+          }
+        },
+        "invalid_or_stale_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "refs_only",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "domain_validity_refs_projection_only" },
+        "refs_only": { "const": true },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  }
+}

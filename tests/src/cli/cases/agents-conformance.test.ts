@@ -232,6 +232,59 @@ function buildReadyAgentRepo() {
     ],
   });
 
+  const privateSurfacePolicyPath = path.join(targetDir, 'contracts', 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  privateSurfacePolicy.physical_source_morphology_policy = {
+    policy_id: 'sample_brief_agent.physical_source_morphology.v1',
+    state: 'classified_no_generic_runtime_reflow',
+    required_surface_ids: [
+      'agent_semantic_pack',
+      'domain_handler_targets',
+      'refs_only_adapters',
+      'minimal_authority_functions',
+      'legacy_runtime_residue',
+    ],
+    classification_buckets: [
+      'declarative_domain_pack',
+      'domain_handler_target',
+      'refs_only_adapter',
+      'minimal_authority_function',
+      'legacy_proof_tombstone',
+    ],
+    authority_boundary: {
+      domain_can_claim_generic_runtime_owner: false,
+      domain_repo_can_own_generated_surface: false,
+    },
+    surface_classifications: [
+      {
+        surface_id: 'agent_semantic_pack',
+        classification: 'declarative_domain_pack',
+        source_refs: ['agent/'],
+      },
+      {
+        surface_id: 'domain_handler_targets',
+        classification: 'domain_handler_target',
+        source_refs: ['agent/cli.ts', 'agent/mcp.ts', 'agent/product-entry.ts'],
+      },
+      {
+        surface_id: 'refs_only_adapters',
+        classification: 'refs_only_adapter',
+        source_refs: ['agent/status.ts', 'runtime/sidecar.ts', 'runtime/workbench.ts'],
+      },
+      {
+        surface_id: 'minimal_authority_functions',
+        classification: 'minimal_authority_function',
+        source_refs: ['runtime/authority_functions/owner-receipt.json'],
+      },
+      {
+        surface_id: 'legacy_runtime_residue',
+        classification: 'legacy_proof_tombstone',
+        source_refs: ['docs/history/runtime-tombstone.md'],
+      },
+    ],
+  };
+  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+
   return targetDir;
 }
 
@@ -270,7 +323,27 @@ test('agents conformance reports structural readiness separately from production
     repo.generated_interface_checks.active_caller_cutover_proof_status,
     'cutover_to_opl_generated_or_domain_handler_targets',
   );
+  assert.equal(repo.physical_morphology_checks.status, 'passed');
+  assert.equal(repo.physical_morphology_checks.policy_status, 'declared');
   assert.equal(repo.evidence_tail_classification.status, 'production_evidence_tail_present');
+});
+
+test('agents conformance blocks missing physical morphology policy', () => {
+  const repoDir = buildReadyAgentRepo();
+  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  delete privateSurfacePolicy.physical_source_morphology_policy;
+  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--repo-dir',
+    repoDir,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.reports[0].blockers.includes('physical_morphology_policy_not_declared'), true);
 });
 
 test('agents conformance blocks legacy roots, README pack paths, and unavailable active-path scans', () => {
