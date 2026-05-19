@@ -389,6 +389,10 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_cohort_loop.projection;
+    const runtimeBudget = runCli(['stages', 'runtime-budget', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_runtime_budget.projection;
     const sourceSpec = runCli([
       'stages',
       'source-spec',
@@ -413,6 +417,12 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
     assert.equal(cohortLoop.summary.blocker_count, 0);
     assert.equal(cohortLoop.authority_boundary.graphflow_runtime_dependency, false);
     assert.equal(cohortLoop.authority_boundary.can_write_source_truth, false);
+    assert.equal(runtimeBudget.surface_kind, 'opl_family_stage_runtime_budget_projection');
+    assert.equal(runtimeBudget.summary.stage_count, 6);
+    assert.equal(runtimeBudget.authority_boundary.graphflow_runtime_dependency, false);
+    assert.equal(runtimeBudget.authority_boundary.probability_truth_claim, false);
+    assert.equal(runtimeBudget.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(runtimeBudget.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(sourceSpec.surface_kind, 'opl_family_stage_pack_source_spec');
     assert.equal(sourceSpec.review_mode, 'diffable_refs_only_visual_equivalent_spec');
     assert.equal(sourceSpec.stage_pack_hash, proofBundle.integrity.stage_pack_hash);

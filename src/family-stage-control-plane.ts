@@ -18,6 +18,9 @@ import {
   buildFamilyStageCohortLoopProjection,
 } from './family-stage-cohort-loop.ts';
 import {
+  buildFamilyStageRuntimeBudgetProjection,
+} from './family-stage-runtime-budget.ts';
+import {
   buildFamilyStagePackRegistryEntry,
   buildFamilyStagePackRegistryProjection,
 } from './family-stage-pack-registry.ts';
@@ -840,6 +843,19 @@ export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts,
       project_id: entry.project_id,
       project: entry.project,
       projection: buildFamilyStageCohortLoopProjection(plane),
+    },
+  };
+}
+
+export function buildFamilyStageRuntimeBudgetInspect(contracts: FrameworkContracts, args: string[]) {
+  const parsed = parseOptionArgs(args, ['domain']);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  return {
+    version: 'g2',
+    family_stage_runtime_budget: {
+      project_id: entry.project_id,
+      project: entry.project,
+      projection: buildFamilyStageRuntimeBudgetProjection(plane),
     },
   };
 }
