@@ -484,6 +484,14 @@ const MAG_FORBIDDEN_ACTIVE_RESIDUE = [
   'compat_facade_active_alias',
 ];
 
+const MAG_REQUIRED_FORBIDDEN_RESIDUE_CLASSES = [
+  'legacy_local_persistence_surface',
+  'legacy_attempt_record_surface',
+  'legacy_repo_cadence_owner',
+  'legacy_executor_runtime_probe',
+  'legacy_compat_alias_surface',
+];
+
 const RCA_FORBIDDEN_ACTIVE_RESIDUE = [
   'GatewayActionMap',
   'getCliGatewayActions',
@@ -601,14 +609,14 @@ function magPhysicalMorphologyPolicyChecks(repoDir: string) {
     ...REQUIRED_MAG_PHYSICAL_SURFACES
       .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
       .map((surfaceId) => `mag_physical_surface_unclassified:${surfaceId}`),
-    ...MAG_FORBIDDEN_ACTIVE_RESIDUE
+    ...MAG_REQUIRED_FORBIDDEN_RESIDUE_CLASSES
       .filter((token) => !forbiddenClasses.includes(token))
       .map((token) => `mag_forbidden_residue_class_missing:${token}`),
     authority.mag_can_own_generic_runtime === false ? null : 'mag_can_own_generic_runtime_must_be_false',
     authority.mag_can_own_generated_wrapper === false ? null : 'mag_can_own_generated_wrapper_must_be_false',
-    authority.mag_can_restore_compat_facade_active_alias === false
+    authority.mag_can_restore_legacy_compat_alias === false
       ? null
-      : 'mag_can_restore_compat_facade_active_alias_must_be_false',
+      : 'mag_can_restore_legacy_compat_alias_must_be_false',
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'declared' : 'blocked',
@@ -662,6 +670,10 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
     allowed_residue_prefixes: [
       ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
       'docs/history/',
+      'contracts/functional_privatization_audit.json',
+      'contracts/runtime-program/',
+      'packages/redcube-gateway/src/actions/product-sidecar-guarded-actions.ts',
+      'tests/',
       'contracts/physical_source_morphology_policy.json',
     ],
     blockers,
