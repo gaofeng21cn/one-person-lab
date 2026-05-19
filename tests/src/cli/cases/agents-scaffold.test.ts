@@ -377,3 +377,46 @@ test('agents scaffold validation blocks empty or unreferenced agent directories'
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
 });
+
+test('agents scaffold validation blocks legacy pack roots and README-only required paths', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-legacy-pack-root-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'legacy-pack-root',
+    ]);
+    const packCompilerPath = path.join(targetDir, 'contracts/pack_compiler_input.json');
+    const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerPath, 'utf8'));
+    delete packCompilerInput.canonical_semantic_pack_root;
+    packCompilerInput.domain_pack_root = 'agent';
+    packCompilerInput.required_domain_pack_paths = [
+      'agent/prompts/domain_intake.md',
+      'agent/README.md',
+    ];
+    fs.writeFileSync(packCompilerPath, `${JSON.stringify(packCompilerInput, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(
+      validated.validation.blockers.includes('pack_compiler_canonical_semantic_pack_root_must_be_agent_slash'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('pack_compiler_legacy_pack_root_field:domain_pack_root'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('required_domain_pack_path_must_not_be_readme:agent/README.md'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});

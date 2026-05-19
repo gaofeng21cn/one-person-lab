@@ -573,6 +573,26 @@ function listedPackPaths(packCompilerInput: unknown) {
   ])];
 }
 
+function readCanonicalPackRoot(packCompilerInput: unknown) {
+  if (!isPlainRecord(packCompilerInput)) {
+    return null;
+  }
+  return readOptionalString(packCompilerInput.canonical_semantic_pack_root);
+}
+
+function legacyPackRootFields(packCompilerInput: unknown) {
+  if (!isPlainRecord(packCompilerInput)) {
+    return [];
+  }
+  return [
+    ['canonical_repo_source_semantic_pack_root', packCompilerInput.canonical_repo_source_semantic_pack_root],
+    ['domain_pack_root', packCompilerInput.domain_pack_root],
+    ['canonical_repo_source_semantic_pack', packCompilerInput.canonical_repo_source_semantic_pack],
+  ]
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([field]) => field);
+}
+
 function discoverPackFiles(repoDir: string, packRoot: string) {
   const rootPath = path.join(repoDir, packRoot);
   if (!fs.existsSync(rootPath) || !fs.statSync(rootPath).isDirectory()) {
@@ -594,17 +614,12 @@ function discoverPackFiles(repoDir: string, packRoot: string) {
 }
 
 function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown) {
-  const packRoot = resolvePackRoot(
-    isPlainRecord(packCompilerInput)
-      ? packCompilerInput.canonical_semantic_pack_root
-        ?? packCompilerInput.canonical_repo_source_semantic_pack_root
-        ?? packCompilerInput.domain_pack_root
-        ?? packCompilerInput.canonical_repo_source_semantic_pack
-      : null,
-  );
+  const canonicalPackRoot = readCanonicalPackRoot(packCompilerInput);
+  const packRoot = resolvePackRoot(canonicalPackRoot);
   const listedPaths = listedPackPaths(packCompilerInput);
   const discoveredPaths = discoverPackFiles(repoDir, packRoot);
   const semanticListedPaths = listedPaths.filter((item) => item.startsWith(packRoot) && !item.endsWith('/README.md'));
+  const readmeListedPaths = listedPaths.filter((item) => item.endsWith('/README.md') || item === 'README.md');
   const packFileStatus = listedPaths.map((item) => readPackFileStatus(repoDir, item));
   const sectionStatus = REQUIRED_AGENT_PACK_SECTIONS.map(({ section, prefix }) => {
     const semanticFiles = discoveredPaths.filter((file) => file.startsWith(prefix) && !file.endsWith('/README.md'));
@@ -619,10 +634,14 @@ function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown) {
     pack_root: packRoot,
     listed_paths: listedPaths,
     semantic_listed_path_count: semanticListedPaths.length,
+    readme_listed_path_count: readmeListedPaths.length,
     discovered_path_count: discoveredPaths.length,
     pack_file_status: packFileStatus,
     section_status: sectionStatus,
     blockers: [
+      canonicalPackRoot === 'agent/' ? null : 'pack_compiler_canonical_semantic_pack_root_must_be_agent_slash',
+      ...legacyPackRootFields(packCompilerInput).map((field) => `pack_compiler_legacy_pack_root_field:${field}`),
+      ...readmeListedPaths.map((item) => `required_domain_pack_path_must_not_be_readme:${item}`),
       fs.existsSync(path.join(repoDir, packRoot)) ? null : `missing_agent_pack_root:${packRoot}`,
       semanticListedPaths.length > 0 ? null : 'missing_required_domain_pack_paths',
       ...packFileStatus
