@@ -11,11 +11,11 @@ import {
 } from '../../agent-lab-complete.ts';
 import {
   agentLabRefSummary,
-  buildLonglineAgentLabResult,
   buildSampleAgentLabResult,
   runAgentLabSuite,
   type AgentLabSuite,
 } from '../../agent-lab.ts';
+import { buildLonglineAgentLabResult } from '../../agent-lab-longline.ts';
 import { FrameworkContractError } from '../../contracts.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
