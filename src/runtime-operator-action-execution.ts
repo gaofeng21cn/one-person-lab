@@ -97,6 +97,51 @@ function stageAttemptQueryArgs(commandOrSurfaceRef: string) {
   return ['attempt', 'query', match[1]];
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
+function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) {
+  const args = stringList(route.opl_cli_args);
+  if (args.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL attempt create action command route.', {
+      command_or_surface_ref: commandOrSurfaceRef,
+      supported_command:
+        'opl family-runtime attempt create --domain <domain> --stage <stage> --provider <provider> --workspace-locator <json> --executor-kind <kind> --executor-binding-ref <ref> --require-stage-admission',
+    });
+  }
+  if (args[0] !== 'attempt' || args[1] !== 'create') {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL attempt create route has invalid opl_cli_args.', {
+      action_id: stringValue(route.action_id),
+      opl_cli_args: args,
+    });
+  }
+  return args;
+}
+
+function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
+  const actionKind = stringValue(route.action_kind);
+  if (actionKind === 'stage_attempt_query') {
+    return {
+      executionKind: 'opl_cli_internal',
+      runtimeArgs: stageAttemptQueryArgs(commandOrSurfaceRef),
+    };
+  }
+  if (actionKind === 'stage_production_attempt_request') {
+    return {
+      executionKind: 'opl_cli_stage_attempt_create',
+      runtimeArgs: stageAttemptCreateArgs(route, commandOrSurfaceRef),
+    };
+  }
+  throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL action command route.', {
+    command_or_surface_ref: commandOrSurfaceRef,
+    action_kind: actionKind,
+    supported_action_kinds: ['stage_attempt_query', 'stage_production_attempt_request'],
+  });
+}
+
 function domainIdFromRoute(route: JsonRecord): FamilyRuntimeDomainId {
   const domainId = stringValue(route.domain_id);
   if (domainId === 'medautoscience' || domainId === 'medautogrant' || domainId === 'redcube') {
@@ -140,10 +185,10 @@ async function executeRoute(route: JsonRecord, options: RuntimeActionExecuteOpti
   }
 
   if (owner === 'opl' && targetKind === 'opl_cli') {
-    const runtimeArgs = stageAttemptQueryArgs(commandOrSurfaceRef);
+    const { executionKind, runtimeArgs } = oplCliRuntimeArgs(route, commandOrSurfaceRef);
     return {
       execution_status: options.dryRun ? 'dry_run' : 'executed',
-      execution_kind: 'opl_cli_internal',
+      execution_kind: executionKind,
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
       executed_runtime_command: `opl family-runtime ${runtimeArgs.join(' ')}`,
@@ -233,7 +278,9 @@ export async function runRuntimeOperatorActionExecute(
   args: string[],
 ) {
   const options = parseRuntimeActionExecuteArgs(args);
-  const snapshotEnvelope = await buildRuntimeTraySnapshot(contracts);
+  const snapshotEnvelope = await buildRuntimeTraySnapshot(contracts, {
+    appOperatorDrilldownDetailLevel: 'full',
+  });
   const snapshot = snapshotEnvelope.runtime_tray_snapshot as JsonRecord;
   const route = actionRoutesFromSnapshot(snapshot).find((candidate) => (
     stringValue(candidate.action_id) === options.actionId

@@ -25,6 +25,9 @@ import {
 import {
   buildStageProductionEvidence,
 } from './runtime-tray-app-operator-drilldown-parts/stage-production-evidence.ts';
+import {
+  buildStageProductionAttemptRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/stage-production-action-routes.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -716,6 +719,7 @@ function appExecutionBridge(
       domain_routes_are_queued_for_approval: true,
       provider_signal_routes_emit_provider_receipts: true,
       opl_cli_routes_can_execute_framework_queries: true,
+      opl_cli_routes_can_create_stage_attempt_requests: true,
       app_surface_routes_are_projection_only: true,
     },
     safe_action_routes: safeActionRoutes.map((ref) => ({
@@ -1140,7 +1144,6 @@ export function buildAppOperatorDrilldown(input: {
   });
   const productionEvidenceTailSummary = record(productionEvidenceTailLedger.summary);
   const periodicRefs = periodicExecutionRefs(providerActionRefs);
-  const actionRefs = operatorActionRoutingRefs(input.stageAttemptWorkbench);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
   const typedBlockers = typedBlockerRefs(attempts, input.domainProjectionIngestion);
@@ -1151,6 +1154,10 @@ export function buildAppOperatorDrilldown(input: {
     attempts,
   });
   const stageProductionEvidenceSummary = record(stageProductionEvidence.summary);
+  const actionRefs = uniqueRefs([
+    ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
+    ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
+  ]);
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
   const lifecycleRefs = lifecycleLedgerRefs();
@@ -1260,6 +1267,8 @@ export function buildAppOperatorDrilldown(input: {
         numberValue(stageProductionEvidenceSummary.missing_executor_binding_stage_count),
       stage_production_evidence_missing_monitor_freshness_stage_count:
         numberValue(stageProductionEvidenceSummary.missing_monitor_freshness_stage_count),
+      stage_production_attempt_request_route_count:
+        actionRefs.filter((ref) => ref.action_kind === 'stage_production_attempt_request').length,
       freshness_signal_count: freshness.length,
       source_ref_count: refFamilies.summary.source_ref_count,
       artifact_ref_count: refFamilies.summary.artifact_ref_count,
