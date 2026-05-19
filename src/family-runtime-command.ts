@@ -117,6 +117,8 @@ export type FamilyRuntimeCommandInput =
       sourceFingerprint?: string;
       executorKind?: string;
       executorBindingRef?: string;
+      invocationMode?: 'invocation' | 'authoring';
+      boundedEditRef?: string;
       taskId?: string;
       retryBudget?: Record<string, unknown>;
       checkpointRefs?: string[];

@@ -156,6 +156,8 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let sourceFingerprint: string | undefined;
   let executorKind: string | undefined;
   let executorBindingRef: string | undefined;
+  let invocationMode: 'invocation' | 'authoring' | undefined;
+  let boundedEditRef: string | undefined;
   let taskId: string | undefined;
   let blockedReason: string | undefined;
   let requireStageAdmission = false;
@@ -203,6 +205,17 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
     } else if (token === '--executor-binding-ref' && value) {
       executorBindingRef = value;
       index += 1;
+    } else if (token === '--invocation-mode' && value) {
+      if (value !== 'invocation' && value !== 'authoring') {
+        throw new FrameworkContractError('cli_usage_error', `Unsupported family-runtime attempt invocation mode: ${value}.`, {
+          allowed_modes: ['invocation', 'authoring'],
+        });
+      }
+      invocationMode = value;
+      index += 1;
+    } else if (token === '--bounded-edit-ref' && value) {
+      boundedEditRef = value;
+      index += 1;
     } else if (token === '--task' && value) {
       taskId = value;
       index += 1;
@@ -248,6 +261,8 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       sourceFingerprint,
       executorKind,
       executorBindingRef,
+      invocationMode,
+      boundedEditRef,
       taskId,
       retryBudget: retryBudget || retryBudgetFile ? parsePayloadArg(retryBudget, retryBudgetFile) : undefined,
       checkpointRefs,

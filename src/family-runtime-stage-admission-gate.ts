@@ -5,10 +5,12 @@ import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from './family-conflict-envelope.ts';
 import { buildFamilyStageAdmissionReview } from './family-stage-admission.ts';
+import { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
 } from './family-stage-admission.ts';
+import type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
 import type { FamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 import {
   insertEvent,
@@ -41,6 +43,7 @@ export type StageAdmissionLaunchGateResult = {
   plane_id: string | null;
   target_domain_id: string | null;
   inspected_stage: FamilyStageAdmissionStageResult | null;
+  inspected_cohort_loop_stage: FamilyStageCohortLoopStage | null;
   findings: FamilyStageAdmissionReview['findings'];
   conflict_or_blocker_envelopes: ReturnType<typeof buildFamilyConflictOrBlockerEnvelope>[];
   authority_boundary: {
@@ -117,6 +120,7 @@ function statusForMissing(input: StageAdmissionLaunchGateInput, reason: string):
     plane_id: null,
     target_domain_id: null,
     inspected_stage: null,
+    inspected_cohort_loop_stage: null,
     findings: [],
     conflict_or_blocker_envelopes: required
       ? [
@@ -159,10 +163,29 @@ export function buildStageAdmissionLaunchGateFromReview(
   if (!inspectedStage) {
     return statusForMissing(input, 'stage_admission_stage_missing');
   }
+  const cohortLoop = buildFamilyStageCohortLoopProjection(input.plane);
+  const inspectedCohortLoopStage = cohortLoop.stages.find((stage) => stage.stage_id === input.stageId) ?? null;
   const stageFindings = input.review.findings.filter((finding) => finding.stage_id === input.stageId);
-  const blockedReason = inspectedStage.status === 'admitted'
-    ? null
-    : `stage_admission_${inspectedStage.status}`;
+  const cohortLoopBlocked = input.requireAdmission === true
+    && inspectedCohortLoopStage !== null
+    && inspectedCohortLoopStage.closure_status !== 'closed_loop_ready';
+  const cohortLoopFindings: FamilyStageAdmissionReview['findings'] = cohortLoopBlocked
+    ? inspectedCohortLoopStage.blockers.map((cohortBlocker) => ({
+        severity: 'blocker' as const,
+        code: cohortBlocker.blocker_id,
+        message: cohortBlocker.minimal_counterexample.reason,
+        stage_id: input.stageId,
+        failure_lane: cohortBlocker.blocker_id === 'cohort_monitor_or_metric_missing' ? 'monitor' as const : 'source' as const,
+        source_ref: `family_stage_cohort_loop:${input.stageId}`,
+        minimal_counterexample: cohortBlocker.minimal_counterexample,
+      }))
+    : [];
+  const findings = [...stageFindings, ...cohortLoopFindings];
+  const blockedReason = inspectedStage.status !== 'admitted'
+    ? `stage_admission_${inspectedStage.status}`
+    : cohortLoopBlocked
+      ? 'stage_cohort_loop_not_closed'
+      : null;
   const subject = buildFamilyConflictSubject({
     domain: input.domainId,
     stageId: input.stageId,
@@ -188,7 +211,8 @@ export function buildStageAdmissionLaunchGateFromReview(
     plane_id: input.plane.plane_id,
     target_domain_id: input.plane.target_domain_id,
     inspected_stage: inspectedStage,
-    findings: stageFindings,
+    inspected_cohort_loop_stage: inspectedCohortLoopStage,
+    findings,
     conflict_or_blocker_envelopes: blockedReason
       ? [
           buildFamilyConflictOrBlockerEnvelope({
@@ -198,9 +222,11 @@ export function buildStageAdmissionLaunchGateFromReview(
             authority: 'opl_runtime',
             status: 'blocked',
             reason: blockedReason,
-            evidenceRefs: stageFindings.map((finding) => `finding:${finding.code}`),
-            allowedNextActions: ['repair_stage_contract', 'retry_after_admission'],
-            forbiddenActions: ['start_executor_without_stage_admission', 'fallback_complete'],
+            evidenceRefs: findings.map((finding) => `finding:${finding.code}`),
+            allowedNextActions: cohortLoopBlocked
+              ? ['declare_source_scope_ref', 'declare_cohort_query_ref', 'declare_trigger_ref', 'declare_monitor_or_metric_ref', 'retry_after_admission']
+              : ['repair_stage_contract', 'retry_after_admission'],
+            forbiddenActions: ['start_executor_without_stage_admission', 'start_executor_without_cohort_loop_closure', 'fallback_complete'],
             failClosed: true,
           }),
         ]
