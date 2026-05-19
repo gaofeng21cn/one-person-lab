@@ -322,6 +322,32 @@ export async function inspectFamilyRuntimeProvidersWithLifecycle(
   };
 }
 
+export async function inspectSelectedFamilyRuntimeProvidersWithLifecycle(
+  input: {
+    requestedProvider?: FamilyRuntimeProviderKind;
+    paths: Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
+    options?: ProviderLifecycleOptions;
+  },
+) {
+  const selectedProvider = resolveFamilyRuntimeProviderKind(input.requestedProvider);
+  const providerRuntime = await inspectFamilyRuntimeProvidersWithLifecycle(
+    selectedProvider,
+    input.paths,
+    input.options,
+  );
+  const provider = providerRuntime.providers[selectedProvider];
+  if (!provider) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
+      selected_provider: selectedProvider,
+    });
+  }
+  return {
+    selectedProvider,
+    providerRuntime,
+    provider,
+  };
+}
+
 export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mode: 'install' | 'repair') {
   if (kind === 'temporal') {
     const inspection = inspectFamilyRuntimeProvider(kind);

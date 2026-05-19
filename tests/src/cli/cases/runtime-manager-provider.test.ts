@@ -1,3 +1,6 @@
+import { spawn } from 'node:child_process';
+import net from 'node:net';
+
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
@@ -169,5 +172,128 @@ test('family-runtime status defaults to temporal production provider and blocks 
     assert.equal(output.provider_runtime.provider_catalog.local_sqlite.production_online_readiness_provider, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime status, family-runtime status, and runtime manager consume the same lifecycle-aware provider readiness truth', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-readiness-truth-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-readiness-helper-bin-'));
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const service = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  const worker = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000);'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  service.unref();
+  worker.unref();
+
+  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
+    const helperPath = path.join(helperBinDir, binary);
+    fs.writeFileSync(
+      helperPath,
+      `#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
+    ;;
+  opl-runtime-watch)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
+    ;;
+  opl-artifact-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
+    ;;
+  opl-state-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
+    ;;
+esac
+`,
+      { mode: 0o755 },
+    );
+  }
+
+  try {
+    assert.equal(typeof service.pid, 'number');
+    assert.equal(typeof worker.pid, 'number');
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: service.pid,
+      address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'test temporal service',
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: worker.pid,
+      address,
+      namespace: 'default',
+      task_queue: 'opl-stage-attempts',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+    }, null, 2)}\n`);
+
+    const env = {
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+      OPL_FAMILY_RUNTIME_PROVIDER: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+      OPL_TEMPORAL_WORKER_STATUS: '',
+      OPL_TEMPORAL_WORKER_ENABLED: '',
+    };
+    const runtimeStatus = runCli(['status', 'runtime'], env).runtime_status;
+    const familyRuntime = runCli(['family-runtime', 'status', '--provider', 'temporal'], env).family_runtime;
+    const runtimeManager = runCli(['runtime', 'manager'], env).runtime_manager;
+
+    const statusProvider = runtimeStatus.family_runtime_providers.providers.temporal;
+    const familyProvider = familyRuntime.provider_runtime.providers.temporal;
+    const managerProvider = runtimeManager.provider_runtime.providers.temporal;
+
+    assert.equal(runtimeStatus.configured_provider, 'temporal');
+    assert.equal(familyRuntime.configured_provider, 'temporal');
+    assert.equal(runtimeManager.family_runtime_queue.configured_provider, 'temporal');
+    assert.equal(statusProvider.ready, true);
+    assert.equal(familyProvider.ready, true);
+    assert.equal(managerProvider.ready, true);
+    assert.equal(statusProvider.status, familyProvider.status);
+    assert.equal(managerProvider.status, familyProvider.status);
+    assert.equal(statusProvider.degraded_reason, familyProvider.degraded_reason);
+    assert.equal(managerProvider.degraded_reason, familyProvider.degraded_reason);
+    assert.equal(statusProvider.details.address, familyProvider.details.address);
+    assert.equal(managerProvider.details.address, familyProvider.details.address);
+    assert.equal(statusProvider.details.address_source, familyProvider.details.address_source);
+    assert.equal(managerProvider.details.address_source, familyProvider.details.address_source);
+    assert.equal(statusProvider.details.worker_readiness.lifecycle_status, 'ready');
+    assert.equal(familyProvider.details.worker_readiness.lifecycle_status, 'ready');
+    assert.equal(managerProvider.details.worker_readiness.lifecycle_status, 'ready');
+    assert.deepEqual(runtimeManager.reconcile.recommended_actions
+      .filter((action: { action_id: string }) => action.action_id === 'configure_temporal_provider'), []);
+  } finally {
+    if (typeof service.pid === 'number') {
+      try {
+        process.kill(service.pid, 'SIGTERM');
+      } catch {
+        // already stopped
+      }
+    }
+    if (typeof worker.pid === 'number') {
+      try {
+        process.kill(worker.pid, 'SIGTERM');
+      } catch {
+        // already stopped
+      }
+    }
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(helperBinDir, { recursive: true, force: true });
   }
 });
