@@ -1,9 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { FrameworkContractError } from './contracts.ts';
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
 import {
-  inspectFamilyRuntimeProvidersWithLifecycle,
+  inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import { buildTemporalWorkerLifecycleContract } from './family-runtime-temporal-readiness.ts';
@@ -20,16 +19,13 @@ export async function buildFamilyRuntimeStatusPayload(
   paths = familyRuntimePaths(),
   requestedProvider = resolveFamilyRuntimeProviderKind(),
 ) {
-  const selectedProvider = resolveFamilyRuntimeProviderKind(requestedProvider);
-  const providerRuntime = await inspectFamilyRuntimeProvidersWithLifecycle(selectedProvider, paths, {
-    managedProviderProjection: readMasManagedProviderProjection(),
+  const { selectedProvider, providerRuntime, provider } = await inspectSelectedFamilyRuntimeProvidersWithLifecycle({
+    requestedProvider,
+    paths,
+    options: {
+      managedProviderProjection: readMasManagedProviderProjection(),
+    },
   });
-  const provider = providerRuntime.providers[selectedProvider]
-    ?? (() => {
-      throw new FrameworkContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
-        selected_provider: selectedProvider,
-      });
-    })();
   const fullOnlineReady = selectedProvider !== 'local_sqlite' && provider.ready;
   const temporalSelected = selectedProvider === 'temporal';
   const schedulerReplacementStatus = temporalSelected

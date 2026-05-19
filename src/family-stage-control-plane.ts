@@ -6,6 +6,7 @@ import type {
   FamilyStageControlPlane,
   FamilyStageDescriptor,
   FamilyStageKind,
+  FamilyStageSurfaceRef,
 } from './family-stage-control-plane-contract.ts';
 import {
   buildFamilyStageAdmissionReview,
@@ -40,12 +41,22 @@ export interface FamilyStageListEntry {
   allowed_action_refs: string[];
   knowledge_ref_count: number;
   source_ref_count: number;
+  source_scope_ref_count: number;
+  artifact_scope_ref_count: number;
+  workspace_scope_ref_count: number;
   runtime_assumption_count: number;
   monitor_ref_count: number;
+  guarantee_mode: FamilyStageGuaranteeMode;
   freshness: JsonRecord | null;
   trust_lane: string | null;
   admission_status: string | null;
 }
+
+export type FamilyStageGuaranteeMode =
+  | 'static_admission_only'
+  | 'runtime_enforced'
+  | 'domain_owned_judgment'
+  | 'observability_only';
 
 export interface FamilyStageLaunchAdmissionGate {
   surface_kind: 'opl_family_stage_launch_admission_gate';
@@ -77,6 +88,44 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function refsCount(refs: FamilyStageSurfaceRef[] | undefined) {
+  return refs?.length ?? 0;
+}
+
+function readBoolean(record: JsonRecord, key: string) {
+  return typeof record[key] === 'boolean' ? record[key] as boolean : null;
+}
+
+function buildFamilyStageGuaranteeProjection(stage: FamilyStageDescriptor) {
+  const trust = stage.trust_boundary;
+  const oplRole = optionalString(stage.authority_boundary.opl_role);
+  const runtimeEnforced = trust?.effect_boundary === true
+    || trust?.runtime_guard_required === true
+    || ['ai_decision', 'human_gate', 'external_system'].includes(trust?.lane ?? '');
+  const domainOwnedJudgment = trust?.owner_receipt_required === true
+    || trust?.human_gate_required === true
+    || readBoolean(stage.authority_boundary, 'no_quality_verdict') === true
+    || readBoolean(stage.authority_boundary, 'can_authorize_quality_verdict') === false
+    || readBoolean(stage.authority_boundary, 'can_write_domain_truth') === false;
+  const observabilityOnly = trust?.lane === 'app_projection'
+    || oplRole === 'projection_consumer_only'
+    || oplRole === 'descriptor_only'
+    || oplRole === 'discovery_only';
+  const modes: FamilyStageGuaranteeMode[] = [
+    runtimeEnforced ? 'runtime_enforced' : 'static_admission_only',
+    ...(domainOwnedJudgment ? ['domain_owned_judgment' as const] : []),
+    ...(observabilityOnly ? ['observability_only' as const] : []),
+  ];
+  return {
+    primary_mode: modes[0],
+    modes: [...new Set(modes)],
+    runtime_enforced: runtimeEnforced,
+    domain_owned_judgment: domainOwnedJudgment,
+    observability_only: observabilityOnly,
+    authority_boundary: 'projection_only_no_domain_verdict_authority',
+  };
 }
 
 function normalizeDomainSelection(value: string) {
@@ -147,8 +196,12 @@ export function buildFamilyStageListEntry(
     allowed_action_refs: stage.allowed_action_refs,
     knowledge_ref_count: stage.knowledge_refs.length,
     source_ref_count: stage.source_refs.length,
+    source_scope_ref_count: refsCount(stage.stage_contract?.source_scope_refs),
+    artifact_scope_ref_count: refsCount(stage.stage_contract?.artifact_scope_refs),
+    workspace_scope_ref_count: refsCount(stage.stage_contract?.workspace_scope_refs),
     runtime_assumption_count: stage.stage_contract?.runtime_assumptions.length ?? 0,
     monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
+    guarantee_mode: buildFamilyStageGuaranteeProjection(stage).primary_mode,
     freshness: stage.freshness,
     trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
     admission_status: admissionStage?.status ?? null,
@@ -436,6 +489,16 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
         allowed_action_refs: stage.allowed_action_refs,
         handoff: stage.handoff,
         source_refs: stage.source_refs,
+        scope_refs: {
+          source_scope_refs: stage.stage_contract?.source_scope_refs ?? [],
+          artifact_scope_refs: stage.stage_contract?.artifact_scope_refs ?? [],
+          workspace_scope_refs: stage.stage_contract?.workspace_scope_refs ?? [],
+          summary: {
+            source_scope_ref_count: refsCount(stage.stage_contract?.source_scope_refs),
+            artifact_scope_ref_count: refsCount(stage.stage_contract?.artifact_scope_refs),
+            workspace_scope_ref_count: refsCount(stage.stage_contract?.workspace_scope_refs),
+          },
+        },
         freshness: stage.freshness,
         runtime_assumptions: stage.stage_contract?.runtime_assumptions ?? [],
         monitor_refs: stage.stage_contract?.monitor_refs ?? [],
@@ -444,6 +507,7 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
           monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
           authority_boundary: 'projection_only_no_domain_verdict_authority',
         },
+        guarantee_summary: buildFamilyStageGuaranteeProjection(stage),
         authority_boundary: stage.authority_boundary,
       },
       parity: buildFamilyStageControlPlaneParity(plane, entry.manifest),

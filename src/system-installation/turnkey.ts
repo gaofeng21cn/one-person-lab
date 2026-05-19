@@ -324,7 +324,7 @@ export async function runOplTurnkeyInstall(
       }),
     );
     const skipOnlineManagement = Boolean(input.noOnlineRuntime);
-    const runtimeManagerAction = runRuntimeManagerAction({
+    const runtimeManagerAction = await runRuntimeManagerAction({
       mode: 'apply',
       skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
       skipOnlineManagement,

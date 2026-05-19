@@ -66,7 +66,7 @@ test('current readiness projection is derived from current OPL surfaces', () => 
   }
 });
 
-test('status dashboard aggregates current OPL management surfaces into one view', () => {
+test('status dashboard aggregates current OPL management surfaces into one view', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dashboard-state-'));
 
   try {
@@ -81,10 +81,10 @@ test('status dashboard aggregates current OPL management surfaces into one view'
       OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     };
 
-    let directDashboard: ReturnType<typeof buildOplDashboard> | null = null;
+    let directDashboard: Awaited<ReturnType<typeof buildOplDashboard>> | null = null;
     try {
       process.env.OPL_STATE_DIR = stateRoot;
-      directDashboard = buildOplDashboard(loadFrameworkContracts({ contractsDir }), {
+      directDashboard = await buildOplDashboard(loadFrameworkContracts({ contractsDir }), {
         workspacePath: repoRoot,
         sessionsLimit: 1,
       });

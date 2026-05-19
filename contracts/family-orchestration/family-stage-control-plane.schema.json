@@ -237,6 +237,27 @@
             "$ref": "#/$defs/surface_ref"
           },
           "description": "Refs to domain-owned or OPL-owned monitor projections that make runtime assumptions visible to App/operator surfaces."
+        },
+        "source_scope_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs that freeze the source cohort or source set used by this stage before launch. OPL projects these refs but does not own source truth."
+        },
+        "artifact_scope_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs that freeze the artifact set this stage may read, produce, or reconcile. OPL projects these refs but does not own artifact authority."
+        },
+        "workspace_scope_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs that freeze the workspace or runtime scope for this stage. OPL projects these refs but does not own workspace truth."
         }
       }
     },

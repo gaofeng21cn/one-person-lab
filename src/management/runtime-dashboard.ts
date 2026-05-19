@@ -142,7 +142,7 @@ export function buildOplStart(
   };
 }
 
-export function buildOplDashboard(
+export async function buildOplDashboard(
   contracts: FrameworkContracts,
   options: DashboardOptions = {},
 ) {
@@ -150,10 +150,10 @@ export function buildOplDashboard(
   const runtimeModes = readOplRuntimeModes();
   const projects = buildProjectsOverview(contracts).projects;
   const workspace = buildWorkspaceStatus({ workspacePath: options.workspacePath }).workspace;
-  const runtimeStatus = buildRuntimeStatus({
+  const runtimeStatus = (await buildRuntimeStatus({
     sessionsLimit: options.sessionsLimit,
     ledgerLimit: options.sessionsLimit,
-  }).runtime_status;
+  })).runtime_status;
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();

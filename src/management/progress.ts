@@ -25,10 +25,10 @@ export async function buildProjectProgressBrief(
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const readiness = buildCurrentReadinessProjection(domainManifests.projects, workspaceCatalog);
-  const runtimeStatus = buildRuntimeStatus({
+  const runtimeStatus = (await buildRuntimeStatus({
     sessionsLimit: options.sessionsLimit,
     ledgerLimit: options.sessionsLimit,
-  }).runtime_status;
+  })).runtime_status;
   const currentProject = pickCurrentProjectEntry(domainManifests, workspaceCatalog, workspacePath);
   const readinessEntry = currentProject.projectId
     ? readiness.projects.find((entry) => entry.project_id === currentProject.projectId) ?? null
