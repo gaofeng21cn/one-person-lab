@@ -209,6 +209,16 @@ test('family stage admission admits contracted static core and recorded boundary
   assert.equal(review.summary.verified_core_eligible_count, 1);
   assert.equal(review.summary.durable_runtime_only_count, 1);
   assert.equal(review.summary.runtime_boundary_required_count, 1);
+  assert.equal(review.summary.human_review_gate_count, 2);
+  assert.equal(review.summary.blocked_human_review_gate_count, 0);
+  assert.equal(review.human_review_burden_budget.status, 'ready');
+  assert.deepEqual(
+    review.human_review_burden_budget.gates.map((gate) => [gate.gate_id, gate.source, gate.status]),
+    [
+      ['publication_review:quality_owner_review', 'trust_boundary', 'ready'],
+      ['publication_quality_gate', 'action_catalog', 'ready'],
+    ],
+  );
   assert.equal(review.stage_results[0]?.trust_lane, 'domain_agent');
   assert.equal(review.stage_results[0]?.static_check_eligible, true);
   assert.deepEqual(review.stage_results[0]?.mode_tags, {
@@ -357,6 +367,39 @@ test('family stage admission blocks runtime guards without event recording', () 
   );
 });
 
+test('family stage admission blocks human review gates without typed refs', () => {
+  const plane = buildStagePlane();
+  const stage = plane.stages[1];
+  assert.ok(stage.authority_boundary);
+  stage.authority_boundary = {
+    ...stage.authority_boundary,
+    expected_receipt_refs: [],
+    human_review_gates: [
+      {
+        gate_id: 'publication_review:operator_quality_gate',
+        gate_type: 'quality_owner_review',
+        owner: 'med-autoscience',
+        missing_refs: ['missing:publication_quality_receipt'],
+      },
+    ],
+  };
+
+  const review = buildFamilyStageAdmissionReview(plane, {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'blocked');
+  assert.equal(review.human_review_burden_budget.status, 'blocked');
+  assert.equal(review.summary.blocked_human_review_gate_count, 1);
+  assert.ok(review.findings.some((finding) =>
+    finding.code === 'human_review_gate_budget_blocked'
+    && finding.stage_id === 'publication_review',
+  ));
+  assert.deepEqual(review.failure_localization.map((item) => [item.lane, item.code, item.stage_id]), [
+    ['human', 'human_review_gate_budget_blocked', 'publication_review'],
+  ]);
+});
+
 test('family stage admission schema freezes OPL non-authority read model', () => {
   const schema = readJson('contracts/family-orchestration/family-stage-admission.schema.json');
   const properties = schema.properties as Record<string, JsonRecord>;
@@ -376,7 +419,10 @@ test('family stage admission schema freezes OPL non-authority read model', () =>
   assert.ok(stageResultRequired.includes('runtime_event_refs'));
   assert.ok(stageResultRequired.includes('mode_tags'));
   assert.ok((schema.required as string[]).includes('failure_localization'));
+  assert.ok((schema.required as string[]).includes('human_review_burden_budget'));
   assert.ok((((schema.$defs as JsonRecord).mode_tags as JsonRecord).required as string[]).includes('verified_core_eligible'));
+  assert.equal(Boolean((schema.$defs as JsonRecord).human_review_burden_budget), true);
+  assert.equal(Boolean((schema.$defs as JsonRecord).human_review_budget_gate), true);
   assert.equal(Boolean(findingProperties.runtime_event_refs_missing_reason), true);
   assert.equal(Boolean(findingProperties.assumption_id), true);
   assert.equal(Boolean(findingProperties.failure_lane), true);

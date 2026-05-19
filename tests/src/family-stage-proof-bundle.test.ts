@@ -244,6 +244,8 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
     }],
   ]);
   assert.deepEqual(bundle.failure_localization, []);
+  assert.equal(bundle.human_review_burden_budget.status, 'ready');
+  assert.equal(bundle.human_review_burden_budget.summary.gate_count, 2);
   assert.deepEqual(bundle.composition_obligations[0], {
     edge_id: 'manuscript_authoring->publication_review',
     upstream_stage_id: 'manuscript_authoring',
@@ -288,6 +290,8 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
     runtime_event_requirement_count: 1,
     satisfied_runtime_event_ref_count: 1,
     expected_receipt_ref_count: 3,
+    human_review_gate_count: 2,
+    blocked_human_review_gate_count: 0,
     test_proof_ref_count: 2,
     blocker_count: 0,
     warning_count: 0,
@@ -426,8 +430,14 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   assert.ok(required.includes('integrity'));
   assert.ok(required.includes('generated_artifact_manifest'));
   assert.ok(required.includes('failure_localization'));
+  assert.ok(required.includes('human_review_burden_budget'));
   assert.ok((defs.stage_result.required as string[]).includes('mode_tags'));
   assert.ok((defs.stage_result.required as string[]).includes('runtime_event_refs'));
+  assert.ok((defs.proof_runtime_metrics.required as string[]).includes('human_review_gate_count'));
+  assert.ok((defs.proof_runtime_metrics.required as string[]).includes('blocked_human_review_gate_count'));
+  assert.equal(Boolean(defs.human_review_burden_budget), true);
+  assert.equal((metrics.human_review_gate_count as number), 0);
+  assert.equal((metrics.blocked_human_review_gate_count as number), 0);
   assert.ok((defs.failure_localization.required as string[]).includes('minimal_counterexample'));
   assert.equal(metrics.composition_obligation_count, 1);
   assert.equal(metrics.runtime_event_requirement_count, 1);
