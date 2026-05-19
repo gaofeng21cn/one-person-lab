@@ -67,6 +67,7 @@ import {
 } from './family-runtime-stage-admission-gate.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
+import { canonicalFamilyRuntimeTaskKind } from './family-runtime-mas-domain-route.ts';
 import {
   reconcileFamilyRuntimeLifecycleRefs,
   runFamilyRuntimeLifecycleApply,
@@ -110,6 +111,7 @@ async function queryTemporalStageAttemptReadModel(attempt: ReturnType<typeof que
 function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
+  const taskKind = canonicalFamilyRuntimeTaskKind(input.domainId, input.taskKind);
   const payload = input.requireStageAdmission
     ? {
         ...input.payload,
@@ -123,7 +125,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     if (existing) {
       const exportedPayloadJson = JSON.stringify(payload);
       const exportedTaskChanged = existing.payload_json !== exportedPayloadJson
-        || existing.task_kind !== input.taskKind
+        || existing.task_kind !== taskKind
         || existing.domain_id !== input.domainId;
       if (existing.status === 'succeeded' && exportedTaskChanged) {
         const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
@@ -135,7 +137,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           WHERE task_id = ?
         `).run(
           input.domainId,
-          input.taskKind,
+          taskKind,
           exportedPayloadJson,
           input.priority ?? 0,
           nextStatus,
@@ -161,7 +163,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
           taskId: refreshed.task_id,
           severity: 'info',
           title: 'Family runtime task requeued',
-          body: `${input.domainId}:${input.taskKind}`,
+          body: `${input.domainId}:${taskKind}`,
           payload: { status: nextStatus, dedupe_key: dedupeKey },
         });
         return {
@@ -188,7 +190,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
 
   const taskId = stableId('frt', [
     input.domainId,
-    input.taskKind,
+    taskKind,
     dedupeKey,
     payload,
     createdAt,
@@ -197,7 +199,7 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const task = {
     task_id: taskId,
     domain_id: input.domainId,
-    task_kind: input.taskKind,
+    task_kind: taskKind,
     payload_json: JSON.stringify(payload),
     dedupe_key: dedupeKey,
     priority: input.priority ?? 0,
@@ -232,13 +234,13 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     domainId: input.domainId,
     eventType: status === 'waiting_approval' ? 'task_waiting_approval' : 'task_enqueued',
     source: input.source ?? 'opl-cli',
-    payload: { task_kind: input.taskKind, dedupe_key: dedupeKey },
+    payload: { task_kind: taskKind, dedupe_key: dedupeKey },
   });
   insertNotification(db, {
     taskId,
     severity: 'info',
     title: status === 'waiting_approval' ? 'Family runtime task waiting for approval' : 'Family runtime task queued',
-    body: `${input.domainId}:${input.taskKind}`,
+    body: `${input.domainId}:${taskKind}`,
     payload: { status },
   });
   return {

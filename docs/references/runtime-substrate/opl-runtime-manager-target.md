@@ -19,11 +19,11 @@
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`
 
-Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / supervision truth、lease、SLO 与 repair command；`OPL Runtime Manager` 只读取 `family_runtime_supervision` surface 做 discovery、export、parity 与产品投影。`safe_reconcile_hint` 是路由提示，不是 OPL 写入 runtime truth 或启动 scheduler 的授权。
+MAS domain route 的 owner split 更窄：OPL 持有 wakeup、queue、attempt、retry、dead-letter、scheduler 与 workbench lifecycle；MAS 只暴露 `domain_route/reconcile-apply` 这类 route ref、owner receipt、typed blocker、SLO/readiness ref 与 safe action ref。`safe_reconcile_hint` 是路由提示，不是 OPL 写入 MAS truth 或启动 MAS-owned scheduler 的授权。
 
-Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS paper autonomy tasks 现在作为该规则的参考实现：`paper_autonomy/repair-recheck`、`paper_autonomy/ai-reviewer-recheck`、`paper_autonomy/gate-replay` 和 `paper_autonomy/route-decision` 会在 OPL 队列与 dispatch 文件中保留 source refs、next owner、callable surface、source fingerprint 与 idempotency key，但实际 repair、AI reviewer、gate replay、route decision 仍由 MAS owner surface 执行和落账。
+Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS 的当前 active route task kind 是 `domain_route/reconcile-apply`，OPL 队列与 dispatch 文件只保留 route ref、action ref、source refs、source fingerprint 与 idempotency key；实际 repair、AI reviewer、gate replay、route decision、truth mutation 或 owner receipt 仍由 MAS owner surface 执行和落账。
 
-当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS paper autonomy projection、MAG/RCA sidecar task hydration，以及 migration provider stopped -> repair -> ready 的 fixture 验收。Temporal-backed provider pilot / provider abstraction cutover 已推进到 repo-native live proof、本机 managed production proof、provider continuous proof projection、provider SLO cadence receipt 和 task-bound stage attempt bridge；MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是真实 provider long-run SLO、真实 MAS/MAG/RCA domain owner-chain soak、workspace/runtime memory body 或 writeback apply receipt、artifact/lifecycle apply receipt，以及真实 MAS paper controlled apply 到最终投稿级交付；这些均是测试/证据差距，必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
+当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS domain route projection、MAG/RCA sidecar task hydration，以及 migration provider stopped -> repair -> ready 的 fixture 验收。Temporal-backed provider pilot / provider abstraction cutover 已推进到 repo-native live proof、本机 managed production proof、provider continuous proof projection、provider SLO cadence receipt 和 task-bound stage attempt bridge；MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是真实 provider long-run SLO、真实 MAS/MAG/RCA domain owner-chain soak、workspace/runtime memory body 或 writeback apply receipt、artifact/lifecycle apply receipt，以及真实 MAS paper controlled apply 到最终投稿级交付；这些均是测试/证据差距，必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
 
 ## 当前要落地的最小面
 
@@ -51,7 +51,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
 - `skill_catalog.domain_projection.opl_stage_runtime_registration`
 - `runtime_continuity` / runtime-control projection
-- `family_runtime_supervision` read-only projection：adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 read-only authority boundary
+- `domain_route_projection` read-only projection：route ref、action ref、owner receipt / typed blocker refs、SLO state、safe reconcile hint、domain-owned source refs 与 read-only authority boundary
 - artifact / attention / runtime health index input
 - domain-owned resume、progress、approval 或 review/publication truth ref
 
@@ -100,7 +100,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 索引规则：
 
 - index 可以缓存与加速 OPL projection
-- runtime supervision index 只能缓存 `family_runtime_supervision` 的只读 projection 与 freshness 判断；修复必须回到 domain-owned repair command
+- domain route index 只能缓存 `domain_route_projection` 的只读 projection 与 freshness 判断；修复必须回到 domain-owned route/action receipt
 - 高频扫描、artifact manifest、session ledger/file state、目录 snapshot 与 large JSON validation 优先落在 Rust helper
 - index lifecycle 必须记录 TTL、diff history、failure log、last-success snapshot 与 freshness 状态；当前 helper 不可用时，OPL 需要明确报告是否还能临时信任上次成功快照
 - index 不得成为 domain-owned durable truth
