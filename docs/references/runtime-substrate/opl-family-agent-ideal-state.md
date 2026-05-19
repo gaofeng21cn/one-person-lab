@@ -45,7 +45,7 @@ Declarative Domain Pack
 
 这条规则高于现有实现分布。只要一个 surface 需要回答 readiness、owner、production consumption、domain authority、App route、launch guarantee 或 legacy cleanup，它必须引用对应权威 payload；不能重新读取另一套局部状态，也不能把描述性文档、旧 proof、fixture 或 historical wording 当成当前真相。
 
-成熟 agent/runtime 工程经验也指向同一约束：Temporal 把 durable workflow 状态、history、workers 和 task queue 分清；LangGraph 把 persistence/checkpoint 用于 thread state、human-in-the-loop 和 time travel；OpenAI Agents SDK 把 sessions、handoffs、guardrails、tracing 分成独立 primitive；MCP 把 tools、resources、prompts 按控制权拆开。OPL 吸收的是这些分层原则，不引入第二 runtime truth。
+成熟 agent/runtime 工程经验也指向同一约束：Temporal 官方模型把 workflow execution/history、activity、worker 和 task queue 拆成不同 durable execution primitive；LangGraph 官方文档把 persistence/checkpoint 用于 thread state、human-in-the-loop、time travel 与 replay；OpenAI Agents SDK 把 sessions、handoffs、guardrails、tracing 拆成独立 primitive；MCP 规范把 tools、resources、prompts 按 server capability 分开声明。OPL 吸收的是这些分层原则，不引入第二 runtime truth，也不把外部框架升级为 OPL provider、planner、executor 或 domain authority。本条参考 2026-05-19 live check 的 [Temporal Docs](https://docs.temporal.io/)、[Temporal SDK developer guide](https://docs.temporal.io/develop)、[LangGraph persistence](https://langchain-5e9cc07a.mintlify.app/oss/python/langgraph/persistence)、[OpenAI Agents SDK](https://developers.openai.com/api/docs/guides/agents)、[OpenAI Agents SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/) 与 [MCP server concepts](https://modelcontextprotocol.io/docs/learn/server-concepts)。
 
 ## 产品分层
 

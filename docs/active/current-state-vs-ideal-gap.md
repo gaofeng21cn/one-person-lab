@@ -113,17 +113,20 @@ RCA 当前 generated/hosted shell consumption、repo-local wrapper active-caller
 | Memory / artifact apply | OPL 只能读 refs，domain 持有 body 和 verdict；descriptor、read model 或 provider proof 不等于真实 workspace apply 已完成。 | MAS/MAG/RCA 在真实 workspace 中形成 accepted/rejected memory writeback、cleanup/restore/retention、artifact mutation receipt 和 operator drilldown。 |
 | Cross-family regression | 三仓都有 consumer boundary。 | generated surface caller migration 后，direct/hosted parity、no-forbidden-write、legacy no-active-caller 和 release/dist consumption 反复通过。 |
 
-## 最短实施顺序
+## 一次性并行闭环计划
 
-当前 main 已落地并需要持续守住的收敛顺序：
+本计划不是按阶段慢慢推进，而是以可并行 lane 一次性收敛到可用的 OPL Framework 主链路。`runtime-single-truth`、`generated-surface`、`app-drilldown`、`cli-parser`、`stage-guarantee` 和 `legacy-hygiene` 可以由独立 worktree/subagent 并行推进；同轮必须吸收回 main、清理临时 worktree/branch，并在 main 上跑集成验证。当前 main 已落地并需要持续守住的并行闭环面如下：
 
-1. `runtime-single-truth lane`：统一 lifecycle-aware provider readiness builder，让 `opl family-runtime status`、`opl status runtime`、`opl runtime manager` 和 App provider projection 同源消费；runtime manager 保留 repair/action facade。
-2. `generated-surface lane`：关闭 pack compiler 的 blocked/drift/readiness 差异，把 MAG transition oracle 收成 explicit evidence gate，而不是 generated artifact drift。
-3. `app-drilldown lane`：`app_operator_drilldown` 默认面改为 summary-first，`--detail full` 返回完整 refs/routes。
-4. `cli-parser lane`：`family-runtime` parser 拆到自然边界模块，public API 与命令行为保持稳定。
-5. `legacy-hygiene lane`：目标态、gap plan、closure matrix 与 status 已把旧 vocabulary 限定到 history/tombstone/provenance、negative guard 或 cleanup plan。
-6. `domain-production-evidence lane`：仍是后续工作。MAS paper、MAG grant、RCA visual 的真实 owner receipt、App/default caller、memory/artifact/lifecycle receipt 和 long-soak evidence 需要在 domain workspace 与 App 发布路径中继续形成。
-7. `integration lane`：每轮收口必须在 main 上运行 repo-native focused tests、contract validate、pack compiler、runtime status、App drilldown summary/full CLI 和 git/worktree cleanup 检查。
+| lane | 必须覆盖的污染/缺口 | 当前 main 状态 | 继续推进口径 |
+| --- | --- | --- | --- |
+| `runtime-single-truth lane` | `provider_readiness_truth_drift` | lifecycle-aware provider readiness builder 已被 `opl family-runtime status`、`opl status runtime`、`opl runtime manager` 和 App provider projection 同源消费；runtime manager 保留 repair/action facade。 | 以后新增 provider/status/App 面只能消费同一 payload；unconfigured / managed ready / local diagnostic 三态必须全 surface 一致。 |
+| `generated-surface lane` | `generated_surface_drift` | pack compiler blocked/drift/readiness 差异已关闭，MAG transition oracle 被建模为 explicit evidence gate，而不是 generated artifact drift。 | 等待 production evidence 的项必须继续写成 explicit evidence gate；不能把 generated descriptor ready 写成 domain ready。 |
+| `app-drilldown lane` | `app_operator_drilldown_overprojection` | `app_operator_drilldown` 默认面已 summary-first，完整 refs/routes 只能通过 `--detail full` 显式查询。 | App 默认页只消费 summary payload；detail drilldown 才读取完整 refs/routes，避免 projection 变成第二 runtime。 |
+| `cli-parser lane` | `family_runtime_cli_parser_monolith` | `family-runtime` parser 已拆到 provider、service/worker、scheduler、attempt、queue、lifecycle 等自然模块，public API 与命令行为保持稳定。 | 后续新增子命令进入对应 scoped module，并用 focused CLI parser tests 与 line-budget 守住。 |
+| `stage-guarantee lane` | stage launch guarantee 含糊 | stage scope refs、runtime assumptions、monitor refs 与 `guarantee_mode` 已进入 control-plane/proof-bundle/App projection。 | 继续把 selected executor binding、consumed refs、expected receipt refs、scope freshness 和 monitor freshness 扩到真实 production caller 链路。 |
+| `legacy-hygiene lane` | `legacy_vocabulary_active_leakage` | 目标态、gap plan、closure matrix 与 status 已把旧 vocabulary 限定到 history/tombstone/provenance、negative guard 或 cleanup plan。 | active caller 迁走后删除或 tombstone；不保留 compatibility alias、facade 或旧默认入口。 |
+| `domain-production-evidence lane` | OPL framework hygiene 之后的真实可用证据 | MAS paper、MAG grant、RCA visual 的 framework 接入面已能被 OPL 识别和投影。 | 在 domain workspace 与 App 发布路径中继续形成 owner receipt、App/default caller、memory/artifact/lifecycle receipt 和 long-soak evidence。 |
+| `integration lane` | 并行 worktree 吸收与回归 | 当前收口在 main 上通过 repo-native 验证。 | 每轮并行后必须 main 上跑 focused tests、contract validate、pack compiler、runtime status、App drilldown summary/full CLI、git/worktree cleanup 检查。 |
 
 ## 当前不能写成
 
