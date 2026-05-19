@@ -155,6 +155,7 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let retryBudgetFile: string | undefined;
   let sourceFingerprint: string | undefined;
   let executorKind: string | undefined;
+  let executorBindingRef: string | undefined;
   let taskId: string | undefined;
   let blockedReason: string | undefined;
   let requireStageAdmission = false;
@@ -198,6 +199,9 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       index += 1;
     } else if (token === '--executor-kind' && value) {
       executorKind = value;
+      index += 1;
+    } else if (token === '--executor-binding-ref' && value) {
+      executorBindingRef = value;
       index += 1;
     } else if (token === '--task' && value) {
       taskId = value;
@@ -243,6 +247,7 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       workspaceLocator: parsePayloadArg(workspaceLocator, workspaceLocatorFile),
       sourceFingerprint,
       executorKind,
+      executorBindingRef,
       taskId,
       retryBudget: retryBudget || retryBudgetFile ? parsePayloadArg(retryBudget, retryBudgetFile) : undefined,
       checkpointRefs,

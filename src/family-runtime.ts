@@ -13,6 +13,7 @@ import {
   inspectFamilyRuntimeProviders,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import { buildStageLaunchInvocationProjection } from './family-runtime-launch-invocation.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { runTemporalServiceCommand } from './family-runtime-temporal-service-command.ts';
 import {
@@ -803,6 +804,20 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_create') {
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.input.providerKind);
+      const sourceFingerprint = parsed.input.sourceFingerprint?.trim() || null;
+      const taskId = parsed.input.taskId?.trim() || null;
+      const baseIdempotencyKey = stableId('idem', [
+        parsed.input.domainId,
+        parsed.input.stageId,
+        providerKind,
+        parsed.input.workspaceLocator,
+        sourceFingerprint,
+        taskId,
+      ]);
+      const projectedIdempotencyKey = parsed.input.newAttempt
+        ? stableId('idem', [baseIdempotencyKey, 'new_attempt_requested'])
+        : baseIdempotencyKey;
       const defaultStageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
@@ -818,8 +833,23 @@ export async function runFamilyRuntime(args: string[]) {
           })
         : null;
       const stageLaunchAdmissionGate = requiredStageAdmissionGate ?? defaultStageLaunchAdmissionGate;
+      const launchInvocation = buildStageLaunchInvocationProjection({
+        domainId: parsed.input.domainId,
+        stageId: parsed.input.stageId,
+        providerKind,
+        workspaceLocator: parsed.input.workspaceLocator,
+        sourceFingerprint,
+        executorKind: parsed.input.executorKind,
+        executorBindingRef: parsed.input.executorBindingRef,
+        taskId,
+        idempotencyKey: projectedIdempotencyKey,
+        requireStageAdmission: parsed.input.requireStageAdmission,
+        planeId: stageLaunchAdmissionGate.plane_id,
+        admissionPlaneId: stageLaunchAdmissionGate.plane_id,
+      });
       const blockedReason =
-        requiredStageAdmissionGate?.blocked_reason
+        launchInvocation.blocker_reason
+        ?? requiredStageAdmissionGate?.blocked_reason
         ?? parsed.input.blockedReason
         ?? defaultStageLaunchAdmissionGate.block_reason
         ?? undefined;
@@ -827,9 +857,12 @@ export async function runFamilyRuntime(args: string[]) {
         ...parsed.input,
         blockedReason,
         launchAdmissionGate: stageLaunchAdmissionGate,
+        launchInvocation,
       });
       const { attempt } = result;
       const stageLaunchBlockedByAdmission =
+        Boolean(launchInvocation.blocker_reason)
+        ||
         requiredStageAdmissionGate?.status === 'blocked'
         || defaultStageLaunchAdmissionGate.gate_action === 'block_stage_launch';
       const temporal_start = parsed.input.start
@@ -854,6 +887,7 @@ export async function runFamilyRuntime(args: string[]) {
           stage_id: attempt.stage_id,
           task_id: attempt.task_id,
           stage_launch_admission_gate: stageLaunchAdmissionGate,
+          launch_invocation: launchInvocation,
           temporal_start,
         },
       });
@@ -865,9 +899,13 @@ export async function runFamilyRuntime(args: string[]) {
           idempotent_noop: result.idempotent_noop,
           attempt,
           stage_launch_admission_gate: stageLaunchAdmissionGate,
+          launch_invocation: launchInvocation,
           conflict_or_blocker_envelopes: 'conflict_or_blocker_envelopes' in result
             ? result.conflict_or_blocker_envelopes
-            : requiredStageAdmissionGate?.conflict_or_blocker_envelopes ?? [],
+            : [
+                ...launchInvocation.conflict_or_blocker_envelopes,
+                ...(requiredStageAdmissionGate?.conflict_or_blocker_envelopes ?? []),
+              ],
           temporal_start,
         },
       };

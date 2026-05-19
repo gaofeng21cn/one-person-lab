@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -69,6 +69,145 @@ test('family-runtime stage attempt create is idempotent by semantic attempt key 
       first.family_runtime_stage_attempt.attempt.idempotency_key,
       third.family_runtime_stage_attempt.attempt.idempotency_key,
     );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt create projects launch invocation and gates non-default executor binding', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-launch-invocation-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = {
+    ...fixtures.medautoscience,
+    family_stage_control_plane: {
+      surface_kind: 'family_stage_control_plane',
+      version: 'family-stage-control-plane.v1',
+      plane_id: 'med_autoscience_stage_control_plane',
+      target_domain_id: 'med-autoscience',
+      owner: 'med-autoscience',
+      authority_boundary: { opl_role: 'projection_consumer_only' },
+      stages: [
+        {
+          stage_id: 'scout',
+          stage_kind: 'planning',
+          title: 'Scout',
+          summary: 'Plan from explicit source refs.',
+          goal: 'Prepare an admitted planning stage under MAS authority.',
+          owner: 'med-autoscience',
+          domain_stage_refs: ['scout'],
+          inputs: [],
+          knowledge_refs: [],
+          skills: [],
+          prompt_refs: [],
+          allowed_action_refs: [],
+          outputs: [],
+          evaluation: [],
+          handoff: null,
+          source_refs: [],
+          freshness: null,
+          action_parity: null,
+          stage_contract: {
+            requires: ['sources_ready'],
+            ensures: ['plan_ready'],
+            boundary_assumptions: ['domain_truth_remains_domain_owned'],
+            properties: [],
+            runtime_assumptions: [],
+            monitor_refs: [],
+            source_scope_refs: [],
+            artifact_scope_refs: [],
+            workspace_scope_refs: [],
+          },
+          trust_boundary: {
+            lane: 'domain_agent',
+            static_check_eligible: true,
+            effect_boundary: false,
+            records_runtime_events: false,
+          },
+          authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
+        },
+      ],
+      notes: [],
+    },
+  };
+  const baseArgs = [
+    'family-runtime',
+    'attempt',
+    'create',
+    '--domain',
+    'medautoscience',
+    '--stage',
+    'scout',
+    '--provider',
+    'local_sqlite',
+    '--workspace-locator',
+    '{"workspace_root":"/tmp/mas"}',
+    '--source-fingerprint',
+    'sha256:scout-launch',
+    '--require-stage-admission',
+  ];
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  });
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], env);
+
+    const codex = runCli(baseArgs, env);
+    const codexAttempt = codex.family_runtime_stage_attempt.attempt;
+    const codexInvocation = codex.family_runtime_stage_attempt.launch_invocation;
+
+    assert.equal(codexAttempt.status, 'queued');
+    assert.equal(codexInvocation.surface_kind, 'opl_stage_launch_invocation');
+    assert.equal(codexInvocation.selected_executor_kind, 'codex_cli');
+    assert.equal(codexInvocation.executor_binding_status, 'default_codex_cli');
+    assert.equal(codexInvocation.authority_boundary.executor_behavior_equivalence_claim, false);
+    assert.equal(codexInvocation.authority_boundary.can_execute_stage, false);
+    assert.equal(
+      codexAttempt.activity_events.some((event: { event_kind: string }) =>
+        event.event_kind === 'stage_launch_invocation'
+      ),
+      true,
+    );
+
+    const missingBinding = runCli([
+      ...baseArgs,
+      '--new-attempt',
+      '--executor-kind',
+      'hermes_agent',
+    ], env);
+    const missingInvocation = missingBinding.family_runtime_stage_attempt.launch_invocation;
+    assert.equal(missingBinding.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(missingInvocation.executor_binding_status, 'missing_non_default_executor_binding');
+    assert.equal(missingInvocation.blocker_reason, 'non_default_executor_binding_ref_missing');
+    assert.equal(
+      missingBinding.family_runtime_stage_attempt.conflict_or_blocker_envelopes.some((envelope: { reason: string }) =>
+        envelope.reason === 'non_default_executor_binding_ref_missing'
+      ),
+      true,
+    );
+
+    const declaredBinding = runCli([
+      ...baseArgs,
+      '--new-attempt',
+      '--executor-kind',
+      'hermes_agent',
+      '--executor-binding-ref',
+      'executor-binding:hermes-agent/audit-demo',
+    ], env);
+    const declaredInvocation = declaredBinding.family_runtime_stage_attempt.launch_invocation;
+    assert.equal(declaredBinding.family_runtime_stage_attempt.attempt.status, 'queued');
+    assert.equal(declaredInvocation.executor_binding_status, 'explicit_executor_binding_declared');
+    assert.equal(declaredInvocation.launch_refs.executor_binding_ref, 'executor-binding:hermes-agent/audit-demo');
+    assert.equal(declaredInvocation.authority_boundary.graphflow_runtime_dependency, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
