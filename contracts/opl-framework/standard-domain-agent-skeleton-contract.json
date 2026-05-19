@@ -87,10 +87,11 @@
       "domain_memory_descriptor_locator",
       "artifact_locator_contract",
       "owner_receipt_contract",
-      "private_functional_surface_policy",
       "quality_or_export_gate_refs",
       "physical_skeleton_follow_through",
-      "legacy_retirement_tombstone_proof"
+      "legacy_retirement_tombstone_proof",
+      "private_functional_surface_policy",
+      "functional_privatization_audit"
     ],
     "opl_owned_generic_primitives": [
       "scheduler_supervision_cadence",
@@ -160,6 +161,8 @@
       "replacement_or_no_regression_evidence",
       "receipt_ref_reconciliation",
       "git_diff_check",
+      "agent_pack_required_paths_resolve",
+      "stage_prompt_skill_knowledge_quality_gate_refs_resolve",
       "functional_privatization_audit_no_generic_owner",
       "pack_compiler_input_schema_check",
       "generated_surface_handoff_parity",
@@ -299,6 +302,7 @@
       "generated_surfaces": [
         "cli",
         "mcp",
+        "skill",
         "product_entry_manifest",
         "sidecar_export_dispatch",
         "status_read_model",
@@ -315,12 +319,32 @@
       "surfaces": [
         "cli",
         "mcp",
+        "skill",
         "product_entry_manifest",
         "sidecar_export_dispatch",
         "status_read_model",
         "workbench_drilldown",
         "functional_harness_cases"
       ]
+    },
+    "agent_pack_contract": {
+      "canonical_semantic_pack_root": "agent/",
+      "required_sections": [
+        "agent/prompts",
+        "agent/stages",
+        "agent/skills",
+        "agent/knowledge",
+        "agent/quality_gates"
+      ],
+      "required_domain_pack_paths_field": "contracts/pack_compiler_input.json#/required_domain_pack_paths",
+      "stage_ref_requirements": [
+        "prompt_refs:agent/prompts/*",
+        "skills:agent/skills/* or skill_id",
+        "knowledge_refs:agent/knowledge/*",
+        "evaluation:agent/quality_gates/*"
+      ],
+      "validator": "opl agents scaffold --validate <repo-dir>",
+      "empty_agent_directory_policy": "blocked"
     },
     "domain_retained_thin_surfaces_deprecated": [
       "domain_truth",

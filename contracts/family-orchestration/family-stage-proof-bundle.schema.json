@@ -132,6 +132,7 @@
       }
     },
     "proof_runtime_metrics": {
+      "description": "Scale-oriented counts derived from the proof bundle for OPL scheduling and operator observability only. These metrics do not authorize a domain ready, quality, receipt, or artifact verdict.",
       "$ref": "#/$defs/proof_runtime_metrics"
     },
     "authority_boundary": {

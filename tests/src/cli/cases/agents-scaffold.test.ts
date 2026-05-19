@@ -216,6 +216,11 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/domain_intake.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/prompts/domain_intake.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/skills/domain_execution.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/knowledge/domain_boundary.md')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'agent/quality_gates/domain_acceptance.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/policies/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/authority_functions/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/native_helpers/README.md')), true);
@@ -233,6 +238,47 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(packCompilerInput.surface_kind, 'opl_domain_pack_compiler_input');
     assert.equal(packCompilerInput.generated_surface_owner, 'one-person-lab');
     assert.equal(packCompilerInput.domain_pack_owner, 'award-foundry');
+    assert.equal(packCompilerInput.canonical_semantic_pack_root, 'agent/');
+    assert.deepEqual(packCompilerInput.required_domain_pack_paths, [
+      'agent/prompts/domain_intake.md',
+      'agent/stages/domain_intake.md',
+      'agent/skills/domain_execution.md',
+      'agent/knowledge/domain_boundary.md',
+      'agent/quality_gates/domain_acceptance.md',
+    ]);
+    const stageControlPlane = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/stage_control_plane.json'), 'utf8'),
+    );
+    assert.equal(stageControlPlane.surface_kind, 'family_stage_control_plane');
+    assert.equal(stageControlPlane.stages.length, 1);
+    assert.deepEqual(stageControlPlane.stages[0].prompt_refs, [
+      {
+        ref_kind: 'repo_path',
+        ref: 'agent/prompts/domain_intake.md',
+        role: 'stage_prompt',
+      },
+    ]);
+    assert.deepEqual(stageControlPlane.stages[0].skills, [
+      {
+        ref_kind: 'repo_path',
+        ref: 'agent/skills/domain_execution.md',
+        role: 'domain_pack_skill_policy',
+      },
+    ]);
+    assert.deepEqual(stageControlPlane.stages[0].knowledge_refs, [
+      {
+        ref_kind: 'repo_path',
+        ref: 'agent/knowledge/domain_boundary.md',
+        role: 'domain_pack_knowledge',
+      },
+    ]);
+    assert.deepEqual(stageControlPlane.stages[0].evaluation, [
+      {
+        ref_kind: 'repo_path',
+        ref: 'agent/quality_gates/domain_acceptance.md',
+        role: 'agent_quality_gate',
+      },
+    ]);
     const generatedSurfaceHandoff = JSON.parse(
       fs.readFileSync(path.join(targetDir, 'contracts/generated_surface_handoff.json'), 'utf8'),
     );
@@ -273,7 +319,60 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(validated.state, 'validated');
     assert.equal(validated.validation.status, 'passed');
     assert.equal(validated.validation.functional_privatization_audit_required, true);
+    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 5);
+    assert.deepEqual(
+      validated.validation.agent_pack_validation.section_status.map((
+        item: { section: string; status: string },
+      ) => [item.section, item.status]),
+      [
+        ['prompts', 'ok'],
+        ['stages', 'ok'],
+        ['skills', 'ok'],
+        ['quality_gates', 'ok'],
+        ['knowledge', 'ok'],
+      ],
+    );
+    assert.equal(validated.validation.stage_ref_validation.stage_count, 1);
     assert.deepEqual(validated.validation.blockers, []);
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks empty or unreferenced agent directories', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-empty-agent-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'empty-agent',
+    ]);
+    fs.rmSync(path.join(targetDir, 'agent/prompts/domain_intake.md'));
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(
+      validated.validation.blockers.includes(
+        'invalid_domain_pack_path:agent/prompts/domain_intake.md:missing',
+      ),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('missing_agent_pack_section:prompts'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.some((blocker: string) =>
+        blocker.startsWith('stage_invalid_agent_ref:domain_intake:agent/prompts/domain_intake.md:missing')
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }

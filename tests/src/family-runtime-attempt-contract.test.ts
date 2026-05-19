@@ -251,10 +251,27 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   assert.ok(scaffold.minimal_authority_functions.includes('quality_or_export_verdict_authorizer'));
   assert.equal(scaffold.pack_compiler_contract.generated_surface_owner, 'one-person-lab');
   assert.ok(scaffold.generated_surface_contract.surfaces.includes('cli'));
+  assert.ok(scaffold.generated_surface_contract.surfaces.includes('skill'));
   assert.ok(scaffold.required_contract_surfaces.includes('pack_compiler_input'));
   assert.ok(scaffold.required_contract_surfaces.includes('generated_surface_handoff'));
   assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'));
   assert.ok(scaffold.retirement_gate_required_evidence.includes('no_active_default_caller'));
   assert.ok(scaffold.required_verification.includes('git_diff_check'));
+  assert.ok(scaffold.required_verification.includes('agent_pack_required_paths_resolve'));
+  assert.ok(scaffold.required_verification.includes('stage_prompt_skill_knowledge_quality_gate_refs_resolve'));
   assert.ok(scaffold.required_verification.includes('generated_surface_handoff_parity'));
+  assert.equal(scaffold.agent_pack_contract.canonical_semantic_pack_root, 'agent/');
+  assert.deepEqual(scaffold.agent_pack_contract.required_sections, [
+    'agent/prompts',
+    'agent/stages',
+    'agent/skills',
+    'agent/knowledge',
+    'agent/quality_gates',
+  ]);
+  assert.deepEqual(scaffold.agent_pack_contract.stage_ref_requirements, [
+    'prompt_refs:agent/prompts/*',
+    'skills:agent/skills/* or skill_id',
+    'knowledge_refs:agent/knowledge/*',
+    'evaluation:agent/quality_gates/*',
+  ]);
 });

@@ -169,6 +169,7 @@ const REQUIRED_CONTRACT_SURFACES = [
   'quality_or_export_gate_refs',
   'physical_skeleton_follow_through',
   'legacy_retirement_tombstone_proof',
+  'private_functional_surface_policy',
   'functional_privatization_audit',
 ] as const;
 
@@ -180,6 +181,8 @@ const REQUIRED_VERIFICATION = [
   'replacement_or_no_regression_evidence',
   'receipt_ref_reconciliation',
   'git_diff_check',
+  'agent_pack_required_paths_resolve',
+  'stage_prompt_skill_knowledge_quality_gate_refs_resolve',
   'pack_compiler_input_schema_check',
   'generated_surface_handoff_parity',
   'generated_surface_no_domain_owner',
@@ -187,6 +190,15 @@ const REQUIRED_VERIFICATION = [
 ] as const;
 
 const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
+const STARTER_STAGE_ID = 'domain_intake';
+const REQUIRED_AGENT_PACK_SECTIONS = [
+  { section: 'prompts', prefix: 'agent/prompts/' },
+  { section: 'stages', prefix: 'agent/stages/' },
+  { section: 'skills', prefix: 'agent/skills/' },
+  { section: 'quality_gates', prefix: 'agent/quality_gates/' },
+  { section: 'knowledge', prefix: 'agent/knowledge/' },
+] as const;
+const FORBIDDEN_AGENT_PACK_TEXT = /\b(TODO|TBD)\b/i;
 
 const OPL_GENERATED_SURFACES = [
   {
@@ -200,6 +212,12 @@ const OPL_GENERATED_SURFACES = [
     owner: 'one-person-lab',
     source_contract: 'contracts/pack_compiler_input.json',
     domain_policy: 'domain_repo_does_not_handwrite_generic_tool_shell',
+  },
+  {
+    surface_id: 'skill',
+    owner: 'one-person-lab',
+    source_contract: 'contracts/pack_compiler_input.json',
+    domain_policy: 'domain_repo_declares_skill_policy_refs_and_direct_path_parity',
   },
   {
     surface_id: 'product_entry_manifest',
@@ -267,6 +285,26 @@ const GENERATED_SURFACE_CONTRACT = {
   },
 } as const;
 
+const AGENT_PACK_CONTRACT = {
+  canonical_semantic_pack_root: 'agent/',
+  required_sections: [
+    'agent/prompts',
+    'agent/stages',
+    'agent/skills',
+    'agent/knowledge',
+    'agent/quality_gates',
+  ],
+  required_domain_pack_paths_field: 'contracts/pack_compiler_input.json#/required_domain_pack_paths',
+  stage_ref_requirements: [
+    'prompt_refs:agent/prompts/*',
+    'skills:agent/skills/* or skill_id',
+    'knowledge_refs:agent/knowledge/*',
+    'evaluation:agent/quality_gates/*',
+  ],
+  validator: 'opl agents scaffold --validate <repo-dir>',
+  empty_agent_directory_policy: 'blocked',
+} as const;
+
 function normalizeDomainId(value: string | undefined) {
   return (value || 'new-domain-agent')
     .trim()
@@ -291,20 +329,40 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       content: `# ${domainLabel} Stages\n\nOPL-facing stage descriptors live here. Domain stage semantics, quality gates, and owner receipts stay domain-owned.\n`,
     },
     {
+      path: `agent/stages/${STARTER_STAGE_ID}.md`,
+      content: `# ${domainLabel} Domain Intake Stage\n\nPurpose: capture the first domain-specific request, source refs, authority boundary, and handoff criteria before any OPL-hosted execution starts.\n\nRequired inputs: user intent, source locator refs, expected deliverable class, domain authority owner, and blocked-scope list.\n\nRequired outputs: intake receipt ref, accepted next-stage ref, typed blocker ref when intent or authority is unclear, and no-forbidden-write evidence ref.\n`,
+    },
+    {
       path: 'agent/prompts/README.md',
       content: `# ${domainLabel} Prompts\n\nPrompt bodies remain domain-owned. OPL may reference prompt locators but does not copy domain truth or memory body.\n`,
+    },
+    {
+      path: `agent/prompts/${STARTER_STAGE_ID}.md`,
+      content: `# ${domainLabel} Domain Intake Prompt\n\nRead the user request, source locators, target deliverable, and known constraints. Return only domain-owned intake refs, an explicit authority boundary, and a next-stage recommendation. Do not write domain truth, memory body, artifacts, quality verdicts, or export verdicts from the OPL generated interface.\n`,
     },
     {
       path: 'agent/skills/README.md',
       content: `# ${domainLabel} Skills\n\nDeclare direct domain skill entry points here and keep direct path parity with OPL-hosted invocation receipts.\n`,
     },
     {
+      path: 'agent/skills/domain_execution.md',
+      content: `# ${domainLabel} Domain Execution Skill Policy\n\nThe direct domain skill is the owner path for domain execution. OPL-generated CLI, MCP, product-entry, sidecar, status, and workbench surfaces route to declared domain handlers or refs-only adapters and require owner receipts for mutating or verdict-bearing outcomes.\n`,
+    },
+    {
       path: 'agent/knowledge/README.md',
       content: `# ${domainLabel} Knowledge\n\nStore knowledge locators and policies here. Runtime memory bodies belong in the workspace/runtime memory root, not in OPL state.\n`,
     },
     {
+      path: 'agent/knowledge/domain_boundary.md',
+      content: `# ${domainLabel} Domain Boundary Knowledge\n\nThis pack owns the domain vocabulary, truth boundaries, source policies, memory-locator semantics, and artifact-authority rules needed by stage execution. OPL consumes these refs for routing and projection only.\n`,
+    },
+    {
       path: 'agent/quality_gates/README.md',
       content: `# ${domainLabel} Quality Gates\n\nQuality, readiness, and export verdicts are owned by this domain agent. OPL only projects refs and receipts.\n`,
+    },
+    {
+      path: 'agent/quality_gates/domain_acceptance.md',
+      content: `# ${domainLabel} Domain Acceptance Gate\n\nA stage may close only with a domain owner receipt, typed blocker, or explicit route-back ref. Mechanical completion, schema completeness, provider completion, or generated-surface readiness cannot declare domain ready, quality accepted, or export approved.\n`,
     },
     {
       path: 'agent/policies/README.md',
@@ -333,6 +391,15 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
         schema_version: 1,
         domain_id: domainId,
         domain_pack_owner: domainId,
+        canonical_semantic_pack_root: 'agent/',
+        canonical_semantic_pack_role: 'repo_source_declarative_domain_pack',
+        required_domain_pack_paths: [
+          `agent/prompts/${STARTER_STAGE_ID}.md`,
+          `agent/stages/${STARTER_STAGE_ID}.md`,
+          'agent/skills/domain_execution.md',
+          'agent/knowledge/domain_boundary.md',
+          'agent/quality_gates/domain_acceptance.md',
+        ],
         generated_surface_owner: 'one-person-lab',
         declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
         minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
@@ -369,10 +436,83 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
     {
       path: 'contracts/stage_control_plane.json',
       content: json({
-        surface_kind: 'stage_control_plane',
-        schema_version: 1,
+        surface_kind: 'family_stage_control_plane',
+        version: 'family-stage-control-plane.v1',
+        plane_id: `${domainId}.stage-control-plane.v1`,
+        target_domain_id: domainId,
+        owner: domainId,
         domain_id: domainId,
-        stages: [],
+        authority_boundary: {
+          domain_truth_owner: domainId,
+          opl_role: 'projection_consumer_only',
+          opl_can_write_domain_truth: false,
+          opl_can_authorize_quality_or_export: false,
+        },
+        stages: [
+          {
+            stage_id: STARTER_STAGE_ID,
+            stage_kind: 'intake',
+            title: 'Domain intake',
+            summary: 'Capture domain intent, source refs, authority boundary, and next-stage readiness.',
+            goal: 'Produce intake receipt refs and a next-stage recommendation without granting OPL domain truth authority.',
+            owner: domainId,
+            domain_stage_refs: [STARTER_STAGE_ID],
+            inputs: [],
+            knowledge_refs: [
+              {
+                ref_kind: 'repo_path',
+                ref: 'agent/knowledge/domain_boundary.md',
+                role: 'domain_pack_knowledge',
+              },
+            ],
+            skills: [
+              {
+                ref_kind: 'repo_path',
+                ref: 'agent/skills/domain_execution.md',
+                role: 'domain_pack_skill_policy',
+              },
+            ],
+            prompt_refs: [
+              {
+                ref_kind: 'repo_path',
+                ref: `agent/prompts/${STARTER_STAGE_ID}.md`,
+                role: 'stage_prompt',
+              },
+            ],
+            allowed_action_refs: [],
+            outputs: [
+              {
+                ref_kind: 'domain_ref',
+                ref: ['intake_receipt_ref', 'typed_blocker_ref', 'next_stage_ref'],
+                role: 'domain_intake_refs',
+              },
+            ],
+            evaluation: [
+              {
+                ref_kind: 'repo_path',
+                ref: 'agent/quality_gates/domain_acceptance.md',
+                role: 'agent_quality_gate',
+              },
+            ],
+            handoff: {
+              next_owner: domainId,
+              next_stage_refs: [],
+            },
+            source_refs: [
+              {
+                ref_kind: 'repo_path',
+                ref: `agent/stages/${STARTER_STAGE_ID}.md`,
+                role: 'stage_policy',
+              },
+            ],
+            authority_boundary: {
+              domain_truth_owner: domainId,
+              opl_role: 'projection_consumer_only',
+              opl_can_write_domain_truth: false,
+              opl_can_authorize_quality_or_export: false,
+            },
+          },
+        ],
         marker: SCAFFOLD_MARKER,
       }),
     },
@@ -380,8 +520,16 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       path: 'contracts/action_catalog.json',
       content: json({
         surface_kind: 'family_action_catalog',
-        schema_version: 1,
+        version: 'family-action-catalog.v1',
+        catalog_id: `${domainId}.action-catalog.v1`,
+        target_domain_id: domainId,
+        owner: domainId,
         domain_id: domainId,
+        authority_boundary: {
+          domain_truth_owner: domainId,
+          opl_role: 'projection_consumer_only',
+          write_policy: 'no_domain_truth_writes',
+        },
         actions: [],
         forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
         marker: SCAFFOLD_MARKER,
@@ -560,6 +708,257 @@ function readJsonFile(filePath: string) {
   }
 }
 
+function readOptionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => readOptionalString(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readRecordArray(value: unknown) {
+  return Array.isArray(value) ? value.filter(isPlainRecord) : [];
+}
+
+function refValues(refs: unknown) {
+  return readRecordArray(refs).flatMap((ref) => {
+    const raw = ref.ref;
+    if (Array.isArray(raw)) {
+      return readStringArray(raw);
+    }
+    return readOptionalString(raw) ? [readOptionalString(raw)!] : [];
+  });
+}
+
+function resolvePackRoot(value: unknown) {
+  const rawRoot =
+    readOptionalString(value)
+    ?? (isPlainRecord(value) ? readOptionalString(value.path) : null)
+    ?? 'agent/';
+  const withSlash = rawRoot.endsWith('/') ? rawRoot : `${rawRoot}/`;
+  return withSlash.replace(/^\.?\//, '');
+}
+
+function isInsideRepo(relativePath: string) {
+  return relativePath
+    && !path.isAbsolute(relativePath)
+    && !relativePath.split(/[\\/]+/).includes('..');
+}
+
+function readPackFileStatus(repoDir: string, relativePath: string) {
+  if (!isInsideRepo(relativePath)) {
+    return {
+      path: relativePath,
+      status: 'blocked_path_outside_repo',
+    };
+  }
+  const absolutePath = path.join(repoDir, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    return {
+      path: relativePath,
+      status: 'missing',
+    };
+  }
+  const stat = fs.statSync(absolutePath);
+  if (!stat.isFile()) {
+    return {
+      path: relativePath,
+      status: 'not_file',
+    };
+  }
+  const text = fs.readFileSync(absolutePath, 'utf8').trim();
+  if (!text) {
+    return {
+      path: relativePath,
+      status: 'empty',
+    };
+  }
+  if (FORBIDDEN_AGENT_PACK_TEXT.test(text)) {
+    return {
+      path: relativePath,
+      status: 'blocked_placeholder_marker',
+    };
+  }
+  return {
+    path: relativePath,
+    status: 'ok',
+  };
+}
+
+function readStageAgentRefStatus(repoDir: string, relativePath: string) {
+  if (!isInsideRepo(relativePath)) {
+    return {
+      path: relativePath,
+      status: 'blocked_path_outside_repo',
+    };
+  }
+  const absolutePath = path.join(repoDir, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    return {
+      path: relativePath,
+      status: 'missing',
+    };
+  }
+  const stat = fs.statSync(absolutePath);
+  if (stat.isDirectory()) {
+    const normalized = relativePath.endsWith('/') ? relativePath : `${relativePath}/`;
+    return normalized === 'agent/'
+      ? {
+        path: relativePath,
+        status: 'ok',
+        ref_kind: 'pack_root_directory',
+      }
+      : {
+        path: relativePath,
+        status: 'not_file',
+      };
+  }
+  return readPackFileStatus(repoDir, relativePath);
+}
+
+function listedPackPaths(packCompilerInput: unknown) {
+  if (!isPlainRecord(packCompilerInput)) {
+    return [];
+  }
+  const direct = readStringArray(packCompilerInput.required_domain_pack_paths);
+  const sourceRefs = isPlainRecord(packCompilerInput.source_refs) ? packCompilerInput.source_refs : {};
+  return [...new Set([
+    ...direct,
+    ...readStringArray(sourceRefs.required_domain_pack_paths),
+  ])];
+}
+
+function discoverPackFiles(repoDir: string, packRoot: string) {
+  const rootPath = path.join(repoDir, packRoot);
+  if (!fs.existsSync(rootPath) || !fs.statSync(rootPath).isDirectory()) {
+    return [];
+  }
+  const files: string[] = [];
+  const visit = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolutePath);
+      } else if (entry.isFile()) {
+        files.push(path.relative(repoDir, absolutePath).split(path.sep).join('/'));
+      }
+    }
+  };
+  visit(rootPath);
+  return files.sort();
+}
+
+function validateAgentPackFiles(repoDir: string, packCompilerInput: unknown) {
+  const packRoot = resolvePackRoot(
+    isPlainRecord(packCompilerInput)
+      ? packCompilerInput.canonical_semantic_pack_root
+        ?? packCompilerInput.canonical_repo_source_semantic_pack_root
+        ?? packCompilerInput.domain_pack_root
+        ?? packCompilerInput.canonical_repo_source_semantic_pack
+      : null,
+  );
+  const listedPaths = listedPackPaths(packCompilerInput);
+  const discoveredPaths = discoverPackFiles(repoDir, packRoot);
+  const semanticListedPaths = listedPaths.filter((item) => item.startsWith(packRoot) && !item.endsWith('/README.md'));
+  const packFileStatus = listedPaths.map((item) => readPackFileStatus(repoDir, item));
+  const sectionStatus = REQUIRED_AGENT_PACK_SECTIONS.map(({ section, prefix }) => {
+    const semanticFiles = discoveredPaths.filter((file) => file.startsWith(prefix) && !file.endsWith('/README.md'));
+    return {
+      section,
+      prefix,
+      semantic_file_count: semanticFiles.length,
+      status: semanticFiles.length > 0 ? 'ok' : 'missing_semantic_file',
+    };
+  });
+  return {
+    pack_root: packRoot,
+    listed_paths: listedPaths,
+    semantic_listed_path_count: semanticListedPaths.length,
+    discovered_path_count: discoveredPaths.length,
+    pack_file_status: packFileStatus,
+    section_status: sectionStatus,
+    blockers: [
+      fs.existsSync(path.join(repoDir, packRoot)) ? null : `missing_agent_pack_root:${packRoot}`,
+      semanticListedPaths.length > 0 ? null : 'missing_required_domain_pack_paths',
+      ...packFileStatus
+        .filter((item) => item.status !== 'ok')
+        .map((item) => `invalid_domain_pack_path:${item.path}:${item.status}`),
+      ...sectionStatus
+        .filter((item) => item.status !== 'ok')
+        .map((item) => `missing_agent_pack_section:${item.section}`),
+    ].filter((entry): entry is string => Boolean(entry)),
+  };
+}
+
+function refIncludesRepoPack(refs: unknown, prefix: string) {
+  return refValues(refs).some((value) => value.startsWith(prefix));
+}
+
+function validateStageRefs(repoDir: string, stageControlPlane: unknown) {
+  const stages = isPlainRecord(stageControlPlane) ? readRecordArray(stageControlPlane.stages) : [];
+  const stageStatuses = stages.map((stage) => {
+    const stageId = readOptionalString(stage.stage_id) ?? 'unknown_stage';
+    const checks = [
+      {
+        field: 'prompt_refs',
+        status: refIncludesRepoPack(stage.prompt_refs, 'agent/prompts/') ? 'ok' : 'missing_agent_prompt_ref',
+      },
+      {
+        field: 'skills',
+        status: refValues(stage.skills).length > 0 ? 'ok' : 'missing_skill_ref',
+      },
+      {
+        field: 'knowledge_refs',
+        status: refIncludesRepoPack(stage.knowledge_refs, 'agent/knowledge/') ? 'ok' : 'missing_agent_knowledge_ref',
+      },
+      {
+        field: 'evaluation',
+        status: refIncludesRepoPack(stage.evaluation, 'agent/quality_gates/') ? 'ok' : 'missing_agent_quality_gate_ref',
+      },
+    ];
+    const referencedAgentFiles = [
+      ...refValues(stage.prompt_refs),
+      ...refValues(stage.skills),
+      ...refValues(stage.knowledge_refs),
+      ...refValues(stage.evaluation),
+      ...refValues(stage.source_refs),
+    ].filter((value) => value.startsWith('agent/'));
+    const fileStatuses = [...new Set(referencedAgentFiles)]
+      .map((item) => readStageAgentRefStatus(repoDir, item));
+    return {
+      stage_id: stageId,
+      checks,
+      referenced_agent_files: referencedAgentFiles,
+      file_status: fileStatuses,
+      blockers: [
+        ...checks
+          .filter((check) => check.status !== 'ok')
+          .map((check) => `stage_missing_${check.field}:${stageId}:${check.status}`),
+        ...fileStatuses
+          .filter((item) => item.status !== 'ok')
+          .map((item) => `stage_invalid_agent_ref:${stageId}:${item.path}:${item.status}`),
+      ],
+    };
+  });
+  return {
+    stage_count: stages.length,
+    stage_statuses: stageStatuses,
+    blockers: [
+      stages.length > 0 ? null : 'missing_stage_control_plane_stages',
+      ...stageStatuses.flatMap((stage) => stage.blockers),
+    ].filter((entry): entry is string => Boolean(entry)),
+  };
+}
+
 export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput) {
   const repoDir = path.resolve(input.repoDir);
   const missingRequiredDirs = REQUIRED_REPO_SOURCE_DIRS.filter((dir) => !fs.existsSync(path.join(repoDir, dir)));
@@ -586,6 +985,9 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const authority = descriptor?.authority_boundary || {};
   const packCompilerInput = readJsonFile(path.join(repoDir, 'contracts/pack_compiler_input.json'));
   const generatedSurfaceHandoff = readJsonFile(path.join(repoDir, 'contracts/generated_surface_handoff.json'));
+  const stageControlPlane = readJsonFile(path.join(repoDir, 'contracts/stage_control_plane.json'));
+  const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput);
+  const stageRefValidation = validateStageRefs(repoDir, stageControlPlane);
   const authorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
     authority.opl_can_write_memory_body === false ? null : 'opl_can_write_memory_body_must_be_false',
@@ -609,6 +1011,8 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...missingContractFiles.map((item) => `missing_contract:${item}`),
     ...missingForbiddenRoleGuards.map((item) => `missing_forbidden_role_guard:${item}`),
     ...authorityViolations,
+    ...agentPackValidation.blockers,
+    ...stageRefValidation.blockers,
   ];
   return {
     version: 'g2',
@@ -624,6 +1028,8 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       missing_contract_files: missingContractFiles,
       missing_forbidden_role_guards: missingForbiddenRoleGuards,
       authority_violations: authorityViolations,
+      agent_pack_validation: agentPackValidation,
+      stage_ref_validation: stageRefValidation,
       functional_privatization_audit_required: true,
       blockers,
       authority_boundary: {
@@ -727,6 +1133,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,
       pack_compiler_contract: PACK_COMPILER_CONTRACT,
       generated_surface_contract: GENERATED_SURFACE_CONTRACT,
+      agent_pack_contract: AGENT_PACK_CONTRACT,
       opl_generated_surfaces: OPL_GENERATED_SURFACES,
       domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
       domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
