@@ -2,6 +2,11 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { insertEvent, stableId } from './family-runtime-store.ts';
+import {
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
+  isMasDomainRouteReconcileApply,
+} from './family-runtime-mas-domain-route.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
   createStageAttempt,
@@ -105,6 +110,9 @@ function familyTransitionResult(payload: Record<string, unknown>) {
 }
 
 function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
+  if (isMasDomainRouteReconcileApply(row.domain_id, row.task_kind)) {
+    return row.task_kind;
+  }
   if (row.domain_id === 'medautoscience' && row.task_kind === 'paper_autonomy/guarded-apply') {
     return row.task_kind;
   }
@@ -136,6 +144,12 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     domain_id: row.domain_id,
     task_kind: row.task_kind,
   };
+  if (isMasDomainRouteReconcileApply(row.domain_id, row.task_kind)) {
+    locator.route_ref = MAS_DOMAIN_ROUTE_RECONCILE_APPLY;
+    locator.action_ref = MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION;
+    locator.domain_truth_owner = 'med-autoscience';
+    locator.opl_writes_domain_truth = false;
+  }
   for (const key of [
     'profile',
     'profile_name',

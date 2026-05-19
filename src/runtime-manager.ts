@@ -2,6 +2,10 @@ import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import {
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
+} from './family-runtime-mas-domain-route.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
@@ -129,11 +133,12 @@ const FAMILY_SCHEDULER_REPLACEMENT = {
       domain_id: 'medautoscience',
       domain_owner: 'med-autoscience',
       migration_priority: 'p0',
-      legacy_scheduler_owner: 'mas_supervision_scheduler',
+      legacy_scheduler_owner: null,
+      legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
       replacement_role:
         'OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.',
       required_domain_refs: [
-        'family_runtime_supervision',
+        MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
         'mas_opl_runtime_workbench_projection',
         'sidecar_owner_receipt_or_typed_blocker',
         'no_forbidden_write_evidence',
@@ -382,25 +387,24 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
         stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
         wakeup_bridge: 'provider wakeup -> opl family-runtime tick --source <provider> --hydrate',
         webhook_bridge: 'provider signal/webhook -> opl family-runtime enqueue',
-        mas_paper_autonomy_projection: {
+        mas_domain_route_projection: {
           supported_task_kinds: [
-            'paper_autonomy/repair-recheck',
-            'paper_autonomy/ai-reviewer-recheck',
-            'paper_autonomy/gate-replay',
-            'paper_autonomy/guarded-apply',
-            'paper_autonomy/route-decision',
+            MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+          ],
+          action_refs: [
+            MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
           ],
           state_projection: [
             'study_id',
-            'next_owner',
-            'callable_surface',
+            'route_ref',
+            'action_ref',
             'source_refs',
             'source_fingerprint',
             'idempotency_key',
           ],
           repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
           authority_boundary:
-            'OPL projects and dispatches MAS paper autonomy tasks but never writes MAS truth, publication quality, artifact gates, or current_package.',
+            'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.',
         },
       },
       family_scheduler_replacement: {

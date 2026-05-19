@@ -38,9 +38,23 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     ]);
     assert.equal(
       output.runtime_manager.family_scheduler_replacement.managed_domains[0].legacy_scheduler_owner,
-      'mas_supervision_scheduler',
+      null,
+    );
+    assert.equal(
+      output.runtime_manager.family_scheduler_replacement.managed_domains[0].legacy_scheduler_residue_policy,
+      'history_tombstone_or_negative_guard_only',
+    );
+    assert.equal(
+      output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[0],
+      'domain_route/reconcile-apply',
     );
     assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
+    assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.supported_task_kinds, [
+      'domain_route/reconcile-apply',
+    ]);
+    assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.action_refs, [
+      'domain_route_reconcile_apply',
+    ]);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_memory_body, false);

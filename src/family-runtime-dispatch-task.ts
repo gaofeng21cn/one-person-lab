@@ -29,6 +29,7 @@ export function writeFamilyRuntimeDispatchTask(
       task_kind: row.task_kind,
       action,
       payload,
+      domain_route: taskPayload.domain_route,
       paper_autonomy: taskPayload.paper_autonomy,
       attempts: row.attempts,
       source: 'opl_family_runtime',

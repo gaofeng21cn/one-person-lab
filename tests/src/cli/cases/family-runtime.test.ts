@@ -798,7 +798,7 @@ cat <<'JSON'
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
-      "task_kind": "runtime_supervisor/reconcile-apply",
+      "task_kind": "domain_route/reconcile-apply",
       "priority": 50,
       "source": "mas-sidecar-export",
       "dedupe_key": "mas:test:DM002:autonomy-continuation:slo_breach",
@@ -837,12 +837,62 @@ echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","wil
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.equal(queue.family_runtime_queue.queue.by_status.succeeded, 1);
     assert.equal(queue.family_runtime_queue.tasks[0].dedupe_key, 'mas:test:DM002:autonomy-continuation:slo_breach');
-    assert.equal(dispatchedTask.task_kind, 'runtime_supervisor/reconcile-apply');
+    assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(dispatchedTask.domain_route.route_ref, 'domain_route/reconcile-apply');
+    assert.equal(dispatchedTask.domain_route.action_ref, 'domain_route_reconcile_apply');
     assert.equal(dispatchedTask.payload.study_id, 'DM002');
     assert.equal(notifications.family_runtime_notifications.notifications.length, 2);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime canonicalizes legacy MAS route aliases to domain route refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-'));
+  const dispatchedTaskPath = path.join(stateRoot, 'dispatched-task.json');
+  const dispatch = createDispatchFixture(`
+cp "$TASK_PATH" ${shellSingleQuote(dispatchedTaskPath)}
+echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","will_start_llm_worker":true}'
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'runtime_supervisor/reconcile-apply',
+      '--payload',
+      '{"study_id":"DM002","source_refs":[{"role":"mas_owner_status","ref":"studies/DM002/status.json"}],"source_fingerprint":"sha256:domain-route"}',
+      '--dedupe-key',
+      'mas:test:DM002:legacy-route-alias',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(enqueue.family_runtime_enqueue.task.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(enqueue.family_runtime_enqueue.task.domain_route.route_ref, 'domain_route/reconcile-apply');
+    assert.equal(enqueue.family_runtime_enqueue.task.domain_route.action_ref, 'domain_route_reconcile_apply');
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.family_runtime_task.task.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(task.family_runtime_task.task.domain_route.domain_truth_owner, 'med-autoscience');
+    assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_mas_truth, false);
+    assert.equal(attempt.stage_id, 'domain_route/reconcile-apply');
+    assert.equal(attempt.workspace_locator.route_ref, 'domain_route/reconcile-apply');
+    assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(dispatchedTask.domain_route.route_ref, 'domain_route/reconcile-apply');
+    assert.equal(dispatchedTask.domain_route.action_ref, 'domain_route_reconcile_apply');
+    assert.equal(dispatchedTask.paper_autonomy, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -936,7 +986,7 @@ cat <<'JSON'
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
-      "task_kind": "runtime_supervisor/reconcile-apply",
+      "task_kind": "domain_route/reconcile-apply",
       "dedupe_key": "mas:test:DM003:autonomy-continuation:slo_breach",
       "payload": {"profile": "/tmp/profile.toml", "study_id": "DM003"}
     },

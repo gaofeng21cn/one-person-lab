@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
 import { stableId } from './family-runtime-ids.ts';
+import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
@@ -162,6 +163,7 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
     domain_id: row.domain_id,
     task_kind: row.task_kind,
     payload,
+    domain_route: masDomainRouteProjection(row, payload),
     paper_autonomy: paperAutonomyProjection(row, payload),
     dedupe_key: row.dedupe_key,
     priority: row.priority,
