@@ -216,6 +216,8 @@ GraphFlow / GFL 的 cohort search / trigger / dashboard closed-loop 模式在 OP
 
 `requires` / `ensures` 组合规则只能由显式 refs、human gate decision 或 owner receipt 满足；组合缺口、证据过期、owner 冲突、receipt 冲突或 executor binding 缺失必须进入 `family-conflict-envelope` / human gate / route-back。OPL 可以选择并绑定 executor 来启动已准入 stage pack，默认 executor 仍是 `Codex CLI`；非默认 executor adapter 必须由 stage pack、domain route 或显式 runtime switch 声明，并产出独立 receipt / audit / fail-closed 证据。
 
+GraphFlow / GFL 的 agent-invocation 模式在 OPL 落成 `opl_stage_launch_invocation` activity event：agent / operator 只能选择已准入或已显式标记的 stage pack，绑定 source fingerprint、workspace locator、idempotency key 和 selected executor 后交给 OPL provider / executor 启动。默认 `codex_cli` 会记录 `default_codex_cli`；`hermes_agent`、`claude_code` 等非默认 executor 在 `--require-stage-admission` 下必须带 `executor_binding_ref`，否则启动前 fail closed 为 `non_default_executor_binding_ref_missing`。这个 gate 只证明启动绑定和审计 refs 存在，不声称非默认 executor 与 Codex CLI 行为或质量等价。
+
 对 `MAS` 来说，这意味着在既有 `scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` route contract 之上做 inventory 与 descriptor projection，不重命名或替换这些 route。对 `RCA` 和 `MAG` 来说，第一轮吸收应保持为现有视觉交付与基金写作 surface 上的轻量 stage-pack projection。
 
 ## Domain Memory Ref / Writeback Freeze
