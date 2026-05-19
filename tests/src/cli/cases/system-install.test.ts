@@ -55,6 +55,16 @@ function createFakeUiUxProMaxSource(root: string) {
   fs.writeFileSync(path.join(root, 'src', 'ui-ux-pro-max', 'scripts', 'search.js'), 'export {};\n', 'utf8');
 }
 
+function createFakeMineruDocumentExtractorSource(root: string) {
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'SKILL.md'),
+    '---\nname: mineru-document-extractor\ndescription: Test MinerU document extraction skill.\n---\n\n# mineru-document-extractor\n',
+    'utf8',
+  );
+  fs.writeFileSync(path.join(root, '_meta.json'), '{"slug":"mineru-document-extractor","version":"test"}\n', 'utf8');
+}
+
 function createFakeOfficeCliInstaller(root: string) {
   const installerPath = path.join(root, 'install-officecli.sh');
   fs.writeFileSync(
@@ -79,17 +89,45 @@ function createFakeOfficeCliInstaller(root: string) {
   return installerPath;
 }
 
+function createFakeMineruOpenApiInstaller(root: string) {
+  const installerPath = path.join(root, 'install-mineru-open-api.sh');
+  fs.writeFileSync(
+    installerPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'mkdir -p "$HOME/.local/bin"',
+      'cat > "$HOME/.local/bin/mineru-open-api" <<\'EOS\'',
+      '#!/usr/bin/env bash',
+      'if [ "${1:-}" = "version" ]; then',
+      '  echo "mineru-open-api version v0.1.3-test"',
+      '  exit 0',
+      'fi',
+      'echo "mineru-open-api test fixture"',
+      'EOS',
+      'chmod +x "$HOME/.local/bin/mineru-open-api"',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  return installerPath;
+}
+
 function createFakeCompanionInstallEnv(homeRoot: string) {
   const sourceRoot = path.join(homeRoot, 'companion-sources');
   const officeCliRoot = path.join(sourceRoot, 'OfficeCLI');
   const uiUxRoot = path.join(sourceRoot, 'ui-ux-pro-max-skill');
+  const mineruRoot = path.join(sourceRoot, 'mineru-document-extractor');
   createFakeOfficeCliSource(officeCliRoot);
   createFakeUiUxProMaxSource(uiUxRoot);
+  createFakeMineruDocumentExtractorSource(mineruRoot);
   return {
     OPL_COMPANION_SOURCES_ROOT: sourceRoot,
     OPL_OFFICECLI_SOURCE_ROOT: officeCliRoot,
     OPL_UI_UX_PRO_MAX_SOURCE_ROOT: uiUxRoot,
+    OPL_MINERU_DOCUMENT_EXTRACTOR_SOURCE_ROOT: mineruRoot,
     OPL_OFFICECLI_INSTALL_COMMAND: createFakeOfficeCliInstaller(sourceRoot),
+    OPL_MINERU_OPEN_API_INSTALL_COMMAND: createFakeMineruOpenApiInstaller(sourceRoot),
   };
 }
 
@@ -249,18 +287,22 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
     assert.deepEqual(
       output.install.companion_skill_sync.tools.map((entry) => [entry.tool_id, entry.status, entry.action, entry.version]),
-      [['officecli', 'installed', 'install', '1.0.70-test']],
+      [
+        ['officecli', 'installed', 'install', '1.0.70-test'],
+        ['mineru-open-api', 'installed', 'install', 'mineru-open-api version v0.1.3-test'],
+      ],
     );
-    assert.equal(output.install.companion_skill_sync.summary.tools_ready, 1);
-    assert.equal(output.install.companion_skill_sync.summary.tools_total, 1);
+    assert.equal(output.install.companion_skill_sync.summary.tools_ready, 2);
+    assert.equal(output.install.companion_skill_sync.summary.tools_total, 2);
     assert.equal(output.install.runtime_manager_action.executed_actions.some((entry) => ['install_hermes_online_runtime', 'repair_hermes_legacy_provider'].includes(entry.action_id)), false);
-    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
+    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max', 'mineru-document-extractor']) {
       const item = output.install.companion_skill_sync.items.find((entry) => entry.skill_id === skillName);
       assert.equal(item?.status, 'synced');
       assert.equal(item?.action, 'symlink');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
     }
     assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'officecli')), true);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'mineru-open-api')), true);
     assert.equal(output.install.first_run_log.surface_id, 'opl_first_run_log');
     assert.equal(output.install.first_run_log.event_schema_version, 'opl_first_run_event.v1');
     assert.equal(output.install.first_run_log.log_path, path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl'));
@@ -307,11 +349,11 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   }
 });
 
-test('recommended Office skills require both skill payloads and the officecli binary', () => {
+test('recommended companion skills require their skill payloads and companion binaries', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-officecli-status-home-'));
   const codexHome = path.join(homeRoot, 'codex-home');
   const skillsRoot = path.join(codexHome, 'skills');
-  for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+  for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'mineru-document-extractor']) {
     fs.mkdirSync(path.join(skillsRoot, skillName), { recursive: true });
     fs.writeFileSync(
       path.join(skillsRoot, skillName, 'SKILL.md'),
@@ -338,6 +380,7 @@ test('recommended Office skills require both skill payloads and the officecli bi
     for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
       assert.equal(missingById.get(skillName), 'missing');
     }
+    assert.equal(missingById.get('mineru-document-extractor'), 'missing');
 
     const toolBin = path.join(homeRoot, '.local', 'bin');
     fs.mkdirSync(toolBin, { recursive: true });
@@ -345,6 +388,12 @@ test('recommended Office skills require both skill payloads and the officecli bi
     fs.writeFileSync(
       officeCliPath,
       '#!/usr/bin/env bash\nif [ "${1:-}" = "--version" ]; then echo "1.0.70-test"; else echo officecli; fi\n',
+      { mode: 0o755 },
+    );
+    const mineruOpenApiPath = path.join(toolBin, 'mineru-open-api');
+    fs.writeFileSync(
+      mineruOpenApiPath,
+      '#!/usr/bin/env bash\nif [ "${1:-}" = "version" ]; then echo "mineru-open-api version v0.1.3-test"; else echo mineru-open-api; fi\n',
       { mode: 0o755 },
     );
 
@@ -365,6 +414,7 @@ test('recommended Office skills require both skill payloads and the officecli bi
     for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
       assert.equal(readyById.get(skillName), 'ready');
     }
+    assert.equal(readyById.get('mineru-document-extractor'), 'ready');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -401,7 +451,7 @@ test('recommended system companion skills sync family skills from packaged Full 
   const packagedSkillsRoot = path.join(homeRoot, 'runtime', 'current', 'skills');
 
   try {
-    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
+    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent', 'mineru-document-extractor']) {
       fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
       fs.writeFileSync(
         path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
@@ -425,7 +475,7 @@ test('recommended system companion skills sync family skills from packaged Full 
     };
 
     const syncedById = new Map(output.install.companion_skill_sync.items.map((item) => [item.skill_id, item.status]));
-    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
+    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent', 'mineru-document-extractor']) {
       assert.equal(syncedById.get(skillId), 'synced');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), true);
     }
