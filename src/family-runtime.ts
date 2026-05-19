@@ -843,6 +843,8 @@ export async function runFamilyRuntime(args: string[]) {
         sourceFingerprint,
         executorKind: parsed.input.executorKind,
         executorBindingRef: parsed.input.executorBindingRef,
+        invocationMode: parsed.input.invocationMode,
+        boundedEditRef: parsed.input.boundedEditRef,
         taskId,
         idempotencyKey: projectedIdempotencyKey,
         requireStageAdmission: parsed.input.requireStageAdmission,

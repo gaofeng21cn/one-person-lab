@@ -10,6 +10,9 @@ export interface StageLaunchInvocationProjection {
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
   provider_kind: FamilyRuntimeProviderKind;
+  invocation_mode: 'invocation' | 'authoring';
+  allowed_agent_actions: Array<'retrieve' | 'select' | 'bind' | 'launch' | 'deploy' | 'author_bounded_edit'>;
+  bounded_edit_ref: string | null;
   selected_executor_kind: string;
   default_executor: boolean;
   executor_binding_ref: string | null;
@@ -27,8 +30,13 @@ export interface StageLaunchInvocationProjection {
     source_binding_ref: string | null;
     workspace_binding_ref: string;
     executor_binding_ref: string | null;
+    bounded_edit_ref: string | null;
   };
-  blocker_reason: 'non_default_executor_binding_ref_missing' | null;
+  policy: {
+    stage_pack_launch_scope: 'approved_or_admitted_only';
+    authoring_output: 'bounded_edit_ref_only';
+  };
+  blocker_reason: 'non_default_executor_binding_ref_missing' | 'agent_authoring_requires_bounded_edit_ref' | null;
   conflict_or_blocker_envelopes: ReturnType<typeof buildFamilyConflictOrBlockerEnvelope>[];
   authority_boundary: {
     opl_role: 'launch_invocation_projection_only';
@@ -53,6 +61,8 @@ export function buildStageLaunchInvocationProjection(input: {
   sourceFingerprint?: string | null;
   executorKind?: string | null;
   executorBindingRef?: string | null;
+  invocationMode?: 'invocation' | 'authoring' | null;
+  boundedEditRef?: string | null;
   taskId?: string | null;
   idempotencyKey: string;
   requireStageAdmission?: boolean;
@@ -61,6 +71,8 @@ export function buildStageLaunchInvocationProjection(input: {
 }): StageLaunchInvocationProjection {
   const selectedExecutorKind = text(input.executorKind) ?? 'codex_cli';
   const executorBindingRef = text(input.executorBindingRef);
+  const invocationMode = input.invocationMode ?? 'invocation';
+  const boundedEditRef = text(input.boundedEditRef);
   const sourceFingerprint = text(input.sourceFingerprint);
   const workspaceLocatorRef = `workspace_locator:${stableId('wl', [input.domainId, input.stageId, input.workspaceLocator])}`;
   const sourceBindingRef = sourceFingerprint ? `source_fingerprint:${sourceFingerprint}` : null;
@@ -72,7 +84,9 @@ export function buildStageLaunchInvocationProjection(input: {
       : 'missing_non_default_executor_binding' as const;
   const blockerReason = input.requireStageAdmission === true && executorBindingStatus === 'missing_non_default_executor_binding'
     ? 'non_default_executor_binding_ref_missing' as const
-    : null;
+    : input.requireStageAdmission === true && invocationMode === 'authoring' && boundedEditRef === null
+      ? 'agent_authoring_requires_bounded_edit_ref' as const
+      : null;
   const subject = buildFamilyConflictSubject({
     domain: input.domainId,
     stageId: input.stageId,
@@ -84,14 +98,21 @@ export function buildStageLaunchInvocationProjection(input: {
       ...(input.planeId ? [`opl://family_stage_control_planes/${input.planeId}`] : []),
       ...(input.admissionPlaneId ? [`opl://family_stage_admission/${input.admissionPlaneId}`] : []),
       ...(executorBindingRef ? [executorBindingRef] : []),
+      ...(boundedEditRef ? [boundedEditRef] : []),
     ],
   });
+  const allowedAgentActions: StageLaunchInvocationProjection['allowed_agent_actions'] = invocationMode === 'authoring'
+    ? ['retrieve', 'select', 'bind', 'author_bounded_edit']
+    : ['retrieve', 'select', 'bind', 'launch', 'deploy'];
   return {
     surface_kind: 'opl_stage_launch_invocation',
     version: 'opl-stage-launch-invocation.v1',
     domain_id: input.domainId,
     stage_id: input.stageId,
     provider_kind: input.providerKind,
+    invocation_mode: invocationMode,
+    allowed_agent_actions: allowedAgentActions,
+    bounded_edit_ref: boundedEditRef,
     selected_executor_kind: selectedExecutorKind,
     default_executor: defaultExecutor,
     executor_binding_ref: executorBindingRef,
@@ -106,6 +127,11 @@ export function buildStageLaunchInvocationProjection(input: {
       source_binding_ref: sourceBindingRef,
       workspace_binding_ref: workspaceLocatorRef,
       executor_binding_ref: executorBindingRef,
+      bounded_edit_ref: boundedEditRef,
+    },
+    policy: {
+      stage_pack_launch_scope: 'approved_or_admitted_only',
+      authoring_output: 'bounded_edit_ref_only',
     },
     blocker_reason: blockerReason,
     conflict_or_blocker_envelopes: blockerReason
@@ -118,11 +144,19 @@ export function buildStageLaunchInvocationProjection(input: {
             status: 'blocked',
             reason: blockerReason,
             evidenceRefs: [
-              `executor_kind:${selectedExecutorKind}`,
-              'missing:executor_binding_ref',
+              blockerReason === 'non_default_executor_binding_ref_missing'
+                ? `executor_kind:${selectedExecutorKind}`
+                : `invocation_mode:${invocationMode}`,
+              blockerReason === 'non_default_executor_binding_ref_missing'
+                ? 'missing:executor_binding_ref'
+                : 'missing:bounded_edit_ref',
             ],
-            allowedNextActions: ['declare_executor_binding_ref', 'retry_after_admission'],
-            forbiddenActions: ['start_non_default_executor_without_binding_ref', 'fallback_complete'],
+            allowedNextActions: blockerReason === 'non_default_executor_binding_ref_missing'
+              ? ['declare_executor_binding_ref', 'retry_after_admission']
+              : ['declare_bounded_edit_ref', 'retry_after_admission'],
+            forbiddenActions: blockerReason === 'non_default_executor_binding_ref_missing'
+              ? ['start_non_default_executor_without_binding_ref', 'fallback_complete']
+              : ['author_unbounded_stage_pack_change', 'fallback_complete'],
             failClosed: true,
           }),
         ]
