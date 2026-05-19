@@ -77,6 +77,9 @@ interface FamilyStageReadinessSummary {
   recommendations: FamilyStageReadinessIssue[];
   drilldown_refs: string[];
   ai_first_contract_light_policy: {
+    expert_judgment_priority: 'ai_native_expert_judgment_first';
+    contract_floor_policy: 'contracts_preserve_minimum_safety_audit_recovery_floor_only';
+    mechanical_signals_policy: 'mechanical_scores_checklists_and_contract_completeness_are_advisory_not_quality_verdicts';
     contract_scope: [
       'launch_safety',
       'opl_authority_boundary',
@@ -88,6 +91,9 @@ interface FamilyStageReadinessSummary {
       'stage_internal_planning',
       'domain_quality_verdict',
       'fixed_intelligent_workflow',
+      'expert_judgment_ceiling',
+      'mechanical_quality_substitute',
+      'contract_completeness_as_quality_verdict',
     ];
   };
   authority_boundary: {
@@ -98,6 +104,8 @@ interface FamilyStageReadinessSummary {
     can_authorize_domain_ready: false;
     can_authorize_quality_verdict: false;
     can_mutate_artifact_body: false;
+    can_replace_ai_expert_judgment: false;
+    contract_completeness_is_quality_verdict: false;
     graphflow_runtime_dependency: false;
   };
 }
@@ -298,6 +306,10 @@ export function buildStageReadinessSummary(
     recommendations: warnings,
     drilldown_refs: drilldownRefs,
     ai_first_contract_light_policy: {
+      expert_judgment_priority: 'ai_native_expert_judgment_first',
+      contract_floor_policy: 'contracts_preserve_minimum_safety_audit_recovery_floor_only',
+      mechanical_signals_policy:
+        'mechanical_scores_checklists_and_contract_completeness_are_advisory_not_quality_verdicts',
       contract_scope: [
         'launch_safety',
         'opl_authority_boundary',
@@ -309,6 +321,9 @@ export function buildStageReadinessSummary(
         'stage_internal_planning',
         'domain_quality_verdict',
         'fixed_intelligent_workflow',
+        'expert_judgment_ceiling',
+        'mechanical_quality_substitute',
+        'contract_completeness_as_quality_verdict',
       ],
     },
     authority_boundary: {
@@ -319,6 +334,8 @@ export function buildStageReadinessSummary(
       can_authorize_domain_ready: false,
       can_authorize_quality_verdict: false,
       can_mutate_artifact_body: false,
+      can_replace_ai_expert_judgment: false,
+      contract_completeness_is_quality_verdict: false,
       graphflow_runtime_dependency: false,
     },
   };

@@ -116,12 +116,17 @@ export function buildAgentReadinessSummary(args: string[]) {
       production_evidence_tail_ledger: productionEvidenceTailLedger,
       conformance_report: conformance,
       authority_boundary: {
+        expert_judgment_priority: 'ai_native_expert_judgment_first',
+        contract_floor_policy: 'contracts_preserve_minimum_safety_audit_recovery_floor_only',
+        structural_gates_are_contract_floor_only: true,
         readiness_can_claim_domain_ready: false,
         readiness_can_claim_artifact_authority: false,
         readiness_can_claim_production_ready: false,
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,
         opl_can_authorize_quality_or_export: false,
+        mechanical_signals_can_claim_quality_verdict: false,
+        contract_completeness_is_quality_verdict: false,
       },
     },
   };

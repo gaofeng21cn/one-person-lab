@@ -15,19 +15,20 @@
 
 这里进一步吸收 GraphFlow / GFL 论文中可复用的流程验证模式：先把可静态检查的 stage pack core 准入，再用 `requires` / `ensures` 组合 stage，并把 AI、人、外部系统、artifact mutation、memory writeback 与 domain verdict 放进运行时强制边界。OPL 采用的是这个 stage admission / trust-lane 语言，不引入 GraphFlow / GFL runtime dependency，也不把 GraphFlow 写成 provider、executor、planner、stage runner 或 domain authority。
 
-本轮吸收原则是 **AI-first, contract-light**。OPL 合同只管启动安全、OPL 越权边界、关键边界结果记录，以及 replay / audit / route-back 证据；不把 AI 推理、stage 内部规划、domain 质量结论或固定智能 workflow 写死。默认 operator / App 入口是 `opl stages readiness --domain <domain>`，它聚合现有 drilldown 与 advisory refs，不新增 domain verdict。capacity-budget 与 domain-validity refs 只折叠进 readiness / proof 作为诊断建议，不作为 standalone 默认 CLI 或 schema 目标。
+本轮吸收原则是 **AI-first、AI 原生专家判断优先、contract-light**。OPL 合同只保启动安全、OPL 越权边界、关键边界结果记录，以及 replay / audit / route-back 证据这些下限；不把 AI 推理、stage 内部规划、domain 质量结论、专家判断上限、机械质量替代物或固定智能 workflow 写死。默认 operator / App 入口是 `opl stages readiness --domain <domain>`，它聚合现有 drilldown 与 advisory refs，不新增 domain verdict。capacity-budget、domain-validity、scorecard、checklist 和 contract completeness 信号只折叠进 readiness / proof 作为诊断建议，不作为 standalone 默认 CLI 或 schema 目标。
 
 当前 stage-led 合同基本原则是：
 
 1. Stage pack 是启动单位；OPL 准入并启动 stage，不启动自由形态 workflow script。
 2. AI-first 执行不被静态合同写死；合同只绑定 prompt、tool、knowledge ref、expected receipt 和 authority boundary。
-3. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
-4. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
-5. `runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。
-6. Hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate 或 executor binding 缺失。
-7. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --domain <domain>` 的 advisory refs，不再作为独立 launch-authority schema。
-8. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete。
-9. 每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref，不用 fallback verdict 补语义。
+3. AI 原生专家判断优先；机械分数、checklist、contract completeness、descriptor ready、provider completion 和 generated-surface proof 只能作为 advisory，除非独立 AI stage 或 domain-owned quality gate 返回 receipt / typed blocker / route-back verdict，否则不能替代专家判断。
+4. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
+5. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
+6. `runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。
+7. Hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate 或 executor binding 缺失。
+8. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --domain <domain>` 的 advisory refs，不再作为独立 launch-authority schema。
+9. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete。
+10. 每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref，不用 fallback verdict 补语义。
 
 ## 归属边界
 

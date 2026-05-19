@@ -508,9 +508,17 @@ test('agents readiness aggregates structural gates and production evidence tail 
   assert.equal(readiness.production_evidence_tail_ledger.summary.tail_item_count, 2);
   assert.equal(readiness.production_evidence_tail_ledger.summary.blocking_tail_item_count, 0);
   assert.equal(readiness.production_evidence_tail_ledger.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(readiness.authority_boundary.expert_judgment_priority, 'ai_native_expert_judgment_first');
+  assert.equal(
+    readiness.authority_boundary.contract_floor_policy,
+    'contracts_preserve_minimum_safety_audit_recovery_floor_only',
+  );
+  assert.equal(readiness.authority_boundary.structural_gates_are_contract_floor_only, true);
   assert.equal(readiness.authority_boundary.readiness_can_claim_domain_ready, false);
   assert.equal(readiness.authority_boundary.readiness_can_claim_artifact_authority, false);
   assert.equal(readiness.authority_boundary.readiness_can_claim_production_ready, false);
+  assert.equal(readiness.authority_boundary.mechanical_signals_can_claim_quality_verdict, false);
+  assert.equal(readiness.authority_boundary.contract_completeness_is_quality_verdict, false);
 });
 
 test('agents conformance reads domain-owned production acceptance evidence without claiming domain ready', () => {

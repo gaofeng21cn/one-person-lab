@@ -15,19 +15,20 @@ They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, 
 
 They also absorb the useful GraphFlow / GFL pattern of admitting a statically checkable stage-pack core, composing stages through `requires` / `ensures`, and keeping AI, human, external-system, artifact, memory, and domain-verdict effects behind runtime-enforced boundaries. OPL adopts this as contract vocabulary only; GraphFlow / GFL is not an OPL runtime, provider, executor, planner, stage runner, or domain authority dependency.
 
-The absorption principle is now **AI-first, contract-light**. OPL contracts govern only launch safety, OPL authority boundaries, key boundary outcome recording, and replay / audit / route-back evidence. They do not freeze AI reasoning, stage-internal planning, domain quality conclusions, or a fixed intelligent workflow. The default operator/App entry is `opl stages readiness --domain <domain>`, which aggregates existing drilldown and advisory refs without adding another authoritative domain verdict. Capacity-budget and domain-validity refs are folded into readiness/proof as advisory diagnostics; they are not standalone default CLI or schema goals.
+The absorption principle is now **AI-first, AI-native expert judgment first, contract-light**. OPL contracts preserve the minimum floor for launch safety, OPL authority boundaries, key boundary outcome recording, and replay / audit / route-back evidence. They do not freeze AI reasoning, stage-internal planning, domain quality conclusions, expert judgment ceilings, mechanical quality substitutes, or a fixed intelligent workflow. The default operator/App entry is `opl stages readiness --domain <domain>`, which aggregates existing drilldown and advisory refs without adding another authoritative domain verdict. Capacity-budget, domain-validity, scorecard, checklist, and contract-completeness signals are folded into readiness/proof as advisory diagnostics; they are not standalone default CLI or schema goals.
 
 The active stage-led contract rules are:
 
 1. Stage packs are the launch unit; OPL admits and launches stages, not free-form workflow scripts.
 2. AI-first execution stays outside static contracts; contracts bind prompts, tools, knowledge refs, expected receipts, and authority boundaries.
-3. `requires` / `ensures` composition is checked before launch, while domain judgment remains a runtime/domain-owned result.
-4. The verified static core covers identity, owner, refs, scope, composition, and forbidden-authority constraints only.
-5. Runtime-enforced boundaries cover AI output, human decisions, external systems, artifact mutation, memory writeback, and domain verdicts.
-6. Hard blockers are limited to launch safety, authority violations, missing key runtime-event recording, unsatisfied composition, hard human gates, or missing executor binding.
-7. Capacity, monitor, assumption, cohort-loop, replay, and domain-owner review signals are folded advisory refs in `opl stages readiness --domain <domain>`, not standalone launch-authority schemas.
-8. Descriptor readiness, read-model availability, generated-surface proof, provider proof, or cleanup proof never equals domain ready, artifact ready, or production evidence complete.
-9. Every blocked or incomplete boundary reports a typed blocker, human gate, receipt conflict, or route-back ref instead of a fallback verdict.
+3. AI-native expert judgment has priority; mechanical scores, checklists, contract completeness, descriptor readiness, provider completion, and generated-surface proof remain advisory unless an independent AI stage or domain-owned quality gate returns a receipt / typed blocker / route-back verdict.
+4. `requires` / `ensures` composition is checked before launch, while domain judgment remains a runtime/domain-owned result.
+5. The verified static core covers identity, owner, refs, scope, composition, and forbidden-authority constraints only.
+6. Runtime-enforced boundaries cover AI output, human decisions, external systems, artifact mutation, memory writeback, and domain verdicts.
+7. Hard blockers are limited to launch safety, authority violations, missing key runtime-event recording, unsatisfied composition, hard human gates, or missing executor binding.
+8. Capacity, monitor, assumption, cohort-loop, replay, and domain-owner review signals are folded advisory refs in `opl stages readiness --domain <domain>`, not standalone launch-authority schemas.
+9. Descriptor readiness, read-model availability, generated-surface proof, provider proof, or cleanup proof never equals domain ready, artifact ready, or production evidence complete.
+10. Every blocked or incomplete boundary reports a typed blocker, human gate, receipt conflict, or route-back ref instead of a fallback verdict.
 
 ## Ownership Boundary
 

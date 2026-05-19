@@ -441,10 +441,28 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
     assert.equal(readiness.drilldown_refs.includes('opl stages replay-certification --domain mas'), true);
     assert.equal(Object.hasOwn(readiness, 'domain_ready_status'), false);
     assert.equal(Object.hasOwn(readiness, 'quality_verdict'), false);
+    assert.equal(
+      readiness.ai_first_contract_light_policy.expert_judgment_priority,
+      'ai_native_expert_judgment_first',
+    );
+    assert.equal(
+      readiness.ai_first_contract_light_policy.contract_floor_policy,
+      'contracts_preserve_minimum_safety_audit_recovery_floor_only',
+    );
+    assert.equal(
+      readiness.ai_first_contract_light_policy.mechanical_signals_policy,
+      'mechanical_scores_checklists_and_contract_completeness_are_advisory_not_quality_verdicts',
+    );
+    assert.equal(
+      readiness.ai_first_contract_light_policy.does_not_contract.includes('mechanical_quality_substitute'),
+      true,
+    );
     assert.equal(readiness.authority_boundary.opl_role, 'stage_readiness_cli_summary_only');
     assert.equal(readiness.authority_boundary.ai_internal_strategy_contract, false);
     assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(readiness.authority_boundary.can_replace_ai_expert_judgment, false);
+    assert.equal(readiness.authority_boundary.contract_completeness_is_quality_verdict, false);
     assert.equal(readiness.authority_boundary.graphflow_runtime_dependency, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
