@@ -288,6 +288,56 @@ function buildReadyAgentRepo() {
   return targetDir;
 }
 
+function retargetReadyRepoToMag(repoDir: string) {
+  const domainDescriptorPath = path.join(repoDir, 'contracts', 'domain_descriptor.json');
+  const domainDescriptor = JSON.parse(fs.readFileSync(domainDescriptorPath, 'utf8'));
+  domainDescriptor.domain_id = 'med-autogrant';
+  domainDescriptor.domain_label = 'Med Auto Grant';
+  writeJson(domainDescriptorPath, domainDescriptor);
+
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  actionCatalog.target_domain_id = 'med-autogrant';
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
+    'domain_runtime',
+    'product_entry',
+    'status',
+    'user_loop',
+    'sidecar',
+    'runtime_registration',
+    'control_plane',
+    'lifecycle',
+    'memory',
+    'package',
+    'autonomy_controller',
+    'legacy_runtime_residue',
+  ];
+  privateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
+    privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surface_id: string) => ({
+      surface_id,
+      classification: surface_id === 'legacy_runtime_residue' ? 'legacy_proof_tombstone' : 'refs_only_adapter',
+      source_refs: surface_id === 'legacy_runtime_residue' ? ['docs/history/runtime-tombstone.md'] : ['agent/'],
+    }))
+  );
+  privateSurfacePolicy.physical_source_morphology_policy.forbidden_residue_classes = [
+    'local_journal',
+    'attempt_ledger',
+    'repo_owned_scheduler',
+    'hermes_gateway_local_manager_probe',
+    'compat_facade_active_alias',
+  ];
+  privateSurfacePolicy.physical_source_morphology_policy.authority_boundary = {
+    mag_can_own_generic_runtime: false,
+    mag_can_own_generated_wrapper: false,
+    mag_can_restore_compat_facade_active_alias: false,
+  };
+  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+}
+
 test('agents conformance reports structural readiness separately from production evidence tail', () => {
   const repoDir = buildReadyAgentRepo();
   const report = runCli([
@@ -371,4 +421,49 @@ test('agents conformance blocks legacy roots, README pack paths, and unavailable
   assert.equal(blockers.includes('pack_compiler_legacy_pack_root_field:canonical_repo_source_semantic_pack_root'), true);
   assert.equal(blockers.includes('required_domain_pack_path_must_not_be_readme:agent/README.md'), true);
   assert.equal(blockers.includes('active_path_scan_state_not_available:$.scan.active_path_scan_state'), true);
+});
+
+test('agents conformance treats OPL replacement ledger refs as non-residue', () => {
+  const repoDir = buildReadyAgentRepo();
+  retargetReadyRepoToMag(repoDir);
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  actionCatalog.notes.push('OPL replacement consumes stage_attempt_ledger refs only.');
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mag=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.reports[0].physical_morphology_checks.status, 'passed');
+  assert.deepEqual(
+    report.reports[0].physical_morphology_checks.forbidden_name_residue.filter((entry: { allowed: boolean }) => !entry.allowed),
+    [],
+  );
+});
+
+test('agents conformance blocks exact MAG legacy residue tokens', () => {
+  const repoDir = buildReadyAgentRepo();
+  retargetReadyRepoToMag(repoDir);
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  actionCatalog.notes.push('old attempt_ledger exact token must stay out of active paths');
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mag=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.includes('active_forbidden_name_residue:attempt_ledger:contracts/action_catalog.json'),
+    true,
+  );
 });
