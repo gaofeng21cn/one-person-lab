@@ -301,6 +301,116 @@ function retargetReadyRepoToMag(repoDir: string) {
   writeJson(actionCatalogPath, actionCatalog);
 }
 
+function retargetReadyRepo(repoDir: string, domainId: string, domainLabel: string) {
+  const domainDescriptorPath = path.join(repoDir, 'contracts', 'domain_descriptor.json');
+  const domainDescriptor = JSON.parse(fs.readFileSync(domainDescriptorPath, 'utf8'));
+  domainDescriptor.domain_id = domainId;
+  domainDescriptor.domain_label = domainLabel;
+  writeJson(domainDescriptorPath, domainDescriptor);
+
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  actionCatalog.target_domain_id = domainId;
+  writeJson(actionCatalogPath, actionCatalog);
+}
+
+function configureReadyMagMorphology(repoDir: string) {
+  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
+    'domain_runtime',
+    'product_entry',
+    'status',
+    'user_loop',
+    'sidecar',
+    'runtime_registration',
+    'control_plane',
+    'lifecycle',
+    'memory',
+    'package',
+    'autonomy_controller',
+    'legacy_runtime_residue',
+  ];
+  privateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
+    privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surface_id: string) => ({
+      surface_id,
+      classification: surface_id === 'legacy_runtime_residue' ? 'legacy_proof_tombstone' : 'refs_only_adapter',
+      source_refs: surface_id === 'legacy_runtime_residue' ? ['docs/history/runtime-tombstone.md'] : ['agent/'],
+    }))
+  );
+  privateSurfacePolicy.physical_source_morphology_policy.forbidden_residue_classes = [
+    'legacy_local_persistence_surface',
+    'legacy_attempt_record_surface',
+    'legacy_repo_cadence_owner',
+    'legacy_executor_runtime_probe',
+    'legacy_compat_alias_surface',
+  ];
+  privateSurfacePolicy.physical_source_morphology_policy.authority_boundary = {
+    mag_can_own_generic_runtime: false,
+    mag_can_own_generated_wrapper: false,
+    mag_can_restore_legacy_compat_alias: false,
+  };
+  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+}
+
+function configureReadyRcaMorphology(repoDir: string) {
+  writeJson(path.join(repoDir, 'contracts', 'physical_source_morphology_policy.json'), {
+    canonical_pack_root: 'agent/',
+    status: 'active_source_classification_policy_landed',
+    active_surface_classifications: [
+      'mcp_product_entry_domain_entry',
+      'product_entry_session_store',
+      'runtime_watch_projection',
+      'product_sidecar_guarded_actions',
+      'operator_evidence_stability_projection',
+      'visual_authority_functions',
+      'legacy_managed_runtime_gateway_names',
+    ].map((surface_id) => ({
+      surface_id,
+      classification: surface_id === 'legacy_managed_runtime_gateway_names'
+        ? 'history_tombstone'
+        : 'domain_handler_or_refs_only_adapter',
+      forbidden_generic_owner_flags: {
+        generic_runtime_owner: false,
+        generated_surface_owner_in_domain_repo: false,
+      },
+    })),
+  });
+}
+
+function configureReadyMetaMorphology(repoDir: string) {
+  fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
+  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  privateSurfacePolicy.forbidden_script_roles = [
+    'generic_runtime_owner',
+    'generic_registry_owner',
+    'app_shell_owner',
+    'agent_lab_execution_owner',
+    'promotion_gate_owner',
+    'target_domain_truth_writer',
+  ];
+  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+  writeJson(path.join(repoDir, 'runtime', 'authority_functions', 'meta-agent-authority-functions.json'), {
+    script_morphology_policy: {
+      allowed_classes: [
+        'authority_function_implementation_ref',
+        'smoke_helper',
+        'fixture_or_proof_helper',
+        'developer_work_order_materializer',
+      ],
+      forbidden_roles: privateSurfacePolicy.forbidden_script_roles,
+      script_classifications: [],
+    },
+  });
+}
+
+function writeProductionAcceptance(repoDir: string, fileName: string, payload: unknown) {
+  const directory = path.join(repoDir, 'contracts', 'production_acceptance');
+  fs.mkdirSync(directory, { recursive: true });
+  writeJson(path.join(directory, fileName), payload);
+}
+
 test('agents conformance reports structural readiness separately from production evidence tail', () => {
   const repoDir = buildReadyAgentRepo();
   const report = runCli([
@@ -339,6 +449,126 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(repo.physical_morphology_checks.status, 'passed');
   assert.equal(repo.physical_morphology_checks.policy_status, 'declared');
   assert.equal(repo.evidence_tail_classification.status, 'production_evidence_tail_present');
+  assert.equal(repo.evidence_tail_classification.tail_items.length, 2);
+  assert.deepEqual(
+    repo.evidence_tail_classification.tail_items.map((item: { status: string }) => item.status),
+    ['open', 'open'],
+  );
+  assert.equal(repo.evidence_tail_classification.tail_items[0].repo_path, repoDir);
+  assert.equal(repo.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
+});
+
+test('agents conformance reads domain-owned production acceptance evidence without claiming domain ready', () => {
+  const masRepo = buildReadyAgentRepo();
+  retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
+
+  const magRepo = buildReadyAgentRepo();
+  retargetReadyRepoToMag(magRepo);
+  configureReadyMagMorphology(magRepo);
+  writeProductionAcceptance(magRepo, 'mag-production-acceptance.json', {
+    evidence_tail_status: 'closed_by_domain_owned_acceptance_receipt',
+    domain_owner: 'med-autogrant',
+    closure_evidence: {
+      accepted_return_shape: 'owner_receipt',
+      next_verification_ref: 'verification:mag/production-default-caller',
+    },
+    refs: {
+      owner_receipt_refs: ['receipt:mag/production-default-caller'],
+      doc_refs: ['docs/status.md#production-acceptance'],
+      next_verification_command_refs: ['mag production acceptance --json'],
+    },
+    authority_boundary: {
+      domain_ready_claimed: false,
+    },
+  });
+
+  const rcaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(rcaRepo, 'redcube-ai', 'RedCube AI');
+  configureReadyRcaMorphology(rcaRepo);
+  writeProductionAcceptance(rcaRepo, 'rca-production-acceptance.json', {
+    evidence_tail_status: 'domain_owned_typed_blocker_with_next_verification_ref',
+    domain_owner: 'redcube-ai',
+    closure_evidence: {
+      accepted_return_shape: 'typed_blocker',
+      typed_blocker_kind: 'live_visual_soak_pending',
+      next_verification_ref: 'verification:rca/live-visual-soak',
+    },
+    refs: {
+      typed_blocker_refs: ['blocker:rca/live-visual-soak'],
+      artifact_receipt_refs: ['artifact-receipt:rca/last-known-good'],
+      doc_refs: ['docs/status.md#production-evidence-tail'],
+      next_verification_command_refs: ['rca acceptance verify --json'],
+    },
+    authority_boundary: {
+      domain_ready_claimed: false,
+    },
+  });
+
+  const metaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(metaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  configureReadyMetaMorphology(metaRepo);
+  writeProductionAcceptance(metaRepo, 'meta-production-acceptance.json', {
+    status: 'domain_owner_receipt_observed',
+    domain_owner: 'opl-meta-agent',
+    receipt_ref: 'receipt:meta-agent/real-target-scaleout',
+    doc_ref: 'docs/status.md#managed-module-acceptance',
+    next_verification_command: 'opl-meta-agent acceptance verify --json',
+    authority_boundary: {
+      domain_ready_claimed: false,
+    },
+  });
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mas=${masRepo}`,
+    '--agent',
+    `mag=${magRepo}`,
+    '--agent',
+    `rca=${rcaRepo}`,
+    '--agent',
+    `opl-meta-agent=${metaRepo}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.summary.total_repo_count, 4);
+  assert.equal(report.summary.passed_count, 4);
+  assert.equal(report.summary.structural_conformance_status, 'passed');
+  assert.equal(report.authority_boundary.conformance_report_can_claim_domain_ready, false);
+
+  const [mas, mag, rca, meta] = report.reports;
+  assert.equal(mas.evidence_tail_classification.status, 'production_evidence_tail_present');
+  assert.equal(mas.evidence_tail_classification.tail_items[0].status, 'open');
+  assert.equal(mas.evidence_tail_classification.tail_items[0].evidence_ref, null);
+
+  assert.equal(mag.evidence_tail_classification.status, 'closed');
+  assert.equal(mag.evidence_tail_classification.tail_items[0].status, 'closed');
+  assert.equal(mag.evidence_tail_classification.tail_items[0].evidence_ref, 'receipt:mag/production-default-caller');
+  assert.equal(mag.evidence_tail_classification.tail_items[0].doc_ref, 'docs/status.md#production-acceptance');
+  assert.equal(
+    mag.evidence_tail_classification.tail_items[0].next_verification_command,
+    'mag production acceptance --json',
+  );
+  assert.equal(mag.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
+
+  assert.equal(rca.status, 'passed');
+  assert.equal(rca.evidence_tail_classification.status, 'domain_owned_typed_blocker_reported');
+  assert.equal(rca.evidence_tail_classification.tail_items[0].status, 'domain_owned_typed_blocker');
+  assert.equal(rca.evidence_tail_classification.tail_items[0].evidence_ref, 'blocker:rca/live-visual-soak');
+  assert.equal(rca.evidence_tail_classification.tail_items[0].next_verification_command, 'rca acceptance verify --json');
+  assert.equal(
+    rca.evidence_tail_classification.tail_items[0].authority_boundary.domain_acceptance_status,
+    'domain_owned_typed_blocker_with_next_verification_ref',
+  );
+  assert.equal(
+    rca.evidence_tail_classification.tail_items[0].authority_boundary.typed_blocker_kind,
+    'live_visual_soak_pending',
+  );
+
+  assert.equal(meta.evidence_tail_classification.status, 'closed');
+  assert.equal(meta.evidence_tail_classification.tail_items[0].domain_owner, 'opl-meta-agent');
+  assert.equal(meta.evidence_tail_classification.authority_boundary.evidence_tail_can_claim_domain_ready, false);
 });
 
 test('agents conformance blocks missing physical morphology policy', () => {
