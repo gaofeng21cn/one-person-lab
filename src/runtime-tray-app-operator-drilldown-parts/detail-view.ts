@@ -88,6 +88,8 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
         markFullRefsObject(record(fullDrilldown.operator_action_routing_refs), 'refs'),
       production_evidence_tail_ledger:
         markFullRefsObject(record(fullDrilldown.production_evidence_tail_ledger), 'tail_items'),
+      domain_dispatch_evidence:
+        markFullRefsObject(record(fullDrilldown.domain_dispatch_evidence), 'attempts'),
     };
   }
 
@@ -130,6 +132,8 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
       limitRefsObject(record(drilldown.domain_projection_refs), 'refs', DEFAULT_TOP_REF_LIMIT),
     production_evidence_tail_ledger:
       limitRefsObject(record(drilldown.production_evidence_tail_ledger), 'tail_items', DEFAULT_TOP_REF_LIMIT),
+    domain_dispatch_evidence:
+      limitRefsObject(record(drilldown.domain_dispatch_evidence), 'attempts', DEFAULT_TOP_REF_LIMIT),
     domain_legacy_cleanup_plan_refs:
       limitRefsObject(record(drilldown.domain_legacy_cleanup_plan_refs), 'refs', DEFAULT_TOP_REF_LIMIT),
   };
