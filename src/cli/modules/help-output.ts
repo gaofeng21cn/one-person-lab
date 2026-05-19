@@ -163,6 +163,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl stages list',
         'opl stages assumptions --domain mas',
         'opl stages registry --domain mas',
+        'opl stages source-spec --domain mas',
         'opl stages replay-certification --domain mas',
         'opl modules',
         'opl module install --module medautoscience',

@@ -389,6 +389,21 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_cohort_loop.projection;
+    const sourceSpec = runCli([
+      'stages',
+      'source-spec',
+      '--domain',
+      'mas',
+      '--library-status',
+      'reused',
+      '--reused-by-ref',
+      'opl://stage-packs/redcube_ai:stage_control_plane',
+      '--recorded-runtime-event-ref',
+      'runtime_event:med-autoscience.stage_1',
+    ], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_pack_source_spec.source_spec;
     assert.equal(proofBundle.admission_status, 'admitted');
     assert.equal(proofBundle.admission_summary.admitted_stages_count, 6);
     assert.equal(proofBundle.authority_boundary.proof_passed, true);
@@ -398,6 +413,15 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
     assert.equal(cohortLoop.summary.blocker_count, 0);
     assert.equal(cohortLoop.authority_boundary.graphflow_runtime_dependency, false);
     assert.equal(cohortLoop.authority_boundary.can_write_source_truth, false);
+    assert.equal(sourceSpec.surface_kind, 'opl_family_stage_pack_source_spec');
+    assert.equal(sourceSpec.review_mode, 'diffable_refs_only_visual_equivalent_spec');
+    assert.equal(sourceSpec.stage_pack_hash, proofBundle.integrity.stage_pack_hash);
+    assert.deepEqual(sourceSpec.diff_keys.registry_lifecycle_statuses, ['reused']);
+    assert.equal(sourceSpec.body_policy.includes_control_plane_body, false);
+    assert.equal(sourceSpec.body_policy.includes_artifact_body, false);
+    assert.equal(sourceSpec.body_policy.executes_stage, false);
+    assert.equal(sourceSpec.authority_boundary.visual_equivalent_spec, true);
+    assert.equal(sourceSpec.authority_boundary.can_execute_stage, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
