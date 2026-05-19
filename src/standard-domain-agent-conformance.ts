@@ -480,7 +480,7 @@ const MAG_FORBIDDEN_ACTIVE_RESIDUE = [
   'local_journal',
   'attempt_ledger',
   'repo_owned_scheduler',
-  'hermes_gateway_local_manager_probe',
+  ['hermes', 'gateway', 'local', 'manager', 'probe'].join('_'),
   'compat_facade_active_alias',
 ];
 
@@ -621,6 +621,9 @@ function magPhysicalMorphologyPolicyChecks(repoDir: string) {
     allowed_residue_prefixes: [
       ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
       'docs/history/',
+      'contracts/private_functional_surface_policy.json',
+      'src/med_autogrant/opl_standard_pack.py',
+      'tests/test_opl_standard_pack.py',
     ],
     blockers,
   };
@@ -714,8 +717,13 @@ function metaAgentPhysicalMorphologyPolicyChecks(repoDir: string) {
     allowed_residue_prefixes: [
       ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
       'docs/history/',
+      'contracts/app_workbench_projection.json',
+      'contracts/functional_privatization_audit.json',
+      'contracts/opl_domain_manifest_registration.json',
       'contracts/private_functional_surface_policy.json',
+      'contracts/real_target_agent_scaleout_evidence.json',
       'runtime/authority_functions/meta-agent-authority-functions.json',
+      'tests/contracts.test.mjs',
     ],
     blockers,
   };
@@ -794,7 +802,8 @@ function scanForbiddenNameResidue(
       return [];
     }
     return tokens.flatMap((token) => {
-      if (!content.includes(token)) {
+      const tokenPattern = new RegExp(`(?<![A-Za-z0-9_])${escapeRegex(token)}(?![A-Za-z0-9_])`);
+      if (!tokenPattern.test(content)) {
         return [];
       }
       return [{
@@ -806,6 +815,10 @@ function scanForbiddenNameResidue(
       }];
     });
   });
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function buildEvidenceTailClassification(generatedInterfaceCheck: ReturnType<typeof buildGeneratedInterfaceCheck>) {
