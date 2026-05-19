@@ -155,6 +155,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl agents scaffold',
         'opl agents descriptors',
         'opl agents descriptor --domain mas',
+        'opl agents readiness --family-defaults',
         'opl agents pack-compiler',
         'opl agents pack-compiler inspect --domain mas',
         'opl agents interfaces --domain mas',

@@ -251,6 +251,61 @@ test('core executor surfaces keep hermes_agent in the canonical explicit non-def
   assert.deepEqual(missing, []);
 });
 
+test('Agent Lab and observability eval surfaces stay refs-only and non-authoritative', () => {
+  const requiredDocPatterns: Array<[string, RegExp]> = [
+    [
+      'docs/status.md',
+      /OPL 只消费 refs，不写入 body、truth、artifact、owner receipt 或 quality verdict/,
+    ],
+    [
+      'docs/architecture.md',
+      /OPL Agent Lab 属于 Framework 内部 eval \/ improvement control plane[\s\S]{0,220}不接管 MAS\/MAG\/RCA 的 domain truth、quality verdict、artifact authority、memory body 或 owner receipt authority/,
+    ],
+    [
+      'docs/invariants.md',
+      /巡检必须通过 OPL Agent Lab 或等价 refs-only control plane[\s\S]{0,160}不得静默写 domain truth、artifact、memory body、quality verdict 或 managed runtime/,
+    ],
+    [
+      'docs/runtime/opl-agent-lab-control-plane.md',
+      /不是 MAS\/MAG\/RCA 之上的质量裁判/,
+    ],
+    [
+      'docs/runtime/opl-agent-lab-control-plane.md',
+      /不能把 provider completion、harness pass、descriptor aligned、agent-lab score 或 OPL operator judgment 写成 domain ready verdict/,
+    ],
+    [
+      'docs/runtime/opl-agent-lab-control-plane.md',
+      /App 不能把这些 refs 升级成 domain quality verdict、artifact readiness、memory apply 或高风险 default agent promotion/,
+    ],
+  ];
+
+  const missingDocs = requiredDocPatterns
+    .filter(([relativePath, pattern]) => !pattern.test(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')))
+    .map(([relativePath]) => relativePath);
+
+  assert.deepEqual(missingDocs, []);
+
+  const authoritySource = fs.readFileSync(path.join(repoRoot, 'src/agent-lab-authority.ts'), 'utf8');
+  for (const flag of [
+    'can_write_domain_truth',
+    'can_write_memory_body',
+    'can_accept_or_reject_memory_writeback',
+    'can_authorize_domain_ready',
+    'can_authorize_quality_verdict',
+    'can_authorize_export_verdict',
+    'can_mutate_domain_artifact',
+    'can_write_owner_receipt',
+    'can_modify_managed_runtime',
+    'can_promote_default_agent_without_gate',
+  ]) {
+    assert.match(authoritySource, new RegExp(`${flag}: false`));
+  }
+
+  const workbenchSource = fs.readFileSync(path.join(repoRoot, 'src/agent-lab-complete.ts'), 'utf8');
+  assert.match(workbenchSource, /observability_export_readiness:\s*\{[\s\S]{0,240}upload_external_service: false,[\s\S]{0,80}reads_domain_body: false,/);
+  assert.match(workbenchSource, /online_learning_refs:\s*\{[\s\S]{0,240}can_train_or_deploy_model_weights: false,[\s\S]{0,80}can_promote_default_agent_without_gate: false,/);
+});
+
 test('examples and admission references do not preserve domain_gateway as an active route', () => {
   const scannedFiles = [
     'docs/history/compatibility/gateway-federation/examples-corpora/opl-operating-example-corpus.md',

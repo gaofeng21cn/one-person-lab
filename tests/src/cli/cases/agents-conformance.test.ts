@@ -458,6 +458,61 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(repo.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
 });
 
+test('agents readiness aggregates structural gates and production evidence tail without claiming authority', () => {
+  const repoDir = buildReadyAgentRepo();
+  const readiness = runCli([
+    'agents',
+    'readiness',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).agent_readiness;
+
+  assert.equal(readiness.surface_kind, 'opl_agent_readiness_summary');
+  assert.equal(readiness.owner, 'one-person-lab');
+  assert.equal(readiness.status, 'passed_with_production_evidence_tail');
+  assert.equal(readiness.summary.structural_conformance_status, 'passed');
+  assert.equal(readiness.summary.conformance_passed_count, 1);
+  assert.equal(readiness.summary.conformance_blocked_count, 0);
+  assert.equal(readiness.summary.pack_compiler_blocked_domain_count, 0);
+  assert.equal(readiness.summary.generated_interface_blocked_count, 0);
+  assert.equal(readiness.summary.domain_generated_surface_owner_claim_count, 0);
+  assert.equal(readiness.summary.production_evidence_tail_count, 2);
+  assert.equal(
+    readiness.summary.production_evidence_tail_policy,
+    'reported_separately_not_a_structural_pass_condition',
+  );
+  assert.equal(readiness.summary.production_or_domain_ready, false);
+
+  assert.equal(readiness.gates.scaffold_and_conformance.status, 'passed');
+  assert.equal(
+    readiness.gates.scaffold_and_conformance.source_command,
+    'opl agents conformance --family-defaults --json',
+  );
+  assert.equal(
+    readiness.gates.pack_compiler.policy,
+    'canonical_domain_pack_metadata_source_for_generated_surfaces',
+  );
+  assert.equal(
+    readiness.gates.generated_interfaces.policy,
+    'generated_descriptors_route_to_domain_handler_targets_without_claiming_domain_truth',
+  );
+  assert.equal(
+    readiness.gates.semantic_hygiene.policy,
+    'framework_hygiene_guard_only_no_domain_authority',
+  );
+
+  assert.equal(
+    readiness.production_evidence_tail_ledger.surface_kind,
+    'opl_production_evidence_tail_ledger',
+  );
+  assert.equal(readiness.production_evidence_tail_ledger.summary.tail_item_count, 2);
+  assert.equal(readiness.production_evidence_tail_ledger.summary.blocking_tail_item_count, 0);
+  assert.equal(readiness.production_evidence_tail_ledger.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(readiness.authority_boundary.readiness_can_claim_domain_ready, false);
+  assert.equal(readiness.authority_boundary.readiness_can_claim_artifact_authority, false);
+  assert.equal(readiness.authority_boundary.readiness_can_claim_production_ready, false);
+});
+
 test('agents conformance reads domain-owned production acceptance evidence without claiming domain ready', () => {
   const masRepo = buildReadyAgentRepo();
   retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
@@ -569,6 +624,47 @@ test('agents conformance reads domain-owned production acceptance evidence witho
   assert.equal(meta.evidence_tail_classification.status, 'closed');
   assert.equal(meta.evidence_tail_classification.tail_items[0].domain_owner, 'opl-meta-agent');
   assert.equal(meta.evidence_tail_classification.authority_boundary.evidence_tail_can_claim_domain_ready, false);
+});
+
+test('agents conformance allows opl-meta-agent contract guard tests to name forbidden roles', () => {
+  const metaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(metaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  configureReadyMetaMorphology(metaRepo);
+  fs.mkdirSync(path.join(metaRepo, 'tests'), { recursive: true });
+  fs.writeFileSync(
+    path.join(metaRepo, 'tests', 'contracts.test.ts'),
+    [
+      'const forbiddenRoles = [',
+      "  'generic_runtime_owner',",
+      "  'generic_registry_owner',",
+      "  'app_shell_owner',",
+      "  'agent_lab_execution_owner',",
+      "  'promotion_gate_owner',",
+      "  'target_domain_truth_writer',",
+      '];',
+      'export { forbiddenRoles };',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `opl-meta-agent=${metaRepo}`,
+  ]).standard_domain_agent_conformance;
+  const forbiddenNameResidue = report.reports[0].physical_morphology_checks.forbidden_name_residue;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.reports[0].status, 'passed');
+  assert.equal(
+    forbiddenNameResidue.some((entry: { path: string; allowed: boolean }) =>
+      entry.path === 'tests/contracts.test.ts' && entry.allowed === true
+    ),
+    true,
+  );
+  assert.deepEqual(report.reports[0].blockers, []);
 });
 
 test('agents conformance blocks missing physical morphology policy', () => {
