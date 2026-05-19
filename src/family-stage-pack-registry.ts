@@ -19,6 +19,12 @@ export interface FamilyStagePackRegistryOptions {
   attemptBinding?: FamilyStagePackRegistryAttemptBinding | null;
   migrationPolicy?: FamilyStagePackMigrationPolicy | null;
   migrationPolicyRef?: string | null;
+  libraryLifecycleStatus?: FamilyStagePackLibraryLifecycleStatus | null;
+  promotionRef?: string | null;
+  deprecationRef?: string | null;
+  supersessionRef?: string | null;
+  supersededByStagePackRef?: string | null;
+  reusedByRefs?: string[] | null;
 }
 
 export interface FamilyStagePackRegistryBlocker {
@@ -56,6 +62,7 @@ export interface FamilyStagePackRegistryEntry {
     integrity_ref: string;
     migration_policy_ref: string | null;
   };
+  library_lifecycle: FamilyStagePackLibraryLifecycle;
   migration: {
     status:
       | 'stable_hash'
@@ -85,6 +92,34 @@ export interface FamilyStagePackRegistryEntry {
   };
 }
 
+export type FamilyStagePackLibraryLifecycleStatus =
+  | 'candidate'
+  | 'admitted'
+  | 'reused'
+  | 'deprecated'
+  | 'superseded';
+
+export interface FamilyStagePackLibraryLifecycle {
+  status: FamilyStagePackLibraryLifecycleStatus;
+  promotion_ref: string | null;
+  deprecation_ref: string | null;
+  supersession_ref: string | null;
+  superseded_by_stage_pack_ref: string | null;
+  reused_by_refs: string[];
+  migration_blocker_count: number;
+  blockers: FamilyStagePackRegistryBlocker[];
+  authority_boundary: {
+    opl_role: 'stage_pack_library_lifecycle_projection_only';
+    lifecycle_is_operator_review_input: true;
+    stores_body_payloads: false;
+    can_execute_stage: false;
+    can_write_domain_truth: false;
+    can_authorize_domain_ready: false;
+    can_authorize_quality_verdict: false;
+    can_mutate_artifact_body: false;
+  };
+}
+
 export interface FamilyStagePackRegistryProjection {
   surface_kind: 'opl_family_stage_pack_registry';
   version: 'family-stage-pack-registry.v1';
@@ -93,6 +128,11 @@ export interface FamilyStagePackRegistryProjection {
     changed_hash_count: number;
     blocked_entry_count: number;
     reusable_entry_count: number;
+    candidate_count: number;
+    admitted_count: number;
+    reused_count: number;
+    deprecated_count: number;
+    superseded_count: number;
   };
   entries: FamilyStagePackRegistryEntry[];
   authority_boundary: {
@@ -201,6 +241,52 @@ function attemptPolicy(
   return 'attempt_blocked_for_human_gate';
 }
 
+function lifecycleStatus(
+  proofBundle: FamilyStageProofBundle,
+  options: FamilyStagePackRegistryOptions,
+): FamilyStagePackLibraryLifecycleStatus {
+  if (options.libraryLifecycleStatus) {
+    return options.libraryLifecycleStatus;
+  }
+  if (options.supersessionRef || options.supersededByStagePackRef) {
+    return 'superseded';
+  }
+  if (options.deprecationRef) {
+    return 'deprecated';
+  }
+  if ((options.reusedByRefs ?? []).length > 0) {
+    return 'reused';
+  }
+  return proofBundle.admission_status === 'admitted' ? 'admitted' : 'candidate';
+}
+
+function buildLibraryLifecycle(
+  proofBundle: FamilyStageProofBundle,
+  options: FamilyStagePackRegistryOptions,
+  blockers: FamilyStagePackRegistryBlocker[],
+): FamilyStagePackLibraryLifecycle {
+  return {
+    status: lifecycleStatus(proofBundle, options),
+    promotion_ref: options.promotionRef ?? null,
+    deprecation_ref: options.deprecationRef ?? null,
+    supersession_ref: options.supersessionRef ?? null,
+    superseded_by_stage_pack_ref: options.supersededByStagePackRef ?? null,
+    reused_by_refs: options.reusedByRefs ?? [],
+    migration_blocker_count: blockers.length,
+    blockers,
+    authority_boundary: {
+      opl_role: 'stage_pack_library_lifecycle_projection_only',
+      lifecycle_is_operator_review_input: true,
+      stores_body_payloads: false,
+      can_execute_stage: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_mutate_artifact_body: false,
+    },
+  };
+}
+
 export function buildFamilyStagePackRegistryEntry(
   proofBundle: FamilyStageProofBundle,
   options: FamilyStagePackRegistryOptions = {},
@@ -224,6 +310,7 @@ export function buildFamilyStagePackRegistryEntry(
       integrity_ref: `opl://stage-packs/${proofBundle.identity.stage_pack_id}/integrity/${currentHash}`,
       migration_policy_ref: options.migrationPolicyRef ?? null,
     },
+    library_lifecycle: buildLibraryLifecycle(proofBundle, options, blockers),
     migration: {
       status,
       policy: options.migrationPolicy ?? null,
@@ -259,6 +346,11 @@ export function buildFamilyStagePackRegistryProjection(
       )).length,
       blocked_entry_count: entries.filter((entry) => entry.migration.blockers.length > 0).length,
       reusable_entry_count: entries.filter((entry) => entry.reusable_library_entry).length,
+      candidate_count: entries.filter((entry) => entry.library_lifecycle.status === 'candidate').length,
+      admitted_count: entries.filter((entry) => entry.library_lifecycle.status === 'admitted').length,
+      reused_count: entries.filter((entry) => entry.library_lifecycle.status === 'reused').length,
+      deprecated_count: entries.filter((entry) => entry.library_lifecycle.status === 'deprecated').length,
+      superseded_count: entries.filter((entry) => entry.library_lifecycle.status === 'superseded').length,
     },
     entries,
     authority_boundary: {
