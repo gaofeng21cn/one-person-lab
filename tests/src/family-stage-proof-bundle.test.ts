@@ -296,6 +296,22 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
   assert.equal(bundle.integrity.signature_status, 'unsigned_digest_only');
   assert.equal(bundle.integrity.authority_boundary.can_execute_stage, false);
   assert.equal(bundle.integrity.authority_boundary.can_verify_external_signature, false);
+  assert.equal(bundle.generated_artifact_manifest.surface_kind, 'opl_stage_pack_generated_artifact_manifest');
+  assert.equal(bundle.generated_artifact_manifest.stage_pack_hash, bundle.integrity.stage_pack_hash);
+  assert.equal(bundle.generated_artifact_manifest.summary.regeneration_required_when_stage_pack_hash_changes, true);
+  assert.deepEqual(bundle.generated_artifact_manifest.generated_test_refs.map((ref) => ref.ref), [
+    'tests/publication-review.test.ts',
+  ]);
+  assert.deepEqual(bundle.generated_artifact_manifest.generated_proof_refs.map((ref) => ref.ref), [
+    'artifacts/manuscript-draft-proof.json',
+    'tests/publication-review.test.ts',
+  ]);
+  assert.deepEqual(bundle.generated_artifact_manifest.generated_artifact_refs.map((ref) => ref.ref), [
+    'artifacts/manuscript-draft-proof.json',
+  ]);
+  assert.equal(bundle.generated_artifact_manifest.authority_boundary.manifest_is_build_review_input, true);
+  assert.equal(bundle.generated_artifact_manifest.authority_boundary.can_execute_stage, false);
+  assert.equal(bundle.generated_artifact_manifest.authority_boundary.can_authorize_quality_verdict, false);
 });
 
 test('stage proof bundle integrity digest is stable and changes with contract refs', () => {
@@ -316,6 +332,12 @@ test('stage proof bundle integrity digest is stable and changes with contract re
 
   assert.equal(baseBundle.integrity.stage_pack_hash, reordered.integrity.stage_pack_hash);
   assert.notEqual(baseBundle.integrity.stage_pack_hash, changed.integrity.stage_pack_hash);
+  assert.equal(baseBundle.generated_artifact_manifest.stage_pack_hash, baseBundle.integrity.stage_pack_hash);
+  assert.equal(changed.generated_artifact_manifest.stage_pack_hash, changed.integrity.stage_pack_hash);
+  assert.notEqual(
+    baseBundle.generated_artifact_manifest.source_stage_pack_ref,
+    changed.generated_artifact_manifest.source_stage_pack_ref,
+  );
   assert.equal(signed.integrity.signature_status, 'signature_ref_declared');
   assert.equal(signed.integrity.signer_ref, 'kms:domain-owner');
   assert.equal(signed.integrity.signature_ref, 'artifact:stage-pack.sig');
@@ -368,16 +390,22 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   const authority = examples[0]?.authority_boundary as JsonRecord;
   const metricsSchema = defs.proof_runtime_metrics as JsonRecord;
   const integritySchema = defs.stage_pack_integrity as JsonRecord;
+  const generatedManifestSchema = defs.generated_artifact_manifest as JsonRecord;
   const integrityProperties = integritySchema.properties as Record<string, JsonRecord>;
+  const generatedManifestProperties = generatedManifestSchema.properties as Record<string, JsonRecord>;
   const metrics = examples[0]?.proof_runtime_metrics as JsonRecord;
   const integrity = examples[0]?.integrity as JsonRecord;
+  const generatedManifest = examples[0]?.generated_artifact_manifest as JsonRecord;
+  const generatedManifestSummary = generatedManifest.summary as JsonRecord;
   const metricsAuthority = metrics.authority_boundary as JsonRecord;
   const integrityAuthority = integrity.authority_boundary as JsonRecord;
+  const generatedManifestAuthority = generatedManifest.authority_boundary as JsonRecord;
 
   assert.equal(properties.surface_kind.const, 'opl_stage_pack_proof_bundle');
   assert.equal(properties.version.const, 'opl-stage-pack-proof-bundle.v1');
   assert.equal((metricsSchema.description as string).includes('operator observability'), true);
   assert.ok(required.includes('integrity'));
+  assert.ok(required.includes('generated_artifact_manifest'));
   assert.equal(metrics.composition_obligation_count, 1);
   assert.equal(metrics.runtime_event_requirement_count, 1);
   assert.equal(metrics.satisfied_runtime_event_ref_count, 1);
@@ -394,6 +422,16 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   assert.equal(integrityAuthority.can_execute_stage, false);
   assert.equal(integrityAuthority.can_write_domain_truth, false);
   assert.equal(integrityAuthority.can_verify_external_signature, false);
+  assert.equal(generatedManifestProperties.stage_pack_hash.pattern, '^[0-9a-f]{64}$');
+  assert.equal(generatedManifest.surface_kind, 'opl_stage_pack_generated_artifact_manifest');
+  assert.equal(generatedManifest.stage_pack_hash, integrity.stage_pack_hash);
+  assert.equal(generatedManifestSummary.regeneration_required_when_stage_pack_hash_changes, true);
+  assert.equal(generatedManifestAuthority.opl_role, 'generated_artifact_manifest_projection_only');
+  assert.equal(generatedManifestAuthority.manifest_is_build_review_input, true);
+  assert.equal(generatedManifestAuthority.graphflow_runtime_dependency, false);
+  assert.equal(generatedManifestAuthority.can_execute_stage, false);
+  assert.equal(generatedManifestAuthority.can_write_domain_truth, false);
+  assert.equal(generatedManifestAuthority.can_authorize_quality_verdict, false);
   assert.equal(authorityProperties.opl_role.const, 'proof_bundle_projection_owner');
   assert.equal(authorityProperties.domain_role.const, 'truth_quality_receipt_and_artifact_authority');
   assert.equal(authority.can_execute_stage, false);
