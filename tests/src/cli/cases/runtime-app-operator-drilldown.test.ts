@@ -665,13 +665,25 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       ),
       true,
     );
+    const bridgeStageProductionAttemptRoute = drilldown.app_execution_bridge.safe_action_routes.find(
+      (ref: { action_id: string }) => ref.action_id === stageProductionAttemptRoute.action_id,
+    );
+    assert.equal(bridgeStageProductionAttemptRoute.can_submit_to_safe_action_shell, true);
     assert.equal(
-      drilldown.app_execution_bridge.safe_action_routes.some(
-        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
-          ref.action_id === stageProductionAttemptRoute.action_id
-          && ref.can_submit_to_safe_action_shell,
-      ),
+      bridgeStageProductionAttemptRoute.action_ref.includes('opl family-runtime attempt create'),
       true,
+    );
+    assert.deepEqual(
+      bridgeStageProductionAttemptRoute.opl_cli_args,
+      stageProductionAttemptRoute.opl_cli_args,
+    );
+    assert.deepEqual(
+      bridgeStageProductionAttemptRoute.missing_production_evidence,
+      stageProductionAttemptRoute.missing_production_evidence,
+    );
+    assert.deepEqual(
+      bridgeStageProductionAttemptRoute.expected_receipt_refs,
+      stageProductionAttemptRoute.expected_receipt_refs,
     );
     assert.equal(
       drilldown.app_execution_bridge.safe_action_routes.some(

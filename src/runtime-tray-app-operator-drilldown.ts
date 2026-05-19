@@ -630,9 +630,17 @@ function appExecutionBridge(
       action_kind: ref.action_kind,
       owner: ref.owner,
       route_target_kind: ref.route_target_kind,
+      action_ref: ref.ref,
+      opl_cli_args: 'opl_cli_args' in ref ? ref.opl_cli_args : null,
       stage_attempt_id: ref.stage_attempt_id,
       domain_id: ref.domain_id,
+      target_domain_id: 'target_domain_id' in ref ? ref.target_domain_id : null,
+      project_id: 'project_id' in ref ? ref.project_id : null,
       stage_id: ref.stage_id,
+      missing_production_evidence:
+        'missing_production_evidence' in ref ? ref.missing_production_evidence : [],
+      expected_receipt_refs:
+        'expected_receipt_refs' in ref ? ref.expected_receipt_refs : [],
       execution_surface: ref.execution_surface,
       submit_via: 'opl runtime action execute',
       dry_run_supported: true,
