@@ -18,6 +18,8 @@ Date: `2026-05-19`
 
 理想状态下，`OPL Framework` 是知识工程驱动的完整生产级智能体开发与运行框架。它负责开发接入、domain admission、stage-led runtime、provider-backed durable workflow、typed queue、attempt ledger、human gate、retry/dead-letter、memory/artifact/lifecycle locator、operator projection、App/workbench 投影、质量证据承载和跨 domain 审计。
 
+它的智能体原则是 AI-first, contract-light。OPL 不追求把专家智能写成越来越厚的固定流程；它把开放式规划、创作、评审、路线判断、诊断和修订交给 `Codex CLI` 等 AI executor、domain stage pack、prompt、skill、knowledge、rubric 与 quality gate，让后续 AI 能力提升能直接转化为 Agent 能力提升。合同只负责 owner boundary、权限、安全、审计、receipt、阻塞、恢复、projection 和 fail-closed，不负责替 AI executor 决定怎么思考或怎么完成专家工作。
+
 `MAS`、`MAG`、`RCA` 以及未来 Patent、Award、Thesis、Review 等 `Foundry Agents` 是基于 OPL Framework 的垂类智能体。它们持有领域知识、stage 语义、领域真相、质量 / export verdict、artifact authority、memory body 和 owner receipt；它们复用 OPL 的运行外围能力，不重复维护通用 runtime、queue、attempt ledger、session store、SQLite lifecycle engine、workspace/source shell、artifact index、memory locator、operator projection 或 generated wrapper。
 
 理想 Foundry Agent 是：
@@ -69,6 +71,8 @@ domain-agent-repo/
 因此，`supervisor`、`scheduler`、`managed run`、`runtime manager`、`session store`、`workbench` 这类命名只允许在 active source 中作为明确的 domain bridge、refs-only adapter、diagnostic 或 history/tombstone 出现。否则即使 descriptor ready 或 functional audit 已 closed，也应列为 physical source morphology gap，继续 rename、split、delete、archive 或 tombstone。
 
 ## 语义单真相与冗余治理
+
+Contract-light 与语义单真相并不冲突。OPL 的机器面必须少而权威，固定的是可审计边界和恢复语义，而不是智能行为本身。一个合同可以要求 stage 提供 goal、refs、owner、allowed action、expected receipt、gate 和 blocker；它不能规定 AI executor 必须按固定模板推理、必须用固定句式评审，或必须把开放式探索压成预设分支。这样才能在不牺牲安全和审计的情况下，最大程度吸收后续模型、工具和 executor 能力提升。
 
 理想 OPL Framework 不能靠多个相似读模型分别解释“是否 ready”“谁是 owner”“哪个 surface 是生产入口”。所有面向 CLI、App、Agent、测试和文档的状态，都必须从少数权威机器面派生：
 
@@ -151,6 +155,8 @@ User / Codex / CLI / One Person Lab App
 ## Stage 是核心组织单元
 
 OPL 的运行逻辑以专家阶段 `stage` 为中心。标准 OPL Agent 必须先拆 stage，再定义每个 stage 的 prompt、tool、knowledge 和 quality gate。每个 stage 应接近真实专家完成复杂工作的一个阶段，而不是单个工具调用、脚本函数或后处理分支。
+
+Stage 是 AI-first 的容器，不是把 AI 行为写死的流程节点。一个 stage 应把目标、资料、权限、质量门和交接说清楚，然后允许被选中的 executor 用当前最强的模型能力完成拆解、推理、创作、审核和修订。OPL 只在边界、receipt、审计、恢复和 owner authority 上 fail closed。
 
 每个 stage 至少声明：
 

@@ -8,6 +8,8 @@
 
 `OPL` 是面向高价值知识工作的完整智能体运行框架。它以 阶段推进为原则，并以 Agent executor 为最小执行单位，阶段内默认最小执行单元是 `Codex CLI`，编排单元是领域阶段，产品目标是通过可恢复的阶段尝试、人工关口、收口凭据、进度投影和文件生命周期，推进到可审计的全自动交付。
 
+当前长期原则是 AI-first, contract-light：OPL 依靠 `Codex CLI` 等 AI executor、domain stage pack、prompt、skill、knowledge 和 quality gate 的持续进步获得智能体能力提升；合同只负责边界、安全、审计、receipt、阻塞、恢复和投影，不把开放式智能行为写死。
+
 当前公开的 `OPL` 资源模型统一为：
 
 - `System`
