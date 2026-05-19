@@ -168,3 +168,45 @@ test('production source does not retain retired Hermes provider or gateway envir
 
   assert.deepEqual(violations, []);
 });
+
+test('default runtime and CLI source do not leak retired vocabulary on active paths', () => {
+  const forbiddenActivePathPatterns = [
+    /\bfront(?:door|desk)\b/i,
+    /product[-_]?front(?:door|desk)/i,
+    /open[-_]?front(?:door|desk)/i,
+    /domain[-_]?gateway/i,
+    /gateway[-_]interaction[-_]contract/i,
+    /compatibility[-_]?alias(?:es)?/i,
+    /legacy[-_]?alias(?:es)?/i,
+    /runtime[-_]?run/i,
+    /runtime[-_]?resume/i,
+    /mcp-stdio/i,
+    /session[-_]journal[-_]root/i,
+    /local[-_]run[-_]journal/i,
+  ];
+  const allowedSourceLines = [
+    /hermes_agent_not_provider_or_gateway_surface/i,
+    /openai_compatible_gateway_backend_forbidden/i,
+    /compatibility_alias_allowed/i,
+    /familyRuntimeRuntimePaths/i,
+  ];
+  const violations: string[] = [];
+
+  for (const relativeRoot of ['src', 'scripts', 'contracts']) {
+    for (const relativePath of walk(relativeRoot)) {
+      const lines = read(relativePath).split('\n');
+      lines.forEach((line, index) => {
+        if (allowedSourceLines.some((pattern) => pattern.test(line))) {
+          return;
+        }
+        for (const pattern of forbiddenActivePathPatterns) {
+          if (pattern.test(line)) {
+            violations.push(`${relativePath}:${index + 1}: ${pattern}`);
+          }
+        }
+      });
+    }
+  }
+
+  assert.deepEqual(violations, []);
+});

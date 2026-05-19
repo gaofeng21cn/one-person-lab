@@ -154,6 +154,96 @@ function buildStagePlane() {
   };
 }
 
+function buildAdmittedActionCatalog(targetDomainId: string, owner: string) {
+  return {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v1',
+    catalog_id: `${targetDomainId.replace(/[^a-z0-9]+/gi, '_')}_action_catalog`,
+    target_domain_id: targetDomainId,
+    owner,
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    actions: Array.from({ length: 6 }, (_entry, index) => ({
+      action_id: `stage_${index + 1}_action`,
+      title: `Stage ${index + 1} action`,
+      summary: `Project stage ${index + 1} action metadata.`,
+      owner,
+      effect: 'read_only',
+      source_command: { command: `${owner} stage-${index + 1}`, surface_kind: 'domain_cli' },
+      input_schema_ref: `schemas/stage-${index + 1}.input.json`,
+      output_schema_ref: `schemas/stage-${index + 1}.output.json`,
+      workspace_locator_fields: ['workspace_root'],
+      human_gate_ids: [],
+      supported_surfaces: { cli: null, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null },
+      authority_boundary: { opl_role: 'projection_consumer_only' },
+    })),
+    notes: [],
+  };
+}
+
+function buildAdmittedStagePlane(targetDomainId: string, owner: string) {
+  return {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: `${targetDomainId.replace(/[^a-z0-9]+/gi, '_')}_stage_control_plane`,
+    target_domain_id: targetDomainId,
+    owner,
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: Array.from({ length: 6 }, (_entry, index) => {
+      const stageNumber = index + 1;
+      return {
+        stage_id: `stage_${stageNumber}`,
+        stage_kind: 'creation',
+        title: `Stage ${stageNumber}`,
+        summary: `Runtime-enforced stage ${stageNumber} descriptor.`,
+        goal: `Expose stage ${stageNumber} as admitted runtime projection metadata.`,
+        owner,
+        domain_stage_refs: [`domain_stage_${stageNumber}`],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [`stage_${stageNumber}_action`],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: [`stage_${stageNumber}_input_ready`],
+          ensures: [`stage_${stageNumber}_receipt_ready`],
+          boundary_assumptions: ['domain_truth_remains_domain_owned'],
+          runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
+          properties: [],
+          runtime_assumptions: [],
+          monitor_refs: [],
+          source_scope_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
+        },
+        trust_boundary: {
+          lane: 'domain_agent',
+          static_check_eligible: false,
+          effect_boundary: false,
+          runtime_guard_required: true,
+          records_runtime_events: true,
+          runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
+        },
+        authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
+      };
+    }),
+    notes: [],
+  };
+}
+
+function withAdmittedStagePack(payload: JsonRecord, targetDomainId: string, owner: string) {
+  return attachManifestSurface(
+    attachManifestSurface(payload, 'family_action_catalog', buildAdmittedActionCatalog(targetDomainId, owner)),
+    'family_stage_control_plane',
+    buildAdmittedStagePlane(targetDomainId, owner),
+  );
+}
+
 test('family stage graph projects edges, guarantee modes, and integrity digest without authority transfer', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-graph-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -216,6 +306,59 @@ test('family stage graph projects edges, guarantee modes, and integrity digest w
     assert.equal(graph.family_stage_graph.authority_boundary.can_execute_stage, false);
     assert.equal(graph.family_stage_graph.authority_boundary.can_write_domain_truth, false);
     assert.equal(graph.family_stage_graph.authority_boundary.can_authorize_quality_verdict, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family stage list and proof bundles preserve 18 admitted runtime-enforced projection stages', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-admitted-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const manifests: Array<[string, JsonRecord, string, string]> = [
+    ['medautoscience', fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience'],
+    ['medautogrant', fixtures.medautogrant as JsonRecord, 'med-autogrant', 'MedAutoGrant'],
+    ['redcube', fixtures.redcube as JsonRecord, 'redcube_ai', 'RedCubeAI'],
+  ];
+
+  try {
+    for (const [project, fixture, targetDomainId, owner] of manifests) {
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        project,
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(withAdmittedStagePack(fixture, targetDomainId, owner)),
+      ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    }
+
+    const list = runCli(['stages', 'list'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(list.family_stages.summary.resolved_planes_count, 3);
+    assert.equal(list.family_stages.summary.stages_count, 18);
+    assert.equal(list.family_stages.summary.admitted_stages_count, 18);
+    assert.equal(list.family_stages.summary.blocked_stages_count, 0);
+    assert.equal(list.family_stages.summary.needs_contracts_stages_count, 0);
+    assert.equal(
+      list.family_stages.stages.every((stage: { admission_status: string; guarantee_mode: string }) =>
+        stage.admission_status === 'admitted' && stage.guarantee_mode === 'runtime_enforced',
+      ),
+      true,
+    );
+
+    const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_proof_bundle.proof_bundle;
+    assert.equal(proofBundle.admission_status, 'admitted');
+    assert.equal(proofBundle.admission_summary.admitted_stages_count, 6);
+    assert.equal(proofBundle.authority_boundary.proof_passed, true);
+    assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

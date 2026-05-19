@@ -23,10 +23,7 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
   const entryPath = path.join(repoRoot, 'src', 'family-runtime-command.ts');
   const partsRoot = path.join(repoRoot, 'src', 'family-runtime-command-parts');
   const entryLines = fs.readFileSync(entryPath, 'utf8').trimEnd().split('\n').length;
-
-  assert.equal(fs.existsSync(partsRoot), true);
-  assert.ok(entryLines < 260, `family-runtime-command.ts should stay thin after parser extraction, got ${entryLines}`);
-  for (const fileName of [
+  const expectedParserParts = [
     'attempt.ts',
     'lifecycle.ts',
     'provider.ts',
@@ -34,7 +31,15 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
     'scheduler.ts',
     'service-worker.ts',
     'shared.ts',
-  ]) {
+  ];
+
+  assert.equal(fs.existsSync(partsRoot), true);
+  assert.ok(entryLines <= 240, `family-runtime-command.ts should stay thin after parser extraction, got ${entryLines}`);
+  assert.deepEqual(
+    fs.readdirSync(partsRoot).filter((fileName) => fileName.endsWith('.ts')).sort(),
+    expectedParserParts,
+  );
+  for (const fileName of expectedParserParts) {
     assert.equal(fs.existsSync(path.join(partsRoot, fileName)), true, `${fileName} parser part is missing`);
   }
 });
