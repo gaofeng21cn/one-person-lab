@@ -2,6 +2,7 @@ import type { listEvents } from './family-runtime-store.ts';
 import { isRecord, optionalString } from './domain-manifest/shared-utils.ts';
 
 const DEFAULT_PROVIDER_PROOF_MAX_AGE_SECONDS = 24 * 60 * 60;
+const DEFAULT_PROVIDER_PROOF_WINDOW_SECONDS = 7 * 24 * 60 * 60;
 const PRODUCTION_PROOF_COMMAND = 'opl family-runtime residency proof --provider temporal --production';
 
 type ProviderRuntimeEvent = ReturnType<typeof listEvents>[number];
@@ -18,6 +19,14 @@ function providerProofMaxAgeSeconds() {
     : DEFAULT_PROVIDER_PROOF_MAX_AGE_SECONDS;
 }
 
+function providerProofWindowSeconds() {
+  const raw = process.env.OPL_PROVIDER_PROOF_WINDOW_SECONDS?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+  return Number.isInteger(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_PROVIDER_PROOF_WINDOW_SECONDS;
+}
+
 function eventAgeSeconds(createdAt: string | null) {
   if (!createdAt) {
     return null;
@@ -27,6 +36,14 @@ function eventAgeSeconds(createdAt: string | null) {
     return null;
   }
   return Math.max(0, Math.floor((Date.now() - createdTime) / 1000));
+}
+
+function eventTimeMs(event: ProviderRuntimeEvent | undefined) {
+  if (!event?.created_at) {
+    return null;
+  }
+  const time = Date.parse(event.created_at);
+  return Number.isFinite(time) ? time : null;
 }
 
 function nextProofDueAt(createdAt: string | null, maxAgeSeconds: number) {
@@ -152,6 +169,121 @@ function countReceiptField(events: ProviderRuntimeEvent[], fieldName: string, ex
 
 function eventPayload(event: ProviderRuntimeEvent | undefined) {
   return isRecord(event?.payload) ? event.payload : null;
+}
+
+function proofReceiptStatus(event: ProviderRuntimeEvent) {
+  const payload = eventPayload(event);
+  const receipt = isRecord(payload?.proof_receipt) ? payload.proof_receipt : null;
+  return optionalString(receipt?.receipt_status);
+}
+
+function proofCloseoutStatus(event: ProviderRuntimeEvent) {
+  return optionalString(eventPayload(event)?.closeout_status);
+}
+
+function executionStatus(event: ProviderRuntimeEvent) {
+  return optionalString(eventPayload(event)?.execution_status);
+}
+
+function executionReceiptStatus(event: ProviderRuntimeEvent) {
+  return optionalString(eventPayload(event)?.receipt_status);
+}
+
+function repairStatus(event: ProviderRuntimeEvent) {
+  const repairReceipt = isRecord(eventPayload(event)?.repair_receipt)
+    ? eventPayload(event)?.repair_receipt as Record<string, unknown>
+    : null;
+  return optionalString(repairReceipt?.repair_status);
+}
+
+function firstCreatedAt(events: ProviderRuntimeEvent[]) {
+  return events[0]?.created_at ?? null;
+}
+
+function latestCreatedAt(events: ProviderRuntimeEvent[]) {
+  return events.at(-1)?.created_at ?? null;
+}
+
+function providerCadenceWindow(input: {
+  proofEvents: ProviderRuntimeEvent[];
+  executionEvents: ProviderRuntimeEvent[];
+  maxAgeSeconds: number;
+}) {
+  const windowSeconds = providerProofWindowSeconds();
+  const nowMs = Date.now();
+  const windowStartMs = nowMs - windowSeconds * 1000;
+  const inWindow = (event: ProviderRuntimeEvent) => {
+    const time = eventTimeMs(event);
+    return time !== null && time >= windowStartMs && time <= nowMs;
+  };
+  const proofEvents = input.proofEvents.filter(inWindow);
+  const executionEvents = input.executionEvents.filter(inWindow);
+  const allWindowEvents = [...proofEvents, ...executionEvents].sort((a, b) =>
+    (eventTimeMs(a) ?? 0) - (eventTimeMs(b) ?? 0)
+  );
+  const expectedExecutionCount = Math.max(1, Math.ceil(windowSeconds / input.maxAgeSeconds));
+  const executedCount = executionEvents.filter((event) => executionStatus(event) === 'executed').length;
+  const skippedCount = executionEvents.filter((event) => executionStatus(event) === 'skipped').length;
+  const blockedExecutionCount = executionEvents.filter((event) => executionReceiptStatus(event) === 'blocked').length;
+  const provenExecutionCount = executionEvents.filter((event) => executionReceiptStatus(event) === 'proven').length;
+  const blockedRepairCount = executionEvents.filter((event) => repairStatus(event) === 'blocked').length;
+  const provenProofCount = proofEvents.filter((event) =>
+    proofCloseoutStatus(event) === 'production_residency_proven'
+    && proofReceiptStatus(event) === 'proven'
+  ).length;
+  const blockedProofCount = proofEvents.filter((event) =>
+    proofCloseoutStatus(event) !== 'production_residency_proven'
+    || proofReceiptStatus(event) !== 'proven'
+  ).length;
+  const missingExecutionCount = Math.max(0, expectedExecutionCount - executionEvents.length);
+  const windowStatus =
+    proofEvents.length === 0 && executionEvents.length === 0
+      ? 'no_window_evidence'
+      : blockedProofCount > 0 || blockedExecutionCount > 0 || blockedRepairCount > 0
+        ? 'window_repair_receipt_observed'
+        : missingExecutionCount > 0
+          ? 'window_evidence_incomplete'
+          : provenProofCount > 0
+            ? 'window_cadence_satisfied'
+            : 'window_evidence_observed';
+  const requiredNextAction = windowStatus === 'window_cadence_satisfied'
+    ? 'Keep supervised Temporal provider SLO ticks running for the full operator evidence window.'
+    : windowStatus === 'window_repair_receipt_observed'
+      ? 'Repair Temporal provider blockers, rerun provider SLO tick, and keep the repair receipt in the runtime ledger.'
+      : `Run opl family-runtime scheduler tick --provider temporal on cadence until the ${windowSeconds}s window has enough execution receipts.`;
+  return {
+    surface_kind: 'opl_temporal_provider_cadence_window_projection',
+    provider_kind: 'temporal',
+    window_seconds: windowSeconds,
+    window_started_at: new Date(windowStartMs).toISOString(),
+    window_ended_at: new Date(nowMs).toISOString(),
+    first_observed_event_created_at: firstCreatedAt(allWindowEvents),
+    latest_observed_event_created_at: latestCreatedAt(allWindowEvents),
+    expected_slo_execution_receipt_count: expectedExecutionCount,
+    observed_slo_execution_receipt_count: executionEvents.length,
+    missing_slo_execution_receipt_count: missingExecutionCount,
+    proof_event_count: proofEvents.length,
+    proven_proof_event_count: provenProofCount,
+    blocked_proof_event_count: blockedProofCount,
+    executed_slo_execution_receipt_count: executedCount,
+    skipped_slo_execution_receipt_count: skippedCount,
+    proven_slo_execution_receipt_count: provenExecutionCount,
+    blocked_slo_execution_receipt_count: blockedExecutionCount,
+    blocked_repair_receipt_count: blockedRepairCount,
+    window_status: windowStatus,
+    long_window_evidence_ready: windowStatus === 'window_cadence_satisfied',
+    required_next_action: requiredNextAction,
+    evidence_policy:
+      'continuous_window_requires_slo_execution_receipts_not_just_latest_provider_proof',
+    authority_boundary: {
+      opl: 'provider_slo_window_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
 }
 
 function continuousProofStatus(input: {
@@ -322,6 +454,7 @@ function operatorSloRepairLoop(input: {
   latestExecutionPayload: Record<string, unknown> | null;
   maxAgeSeconds: number;
   requiredNextAction: string;
+  cadenceWindow: ReturnType<typeof providerCadenceWindow>;
 }) {
   const repairState = proofRepairState({
     continuousProofStatus: input.continuousProofStatus,
@@ -352,6 +485,7 @@ function operatorSloRepairLoop(input: {
       latestExecution: input.latestExecution,
       latestExecutionPayload: input.latestExecutionPayload,
     }),
+    cadence_window: input.cadenceWindow,
     operator_cadence: cadence,
     operator_cadence_action: operatorCadenceAction({
       repairState,
@@ -396,6 +530,11 @@ export function buildProviderContinuousProof(events: ReturnType<typeof listEvent
     freshnessStatus,
     continuousProofStatus: proofStatus,
   });
+  const cadenceWindow = providerCadenceWindow({
+    proofEvents: state.proofEvents,
+    executionEvents: state.executionEvents,
+    maxAgeSeconds,
+  });
   return {
     surface_kind: 'opl_temporal_provider_continuous_proof_projection',
     provider_kind: 'temporal',
@@ -416,6 +555,7 @@ export function buildProviderContinuousProof(events: ReturnType<typeof listEvent
     latest_proof_receipt: state.latestProofReceipt,
     continuous_proof_status: proofStatus,
     proof_slo_status: sloStatus,
+    cadence_window: cadenceWindow,
     operator_slo_repair_loop: operatorSloRepairLoop({
       continuousProofStatus: proofStatus,
       freshnessStatus,
@@ -429,6 +569,7 @@ export function buildProviderContinuousProof(events: ReturnType<typeof listEvent
       latestExecutionPayload: state.latestExecutionPayload,
       maxAgeSeconds,
       requiredNextAction: nextAction,
+      cadenceWindow,
     }),
     required_next_action: nextAction,
     authority_boundary: {

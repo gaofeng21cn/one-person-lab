@@ -30,6 +30,10 @@ test('runtime snapshot projects provider continuous proof receipt without domain
     );
     assert.equal(snapshot.provider_continuous_proof.proof_freshness_status, 'fresh');
     assert.equal(snapshot.provider_continuous_proof.proof_slo_status, 'proof_blocker_observed');
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.window_status, 'window_repair_receipt_observed');
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.long_window_evidence_ready, false);
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.observed_slo_execution_receipt_count, 1);
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.blocked_repair_receipt_count, 1);
     assert.equal(snapshot.provider_continuous_proof.latest_closeout_status, 'production_residency_needs_live_evidence');
     assert.equal(snapshot.provider_continuous_proof.latest_proof_receipt.receipt_status, 'blocked');
     assert.equal(
@@ -89,6 +93,7 @@ test('runtime snapshot projects provider continuous proof receipt without domain
     assert.equal(typeof proofItem.provider_continuous_proof.latest_event_age_seconds, 'number');
     assert.equal(proofItem.provider_continuous_proof.proof_freshness_status, 'fresh');
     assert.equal(proofItem.provider_continuous_proof.proof_slo_status, 'proof_blocker_observed');
+    assert.equal(proofItem.provider_continuous_proof.cadence_window.window_status, 'window_repair_receipt_observed');
     assert.equal(
       proofItem.provider_continuous_proof.operator_slo_repair_loop.operator_cadence.max_proof_age_seconds,
       86400,
@@ -254,6 +259,10 @@ db.close();`,
     assert.equal(typeof snapshot.provider_continuous_proof.latest_event_age_seconds, 'number');
     assert.equal(snapshot.provider_continuous_proof.proof_freshness_status, 'fresh');
     assert.equal(snapshot.provider_continuous_proof.proof_slo_status, 'proof_fresh');
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.window_status, 'window_evidence_incomplete');
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.long_window_evidence_ready, false);
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.observed_slo_execution_receipt_count, 0);
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.missing_slo_execution_receipt_count, 7);
     assert.equal(snapshot.provider_continuous_proof.operator_slo_repair_loop.repair_state, 'cadence_current');
     assert.equal(
       snapshot.provider_continuous_proof.operator_slo_repair_loop.latest_receipt_summary.receipt_status,
@@ -356,6 +365,8 @@ db.close();`,
     assert.equal(proof.proven_event_count, 1);
     assert.equal(proof.continuous_proof_status, 'latest_proof_proven');
     assert.equal(proof.proof_slo_status, 'proof_fresh');
+    assert.equal(proof.cadence_window.window_status, 'window_repair_receipt_observed');
+    assert.equal(proof.cadence_window.long_window_evidence_ready, false);
     assert.equal(proof.operator_slo_repair_loop.repair_state, 'cadence_current');
     assert.equal(proof.operator_slo_repair_loop.execution_receipts.blocked_count, 0);
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), false);
@@ -419,6 +430,8 @@ db.close();`,
 
     assert.equal(snapshot.provider_continuous_proof.continuous_proof_status, 'all_observed_proofs_proven');
     assert.equal(snapshot.provider_continuous_proof.proof_slo_status, 'proof_stale');
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.window_status, 'window_evidence_incomplete');
+    assert.equal(snapshot.provider_continuous_proof.cadence_window.long_window_evidence_ready, false);
     assert.equal(proofItem.status, 'all_observed_proofs_proven');
     assert.equal(proofItem.status_label, 'Provider proof 已过期');
     assert.equal(proofItem.action_owner, 'infrastructure');
@@ -437,6 +450,107 @@ db.close();`,
       'opl family-runtime residency proof --provider temporal --production',
     );
     assert.equal(proofItem.provider_continuous_proof.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot marks Temporal provider cadence window ready only after supervised execution receipts cover the window', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-window-ready-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    runCli(['family-runtime', 'events', 'export'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const eventRows = Array.from({ length: 7 }, (_, index) => {
+      const createdAt = new Date(now - (6 - index) * dayMs).toISOString();
+      return {
+        proofEventId: `evt_provider_proof_window_${index}`,
+        receiptEventId: `evt_provider_slo_window_${index}`,
+        createdAt,
+      };
+    });
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+const rows = ${JSON.stringify(eventRows)};
+for (const row of rows) {
+  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+    .run(
+      row.proofEventId,
+      'temporal_residency_proof',
+      'test',
+      JSON.stringify({
+        provider_kind: 'temporal',
+        proof_mode: 'external_temporal_service_worker',
+        closeout_status: 'production_residency_proven',
+        proof_receipt: {
+          receipt_kind: 'temporal_production_residency_proof',
+          receipt_status: 'proven',
+          provider_kind: 'temporal'
+        }
+      }),
+      row.createdAt
+    );
+  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+    .run(
+      row.receiptEventId,
+      'temporal_provider_slo_execution_receipt',
+      'test',
+      JSON.stringify({
+        surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+        provider_kind: 'temporal',
+        execution_status: 'executed',
+        receipt_status: 'proven',
+        receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+        repair_receipt: {
+          repair_status: 'executed',
+          can_execute_domain_repair: false
+        },
+        authority_boundary: {
+          can_authorize_domain_ready: false
+        }
+      }),
+      row.createdAt
+    );
+}
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const window = output.runtime_tray_snapshot.provider_continuous_proof.cadence_window;
+    const allItems = [
+      ...output.runtime_tray_snapshot.running_items,
+      ...output.runtime_tray_snapshot.attention_items,
+      ...output.runtime_tray_snapshot.recent_items,
+    ];
+
+    assert.equal(window.window_status, 'window_cadence_satisfied');
+    assert.equal(window.long_window_evidence_ready, true);
+    assert.equal(window.expected_slo_execution_receipt_count, 7);
+    assert.equal(window.observed_slo_execution_receipt_count, 7);
+    assert.equal(window.missing_slo_execution_receipt_count, 0);
+    assert.equal(window.blocked_repair_receipt_count, 0);
+    assert.equal(output.runtime_tray_snapshot.provider_continuous_proof.proof_slo_status, 'proof_fresh');
+    assert.equal(allItems.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
