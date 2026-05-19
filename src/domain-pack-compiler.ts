@@ -670,6 +670,7 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
 function buildCompilerDomains(contracts: FrameworkContracts) {
   const descriptorList = buildFamilyAgentDescriptorList(contracts, {
     manifestCommandTimeoutMs: PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS,
+    manifestCommandTimeoutPolicy: 'fixed',
   });
   const familyAgentDescriptors = descriptorList.family_agent_descriptors;
   return familyAgentDescriptors.descriptors.map((descriptor) =>
