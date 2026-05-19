@@ -1,5 +1,10 @@
 # Contract Convergence v1 执行板
 
+Owner: `One Person Lab`
+Purpose: `references_convergence_governance_contract_convergence_v1_execution_board`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 > 2026-05-14 生命周期说明：本文保留为 `2026-04-11` 四仓 convergence program 快照。正文中的 `Gateway / Federation`、`Domain Harness OS` 和 `Phase C` 说法只记录当时的统一治理语言；当前 OPL truth 已收敛为 stage-led、以 Agent executor 为最小执行单位的 family agent framework。当前入口和剩余差距以 `docs/status.md`、`docs/architecture.md`、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` 为准。本文不提供 active gateway/federation compatibility interface。
 
 状态锚点：`2026-04-11`

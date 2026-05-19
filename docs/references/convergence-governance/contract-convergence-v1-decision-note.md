@@ -1,5 +1,10 @@
 # Contract Convergence v1 决策记录（2026-04-08）
 
+Owner: `One Person Lab`
+Purpose: `references_convergence_governance_contract_convergence_v1_decision_note`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 > 2026-05-14 退役更新：本文件保留 2026-04-08 的历史决策背景；其中涉及 OMX 的开发控制面分工已被 Codex-only 当前执行口径取代，`gateway / federation` 说法也已被 stage-led OPL family agent framework 口径取代。本文不得作为当前执行入口、prompt 模板、长跑手册或 active compatibility interface 使用。
 
 ## 文档定位

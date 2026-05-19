@@ -1,5 +1,10 @@
 # Family Product Operator Projection
 
+Owner: `One Person Lab`
+Purpose: `references_operating_governance_family_product_operator_projection`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## Purpose
 
 `OPL` product/operator view 把 family runtime attempt、domain quality projection 和 incident learning loop 聚合成用户可监督的状态面。它回答用户关心的问题：哪个 domain 在跑、当前卡点、是否会自动继续、下一次该看哪个 surface、是否需要 human gate、质量门是否关闭。

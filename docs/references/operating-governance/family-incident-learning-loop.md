@@ -1,5 +1,10 @@
 # Family Incident Learning Loop
 
+Owner: `One Person Lab`
+Purpose: `references_operating_governance_family_incident_learning_loop`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## Purpose
 
 `OPL` family 的长期自治能力必须从真实失败中变强。incident 不能只留在聊天、日志、terminal prose 或个人记忆里；每个可复现或可分类失败都必须回流成 repo-tracked guard、test、contract、runbook、taxonomy update 或 operator projection。

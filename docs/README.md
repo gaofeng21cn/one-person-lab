@@ -1,5 +1,10 @@
 # OPL 文档索引
 
+Owner: `One Person Lab`
+Purpose: `index`
+State: `active_index`
+Machine boundary: 本文是人读文档入口。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、release artifacts 和真实 evidence。
+
 这个目录是 `One Person Lab` 仓库跟踪文档面的入口索引。
 仓库首页优先写给想安装并开始工作的用户。
 这份索引服务需要理解当前产品模型、活跃 runtime/activation 主线，以及文档生命周期地图的读者。

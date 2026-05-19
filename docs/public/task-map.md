@@ -1,5 +1,10 @@
 # OPL 任务版图
 
+Owner: `One Person Lab`
+Purpose: `public_task_map_support`
+State: `public_support`
+Machine boundary: 本文是人读任务版图。domain admission、runtime readiness、quality/export verdict 和 artifact authority 继续归 contracts、source、CLI/API 行为、domain-owned manifests / receipts 和真实 evidence。
+
 ## 总览
 
 `OPL` 把一人课题组的正式工作拆成七类工作流：

@@ -1,5 +1,10 @@
 # OPL 生态四仓统一状态总表
 
+Owner: `One Person Lab`
+Purpose: `historical_ecosystem_status_snapshot`
+State: `history_only`
+Machine boundary: 本文只保存 2026-04-11 四仓状态快照。当前状态、executor/provider 边界、domain-agent 集合和生产证据门回到核心五件套、`docs/active/current-state-vs-ideal-gap.md`、contracts、source、CLI/API 行为和 domain-owned manifests。
+
 > 历史说明（2026-04-11 OMX offboarding；2026-05-14 复核）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。正文中的 `Gateway / Federation`、`Domain Harness OS` 与 `Codex-default host-agent runtime` 是当时快照语言；当前活跃入口以 stage-led OPL framework 文档为准（根层 `README*`、中文 `docs/README.md`、`docs/status.md`、`docs/architecture.md`、`contracts/opl-framework/README*`）。本文不提供 active gateway/federation compatibility interface。
 
 状态锚点：`2026-04-11`
@@ -7,7 +12,7 @@
 ## 当前默认口径跳转（2026-04-13）
 
 - 本文件是 `2026-04-11 snapshot`，属于历史参考；不再作为四仓当前执行器与推进顺序的默认口径。
-- 当前 follow-up 与执行器统一口径请优先读 `docs/status.md`、`docs/project.md`、`docs/architecture.md`，再读 [`four-repo-executor-follow-up-and-hermes-evaluation.md`](./four-repo-executor-follow-up-and-hermes-evaluation.md) 与 [`hermes-agent-executor-evaluation.md`](../runtime-substrate/hermes-agent-executor-evaluation.md)。
+- 当前 follow-up 与执行器统一口径请优先读 `docs/status.md`、`docs/project.md`、`docs/architecture.md`，再读本目录中的历史 [`four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md`](./four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md) 与当前 executor 边界参考 `docs/references/runtime-substrate/hermes-agent-executor-evaluation.md`。
 - 当前 active domain-agent 集合是 `MAS / MAG / RCA`；`MDS` 是 `MAS` 下层受控 runtime/backend companion，不作为 OPL 默认 active domain agent 或 OPL-managed module。默认 OPL 本地入口继承 `Codex CLI` / Codex-default 语义。
 - `Hermes-Agent` 当前仍是后续评估路线，路线状态写作 `experimental`；完整 `Hermes AIAgent` agent loop 是这条路线的硬 guardrail。
 - `RedCube` 当前 repo-tracked truth 已经包含 upstream runtime-owner cutover、`redcube product frontdoor`、federated product entry、session continuity、family manifest companion，以及 `Codex CLI` 默认执行器与 `autonomous` 默认模式。
@@ -23,7 +28,7 @@
 3. 四仓是否已经拉平到同一起跑线
 4. 现阶段各仓下一步到底应该继续什么
 
-`2026-04-11` 快照对应的中央 program 与阶段定义，以 [`contract-convergence-v1-execution-board.md`](./contract-convergence-v1-execution-board.md) 为准；当前默认口径请回到 [`four-repo-executor-follow-up-and-hermes-evaluation.md`](./four-repo-executor-follow-up-and-hermes-evaluation.md) 与 `docs/status.md`。
+`2026-04-11` 快照对应的中央 program 与阶段定义，以 `docs/references/convergence-governance/contract-convergence-v1-execution-board.md` 为准；当前默认口径请回到核心五件套、`docs/references/runtime-substrate/family-executor-adapter-defaults.md` 与 `docs/status.md`。
 
 ## 使用规则
 

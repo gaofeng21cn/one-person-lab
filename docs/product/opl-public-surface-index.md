@@ -1,5 +1,10 @@
 # OPL 公开界面索引
 
+Owner: `One Person Lab`
+Purpose: `public_surface_index`
+State: `active_support`
+Machine boundary: 本文是人读 public surface 索引。机器可读 surface truth 继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和 App release/test evidence。
+
 ## 目的
 
 这份文档索引当前 `OPL` 的权威公开界面。
@@ -74,7 +79,7 @@
 
 - [参考级索引](../references/README.md)
 - [历史归档索引](../history/README.md)
-- [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
+- [Convergence Governance 过程归档](../history/process/convergence-governance/README.md)
 - `docs/history/compatibility/` 下的退役 gateway/federation provenance
 
 ## 阅读规则

@@ -1,5 +1,10 @@
 # OPL Family Structure Advisory Report
 
+Owner: `One Person Lab`
+Purpose: `references_operating_governance_family_structure_advisory_report`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 owner: OPL shared governance  
 purpose: advisory structure scan across OPL-family tracked files  
 state: current advisory report, not a fail-closed gate  

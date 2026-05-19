@@ -1,5 +1,7 @@
 # OPL 产品分层与 Foundry Agent 发布形态落地记录（2026-05-12）
 
+State: `support_reference`
+
 Status: `completed_closeout_reference`
 Owner: `One Person Lab`
 Purpose: 记录 `OPL Framework -> One Person Lab App -> Foundry Agents` 三层产品模型的一次跨仓落地结果、验证结果与剩余风险。

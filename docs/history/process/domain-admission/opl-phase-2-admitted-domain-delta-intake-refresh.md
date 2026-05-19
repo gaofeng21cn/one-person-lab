@@ -36,7 +36,7 @@
 ## 当前只允许修改的中央文件
 
 - `docs/references/contract-convergence-v1-execution-board.md`
-- `docs/references/ecosystem-status-matrix.md`
+- `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`
 - `docs/references/runtime-alignment-taskboard.md`
 - `docs/references/opl-phase2-ecosystem-sync-owner-line.md`
 

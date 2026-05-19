@@ -1,5 +1,10 @@
 # Unified Harness Engineering Substrate
 
+Owner: `One Person Lab`
+Purpose: `public_unified_harness_engineering_substrate`
+State: `public_support`
+Machine boundary: 本文是人读公开支撑材料。当前产品 truth 继续归 README、核心五件套、contracts、source、CLI/API 行为、release artifacts、runtime ledger 和真实 App evidence。
+
 ## 目的
 
 这份文档用于定义当前 `OPL` 体系下共享的 Harness Engineering 语言。

@@ -1,5 +1,10 @@
 # OPL 运行模型
 
+Owner: `One Person Lab`
+Purpose: `public_operating_model_support`
+State: `public_support`
+Machine boundary: 本文是人读公开运行模型。机器 truth 继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+
 ## 核心判断
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。

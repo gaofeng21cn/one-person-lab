@@ -1,5 +1,10 @@
 # OPL 定位演化与收敛经验参考
 
+Owner: `One Person Lab`
+Purpose: `references_convergence_governance_opl_positioning_convergence_lessons`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 状态锚点：`2026-05-14`
 
 ## 用途

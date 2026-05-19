@@ -1,5 +1,10 @@
 # Family Domain Quality Projection Contract
 
+Owner: `One Person Lab`
+Purpose: `references_operating_governance_family_domain_quality_projection_contract`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## Purpose
 
 `OPL` family 需要统一展示 domain work 是否真的过了质量门，但不能把医学、基金、视觉交付的判断标准合成一个 generic QA gate。本合同只定义 quality projection 的共同字段和 owner split。

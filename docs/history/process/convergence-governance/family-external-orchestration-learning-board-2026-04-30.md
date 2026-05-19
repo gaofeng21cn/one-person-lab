@@ -1,5 +1,10 @@
 # OPL Family External Orchestration Learning Board 2026-04-30
 
+Owner: `One Person Lab`
+Purpose: `historical_external_orchestration_learning_snapshot`
+State: `history_only`
+Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 provenance。当前可吸收模式必须回到 OPL-owned contracts、source、CLI/API 行为、runtime ledger、domain-owned manifests 和 `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`。
+
 ## Purpose
 
 这份 board 把 `MAS` 从外部 agent / orchestration 项目吸收的经验，提升为 `OPL` family 的长期学习入口。它记录方法和边界，不把医学语义、外部 scheduler、外部 tracker 或 persona 库升级成 `OPL` owner。

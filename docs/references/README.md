@@ -1,5 +1,10 @@
 # OPL 参考级文档索引
 
+Owner: `One Person Lab`
+Purpose: `references_index`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 这个索引管理 `docs/references/` 下的支撑参考文档。
 这些文档用于审计、验收、对齐、样例、迁移与历史追踪，不是 `OPL` 当前公开主线的默认阅读面。
 
@@ -37,14 +42,12 @@
 - [系列项目文档治理清单](./governance/series-doc-governance-checklist.md)
 - [四仓文档 intake 模板](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 执行看板](./convergence-governance/contract-convergence-v1-execution-board.md)
-- [生态状态矩阵](./convergence-governance/ecosystem-status-matrix.md)
-- [四仓 executor follow-up 与 Hermes 评估](./convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation.md)
 - [Family shared release 维护参考](./convergence-governance/family-shared-release-maintenance.md)
-- [Family 用户侧成熟度路线图](./convergence-governance/family-user-facing-maturity-roadmap.md)
-- [四仓文档同步摘要，2026-04-14](./convergence-governance/four-repo-doc-series-sync-summary-2026-04-14.md)
 - [OPL 定位演化与收敛经验参考](./convergence-governance/opl-positioning-convergence-lessons.md)
-- [Family external orchestration learning board，2026-04-30](./convergence-governance/family-external-orchestration-learning-board-2026-04-30.md)
 - [OPL Family stage control plane adoption plan](./convergence-governance/family-stage-control-plane-adoption-plan.md)
+
+已退出 active/reference 支撑面的 dated convergence snapshots 统一进入
+[Convergence Governance 过程归档](../history/process/convergence-governance/README.md)。这些文件只解释旧判断来源，不再作为当前 roadmap、executor/default provider、frontdoor/Gateway/federation 语义或 manifest 要求。
 
 ## 二、当前支撑参考
 
@@ -115,6 +118,7 @@
 - `family-content-level-docs-consolidation-2026-05-11.md` 是当前 OPL/MAS/MAG/RCA/MDS 内容级文档整理的跨仓 owner map。
 - `series-doc-governance-checklist.md` 是当前仓与 family 系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
+- 2026-04 的 executor follow-up、ecosystem matrix、用户面成熟度、外部 orchestration learning board 和四仓同步摘要已经迁入 history；需要来源脉络时读 [Convergence Governance 过程归档](../history/process/convergence-governance/README.md)，不要把它们重新列回 current reference。
 - 新参考文档优先按上面的目录分区归档。
 - `README*`、`docs/**` 与参考文档默认是人读材料。不要让脚本、合同、测试或 runtime dashboard 依赖 prose path、Markdown 章节或文案；需要跨层引用时使用稳定合同文件或语义 surface id。
 - 已完成的一次性计划、生成型过程 specs 和被取代的设计草稿应迁入 [过程历史归档](../history/process/README.md)，不要继续留在 active reference 或 specs 层。

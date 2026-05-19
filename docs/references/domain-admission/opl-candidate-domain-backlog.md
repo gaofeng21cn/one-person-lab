@@ -1,5 +1,10 @@
 # OPL Candidate Domain Backlog
 
+Owner: `One Person Lab`
+Purpose: `references_domain_admission_opl_candidate_domain_backlog`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## 目的
 
 这份文档索引当前仍在定义中的 `OPL` workstream 的 admission-blocker backlog。

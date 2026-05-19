@@ -1,5 +1,10 @@
 # OPL 当前状态
 
+Owner: `One Person Lab`
+Purpose: `status`
+State: `active_truth`
+Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+
 更新时间：`2026-05-19`
 
 ## 当前公开角色

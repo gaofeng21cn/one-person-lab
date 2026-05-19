@@ -1,6 +1,6 @@
 # Historical OPL Phase 2 生态同步 Owner Line Brief
 
-> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/references/ecosystem-status-matrix.md` 和 `contracts/opl-framework/*.json` 为准。
+> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md` 和 `contracts/opl-framework/*.json` 为准。
 > 2026-05-02 退役更新：OMX 已退出当前 OPL 开发环境；本文件不得作为 OMX continuation、prompt 模板或 worktree 长跑入口使用。
 
 状态锚点：`2026-05-02`
@@ -59,7 +59,7 @@
 只有满足下面任一条件时，这条线才值得打开：
 
 1. 已 admitted 的业务仓出现新的 absorbed repo-tracked truth，导致：
-   - `docs/references/ecosystem-status-matrix.md`
+   - `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`
    - `docs/references/contract-convergence-v1-execution-board.md`
    - `docs/references/runtime-alignment-taskboard.md`
    需要同步更新；
@@ -90,7 +90,7 @@
 
 ## In Scope
 
-- `docs/references/ecosystem-status-matrix.md`
+- `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`
 - `docs/references/contract-convergence-v1-execution-board.md`
 - `docs/references/runtime-alignment-taskboard.md`
 - `docs/references/opl-phase-2-central-reference-sync-board.md`

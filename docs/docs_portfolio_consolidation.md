@@ -89,7 +89,8 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/references/runtime-substrate/opl-managed-runtime-three-layer-contract.md` | `contract_linked_support` | shared managed-runtime 三层 owner split 的人读边界。 | 因 machine contract / tests 仍引用而保留路径；旧 Hermes/upstream runtime owner 读法已过时。 |
 | `docs/references/runtime-substrate/opl-runtime-manager-target.md` | `support_reference` | Runtime Manager 的 provider readiness、native helper、state index 与 operator projection 边界。 | 只做产品级管理与投影支撑；不替代 provider 或 domain truth。 |
 | `docs/references/current-support/*` | `support_reference` | 安装、GUI/WebUI、release、skills、测试和质量操作参考。 | 保持支撑参考；行为 truth 回命令、合同和 artifact。 |
-| `docs/references/convergence-governance/*` | `support_reference_or_rollout_record` | 收敛治理、外部学习、intake 模板和 dated rollout 记录。 | 有效规则上提；dated 记录不当 current plan。 |
+| `docs/references/convergence-governance/*` | `support_reference_or_rollout_record` | 当前仍有效的收敛治理规则、intake 模板、path-stable decision/board 和 current support rollout 记录。 | 有效规则上提；dated 2026-04 快照已迁入 history，不当 current plan。 |
+| `docs/history/process/convergence-governance/*` | `history_or_tombstone` | 四仓同步、executor follow-up、用户面成熟度和外部 orchestration learning 的历史快照。 | 只作 provenance；不得恢复为 active roadmap、manifest 要求或 compatibility surface。 |
 | `docs/references/operating-governance/*` | `support_reference` | quality、operator projection、memory governance 和 family governance 支撑。 | 保持支撑参考；gateway-derived 旧 matrix 留 history。 |
 | `docs/references/domain-admission/*` | `support_reference` | candidate backlog 和准入支撑参考。 | 保持 reference；正式准入规则回 specs。 |
 | `docs/history/**` | `history_or_tombstone` | 退役路线、完成计划、frontdoor/gateway/federation/OMX/process provenance。 | 不作为 active owner；有用结论先吸收再保留原文。 |

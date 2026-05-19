@@ -1,5 +1,10 @@
 # OPL Fresh Install 与 GUI 首启测试参考
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_fresh_install_and_gui_first_launch_testing`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 当前 OPL App 是 CLI-backed GUI。真实安装、初始化、模块管理和 skill 同步由 OPL CLI 持有；GUI 触发命令、展示状态、呈现阻塞项，并暴露稳定 accessibility label 供自动化测试使用。
 
 ## 首启 readiness 模型

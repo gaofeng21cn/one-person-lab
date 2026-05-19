@@ -1,5 +1,10 @@
 # Hermes-Agent 备选执行器评估
 
+Owner: `One Person Lab`
+Purpose: `references_runtime_substrate_hermes_agent_executor_evaluation`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 状态锚点：`2026-05-14`
 
 当前口径：`hermes_agent` 已是 OPL family canonical executor backend 之一，但只作为显式非默认 adapter/backend 使用。它和 `claude_code` 一样只承诺接口连接、生命周期、receipt、audit 与 fail-closed；不承诺行为、质量、工具语义或 resume 与 `Codex CLI` 等价。本文的评估规则用于守住这个非等价边界。旧 Hermes provider / Gateway / readiness / compatibility surface 已退出 active/default path，不属于本文要保留的执行器接口。
@@ -115,5 +120,5 @@
 ## 当前对应关系
 
 - 当前默认主线：`docs/references/runtime-substrate/family-executor-adapter-defaults.md`
-- 当前四仓执行器 follow-up：`docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
+- 历史四仓执行器 follow-up：`docs/history/process/convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md`
 - 当前顶层状态：`docs/status.md`

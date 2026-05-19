@@ -1,5 +1,8 @@
 # 家族 Executor Adapter 默认口径
 
+Purpose: `references_runtime_substrate_family_executor_adapter_defaults`
+State: `support_reference`
+
 Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: 本文是人读 executor 边界参考；机器可读默认值以 `contracts/opl-framework/family-executor-adapter-defaults.json`、`contracts/opl-framework/domain-onboarding-readiness.schema.json`、source code 与 CLI/API 行为为准。

@@ -1,5 +1,10 @@
 # OPL GUI Shell Adapter 边界说明
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_gui_shell_adapter_boundary`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 状态锚点：`2026-05-01`
 
 ## 结论

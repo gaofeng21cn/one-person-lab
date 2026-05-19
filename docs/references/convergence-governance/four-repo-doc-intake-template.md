@@ -1,5 +1,10 @@
 # 四仓文档协调模板
 
+Owner: `One Person Lab`
+Purpose: `references_convergence_governance_four_repo_doc_intake_template`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## 用途
 
 这份模板用于 `One Person Lab`、`Med Auto Science`、`Med Auto Grant`、`RedCube AI` 的跨仓文档协调。

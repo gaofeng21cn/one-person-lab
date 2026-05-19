@@ -1,5 +1,10 @@
 # OPL 测试 Lane 治理参考
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_test_lane_governance`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 本参考冻结当前测试入口语义。机器真相在 `scripts/test-lanes.mjs`、`package.json` 和 `scripts/verify.sh`；本文只解释维护口径。
 
 ## Lane 语义

@@ -1,5 +1,10 @@
 # 四仓文档系列同步摘要（2026-04-14）
 
+Owner: `One Person Lab`
+Purpose: `historical_four_repo_docs_sync_snapshot`
+State: `history_only`
+Machine boundary: 本文只保存 2026-04 四仓 docs 同步 provenance。当前文档 taxonomy、owner boundary 和 active/reference/history 分层以核心五件套、`docs/docs_portfolio_consolidation.md`、`docs/policies/docs-lifecycle-policy.md` 和各仓当前 docs 为准。
+
 ## 目的
 
 这份摘要记录 `One Person Lab`、`Med Auto Science`、`Med Auto Grant`、`RedCube AI` 在本轮文档治理收口中的统一落点，作为后续 cross-repo docs intake 的参考基线。

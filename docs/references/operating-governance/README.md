@@ -1,5 +1,8 @@
 # Operating Governance 参考索引
 
+Purpose: `references_operating_governance_index`
+State: `support_reference`
+
 Status: `support_reference_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；机器可读 governance 行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。

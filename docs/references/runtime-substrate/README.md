@@ -1,5 +1,8 @@
 # Runtime Substrate 参考索引
 
+Purpose: `references_runtime_substrate_index`
+State: `support_reference`
+
 Status: `support_reference_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；机器可读行为必须使用合同、源码、CLI/API 行为、runtime ledger、生成产物或 `human_doc:*` 语义标识。
