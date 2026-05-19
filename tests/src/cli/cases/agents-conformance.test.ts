@@ -626,6 +626,154 @@ test('agents conformance reads domain-owned production acceptance evidence witho
   assert.equal(meta.evidence_tail_classification.authority_boundary.evidence_tail_can_claim_domain_ready, false);
 });
 
+test('agents conformance parses nested MAS and RCA production acceptance evidence tails', () => {
+  const masRepo = buildReadyAgentRepo();
+  retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
+  writeProductionAcceptance(masRepo, 'mas-production-acceptance.json', {
+    surface_kind: 'mas_domain_owned_production_acceptance',
+    domain_id: 'med-autoscience',
+    owner: 'MedAutoScience',
+    acceptance_status: 'closed_by_domain_owned_acceptance_receipt',
+    domain_acceptance_receipt: {
+      receipt_id: 'mas-production-acceptance-2026-05-19',
+      receipt_class: 'owner_receipt',
+      receipt_owner: 'MedAutoScience',
+      receipt_status: 'accepted',
+      owner_receipt_refs: [
+        {
+          ref: 'contracts/owner_receipt_contract.json',
+          role: 'domain_owner_receipt_contract',
+          body_included: false,
+        },
+        {
+          ref: 'contracts/production_acceptance/mas-production-acceptance.json#/domain_acceptance_receipt',
+          role: 'domain_owned_production_acceptance_receipt',
+          body_included: false,
+        },
+      ],
+      progress_delta_refs: [
+        {
+          ref: 'docs/status.md#current-evidence-tail',
+          role: 'human_doc_progress_delta',
+          body_included: false,
+        },
+      ],
+      quality_publication_gate_refs: [
+        {
+          ref: 'publication_eval/latest.json',
+          role: 'mas_owned_publication_eval_surface',
+          body_included: false,
+        },
+      ],
+      typed_blocker_refs: [],
+      next_verification_command_refs: [
+        {
+          ref: 'scripts/run-pytest-clean.sh -q tests/test_mas_production_acceptance.py',
+          role: 'focused_contract_test',
+          body_included: false,
+        },
+      ],
+    },
+    refs: {
+      next_verification_command_refs: [
+        {
+          ref: 'scripts/verify.sh',
+          role: 'minimum_repo_verification',
+          body_included: false,
+        },
+      ],
+    },
+    authority_boundary: {
+      opl_can_authorize_domain_ready: false,
+      provider_completion_is_domain_ready: false,
+    },
+  });
+
+  const rcaRepo = buildReadyAgentRepo();
+  retargetReadyRepo(rcaRepo, 'redcube-ai', 'RedCube AI');
+  configureReadyRcaMorphology(rcaRepo);
+  writeProductionAcceptance(rcaRepo, 'rca-production-acceptance.json', {
+    surface_kind: 'rca_domain_owned_visual_production_acceptance_evidence',
+    domain_id: 'redcube_ai',
+    owner: 'redcube_ai',
+    visual_artifact_receipt_chain: {
+      artifact_receipt_refs: [
+        'contracts/artifact_locator_contract.json',
+        'workspace-runtime-ref:artifact-locator:transition-hosted-domain-receipt',
+      ],
+      review_export_gate_refs: ['workspace-runtime-ref:review-export:transition-run'],
+    },
+    evidence_tail: {
+      status: 'closed_by_domain_owned_acceptance_receipt',
+      closure_receipt: {
+        return_shape: 'domain_receipt',
+        owner: 'redcube_ai',
+        receipt_ref: 'rca-owner-receipt:visual-stage:transition-hosted-domain-receipt',
+        artifact_locator_ref: 'contracts/artifact_locator_contract.json',
+        artifact_receipt_refs: [
+          'workspace-runtime-ref:artifact-locator:transition-hosted-domain-receipt',
+        ],
+        review_export_ref: 'workspace-runtime-ref:review-export:transition-run',
+      },
+      typed_blocker: null,
+    },
+    next_verification_command_refs: [
+      {
+        ref: 'command:npm run --silent build && node --experimental-strip-types --test tests/rca-production-acceptance.test.ts',
+        purpose: 'focused_production_acceptance_contract_test',
+      },
+    ],
+    authority_boundary: {
+      opl_can_authorize_domain_ready: false,
+      provider_completion_is_domain_ready: false,
+    },
+  });
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mas=${masRepo}`,
+    '--agent',
+    `rca=${rcaRepo}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.summary.structural_conformance_status, 'passed');
+  assert.equal(report.authority_boundary.conformance_report_can_claim_domain_ready, false);
+
+  const [mas, rca] = report.reports;
+  const masTail = mas.evidence_tail_classification.tail_items[0];
+  assert.equal(mas.evidence_tail_classification.status, 'closed');
+  assert.equal(masTail.status, 'closed');
+  assert.equal(masTail.domain_owner, 'MedAutoScience');
+  assert.equal(masTail.evidence_ref, 'contracts/owner_receipt_contract.json');
+  assert.equal(masTail.doc_ref, 'docs/status.md#current-evidence-tail');
+  assert.equal(
+    masTail.next_verification_command,
+    'scripts/run-pytest-clean.sh -q tests/test_mas_production_acceptance.py',
+  );
+  assert.equal(masTail.contract_ref, 'contracts/production_acceptance/mas-production-acceptance.json');
+  assert.equal(masTail.owner_ref, 'MedAutoScience');
+  assert.equal(masTail.authority_boundary.conformance_report_can_claim_domain_ready, false);
+  assert.equal(masTail.authority_boundary.domain_ready_claimed_by_conformance, false);
+
+  const rcaTail = rca.evidence_tail_classification.tail_items[0];
+  assert.equal(rca.evidence_tail_classification.status, 'closed');
+  assert.equal(rcaTail.status, 'closed');
+  assert.equal(rcaTail.domain_owner, 'redcube_ai');
+  assert.equal(rcaTail.evidence_ref, 'rca-owner-receipt:visual-stage:transition-hosted-domain-receipt');
+  assert.equal(rcaTail.doc_ref, 'workspace-runtime-ref:review-export:transition-run');
+  assert.equal(
+    rcaTail.next_verification_command,
+    'command:npm run --silent build && node --experimental-strip-types --test tests/rca-production-acceptance.test.ts',
+  );
+  assert.equal(rcaTail.contract_ref, 'contracts/production_acceptance/rca-production-acceptance.json');
+  assert.equal(rcaTail.owner_ref, 'redcube_ai');
+  assert.equal(rcaTail.authority_boundary.conformance_report_can_claim_domain_ready, false);
+  assert.equal(rcaTail.authority_boundary.domain_ready_claimed_by_conformance, false);
+});
+
 test('agents conformance allows opl-meta-agent contract guard tests to name forbidden roles', () => {
   const metaRepo = buildReadyAgentRepo();
   retargetReadyRepo(metaRepo, 'opl-meta-agent', 'OPL Meta Agent');
