@@ -16,6 +16,117 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  masManifest.family_stage_control_plane = {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'med_autoscience_stage_control_plane',
+    target_domain_id: 'medautoscience',
+    owner: 'med-autoscience',
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: [
+      {
+        stage_id: 'write',
+        stage_kind: 'creation',
+        title: 'Write',
+        summary: 'Write from explicit refs.',
+        goal: 'Produce draft refs under MAS authority.',
+        owner: 'med-autoscience',
+        domain_stage_refs: ['write'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['sources_ready'],
+          ensures: ['draft_ready'],
+          boundary_assumptions: ['domain_truth_remains_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:write.owner_receipt_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:write/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:dataset', role: 'source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:write/current', role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:write/current', role: 'trigger' }],
+          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:write/currentness', role: 'metric' }],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [{ ref_kind: 'artifact_ref', ref: 'artifact:table', role: 'artifact_scope' }],
+          workspace_scope_refs: [{ ref_kind: 'workspace_ref', ref: 'workspace:/tmp/mas', role: 'workspace_scope' }],
+        },
+        trust_boundary: {
+          lane: 'domain_agent',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: ['runtime_event:write.owner_receipt_recorded'],
+          owner_receipt_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['receipt:write-closeout'],
+          can_write_domain_truth: false,
+          can_authorize_quality_verdict: false,
+        },
+      },
+      {
+        stage_id: 'review',
+        stage_kind: 'review',
+        title: 'Review',
+        summary: 'Review from draft refs.',
+        goal: 'Return review refs under MAS authority.',
+        owner: 'med-autoscience',
+        domain_stage_refs: ['review'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['draft_ready'],
+          ensures: ['review_ready'],
+          boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:review', role: 'source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:review/current', role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:review/current', role: 'trigger' }],
+          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'metric' }],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
+        },
+        trust_boundary: {
+          lane: 'human_gate',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+          owner_receipt_required: true,
+          human_gate_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['mas:review-receipt'],
+          can_authorize_quality_verdict: false,
+        },
+      },
+    ],
+    notes: [],
+  };
 
   masManifest.runtime_inventory = {
     ...((masManifest.runtime_inventory as Record<string, unknown>) ?? {}),
@@ -336,6 +447,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.domain_legacy_cleanup_action_count, 1);
     assert.equal(drilldown.summary.domain_legacy_cleanup_opl_apply_ready_count, 1);
     assert.equal(drilldown.summary.domain_legacy_cleanup_delete_ready_count, 0);
+    assert.equal(drilldown.summary.stage_production_evidence_domain_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_observed_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_missing_caller_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_missing_expected_receipt_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_missing_executor_binding_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_missing_monitor_freshness_stage_count, 2);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);
@@ -414,6 +532,39 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(
       drilldown.domain_legacy_cleanup_plan_refs.authority_boundary.can_move_or_delete_domain_repo_files,
       false,
+    );
+    assert.equal(
+      drilldown.stage_production_evidence.surface_kind,
+      'opl_app_drilldown_stage_production_evidence',
+    );
+    assert.equal(drilldown.stage_production_evidence.summary.stage_count, 2);
+    assert.equal(drilldown.stage_production_evidence.summary.observed_stage_count, 1);
+    const writeProductionEvidence = drilldown.stage_production_evidence.stages.find(
+      (stage: { stage_id: string }) => stage.stage_id === 'write',
+    );
+    assert.equal(writeProductionEvidence.production_evidence_status, 'production_caller_evidence_observed');
+    assert.deepEqual(writeProductionEvidence.selected_executor_kinds, ['codex_cli']);
+    assert.equal(writeProductionEvidence.expected_receipt_refs.includes('receipt:write-closeout'), true);
+    assert.equal(writeProductionEvidence.observed_evidence_refs.includes('receipt:write-closeout'), true);
+    assert.equal(writeProductionEvidence.observed_evidence_refs.includes('source:dataset'), true);
+    assert.equal(
+      writeProductionEvidence.missing_production_evidence.includes('production_caller_attempt_not_observed'),
+      false,
+    );
+    assert.equal(
+      writeProductionEvidence.authority_boundary.can_authorize_domain_ready,
+      false,
+    );
+    const reviewProductionEvidence = drilldown.stage_production_evidence.stages.find(
+      (stage: { stage_id: string }) => stage.stage_id === 'review',
+    );
+    assert.equal(
+      reviewProductionEvidence.production_evidence_status,
+      'stage_pack_ready_waiting_for_production_caller',
+    );
+    assert.equal(
+      reviewProductionEvidence.missing_production_evidence.includes('production_caller_attempt_not_observed'),
+      true,
     );
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
