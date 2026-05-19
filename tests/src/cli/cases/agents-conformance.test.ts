@@ -299,43 +299,6 @@ function retargetReadyRepoToMag(repoDir: string) {
   const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
   actionCatalog.target_domain_id = 'med-autogrant';
   writeJson(actionCatalogPath, actionCatalog);
-
-  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
-  privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
-    'domain_runtime',
-    'product_entry',
-    'status',
-    'user_loop',
-    'sidecar',
-    'runtime_registration',
-    'control_plane',
-    'lifecycle',
-    'memory',
-    'package',
-    'autonomy_controller',
-    'legacy_runtime_residue',
-  ];
-  privateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
-    privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surface_id: string) => ({
-      surface_id,
-      classification: surface_id === 'legacy_runtime_residue' ? 'legacy_proof_tombstone' : 'refs_only_adapter',
-      source_refs: surface_id === 'legacy_runtime_residue' ? ['docs/history/runtime-tombstone.md'] : ['agent/'],
-    }))
-  );
-  privateSurfacePolicy.physical_source_morphology_policy.forbidden_residue_classes = [
-    'local_journal',
-    'attempt_ledger',
-    'repo_owned_scheduler',
-    'hermes_gateway_local_manager_probe',
-    'compat_facade_active_alias',
-  ];
-  privateSurfacePolicy.physical_source_morphology_policy.authority_boundary = {
-    mag_can_own_generic_runtime: false,
-    mag_can_own_generated_wrapper: false,
-    mag_can_restore_compat_facade_active_alias: false,
-  };
-  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
 }
 
 test('agents conformance reports structural readiness separately from production evidence tail', () => {
@@ -431,6 +394,43 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
   actionCatalog.notes.push('OPL replacement consumes stage_attempt_ledger refs only.');
   writeJson(actionCatalogPath, actionCatalog);
 
+  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
+    'domain_runtime',
+    'product_entry',
+    'status',
+    'user_loop',
+    'sidecar',
+    'runtime_registration',
+    'control_plane',
+    'lifecycle',
+    'memory',
+    'package',
+    'autonomy_controller',
+    'legacy_runtime_residue',
+  ];
+  privateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
+    privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surface_id: string) => ({
+      surface_id,
+      classification: surface_id === 'legacy_runtime_residue' ? 'legacy_proof_tombstone' : 'refs_only_adapter',
+      source_refs: surface_id === 'legacy_runtime_residue' ? ['docs/history/runtime-tombstone.md'] : ['agent/'],
+    }))
+  );
+  privateSurfacePolicy.physical_source_morphology_policy.forbidden_residue_classes = [
+    'legacy_local_persistence_surface',
+    'legacy_attempt_record_surface',
+    'legacy_repo_cadence_owner',
+    'legacy_executor_runtime_probe',
+    'legacy_compat_alias_surface',
+  ];
+  privateSurfacePolicy.physical_source_morphology_policy.authority_boundary = {
+    mag_can_own_generic_runtime: false,
+    mag_can_own_generated_wrapper: false,
+    mag_can_restore_legacy_compat_alias: false,
+  };
+  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+
   const report = runCli([
     'agents',
     'conformance',
@@ -440,10 +440,7 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
 
   assert.equal(report.status, 'passed');
   assert.equal(report.reports[0].physical_morphology_checks.status, 'passed');
-  assert.deepEqual(
-    report.reports[0].physical_morphology_checks.forbidden_name_residue.filter((entry: { allowed: boolean }) => !entry.allowed),
-    [],
-  );
+  assert.deepEqual(report.reports[0].physical_morphology_checks.forbidden_name_residue, []);
 });
 
 test('agents conformance blocks exact MAG legacy residue tokens', () => {
