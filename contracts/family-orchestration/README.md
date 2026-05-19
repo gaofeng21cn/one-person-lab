@@ -289,6 +289,7 @@ This directory does not:
 - [`family-stage-proof-bundle.schema.json`](./family-stage-proof-bundle.schema.json)
 - [`family-stage-graph-projection.schema.json`](./family-stage-graph-projection.schema.json)
 - [`family-stage-cohort-loop.schema.json`](./family-stage-cohort-loop.schema.json)
+- [`family-stage-runtime-budget.schema.json`](./family-stage-runtime-budget.schema.json)
 - [`family-stage-integrity-metadata.schema.json`](./family-stage-integrity-metadata.schema.json)
 - [`family-domain-memory-ref.schema.json`](./family-domain-memory-ref.schema.json)
 - [`family-domain-memory-writeback.schema.json`](./family-domain-memory-writeback.schema.json)

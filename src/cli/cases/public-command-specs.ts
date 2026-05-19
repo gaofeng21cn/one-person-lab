@@ -50,6 +50,7 @@ import {
   buildFamilyStagePackSourceSpecInspect,
   buildFamilyStageProofBundleInspect,
   buildFamilyStageReplayCertificationInspect,
+  buildFamilyStageRuntimeBudgetInspect,
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
@@ -742,6 +743,13 @@ export function buildPublicCommandSpecs(
       examples: ['opl stages cohort-loop --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageCohortLoopInspect(getContracts(), args),
+    },
+    'stages runtime-budget': {
+      usage: 'opl stages runtime-budget --domain <domain>',
+      summary: 'Project refs-only runtime boundary, monitor, and success-rate budget readiness for one domain stage pack.',
+      examples: ['opl stages runtime-budget --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageRuntimeBudgetInspect(getContracts(), args),
     },
     'stages registry': {
       usage: 'opl stages registry --domain <domain> [--library-status <candidate|admitted|reused|deprecated|superseded>] [--promotion-ref <ref>] [--deprecation-ref <ref>] [--supersession-ref <ref>] [--superseded-by-stage-pack-ref <ref>] [--reused-by-ref <ref>] [--previous-stage-pack-hash <hash>] [--migration-policy <continue_old_hash|migrate_to_new_hash|blocked_human_gate>] [--migration-policy-ref <ref>]',
