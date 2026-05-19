@@ -69,22 +69,24 @@ OPL 已具备完整生产级智能体框架的控制面骨架，并已进入 liv
 - provider completion 等于 domain ready、quality ready、fundability ready、visual ready 或 export ready。
 - 不能把 MAS descriptor ready、read model、provider proof、replacement proof、generated bundle ready、`runtime_transport_handoff_projection` 或机器合同 gap count 为 0 单独写成 MAS 物理纯净模板已完成；MAS generic runtime owner 已机器化归 OPL，但 physical delete/archive、App/workbench production caller 和 live paper evidence 仍单独验收。
 
-## 下一跳顺序
+## 一步到位并行落地计划
 
-1. `semantic_single_truth_regression_guard`：provider readiness single payload、generated drift/evidence gate、summary-first App drilldown、family-runtime parser split、stage scope/guarantee projection 和 legacy vocabulary hygiene 已落地，后续只允许通过回归测试扩展。
-2. `stage_launch_scope_and_executor_scaleout`：把 selected executor binding、consumed refs、expected receipt refs、source/artifact/workspace scope refs 与 monitor freshness 放进真实 production caller 链路。
-3. `external_generated_surface_production_evidence` for MAS/MAG/RCA：repo-side generated/handler target consumption 已闭合；OPL refs-only evidence receipt ledger 与 App drilldown 状态消费已落地；下一步补真实外部 default caller、App、release/dist、live owner-chain 和 direct/hosted parity 证据。
-4. `MAS physical thinning closeout`：runtime handoff projection 已落地，继续完成 runner / worker lease / supervisor / workbench projection / SQLite lifecycle writer 的 no-active-caller、parity、delete/archive/tombstone。
-5. `App/operator drilldown GUI evidence`
-6. `App managed-environment startup maintenance GUI/release evidence`
-7. `Developer Mode direct-fix / fork-PR live closeout evidence`
-8. `MAS paper-line guarded apply scaleout`
-9. `Temporal provider continuous proof / SLO cadence long-window evidence`
-10. `transition owner receipt / no-regression evidence on OPL bridge`
-11. `domain memory/lifecycle apply generalization`
-12. `MAG/RCA controlled soak`
-13. `RCA naming contract hygiene tail`
-14. `physical skeleton layout`
-15. `legacy physical retirement`
+该计划按可并行 lane 收敛，不按线性阶段等待。任一 lane 只能在满足 owner boundary、repo-native verification、domain owner receipt、no-regression evidence 或 typed blocker 后写成完成；没有 fresh evidence 不写完成。并行开发完成后必须回到 main 做统一吸收、验证和 worktree/branch 清理。
 
-每一步都必须留下 repo-native verification、domain owner receipt、no-regression evidence 或 typed blocker；没有 fresh evidence 不写完成。
+| lane | 当前状态 | 可并行完成门槛 |
+| --- | --- | --- |
+| `semantic_single_truth_regression_guard` | provider readiness single payload、generated drift/evidence gate、summary-first App drilldown、family-runtime parser split、stage scope/guarantee projection 和 legacy vocabulary hygiene 已落地。 | 后续新增 surface 只能通过回归测试扩展；任何 readiness、generated surface、App route、stage guarantee 或 legacy cleanup 读法都必须引用唯一 owner payload。 |
+| `stage_launch_scope_and_executor_scaleout` | stage admission / proof-bundle / `guarantee_mode` projection 已落地。 | selected executor binding、consumed refs、expected receipt refs、source/artifact/workspace scope refs 与 monitor freshness 进入真实 production caller 链路。 |
+| `external_generated_surface_production_evidence` for MAS/MAG/RCA | repo-side generated/handler target consumption 已闭合；OPL refs-only evidence receipt ledger 与 App drilldown 状态消费已落地。 | 补真实外部 default caller、App、release/dist、live owner-chain 和 direct/hosted parity 证据。 |
+| `MAS physical thinning closeout` | runtime handoff projection 已落地。 | runner / worker lease / supervisor / workbench projection / SQLite lifecycle writer 完成 no-active-caller、parity、delete/archive/tombstone。 |
+| `App/operator drilldown GUI evidence` | CLI/runtime summary-first 与 full detail read model 已落地。 | App GUI 默认 summary、detail lazy refs/routes、截图/发布包和长时 operator evidence 可重复证明。 |
+| `App managed-environment startup maintenance GUI/release evidence` | `opl system startup-maintenance` 机器入口已落地。 | App 启动自动调用、release artifact、reload prompt 用户路径、provider state 联动和 fail-closed manual_required 证据成立。 |
+| `Developer Mode direct-fix / fork-PR live closeout evidence` | developer supervisor config、permission projection 和 route read model 已落地。 | 用真实 repo 问题证明 owner direct-fix 与 non-owner fork/PR closeout，且不写 managed runtime truth 或 domain truth。 |
+| `MAS paper-line guarded apply scaleout` | MAS paper refs 与 guarded boundary 可被 OPL ingest。 | 多条真实 paper line 产出 progress delta、AI reviewer update、artifact delta、human gate、stop-loss 或 stable typed blocker。 |
+| `Temporal provider continuous proof / SLO cadence long-window evidence` | schedule install/trigger/tick 与 SLO receipt 已有当前 proof。 | 长窗口 cadence、repair execution、restart/re-query/signal/history 与 domain owner-chain dispatch 不退化。 |
+| `transition owner receipt / no-regression evidence on OPL bridge` | transition spec、runner、receipt/projection envelope 和 refs-only bridge 已有基础。 | MAS/MAG/RCA sidecar dispatch 持续返回 accepted owner receipt、typed blocker 或 no-regression evidence。 |
+| `domain memory/lifecycle apply generalization` | locator/index/proof refs 已有基础。 | 三仓真实 workspace 中 accepted/rejected memory writeback、cleanup/restore/retention 与 artifact mutation receipt 成立。 |
+| `MAG/RCA controlled soak` | MAG transition oracle 与 RCA visual transition evidence surface 已有基础。 | 真实 OPL-hosted grant/visual stage attempt 形成 owner receipt、typed blocker、artifact-producing receipt 或 repeated no-regression evidence。 |
+| `RCA naming contract hygiene tail` | generated/hosted shell 与 legacy cleanup 已闭合，剩 naming tail。 | 历史 `managed` 命名完成 compatibility-free contract / tombstone 清理。 |
+| `physical skeleton layout` | OPL read model 能区分 descriptor readiness、skeleton audit 与 production closure gaps。 | direct/hosted parity、restore/provenance proof、focused tests 与 no-forbidden-write proof 稳定后逐仓迁移 repo-source skeleton；workspace artifacts 不迁入源码树。 |
+| `legacy physical retirement` | 旧 vocabulary 已限定到 diagnostic、fixture、provenance、history 或 negative guard。 | replacement proof 与 no-active-caller proof 同时通过后，删除 active residue 或迁入 history/tombstone；不保留兼容接口。 |
