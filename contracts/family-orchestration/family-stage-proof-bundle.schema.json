@@ -21,6 +21,7 @@
     "test_proof_refs",
     "proof_runtime_metrics",
     "integrity",
+    "generated_artifact_manifest",
     "authority_boundary"
   ],
   "properties": {
@@ -139,6 +140,10 @@
     "integrity": {
       "description": "Deterministic digest metadata for the stage pack control-plane/action-catalog refs. OPL projects the digest and optional signature refs only; it does not verify external signatures or turn integrity metadata into domain readiness.",
       "$ref": "#/$defs/stage_pack_integrity"
+    },
+    "generated_artifact_manifest": {
+      "description": "Refs-only manifest of generated/reviewable code, test, proof, schema, and artifact refs derived from the stage pack. It is bound to the stage_pack_hash and is a build/review input only.",
+      "$ref": "#/$defs/generated_artifact_manifest"
     },
     "authority_boundary": {
       "type": "object",
@@ -708,6 +713,108 @@
           }
         }
       }
+    },
+    "generated_artifact_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "stage_pack_hash",
+        "source_stage_pack_ref",
+        "graph_projection_ref",
+        "generated_code_refs",
+        "generated_test_refs",
+        "generated_proof_refs",
+        "generated_schema_refs",
+        "generated_artifact_refs",
+        "summary",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_stage_pack_generated_artifact_manifest"
+        },
+        "version": {
+          "const": "opl-stage-pack-generated-artifact-manifest.v1"
+        },
+        "stage_pack_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_stage_pack_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "graph_projection_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_code_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_surface_ref" }
+        },
+        "generated_test_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_surface_ref" }
+        },
+        "generated_proof_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_surface_ref" }
+        },
+        "generated_schema_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_surface_ref" }
+        },
+        "generated_artifact_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage_surface_ref" }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "generated_code_ref_count",
+            "generated_test_ref_count",
+            "generated_proof_ref_count",
+            "generated_schema_ref_count",
+            "generated_artifact_ref_count",
+            "regeneration_required_when_stage_pack_hash_changes"
+          ],
+          "properties": {
+            "generated_code_ref_count": { "type": "integer", "minimum": 0 },
+            "generated_test_ref_count": { "type": "integer", "minimum": 0 },
+            "generated_proof_ref_count": { "type": "integer", "minimum": 0 },
+            "generated_schema_ref_count": { "type": "integer", "minimum": 0 },
+            "generated_artifact_ref_count": { "type": "integer", "minimum": 0 },
+            "regeneration_required_when_stage_pack_hash_changes": { "const": true }
+          }
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opl_role",
+            "manifest_is_build_review_input",
+            "graphflow_runtime_dependency",
+            "can_execute_stage",
+            "can_write_domain_truth",
+            "can_authorize_domain_ready",
+            "can_authorize_quality_verdict",
+            "can_mutate_artifact_body"
+          ],
+          "properties": {
+            "opl_role": { "const": "generated_artifact_manifest_projection_only" },
+            "manifest_is_build_review_input": { "const": true },
+            "graphflow_runtime_dependency": { "const": false },
+            "can_execute_stage": { "const": false },
+            "can_write_domain_truth": { "const": false },
+            "can_authorize_domain_ready": { "const": false },
+            "can_authorize_quality_verdict": { "const": false },
+            "can_mutate_artifact_body": { "const": false }
+          }
+        }
+      }
     }
   },
   "examples": [
@@ -845,6 +952,50 @@
           "can_authorize_domain_ready": false,
           "can_authorize_quality_verdict": false,
           "can_verify_external_signature": false
+        }
+      },
+      "generated_artifact_manifest": {
+        "surface_kind": "opl_stage_pack_generated_artifact_manifest",
+        "version": "opl-stage-pack-generated-artifact-manifest.v1",
+        "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_stage_pack_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "graph_projection_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generated_code_refs": [],
+        "generated_test_refs": [
+          {
+            "stage_id": "publication_review",
+            "ref_kind": "test",
+            "ref": "tests/publication-review.test.ts",
+            "role": "proof_ref"
+          }
+        ],
+        "generated_proof_refs": [
+          {
+            "stage_id": "publication_review",
+            "ref_kind": "test",
+            "ref": "tests/publication-review.test.ts",
+            "role": "proof_ref"
+          }
+        ],
+        "generated_schema_refs": [],
+        "generated_artifact_refs": [],
+        "summary": {
+          "generated_code_ref_count": 0,
+          "generated_test_ref_count": 1,
+          "generated_proof_ref_count": 1,
+          "generated_schema_ref_count": 0,
+          "generated_artifact_ref_count": 0,
+          "regeneration_required_when_stage_pack_hash_changes": true
+        },
+        "authority_boundary": {
+          "opl_role": "generated_artifact_manifest_projection_only",
+          "manifest_is_build_review_input": true,
+          "graphflow_runtime_dependency": false,
+          "can_execute_stage": false,
+          "can_write_domain_truth": false,
+          "can_authorize_domain_ready": false,
+          "can_authorize_quality_verdict": false,
+          "can_mutate_artifact_body": false
         }
       },
       "authority_boundary": {
