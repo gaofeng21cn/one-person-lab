@@ -161,7 +161,7 @@
       "agent_lab_evolve.next_mechanism_candidate.source_mechanism_evolution_input_refs",
       "agent_lab_optimize.gated_optimizer_candidate_set.candidates.source_refs"
     ],
-    "authority_boundary": "OPL Agent Lab may consume MAS suite-projected runtime event ledger refs, provider/executor switch hygiene refs, claim assurance refs, helper drift guard refs, assurance contract refs, adversarial review gate refs, experiment queue recovery refs, and publication aftercare refs as mechanism evolution inputs. These are refs-only signals and cannot carry body, domain truth, artifact body, memory body, owner receipt body, quality verdict, publication verdict, shared submission action, or writeback accept/reject authority."
+    "authority_boundary": "OPL Agent Lab may consume suite-projected runtime event ledger refs, provider/executor switch hygiene refs, claim assurance refs, helper skill drift guard refs, assurance contract refs, adversarial review gate refs, experiment queue recovery refs, and publication aftercare refs as mechanism evolution inputs. These are refs-only signals and cannot carry body, domain truth, artifact body, memory body, owner receipt body, quality verdict, publication verdict, writeback accept/reject authority, shared submission action authority, helper execution authority, or publication submission authority."
   },
   "workbench_surface": {
     "surface_kind": "opl_agent_lab_workbench_read_model",
@@ -378,6 +378,7 @@
     ],
     "status": "ready_for_connector_consumption_refs_only",
     "source_ref_groups": [
+      "complete_control_plane_ref",
       "suite_result_refs",
       "trajectory_refs",
       "scorecard_refs",
