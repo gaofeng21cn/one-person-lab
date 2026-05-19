@@ -11,6 +11,7 @@ const nodeTest = (files, options = {}) => ({
   kind: 'node-test',
   files,
   stripTypes: options.stripTypes !== false,
+  batchSize: options.batchSize ?? null,
 });
 
 const lanes = {
@@ -21,7 +22,7 @@ const lanes = {
       'tests/src/cli-modularization.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/opl-session-runtime.test.ts',
-    ]),
+    ], { batchSize: 25 }),
   ],
   fast: [
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
@@ -79,6 +80,7 @@ const lanes = {
       'tests/src/cli/cases/family-runtime-stage-attempts.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts-residency-proof.test.ts',
       'tests/src/cli/cases/family-runtime-stage-launch-gates.test.ts',
+      'tests/src/cli/cases/family-runtime-stage-admission-contract-light.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempt-usage.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts',
       'tests/src/cli/cases/agent-lab.test.ts',
@@ -180,8 +182,29 @@ function runStep(step) {
 const stepRunners = {
   command: (step) => spawnStep(step.command, step.args),
   npm: (step) => spawnStep(npmCommand(), step.args),
-  'node-test': (step) => spawnStep(process.execPath, nodeTestArgs(step)),
+  'node-test': runNodeTestStep,
 };
+
+function runNodeTestStep(step) {
+  if (!Number.isInteger(step.batchSize) || step.batchSize <= 0 || step.files.length <= step.batchSize) {
+    return spawnStep(process.execPath, nodeTestArgs(step));
+  }
+  for (const files of chunkFiles(step.files, step.batchSize)) {
+    const result = spawnStep(process.execPath, nodeTestArgs({ ...step, files }));
+    if (result.status !== 0) {
+      return result;
+    }
+  }
+  return { status: 0 };
+}
+
+function chunkFiles(files, size) {
+  const chunks = [];
+  for (let index = 0; index < files.length; index += size) {
+    chunks.push(files.slice(index, index + size));
+  }
+  return chunks;
+}
 
 function spawnStep(commandName, args) {
   return spawnSync(commandName, args, {

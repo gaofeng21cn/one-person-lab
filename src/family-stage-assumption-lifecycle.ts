@@ -118,7 +118,7 @@ function lifecycleForAssumption(
       : monitorRefs.length === 0
         ? 'missing_monitor'
         : 'current';
-  const severity: FamilyStageRuntimeAssumptionSeverity = status === 'current' ? 'info' : 'blocker';
+  const severity: FamilyStageRuntimeAssumptionSeverity = status === 'current' ? 'info' : 'warning';
   const missingField = !owner
     ? 'owner' as const
     : monitorRefs.length === 0

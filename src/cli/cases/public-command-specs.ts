@@ -49,6 +49,7 @@ import {
   buildFamilyStagePackRegistryInspect,
   buildFamilyStagePackSourceSpecInspect,
   buildFamilyStageProofBundleInspect,
+  buildFamilyStageReadinessInspect,
   buildFamilyStageReplayCertificationInspect,
   buildFamilyStageRuntimeBudgetInspect,
   buildFamilyStageInspect,
@@ -716,6 +717,13 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildFamilyStageInspect(getContracts(), args),
     },
+    'stages readiness': {
+      usage: 'opl stages readiness --domain <domain>',
+      summary: 'Summarize launch readiness from existing stage admission, proof, cohort, runtime-budget, assumptions, and replay drilldowns without issuing a domain verdict.',
+      examples: ['opl stages readiness --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageReadinessInspect(getContracts(), args),
+    },
     'stages proof-bundle': {
       usage: 'opl stages proof-bundle --domain <domain>',
       summary: 'Project one domain stage pack proof bundle for admission, runtime-event, idempotency, and receipt obligations.',
@@ -732,7 +740,7 @@ export function buildPublicCommandSpecs(
     },
     'stages assumptions': {
       usage: 'opl stages assumptions --domain <domain>',
-      summary: 'Project runtime assumption lifecycle status, monitor refs, and typed blockers for one domain stage pack.',
+      summary: 'Project runtime assumption lifecycle status, monitor refs, and warning findings for one domain stage pack.',
       examples: ['opl stages assumptions --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageAssumptionsInspect(getContracts(), args),

@@ -482,17 +482,17 @@ function inspectRuntimeAssumptions(
       continue;
     }
     pushFinding(findings, {
-      severity: 'blocker',
+      severity: 'warning',
       code: assumption.status === 'stale'
         ? 'runtime_assumption_stale'
         : assumption.status === 'missing_monitor'
           ? 'runtime_assumption_missing_monitor_ref'
           : 'runtime_assumption_missing_owner',
       message: assumption.status === 'stale'
-        ? 'Runtime assumption has invalidation refs and must be repaired before stage launch.'
+        ? 'Runtime assumption has invalidation refs and should be repaired before production launch.'
         : assumption.status === 'missing_monitor'
-          ? 'Runtime assumption must declare at least one monitor ref before stage launch.'
-          : 'Runtime assumption must declare an owner before stage launch.',
+          ? 'Runtime assumption should declare at least one monitor ref for operator observability.'
+          : 'Runtime assumption should declare an owner for operator route-back.',
       stage_id: assumption.stage_id,
       assumption_id: assumption.assumption_id,
       minimal_counterexample: assumption.minimal_counterexample ?? undefined,
