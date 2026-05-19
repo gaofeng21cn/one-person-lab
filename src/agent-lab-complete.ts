@@ -1233,6 +1233,9 @@ export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
   const complete = buildCompleteAgentLabControlPlane();
   const { sample, longline } = suiteResults();
   const results = [sample, longline];
+  const integrationContracts = complete.integration_contracts.integration_contracts;
+  const reviewTraceEntries = complete.review_trace_ledger.trace_entries;
+  const logDrivenCandidates = complete.log_driven_mechanism_candidates;
 
   return {
     surface_kind: 'opl_agent_lab_export_envelope',
@@ -1248,6 +1251,10 @@ export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
       trajectory_refs: results.flatMap((result) => result.refs.trajectory_refs),
       scorecard_refs: results.flatMap((result) => result.refs.domain_quality_scorecard_refs),
       promotion_gate_refs: results.flatMap((result) => result.refs.promotion_gate_refs),
+      integration_contract_refs: integrationContracts.map((contract) => contract.contract_ref),
+      review_trace_refs: reviewTraceEntries.map((entry) => entry.trace_ref),
+      review_evidence_refs: unique(reviewTraceEntries.flatMap((entry) => entry.evidence_refs)),
+      log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     },
     connector_payload: connectorPayload(target, results),
     authority_boundary: AUTHORITY_BOUNDARY,

@@ -197,6 +197,10 @@ function unique(values: string[]) {
   return [...new Set(values)];
 }
 
+function compactUnique(values: string[]) {
+  return unique(values.filter((value) => value.trim().length > 0));
+}
+
 function policyMode(value: unknown) {
   return value === 'advisory' || value === 'fail_closed' ? value : undefined;
 }
@@ -466,7 +470,7 @@ function mechanismEvolutionInputRefs(value: ReturnType<typeof mechanismEvolution
   if (!value) {
     return [];
   }
-  return unique([
+  return compactUnique([
     ...value.research_wiki_refs,
     ...value.failed_route_refs,
     ...value.reviewer_direct_evidence_refs,
