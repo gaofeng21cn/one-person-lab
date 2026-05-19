@@ -688,9 +688,9 @@ export async function buildRuntimeTraySnapshot(
   options: { appOperatorDrilldownDetailLevel?: AppOperatorDrilldownDetailLevel } = {},
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind();
-  const familyRuntimeRuntimePaths = familyRuntimePaths();
+  const familyProviderPaths = familyRuntimePaths();
   const masManagedProviderProjection = readMasManagedProviderProjection();
-  const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyRuntimeRuntimePaths, {
+  const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyProviderPaths, {
     managedProviderProjection: masManagedProviderProjection,
   });
   const providerReady = lifecycleProvider.ready === true;

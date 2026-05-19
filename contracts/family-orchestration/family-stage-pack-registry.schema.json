@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-pack-registry.schema.json",
+  "title": "OPL Family Stage Pack Registry",
+  "description": "Refs-only registry for reusable admitted stage packs keyed by stage_pack_hash, with explicit migration policy for hash changes across durable attempts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "summary",
+    "entries",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_family_stage_pack_registry"
+    },
+    "version": {
+      "const": "family-stage-pack-registry.v1"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/projection_authority_boundary"
+    }
+  },
+  "$defs": {
+    "stage_pack_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_count",
+        "changed_hash_count",
+        "blocked_entry_count",
+        "reusable_entry_count"
+      ],
+      "properties": {
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "changed_hash_count": { "type": "integer", "minimum": 0 },
+        "blocked_entry_count": { "type": "integer", "minimum": 0 },
+        "reusable_entry_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_pack_id",
+        "target_domain_id",
+        "plane_id",
+        "stage_pack_hash",
+        "stage_ids",
+        "action_catalog_id",
+        "admission_status",
+        "reusable_library_entry",
+        "refs",
+        "migration",
+        "authority_boundary"
+      ],
+      "properties": {
+        "stage_pack_id": { "type": "string", "minLength": 1 },
+        "target_domain_id": { "type": "string", "minLength": 1 },
+        "plane_id": { "type": "string", "minLength": 1 },
+        "stage_pack_hash": { "$ref": "#/$defs/stage_pack_hash" },
+        "stage_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "action_catalog_id": {
+          "type": ["string", "null"]
+        },
+        "admission_status": {
+          "type": "string",
+          "enum": ["admitted", "needs_contracts", "blocked"]
+        },
+        "reusable_library_entry": { "const": true },
+        "refs": { "$ref": "#/$defs/refs" },
+        "migration": { "$ref": "#/$defs/migration" },
+        "authority_boundary": { "$ref": "#/$defs/entry_authority_boundary" }
+      }
+    },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_bundle_ref",
+        "graph_projection_ref",
+        "integrity_ref",
+        "migration_policy_ref"
+      ],
+      "properties": {
+        "proof_bundle_ref": { "type": "string", "minLength": 1 },
+        "graph_projection_ref": { "type": "string", "minLength": 1 },
+        "integrity_ref": { "type": "string", "minLength": 1 },
+        "migration_policy_ref": { "type": ["string", "null"] }
+      }
+    },
+    "migration_policy": {
+      "type": "string",
+      "enum": [
+        "continue_old_hash",
+        "migrate_to_new_hash",
+        "blocked_human_gate"
+      ]
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "policy",
+        "previous_stage_pack_hash",
+        "current_stage_pack_hash",
+        "active_attempt_stage_pack_hash",
+        "active_attempt_policy",
+        "blockers"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "stable_hash",
+            "continue_old_hash",
+            "migrate_to_new_hash",
+            "blocked_human_gate",
+            "blocked"
+          ]
+        },
+        "policy": {
+          "anyOf": [
+            { "$ref": "#/$defs/migration_policy" },
+            { "type": "null" }
+          ]
+        },
+        "previous_stage_pack_hash": {
+          "anyOf": [
+            { "$ref": "#/$defs/stage_pack_hash" },
+            { "type": "null" }
+          ]
+        },
+        "current_stage_pack_hash": { "$ref": "#/$defs/stage_pack_hash" },
+        "active_attempt_stage_pack_hash": {
+          "anyOf": [
+            { "$ref": "#/$defs/stage_pack_hash" },
+            { "type": "null" }
+          ]
+        },
+        "active_attempt_policy": {
+          "type": "string",
+          "enum": [
+            "attempt_continues_bound_hash",
+            "attempt_migrates_to_current_hash",
+            "attempt_blocked_for_human_gate",
+            "no_active_attempt_binding"
+          ]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blocker"
+          }
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocker_kind",
+        "blocker_id",
+        "stage_attempt_id",
+        "minimal_counterexample",
+        "repair_action"
+      ],
+      "properties": {
+        "blocker_kind": { "const": "stage_pack_migration_blocker" },
+        "blocker_id": {
+          "type": "string",
+          "enum": [
+            "stage_pack_hash_changed_without_policy",
+            "stage_pack_hash_migration_requires_human_gate",
+            "attempt_stage_pack_hash_conflict"
+          ]
+        },
+        "stage_attempt_id": { "type": ["string", "null"] },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "current_stage_pack_hash",
+            "reason"
+          ],
+          "properties": {
+            "current_stage_pack_hash": { "$ref": "#/$defs/stage_pack_hash" },
+            "previous_stage_pack_hash": { "$ref": "#/$defs/stage_pack_hash" },
+            "attempt_stage_pack_hash": { "$ref": "#/$defs/stage_pack_hash" },
+            "policy": { "$ref": "#/$defs/migration_policy" },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        },
+        "repair_action": {
+          "type": "string",
+          "enum": [
+            "declare_stage_pack_migration_policy",
+            "record_human_gate_for_stage_pack_migration",
+            "bind_attempt_to_declared_stage_pack_hash"
+          ]
+        }
+      }
+    },
+    "entry_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "stores_body_payloads",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "stage_pack_registry_projection_only" },
+        "stores_body_payloads": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    },
+    "projection_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "registry_is_scheduler_input",
+        "stores_body_payloads",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "stage_pack_registry_projection_only" },
+        "registry_is_scheduler_input": { "const": true },
+        "stores_body_payloads": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_family_stage_pack_registry",
+      "version": "family-stage-pack-registry.v1",
+      "summary": {
+        "entry_count": 1,
+        "changed_hash_count": 0,
+        "blocked_entry_count": 0,
+        "reusable_entry_count": 1
+      },
+      "entries": [
+        {
+          "stage_pack_id": "med-autoscience:mas_stage_control_plane",
+          "target_domain_id": "med-autoscience",
+          "plane_id": "mas_stage_control_plane",
+          "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "stage_ids": ["manuscript_authoring"],
+          "action_catalog_id": "mas_stage_actions",
+          "admission_status": "admitted",
+          "reusable_library_entry": true,
+          "refs": {
+            "proof_bundle_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/proof-bundles/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "graph_projection_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "integrity_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/integrity/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "migration_policy_ref": null
+          },
+          "migration": {
+            "status": "stable_hash",
+            "policy": null,
+            "previous_stage_pack_hash": null,
+            "current_stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "active_attempt_stage_pack_hash": null,
+            "active_attempt_policy": "no_active_attempt_binding",
+            "blockers": []
+          },
+          "authority_boundary": {
+            "opl_role": "stage_pack_registry_projection_only",
+            "stores_body_payloads": false,
+            "can_execute_stage": false,
+            "can_write_domain_truth": false,
+            "can_authorize_domain_ready": false,
+            "can_authorize_quality_verdict": false,
+            "can_mutate_artifact_body": false
+          }
+        }
+      ],
+      "authority_boundary": {
+        "opl_role": "stage_pack_registry_projection_only",
+        "registry_is_scheduler_input": true,
+        "stores_body_payloads": false,
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}
