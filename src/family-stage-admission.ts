@@ -5,6 +5,9 @@ import type {
   FamilyStageTrustLane,
 } from './family-stage-control-plane-contract.ts';
 import type { NormalizedDomainManifest } from './domain-manifest/types.ts';
+import {
+  buildFamilyStageAssumptionLifecycleProjection,
+} from './family-stage-assumption-lifecycle.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -18,7 +21,9 @@ export interface FamilyStageAdmissionFinding {
   stage_id?: string;
   target_stage_id?: string;
   action_id?: string;
+  assumption_id?: string;
   runtime_event_refs_missing_reason?: string;
+  minimal_counterexample?: JsonRecord;
 }
 
 export interface FamilyStageAdmissionStageResult {
@@ -268,6 +273,34 @@ function inspectStageContract(stage: FamilyStageDescriptor, findings: FamilyStag
   }
 }
 
+function inspectRuntimeAssumptions(
+  plane: FamilyStageControlPlane,
+  findings: FamilyStageAdmissionFinding[],
+) {
+  const lifecycle = buildFamilyStageAssumptionLifecycleProjection(plane);
+  for (const assumption of lifecycle.assumptions) {
+    if (assumption.status === 'current') {
+      continue;
+    }
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: assumption.status === 'stale'
+        ? 'runtime_assumption_stale'
+        : assumption.status === 'missing_monitor'
+          ? 'runtime_assumption_missing_monitor_ref'
+          : 'runtime_assumption_missing_owner',
+      message: assumption.status === 'stale'
+        ? 'Runtime assumption has invalidation refs and must be repaired before stage launch.'
+        : assumption.status === 'missing_monitor'
+          ? 'Runtime assumption must declare at least one monitor ref before stage launch.'
+          : 'Runtime assumption must declare an owner before stage launch.',
+      stage_id: assumption.stage_id,
+      assumption_id: assumption.assumption_id,
+      minimal_counterexample: assumption.minimal_counterexample ?? undefined,
+    });
+  }
+}
+
 function inspectActions(
   stage: FamilyStageDescriptor,
   findings: FamilyStageAdmissionFinding[],
@@ -455,6 +488,7 @@ export function buildFamilyStageAdmissionReview(
   }
   inspectComposition(plane, findings);
   inspectStaticCycles(plane, findings);
+  inspectRuntimeAssumptions(plane, findings);
 
   const stageResults = plane.stages.map((stage) => stageResult(stage, findings));
   const blockersCount = findings.filter((finding) => finding.severity === 'blocker').length;

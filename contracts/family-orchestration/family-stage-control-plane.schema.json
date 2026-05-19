@@ -226,10 +226,17 @@
         "runtime_assumptions": {
           "type": "array",
           "items": {
-            "type": "string",
-            "minLength": 1
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "$ref": "#/$defs/runtime_assumption"
+              }
+            ]
           },
-          "description": "Operational assumptions that must be monitored at runtime, such as source freshness, provider SLO, boundary failure rate, or artifact locator freshness. OPL projects these assumptions but does not turn them into domain verdicts."
+          "description": "Operational assumptions that must be monitored at runtime, such as source freshness, provider SLO, boundary failure rate, or artifact locator freshness. String entries keep the legacy lightweight form; object entries can carry owner, monitor, freshness, invalidation, and repair refs. OPL projects and gates these assumptions but does not turn them into domain verdicts."
         },
         "monitor_refs": {
           "type": "array",
@@ -305,6 +312,79 @@
         },
         "runtime_guard_required": {
           "type": "boolean"
+        }
+      }
+    },
+    "runtime_assumption": {
+      "type": "object",
+      "additionalProperties": true,
+      "anyOf": [
+        {
+          "required": [
+            "assumption_id"
+          ]
+        },
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "ref"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        }
+      ],
+      "properties": {
+        "assumption_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "freshness_window_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed_at_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "invalidated_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "repair_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "monitor_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          }
         }
       }
     }

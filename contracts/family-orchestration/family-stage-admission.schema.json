@@ -234,9 +234,17 @@
           "type": "string",
           "minLength": 1
         },
+        "assumption_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "runtime_event_refs_missing_reason": {
           "type": "string",
           "minLength": 1
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     }

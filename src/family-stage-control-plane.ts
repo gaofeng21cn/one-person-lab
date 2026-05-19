@@ -12,9 +12,20 @@ import {
   buildFamilyStageAdmissionReview,
 } from './family-stage-admission.ts';
 import {
+  buildFamilyStageAssumptionLifecycleProjection,
+} from './family-stage-assumption-lifecycle.ts';
+import {
+  buildFamilyStagePackRegistryEntry,
+  buildFamilyStagePackRegistryProjection,
+} from './family-stage-pack-registry.ts';
+import type { FamilyStagePackMigrationPolicy } from './family-stage-pack-registry.ts';
+import {
   buildFamilyStagePackIntegrity,
   buildFamilyStageProofBundle,
 } from './family-stage-proof-bundle.ts';
+import {
+  buildFamilyStageReplayCertification,
+} from './family-stage-replay-certification.ts';
 import type { FamilyStageProofBundleIntegrity } from './family-stage-proof-bundle.ts';
 import type {
   FamilyStageAdmissionReview,
@@ -623,11 +634,55 @@ function parseOptionArgs(args: string[], required: string[]) {
   return parsed;
 }
 
+function parseRepeatedOptionArgs(args: string[], required: string[], repeated: string[] = []) {
+  const parsed: Record<string, string> = {};
+  const repeatedValues: Record<string, string[]> = Object.fromEntries(repeated.map((key) => [key, []]));
+  const repeatable = new Set(repeated);
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (!token.startsWith('--')) {
+      throw new FrameworkContractError('cli_usage_error', `Unexpected positional argument: ${token}.`, { token });
+    }
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw new FrameworkContractError('cli_usage_error', `Missing value for option: ${token}.`, { option: token });
+    }
+    const key = token.slice(2);
+    if (repeatable.has(key)) {
+      repeatedValues[key].push(value);
+    } else {
+      parsed[key] = value;
+    }
+    index += 1;
+  }
+  for (const field of required) {
+    if (!parsed[field]) {
+      throw new FrameworkContractError('cli_usage_error', `Missing required option: --${field}.`, {
+        required: required.map((entry) => `--${entry}`),
+      });
+    }
+  }
+  return { parsed, repeated: repeatedValues };
+}
+
+function normalizeMigrationPolicy(value: string | undefined): FamilyStagePackMigrationPolicy | null {
+  if (!value) {
+    return null;
+  }
+  if (value === 'continue_old_hash' || value === 'migrate_to_new_hash' || value === 'blocked_human_gate') {
+    return value;
+  }
+  throw new FrameworkContractError('cli_usage_error', `Unsupported stage pack migration policy: ${value}.`, {
+    allowed_policies: ['continue_old_hash', 'migrate_to_new_hash', 'blocked_human_gate'],
+  });
+}
+
 export function buildFamilyStageInspect(contracts: FrameworkContracts, args: string[]) {
   const parsed = parseOptionArgs(args, ['domain', 'stage']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   const stage = findStage(plane, parsed.stage);
   const admission: FamilyStageAdmissionReview = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const assumptionLifecycle = buildFamilyStageAssumptionLifecycleProjection(plane);
   const inspectedStageAdmission =
     admission.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
   return {
@@ -662,9 +717,15 @@ export function buildFamilyStageInspect(contracts: FrameworkContracts, args: str
         freshness: stage.freshness,
         runtime_assumptions: stage.stage_contract?.runtime_assumptions ?? [],
         monitor_refs: stage.stage_contract?.monitor_refs ?? [],
+        assumption_lifecycle: assumptionLifecycle.assumptions.filter((assumption) => (
+          assumption.stage_id === stage.stage_id
+        )),
         monitor_summary: {
           runtime_assumption_count: stage.stage_contract?.runtime_assumptions.length ?? 0,
           monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
+          assumption_blocker_count: assumptionLifecycle.assumptions.filter((assumption) => (
+            assumption.stage_id === stage.stage_id && assumption.severity === 'blocker'
+          )).length,
           authority_boundary: 'projection_only_no_domain_verdict_authority',
         },
         guarantee_summary: buildFamilyStageGuaranteeProjection(stage),
@@ -702,5 +763,79 @@ export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args
   return {
     version: 'g2',
     family_stage_graph: buildStageGraphProjection(entry, plane),
+  };
+}
+
+export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts, args: string[]) {
+  const parsed = parseOptionArgs(args, ['domain']);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  return {
+    version: 'g2',
+    family_stage_assumption_lifecycle: {
+      project_id: entry.project_id,
+      project: entry.project,
+      projection: buildFamilyStageAssumptionLifecycleProjection(plane),
+    },
+  };
+}
+
+export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContracts, args: string[]) {
+  const { parsed } = parseRepeatedOptionArgs(args, ['domain']);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const proofBundle = buildFamilyStageProofBundle(plane, {
+    actionCatalog: entry.manifest?.family_action_catalog ?? null,
+    admissionReview: admission,
+  });
+  const migrationPolicy = normalizeMigrationPolicy(parsed['migration-policy']);
+  const attemptBinding = parsed['attempt-id']
+    ? {
+        stage_attempt_id: parsed['attempt-id'],
+        stage_pack_hash: parsed['attempt-stage-pack-hash'] ?? proofBundle.integrity.stage_pack_hash,
+        stage_id: parsed['attempt-stage'] ?? proofBundle.identity.stage_ids[0] ?? 'unknown_stage',
+        created_at_ref: parsed['attempt-created-at-ref'] ?? null,
+      }
+    : null;
+  const entryProjection = buildFamilyStagePackRegistryEntry(proofBundle, {
+    previousStagePackHash: parsed['previous-stage-pack-hash'] ?? null,
+    attemptBinding,
+    migrationPolicy,
+    migrationPolicyRef: parsed['migration-policy-ref'] ?? null,
+  });
+  return {
+    version: 'g2',
+    family_stage_pack_registry: {
+      project_id: entry.project_id,
+      project: entry.project,
+      projection: buildFamilyStagePackRegistryProjection([entryProjection]),
+    },
+  };
+}
+
+export function buildFamilyStageReplayCertificationInspect(contracts: FrameworkContracts, args: string[]) {
+  const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], [
+    'append-only-event-log-ref',
+    'attempt-ledger-ref',
+    'recorded-runtime-event-ref',
+    'closeout-receipt-ref',
+  ]);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const proofBundle = buildFamilyStageProofBundle(plane, {
+    actionCatalog: entry.manifest?.family_action_catalog ?? null,
+    admissionReview: admission,
+  });
+  return {
+    version: 'g2',
+    family_stage_replay_certification: {
+      project_id: entry.project_id,
+      project: entry.project,
+      certification: buildFamilyStageReplayCertification(proofBundle, {
+        append_only_event_log_refs: repeated['append-only-event-log-ref'],
+        attempt_ledger_refs: repeated['attempt-ledger-ref'],
+        recorded_runtime_event_refs: repeated['recorded-runtime-event-ref'],
+        closeout_receipt_refs: repeated['closeout-receipt-ref'],
+      }),
+    },
   };
 }
