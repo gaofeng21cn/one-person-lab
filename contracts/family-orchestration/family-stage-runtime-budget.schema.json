@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-runtime-budget.schema.json",
+  "title": "OPL Family Stage Runtime Budget Projection",
+  "description": "Refs-only runtime reliability and capacity budget projection over a FamilyStageControlPlane. It absorbs GraphFlow-style boundary compounding as an operator projection without calculating unverified probabilities or introducing a GraphFlow runtime dependency.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "plane_id",
+    "target_domain_id",
+    "summary",
+    "stages",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_family_stage_runtime_budget_projection" },
+    "version": { "const": "family-stage-runtime-budget.v1" },
+    "plane_id": { "type": "string", "minLength": 1 },
+    "target_domain_id": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_count",
+        "ready_count",
+        "needs_monitor_count",
+        "blocker_count",
+        "boundary_count",
+        "runtime_guard_count",
+        "monitor_count",
+        "metric_count",
+        "unmonitored_boundary_count"
+      ],
+      "properties": {
+        "stage_count": { "type": "integer", "minimum": 0 },
+        "ready_count": { "type": "integer", "minimum": 0 },
+        "needs_monitor_count": { "type": "integer", "minimum": 0 },
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "boundary_count": { "type": "integer", "minimum": 0 },
+        "runtime_guard_count": { "type": "integer", "minimum": 0 },
+        "monitor_count": { "type": "integer", "minimum": 0 },
+        "metric_count": { "type": "integer", "minimum": 0 },
+        "unmonitored_boundary_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
+  },
+  "$defs": {
+    "surface_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ref"],
+      "properties": {
+        "ref_kind": { "type": "string", "minLength": 1 },
+        "ref": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "role": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reliability_budget_status": {
+      "type": "string",
+      "enum": ["ready", "needs_monitor", "blocker"]
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "owner",
+        "boundary_count",
+        "runtime_guard_count",
+        "runtime_event_ref_count",
+        "monitor_count",
+        "metric_count",
+        "dashboard_metric_count",
+        "unmonitored_boundary_count",
+        "reliability_budget_status",
+        "expected_success_ref",
+        "boundary_success_rate_ref",
+        "monitor_refs",
+        "metric_refs",
+        "dashboard_metric_refs",
+        "runtime_event_refs",
+        "minimal_counterexamples"
+      ],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "boundary_count": { "type": "integer", "minimum": 0 },
+        "runtime_guard_count": { "type": "integer", "minimum": 0 },
+        "runtime_event_ref_count": { "type": "integer", "minimum": 0 },
+        "monitor_count": { "type": "integer", "minimum": 0 },
+        "metric_count": { "type": "integer", "minimum": 0 },
+        "dashboard_metric_count": { "type": "integer", "minimum": 0 },
+        "unmonitored_boundary_count": { "type": "integer", "minimum": 0 },
+        "reliability_budget_status": { "$ref": "#/$defs/reliability_budget_status" },
+        "expected_success_ref": {
+          "oneOf": [
+            { "$ref": "#/$defs/surface_ref" },
+            { "type": "null" }
+          ]
+        },
+        "boundary_success_rate_ref": {
+          "oneOf": [
+            { "$ref": "#/$defs/surface_ref" },
+            { "type": "null" }
+          ]
+        },
+        "monitor_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "metric_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "dashboard_metric_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "runtime_event_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "minimal_counterexamples": { "type": "array", "items": { "$ref": "#/$defs/counterexample" } }
+      }
+    },
+    "counterexample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage_id", "missing_field", "reason"],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "missing_field": {
+          "type": "string",
+          "enum": [
+            "monitor_refs",
+            "expected_success_ref_or_boundary_success_rate_ref",
+            "boundary_monitor_coverage"
+          ]
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "graphflow_runtime_dependency",
+        "probability_truth_claim",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "runtime_budget_projection_only" },
+        "graphflow_runtime_dependency": { "const": false },
+        "probability_truth_claim": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_family_stage_runtime_budget_projection",
+      "version": "family-stage-runtime-budget.v1",
+      "plane_id": "mas_stage_control_plane",
+      "target_domain_id": "med-autoscience",
+      "summary": {
+        "stage_count": 1,
+        "ready_count": 1,
+        "needs_monitor_count": 0,
+        "blocker_count": 0,
+        "boundary_count": 1,
+        "runtime_guard_count": 1,
+        "monitor_count": 1,
+        "metric_count": 1,
+        "unmonitored_boundary_count": 0
+      },
+      "stages": [
+        {
+          "stage_id": "manuscript_authoring",
+          "owner": "med-autoscience",
+          "boundary_count": 1,
+          "runtime_guard_count": 1,
+          "runtime_event_ref_count": 1,
+          "monitor_count": 1,
+          "metric_count": 1,
+          "dashboard_metric_count": 0,
+          "unmonitored_boundary_count": 0,
+          "reliability_budget_status": "ready",
+          "expected_success_ref": null,
+          "boundary_success_rate_ref": { "ref_kind": "metric_ref", "ref": "metric:runtime/boundary_success_rate", "role": "boundary_success_rate" },
+          "monitor_refs": [{ "ref_kind": "receipt", "ref": "receipt:runtime-monitor/latest", "role": "runtime_boundary_monitor" }],
+          "metric_refs": [{ "ref_kind": "metric_ref", "ref": "metric:runtime/boundary_success_rate", "role": "boundary_success_rate" }],
+          "dashboard_metric_refs": [],
+          "runtime_event_refs": ["event:stage-runtime-guard"],
+          "minimal_counterexamples": []
+        }
+      ],
+      "authority_boundary": {
+        "opl_role": "runtime_budget_projection_only",
+        "graphflow_runtime_dependency": false,
+        "probability_truth_claim": false,
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}

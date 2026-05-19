@@ -987,6 +987,7 @@
         "stage_pack_hash",
         "source_stage_pack_ref",
         "graph_projection_ref",
+        "source_of_truth",
         "generated_code_refs",
         "generated_test_refs",
         "generated_proof_refs",
@@ -1014,25 +1015,56 @@
           "type": "string",
           "minLength": 1
         },
+        "source_of_truth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "diagram_ref",
+            "stage_pack_ref",
+            "stage_pack_hash",
+            "generated_artifacts_are_regenerable_supply_chain_inputs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "diagram_stage_pack"
+            },
+            "diagram_ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "stage_pack_ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "stage_pack_hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "generated_artifacts_are_regenerable_supply_chain_inputs": {
+              "const": true
+            }
+          }
+        },
         "generated_code_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/stage_surface_ref" }
+          "items": { "$ref": "#/$defs/generated_artifact_ref" }
         },
         "generated_test_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/stage_surface_ref" }
+          "items": { "$ref": "#/$defs/generated_artifact_ref" }
         },
         "generated_proof_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/stage_surface_ref" }
+          "items": { "$ref": "#/$defs/generated_artifact_ref" }
         },
         "generated_schema_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/stage_surface_ref" }
+          "items": { "$ref": "#/$defs/generated_artifact_ref" }
         },
         "generated_artifact_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/stage_surface_ref" }
+          "items": { "$ref": "#/$defs/generated_artifact_ref" }
         },
         "summary": {
           "type": "object",
@@ -1043,6 +1075,9 @@
             "generated_proof_ref_count",
             "generated_schema_ref_count",
             "generated_artifact_ref_count",
+            "regenerated_ref_count",
+            "needs_regeneration_ref_count",
+            "missing_source_hash_ref_count",
             "regeneration_required_when_stage_pack_hash_changes"
           ],
           "properties": {
@@ -1051,6 +1086,9 @@
             "generated_proof_ref_count": { "type": "integer", "minimum": 0 },
             "generated_schema_ref_count": { "type": "integer", "minimum": 0 },
             "generated_artifact_ref_count": { "type": "integer", "minimum": 0 },
+            "regenerated_ref_count": { "type": "integer", "minimum": 0 },
+            "needs_regeneration_ref_count": { "type": "integer", "minimum": 0 },
+            "missing_source_hash_ref_count": { "type": "integer", "minimum": 0 },
             "regeneration_required_when_stage_pack_hash_changes": { "const": true }
           }
         },
@@ -1077,6 +1115,81 @@
             "can_authorize_quality_verdict": { "const": false },
             "can_mutate_artifact_body": { "const": false }
           }
+        }
+      }
+    },
+    "generated_artifact_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "stage_id",
+        "ref",
+        "source_of_truth_kind",
+        "source_stage_pack_ref",
+        "source_stage_pack_hash",
+        "declared_source_stage_pack_hash",
+        "source_graph_projection_ref",
+        "regeneration_policy",
+        "drift_status",
+        "drift_reason"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref_kind": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/surface_ref_value"
+        },
+        "role": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "source_of_truth_kind": {
+          "const": "diagram_stage_pack"
+        },
+        "source_stage_pack_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_stage_pack_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "declared_source_stage_pack_hash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_graph_projection_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regeneration_policy": {
+          "const": "regenerate_when_source_stage_pack_hash_changes"
+        },
+        "drift_status": {
+          "type": "string",
+          "enum": [
+            "regenerated",
+            "needs_regeneration",
+            "missing_source_hash"
+          ]
+        },
+        "drift_reason": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }
@@ -1252,13 +1365,28 @@
         "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "source_stage_pack_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "graph_projection_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_of_truth": {
+          "kind": "diagram_stage_pack",
+          "diagram_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "stage_pack_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "generated_artifacts_are_regenerable_supply_chain_inputs": true
+        },
         "generated_code_refs": [],
         "generated_test_refs": [
           {
             "stage_id": "publication_review",
             "ref_kind": "test",
             "ref": "tests/publication-review.test.ts",
-            "role": "proof_ref"
+            "role": "proof_ref",
+            "source_of_truth_kind": "diagram_stage_pack",
+            "source_stage_pack_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "source_stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "declared_source_stage_pack_hash": null,
+            "source_graph_projection_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "regeneration_policy": "regenerate_when_source_stage_pack_hash_changes",
+            "drift_status": "missing_source_hash",
+            "drift_reason": "generated_ref_missing_declared_source_stage_pack_hash"
           }
         ],
         "generated_proof_refs": [
@@ -1266,7 +1394,15 @@
             "stage_id": "publication_review",
             "ref_kind": "test",
             "ref": "tests/publication-review.test.ts",
-            "role": "proof_ref"
+            "role": "proof_ref",
+            "source_of_truth_kind": "diagram_stage_pack",
+            "source_stage_pack_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "source_stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "declared_source_stage_pack_hash": null,
+            "source_graph_projection_ref": "opl://stage-packs/med-autoscience/mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "regeneration_policy": "regenerate_when_source_stage_pack_hash_changes",
+            "drift_status": "missing_source_hash",
+            "drift_reason": "generated_ref_missing_declared_source_stage_pack_hash"
           }
         ],
         "generated_schema_refs": [],
@@ -1277,6 +1413,9 @@
           "generated_proof_ref_count": 1,
           "generated_schema_ref_count": 0,
           "generated_artifact_ref_count": 0,
+          "regenerated_ref_count": 0,
+          "needs_regeneration_ref_count": 0,
+          "missing_source_hash_ref_count": 2,
           "regeneration_required_when_stage_pack_hash_changes": true
         },
         "authority_boundary": {
