@@ -26,6 +26,7 @@ import {
 import {
   buildFamilyStageReplayCertification,
 } from './family-stage-replay-certification.ts';
+import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { FamilyStageProofBundleIntegrity } from './family-stage-proof-bundle.ts';
 import type {
   FamilyStageAdmissionReview,
@@ -380,14 +381,18 @@ function buildStageGraphProjection(
 }
 
 type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
+const STAGE_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
+
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
+  manifestCommandTimeoutPolicy?: ManifestCommandTimeoutPolicy;
   domainManifests?: DomainManifestCatalog;
 };
 
 function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalogOptions = {}) {
   const catalog = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
-    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
+    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs ?? STAGE_MANIFEST_COMMAND_TIMEOUT_MS,
+    manifestCommandTimeoutPolicy: options.manifestCommandTimeoutPolicy ?? 'fixed',
   }).domain_manifests;
   const domains = catalog.projects.map((entry) => {
     const plane = resolvePlaneFromEntry(entry);
