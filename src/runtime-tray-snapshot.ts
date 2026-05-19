@@ -22,7 +22,10 @@ import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
 import { buildDomainProjectionIngestion } from './runtime-tray-domain-projection-ingestion.ts';
-import { buildAppOperatorDrilldown } from './runtime-tray-app-operator-drilldown.ts';
+import {
+  buildAppOperatorDrilldown,
+  type AppOperatorDrilldownDetailLevel,
+} from './runtime-tray-app-operator-drilldown.ts';
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',
@@ -680,7 +683,10 @@ function buildMasStudyProjection(
   };
 }
 
-export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
+export async function buildRuntimeTraySnapshot(
+  contracts: FrameworkContracts,
+  options: { appOperatorDrilldownDetailLevel?: AppOperatorDrilldownDetailLevel } = {},
+) {
   const providerKind = resolveFamilyRuntimeProviderKind();
   const familyRuntimeRuntimePaths = familyRuntimePaths();
   const masManagedProviderProjection = readMasManagedProviderProjection();
@@ -700,6 +706,7 @@ export async function buildRuntimeTraySnapshot(contracts: FrameworkContracts) {
     providerContinuousProof,
     domainProjectionIngestion,
     domainManifestProjects: domainManifests.projects,
+    detailLevel: options.appOperatorDrilldownDetailLevel,
   });
   const domainItems = domainManifests.projects
     .map((entry) =>

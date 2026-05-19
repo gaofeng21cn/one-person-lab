@@ -1,8 +1,9 @@
 import {
-  inspectFamilyRuntimeProvider,
-  inspectFamilyRuntimeProviders,
+  inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
+import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { familyRuntimePaths } from './family-runtime-store.ts';
 import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
 import { buildStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
 
@@ -308,7 +309,7 @@ function isOnlineRuntimeAction(actionId: string) {
 }
 
 function filterActionableRuntimeManagerActions(
-  actions: ReturnType<typeof buildRuntimeManager>['runtime_manager']['reconcile']['recommended_actions'],
+  actions: Awaited<ReturnType<typeof buildRuntimeManager>>['runtime_manager']['reconcile']['recommended_actions'],
   input: RuntimeManagerActionInput,
 ) {
   return actions.filter((action) => {
@@ -322,10 +323,15 @@ function filterActionableRuntimeManagerActions(
   });
 }
 
-export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
-  const selectedProvider = resolveFamilyRuntimeProviderKind();
-  const provider = inspectFamilyRuntimeProvider(selectedProvider);
-  const providers = inspectFamilyRuntimeProviders(selectedProvider);
+export async function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
+  const { selectedProvider, providerRuntime: providers, provider } =
+    await inspectSelectedFamilyRuntimeProvidersWithLifecycle({
+      requestedProvider: resolveFamilyRuntimeProviderKind(),
+      paths: familyRuntimePaths(),
+      options: {
+        managedProviderProjection: readMasManagedProviderProjection(),
+      },
+    });
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
     persistIndexes: input.persistNativeIndexes,
   });
@@ -470,8 +476,8 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
   };
 }
 
-export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
-  const before = buildRuntimeManager({ persistNativeIndexes: false });
+export async function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
+  const before = await buildRuntimeManager({ persistNativeIndexes: false });
   const recommendedActions = before.runtime_manager.reconcile.recommended_actions;
   const actionableActions = filterActionableRuntimeManagerActions(recommendedActions, input);
   const plannedActions = actionableActions.map((action) => ({
@@ -511,7 +517,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   }
 
   const executedActions = [];
-  let after: ReturnType<typeof buildRuntimeManager> | null = null;
+  let after: Awaited<ReturnType<typeof buildRuntimeManager>> | null = null;
 
   for (const action of actionableActions) {
     if (action.action_id === 'configure_temporal_provider') {
@@ -543,7 +549,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
     }
 
     if (action.action_id === 'refresh_native_indexes') {
-      after = buildRuntimeManager({ persistNativeIndexes: true });
+      after = await buildRuntimeManager({ persistNativeIndexes: true });
       const persistence = after.runtime_manager.state_index_target.persistence;
       executedActions.push({
         action_id: action.action_id,
@@ -573,7 +579,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
     });
   }
 
-  after ??= buildRuntimeManager({ persistNativeIndexes: false });
+  after ??= await buildRuntimeManager({ persistNativeIndexes: false });
   const afterSummary = summarizeRuntimeManagerForAction(after);
   const executedNonBlockingActions = executedActions.filter((action) => action.blocking === false);
   const hasFailure = executedActions.some((action) => action.status === 'failed');
@@ -613,7 +619,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   };
 }
 
-function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntimeManager>) {
+function summarizeRuntimeManagerForAction(payload: Awaited<ReturnType<typeof buildRuntimeManager>>) {
   const runtimeManager = payload.runtime_manager;
 
   return {
@@ -631,7 +637,7 @@ function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntim
 }
 
 function buildRuntimeManagerReconcile(
-  provider: ReturnType<typeof inspectFamilyRuntimeProvider>,
+  provider: Awaited<ReturnType<typeof inspectSelectedFamilyRuntimeProvidersWithLifecycle>>['provider'],
   nativeHelperProjection: ReturnType<typeof buildNativeHelperProjection>,
 ) {
   const recommendedActions = [];

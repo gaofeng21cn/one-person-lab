@@ -14,6 +14,10 @@ import {
 } from './runtime-tray-domain-evidence-requests.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
+import {
+  applyAppOperatorDrilldownDetail,
+  type AppOperatorDrilldownDetailLevel,
+} from './runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1069,6 +1073,7 @@ export function buildAppOperatorDrilldown(input: {
   providerContinuousProof: JsonRecord;
   domainProjectionIngestion: JsonRecord;
   domainManifestProjects: DomainManifestCatalogEntry[];
+  detailLevel?: AppOperatorDrilldownDetailLevel;
 }) {
   const attempts = recordList(input.stageAttemptWorkbench.attempts);
   const routeRefs = routeGraphRefs(attempts);
@@ -1109,7 +1114,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
   ]);
 
-  return {
+  return applyAppOperatorDrilldownDetail({
     surface_kind: 'opl_app_operator_drilldown_read_model',
     projection_scope: 'runtime_snapshot',
     consumer: 'one_person_lab_app_operator_workbench',
@@ -1277,5 +1282,7 @@ export function buildAppOperatorDrilldown(input: {
       'does_not_authorize_quality_readiness_or_export_verdict',
       'does_not_directly_execute_domain_actions',
     ],
-  };
+  }, input.detailLevel ?? 'full');
 }
+
+export type { AppOperatorDrilldownDetailLevel };

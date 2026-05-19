@@ -829,8 +829,12 @@ export function buildPublicCommandSpecs(
       group: 'runtime',
     }),
     'runtime app-operator-drilldown': cloneCommandSpec(commandSpecs['runtime app-operator-drilldown'], {
-      usage: 'opl runtime app-operator-drilldown',
-      examples: ['opl runtime app-operator-drilldown', 'opl runtime app-operator-drilldown --json'],
+      usage: 'opl runtime app-operator-drilldown [--detail summary|full] [--full]',
+      examples: [
+        'opl runtime app-operator-drilldown',
+        'opl runtime app-operator-drilldown --json',
+        'opl runtime app-operator-drilldown --detail full --json',
+      ],
       group: 'runtime',
     }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
