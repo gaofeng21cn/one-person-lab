@@ -3,8 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
-import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
+import { buildOplRecommendedSkillSpecs } from './install-companions/catalog.ts';
+export { buildOplGuiShellSurface } from './install-companions/gui-shell.ts';
 import { runGit } from './system-installation/shared.ts';
 
 export type OplCompanionSkillStatus = 'ready' | 'missing';
@@ -932,145 +932,13 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
     'mineru-open-api': Boolean(resolveMineruOpenApiTool(home)),
   };
 
-  const specs: Array<Omit<OplRecommendedSkill, 'status'>> = [
-    {
-      skill_id: 'superpowers',
-      label: 'Superpowers process skills',
-      required: false,
-      source: 'superpowers',
-      expected_paths: [
-        path.join(superpowersRepoDir, 'skills', 'using-superpowers', 'SKILL.md'),
-        path.join(superpowersRepoDir, 'skills', 'verification-before-completion', 'SKILL.md'),
-        path.join(agentsSuperpowersDir, 'using-superpowers', 'SKILL.md'),
-      ],
-      install_hint: 'OPL installs the official Superpowers bundle by cloning https://github.com/obra/superpowers.git into ~/.codex/superpowers and linking ~/.agents/skills/superpowers to the full skills directory.',
-      update_hint: 'Update with: cd ~/.codex/superpowers && git pull --ff-only. The ~/.agents/skills/superpowers symlink makes updates visible after Codex/App restart.',
-      supports: ['planning', 'debugging', 'verification', 'branch_finish', 'skill_methodology'],
-    },
-    {
-      skill_id: 'mas',
-      label: 'Med Auto Science skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'mas', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mas', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the MAS skill so Codex can operate the Med Auto Science domain app directly.',
-      supports: ['mas', 'medical_research', 'paper_drafting', 'study_runtime'],
-    },
-    {
-      skill_id: 'mag',
-      label: 'Med Auto Grant skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'mag', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mag', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the MAG skill so Codex can operate the Med Auto Grant domain app directly.',
-      supports: ['mag', 'grant_writing', 'proposal_revision'],
-    },
-    {
-      skill_id: 'rca',
-      label: 'RedCube AI skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'rca', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'rca', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the RCA skill so Codex can operate RedCube AI visual deliverable workflows directly.',
-      supports: ['rca', 'presentations', 'visual_deliverables'],
-    },
-    {
-      skill_id: 'opl-meta-agent',
-      label: 'OPL Meta Agent skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'opl-meta-agent', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'opl-meta-agent', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the OPL Meta Agent skill so Codex can design, test, and improve OPL-compatible Foundry Agents.',
-      supports: ['opl_meta_agent', 'agent_foundry', 'agent_lab'],
-    },
-    {
-      skill_id: 'officecli',
-      label: 'officecli core skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli', 'SKILL.md')],
-      required_tools: ['officecli'],
-      install_hint: 'Install the officecli skill and binary so MAS/MAG/RCA can handle Office deliverables.',
-      supports: ['docx', 'pptx', 'xlsx'],
-    },
-    {
-      skill_id: 'ui-ux-pro-max',
-      label: 'UI UX Pro Max skill',
-      required: false,
-      source: 'github',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'ui-ux-pro-max', 'SKILL.md')],
-      install_hint: 'Install https://github.com/nextlevelbuilder/ui-ux-pro-max-skill so RCA can review and improve visual deliverables.',
-      supports: ['rca', 'ui_review', 'ux_design', 'presentation_visuals'],
-    },
-    {
-      skill_id: 'mineru-document-extractor',
-      label: 'MinerU document extraction skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'mineru-document-extractor', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mineru-document-extractor', 'SKILL.md')] : []),
-      ],
-      required_tools: ['mineru-open-api'],
-      install_hint: 'Install the MinerU document extraction skill and mineru-open-api binary so Codex can extract PDFs, scans, images, Office files, and web pages. MinerU flash-extract works without a token; extract and crawl use MINERU_TOKEN or mineru-open-api auth.',
-      supports: ['pdf', 'ocr', 'document_extraction', 'mineru', 'web_extraction'],
-    },
-    {
-      skill_id: 'officecli-docx',
-      label: 'officecli Word skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-docx', 'SKILL.md')],
-      required_tools: ['officecli'],
-      install_hint: 'Install officecli-docx for Word document creation and editing.',
-      supports: ['docx', 'academic_paper'],
-    },
-    {
-      skill_id: 'officecli-pptx',
-      label: 'officecli PowerPoint skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-pptx', 'SKILL.md')],
-      required_tools: ['officecli'],
-      install_hint: 'Install officecli-pptx for presentation creation and editing.',
-      supports: ['pptx', 'pitch_deck'],
-    },
-    {
-      skill_id: 'officecli-xlsx',
-      label: 'officecli Excel skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-xlsx', 'SKILL.md')],
-      required_tools: ['officecli'],
-      install_hint: 'Install officecli-xlsx for spreadsheet and dashboard work.',
-      supports: ['xlsx', 'dashboard'],
-    },
-    {
-      skill_id: 'openai_primary_runtime_office',
-      label: 'Codex native Office skills',
-      required: false,
-      source: 'codex_builtin',
-      expected_paths: [
-        path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', 'documents', '26.423.10653', 'skills', 'documents', 'SKILL.md'),
-        path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', 'presentations', '26.423.10653', 'skills', 'presentations', 'SKILL.md'),
-        path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', 'spreadsheets', '26.423.10653', 'skills', 'spreadsheets', 'SKILL.md'),
-      ],
-      install_hint: 'Use Codex bundled Documents, Presentations, and Spreadsheets skills when available.',
-      supports: ['documents', 'presentations', 'spreadsheets'],
-    },
-  ];
+  const specs = buildOplRecommendedSkillSpecs({
+    codexHome,
+    superpowersRepoDir,
+    agentsSuperpowersDir,
+    skillsManagerHome,
+    packagedSkillsRoot,
+  });
 
   return specs.map((spec) => {
     const expectedPaths = spec.source === 'codex_builtin' || spec.source === 'superpowers'
@@ -1094,73 +962,4 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       status: skillStatus === 'ready' && toolStatus ? 'ready' : 'missing',
     };
   });
-}
-
-export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
-  const workspaceRoot = resolveFamilyWorkspaceRootFromRepoRoot(repoRoot);
-  const siblingCheckoutPath = path.join(workspaceRoot, 'one-person-lab-app');
-  const releaseVersion = getOplReleaseVersion();
-
-  return {
-    shell_id: 'opl_aion_shell',
-    label: 'OPL Desktop GUI',
-    owner: 'one-person-lab-app',
-    base_shell: 'aionui',
-    relation_to_opl: 'opl_branded_gui_shell',
-    repo_url: 'https://github.com/gaofeng21cn/one-person-lab-app',
-    active_shell_root: 'shells/aionui',
-    release_repo: getOplReleaseRepo(),
-    release_tag: buildOplReleaseTag(releaseVersion),
-    opl_release_version: releaseVersion,
-    sibling_checkout_path: siblingCheckoutPath,
-    sibling_checkout_found: fs.existsSync(siblingCheckoutPath) && fs.statSync(siblingCheckoutPath).isDirectory(),
-    product_identity: {
-      app_name: 'OPL',
-      bundle_name: 'OPL.app',
-      required_branding: ['One Person Lab', 'OPL iconography', 'OPL product wording'],
-      hidden_upstream_modules: ['AionUI team management', 'AionUI scheduled tasks', 'generic upstream branding'],
-    },
-    release_strategy: 'prefer_prebuilt_release_then_source_build',
-    prebuilt_artifacts: [
-      {
-        platform: 'macos',
-        architectures: ['x64', 'arm64'],
-        distributable_patterns: [
-          buildOplGuiArtifactName({ platform: 'macos', arch: 'x64', ext: 'dmg', version: releaseVersion }),
-          buildOplGuiArtifactName({ platform: 'macos', arch: 'arm64', ext: 'dmg', version: releaseVersion }),
-        ],
-        updater_metadata: ['latest-mac.yml', 'latest-arm64-mac.yml'],
-      },
-      {
-        platform: 'windows',
-        architectures: ['x64', 'arm64'],
-        distributable_patterns: [
-          buildOplGuiArtifactName({ platform: 'windows', arch: 'x64', ext: 'exe', version: releaseVersion }),
-          buildOplGuiArtifactName({ platform: 'windows', arch: 'arm64', ext: 'exe', version: releaseVersion }),
-        ],
-        updater_metadata: ['latest.yml', 'latest-win-arm64.yml'],
-      },
-      {
-        platform: 'linux',
-        architectures: ['x64', 'arm64'],
-        distributable_patterns: [
-          buildOplGuiArtifactName({ platform: 'linux', arch: 'x64', ext: 'deb', version: releaseVersion }),
-          buildOplGuiArtifactName({ platform: 'linux', arch: 'arm64', ext: 'deb', version: releaseVersion }),
-        ],
-        updater_metadata: ['latest-linux.yml', 'latest-linux-arm64.yml'],
-      },
-    ],
-    fallback_build_commands: [
-      'bun install',
-      'bun run dist:mac',
-      'bun run dist:win',
-      'bun run dist:linux',
-    ],
-    notes: [
-      'OPL owns the runtime contract and App release discovery surface; one-person-lab-app owns the OPL-branded desktop GUI package built from shells/aionui.',
-      'A valid OPL GUI package is an OPL-branded Electron-builder distributable uploaded to the one-person-lab-app GitHub Release.',
-      'The upstream AionUI app is not itself the OPL GUI.',
-      'Source build is only the fallback when no release asset matches the local platform and architecture.',
-    ],
-  };
 }
