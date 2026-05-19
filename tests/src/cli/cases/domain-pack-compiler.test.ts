@@ -1,10 +1,18 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { buildFamilyAgentDescriptorList } from '../../../../src/family-domain-agent-descriptor.ts';
 import {
   attachManifestSurface,
   bindFamilyManifests,
   type JsonRecord,
   withPackCompilerReadySurfaces,
 } from './domain-pack-compiler-fixtures.ts';
+
+function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: number) {
+  return `${process.execPath} -e ${
+    shellSingleQuote(`setTimeout(() => process.stdout.write(process.argv[1]), ${delayMs});`)
+  } ${shellSingleQuote(JSON.stringify(payload))}`;
+}
+
 test('domain pack compiler projects OPL-owned generated surfaces for admitted domain packs', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-state-'));
@@ -86,6 +94,66 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   );
   assert.equal(mas.domain_pack_compiler.authority_boundary.opl_can_authorize_quality_or_export, false);
   assert.equal(mas.domain_pack_compiler.authority_boundary.provider_completion_is_domain_ready, false);
+});
+
+test('domain pack compiler uses an extended manifest discovery budget without changing descriptor default timeout', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-timeout-state-'));
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
+  const fixtures = loadFamilyManifestFixtures();
+  const slowMas = withPackCompilerReadySurfaces(fixtures.medautoscience, {
+    agentId: 'mas',
+    targetDomainId: 'med-autoscience',
+    owner: 'MedAutoScience',
+    actionId: 'study_packet',
+    stageId: 'study_stage',
+    memoryRefId: 'mas_publication_route_memory',
+  });
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildDelayedManifestCommand(slowMas, 500),
+    ], env);
+
+    const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+    process.env.OPL_STATE_DIR = stateRoot;
+    const descriptors = buildFamilyAgentDescriptorList(loadFrameworkContracts(), {
+      manifestCommandTimeoutMs: 100,
+    });
+    if (previousContractsDir === undefined) {
+      delete process.env.OPL_CONTRACTS_DIR;
+    } else {
+      process.env.OPL_CONTRACTS_DIR = previousContractsDir;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    const masDescriptor = descriptors.family_agent_descriptors.descriptors.find(
+      (descriptor: { project_id: string }) => descriptor.project_id === 'medautoscience',
+    );
+    assert.ok(masDescriptor);
+    assert.equal(masDescriptor.manifest_status, 'command_timeout');
+
+    const packCompiler = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+    assert.equal(packCompiler.domain_pack_compiler.compiler_status, 'ready');
+    assert.deepEqual(packCompiler.domain_pack_compiler.blocker_reasons, []);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('domain pack compiler blocks generated handoff when a domain still declares generic residue', () => {

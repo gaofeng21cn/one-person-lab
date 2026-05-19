@@ -20,6 +20,7 @@
     "runtime_event_requirements",
     "test_proof_refs",
     "proof_runtime_metrics",
+    "integrity",
     "authority_boundary"
   ],
   "properties": {
@@ -134,6 +135,10 @@
     "proof_runtime_metrics": {
       "description": "Scale-oriented counts derived from the proof bundle for OPL scheduling and operator observability only. These metrics do not authorize a domain ready, quality, receipt, or artifact verdict.",
       "$ref": "#/$defs/proof_runtime_metrics"
+    },
+    "integrity": {
+      "description": "Deterministic digest metadata for the stage pack control-plane/action-catalog refs. OPL projects the digest and optional signature refs only; it does not verify external signatures or turn integrity metadata into domain readiness.",
+      "$ref": "#/$defs/stage_pack_integrity"
     },
     "authority_boundary": {
       "type": "object",
@@ -609,6 +614,100 @@
           "const": false
         }
       }
+    },
+    "stage_pack_integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "version",
+        "hash_algorithm",
+        "stage_pack_hash",
+        "hash_scope",
+        "signature_status",
+        "signer_ref",
+        "signature_ref",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "opl_stage_pack_integrity_metadata"
+        },
+        "version": {
+          "const": "opl-stage-pack-integrity-metadata.v1"
+        },
+        "hash_algorithm": {
+          "const": "sha256"
+        },
+        "stage_pack_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "hash_scope": {
+          "const": "family_stage_control_plane_and_action_catalog_contract_refs"
+        },
+        "signature_status": {
+          "type": "string",
+          "enum": [
+            "unsigned_digest_only",
+            "signature_ref_declared"
+          ]
+        },
+        "signer_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signature_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opl_role",
+            "can_execute_stage",
+            "can_write_domain_truth",
+            "can_authorize_domain_ready",
+            "can_authorize_quality_verdict",
+            "can_verify_external_signature"
+          ],
+          "properties": {
+            "opl_role": {
+              "const": "digest_projection_only"
+            },
+            "can_execute_stage": {
+              "const": false
+            },
+            "can_write_domain_truth": {
+              "const": false
+            },
+            "can_authorize_domain_ready": {
+              "const": false
+            },
+            "can_authorize_quality_verdict": {
+              "const": false
+            },
+            "can_verify_external_signature": {
+              "const": false
+            }
+          }
+        }
+      }
     }
   },
   "examples": [
@@ -728,6 +827,24 @@
           "can_mutate_artifact_body": false,
           "can_accept_or_reject_owner_receipt": false,
           "metrics_are_domain_verdict": false
+        }
+      },
+      "integrity": {
+        "surface_kind": "opl_stage_pack_integrity_metadata",
+        "version": "opl-stage-pack-integrity-metadata.v1",
+        "hash_algorithm": "sha256",
+        "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hash_scope": "family_stage_control_plane_and_action_catalog_contract_refs",
+        "signature_status": "unsigned_digest_only",
+        "signer_ref": null,
+        "signature_ref": null,
+        "authority_boundary": {
+          "opl_role": "digest_projection_only",
+          "can_execute_stage": false,
+          "can_write_domain_truth": false,
+          "can_authorize_domain_ready": false,
+          "can_authorize_quality_verdict": false,
+          "can_verify_external_signature": false
         }
       },
       "authority_boundary": {

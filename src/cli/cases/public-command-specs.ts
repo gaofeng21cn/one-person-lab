@@ -42,6 +42,7 @@ import {
   buildFamilyDomainMemoryMigrationPlan,
 } from '../../family-domain-memory.ts';
 import {
+  buildFamilyStageGraphInspect,
   buildFamilyStageProofBundleInspect,
   buildFamilyStageInspect,
   buildFamilyStagesList,
@@ -702,6 +703,13 @@ export function buildPublicCommandSpecs(
       examples: ['opl stages proof-bundle --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageProofBundleInspect(getContracts(), args),
+    },
+    'stages graph': {
+      usage: 'opl stages graph --domain <domain>',
+      summary: 'Project one domain stage pack as a graph for scheduler/App consumption, including admission, edges, guarantee modes, and integrity digest.',
+      examples: ['opl stages graph --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageGraphInspect(getContracts(), args),
     },
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
       usage: 'opl contract validate',

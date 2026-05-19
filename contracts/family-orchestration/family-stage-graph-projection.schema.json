@@ -1,0 +1,424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-graph-projection.schema.json",
+  "title": "OPL Family Stage Graph Projection",
+  "description": "Graph projection of one admitted or blocked family stage pack for scheduler and App consumption. It exposes nodes, handoff edges, admission status, guarantee modes, and a stable stage-pack digest without introducing a GraphFlow runtime or granting OPL domain authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "project_id",
+    "project",
+    "target_domain_id",
+    "plane_id",
+    "graph_summary",
+    "nodes",
+    "edges",
+    "admission_status",
+    "integrity",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_family_stage_graph_projection"
+    },
+    "version": {
+      "const": "family-stage-graph-projection.v1"
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plane_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_summary": {
+      "$ref": "#/$defs/graph_summary"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "admission_status": {
+      "$ref": "#/$defs/admission_status"
+    },
+    "integrity": {
+      "$ref": "family-stage-proof-bundle.schema.json#/$defs/stage_pack_integrity"
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "graph_is_scheduler_input",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": {
+          "const": "graph_projection_only"
+        },
+        "graph_is_scheduler_input": {
+          "const": true
+        },
+        "can_execute_stage": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        },
+        "can_authorize_domain_ready": {
+          "const": false
+        },
+        "can_authorize_quality_verdict": {
+          "const": false
+        },
+        "can_mutate_artifact_body": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "admission_status": {
+      "type": "string",
+      "enum": [
+        "admitted",
+        "needs_contracts",
+        "blocked"
+      ]
+    },
+    "guarantee_mode": {
+      "type": "string",
+      "enum": [
+        "static_admission_only",
+        "runtime_enforced",
+        "domain_owned_judgment",
+        "observability_only"
+      ]
+    },
+    "graph_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_count",
+        "edge_count",
+        "blocked_node_count",
+        "needs_contracts_node_count",
+        "missing_edge_count",
+        "runtime_enforced_node_count",
+        "monitor_ref_count"
+      ],
+      "properties": {
+        "node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "edge_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_contracts_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_edge_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtime_enforced_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "monitor_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "stage_kind",
+        "title",
+        "owner",
+        "trust_lane",
+        "admission_status",
+        "guarantee_modes",
+        "static_check_eligible",
+        "runtime_enforced",
+        "domain_owned_judgment",
+        "observability_only",
+        "runtime_event_ref_count",
+        "source_scope_ref_count",
+        "artifact_scope_ref_count",
+        "workspace_scope_ref_count",
+        "runtime_assumption_count",
+        "monitor_ref_count"
+      ],
+      "properties": {
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trust_lane": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "admission_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/admission_status"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "guarantee_modes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/guarantee_mode"
+          }
+        },
+        "static_check_eligible": {
+          "type": "boolean"
+        },
+        "runtime_enforced": {
+          "type": "boolean"
+        },
+        "domain_owned_judgment": {
+          "type": "boolean"
+        },
+        "observability_only": {
+          "type": "boolean"
+        },
+        "runtime_event_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workspace_scope_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtime_assumption_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "monitor_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edge_id",
+        "upstream_stage_id",
+        "downstream_stage_id",
+        "edge_kind",
+        "upstream_ensures",
+        "downstream_requires",
+        "satisfied_by",
+        "missing",
+        "status"
+      ],
+      "properties": {
+        "edge_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "upstream_stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "downstream_stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "edge_kind": {
+          "const": "handoff_requires_ensures"
+        },
+        "upstream_ensures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "downstream_requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "satisfied_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "satisfied",
+            "missing"
+          ]
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_family_stage_graph_projection",
+      "version": "family-stage-graph-projection.v1",
+      "project_id": "medautoscience",
+      "project": "medautoscience",
+      "target_domain_id": "med-autoscience",
+      "plane_id": "mas_stage_control_plane",
+      "graph_summary": {
+        "node_count": 2,
+        "edge_count": 1,
+        "blocked_node_count": 0,
+        "needs_contracts_node_count": 0,
+        "missing_edge_count": 0,
+        "runtime_enforced_node_count": 1,
+        "monitor_ref_count": 1
+      },
+      "nodes": [
+        {
+          "stage_id": "publication_review",
+          "stage_kind": "review",
+          "title": "Publication review",
+          "owner": "med-autoscience",
+          "trust_lane": "human_gate",
+          "admission_status": "admitted",
+          "guarantee_modes": [
+            "runtime_enforced",
+            "domain_owned_judgment",
+            "observability_only"
+          ],
+          "static_check_eligible": false,
+          "runtime_enforced": true,
+          "domain_owned_judgment": true,
+          "observability_only": true,
+          "runtime_event_ref_count": 1,
+          "source_scope_ref_count": 1,
+          "artifact_scope_ref_count": 1,
+          "workspace_scope_ref_count": 1,
+          "runtime_assumption_count": 1,
+          "monitor_ref_count": 1
+        }
+      ],
+      "edges": [
+        {
+          "edge_id": "manuscript_authoring->publication_review",
+          "upstream_stage_id": "manuscript_authoring",
+          "downstream_stage_id": "publication_review",
+          "edge_kind": "handoff_requires_ensures",
+          "upstream_ensures": [
+            "draft_ready"
+          ],
+          "downstream_requires": [
+            "draft_ready"
+          ],
+          "satisfied_by": [
+            "draft_ready"
+          ],
+          "missing": [],
+          "status": "satisfied"
+        }
+      ],
+      "admission_status": "admitted",
+      "integrity": {
+        "surface_kind": "opl_stage_pack_integrity_metadata",
+        "version": "opl-stage-pack-integrity-metadata.v1",
+        "hash_algorithm": "sha256",
+        "stage_pack_hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "hash_scope": "family_stage_control_plane_and_action_catalog_contract_refs",
+        "signature_status": "unsigned_digest_only",
+        "signer_ref": null,
+        "signature_ref": null,
+        "authority_boundary": {
+          "opl_role": "digest_projection_only",
+          "can_execute_stage": false,
+          "can_write_domain_truth": false,
+          "can_authorize_domain_ready": false,
+          "can_authorize_quality_verdict": false,
+          "can_verify_external_signature": false
+        }
+      },
+      "authority_boundary": {
+        "opl_role": "graph_projection_only",
+        "graph_is_scheduler_input": true,
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}
