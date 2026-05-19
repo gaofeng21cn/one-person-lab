@@ -3,6 +3,10 @@ import { FrameworkContractError } from './contracts.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
+import {
+  parseExternalEvidenceApplyArgs,
+  runExternalEvidenceApply,
+} from './external-evidence-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -103,6 +107,16 @@ function stringList(value: unknown) {
     : [];
 }
 
+function refsFromPayload(payload: JsonRecord, keys: string[]) {
+  return keys.flatMap((key) => {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return [value.trim()];
+    }
+    return stringList(value);
+  });
+}
+
 function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const args = stringList(route.opl_cli_args);
   if (args.length === 0) {
@@ -121,6 +135,76 @@ function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) 
   return args;
 }
 
+function externalEvidenceApplyArgs(
+  route: JsonRecord,
+  payload: JsonRecord,
+  commandOrSurfaceRef: string,
+  options: { allowEmptyRecordPayload?: boolean } = {},
+) {
+  const args = stringList(route.opl_cli_args);
+  if (args.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL external evidence action route.', {
+      command_or_surface_ref: commandOrSurfaceRef,
+      supported_command:
+        'opl agents evidence apply --domain <domain> --request-id <id> [--mode verify] [refs-only evidence inputs]',
+    });
+  }
+  if (args[0] !== 'agents' || args[1] !== 'evidence' || args[2] !== 'apply') {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL external evidence route has invalid opl_cli_args.', {
+      action_id: stringValue(route.action_id),
+      opl_cli_args: args,
+    });
+  }
+  const actionKind = stringValue(route.action_kind);
+  if (actionKind === 'external_evidence_receipt_verify' || actionKind === 'evidence_gate_receipt_verify') {
+    return args;
+  }
+  const evidenceRefs = refsFromPayload(payload, ['evidence_refs', 'evidence_ref']);
+  const domainReceiptRefs = refsFromPayload(payload, [
+    'domain_receipt_refs',
+    'domain_receipt_ref',
+    'receipt_refs',
+    'receipt_ref',
+  ]);
+  const typedBlockerRefs = refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']);
+  const noRegressionRefs = refsFromPayload(payload, ['no_regression_refs', 'no_regression_ref']);
+  const releaseDistRefs = refsFromPayload(payload, ['release_dist_refs', 'release_dist_ref']);
+  const directHostedParityRefs = refsFromPayload(payload, [
+    'direct_hosted_parity_refs',
+    'direct_hosted_parity_ref',
+  ]);
+  const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
+  const receiptRef = stringValue(payload.receipt_ref);
+  const extraArgs = [
+    ...evidenceRefs.flatMap((ref) => ['--evidence-ref', ref]),
+    ...domainReceiptRefs.flatMap((ref) => ['--domain-receipt-ref', ref]),
+    ...typedBlockerRefs.flatMap((ref) => ['--typed-blocker-ref', ref]),
+    ...noRegressionRefs.flatMap((ref) => ['--no-regression-ref', ref]),
+    ...releaseDistRefs.flatMap((ref) => ['--release-dist-ref', ref]),
+    ...directHostedParityRefs.flatMap((ref) => ['--direct-hosted-parity-ref', ref]),
+    ...ownerChainRefs.flatMap((ref) => ['--owner-chain-ref', ref]),
+    ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
+  ];
+  if (extraArgs.length === 0) {
+    if (options.allowEmptyRecordPayload === true) {
+      return args;
+    }
+    throw new FrameworkContractError('cli_usage_error', 'External evidence record action requires refs-only payload evidence.', {
+      action_id: stringValue(route.action_id),
+      required_any: [
+        'evidence_refs',
+        'domain_receipt_refs',
+        'typed_blocker_refs',
+        'no_regression_refs',
+        'release_dist_refs',
+        'direct_hosted_parity_refs',
+        'owner_chain_refs',
+      ],
+    });
+  }
+  return [...args, ...extraArgs];
+}
+
 function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const actionKind = stringValue(route.action_kind);
   if (actionKind === 'stage_attempt_query') {
@@ -135,10 +219,30 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       runtimeArgs: stageAttemptCreateArgs(route, commandOrSurfaceRef),
     };
   }
+  if (
+    actionKind === 'external_evidence_receipt_record'
+    || actionKind === 'external_evidence_receipt_verify'
+    || actionKind === 'evidence_gate_receipt_record'
+    || actionKind === 'evidence_gate_receipt_verify'
+  ) {
+    return {
+      executionKind: 'opl_cli_external_evidence_apply',
+      runtimeArgs: externalEvidenceApplyArgs(route, {}, commandOrSurfaceRef, {
+        allowEmptyRecordPayload: true,
+      }),
+    };
+  }
   throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL action command route.', {
     command_or_surface_ref: commandOrSurfaceRef,
     action_kind: actionKind,
-    supported_action_kinds: ['stage_attempt_query', 'stage_production_attempt_request'],
+    supported_action_kinds: [
+      'stage_attempt_query',
+      'stage_production_attempt_request',
+      'external_evidence_receipt_record',
+      'external_evidence_receipt_verify',
+      'evidence_gate_receipt_record',
+      'evidence_gate_receipt_verify',
+    ],
   });
 }
 
@@ -185,14 +289,32 @@ async function executeRoute(route: JsonRecord, options: RuntimeActionExecuteOpti
   }
 
   if (owner === 'opl' && targetKind === 'opl_cli') {
-    const { executionKind, runtimeArgs } = oplCliRuntimeArgs(route, commandOrSurfaceRef);
+    const actionKind = stringValue(route.action_kind);
+    const externalEvidenceAction = actionKind === 'external_evidence_receipt_record'
+      || actionKind === 'external_evidence_receipt_verify'
+      || actionKind === 'evidence_gate_receipt_record'
+      || actionKind === 'evidence_gate_receipt_verify';
+    const { executionKind, runtimeArgs } = externalEvidenceAction
+      ? {
+          executionKind: 'opl_cli_external_evidence_apply',
+          runtimeArgs: externalEvidenceApplyArgs(route, options.payload, commandOrSurfaceRef, {
+            allowEmptyRecordPayload: options.dryRun,
+          }),
+        }
+      : oplCliRuntimeArgs(route, commandOrSurfaceRef);
     return {
       execution_status: options.dryRun ? 'dry_run' : 'executed',
       execution_kind: executionKind,
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
-      executed_runtime_command: `opl family-runtime ${runtimeArgs.join(' ')}`,
-      result: options.dryRun ? null : await runFamilyRuntime(runtimeArgs),
+      executed_runtime_command: externalEvidenceAction
+        ? `opl ${runtimeArgs.join(' ')}`
+        : `opl family-runtime ${runtimeArgs.join(' ')}`,
+      result: options.dryRun
+        ? null
+        : externalEvidenceAction
+          ? runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3)))
+          : await runFamilyRuntime(runtimeArgs),
     };
   }
 
