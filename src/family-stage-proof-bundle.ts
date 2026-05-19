@@ -95,6 +95,37 @@ export interface FamilyStageProofBundleIntegrity {
   };
 }
 
+export interface FamilyStageGeneratedArtifactManifest {
+  surface_kind: 'opl_stage_pack_generated_artifact_manifest';
+  version: 'opl-stage-pack-generated-artifact-manifest.v1';
+  stage_pack_hash: string;
+  source_stage_pack_ref: string;
+  graph_projection_ref: string;
+  generated_code_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  generated_test_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  generated_proof_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  generated_schema_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  generated_artifact_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  summary: {
+    generated_code_ref_count: number;
+    generated_test_ref_count: number;
+    generated_proof_ref_count: number;
+    generated_schema_ref_count: number;
+    generated_artifact_ref_count: number;
+    regeneration_required_when_stage_pack_hash_changes: true;
+  };
+  authority_boundary: {
+    opl_role: 'generated_artifact_manifest_projection_only';
+    manifest_is_build_review_input: true;
+    graphflow_runtime_dependency: false;
+    can_execute_stage: false;
+    can_write_domain_truth: false;
+    can_authorize_domain_ready: false;
+    can_authorize_quality_verdict: false;
+    can_mutate_artifact_body: false;
+  };
+}
+
 export interface FamilyStageProofBundle {
   surface_kind: 'opl_stage_pack_proof_bundle';
   version: 'opl-stage-pack-proof-bundle.v1';
@@ -118,6 +149,7 @@ export interface FamilyStageProofBundle {
   test_proof_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
   proof_runtime_metrics: FamilyStageProofBundleRuntimeMetrics;
   integrity: FamilyStageProofBundleIntegrity;
+  generated_artifact_manifest: FamilyStageGeneratedArtifactManifest;
   authority_boundary: {
     opl_role: 'proof_bundle_projection_owner';
     domain_role: 'truth_quality_receipt_and_artifact_authority';
@@ -226,6 +258,33 @@ function stageRefMatchesProof(ref: FamilyStageSurfaceRef) {
     || value.includes('receipt')
     || value.includes('evaluation')
   ));
+}
+
+function stageRefMatchesAny(ref: FamilyStageSurfaceRef, needles: string[]) {
+  const tokens = [
+    ref.ref_kind,
+    ref.role,
+    ref.label,
+    ...(Array.isArray(ref.ref) ? ref.ref : [ref.ref]),
+  ]
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.toLowerCase());
+  return tokens.some((value) => needles.some((needle) => value.includes(needle)));
+}
+
+function stageRefs(stage: FamilyStageDescriptor) {
+  return [
+    ...stage.inputs,
+    ...stage.outputs,
+    ...stage.evaluation,
+    ...stage.source_refs,
+    ...stage.knowledge_refs,
+    ...stage.prompt_refs,
+    ...stage.skills,
+  ].map((ref) => ({
+    ...ref,
+    stage_id: stage.stage_id,
+  }));
 }
 
 function buildCompositionObligations(plane: FamilyStageControlPlane): FamilyStageProofBundleCompositionObligation[] {
@@ -432,6 +491,48 @@ export function buildFamilyStagePackIntegrity(
   };
 }
 
+function buildFamilyStageGeneratedArtifactManifest(
+  plane: FamilyStageControlPlane,
+  integrity: FamilyStageProofBundleIntegrity,
+): FamilyStageGeneratedArtifactManifest {
+  const refs = plane.stages.flatMap(stageRefs);
+  const generatedCodeRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['code', 'generated_code', 'source_code']));
+  const generatedTestRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['test', 'evaluation']));
+  const generatedProofRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['proof', 'evidence']));
+  const generatedSchemaRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['schema']));
+  const generatedArtifactRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['artifact']));
+  return {
+    surface_kind: 'opl_stage_pack_generated_artifact_manifest',
+    version: 'opl-stage-pack-generated-artifact-manifest.v1',
+    stage_pack_hash: integrity.stage_pack_hash,
+    source_stage_pack_ref: `opl://stage-packs/${plane.target_domain_id}/${plane.plane_id}/${integrity.stage_pack_hash}`,
+    graph_projection_ref: `opl://stage-packs/${plane.target_domain_id}/${plane.plane_id}/graphs/${integrity.stage_pack_hash}`,
+    generated_code_refs: generatedCodeRefs,
+    generated_test_refs: generatedTestRefs,
+    generated_proof_refs: generatedProofRefs,
+    generated_schema_refs: generatedSchemaRefs,
+    generated_artifact_refs: generatedArtifactRefs,
+    summary: {
+      generated_code_ref_count: generatedCodeRefs.length,
+      generated_test_ref_count: generatedTestRefs.length,
+      generated_proof_ref_count: generatedProofRefs.length,
+      generated_schema_ref_count: generatedSchemaRefs.length,
+      generated_artifact_ref_count: generatedArtifactRefs.length,
+      regeneration_required_when_stage_pack_hash_changes: true,
+    },
+    authority_boundary: {
+      opl_role: 'generated_artifact_manifest_projection_only',
+      manifest_is_build_review_input: true,
+      graphflow_runtime_dependency: false,
+      can_execute_stage: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_mutate_artifact_body: false,
+    },
+  };
+}
+
 export function buildFamilyStageProofBundle(
   plane: FamilyStageControlPlane,
   options: BuildFamilyStageProofBundleOptions = {},
@@ -447,6 +548,7 @@ export function buildFamilyStageProofBundle(
   const runtimeEventRequirements = buildRuntimeEventRequirements(plane);
   const testProofRefs = buildTestProofRefs(plane);
   const integrity = buildFamilyStagePackIntegrity(plane, actionCatalog);
+  const generatedArtifactManifest = buildFamilyStageGeneratedArtifactManifest(plane, integrity);
 
   return {
     surface_kind: 'opl_stage_pack_proof_bundle',
@@ -477,6 +579,7 @@ export function buildFamilyStageProofBundle(
       testProofRefs,
     ),
     integrity,
+    generated_artifact_manifest: generatedArtifactManifest,
     authority_boundary: {
       opl_role: 'proof_bundle_projection_owner',
       domain_role: 'truth_quality_receipt_and_artifact_authority',
