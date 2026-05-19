@@ -8,7 +8,8 @@ test('OPL system skill sync catalog excludes MAS/MDS project-local stage skills'
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
   const pluginNames = catalog.packs.map((pack) => pack.canonical_plugin_name);
 
-  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube']);
+  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent']);
   assert.equal(domainIds.includes('meddeepscientist'), false);
   assert.equal(pluginNames.includes('deepscientist'), false);
+  assert.equal(pluginNames.includes('opl-meta-agent'), true);
 });

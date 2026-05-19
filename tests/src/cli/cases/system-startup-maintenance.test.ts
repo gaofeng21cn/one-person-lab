@@ -3,7 +3,7 @@ import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 
 function createDomainModuleRemote(input: {
   repoName: string;
-  pluginName: 'mas' | 'mag' | 'rca';
+  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
   installerKind: 'bash' | 'node';
   logPath: string;
 }) {
@@ -81,6 +81,12 @@ test('system startup-maintenance installs clean managed modules and returns App 
     installerKind: 'node',
     logPath,
   });
+  const metaRemote = createDomainModuleRemote({
+    repoName: 'opl-meta-agent',
+    pluginName: 'opl-meta-agent',
+    installerKind: 'node',
+    logPath,
+  });
 
   try {
     const output = runCli(['system', 'startup-maintenance'], {
@@ -91,6 +97,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: masRemote.remoteRoot,
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -140,7 +147,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.mode, 'clean_managed_environment_startup');
     assert.equal(output.system_action.details.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.system_action.details.authority_boundary.can_install_domain_daemon, false);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 3);
+    assert.equal(output.system_action.details.summary.completed_targets_count, 4);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.deepEqual(
       output.system_action.details.module_targets.map((target) => [
@@ -155,17 +162,19 @@ test('system startup-maintenance installs clean managed modules and returns App 
         ['medautoscience', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
         ['medautogrant', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
         ['redcube', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
+        ['oplmetaagent', 'completed', 'module_missing', 'missing', 'completed', 'completed'],
       ],
     );
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
     assert.equal(output.system_action.details.plugin_cache_freshness.source, 'module_turnkey_skill_sync');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 3);
+    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 4);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
     assert.equal(output.system_action.details.restart_reload_prompt.action, 'reload_app_and_codex_plugin_cache');
     assert.deepEqual(output.system_action.details.restart_reload_prompt.affected_domains, [
       'medautoscience',
       'medautogrant',
       'redcube',
+      'oplmetaagent',
     ]);
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
       'mas-bootstrap',
@@ -177,8 +186,11 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'rca-bootstrap',
       'rca-skill-sync',
       'rca-health',
+      'opl-meta-agent-bootstrap',
+      'opl-meta-agent-skill-sync',
+      'opl-meta-agent-health',
     ]);
-    for (const skillName of ['mas', 'mag', 'rca']) {
+    for (const skillName of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
     }
   } finally {
@@ -186,6 +198,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -211,6 +224,12 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
     installerKind: 'node',
     logPath,
   });
+  const metaRemote = createDomainModuleRemote({
+    repoName: 'opl-meta-agent',
+    pluginName: 'opl-meta-agent',
+    installerKind: 'node',
+    logPath,
+  });
   const masDeveloperCheckout = path.join(homeRoot, 'developer-med-autoscience');
 
   try {
@@ -223,6 +242,7 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
       OPL_MODULE_PATH_MEDAUTOSCIENCE: masDeveloperCheckout,
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -253,6 +273,7 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
       OPL_MODULE_PATH_MEDAUTOSCIENCE: masDeveloperCheckout,
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     }) as {
@@ -276,10 +297,12 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
     assert.equal(secondTargets.get('medautogrant')?.reason, 'dirty_checkout');
     assert.equal(secondTargets.get('medautogrant')?.action, null);
     assert.equal(secondTargets.get('redcube')?.status, 'completed');
+    assert.equal(secondTargets.get('oplmetaagent')?.status, 'completed');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
   }
 });

@@ -237,11 +237,13 @@ EOF
   const medAutoGrantRemote = createGitModuleRemoteFixture('med-autogrant', {
     extraFiles: moduleExtraFiles,
   });
+  const metaAgentRemote = createGitModuleRemoteFixture('opl-meta-agent');
   const env = {
     HOME: homeRoot,
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: medAutoGrantRemote.remoteRoot,
+    OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
   };
@@ -287,9 +289,9 @@ EOF
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.total_targets_count, 5);
+    assert.equal(output.system_action.details.summary.total_targets_count, 6);
     assert.equal(output.system_action.details.summary.completed_targets_count, 1);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 4);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 5);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('engine:codex')?.status, 'skipped');
     assert.equal(targets.get('engine:codex')?.reason, 'selected_codex_ready');
@@ -311,6 +313,7 @@ EOF
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(medAutoGrantRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaAgentRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -376,6 +379,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     medautoscience: createGitModuleRemoteFixture('med-autoscience', { extraFiles: buildModuleFiles('mas') }),
     medautogrant: createGitModuleRemoteFixture('med-autogrant', { extraFiles: buildModuleFiles('mag') }),
     redcube: createGitModuleRemoteFixture('redcube-ai', { extraFiles: buildModuleFiles('rca') }),
+    oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent', { extraFiles: buildModuleFiles(null) }),
   };
   const redcubeExternalCheckout = path.join(homeRoot, 'external-redcube-ai');
   const cloneResult = spawnSync('git', ['clone', '--branch', 'main', remotes.redcube.remoteRoot, redcubeExternalCheckout], {
@@ -389,6 +393,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: remotes.medautoscience.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: remotes.medautogrant.remoteRoot,
     OPL_MODULE_REPO_URL_REDCUBE: remotes.redcube.remoteRoot,
+    OPL_MODULE_REPO_URL_OPLMETAAGENT: remotes.oplmetaagent.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 
@@ -429,8 +434,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(output.system_action.action, 'reconcile_modules');
     assert.equal(output.system_action.status, 'manual_required');
     assert.deepEqual(output.system_action.details.summary, {
-      total_targets_count: 4,
-      completed_targets_count: 2,
+      total_targets_count: 5,
+      completed_targets_count: 3,
       skipped_targets_count: 1,
       manual_required_targets_count: 1,
     });
@@ -440,6 +445,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(targets.get('meddeepscientist')?.reason, 'optional_module_not_in_default_reconcile');
     assert.equal(targets.get('redcube')?.status, 'completed');
     assert.equal(targets.get('redcube')?.reason, 'module_reconcile_refresh');
+    assert.equal(targets.get('oplmetaagent')?.status, 'completed');
+    assert.equal(targets.get('oplmetaagent')?.reason, 'module_missing');
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
     assert.equal(targets.get('medautogrant')?.reason, 'dirty_checkout');
     const turnkeyLog = fs.readFileSync(turnkeyLogPath, 'utf8');
@@ -450,6 +457,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.doesNotMatch(turnkeyLog, /bootstrap:external-redcube-ai/);
     assert.match(turnkeyLog, /skill:external-redcube-ai/);
     assert.match(turnkeyLog, /health:external-redcube-ai/);
+    assert.match(turnkeyLog, /bootstrap:opl-meta-agent/);
+    assert.match(turnkeyLog, /health:opl-meta-agent/);
 
     const modules = runCli(['modules'], env) as {
       modules: {
@@ -460,6 +469,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(byId.get('medautoscience')?.git?.head_sha, nextMasSha);
     assert.equal(byId.get('meddeepscientist')?.installed, false);
     assert.equal(byId.get('redcube')?.installed, true);
+    assert.equal(byId.get('oplmetaagent')?.installed, true);
   } finally {
     for (const remote of Object.values(remotes)) {
       fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
@@ -472,9 +482,9 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-full-seed-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const buildFullSeedModule = (
-    moduleId: 'medautoscience' | 'medautogrant' | 'redcube',
-    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai',
-    packageName: 'mas' | 'mag' | 'rca',
+    moduleId: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent',
+    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent',
+    packageName: 'mas' | 'mag' | 'rca' | 'meta-agent',
     extraFiles: Record<string, string> = {},
   ) => {
     const remote = createGitModuleRemoteFixture(repoName, {
@@ -535,6 +545,7 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
         '',
       ].join('\n'),
     }),
+    oplmetaagent: buildFullSeedModule('oplmetaagent', 'opl-meta-agent', 'meta-agent'),
   };
   const env = {
     HOME: homeRoot,
@@ -542,9 +553,11 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
     OPL_MODULE_PATH_MEDAUTOSCIENCE: packagedModules.medautoscience.packagedRoot,
     OPL_MODULE_PATH_MEDAUTOGRANT: packagedModules.medautogrant.packagedRoot,
     OPL_MODULE_PATH_REDCUBE: packagedModules.redcube.packagedRoot,
+    OPL_MODULE_PATH_OPLMETAAGENT: packagedModules.oplmetaagent.packagedRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: packagedModules.medautoscience.remote.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: packagedModules.medautogrant.remote.remoteRoot,
     OPL_MODULE_REPO_URL_REDCUBE: packagedModules.redcube.remote.remoteRoot,
+    OPL_MODULE_REPO_URL_OPLMETAAGENT: packagedModules.oplmetaagent.remote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 

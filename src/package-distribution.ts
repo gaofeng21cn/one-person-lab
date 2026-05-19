@@ -5,7 +5,7 @@ import path from 'node:path';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
 
-type PackageModuleId = 'medautoscience' | 'medautogrant' | 'redcube';
+type PackageModuleId = 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
 
 type PackageModuleSpec = {
   module_id: PackageModuleId;
@@ -50,6 +50,14 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
     scope: 'domain_module',
     package_name: 'redcube-ai',
+  },
+  {
+    module_id: 'oplmetaagent',
+    label: 'OPL Meta Agent',
+    repo_name: 'opl-meta-agent',
+    repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
+    scope: 'domain_module',
+    package_name: 'opl-meta-agent',
   },
 ];
 
