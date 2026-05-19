@@ -30,6 +30,7 @@ import {
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
 } from '../../domain-pack-compiler.ts';
+import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
 import {
@@ -648,6 +649,17 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildStandardDomainAgentConformanceReport(args),
+    },
+    'agents readiness': {
+      usage: 'opl agents readiness [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
+      summary:
+        'Aggregate standard-agent readiness gates while reporting production evidence tails without claiming domain readiness.',
+      examples: [
+        'opl agents readiness --family-defaults',
+        'opl agents readiness --agent mas=/path/to/med-autoscience',
+      ],
+      group: 'domain',
+      handler: (args) => buildAgentReadinessSummary(args),
     },
     'substrate projections': {
       usage: 'opl substrate projections',

@@ -76,6 +76,7 @@ const lanes = {
       'tests/src/cli/cases/workspace-domain.production-provider-slo-closeout.test.ts',
       'tests/src/cli/cases/family-runtime-worker.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts.test.ts',
+      'tests/src/cli/cases/family-runtime-stage-attempt-query-closeout.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts-residency-proof.test.ts',
       'tests/src/cli/cases/family-runtime-stage-launch-gates.test.ts',
       'tests/src/cli/cases/family-runtime-stage-admission-contract-light.test.ts',

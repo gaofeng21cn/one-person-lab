@@ -32,6 +32,20 @@ function recordList(value: unknown) {
   return value.filter(isRecord);
 }
 
+function refObjects(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => {
+      if (typeof entry === 'string') {
+        return entry;
+      }
+      return isRecord(entry) ? optionalString(entry.ref) : null;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+}
+
 function readJsonFile(repoDir: string, relativePath: string) {
   const absolutePath = path.join(repoDir, relativePath);
   if (!fs.existsSync(absolutePath)) {
@@ -129,17 +143,27 @@ function productionAcceptanceTailItem(
     const file = readJsonFile(repoDir, relativePath);
     const payload = isRecord(file.payload) ? file.payload : {};
     const closureEvidence = nestedRecord(payload, 'closure_evidence');
+    const evidenceTail = nestedRecord(payload, 'evidence_tail');
+    const closureReceipt = nestedRecord(evidenceTail, 'closure_receipt');
+    const domainAcceptanceReceipt = nestedRecord(payload, 'domain_acceptance_receipt');
     const refs = nestedRecord(payload, 'refs');
     const typedBlockers = recordList(payload.typed_blockers);
     const typedBlockerRefs = stringList(payload.typed_blocker_refs)
-      .concat(stringList(refs.typed_blocker_refs));
-    const evidenceTailStatus = optionalString(payload.evidence_tail_status);
-    const acceptedReturnShape = optionalString(closureEvidence.accepted_return_shape);
+      .concat(stringList(refs.typed_blocker_refs))
+      .concat(refObjects(domainAcceptanceReceipt.typed_blocker_refs));
+    const evidenceTailStatus = optionalString(payload.evidence_tail_status)
+      ?? optionalString(payload.acceptance_status)
+      ?? optionalString(evidenceTail.status)
+      ?? optionalString(domainAcceptanceReceipt.receipt_status);
+    const acceptedReturnShape = optionalString(closureEvidence.accepted_return_shape)
+      ?? optionalString(closureReceipt.return_shape);
     const typedBlockerKind = optionalString(closureEvidence.typed_blocker_kind);
     const nextVerificationRef = firstString(
       closureEvidence.next_verification_ref,
       refs.next_verification_refs,
       refs.next_verification_command_refs,
+      payload.next_verification_command_refs,
+      domainAcceptanceReceipt.next_verification_command_refs,
     );
     const status = (
       file.status !== 'resolved'
@@ -165,6 +189,10 @@ function productionAcceptanceTailItem(
             refs.acceptance_receipt_refs,
             refs.artifact_receipt_refs,
             refs.evidence_refs,
+            domainAcceptanceReceipt.owner_receipt_refs,
+            domainAcceptanceReceipt.progress_delta_refs,
+            closureReceipt.receipt_ref,
+            closureReceipt.artifact_receipt_refs,
           ) && firstString(payload.doc_ref, payload.documentation_ref, payload.doc_refs)
             ? 'closed'
             : 'invalid_evidence'
@@ -187,16 +215,31 @@ function productionAcceptanceTailItem(
         typedBlockerRefs,
         refs.artifact_receipt_refs,
         nextVerificationRef,
+        domainAcceptanceReceipt.owner_receipt_refs,
+        domainAcceptanceReceipt.progress_delta_refs,
+        closureReceipt.receipt_ref,
+        closureReceipt.artifact_receipt_refs,
       ),
-      doc_ref: firstString(payload.doc_ref, payload.documentation_ref, payload.doc_refs, refs.doc_refs),
+      doc_ref: firstString(
+        payload.doc_ref,
+        payload.documentation_ref,
+        payload.doc_refs,
+        refs.doc_refs,
+        domainAcceptanceReceipt.progress_delta_refs,
+        closureReceipt.review_export_ref,
+      ),
       next_verification_command: firstString(
         payload.next_verification_command,
         payload.verification_command,
         refs.next_verification_command_refs,
+        payload.next_verification_command_refs,
         payload.next_verification_ref,
         closureEvidence.next_verification_ref,
         refs.next_verification_refs,
+        domainAcceptanceReceipt.next_verification_command_refs,
       ),
+      contract_ref: relativePath,
+      owner_ref: firstString(payload.owner, payload.domain_owner, payload.domain_id, closureReceipt.owner),
       authority_boundary: conformanceTailAuthorityBoundary({
         evidence_owner: 'domain_repo',
         production_acceptance_ref: relativePath,

@@ -13,6 +13,7 @@ import {
   buildDomainEvidenceRequestRefs,
 } from './runtime-tray-domain-evidence-requests.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
+import { buildAppDrilldownProductionEvidenceTailLedger } from './production-evidence-tail-ledger.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import {
   applyAppOperatorDrilldownDetail,
@@ -1113,6 +1114,11 @@ export function buildAppOperatorDrilldown(input: {
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
+  const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
+    providerContinuousProof: input.providerContinuousProof,
+    stageAttempts: attempts,
+  });
+  const productionEvidenceTailSummary = record(productionEvidenceTailLedger.summary);
   const periodicRefs = periodicExecutionRefs(providerActionRefs);
   const actionRefs = operatorActionRoutingRefs(input.stageAttemptWorkbench);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
@@ -1139,6 +1145,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
     sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
   ]);
@@ -1238,6 +1245,14 @@ export function buildAppOperatorDrilldown(input: {
         evidenceRequests.summary.replacement_surface_available_count,
       domain_remaining_bridge_module_count:
         evidenceRequests.summary.remaining_bridge_module_count,
+      production_evidence_tail_item_count:
+        numberValue(productionEvidenceTailSummary.tail_item_count),
+      production_evidence_tail_open_item_count:
+        numberValue(productionEvidenceTailSummary.open_tail_item_count),
+      production_evidence_tail_owner_group_count:
+        numberValue(productionEvidenceTailSummary.owner_group_count),
+      production_evidence_tail_blocking_item_count:
+        numberValue(productionEvidenceTailSummary.blocking_tail_item_count),
       domain_legacy_cleanup_plan_count:
         legacyCleanupPlans.summary.legacy_cleanup_plan_count,
       domain_legacy_cleanup_ready_plan_count:
@@ -1316,6 +1331,7 @@ export function buildAppOperatorDrilldown(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     domain_evidence_request_refs: evidenceRequests,
+    production_evidence_tail_ledger: productionEvidenceTailLedger,
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     functional_privatization_audit_summary: functionalSummary,
     authority_boundary: refsOnlyAuthorityBoundary(),

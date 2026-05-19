@@ -736,6 +736,7 @@ function metaAgentPhysicalMorphologyPolicyChecks(repoDir: string) {
       'contracts/private_functional_surface_policy.json',
       'contracts/real_target_agent_scaleout_evidence.json',
       'runtime/authority_functions/meta-agent-authority-functions.json',
+      'tests/contracts.test.ts',
       'tests/contracts.test.mjs',
     ],
     blockers,

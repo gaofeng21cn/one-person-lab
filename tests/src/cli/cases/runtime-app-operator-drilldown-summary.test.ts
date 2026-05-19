@@ -54,6 +54,8 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
           domain_ready_verdict: 'domain_gate_pending',
           route_impact: {
             decision: 'bounded_repair',
+            owner_receipt_refs: [`owner-receipt:summary-${index}`],
+            typed_blocker_refs: [`blocker:summary-${index}`],
             quality_refs: [`publication_eval/${index}.json`],
             readiness_refs: [`controller_decisions/${index}.json`],
             repair_command: `medautosci sidecar dispatch --task task-${index}.json --format json`,
@@ -78,10 +80,15 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.summary.operator_action_route_count > 36, true);
     assert.equal(summaryDrilldown.route_graph_refs.refs.length <= 10, true);
     assert.equal(summaryDrilldown.operator_action_routing_refs.refs.length <= 10, true);
+    assert.equal(summaryDrilldown.production_evidence_tail_ledger.tail_items.length <= 10, true);
     assert.equal(summaryDrilldown.route_graph_refs.omitted_ref_count, 2);
     assert.equal(
       summaryDrilldown.operator_action_routing_refs.omitted_ref_count,
       summaryDrilldown.summary.operator_action_route_count - 10,
+    );
+    assert.equal(
+      summaryDrilldown.production_evidence_tail_ledger.omitted_ref_count,
+      summaryDrilldown.summary.production_evidence_tail_item_count - 10,
     );
 
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
@@ -92,11 +99,16 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(fullDrilldown.detail_level, 'full');
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
     assert.equal(
+      fullDrilldown.production_evidence_tail_ledger.tail_items.length,
+      summaryDrilldown.summary.production_evidence_tail_item_count,
+    );
+    assert.equal(
       fullDrilldown.operator_action_routing_refs.refs.length,
       summaryDrilldown.summary.operator_action_route_count,
     );
     assert.equal(fullDrilldown.route_graph_refs.omitted_ref_count, 0);
     assert.equal(fullDrilldown.operator_action_routing_refs.omitted_ref_count, 0);
+    assert.equal(fullDrilldown.production_evidence_tail_ledger.omitted_ref_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
