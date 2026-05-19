@@ -90,6 +90,10 @@ ARIS 的可学习点以模式进入 OPL Agent Lab，不作为 runtime dependency
 - experiment / analysis queue manifest：把实验、分析、回归和 follow-up 队列显式列为 manifest refs，让 App/workbench 能看到待验证链条。
 - runtime event ledger / provider-executor switch hygiene / claim assurance：MAS suite 可以把运行事件账本、provider/executor 切换卫生证明和 claim 直接证据保障投影成 typed body-free refs；OPL 只把这些 refs 纳入 mechanism evolution input、candidate source、log-mined source 和 evidence delta，不接收 body、truth、artifact、owner receipt 或 quality verdict。
 - usage-log-driven meta optimize：用使用日志、失败日志和 operator friction refs 驱动机制优化候选；日志只产生 meta optimize signal，不授予 domain truth 或 artifact mutation 权限。
+- effort / assurance 双轴：把执行投入级别与证据保障级别拆开投影，避免把 quick smoke、standard regression、deep soak、owner-chain proof 写成同一种 readiness。
+- helper inventory / drift report：把 Codex skills、MCP tools、本地 helper binary 的 inventory refs 和 drift guard refs 作为 Agent Lab 控制面输入；缺 inventory 或 drift 未验证时 fail closed，只输出 blocker/route refs，不执行 helper。
+- permission / current-date fail-closed invariant：需要 permission scope、sandbox policy 和 current-date context refs；缺失时输出 typed blocker 与 owner route，不能用隐式默认权限或陈旧日期继续推进。
+- MCP / stream reliability policy：把 MCP tool result、stream event ordering、stream closeout receipt、retry/dead-letter 和 stream replay refs 固定为 reliability policy；禁止静默丢 event 或把 stream payload body 纳入 OPL。
 
 ## Developer Mode 与外围巡检
 
@@ -171,6 +175,7 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 - Integration contracts：`opl agent-lab complete/workbench/mechanism --json` 均暴露 `opl_agent_lab_integration_contract_read_model`，把 activation predicate、canonical entry、artifact verifier、failure policy、typed blocker、owner route、retry/dead-letter 和 rollback refs 固定为机器面。
 - Review trace ledger：`opl agent-lab complete/workbench/mechanism/evolve --json` 暴露 `opl_agent_lab_review_trace_ledger`，记录 independent reviewer、web research、mechanism patch 的 request/response/evidence/diff/contract/test/reviewer/no-shared-context refs。
 - Log-driven mechanism candidates：`opl agent-lab complete/workbench/mechanism/optimize/evolve --json` 暴露 `opl_agent_lab_log_driven_mechanism_candidate_read_model`，把 usage log、failure mode、user interrupt、convergence iteration、tool failure 和 blocker refs 转成 prompt / skill / rubric / workflow-default 候选。
+- ARIS maturity controls：`opl agent-lab complete/workbench/mechanism/evolve --json` 暴露 `opl_agent_lab_aris_maturity_controls_read_model`，把 ARIS v0.4.11 的 effort/assurance 双轴、helper inventory/drift report、permission/current-date fail-closed invariant、MCP/stream reliability policy 吸收为 refs-only 控制面；该 surface 明确 `runtime_dependency_required=false`，不读取 helper、MCP 或 stream body。
 - CLI external suite：`opl agent-lab run --suite <suite.json> --json`，运行 domain agent 或 OPL-compatible meta-agent 仓生成的 OPL-compatible Agent Lab suite JSON，返回同一套 refs-only suite result、ref summary 和 authority boundary。
 - CLI workbench：`opl agent-lab workbench --json`，把 complete / sample / longline / run 语义规整成 App/workbench 可直接消费的 read model，包含 eval adapters、observability export readiness、optimizer candidates、promotion gates、online learning refs 和 authority boundary，并显式返回 `app_workbench_consumption_ready=true`。
 - CLI mechanism：`opl agent-lab mechanism --json`，输出 first-class mechanism read model，包含 `mechanism_ref`、`mechanism_version`、`editable_surfaces`、`meta_edit_receipt`、`evolution_segment`、`evidence_delta` 和 `next_mechanism_candidate`。该入口严格 refs-only，不写 domain truth、memory body、artifact，不训练权重；promotion 由风险分级、独立 AI reviewer、version ledger、canary 和 rollback refs 约束。
@@ -213,7 +218,7 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 | Integration contract machine surface | `ready_for_cross_surface_integration_gates` | activation predicate、canonical entry、artifact verifier、failure policy、typed blocker、owner route、retry/dead-letter 与 rollback refs 已进入 complete/workbench/mechanism read model。 |
 | Review trace ledger | `ready_for_mechanism_patch_replay_and_audit` | independent reviewer、web research、mechanism patch 的 request/response/evidence/diff/contract/test/reviewer/no-shared-context refs 已进入 complete/workbench/mechanism/evolve read model。 |
 | Log-driven candidate miner | `ready_for_usage_log_driven_meta_optimize` | usage logs、failure modes、user interrupts、convergence iterations、tool failures 和 blockers 已能生成 refs-only prompt/skill/rubric/workflow-default mechanism candidates。 |
-| ARIS pattern intake | `machine_surfaces_landed_no_runtime_dependency` | research wiki / failed route memory、direct-evidence review、integration failure policy、experiment queue manifest 和 usage-log meta optimize 模式已落成 refs-only 机器面，不依赖 ARIS runtime。 |
+| ARIS pattern intake | `machine_surfaces_landed_no_runtime_dependency` | research wiki / failed route memory、direct-evidence review、integration failure policy、experiment queue manifest、usage-log meta optimize、effort/assurance 双轴、helper inventory/drift report、permission/current-date fail-closed invariant 与 MCP/stream reliability policy 已落成 refs-only 机器面，不依赖 ARIS runtime。 |
 | RL boundary | `downstream_ready_after_stable_trajectory_and_reward_surfaces` | 可输出 transition refs；不在 OPL core 训练或部署模型权重。 |
 | App/workbench read model | `ready_for_app_workbench_consumption` | `opl agent-lab workbench --json` 输出完整 read model，`app_workbench_consumption_ready=true`。 |
 | Optional connector export | `ready_for_connector_consumption_refs_only` | `opl agent-lab export --target ... --json` 输出 refs-only envelope，不上传外部服务，不读 domain body。 |
