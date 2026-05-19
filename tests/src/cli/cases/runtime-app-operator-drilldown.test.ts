@@ -420,8 +420,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.provider_cadence_window_missing_receipt_count, 7);
     assert.equal(drilldown.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
     assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
-    assert.equal(drilldown.summary.operator_action_route_count, 13);
-    assert.equal(drilldown.summary.operator_executable_route_count, 3);
+    assert.equal(drilldown.summary.operator_action_route_count, 14);
+    assert.equal(drilldown.summary.operator_executable_route_count, 4);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -454,6 +454,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_evidence_missing_expected_receipt_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_executor_binding_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_monitor_freshness_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_attempt_request_route_count, 1);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);
@@ -567,6 +568,42 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       true,
     );
 
+    const stageProductionAttemptRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_kind: string; stage_id: string }) =>
+        ref.action_kind === 'stage_production_attempt_request'
+        && ref.stage_id === 'review',
+    );
+    assert.equal(stageProductionAttemptRoute.owner, 'opl');
+    assert.equal(stageProductionAttemptRoute.route_target_kind, 'opl_cli');
+    assert.equal(stageProductionAttemptRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(stageProductionAttemptRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(stageProductionAttemptRoute.domain_id, 'medautoscience');
+    assert.equal(stageProductionAttemptRoute.ref.includes('opl family-runtime attempt create'), true);
+    assert.equal(stageProductionAttemptRoute.ref.includes('--domain medautoscience'), true);
+    assert.equal(stageProductionAttemptRoute.ref.includes('--stage review'), true);
+    assert.equal(stageProductionAttemptRoute.ref.includes('--provider temporal'), true);
+    assert.equal(stageProductionAttemptRoute.ref.includes('--executor-kind codex_cli'), true);
+    assert.equal(stageProductionAttemptRoute.ref.includes('--require-stage-admission'), true);
+    assert.deepEqual(stageProductionAttemptRoute.opl_cli_args.slice(0, 8), [
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'review',
+      '--provider',
+      'temporal',
+    ]);
+    assert.deepEqual(
+      stageProductionAttemptRoute.missing_production_evidence,
+      reviewProductionEvidence.missing_production_evidence,
+    );
+    assert.deepEqual(
+      stageProductionAttemptRoute.expected_receipt_refs,
+      reviewProductionEvidence.expected_receipt_refs,
+    );
+    assert.equal(stageProductionAttemptRoute.authority_boundary.can_write_domain_truth, false);
+
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',
     );
@@ -588,7 +625,19 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       true,
     );
     assert.equal(
+      drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === stageProductionAttemptRoute.action_id
+          && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+    assert.equal(
       drilldown.app_execution_bridge.route_submission_policy.domain_routes_are_queued_for_approval,
+      true,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.route_submission_policy.opl_cli_routes_can_create_stage_attempt_requests,
       true,
     );
     assert.equal(
@@ -1142,6 +1191,145 @@ test('runtime action execute can execute OPL-owned attempt query routes', () => 
     assert.equal(
       execution.execution.result.family_runtime_stage_attempt_query.stage_attempt_query.attempt.stage_attempt_id,
       attemptId,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime action execute can create OPL-owned stage production attempt requests', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-stage-production-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  masManifest.family_stage_control_plane = {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'med_autoscience_stage_control_plane',
+    target_domain_id: 'med-autoscience',
+    owner: 'med-autoscience',
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: [
+      {
+        stage_id: 'review',
+        stage_kind: 'review',
+        title: 'Review',
+        summary: 'Review from draft refs.',
+        goal: 'Return review refs under MAS authority.',
+        owner: 'med-autoscience',
+        domain_stage_refs: ['review'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['draft_ready'],
+          ensures: ['review_ready'],
+          boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:review', role: 'source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:review/current', role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:review/current', role: 'trigger' }],
+          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'metric' }],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
+        },
+        trust_boundary: {
+          lane: 'domain_agent',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: [],
+          owner_receipt_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['mas:review-receipt'],
+          can_authorize_quality_verdict: false,
+        },
+      },
+    ],
+    notes: [],
+  };
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const dryRun = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-attempt:medautoscience:review',
+      '--dry-run',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(dryRun.execution.execution_kind, 'opl_cli_stage_attempt_create');
+    assert.equal(dryRun.execution.execution_status, 'dry_run');
+    assert.equal(dryRun.execution.result, null);
+    assert.equal(
+      dryRun.execution.executed_runtime_command.includes('opl family-runtime attempt create --domain medautoscience --stage review'),
+      true,
+    );
+
+    const execution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-attempt:medautoscience:review',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(execution.execution.execution_kind, 'opl_cli_stage_attempt_create');
+    assert.equal(execution.execution.execution_status, 'executed');
+    assert.equal(execution.authority_boundary.can_write_domain_truth, false);
+    assert.equal(
+      execution.execution.result.family_runtime_stage_attempt.attempt.domain_id,
+      'medautoscience',
+    );
+    assert.equal(
+      execution.execution.result.family_runtime_stage_attempt.attempt.stage_id,
+      'review',
+    );
+    assert.equal(
+      execution.execution.result.family_runtime_stage_attempt.attempt.provider_kind,
+      'temporal',
+    );
+    assert.equal(
+      execution.execution.result.family_runtime_stage_attempt.attempt.executor_kind,
+      'codex_cli',
+    );
+    assert.equal(
+      execution.execution.result.family_runtime_stage_attempt.launch_invocation.executor_binding_ref,
+      'opl://executors/codex-cli/default',
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
