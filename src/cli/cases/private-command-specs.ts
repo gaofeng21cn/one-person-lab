@@ -273,9 +273,9 @@ export function buildInternalCommandSpecs(
       summary:
         'Show the OPL Runtime Manager boundary for the configured provider-backed family runtime.',
       examples: ['opl runtime manager'],
-      handler: (args) => {
+      handler: async (args) => {
         assertNoArgs(args, commandSpecs['runtime manager']);
-        return buildRuntimeManager();
+        return await buildRuntimeManager();
       },
     },
     'runtime manager action': {

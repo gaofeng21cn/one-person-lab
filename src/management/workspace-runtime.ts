@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 
 import { FrameworkContractError } from '../contracts.ts';
-import { inspectFamilyRuntimeProviders, resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
+import { inspectSelectedFamilyRuntimeProvidersWithLifecycle } from '../family-runtime-providers.ts';
+import { readMasManagedProviderProjection } from '../family-runtime-mas-managed-provider-projection.ts';
+import { familyRuntimePaths } from '../family-runtime-store.ts';
 import { buildSessionLedger } from '../session-ledger.ts';
 
 import type { RuntimeStatusOptions, WorkspaceStatusOptions } from './types.ts';
@@ -37,21 +39,26 @@ export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
   };
 }
 
-export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
-  const providerKind = resolveFamilyRuntimeProviderKind();
-  const familyRuntimeProviders = inspectFamilyRuntimeProviders(providerKind);
+export async function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
+  const { selectedProvider, providerRuntime: familyRuntimeProviders } =
+    await inspectSelectedFamilyRuntimeProvidersWithLifecycle({
+      paths: familyRuntimePaths(),
+      options: {
+        managedProviderProjection: readMasManagedProviderProjection(),
+      },
+    });
   const ledger = buildSessionLedger(options.ledgerLimit ?? options.sessionsLimit ?? 5).session_ledger;
 
   return {
     version: 'g2',
     runtime_status: {
       runtime_substrate: 'provider_backed_family_runtime',
-      configured_provider: providerKind,
+      configured_provider: selectedProvider,
       family_runtime_providers: familyRuntimeProviders,
       production_provider_policy: {
         required_provider: 'temporal',
-        configured_provider_role: familyRuntimeProviders.provider_catalog[providerKind]?.provider_role ?? 'unknown',
-        local_sqlite_is_dev_ci_offline_only: providerKind === 'local_sqlite',
+        configured_provider_role: familyRuntimeProviders.provider_catalog[selectedProvider]?.provider_role ?? 'unknown',
+        local_sqlite_is_dev_ci_offline_only: selectedProvider === 'local_sqlite',
         domain_daemon_policy: 'domain_launchagents_and_repo_local_supervision_ticks_are_legacy_cleanup_or_diagnostic_only',
         scheduler_replacement_surface: 'opl family-runtime scheduler install|status|trigger|remove --provider temporal',
       },
