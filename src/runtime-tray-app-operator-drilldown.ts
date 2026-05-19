@@ -28,6 +28,9 @@ import {
 import {
   buildStageProductionAttemptRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/stage-production-action-routes.ts';
+import {
+  buildExternalEvidenceActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/external-evidence-action-routes.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1154,20 +1157,21 @@ export function buildAppOperatorDrilldown(input: {
     attempts,
   });
   const stageProductionEvidenceSummary = record(stageProductionEvidence.summary);
-  const actionRefs = uniqueRefs([
-    ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
-    ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
-  ]);
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
-  const lifecycleRefs = lifecycleLedgerRefs();
-  const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
-  const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
   const evidenceRequests = buildDomainEvidenceRequestRefs(
     input.domainManifestProjects,
     replacementCoverage,
   );
+  const actionRefs = uniqueRefs([
+    ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
+    ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
+    ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
+  ]);
+  const lifecycleRefs = lifecycleLedgerRefs();
+  const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
+  const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const legacyCleanupPlans = legacyCleanupPlanRefs(
     input.domainManifestProjects,
     input.providerContinuousProof,
@@ -1269,6 +1273,16 @@ export function buildAppOperatorDrilldown(input: {
         numberValue(stageProductionEvidenceSummary.missing_monitor_freshness_stage_count),
       stage_production_attempt_request_route_count:
         actionRefs.filter((ref) => ref.action_kind === 'stage_production_attempt_request').length,
+      external_evidence_action_route_count:
+        actionRefs.filter((ref) => (
+          ref.action_kind === 'external_evidence_receipt_record'
+          || ref.action_kind === 'external_evidence_receipt_verify'
+        )).length,
+      evidence_gate_action_route_count:
+        actionRefs.filter((ref) => (
+          ref.action_kind === 'evidence_gate_receipt_record'
+          || ref.action_kind === 'evidence_gate_receipt_verify'
+        )).length,
       freshness_signal_count: freshness.length,
       source_ref_count: refFamilies.summary.source_ref_count,
       artifact_ref_count: refFamilies.summary.artifact_ref_count,
