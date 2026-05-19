@@ -80,6 +80,10 @@ function latestActivity(events: JsonRecord[]) {
   return events.at(-1) ?? null;
 }
 
+function latestActivityByKind(events: JsonRecord[], eventKind: string) {
+  return events.filter((event) => optionalString(event.event_kind) === eventKind).at(-1) ?? null;
+}
+
 function hasEntries(value: unknown) {
   return Array.isArray(value) && value.length > 0;
 }
@@ -308,6 +312,10 @@ function attemptProjection(
 ) {
   const providerRun = parseRecord(row.provider_run_json);
   const activityEvents = recordList(parseList(row.activity_events_json));
+  const launchInvocationEvent = latestActivityByKind(activityEvents, 'stage_launch_invocation');
+  const launchInvocation = isRecord(launchInvocationEvent?.invocation)
+    ? launchInvocationEvent.invocation as JsonRecord
+    : null;
   const routeImpact = parseRecord(row.route_impact_json);
   const workspaceLocator = parseRecord(row.workspace_locator_json);
   const activity = latestActivity(activityEvents);
@@ -453,6 +461,7 @@ function attemptProjection(
   return {
     stage_attempt_id: row.stage_attempt_id,
     provider_kind: row.provider_kind,
+    executor_kind: row.executor_kind,
     domain_id: row.domain_id,
     stage_id: row.stage_id,
     workflow_id: row.workflow_id,
@@ -461,6 +470,7 @@ function attemptProjection(
     workflow_status: optionalString(providerRun.provider_status) ?? row.status,
     activity_status: optionalString(activity?.activity_status),
     activity_kind: optionalString(activity?.activity_kind),
+    launch_invocation: launchInvocation,
     local_status: row.status,
     heartbeat: {
       last_updated_at: row.updated_at,
