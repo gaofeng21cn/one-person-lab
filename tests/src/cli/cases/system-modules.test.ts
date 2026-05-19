@@ -310,6 +310,76 @@ git ls-files >/dev/null
   }
 });
 
+test('modules projection treats Full runtime packaged overrides as launch sources', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-full-launch-home-'));
+  const runtimeRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'runtime', 'current');
+  const packagedModules = [
+    ['medautoscience', 'med-autoscience', 'mas'],
+    ['medautogrant', 'med-autogrant', 'mag'],
+    ['redcube', 'redcube-ai', 'rca'],
+    ['oplmetaagent', 'opl-meta-agent', 'meta-agent'],
+  ] as const;
+
+  try {
+    const env: Record<string, string> = {
+      HOME: homeRoot,
+      OPL_FULL_RUNTIME_HOME: runtimeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    };
+
+    for (const [moduleId, repoName, runtimeSlot] of packagedModules) {
+      const moduleRoot = path.join(runtimeRoot, 'modules', runtimeSlot);
+      fs.mkdirSync(path.join(moduleRoot, 'agent'), { recursive: true });
+      fs.mkdirSync(path.join(moduleRoot, 'plugins'), { recursive: true });
+      fs.writeFileSync(
+        path.join(moduleRoot, 'opl-runtime-module.json'),
+        JSON.stringify({
+          marker_version: 1,
+          module_id: moduleId,
+          repo_name: repoName,
+          packaged_runtime: true,
+          source_git: { head_sha: `${moduleId}-full-sha` },
+        }),
+      );
+      env[`OPL_MODULE_PATH_${moduleId.toUpperCase()}`] = moduleRoot;
+    }
+
+    const output = runCli(['modules'], env) as {
+      modules: {
+        summary: {
+          installed_default_modules_count: number;
+          healthy_default_modules_count: number;
+        };
+        items: Array<{
+          module_id: string;
+          installed: boolean;
+          install_origin: string;
+          health_status: string;
+          available_actions: string[];
+          recommended_action: string | null;
+          git: { head_sha: string | null; sync_status: string } | null;
+        }>;
+      };
+    };
+
+    assert.equal(output.modules.summary.installed_default_modules_count, 4);
+    assert.equal(output.modules.summary.healthy_default_modules_count, 4);
+    const modulesById = new Map(output.modules.items.map((entry) => [entry.module_id, entry]));
+    for (const [moduleId] of packagedModules) {
+      const module = modulesById.get(moduleId);
+      assert.equal(module?.installed, true);
+      assert.equal(module?.install_origin, 'env_override');
+      assert.equal(module?.health_status, 'ready');
+      assert.equal(module?.available_actions.length, 0);
+      assert.equal(module?.recommended_action, null);
+      assert.equal(module?.git?.head_sha, `${moduleId}-full-sha`);
+      assert.equal(module?.git?.sync_status, 'no_upstream');
+    }
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('module exec runs domain CLIs from the current module checkout instead of PATH tools', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-home-'));
   const fakeBinRoot = path.join(homeRoot, 'fake-bin');
