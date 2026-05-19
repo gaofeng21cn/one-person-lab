@@ -65,6 +65,7 @@ export type StageAttemptCreateInput = {
   workspaceLocator: Record<string, unknown>;
   sourceFingerprint?: string;
   executorKind?: string;
+  executorBindingRef?: string;
   taskId?: string;
   retryBudget?: Record<string, unknown>;
   checkpointRefs?: string[];
@@ -72,6 +73,7 @@ export type StageAttemptCreateInput = {
   humanGateRefs?: string[];
   blockedReason?: string;
   launchAdmissionGate?: object;
+  launchInvocation?: object;
   newAttempt?: boolean;
   start?: boolean;
 };
@@ -240,13 +242,20 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     completed_at: null,
     last_heartbeat_at: null,
   };
-  const initialActivityEvents = input.launchAdmissionGate
+  const initialActivityEvents: Record<string, unknown>[] = input.launchAdmissionGate
     ? [{
         event_kind: 'stage_launch_admission_gate',
         event_time: createdAt,
         gate: input.launchAdmissionGate,
       }]
     : [];
+  if (input.launchInvocation) {
+    initialActivityEvents.push({
+      event_kind: 'stage_launch_invocation',
+      event_time: createdAt,
+      invocation: input.launchInvocation,
+    });
+  }
   const row = {
     stage_attempt_id: stageAttemptId,
     idempotency_key: idempotencyKey,

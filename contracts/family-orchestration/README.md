@@ -204,6 +204,8 @@ GraphFlow / GFL's cohort search / trigger / dashboard closed-loop pattern maps t
 
 Runtime effects remain in the `runtime_enforced_boundary`: executor output, human approval, external-system responses, artifact mutation, memory writeback, domain quality / publication / fundability / visual verdicts, and owner receipts. Unsatisfied composition, stale evidence, owner conflicts, receipt conflicts, or missing executor binding must become a conflict envelope, human gate, or route-back. `Codex CLI` remains the default executor; non-default adapters require explicit selection plus independent receipt and audit evidence.
 
+GraphFlow / GFL's agent-invocation pattern maps to the `opl_stage_launch_invocation` activity event. An agent/operator selects an admitted or explicitly marked stage pack, binds source fingerprint, workspace locator, idempotency key, and selected executor, then hands launch to the OPL provider/executor path. The default `codex_cli` records `default_codex_cli`; non-default executors such as `hermes_agent` or `claude_code` must carry an `executor_binding_ref` when `--require-stage-admission` is used, or launch fails closed with `non_default_executor_binding_ref_missing`. This gate proves launch binding and audit refs only; it does not claim behavioral or quality equivalence with Codex CLI.
+
 For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
 
 ## Stage Integrity Metadata Freeze

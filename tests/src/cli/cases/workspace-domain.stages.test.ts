@@ -515,6 +515,17 @@ test('family-runtime attempt create applies family stage launch admission gate',
       admitted.family_runtime_stage_attempt.attempt.activity_events[0].gate.stage_id,
       'manuscript_authoring',
     );
+    assert.equal(admitted.family_runtime_stage_attempt.launch_invocation.surface_kind, 'opl_stage_launch_invocation');
+    assert.equal(admitted.family_runtime_stage_attempt.launch_invocation.selected_executor_kind, 'codex_cli');
+    assert.equal(admitted.family_runtime_stage_attempt.launch_invocation.executor_binding_status, 'default_codex_cli');
+    assert.equal(
+      admitted.family_runtime_stage_attempt.attempt.activity_events[1].event_kind,
+      'stage_launch_invocation',
+    );
+    assert.equal(
+      admitted.family_runtime_stage_attempt.attempt.activity_events[1].invocation.authority_boundary.executor_behavior_equivalence_claim,
+      false,
+    );
 
     const blocked = runCli([
       'family-runtime',
