@@ -1,4 +1,5 @@
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
+import { buildOplFrameworkSemanticHygieneAudit } from '../../framework-semantic-hygiene.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
 import { runOplSystemAction } from '../../system-installation/system-actions.ts';
@@ -144,6 +145,18 @@ export function buildPublicSystemCommandSpecs(
         group: 'system',
       },
       async () => buildPublicSystemInitializePayload(await buildOplInitialize(getContracts())),
+    ),
+    'system semantic-hygiene': buildNoArgSpec(
+      {
+        usage: 'opl system semantic-hygiene',
+        summary: 'Show the machine-readable OPL framework semantic hygiene audit gates.',
+        examples: ['opl system semantic-hygiene --json'],
+        group: 'system',
+      },
+      () => ({
+        version: 'g2',
+        semantic_hygiene: buildOplFrameworkSemanticHygieneAudit(getContracts()),
+      }),
     ),
     'system configure-codex': systemConfigureCodexSpec,
     'system repair': buildNoArgSpec(
