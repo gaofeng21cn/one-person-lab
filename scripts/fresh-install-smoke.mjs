@@ -107,6 +107,7 @@ function createGitModuleFixtures(modulesRoot) {
     'med-autoscience',
     'med-autogrant',
     'redcube-ai',
+    'opl-meta-agent',
   ];
 
   for (const repoName of repoNames) {
