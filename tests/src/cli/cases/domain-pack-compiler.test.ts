@@ -96,6 +96,39 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(mas.domain_pack_compiler.authority_boundary.provider_completion_is_domain_ready, false);
 });
 
+test('domain pack compiler index keeps generated surfaces ready, aligned, and OPL-owned', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-readiness-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  try {
+    bindFamilyManifests(env);
+
+    const list = runCli(['agents', 'pack-compiler'], env);
+    const summary = list.domain_pack_compiler.summary;
+    assert.equal(summary.generated_surface_count, 24);
+    assert.equal(summary.generated_surface_ready_count, 24);
+    assert.equal(summary.generated_surface_blocked_count, 0);
+    assert.equal(summary.generated_artifact_drift_detected_count, 0);
+    assert.equal(summary.domain_generated_surface_owner_claim_count, 0);
+    assert.equal(list.domain_pack_compiler.authority_boundary.opl_owns_generated_surfaces, true);
+    assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
+
+    for (const domain of ['mas', 'mag', 'rca']) {
+      const inspection = runCli(['agents', 'pack-compiler', 'inspect', '--domain', domain], env)
+        .domain_pack_compiler;
+      assert.equal(inspection.compiler_status, 'ready');
+      assert.equal(inspection.generated_interface_bundle.owner, 'one-person-lab');
+      assert.equal(inspection.generated_interface_bundle.status, 'ready');
+      assert.equal(inspection.generated_interface_bundle.domain_repo_can_own_generated_surface, false);
+      assert.equal(inspection.generated_artifact_drift_manifest.status, 'aligned');
+      assert.deepEqual(inspection.generated_artifact_drift_manifest.drift_findings, []);
+    }
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain pack compiler uses an extended manifest discovery budget without changing descriptor default timeout', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-timeout-state-'));
