@@ -236,15 +236,28 @@ function providerCadenceWindow(input: {
     || proofReceiptStatus(event) !== 'proven'
   ).length;
   const missingExecutionCount = Math.max(0, expectedExecutionCount - executionEvents.length);
+  const latestProof = proofEvents.at(-1);
+  const latestExecution = executionEvents.at(-1);
+  const latestProofProven = latestProof
+    ? proofCloseoutStatus(latestProof) === 'production_residency_proven'
+      && proofReceiptStatus(latestProof) === 'proven'
+    : false;
+  const latestExecutionBlocked = latestExecution
+    ? executionReceiptStatus(latestExecution) === 'blocked' || repairStatus(latestExecution) === 'blocked'
+    : false;
+  const cadenceCovered = missingExecutionCount === 0 && provenProofCount > 0;
+  const unrepairedCurrentBlocker = !latestProofProven || latestExecutionBlocked;
   const windowStatus =
     proofEvents.length === 0 && executionEvents.length === 0
       ? 'no_window_evidence'
-      : blockedProofCount > 0 || blockedExecutionCount > 0 || blockedRepairCount > 0
+      : unrepairedCurrentBlocker
         ? 'window_repair_receipt_observed'
         : missingExecutionCount > 0
           ? 'window_evidence_incomplete'
-          : provenProofCount > 0
-            ? 'window_cadence_satisfied'
+          : cadenceCovered
+          ? 'window_cadence_satisfied'
+          : blockedProofCount > 0 || blockedExecutionCount > 0 || blockedRepairCount > 0
+            ? 'window_repair_receipt_observed'
             : 'window_evidence_observed';
   const requiredNextAction = windowStatus === 'window_cadence_satisfied'
     ? 'Keep supervised Temporal provider SLO ticks running for the full operator evidence window.'

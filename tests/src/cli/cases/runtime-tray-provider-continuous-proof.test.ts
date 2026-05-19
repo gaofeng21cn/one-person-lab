@@ -365,7 +365,7 @@ db.close();`,
     assert.equal(proof.proven_event_count, 1);
     assert.equal(proof.continuous_proof_status, 'latest_proof_proven');
     assert.equal(proof.proof_slo_status, 'proof_fresh');
-    assert.equal(proof.cadence_window.window_status, 'window_repair_receipt_observed');
+    assert.equal(proof.cadence_window.window_status, 'window_evidence_incomplete');
     assert.equal(proof.cadence_window.long_window_evidence_ready, false);
     assert.equal(proof.operator_slo_repair_loop.repair_state, 'cadence_current');
     assert.equal(proof.operator_slo_repair_loop.execution_receipts.blocked_count, 0);
@@ -551,6 +551,105 @@ db.close();`,
     assert.equal(window.blocked_repair_receipt_count, 0);
     assert.equal(output.runtime_tray_snapshot.provider_continuous_proof.proof_slo_status, 'proof_fresh');
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot treats historical provider blockers as repaired after a fully covered proven cadence window', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-window-repaired-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    runCli(['family-runtime', 'events', 'export'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const eventRows = Array.from({ length: 7 }, (_, index) => {
+      const createdAt = new Date(now - (6 - index) * dayMs).toISOString();
+      return {
+        proofEventId: `evt_provider_proof_repaired_window_${index}`,
+        receiptEventId: `evt_provider_slo_repaired_window_${index}`,
+        createdAt,
+        blocked: index === 0,
+      };
+    });
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+const rows = ${JSON.stringify(eventRows)};
+for (const row of rows) {
+  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+    .run(
+      row.proofEventId,
+      'temporal_residency_proof',
+      'test',
+      JSON.stringify({
+        provider_kind: 'temporal',
+        proof_mode: 'external_temporal_service_worker',
+        closeout_status: row.blocked ? 'production_residency_needs_live_evidence' : 'production_residency_proven',
+        proof_receipt: {
+          receipt_kind: row.blocked ? 'temporal_production_residency_blocker' : 'temporal_production_residency_proof',
+          receipt_status: row.blocked ? 'blocked' : 'proven',
+          provider_kind: 'temporal'
+        }
+      }),
+      row.createdAt
+    );
+  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+    .run(
+      row.receiptEventId,
+      'temporal_provider_slo_execution_receipt',
+      'test',
+      JSON.stringify({
+        surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+        provider_kind: 'temporal',
+        execution_status: 'executed',
+        receipt_status: row.blocked ? 'blocked' : 'proven',
+        receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+        repair_receipt: {
+          repair_status: row.blocked ? 'blocked' : 'executed',
+          can_execute_domain_repair: false
+        },
+        authority_boundary: {
+          can_authorize_domain_ready: false
+        }
+      }),
+      row.createdAt
+    );
+}
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const window = output.runtime_tray_snapshot.provider_continuous_proof.cadence_window;
+
+    assert.equal(output.runtime_tray_snapshot.provider_continuous_proof.continuous_proof_status, 'latest_proof_proven');
+    assert.equal(output.runtime_tray_snapshot.provider_continuous_proof.proof_slo_status, 'proof_fresh');
+    assert.equal(window.expected_slo_execution_receipt_count, 7);
+    assert.equal(window.observed_slo_execution_receipt_count, 7);
+    assert.equal(window.missing_slo_execution_receipt_count, 0);
+    assert.equal(window.blocked_proof_event_count, 1);
+    assert.equal(window.blocked_slo_execution_receipt_count, 1);
+    assert.equal(window.blocked_repair_receipt_count, 1);
+    assert.equal(window.window_status, 'window_cadence_satisfied');
+    assert.equal(window.long_window_evidence_ready, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
