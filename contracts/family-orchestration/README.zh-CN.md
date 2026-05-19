@@ -15,7 +15,7 @@
 
 这里进一步吸收 GraphFlow / GFL 论文中可复用的流程验证模式：先把可静态检查的 stage pack core 准入，再用 `requires` / `ensures` 组合 stage，并把 AI、人、外部系统、artifact mutation、memory writeback 与 domain verdict 放进运行时强制边界。OPL 采用的是这个 stage admission / trust-lane 语言，不引入 GraphFlow / GFL runtime dependency，也不把 GraphFlow 写成 provider、executor、planner、stage runner 或 domain authority。
 
-本轮吸收原则是 **AI-first, contract-light**。OPL 合同只管启动安全、OPL 越权边界、关键边界结果记录，以及 replay / audit / route-back 证据；不把 AI 推理、stage 内部规划、domain 质量结论或固定智能 workflow 写死。默认 operator 入口是 `opl stages readiness --domain <domain>`，它聚合现有 drilldown surface，不新增 domain verdict。
+本轮吸收原则是 **AI-first, contract-light**。OPL 合同只管启动安全、OPL 越权边界、关键边界结果记录，以及 replay / audit / route-back 证据；不把 AI 推理、stage 内部规划、domain 质量结论或固定智能 workflow 写死。默认 operator / App 入口是 `opl stages readiness --domain <domain>`，它聚合现有 drilldown 与 advisory refs，不新增 domain verdict。capacity-budget 与 domain-validity refs 只折叠进 readiness / proof 作为诊断建议，不作为 standalone 默认 CLI 或 schema 目标。
 
 ## 归属边界
 
@@ -64,9 +64,9 @@
 - `family-stage-runtime-budget.schema.json`
   - 冻结 runtime reliability / capacity budget 的 refs-only 投影，覆盖 boundary count、runtime guard count、monitor / metric refs、unmonitored boundary count、expected-success 或 boundary-success-rate refs；OPL 不计算未证实概率、不授权 domain readiness、不引入 GraphFlow runtime
 - `family-stage-capacity-budget.schema.json`
-  - 冻结 provider launch / replay / event-log / guard-eval capacity 的 refs-only 投影；OPL 不调度 provider、不声明概率真值、不授权 domain readiness
+  - advisory refs-only capacity 信号，折叠进 readiness / proof 诊断，用来指向 provider launch / replay / event-log / guard-eval refs；OPL 不调度 provider、不声明概率真值、不授权 domain readiness
 - `family-stage-domain-validity.schema.json`
-  - 冻结 launchable 或 review-gated stage 的 domain-owner review / intent validation / owner acceptance refs 投影；OPL 不签发 domain-ready、quality 或 artifact verdict
+  - advisory refs-only domain-owner review / intent validation / owner acceptance 信号，折叠进 readiness / proof 诊断；OPL 不签发 domain-ready、quality 或 artifact verdict
 - `family-stage-pack-registry.schema.json`
   - 冻结 stage pack library / registry 投影，按 integrity hash 记录 reusable pack refs、lifecycle status、promotion / deprecation / supersession refs、active attempt binding 与迁移策略 blocker
 - `family-stage-pack-source-spec.schema.json`

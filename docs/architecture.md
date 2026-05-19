@@ -218,7 +218,9 @@ Stage progression 的 AI-first quality gate 需要独立 reviewer / gate attempt
 
 #### Stage Pack Admission 与 Trust Lanes
 
-GraphFlow / GFL 论文中值得 OPL 吸收的是把可静态验证的流程核心和运行时信任边界拆开的模式。OPL 只吸收这个 contract pattern，不引入 GraphFlow / GFL runtime dependency，不把 GraphFlow graph engine、planner 或 executor 作为 OPL 的 provider、stage runner 或 domain authority。
+默认 operator / App 检查入口是 `opl stages readiness --domain <domain>`。它把 admission、proof bundle、assumption lifecycle、cohort loop、replay certification、scope refs、`guarantee_mode` 和 runtime/capacity/domain-validity advisory refs 聚成 launch-readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是维护者诊断 drilldown，不是普通首屏，也不是独立学习目标。
+
+GraphFlow / GFL 论文中值得 OPL 吸收的是把可静态验证的流程核心和运行时信任边界拆开的模式。OPL 只吸收这个 AI-first、contract-light 的 contract pattern，不引入重型证明器、GraphFlow / GFL runtime dependency、固定 workflow 编译链，也不把 GraphFlow graph engine、planner 或 executor 作为 OPL 的 provider、stage runner、domain quality authority 或 domain authority。
 
 OPL 的 stage pack admission 应形成独立准入门：一个可启动的 stage pack 必须声明 stage id、owner、stage goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane、authority boundary、launch profile 和 selected executor binding。准入通过只表示这个 pack 可以进入 OPL queue / provider / executor 启动路径，不表示 domain task 已完成、artifact 已可信、memory writeback 已接受或质量 gate 已通过。
 
