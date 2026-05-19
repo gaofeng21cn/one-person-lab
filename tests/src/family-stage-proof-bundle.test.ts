@@ -91,6 +91,7 @@ function buildStagePlane(overrides: {
   reviewRequires?: string[];
   reviewStageContract?: FamilyStageControlPlane['stages'][number]['stage_contract'];
   omitReviewStageContract?: boolean;
+  publicationReviewEvaluationRefs?: FamilyStageControlPlane['stages'][number]['evaluation'];
 } = {}): FamilyStageControlPlane {
   return {
     surface_kind: 'family_stage_control_plane',
@@ -168,7 +169,7 @@ function buildStagePlane(overrides: {
         prompt_refs: [],
         allowed_action_refs: ['review_draft'],
         outputs: [],
-        evaluation: [
+        evaluation: overrides.publicationReviewEvaluationRefs ?? [
           {
             ref_kind: 'test',
             ref: 'tests/publication-review.test.ts',
@@ -315,9 +316,31 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
   assert.equal(bundle.integrity.authority_boundary.can_verify_external_signature, false);
   assert.equal(bundle.generated_artifact_manifest.surface_kind, 'opl_stage_pack_generated_artifact_manifest');
   assert.equal(bundle.generated_artifact_manifest.stage_pack_hash, bundle.integrity.stage_pack_hash);
+  assert.equal(bundle.generated_artifact_manifest.source_of_truth.kind, 'diagram_stage_pack');
+  assert.equal(
+    bundle.generated_artifact_manifest.source_of_truth.generated_artifacts_are_regenerable_supply_chain_inputs,
+    true,
+  );
   assert.equal(bundle.generated_artifact_manifest.summary.regeneration_required_when_stage_pack_hash_changes, true);
+  assert.equal(bundle.generated_artifact_manifest.summary.missing_source_hash_ref_count, 4);
+  assert.equal(bundle.generated_artifact_manifest.summary.needs_regeneration_ref_count, 0);
   assert.deepEqual(bundle.generated_artifact_manifest.generated_test_refs.map((ref) => ref.ref), [
     'tests/publication-review.test.ts',
+  ]);
+  assert.deepEqual(bundle.generated_artifact_manifest.generated_test_refs.map((ref) => ({
+    ref: ref.ref,
+    source_stage_pack_hash: ref.source_stage_pack_hash,
+    declared_source_stage_pack_hash: ref.declared_source_stage_pack_hash,
+    regeneration_policy: ref.regeneration_policy,
+    drift_status: ref.drift_status,
+  })), [
+    {
+      ref: 'tests/publication-review.test.ts',
+      source_stage_pack_hash: bundle.integrity.stage_pack_hash,
+      declared_source_stage_pack_hash: null,
+      regeneration_policy: 'regenerate_when_source_stage_pack_hash_changes',
+      drift_status: 'missing_source_hash',
+    },
   ]);
   assert.deepEqual(bundle.generated_artifact_manifest.generated_proof_refs.map((ref) => ref.ref), [
     'artifacts/manuscript-draft-proof.json',
@@ -329,6 +352,39 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
   assert.equal(bundle.generated_artifact_manifest.authority_boundary.manifest_is_build_review_input, true);
   assert.equal(bundle.generated_artifact_manifest.authority_boundary.can_execute_stage, false);
   assert.equal(bundle.generated_artifact_manifest.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('stage proof bundle flags generated refs that were bound to an older stage pack hash', () => {
+  const oldStagePackHash = 'b'.repeat(64);
+  const plane = buildStagePlane({
+    publicationReviewEvaluationRefs: [
+      {
+        ref_kind: 'test',
+        ref: 'tests/publication-review.test.ts',
+        role: 'proof_ref',
+        source_stage_pack_hash: oldStagePackHash,
+      } as FamilyStageControlPlane['stages'][number]['evaluation'][number],
+    ],
+  });
+  const bundle = buildFamilyStageProofBundle(plane, {
+    actionCatalog: buildActionCatalog(),
+  });
+  const generatedTestRef = bundle.generated_artifact_manifest.generated_test_refs[0];
+
+  assert.notEqual(bundle.integrity.stage_pack_hash, oldStagePackHash);
+  assert.equal(generatedTestRef?.declared_source_stage_pack_hash, oldStagePackHash);
+  assert.equal(generatedTestRef?.source_stage_pack_hash, bundle.integrity.stage_pack_hash);
+  assert.equal(generatedTestRef?.source_stage_pack_ref, bundle.generated_artifact_manifest.source_stage_pack_ref);
+  assert.equal(generatedTestRef?.source_graph_projection_ref, bundle.generated_artifact_manifest.graph_projection_ref);
+  assert.equal(generatedTestRef?.regeneration_policy, 'regenerate_when_source_stage_pack_hash_changes');
+  assert.equal(generatedTestRef?.drift_status, 'needs_regeneration');
+  assert.equal(
+    generatedTestRef?.drift_reason,
+    'declared_source_stage_pack_hash_differs_from_current_stage_pack_hash',
+  );
+  assert.equal(bundle.generated_artifact_manifest.summary.needs_regeneration_ref_count, 2);
+  assert.equal(bundle.generated_artifact_manifest.summary.missing_source_hash_ref_count, 2);
+  assert.equal(bundle.generated_artifact_manifest.authority_boundary.graphflow_runtime_dependency, false);
 });
 
 test('stage proof bundle integrity digest is stable and changes with contract refs', () => {
@@ -420,6 +476,7 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   const integrity = examples[0]?.integrity as JsonRecord;
   const generatedManifest = examples[0]?.generated_artifact_manifest as JsonRecord;
   const generatedManifestSummary = generatedManifest.summary as JsonRecord;
+  const generatedManifestSourceOfTruth = generatedManifest.source_of_truth as JsonRecord;
   const metricsAuthority = metrics.authority_boundary as JsonRecord;
   const integrityAuthority = integrity.authority_boundary as JsonRecord;
   const generatedManifestAuthority = generatedManifest.authority_boundary as JsonRecord;
@@ -458,7 +515,20 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   assert.equal(generatedManifestProperties.stage_pack_hash.pattern, '^[0-9a-f]{64}$');
   assert.equal(generatedManifest.surface_kind, 'opl_stage_pack_generated_artifact_manifest');
   assert.equal(generatedManifest.stage_pack_hash, integrity.stage_pack_hash);
+  assert.equal((defs.generated_artifact_manifest.required as string[]).includes('source_of_truth'), true);
+  assert.equal((defs.generated_artifact_ref.required as string[]).includes('source_stage_pack_hash'), true);
+  assert.equal((defs.generated_artifact_ref.required as string[]).includes('regeneration_policy'), true);
+  assert.equal((defs.generated_artifact_ref.required as string[]).includes('drift_status'), true);
+  assert.equal(generatedManifestSourceOfTruth.kind, 'diagram_stage_pack');
+  assert.equal(generatedManifestSourceOfTruth.generated_artifacts_are_regenerable_supply_chain_inputs, true);
   assert.equal(generatedManifestSummary.regeneration_required_when_stage_pack_hash_changes, true);
+  assert.equal(generatedManifestSummary.missing_source_hash_ref_count, 2);
+  assert.equal(generatedManifestSummary.needs_regeneration_ref_count, 0);
+  assert.equal((generatedManifest.generated_test_refs as JsonRecord[])[0]?.drift_status, 'missing_source_hash');
+  assert.equal(
+    (generatedManifest.generated_test_refs as JsonRecord[])[0]?.regeneration_policy,
+    'regenerate_when_source_stage_pack_hash_changes',
+  );
   assert.equal(generatedManifestAuthority.opl_role, 'generated_artifact_manifest_projection_only');
   assert.equal(generatedManifestAuthority.manifest_is_build_review_input, true);
   assert.equal(generatedManifestAuthority.graphflow_runtime_dependency, false);

@@ -83,6 +83,23 @@ export interface FamilyStageProofBundleRuntimeMetrics {
   };
 }
 
+export type FamilyStageGeneratedArtifactDriftStatus =
+  | 'regenerated'
+  | 'needs_regeneration'
+  | 'missing_source_hash';
+
+export interface FamilyStageGeneratedArtifactRef extends FamilyStageSurfaceRef {
+  stage_id: string;
+  source_of_truth_kind: 'diagram_stage_pack';
+  source_stage_pack_ref: string;
+  source_stage_pack_hash: string;
+  declared_source_stage_pack_hash: string | null;
+  source_graph_projection_ref: string;
+  regeneration_policy: 'regenerate_when_source_stage_pack_hash_changes';
+  drift_status: FamilyStageGeneratedArtifactDriftStatus;
+  drift_reason: string;
+}
+
 export interface FamilyStageProofBundleIntegrity {
   surface_kind: 'opl_stage_pack_integrity_metadata';
   version: 'opl-stage-pack-integrity-metadata.v1';
@@ -108,17 +125,27 @@ export interface FamilyStageGeneratedArtifactManifest {
   stage_pack_hash: string;
   source_stage_pack_ref: string;
   graph_projection_ref: string;
-  generated_code_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
-  generated_test_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
-  generated_proof_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
-  generated_schema_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
-  generated_artifact_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
+  source_of_truth: {
+    kind: 'diagram_stage_pack';
+    diagram_ref: string;
+    stage_pack_ref: string;
+    stage_pack_hash: string;
+    generated_artifacts_are_regenerable_supply_chain_inputs: true;
+  };
+  generated_code_refs: FamilyStageGeneratedArtifactRef[];
+  generated_test_refs: FamilyStageGeneratedArtifactRef[];
+  generated_proof_refs: FamilyStageGeneratedArtifactRef[];
+  generated_schema_refs: FamilyStageGeneratedArtifactRef[];
+  generated_artifact_refs: FamilyStageGeneratedArtifactRef[];
   summary: {
     generated_code_ref_count: number;
     generated_test_ref_count: number;
     generated_proof_ref_count: number;
     generated_schema_ref_count: number;
     generated_artifact_ref_count: number;
+    regenerated_ref_count: number;
+    needs_regeneration_ref_count: number;
+    missing_source_hash_ref_count: number;
     regeneration_required_when_stage_pack_hash_changes: true;
   };
   authority_boundary: {
@@ -401,6 +428,42 @@ function buildTestProofRefs(plane: FamilyStageControlPlane): Array<FamilyStageSu
     })));
 }
 
+function readDeclaredSourceStagePackHash(ref: FamilyStageSurfaceRef) {
+  const record = ref as unknown as JsonRecord;
+  return optionalString(record.source_stage_pack_hash)
+    ?? optionalString(record.declared_source_stage_pack_hash);
+}
+
+function buildGeneratedArtifactRef(
+  ref: FamilyStageSurfaceRef & { stage_id: string },
+  sourceStagePackRef: string,
+  graphProjectionRef: string,
+  stagePackHash: string,
+): FamilyStageGeneratedArtifactRef {
+  const declaredSourceStagePackHash = readDeclaredSourceStagePackHash(ref);
+  const driftStatus: FamilyStageGeneratedArtifactDriftStatus = declaredSourceStagePackHash
+    ? declaredSourceStagePackHash === stagePackHash
+      ? 'regenerated'
+      : 'needs_regeneration'
+    : 'missing_source_hash';
+  const driftReason = driftStatus === 'regenerated'
+    ? 'declared_source_stage_pack_hash_matches_current_stage_pack_hash'
+    : driftStatus === 'needs_regeneration'
+      ? 'declared_source_stage_pack_hash_differs_from_current_stage_pack_hash'
+      : 'generated_ref_missing_declared_source_stage_pack_hash';
+  return {
+    ...ref,
+    source_of_truth_kind: 'diagram_stage_pack',
+    source_stage_pack_ref: sourceStagePackRef,
+    source_stage_pack_hash: stagePackHash,
+    declared_source_stage_pack_hash: declaredSourceStagePackHash,
+    source_graph_projection_ref: graphProjectionRef,
+    regeneration_policy: 'regenerate_when_source_stage_pack_hash_changes',
+    drift_status: driftStatus,
+    drift_reason: driftReason,
+  };
+}
+
 function buildProofRuntimeMetrics(
   admissionReview: FamilyStageAdmissionReview,
   compositionObligations: FamilyStageProofBundleCompositionObligation[],
@@ -508,17 +571,49 @@ function buildFamilyStageGeneratedArtifactManifest(
   integrity: FamilyStageProofBundleIntegrity,
 ): FamilyStageGeneratedArtifactManifest {
   const refs = plane.stages.flatMap(stageRefs);
-  const generatedCodeRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['code', 'generated_code', 'source_code']));
-  const generatedTestRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['test', 'evaluation']));
-  const generatedProofRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['proof', 'evidence']));
-  const generatedSchemaRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['schema']));
-  const generatedArtifactRefs = refs.filter((ref) => stageRefMatchesAny(ref, ['artifact']));
+  const sourceStagePackRef = `opl://stage-packs/${plane.target_domain_id}/${plane.plane_id}/${integrity.stage_pack_hash}`;
+  const graphProjectionRef = `opl://stage-packs/${plane.target_domain_id}/${plane.plane_id}/graphs/${integrity.stage_pack_hash}`;
+  const decorateRef = (ref: FamilyStageSurfaceRef & { stage_id: string }) => buildGeneratedArtifactRef(
+    ref,
+    sourceStagePackRef,
+    graphProjectionRef,
+    integrity.stage_pack_hash,
+  );
+  const generatedCodeRefs = refs
+    .filter((ref) => stageRefMatchesAny(ref, ['code', 'generated_code', 'source_code']))
+    .map(decorateRef);
+  const generatedTestRefs = refs
+    .filter((ref) => stageRefMatchesAny(ref, ['test', 'evaluation']))
+    .map(decorateRef);
+  const generatedProofRefs = refs
+    .filter((ref) => stageRefMatchesAny(ref, ['proof', 'evidence']))
+    .map(decorateRef);
+  const generatedSchemaRefs = refs
+    .filter((ref) => stageRefMatchesAny(ref, ['schema']))
+    .map(decorateRef);
+  const generatedArtifactRefs = refs
+    .filter((ref) => stageRefMatchesAny(ref, ['artifact']))
+    .map(decorateRef);
+  const generatedRefs = [
+    ...generatedCodeRefs,
+    ...generatedTestRefs,
+    ...generatedProofRefs,
+    ...generatedSchemaRefs,
+    ...generatedArtifactRefs,
+  ];
   return {
     surface_kind: 'opl_stage_pack_generated_artifact_manifest',
     version: 'opl-stage-pack-generated-artifact-manifest.v1',
     stage_pack_hash: integrity.stage_pack_hash,
-    source_stage_pack_ref: `opl://stage-packs/${plane.target_domain_id}/${plane.plane_id}/${integrity.stage_pack_hash}`,
-    graph_projection_ref: `opl://stage-packs/${plane.target_domain_id}/${plane.plane_id}/graphs/${integrity.stage_pack_hash}`,
+    source_stage_pack_ref: sourceStagePackRef,
+    graph_projection_ref: graphProjectionRef,
+    source_of_truth: {
+      kind: 'diagram_stage_pack',
+      diagram_ref: graphProjectionRef,
+      stage_pack_ref: sourceStagePackRef,
+      stage_pack_hash: integrity.stage_pack_hash,
+      generated_artifacts_are_regenerable_supply_chain_inputs: true,
+    },
     generated_code_refs: generatedCodeRefs,
     generated_test_refs: generatedTestRefs,
     generated_proof_refs: generatedProofRefs,
@@ -530,6 +625,9 @@ function buildFamilyStageGeneratedArtifactManifest(
       generated_proof_ref_count: generatedProofRefs.length,
       generated_schema_ref_count: generatedSchemaRefs.length,
       generated_artifact_ref_count: generatedArtifactRefs.length,
+      regenerated_ref_count: generatedRefs.filter((ref) => ref.drift_status === 'regenerated').length,
+      needs_regeneration_ref_count: generatedRefs.filter((ref) => ref.drift_status === 'needs_regeneration').length,
+      missing_source_hash_ref_count: generatedRefs.filter((ref) => ref.drift_status === 'missing_source_hash').length,
       regeneration_required_when_stage_pack_hash_changes: true,
     },
     authority_boundary: {
