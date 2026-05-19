@@ -94,6 +94,7 @@ const lanes = {
       'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
       'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      'tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
       'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',
       'tests/src/cli/cases/runtime-tray-provider-continuous-proof.test.ts',

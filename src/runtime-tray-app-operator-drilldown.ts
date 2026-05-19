@@ -31,6 +31,10 @@ import {
 import {
   buildExternalEvidenceActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/external-evidence-action-routes.ts';
+import {
+  periodicExecutionRefs,
+  providerSloRefs,
+} from './runtime-tray-app-operator-drilldown-parts/provider-periodic-refs.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -274,116 +278,6 @@ function qualityReadinessRefs(workbench: JsonRecord) {
     projection_policy: 'refs_only_no_quality_or_readiness_authority',
     quality_refs: uniqueStrings(stringList(quality.quality_refs)),
     readiness_refs: uniqueStrings(stringList(quality.readiness_refs)),
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
-}
-
-function providerSloRefs(providerContinuousProof: JsonRecord) {
-  const loop = record(providerContinuousProof.operator_slo_repair_loop);
-  const cadenceAction = record(loop.operator_cadence_action);
-  const cadenceCommand = stringValue(cadenceAction.command);
-  const cadenceRef = cadenceCommand
-    ? {
-        ref: cadenceCommand,
-        role: stringValue(cadenceAction.action_kind) ?? 'provider_slo_cadence_action',
-        provider_kind: stringValue(cadenceAction.provider_kind),
-        execution_owner: stringValue(cadenceAction.execution_owner),
-        execution_policy: stringValue(cadenceAction.execution_policy),
-        dispatch_status: stringValue(cadenceAction.dispatch_status),
-        can_execute: false,
-      }
-    : null;
-  const commandRefs = cadenceRef ? [cadenceRef] : recordList(loop.operator_commands)
-    .map((command) => ({
-      ref: stringValue(command.command),
-      role: stringValue(command.command_role) ?? 'provider_slo_operator_command',
-      provider_kind: stringValue(providerContinuousProof.provider_kind),
-      execution_owner: stringValue(command.execution_owner),
-      execution_policy: stringValue(command.execution_policy),
-      dispatch_status: null,
-      can_execute: false,
-    }))
-    .filter((entry): entry is {
-      ref: string;
-      role: string;
-      provider_kind: string | null;
-      execution_owner: string | null;
-      execution_policy: string | null;
-      dispatch_status: null;
-      can_execute: false;
-    } => Boolean(entry.ref));
-
-  return uniqueRefs(commandRefs);
-}
-
-function periodicExecutionRefs(providerActionRefs: ReturnType<typeof providerSloRefs>) {
-  const scheduleId = 'opl-family-runtime-provider-scheduler';
-  const schedulerRefs = [
-    {
-      ref: 'opl family-runtime scheduler status --provider temporal',
-      role: 'scheduler_cadence_status',
-      provider_kind: 'temporal',
-      schedule_id: scheduleId,
-      cadence_owner: 'provider_backed_family_runtime',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      execution_policy: 'read_only_status_projection',
-      expected_surface_kind: 'opl_family_runtime_scheduler_cadence',
-      can_execute: false,
-    },
-    {
-      ref: 'opl family-runtime scheduler install --provider temporal',
-      role: 'scheduler_cadence_install_or_update',
-      provider_kind: 'temporal',
-      schedule_id: scheduleId,
-      cadence_owner: 'provider_backed_family_runtime',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      execution_policy: 'operator_or_infrastructure_supervised',
-      expected_surface_kind: 'temporal_scheduler_cadence_install_receipt',
-      can_execute: false,
-    },
-    {
-      ref: 'opl family-runtime scheduler trigger --provider temporal',
-      role: 'scheduler_cadence_manual_trigger',
-      provider_kind: 'temporal',
-      schedule_id: scheduleId,
-      cadence_owner: 'provider_backed_family_runtime',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      execution_policy: 'operator_or_infrastructure_supervised',
-      expected_surface_kind: 'temporal_scheduler_cadence_trigger_receipt',
-      can_execute: false,
-    },
-    {
-      ref: 'opl family-runtime scheduler tick --provider temporal',
-      role: 'scheduler_tick_provider_slo_and_queue_dispatch',
-      provider_kind: 'temporal',
-      schedule_id: scheduleId,
-      cadence_owner: 'provider_backed_family_runtime',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      execution_policy: 'provider_backed_no_domain_daemon',
-      expected_surface_kind: 'opl_family_runtime_scheduler_tick',
-      can_execute: false,
-    },
-  ];
-  return {
-    surface_kind: 'opl_app_drilldown_periodic_execution_refs',
-    projection_policy: 'provider_scheduler_refs_only_no_domain_daemon_or_truth_write',
-    schedule_id: scheduleId,
-    refs: uniqueRefs([
-      ...schedulerRefs,
-      ...providerActionRefs.map((ref) => ({
-        ...ref,
-        role: `provider_slo:${ref.role}`,
-        schedule_id: scheduleId,
-        cadence_owner: 'provider_backed_family_runtime',
-        scheduler_owner: 'opl_provider_runtime_manager',
-        can_execute: false,
-      })),
-    ]),
-    replaces_domain_daemon_surface: {
-      medautoscience: 'MAS LaunchAgent / local supervision tick is cleanup-only legacy residue.',
-      medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
-      redcube: 'RCA repo-local sidecar/session supervision is handler diagnostic only.',
-    },
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
