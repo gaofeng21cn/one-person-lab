@@ -5,6 +5,7 @@ import {
 } from './family-stage-admission.ts';
 import type {
   FamilyStageAdmissionFinding,
+  FamilyStageFailureLocalization,
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
   FamilyStageAdmissionStatus,
@@ -141,6 +142,7 @@ export interface FamilyStageProofBundle {
   admission_summary: FamilyStageAdmissionReview['summary'];
   stage_results: FamilyStageAdmissionStageResult[];
   blocking_reasons: FamilyStageAdmissionFinding[];
+  failure_localization: FamilyStageFailureLocalization[];
   composition_obligations: FamilyStageProofBundleCompositionObligation[];
   boundary_assumptions: FamilyStageProofBundleBoundaryAssumption[];
   idempotency_assumptions: FamilyStageProofBundleIdempotencyAssumption[];
@@ -565,6 +567,7 @@ export function buildFamilyStageProofBundle(
     admission_summary: admissionReview.summary,
     stage_results: admissionReview.stage_results,
     blocking_reasons: proofPassed ? [] : admissionReview.findings,
+    failure_localization: admissionReview.failure_localization,
     composition_obligations: compositionObligations,
     boundary_assumptions: plane.stages.map(readBoundaryAssumptions),
     idempotency_assumptions: plane.stages.map(readIdempotencyAssumptions),
