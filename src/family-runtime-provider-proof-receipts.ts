@@ -6,6 +6,17 @@ import type { familyRuntimePaths } from './family-runtime-store.ts';
 
 const TEMPORAL_PRODUCTION_PROOF_COMMAND = 'opl family-runtime residency proof --provider temporal --production';
 const TEMPORAL_PRODUCTION_PROOF_MAX_AGE_SECONDS = 24 * 60 * 60;
+const TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS = [
+  'external_temporal_server_reachable',
+  'managed_worker_ready',
+  'worker_completed_attempt',
+  'worker_restart_requery',
+  'signal_history_preserved',
+  'typed_closeout_required_for_completed',
+  'missing_closeout_blocks_completion',
+  'retry_or_dead_letter_boundary_observed',
+  'domain_truth_boundary_preserved',
+] as const;
 
 type TemporalResidencyProof = Awaited<ReturnType<typeof buildTemporalResidencyProof>>;
 type RuntimePaths = ReturnType<typeof familyRuntimePaths>;
@@ -35,6 +46,54 @@ function stringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string')
     : [];
+}
+
+function booleanRecord(value: Record<string, unknown> | null) {
+  return Object.fromEntries(TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS.map((checkId) => [
+    checkId,
+    value?.[checkId] === true,
+  ]));
+}
+
+export function temporalProductionCapabilityReceipt(proof: TemporalResidencyProof) {
+  const productionProof = recordOrNull(proof.production_residency_proof);
+  const checks = booleanRecord(recordOrNull(productionProof?.checks));
+  const failedCheckIds = TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS.filter((checkId) => checks[checkId] !== true);
+  const completedAttempt = recordOrNull(productionProof?.completed_attempt);
+  const blockedAttempt = recordOrNull(productionProof?.blocked_attempt);
+  const restartedWorkerRequery = recordOrNull(productionProof?.restarted_worker_requery);
+  const capabilityProven =
+    proof.closeout_status === 'production_residency_proven'
+    && failedCheckIds.length === 0;
+  return {
+    surface_kind: 'opl_temporal_provider_production_capability_receipt',
+    provider_kind: 'temporal',
+    receipt_status: capabilityProven ? 'proven' : 'blocked',
+    capability_status: capabilityProven ? 'capability_proven' : 'capability_blocked',
+    required_check_ids: [...TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS],
+    checks,
+    failed_check_ids: failedCheckIds,
+    proven_check_count: TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS.length - failedCheckIds.length,
+    required_check_count: TEMPORAL_PRODUCTION_CAPABILITY_CHECK_IDS.length,
+    completed_workflow_id: typeof completedAttempt?.workflow_id === 'string'
+      ? completedAttempt.workflow_id
+      : null,
+    blocked_workflow_id: typeof blockedAttempt?.workflow_id === 'string'
+      ? blockedAttempt.workflow_id
+      : null,
+    restarted_worker_requery_status:
+      typeof restartedWorkerRequery?.requery_status === 'string'
+        ? restartedWorkerRequery.requery_status
+        : null,
+    evidence_policy:
+      'production_capability_receipt_requires_restart_requery_signal_history_typed_closeout_and_boundary_checks',
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
 }
 
 function productionProofRepairAction(proof: TemporalResidencyProof) {
@@ -123,6 +182,7 @@ export function temporalProviderSloExecutionReceipt(input: {
     closeout_status: input.proof.closeout_status,
     receipt_status: receipt.receipt_status,
     receipt_kind: receipt.receipt_kind,
+    production_capability_receipt: temporalProductionCapabilityReceipt(input.proof),
     repair_receipt: repairReceipt,
     persisted_proof_ref: input.persistedProofRef,
     proves_only: 'temporal_service_worker_residency_cadence_execution',
