@@ -290,6 +290,36 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
       metrics_are_domain_verdict: false,
     },
   });
+  assert.equal(bundle.integrity.surface_kind, 'opl_stage_pack_integrity_metadata');
+  assert.equal(bundle.integrity.hash_algorithm, 'sha256');
+  assert.match(bundle.integrity.stage_pack_hash, /^[0-9a-f]{64}$/);
+  assert.equal(bundle.integrity.signature_status, 'unsigned_digest_only');
+  assert.equal(bundle.integrity.authority_boundary.can_execute_stage, false);
+  assert.equal(bundle.integrity.authority_boundary.can_verify_external_signature, false);
+});
+
+test('stage proof bundle integrity digest is stable and changes with contract refs', () => {
+  const actionCatalog = buildActionCatalog();
+  const baseBundle = buildFamilyStageProofBundle(buildStagePlane(), { actionCatalog });
+  const reordered = buildFamilyStageProofBundle(buildStagePlane(), { actionCatalog });
+  const changed = buildFamilyStageProofBundle(buildStagePlane({
+    authorEnsures: ['draft_ready', 'source_trace_ready'],
+  }), { actionCatalog });
+  const signed = buildFamilyStageProofBundle({
+    ...buildStagePlane(),
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      stage_pack_signer_ref: 'kms:domain-owner',
+      stage_pack_signature_ref: 'artifact:stage-pack.sig',
+    },
+  }, { actionCatalog });
+
+  assert.equal(baseBundle.integrity.stage_pack_hash, reordered.integrity.stage_pack_hash);
+  assert.notEqual(baseBundle.integrity.stage_pack_hash, changed.integrity.stage_pack_hash);
+  assert.equal(signed.integrity.signature_status, 'signature_ref_declared');
+  assert.equal(signed.integrity.signer_ref, 'kms:domain-owner');
+  assert.equal(signed.integrity.signature_ref, 'artifact:stage-pack.sig');
+  assert.equal(signed.integrity.authority_boundary.can_verify_external_signature, false);
 });
 
 test('stage proof bundle exposes missing composition and does not mark blocked proof as passed', () => {
@@ -330,18 +360,24 @@ test('stage proof bundle exposes needs-contracts admission without pretending pr
 test('stage proof bundle schema freezes authority boundary away from domain truth and artifact body', () => {
   const schema = readJson('contracts/family-orchestration/family-stage-proof-bundle.schema.json');
   const properties = schema.properties as Record<string, JsonRecord>;
+  const required = schema.required as string[];
   const defs = schema.$defs as Record<string, JsonRecord>;
   const authoritySchema = properties.authority_boundary as JsonRecord;
   const authorityProperties = authoritySchema.properties as Record<string, JsonRecord>;
   const examples = schema.examples as JsonRecord[];
   const authority = examples[0]?.authority_boundary as JsonRecord;
   const metricsSchema = defs.proof_runtime_metrics as JsonRecord;
+  const integritySchema = defs.stage_pack_integrity as JsonRecord;
+  const integrityProperties = integritySchema.properties as Record<string, JsonRecord>;
   const metrics = examples[0]?.proof_runtime_metrics as JsonRecord;
+  const integrity = examples[0]?.integrity as JsonRecord;
   const metricsAuthority = metrics.authority_boundary as JsonRecord;
+  const integrityAuthority = integrity.authority_boundary as JsonRecord;
 
   assert.equal(properties.surface_kind.const, 'opl_stage_pack_proof_bundle');
   assert.equal(properties.version.const, 'opl-stage-pack-proof-bundle.v1');
   assert.equal((metricsSchema.description as string).includes('operator observability'), true);
+  assert.ok(required.includes('integrity'));
   assert.equal(metrics.composition_obligation_count, 1);
   assert.equal(metrics.runtime_event_requirement_count, 1);
   assert.equal(metrics.satisfied_runtime_event_ref_count, 1);
@@ -351,6 +387,13 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   assert.equal(metricsAuthority.metrics_are_domain_verdict, false);
   assert.equal(metricsAuthority.can_authorize_domain_ready, false);
   assert.equal(metricsAuthority.can_authorize_quality_verdict, false);
+  assert.equal(integrityProperties.stage_pack_hash.pattern, '^[0-9a-f]{64}$');
+  assert.equal(integrity.surface_kind, 'opl_stage_pack_integrity_metadata');
+  assert.equal(integrity.hash_scope, 'family_stage_control_plane_and_action_catalog_contract_refs');
+  assert.equal(integrityAuthority.opl_role, 'digest_projection_only');
+  assert.equal(integrityAuthority.can_execute_stage, false);
+  assert.equal(integrityAuthority.can_write_domain_truth, false);
+  assert.equal(integrityAuthority.can_verify_external_signature, false);
   assert.equal(authorityProperties.opl_role.const, 'proof_bundle_projection_owner');
   assert.equal(authorityProperties.domain_role.const, 'truth_quality_receipt_and_artifact_authority');
   assert.equal(authority.can_execute_stage, false);

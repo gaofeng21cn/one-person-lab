@@ -24,6 +24,8 @@ import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
 
+const PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -666,7 +668,9 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
 }
 
 function buildCompilerDomains(contracts: FrameworkContracts) {
-  const descriptorList = buildFamilyAgentDescriptorList(contracts);
+  const descriptorList = buildFamilyAgentDescriptorList(contracts, {
+    manifestCommandTimeoutMs: PACK_COMPILER_MANIFEST_COMMAND_TIMEOUT_MS,
+  });
   const familyAgentDescriptors = descriptorList.family_agent_descriptors;
   return familyAgentDescriptors.descriptors.map((descriptor) =>
     buildPackCompilerProjection(descriptor as JsonRecord)

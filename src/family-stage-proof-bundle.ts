@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { FamilyActionCatalog } from './family-action-catalog-contract.ts';
 import {
   buildFamilyStageAdmissionReview,
@@ -75,6 +76,25 @@ export interface FamilyStageProofBundleRuntimeMetrics {
   };
 }
 
+export interface FamilyStageProofBundleIntegrity {
+  surface_kind: 'opl_stage_pack_integrity_metadata';
+  version: 'opl-stage-pack-integrity-metadata.v1';
+  hash_algorithm: 'sha256';
+  stage_pack_hash: string;
+  hash_scope: 'family_stage_control_plane_and_action_catalog_contract_refs';
+  signature_status: 'unsigned_digest_only' | 'signature_ref_declared';
+  signer_ref: string | null;
+  signature_ref: string | null;
+  authority_boundary: {
+    opl_role: 'digest_projection_only';
+    can_execute_stage: false;
+    can_write_domain_truth: false;
+    can_authorize_domain_ready: false;
+    can_authorize_quality_verdict: false;
+    can_verify_external_signature: false;
+  };
+}
+
 export interface FamilyStageProofBundle {
   surface_kind: 'opl_stage_pack_proof_bundle';
   version: 'opl-stage-pack-proof-bundle.v1';
@@ -97,6 +117,7 @@ export interface FamilyStageProofBundle {
   runtime_event_requirements: FamilyStageProofBundleRuntimeEventRequirement[];
   test_proof_refs: Array<FamilyStageSurfaceRef & { stage_id: string }>;
   proof_runtime_metrics: FamilyStageProofBundleRuntimeMetrics;
+  integrity: FamilyStageProofBundleIntegrity;
   authority_boundary: {
     opl_role: 'proof_bundle_projection_owner';
     domain_role: 'truth_quality_receipt_and_artifact_authority';
@@ -124,6 +145,28 @@ function readStringList(value: unknown) {
     return [];
   }
   return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stableValue);
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableValue(value[key])]),
+  );
+}
+
+function stableJson(value: unknown) {
+  return JSON.stringify(stableValue(value));
 }
 
 function readNextStageRefs(stage: FamilyStageDescriptor) {
@@ -322,6 +365,73 @@ function buildProofRuntimeMetrics(
   };
 }
 
+export function buildFamilyStagePackIntegrity(
+  plane: FamilyStageControlPlane,
+  actionCatalog: FamilyActionCatalog | null,
+): FamilyStageProofBundleIntegrity {
+  const snapshot = {
+    surface_kind: 'opl_stage_pack_contract_snapshot',
+    version: 'opl-stage-pack-contract-snapshot.v1',
+    plane: {
+      plane_id: plane.plane_id,
+      target_domain_id: plane.target_domain_id,
+      owner: plane.owner,
+      authority_boundary: plane.authority_boundary,
+      stages: plane.stages.map((stage) => ({
+        stage_id: stage.stage_id,
+        stage_kind: stage.stage_kind,
+        owner: stage.owner,
+        domain_stage_refs: stage.domain_stage_refs,
+        inputs: stage.inputs,
+        outputs: stage.outputs,
+        evaluation: stage.evaluation,
+        allowed_action_refs: stage.allowed_action_refs,
+        handoff: stage.handoff,
+        stage_contract: stage.stage_contract,
+        trust_boundary: stage.trust_boundary,
+        authority_boundary: stage.authority_boundary,
+      })),
+    },
+    action_catalog: actionCatalog
+      ? {
+          catalog_id: actionCatalog.catalog_id,
+          target_domain_id: actionCatalog.target_domain_id,
+          owner: actionCatalog.owner,
+          actions: actionCatalog.actions.map((action) => ({
+            action_id: action.action_id,
+            owner: action.owner,
+            effect: action.effect,
+            input_schema_ref: action.input_schema_ref,
+            output_schema_ref: action.output_schema_ref,
+            workspace_locator_fields: action.workspace_locator_fields,
+            human_gate_ids: action.human_gate_ids,
+            authority_boundary: action.authority_boundary,
+          })),
+        }
+      : null,
+  };
+  const signatureRef = optionalString(plane.authority_boundary.stage_pack_signature_ref);
+  const signerRef = optionalString(plane.authority_boundary.stage_pack_signer_ref);
+  return {
+    surface_kind: 'opl_stage_pack_integrity_metadata',
+    version: 'opl-stage-pack-integrity-metadata.v1',
+    hash_algorithm: 'sha256',
+    stage_pack_hash: crypto.createHash('sha256').update(stableJson(snapshot)).digest('hex'),
+    hash_scope: 'family_stage_control_plane_and_action_catalog_contract_refs',
+    signature_status: signatureRef || signerRef ? 'signature_ref_declared' : 'unsigned_digest_only',
+    signer_ref: signerRef,
+    signature_ref: signatureRef,
+    authority_boundary: {
+      opl_role: 'digest_projection_only',
+      can_execute_stage: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_verify_external_signature: false,
+    },
+  };
+}
+
 export function buildFamilyStageProofBundle(
   plane: FamilyStageControlPlane,
   options: BuildFamilyStageProofBundleOptions = {},
@@ -336,6 +446,7 @@ export function buildFamilyStageProofBundle(
   const expectedReceiptRefs = buildExpectedReceiptRefs(plane, actionCatalog);
   const runtimeEventRequirements = buildRuntimeEventRequirements(plane);
   const testProofRefs = buildTestProofRefs(plane);
+  const integrity = buildFamilyStagePackIntegrity(plane, actionCatalog);
 
   return {
     surface_kind: 'opl_stage_pack_proof_bundle',
@@ -365,6 +476,7 @@ export function buildFamilyStageProofBundle(
       expectedReceiptRefs,
       testProofRefs,
     ),
+    integrity,
     authority_boundary: {
       opl_role: 'proof_bundle_projection_owner',
       domain_role: 'truth_quality_receipt_and_artifact_authority',

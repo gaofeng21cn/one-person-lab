@@ -644,8 +644,13 @@ function descriptorProviderResidencyGapStatus(descriptors: ReturnType<typeof bui
   return firstStatus ?? null;
 }
 
-export function buildFamilyAgentDescriptorList(contracts: FrameworkContracts) {
-  const catalog = buildDomainManifestCatalog(contracts).domain_manifests;
+export function buildFamilyAgentDescriptorList(
+  contracts: FrameworkContracts,
+  options: { manifestCommandTimeoutMs?: number } = {},
+) {
+  const catalog = buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: options.manifestCommandTimeoutMs,
+  }).domain_manifests;
   const descriptors = catalog.projects.map(buildDescriptor);
   return {
     version: 'g2',
