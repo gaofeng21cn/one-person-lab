@@ -22,7 +22,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 function parseAgentsScaffoldArgs(
@@ -298,13 +298,22 @@ export function buildInternalCommandSpecs(
       },
     },
     'runtime app-operator-drilldown': {
-      usage: 'opl runtime app-operator-drilldown',
+      usage: 'opl runtime app-operator-drilldown [--detail summary|full] [--full]',
       summary:
-        'Project the App/operator drilldown read model from the runtime snapshot without exposing raw domain bodies.',
-      examples: ['opl runtime app-operator-drilldown', 'opl runtime app-operator-drilldown --json'],
+        'Project the App/operator drilldown read model from the runtime snapshot, summary-first by default.',
+      examples: [
+        'opl runtime app-operator-drilldown',
+        'opl runtime app-operator-drilldown --json',
+        'opl runtime app-operator-drilldown --detail full --json',
+      ],
       handler: async (args) => {
-        assertNoArgs(args, commandSpecs['runtime app-operator-drilldown']);
-        const snapshot = await buildRuntimeTraySnapshot(getContracts());
+        const parsed = parseRuntimeAppOperatorDrilldownArgs(
+          args,
+          commandSpecs['runtime app-operator-drilldown'],
+        );
+        const snapshot = await buildRuntimeTraySnapshot(getContracts(), {
+          appOperatorDrilldownDetailLevel: parsed.detailLevel,
+        });
         return {
           app_operator_drilldown: snapshot.runtime_tray_snapshot.app_operator_drilldown,
         };
