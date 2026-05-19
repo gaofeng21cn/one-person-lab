@@ -6,6 +6,7 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
     'gaofeng21cn/one-person-lab': 'admin',
     'gaofeng21cn/med-autoscience': 'write',
     'gaofeng21cn/med-autogrant': 'maintain',
+    'gaofeng21cn/opl-meta-agent': 'write',
     'gaofeng21cn/redcube-ai': 'admin',
   },
 });
@@ -218,6 +219,7 @@ test('system developer-supervisor reports and persists the family developer mode
         'gaofeng21cn/med-autogrant',
         'gaofeng21cn/med-autoscience',
         'gaofeng21cn/one-person-lab',
+        'gaofeng21cn/opl-meta-agent',
         'gaofeng21cn/redcube-ai',
       ],
     );
@@ -250,6 +252,7 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
       'gaofeng21cn/one-person-lab': 'read',
       'gaofeng21cn/med-autoscience': 'read',
       'gaofeng21cn/med-autogrant': 'none',
+      'gaofeng21cn/opl-meta-agent': 'read',
       'gaofeng21cn/redcube-ai': 'read',
     },
   });
