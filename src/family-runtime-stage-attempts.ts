@@ -67,6 +67,8 @@ export type StageAttemptCreateInput = {
   sourceFingerprint?: string;
   executorKind?: string;
   executorBindingRef?: string;
+  invocationMode?: string;
+  boundedEditRef?: string;
   taskId?: string;
   retryBudget?: Record<string, unknown>;
   checkpointRefs?: string[];

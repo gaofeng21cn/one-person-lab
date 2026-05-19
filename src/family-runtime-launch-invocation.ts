@@ -3,6 +3,12 @@ import { stableId } from './family-runtime-store.ts';
 import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 
 type JsonRecord = Record<string, unknown>;
+type InvocationMode = 'invocation' | 'authoring';
+type LaunchInvocationBlockerReason =
+  | 'non_default_executor_binding_ref_missing'
+  | 'agent_authoring_requires_bounded_edit_ref';
+
+type AllowedAgentAction = 'retrieve' | 'select' | 'bind' | 'launch' | 'deploy' | 'author_bounded_edit';
 
 export interface StageLaunchInvocationProjection {
   surface_kind: 'opl_stage_launch_invocation';
@@ -10,8 +16,8 @@ export interface StageLaunchInvocationProjection {
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
   provider_kind: FamilyRuntimeProviderKind;
-  invocation_mode: 'invocation' | 'authoring';
-  allowed_agent_actions: Array<'retrieve' | 'select' | 'bind' | 'launch' | 'deploy' | 'author_bounded_edit'>;
+  invocation_mode: InvocationMode;
+  allowed_agent_actions: AllowedAgentAction[];
   bounded_edit_ref: string | null;
   selected_executor_kind: string;
   default_executor: boolean;
@@ -35,8 +41,11 @@ export interface StageLaunchInvocationProjection {
   policy: {
     stage_pack_launch_scope: 'approved_or_admitted_only';
     authoring_output: 'bounded_edit_ref_only';
+    unadmitted_agent_generated_stage_pack: 'fail_closed';
+    graphflow_runtime_dependency: false;
+    runtime_equivalence_claim: false;
   };
-  blocker_reason: 'non_default_executor_binding_ref_missing' | 'agent_authoring_requires_bounded_edit_ref' | null;
+  blocker_reason: LaunchInvocationBlockerReason | null;
   conflict_or_blocker_envelopes: ReturnType<typeof buildFamilyConflictOrBlockerEnvelope>[];
   authority_boundary: {
     opl_role: 'launch_invocation_projection_only';
@@ -51,6 +60,10 @@ export interface StageLaunchInvocationProjection {
 
 function text(value: string | null | undefined) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function invocationMode(value: string | null | undefined): InvocationMode {
+  return text(value) === 'authoring' ? 'authoring' : 'invocation';
 }
 
 export function buildStageLaunchInvocationProjection(input: {
@@ -71,7 +84,7 @@ export function buildStageLaunchInvocationProjection(input: {
 }): StageLaunchInvocationProjection {
   const selectedExecutorKind = text(input.executorKind) ?? 'codex_cli';
   const executorBindingRef = text(input.executorBindingRef);
-  const invocationMode = input.invocationMode ?? 'invocation';
+  const mode = invocationMode(input.invocationMode);
   const boundedEditRef = text(input.boundedEditRef);
   const sourceFingerprint = text(input.sourceFingerprint);
   const workspaceLocatorRef = `workspace_locator:${stableId('wl', [input.domainId, input.stageId, input.workspaceLocator])}`;
@@ -82,11 +95,13 @@ export function buildStageLaunchInvocationProjection(input: {
     : executorBindingRef
       ? 'explicit_executor_binding_declared' as const
       : 'missing_non_default_executor_binding' as const;
-  const blockerReason = input.requireStageAdmission === true && executorBindingStatus === 'missing_non_default_executor_binding'
-    ? 'non_default_executor_binding_ref_missing' as const
-    : input.requireStageAdmission === true && invocationMode === 'authoring' && boundedEditRef === null
-      ? 'agent_authoring_requires_bounded_edit_ref' as const
-      : null;
+  const blockerReason: LaunchInvocationBlockerReason | null = input.requireStageAdmission === true
+    ? mode === 'authoring' && !boundedEditRef
+      ? 'agent_authoring_requires_bounded_edit_ref'
+      : executorBindingStatus === 'missing_non_default_executor_binding'
+        ? 'non_default_executor_binding_ref_missing'
+        : null
+    : null;
   const subject = buildFamilyConflictSubject({
     domain: input.domainId,
     stageId: input.stageId,
@@ -101,7 +116,7 @@ export function buildStageLaunchInvocationProjection(input: {
       ...(boundedEditRef ? [boundedEditRef] : []),
     ],
   });
-  const allowedAgentActions: StageLaunchInvocationProjection['allowed_agent_actions'] = invocationMode === 'authoring'
+  const allowedAgentActions: StageLaunchInvocationProjection['allowed_agent_actions'] = mode === 'authoring'
     ? ['retrieve', 'select', 'bind', 'author_bounded_edit']
     : ['retrieve', 'select', 'bind', 'launch', 'deploy'];
   return {
@@ -110,7 +125,7 @@ export function buildStageLaunchInvocationProjection(input: {
     domain_id: input.domainId,
     stage_id: input.stageId,
     provider_kind: input.providerKind,
-    invocation_mode: invocationMode,
+    invocation_mode: mode,
     allowed_agent_actions: allowedAgentActions,
     bounded_edit_ref: boundedEditRef,
     selected_executor_kind: selectedExecutorKind,
@@ -132,6 +147,9 @@ export function buildStageLaunchInvocationProjection(input: {
     policy: {
       stage_pack_launch_scope: 'approved_or_admitted_only',
       authoring_output: 'bounded_edit_ref_only',
+      unadmitted_agent_generated_stage_pack: 'fail_closed',
+      graphflow_runtime_dependency: false,
+      runtime_equivalence_claim: false,
     },
     blocker_reason: blockerReason,
     conflict_or_blocker_envelopes: blockerReason
@@ -144,19 +162,17 @@ export function buildStageLaunchInvocationProjection(input: {
             status: 'blocked',
             reason: blockerReason,
             evidenceRefs: [
-              blockerReason === 'non_default_executor_binding_ref_missing'
-                ? `executor_kind:${selectedExecutorKind}`
-                : `invocation_mode:${invocationMode}`,
-              blockerReason === 'non_default_executor_binding_ref_missing'
-                ? 'missing:executor_binding_ref'
-                : 'missing:bounded_edit_ref',
+              `invocation_mode:${mode}`,
+              ...(blockerReason === 'non_default_executor_binding_ref_missing'
+                ? [`executor_kind:${selectedExecutorKind}`, 'missing:executor_binding_ref']
+                : ['missing:bounded_edit_ref']),
             ],
             allowedNextActions: blockerReason === 'non_default_executor_binding_ref_missing'
               ? ['declare_executor_binding_ref', 'retry_after_admission']
-              : ['declare_bounded_edit_ref', 'retry_after_admission'],
+              : ['return_bounded_edit_ref', 'submit_stage_pack_for_admission'],
             forbiddenActions: blockerReason === 'non_default_executor_binding_ref_missing'
               ? ['start_non_default_executor_without_binding_ref', 'fallback_complete']
-              : ['author_unbounded_stage_pack_change', 'fallback_complete'],
+              : ['launch_unadmitted_agent_generated_stage_pack', 'fallback_complete'],
             failClosed: true,
           }),
         ]
