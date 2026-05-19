@@ -95,6 +95,12 @@ function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]
   });
 }
 
+function cleanupCommandDomainId(project: DomainManifestCatalogEntry, fallbackDomainId: string) {
+  return stringValue(project.project_id)
+    ?? stringValue(project.project)
+    ?? fallbackDomainId;
+}
+
 function nestedRef(value: unknown) {
   return isRecord(value) && typeof value.ref === 'string' && value.ref.trim().length > 0
     ? value.ref.trim()
@@ -815,12 +821,14 @@ function legacyCleanupPlanRefs(
       ?? stringValue(inspection.project_id)
       ?? project.project_id;
     const agentId = stringValue(inspection.agent_id) ?? domainId;
+    const commandDomainId = cleanupCommandDomainId(project, domainId);
     const sourceRefValue = `opl://agents/${domainId}/legacy-cleanup-plan`;
     return [{
       ref: sourceRefValue,
       role: 'domain_legacy_cleanup_plan',
       domain_id: domainId,
       agent_id: agentId,
+      command_domain_id: commandDomainId,
       skeleton_status: stringValue(inspection.skeleton_status),
       gate_status: stringValue(gate.status),
       plan_status: stringValue(plan.plan_status),
@@ -850,9 +858,9 @@ function legacyCleanupPlanRefs(
           action.opl_writes_domain_repo_active_files === true,
       })),
       apply_command:
-        `opl agents legacy-cleanup apply --domain ${agentId} --mode apply --source-ref ${sourceRefValue}`,
+        `opl agents legacy-cleanup apply --domain ${commandDomainId} --mode apply --source-ref ${sourceRefValue}`,
       verify_command:
-        `opl agents legacy-cleanup apply --domain ${agentId} --mode verify --source-ref ${sourceRefValue}`,
+        `opl agents legacy-cleanup apply --domain ${commandDomainId} --mode verify --source-ref ${sourceRefValue}`,
       required_apply_surface: stringValue(plan.required_apply_surface)
         ?? 'family_runtime_lifecycle_apply',
       can_execute_from_app: false,
