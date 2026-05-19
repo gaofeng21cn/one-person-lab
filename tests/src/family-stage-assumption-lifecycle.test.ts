@@ -110,8 +110,10 @@ test('family stage assumption lifecycle blocks stale typed assumptions with coun
   const projection = buildFamilyStageAssumptionLifecycleProjection(plane);
 
   assert.equal(projection.summary.stale_count, 1);
-  assert.equal(projection.summary.blocker_count, 1);
+  assert.equal(projection.summary.blocker_count, 0);
+  assert.equal(projection.summary.warning_count, 1);
   assert.equal(projection.assumptions[0]?.status, 'stale');
+  assert.equal(projection.assumptions[0]?.severity, 'warning');
   assert.deepEqual(projection.assumptions[0]?.minimal_counterexample, {
     assumption_id: 'provider_slo_current',
     stage_id: 'manuscript_authoring',
@@ -120,21 +122,23 @@ test('family stage assumption lifecycle blocks stale typed assumptions with coun
   });
 
   const admission = buildFamilyStageAdmissionReview(plane);
-  assert.equal(admission.status, 'blocked');
+  assert.equal(admission.status, 'needs_contracts');
   assert.ok(admission.findings.some((finding) => (
     finding.code === 'runtime_assumption_stale'
     && finding.assumption_id === 'provider_slo_current'
+    && finding.severity === 'warning'
     && finding.minimal_counterexample?.reason === 'runtime assumption has invalidation refs'
   )));
 });
 
-test('family stage admission blocks runtime assumptions without monitor refs', () => {
+test('family stage admission warns on runtime assumptions without monitor refs', () => {
   const admission = buildFamilyStageAdmissionReview(buildPlane(['artifact_locator_fresh']));
 
-  assert.equal(admission.status, 'blocked');
+  assert.equal(admission.status, 'needs_contracts');
   assert.ok(admission.findings.some((finding) => (
     finding.code === 'runtime_assumption_missing_monitor_ref'
     && finding.assumption_id === 'artifact_locator_fresh'
+    && finding.severity === 'warning'
     && finding.minimal_counterexample?.missing_field === 'monitor_refs'
   )));
 });

@@ -186,7 +186,7 @@ test('family-runtime attempt create projects launch invocation and gates non-def
   }
 });
 
-test('family-runtime required admission blocks stage launch without closed cohort loop refs', () => {
+test('family-runtime required admission warns without blocking when cohort loop refs are open', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cohort-loop-gate-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
@@ -272,28 +272,24 @@ test('family-runtime required admission blocks stage launch without closed cohor
       '--source-fingerprint',
       'sha256:scout-cohort-loop',
       '--require-stage-admission',
-      '--start',
     ], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     });
     const gate = created.family_runtime_stage_attempt.stage_launch_admission_gate;
 
-    assert.equal(created.family_runtime_stage_attempt.attempt.status, 'blocked');
-    assert.equal(created.family_runtime_stage_attempt.attempt.blocked_reason, 'stage_cohort_loop_not_closed');
-    assert.equal(created.family_runtime_stage_attempt.temporal_start, null);
-    assert.equal(gate.status, 'blocked');
-    assert.equal(gate.blocked_reason, 'stage_cohort_loop_not_closed');
+    assert.equal(created.family_runtime_stage_attempt.attempt.status, 'queued');
+    assert.equal(created.family_runtime_stage_attempt.attempt.blocked_reason, null);
+    assert.equal(gate.status, 'allowed');
+    assert.equal(gate.blocked_reason, null);
     assert.equal(gate.inspected_cohort_loop_stage.closure_status, 'missing_query');
     assert.deepEqual(gate.findings.map((finding: { code: string }) => finding.code), [
       'cohort_query_missing',
       'cohort_trigger_missing',
       'cohort_monitor_or_metric_missing',
     ]);
-    assert.equal(
-      created.family_runtime_stage_attempt.conflict_or_blocker_envelopes[0].forbidden_actions.includes('start_executor_without_cohort_loop_closure'),
-      true,
-    );
+    assert.equal(gate.findings.every((finding: { severity: string }) => finding.severity === 'warning'), true);
+    assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

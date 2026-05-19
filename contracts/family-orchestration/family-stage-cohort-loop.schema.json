@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-cohort-loop.schema.json",
   "title": "OPL Family Stage Cohort Loop",
-  "description": "Refs-only projection that checks whether a stage pack connects source scope, cohort query, trigger, and monitor/metric refs for closed-loop scheduling and operator visibility. It does not evaluate source truth or introduce a GraphFlow runtime dependency.",
+  "description": "Refs-only projection that checks whether a stage pack connects source scope, cohort query, trigger, and monitor/metric refs for closed-loop scheduling and operator visibility. Missing links are readiness warnings by default; the projection does not evaluate source truth, block launch by itself, or introduce a GraphFlow runtime dependency.",
   "type": "object",
   "additionalProperties": false,
   "required": [

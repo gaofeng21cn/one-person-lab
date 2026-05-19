@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-assumption-lifecycle.schema.json",
   "title": "OPL Family Stage Assumption Lifecycle",
-  "description": "OPL-owned projection for runtime assumption freshness and monitor completeness. It can block launch readiness, but it does not grant domain truth or quality authority.",
+  "description": "OPL-owned projection for runtime assumption freshness and monitor completeness. It reports operator warnings by default and does not grant domain truth or quality authority.",
   "type": "object",
   "additionalProperties": false,
   "required": [
