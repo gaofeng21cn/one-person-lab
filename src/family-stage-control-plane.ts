@@ -35,6 +35,13 @@ import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
 } from './family-stage-admission.ts';
+import {
+  buildFamilyStageModeTags,
+} from './family-stage-admission.ts';
+import type {
+  FamilyStageModeTags,
+  FamilyStageFailureLocalization,
+} from './family-stage-admission.ts';
 export {
   normalizeFamilyStageControlPlane,
 } from './family-stage-control-plane-contract.ts';
@@ -66,6 +73,7 @@ export interface FamilyStageListEntry {
   runtime_assumption_count: number;
   monitor_ref_count: number;
   guarantee_mode: FamilyStageGuaranteeMode;
+  mode_tags: FamilyStageModeTags;
   freshness: JsonRecord | null;
   trust_lane: string | null;
   admission_status: string | null;
@@ -109,6 +117,7 @@ export interface FamilyStageGraphNode {
   trust_lane: string | null;
   admission_status: string | null;
   guarantee_modes: FamilyStageGuaranteeMode[];
+  mode_tags: FamilyStageModeTags;
   static_check_eligible: boolean;
   runtime_enforced: boolean;
   domain_owned_judgment: boolean;
@@ -147,10 +156,14 @@ export interface FamilyStageGraphProjection {
     needs_contracts_node_count: number;
     missing_edge_count: number;
     runtime_enforced_node_count: number;
+    verified_core_eligible_node_count: number;
+    durable_runtime_only_node_count: number;
+    runtime_boundary_required_node_count: number;
     monitor_ref_count: number;
   };
   nodes: FamilyStageGraphNode[];
   edges: FamilyStageGraphEdge[];
+  failure_localization: FamilyStageFailureLocalization[];
   admission_status: string;
   integrity: FamilyStageProofBundleIntegrity;
   authority_boundary: {
@@ -291,6 +304,7 @@ export function buildFamilyStageListEntry(
     runtime_assumption_count: stage.stage_contract?.runtime_assumptions.length ?? 0,
     monitor_ref_count: stage.stage_contract?.monitor_refs.length ?? 0,
     guarantee_mode: buildFamilyStageGuaranteeProjection(stage).primary_mode,
+    mode_tags: admissionStage?.mode_tags ?? buildFamilyStageModeTags(stage),
     freshness: stage.freshness,
     trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
     admission_status: admissionStage?.status ?? null,
@@ -311,6 +325,7 @@ function buildGraphNode(
   admissionStage: FamilyStageAdmissionStageResult | null,
 ): FamilyStageGraphNode {
   const guarantee = buildFamilyStageGuaranteeProjection(stage);
+  const modeTags = admissionStage?.mode_tags ?? buildFamilyStageModeTags(stage);
   return {
     stage_id: stage.stage_id,
     stage_kind: stage.stage_kind,
@@ -319,6 +334,7 @@ function buildGraphNode(
     trust_lane: stage.trust_boundary?.lane ?? admissionStage?.trust_lane ?? null,
     admission_status: admissionStage?.status ?? null,
     guarantee_modes: guarantee.modes,
+    mode_tags: modeTags,
     static_check_eligible: stage.trust_boundary?.static_check_eligible === true,
     runtime_enforced: guarantee.runtime_enforced,
     domain_owned_judgment: guarantee.domain_owned_judgment,
@@ -365,10 +381,14 @@ function buildStageGraphProjection(
       needs_contracts_node_count: nodes.filter((node) => node.admission_status === 'needs_contracts').length,
       missing_edge_count: edges.filter((edge) => edge.status === 'missing').length,
       runtime_enforced_node_count: nodes.filter((node) => node.runtime_enforced).length,
+      verified_core_eligible_node_count: nodes.filter((node) => node.mode_tags.verified_core_eligible).length,
+      durable_runtime_only_node_count: nodes.filter((node) => node.mode_tags.durable_runtime_only).length,
+      runtime_boundary_required_node_count: nodes.filter((node) => node.mode_tags.runtime_boundary_required).length,
       monitor_ref_count: nodes.reduce((count, node) => count + node.monitor_ref_count, 0),
     },
     nodes,
     edges,
+    failure_localization: admission.failure_localization,
     admission_status: admission.status,
     integrity: buildFamilyStagePackIntegrity(plane, actionCatalog),
     authority_boundary: {

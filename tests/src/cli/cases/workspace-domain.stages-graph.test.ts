@@ -294,6 +294,9 @@ test('family stage graph projects edges, guarantee modes, and integrity digest w
       needs_contracts_node_count: 0,
       missing_edge_count: 0,
       runtime_enforced_node_count: 1,
+      verified_core_eligible_node_count: 1,
+      durable_runtime_only_node_count: 1,
+      runtime_boundary_required_node_count: 1,
       monitor_ref_count: 1,
     });
     assert.deepEqual(graph.family_stage_graph.edges[0], {
@@ -311,6 +314,19 @@ test('family stage graph projects edges, guarantee modes, and integrity digest w
       ['manuscript_authoring', ['static_admission_only', 'domain_owned_judgment', 'observability_only']],
       ['publication_review', ['runtime_enforced', 'domain_owned_judgment', 'observability_only']],
     ]);
+    assert.deepEqual(graph.family_stage_graph.nodes.map((node: { stage_id: string; mode_tags: JsonRecord }) => [node.stage_id, node.mode_tags]), [
+      ['manuscript_authoring', {
+        verified_core_eligible: true,
+        durable_runtime_only: false,
+        runtime_boundary_required: false,
+      }],
+      ['publication_review', {
+        verified_core_eligible: false,
+        durable_runtime_only: true,
+        runtime_boundary_required: true,
+      }],
+    ]);
+    assert.deepEqual(graph.family_stage_graph.failure_localization, []);
     assert.equal(graph.family_stage_graph.integrity.stage_pack_hash, proofBundle.family_stage_proof_bundle.proof_bundle.integrity.stage_pack_hash);
     assert.equal(graph.family_stage_graph.integrity.signature_status, 'signature_ref_declared');
     assert.equal(graph.family_stage_graph.integrity.authority_boundary.can_verify_external_signature, false);
@@ -356,8 +372,11 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
     assert.equal(list.family_stages.summary.blocked_stages_count, 0);
     assert.equal(list.family_stages.summary.needs_contracts_stages_count, 0);
     assert.equal(
-      list.family_stages.stages.every((stage: { admission_status: string; guarantee_mode: string }) =>
-        stage.admission_status === 'admitted' && stage.guarantee_mode === 'runtime_enforced',
+      list.family_stages.stages.every((stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean; runtime_boundary_required: boolean } }) =>
+        stage.admission_status === 'admitted'
+        && stage.guarantee_mode === 'runtime_enforced'
+        && stage.mode_tags.durable_runtime_only === true
+        && stage.mode_tags.runtime_boundary_required === true,
       ),
       true,
     );

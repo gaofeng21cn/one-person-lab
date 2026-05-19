@@ -22,8 +22,40 @@ export interface FamilyStageAdmissionFinding {
   target_stage_id?: string;
   action_id?: string;
   assumption_id?: string;
+  failure_lane?: FamilyStageFailureLane;
+  source_ref?: string;
   runtime_event_refs_missing_reason?: string;
   minimal_counterexample?: JsonRecord;
+}
+
+export type FamilyStageFailureLane =
+  | 'ai'
+  | 'human'
+  | 'external'
+  | 'provider'
+  | 'runtime'
+  | 'domain'
+  | 'artifact'
+  | 'source'
+  | 'monitor'
+  | 'executor';
+
+export interface FamilyStageModeTags {
+  verified_core_eligible: boolean;
+  durable_runtime_only: boolean;
+  runtime_boundary_required: boolean;
+}
+
+export interface FamilyStageFailureLocalization {
+  lane: FamilyStageFailureLane;
+  severity: FamilyStageAdmissionFindingSeverity;
+  code: string;
+  stage_id: string | null;
+  target_stage_id: string | null;
+  action_id: string | null;
+  assumption_id: string | null;
+  source_ref: string | null;
+  minimal_counterexample: JsonRecord;
 }
 
 export interface FamilyStageAdmissionStageResult {
@@ -32,6 +64,7 @@ export interface FamilyStageAdmissionStageResult {
   trust_lane: FamilyStageTrustLane | null;
   static_check_eligible: boolean;
   effect_boundary: boolean;
+  mode_tags: FamilyStageModeTags;
   runtime_event_refs: string[];
   finding_count: number;
   blocker_count: number;
@@ -51,9 +84,13 @@ export interface FamilyStageAdmissionReview {
     needs_contracts_stages_count: number;
     blockers_count: number;
     warnings_count: number;
+    verified_core_eligible_count: number;
+    durable_runtime_only_count: number;
+    runtime_boundary_required_count: number;
   };
   stage_results: FamilyStageAdmissionStageResult[];
   findings: FamilyStageAdmissionFinding[];
+  failure_localization: FamilyStageFailureLocalization[];
   authority_boundary: {
     opl_role: 'admission_projection_and_contract_checker';
     can_execute_stage: false;
@@ -241,6 +278,161 @@ function readRuntimeEventRefs(stage: FamilyStageDescriptor) {
     ...readStringList(stage.trust_boundary?.runtime_event_refs),
     ...readStringList(stage.stage_contract?.runtime_event_refs),
   ]));
+}
+
+function stageRuntimeBoundaryRequired(stage: FamilyStageDescriptor) {
+  const trust = stage.trust_boundary;
+  return trust?.effect_boundary === true
+    || trust?.runtime_guard_required === true
+    || (trust ? EFFECT_BOUNDARY_LANES.has(trust.lane) : false);
+}
+
+export function buildFamilyStageModeTags(stage: FamilyStageDescriptor): FamilyStageModeTags {
+  const runtimeBoundaryRequired = stageRuntimeBoundaryRequired(stage);
+  const verifiedCoreEligible = stage.trust_boundary?.static_check_eligible === true && !runtimeBoundaryRequired;
+  return {
+    verified_core_eligible: verifiedCoreEligible,
+    durable_runtime_only: runtimeBoundaryRequired && !verifiedCoreEligible,
+    runtime_boundary_required: runtimeBoundaryRequired,
+  };
+}
+
+function stageById(plane: FamilyStageControlPlane) {
+  return new Map(plane.stages.map((stage) => [stage.stage_id, stage]));
+}
+
+function classifyFailureLane(
+  finding: FamilyStageAdmissionFinding,
+  stagesById: Map<string, FamilyStageDescriptor>,
+): FamilyStageFailureLane {
+  const code = finding.code;
+  const stage = finding.stage_id ? stagesById.get(finding.stage_id) : null;
+  const trustLane = stage?.trust_boundary?.lane ?? null;
+
+  if (code.includes('assumption_missing_monitor') || code.includes('missing_monitor')) {
+    return 'monitor';
+  }
+  if (code.includes('assumption_stale') || code.includes('runtime_guard') || code.includes('runtime_event')) {
+    return 'runtime';
+  }
+  if (code.includes('source')) {
+    return 'source';
+  }
+  if (code.includes('artifact')) {
+    return 'artifact';
+  }
+  if (code.includes('provider') || code.includes('temporal')) {
+    return 'provider';
+  }
+  if (code.includes('action') || code.includes('composition') || code.includes('handoff')) {
+    return 'domain';
+  }
+  if (code.includes('human_gate')) {
+    return 'human';
+  }
+  if (code.includes('executor')) {
+    return 'executor';
+  }
+  if (trustLane === 'ai_decision') {
+    return 'ai';
+  }
+  if (trustLane === 'human_gate') {
+    return 'human';
+  }
+  if (trustLane === 'external_system') {
+    return 'external';
+  }
+  if (trustLane === 'codex_executor') {
+    return 'executor';
+  }
+  if (trustLane === 'domain_agent') {
+    return 'domain';
+  }
+  return 'runtime';
+}
+
+function sourceRefForFailure(
+  finding: FamilyStageAdmissionFinding,
+  lane: FamilyStageFailureLane,
+  stagesById: Map<string, FamilyStageDescriptor>,
+) {
+  if (finding.source_ref) {
+    return finding.source_ref;
+  }
+  if (finding.action_id) {
+    return `family_action_catalog:${finding.action_id}`;
+  }
+  if (finding.assumption_id) {
+    return `runtime_assumption:${finding.assumption_id}`;
+  }
+  if (finding.target_stage_id) {
+    return `family_stage:${finding.target_stage_id}`;
+  }
+  if (finding.stage_id) {
+    const stage = stagesById.get(finding.stage_id);
+    if (lane === 'monitor') {
+      const ref = stage?.stage_contract?.monitor_refs[0]?.ref;
+      return typeof ref === 'string' ? ref : null;
+    }
+    if (lane === 'source') {
+      const ref = stage?.stage_contract?.source_scope_refs[0]?.ref ?? stage?.source_refs[0]?.ref;
+      return typeof ref === 'string' ? ref : null;
+    }
+    if (lane === 'artifact') {
+      const ref = stage?.stage_contract?.artifact_scope_refs[0]?.ref ?? stage?.outputs[0]?.ref;
+      return typeof ref === 'string' ? ref : null;
+    }
+    return `family_stage:${finding.stage_id}`;
+  }
+  return null;
+}
+
+function minimalCounterexampleForFinding(
+  finding: FamilyStageAdmissionFinding,
+  lane: FamilyStageFailureLane,
+  sourceRef: string | null,
+): JsonRecord {
+  return finding.minimal_counterexample ?? {
+    lane,
+    code: finding.code,
+    ...(finding.stage_id ? { stage_id: finding.stage_id } : {}),
+    ...(finding.target_stage_id ? { target_stage_id: finding.target_stage_id } : {}),
+    ...(finding.action_id ? { action_id: finding.action_id } : {}),
+    ...(finding.assumption_id ? { assumption_id: finding.assumption_id } : {}),
+    ...(sourceRef ? { source_ref: sourceRef } : {}),
+  };
+}
+
+function localizeFindings(
+  findings: FamilyStageAdmissionFinding[],
+  stagesById: Map<string, FamilyStageDescriptor>,
+): FamilyStageAdmissionFinding[] {
+  return findings.map((finding) => {
+    const lane = finding.failure_lane ?? classifyFailureLane(finding, stagesById);
+    const sourceRef = sourceRefForFailure(finding, lane, stagesById);
+    return {
+      ...finding,
+      failure_lane: lane,
+      source_ref: sourceRef ?? undefined,
+      minimal_counterexample: minimalCounterexampleForFinding(finding, lane, sourceRef),
+    };
+  });
+}
+
+function buildFailureLocalization(
+  findings: FamilyStageAdmissionFinding[],
+): FamilyStageFailureLocalization[] {
+  return findings.map((finding) => ({
+    lane: finding.failure_lane ?? 'runtime',
+    severity: finding.severity,
+    code: finding.code,
+    stage_id: finding.stage_id ?? null,
+    target_stage_id: finding.target_stage_id ?? null,
+    action_id: finding.action_id ?? null,
+    assumption_id: finding.assumption_id ?? null,
+    source_ref: finding.source_ref ?? null,
+    minimal_counterexample: finding.minimal_counterexample ?? { code: finding.code },
+  }));
 }
 
 function inspectStageContract(stage: FamilyStageDescriptor, findings: FamilyStageAdmissionFinding[]) {
@@ -456,8 +648,7 @@ function stageResult(stage: FamilyStageDescriptor, findings: FamilyStageAdmissio
   const stageFindings = findings.filter((finding) => finding.stage_id === stage.stage_id);
   const blockerCount = stageFindings.filter((finding) => finding.severity === 'blocker').length;
   const warningCount = stageFindings.filter((finding) => finding.severity === 'warning').length;
-  const effectBoundary =
-    stage.trust_boundary?.effect_boundary === true
+  const effectBoundary = stage.trust_boundary?.effect_boundary === true
     || (stage.trust_boundary ? EFFECT_BOUNDARY_LANES.has(stage.trust_boundary.lane) : false);
   return {
     stage_id: stage.stage_id,
@@ -465,6 +656,7 @@ function stageResult(stage: FamilyStageDescriptor, findings: FamilyStageAdmissio
     trust_lane: stage.trust_boundary?.lane ?? null,
     static_check_eligible: stage.trust_boundary?.static_check_eligible === true,
     effect_boundary: effectBoundary,
+    mode_tags: buildFamilyStageModeTags(stage),
     runtime_event_refs: readRuntimeEventRefs(stage),
     finding_count: stageFindings.length,
     blocker_count: blockerCount,
@@ -490,9 +682,10 @@ export function buildFamilyStageAdmissionReview(
   inspectStaticCycles(plane, findings);
   inspectRuntimeAssumptions(plane, findings);
 
-  const stageResults = plane.stages.map((stage) => stageResult(stage, findings));
-  const blockersCount = findings.filter((finding) => finding.severity === 'blocker').length;
-  const warningsCount = findings.filter((finding) => finding.severity === 'warning').length;
+  const localizedFindings = localizeFindings(findings, stageById(plane));
+  const stageResults = plane.stages.map((stage) => stageResult(stage, localizedFindings));
+  const blockersCount = localizedFindings.filter((finding) => finding.severity === 'blocker').length;
+  const warningsCount = localizedFindings.filter((finding) => finding.severity === 'warning').length;
 
   return {
     surface_kind: 'family_stage_admission_review',
@@ -507,9 +700,13 @@ export function buildFamilyStageAdmissionReview(
       needs_contracts_stages_count: stageResults.filter((result) => result.status === 'needs_contracts').length,
       blockers_count: blockersCount,
       warnings_count: warningsCount,
+      verified_core_eligible_count: stageResults.filter((result) => result.mode_tags.verified_core_eligible).length,
+      durable_runtime_only_count: stageResults.filter((result) => result.mode_tags.durable_runtime_only).length,
+      runtime_boundary_required_count: stageResults.filter((result) => result.mode_tags.runtime_boundary_required).length,
     },
     stage_results: stageResults,
-    findings,
+    findings: localizedFindings,
+    failure_localization: buildFailureLocalization(localizedFindings),
     authority_boundary: {
       opl_role: 'admission_projection_and_contract_checker',
       can_execute_stage: false,

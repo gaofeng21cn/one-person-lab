@@ -13,6 +13,7 @@
     "admission_summary",
     "stage_results",
     "blocking_reasons",
+    "failure_localization",
     "composition_obligations",
     "boundary_assumptions",
     "idempotency_assumptions",
@@ -95,6 +96,13 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/finding"
+      }
+    },
+    "failure_localization": {
+      "type": "array",
+      "description": "Projection-only failure/blocker localization by trust/source lane for scheduler and operator drilldown. It is not a domain verdict.",
+      "items": {
+        "$ref": "#/$defs/failure_localization"
       }
     },
     "composition_obligations": {
@@ -258,6 +266,8 @@
         "trust_lane",
         "static_check_eligible",
         "effect_boundary",
+        "mode_tags",
+        "runtime_event_refs",
         "finding_count",
         "blocker_count",
         "warning_count"
@@ -285,6 +295,16 @@
         },
         "effect_boundary": {
           "type": "boolean"
+        },
+        "mode_tags": {
+          "$ref": "#/$defs/mode_tags"
+        },
+        "runtime_event_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "finding_count": {
           "type": "integer",
@@ -332,6 +352,112 @@
         },
         "action_id": {
           "type": "string"
+        },
+        "assumption_id": {
+          "type": "string"
+        },
+        "failure_lane": {
+          "$ref": "#/$defs/failure_lane"
+        },
+        "source_ref": {
+          "type": "string"
+        },
+        "runtime_event_refs_missing_reason": {
+          "type": "string"
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "mode_tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verified_core_eligible",
+        "durable_runtime_only",
+        "runtime_boundary_required"
+      ],
+      "properties": {
+        "verified_core_eligible": {
+          "type": "boolean"
+        },
+        "durable_runtime_only": {
+          "type": "boolean"
+        },
+        "runtime_boundary_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "failure_lane": {
+      "type": "string",
+      "enum": [
+        "ai",
+        "human",
+        "external",
+        "provider",
+        "runtime",
+        "domain",
+        "artifact",
+        "source",
+        "monitor",
+        "executor"
+      ]
+    },
+    "failure_localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane",
+        "severity",
+        "code",
+        "stage_id",
+        "target_stage_id",
+        "action_id",
+        "assumption_id",
+        "source_ref",
+        "minimal_counterexample"
+      ],
+      "properties": {
+        "lane": {
+          "$ref": "#/$defs/failure_lane"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "blocker",
+            "warning"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "target_stage_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "action_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "assumption_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     },

@@ -231,6 +231,19 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
   assert.equal(bundle.identity.action_catalog_id, 'mas_stage_actions');
   assert.equal(bundle.admission_status, 'admitted');
   assert.equal(bundle.authority_boundary.proof_passed, true);
+  assert.deepEqual(bundle.stage_results.map((result) => [result.stage_id, result.mode_tags]), [
+    ['manuscript_authoring', {
+      verified_core_eligible: true,
+      durable_runtime_only: false,
+      runtime_boundary_required: false,
+    }],
+    ['publication_review', {
+      verified_core_eligible: false,
+      durable_runtime_only: true,
+      runtime_boundary_required: true,
+    }],
+  ]);
+  assert.deepEqual(bundle.failure_localization, []);
   assert.deepEqual(bundle.composition_obligations[0], {
     edge_id: 'manuscript_authoring->publication_review',
     upstream_stage_id: 'manuscript_authoring',
@@ -356,6 +369,9 @@ test('stage proof bundle exposes missing composition and does not mark blocked p
   assert.equal(bundle.admission_status, 'blocked');
   assert.equal(bundle.authority_boundary.proof_passed, false);
   assert.ok(bundle.blocking_reasons.some((finding) => finding.code === 'composition_obligation_not_satisfied'));
+  assert.deepEqual(bundle.failure_localization.map((item) => [item.lane, item.code, item.source_ref]), [
+    ['domain', 'composition_obligation_not_satisfied', 'family_stage:publication_review'],
+  ]);
   assert.deepEqual(bundle.composition_obligations[0]?.missing, ['draft_ready']);
   assert.equal(bundle.composition_obligations[0]?.status, 'missing');
   assert.equal(bundle.proof_runtime_metrics.composition_obligation_count, 1);
@@ -374,6 +390,9 @@ test('stage proof bundle exposes needs-contracts admission without pretending pr
   assert.equal(bundle.admission_status, 'needs_contracts');
   assert.equal(bundle.authority_boundary.proof_passed, false);
   assert.ok(bundle.blocking_reasons.some((finding) => finding.code === 'missing_stage_contract'));
+  assert.deepEqual(bundle.failure_localization.map((item) => [item.lane, item.code, item.stage_id]), [
+    ['human', 'missing_stage_contract', 'publication_review'],
+  ]);
   assert.ok(bundle.stage_results.some((result) => result.status === 'needs_contracts'));
   assert.equal(bundle.proof_runtime_metrics.blocker_count, 0);
   assert.equal(bundle.proof_runtime_metrics.warning_count, 1);
@@ -406,6 +425,10 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   assert.equal((metricsSchema.description as string).includes('operator observability'), true);
   assert.ok(required.includes('integrity'));
   assert.ok(required.includes('generated_artifact_manifest'));
+  assert.ok(required.includes('failure_localization'));
+  assert.ok((defs.stage_result.required as string[]).includes('mode_tags'));
+  assert.ok((defs.stage_result.required as string[]).includes('runtime_event_refs'));
+  assert.ok((defs.failure_localization.required as string[]).includes('minimal_counterexample'));
   assert.equal(metrics.composition_obligation_count, 1);
   assert.equal(metrics.runtime_event_requirement_count, 1);
   assert.equal(metrics.satisfied_runtime_event_ref_count, 1);
