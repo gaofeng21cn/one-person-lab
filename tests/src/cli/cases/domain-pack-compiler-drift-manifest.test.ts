@@ -40,6 +40,32 @@ test('domain pack compiler emits aligned generated artifact drift manifests for 
   assert.equal(driftManifest.authority_boundary.opl_can_write_domain_truth, false);
 });
 
+test('default domain pack compiler surface treats admitted generated artifacts as aligned', () => {
+  const list = runCli(['agents', 'pack-compiler']);
+  assert.equal(list.domain_pack_compiler.summary.total_domain_count, 3);
+  assert.equal(list.domain_pack_compiler.summary.ready_domain_count, 3);
+  assert.equal(list.domain_pack_compiler.summary.blocked_domain_count, 0);
+  assert.equal(list.domain_pack_compiler.summary.generated_surface_count, 24);
+  assert.equal(list.domain_pack_compiler.summary.generated_surface_ready_count, 24);
+  assert.equal(list.domain_pack_compiler.summary.generated_surface_blocked_count, 0);
+  assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_aligned_count, 3);
+  assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_detected_count, 0);
+
+  const mag = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mag']);
+  assert.equal(mag.domain_pack_compiler.compiler_status, 'ready');
+  assert.deepEqual(mag.domain_pack_compiler.blocker_reasons, []);
+  assert.equal(
+    mag.domain_pack_compiler.pack_compiler_input_projection.declarative_pack_refs.transition_status,
+    'oracle_evidence_gate',
+  );
+  assert.equal(
+    mag.domain_pack_compiler.pack_compiler_input_projection.declarative_pack_refs.transition_evidence_gate_status,
+    'grant_transition_oracle_matrix_passed',
+  );
+  assert.equal(mag.domain_pack_compiler.generated_artifact_drift_manifest.status, 'aligned');
+  assert.deepEqual(mag.domain_pack_compiler.generated_artifact_drift_manifest.drift_findings, []);
+});
+
 test('domain pack compiler marks generated artifact drift when blockers remain', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-drift-blocked-'));
