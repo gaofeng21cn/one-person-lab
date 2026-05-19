@@ -396,6 +396,44 @@ test('recommended system companion skills exclude MAS/MDS project-local stage sk
   }
 });
 
+test('recommended system companion skills sync family skills from packaged Full runtime', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-packaged-family-skills-home-'));
+  const packagedSkillsRoot = path.join(homeRoot, 'runtime', 'current', 'skills');
+
+  try {
+    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
+      fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
+      fs.writeFileSync(
+        path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
+        `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
+      );
+    }
+
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+      PATH: '/usr/bin:/bin',
+    }) as {
+      install: {
+        companion_skill_sync: {
+          items: Array<{ skill_id: string; status: string }>;
+        };
+      };
+    };
+
+    const syncedById = new Map(output.install.companion_skill_sync.items.map((item) => [item.skill_id, item.status]));
+    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
+      assert.equal(syncedById.get(skillId), 'synced');
+      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), true);
+    }
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('managed companion sync does not mirror MAS/MDS project-local stage skills into user Codex home', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-companion-mds-stage-skills-home-'));
 
