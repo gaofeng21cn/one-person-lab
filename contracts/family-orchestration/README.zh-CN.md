@@ -15,6 +15,8 @@
 
 这里进一步吸收 GraphFlow / GFL 论文中可复用的流程验证模式：先把可静态检查的 stage pack core 准入，再用 `requires` / `ensures` 组合 stage，并把 AI、人、外部系统、artifact mutation、memory writeback 与 domain verdict 放进运行时强制边界。OPL 采用的是这个 stage admission / trust-lane 语言，不引入 GraphFlow / GFL runtime dependency，也不把 GraphFlow 写成 provider、executor、planner、stage runner 或 domain authority。
 
+本轮吸收原则是 **AI-first, contract-light**。OPL 合同只管启动安全、OPL 越权边界、关键边界结果记录，以及 replay / audit / route-back 证据；不把 AI 推理、stage 内部规划、domain 质量结论或固定智能 workflow 写死。默认 operator 入口是 `opl stages readiness --domain <domain>`，它聚合现有 drilldown surface，不新增 domain verdict。
+
 ## 归属边界
 
 `one-person-lab` 在这里负责：
@@ -58,7 +60,7 @@
 - `family-stage-graph-projection.schema.json`
   - 冻结单个 family stage pack 的 graph projection，供 scheduler / App 消费 nodes、handoff edges、admission state、guarantee modes、integrity digest 与 OPL non-authority boundary
 - `family-stage-cohort-loop.schema.json`
-  - 冻结 stage pack 的 source scope / cohort query / trigger / monitor-metric 闭环投影，供 scheduler / App 判断同一批 source 是否有可审计启动和监控 refs；OPL 只投影 refs 与 blocker，不评估 source truth 或引入 GraphFlow runtime
+  - 冻结 stage pack 的 source scope / cohort query / trigger / monitor-metric 闭环投影，供 scheduler / App 判断同一批 source 是否有可审计启动和监控 refs；OPL 只投影 refs 与 drilldown finding，不评估 source truth、不授权 domain readiness，也不引入 GraphFlow runtime
 - `family-stage-runtime-budget.schema.json`
   - 冻结 runtime reliability / capacity budget 的 refs-only 投影，覆盖 boundary count、runtime guard count、monitor / metric refs、unmonitored boundary count、expected-success 或 boundary-success-rate refs；OPL 不计算未证实概率、不授权 domain readiness、不引入 GraphFlow runtime
 - `family-stage-pack-registry.schema.json`
@@ -68,7 +70,7 @@
 - `family-stage-replay-certification.schema.json`
   - 冻结 stage pack replay certification 投影，要求 replay 只读取 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs，不能重新询问 AI、人或外部系统
 - `family-stage-assumption-lifecycle.schema.json`
-  - 冻结 runtime assumption lifecycle 投影，把 stale assumption、缺失 monitor ref 或 owner 的情况转成 typed blocker 和 minimal counterexample
+  - 冻结 runtime assumption lifecycle 投影，把 stale assumption、缺失 monitor ref 或 owner 的情况转成 operator warning 和 minimal counterexample；除非被明确升级为启动安全 blocker，否则不默认阻断启动
 - `family-domain-memory-ref.schema.json`
   - 冻结 domain-owned memory pack 的 locator-only 引用，覆盖 memory family、pack ref、stage applicability、retrieval/writeback/receipt/recall refs、freshness 与 OPL forbidden authority
 - `family-domain-memory-writeback.schema.json`
@@ -214,13 +216,13 @@ GraphFlow / GFL 的 `verified-core` vs `durable-runtime` 区分在 admission、g
 
 GraphFlow / GFL 对 human review cost 的强调在 OPL 落成 `human_review_burden_budget`，挂在 admission、proof bundle、stage attempt query 和 runtime-tray workbench 投影上。它把声明的人类 gate 规范成 typed gate id、owner、required refs、missing refs 与 ready/blocked 状态，让 launch/readiness surface 能因缺少 typed review evidence fail closed，而不是临时提出非结构化人工问题。OPL 只投影这个预算；真实判断、receipt、quality verdict 和 artifact authority 仍归 domain owner。
 
-GraphFlow / GFL 的 operational assumption monitor 模式在这里落成两个轻量字段和一个 lifecycle 投影：`runtime_assumptions` 声明 stage 启动与运行时必须持续可见的假设，例如 source freshness、provider SLO、boundary failure rate 或 artifact locator freshness；`monitor_refs` 指向 domain-owned 或 OPL-owned monitor projection，让 App/operator surface 能看到这些假设是否有可审计来源。旧字符串 assumption 继续可用；机器可读 assumption object 可以携带 owner、monitor refs、freshness / observed refs、invalidation refs 与 repair action。`family-stage-assumption-lifecycle` 会把 stale assumption、缺 monitor ref 或缺 owner 转成 launch blocker 和 minimal counterexample。OPL 只投影 monitor refs、状态和 blocker，不把 monitor 结果升级为 domain truth、quality verdict、publication / fundability / visual verdict 或 artifact authority。
+GraphFlow / GFL 的 operational assumption monitor 模式在这里落成两个轻量字段和一个 lifecycle 投影：`runtime_assumptions` 声明 stage 启动与运行时应持续可见的假设，例如 source freshness、provider SLO、boundary failure rate 或 artifact locator freshness；`monitor_refs` 指向 domain-owned 或 OPL-owned monitor projection，让 App/operator surface 能看到这些假设是否有可审计来源。旧字符串 assumption 继续可用；机器可读 assumption object 可以携带 owner、monitor refs、freshness / observed refs、invalidation refs 与 repair action。`family-stage-assumption-lifecycle` 会把 stale assumption、缺 monitor ref 或缺 owner 投成 warning 和 minimal counterexample。OPL 只投影 monitor refs、状态和 warning，不把 monitor 结果升级为 domain truth、quality verdict、publication / fundability / visual verdict、artifact authority 或默认启动 blocker。
 
 scope refs 让启动边界可机器读取：`source_scope_refs` 冻结 source cohort，`artifact_scope_refs` 冻结 artifact set，`workspace_scope_refs` 冻结 stage 可用的 workspace/runtime scope。OPL 只投影 refs 和计数。`guarantee_mode` 区分 `static_admission_only`、`runtime_enforced`、`domain_owned_judgment` 与 `observability_only`；它是 scheduler / operator 读法，不是 proof assistant 结论，也不是 domain verdict。
 
-GraphFlow / GFL 的 cohort search / trigger / dashboard closed-loop 模式在 OPL 落成 refs-only `family-stage-cohort-loop` 投影：`source_scope_refs` 固定 source cohort 或 source set，`cohort_query_refs` 指向可审计 query，`trigger_refs` 指向 queue / launch / schedule 触发面，`monitor_refs`、`metric_refs` 或 `dashboard_metric_refs` 指向同一 cohort 的运行后观测面。缺少任一环节会给出 typed blocker 和 minimal counterexample。`--require-stage-admission` 启用时，runtime launch gate 会消费这个投影；选中 stage 不是 `closed_loop_ready` 时，executor 启动前直接 blocked。这个投影只服务 scheduler / App 的 launch-readiness 与 operator drilldown，不执行 query、不写 source truth、不授权 domain ready 或 quality verdict。
+GraphFlow / GFL 的 cohort search / trigger / dashboard closed-loop 模式在 OPL 落成 refs-only `family-stage-cohort-loop` 投影：`source_scope_refs` 固定 source cohort 或 source set，`cohort_query_refs` 指向可审计 query，`trigger_refs` 指向 queue / launch / schedule 触发面，`monitor_refs`、`metric_refs` 或 `dashboard_metric_refs` 指向同一 cohort 的运行后观测面。缺少环节会给出 drilldown finding 和 minimal counterexample。`--require-stage-admission` 启用时，runtime launch gate 记录这些 finding 为 warning；只有 admission hard blocker、越权、effect boundary 缺 runtime event 记录、组合不满足或 executor binding 缺失这类启动安全问题才阻断 executor。这个投影只服务 scheduler / App 的 launch-readiness 与 operator drilldown，不执行 query、不写 source truth、不授权 domain ready 或 quality verdict。
 
-GraphFlow / GFL 的 boundary reliability compounding 模式在 OPL 落成 refs-only `family-stage-runtime-budget` 投影：OPL 只计数 declared boundary、runtime guard、monitor ref、metric ref、dashboard metric ref 与 unmonitored boundary，并要求 `expected_success_ref` 或 `boundary_success_rate_ref` 存在后才能把 runtime budget 标为 ready。原文的 `p^k` 只作为监控设计启发，不会被当成概率真相；这个投影不授权 domain ready / quality / artifact verdict，也不引入 GraphFlow runtime。
+GraphFlow / GFL 的 boundary reliability compounding 模式在 OPL 落成 refs-only `family-stage-runtime-budget` 投影：OPL 只计数 declared boundary、runtime guard、monitor ref、metric ref、dashboard metric ref 与 unmonitored boundary，并建议提供 `expected_success_ref` 或 `boundary_success_rate_ref` 后再把 runtime budget 标为 fully observable。原文的 `p^k` 只作为监控设计启发，不会被当成概率真相；这个投影不授权 domain ready / quality / artifact verdict，不默认阻断启动，也不引入 GraphFlow runtime。
 
 `family-stage-proof-bundle.schema.json`、`family-stage-graph-projection.schema.json`、`family-stage-pack-registry.schema.json`、`family-stage-pack-source-spec.schema.json` 与 `family-stage-replay-certification.schema.json` 是 OPL 对同一个 stage pack 的 machine-readable 投影。proof bundle 携带 composition、receipt、runtime-event、human-review budget、proof-ref 与 integrity metadata；graph projection 携带 nodes、edges、guarantee modes、graph summary 和同一个 integrity digest；registry 按 stage pack hash 暴露 reusable library refs、lifecycle status、promotion / deprecation / supersession refs、active attempt binding 与 hash migration policy blocker；source/spec 投影是 body-free visual-equivalent review bundle，只聚合 control-plane、proof、graph、registry、replay、assumption 与 cohort surface 的稳定 refs；replay certification 用 proof bundle obligation 对照 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs。它们都是只读 scheduler / App / operator input，不执行 stage、不重新询问 AI / human / external source、不验证外部签名、不写 domain truth、不修改 artifact、不生成 artifact body，也不授权 domain readiness。
 

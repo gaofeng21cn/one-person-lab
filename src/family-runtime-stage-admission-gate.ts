@@ -166,12 +166,12 @@ export function buildStageAdmissionLaunchGateFromReview(
   const cohortLoop = buildFamilyStageCohortLoopProjection(input.plane);
   const inspectedCohortLoopStage = cohortLoop.stages.find((stage) => stage.stage_id === input.stageId) ?? null;
   const stageFindings = input.review.findings.filter((finding) => finding.stage_id === input.stageId);
-  const cohortLoopBlocked = input.requireAdmission === true
+  const cohortLoopNeedsAttention = input.requireAdmission === true
     && inspectedCohortLoopStage !== null
     && inspectedCohortLoopStage.closure_status !== 'closed_loop_ready';
-  const cohortLoopFindings: FamilyStageAdmissionReview['findings'] = cohortLoopBlocked
+  const cohortLoopFindings: FamilyStageAdmissionReview['findings'] = cohortLoopNeedsAttention
     ? inspectedCohortLoopStage.blockers.map((cohortBlocker) => ({
-        severity: 'blocker' as const,
+        severity: 'warning' as const,
         code: cohortBlocker.blocker_id,
         message: cohortBlocker.minimal_counterexample.reason,
         stage_id: input.stageId,
@@ -183,9 +183,7 @@ export function buildStageAdmissionLaunchGateFromReview(
   const findings = [...stageFindings, ...cohortLoopFindings];
   const blockedReason = inspectedStage.status !== 'admitted'
     ? `stage_admission_${inspectedStage.status}`
-    : cohortLoopBlocked
-      ? 'stage_cohort_loop_not_closed'
-      : null;
+    : null;
   const subject = buildFamilyConflictSubject({
     domain: input.domainId,
     stageId: input.stageId,
@@ -223,10 +221,8 @@ export function buildStageAdmissionLaunchGateFromReview(
             status: 'blocked',
             reason: blockedReason,
             evidenceRefs: findings.map((finding) => `finding:${finding.code}`),
-            allowedNextActions: cohortLoopBlocked
-              ? ['declare_source_scope_ref', 'declare_cohort_query_ref', 'declare_trigger_ref', 'declare_monitor_or_metric_ref', 'retry_after_admission']
-              : ['repair_stage_contract', 'retry_after_admission'],
-            forbiddenActions: ['start_executor_without_stage_admission', 'start_executor_without_cohort_loop_closure', 'fallback_complete'],
+            allowedNextActions: ['repair_stage_contract', 'retry_after_admission'],
+            forbiddenActions: ['start_executor_without_stage_admission', 'fallback_complete'],
             failClosed: true,
           }),
         ]

@@ -36,6 +36,9 @@ import {
   buildFamilyStageReplayCertification,
 } from './family-stage-replay-certification.ts';
 import {
+  buildStageReadinessSummary,
+} from './family-stage-readiness.ts';
+import {
   buildFamilyStagePackSourceSpecProjection,
 } from './family-stage-source-spec.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
@@ -818,6 +821,18 @@ export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args
   return {
     version: 'g2',
     family_stage_graph: buildStageGraphProjection(entry, plane),
+  };
+}
+
+export function buildFamilyStageReadinessInspect(
+  contracts: FrameworkContracts,
+  args: string[],
+): { version: 'g2'; family_stage_readiness: Record<string, unknown> } {
+  const parsed = parseOptionArgs(args, ['domain']);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  return {
+    version: 'g2',
+    family_stage_readiness: buildStageReadinessSummary(entry, plane, parsed.domain.trim()) as unknown as Record<string, unknown>,
   };
 }
 
