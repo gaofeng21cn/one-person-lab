@@ -12,7 +12,7 @@ Date: `2026-05-19`
 
 已经成立的是 OPL framework 骨架和读模型：Temporal provider、OPL-owned provider scheduler cadence/tick surface、typed queue、stage attempt ledger、typed closeout、safe runtime action shell、lifecycle refs-only index、external evidence refs-only receipt ledger、App/operator drilldown read model、provider proof/readiness projection、functional runtime harness、generic substrate projection、transition runner/read model、domain pack compiler active-caller proof、Agent Lab 和 private functional audit。
 
-2026-05-19 的系统评估把下一跳从“继续加 surface”改成“先消除多重语义污染”。闭环计划必须同时处理六个高风险冗余面：provider/runtime readiness 多真相、generated surface drift/block、App/operator drilldown 默认过重、`family-runtime` CLI parser 语义堆叠、stage launch guarantee 含糊、legacy vocabulary 在 active 面泄漏。当前 main 已吸收 OPL-framework 侧 runtime single truth、generated surface gate、App drilldown summary-first、family-runtime parser split、stage scope / `guarantee_mode` projection 和文档口径；后续 MAS/MAG/RCA production evidence 必须建立在这些单真相 surface 之上。
+2026-05-19 的系统评估把下一跳从“继续加 surface”改成“关闭六大冗余/语义污染点”。当前 main 已把 provider/runtime readiness 多真相、generated surface drift/block、App/operator drilldown 默认过重、`family-runtime` CLI parser 语义堆叠、stage launch guarantee 含糊、legacy vocabulary active leakage 落成机器守门面：runtime single truth、generated surface gate、App drilldown summary-first、family-runtime parser split、stage scope / `guarantee_mode` projection 和文档 vocabulary hygiene。后续 MAS/MAG/RCA production evidence 必须建立在这些单真相 surface 之上；这些守门面不证明 MAS/MAG/RCA production ready，也不改变 Temporal production substrate 与 domain truth/quality authority 的分工。
 
 2026-05-18 的 provider evidence 曾把 provider cadence 从“命令面存在”推进到“本机真实 receipt 存在”：Temporal schedule `opl-family-runtime-provider-scheduler` 已创建，`scheduler trigger` 已返回 triggered，`scheduler tick --provider temporal --force` 已生成新的 `production_residency_proven` SLO execution receipt。该证据作为 SLO / residency history 读取；当前 ready/unconfigured 状态必须由统一 lifecycle-aware provider payload 判断。`family-runtime status.periodic_execution` 与 `runtime app-operator-drilldown.periodic_execution_refs` 已把 scheduler cadence、provider SLO receipt 和 domain-daemon replacement policy 投成机器读面。`local_sqlite` 只有显式选择时作为 dev/CI/offline diagnostic baseline，不能替代 production provider 或 domain daemon。本机 `launchctl list` 与 `~/Library/LaunchAgents` fresh check 未发现 MAS / MedAutoScience supervision scheduler label 或 plist；MAS 旧 local scheduler 只能作为 cleanup diagnostic / tombstone 处理。
 
@@ -35,7 +35,7 @@ Fresh legacy cleanup evidence（2026-05-19）进一步把 physical cleanup gate 
 
 | gap | 当前已落地 | 未闭合内容 | 下一跳完成门槛 |
 | --- | --- | --- | --- |
-| `semantic_single_truth_closeout` | OPL-framework hygiene 已在 main 落地：provider readiness 共享 lifecycle-aware payload；MAG transition oracle 收成 pack compiler evidence gate；App drilldown 默认 summary-first；`family-runtime` parser 拆分为 scoped modules；stage control plane 投影 source/artifact/workspace scope refs 与 `guarantee_mode`；主文档限定 legacy vocabulary 到 history/tombstone/provenance。 | 剩余不是框架结构缺口，而是 App release/user path evidence、MAS/MAG/RCA production evidence gate，以及后续新增 surface 的回归守卫。 | readiness、generated surfaces、App projection、CLI grammar、stage launch guarantee、legacy vocabulary 均有唯一 owner payload；派生 surface 不自行推断 truth；相关 focused tests 和 CLI smoke 可重复通过。 |
+| `semantic_hygiene_guard_surface_closeout` | 六大语义污染点已在 main 落成机器守门面：provider readiness 共享 lifecycle-aware payload；MAG transition oracle 收成 pack compiler evidence gate；App drilldown 默认 summary-first；`family-runtime` parser 拆分为 scoped modules；stage control plane 投影 source/artifact/workspace scope refs、runtime assumptions、monitor refs 与 `guarantee_mode`；主文档限定 legacy vocabulary 到 history/tombstone/provenance。 | 剩余不是框架结构缺口，而是 App release/user path evidence、MAS/MAG/RCA production evidence gate，以及后续新增 surface 的回归守卫。 | readiness、generated surfaces、App projection、CLI grammar、stage launch guarantee、legacy vocabulary 均有唯一 owner payload；派生 surface 不自行推断 truth；相关 focused tests 和 CLI smoke 可重复通过。 |
 | `production_temporal_residency` | Temporal 是 production required provider；`local_sqlite` 已降为 dev/CI/offline diagnostic baseline；provider proof/status/readiness 可读；本机 Temporal schedule 已安装并可 trigger/tick，fresh SLO receipt 为 `production_residency_proven`。`provider_continuous_proof.cadence_window` 现在把最近窗口的 expected / observed / missing / blocked repair receipt counters、窗口状态和 authority boundary 投给 runtime snapshot、tray item 和 App drilldown summary。 | 自动或受监督 cadence 的真实长窗口 receipt 覆盖、overdue repair execution receipt、restart/re-query/signal/history 长窗口证据和真实 domain attempt 压测仍未闭合；`cadence_window` 是机器审计面，不是 live soak 完成证明。 | Temporal production proof 按 cadence 持续可重复通过，并用长窗口 SLO 证明 service/worker/workflow/query/signal/history/restart recovery 不退化；窗口必须达到 `window_cadence_satisfied`，且 domain owner-chain dispatch 仍单独返回 receipt / typed blocker。 |
 | `stage_launch_admission_gate` | `family-stage-admission` read model 已接入 `family-runtime attempt create`；声明 stage 的 admission blocker 会进入 blocked attempt，`--require-stage-admission` 已在 attempt start 与 provider-hosted tick 路径阻断 executor/domain dispatch；`needs_contracts` warning 会进入 attempt activity events；`opl stages proof-bundle --domain <domain>` 已输出 admission、runtime-event、idempotency 与 expected receipt obligation bundle；`family-stage-control-plane` 现在投影 source/artifact/workspace scope refs 和 `guarantee_mode`；MAS/MAG/RCA 当前 18 个 stage 均为 `admitted`。未声明旧 stage 只作为 legacy/diagnostic attempt metadata，不能当作标准 OPL Agent production launch evidence。 | selected executor binding、真实 consumed refs / expected receipt refs、scope freshness 和 monitor freshness 的 production caller scaleout 仍需进入 queue/provider/App 可见证据；当前 gate 已阻断明确 blocker，并已机器化 stage pack obligation projection，但还缺真实 production caller 链路的持续证明。 | 每个 production stage attempt 在启动前都有 stage pack admission、executor binding、idempotency、consumed refs、expected receipt refs、source/artifact/workspace scope refs、monitor refs 和 owner boundary proof；不满足时产出 typed blocker / human gate / route-back。 |
 | `generated_surface_production_consumption` | `domain-pack-compiler` 已能投影 CLI/MCP/product-entry/sidecar/status/workbench/harness handoff metadata 与 active-caller proof；MAS/MAG/RCA generated interface descriptor 均可读；MAS/MAG/RCA repo-side generated/handler target consumption 已闭合；pack compiler 已把 generated artifact drift 与 transition oracle / evidence gate 区分开；MAS runtime transport handoff projection 已把 generic runtime owner 归 OPL。App/operator 当前显示 7 个 open external evidence request、4 个 remaining evidence gate、10 个 evidence-gated bridge modules。 | MAG/RCA 还缺外部默认 caller / App / live owner-chain evidence；MAS 还缺真实 provider / App / owner receipt evidence，不是 domain ready；MAS physical delete/archive 还需 no-active-caller 与 parity gate。 | MAG/RCA 用 release/dist/default caller evidence、App evidence 和 live owner receipt chain 证明生产消费；MAS 用 paper-line provider/app evidence 证明迁移后目标边界持续成立，并在 parity 成立后清理不再需要的 active-path residue；必须等待 production evidence 的项写成 explicit evidence gate，不写成 generated drift。 |
@@ -71,13 +71,13 @@ OPL 已具备完整生产级智能体框架的控制面骨架，并已进入 liv
 - provider completion 等于 domain ready、quality ready、fundability ready、visual ready 或 export ready。
 - 不能把 MAS descriptor ready、read model、provider proof、replacement proof、generated bundle ready、`runtime_transport_handoff_projection` 或机器合同 gap count 为 0 单独写成 MAS 物理纯净模板已完成；MAS generic runtime owner 已机器化归 OPL，但 physical delete/archive、App/workbench production caller 和 live paper evidence 仍单独验收。
 
-## 一步到位并行落地计划
+## 一步到位并行守门面
 
-该计划按可并行 lane 收敛，不按线性阶段等待。任一 lane 只能在满足 owner boundary、repo-native verification、domain owner receipt、no-regression evidence 或 typed blocker 后写成完成；没有 fresh evidence 不写完成。并行开发完成后必须回到 main 做统一吸收、验证和 worktree/branch 清理。
+这里记录的是已落地守门面和仍需 production evidence 的分界，不是阶段计划。语义治理类 lane 可由并行 worktree/subagent 独立推进；完成后必须吸收回 main、清理临时 worktree/branch，并在 main 上完成统一验证。任一 production evidence lane 只能在满足 owner boundary、repo-native verification、domain owner receipt、no-regression evidence 或 typed blocker 后写成完成；没有 fresh evidence 不写完成。
 
 | lane | 当前状态 | 可并行完成门槛 |
 | --- | --- | --- |
-| `semantic_single_truth_regression_guard` | provider readiness single payload、generated drift/evidence gate、summary-first App drilldown、family-runtime parser split、stage scope/guarantee projection 和 legacy vocabulary hygiene 已落地。 | 后续新增 surface 只能通过回归测试扩展；任何 readiness、generated surface、App route、stage guarantee 或 legacy cleanup 读法都必须引用唯一 owner payload。 |
+| `semantic_hygiene_regression_guard` | 六大污染点的机器守门面已落地：provider readiness single payload、generated drift/evidence gate、summary-first App drilldown、family-runtime parser split、stage scope/guarantee projection 和 legacy vocabulary hygiene。 | 后续新增 surface 只能通过回归测试扩展；任何 readiness、generated surface、App route、stage guarantee 或 legacy cleanup 读法都必须引用唯一 owner payload。 |
 | `stage_launch_scope_and_executor_scaleout` | stage admission / proof-bundle / `guarantee_mode` projection 已落地。 | selected executor binding、consumed refs、expected receipt refs、source/artifact/workspace scope refs 与 monitor freshness 进入真实 production caller 链路。 |
 | `external_generated_surface_production_evidence` for MAS/MAG/RCA | repo-side generated/handler target consumption 已闭合；OPL refs-only evidence receipt ledger 与 App drilldown 状态消费已落地。 | 补真实外部 default caller、App、release/dist、live owner-chain 和 direct/hosted parity 证据。 |
 | `MAS physical thinning closeout` | runtime handoff projection 已落地。 | runner / worker lease / supervisor / workbench projection / SQLite lifecycle writer 完成 no-active-caller、parity、delete/archive/tombstone。 |
@@ -92,3 +92,21 @@ OPL 已具备完整生产级智能体框架的控制面骨架，并已进入 liv
 | `RCA naming contract hygiene tail` | generated/hosted shell 与 legacy cleanup 已闭合，剩 naming tail。 | 历史 `managed` 命名完成 compatibility-free contract / tombstone 清理。 |
 | `physical skeleton layout` | OPL read model 能区分 descriptor readiness、skeleton audit 与 production closure gaps。 | direct/hosted parity、restore/provenance proof、focused tests 与 no-forbidden-write proof 稳定后逐仓迁移 repo-source skeleton；workspace artifacts 不迁入源码树。 |
 | `legacy physical retirement` | 旧 vocabulary 已限定到 diagnostic、fixture、provenance、history 或 negative guard；三仓 OPL cleanup dry-run apply 已 ready，且 OPL refs-only cleanup ledger 已 apply/verify 到 receipt。 | replacement proof 与 no-active-caller proof 同时通过后，domain owner 删除 active residue 或迁入 history/tombstone；OPL 只写 refs-only cleanup ledger，不保留兼容接口。 |
+
+主线验证命令必须在 main 吸收后执行并记录结果：
+
+- `rtk ./scripts/verify.sh`
+- `rtk npm run test:fast`
+- `rtk npm run test:meta`
+- `rtk npm run test:artifact`
+- `rtk opl agents interfaces --domain mas --json`
+- `rtk opl agents interfaces --domain mag --json`
+- `rtk opl agents interfaces --domain rca --json`
+- `rtk opl stages proof-bundle --domain mas --json`
+- `rtk opl stages proof-bundle --domain mag --json`
+- `rtk opl stages proof-bundle --domain rca --json`
+- `rtk opl family-runtime status --json`
+- `rtk opl runtime app-operator-drilldown --json`
+- `rtk opl runtime app-operator-drilldown --detail full --json`
+- `rtk git status --short`
+- `rtk git worktree list`
