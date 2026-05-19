@@ -25,7 +25,12 @@
     "research_wiki_refs",
     "runtime_event_ledger_refs",
     "provider_switch_hygiene_refs",
-    "claim_assurance_map_refs"
+    "claim_assurance_map_refs",
+    "helper_skill_drift_guard_refs",
+    "assurance_contract_refs",
+    "adversarial_review_gate_refs",
+    "experiment_queue_recovery_refs",
+    "publication_aftercare_plan_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -118,6 +123,11 @@
       "runtime_event_ledger_refs",
       "provider_switch_hygiene_refs",
       "claim_assurance_map_refs",
+      "helper_skill_drift_guard_refs",
+      "assurance_contract_refs",
+      "adversarial_review_gate_refs",
+      "experiment_queue_recovery_refs",
+      "publication_aftercare_plan_refs",
       "target_editable_surface_refs",
       "evidence_delta_refs"
     ],
@@ -126,7 +136,12 @@
       "analysis_queue_manifest",
       "runtime_event_ledger",
       "provider_switch_hygiene",
-      "claim_assurance_map"
+      "claim_assurance_map",
+      "helper_skill_drift_guard",
+      "assurance_contract",
+      "adversarial_review_gate",
+      "experiment_queue_recovery",
+      "publication_aftercare_plan"
     ],
     "forbidden_payloads": [
       "body",
@@ -136,7 +151,8 @@
       "memory_body",
       "publication_verdict",
       "quality_verdict",
-      "writeback_accept_reject_decision"
+      "writeback_accept_reject_decision",
+      "shared_submission_action"
     ],
     "consumer_outputs": [
       "agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs",
@@ -361,6 +377,16 @@
       "json"
     ],
     "status": "ready_for_connector_consumption_refs_only",
+    "source_ref_groups": [
+      "suite_result_refs",
+      "trajectory_refs",
+      "scorecard_refs",
+      "promotion_gate_refs",
+      "integration_contract_refs",
+      "review_trace_refs",
+      "review_evidence_refs",
+      "log_mined_candidate_refs"
+    ],
     "upload_external_service": false,
     "reads_domain_body": false,
     "authority_boundary": "connector envelopes only carry refs and connector-shaped metadata; connectors cannot read domain bodies or upload from OPL core"
