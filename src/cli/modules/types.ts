@@ -73,6 +73,10 @@ type RuntimeManagerActionCliInput = {
   mode: 'dry_run' | 'apply';
 };
 
+type RuntimeAppOperatorDrilldownCliInput = {
+  detailLevel: 'summary' | 'full';
+};
+
 type ObservabilityExportCliInput = {
   format: 'json' | 'openmetrics';
 };
@@ -202,6 +206,7 @@ export type {
   LaunchDomainCliInput,
   ParsedCliInput,
   ProductEntryCliInput,
+  RuntimeAppOperatorDrilldownCliInput,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,

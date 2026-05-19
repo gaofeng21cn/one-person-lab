@@ -7,6 +7,7 @@ import type {
   LaunchDomainCliInput,
   ObservabilityExportCliInput,
   ProductEntryCliInput,
+  RuntimeAppOperatorDrilldownCliInput,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
@@ -404,6 +405,42 @@ function parseRuntimeManagerActionArgs(
   return { mode };
 }
 
+function parseRuntimeAppOperatorDrilldownArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): RuntimeAppOperatorDrilldownCliInput {
+  let detailLevel: RuntimeAppOperatorDrilldownCliInput['detailLevel'] = 'summary';
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--full') {
+      detailLevel = 'full';
+      continue;
+    }
+    if (token === '--detail') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) {
+        throw buildUsageError('Missing value for option: --detail.', spec, { option: '--detail' });
+      }
+      if (value !== 'summary' && value !== 'full') {
+        throw buildUsageError('runtime app-operator-drilldown --detail must be summary or full.', spec, {
+          option: '--detail',
+          value,
+        });
+      }
+      detailLevel = value;
+      index += 1;
+      continue;
+    }
+
+    throw buildUsageError(`Unknown option for runtime app-operator-drilldown: ${token}.`, spec, {
+      option: token,
+    });
+  }
+
+  return { detailLevel };
+}
+
 function parseObservabilityExportArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -767,6 +804,7 @@ export {
   parsePort,
   parsePositiveInteger,
   parseProductEntryArgs,
+  parseRuntimeAppOperatorDrilldownArgs,
   parseResumeArgs,
   parseObservabilityExportArgs,
   parseRuntimeManagerActionArgs,
