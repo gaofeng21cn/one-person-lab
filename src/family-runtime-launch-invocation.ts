@@ -8,17 +8,25 @@ type LaunchInvocationBlockerReason =
   | 'non_default_executor_binding_ref_missing'
   | 'agent_authoring_requires_bounded_edit_ref';
 
-type AllowedAgentAction = 'retrieve' | 'select' | 'bind' | 'launch' | 'deploy' | 'author_bounded_edit';
+const invocationAgentActions = ['retrieve', 'select', 'bind', 'launch', 'deploy'] as const;
+const authoringAgentActions = ['retrieve', 'select', 'bind', 'author_bounded_edit'] as const;
 
 export interface StageLaunchInvocationProjection {
   surface_kind: 'opl_stage_launch_invocation';
   version: 'opl-stage-launch-invocation.v1';
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
-  provider_kind: FamilyRuntimeProviderKind;
   invocation_mode: InvocationMode;
-  allowed_agent_actions: AllowedAgentAction[];
+  allowed_agent_actions: Array<typeof invocationAgentActions[number] | typeof authoringAgentActions[number]>;
   bounded_edit_ref: string | null;
+  policy: {
+    stage_pack_launch_scope: 'approved_or_admitted_only';
+    authoring_output: 'bounded_edit_ref_only';
+    unadmitted_agent_generated_stage_pack: 'fail_closed';
+    graphflow_runtime_dependency: false;
+    runtime_equivalence_claim: false;
+  };
+  provider_kind: FamilyRuntimeProviderKind;
   selected_executor_kind: string;
   default_executor: boolean;
   executor_binding_ref: string | null;
@@ -37,13 +45,6 @@ export interface StageLaunchInvocationProjection {
     workspace_binding_ref: string;
     executor_binding_ref: string | null;
     bounded_edit_ref: string | null;
-  };
-  policy: {
-    stage_pack_launch_scope: 'approved_or_admitted_only';
-    authoring_output: 'bounded_edit_ref_only';
-    unadmitted_agent_generated_stage_pack: 'fail_closed';
-    graphflow_runtime_dependency: false;
-    runtime_equivalence_claim: false;
   };
   blocker_reason: LaunchInvocationBlockerReason | null;
   conflict_or_blocker_envelopes: ReturnType<typeof buildFamilyConflictOrBlockerEnvelope>[];
@@ -74,7 +75,7 @@ export function buildStageLaunchInvocationProjection(input: {
   sourceFingerprint?: string | null;
   executorKind?: string | null;
   executorBindingRef?: string | null;
-  invocationMode?: 'invocation' | 'authoring' | null;
+  invocationMode?: string | null;
   boundedEditRef?: string | null;
   taskId?: string | null;
   idempotencyKey: string;
@@ -117,17 +118,24 @@ export function buildStageLaunchInvocationProjection(input: {
     ],
   });
   const allowedAgentActions: StageLaunchInvocationProjection['allowed_agent_actions'] = mode === 'authoring'
-    ? ['retrieve', 'select', 'bind', 'author_bounded_edit']
-    : ['retrieve', 'select', 'bind', 'launch', 'deploy'];
+    ? [...authoringAgentActions]
+    : [...invocationAgentActions];
   return {
     surface_kind: 'opl_stage_launch_invocation',
     version: 'opl-stage-launch-invocation.v1',
     domain_id: input.domainId,
     stage_id: input.stageId,
-    provider_kind: input.providerKind,
     invocation_mode: mode,
     allowed_agent_actions: allowedAgentActions,
     bounded_edit_ref: boundedEditRef,
+    policy: {
+      stage_pack_launch_scope: 'approved_or_admitted_only',
+      authoring_output: 'bounded_edit_ref_only',
+      unadmitted_agent_generated_stage_pack: 'fail_closed',
+      graphflow_runtime_dependency: false,
+      runtime_equivalence_claim: false,
+    },
+    provider_kind: input.providerKind,
     selected_executor_kind: selectedExecutorKind,
     default_executor: defaultExecutor,
     executor_binding_ref: executorBindingRef,
@@ -143,13 +151,6 @@ export function buildStageLaunchInvocationProjection(input: {
       workspace_binding_ref: workspaceLocatorRef,
       executor_binding_ref: executorBindingRef,
       bounded_edit_ref: boundedEditRef,
-    },
-    policy: {
-      stage_pack_launch_scope: 'approved_or_admitted_only',
-      authoring_output: 'bounded_edit_ref_only',
-      unadmitted_agent_generated_stage_pack: 'fail_closed',
-      graphflow_runtime_dependency: false,
-      runtime_equivalence_claim: false,
     },
     blocker_reason: blockerReason,
     conflict_or_blocker_envelopes: blockerReason
