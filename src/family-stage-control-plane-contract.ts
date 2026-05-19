@@ -19,6 +19,19 @@ export interface FamilyStageSurfaceRef {
   label?: string;
 }
 
+export interface FamilyStageRuntimeAssumption extends JsonRecord {
+  assumption_id?: string;
+  id?: string;
+  ref?: string;
+  name?: string;
+  owner?: string;
+  freshness_window_ref?: string;
+  observed_at_ref?: string;
+  invalidated_by?: string[];
+  repair_action?: string;
+  monitor_refs?: FamilyStageSurfaceRef[];
+}
+
 export type FamilyStageTrustLane =
   | 'opl_framework'
   | 'domain_agent'
@@ -45,7 +58,7 @@ export interface FamilyStageContract extends JsonRecord {
   boundary_assumptions: string[];
   properties: string[];
   runtime_event_refs?: string[];
-  runtime_assumptions: string[];
+  runtime_assumptions: Array<string | FamilyStageRuntimeAssumption>;
   monitor_refs: FamilyStageSurfaceRef[];
   source_scope_refs: FamilyStageSurfaceRef[];
   artifact_scope_refs: FamilyStageSurfaceRef[];
@@ -143,6 +156,28 @@ function normalizeSurfaceRefs(value: unknown, field: string) {
   return value.map((entry, index) => normalizeSurfaceRef(entry, `${field}[${index}]`));
 }
 
+function normalizeRuntimeAssumption(value: unknown, field: string): string | FamilyStageRuntimeAssumption {
+  const text = optionalString(value);
+  if (text) {
+    return text;
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be a string or an object.`);
+  }
+  return {
+    ...value,
+    invalidated_by: readStringList(value.invalidated_by),
+    monitor_refs: normalizeSurfaceRefs(value.monitor_refs, `${field}.monitor_refs`),
+  };
+}
+
+function normalizeRuntimeAssumptions(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((entry, index) => normalizeRuntimeAssumption(entry, `${field}[${index}]`));
+}
+
 const FAMILY_STAGE_KINDS = new Set<string>([
   'intake',
   'planning',
@@ -196,7 +231,7 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     boundary_assumptions: readStringList(value.boundary_assumptions),
     properties: readStringList(value.properties),
     runtime_event_refs: readStringList(value.runtime_event_refs),
-    runtime_assumptions: readStringList(value.runtime_assumptions),
+    runtime_assumptions: normalizeRuntimeAssumptions(value.runtime_assumptions, 'stage_contract.runtime_assumptions'),
     monitor_refs: normalizeSurfaceRefs(value.monitor_refs, 'stage_contract.monitor_refs'),
     source_scope_refs: normalizeSurfaceRefs(value.source_scope_refs, 'stage_contract.source_scope_refs'),
     artifact_scope_refs: normalizeSurfaceRefs(value.artifact_scope_refs, 'stage_contract.artifact_scope_refs'),

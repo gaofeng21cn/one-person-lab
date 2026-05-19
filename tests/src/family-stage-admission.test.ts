@@ -339,4 +339,6 @@ test('family stage admission schema freezes OPL non-authority read model', () =>
   const findingProperties = (((schema.$defs as JsonRecord).finding as JsonRecord).properties as JsonRecord);
   assert.ok(stageResultRequired.includes('runtime_event_refs'));
   assert.equal(Boolean(findingProperties.runtime_event_refs_missing_reason), true);
+  assert.equal(Boolean(findingProperties.assumption_id), true);
+  assert.equal(Boolean(findingProperties.minimal_counterexample), true);
 });

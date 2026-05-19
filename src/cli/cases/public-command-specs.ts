@@ -42,8 +42,11 @@ import {
   buildFamilyDomainMemoryMigrationPlan,
 } from '../../family-domain-memory.ts';
 import {
+  buildFamilyStageAssumptionsInspect,
   buildFamilyStageGraphInspect,
+  buildFamilyStagePackRegistryInspect,
   buildFamilyStageProofBundleInspect,
+  buildFamilyStageReplayCertificationInspect,
   buildFamilyStageInspect,
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
@@ -710,6 +713,27 @@ export function buildPublicCommandSpecs(
       examples: ['opl stages graph --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageGraphInspect(getContracts(), args),
+    },
+    'stages assumptions': {
+      usage: 'opl stages assumptions --domain <domain>',
+      summary: 'Project runtime assumption lifecycle status, monitor refs, and typed blockers for one domain stage pack.',
+      examples: ['opl stages assumptions --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageAssumptionsInspect(getContracts(), args),
+    },
+    'stages registry': {
+      usage: 'opl stages registry --domain <domain> [--previous-stage-pack-hash <hash>] [--migration-policy <continue_old_hash|migrate_to_new_hash|blocked_human_gate>]',
+      summary: 'Project a reusable stage-pack registry entry with integrity hash and migration blockers.',
+      examples: ['opl stages registry --domain mas --previous-stage-pack-hash old-hash --migration-policy blocked_human_gate'],
+      group: 'domain',
+      handler: (args) => buildFamilyStagePackRegistryInspect(getContracts(), args),
+    },
+    'stages replay-certification': {
+      usage: 'opl stages replay-certification --domain <domain> [--append-only-event-log-ref <ref>] [--attempt-ledger-ref <ref>] [--recorded-runtime-event-ref <ref>] [--closeout-receipt-ref <ref>]',
+      summary: 'Certify replay readiness from proof-bundle obligations and recorded append-only event / receipt refs.',
+      examples: ['opl stages replay-certification --domain mas --append-only-event-log-ref opl://events/mas --attempt-ledger-ref opl://attempts/mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageReplayCertificationInspect(getContracts(), args),
     },
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
       usage: 'opl contract validate',
