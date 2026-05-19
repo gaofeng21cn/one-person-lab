@@ -386,8 +386,20 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       false,
     );
     assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].agent_id,
+      'mas',
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].command_domain_id,
+      'medautoscience',
+    );
+    assert.equal(
       drilldown.domain_legacy_cleanup_plan_refs.refs[0].apply_command,
-      'opl agents legacy-cleanup apply --domain mas --mode apply --source-ref opl://agents/med-autoscience/legacy-cleanup-plan',
+      'opl agents legacy-cleanup apply --domain medautoscience --mode apply --source-ref opl://agents/med-autoscience/legacy-cleanup-plan',
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].verify_command,
+      'opl agents legacy-cleanup apply --domain medautoscience --mode verify --source-ref opl://agents/med-autoscience/legacy-cleanup-plan',
     );
     assert.deepEqual(
       drilldown.domain_legacy_cleanup_plan_refs.refs[0].action_refs[0].replacement_parity_refs,
