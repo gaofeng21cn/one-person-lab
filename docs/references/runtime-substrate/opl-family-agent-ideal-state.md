@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `north_star_reference`
 State: `active_support`
 Machine boundary: 本文是人读目标态参考。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Date: `2026-05-18`
+Date: `2026-05-19`
 
 ## 文档读法
 
@@ -29,6 +29,22 @@ Declarative Domain Pack
 ```
 
 它不是自带一套运行平台。Domain repo 默认先把领域工作拆成专家 stage，再为每个 stage 声明提示词、工具、知识、质控、输入输出、handoff 和 receipt。工具包括 OPL 提供的通用工具、stage skill、以及无法声明化但边界清晰的私有功能，例如 MAS 的绘图 / 统计 / artifact materialization helper；知识包括领域规则、source refs、memory refs、经验卡、rubric 和 policy。只有领域裁决无法可靠声明化时，domain repo 才保留最小 authority function，例如 quality verdict、artifact mutation authorization、memory accept/reject、source readiness verdict、owner receipt signer 或 domain-specific native helper implementation。
+
+## 语义单真相与冗余治理
+
+理想 OPL Framework 不能靠多个相似读模型分别解释“是否 ready”“谁是 owner”“哪个 surface 是生产入口”。所有面向 CLI、App、Agent、测试和文档的状态，都必须从少数权威机器面派生：
+
+| 语义 | 唯一权威 owner | 可派生 surface | 禁止形态 |
+| --- | --- | --- | --- |
+| provider/runtime readiness | lifecycle-aware provider runtime inspection | `opl family-runtime status`、`opl status runtime`、`opl runtime manager`、App provider panel | 每个命令各自用 env、state file、managed projection 或旧 proof 推断 ready |
+| generated surface readiness | canonical action/stage metadata 与 pack compiler input | CLI、MCP、Skill、product-entry、sidecar、status、session、workbench、OpenAI tool、AI SDK tool | domain repo 声称自己持有 generated wrapper owner，或 generated artifact 与 source metadata 漂移 |
+| App/operator drilldown | summary-first OPL operator projection | App 首页、operator tray、detail drilldown、safe action route | 默认输出巨量 refs/routes，让用户和 App 把 projection 当成第二 runtime |
+| family runtime CLI grammar | registry + scoped parser modules | `opl family-runtime ...` public command surface | 单个超长 parser 同时承载 provider、scheduler、attempt、queue、lifecycle、evidence 语义 |
+| legacy/provenance vocabulary | history/tombstone/provenance docs and negative guards | cleanup plan、audit fixture、migration record | Hermes/Gateway/frontdoor/MDS/default-compat 等旧词回到 active runtime 或默认产品入口 |
+
+这条规则高于现有实现分布。只要一个 surface 需要回答 readiness、owner、production consumption、domain authority、App route 或 legacy cleanup，它必须引用对应权威 payload；不能重新读取另一套局部状态，也不能把描述性文档、旧 proof、fixture 或 historical wording 当成当前真相。
+
+成熟 agent/runtime 工程经验也指向同一约束：Temporal 把 durable workflow 状态、history、workers 和 task queue 分清；LangGraph 把 persistence/checkpoint 用于 thread state、human-in-the-loop 和 time travel；OpenAI Agents SDK 把 sessions、handoffs、guardrails、tracing 分成独立 primitive；MCP 把 tools、resources、prompts 按控制权拆开。OPL 吸收的是这些分层原则，不引入第二 runtime truth。
 
 ## 产品分层
 
