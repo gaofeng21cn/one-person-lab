@@ -290,12 +290,7 @@ test('family stage control plane is resolved from domain manifests as read-only 
     assert.deepEqual(projection.runtime_assumptions, ['source_freshness_within_domain_policy', 'provider_slo_current_before_launch']);
     assert.deepEqual(projection.monitor_refs, [{ ref_kind: 'json_pointer', ref: '/product_entry_manifest/runtime_inventory', role: 'runtime_assumption_monitor' }]);
     assert.deepEqual(projection.guarantee_summary.modes, ['static_admission_only', 'domain_owned_judgment', 'observability_only']);
-    assert.deepEqual(projection.monitor_summary, {
-      runtime_assumption_count: 2,
-      monitor_ref_count: 1,
-      assumption_blocker_count: 0,
-      authority_boundary: 'projection_only_no_domain_verdict_authority',
-    });
+    assert.deepEqual(projection.monitor_summary, { runtime_assumption_count: 2, monitor_ref_count: 1, assumption_blocker_count: 0, authority_boundary: 'projection_only_no_domain_verdict_authority' });
     assert.equal(inspect.family_stage.parity.status, 'aligned');
     assert.equal(inspect.family_stage.admission.status, 'needs_contracts');
     assert.equal(inspect.family_stage.admission.inspected_stage.status, 'needs_contracts');

@@ -57,6 +57,12 @@
   - 冻结轻量 proof-carrying stage-pack bundle，供 OPL 调度 / 准入消费 composition obligation、assumption、receipt ref、runtime-event requirement、test / proof ref、blocker、`proof_runtime_metrics` 与 OPL non-authority boundary；这些 metrics 只做 scheduling / operator observability，不是 domain ready、quality、receipt 或 artifact verdict
 - `family-stage-graph-projection.schema.json`
   - 冻结单个 family stage pack 的 graph projection，供 scheduler / App 消费 nodes、handoff edges、admission state、guarantee modes、integrity digest 与 OPL non-authority boundary
+- `family-stage-pack-registry.schema.json`
+  - 冻结 stage-pack library / registry 投影，按 integrity hash 记录 reusable pack refs、active attempt binding 与迁移策略 blocker
+- `family-stage-replay-certification.schema.json`
+  - 冻结 stage pack replay certification 投影，要求 replay 只读取 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs，不能重新询问 AI、人或外部系统
+- `family-stage-assumption-lifecycle.schema.json`
+  - 冻结 runtime assumption lifecycle 投影，把 stale assumption、缺失 monitor ref 或 owner 的情况转成 typed blocker 和 minimal counterexample
 - `family-domain-memory-ref.schema.json`
   - 冻结 domain-owned memory pack 的 locator-only 引用，覆盖 memory family、pack ref、stage applicability、retrieval/writeback/receipt/recall refs、freshness 与 OPL forbidden authority
 - `family-domain-memory-writeback.schema.json`
@@ -198,11 +204,11 @@ canonical classification 固定为：
 
 GraphFlow / GFL 的吸收点在这里落成 stage pack admission 规则：`family-stage-control-plane` 和 `family-stage-admission` 共同形成 `verified_static_core` 读模型，用于检查 stage id、owner、goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane、scope refs 与 authority boundary 是否自洽。`opl stages list|inspect` 会投影 admission status、composition blocker、effect-boundary / runtime-guard blocker、OPL non-authority boundary 与 `guarantee_mode` summary。准入通过只表示 stage pack 可以进入后续 OPL queue / provider / executor 启动候选；AI 输出、人类批准、外部系统返回、artifact mutation、memory writeback、domain quality / publication / fundability / visual verdict 和 owner receipt 仍属于 `runtime_enforced_boundary`。
 
-GraphFlow / GFL 的 operational assumption monitor 模式在这里落成两个轻量字段：`runtime_assumptions` 声明 stage 启动与运行时必须持续可见的假设，例如 source freshness、provider SLO、boundary failure rate 或 artifact locator freshness；`monitor_refs` 指向 domain-owned 或 OPL-owned monitor projection，让 App/operator surface 能看到这些假设是否有可审计来源。OPL 只投影 monitor refs 和计数，不把 monitor 结果升级为 domain truth、quality verdict、publication / fundability / visual verdict 或 artifact authority。
+GraphFlow / GFL 的 operational assumption monitor 模式在这里落成两个轻量字段和一个 lifecycle 投影：`runtime_assumptions` 声明 stage 启动与运行时必须持续可见的假设，例如 source freshness、provider SLO、boundary failure rate 或 artifact locator freshness；`monitor_refs` 指向 domain-owned 或 OPL-owned monitor projection，让 App/operator surface 能看到这些假设是否有可审计来源。旧字符串 assumption 继续可用；机器可读 assumption object 可以携带 owner、monitor refs、freshness / observed refs、invalidation refs 与 repair action。`family-stage-assumption-lifecycle` 会把 stale assumption、缺 monitor ref 或缺 owner 转成 launch blocker 和 minimal counterexample。OPL 只投影 monitor refs、状态和 blocker，不把 monitor 结果升级为 domain truth、quality verdict、publication / fundability / visual verdict 或 artifact authority。
 
 scope refs 让启动边界可机器读取：`source_scope_refs` 冻结 source cohort，`artifact_scope_refs` 冻结 artifact set，`workspace_scope_refs` 冻结 stage 可用的 workspace/runtime scope。OPL 只投影 refs 和计数。`guarantee_mode` 区分 `static_admission_only`、`runtime_enforced`、`domain_owned_judgment` 与 `observability_only`；它是 scheduler / operator 读法，不是 proof assistant 结论，也不是 domain verdict。
 
-`family-stage-proof-bundle.schema.json` 与 `family-stage-graph-projection.schema.json` 是 OPL 对同一个 stage pack 的 machine-readable 投影。proof bundle 携带 composition、receipt、runtime-event、proof-ref 与 integrity metadata；graph projection 携带 nodes、edges、guarantee modes、graph summary 和同一个 integrity digest。二者都是只读 scheduler / App input，不执行 stage、不验证外部签名、不写 domain truth、不修改 artifact，也不授权 domain readiness。
+`family-stage-proof-bundle.schema.json`、`family-stage-graph-projection.schema.json`、`family-stage-pack-registry.schema.json` 与 `family-stage-replay-certification.schema.json` 是 OPL 对同一个 stage pack 的 machine-readable 投影。proof bundle 携带 composition、receipt、runtime-event、proof-ref 与 integrity metadata；graph projection 携带 nodes、edges、guarantee modes、graph summary 和同一个 integrity digest；registry 按 stage pack hash 暴露 reusable library refs、active attempt binding 与 hash migration policy blocker；replay certification 用 proof bundle obligation 对照 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs。它们都是只读 scheduler / App input，不执行 stage、不重新询问 AI / human / external source、不验证外部签名、不写 domain truth、不修改 artifact，也不授权 domain readiness。
 
 `requires` / `ensures` 组合规则只能由显式 refs、human gate decision 或 owner receipt 满足；组合缺口、证据过期、owner 冲突、receipt 冲突或 executor binding 缺失必须进入 `family-conflict-envelope` / human gate / route-back。OPL 可以选择并绑定 executor 来启动已准入 stage pack，默认 executor 仍是 `Codex CLI`；非默认 executor adapter 必须由 stage pack、domain route 或显式 runtime switch 声明，并产出独立 receipt / audit / fail-closed 证据。
 
