@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
 import { getActiveWorkspaceBinding } from './workspace-registry.ts';
@@ -13,6 +12,10 @@ import {
   insertEvent,
   type taskToPayload,
 } from './family-runtime-store.ts';
+import {
+  runFamilyRuntimeSidecarCommand,
+  sidecarResultErrorMessage,
+} from './family-runtime-sidecar-process.ts';
 
 type DomainExportCommand = {
   argv: string[];
@@ -324,23 +327,22 @@ export function hydrateDomainTasks(
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
       continue;
     }
-    const result = spawnSync(command.argv[0], command.argv.slice(1), {
+    const result = runFamilyRuntimeSidecarCommand(command.argv, {
       cwd: command.cwd,
-      encoding: 'utf8',
       env: process.env,
     });
     const stdout = result.stdout ?? '';
     const stderr = result.stderr ?? '';
-    const exitCode = result.status ?? (result.error ? 127 : 1);
+    const exitCode = result.exit_code;
     if (exitCode !== 0) {
       blockedCount += 1;
       exports.push({
         domain_id: domainId,
-        status: 'failed',
+        status: result.timed_out ? 'timeout' : 'failed',
         command_preview: command.argv,
         command_cwd: command.cwd,
         command_source: command.source,
-        error: result.error?.message || stderr || stdout || `Domain export exited ${exitCode}.`,
+        error: sidecarResultErrorMessage(result, 'Domain export'),
       });
       continue;
     }

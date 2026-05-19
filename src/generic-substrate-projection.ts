@@ -1,9 +1,11 @@
-import { spawnSync } from 'node:child_process';
-
 import { FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './domain-manifest/types.ts';
 import type { FrameworkContracts } from './types.ts';
+import {
+  runFamilyRuntimeSidecarCommand,
+  sidecarResultErrorMessage,
+} from './family-runtime-sidecar-process.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -172,18 +174,17 @@ function readSidecarSubstrateAdapter(entry: DomainManifestCatalogEntry) {
     if (!command) {
       continue;
     }
-    const result = spawnSync(command[0], command.slice(1), {
+    const result = runFamilyRuntimeSidecarCommand(command, {
       cwd: process.cwd(),
-      encoding: 'utf8',
       env: process.env,
       maxBuffer: 10 * 1024 * 1024,
     });
-    if (result.error || (result.status ?? 1) !== 0) {
+    if (result.exit_code !== 0) {
       return {
         status: 'blocked',
         env_name: envName,
         adapter: null,
-        error: result.error?.message ?? result.stderr?.trim() ?? `exit_${result.status ?? 'unknown'}`,
+        error: sidecarResultErrorMessage(result, 'Substrate sidecar export'),
       };
     }
     try {

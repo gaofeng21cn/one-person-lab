@@ -63,6 +63,7 @@ const lanes = {
       'tests/src/cli/cases/workspace-domain.transitions.test.ts',
       'tests/src/cli/cases/family-runtime.test.ts',
       'tests/src/cli/cases/family-runtime-mas-domain-route.test.ts',
+      'tests/src/cli/cases/family-runtime-sidecar-timeout.test.ts',
       'tests/src/cli/cases/family-runtime-cross-repo-e2e.test.ts',
       'tests/src/cli/cases/family-runtime-binding-intake.test.ts',
       'tests/src/cli/cases/family-runtime-paper-autonomy.test.ts',

@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
@@ -61,6 +60,10 @@ import { readMasManagedProviderProjection } from './family-runtime-mas-managed-p
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import { canonicalFamilyRuntimeTaskKind } from './family-runtime-mas-domain-route.ts';
 import { commandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
+import {
+  runFamilyRuntimeSidecarCommand,
+  sidecarResultErrorMessage,
+} from './family-runtime-sidecar-process.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
@@ -289,15 +292,14 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
 
   const dispatchPath = writeFamilyRuntimeDispatchTask(paths, { ...row, attempts: attempt });
   const command = commandForDomain(row.domain_id, dispatchPath);
-  const result = spawnSync(command[0], command.slice(1), {
+  const result = runFamilyRuntimeSidecarCommand(command, {
     cwd: process.cwd(),
-    encoding: 'utf8',
     env: process.env,
   });
 
   const stdout = result.stdout ?? '';
   const stderr = result.stderr ?? '';
-  const exitCode = result.status ?? (result.error ? 127 : 1);
+  const exitCode = result.exit_code;
   const output = parseDispatchOutput(stdout);
   const succeeded = exitCode === 0 && output.forbidden_domain_truth_write !== true;
 
@@ -348,7 +350,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     return { task_id: row.task_id, status: 'succeeded', command_preview: command, output, stage_attempts: stageAttempts };
   }
 
-  const errorMessage = result.error?.message || stderr || stdout || `Domain dispatch exited ${exitCode}.`;
+  const errorMessage = sidecarResultErrorMessage(result, 'Domain dispatch');
   const nextStatus: FamilyRuntimeTaskStatus = attempt >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
   const failedAt = nowIso();
   db.prepare(`
