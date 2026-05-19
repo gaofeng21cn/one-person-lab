@@ -77,7 +77,7 @@ install_managed_node() {
   }
   node_dir="$MANAGED_TOOLCHAIN_ROOT/node-$MANAGED_NODE_VERSION-darwin-$arch"
   archive_url="${OPL_MANAGED_NODE_URL:-https://nodejs.org/dist/$MANAGED_NODE_VERSION/node-$MANAGED_NODE_VERSION-darwin-$arch.tar.gz}"
-  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/node-$MANAGED_NODE_VERSION-darwin-$arch.XXXXXX.tgz")
+  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/node-$MANAGED_NODE_VERSION-darwin-$arch.XXXXXX")
 
   log "Preparing One Person Lab managed Node.js $MANAGED_NODE_VERSION"
   mkdir -p "$MANAGED_TOOLCHAIN_ROOT"
@@ -161,7 +161,7 @@ source_archive_url() {
 
 install_from_archive() {
   local archive_tmp extract_root source_dir
-  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/one-person-lab.XXXXXX.tgz")
+  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/one-person-lab.XXXXXX")
   extract_root=$(mktemp -d "${TMPDIR:-/tmp}/one-person-lab-src.XXXXXX")
   cleanup_archive_tmp() {
     rm -f "$archive_tmp"
