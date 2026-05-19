@@ -17,6 +17,18 @@ They also absorb the useful GraphFlow / GFL pattern of admitting a statically ch
 
 The absorption principle is now **AI-first, contract-light**. OPL contracts govern only launch safety, OPL authority boundaries, key boundary outcome recording, and replay / audit / route-back evidence. They do not freeze AI reasoning, stage-internal planning, domain quality conclusions, or a fixed intelligent workflow. The default operator/App entry is `opl stages readiness --domain <domain>`, which aggregates existing drilldown and advisory refs without adding another authoritative domain verdict. Capacity-budget and domain-validity refs are folded into readiness/proof as advisory diagnostics; they are not standalone default CLI or schema goals.
 
+The active stage-led contract rules are:
+
+1. Stage packs are the launch unit; OPL admits and launches stages, not free-form workflow scripts.
+2. AI-first execution stays outside static contracts; contracts bind prompts, tools, knowledge refs, expected receipts, and authority boundaries.
+3. `requires` / `ensures` composition is checked before launch, while domain judgment remains a runtime/domain-owned result.
+4. The verified static core covers identity, owner, refs, scope, composition, and forbidden-authority constraints only.
+5. Runtime-enforced boundaries cover AI output, human decisions, external systems, artifact mutation, memory writeback, and domain verdicts.
+6. Hard blockers are limited to launch safety, authority violations, missing key runtime-event recording, unsatisfied composition, hard human gates, or missing executor binding.
+7. Capacity, monitor, assumption, cohort-loop, replay, and domain-owner review signals are folded advisory refs in `opl stages readiness --domain <domain>`, not standalone launch-authority schemas.
+8. Descriptor readiness, read-model availability, generated-surface proof, provider proof, or cleanup proof never equals domain ready, artifact ready, or production evidence complete.
+9. Every blocked or incomplete boundary reports a typed blocker, human gate, receipt conflict, or route-back ref instead of a fallback verdict.
+
 ## Ownership Boundary
 
 `one-person-lab` owns:
@@ -62,7 +74,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-stage-cohort-loop.schema.json`
   - refs-only source scope / cohort query / trigger / monitor-metric loop projection for one stage pack, with drilldown findings when the same source set cannot be traced from launch to operator monitoring; OPL does not evaluate source truth, authorize domain readiness, or introduce a GraphFlow runtime
 - `family-stage-runtime-budget.schema.json`
-  - refs-only runtime reliability / capacity budget projection over boundary count, runtime guard count, monitor / metric refs, unmonitored boundary count, and expected-success or boundary-success-rate refs; OPL does not calculate unverified probabilities, authorize domain readiness, or introduce a GraphFlow runtime
+  - refs-only runtime reliability / capacity advisory projection over boundary count, runtime guard count, monitor / metric refs, unmonitored boundary count, and expected-success or boundary-success-rate refs; this folds capacity-budget evidence into readiness warnings / recommendations and drilldown refs, and OPL does not calculate unverified probabilities, authorize domain readiness, or introduce a GraphFlow runtime
 - `family-stage-pack-registry.schema.json`
   - stage-pack library / registry projection keyed by integrity hash, including reusable pack refs, lifecycle status, promotion / deprecation / supersession refs, active attempt binding, migration policy, and migration blockers
 - `family-stage-pack-source-spec.schema.json`
@@ -206,7 +218,7 @@ The GraphFlow / GFL operational-assumption monitor pattern lands here as two lig
 
 The scope refs make launch scope explicit: `source_scope_refs` freeze the source cohort, `artifact_scope_refs` freeze the artifact set, and `workspace_scope_refs` freeze the workspace/runtime scope that the stage is allowed to use. OPL projects these refs and counts only. The `guarantee_mode` projection distinguishes `static_admission_only`, `runtime_enforced`, `domain_owned_judgment`, and `observability_only`; it is an operator/scheduler read model, not a proof assistant result or domain verdict.
 
-GraphFlow / GFL's cohort search / trigger / dashboard closed-loop pattern maps to the refs-only `family-stage-cohort-loop` projection. `source_scope_refs` freezes the source cohort or source set, `cohort_query_refs` points to the auditable query, `trigger_refs` points to the queue / launch / schedule trigger, and `monitor_refs`, `metric_refs`, or `dashboard_metric_refs` point to post-launch observation for the same cohort. Missing links stay visible as drilldown findings with minimal counterexamples. When `--require-stage-admission` is used, the runtime launch gate records those findings as warnings; it blocks executor launch only for admission hard blockers such as authority violations, missing runtime-event recording on effect boundaries, unsatisfied composition, or missing executor binding. The projection is a scheduler/App launch-readiness and operator drilldown input only; it does not execute queries, write source truth, or authorize domain readiness or quality verdicts.
+GraphFlow / GFL's cohort search / trigger / dashboard closed-loop pattern maps to the refs-only `family-stage-cohort-loop` projection. `source_scope_refs` freezes the source cohort or source set, `cohort_query_refs` points to the auditable query, `trigger_refs` points to the queue / launch / schedule trigger, and `monitor_refs`, `metric_refs`, or `dashboard_metric_refs` point to post-launch observation for the same cohort. Missing links stay visible as drilldown findings with minimal counterexamples. When `--require-stage-admission` is used, the runtime launch gate records those findings as warnings; it blocks executor launch only for launch-safety failures, authority violations, missing key runtime-event recording on effect boundaries, unsatisfied composition, hard human gates, or missing executor binding. The projection is a scheduler/App launch-readiness and operator drilldown input only; it does not execute queries, write source truth, or authorize domain readiness or quality verdicts.
 
 GraphFlow / GFL's boundary reliability compounding pattern lands as the refs-only `family-stage-runtime-budget` projection. OPL counts declared boundaries, runtime guards, monitor refs, metric refs, dashboard metric refs, and unmonitored boundaries, then recommends an `expected_success_ref` or `boundary_success_rate_ref` before a runtime budget can be shown as fully observable. The original `p^k` framing is treated only as a heuristic prompt for monitor design: this projection never calculates probability truth, never authorizes domain readiness / quality / artifact verdicts, never blocks launch by default, and never introduces a GraphFlow runtime dependency.
 
