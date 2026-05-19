@@ -291,6 +291,151 @@ db.close();`,
   }
 });
 
+test('runtime snapshot and App drilldown project Temporal restart requery signal history capability SLO', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-capability-slo-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    runCli(['family-runtime', 'events', 'export'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const createdAt = new Date().toISOString();
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      '-e',
+      `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+const checks = {
+  external_temporal_server_reachable: true,
+  managed_worker_ready: true,
+  worker_completed_attempt: true,
+  worker_restart_requery: true,
+  signal_history_preserved: true,
+  typed_closeout_required_for_completed: true,
+  missing_closeout_blocks_completion: true,
+  retry_or_dead_letter_boundary_observed: true,
+  domain_truth_boundary_preserved: true
+};
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_capability_slo_proof',
+    'temporal_residency_proof',
+    'test',
+    JSON.stringify({
+      provider_kind: 'temporal',
+      proof_mode: 'external_temporal_service_worker',
+      closeout_status: 'production_residency_proven',
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_proof',
+        receipt_status: 'proven',
+        provider_kind: 'temporal'
+      }
+    }),
+    ${JSON.stringify(createdAt)}
+  );
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_capability_slo_execution',
+    'temporal_provider_slo_execution_receipt',
+    'test',
+    JSON.stringify({
+      surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+      provider_kind: 'temporal',
+      command: 'opl family-runtime residency proof --provider temporal --production',
+      execution_status: 'executed',
+      receipt_status: 'proven',
+      receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+      production_capability_receipt: {
+        surface_kind: 'opl_temporal_provider_production_capability_receipt',
+        provider_kind: 'temporal',
+        receipt_status: 'proven',
+        capability_status: 'capability_proven',
+        checks,
+        failed_check_ids: [],
+        proven_check_count: Object.keys(checks).length,
+        required_check_count: Object.keys(checks).length,
+        completed_workflow_id: 'wf-capability-completed',
+        blocked_workflow_id: 'wf-capability-blocked',
+        restarted_worker_requery_status: 'stage_attempt_query_available_after_worker_restart'
+      },
+      repair_receipt: {
+        repair_status: 'executed',
+        can_execute_domain_repair: false
+      },
+      authority_boundary: {
+        can_authorize_domain_ready: false
+      }
+    }),
+    ${JSON.stringify(createdAt)}
+  );
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_provider_capability_slo_skipped_after_proof',
+    'temporal_provider_slo_execution_receipt',
+    'test',
+    JSON.stringify({
+      surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+      provider_kind: 'temporal',
+      command: 'opl family-runtime residency proof --provider temporal --production',
+      execution_status: 'skipped',
+      receipt_status: 'skipped',
+      receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+      skip_reason: 'cadence_current',
+      repair_receipt: {
+        repair_status: 'skipped',
+        can_execute_domain_repair: false
+      },
+      authority_boundary: {
+        can_authorize_domain_ready: false
+      }
+    }),
+    ${JSON.stringify(new Date(Date.parse(createdAt) + 1000).toISOString())}
+  );
+db.close();`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const capability = output.runtime_tray_snapshot.provider_continuous_proof.provider_capability_slo;
+
+    assert.equal(capability.status, 'capability_slo_satisfied');
+    assert.equal(capability.restart_requery_ready, true);
+    assert.equal(capability.signal_history_ready, true);
+    assert.equal(capability.typed_closeout_required_ready, true);
+    assert.equal(capability.missing_closeout_block_ready, true);
+    assert.equal(capability.retry_dead_letter_boundary_ready, true);
+    assert.equal(capability.domain_truth_boundary_preserved, true);
+    assert.equal(capability.latest_capability_event_id, 'evt_provider_capability_slo_execution');
+    assert.deepEqual(capability.failed_check_ids, []);
+    assert.equal(capability.authority_boundary.can_authorize_domain_ready, false);
+
+    const appOutput = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const summary = appOutput.app_operator_drilldown.summary;
+    assert.equal(summary.provider_capability_slo_status, 'capability_slo_satisfied');
+    assert.equal(summary.provider_capability_restart_requery_ready, true);
+    assert.equal(summary.provider_capability_signal_history_ready, true);
+    assert.equal(summary.provider_capability_typed_closeout_ready, true);
+    assert.equal(summary.provider_capability_retry_dead_letter_ready, true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime snapshot treats a newer proven provider proof as current after an older blocker', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-recovered-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

@@ -160,6 +160,70 @@ function repairReceiptSummary(input: {
   };
 }
 
+function providerCapabilitySlo(input: {
+  executionEvents: ProviderRuntimeEvent[];
+}) {
+  let latestCapabilityEvent: ProviderRuntimeEvent | undefined;
+  for (let index = input.executionEvents.length - 1; index >= 0; index -= 1) {
+    const event = input.executionEvents[index];
+    if (isRecord(eventPayload(event)?.production_capability_receipt)) {
+      latestCapabilityEvent = event;
+      break;
+    }
+  }
+  const latestCapabilityPayload = eventPayload(latestCapabilityEvent);
+  const receipt = isRecord(latestCapabilityPayload?.production_capability_receipt)
+    ? latestCapabilityPayload.production_capability_receipt
+    : null;
+  const checks = isRecord(receipt?.checks) ? receipt.checks : {};
+  const checkReady = (checkId: string) => checks[checkId] === true;
+  const failedCheckIds = Array.isArray(receipt?.failed_check_ids)
+    ? receipt.failed_check_ids.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const receiptStatus = optionalString(receipt?.receipt_status);
+  const capabilityStatus = optionalString(receipt?.capability_status);
+  const satisfied = receiptStatus === 'proven' && capabilityStatus === 'capability_proven';
+  return {
+    surface_kind: 'opl_temporal_provider_capability_slo_projection',
+    provider_kind: 'temporal',
+    status: satisfied ? 'capability_slo_satisfied' : receipt ? 'capability_slo_blocked' : 'capability_slo_not_observed',
+    latest_receipt_status: receiptStatus,
+    latest_capability_status: capabilityStatus,
+    latest_capability_event_id: latestCapabilityEvent?.event_id ?? null,
+    latest_capability_event_created_at: latestCapabilityEvent?.created_at ?? null,
+    latest_capability_event_age_seconds: eventAgeSeconds(latestCapabilityEvent?.created_at ?? null),
+    required_check_count: typeof receipt?.required_check_count === 'number'
+      ? receipt.required_check_count
+      : 0,
+    proven_check_count: typeof receipt?.proven_check_count === 'number'
+      ? receipt.proven_check_count
+      : 0,
+    failed_check_ids: failedCheckIds,
+    restart_requery_ready: checkReady('worker_restart_requery'),
+    signal_history_ready: checkReady('signal_history_preserved'),
+    typed_closeout_required_ready: checkReady('typed_closeout_required_for_completed'),
+    missing_closeout_block_ready: checkReady('missing_closeout_blocks_completion'),
+    retry_dead_letter_boundary_ready: checkReady('retry_or_dead_letter_boundary_observed'),
+    worker_completed_attempt_ready: checkReady('worker_completed_attempt'),
+    service_worker_ready:
+      checkReady('external_temporal_server_reachable') && checkReady('managed_worker_ready'),
+    domain_truth_boundary_preserved: checkReady('domain_truth_boundary_preserved'),
+    completed_workflow_id: optionalString(receipt?.completed_workflow_id),
+    blocked_workflow_id: optionalString(receipt?.blocked_workflow_id),
+    restarted_worker_requery_status: optionalString(receipt?.restarted_worker_requery_status),
+    evidence_policy:
+      'projection_reads_latest_provider_slo_execution_receipt_capability_checks',
+    authority_boundary: {
+      opl: 'temporal_provider_capability_slo_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_artifact_export: false,
+      can_write_domain_truth: false,
+    },
+  };
+}
+
 function countReceiptField(events: ProviderRuntimeEvent[], fieldName: string, expected: string) {
   return events.filter((event) => {
     const payload = eventPayload(event);
@@ -569,6 +633,9 @@ export function buildProviderContinuousProof(events: ReturnType<typeof listEvent
     continuous_proof_status: proofStatus,
     proof_slo_status: sloStatus,
     cadence_window: cadenceWindow,
+    provider_capability_slo: providerCapabilitySlo({
+      executionEvents: state.executionEvents,
+    }),
     operator_slo_repair_loop: operatorSloRepairLoop({
       continuousProofStatus: proofStatus,
       freshnessStatus,

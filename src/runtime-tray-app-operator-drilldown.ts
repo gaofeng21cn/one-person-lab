@@ -1097,6 +1097,19 @@ function providerCadenceWindowSummary(providerContinuousProof: JsonRecord) {
   };
 }
 
+function providerCapabilitySloSummary(providerContinuousProof: JsonRecord) {
+  const capability = record(providerContinuousProof.provider_capability_slo);
+  return {
+    status: stringValue(capability.status),
+    restart_requery_ready: capability.restart_requery_ready === true,
+    signal_history_ready: capability.signal_history_ready === true,
+    typed_closeout_required_ready: capability.typed_closeout_required_ready === true,
+    missing_closeout_block_ready: capability.missing_closeout_block_ready === true,
+    retry_dead_letter_boundary_ready: capability.retry_dead_letter_boundary_ready === true,
+    domain_truth_boundary_preserved: capability.domain_truth_boundary_preserved === true,
+  };
+}
+
 export function buildAppOperatorDrilldown(input: {
   stageAttemptWorkbench: JsonRecord;
   providerContinuousProof: JsonRecord;
@@ -1114,6 +1127,7 @@ export function buildAppOperatorDrilldown(input: {
   const qualityRefs = qualityReadinessRefs(input.stageAttemptWorkbench);
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
+  const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
   const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
     providerContinuousProof: input.providerContinuousProof,
     stageAttempts: attempts,
@@ -1183,6 +1197,14 @@ export function buildAppOperatorDrilldown(input: {
         providerCadenceWindow.missing_slo_execution_receipt_count,
       provider_cadence_window_blocked_repair_receipt_count:
         providerCadenceWindow.blocked_repair_receipt_count,
+      provider_capability_slo_status: providerCapabilitySlo.status,
+      provider_capability_restart_requery_ready: providerCapabilitySlo.restart_requery_ready,
+      provider_capability_signal_history_ready: providerCapabilitySlo.signal_history_ready,
+      provider_capability_typed_closeout_ready: providerCapabilitySlo.typed_closeout_required_ready,
+      provider_capability_missing_closeout_block_ready: providerCapabilitySlo.missing_closeout_block_ready,
+      provider_capability_retry_dead_letter_ready: providerCapabilitySlo.retry_dead_letter_boundary_ready,
+      provider_capability_domain_truth_boundary_preserved:
+        providerCapabilitySlo.domain_truth_boundary_preserved,
       periodic_execution_ref_count: periodicRefs.refs.length,
       operator_action_route_count: actionRefs.length,
       operator_executable_route_count: actionRefs.filter((ref) => (

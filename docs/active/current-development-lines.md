@@ -48,7 +48,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要已经
 
 | 线路 | 当前 owner | 当前要做 |
 | --- | --- | --- |
-| `provider_runtime` | OPL Runtime Manager / Temporal provider | 固定 Temporal production provider，持续补 cadence、repair execution receipt、restart/re-query/signal/history 长窗口证据。 |
+| `provider_runtime` | OPL Runtime Manager / Temporal provider | 固定 Temporal production provider，保持 cadence / capability SLO satisfied；restart/re-query/signal/history 已进入 OPL provider capability projection，继续补真实 domain owner-chain dispatch 和长时 operator evidence。 |
 | `generated_surface` | OPL pack compiler / generated surface | 从 domain descriptor/stage/action/memory/transition/receipt metadata 派生 entry/status/sidecar/workbench/harness，投影 generated artifact drift manifest 指纹，并迁移生产 caller。 |
 | `domain_private_residue` | OPL functional audit + domain repos | 按 OPL replacement、generated surface、refs-only adapter、minimal authority function、tombstone 分类收薄或删除；MAS runner/supervisor/workbench/SQLite lifecycle writer 是当前最高优先级物理收薄面。 |
 | `lifecycle_memory_artifact` | OPL primitive + domain owner receipt | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 |
