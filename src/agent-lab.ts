@@ -7,6 +7,12 @@ type JsonRecord = Record<string, unknown>;
 type AgentLabDomainId = 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | string;
 type AgentLabStatus = 'passed' | 'blocked';
 type AgentLabIndependentAiReviewStatus = 'approved' | 'review_pending' | 'blocked_from_auto_promotion';
+type AgentLabPromotionRiskTier = 'low_risk' | 'medium_risk' | 'high_risk';
+type AgentLabPromotionSafetyStatus =
+  | 'regression_guard_only'
+  | 'promotion_ready'
+  | 'promotion_blocked'
+  | 'owner_or_human_gate_required';
 
 export type AgentLabTaskManifest = {
   task_id: string;
@@ -134,6 +140,12 @@ export type AgentLabPromotionGate = {
   required_refs: string[];
   regression_suite_refs: string[];
   no_forbidden_write_proof_refs: string[];
+  failure_delta_refs?: string[];
+  independent_ai_review_receipt_refs?: string[];
+  promotion_receipt_refs?: string[];
+  rollback_target_refs?: string[];
+  canary_observation_refs?: string[];
+  owner_or_human_gate_refs?: string[];
   authority_boundary?: JsonRecord;
 };
 
@@ -193,6 +205,14 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function optionalRefs(values: string[] | undefined) {
+  return unique(Array.isArray(values) ? values : []);
+}
+
+function hasRefs(values: string[] | undefined) {
+  return optionalRefs(values).length > 0;
 }
 
 function textField(record: JsonRecord | null, key: string): string | null {
@@ -289,6 +309,122 @@ function reviewReceiptInputForTask(task: AgentLabTaskManifest): unknown {
   return task.mechanism_evolution_inputs.independent_ai_review_receipt;
 }
 
+function promotionRiskTier(task: AgentLabTaskManifest): AgentLabPromotionRiskTier {
+  if (task.improvement_candidate.allowed_change_scope === 'manual_review_required') {
+    return 'high_risk';
+  }
+
+  if (task.improvement_candidate.candidate_kind === 'prompt'
+    || task.improvement_candidate.candidate_kind === 'rubric_gap'
+    || task.improvement_candidate.candidate_kind === 'display_metadata'
+    || task.improvement_candidate.candidate_kind === 'test_metadata') {
+    return 'low_risk';
+  }
+
+  return 'medium_risk';
+}
+
+function failureDeltaRefs(task: AgentLabTaskManifest) {
+  return unique([
+    ...optionalRefs(task.promotion_gate.failure_delta_refs),
+    ...task.improvement_candidate.evidence_refs.filter((ref) =>
+      ref.startsWith('failure-delta:')
+      || ref.startsWith('evidence-delta:')
+      || ref.includes('/failure-delta/')
+      || ref.includes('/evidence-delta/')
+      || ref.includes('failure_delta')
+      || ref.includes('evidence_delta')),
+  ]);
+}
+
+function buildPromotionSafetyAssessment(
+  task: AgentLabTaskManifest,
+  independentAiReviewAssessment: AgentLabIndependentAiReviewAssessment,
+) {
+  const riskTier = promotionRiskTier(task);
+  const deltaRefs = failureDeltaRefs(task);
+  const missingRequiredRefs: string[] = [];
+
+  if (task.promotion_gate.gate_status !== 'passed') {
+    missingRequiredRefs.push('promotion_gate_blocked');
+  }
+  if (!hasRefs(task.promotion_gate.regression_suite_refs)) {
+    missingRequiredRefs.push('promotion_regression_suite_ref_missing');
+  }
+  if (!hasRefs(task.promotion_gate.no_forbidden_write_proof_refs)) {
+    missingRequiredRefs.push('promotion_no_forbidden_write_proof_missing');
+  }
+
+  if (deltaRefs.length === 0) {
+    return {
+      surface_kind: 'opl_agent_lab_promotion_safety_assessment',
+      risk_tier: riskTier,
+      safety_status: missingRequiredRefs.length === 0
+        ? 'regression_guard_only' as AgentLabPromotionSafetyStatus
+        : 'promotion_blocked' as AgentLabPromotionSafetyStatus,
+      has_failure_delta: false,
+      failure_delta_refs: deltaRefs,
+      missing_required_refs: unique(missingRequiredRefs),
+      automatic_mechanism_promotion_ready: false,
+      authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+    };
+  }
+
+  if (riskTier === 'high_risk') {
+    if (!hasRefs(task.promotion_gate.owner_or_human_gate_refs)) {
+      missingRequiredRefs.push('promotion_owner_or_human_gate_ref_missing');
+    }
+    return {
+      surface_kind: 'opl_agent_lab_promotion_safety_assessment',
+      risk_tier: riskTier,
+      safety_status: missingRequiredRefs.length === 0
+        ? 'owner_or_human_gate_required' as AgentLabPromotionSafetyStatus
+        : 'promotion_blocked' as AgentLabPromotionSafetyStatus,
+      has_failure_delta: true,
+      failure_delta_refs: deltaRefs,
+      missing_required_refs: unique(missingRequiredRefs),
+      automatic_mechanism_promotion_ready: false,
+      authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+    };
+  }
+
+  const independentAiReviewReceiptRefs = optionalRefs(task.promotion_gate.independent_ai_review_receipt_refs);
+  if (independentAiReviewReceiptRefs.length === 0) {
+    missingRequiredRefs.push('promotion_independent_ai_review_receipt_missing');
+  }
+  if (independentAiReviewReceiptRefs.length > 0 && !independentAiReviewAssessment.ai_review_approved) {
+    missingRequiredRefs.push('promotion_real_independent_ai_review_missing');
+  }
+  if (independentAiReviewAssessment.receipt_ref
+    && independentAiReviewReceiptRefs.length > 0
+    && !independentAiReviewReceiptRefs.includes(independentAiReviewAssessment.receipt_ref)) {
+    missingRequiredRefs.push('promotion_independent_ai_review_receipt_ref_mismatch');
+  }
+  if (!hasRefs(task.promotion_gate.promotion_receipt_refs)) {
+    missingRequiredRefs.push('promotion_receipt_ref_missing');
+  }
+  if (!hasRefs(task.promotion_gate.rollback_target_refs)) {
+    missingRequiredRefs.push('promotion_rollback_target_ref_missing');
+  }
+  if (riskTier === 'medium_risk' && !hasRefs(task.promotion_gate.canary_observation_refs)) {
+    missingRequiredRefs.push('promotion_canary_observation_ref_missing');
+  }
+
+  const missing = unique(missingRequiredRefs);
+  return {
+    surface_kind: 'opl_agent_lab_promotion_safety_assessment',
+    risk_tier: riskTier,
+    safety_status: missing.length === 0
+      ? 'promotion_ready' as AgentLabPromotionSafetyStatus
+      : 'promotion_blocked' as AgentLabPromotionSafetyStatus,
+    has_failure_delta: true,
+    failure_delta_refs: deltaRefs,
+    missing_required_refs: missing,
+    automatic_mechanism_promotion_ready: missing.length === 0,
+    authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+  };
+}
+
 function hasForbiddenMemoryBody(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
@@ -335,12 +471,14 @@ function recoveryPassed(task: AgentLabTaskManifest) {
 function buildRun(task: AgentLabTaskManifest) {
   const mechanismEvolutionInputs = mechanismEvolutionInputsForTask(task);
   const independentAiReviewAssessment = assessIndependentAiReviewReceipt(reviewReceiptInputForTask(task));
+  const promotionSafetyAssessment = buildPromotionSafetyAssessment(task, independentAiReviewAssessment);
   const recoveryPassedCount = recoveryPassed(task).length;
   const recoveryProbeCount = task.recovery_probes.length;
   const failureTaxonomy = [
     recoveryPassedCount === recoveryProbeCount ? null : 'recovery_probe_mismatch',
     task.scorecard.passed ? null : 'domain_scorecard_blocked',
     task.promotion_gate.gate_status === 'passed' ? null : 'promotion_gate_blocked',
+    ...promotionSafetyAssessment.missing_required_refs.filter((entry) => entry !== 'promotion_gate_blocked'),
   ].filter((entry): entry is string => Boolean(entry));
   const status: AgentLabStatus = failureTaxonomy.length === 0 ? 'passed' : 'blocked';
   return {
@@ -380,6 +518,7 @@ function buildRun(task: AgentLabTaskManifest) {
     independent_ai_review_assessment: independentAiReviewAssessment,
     improvement_candidate: task.improvement_candidate,
     promotion_gate: task.promotion_gate,
+    promotion_safety_assessment: promotionSafetyAssessment,
     mechanism_evolution_inputs: mechanismEvolutionInputs,
     mechanism_evolution_input_refs: mechanismEvolutionInputRefs(mechanismEvolutionInputs),
     authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
@@ -387,6 +526,7 @@ function buildRun(task: AgentLabTaskManifest) {
 }
 
 function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRun>[]) {
+  const promotionSafetyAssessments = runs.map((run) => run.promotion_safety_assessment);
   const recoveryProbeRefs = unique(input.tasks.flatMap((task) =>
     task.recovery_probes.map((probe) => probe.probe_ref)));
   const scorecardRefs = unique(input.tasks.map((task) => task.scorecard.scorecard_ref));
@@ -411,7 +551,7 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       failure_taxonomy_observed: allRunsHaveFailureTaxonomy,
       improvement_candidates_observed: improvementCandidateRefs.length > 0,
       promotion_gates_observed: promotionGateRefs.length > 0
-        && input.tasks.every((task) => task.promotion_gate.no_forbidden_write_proof_refs.length > 0),
+        && promotionSafetyAssessments.every((assessment) => assessment.missing_required_refs.length === 0),
       no_memory_body_observed: !memoryBodyObserved,
       forbidden_authority_flags_all_false: forbiddenAuthorityFlags.length === 0,
     } satisfies Record<AgentLabObservationKey, boolean>,
@@ -424,6 +564,15 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       oracle_refs: unique(input.tasks.flatMap((task) => task.oracle_refs)),
       improvement_candidate_refs: improvementCandidateRefs,
       promotion_gate_refs: promotionGateRefs,
+      promotion_independent_ai_review_receipt_refs: unique(input.tasks.flatMap((task) =>
+        optionalRefs(task.promotion_gate.independent_ai_review_receipt_refs))),
+      promotion_receipt_refs: unique(input.tasks.flatMap((task) =>
+        optionalRefs(task.promotion_gate.promotion_receipt_refs))),
+      rollback_target_refs: unique(input.tasks.flatMap((task) =>
+        optionalRefs(task.promotion_gate.rollback_target_refs))),
+      canary_observation_refs: unique(input.tasks.flatMap((task) =>
+        optionalRefs(task.promotion_gate.canary_observation_refs))),
+      failure_delta_refs: unique(promotionSafetyAssessments.flatMap((assessment) => assessment.failure_delta_refs)),
       artifact_refs: unique(input.tasks.flatMap((task) => task.trajectory.artifact_refs)),
       receipt_refs: unique(input.tasks.flatMap((task) => task.trajectory.receipt_refs)),
       mechanism_evolution_input_refs: mechanismEvolutionInputRefs,
@@ -493,9 +642,18 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       ai_review_approved_count: aiReviewApprovedCount,
       improvement_candidate_count: input.tasks.length,
       promotion_gate_passed_count: promotionGatePassedCount,
+      regression_guard_only_count: runs.filter((run) =>
+        run.promotion_safety_assessment.safety_status === 'regression_guard_only').length,
+      promotion_safety_ready_count: runs.filter((run) =>
+        run.promotion_safety_assessment.safety_status === 'promotion_ready').length,
+      promotion_safety_blocked_count: runs.filter((run) =>
+        run.promotion_safety_assessment.safety_status === 'promotion_blocked').length,
+      owner_or_human_gate_required_count: runs.filter((run) =>
+        run.promotion_safety_assessment.safety_status === 'owner_or_human_gate_required').length,
       promotable_candidate_count: runs.filter((run) =>
         run.promotion_gate.gate_status === 'passed'
-        && run.independent_ai_review_assessment.ai_review_approved).length,
+        && run.independent_ai_review_assessment.ai_review_approved
+        && run.promotion_safety_assessment.automatic_mechanism_promotion_ready).length,
       memory_body_observed: observationResult.counters.memory_body_observed,
       forbidden_authority_flag_count: observationResult.counters.forbidden_authority_flag_count,
     },

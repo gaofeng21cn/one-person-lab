@@ -247,6 +247,7 @@ function buildMechanismPromotionDecision(input: {
   riskTier?: 'low_risk' | 'medium_risk' | 'high_risk';
   independentReview?: IndependentAiReviewReceiptInput;
   independentAiReviewAssessment?: ReturnType<typeof assessIndependentAiReviewReceipt>;
+  promotionSafetyReady?: boolean;
   sourceRefs?: string[];
 } = {}) {
   const suiteStatus = input.suiteStatus ?? 'passed';
@@ -256,6 +257,7 @@ function buildMechanismPromotionDecision(input: {
     ?? assessIndependentAiReviewReceipt(independentReview);
   const gatesPassed = suiteStatus === 'passed'
     && riskTier !== 'high_risk'
+    && input.promotionSafetyReady === true
     && independentAiReviewAssessment.ai_review_approved
     && reviewReceiptVerdict(independentReview) === 'approved_for_risk_tiered_auto_promotion';
   const promotionDecision = riskTier === 'high_risk'
@@ -685,6 +687,7 @@ function optimizerCandidates(results: AgentLabSuiteResult[]) {
         riskTier,
         independentReview: reviewReceipt,
         independentAiReviewAssessment,
+        promotionSafetyReady: run.promotion_safety_assessment.automatic_mechanism_promotion_ready,
         sourceRefs: [result.result_id, run.run_id, run.promotion_gate.gate_ref],
       });
       const passedFixtureGate = run.status === 'passed' && run.promotion_gate.gate_status === 'passed';
@@ -710,13 +713,16 @@ function optimizerCandidates(results: AgentLabSuiteResult[]) {
         independent_ai_review_ref: reviewReceiptRef(reviewReceipt),
         independent_ai_review_receipt: reviewReceipt,
         independent_ai_review_assessment: independentAiReviewAssessment,
+        promotion_safety_assessment: run.promotion_safety_assessment,
         promotion_decision: promotionDecision.promotion_decision,
         promotion_receipt_ref: promotionDecision.promotion_receipt_ref,
         rollback_target_ref: promotionDecision.rollback_target_ref,
         candidate_status: !passedFixtureGate
           ? 'blocked'
-          : independentAiReviewAssessment.ai_review_approved
+          : promotionDecision.automatic_mechanism_promotion_ready
             ? 'gated_candidate_ready'
+            : run.promotion_safety_assessment.safety_status === 'regression_guard_only'
+              ? 'regression_guard_only'
             : independentAiReviewAssessment.review_status,
         automatic_mechanism_promotion_ready: promotionDecision.automatic_mechanism_promotion_ready,
         authority_boundary: AUTHORITY_BOUNDARY,
@@ -735,6 +741,12 @@ function promotionGates(results: AgentLabSuiteResult[]) {
       required_refs: run.promotion_gate.required_refs,
       regression_suite_refs: run.promotion_gate.regression_suite_refs,
       no_forbidden_write_proof_refs: run.promotion_gate.no_forbidden_write_proof_refs,
+      failure_delta_refs: run.promotion_gate.failure_delta_refs ?? [],
+      independent_ai_review_receipt_refs: run.promotion_gate.independent_ai_review_receipt_refs ?? [],
+      promotion_receipt_refs: run.promotion_gate.promotion_receipt_refs ?? [],
+      rollback_target_refs: run.promotion_gate.rollback_target_refs ?? [],
+      canary_observation_refs: run.promotion_gate.canary_observation_refs ?? [],
+      promotion_safety_assessment: run.promotion_safety_assessment,
       can_promote_default_agent: false,
       authority_boundary: AUTHORITY_BOUNDARY,
     })));
@@ -1080,6 +1092,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     riskTier: 'medium_risk',
     independentReview,
     independentAiReviewAssessment,
+    promotionSafetyReady: candidates.some((candidate) => candidate.automatic_mechanism_promotion_ready),
     sourceRefs: [suiteResult.result_id, ...candidateRefs, ...transitionRefs],
   });
   const promotionReceipt = buildMechanismPromotionReceipt(mechanismPromotionDecision);
@@ -1308,6 +1321,8 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
       promotable_candidate_count: candidates.filter((candidate) =>
         candidate.candidate_status === 'gated_candidate_ready').length,
       auto_promotable_candidate_count: autoPromotableCandidates.length,
+      regression_guard_only_count: candidates.filter((candidate) =>
+        candidate.candidate_status === 'regression_guard_only').length,
       ai_review_approved_count: aiReviewApprovedCount,
       candidates,
     },
