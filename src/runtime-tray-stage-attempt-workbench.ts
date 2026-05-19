@@ -27,6 +27,10 @@ import {
   buildAttemptGenericProjections,
   buildWorkbenchGenericProjections,
 } from './runtime-tray-stage-attempt-generic-projections.ts';
+import {
+  buildAttemptHumanReviewBurdenBudget,
+  buildFamilyHumanReviewBurdenBudget,
+} from './family-human-review-budget.ts';
 import { fileSourceRef, optionalString } from './runtime-tray-snapshot-utils.ts';
 import type { JsonRecord, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 
@@ -420,6 +424,13 @@ function attemptProjection(
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: currentProviderReadiness,
   });
+  const humanReviewBurdenBudget = buildAttemptHumanReviewBurdenBudget({
+    targetDomainId: row.domain_id,
+    stageId: row.stage_id,
+    humanGateRefs,
+    humanGateLedger,
+    routeImpact,
+  });
   const controlLoopSummary = buildAttemptControlLoopSummary({
     row,
     routeImpact,
@@ -475,6 +486,7 @@ function attemptProjection(
     next_owner: nextOwner,
     human_gate_refs: humanGateRefs,
     human_gate_ledger: humanGateLedger,
+    human_review_burden_budget: humanReviewBurdenBudget,
     user_instruction_ledger: userInstructionLedger,
     resume_ledger: resumeLedger,
     user_instructions: userInstructionLedger,
@@ -496,6 +508,7 @@ function attemptProjection(
       provider_kind: row.provider_kind,
       attention: attentionFlags.length > 0,
       human_gate: isHumanGate,
+      human_review_budget_status: humanReviewBurdenBudget.status,
       resume_available: resumeLedger.length > 0,
       dead_lettered: isDeadLetter,
       has_consumed_memory_refs: consumedMemoryRefs.length > 0,
@@ -668,8 +681,45 @@ function groupAttempts(attempts: StageAttemptProjection[], keyFor: (attempt: Sta
   ]));
 }
 
+function humanReviewGateSource(value: unknown) {
+  const source = optionalString(value);
+  return source === 'stage_authority_boundary'
+    || source === 'trust_boundary'
+    || source === 'action_catalog'
+    || source === 'signal_payload'
+    || source === 'gate_ref'
+    ? source
+    : 'gate_ref';
+}
+
 function workbenchMetadata(attempts: StageAttemptProjection[]) {
   const operatorConflicts = attempts.flatMap((attempt) => recordListFromUnknown(attempt.operator_conflicts));
+  const humanReviewBurdenBudget = buildFamilyHumanReviewBurdenBudget({
+    projectionScope: 'stage_attempt_workbench',
+    targetDomainId: null,
+    gates: attempts.flatMap((attempt) => {
+      const budget: JsonRecord = isRecord(attempt.human_review_burden_budget)
+        ? attempt.human_review_burden_budget
+        : {};
+      return recordListFromUnknown(budget.gates).map((gate) => ({
+        gate_id: optionalString(gate.gate_id) ?? 'unknown_human_gate',
+        gate_type: (
+          ['intent_review', 'scope_review', 'boundary_exception_review', 'quality_owner_review', 'artifact_mutation_review']
+            .includes(optionalString(gate.gate_type) ?? '')
+            ? optionalString(gate.gate_type)
+            : 'boundary_exception_review'
+        ) as 'intent_review' | 'scope_review' | 'boundary_exception_review' | 'quality_owner_review' | 'artifact_mutation_review',
+        owner: optionalString(gate.owner) ?? attempt.domain_id,
+        stage_id: optionalString(gate.stage_id) ?? attempt.stage_id,
+        required_refs: stringListFrom(gate.required_refs),
+        missing_refs: stringListFrom(gate.missing_refs),
+        reason: optionalString(gate.reason) ?? 'stage_attempt_human_gate_ref',
+        status: gate.status === 'blocked' ? 'blocked' as const : 'ready' as const,
+        source: humanReviewGateSource(gate.source),
+        admission_blocking: gate.admission_blocking === true,
+      }));
+    }),
+  });
   const attentionCounters = {
     total: attempts.filter(projectionHasAttention).length,
     human_gate_count: attempts.filter(projectionHasHumanGate).length,
@@ -698,11 +748,13 @@ function workbenchMetadata(attempts: StageAttemptProjection[]) {
       ...buildWorkbenchGenericProjections(attempts),
       operator_conflict_count: operatorConflicts.length,
       control_loop_summary: buildWorkbenchControlLoopSummary(attempts),
+      human_review_burden_budget: humanReviewBurdenBudget,
       human_gate_count: attentionCounters.human_gate_count,
       resume_count: attentionCounters.resume_count,
       dead_letter_count: attentionCounters.dead_letter_count,
     },
     operator_conflicts: operatorConflicts,
+    human_review_burden_budget: humanReviewBurdenBudget,
     groups,
     filter_metadata: {
       group_keys: ['domain_id', 'stage_id', 'status'],
@@ -742,6 +794,11 @@ const EMPTY_WORKBENCH_METADATA = {
     usage_projection: summarizeStageAttemptUsageProjections([], 'stage_attempt_workbench'),
     ...buildWorkbenchGenericProjections([]),
     control_loop_summary: buildWorkbenchControlLoopSummary([]),
+    human_review_burden_budget: buildFamilyHumanReviewBurdenBudget({
+      projectionScope: 'stage_attempt_workbench',
+      targetDomainId: null,
+      gates: [],
+    }),
     human_gate_count: 0,
     resume_count: 0,
     dead_letter_count: 0,
@@ -752,6 +809,11 @@ const EMPTY_WORKBENCH_METADATA = {
     by_status: {},
   },
   operator_conflicts: [],
+  human_review_burden_budget: buildFamilyHumanReviewBurdenBudget({
+    projectionScope: 'stage_attempt_workbench',
+    targetDomainId: null,
+    gates: [],
+  }),
   filter_metadata: {
     group_keys: ['domain_id', 'stage_id', 'status'],
     attention_flags: ['human_gate', 'resume_available', 'dead_lettered', 'blocked', 'rejected_writes'],
@@ -788,6 +850,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
+      human_review_burden_budget: EMPTY_WORKBENCH_METADATA.human_review_burden_budget,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
@@ -830,6 +893,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       action_routing: metadata.summary.action_routing,
       transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
       control_loop_summary: metadata.summary.control_loop_summary,
+      human_review_burden_budget: metadata.human_review_burden_budget,
       attempts,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
@@ -856,6 +920,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
+      human_review_burden_budget: EMPTY_WORKBENCH_METADATA.human_review_burden_budget,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',

@@ -206,6 +206,16 @@ test('family stage admission admits contracted static core and recorded boundary
   assert.equal(review.status, 'admitted');
   assert.equal(review.summary.admitted_stages_count, 2);
   assert.equal(review.summary.blockers_count, 0);
+  assert.equal(review.summary.human_review_gate_count, 2);
+  assert.equal(review.summary.blocked_human_review_gate_count, 0);
+  assert.equal(review.human_review_burden_budget.authority_boundary.can_ask_untyped_human_question, false);
+  assert.deepEqual(
+    review.human_review_burden_budget.gates.map((gate) => [gate.source, gate.admission_blocking]),
+    [
+      ['trust_boundary', false],
+      ['action_catalog', true],
+    ],
+  );
   assert.equal(review.stage_results[0]?.trust_lane, 'domain_agent');
   assert.equal(review.stage_results[0]?.static_check_eligible, true);
   assert.equal(review.stage_results[1]?.effect_boundary, true);
@@ -229,6 +239,29 @@ test('family stage admission blocks unsatisfied composition obligations', () => 
   assert.equal(review.summary.blocked_stages_count, 1);
   assert.ok(
     review.findings.some((finding) => finding.code === 'composition_obligation_not_satisfied'),
+  );
+});
+
+test('family stage admission blocks human gates that lack typed refs', () => {
+  const plane = buildStagePlane();
+  const reviewStage = plane.stages[1];
+  reviewStage.allowed_action_refs = [];
+  reviewStage.authority_boundary = {
+    opl_role: 'projection_consumer_only',
+    can_authorize_quality_verdict: false,
+  };
+
+  const review = buildFamilyStageAdmissionReview(plane, {
+    family_action_catalog: buildActionCatalog(),
+  });
+
+  assert.equal(review.status, 'blocked');
+  assert.equal(review.summary.blocked_human_review_gate_count, 1);
+  assert.ok(
+    review.findings.some((finding) =>
+      finding.code === 'human_review_gate_budget_blocked'
+      && finding.stage_id === 'publication_review',
+    ),
   );
 });
 
@@ -341,4 +374,7 @@ test('family stage admission schema freezes OPL non-authority read model', () =>
   assert.equal(Boolean(findingProperties.runtime_event_refs_missing_reason), true);
   assert.equal(Boolean(findingProperties.assumption_id), true);
   assert.equal(Boolean(findingProperties.minimal_counterexample), true);
+  assert.ok((schema.required as string[]).includes('human_review_burden_budget'));
+  const gateRequired = (((schema.$defs as JsonRecord).human_review_budget_gate as JsonRecord).required as string[]);
+  assert.ok(gateRequired.includes('admission_blocking'));
 });

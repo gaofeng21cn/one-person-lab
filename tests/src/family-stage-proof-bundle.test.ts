@@ -275,6 +275,8 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
     runtime_event_requirement_count: 1,
     satisfied_runtime_event_ref_count: 1,
     expected_receipt_ref_count: 3,
+    human_review_gate_count: 2,
+    blocked_human_review_gate_count: 0,
     test_proof_ref_count: 2,
     blocker_count: 0,
     warning_count: 0,
@@ -290,6 +292,12 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
       metrics_are_domain_verdict: false,
     },
   });
+  assert.equal(bundle.human_review_burden_budget.status, 'ready');
+  assert.equal(bundle.human_review_burden_budget.authority_boundary.can_ask_untyped_human_question, false);
+  assert.deepEqual(bundle.human_review_burden_budget.gates.map((gate) => [gate.source, gate.admission_blocking]), [
+    ['trust_boundary', false],
+    ['action_catalog', true],
+  ]);
   assert.equal(bundle.integrity.surface_kind, 'opl_stage_pack_integrity_metadata');
   assert.equal(bundle.integrity.hash_algorithm, 'sha256');
   assert.match(bundle.integrity.stage_pack_hash, /^[0-9a-f]{64}$/);
@@ -389,11 +397,13 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   const examples = schema.examples as JsonRecord[];
   const authority = examples[0]?.authority_boundary as JsonRecord;
   const metricsSchema = defs.proof_runtime_metrics as JsonRecord;
+  const humanReviewGateSchema = defs.human_review_budget_gate as JsonRecord;
   const integritySchema = defs.stage_pack_integrity as JsonRecord;
   const generatedManifestSchema = defs.generated_artifact_manifest as JsonRecord;
   const integrityProperties = integritySchema.properties as Record<string, JsonRecord>;
   const generatedManifestProperties = generatedManifestSchema.properties as Record<string, JsonRecord>;
   const metrics = examples[0]?.proof_runtime_metrics as JsonRecord;
+  const humanReviewBudget = examples[0]?.human_review_burden_budget as JsonRecord;
   const integrity = examples[0]?.integrity as JsonRecord;
   const generatedManifest = examples[0]?.generated_artifact_manifest as JsonRecord;
   const generatedManifestSummary = generatedManifest.summary as JsonRecord;
@@ -406,11 +416,20 @@ test('stage proof bundle schema freezes authority boundary away from domain trut
   assert.equal((metricsSchema.description as string).includes('operator observability'), true);
   assert.ok(required.includes('integrity'));
   assert.ok(required.includes('generated_artifact_manifest'));
+  assert.ok(required.includes('human_review_burden_budget'));
+  assert.ok((metricsSchema.required as string[]).includes('human_review_gate_count'));
+  assert.ok((metricsSchema.required as string[]).includes('blocked_human_review_gate_count'));
+  assert.ok((humanReviewGateSchema.required as string[]).includes('admission_blocking'));
   assert.equal(metrics.composition_obligation_count, 1);
   assert.equal(metrics.runtime_event_requirement_count, 1);
   assert.equal(metrics.satisfied_runtime_event_ref_count, 1);
   assert.equal(metrics.expected_receipt_ref_count, 1);
+  assert.equal(metrics.human_review_gate_count, 1);
+  assert.equal(metrics.blocked_human_review_gate_count, 0);
   assert.equal(metrics.test_proof_ref_count, 1);
+  assert.equal(humanReviewBudget.surface_kind, 'family_human_review_burden_budget');
+  assert.equal(((humanReviewBudget.gates as JsonRecord[])[0]?.admission_blocking), true);
+  assert.equal(((humanReviewBudget.authority_boundary as JsonRecord).can_ask_untyped_human_question), false);
   assert.equal(metricsAuthority.opl_role, 'scheduling_operator_observability_only');
   assert.equal(metricsAuthority.metrics_are_domain_verdict, false);
   assert.equal(metricsAuthority.can_authorize_domain_ready, false);

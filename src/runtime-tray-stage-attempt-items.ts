@@ -192,6 +192,7 @@ export function buildStageAttemptTrayItems(input: {
         operator_conflicts: operatorConflicts(attempt),
         route_decision_graph: record(attempt.route_decision_graph),
         review_repair_queue: record(attempt.review_repair_queue),
+        human_review_burden_budget: record(attempt.human_review_burden_budget),
         quality_readiness: record(attempt.quality_readiness),
         observability_slo: record(attempt.observability_slo),
         workspace_source_intake: record(attempt.workspace_source_intake),
