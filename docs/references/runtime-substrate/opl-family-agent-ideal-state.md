@@ -13,6 +13,7 @@ Date: `2026-05-19`
 - 目标态优先于现状。MAS/MAG/RCA 当前已经存在的 runtime、sidecar、status、workbench、session、memory/artifact lifecycle 或 CLI/MCP/product shell 只能作为迁移输入，不是目标态约束。
 - Provider ready、descriptor aligned、skeleton evidence observed 或 provider completion 都不能写成 domain ready、publication-ready、fundability-ready、visual-ready 或 production soak complete。
 - `opl agents interfaces --repo-dir <domain> --json` 返回 `status=ready` 只表示 OPL 可以从现有 descriptor / action / stage / memory / audit source 生成接口描述，并且这些描述只路由到 domain handler target。它不等于生成面已经成为生产唯一 caller，也不等于旧 wrapper、sidecar、session、workbench 或 lifecycle 面已经物理退役。
+- 目标态不要求兼容旧平台面。旧模块、旧接口、旧测试、旧文档入口、旧 CLI alias、facade、wrapper、Gateway/frontdoor/Hermes/local-manager/MDS-default 等词面，只能作为迁移输入、history/tombstone/provenance 或 negative guard；一旦 replacement 与 no-active-caller proof 成立，应直接清理，不新增 compatibility alias 或第二入口。
 
 ## 目标结论
 

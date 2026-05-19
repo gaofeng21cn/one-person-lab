@@ -12,6 +12,7 @@ Date: `2026-05-19`
 - 结论只记录当前真实状态，不保存历史演变、dated closeout 或过程性 proof。过程性记录统一归档到 [OPL family 文档过程归档 2026-05](../history/process/plans/2026-05-18-opl-family-doc-process-history.md)。
 - 功能/结构差距按目标态判断，不按现有实现是否能跑判断。凡 MAS/MAG/RCA 内仍承担通用 runtime、runner、queue、session、lifecycle、workbench、memory/artifact transport、sidecar/status/product wrapper 或 generated surface 职责的实现，都必须进入 OPL 上收、generated surface 替换、refs-only 收薄或退役分类。
 - 测试/证据差距只记录目标结构已经正确、但还缺真实运行、长时证据、owner receipt scaleout 或 no-regression proof 的事项。不能把功能未完成写成测试尾巴。
+- 过时模块、接口、CLI alias、wrapper、facade、compat test、fixture 和 active docs 入口不再保留兼容面。只要 active caller 已迁出、OPL replacement / domain receipt parity / no-active-caller proof 成立，默认动作是删除、archive 或 tombstone，并同步移除测试和文档入口；需要 provenance 时只在 `docs/history/**`、tombstone refs 或 negative guard 中保留。
 
 ## 当前结论
 
