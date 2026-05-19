@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from './contracts.ts';
 import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
+import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
 import { validateStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
 import type { FrameworkContracts } from './types.ts';
 
@@ -833,22 +834,6 @@ function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function buildEvidenceTailClassification(generatedInterfaceCheck: ReturnType<typeof buildGeneratedInterfaceCheck>) {
-  const tail_items = [
-    generatedInterfaceCheck.claims_live_soak_complete
-      ? null
-      : 'production_live_soak_not_claimed_by_conformance',
-    generatedInterfaceCheck.claims_domain_ready
-      ? null
-      : 'domain_ready_not_claimed_by_conformance',
-  ].filter((entry): entry is string => Boolean(entry));
-  return {
-    status: tail_items.length === 0 ? 'no_tail_detected' : 'production_evidence_tail_present',
-    tail_items,
-    structural_gate_policy: 'tail_items_are_not_structural_conformance_blockers',
-  };
-}
-
 function buildRepoConformance(input: RepoInput) {
   const repoDir = path.resolve(input.repo_dir);
   const domainId = readDomainId(repoDir, input.requested_agent_id);
@@ -858,7 +843,7 @@ function buildRepoConformance(input: RepoInput) {
   const privateSurfaceChecks = buildPrivateSurfaceChecks(repoDir);
   const generatedInterfaceChecks = buildGeneratedInterfaceCheck(repoDir);
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
-  const evidenceTailClassification = buildEvidenceTailClassification(generatedInterfaceChecks);
+  const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
   const blockers = unique([
     ...scaffoldValidation.blockers,
     ...packCompilerChecks.blockers,
