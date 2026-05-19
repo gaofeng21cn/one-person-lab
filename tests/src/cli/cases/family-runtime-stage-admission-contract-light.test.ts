@@ -93,6 +93,7 @@ test('family-runtime required admission warns but does not block launch without 
     assert.equal(created.family_runtime_stage_attempt.attempt.blocked_reason, null);
     assert.equal(gate.status, 'allowed');
     assert.equal(gate.blocked_reason, null);
+    assert.deepEqual(gate.blocker_findings, []);
     assert.equal(gate.inspected_cohort_loop_stage.closure_status, 'missing_query');
     assert.deepEqual(gate.findings.map((finding: { code: string }) => finding.code), [
       'cohort_query_missing',
@@ -100,6 +101,14 @@ test('family-runtime required admission warns but does not block launch without 
       'cohort_monitor_or_metric_missing',
     ]);
     assert.equal(gate.findings.every((finding: { severity: string }) => finding.severity === 'warning'), true);
+    assert.deepEqual(
+      gate.recommendation_findings.map((finding: { code: string }) => finding.code),
+      [
+        'cohort_query_missing',
+        'cohort_trigger_missing',
+        'cohort_monitor_or_metric_missing',
+      ],
+    );
     assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
