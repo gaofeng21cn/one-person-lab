@@ -177,13 +177,16 @@ function stageProductionEvidence(
       ...refValues(cohortStage?.metric_refs),
       ...refValues(cohortStage?.dashboard_metric_refs),
     ]);
+    const observedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => observedRefs.includes(ref));
+    const unobservedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => !observedRefs.includes(ref));
+    const observedMonitorFreshnessRefs = monitorRefs.filter((ref) => observedRefs.includes(ref));
+    const unobservedMonitorFreshnessRefs = monitorRefs.filter((ref) => !observedRefs.includes(ref));
     const triggerRefs = refValues(cohortStage?.trigger_refs);
     const cohortQueryRefs = refValues(cohortStage?.cohort_query_refs);
     const missingEvidence = [
       selectedExecutorKinds.length === 0 ? 'selected_executor_binding_not_observed' : null,
       stageAttempts.length === 0 ? 'production_caller_attempt_not_observed' : null,
-      expectedReceiptRefs.length > 0
-        && !expectedReceiptRefs.some((ref) => observedRefs.includes(ref))
+      unobservedExpectedReceiptRefs.length > 0
         ? 'expected_receipt_ref_not_observed'
         : null,
       sourceScopeRefs.length > 0
@@ -195,8 +198,7 @@ function stageProductionEvidence(
         && !runtimeRequirement.runtime_event_refs.some((ref) => observedRefs.includes(ref))
         ? 'runtime_event_ref_not_observed'
         : null,
-      monitorRefs.length > 0
-        && !monitorRefs.some((ref) => observedRefs.includes(ref))
+      unobservedMonitorFreshnessRefs.length > 0
         ? 'monitor_freshness_ref_not_observed'
         : null,
     ].filter((entry): entry is string => Boolean(entry));
@@ -227,7 +229,12 @@ function stageProductionEvidence(
       monitor_refs: monitorRefs,
       runtime_event_refs: runtimeRequirement?.runtime_event_refs ?? [],
       expected_receipt_refs: expectedReceiptRefs,
+      expected_receipt_declared: expectedReceiptRefs.length > 0,
+      observed_expected_receipt_refs: observedExpectedReceiptRefs,
+      unobserved_expected_receipt_refs: unobservedExpectedReceiptRefs,
       observed_evidence_refs: observedRefs,
+      monitor_freshness_refs: observedMonitorFreshnessRefs,
+      unobserved_monitor_refs: unobservedMonitorFreshnessRefs,
       missing_production_evidence: uniqueStrings(missingEvidence),
       authority_boundary: authorityBoundary(),
     };
@@ -247,11 +254,30 @@ function stageProductionEvidence(
     missing_expected_receipt_stage_count: stages.filter((stage) =>
       stage.missing_production_evidence.includes('expected_receipt_ref_not_observed')
     ).length,
+    expected_receipt_declared_stage_count: stages.filter((stage) =>
+      stage.expected_receipt_declared
+    ).length,
+    expected_receipt_observed_stage_count: stages.filter((stage) =>
+      stage.observed_expected_receipt_refs.length > 0
+    ).length,
+    expected_receipt_unobserved_stage_count: stages.filter((stage) =>
+      stage.unobserved_expected_receipt_refs.length > 0
+    ).length,
     missing_executor_binding_stage_count: stages.filter((stage) =>
       stage.missing_production_evidence.includes('selected_executor_binding_not_observed')
     ).length,
+    executor_binding_observed_stage_count: stages.filter((stage) =>
+      stage.selected_executor_kinds.length > 0
+    ).length,
     missing_monitor_freshness_stage_count: stages.filter((stage) =>
       stage.missing_production_evidence.includes('monitor_freshness_ref_not_observed')
+    ).length,
+    monitor_declared_stage_count: stages.filter((stage) => stage.monitor_refs.length > 0).length,
+    monitor_freshness_observed_stage_count: stages.filter((stage) =>
+      stage.monitor_freshness_refs.length > 0
+    ).length,
+    monitor_freshness_unobserved_stage_count: stages.filter((stage) =>
+      stage.unobserved_monitor_refs.length > 0
     ).length,
     stages,
   };
@@ -294,10 +320,24 @@ export function buildStageProductionEvidence(input: {
         domains.reduce((count, domain) => count + domain.missing_production_caller_stage_count, 0),
       missing_expected_receipt_stage_count:
         domains.reduce((count, domain) => count + domain.missing_expected_receipt_stage_count, 0),
+      expected_receipt_declared_stage_count:
+        domains.reduce((count, domain) => count + domain.expected_receipt_declared_stage_count, 0),
+      expected_receipt_observed_stage_count:
+        domains.reduce((count, domain) => count + domain.expected_receipt_observed_stage_count, 0),
+      expected_receipt_unobserved_stage_count:
+        domains.reduce((count, domain) => count + domain.expected_receipt_unobserved_stage_count, 0),
       missing_executor_binding_stage_count:
         domains.reduce((count, domain) => count + domain.missing_executor_binding_stage_count, 0),
+      executor_binding_observed_stage_count:
+        domains.reduce((count, domain) => count + domain.executor_binding_observed_stage_count, 0),
       missing_monitor_freshness_stage_count:
         domains.reduce((count, domain) => count + domain.missing_monitor_freshness_stage_count, 0),
+      monitor_declared_stage_count:
+        domains.reduce((count, domain) => count + domain.monitor_declared_stage_count, 0),
+      monitor_freshness_observed_stage_count:
+        domains.reduce((count, domain) => count + domain.monitor_freshness_observed_stage_count, 0),
+      monitor_freshness_unobserved_stage_count:
+        domains.reduce((count, domain) => count + domain.monitor_freshness_unobserved_stage_count, 0),
       provider_completion_is_domain_ready: false,
       projection_can_authorize_domain_ready: false,
     },
