@@ -719,7 +719,7 @@ export function buildPublicCommandSpecs(
     },
     'stages readiness': {
       usage: 'opl stages readiness --domain <domain>',
-      summary: 'Summarize launch readiness from existing stage admission, proof, cohort, runtime-budget, assumptions, and replay drilldowns without issuing a domain verdict.',
+      summary: 'Summarize the default operator/App launch-readiness view from admission, proof, assumptions, cohort, replay, and advisory budget/validity refs without issuing a domain verdict.',
       examples: ['opl stages readiness --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageReadinessInspect(getContracts(), args),
@@ -754,7 +754,7 @@ export function buildPublicCommandSpecs(
     },
     'stages runtime-budget': {
       usage: 'opl stages runtime-budget --domain <domain>',
-      summary: 'Project refs-only runtime boundary, monitor, and success-rate budget readiness for one domain stage pack.',
+      summary: 'Diagnostic drilldown for refs-only runtime boundary and monitor coverage folded into stages readiness/proof; not a standalone domain-ready verdict.',
       examples: ['opl stages runtime-budget --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageRuntimeBudgetInspect(getContracts(), args),

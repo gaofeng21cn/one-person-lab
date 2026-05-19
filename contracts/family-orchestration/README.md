@@ -15,7 +15,7 @@ They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, 
 
 They also absorb the useful GraphFlow / GFL pattern of admitting a statically checkable stage-pack core, composing stages through `requires` / `ensures`, and keeping AI, human, external-system, artifact, memory, and domain-verdict effects behind runtime-enforced boundaries. OPL adopts this as contract vocabulary only; GraphFlow / GFL is not an OPL runtime, provider, executor, planner, stage runner, or domain authority dependency.
 
-The absorption principle is now **AI-first, contract-light**. OPL contracts govern only launch safety, OPL authority boundaries, key boundary outcome recording, and replay / audit / route-back evidence. They do not freeze AI reasoning, stage-internal planning, domain quality conclusions, or a fixed intelligent workflow. The default operator entry is `opl stages readiness --domain <domain>`, which aggregates existing drilldown surfaces without adding another authoritative domain verdict.
+The absorption principle is now **AI-first, contract-light**. OPL contracts govern only launch safety, OPL authority boundaries, key boundary outcome recording, and replay / audit / route-back evidence. They do not freeze AI reasoning, stage-internal planning, domain quality conclusions, or a fixed intelligent workflow. The default operator/App entry is `opl stages readiness --domain <domain>`, which aggregates existing drilldown and advisory refs without adding another authoritative domain verdict. Capacity-budget and domain-validity refs are folded into readiness/proof as advisory diagnostics; they are not standalone default CLI or schema goals.
 
 ## Ownership Boundary
 
@@ -64,9 +64,9 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-stage-runtime-budget.schema.json`
   - refs-only runtime reliability / capacity budget projection over boundary count, runtime guard count, monitor / metric refs, unmonitored boundary count, and expected-success or boundary-success-rate refs; OPL does not calculate unverified probabilities, authorize domain readiness, or introduce a GraphFlow runtime
 - `family-stage-capacity-budget.schema.json`
-  - refs-only provider launch / replay / event-log / guard-eval capacity projection over stage refs; OPL does not schedule providers, claim probability truth, or authorize domain readiness
+  - advisory refs-only capacity signal folded into readiness/proof diagnostics for provider launch / replay / event-log / guard-eval refs; OPL does not schedule providers, claim probability truth, or authorize domain readiness
 - `family-stage-domain-validity.schema.json`
-  - refs-only domain-owner review / intent validation / owner acceptance projection for launchable or review-gated stages; OPL does not issue domain-ready, quality, or artifact verdicts
+  - advisory refs-only domain-owner review / intent validation / owner acceptance signal folded into readiness/proof diagnostics; OPL does not issue domain-ready, quality, or artifact verdicts
 - `family-stage-pack-registry.schema.json`
   - stage-pack library / registry projection keyed by integrity hash, including reusable pack refs, lifecycle status, promotion / deprecation / supersession refs, active attempt binding, migration policy, and migration blockers
 - `family-stage-pack-source-spec.schema.json`

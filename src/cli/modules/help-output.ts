@@ -208,6 +208,8 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     '  opl system initialize          Check first-run state and remaining setup actions',
     '  opl modules                    Inspect managed module health',
     '  opl skill sync                 Sync family skills into the Codex skill path',
+    '  opl stages readiness --domain mas',
+    '                                 Check the default operator/App launch-readiness summary',
     '  opl "your task"                Start from the default Codex runtime',
     '',
     'Common commands:',
