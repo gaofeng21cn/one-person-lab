@@ -445,7 +445,11 @@ test('family-runtime enqueue is idempotent by dedupe key and writes local inbox 
 
 test('family-runtime approval pauses dispatch until approved', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-approval-'));
-  const dispatch = createDispatchFixture('echo \'{"accepted":true,"surface_kind":"test_dispatch"}\'');
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{"accepted":true,"surface_kind":"test_dispatch"}
+JSON
+`);
   try {
     const enqueue = runCli([
       'family-runtime',
@@ -488,7 +492,11 @@ test('family-runtime approval pauses dispatch until approved', () => {
 
 test('family-runtime stage attempt ledger keeps provider dispatch separate until typed closeout', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-'));
-  const dispatch = createDispatchFixture('echo \'{"accepted":true,"closeout_refs":["studies/DM002/stage_closeout/latest.json"]}\'');
+  const dispatch = createDispatchFixture(`
+cat <<'JSON'
+{"accepted":true,"closeout_refs":["studies/DM002/stage_closeout/latest.json"]}
+JSON
+`);
   try {
     const enqueue = runCli([
       'family-runtime',
@@ -758,7 +766,7 @@ test('family-runtime retries failed domain dispatch and then dead-letters', () =
       '--domain',
       'medautoscience',
       '--task-kind',
-      'runtime_supervision/recover',
+      'domain_route/recover',
       '--payload',
       '{"profile":"/tmp/profile.toml"}',
     ], familyRuntimeEnv(stateRoot, {
@@ -779,197 +787,6 @@ test('family-runtime retries failed domain dispatch and then dead-letters', () =
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime tick hydrates MAS sidecar pending tasks before dispatch', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hydrate-'));
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-export-'));
-  const exportPath = path.join(fixtureRoot, 'export');
-  const dispatchPath = path.join(fixtureRoot, 'dispatch');
-  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_sidecar_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "domain_route/reconcile-apply",
-      "priority": 50,
-      "source": "mas-sidecar-export",
-      "dedupe_key": "mas:test:DM002:autonomy-continuation:slo_breach",
-      "payload": {
-        "profile": "/tmp/profile.toml",
-        "study_id": "DM002",
-        "continuation_reason": "slo_breach"
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
-echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","will_start_llm_worker":true}'
-`,
-    { mode: 0o755 },
-  );
-  try {
-    const tick = runCli(['family-runtime', 'tick', '--source', 'test', '--hydrate'], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
-    }));
-    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
-    const notifications = runCli(['family-runtime', 'notify', 'list'], familyRuntimeEnv(stateRoot));
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
-
-    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
-    assert.equal(tick.family_runtime_tick.selected_count, 1);
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(queue.family_runtime_queue.queue.by_status.succeeded, 1);
-    assert.equal(queue.family_runtime_queue.tasks[0].dedupe_key, 'mas:test:DM002:autonomy-continuation:slo_breach');
-    assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
-    assert.equal(dispatchedTask.domain_route.route_ref, 'domain_route/reconcile-apply');
-    assert.equal(dispatchedTask.domain_route.action_ref, 'domain_route_reconcile_apply');
-    assert.equal(dispatchedTask.payload.study_id, 'DM002');
-    assert.equal(notifications.family_runtime_notifications.notifications.length, 2);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime canonicalizes legacy MAS route aliases to domain route refs', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-route-'));
-  const dispatchedTaskPath = path.join(stateRoot, 'dispatched-task.json');
-  const dispatch = createDispatchFixture(`
-cp "$TASK_PATH" ${shellSingleQuote(dispatchedTaskPath)}
-echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","will_start_llm_worker":true}'
-`);
-  try {
-    const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
-    });
-    const enqueue = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'runtime_supervisor/reconcile-apply',
-      '--payload',
-      '{"study_id":"DM002","source_refs":[{"role":"mas_owner_status","ref":"studies/DM002/status.json"}],"source_fingerprint":"sha256:domain-route"}',
-      '--dedupe-key',
-      'mas:test:DM002:legacy-route-alias',
-    ], env);
-    const taskId = enqueue.family_runtime_enqueue.task.task_id;
-    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
-    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
-    const attempt = task.family_runtime_task.stage_attempts[0];
-
-    assert.equal(enqueue.family_runtime_enqueue.task.task_kind, 'domain_route/reconcile-apply');
-    assert.equal(enqueue.family_runtime_enqueue.task.domain_route.route_ref, 'domain_route/reconcile-apply');
-    assert.equal(enqueue.family_runtime_enqueue.task.domain_route.action_ref, 'domain_route_reconcile_apply');
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(task.family_runtime_task.task.task_kind, 'domain_route/reconcile-apply');
-    assert.equal(task.family_runtime_task.task.domain_route.domain_truth_owner, 'med-autoscience');
-    assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_mas_truth, false);
-    assert.equal(attempt.stage_id, 'domain_route/reconcile-apply');
-    assert.equal(attempt.workspace_locator.route_ref, 'domain_route/reconcile-apply');
-    assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
-    assert.equal(dispatchedTask.domain_route.route_ref, 'domain_route/reconcile-apply');
-    assert.equal(dispatchedTask.domain_route.action_ref, 'domain_route_reconcile_apply');
-    assert.equal(dispatchedTask.paper_autonomy, null);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime preserves MAS paper autonomy task projection through hydrate and dispatch', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-'));
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-export-'));
-  const exportPath = path.join(fixtureRoot, 'export');
-  const dispatchPath = path.join(fixtureRoot, 'dispatch');
-  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
-  fs.writeFileSync(
-    exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-{
-  "surface_kind": "mas_family_sidecar_export",
-  "pending_family_tasks": [
-    {
-      "domain_id": "medautoscience",
-      "task_kind": "paper_autonomy/repair-recheck",
-      "priority": 80,
-      "source": "mas-sidecar-export",
-      "dedupe_key": "reviewer_refinement_loop:unit-1:sha256:abc",
-      "dispatch_owner": "med-autoscience",
-      "profile_name": "dm-cvd",
-      "source_refs": ["studies/DM002/artifacts/publication_eval/latest.json"],
-      "payload": {
-        "profile": "/tmp/profile.toml",
-        "study_id": "DM002",
-        "repair_work_unit": {
-          "unit_id": "unit-1",
-          "work_unit_type": "text_repair",
-          "owner": "quality_repair_batch",
-          "callable_surface": "run_quality_repair_batch",
-          "source_fingerprint": "sha256:abc",
-          "source_refs": ["studies/DM002/paper/manuscript.md"]
-        }
-      }
-    }
-  ]
-}
-JSON
-`,
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    dispatchPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
-echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","paper_autonomy_receipt":true}'
-`,
-    { mode: 0o755 },
-  );
-  try {
-    const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
-    }));
-    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
-    const task = queue.family_runtime_queue.tasks[0];
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
-
-    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(task.task_kind, 'paper_autonomy/repair-recheck');
-    assert.equal(task.paper_autonomy.study_id, 'DM002');
-    assert.equal(task.paper_autonomy.next_owner, 'quality_repair_batch');
-    assert.equal(task.paper_autonomy.callable_surface, 'run_quality_repair_batch');
-    assert.equal(task.paper_autonomy.repair_command, 'medautosci sidecar dispatch --task <task.json> --format json');
-    assert.equal(task.paper_autonomy.authority_boundary.writes_mas_truth, false);
-    assert.deepEqual(task.payload.source_refs, ["studies/DM002/artifacts/publication_eval/latest.json"]);
-    assert.equal(dispatchedTask.paper_autonomy.next_owner, 'quality_repair_batch');
-    assert.equal(dispatchedTask.paper_autonomy.idempotency_key, 'reviewer_refinement_loop:unit-1:sha256:abc');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 

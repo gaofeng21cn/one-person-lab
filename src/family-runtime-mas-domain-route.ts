@@ -1,13 +1,8 @@
+import { FrameworkContractError } from './contracts.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 
 export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY = 'domain_route/reconcile-apply';
 export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION = 'domain_route_reconcile_apply';
-
-// Legacy intake aliases are accepted only to emit the canonical domain route ref.
-const LEGACY_MAS_RECONCILE_TASK_KINDS = new Set([
-  'runtime_supervisor/reconcile-apply',
-  'runtime/reconcile-apply',
-]);
 
 type MasDomainRouteProjectionTask = {
   domain_id: string;
@@ -20,10 +15,22 @@ export function canonicalFamilyRuntimeTaskKind(
   taskKind: string,
 ) {
   const trimmed = taskKind.trim();
-  if (domainId === 'medautoscience' && LEGACY_MAS_RECONCILE_TASK_KINDS.has(trimmed)) {
-    return MAS_DOMAIN_ROUTE_RECONCILE_APPLY;
+  if (domainId === 'medautoscience' && retiredMasRuntimePrefix(trimmed)) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'MAS family runtime task kinds with repo-runtime prefixes are retired; use the domain route task kind.',
+      {
+        task_kind: trimmed,
+        replacement_task_kind: MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+        tombstone_policy: 'legacy_negative_tests_only',
+      },
+    );
   }
   return trimmed;
+}
+
+function retiredMasRuntimePrefix(taskKind: string) {
+  return taskKind.startsWith('runtime_') || taskKind.startsWith('runtime/');
 }
 
 export function isMasDomainRouteReconcileApply(domainId: string, taskKind: string) {

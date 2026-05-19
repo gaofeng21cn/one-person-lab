@@ -61,6 +61,10 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - refs-only source scope / cohort query / trigger / monitor-metric loop projection for one stage pack, with typed blockers when the same source set cannot be traced from launch to operator monitoring; OPL does not evaluate source truth or introduce a GraphFlow runtime
 - `family-stage-runtime-budget.schema.json`
   - refs-only runtime reliability / capacity budget projection over boundary count, runtime guard count, monitor / metric refs, unmonitored boundary count, and expected-success or boundary-success-rate refs; OPL does not calculate unverified probabilities, authorize domain readiness, or introduce a GraphFlow runtime
+- `family-stage-capacity-budget.schema.json`
+  - refs-only provider launch / replay / event-log / guard-eval capacity projection over stage refs; OPL does not schedule providers, claim probability truth, or authorize domain readiness
+- `family-stage-domain-validity.schema.json`
+  - refs-only domain-owner review / intent validation / owner acceptance projection for launchable or review-gated stages; OPL does not issue domain-ready, quality, or artifact verdicts
 - `family-stage-pack-registry.schema.json`
   - stage-pack library / registry projection keyed by integrity hash, including reusable pack refs, lifecycle status, promotion / deprecation / supersession refs, active attempt binding, migration policy, and migration blockers
 - `family-stage-pack-source-spec.schema.json`

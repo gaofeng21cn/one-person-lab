@@ -11,7 +11,6 @@ const BASELINE = new Map([
   ['src/family-domain-agent-skeleton.ts', 1145],
   ['src/family-runtime-lifecycle-index.ts', 1078],
   ['src/family-runtime-temporal-provider.ts', 1024],
-  ['src/family-runtime.ts', 1018],
   ['src/runtime-tray-app-operator-drilldown.ts', 1365],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);

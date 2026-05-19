@@ -2,12 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
-import {
-  DOMAIN_ADAPTERS,
-  parseFamilyRuntimeCommand,
-  type EnqueueInput,
-  type FamilyRuntimeDomainId,
-} from './family-runtime-command.ts';
+import { parseFamilyRuntimeCommand, type EnqueueInput } from './family-runtime-command.ts';
 import {
   ensureFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
@@ -61,51 +56,17 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
-import {
-  blockTaskForStageAdmissionGate,
-  buildStageAdmissionLaunchGate,
-} from './family-runtime-stage-admission-gate.ts';
+import { blockTaskForStageAdmissionGate, buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import { canonicalFamilyRuntimeTaskKind } from './family-runtime-mas-domain-route.ts';
-import {
-  reconcileFamilyRuntimeLifecycleRefs,
-  runFamilyRuntimeLifecycleApply,
-} from './family-runtime-lifecycle-index.ts';
+import { commandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
+import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
+import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
-}
-
-async function queryTemporalStageAttemptReadModel(attempt: ReturnType<typeof queryStageAttempt>['stage_attempt_query']['attempt']) {
-  if (attempt.provider_kind !== 'temporal') {
-    return null;
-  }
-  try {
-    return await (await temporalProviderModule()).queryTemporalStageAttemptWorkflow(attempt);
-  } catch (error) {
-    if (
-      error instanceof FrameworkContractError
-      && error.code === 'contract_shape_invalid'
-      && error.message.includes('OPL_TEMPORAL_ADDRESS')
-    ) {
-      return {
-        surface_kind: 'temporal_stage_attempt_query_unavailable',
-        provider_kind: 'temporal',
-        stage_attempt_id: attempt.stage_attempt_id,
-        workflow_id: attempt.workflow_id,
-        status: 'unavailable',
-        reason: 'temporal_address_not_configured',
-        error: error.toJSON().error,
-        authority_boundary: {
-          opl: 'local_stage_attempt_ledger_projection_only',
-          domain: 'truth_quality_artifact_gate_owner',
-        },
-      };
-    }
-    throw error;
-  }
 }
 
 function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
@@ -248,31 +209,6 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
     idempotent_noop: false,
     task: taskToPayload(task as FamilyRuntimeTaskRow),
   };
-}
-
-function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
-  const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
-  if (override) {
-    const tokens = override.split(/\s+/);
-    if (tokens.some((token) => token.includes('{task}'))) {
-      return tokens.map((token) => token.replaceAll('{task}', taskPath));
-    }
-    return [...tokens, taskPath];
-  }
-
-  return [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'];
-}
-
-function parseDispatchOutput(stdout: string) {
-  const trimmed = stdout.trim();
-  if (!trimmed) {
-    return {};
-  }
-  try {
-    return JSON.parse(trimmed) as Record<string, unknown>;
-  } catch {
-    return { raw_stdout: trimmed };
-  }
 }
 
 function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
