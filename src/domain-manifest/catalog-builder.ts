@@ -1,10 +1,14 @@
 import type { FrameworkContracts } from '../types.ts';
 import { getActiveWorkspaceBinding } from '../workspace-registry.ts';
+import type { ManifestCommandTimeoutPolicy } from './resolver.ts';
 import { resolveBindingManifest } from './resolver.ts';
 
 export function buildDomainManifestCatalog(
   contracts: FrameworkContracts,
-  options: { manifestCommandTimeoutMs?: number } = {},
+  options: {
+    manifestCommandTimeoutMs?: number;
+    manifestCommandTimeoutPolicy?: ManifestCommandTimeoutPolicy;
+  } = {},
 ) {
   const projects = contracts.domains.domains.map((domain) => {
     const binding = getActiveWorkspaceBinding(domain.domain_id);
@@ -23,6 +27,7 @@ export function buildDomainManifestCatalog(
 
     return resolveBindingManifest(domain.domain_id, domain.project, binding, {
       timeoutMs: options.manifestCommandTimeoutMs,
+      timeoutPolicy: options.manifestCommandTimeoutPolicy,
     });
   });
 

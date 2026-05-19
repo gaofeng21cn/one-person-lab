@@ -647,7 +647,7 @@ function manifestErrorProjection(entry: DomainManifestCatalogEntry) {
   const timeoutMs = typeof entry.error.timeout_ms === 'number'
     ? entry.error.timeout_ms
     : entry.status === 'command_timeout'
-      ? resolveManifestCommandTimeoutMs(PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS)
+      ? resolveManifestCommandTimeoutMs()
       : null;
   const suggestedTimeoutMs = timeoutMs ? Math.max(10_000, timeoutMs * 5) : null;
   return {
@@ -874,8 +874,9 @@ function buildGlobalBlockers(input: {
 export async function buildProductionFunctionalCloseout(contracts: FrameworkContracts) {
   const paths = familyRuntimePaths();
   const domainIds = contracts.domains.domains.map((domain) => domain.domain_id);
+  const manifestCommandTimeoutMs = resolveManifestCommandTimeoutMs();
   const manifestCatalogOptions = {
-    manifestCommandTimeoutMs: PRODUCTION_CLOSEOUT_MANIFEST_COMMAND_TIMEOUT_MS,
+    manifestCommandTimeoutMs,
   };
   const catalog = buildDomainManifestCatalog(contracts, manifestCatalogOptions);
   const sharedManifestCatalogOptions = {

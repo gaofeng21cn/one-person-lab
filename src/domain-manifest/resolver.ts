@@ -11,17 +11,18 @@ import type { DomainManifestCatalogEntry } from './types.ts';
 
 type DomainManifestErrorCode = 'command_failed' | 'command_timeout' | 'invalid_json' | 'invalid_manifest';
 type JsonRecord = Record<string, unknown>;
+export type ManifestCommandTimeoutPolicy = 'env_or_default' | 'fixed';
 
-export function resolveManifestCommandTimeoutMs(defaultTimeoutMs?: number) {
-  if (defaultTimeoutMs !== undefined) {
-    return Number.isInteger(defaultTimeoutMs) && defaultTimeoutMs > 0 ? defaultTimeoutMs : 30_000;
-  }
+export function resolveManifestCommandTimeoutMs(
+  defaultTimeoutMs = 30_000,
+  policy: ManifestCommandTimeoutPolicy = 'env_or_default',
+) {
   const raw = process.env.OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS?.trim();
   const parsed = raw ? Number.parseInt(raw, 10) : NaN;
-  if (Number.isInteger(parsed) && parsed > 0) {
+  if (policy === 'env_or_default' && Number.isInteger(parsed) && parsed > 0) {
     return parsed;
   }
-  return 30_000;
+  return Number.isInteger(defaultTimeoutMs) && defaultTimeoutMs > 0 ? defaultTimeoutMs : 30_000;
 }
 
 function commandTimedOut(result: ReturnType<typeof spawnSync>) {
@@ -115,7 +116,7 @@ export function resolveBindingManifest(
   projectId: string,
   project: string,
   binding: WorkspaceBinding,
-  options: { timeoutMs?: number } = {},
+  options: { timeoutMs?: number; timeoutPolicy?: ManifestCommandTimeoutPolicy } = {},
 ): DomainManifestCatalogEntry {
   const manifestCommand = binding.direct_entry.manifest_command;
   if (!manifestCommand) {
@@ -131,7 +132,9 @@ export function resolveBindingManifest(
     };
   }
 
-  const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs);
+  const timeoutPolicy = options.timeoutPolicy
+    ?? (options.timeoutMs === undefined ? 'env_or_default' : 'fixed');
+  const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs, timeoutPolicy);
   const result = executeManifestCommand(binding, manifestCommand, timeoutMs);
 
   if (commandTimedOut(result)) {
