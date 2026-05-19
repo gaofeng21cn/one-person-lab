@@ -1185,8 +1185,14 @@ export function buildAppOperatorDrilldown(input: {
         evidenceRequests.summary.external_evidence_receipt_count,
       domain_external_verified_evidence_receipt_count:
         evidenceRequests.summary.external_verified_receipt_count,
+      domain_evidence_gate_count:
+        evidenceRequests.summary.evidence_gate_count,
       domain_remaining_evidence_gate_count:
         evidenceRequests.summary.remaining_evidence_gate_count,
+      domain_evidence_gate_receipt_count:
+        evidenceRequests.summary.evidence_gate_receipt_count,
+      domain_evidence_gate_verified_receipt_count:
+        evidenceRequests.summary.evidence_gate_verified_receipt_count,
       domain_opl_replacement_expectation_count:
         evidenceRequests.summary.opl_replacement_expectation_count,
       domain_replacement_surface_available_count:
