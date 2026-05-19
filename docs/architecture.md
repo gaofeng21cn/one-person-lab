@@ -4,6 +4,8 @@
 
 `OPL` 的目标不是只做入口聚合或工作台投影，而是完整的 stage-led family agent runtime framework。当前产品认知分成 `OPL Framework`、`One Person Lab App` 和 `Foundry Agents` 三层：Framework 负责开发与运行框架，App 负责普通用户工作台，Foundry Agents 负责领域智能体与交付权威。阶段内最小执行单位是 Agent executor；`Codex CLI` 是当前第一公民 executor。
 
+OPL 的设计取向是 AI-first, contract-light：框架通过 stage、prompt、skill、knowledge、quality gate 和 selected executor 承接 AI 能力进步；合同只做 owner boundary、权限、安全、审计、receipt、阻塞、恢复和 projection，不把专家拆解、创作、评审、路线判断或修订策略固化成脚本引擎。
+
 OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。
 
 `OPL` 的当前主链路是：
@@ -28,6 +30,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `One Person Lab App` 是 user-facing workbench：它消费 Framework 的 runtime/activation truth 和 domain-owned projection，不成为 domain runtime、quality verdict 或 artifact authority
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
+- OPL 的合同面必须保持 contract-light：`family-stage-control-plane`、action catalog、receipt、proof bundle 和 projection 只约束启动条件、owner、权限、安全、审计、恢复与路由；stage 内的开放式思考、写作、评审、诊断和迭代由 AI executor 与 domain-owned workflow 承担
 - 涉及知识交付、专家判断或正式质量裁决的复杂步骤必须保持为独立 stage，例如 MAS AI 审稿、publication quality review、MAG fundability review、RCA visual review；不得把这类工作折叠成另一个 stage 的函数、helper 或后处理
 - AI-first quality gate 是独立审核任务：执行 attempt 产出 artifacts / refs / closeout packet，审核 attempt 只读取这些显式输入和必要上下游 refs，产出 gate receipt / typed blocker / route-back；同一个 `Codex CLI` attempt 不能在同一上下文里自审并推进下一 stage
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 App repo 通过 `opl-aion-shell` 提供的 GUI shell 都消费同一套 runtime truth
@@ -201,6 +204,8 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 #### Family Stage Control Plane
 
 `Family Stage Control Plane` 是 `MAS` stage 化经验上升后的 family 级 shared descriptor / discovery surface。它把程序责任限制在阶段目标、skill / prompt / evaluation refs、输入输出、handoff、receipt、projection 与 authority boundary 上，把阶段内部的专家拆解、创作、审核、修订和诊断继续交给被选中的 Agent executor 与 domain-owned AI workflow。阶段的粒度应接近人类专家真实推进复杂工作的方式，而不是把开放式知识工作压成固定脚本节点。
+
+这层必须保持 contract-light。stage descriptor 可以声明目标、输入、约束、工具、知识、质量门、owner、receipt 与禁止写入边界，但不能把“如何推理、如何写作、如何评审、如何发现新路线”写成封闭流程。OPL 依靠 AI executor 的后续能力升级获得智能体进步，合同负责让这些升级在安全、可审计、可恢复的边界内运行。
 
 复杂知识交付步骤的默认建模单位是 stage，而不是函数。MAS 的 AI reviewer、publication quality review、RCA 的 visual review、MAG 的 proposal / fundability review 这类步骤需要有自己的 goal、inputs、prompt / skill refs、evaluation refs、outputs、handoff 与 receipt；authority function 只能签发最小领域 verdict、owner receipt、typed blocker 或 safe action refs，不能暗中承载完整审稿、质量评估或修订建议生成流程。
 
