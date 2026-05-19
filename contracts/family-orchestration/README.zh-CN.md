@@ -58,7 +58,7 @@
 - `family-stage-graph-projection.schema.json`
   - 冻结单个 family stage pack 的 graph projection，供 scheduler / App 消费 nodes、handoff edges、admission state、guarantee modes、integrity digest 与 OPL non-authority boundary
 - `family-stage-pack-registry.schema.json`
-  - 冻结 stage-pack library / registry 投影，按 integrity hash 记录 reusable pack refs、active attempt binding 与迁移策略 blocker
+  - 冻结 stage pack library / registry 投影，按 integrity hash 记录 reusable pack refs、active attempt binding 与迁移策略 blocker
 - `family-stage-replay-certification.schema.json`
   - 冻结 stage pack replay certification 投影，要求 replay 只读取 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs，不能重新询问 AI、人或外部系统
 - `family-stage-assumption-lifecycle.schema.json`
