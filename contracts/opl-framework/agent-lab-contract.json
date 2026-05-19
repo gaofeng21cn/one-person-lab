@@ -377,6 +377,16 @@
       "json"
     ],
     "status": "ready_for_connector_consumption_refs_only",
+    "source_ref_groups": [
+      "suite_result_refs",
+      "trajectory_refs",
+      "scorecard_refs",
+      "promotion_gate_refs",
+      "integration_contract_refs",
+      "review_trace_refs",
+      "review_evidence_refs",
+      "log_mined_candidate_refs"
+    ],
     "upload_external_service": false,
     "reads_domain_body": false,
     "authority_boundary": "connector envelopes only carry refs and connector-shaped metadata; connectors cannot read domain bodies or upload from OPL core"

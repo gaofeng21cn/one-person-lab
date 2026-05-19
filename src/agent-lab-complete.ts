@@ -1,29 +1,16 @@
 import {
   agentLabRefSummary,
-  buildLonglineAgentLabResult,
   buildSampleAgentLabResult,
   runAgentLabSuite,
   type AgentLabSuite,
 } from './agent-lab.ts';
+import { buildLonglineAgentLabResult } from './agent-lab-longline.ts';
+import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import { stableId } from './family-runtime-ids.ts';
 
 const AUTHORITY_BOUNDARY = {
-  opl: 'agent_lab_eval_improvement_control_plane_refs_only',
-  domain: 'truth_quality_artifact_memory_body_and_owner_receipt_authority',
-  can_write_domain_truth: false,
-  can_write_memory_body: false,
-  can_accept_or_reject_memory_writeback: false,
-  can_authorize_domain_ready: false,
-  can_authorize_quality_verdict: false,
-  can_authorize_export_verdict: false,
-  can_mutate_domain_artifact: false,
-  can_write_owner_receipt: false,
-  can_modify_managed_runtime: false,
-  can_promote_default_agent_without_gate: false,
+  ...AGENT_LAB_AUTHORITY_BOUNDARY,
   can_train_or_deploy_model_weights: false,
-  can_write_shared_submission_action: false,
-  can_push_shared_submission_action: false,
-  can_authorize_submission_action: false,
 };
 
 const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
@@ -696,7 +683,7 @@ type AgentLabSuiteResult = ReturnType<typeof runAgentLabSuite>;
 export type AgentLabExportTarget = 'inspect-ai' | 'openinference' | 'langfuse' | 'phoenix' | 'json';
 
 function unique(values: string[]) {
-  return [...new Set(values)];
+  return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
 function suiteResults() {

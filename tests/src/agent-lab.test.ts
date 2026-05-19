@@ -14,10 +14,10 @@ import {
   buildDeveloperModeAgentLabRepairRouteReadModel,
 } from '../../src/agent-lab-complete.ts';
 import {
-  buildLonglineAgentLabSuite,
   buildSampleAgentLabSuite,
   runAgentLabSuite,
 } from '../../src/agent-lab.ts';
+import { buildLonglineAgentLabSuite } from '../../src/agent-lab-longline.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
