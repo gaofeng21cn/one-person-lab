@@ -116,6 +116,7 @@ export type FamilyRuntimeCommandInput =
       workspaceLocator: Record<string, unknown>;
       sourceFingerprint?: string;
       executorKind?: string;
+      executorBindingRef?: string;
       taskId?: string;
       retryBudget?: Record<string, unknown>;
       checkpointRefs?: string[];
