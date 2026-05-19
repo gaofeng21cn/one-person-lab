@@ -72,6 +72,7 @@ const lanes = {
       'tests/src/cli/cases/agents-scaffold.test.ts',
       'tests/src/cli/cases/domain-pack-compiler-drift-manifest.test.ts',
       'tests/src/cli/cases/domain-pack-compiler.test.ts',
+      'tests/src/cli/cases/workspace-domain.stages-graph.test.ts',
       'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
       'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',

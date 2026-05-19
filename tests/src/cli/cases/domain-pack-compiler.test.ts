@@ -127,20 +127,24 @@ test('domain pack compiler uses an extended manifest discovery budget without ch
 
     const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
     const previousStateDir = process.env.OPL_STATE_DIR;
-    process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
-    process.env.OPL_STATE_DIR = stateRoot;
-    const descriptors = buildFamilyAgentDescriptorList(loadFrameworkContracts(), {
-      manifestCommandTimeoutMs: 100,
-    });
-    if (previousContractsDir === undefined) {
-      delete process.env.OPL_CONTRACTS_DIR;
-    } else {
-      process.env.OPL_CONTRACTS_DIR = previousContractsDir;
-    }
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
+    let descriptors;
+    try {
+      process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+      process.env.OPL_STATE_DIR = stateRoot;
+      descriptors = buildFamilyAgentDescriptorList(loadFrameworkContracts(), {
+        manifestCommandTimeoutMs: 100,
+      });
+    } finally {
+      if (previousContractsDir === undefined) {
+        delete process.env.OPL_CONTRACTS_DIR;
+      } else {
+        process.env.OPL_CONTRACTS_DIR = previousContractsDir;
+      }
+      if (previousStateDir === undefined) {
+        delete process.env.OPL_STATE_DIR;
+      } else {
+        process.env.OPL_STATE_DIR = previousStateDir;
+      }
     }
     const masDescriptor = descriptors.family_agent_descriptors.descriptors.find(
       (descriptor: { project_id: string }) => descriptor.project_id === 'medautoscience',
