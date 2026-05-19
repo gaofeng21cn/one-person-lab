@@ -7,7 +7,8 @@
   "cli_surfaces": [
     "opl agents pack-compiler",
     "opl agents pack-compiler inspect --domain <domain>",
-    "opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]"
+    "opl agents interfaces (--domain <domain> | --repo-dir <path>) [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]",
+    "opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...]"
   ],
   "input_surfaces": [
     "family_agent_descriptor.entry",
@@ -133,6 +134,26 @@
       "opl_can_write_memory_body": false,
       "opl_can_authorize_quality_or_export": false,
       "opl_can_mutate_domain_artifacts": false
+    }
+  },
+  "standard_agent_conformance_report": {
+    "surface_kind": "opl_standard_domain_agent_conformance_report",
+    "owner": "one-person-lab",
+    "command": "opl agents conformance",
+    "checks": [
+      "standard_domain_agent_scaffold_validation",
+      "pack_compiler_input canonical_semantic_pack_root and legacy root field guard",
+      "required_domain_pack_paths reject README-only semantic anchors",
+      "generated_surface_handoff OPL owner guard",
+      "generated interface readiness and active-caller target proof",
+      "functional_privatization_audit generic runtime owner and active-path scan guard"
+    ],
+    "production_evidence_tail_policy": "reported separately; conformance ready does not claim live soak, production caller migration, App user-path proof, or domain readiness",
+    "authority_boundary": {
+      "opl_can_write_domain_truth": false,
+      "opl_can_write_memory_body": false,
+      "opl_can_authorize_quality_or_export": false,
+      "conformance_report_can_claim_domain_ready": false
     }
   },
   "ready_conditions": [
