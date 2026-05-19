@@ -1,4 +1,6 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { buildFamilyStagesList } from '../../../../src/family-stage-control-plane.ts';
+import { loadFrameworkContracts } from '../../../../src/contracts.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -13,6 +15,12 @@ function attachManifestSurface(payload: JsonRecord, field: string, value: JsonRe
     };
   }
   return { ...payload, [field]: value };
+}
+
+function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: number) {
+  return `${process.execPath} -e ${
+    shellSingleQuote(`setTimeout(() => process.stdout.write(process.argv[1]), ${delayMs});`)
+  } ${shellSingleQuote(JSON.stringify(payload))}`;
 }
 
 function buildActionCatalog() {
@@ -359,6 +367,66 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
     assert.equal(proofBundle.admission_summary.admitted_stages_count, 6);
     assert.equal(proofBundle.authority_boundary.proof_passed, true);
     assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family stage proof bundle uses the extended stage manifest discovery budget', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-timeout-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const slowMas = withAdmittedStagePack(
+    fixtures.medautoscience as JsonRecord,
+    'med-autoscience',
+    'MedAutoScience',
+  );
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildDelayedManifestCommand(slowMas, 500),
+    ], env);
+
+    const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    let shortTimeoutList;
+    try {
+      process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+      process.env.OPL_STATE_DIR = stateRoot;
+      shortTimeoutList = buildFamilyStagesList(loadFrameworkContracts(), {
+        manifestCommandTimeoutMs: 100,
+      });
+    } finally {
+      if (previousContractsDir === undefined) {
+        delete process.env.OPL_CONTRACTS_DIR;
+      } else {
+        process.env.OPL_CONTRACTS_DIR = previousContractsDir;
+      }
+      if (previousStateDir === undefined) {
+        delete process.env.OPL_STATE_DIR;
+      } else {
+        process.env.OPL_STATE_DIR = previousStateDir;
+      }
+    }
+    const shortTimeoutMas = shortTimeoutList.family_stages.domains.find(
+      (domain: { project_id: string }) => domain.project_id === 'medautoscience',
+    );
+    assert.ok(shortTimeoutMas);
+    assert.equal(shortTimeoutMas.manifest_status, 'command_timeout');
+
+    const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], env);
+    assert.equal(proofBundle.family_stage_proof_bundle.proof_bundle.admission_status, 'admitted');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
