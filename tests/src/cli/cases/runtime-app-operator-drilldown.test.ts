@@ -1,5 +1,3 @@
-import { spawnSync } from 'node:child_process';
-
 import {
   assert,
   buildManifestCommand,
@@ -12,6 +10,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { insertProviderProof } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
@@ -323,6 +322,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
     assert.equal(drilldown.summary.domain_evidence_gate_count, 1);
     assert.equal(drilldown.summary.domain_remaining_evidence_gate_count, 0);
+    assert.equal(drilldown.summary.domain_open_evidence_gate_request_count, 0);
+    assert.equal(drilldown.summary.domain_recorded_evidence_gate_request_count, 0);
+    assert.equal(drilldown.summary.domain_verified_evidence_gate_request_count, 1);
     assert.equal(drilldown.summary.domain_evidence_gate_receipt_count, 1);
     assert.equal(drilldown.summary.domain_evidence_gate_verified_receipt_count, 1);
     assert.equal(drilldown.summary.domain_opl_replacement_expectation_count, 1);
@@ -504,10 +506,16 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.domain_evidence_request_refs.evidence_gate_receipts.some(
         (ref: {
           ref: string;
+          gate_id: string;
+          request_id: string;
+          request_pack_id: string;
           receipt_status: string;
           domain_receipt_refs: string[];
         }) =>
           ref.ref === 'opl://external-evidence/medautoscience/real_package_lifecycle_receipt'
+          && ref.gate_id === 'real_package_lifecycle_receipt'
+          && ref.request_id === 'real_package_lifecycle_receipt'
+          && ref.request_pack_id === 'medautoscience.evidence_gate_projection'
           && ref.receipt_status === 'verified'
           && ref.domain_receipt_refs.includes('mas://receipts/package-lifecycle/latest.json'),
       ),
@@ -523,7 +531,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(
       drilldown.domain_evidence_request_refs.remaining_bridge_modules.some(
-        (ref: { ref: string }) => ref.ref === 'package_lifecycle_adapter',
+        (ref: { ref: string; module_id: string }) =>
+          ref.ref === 'package_lifecycle_adapter'
+          && ref.module_id === 'package_lifecycle_adapter',
       ),
       true,
     );
@@ -961,39 +971,3 @@ test('runtime action execute can execute OPL-owned attempt query routes', () => 
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
-
-function insertProviderProof(stateRoot: string) {
-  const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
-  const result = spawnSync(process.execPath, [
-    '--experimental-strip-types',
-    '-e',
-    `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_app_drilldown_provider_proof',
-    'temporal_residency_proof',
-    'test',
-    JSON.stringify({
-      provider_kind: 'temporal',
-      proof_mode: 'external_temporal_service_worker',
-      closeout_status: 'production_residency_proven',
-      proof_receipt: {
-        receipt_kind: 'temporal_production_residency_proof',
-        receipt_status: 'proven',
-        provider_kind: 'temporal'
-      }
-    }),
-    ${JSON.stringify(new Date().toISOString())}
-  );
-db.close();`,
-  ], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      NODE_NO_WARNINGS: '1',
-    },
-  });
-  assert.equal(result.status, 0, result.stderr);
-}

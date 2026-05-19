@@ -163,6 +163,9 @@ export function buildDomainEvidenceRequestRefs(
         ref: gateId,
         role: 'remaining_evidence_gate',
         domain_id: domainId,
+        gate_id: gateId,
+        request_id: gateId,
+        request_pack_id: `${domainId}.evidence_gate_projection`,
         gate_status: receiptStatus === 'verified' ? 'verified' : 'open',
         external_receipt_status: receiptStatus,
         source_refs: gates.source_refs,
@@ -184,7 +187,9 @@ export function buildDomainEvidenceRequestRefs(
       ref: receipt.receipt_ref,
       role: 'evidence_gate_receipt',
       domain_id: gate.domain_id,
-      gate_id: gate.ref,
+      gate_id: gate.gate_id,
+      request_id: gate.request_id,
+      request_pack_id: gate.request_pack_id,
       receipt_status: receipt.receipt_status,
       evidence_refs: receipt.evidence_refs,
       domain_receipt_refs: receipt.receipt_refs,
@@ -223,6 +228,7 @@ export function buildDomainEvidenceRequestRefs(
       ref: moduleId,
       role: 'remaining_bridge_module',
       domain_id: audit.target_domain_id ?? project.project_id,
+      module_id: moduleId,
       module_status: 'allowed_refs_only_or_minimal_authority_until_evidence_gate_closes',
       source_refs: gates.source_refs,
       can_execute: false,
@@ -241,6 +247,13 @@ export function buildDomainEvidenceRequestRefs(
       external_evidence_request_count: externalRequests.length,
       evidence_gate_count: evidenceGates.length,
       remaining_evidence_gate_count: remainingEvidenceGates.length,
+      open_evidence_gate_request_count: remainingEvidenceGates.length,
+      recorded_evidence_gate_request_count: evidenceGates.filter((gate) =>
+        gate.external_receipt_status === 'recorded'
+      ).length,
+      verified_evidence_gate_request_count: evidenceGates.filter((gate) =>
+        gate.external_receipt_status === 'verified'
+      ).length,
       evidence_gate_receipt_count: evidenceGateReceiptRefs.length,
       evidence_gate_verified_receipt_count: evidenceGateReceiptRefs.filter((receipt) =>
         receipt.receipt_status === 'verified'
