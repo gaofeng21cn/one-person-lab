@@ -41,7 +41,13 @@ test('domain pack compiler emits aligned generated artifact drift manifests for 
 });
 
 test('default domain pack compiler surface treats admitted generated artifacts as aligned', () => {
-  const list = runCli(['agents', 'pack-compiler']);
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-default-state-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  bindFamilyManifests(env);
+
+  const list = runCli(['agents', 'pack-compiler'], env);
   assert.equal(list.domain_pack_compiler.summary.total_domain_count, 3);
   assert.equal(list.domain_pack_compiler.summary.ready_domain_count, 3);
   assert.equal(list.domain_pack_compiler.summary.blocked_domain_count, 0);
@@ -51,7 +57,7 @@ test('default domain pack compiler surface treats admitted generated artifacts a
   assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_aligned_count, 3);
   assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_detected_count, 0);
 
-  const mag = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mag']);
+  const mag = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mag'], env);
   assert.equal(mag.domain_pack_compiler.compiler_status, 'ready');
   assert.deepEqual(mag.domain_pack_compiler.blocker_reasons, []);
   assert.equal(
