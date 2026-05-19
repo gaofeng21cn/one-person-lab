@@ -18,6 +18,13 @@ function readJson(relativePath: string): JsonRecord {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
 }
 
+function record(value: unknown): JsonRecord {
+  assert.equal(typeof value, 'object');
+  assert.notEqual(value, null);
+  assert.equal(Array.isArray(value), false);
+  return value as JsonRecord;
+}
+
 function buildPlane(runtimeAssumptions: unknown[], monitorRefs: JsonRecord[] = []): FamilyStageControlPlane {
   const plane = normalizeFamilyStageControlPlane({
     surface_kind: 'family_stage_control_plane',
@@ -135,12 +142,12 @@ test('family stage admission blocks runtime assumptions without monitor refs', (
 test('family stage assumption schemas expose typed assumptions and non-authority projection', () => {
   const controlPlaneSchema = readJson('contracts/family-orchestration/family-stage-control-plane.schema.json');
   const lifecycleSchema = readJson('contracts/family-orchestration/family-stage-assumption-lifecycle.schema.json');
-  const runtimeAssumption = (controlPlaneSchema.$defs as JsonRecord).runtime_assumption as JsonRecord;
-  const authority = ((lifecycleSchema.properties as JsonRecord).authority_boundary as JsonRecord).properties as JsonRecord;
+  const runtimeAssumption = record(record(controlPlaneSchema.$defs).runtime_assumption);
+  const authority = record(record(record(lifecycleSchema.properties).authority_boundary).properties);
 
   assert.equal(Boolean(runtimeAssumption), true);
-  assert.equal(authority.opl_role.const, 'assumption_lifecycle_projection_only');
-  assert.equal(authority.can_execute_stage.const, false);
-  assert.equal(authority.can_write_domain_truth.const, false);
-  assert.equal(authority.can_authorize_quality_verdict.const, false);
+  assert.equal(record(authority.opl_role).const, 'assumption_lifecycle_projection_only');
+  assert.equal(record(authority.can_execute_stage).const, false);
+  assert.equal(record(authority.can_write_domain_truth).const, false);
+  assert.equal(record(authority.can_authorize_quality_verdict).const, false);
 });

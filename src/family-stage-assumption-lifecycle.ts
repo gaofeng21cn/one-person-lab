@@ -10,13 +10,13 @@ type JsonRecord = Record<string, unknown>;
 export type FamilyStageRuntimeAssumptionStatus = 'current' | 'stale' | 'missing_monitor' | 'missing_owner';
 export type FamilyStageRuntimeAssumptionSeverity = 'info' | 'warning' | 'blocker';
 
-export interface FamilyStageRuntimeAssumptionCounterexample {
+export type FamilyStageRuntimeAssumptionCounterexample = {
   assumption_id: string;
   stage_id: string;
   missing_field?: 'owner' | 'monitor_refs' | 'freshness_window_ref' | 'observed_at_ref';
   invalidated_by?: string[];
   reason: string;
-}
+} & JsonRecord;
 
 export interface FamilyStageRuntimeAssumptionLifecycle {
   assumption_id: string;
