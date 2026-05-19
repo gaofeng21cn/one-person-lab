@@ -16,12 +16,12 @@ export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRoot
 type SkillPackInstallerKind = 'bash' | 'node';
 
 type SkillPackSpec = {
-  domain_id: 'medautoscience' | 'medautogrant' | 'redcube';
-  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE';
+  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
+  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT';
   project: string;
   label: string;
   plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca';
+  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
   installer_kind: SkillPackInstallerKind;
   installer_relative_paths: string[];
 };
@@ -98,6 +98,16 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
       path.join('scripts', 'install-codex-plugin.mjs'),
     ],
   },
+  {
+    domain_id: 'oplmetaagent',
+    module_id: 'OPLMETAAGENT',
+    project: 'opl-meta-agent',
+    label: 'OPL Meta Agent',
+    plugin_name: 'opl-meta-agent',
+    canonical_plugin_name: 'opl-meta-agent',
+    installer_kind: 'node',
+    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.mjs')],
+  },
 ];
 
 const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
@@ -113,6 +123,11 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['redcube', 'redcube'],
   ['redcube-ai', 'redcube'],
   ['redcube_ai', 'redcube'],
+  ['oplmetaagent', 'oplmetaagent'],
+  ['opl-meta-agent', 'oplmetaagent'],
+  ['opl_meta_agent', 'oplmetaagent'],
+  ['meta-agent', 'oplmetaagent'],
+  ['meta_agent', 'oplmetaagent'],
 ]);
 
 function isDirectory(filePath: string) {

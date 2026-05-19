@@ -64,7 +64,7 @@ EOF
         }>;
       };
     };
-    assert.equal(initial.modules.summary.total_modules_count, 4);
+    assert.equal(initial.modules.summary.total_modules_count, 5);
     const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);
@@ -347,6 +347,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
   const masFixture = createGitModuleRemoteFixture('med-autoscience');
   const magFixture = createGitModuleRemoteFixture('med-autogrant');
   const rcaFixture = createGitModuleRemoteFixture('redcube-ai');
+  const metaFixture = createGitModuleRemoteFixture('opl-meta-agent');
   const mdsFixture = createGitModuleRemoteFixture('med-deepscientist');
   const env = {
     HOME: homeRoot,
@@ -355,6 +356,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
     OPL_MODULE_PATH_MEDAUTOGRANT: magFixture.sourceRoot,
     OPL_MODULE_PATH_REDCUBE: rcaFixture.sourceRoot,
+    OPL_MODULE_PATH_OPLMETAAGENT: metaFixture.sourceRoot,
     OPL_MODULE_PATH_MEDDEEPSCIENTIST: mdsFixture.sourceRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
@@ -454,6 +456,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(magFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(rcaFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(mdsFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

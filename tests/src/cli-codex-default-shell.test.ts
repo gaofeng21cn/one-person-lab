@@ -138,6 +138,7 @@ const fakeFamilySkillDescriptions: Record<string, string> = {
   mas: 'Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
   mag: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',
   rca: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
+  'opl-meta-agent': 'Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
 };
 
 const retiredCliCommandMatrix: Array<{
@@ -227,6 +228,16 @@ fs.appendFileSync(${JSON.stringify(path.join(captureDir, 'sync.log'))}, 'redcube
 process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n');
 `,
     },
+    {
+      project: 'opl-meta-agent',
+      plugin: 'opl-meta-agent',
+      canonicalPlugin: 'opl-meta-agent',
+      installer: path.join('scripts', 'install-codex-plugin.mjs'),
+      scriptBody: `import fs from 'node:fs';
+fs.appendFileSync(${JSON.stringify(path.join(captureDir, 'sync.log'))}, 'opl-meta-agent\\n');
+process.stdout.write(JSON.stringify({ repo: 'opl-meta-agent', sync: 'ok' }) + '\\n');
+`,
+    },
   ];
 
   for (const spec of specs) {
@@ -248,7 +259,7 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     fs.mkdirSync(path.join(skillRoot, 'agents'), { recursive: true });
     fs.writeFileSync(
       path.join(skillRoot, 'agents', 'openai.yaml'),
-      `interface:\n  display_name: "${spec.project === 'med-autoscience' ? 'Med Auto Science' : spec.project === 'med-autogrant' ? 'Med Auto Grant' : 'RedCube AI'}"\n  short_description: "Canonical family app skill"\n  default_prompt: "Use $${spec.canonicalPlugin} to inspect the current family app state."\n`,
+      `interface:\n  display_name: "${spec.project === 'med-autoscience' ? 'Med Auto Science' : spec.project === 'med-autogrant' ? 'Med Auto Grant' : spec.project === 'redcube-ai' ? 'RedCube AI' : 'OPL Meta Agent'}"\n  short_description: "Canonical family app skill"\n  default_prompt: "Use $${spec.canonicalPlugin} to inspect the current family app state."\n`,
     );
     fs.writeFileSync(installerPath, spec.scriptBody, { mode: 0o755 });
   }
@@ -572,21 +583,21 @@ test('opl skill list discovers the family plugin packs through the configured si
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
-    assert.equal(output.skill_catalog.summary.total, 3);
-    assert.equal(output.skill_catalog.summary.ready_to_sync, 3);
+    assert.equal(output.skill_catalog.summary.total, 4);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 4);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
-      ['medautoscience', 'medautogrant', 'redcube'],
+      ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'],
     );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
-      ['mas', 'mag', 'rca'],
+      ['mas', 'mag', 'rca', 'opl-meta-agent'],
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-      [true, true, true],
+      [true, true, true, true],
     );
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
@@ -626,6 +637,7 @@ test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WO
       OPL_STATE_DIR: stateDir,
       OPL_MEDAUTOGRANT_REPO_ROOT: path.join(missingRepoRoot, 'med-autogrant'),
       OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
+      OPL_OPLMETAAGENT_REPO_ROOT: path.join(missingRepoRoot, 'opl-meta-agent'),
     });
 
     const medAutoScience = output.skill_catalog.packs.find(
@@ -735,26 +747,28 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
-    assert.equal(output.skill_sync.summary.synced, 3);
+    assert.equal(output.skill_sync.summary.synced, 4);
     assert.deepEqual(fs.readFileSync(syncLogPath, 'utf8').trim().split('\n'), [
       'med-autoscience',
       'med-autogrant',
       'redcube-ai',
+      'opl-meta-agent',
     ]);
     assert.equal(output.skill_sync.packs[0].installer_result.repo, 'med-autoscience');
     assert.equal(output.skill_sync.packs[1].installer_result.repo, 'med-autogrant');
     assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
+    assert.equal(output.skill_sync.packs[3].installer_result.repo, 'opl-meta-agent');
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
-    for (const skillName of ['mas', 'mag', 'rca']) {
+    for (const skillName of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
       const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
       const metadataPath = path.join(homeDir, '.codex', 'skills', skillName, 'agents', 'openai.yaml');
       const content = fs.readFileSync(skillPath, 'utf8');
       const metadata = fs.readFileSync(metadataPath, 'utf8');
       assert.match(content, /^---\nname: /);
       assert.doesNotMatch(content, /test skill/i);
-      assert.match(metadata, /display_name: "(Med Auto Science|Med Auto Grant|RedCube AI)"/);
+      assert.match(metadata, /display_name: "(Med Auto Science|Med Auto Grant|RedCube AI|OPL Meta Agent)"/);
       assert.match(metadata, new RegExp(`default_prompt: "Use \\$${skillName}\\b`));
     }
   } finally {
@@ -785,6 +799,7 @@ exit 0
       'med-autoscience',
       'med-autogrant',
       'redcube-ai',
+      'opl-meta-agent',
     ]);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });

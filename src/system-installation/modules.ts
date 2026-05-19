@@ -35,7 +35,7 @@ type DomainModuleRuntimeSpec = DomainModuleSpec & {
   bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
-  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube';
+  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
 };
 
 type ModuleActionStepResult = {
@@ -125,6 +125,25 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       args: ['run', '--silent', 'redcube', '--', ...args],
     }),
     skill_sync_domain: 'redcube',
+  },
+  {
+    module_id: 'oplmetaagent',
+    label: 'OPL Meta Agent',
+    repo_name: 'opl-meta-agent',
+    repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
+    scope: 'domain_module',
+    default_install: true,
+    description: 'Foundry Agent for building new OPL-compatible high-value knowledge delivery agents.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? { command: 'npm', args: ['install'] }
+    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    exec_command: (_checkoutPath, args) => ({
+      command: 'npm',
+      args: ['test', '--', ...args],
+    }),
+    skill_sync_domain: 'oplmetaagent',
   },
 ];
 
@@ -433,6 +452,11 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
     ['med-autogrant', 'medautogrant'],
     ['med_autogrant', 'medautogrant'],
     ['mag', 'medautogrant'],
+    ['opl-meta-agent', 'oplmetaagent'],
+    ['opl_meta_agent', 'oplmetaagent'],
+    ['oplmetaagent', 'oplmetaagent'],
+    ['meta-agent', 'oplmetaagent'],
+    ['meta_agent', 'oplmetaagent'],
     ['redcube-ai', 'redcube'],
     ['redcube_ai', 'redcube'],
     ['rca', 'redcube'],
@@ -477,6 +501,7 @@ export function buildOplModules() {
       notes: [
         'OPL-managed default installs live under modules_root by default.',
         'MDS remains available only as an explicit MAS-declared diagnostic, intake, or parity-oracle companion; it is not installed during the default OPL first-run path.',
+        'OPL Meta Agent is a managed default ecosystem module so the App can install and maintain the Foundry Agent used to create new OPL-compatible agents.',
         'External sibling checkouts are still recognized so existing developer machines remain visible to the GUI without forcing a reinstall.',
       ],
     },

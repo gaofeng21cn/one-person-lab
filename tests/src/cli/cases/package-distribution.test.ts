@@ -121,6 +121,14 @@ test('packages manifest exposes package coordinates while marking module install
     output.packages_manifest.packages.modules.redcube.install_strategy,
     'extract_to_managed_modules_root',
   );
+  assert.equal(
+    output.packages_manifest.packages.modules.oplmetaagent.artifact,
+    'ghcr.io/gaofeng21cn/one-person-lab-modules/opl-meta-agent:26.4.27',
+  );
+  assert.equal(
+    output.packages_manifest.packages.modules.oplmetaagent.fallback_git.repo_url,
+    'https://github.com/gaofeng21cn/opl-meta-agent.git',
+  );
 });
 
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
@@ -132,6 +140,7 @@ test('package archive builder writes channel manifest checksums git source and r
     medautoscience: createGitModuleRemoteFixture('med-autoscience'),
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
+    oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
   };
 
   execFileSync(process.execPath, [
@@ -155,6 +164,7 @@ test('package archive builder writes channel manifest checksums git source and r
       OPL_MODULE_PATH_MEDAUTOSCIENCE: fixtures.medautoscience.sourceRoot,
       OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
       OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
+      OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
     },
   });
 
@@ -182,7 +192,13 @@ test('package archive builder writes channel manifest checksums git source and r
     fixtures.medautoscience.getHeadSha(),
   );
   assert.match(manifest.packages.modules.medautoscience.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.equal(
+    manifest.packages.modules.oplmetaagent.source_git.head_sha,
+    fixtures.oplmetaagent.getHeadSha(),
+  );
+  assert.match(manifest.packages.modules.oplmetaagent.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
+  assert.match(checksums, /opl-meta-agent-26\.4\.31\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.modules.medautoscience.source_archive.sha256));
 
   execFileSync(process.execPath, [
