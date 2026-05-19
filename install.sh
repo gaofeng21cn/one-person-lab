@@ -5,6 +5,9 @@ REPO_URL=${OPL_REPO_URL:-https://github.com/gaofeng21cn/one-person-lab.git}
 INSTALL_DIR=${OPL_INSTALL_DIR:-$HOME/.opl/one-person-lab}
 BRANCH=${OPL_INSTALL_BRANCH:-main}
 BOOTSTRAP_ONLY=${OPL_BOOTSTRAP_ONLY:-0}
+MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
+MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.21.1}
+INSTALL_SOURCE_MARKER=.opl-install-source
 
 INSTALL_ARGS=()
 for arg in "$@"; do
@@ -27,22 +30,119 @@ log() {
   printf '==> %s\n' "$1"
 }
 
+is_darwin() {
+  [ "$(uname -s)" = "Darwin" ]
+}
+
+node_darwin_arch() {
+  case "$(uname -m)" in
+    arm64|aarch64)
+      printf 'arm64\n'
+      ;;
+    x86_64|amd64)
+      printf 'x64\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+managed_node_dir() {
+  local arch
+  arch=$(node_darwin_arch) || return 1
+  printf '%s/node-%s-darwin-%s\n' "$MANAGED_TOOLCHAIN_ROOT" "$MANAGED_NODE_VERSION" "$arch"
+}
+
+prepend_managed_node_if_present() {
+  local node_dir
+  node_dir=$(managed_node_dir 2>/dev/null) || return 0
+  if [ -x "$node_dir/bin/node" ] && [ -x "$node_dir/bin/npm" ]; then
+    PATH="$node_dir/bin:$PATH"
+    export PATH
+  fi
+}
+
+node_is_usable() {
+  command -v node >/dev/null 2>&1 || return 1
+  command -v npm >/dev/null 2>&1 || return 1
+  node -e 'const major = Number(process.versions.node.split(".")[0]); process.exit(major >= 22 && major < 25 ? 0 : 1)' >/dev/null 2>&1
+}
+
+install_managed_node() {
+  local arch node_dir archive_tmp archive_url
+  arch=$(node_darwin_arch) || {
+    printf 'One Person Lab cannot prepare managed Node.js on this Mac architecture: %s\n' "$(uname -m)" >&2
+    exit 1
+  }
+  node_dir="$MANAGED_TOOLCHAIN_ROOT/node-$MANAGED_NODE_VERSION-darwin-$arch"
+  archive_url="${OPL_MANAGED_NODE_URL:-https://nodejs.org/dist/$MANAGED_NODE_VERSION/node-$MANAGED_NODE_VERSION-darwin-$arch.tar.gz}"
+  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/node-$MANAGED_NODE_VERSION-darwin-$arch.XXXXXX.tgz")
+
+  log "Preparing One Person Lab managed Node.js $MANAGED_NODE_VERSION"
+  mkdir -p "$MANAGED_TOOLCHAIN_ROOT"
+  curl --http1.1 --connect-timeout 20 --max-time 300 --retry 3 --retry-delay 2 --retry-all-errors -fsSL "$archive_url" -o "$archive_tmp"
+  rm -rf "$node_dir"
+  tar -xzf "$archive_tmp" -C "$MANAGED_TOOLCHAIN_ROOT"
+  rm -f "$archive_tmp"
+  prepend_managed_node_if_present
+  if ! node_is_usable; then
+    printf 'Managed Node.js was downloaded but is not usable: %s\n' "$node_dir" >&2
+    exit 1
+  fi
+}
+
+ensure_node_runtime() {
+  prepend_managed_node_if_present
+  if node_is_usable; then
+    return 0
+  fi
+
+  if is_darwin; then
+    need_cmd curl
+    need_cmd tar
+    install_managed_node
+    return 0
+  fi
+
+  need_cmd node
+  need_cmd npm
+}
+
+git_is_usable() {
+  command -v git >/dev/null 2>&1 || return 1
+  if is_darwin && [ "$(command -v git)" = "/usr/bin/git" ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
+    return 1
+  fi
+  git --version >/dev/null 2>&1
+}
+
+request_command_line_tools() {
+  if is_darwin && [ -x /usr/bin/xcode-select ]; then
+    /usr/bin/xcode-select --install >/dev/null 2>&1 || true
+    printf 'One Person Lab has opened the macOS Command Line Tools installer for Git-backed updates.\n' >&2
+    printf 'Finish that Apple installer, then retry setup in the One Person Lab App.\n' >&2
+    exit 69
+  fi
+}
+
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     printf 'Missing required command: %s\n' "$1" >&2
     printf '\n' >&2
-    printf 'One Person Lab needs git, Node.js, and npm before it can run the complete setup.\n' >&2
-    if [ "$(uname -s)" = "Darwin" ]; then
-      printf 'Fastest macOS setup:\n' >&2
-      printf '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\n' >&2
-      printf '  brew install git node\n' >&2
+    if is_darwin; then
+      printf 'One Person Lab could not prepare the required macOS setup helper automatically.\n' >&2
+      printf 'Please retry from the One Person Lab App after the current setup step finishes.\n' >&2
     elif command -v apt-get >/dev/null 2>&1; then
+      printf 'One Person Lab needs git, Node.js, and npm before it can run the complete setup.\n' >&2
       printf 'Fastest Debian/Ubuntu setup:\n' >&2
       printf '  sudo apt-get update && sudo apt-get install -y git nodejs npm\n' >&2
     elif command -v dnf >/dev/null 2>&1; then
+      printf 'One Person Lab needs git, Node.js, and npm before it can run the complete setup.\n' >&2
       printf 'Fastest Fedora/RHEL setup:\n' >&2
       printf '  sudo dnf install -y git nodejs npm\n' >&2
     elif command -v apk >/dev/null 2>&1; then
+      printf 'One Person Lab needs git, Node.js, and npm before it can run the complete setup.\n' >&2
       printf 'Fastest Alpine setup:\n' >&2
       printf '  apk add --no-cache git nodejs npm\n' >&2
     else
@@ -55,23 +155,66 @@ need_cmd() {
   fi
 }
 
-need_cmd git
-need_cmd node
-need_cmd npm
+source_archive_url() {
+  printf 'https://github.com/gaofeng21cn/one-person-lab/archive/refs/heads/%s.tar.gz\n' "$BRANCH"
+}
+
+install_from_archive() {
+  local archive_tmp extract_root source_dir
+  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/one-person-lab.XXXXXX.tgz")
+  extract_root=$(mktemp -d "${TMPDIR:-/tmp}/one-person-lab-src.XXXXXX")
+  cleanup_archive_tmp() {
+    rm -f "$archive_tmp"
+    rm -rf "$extract_root"
+  }
+  trap cleanup_archive_tmp EXIT
+
+  log "Downloading One Person Lab source archive into $INSTALL_DIR"
+  curl --http1.1 --connect-timeout 20 --max-time 300 --retry 3 --retry-delay 2 --retry-all-errors -fsSL \
+    "${OPL_SOURCE_ARCHIVE_URL:-$(source_archive_url)}" \
+    -o "$archive_tmp"
+  tar -xzf "$archive_tmp" -C "$extract_root"
+  source_dir=$(find "$extract_root" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+  if [ -z "$source_dir" ] || [ ! -d "$source_dir" ]; then
+    printf 'Downloaded One Person Lab source archive did not contain an installable directory.\n' >&2
+    exit 1
+  fi
+  printf 'archive\n' > "$source_dir/$INSTALL_SOURCE_MARKER"
+  rm -rf "$INSTALL_DIR"
+  mv "$source_dir" "$INSTALL_DIR"
+  trap - EXIT
+  cleanup_archive_tmp
+}
+
+ensure_node_runtime
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
 
 if [ -d "$INSTALL_DIR/.git" ]; then
+  if ! git_is_usable; then
+    request_command_line_tools
+    printf 'One Person Lab needs Git to update the existing source checkout: %s\n' "$INSTALL_DIR" >&2
+    exit 1
+  fi
   log "Updating One Person Lab in $INSTALL_DIR"
   git -C "$INSTALL_DIR" fetch --prune origin "$BRANCH"
   git -C "$INSTALL_DIR" checkout "$BRANCH"
   git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
+elif [ -f "$INSTALL_DIR/$INSTALL_SOURCE_MARKER" ]; then
+  install_from_archive
 else
   if [ -e "$INSTALL_DIR" ]; then
     printf 'Install directory exists but is not a git checkout: %s\n' "$INSTALL_DIR" >&2
     printf 'Move it away or set OPL_INSTALL_DIR to another path.\n' >&2
     exit 1
   fi
+  if ! git_is_usable; then
+    if is_darwin; then
+      install_from_archive
+    else
+      need_cmd git
+    fi
+  else
   CLONE_TMP="${INSTALL_DIR}.tmp.$$"
   rm -rf "$CLONE_TMP"
   cleanup_clone_tmp() {
@@ -82,6 +225,7 @@ else
   git clone --branch "$BRANCH" "$REPO_URL" "$CLONE_TMP"
   mv "$CLONE_TMP" "$INSTALL_DIR"
   trap - EXIT
+  fi
 fi
 
 cd "$INSTALL_DIR"

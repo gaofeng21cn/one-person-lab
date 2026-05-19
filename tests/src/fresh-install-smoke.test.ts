@@ -23,6 +23,10 @@ test('install bootstrap-only handles no forwarded args under nounset bash', () =
     [
       '#!/usr/bin/env bash',
       'set -euo pipefail',
+      'if [ "${1:-}" = "--version" ]; then',
+      '  printf "git version 2.50.0\\n"',
+      '  exit 0',
+      'fi',
       'if [ "${1:-}" = "clone" ]; then',
       '  target=""',
       '  for arg in "$@"; do target="$arg"; done',
@@ -62,6 +66,10 @@ test('install bootstrap-only removes partial clone directories after clone failu
     [
       '#!/usr/bin/env bash',
       'set -euo pipefail',
+      'if [ "${1:-}" = "--version" ]; then',
+      '  printf "git version 2.50.0\\n"',
+      '  exit 0',
+      'fi',
       'if [ "${1:-}" = "clone" ]; then',
       '  target=""',
       '  for arg in "$@"; do target="$arg"; done',
@@ -98,6 +106,111 @@ test('install bootstrap-only removes partial clone directories after clone failu
       fs.readdirSync(path.dirname(installDir)).filter((entry) => entry.startsWith(`${path.basename(installDir)}.tmp.`)),
       [],
     );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install bootstrap-only on macOS prepares managed Node and uses a source archive when git is unavailable', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-managed-node-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const toolchainRoot = path.join(homeRoot, '.opl', 'toolchain');
+  const gitLog = path.join(homeRoot, 'git.log');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(fakeBin, 'uname'),
+    [
+      '#!/usr/bin/env bash',
+      'if [ "${1:-}" = "-s" ]; then printf "Darwin\\n"; exit 0; fi',
+      'if [ "${1:-}" = "-m" ]; then printf "arm64\\n"; exit 0; fi',
+      'exec /usr/bin/uname "$@"',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'git'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(gitLog)}`,
+      'exit 1',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'curl'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'out=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  if [ "$1" = "-o" ]; then out="$2"; shift 2; continue; fi',
+      '  shift',
+      'done',
+      'mkdir -p "$(dirname "$out")"',
+      'printf "fixture archive\\n" > "$out"',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'tar'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'archive=""',
+      'dest=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  case "$1" in',
+      '    -xzf) archive="$2"; shift 2 ;;',
+      '    -C) dest="$2"; shift 2 ;;',
+      '    *) shift ;;',
+      '  esac',
+      'done',
+      'if [[ "$archive" == *"node-v22.21.1-darwin-arm64"* ]]; then',
+      '  node_dir="$dest/node-v22.21.1-darwin-arm64/bin"',
+      '  mkdir -p "$node_dir"',
+      '  cat > "$node_dir/node" <<\\NODE',
+      '#!/usr/bin/env bash',
+      'exit 0',
+      'NODE',
+      '  cat > "$node_dir/npm" <<\\NPM',
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(npmLog)}`,
+      'exit 0',
+      'NPM',
+      '  chmod +x "$node_dir/node" "$node_dir/npm"',
+      '  exit 0',
+      'fi',
+      'mkdir -p "$dest/one-person-lab-main"',
+      'printf "{}\\n" > "$dest/one-person-lab-main/package.json"',
+    ].join('\n'),
+  );
+  for (const command of ['uname', 'git', 'curl', 'tar']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+
+  try {
+    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        HOME: homeRoot,
+        OPL_INSTALL_DIR: installDir,
+        OPL_MANAGED_TOOLCHAIN_ROOT: toolchainRoot,
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /Preparing One Person Lab managed Node\.js v22\.21\.1/);
+    assert.match(result.stdout, /Downloading One Person Lab source archive/);
+    assert.match(result.stdout, /OPL CLI is ready/);
+    assert.equal(result.stderr.includes('Homebrew'), false);
+    assert.equal(result.stderr.includes('brew install'), false);
+    assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.21.1-darwin-arm64', 'bin', 'node')), true);
+    assert.equal(fs.readFileSync(path.join(installDir, '.opl-install-source'), 'utf8').trim(), 'archive');
+    assert.equal(fs.existsSync(gitLog), true);
+    assert.equal(fs.readFileSync(gitLog, 'utf8').includes('clone'), false);
+    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), ['install', 'link']);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
