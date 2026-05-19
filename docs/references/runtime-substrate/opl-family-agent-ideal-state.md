@@ -30,6 +30,44 @@ Declarative Domain Pack
 
 它不是自带一套运行平台。Domain repo 默认先把领域工作拆成专家 stage，再为每个 stage 声明提示词、工具、知识、质控、输入输出、handoff 和 receipt。工具包括 OPL 提供的通用工具、stage skill、以及无法声明化但边界清晰的私有功能，例如 MAS 的绘图 / 统计 / artifact materialization helper；知识包括领域规则、source refs、memory refs、经验卡、rubric 和 policy。只有领域裁决无法可靠声明化时，domain repo 才保留最小 authority function，例如 quality verdict、artifact mutation authorization、memory accept/reject、source readiness verdict、owner receipt signer 或 domain-specific native helper implementation。
 
+理想 Foundry Agent 的物理源码形态也必须表达同一分层。标准 repo source tree 应让维护者不读长文档也能看出谁持有语义、谁持有合同、谁只是 authority implementation，谁是 OPL 生成或托管面：
+
+```text
+domain-agent-repo/
+  agent/
+    stages/
+    prompts/
+    skills/
+    knowledge/
+    quality_gates/
+    policies/
+  contracts/
+    domain_descriptor.json
+    pack_compiler_input.json
+    stage_control_plane.json
+    action_catalog.json
+    memory_descriptor.json
+    artifact_locator_contract.json
+    generated_surface_handoff.json
+    owner_receipt.schema.json
+  runtime/
+    authority_functions/
+    native_helpers/
+    fixtures/
+  src/ or packages/
+    domain handlers, authority implementations, native helpers, schema helpers
+  docs/
+    project.md
+    status.md
+    architecture.md
+    invariants.md
+    decisions.md
+```
+
+`agent/` 是唯一 canonical semantic pack root。`contracts/` 是机器合同和 OPL 消费边界。`runtime/authority_functions/`、`src/` 或 `packages/` 中长期保留的代码必须能归为 domain handler、minimal authority function、native helper implementation、refs-only adapter、fixture 或 diagnostic probe。任何 repo-local generic scheduler、queue、attempt ledger、state-machine runner、session store、SQLite lifecycle engine、operator workbench、generated wrapper owner、default runtime owner、compatibility facade 或 local daemon 都不是标准 OPL Agent 物理形态。
+
+因此，`supervisor`、`scheduler`、`managed run`、`runtime manager`、`session store`、`workbench` 这类命名只允许在 active source 中作为明确的 domain bridge、refs-only adapter、diagnostic 或 history/tombstone 出现。否则即使 descriptor ready 或 functional audit 已 closed，也应列为 physical source morphology gap，继续 rename、split、delete、archive 或 tombstone。
+
 ## 语义单真相与冗余治理
 
 理想 OPL Framework 不能靠多个相似读模型分别解释“是否 ready”“谁是 owner”“哪个 surface 是生产入口”。所有面向 CLI、App、Agent、测试和文档的状态，都必须从少数权威机器面派生：
