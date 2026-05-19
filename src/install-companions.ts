@@ -17,6 +17,7 @@ export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_sourc
 export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
 export type OplSuperpowersProfile = 'keep' | 'lite' | 'full';
 export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'missing' | 'failed';
+export type OplCompanionToolId = 'officecli' | 'mineru-open-api';
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
@@ -28,7 +29,7 @@ export type OplCompanionSkillSyncItem = {
 };
 
 export type OplCompanionToolSyncItem = {
-  tool_id: 'officecli';
+  tool_id: OplCompanionToolId;
   binary_path: string | null;
   version: string | null;
   status: OplCompanionToolActionStatus;
@@ -63,7 +64,7 @@ export type OplRecommendedSkill = {
   expected_paths: string[];
   install_source_paths?: string[];
   status: OplCompanionSkillStatus;
-  required_tools?: string[];
+  required_tools?: OplCompanionToolId[];
   install_hint: string;
   update_hint?: string;
   supports: string[];
@@ -152,6 +153,11 @@ function getUiUxProMaxRepoUrl() {
   return process.env.OPL_UI_UX_PRO_MAX_REPO_URL?.trim() || 'https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git';
 }
 
+function getMineruDocumentExtractorArchiveUrl() {
+  return process.env.OPL_MINERU_DOCUMENT_EXTRACTOR_ARCHIVE_URL?.trim()
+    || 'https://github.com/MinerU-Extract/mineru-document-extractor/archive/refs/heads/main.tar.gz';
+}
+
 function remoteCompanionInstallDisabled() {
   return process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL === '1';
 }
@@ -190,22 +196,34 @@ function runCommandForOutput(command: string, args: string[]) {
   return [result.stdout, result.stderr].filter(Boolean).join('\n').trim() || null;
 }
 
-function inspectOfficeCliBinary(binaryPath: string | null): OplCompanionToolSyncItem | null {
+function inspectToolBinary(
+  toolId: OplCompanionToolId,
+  binaryPath: string | null,
+  versionArgs: string[],
+): OplCompanionToolSyncItem | null {
   if (!binaryPath || !fs.existsSync(binaryPath) || !fs.statSync(binaryPath).isFile()) {
     return null;
   }
-  const version = runCommandForOutput(binaryPath, ['--version']);
+  const version = runCommandForOutput(binaryPath, versionArgs);
   if (!version) {
     return null;
   }
   return {
-    tool_id: 'officecli',
+    tool_id: toolId,
     binary_path: binaryPath,
     version,
     status: 'ready',
     action: 'none',
     note: null,
   };
+}
+
+function inspectOfficeCliBinary(binaryPath: string | null): OplCompanionToolSyncItem | null {
+  return inspectToolBinary('officecli', binaryPath, ['--version']);
+}
+
+function inspectMineruOpenApiBinary(binaryPath: string | null): OplCompanionToolSyncItem | null {
+  return inspectToolBinary('mineru-open-api', binaryPath, ['version']);
 }
 
 function resolveOfficeCliTool(home: string): OplCompanionToolSyncItem | null {
@@ -225,9 +243,31 @@ function resolveOfficeCliTool(home: string): OplCompanionToolSyncItem | null {
   return null;
 }
 
+function resolveMineruOpenApiTool(home: string): OplCompanionToolSyncItem | null {
+  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  const candidates = [
+    process.env.OPL_MINERU_OPEN_API_BIN?.trim() || null,
+    runtimeHome ? path.join(runtimeHome, 'bin', 'mineru-open-api') : null,
+    findExecutableInPath('mineru-open-api'),
+    path.join(home, '.local', 'bin', 'mineru-open-api'),
+  ];
+  for (const candidate of candidates) {
+    const inspected = inspectMineruOpenApiBinary(candidate);
+    if (inspected) {
+      return inspected;
+    }
+  }
+  return null;
+}
+
 function buildOfficeCliInstallCommand() {
   return process.env.OPL_OFFICECLI_INSTALL_COMMAND?.trim()
     || 'curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/main/install.sh | bash';
+}
+
+function buildMineruOpenApiInstallCommand() {
+  return process.env.OPL_MINERU_OPEN_API_INSTALL_COMMAND?.trim()
+    || 'npm install -g mineru-open-api';
 }
 
 function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
@@ -274,6 +314,56 @@ function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
     status: 'failed',
     action: 'install',
     note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'officecli install did not produce a runnable binary.',
+  };
+}
+
+function ensureMineruOpenApiTool(home: string): OplCompanionToolSyncItem {
+  const existing = resolveMineruOpenApiTool(home);
+  if (existing) {
+    return existing;
+  }
+  if (remoteCompanionInstallDisabled()) {
+    return {
+      tool_id: 'mineru-open-api',
+      binary_path: null,
+      version: null,
+      status: 'missing',
+      action: 'none',
+      note: 'Remote companion install is disabled; mineru-open-api binary was not installed.',
+    };
+  }
+
+  const localPrefix = path.join(home, '.local');
+  const localBin = path.join(localPrefix, 'bin');
+  fs.mkdirSync(localBin, { recursive: true });
+  ensurePathEntry(localBin);
+  const installCommand = buildMineruOpenApiInstallCommand();
+  const result = spawnSync(process.env.SHELL?.trim() || '/bin/bash', ['-lc', installCommand], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: home,
+      PATH: process.env.PATH,
+      npm_config_prefix: localPrefix,
+      NPM_CONFIG_PREFIX: localPrefix,
+    },
+    stdio: 'pipe',
+  });
+  const installed = resolveMineruOpenApiTool(home);
+  if (result.status === 0 && installed) {
+    return {
+      ...installed,
+      status: 'installed',
+      action: 'install',
+    };
+  }
+  return {
+    tool_id: 'mineru-open-api',
+    binary_path: null,
+    version: null,
+    status: 'failed',
+    action: 'install',
+    note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'mineru-open-api install did not produce a runnable binary.',
   };
 }
 
@@ -400,6 +490,16 @@ function materializeSkillFile(sourceFile: string, targetRoot: string) {
   fs.copyFileSync(sourceFile, path.join(targetRoot, 'SKILL.md'));
 }
 
+function materializeSingleSkillRoot(sourceRoot: string, targetRoot: string) {
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+  fs.mkdirSync(targetRoot, { recursive: true });
+  fs.copyFileSync(path.join(sourceRoot, 'SKILL.md'), path.join(targetRoot, 'SKILL.md'));
+  const metaPath = path.join(sourceRoot, '_meta.json');
+  if (fs.existsSync(metaPath)) {
+    fs.copyFileSync(metaPath, path.join(targetRoot, '_meta.json'));
+  }
+}
+
 function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
   if (fs.existsSync(path.join(repoDir, '.git'))) {
     const pullResult = runGit(['pull', '--ff-only'], repoDir);
@@ -422,12 +522,56 @@ function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
   };
 }
 
+function downloadArchiveToDirectory(archiveUrl: string, targetRoot: string) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-companion-archive-'));
+  const archivePath = path.join(tempRoot, 'source.tar.gz');
+  const unpackRoot = path.join(tempRoot, 'unpack');
+  try {
+    const curlResult = spawnSync('curl', ['-fsSL', archiveUrl, '-o', archivePath], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+    if (curlResult.status !== 0) {
+      return false;
+    }
+    fs.mkdirSync(unpackRoot, { recursive: true });
+    const tarResult = spawnSync('tar', ['-xzf', archivePath, '-C', unpackRoot], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+    if (tarResult.status !== 0) {
+      return false;
+    }
+    const unpackedRoot = fs.readdirSync(unpackRoot)
+      .map((entry) => path.join(unpackRoot, entry))
+      .find((entryPath) => fs.statSync(entryPath).isDirectory());
+    if (!unpackedRoot || !fs.existsSync(path.join(unpackedRoot, 'SKILL.md'))) {
+      return false;
+    }
+    fs.rmSync(targetRoot, { recursive: true, force: true });
+    fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
+    fs.cpSync(unpackedRoot, targetRoot, {
+      recursive: true,
+      dereference: true,
+      preserveTimestamps: true,
+    });
+    return true;
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
 function resolveOfficeCliSourceRoot(home: string) {
   return process.env.OPL_OFFICECLI_SOURCE_ROOT?.trim() || path.join(resolveCompanionSourcesRoot(home), 'OfficeCLI');
 }
 
 function resolveUiUxProMaxSourceRoot(home: string) {
   return process.env.OPL_UI_UX_PRO_MAX_SOURCE_ROOT?.trim() || path.join(resolveCompanionSourcesRoot(home), 'ui-ux-pro-max-skill');
+}
+
+function resolveMineruDocumentExtractorSourceRoot(home: string) {
+  return process.env.OPL_MINERU_DOCUMENT_EXTRACTOR_SOURCE_ROOT?.trim()
+    || path.join(resolveCompanionSourcesRoot(home), 'mineru-document-extractor');
 }
 
 function materializeOfficeCliSkillSource(home: string, skillId: string) {
@@ -477,6 +621,19 @@ function materializeUiUxProMaxSkillSource(home: string) {
   return resolveSkillSourceCandidate(materializedRoot);
 }
 
+function materializeMineruDocumentExtractorSkillSource(home: string) {
+  const repoDir = resolveMineruDocumentExtractorSourceRoot(home);
+  if (!fs.existsSync(repoDir) && !remoteCompanionInstallDisabled()) {
+    downloadArchiveToDirectory(getMineruDocumentExtractorArchiveUrl(), repoDir);
+  }
+  if (!fs.existsSync(path.join(repoDir, 'SKILL.md'))) {
+    return null;
+  }
+  const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', 'mineru-document-extractor');
+  materializeSingleSkillRoot(repoDir, materializedRoot);
+  return resolveSkillSourceCandidate(materializedRoot);
+}
+
 function ensureRecommendedSkillSource(home: string, skill: OplRecommendedSkill) {
   const existing = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
   if (existing) {
@@ -487,6 +644,9 @@ function ensureRecommendedSkillSource(home: string, skill: OplRecommendedSkill) 
   }
   if (skill.skill_id === 'officecli' || skill.skill_id.startsWith('officecli-')) {
     return materializeOfficeCliSkillSource(home, skill.skill_id);
+  }
+  if (skill.skill_id === 'mineru-document-extractor') {
+    return materializeMineruDocumentExtractorSkillSource(home);
   }
   return null;
 }
@@ -543,14 +703,24 @@ function buildCompanionResult(
   mode: OplCompanionSkillApplyMode,
   superpowersProfile: OplSuperpowersProfile,
   items: OplCompanionSkillSyncItem[],
-  tools: OplCompanionToolSyncItem[] = [resolveOfficeCliTool(home) ?? {
-    tool_id: 'officecli',
-    binary_path: null,
-    version: null,
-    status: 'missing',
-    action: 'none',
-    note: 'officecli binary is not available.',
-  }],
+  tools: OplCompanionToolSyncItem[] = [
+    resolveOfficeCliTool(home) ?? {
+      tool_id: 'officecli',
+      binary_path: null,
+      version: null,
+      status: 'missing',
+      action: 'none',
+      note: 'officecli binary is not available.',
+    },
+    resolveMineruOpenApiTool(home) ?? {
+      tool_id: 'mineru-open-api',
+      binary_path: null,
+      version: null,
+      status: 'missing',
+      action: 'none',
+      note: 'mineru-open-api binary is not available.',
+    },
+  ],
 ): OplCompanionSkillSyncResult {
   return {
     surface_id: 'opl_companion_skill_sync',
@@ -588,7 +758,7 @@ export function syncOplCompanionSkills(
   const codexSkillsDir = resolveCodexSkillsDir(home);
   const recommendedSkills = buildOplRecommendedSkills(home);
   const items: OplCompanionSkillSyncItem[] = [];
-  const tools = [ensureOfficeCliTool(home)];
+  const tools = [ensureOfficeCliTool(home), ensureMineruOpenApiTool(home)];
 
   for (const skill of recommendedSkills) {
     if (skill.source === 'superpowers') {
@@ -757,7 +927,10 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
   const agentsSuperpowersDir = path.join(resolveAgentsSkillsDir(home), 'superpowers');
   const skillsManagerHome = path.join(home, '.skills-manager');
   const packagedSkillsRoot = resolvePackagedSkillsRoot();
-  const officeCliToolReady = Boolean(resolveOfficeCliTool(home));
+  const toolReadyById: Record<OplCompanionToolId, boolean> = {
+    officecli: Boolean(resolveOfficeCliTool(home)),
+    'mineru-open-api': Boolean(resolveMineruOpenApiTool(home)),
+  };
 
   const specs: Array<Omit<OplRecommendedSkill, 'status'>> = [
     {
@@ -842,6 +1015,19 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       supports: ['rca', 'ui_review', 'ux_design', 'presentation_visuals'],
     },
     {
+      skill_id: 'mineru-document-extractor',
+      label: 'MinerU document extraction skill',
+      required: false,
+      source: 'skills_manager',
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'mineru-document-extractor', 'SKILL.md'),
+        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mineru-document-extractor', 'SKILL.md')] : []),
+      ],
+      required_tools: ['mineru-open-api'],
+      install_hint: 'Install the MinerU document extraction skill and mineru-open-api binary so Codex can extract PDFs, scans, images, Office files, and web pages. MinerU flash-extract works without a token; extract and crawl use MINERU_TOKEN or mineru-open-api auth.',
+      supports: ['pdf', 'ocr', 'document_extraction', 'mineru', 'web_extraction'],
+    },
+    {
       skill_id: 'officecli-docx',
       label: 'officecli Word skill',
       required: false,
@@ -900,7 +1086,7 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
         ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, spec.skill_id, 'SKILL.md')] : []),
       ];
     const skillStatus = buildSkillStatus(expectedPaths);
-    const toolStatus = spec.required_tools?.includes('officecli') ? officeCliToolReady : true;
+    const toolStatus = spec.required_tools?.every((toolId) => toolReadyById[toolId]) ?? true;
     return {
       ...spec,
       expected_paths: expectedPaths,
