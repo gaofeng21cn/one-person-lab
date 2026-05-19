@@ -6,6 +6,7 @@ type JsonRecord = Record<string, unknown>;
 
 type AgentLabDomainId = 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | string;
 type AgentLabStatus = 'passed' | 'blocked';
+type AgentLabIndependentAiReviewStatus = 'approved' | 'review_pending' | 'blocked_from_auto_promotion';
 
 export type AgentLabTaskManifest = {
   task_id: string;
@@ -65,11 +66,56 @@ export type AgentLabScorecard = {
   domain_owned: boolean;
   opl_scorecard_role: 'scorecard_ref_projection_only';
   passed: boolean;
+  scorecard_pass_scope?: 'suite_fixture_scorecard_only' | 'suite_fixture_scorecard_blocked' | string;
   metric_refs: string[];
   evidence_refs: string[];
   review_refs: string[];
   quality_gate_refs: string[];
   authority_boundary?: JsonRecord;
+};
+
+export const REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS = [
+  'receipt_ref',
+  'receipt_source',
+  'assessment_mode',
+  'reviewer_ref',
+  'reviewer_agent_ref',
+  'reviewed_mechanism_candidate_ref',
+  'request_ref',
+  'response_ref',
+  'evidence_refs',
+  'no_shared_context',
+  'forbidden_write_scan_ref',
+  'verdict',
+  'risk_tier',
+];
+
+export type AgentLabIndependentAiReviewAssessment = {
+  surface_kind: 'opl_agent_lab_independent_ai_review_assessment';
+  assessment_mode:
+    | 'real_independent_ai_review'
+    | 'missing_real_independent_review'
+    | 'synthetic_fixture'
+    | 'generated_fixture'
+    | 'fixture_receipt'
+    | string;
+  receipt_source: 'real_independent_ai_review' | 'missing' | 'synthetic_fixture' | 'generated_fixture' | string;
+  receipt_ref: string | null;
+  reviewed_mechanism_candidate_ref: string | null;
+  reviewer_ref: string | null;
+  reviewer_agent_ref: string | null;
+  request_ref: string | null;
+  response_ref: string | null;
+  evidence_refs: string[];
+  forbidden_write_scan_ref: string | null;
+  verdict: string | null;
+  risk_tier: string | null;
+  ai_review_approved: boolean;
+  review_status: AgentLabIndependentAiReviewStatus;
+  required_provenance_fields: string[];
+  missing_required_fields: string[];
+  no_shared_context_verified: boolean;
+  fixture_or_generated_receipt: boolean;
 };
 
 export type AgentLabImprovementCandidate = {
@@ -149,6 +195,100 @@ function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function textField(record: JsonRecord | null, key: string): string | null {
+  if (!record || typeof record[key] !== 'string') {
+    return null;
+  }
+  const value = record[key].trim();
+  return value.length > 0 ? value : null;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return unique(value.filter((entry): entry is string => typeof entry === 'string'));
+}
+
+function isFixtureReviewReceipt(receiptSource: string, assessmentMode: string) {
+  return receiptSource === 'synthetic_fixture'
+    || receiptSource === 'generated_fixture'
+    || receiptSource === 'fixture'
+    || receiptSource.endsWith('_fixture')
+    || assessmentMode === 'synthetic_fixture'
+    || assessmentMode === 'generated_fixture'
+    || assessmentMode === 'fixture_receipt'
+    || assessmentMode.endsWith('_fixture');
+}
+
+export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLabIndependentAiReviewAssessment {
+  const receipt = isRecord(receiptInput) ? receiptInput : null;
+  const receiptSource = textField(receipt, 'receipt_source') ?? (receipt ? 'unspecified' : 'missing');
+  const assessmentMode = textField(receipt, 'assessment_mode')
+    ?? (receipt ? 'generated_fixture' : 'missing_real_independent_review');
+  const evidenceRefs = stringList(receipt?.evidence_refs);
+  const noSharedContextVerified = receipt?.no_shared_context === true
+    && receipt?.review_context_inherits_executor_context !== true;
+  const fields = {
+    receipt_ref: textField(receipt, 'receipt_ref'),
+    receipt_source: receiptSource === 'missing' ? null : receiptSource,
+    assessment_mode: receipt ? assessmentMode : null,
+    reviewer_ref: textField(receipt, 'reviewer_ref'),
+    reviewer_agent_ref: textField(receipt, 'reviewer_agent_ref'),
+    reviewed_mechanism_candidate_ref: textField(receipt, 'reviewed_mechanism_candidate_ref'),
+    request_ref: textField(receipt, 'request_ref'),
+    response_ref: textField(receipt, 'response_ref'),
+    evidence_refs: evidenceRefs.length > 0 ? 'observed' : null,
+    no_shared_context: noSharedContextVerified ? 'observed' : null,
+    forbidden_write_scan_ref: textField(receipt, 'forbidden_write_scan_ref'),
+    verdict: textField(receipt, 'verdict'),
+    risk_tier: textField(receipt, 'risk_tier'),
+  };
+  const missingRequiredFields = REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS.filter((field) =>
+    !fields[field as keyof typeof fields]);
+  const fixtureOrGeneratedReceipt = isFixtureReviewReceipt(receiptSource, assessmentMode);
+  const verdict = textField(receipt, 'verdict');
+  const aiReviewApproved = receiptSource === 'real_independent_ai_review'
+    && assessmentMode === 'real_independent_ai_review'
+    && !fixtureOrGeneratedReceipt
+    && missingRequiredFields.length === 0
+    && (verdict === 'approved_for_risk_tiered_auto_promotion' || verdict === 'approved');
+  const reviewStatus: AgentLabIndependentAiReviewStatus = aiReviewApproved
+    ? 'approved'
+    : receiptSource === 'missing' || fixtureOrGeneratedReceipt
+      ? 'review_pending'
+      : 'blocked_from_auto_promotion';
+
+  return {
+    surface_kind: 'opl_agent_lab_independent_ai_review_assessment',
+    assessment_mode: assessmentMode,
+    receipt_source: receiptSource,
+    receipt_ref: fields.receipt_ref,
+    reviewed_mechanism_candidate_ref: fields.reviewed_mechanism_candidate_ref,
+    reviewer_ref: fields.reviewer_ref,
+    reviewer_agent_ref: fields.reviewer_agent_ref,
+    request_ref: fields.request_ref,
+    response_ref: fields.response_ref,
+    evidence_refs: evidenceRefs,
+    forbidden_write_scan_ref: fields.forbidden_write_scan_ref,
+    verdict,
+    risk_tier: fields.risk_tier,
+    ai_review_approved: aiReviewApproved,
+    review_status: reviewStatus,
+    required_provenance_fields: [...REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS],
+    missing_required_fields: missingRequiredFields,
+    no_shared_context_verified: noSharedContextVerified,
+    fixture_or_generated_receipt: fixtureOrGeneratedReceipt,
+  };
+}
+
+function reviewReceiptInputForTask(task: AgentLabTaskManifest): unknown {
+  if (!isRecord(task.mechanism_evolution_inputs)) {
+    return null;
+  }
+  return task.mechanism_evolution_inputs.independent_ai_review_receipt;
+}
+
 function hasForbiddenMemoryBody(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
@@ -194,6 +334,7 @@ function recoveryPassed(task: AgentLabTaskManifest) {
 
 function buildRun(task: AgentLabTaskManifest) {
   const mechanismEvolutionInputs = mechanismEvolutionInputsForTask(task);
+  const independentAiReviewAssessment = assessIndependentAiReviewReceipt(reviewReceiptInputForTask(task));
   const recoveryPassedCount = recoveryPassed(task).length;
   const recoveryProbeCount = task.recovery_probes.length;
   const failureTaxonomy = [
@@ -230,7 +371,13 @@ function buildRun(task: AgentLabTaskManifest) {
       blocked_count: recoveryProbeCount - recoveryPassedCount,
       probe_refs: task.recovery_probes.map((probe) => probe.probe_ref),
     },
-    scorecard: task.scorecard,
+    scorecard: {
+      ...task.scorecard,
+      scorecard_pass_scope: task.scorecard.passed
+        ? 'suite_fixture_scorecard_only'
+        : 'suite_fixture_scorecard_blocked',
+    },
+    independent_ai_review_assessment: independentAiReviewAssessment,
     improvement_candidate: task.improvement_candidate,
     promotion_gate: task.promotion_gate,
     mechanism_evolution_inputs: mechanismEvolutionInputs,
@@ -298,6 +445,8 @@ function domainSummary(runs: ReturnType<typeof buildRun>[]) {
       run_count: domainRuns.length,
       passed_run_count: domainRuns.filter((run) => run.status === 'passed').length,
       blocked_run_count: domainRuns.filter((run) => run.status === 'blocked').length,
+      ai_review_approved_count: domainRuns.filter((run) =>
+        run.independent_ai_review_assessment.ai_review_approved).length,
       scorecard_refs: domainRuns.map((run) => run.scorecard.scorecard_ref),
       improvement_candidate_refs: domainRuns.map((run) => run.improvement_candidate.candidate_ref),
       promotion_gate_refs: domainRuns.map((run) => run.promotion_gate.gate_ref),
@@ -313,6 +462,9 @@ export function runAgentLabSuite(input: AgentLabSuite) {
     (observation) => !observationResult.observations[observation],
   );
   const blockedRuns = runs.filter((run) => run.status === 'blocked');
+  const aiReviewApprovedCount = runs.filter((run) =>
+    run.independent_ai_review_assessment.ai_review_approved).length;
+  const promotionGatePassedCount = input.tasks.filter((task) => task.promotion_gate.gate_status === 'passed').length;
   const status: AgentLabStatus = missingObservations.length === 0 && blockedRuns.length === 0 ? 'passed' : 'blocked';
 
   return {
@@ -338,8 +490,12 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       recovery_probe_count: input.tasks.reduce((total, task) => total + task.recovery_probes.length, 0),
       recovery_passed_count: input.tasks.reduce((total, task) => total + recoveryPassed(task).length, 0),
       scorecard_passed_count: input.tasks.filter((task) => task.scorecard.passed).length,
+      ai_review_approved_count: aiReviewApprovedCount,
       improvement_candidate_count: input.tasks.length,
-      promotable_candidate_count: input.tasks.filter((task) => task.promotion_gate.gate_status === 'passed').length,
+      promotion_gate_passed_count: promotionGatePassedCount,
+      promotable_candidate_count: runs.filter((run) =>
+        run.promotion_gate.gate_status === 'passed'
+        && run.independent_ai_review_assessment.ai_review_approved).length,
       memory_body_observed: observationResult.counters.memory_body_observed,
       forbidden_authority_flag_count: observationResult.counters.forbidden_authority_flag_count,
     },

@@ -26,6 +26,28 @@ function readJson(relativePath: string) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
+function realIndependentAiReviewReceipt(candidateRef: string) {
+  return {
+    receipt_ref: `independent-ai-review-receipt:${candidateRef}`,
+    receipt_source: 'real_independent_ai_review',
+    assessment_mode: 'real_independent_ai_review',
+    reviewer_ref: 'reviewer-ref:agent-lab/external-independent-reviewer/run-001',
+    reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
+    reviewed_mechanism_candidate_ref: candidateRef,
+    request_ref: `review-request-ref:${candidateRef}`,
+    response_ref: `review-response-ref:${candidateRef}`,
+    evidence_refs: [
+      `review-evidence-ref:${candidateRef}`,
+      `no-forbidden-write-evidence-ref:${candidateRef}`,
+    ],
+    no_shared_context: true,
+    review_context_inherits_executor_context: false,
+    forbidden_write_scan_ref: `no-forbidden-write-scan-ref:${candidateRef}`,
+    verdict: 'approved_for_risk_tiered_auto_promotion',
+    risk_tier: 'low_risk',
+  };
+}
+
 test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring, and promotion gates without domain authority', () => {
   const result = runAgentLabSuite(buildSampleAgentLabSuite());
 
@@ -39,8 +61,10 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(result.summary.recovery_probe_count, 5);
   assert.equal(result.summary.recovery_passed_count, 5);
   assert.equal(result.summary.scorecard_passed_count, 3);
+  assert.equal(result.summary.ai_review_approved_count, 0);
   assert.equal(result.summary.improvement_candidate_count, 3);
-  assert.equal(result.summary.promotable_candidate_count, 3);
+  assert.equal(result.summary.promotable_candidate_count, 0);
+  assert.equal(result.summary.promotion_gate_passed_count, 3);
   assert.equal(result.summary.forbidden_authority_flag_count, 0);
   assert.equal(result.summary.memory_body_observed, false);
   assert.deepEqual(result.missing_observations, []);
@@ -75,6 +99,56 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(masRun.trajectory.stage_attempt_refs[0], 'stage-attempt:mas/paper-repair-smoke');
   assert.equal(masRun.scorecard.domain_owned, true);
   assert.equal(masRun.scorecard.opl_scorecard_role, 'scorecard_ref_projection_only');
+  assert.equal(masRun.scorecard.scorecard_pass_scope, 'suite_fixture_scorecard_only');
+  assert.equal(masRun.independent_ai_review_assessment.review_status, 'review_pending');
+  assert.equal(masRun.independent_ai_review_assessment.ai_review_approved, false);
+});
+
+test('Agent Lab separates fixture scorecard pass from independent AI review approval', () => {
+  const result = runAgentLabSuite(buildSampleAgentLabSuite());
+
+  assert.equal(result.status, 'passed');
+  assert.equal(result.summary.scorecard_passed_count, 3);
+  assert.equal(result.summary.ai_review_approved_count, 0);
+  assert.equal(result.summary.promotable_candidate_count, 0);
+  assert.equal(result.summary.promotion_gate_passed_count, 3);
+
+  for (const run of result.runs) {
+    assert.equal(run.scorecard.passed, true);
+    assert.equal(run.scorecard.scorecard_pass_scope, 'suite_fixture_scorecard_only');
+    assert.equal(run.independent_ai_review_assessment.surface_kind,
+      'opl_agent_lab_independent_ai_review_assessment');
+    assert.equal(run.independent_ai_review_assessment.assessment_mode, 'missing_real_independent_review');
+    assert.equal(run.independent_ai_review_assessment.receipt_source, 'missing');
+    assert.equal(run.independent_ai_review_assessment.ai_review_approved, false);
+    assert.equal(run.independent_ai_review_assessment.review_status, 'review_pending');
+  }
+});
+
+test('Agent Lab counts only real independent AI review receipts as AI review approval', () => {
+  const suite = buildSampleAgentLabSuite();
+  const candidateRef = suite.tasks[0].improvement_candidate.candidate_ref;
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    mechanism_evolution_inputs: {
+      ...(suite.tasks[0].mechanism_evolution_inputs ?? {}),
+      independent_ai_review_receipt: realIndependentAiReviewReceipt(candidateRef),
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+  const reviewedRun = result.runs[0];
+
+  assert.equal(result.status, 'passed');
+  assert.equal(result.summary.scorecard_passed_count, 3);
+  assert.equal(result.summary.ai_review_approved_count, 1);
+  assert.equal(result.summary.promotable_candidate_count, 1);
+  assert.equal(reviewedRun.independent_ai_review_assessment.ai_review_approved, true);
+  assert.equal(reviewedRun.independent_ai_review_assessment.review_status, 'approved');
+  assert.deepEqual(reviewedRun.independent_ai_review_assessment.missing_required_fields, []);
+  assert.ok(reviewedRun.mechanism_evolution_input_refs.includes(
+    `independent-ai-review-receipt:${candidateRef}`,
+  ));
 });
 
 test('Agent Lab blocks memory body payloads instead of treating them as OPL-applied learning', () => {
@@ -435,7 +509,9 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.mechanism_surface.fields.includes('log_driven_mechanism_candidates'));
   assert.ok(contract.mechanism_surface.fields.includes('aris_maturity_controls'));
   assert.ok(contract.mechanism_surface.fields.includes('rollback'));
-  assert.equal(contract.mechanism_surface.automatic_mechanism_promotion_ready, true);
+  assert.equal(contract.mechanism_surface.automatic_mechanism_promotion_ready, false);
+  assert.equal(contract.mechanism_surface.required_review_provenance_fields.includes('forbidden_write_scan_ref'),
+    true);
   assert.equal(contract.mechanism_surface.risk_tiers.low_risk.auto_promotion, 'auto_promote_to_stable');
   assert.equal(contract.mechanism_surface.risk_tiers.medium_risk.auto_promotion, 'auto_promote_to_canary');
   assert.equal(contract.mechanism_surface.risk_tiers.high_risk.auto_promotion,
@@ -463,7 +539,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(contract.evolution_surface.writes_domain_truth, false);
   assert.equal(contract.evolution_surface.writes_memory_body, false);
   assert.equal(contract.evolution_surface.mutates_artifact, false);
-  assert.equal(contract.evolution_surface.automatic_mechanism_promotion_ready, true);
+  assert.equal(contract.evolution_surface.automatic_mechanism_promotion_ready, false);
   assert.equal(contract.evolution_surface.requires_independent_ai_review, true);
   assert.ok(contract.evolution_surface.outputs.includes('integration_contracts'));
   assert.ok(contract.evolution_surface.outputs.includes('review_trace_ledger'));
@@ -483,6 +559,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('review_trace_ledger'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('aris_maturity_controls'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('automatic_mechanism_promotion_ready'));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ai_review_approved_count'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ready_to_emit_integration_contracts'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ready_to_emit_review_trace_ledger'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
@@ -648,7 +725,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_review_trace_ledger, true);
   assert.equal(result.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
-  assert.equal(result.readiness.automatic_mechanism_promotion_ready, true);
+  assert.equal(result.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(result.readiness.automatic_model_training_ready, false);
   assert.equal(result.readiness.automatic_default_agent_promotion_ready,
     'risk_tiered_after_independent_ai_review');
@@ -707,7 +784,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'risk_tiered_auto_promotion_with_independent_ai_review');
   assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
   assert.equal(result.mechanism_control_plane.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
-  assert.equal(result.mechanism_control_plane.mechanism_promotion_policy.automatic_mechanism_promotion_ready, true);
+  assert.equal(result.mechanism_control_plane.mechanism_promotion_policy.automatic_mechanism_promotion_ready, false);
   assert.equal(result.mechanism_control_plane.independent_ai_review_receipt.review_context_inherits_executor_context,
     false);
   assert.equal(result.optimizer_loop.rl_boundary.can_emit_transition_refs, true);
@@ -726,7 +803,7 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.observability_export_readiness.reads_domain_body, false);
   assert.equal(result.mechanism.surface_kind, 'opl_agent_lab_mechanism_read_model');
   assert.equal(result.mechanism.refs_only, true);
-  assert.equal(result.mechanism.mechanism_promotion_policy.automatic_mechanism_promotion_ready, true);
+  assert.equal(result.mechanism.mechanism_promotion_policy.automatic_mechanism_promotion_ready, false);
   assert.equal(result.mechanism.mechanism_version_ledger.current_version, result.mechanism.mechanism_version);
   assert.match(result.mechanism.rollback.rollback_target_ref, /^mechanism-version-ref:/);
   assert.equal(result.integration_contracts.surface_kind, 'opl_agent_lab_integration_contract_read_model');
@@ -816,10 +893,10 @@ test('Agent Lab mechanism read model makes mechanism editable surfaces first-cla
   assert.equal(result.version, 'opl-agent-lab-mechanism.v1');
   assert.equal(result.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
   assert.equal(result.mechanism_version, 'opl-agent-lab-mechanism.v1');
-  assert.equal(result.status, 'mechanism_auto_promotion_ready_with_independent_ai_review');
+  assert.equal(result.status, 'review_pending');
   assert.equal(result.editable_surfaces.length, 4);
   assert.ok(result.editable_surfaces.some((surface) => surface.surface_kind === 'stage_policy_ref'));
-  assert.equal(result.mechanism_promotion_policy.automatic_mechanism_promotion_ready, true);
+  assert.equal(result.mechanism_promotion_policy.automatic_mechanism_promotion_ready, false);
   assert.equal(result.mechanism_promotion_policy.risk_tiers.low_risk.auto_promotion, 'auto_promote_to_stable');
   assert.equal(result.mechanism_promotion_policy.risk_tiers.medium_risk.auto_promotion, 'auto_promote_to_canary');
   assert.equal(result.mechanism_promotion_policy.risk_tiers.high_risk.auto_promotion,
@@ -828,8 +905,11 @@ test('Agent Lab mechanism read model makes mechanism editable surfaces first-cla
     result.independent_ai_review_receipt.receipt_ref,
   ));
   assert.equal(result.independent_ai_review_receipt.receipt_kind, 'independent_ai_review_receipt_ref');
+  assert.equal(result.independent_ai_review_receipt.receipt_source, 'generated_fixture');
   assert.equal(result.independent_ai_review_receipt.review_context_inherits_executor_context, false);
-  assert.equal(result.independent_ai_review_receipt.verdict, 'approved_for_risk_tiered_auto_promotion');
+  assert.equal(result.independent_ai_review_assessment.review_status, 'review_pending');
+  assert.equal(result.independent_ai_review_assessment.ai_review_approved, false);
+  assert.ok(result.independent_ai_review_assessment.missing_required_fields.includes('reviewer_ref'));
   assert.equal(result.mechanism_version_ledger.current_version, result.mechanism_version);
   assert.equal(result.mechanism_version_ledger.versions.length, 2);
   assert.equal(result.integration_contracts.summary.contract_count, 3);
@@ -853,8 +933,9 @@ test('Agent Lab mechanism read model makes mechanism editable surfaces first-cla
   assert.equal(result.evidence_delta.memory_body_delta_written, false);
   assert.equal(result.evidence_delta.artifact_delta_written, false);
   assert.equal(result.next_mechanism_candidate.risk_tier, 'medium_risk');
-  assert.equal(result.next_mechanism_candidate.default_promotion, true);
-  assert.equal(result.next_mechanism_candidate.promotion_decision, 'auto_promote_to_canary');
+  assert.equal(result.next_mechanism_candidate.default_promotion, false);
+  assert.equal(result.next_mechanism_candidate.candidate_status, 'review_pending');
+  assert.equal(result.next_mechanism_candidate.promotion_decision, 'blocked_from_auto_promotion');
   assert.match(result.next_mechanism_candidate.promotion_receipt_ref, /^mechanism-promotion-receipt:/);
   assert.match(result.next_mechanism_candidate.rollback_target_ref, /^mechanism-version-ref:/);
   assert.equal(result.refs_only, true);
@@ -865,7 +946,7 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   const result = buildAgentLabEvolutionResult(buildSampleAgentLabSuite());
 
   assert.equal(result.surface_kind, 'opl_agent_lab_evolution_result');
-  assert.equal(result.status, 'mechanism_auto_promoted_to_canary');
+  assert.equal(result.status, 'blocked_from_auto_promotion');
   assert.equal(result.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
   assert.equal(result.mechanism_version, 'opl-agent-lab-mechanism.v1');
   assert.equal(result.editable_surfaces.length, 4);
@@ -875,15 +956,18 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
     'opl_agent_lab_log_driven_mechanism_candidate_read_model');
   assert.equal(result.aris_maturity_controls.surface_kind, 'opl_agent_lab_aris_maturity_controls_read_model');
   assert.equal(result.log_mined_candidate_refs.length, 4);
-  assert.equal(result.mechanism_promotion_decision.automatic_mechanism_promotion_ready, true);
-  assert.equal(result.mechanism_promotion_decision.promotion_decision, 'auto_promote_to_canary');
+  assert.equal(result.mechanism_promotion_decision.automatic_mechanism_promotion_ready, false);
+  assert.equal(result.mechanism_promotion_decision.promotion_decision, 'blocked_from_auto_promotion');
+  assert.equal(result.mechanism_promotion_decision.independent_ai_review_assessment.review_status,
+    'review_pending');
   assert.equal(result.mechanism_promotion_decision.risk_tier, 'medium_risk');
   assert.equal(result.mechanism_promotion_decision.canary.required, true);
   assert.match(result.mechanism_promotion_decision.rollback_target_ref, /^mechanism-version-ref:/);
-  assert.equal(result.independent_ai_review_receipt.verdict, 'approved_for_risk_tiered_auto_promotion');
+  assert.equal(result.independent_ai_review_receipt.receipt_source, 'generated_fixture');
+  assert.equal(result.independent_ai_review_assessment.ai_review_approved, false);
   assert.equal(result.independent_ai_review_receipt.review_context_inherits_executor_context, false);
   assert.match(result.promotion_receipt.receipt_ref, /^mechanism-promotion-receipt:/);
-  assert.equal(result.promotion_receipt.promoted_to_status, 'canary');
+  assert.equal(result.promotion_receipt.promoted_to_status, 'blocked');
   assert.equal(result.meta_edit_receipt.writes_domain_truth, false);
   assert.equal(result.meta_edit_receipt.writes_memory_body, false);
   assert.equal(result.meta_edit_receipt.mutates_artifact, false);
@@ -898,10 +982,10 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   assert.equal(result.next_mechanism_candidate.source_log_mined_candidate_refs.length, 4);
   assert.equal(result.next_mechanism_candidate.source_maturity_control_refs.length, 4);
   assert.equal(result.next_mechanism_candidate.review_trace_ledger_ref, result.review_trace_ledger.ledger_ref);
-  assert.equal(result.next_mechanism_candidate.default_promotion, true);
-  assert.equal(result.next_mechanism_candidate.promotion_decision, 'auto_promote_to_canary');
+  assert.equal(result.next_mechanism_candidate.default_promotion, false);
+  assert.equal(result.next_mechanism_candidate.promotion_decision, 'blocked_from_auto_promotion');
   assert.equal(result.automatic_model_training_ready, false);
-  assert.equal(result.automatic_mechanism_promotion_ready, true);
+  assert.equal(result.automatic_mechanism_promotion_ready, false);
   assert.equal(result.automatic_default_agent_promotion_ready, 'risk_tiered_after_independent_ai_review');
   assert.equal(result.refs_only, true);
   assert.equal(result.authority_boundary.can_train_or_deploy_model_weights, false);
@@ -935,18 +1019,45 @@ test('Agent Lab optimize returns gated candidate and RL transition refs without 
   const result = buildAgentLabOptimizeResult(buildSampleAgentLabSuite());
 
   assert.equal(result.surface_kind, 'opl_agent_lab_optimize_result');
-  assert.equal(result.status, 'gated_candidate_set_ready');
+  assert.equal(result.status, 'review_pending');
   assert.equal(result.suite_result.status, 'passed');
   assert.equal(result.gated_optimizer_candidate_set.candidate_count, 3);
-  assert.equal(result.gated_optimizer_candidate_set.promotable_candidate_count, 3);
-  assert.equal(result.gated_optimizer_candidate_set.auto_promotable_candidate_count, 3);
+  assert.equal(result.gated_optimizer_candidate_set.promotable_candidate_count, 0);
+  assert.equal(result.gated_optimizer_candidate_set.auto_promotable_candidate_count, 0);
+  assert.equal(result.gated_optimizer_candidate_set.ai_review_approved_count, 0);
   assert.ok(result.gated_optimizer_candidate_set.candidates.every((candidate: any) =>
     candidate.independent_ai_review_ref && candidate.rollback_target_ref));
+  assert.ok(result.gated_optimizer_candidate_set.candidates.every((candidate: any) =>
+    candidate.independent_ai_review_assessment.review_status === 'review_pending'));
   assert.equal(result.log_driven_mechanism_candidates.summary.candidate_count, 4);
   assert.equal(result.log_mined_candidate_refs.length, 4);
   assert.equal(result.rl_transition_refs.transition_count, 3);
-  assert.equal(result.automatic_mechanism_promotion_ready, true);
+  assert.equal(result.automatic_mechanism_promotion_ready, false);
   assert.equal(result.automatic_model_training_ready, false);
   assert.equal(result.automatic_default_agent_promotion_ready, 'risk_tiered_after_independent_ai_review');
   assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
+});
+
+test('Agent Lab optimize requires real independent AI review before auto-promotion', () => {
+  const suite = buildSampleAgentLabSuite();
+  const candidateRef = suite.tasks[0].improvement_candidate.candidate_ref;
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    mechanism_evolution_inputs: {
+      ...(suite.tasks[0].mechanism_evolution_inputs ?? {}),
+      independent_ai_review_receipt: realIndependentAiReviewReceipt(candidateRef),
+    },
+  };
+
+  const result = buildAgentLabOptimizeResult(suite);
+  const approvedCandidate = result.gated_optimizer_candidate_set.candidates.find((candidate: any) =>
+    candidate.candidate_ref === candidateRef);
+
+  assert.equal(result.status, 'gated_candidate_set_ready');
+  assert.equal(result.gated_optimizer_candidate_set.ai_review_approved_count, 1);
+  assert.equal(result.gated_optimizer_candidate_set.auto_promotable_candidate_count, 1);
+  assert.ok(approvedCandidate);
+  assert.equal(approvedCandidate.independent_ai_review_assessment.review_status, 'approved');
+  assert.equal(approvedCandidate.automatic_mechanism_promotion_ready, true);
+  assert.equal(approvedCandidate.promotion_decision, 'auto_promote_to_stable');
 });

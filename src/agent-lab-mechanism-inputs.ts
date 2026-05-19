@@ -225,6 +225,49 @@ export function mechanismEvolutionInputsForTask(task: AgentLabMechanismInputTask
       can_authorize_submission_action: false,
     }
     : undefined;
+  const independentAiReviewReceipt = isRecord(inputs.independent_ai_review_receipt)
+    ? {
+      receipt_ref: typeof inputs.independent_ai_review_receipt.receipt_ref === 'string'
+        ? inputs.independent_ai_review_receipt.receipt_ref
+        : undefined,
+      receipt_source: typeof inputs.independent_ai_review_receipt.receipt_source === 'string'
+        ? inputs.independent_ai_review_receipt.receipt_source
+        : undefined,
+      assessment_mode: typeof inputs.independent_ai_review_receipt.assessment_mode === 'string'
+        ? inputs.independent_ai_review_receipt.assessment_mode
+        : undefined,
+      reviewer_ref: typeof inputs.independent_ai_review_receipt.reviewer_ref === 'string'
+        ? inputs.independent_ai_review_receipt.reviewer_ref
+        : undefined,
+      reviewer_agent_ref: typeof inputs.independent_ai_review_receipt.reviewer_agent_ref === 'string'
+        ? inputs.independent_ai_review_receipt.reviewer_agent_ref
+        : undefined,
+      reviewed_mechanism_candidate_ref:
+        typeof inputs.independent_ai_review_receipt.reviewed_mechanism_candidate_ref === 'string'
+          ? inputs.independent_ai_review_receipt.reviewed_mechanism_candidate_ref
+          : undefined,
+      request_ref: typeof inputs.independent_ai_review_receipt.request_ref === 'string'
+        ? inputs.independent_ai_review_receipt.request_ref
+        : undefined,
+      response_ref: typeof inputs.independent_ai_review_receipt.response_ref === 'string'
+        ? inputs.independent_ai_review_receipt.response_ref
+        : undefined,
+      evidence_refs: stringList(inputs.independent_ai_review_receipt.evidence_refs),
+      no_shared_context: inputs.independent_ai_review_receipt.no_shared_context === true,
+      review_context_inherits_executor_context:
+        inputs.independent_ai_review_receipt.review_context_inherits_executor_context === true,
+      forbidden_write_scan_ref:
+        typeof inputs.independent_ai_review_receipt.forbidden_write_scan_ref === 'string'
+          ? inputs.independent_ai_review_receipt.forbidden_write_scan_ref
+          : undefined,
+      verdict: typeof inputs.independent_ai_review_receipt.verdict === 'string'
+        ? inputs.independent_ai_review_receipt.verdict
+        : undefined,
+      risk_tier: typeof inputs.independent_ai_review_receipt.risk_tier === 'string'
+        ? inputs.independent_ai_review_receipt.risk_tier
+        : undefined,
+    }
+    : undefined;
 
   return {
     surface_kind: inputs.surface_kind,
@@ -250,6 +293,7 @@ export function mechanismEvolutionInputsForTask(task: AgentLabMechanismInputTask
       : undefined,
     version_ledger_ref: typeof inputs.version_ledger_ref === 'string' ? inputs.version_ledger_ref : undefined,
     rollback_ref: typeof inputs.rollback_ref === 'string' ? inputs.rollback_ref : undefined,
+    independent_ai_review_receipt: independentAiReviewReceipt,
     research_memory_graph: researchMemoryGraph,
     analysis_queue_manifest: analysisQueueManifest,
     runtime_event_ledger: runtimeEventLedger,
@@ -296,6 +340,13 @@ export function mechanismEvolutionInputRefs(
     ...value.target_editable_surface_refs,
     ...value.evidence_delta_refs,
     ...(value.independent_ai_review_receipt_ref ? [value.independent_ai_review_receipt_ref] : []),
+    ...(value.independent_ai_review_receipt?.receipt_ref ? [value.independent_ai_review_receipt.receipt_ref] : []),
+    ...(value.independent_ai_review_receipt?.request_ref ? [value.independent_ai_review_receipt.request_ref] : []),
+    ...(value.independent_ai_review_receipt?.response_ref ? [value.independent_ai_review_receipt.response_ref] : []),
+    ...(value.independent_ai_review_receipt?.evidence_refs ?? []),
+    ...(value.independent_ai_review_receipt?.forbidden_write_scan_ref
+      ? [value.independent_ai_review_receipt.forbidden_write_scan_ref]
+      : []),
     ...(value.version_ledger_ref ? [value.version_ledger_ref] : []),
     ...(value.rollback_ref ? [value.rollback_ref] : []),
     ...(value.research_memory_graph?.manifest_refs ?? []),
