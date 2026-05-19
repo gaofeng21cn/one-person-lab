@@ -1177,10 +1177,17 @@ export function buildAppOperatorDrilldown(input: {
         numberValue(stageProductionEvidenceSummary.missing_production_caller_stage_count),
       stage_production_evidence_missing_expected_receipt_stage_count:
         numberValue(stageProductionEvidenceSummary.missing_expected_receipt_stage_count),
+      stage_production_evidence_expected_receipt_declared_stage_count: numberValue(stageProductionEvidenceSummary.expected_receipt_declared_stage_count),
+      stage_production_evidence_expected_receipt_observed_stage_count: numberValue(stageProductionEvidenceSummary.expected_receipt_observed_stage_count),
+      stage_production_evidence_expected_receipt_unobserved_stage_count: numberValue(stageProductionEvidenceSummary.expected_receipt_unobserved_stage_count),
       stage_production_evidence_missing_executor_binding_stage_count:
         numberValue(stageProductionEvidenceSummary.missing_executor_binding_stage_count),
+      stage_production_evidence_executor_binding_observed_stage_count: numberValue(stageProductionEvidenceSummary.executor_binding_observed_stage_count),
       stage_production_evidence_missing_monitor_freshness_stage_count:
         numberValue(stageProductionEvidenceSummary.missing_monitor_freshness_stage_count),
+      stage_production_evidence_monitor_declared_stage_count: numberValue(stageProductionEvidenceSummary.monitor_declared_stage_count),
+      stage_production_evidence_monitor_freshness_observed_stage_count: numberValue(stageProductionEvidenceSummary.monitor_freshness_observed_stage_count),
+      stage_production_evidence_monitor_freshness_unobserved_stage_count: numberValue(stageProductionEvidenceSummary.monitor_freshness_unobserved_stage_count),
       stage_production_attempt_request_route_count:
         actionRefs.filter((ref) => ref.action_kind === 'stage_production_attempt_request').length,
       external_evidence_action_route_count:

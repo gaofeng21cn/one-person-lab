@@ -451,9 +451,16 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_evidence_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_evidence_observed_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_caller_stage_count, 1);
-    assert.equal(drilldown.summary.stage_production_evidence_missing_expected_receipt_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_missing_expected_receipt_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_declared_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_observed_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_unobserved_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_evidence_missing_executor_binding_stage_count, 1);
+    assert.equal(drilldown.summary.stage_production_evidence_executor_binding_observed_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_monitor_freshness_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_monitor_declared_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_monitor_freshness_observed_stage_count, 0);
+    assert.equal(drilldown.summary.stage_production_evidence_monitor_freshness_unobserved_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_attempt_request_route_count, 1);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
@@ -587,8 +594,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(writeProductionEvidence.production_evidence_status, 'production_caller_evidence_observed');
     assert.deepEqual(writeProductionEvidence.selected_executor_kinds, ['codex_cli']);
     assert.equal(writeProductionEvidence.expected_receipt_refs.includes('receipt:write-closeout'), true);
+    assert.equal(writeProductionEvidence.expected_receipt_declared, true);
+    assert.deepEqual(writeProductionEvidence.observed_expected_receipt_refs, ['receipt:write-closeout']);
+    assert.deepEqual(writeProductionEvidence.unobserved_expected_receipt_refs, ['owner_receipt:write']);
     assert.equal(writeProductionEvidence.observed_evidence_refs.includes('receipt:write-closeout'), true);
     assert.equal(writeProductionEvidence.observed_evidence_refs.includes('source:dataset'), true);
+    assert.deepEqual(writeProductionEvidence.monitor_freshness_refs, []);
+    assert.deepEqual(writeProductionEvidence.unobserved_monitor_refs, ['metric:write/currentness']);
     assert.equal(
       writeProductionEvidence.missing_production_evidence.includes('production_caller_attempt_not_observed'),
       false,
@@ -608,6 +620,14 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       reviewProductionEvidence.missing_production_evidence.includes('production_caller_attempt_not_observed'),
       true,
     );
+    assert.equal(reviewProductionEvidence.expected_receipt_declared, true);
+    assert.deepEqual(reviewProductionEvidence.observed_expected_receipt_refs, []);
+    assert.deepEqual(
+      reviewProductionEvidence.unobserved_expected_receipt_refs,
+      ['mas:review-receipt', 'owner_receipt:review'],
+    );
+    assert.deepEqual(reviewProductionEvidence.monitor_freshness_refs, []);
+    assert.deepEqual(reviewProductionEvidence.unobserved_monitor_refs, ['metric:review/currentness']);
 
     const stageProductionAttemptRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string; stage_id: string }) =>
