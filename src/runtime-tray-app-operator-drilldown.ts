@@ -32,6 +32,12 @@ import {
   buildExternalEvidenceActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/external-evidence-action-routes.ts';
 import {
+  buildLegacyCleanupActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/legacy-cleanup-action-routes.ts';
+import {
+  buildProviderSchedulerActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
+import {
   periodicExecutionRefs,
   providerSloRefs,
 } from './runtime-tray-app-operator-drilldown-parts/provider-periodic-refs.ts';
@@ -1058,18 +1064,20 @@ export function buildAppOperatorDrilldown(input: {
     input.domainManifestProjects,
     replacementCoverage,
   );
-  const actionRefs = uniqueRefs([
-    ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
-    ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
-    ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
-  ]);
-  const lifecycleRefs = lifecycleLedgerRefs();
-  const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
-  const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const legacyCleanupPlans = legacyCleanupPlanRefs(
     input.domainManifestProjects,
     input.providerContinuousProof,
   );
+  const actionRefs = uniqueRefs([
+    ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
+    ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
+    ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
+    ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
+    ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),
+  ]);
+  const lifecycleRefs = lifecycleLedgerRefs();
+  const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
+  const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
     sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),

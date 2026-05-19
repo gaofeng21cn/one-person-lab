@@ -7,6 +7,9 @@ import {
   parseExternalEvidenceApplyArgs,
   runExternalEvidenceApply,
 } from './external-evidence-ledger.ts';
+import {
+  runFamilyAgentLegacyCleanupApply,
+} from './family-domain-agent-skeleton.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -205,6 +208,40 @@ function externalEvidenceApplyArgs(
   return [...args, ...extraArgs];
 }
 
+function providerSchedulerArgs(route: JsonRecord, commandOrSurfaceRef: string) {
+  const args = stringList(route.opl_cli_args);
+  if (args.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL provider scheduler action route.', {
+      command_or_surface_ref: commandOrSurfaceRef,
+      supported_command: 'opl family-runtime scheduler <status|install|trigger|tick> --provider temporal',
+    });
+  }
+  if (args[0] !== 'scheduler') {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL provider scheduler route has invalid opl_cli_args.', {
+      action_id: stringValue(route.action_id),
+      opl_cli_args: args,
+    });
+  }
+  return args;
+}
+
+function legacyCleanupApplyArgs(route: JsonRecord, commandOrSurfaceRef: string) {
+  const args = stringList(route.opl_cli_args);
+  if (args.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL legacy cleanup action route.', {
+      command_or_surface_ref: commandOrSurfaceRef,
+      supported_command: 'opl agents legacy-cleanup apply --domain <domain> --mode <apply|verify> --source-ref <ref>',
+    });
+  }
+  if (args[0] !== 'agents' || args[1] !== 'legacy-cleanup' || args[2] !== 'apply') {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL legacy cleanup route has invalid opl_cli_args.', {
+      action_id: stringValue(route.action_id),
+      opl_cli_args: args,
+    });
+  }
+  return args;
+}
+
 function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const actionKind = stringValue(route.action_kind);
   if (actionKind === 'stage_attempt_query') {
@@ -232,6 +269,23 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       }),
     };
   }
+  if (
+    actionKind === 'provider_scheduler_status'
+    || actionKind === 'provider_scheduler_install'
+    || actionKind === 'provider_scheduler_trigger'
+    || actionKind === 'provider_scheduler_tick'
+  ) {
+    return {
+      executionKind: 'opl_cli_provider_scheduler',
+      runtimeArgs: providerSchedulerArgs(route, commandOrSurfaceRef),
+    };
+  }
+  if (actionKind === 'legacy_cleanup_apply' || actionKind === 'legacy_cleanup_verify') {
+    return {
+      executionKind: 'opl_cli_legacy_cleanup_apply',
+      runtimeArgs: legacyCleanupApplyArgs(route, commandOrSurfaceRef),
+    };
+  }
   throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL action command route.', {
     command_or_surface_ref: commandOrSurfaceRef,
     action_kind: actionKind,
@@ -242,6 +296,12 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'external_evidence_receipt_verify',
       'evidence_gate_receipt_record',
       'evidence_gate_receipt_verify',
+      'provider_scheduler_status',
+      'provider_scheduler_install',
+      'provider_scheduler_trigger',
+      'provider_scheduler_tick',
+      'legacy_cleanup_apply',
+      'legacy_cleanup_verify',
     ],
   });
 }
@@ -271,7 +331,11 @@ function executionBoundary() {
   };
 }
 
-async function executeRoute(route: JsonRecord, options: RuntimeActionExecuteOptions) {
+async function executeRoute(
+  contracts: FrameworkContracts,
+  route: JsonRecord,
+  options: RuntimeActionExecuteOptions,
+) {
   const actionKind = stringValue(route.action_kind) ?? '';
   const owner = stringValue(route.owner) ?? stringValue(route.action_owner) ?? '';
   const targetKind = stringValue(route.route_target_kind) ?? '';
@@ -294,6 +358,8 @@ async function executeRoute(route: JsonRecord, options: RuntimeActionExecuteOpti
       || actionKind === 'external_evidence_receipt_verify'
       || actionKind === 'evidence_gate_receipt_record'
       || actionKind === 'evidence_gate_receipt_verify';
+    const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
+      || actionKind === 'legacy_cleanup_verify';
     const { executionKind, runtimeArgs } = externalEvidenceAction
       ? {
           executionKind: 'opl_cli_external_evidence_apply',
@@ -309,12 +375,16 @@ async function executeRoute(route: JsonRecord, options: RuntimeActionExecuteOpti
       action_kind: actionKind,
       executed_runtime_command: externalEvidenceAction
         ? `opl ${runtimeArgs.join(' ')}`
-        : `opl family-runtime ${runtimeArgs.join(' ')}`,
+        : legacyCleanupAction
+          ? `opl ${runtimeArgs.join(' ')}`
+          : `opl family-runtime ${runtimeArgs.join(' ')}`,
       result: options.dryRun
         ? null
         : externalEvidenceAction
           ? runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3)))
-          : await runFamilyRuntime(runtimeArgs),
+          : legacyCleanupAction
+            ? runFamilyAgentLegacyCleanupApply(contracts, runtimeArgs.slice(3))
+            : await runFamilyRuntime(runtimeArgs),
     };
   }
 
@@ -413,7 +483,7 @@ export async function runRuntimeOperatorActionExecute(
     });
   }
 
-  const execution = await executeRoute(route, options);
+  const execution = await executeRoute(contracts, route, options);
   return {
     runtime_operator_action_execution: {
       surface_kind: 'opl_runtime_operator_action_execution',

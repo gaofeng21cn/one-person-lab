@@ -420,8 +420,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.provider_cadence_window_missing_receipt_count, 7);
     assert.equal(drilldown.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
     assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
-    assert.equal(drilldown.summary.operator_action_route_count, 14);
-    assert.equal(drilldown.summary.operator_executable_route_count, 4);
+    assert.equal(drilldown.summary.operator_action_route_count, 20);
+    assert.equal(drilldown.summary.operator_executable_route_count, 10);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -494,6 +494,24 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.periodic_execution_refs.authority_boundary.can_write_domain_truth,
       false,
     );
+    const schedulerStatusRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) => ref.action_id === 'provider-scheduler:temporal:status',
+    );
+    assert.equal(schedulerStatusRoute.owner, 'opl');
+    assert.equal(schedulerStatusRoute.route_target_kind, 'opl_cli');
+    assert.equal(schedulerStatusRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(schedulerStatusRoute.execution_surface, 'opl runtime action execute');
+    assert.deepEqual(schedulerStatusRoute.opl_cli_args, [
+      'scheduler',
+      'status',
+      '--provider',
+      'temporal',
+    ]);
+    const schedulerTickRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) => ref.action_id === 'provider-scheduler:temporal:tick',
+    );
+    assert.equal(schedulerTickRoute.action_kind, 'provider_scheduler_tick');
+    assert.equal(schedulerTickRoute.authority_boundary.can_install_domain_daemon, false);
     assert.equal(
       drilldown.domain_legacy_cleanup_plan_refs.surface_kind,
       'opl_app_drilldown_domain_legacy_cleanup_plan_refs',
@@ -534,6 +552,29 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.domain_legacy_cleanup_plan_refs.authority_boundary.can_move_or_delete_domain_repo_files,
       false,
     );
+    const legacyCleanupApplyRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) => ref.action_id === 'legacy-cleanup:medautoscience:apply',
+    );
+    assert.equal(legacyCleanupApplyRoute.owner, 'opl');
+    assert.equal(legacyCleanupApplyRoute.route_target_kind, 'opl_cli');
+    assert.equal(legacyCleanupApplyRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(legacyCleanupApplyRoute.execution_surface, 'opl runtime action execute');
+    assert.deepEqual(legacyCleanupApplyRoute.opl_cli_args, [
+      'agents',
+      'legacy-cleanup',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--mode',
+      'apply',
+      '--source-ref',
+      'opl://agents/med-autoscience/legacy-cleanup-plan',
+    ]);
+    assert.equal(legacyCleanupApplyRoute.authority_boundary.can_move_or_delete_domain_repo_files, false);
+    const legacyCleanupVerifyRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) => ref.action_id === 'legacy-cleanup:medautoscience:verify',
+    );
+    assert.equal(legacyCleanupVerifyRoute.action_kind, 'legacy_cleanup_verify');
     assert.equal(
       drilldown.stage_production_evidence.surface_kind,
       'opl_app_drilldown_stage_production_evidence',
@@ -628,6 +669,22 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.app_execution_bridge.safe_action_routes.some(
         (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
           ref.action_id === stageProductionAttemptRoute.action_id
+          && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === schedulerStatusRoute.action_id
+          && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === legacyCleanupApplyRoute.action_id
           && ref.can_submit_to_safe_action_shell,
       ),
       true,
