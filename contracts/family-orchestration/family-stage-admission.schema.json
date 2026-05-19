@@ -387,7 +387,10 @@
         "blocked_stages_count": 0,
         "needs_contracts_stages_count": 0,
         "blockers_count": 0,
-        "warnings_count": 0
+        "warnings_count": 0,
+        "verified_core_eligible_count": 1,
+        "durable_runtime_only_count": 0,
+        "runtime_boundary_required_count": 0
       },
       "stage_results": [
         {
@@ -396,6 +399,11 @@
           "trust_lane": "domain_agent",
           "static_check_eligible": true,
           "effect_boundary": false,
+          "mode_tags": {
+            "verified_core_eligible": true,
+            "durable_runtime_only": false,
+            "runtime_boundary_required": false
+          },
           "runtime_event_refs": [],
           "finding_count": 0,
           "blocker_count": 0,
@@ -403,6 +411,7 @@
         }
       ],
       "findings": [],
+      "failure_localization": [],
       "authority_boundary": {
         "opl_role": "admission_projection_and_contract_checker",
         "can_execute_stage": false,

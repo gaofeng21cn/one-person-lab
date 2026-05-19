@@ -463,6 +463,9 @@
         "needs_contracts_node_count": 0,
         "missing_edge_count": 0,
         "runtime_enforced_node_count": 1,
+        "verified_core_eligible_node_count": 0,
+        "durable_runtime_only_node_count": 1,
+        "runtime_boundary_required_node_count": 1,
         "monitor_ref_count": 1
       },
       "nodes": [
@@ -478,6 +481,11 @@
             "domain_owned_judgment",
             "observability_only"
           ],
+          "mode_tags": {
+            "verified_core_eligible": false,
+            "durable_runtime_only": true,
+            "runtime_boundary_required": true
+          },
           "static_check_eligible": false,
           "runtime_enforced": true,
           "domain_owned_judgment": true,
@@ -509,6 +517,7 @@
           "status": "satisfied"
         }
       ],
+      "failure_localization": [],
       "admission_status": "admitted",
       "integrity": {
         "surface_kind": "opl_stage_pack_integrity_metadata",
