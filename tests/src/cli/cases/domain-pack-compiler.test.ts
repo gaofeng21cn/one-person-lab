@@ -296,6 +296,61 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   assert.deepEqual(mcpOnly.stage_routes, []);
 });
 
+test('generated interfaces domain mode consumes generated handoff from active repo contracts', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-domain-handoff-'));
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interface-domain-repo-'));
+  fs.mkdirSync(path.join(targetDir, 'contracts'), { recursive: true });
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const manifest = withPackCompilerReadySurfaces(fixtures.medautoscience, {
+    agentId: 'mas',
+    targetDomainId: 'med-autoscience',
+    owner: 'MedAutoScience',
+    actionId: 'study_packet',
+    stageId: 'study_stage',
+    memoryRefId: 'mas_publication_route_memory',
+  });
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'generated_surface_handoff.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      generated_surfaces: [
+        { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'sidecar_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
+      ],
+    })}\n`,
+  );
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    targetDir,
+    '--manifest-command',
+    buildManifestCommand(manifest),
+  ], env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(bundle.status, 'ready');
+  assert.equal(bundle.active_caller_target_proof.status, 'ready');
+  assert.equal(bundle.active_caller_target_proof.blocked_target_count, 0);
+  assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
+  assert.equal(bundle.generated_wrapper_bundle.status, 'ready');
+});
+
 test('generated interfaces keep active caller cutover blocked while repo-local migration bridges remain', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-bridge-blocked-'));

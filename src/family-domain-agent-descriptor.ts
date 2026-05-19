@@ -163,6 +163,11 @@ function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
       ref: '/artifact_inventory',
       status: manifest?.artifact_inventory ? 'resolved' : 'missing',
     },
+    generated_surface_handoff: {
+      ref_kind: 'json_pointer',
+      ref: '/generated_surface_handoff',
+      status: manifest?.generated_surface_handoff ? 'resolved' : 'missing',
+    },
   };
 }
 
@@ -585,6 +590,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
     family_transition: familyTransition,
     grant_transition_oracle: grantTransitionOracle,
     domain_memory_descriptor: domainMemory,
+    generated_surface_handoff_contract: manifest?.generated_surface_handoff ?? null,
     skill_catalog: skillCatalog,
     runtime_surfaces: runtimeSurfaces,
     functional_privatization_audit: functionalPrivatizationAudit,

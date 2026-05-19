@@ -585,6 +585,34 @@ function buildRepoContractDescriptor(repoDirInput: string) {
   };
 }
 
+function repoGeneratedSurfaceHandoffFromDescriptor(descriptor: JsonRecord) {
+  const current = isRecord(descriptor.generated_surface_handoff_contract)
+    ? descriptor.generated_surface_handoff_contract
+    : isRecord(descriptor.generated_surface_handoff)
+      ? descriptor.generated_surface_handoff
+      : null;
+  if (current) {
+    return current;
+  }
+
+  const workspacePath = optionalString(descriptor.workspace_path);
+  if (!workspacePath || !fs.existsSync(workspacePath) || !fs.statSync(workspacePath).isDirectory()) {
+    return null;
+  }
+  return readRepoJson(workspacePath, 'contracts/generated_surface_handoff.json');
+}
+
+function descriptorWithRepoContractInputs(descriptor: JsonRecord) {
+  const generatedSurfaceHandoff = repoGeneratedSurfaceHandoffFromDescriptor(descriptor);
+  if (!generatedSurfaceHandoff) {
+    return descriptor;
+  }
+  return {
+    ...descriptor,
+    generated_surface_handoff_contract: generatedSurfaceHandoff,
+  };
+}
+
 function surfaceProjection(descriptor: JsonRecord, surface: typeof GENERATED_SURFACES[number]) {
   const missing = surface.required_descriptor_surfaces.filter((required) =>
     !descriptorSurfaceResolved(descriptor, required)
@@ -674,7 +702,7 @@ function buildCompilerDomains(contracts: FrameworkContracts) {
   });
   const familyAgentDescriptors = descriptorList.family_agent_descriptors;
   return familyAgentDescriptors.descriptors.map((descriptor) =>
-    buildPackCompilerProjection(descriptor as JsonRecord)
+    buildPackCompilerProjection(descriptorWithRepoContractInputs(descriptor as JsonRecord))
   );
 }
 
