@@ -74,6 +74,7 @@ interface FamilyStageReadinessSummary {
   checks: FamilyStageReadinessCheck[];
   hard_blockers: FamilyStageReadinessIssue[];
   warnings: FamilyStageReadinessIssue[];
+  recommendations: FamilyStageReadinessIssue[];
   drilldown_refs: string[];
   ai_first_contract_light_policy: {
     contract_scope: [
@@ -294,6 +295,7 @@ export function buildStageReadinessSummary(
     checks,
     hard_blockers: hardBlockers,
     warnings,
+    recommendations: warnings,
     drilldown_refs: drilldownRefs,
     ai_first_contract_light_policy: {
       contract_scope: [

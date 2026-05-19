@@ -434,6 +434,7 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
     assert.equal(readiness.summary.hard_blocker_count, 0);
     assert.equal(readiness.summary.cohort_loop_warning_count, 0);
     assert.equal(readiness.summary.replay_evidence_warning_count > 0, true);
+    assert.deepEqual(readiness.recommendations, readiness.warnings);
     assert.equal(readiness.checks.some((entry: { check_id: string }) => entry.check_id === 'stage_admission'), true);
     assert.equal(readiness.checks.some((entry: { check_id: string }) => entry.check_id === 'proof_bundle'), true);
     assert.equal(readiness.drilldown_refs.includes('opl stages proof-bundle --domain mas'), true);
@@ -536,6 +537,7 @@ test('family stage readiness treats lightweight authoring fields as warnings ins
       readiness.warnings.some((entry: { code: string }) => entry.code === 'cohort_query_missing'),
       true,
     );
+    assert.deepEqual(readiness.recommendations, readiness.warnings);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

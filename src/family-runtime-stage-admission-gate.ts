@@ -45,6 +45,8 @@ export type StageAdmissionLaunchGateResult = {
   inspected_stage: FamilyStageAdmissionStageResult | null;
   inspected_cohort_loop_stage: FamilyStageCohortLoopStage | null;
   findings: FamilyStageAdmissionReview['findings'];
+  blocker_findings: FamilyStageAdmissionReview['findings'];
+  recommendation_findings: FamilyStageAdmissionReview['findings'];
   conflict_or_blocker_envelopes: ReturnType<typeof buildFamilyConflictOrBlockerEnvelope>[];
   authority_boundary: {
     opl: 'launch_gate_and_blocker_projection_only';
@@ -122,6 +124,8 @@ function statusForMissing(input: StageAdmissionLaunchGateInput, reason: string):
     inspected_stage: null,
     inspected_cohort_loop_stage: null,
     findings: [],
+    blocker_findings: [],
+    recommendation_findings: [],
     conflict_or_blocker_envelopes: required
       ? [
           buildFamilyConflictOrBlockerEnvelope({
@@ -181,6 +185,8 @@ export function buildStageAdmissionLaunchGateFromReview(
       }))
     : [];
   const findings = [...stageFindings, ...cohortLoopFindings];
+  const blockerFindings = findings.filter((finding) => finding.severity === 'blocker');
+  const recommendationFindings = findings.filter((finding) => finding.severity === 'warning');
   const blockedReason = inspectedStage.status !== 'admitted'
     ? `stage_admission_${inspectedStage.status}`
     : null;
@@ -211,6 +217,8 @@ export function buildStageAdmissionLaunchGateFromReview(
     inspected_stage: inspectedStage,
     inspected_cohort_loop_stage: inspectedCohortLoopStage,
     findings,
+    blocker_findings: blockerFindings,
+    recommendation_findings: recommendationFindings,
     conflict_or_blocker_envelopes: blockedReason
       ? [
           buildFamilyConflictOrBlockerEnvelope({
