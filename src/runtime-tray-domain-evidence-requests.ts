@@ -150,15 +150,53 @@ export function buildDomainEvidenceRequestRefs(
     if (!gates) {
       return [];
     }
-    return gates.remaining_evidence_gate_ids.map((gateId) => ({
-      ref: gateId,
-      role: 'remaining_evidence_gate',
-      domain_id: audit.target_domain_id ?? project.project_id,
-      gate_status: 'open',
-      source_refs: gates.source_refs,
-      can_execute: false,
-    }));
+    return gates.remaining_evidence_gate_ids.map((gateId) => {
+      const domainId = audit.target_domain_id ?? project.project_id;
+      const receipts = externalEvidenceReceiptsForRequest(domainId, gateId);
+      const receiptSummary = summarizeExternalEvidenceReceipts(receipts);
+      const receiptStatus = receiptSummary.verified_receipt_count > 0
+        ? 'verified'
+        : receiptSummary.receipt_count > 0
+          ? 'recorded'
+          : 'missing';
+      return {
+        ref: gateId,
+        role: 'remaining_evidence_gate',
+        domain_id: domainId,
+        gate_status: receiptStatus === 'verified' ? 'verified' : 'open',
+        external_receipt_status: receiptStatus,
+        source_refs: gates.source_refs,
+        evidence_apply_command:
+          `opl agents evidence apply --domain ${domainId} --request-id ${gateId}`,
+        evidence_verify_command:
+          `opl agents evidence apply --domain ${domainId} --request-id ${gateId} --mode verify`,
+        observed_receipts: receipts,
+        observed_receipt_summary: receiptSummary,
+        can_execute: false,
+      };
+    });
   });
+  const remainingEvidenceGates = evidenceGates.filter((gate) =>
+    gate.external_receipt_status !== 'verified'
+  );
+  const evidenceGateReceiptRefs = uniqueRefs(evidenceGates.flatMap((gate) =>
+    gate.observed_receipts.map((receipt) => ({
+      ref: receipt.receipt_ref,
+      role: 'evidence_gate_receipt',
+      domain_id: gate.domain_id,
+      gate_id: gate.ref,
+      receipt_status: receipt.receipt_status,
+      evidence_refs: receipt.evidence_refs,
+      domain_receipt_refs: receipt.receipt_refs,
+      typed_blocker_refs: receipt.typed_blocker_refs,
+      no_regression_refs: receipt.no_regression_refs,
+      release_dist_refs: receipt.release_dist_refs,
+      direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
+      owner_chain_refs: receipt.owner_chain_refs,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+      can_execute: false,
+    }))
+  ));
   const replacementExpectations = resolvedProjects.flatMap((project) => {
     const audit = project.manifest?.functional_privatization_audit;
     return (audit?.opl_replacement_expectations ?? []).map((expectation) => ({
@@ -195,12 +233,18 @@ export function buildDomainEvidenceRequestRefs(
     projection_policy: 'domain_declared_requests_refs_only_no_domain_truth_or_verdict',
     external_requests: uniqueRefs(externalRequests),
     external_receipts: externalReceiptRefs,
-    evidence_gates: uniqueRefs(evidenceGates),
+    evidence_gates: uniqueRefs(remainingEvidenceGates),
+    evidence_gate_receipts: evidenceGateReceiptRefs,
     replacement_expectations: uniqueRefs(replacementExpectations),
     remaining_bridge_modules: uniqueRefs(remainingBridgeModules),
     summary: {
       external_evidence_request_count: externalRequests.length,
-      remaining_evidence_gate_count: evidenceGates.length,
+      evidence_gate_count: evidenceGates.length,
+      remaining_evidence_gate_count: remainingEvidenceGates.length,
+      evidence_gate_receipt_count: evidenceGateReceiptRefs.length,
+      evidence_gate_verified_receipt_count: evidenceGateReceiptRefs.filter((receipt) =>
+        receipt.receipt_status === 'verified'
+      ).length,
       opl_replacement_expectation_count: replacementExpectations.length,
       remaining_bridge_module_count: remainingBridgeModules.length,
       replacement_surface_available_count: replacementExpectations.filter((expectation) =>

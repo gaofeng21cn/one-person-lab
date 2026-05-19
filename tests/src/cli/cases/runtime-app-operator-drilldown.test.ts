@@ -195,6 +195,40 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'real_package_lifecycle_receipt',
+      '--request-pack-id',
+      'mas.bridge_exit_gate.fixture',
+      '--source-ref',
+      '/functional_privatization_audit/bridge_exit_gate/remaining_evidence_gate_ids/0',
+      '--domain-receipt-ref',
+      'mas://receipts/package-lifecycle/latest.json',
+      '--no-regression-ref',
+      'mas://proof/no-regression/package-lifecycle.json',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'real_package_lifecycle_receipt',
+      '--mode',
+      'verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
 
     const attempt = runCli([
       'family-runtime',
@@ -281,7 +315,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.domain_verified_evidence_receipt_request_count, 1);
     assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
     assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
-    assert.equal(drilldown.summary.domain_remaining_evidence_gate_count, 1);
+    assert.equal(drilldown.summary.domain_evidence_gate_count, 1);
+    assert.equal(drilldown.summary.domain_remaining_evidence_gate_count, 0);
+    assert.equal(drilldown.summary.domain_evidence_gate_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_evidence_gate_verified_receipt_count, 1);
     assert.equal(drilldown.summary.domain_opl_replacement_expectation_count, 1);
     assert.equal(drilldown.summary.domain_replacement_surface_available_count, 1);
     assert.equal(drilldown.summary.domain_remaining_bridge_module_count, 1);
@@ -442,6 +479,19 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(
       drilldown.domain_evidence_request_refs.evidence_gates.some(
         (ref: { ref: string }) => ref.ref === 'real_package_lifecycle_receipt',
+      ),
+      false,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.evidence_gate_receipts.some(
+        (ref: {
+          ref: string;
+          receipt_status: string;
+          domain_receipt_refs: string[];
+        }) =>
+          ref.ref === 'opl://external-evidence/medautoscience/real_package_lifecycle_receipt'
+          && ref.receipt_status === 'verified'
+          && ref.domain_receipt_refs.includes('mas://receipts/package-lifecycle/latest.json'),
       ),
       true,
     );
