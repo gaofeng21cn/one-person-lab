@@ -21,7 +21,10 @@ import {
   buildFamilyStagePackRegistryEntry,
   buildFamilyStagePackRegistryProjection,
 } from './family-stage-pack-registry.ts';
-import type { FamilyStagePackMigrationPolicy } from './family-stage-pack-registry.ts';
+import type {
+  FamilyStagePackLibraryLifecycleStatus,
+  FamilyStagePackMigrationPolicy,
+} from './family-stage-pack-registry.ts';
 import {
   buildFamilyStagePackIntegrity,
   buildFamilyStageProofBundle,
@@ -29,6 +32,9 @@ import {
 import {
   buildFamilyStageReplayCertification,
 } from './family-stage-replay-certification.ts';
+import {
+  buildFamilyStagePackSourceSpecProjection,
+} from './family-stage-source-spec.ts';
 import type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
 import type { FamilyStageProofBundleIntegrity } from './family-stage-proof-bundle.ts';
 import type {
@@ -685,6 +691,24 @@ function normalizeMigrationPolicy(value: string | undefined): FamilyStagePackMig
   });
 }
 
+function normalizeLibraryLifecycleStatus(value: string | undefined): FamilyStagePackLibraryLifecycleStatus | null {
+  if (!value) {
+    return null;
+  }
+  if (
+    value === 'candidate'
+    || value === 'admitted'
+    || value === 'reused'
+    || value === 'deprecated'
+    || value === 'superseded'
+  ) {
+    return value;
+  }
+  throw new FrameworkContractError('cli_usage_error', `Unsupported stage pack library lifecycle status: ${value}.`, {
+    allowed_statuses: ['candidate', 'admitted', 'reused', 'deprecated', 'superseded'],
+  });
+}
+
 export function buildFamilyStageInspect(contracts: FrameworkContracts, args: string[]) {
   const parsed = parseOptionArgs(args, ['domain', 'stage']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
@@ -801,7 +825,7 @@ export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts,
 }
 
 export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContracts, args: string[]) {
-  const { parsed } = parseRepeatedOptionArgs(args, ['domain']);
+  const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], ['reused-by-ref']);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
   const proofBundle = buildFamilyStageProofBundle(plane, {
@@ -822,6 +846,12 @@ export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContract
     attemptBinding,
     migrationPolicy,
     migrationPolicyRef: parsed['migration-policy-ref'] ?? null,
+    libraryLifecycleStatus: normalizeLibraryLifecycleStatus(parsed['library-status']),
+    promotionRef: parsed['promotion-ref'] ?? null,
+    deprecationRef: parsed['deprecation-ref'] ?? null,
+    supersessionRef: parsed['supersession-ref'] ?? null,
+    supersededByStagePackRef: parsed['superseded-by-stage-pack-ref'] ?? null,
+    reusedByRefs: repeated['reused-by-ref'],
   });
   return {
     version: 'g2',
@@ -829,6 +859,57 @@ export function buildFamilyStagePackRegistryInspect(contracts: FrameworkContract
       project_id: entry.project_id,
       project: entry.project,
       projection: buildFamilyStagePackRegistryProjection([entryProjection]),
+    },
+  };
+}
+
+export function buildFamilyStagePackSourceSpecInspect(contracts: FrameworkContracts, args: string[]) {
+  const { parsed, repeated } = parseRepeatedOptionArgs(args, ['domain'], [
+    'append-only-event-log-ref',
+    'attempt-ledger-ref',
+    'recorded-runtime-event-ref',
+    'closeout-receipt-ref',
+    'reused-by-ref',
+  ]);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const proofBundle = buildFamilyStageProofBundle(plane, {
+    actionCatalog: entry.manifest?.family_action_catalog ?? null,
+    admissionReview: admission,
+  });
+  const graphProjection = buildStageGraphProjection(entry, plane);
+  const registryEntry = buildFamilyStagePackRegistryEntry(proofBundle, {
+    previousStagePackHash: parsed['previous-stage-pack-hash'] ?? null,
+    migrationPolicy: normalizeMigrationPolicy(parsed['migration-policy']),
+    migrationPolicyRef: parsed['migration-policy-ref'] ?? null,
+    libraryLifecycleStatus: normalizeLibraryLifecycleStatus(parsed['library-status']),
+    promotionRef: parsed['promotion-ref'] ?? null,
+    deprecationRef: parsed['deprecation-ref'] ?? null,
+    supersessionRef: parsed['supersession-ref'] ?? null,
+    supersededByStagePackRef: parsed['superseded-by-stage-pack-ref'] ?? null,
+    reusedByRefs: repeated['reused-by-ref'],
+  });
+  const registryProjection = buildFamilyStagePackRegistryProjection([registryEntry]);
+  const replayCertification = buildFamilyStageReplayCertification(proofBundle, {
+    append_only_event_log_refs: repeated['append-only-event-log-ref'],
+    attempt_ledger_refs: repeated['attempt-ledger-ref'],
+    recorded_runtime_event_refs: repeated['recorded-runtime-event-ref'],
+    closeout_receipt_refs: repeated['closeout-receipt-ref'],
+  });
+  return {
+    version: 'g2',
+    family_stage_pack_source_spec: {
+      project_id: entry.project_id,
+      project: entry.project,
+      source_spec: buildFamilyStagePackSourceSpecProjection({
+        plane,
+        proofBundle,
+        graphProjection,
+        registryProjection,
+        replayCertification,
+        assumptionLifecycle: buildFamilyStageAssumptionLifecycleProjection(plane),
+        cohortLoop: buildFamilyStageCohortLoopProjection(plane),
+      }),
     },
   };
 }

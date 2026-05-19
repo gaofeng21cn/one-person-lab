@@ -60,7 +60,9 @@
 - `family-stage-cohort-loop.schema.json`
   - 冻结 stage pack 的 source scope / cohort query / trigger / monitor-metric 闭环投影，供 scheduler / App 判断同一批 source 是否有可审计启动和监控 refs；OPL 只投影 refs 与 blocker，不评估 source truth 或引入 GraphFlow runtime
 - `family-stage-pack-registry.schema.json`
-  - 冻结 stage pack library / registry 投影，按 integrity hash 记录 reusable pack refs、active attempt binding 与迁移策略 blocker
+  - 冻结 stage pack library / registry 投影，按 integrity hash 记录 reusable pack refs、lifecycle status、promotion / deprecation / supersession refs、active attempt binding 与迁移策略 blocker
+- `family-stage-pack-source-spec.schema.json`
+  - 冻结 body-free refs-only source/spec 投影，供 human diff review 聚合 control-plane、proof-bundle、graph、registry、replay、assumption-lifecycle 与 cohort-loop refs，不生成 artifact body，也不执行 stage
 - `family-stage-replay-certification.schema.json`
   - 冻结 stage pack replay certification 投影，要求 replay 只读取 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs，不能重新询问 AI、人或外部系统
 - `family-stage-assumption-lifecycle.schema.json`
@@ -212,7 +214,7 @@ scope refs 让启动边界可机器读取：`source_scope_refs` 冻结 source co
 
 GraphFlow / GFL 的 cohort search / trigger / dashboard closed-loop 模式在 OPL 落成 refs-only `family-stage-cohort-loop` 投影：`source_scope_refs` 固定 source cohort 或 source set，`cohort_query_refs` 指向可审计 query，`trigger_refs` 指向 queue / launch / schedule 触发面，`monitor_refs`、`metric_refs` 或 `dashboard_metric_refs` 指向同一 cohort 的运行后观测面。缺少任一环节会给出 typed blocker 和 minimal counterexample。这个投影只服务 scheduler / App 的 launch-readiness 与 operator drilldown，不执行 query、不写 source truth、不授权 domain ready 或 quality verdict。
 
-`family-stage-proof-bundle.schema.json`、`family-stage-graph-projection.schema.json`、`family-stage-pack-registry.schema.json` 与 `family-stage-replay-certification.schema.json` 是 OPL 对同一个 stage pack 的 machine-readable 投影。proof bundle 携带 composition、receipt、runtime-event、proof-ref 与 integrity metadata；graph projection 携带 nodes、edges、guarantee modes、graph summary 和同一个 integrity digest；registry 按 stage pack hash 暴露 reusable library refs、active attempt binding 与 hash migration policy blocker；replay certification 用 proof bundle obligation 对照 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs。它们都是只读 scheduler / App input，不执行 stage、不重新询问 AI / human / external source、不验证外部签名、不写 domain truth、不修改 artifact，也不授权 domain readiness。
+`family-stage-proof-bundle.schema.json`、`family-stage-graph-projection.schema.json`、`family-stage-pack-registry.schema.json`、`family-stage-pack-source-spec.schema.json` 与 `family-stage-replay-certification.schema.json` 是 OPL 对同一个 stage pack 的 machine-readable 投影。proof bundle 携带 composition、receipt、runtime-event、proof-ref 与 integrity metadata；graph projection 携带 nodes、edges、guarantee modes、graph summary 和同一个 integrity digest；registry 按 stage pack hash 暴露 reusable library refs、lifecycle status、promotion / deprecation / supersession refs、active attempt binding 与 hash migration policy blocker；source/spec 投影是 body-free visual-equivalent review bundle，只聚合 control-plane、proof、graph、registry、replay、assumption 与 cohort surface 的稳定 refs；replay certification 用 proof bundle obligation 对照 append-only event log、attempt ledger、runtime event refs 与 closeout receipt refs。它们都是只读 scheduler / App / operator input，不执行 stage、不重新询问 AI / human / external source、不验证外部签名、不写 domain truth、不修改 artifact、不生成 artifact body，也不授权 domain readiness。
 
 GraphFlow / GFL 的 diagram-as-spec / generated artifacts 模式在 proof bundle 内落成 `generated_artifact_manifest`：OPL 只记录从同一 stage pack 推导出来的 code / test / proof / schema / artifact refs、`source_stage_pack_ref`、`graph_projection_ref` 与 `stage_pack_hash`。hash 变化意味着 generated refs 必须重新生成、迁移或进入 human gate；manifest 是 build/review input，不执行 stage、不写 artifact body，也不把生成物存在当作 domain ready 或 quality verdict。
 

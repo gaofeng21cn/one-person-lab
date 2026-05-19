@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-pack-source-spec.schema.json",
+  "title": "OPL Family Stage Pack Source Spec",
+  "description": "Body-free refs-only source/spec projection for human diff review. It aggregates stable refs to the control plane, proof bundle, graph projection, registry, replay certification, assumption lifecycle, and cohort loop without generating artifact bodies or executing stages.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "stage_pack_id",
+    "target_domain_id",
+    "plane_id",
+    "stage_pack_hash",
+    "source_spec_hash",
+    "review_mode",
+    "diff_keys",
+    "source_refs",
+    "review_summary",
+    "body_policy",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_family_stage_pack_source_spec" },
+    "version": { "const": "family-stage-pack-source-spec.v1" },
+    "stage_pack_id": { "type": "string", "minLength": 1 },
+    "target_domain_id": { "type": "string", "minLength": 1 },
+    "plane_id": { "type": "string", "minLength": 1 },
+    "stage_pack_hash": { "$ref": "#/$defs/hash" },
+    "source_spec_hash": { "$ref": "#/$defs/hash" },
+    "review_mode": { "const": "diffable_refs_only_visual_equivalent_spec" },
+    "diff_keys": { "$ref": "#/$defs/diff_keys" },
+    "source_refs": { "$ref": "#/$defs/source_refs" },
+    "review_summary": { "$ref": "#/$defs/review_summary" },
+    "body_policy": { "$ref": "#/$defs/body_policy" },
+    "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "diff_keys": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_pack_hash",
+        "stage_ids",
+        "action_catalog_id",
+        "admission_status",
+        "graph_node_count",
+        "graph_edge_count",
+        "registry_lifecycle_statuses",
+        "registry_lifecycle_refs",
+        "replay_status",
+        "replay_evidence_refs",
+        "assumption_blocker_count",
+        "cohort_blocker_count"
+      ],
+      "properties": {
+        "stage_pack_hash": { "$ref": "#/$defs/hash" },
+        "stage_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "action_catalog_id": { "type": ["string", "null"] },
+        "admission_status": {
+          "type": "string",
+          "enum": ["admitted", "needs_contracts", "blocked"]
+        },
+        "graph_node_count": { "type": "integer", "minimum": 0 },
+        "graph_edge_count": { "type": "integer", "minimum": 0 },
+        "registry_lifecycle_statuses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["candidate", "admitted", "reused", "deprecated", "superseded"]
+          }
+        },
+        "registry_lifecycle_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "replay_status": {
+          "type": "string",
+          "enum": ["replay_ready", "blocked"]
+        },
+        "replay_evidence_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "assumption_blocker_count": { "type": "integer", "minimum": 0 },
+        "cohort_blocker_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "source_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control_plane_ref",
+        "proof_bundle_ref",
+        "graph_projection_ref",
+        "registry_ref",
+        "replay_certification_ref",
+        "assumption_lifecycle_ref",
+        "cohort_loop_ref",
+        "action_catalog_ref"
+      ],
+      "properties": {
+        "control_plane_ref": { "type": "string", "minLength": 1 },
+        "proof_bundle_ref": { "type": "string", "minLength": 1 },
+        "graph_projection_ref": { "type": "string", "minLength": 1 },
+        "registry_ref": { "type": "string", "minLength": 1 },
+        "replay_certification_ref": { "type": "string", "minLength": 1 },
+        "assumption_lifecycle_ref": { "type": "string", "minLength": 1 },
+        "cohort_loop_ref": { "type": "string", "minLength": 1 },
+        "action_catalog_ref": { "type": ["string", "null"] }
+      }
+    },
+    "review_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_count",
+        "runtime_event_requirement_count",
+        "expected_receipt_ref_count",
+        "registry_entry_count",
+        "replay_blocker_count",
+        "assumption_blocker_count",
+        "cohort_blocker_count",
+        "visual_equivalent",
+        "body_free"
+      ],
+      "properties": {
+        "stage_count": { "type": "integer", "minimum": 0 },
+        "runtime_event_requirement_count": { "type": "integer", "minimum": 0 },
+        "expected_receipt_ref_count": { "type": "integer", "minimum": 0 },
+        "registry_entry_count": { "type": "integer", "minimum": 0 },
+        "replay_blocker_count": { "type": "integer", "minimum": 0 },
+        "assumption_blocker_count": { "type": "integer", "minimum": 0 },
+        "cohort_blocker_count": { "type": "integer", "minimum": 0 },
+        "visual_equivalent": { "const": true },
+        "body_free": { "const": true }
+      }
+    },
+    "body_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "includes_control_plane_body",
+        "includes_proof_bundle_body",
+        "includes_graph_body",
+        "includes_registry_body",
+        "includes_artifact_body",
+        "executes_stage"
+      ],
+      "properties": {
+        "includes_control_plane_body": { "const": false },
+        "includes_proof_bundle_body": { "const": false },
+        "includes_graph_body": { "const": false },
+        "includes_registry_body": { "const": false },
+        "includes_artifact_body": { "const": false },
+        "executes_stage": { "const": false }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "human_operator_review_input",
+        "visual_equivalent_spec",
+        "stores_body_payloads",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "stage_pack_source_spec_projection_only" },
+        "human_operator_review_input": { "const": true },
+        "visual_equivalent_spec": { "const": true },
+        "stores_body_payloads": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_family_stage_pack_source_spec",
+      "version": "family-stage-pack-source-spec.v1",
+      "stage_pack_id": "med-autoscience:mas_stage_control_plane",
+      "target_domain_id": "med-autoscience",
+      "plane_id": "mas_stage_control_plane",
+      "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_spec_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "review_mode": "diffable_refs_only_visual_equivalent_spec",
+      "diff_keys": {
+        "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "stage_ids": ["manuscript_authoring"],
+        "action_catalog_id": "mas_stage_actions",
+        "admission_status": "admitted",
+        "graph_node_count": 1,
+        "graph_edge_count": 0,
+        "registry_lifecycle_statuses": ["admitted"],
+        "registry_lifecycle_refs": ["human_gate:mas-stage-pack-admission"],
+        "replay_status": "replay_ready",
+        "replay_evidence_refs": ["runtime_event:publication_review.gate_recorded"],
+        "assumption_blocker_count": 0,
+        "cohort_blocker_count": 0
+      },
+      "source_refs": {
+        "control_plane_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/control-plane/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "proof_bundle_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/proof-bundles/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "graph_projection_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registry_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/registry/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "replay_certification_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/replay-certification/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "assumption_lifecycle_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/assumptions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "cohort_loop_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/cohort-loop/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "action_catalog_ref": "opl://action-catalogs/mas_stage_actions"
+      },
+      "review_summary": {
+        "stage_count": 1,
+        "runtime_event_requirement_count": 0,
+        "expected_receipt_ref_count": 0,
+        "registry_entry_count": 1,
+        "replay_blocker_count": 0,
+        "assumption_blocker_count": 0,
+        "cohort_blocker_count": 0,
+        "visual_equivalent": true,
+        "body_free": true
+      },
+      "body_policy": {
+        "includes_control_plane_body": false,
+        "includes_proof_bundle_body": false,
+        "includes_graph_body": false,
+        "includes_registry_body": false,
+        "includes_artifact_body": false,
+        "executes_stage": false
+      },
+      "authority_boundary": {
+        "opl_role": "stage_pack_source_spec_projection_only",
+        "human_operator_review_input": true,
+        "visual_equivalent_spec": true,
+        "stores_body_payloads": false,
+        "can_execute_stage": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}

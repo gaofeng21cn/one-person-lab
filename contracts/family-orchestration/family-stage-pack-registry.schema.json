@@ -44,13 +44,23 @@
         "entry_count",
         "changed_hash_count",
         "blocked_entry_count",
-        "reusable_entry_count"
+        "reusable_entry_count",
+        "candidate_count",
+        "admitted_count",
+        "reused_count",
+        "deprecated_count",
+        "superseded_count"
       ],
       "properties": {
         "entry_count": { "type": "integer", "minimum": 0 },
         "changed_hash_count": { "type": "integer", "minimum": 0 },
         "blocked_entry_count": { "type": "integer", "minimum": 0 },
-        "reusable_entry_count": { "type": "integer", "minimum": 0 }
+        "reusable_entry_count": { "type": "integer", "minimum": 0 },
+        "candidate_count": { "type": "integer", "minimum": 0 },
+        "admitted_count": { "type": "integer", "minimum": 0 },
+        "reused_count": { "type": "integer", "minimum": 0 },
+        "deprecated_count": { "type": "integer", "minimum": 0 },
+        "superseded_count": { "type": "integer", "minimum": 0 }
       }
     },
     "entry": {
@@ -66,6 +76,7 @@
         "admission_status",
         "reusable_library_entry",
         "refs",
+        "library_lifecycle",
         "migration",
         "authority_boundary"
       ],
@@ -87,8 +98,51 @@
         },
         "reusable_library_entry": { "const": true },
         "refs": { "$ref": "#/$defs/refs" },
+        "library_lifecycle": { "$ref": "#/$defs/library_lifecycle" },
         "migration": { "$ref": "#/$defs/migration" },
         "authority_boundary": { "$ref": "#/$defs/entry_authority_boundary" }
+      }
+    },
+    "library_lifecycle_status": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "admitted",
+        "reused",
+        "deprecated",
+        "superseded"
+      ]
+    },
+    "library_lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "promotion_ref",
+        "deprecation_ref",
+        "supersession_ref",
+        "superseded_by_stage_pack_ref",
+        "reused_by_refs",
+        "migration_blocker_count",
+        "blockers",
+        "authority_boundary"
+      ],
+      "properties": {
+        "status": { "$ref": "#/$defs/library_lifecycle_status" },
+        "promotion_ref": { "type": ["string", "null"] },
+        "deprecation_ref": { "type": ["string", "null"] },
+        "supersession_ref": { "type": ["string", "null"] },
+        "superseded_by_stage_pack_ref": { "type": ["string", "null"] },
+        "reused_by_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "migration_blocker_count": { "type": "integer", "minimum": 0 },
+        "blockers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/blocker" }
+        },
+        "authority_boundary": { "$ref": "#/$defs/lifecycle_authority_boundary" }
       }
     },
     "refs": {
@@ -242,6 +296,30 @@
         "can_mutate_artifact_body": { "const": false }
       }
     },
+    "lifecycle_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "lifecycle_is_operator_review_input",
+        "stores_body_payloads",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "stage_pack_library_lifecycle_projection_only" },
+        "lifecycle_is_operator_review_input": { "const": true },
+        "stores_body_payloads": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    },
     "projection_authority_boundary": {
       "type": "object",
       "additionalProperties": false,
@@ -275,7 +353,12 @@
         "entry_count": 1,
         "changed_hash_count": 0,
         "blocked_entry_count": 0,
-        "reusable_entry_count": 1
+        "reusable_entry_count": 1,
+        "candidate_count": 0,
+        "admitted_count": 1,
+        "reused_count": 0,
+        "deprecated_count": 0,
+        "superseded_count": 0
       },
       "entries": [
         {
@@ -292,6 +375,26 @@
             "graph_projection_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "integrity_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/integrity/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "migration_policy_ref": null
+          },
+          "library_lifecycle": {
+            "status": "admitted",
+            "promotion_ref": "human_gate:mas-stage-pack-admission",
+            "deprecation_ref": null,
+            "supersession_ref": null,
+            "superseded_by_stage_pack_ref": null,
+            "reused_by_refs": [],
+            "migration_blocker_count": 0,
+            "blockers": [],
+            "authority_boundary": {
+              "opl_role": "stage_pack_library_lifecycle_projection_only",
+              "lifecycle_is_operator_review_input": true,
+              "stores_body_payloads": false,
+              "can_execute_stage": false,
+              "can_write_domain_truth": false,
+              "can_authorize_domain_ready": false,
+              "can_authorize_quality_verdict": false,
+              "can_mutate_artifact_body": false
+            }
           },
           "migration": {
             "status": "stable_hash",
