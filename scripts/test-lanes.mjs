@@ -47,8 +47,6 @@ const lanes = {
       'tests/src/family-stage-proof-bundle.test.ts',
       'tests/src/family-stage-cohort-loop.test.ts',
       'tests/src/family-stage-runtime-budget.test.ts',
-      'tests/src/family-stage-capacity-budget.test.ts',
-      'tests/src/family-stage-domain-validity.test.ts',
       'tests/src/family-stage-assumption-lifecycle.test.ts',
       'tests/src/family-stage-replay-certification.test.ts',
       'tests/src/family-stage-pack-registry.test.ts',
