@@ -2,6 +2,9 @@
 
 Status: `active_support`
 Owner: `One Person Lab`
+Purpose: `public_support_index`
+State: `active_support`
+Machine boundary: 本文是人读索引。公开产品 truth 继续归 README、核心五件套、contracts、source、CLI/API 行为、release artifacts、runtime ledger 和真实 App evidence。
 
 本目录收纳用户在仓库首页和文档索引之后阅读的产品方向文档。
 

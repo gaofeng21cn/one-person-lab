@@ -1,5 +1,8 @@
 # 活跃规格索引
 
+Purpose: `specs_index`
+State: `active_spec_support`
+
 Status: `spec_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；机器可读行为必须使用 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物或语义化 `human_doc:*` id。

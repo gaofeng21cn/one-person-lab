@@ -1,5 +1,7 @@
 # OPL 当前开发线路
 
+State: `active_support`
+
 Status: `active_support`
 Owner: `One Person Lab`
 Purpose: 在 OPL 已定位为 stage-led、以 Agent executor 为最小执行单位的完整智能体框架之后，给出当前 framework-first 的内容级开发线路。

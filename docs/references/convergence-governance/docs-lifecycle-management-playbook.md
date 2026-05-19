@@ -1,5 +1,9 @@
 # 文档分层与生命周期管理 Playbook
 
+Purpose: `references_convergence_governance_docs_lifecycle_management_playbook`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 Status: `active reference`
 Date: `2026-05-07`
 Owner: `One Person Lab`

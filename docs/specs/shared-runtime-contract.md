@@ -1,5 +1,10 @@
 # Shared Runtime Contract
 
+Owner: `One Person Lab`
+Purpose: `specs_shared_runtime_contract`
+State: `active_spec_support`
+Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
+
 > 当前状态说明（`2026-05-11`）：本文作为 stage-led、以 Agent executor 为最小执行单位的 OPL framework 共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected MAS/MAG/RCA domain agent`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下层 domain 执行词汇按 `harness / controller` 内部边界理解，不作为当前默认公开产品模型。
 
 ## 目的

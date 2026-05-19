@@ -1,5 +1,10 @@
 # OPL 路线图
 
+Owner: `One Person Lab`
+Purpose: `public_roadmap_support`
+State: `public_support`
+Machine boundary: 本文是人读公开路线图。当前实现和 readiness truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests、release artifacts 和真实 App evidence。
+
 ## 当前角色
 
 `OPL` 是 one-person research lab 的 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。
@@ -63,7 +68,7 @@
 
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)
 - [Gateway-Derived Operating Governance 归档](../history/compatibility/gateway-federation/operating-governance/README.md)
-- [生态四仓统一状态总表](../references/convergence-governance/ecosystem-status-matrix.md)
+- [Convergence Governance 过程归档](../history/process/convergence-governance/README.md)
 - [Runtime Substrate 历史归档](../history/runtime-substrate/README.md)
 - 只有明确需要 provenance 或 diagnostic 时，才进入 `docs/history/compatibility/` 下的 Legacy Gateway/Federation archive
 

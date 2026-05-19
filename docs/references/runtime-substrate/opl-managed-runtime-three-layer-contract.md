@@ -1,5 +1,8 @@
 # OPL 托管运行时三层合同
 
+Purpose: `references_runtime_substrate_opl_managed_runtime_three_layer_contract`
+State: `support_reference`
+
 Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: 本文是人读边界参考；机器可读事实必须使用 `contracts/`、source code、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 或 App/workbench projection。

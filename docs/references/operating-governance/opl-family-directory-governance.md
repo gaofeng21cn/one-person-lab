@@ -1,5 +1,10 @@
 # OPL Family Directory Governance
 
+Owner: `One Person Lab`
+Purpose: `references_operating_governance_opl_family_directory_governance`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 owner: `OPL maintainers`
 purpose: 冻结 OPL family 仓库目录归属和 hygiene baseline，避免把源码、合同、叙述文档与运行态输出混放。
 state: active reference

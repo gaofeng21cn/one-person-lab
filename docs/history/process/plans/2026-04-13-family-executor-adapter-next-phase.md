@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `docs/status.md`
 - Modify: `docs/references/family-executor-adapter-defaults.md`
-- Modify: `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
+- Modify: `docs/history/process/convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md`
 
 - [ ] 把已经完成的 `MedAutoGrant` critique truth、`MedDeepScientist` inherit-local-default truth 从“待完成”移出
 - [ ] 明确当前仍未完成的是 `RedCube AI` 主 checkout 吸收、central reference sync 与 `Hermes-native` proof lane

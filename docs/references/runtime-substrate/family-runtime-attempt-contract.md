@@ -1,5 +1,10 @@
 # Family Runtime Attempt Contract
 
+Owner: `One Person Lab`
+Purpose: `references_runtime_substrate_family_runtime_attempt_contract`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## Purpose
 
 本合同把 `MAS` work-unit / route-unit attempt 经验抽象成 `OPL` family-level 最小共同语义。它服务 `OPL Runtime Manager` 的状态索引、诊断和产品投影，不改变 `Codex-default session/runtime`，也不让 `OPL` 接管 `MAS`、`MAG`、`RCA` 的 domain runtime truth。

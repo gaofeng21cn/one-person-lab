@@ -1,5 +1,10 @@
 # Family Shared Release Maintenance
 
+Owner: `One Person Lab`
+Purpose: `references_convergence_governance_family_shared_release_maintenance`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 这份文档定义 `OPL` 作为 family shared modules owner 时的维护动作。这里维护的是 shared module owner commit、repo-tracked contract 与 consumer pins；`MAS`、`MAG`、`RCA` 继续各自维护 domain release truth。
 
 ## Scope

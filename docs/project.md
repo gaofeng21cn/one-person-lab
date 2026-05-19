@@ -1,5 +1,10 @@
 # OPL 项目概览
 
+Owner: `One Person Lab`
+Purpose: `project`
+State: `active_truth`
+Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+
 ## 项目是什么
 
 对外公开时，`One Person Lab` (`OPL`) 同时包含三个清晰层次：`OPL Framework`、`One Person Lab App` 和 `Foundry Agents`。其中 `OPL Framework` 是面向高价值知识工作的完整智能体开发与运行框架。它以阶段推进和 Agent executor 为核心原则：大型任务按接近人类专家实施的阶段推进，`Codex CLI` 是当前第一公民 executor，OPL 负责让这些阶段可发现、可恢复、可审计、可投影，并以全自动交付为目标逐步补齐生产级运行能力。

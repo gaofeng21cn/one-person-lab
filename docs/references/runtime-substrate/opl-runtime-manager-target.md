@@ -1,5 +1,10 @@
 # OPL Runtime Manager 目标形态
 
+Owner: `One Person Lab`
+Purpose: `references_runtime_substrate_opl_runtime_manager_target`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## 定位
 
 `OPL Runtime Manager` 是 OPL 的产品级 runtime 管理与投影层。

@@ -2,6 +2,9 @@
 
 Status: `active_support`
 Owner: `One Person Lab`
+Purpose: `active_docs_index`
+State: `active_support`
+Machine boundary: 本文是人读索引。机器真相继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 App/workspace evidence。
 
 本目录只收纳当前仍决定执行顺序、差距闭环、开发组合治理和当前完成门槛的人读支撑文档。dated closeout、receipt/proof 流水和历史演变进入 `docs/history/**`。
 

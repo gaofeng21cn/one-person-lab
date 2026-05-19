@@ -1,5 +1,10 @@
 # OPL Quality Details Reference
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_quality_details`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 `opl quality details` is the family-owned sidecar diagnostic surface for code-quality triage. It complements Sentrux Free: Sentrux remains the structural score, trend, baseline, and rules wall; OPL emits deterministic details that help an agent find the files, functions, dependency paths, test gaps, and local rules involved in a structural problem.
 
 The command does not fork Sentrux, bypass Sentrux licensing, depend on Sentrux Pro, or create a second quality score. It reads the target repository and writes only stdout or caller-chosen artifacts.

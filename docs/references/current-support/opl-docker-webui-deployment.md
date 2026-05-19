@@ -1,5 +1,10 @@
 # OPL Docker WebUI 部署参考
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_docker_webui_deployment`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 这份参考文档面向在 Linux 服务器、Docker 容器或浏览器访问路径中部署 One Person Lab 的使用者和维护者。
 
 ## 当前 WebUI 边界

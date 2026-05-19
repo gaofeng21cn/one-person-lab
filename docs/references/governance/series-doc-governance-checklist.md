@@ -1,5 +1,10 @@
 # 系列项目文档治理清单
 
+Owner: `One Person Lab`
+Purpose: `references_governance_series_doc_governance_checklist`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## 目标
 
 本清单用于把 `One Person Lab` 放进 `One Person Lab`、`Med Auto Science`、`Med Auto Grant`、`RedCube AI` 这组系列项目的统一文档管理口径里做巡检。

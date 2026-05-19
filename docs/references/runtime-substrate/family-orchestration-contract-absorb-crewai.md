@@ -1,5 +1,8 @@
 # Family Orchestration 合同吸收说明
 
+Purpose: `references_runtime_substrate_family_orchestration_contract_absorb_crewai`
+State: `support_reference`
+
 Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: 本文是外部框架学习与合同吸收的人读记录；机器可读事实以 `contracts/family-orchestration/`、`contracts/opl-framework/`、source code、CLI/API 行为与 domain-owned manifests 为准。

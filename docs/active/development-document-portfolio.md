@@ -1,5 +1,7 @@
 # OPL 开发文档组合整理
 
+State: `active_support`
+
 Status: `active_development_portfolio`
 Owner: `One Person Lab`
 Purpose: 按 2026-05-11 framework-first 定位，逐文档、逐内容整理 OPL 开发文档的当前角色、吸收关系、归档规则和执行优先级。

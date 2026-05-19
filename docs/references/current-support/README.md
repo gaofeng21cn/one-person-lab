@@ -1,5 +1,8 @@
 # 当前支撑参考索引
 
+Purpose: `references_current_support_index`
+State: `support_reference`
+
 Status: `support_reference_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；操作真相必须使用 CLI/API 行为、contracts、source、release artifact、runtime state 或语义化 `human_doc:*` id。

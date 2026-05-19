@@ -1,5 +1,10 @@
 # OPL 默认 Skill 生态参考
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_default_skill_ecosystem`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 这份文档说明 OPL App 和 `opl install` 默认维护哪些 skill，以及这些 skill 应该放在哪一层。目标是让 One Person Lab App、原版 Codex App 和命令行 Codex 看到一致的能力生态，同时避免把项目专用 skill 装到系统级。
 
 ## 三层模型

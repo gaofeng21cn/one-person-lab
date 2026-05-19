@@ -1,5 +1,10 @@
 # OPL Domain-Agent Admission Contract
 
+Owner: `One Person Lab`
+Purpose: `specs_opl_domain_onboarding_contract`
+State: `active_spec_support`
+Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
+
 > 当前状态说明（`2026-05-11`）：本文是候选 domain-agent admission review 的活跃人读支撑。当前已收录 domain 同时保留 direct Codex/domain-skill activation 与 durable OPL stage-attempt hosting：`Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> selected domain-agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。
 
 ## 目的

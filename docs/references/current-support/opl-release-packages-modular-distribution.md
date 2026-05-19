@@ -1,5 +1,10 @@
 # OPL Release 与 Packages 模块化分发参考
 
+Owner: `One Person Lab`
+Purpose: `references_current_support_opl_release_packages_modular_distribution`
+State: `support_reference`
+Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+
 ## 定位
 
 - `one-person-lab-app` GitHub Releases 面向用户下载，承载 `One-Person-Lab-<OPL版本>-<平台>-<架构>` 这类桌面 App 安装包。

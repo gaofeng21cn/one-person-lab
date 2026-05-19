@@ -1,5 +1,10 @@
 # OPL 硬约束
 
+Owner: `One Person Lab`
+Purpose: `invariants`
+State: `active_truth`
+Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+
 ## 顶层定位
 
 - `OPL` 是面向高价值知识工作的完整智能体运行框架。它以 `Codex-default session runtime` 为默认交互底座，以 stage-led family framework 承接长期自治、恢复、队列、human gate、trace、projection 与交付收口。

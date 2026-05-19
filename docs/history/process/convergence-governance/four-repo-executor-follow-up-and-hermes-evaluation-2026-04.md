@@ -1,6 +1,13 @@
 # 四仓执行器后续任务与 Hermes-Agent 备选执行器评估
 
+Owner: `One Person Lab`
+Purpose: `historical_executor_followup_snapshot`
+State: `history_only`
+Machine boundary: 本文只保存 2026-04 executor/Hermes 评估 provenance。当前 executor、provider、readiness 与 domain-agent truth 回到核心五件套、`docs/references/runtime-substrate/family-executor-adapter-defaults.md`、`docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md`、contracts、源码和 CLI/API 行为。
+
 状态锚点：`2026-04-13`
+
+> 当前读法：`Codex CLI` 仍是第一公民 executor；`hermes_agent` 只作为显式非默认 executor adapter/backend。本文正文里的 MedDeepScientist 底层后端、Hermes 实验路线或旧 reference path 只按历史评估读取，不能恢复成 OPL 默认 runtime、MAS 默认 backend 或 compatibility surface。
 
 ## 这份文档解决什么
 
@@ -106,7 +113,7 @@
 
 当前这一棒必须重点处理：
 
-- `docs/references/ecosystem-status-matrix.md`
+- `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`
 - `docs/status.md`
 - `docs/README*`
 - `docs/roadmap*`
@@ -142,7 +149,7 @@
   - `docs/roadmap*`
   - `docs/references/family-executor-adapter-defaults.md`
   - `docs/references/hermes-agent-executor-evaluation.md`
-  - `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
+  - `docs/history/process/convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation-2026-04.md`
   - `contracts/opl-framework/family-executor-adapter-defaults.json`
   - `contracts/opl-framework/README*.md`
   - `docs/history/process/plans/2026-04-13-family-executor-adapter-next-phase.md`

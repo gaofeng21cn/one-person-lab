@@ -1,5 +1,10 @@
 # Shared Domain Contract
 
+Owner: `One Person Lab`
+Purpose: `specs_shared_domain_contract`
+State: `active_spec_support`
+Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
+
 > 当前状态说明（`2026-05-09`）：本文作为共享边界参考保留。当前 active public domain-agent 集合是 `MAS`、`MAG`、`RCA`；MAS monolith closeout 后，`MDS` 只通过 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。下文旧的 `Domain Gateway` / `Domain Harness OS` 词汇只按历史内部边界语境理解，不保留兼容接口；当前公开文档优先使用独立 `domain agent` 与 app skill 口径。
 
 ## 目的

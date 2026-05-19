@@ -1,5 +1,10 @@
 # OPL 关键决策
 
+Owner: `One Person Lab`
+Purpose: `decisions`
+State: `active_truth`
+Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
+
 ## 2026-05-19
 
 ### 决策：OPL 采用 AI-first, contract-light 作为长期智能体原则
