@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-replay-certification.schema.json",
+  "title": "OPL Family Stage Replay Certification",
+  "description": "Refs-only replay certification for a proof-carrying family stage pack. It proves replay can use append-only event log, attempt ledger, runtime event, and closeout receipt refs instead of re-querying AI, human, or external outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "stage_pack_id",
+    "target_domain_id",
+    "stage_pack_hash",
+    "replay_status",
+    "summary",
+    "stage_results",
+    "blockers",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_family_stage_replay_certification"
+    },
+    "version": {
+      "const": "family-stage-replay-certification.v1"
+    },
+    "stage_pack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage_pack_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "replay_status": {
+      "type": "string",
+      "enum": [
+        "replay_ready",
+        "blocked"
+      ]
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "stage_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_result"
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authority_boundary"
+    }
+  },
+  "$defs": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_count",
+        "replay_ready_stage_count",
+        "blocked_stage_count",
+        "missing_runtime_event_ref_count",
+        "missing_receipt_ref_count",
+        "append_only_event_log_ref_count",
+        "attempt_ledger_ref_count",
+        "blocker_count"
+      ],
+      "properties": {
+        "stage_count": { "type": "integer", "minimum": 0 },
+        "replay_ready_stage_count": { "type": "integer", "minimum": 0 },
+        "blocked_stage_count": { "type": "integer", "minimum": 0 },
+        "missing_runtime_event_ref_count": { "type": "integer", "minimum": 0 },
+        "missing_receipt_ref_count": { "type": "integer", "minimum": 0 },
+        "append_only_event_log_ref_count": { "type": "integer", "minimum": 0 },
+        "attempt_ledger_ref_count": { "type": "integer", "minimum": 0 },
+        "blocker_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stage_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "replay_status",
+        "required_runtime_event_refs",
+        "recorded_runtime_event_refs",
+        "missing_runtime_event_refs",
+        "expected_receipt_refs",
+        "recorded_receipt_refs",
+        "missing_receipt_refs"
+      ],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "replay_status": {
+          "type": "string",
+          "enum": ["replay_ready", "blocked"]
+        },
+        "required_runtime_event_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "recorded_runtime_event_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "missing_runtime_event_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "expected_receipt_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "recorded_receipt_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "missing_receipt_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocker_kind",
+        "blocker_id",
+        "stage_id",
+        "minimal_counterexample",
+        "repair_action"
+      ],
+      "properties": {
+        "blocker_kind": {
+          "const": "replay_certification_blocker"
+        },
+        "blocker_id": {
+          "type": "string",
+          "enum": [
+            "stage_pack_not_admitted",
+            "append_only_event_log_ref_missing",
+            "attempt_ledger_ref_missing",
+            "runtime_event_ref_missing",
+            "expected_receipt_ref_missing"
+          ]
+        },
+        "stage_id": {
+          "type": ["string", "null"]
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason"],
+          "properties": {
+            "stage_id": { "type": "string" },
+            "expected_ref": { "type": "string" },
+            "missing_ref": { "type": "string" },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        },
+        "repair_action": {
+          "type": "string",
+          "enum": [
+            "repair_stage_pack_admission",
+            "record_append_only_event_log_ref",
+            "record_attempt_ledger_ref",
+            "record_runtime_event_ref",
+            "record_expected_receipt_ref"
+          ]
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "replay_reads_append_only_log_refs_only",
+        "can_requery_ai",
+        "can_requery_human",
+        "can_requery_external_system",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body",
+        "can_accept_or_reject_owner_receipt"
+      ],
+      "properties": {
+        "opl_role": { "const": "replay_certification_projection_only" },
+        "replay_reads_append_only_log_refs_only": { "const": true },
+        "can_requery_ai": { "const": false },
+        "can_requery_human": { "const": false },
+        "can_requery_external_system": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false },
+        "can_accept_or_reject_owner_receipt": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_family_stage_replay_certification",
+      "version": "family-stage-replay-certification.v1",
+      "stage_pack_id": "med-autoscience:mas_stage_control_plane",
+      "target_domain_id": "med-autoscience",
+      "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "replay_status": "replay_ready",
+      "summary": {
+        "stage_count": 1,
+        "replay_ready_stage_count": 1,
+        "blocked_stage_count": 0,
+        "missing_runtime_event_ref_count": 0,
+        "missing_receipt_ref_count": 0,
+        "append_only_event_log_ref_count": 1,
+        "attempt_ledger_ref_count": 1,
+        "blocker_count": 0
+      },
+      "stage_results": [
+        {
+          "stage_id": "publication_review",
+          "replay_status": "replay_ready",
+          "required_runtime_event_refs": ["runtime_event:publication_review.gate_recorded"],
+          "recorded_runtime_event_refs": ["runtime_event:publication_review.gate_recorded"],
+          "missing_runtime_event_refs": [],
+          "expected_receipt_refs": ["human_gate:publication_quality_gate"],
+          "recorded_receipt_refs": ["human_gate:publication_quality_gate"],
+          "missing_receipt_refs": []
+        }
+      ],
+      "blockers": [],
+      "authority_boundary": {
+        "opl_role": "replay_certification_projection_only",
+        "replay_reads_append_only_log_refs_only": true,
+        "can_requery_ai": false,
+        "can_requery_human": false,
+        "can_requery_external_system": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false,
+        "can_accept_or_reject_owner_receipt": false
+      }
+    }
+  ]
+}
