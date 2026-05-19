@@ -30,6 +30,7 @@ import {
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
 } from '../../domain-pack-compiler.ts';
+import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
 import {
   buildFamilyAgentInspect,
@@ -632,6 +633,18 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildGeneratedAgentInterfaces(getContracts(), args),
+    },
+    'agents conformance': {
+      usage: 'opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
+      summary:
+        'Report structural conformance for standard OPL agents across scaffold, pack compiler, generated interface, and private-surface gates.',
+      examples: [
+        'opl agents conformance',
+        'opl agents conformance --repo-dir /path/to/med-autoscience --repo-dir /path/to/redcube-ai',
+        'opl agents conformance --agent mas=/path/to/med-autoscience',
+      ],
+      group: 'domain',
+      handler: (args) => buildStandardDomainAgentConformanceReport(args),
     },
     'substrate projections': {
       usage: 'opl substrate projections',
