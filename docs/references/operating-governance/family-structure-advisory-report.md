@@ -37,8 +37,9 @@ mechanical_residue:
 public_surface_risk:
 
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
+- `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
 
-This is the current large machine-readable public surface in the advisory scan. It is not an immediate split target, but future edits should prefer schema modularity or generated/source separation over growing it further.
+These are the current large machine-readable public surfaces in the advisory scan. They are not immediate split targets, but future edits should prefer schema modularity or generated/source separation over growing them further.
 
 ### med-autogrant
 
