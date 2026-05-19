@@ -55,6 +55,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - OPL-owned stage admission read model for stage contracts, trust lanes, effect-boundary runtime-event requirements, composition obligations, admission findings, and OPL non-authority boundaries
 - `family-stage-proof-bundle.schema.json`
   - lightweight proof-carrying stage-pack bundle for OPL scheduling / admission consumption, carrying composition obligations, assumptions, receipt refs, runtime-event requirements, test / proof refs, blockers, and OPL non-authority boundaries
+- `family-stage-graph-projection.schema.json`
+  - graph projection of one family stage pack for scheduler/App consumption, carrying nodes, handoff edges, admission state, guarantee modes, integrity digest, and OPL non-authority boundaries
 - `family-stage-integrity-metadata.schema.json`
   - shared stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only
 - `family-domain-memory-ref.schema.json`
@@ -188,6 +190,8 @@ The GraphFlow / GFL operational-assumption monitor pattern lands here as two lig
 
 The scope refs make launch scope explicit: `source_scope_refs` freeze the source cohort, `artifact_scope_refs` freeze the artifact set, and `workspace_scope_refs` freeze the workspace/runtime scope that the stage is allowed to use. OPL projects these refs and counts only. The `guarantee_mode` projection distinguishes `static_admission_only`, `runtime_enforced`, `domain_owned_judgment`, and `observability_only`; it is an operator/scheduler read model, not a proof assistant result or domain verdict.
 
+`family-stage-proof-bundle.schema.json` and `family-stage-graph-projection.schema.json` are the machine-readable OPL projections over that stage pack. The proof bundle carries composition, receipt, runtime-event, proof-ref, and integrity metadata; the graph projection carries nodes, edges, guarantee modes, graph summary, and the same integrity digest. Both are read-only scheduler/App inputs and do not execute stages, verify external signatures, write domain truth, mutate artifacts, or authorize domain readiness.
+
 Runtime effects remain in the `runtime_enforced_boundary`: executor output, human approval, external-system responses, artifact mutation, memory writeback, domain quality / publication / fundability / visual verdicts, and owner receipts. Unsatisfied composition, stale evidence, owner conflicts, receipt conflicts, or missing executor binding must become a conflict envelope, human gate, or route-back. `Codex CLI` remains the default executor; non-default adapters require explicit selection plus independent receipt and audit evidence.
 
 For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
@@ -257,6 +261,10 @@ This directory does not:
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
 - [`family-stage-control-plane.schema.json`](./family-stage-control-plane.schema.json)
+- [`family-stage-admission.schema.json`](./family-stage-admission.schema.json)
+- [`family-stage-proof-bundle.schema.json`](./family-stage-proof-bundle.schema.json)
+- [`family-stage-graph-projection.schema.json`](./family-stage-graph-projection.schema.json)
+- [`family-stage-integrity-metadata.schema.json`](./family-stage-integrity-metadata.schema.json)
 - [`family-domain-memory-ref.schema.json`](./family-domain-memory-ref.schema.json)
 - [`family-domain-memory-writeback.schema.json`](./family-domain-memory-writeback.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
