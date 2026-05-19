@@ -125,6 +125,14 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 6. 如果文件仍有 current subsection、contract-linked reader context 或 active support role，可以留在 current/support 层并用 README/index 标清生命周期。
 7. 如果文件已被判定为纯历史、纯 activation package、纯 fail-closed tranche、纯旧 provider proof 或纯 tombstone，不再靠 path stability 留在 current/support 层；先把有效结论吸收到当前 owner，再物理移动到 `docs/history/**`。
 
+长清单治理单独按下面规则执行：
+
+- active 文档中的表格只保留当前 owner、当前状态、下一步 gate 和完成口径；不再逐轮追加 dated proof、closeout 命令、旧分支名或历史 batch。
+- 同一文档内不能同时承担 target state、current truth、active plan、proof ledger 和 history narrative。发现混用时，目标态进 `docs/references/`，current truth 进核心五件套或 owner doc，执行计划进 `docs/active/`，过程流水进 `docs/history/**`。
+- 已闭合的 lane 只在 active 文档保留一行“当前守门面 / 后续回归口径”；完整来龙去脉进入 history/provenance。
+- 如果一张表超过“当前执行决策”需要的粒度，先合并成 capability / owner / evidence gate 三列，再把原始逐条记录归档。
+- 任何长清单都不得把 descriptor ready、read model ready、provider proof、generated bundle ready 或 cleanup ledger ready 写成 domain production ready。
+
 ## Direct Retirement
 
 过时模块、接口、CLI alias、wrapper、facade、聚合测试和旧文档入口被当前 owner surface 替代后，默认直接退役：
