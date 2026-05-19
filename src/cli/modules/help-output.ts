@@ -208,7 +208,7 @@ function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
     'Fast start:',
     '  opl install                    Install the default Codex engine, modules, Codex skills, and the One Person Lab App',
     '  opl system initialize          Check first-run state and remaining setup actions',
-    '  opl modules                    Inspect MAS/MAG/RCA module health',
+    '  opl modules                    Inspect managed module health',
     '  opl skill sync                 Sync family skills into the Codex skill path',
     '  opl "your task"                Start from the default Codex runtime',
     '',
