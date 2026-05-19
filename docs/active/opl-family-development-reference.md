@@ -25,6 +25,18 @@ OPL family 的最高优先级是目标架构，而不是迁就当前实现分布
 
 真实语义必须归位到 `agent/` pack，而不是散落在 `src/`、`packages/`、旧 wrapper 或只有目录骨架的空 scaffold 里。标准 agent repo 的 `contracts/pack_compiler_input.json` 必须声明 canonical `agent/` pack root 和 `required_domain_pack_paths`；`contracts/stage_control_plane.json` 的每个 stage 必须引用真实 `agent/prompts/*`、`agent/skills/*` 或明确 skill id、`agent/knowledge/*` 与 `agent/quality_gates/*`。这些 ref 指向的文件必须存在、非空、没有占位标记，并且承载该 domain 的 prompt、stage policy、skill policy、knowledge 和 quality gate 语义。`opl agents scaffold --validate <repo>` 是这一层的机器守门；空 `agents/`、只有 README 的目录、只靠 `src/` / `packages/` 承载领域语义、或 stage 缺 prompt/skill/knowledge/evaluation refs 都不能写成标准 OPL Agent。
 
+物理源码形态也必须标准化。descriptor ready、generated interface ready、private functional audit closed 或 `functional_structure_gap_count=0` 只能证明“owner / handoff / contract 分类”正确；它不能自动证明源码已经像标准 OPL Agent 一样物理归位。标准 repo 的源码应该按长期角色分层：
+
+- `agent/`：只承载 declarative domain pack，包括 stages、prompts、skills、knowledge、quality gates、policies 和 stage handoff policy。
+- `contracts/`：只承载 machine-readable descriptor、pack compiler input、stage/action/memory/artifact/receipt contracts、generated handoff、evidence request 和 cleanup gate。
+- `runtime/authority_functions/` 或等价 domain module：只承载无法声明化的最小 authority functions、native helper implementation、fixtures 和 receipt signer；输入输出必须是 refs、receipt、typed blocker 或 safe action metadata。
+- `src/` / `packages/`：只能保留 direct domain handler、authority implementation、native helper、schema/contract helpers、fixtures 或 tests；不能继续放 repo-owned generic scheduler、queue、attempt ledger、state-machine runner、session store、SQLite lifecycle engine、operator workbench、generic product wrapper 或 default runtime owner。
+- `docs/`：承载目标态、当前状态、差距、history/tombstone 和 provenance；不得作为机器接口或 stage semantic substitute。
+
+文件名和目录名也是结构信号。`supervisor`、`scheduler`、`runtime manager`、`managed run`、`session store`、`workbench`、`gateway`、`frontdoor`、`local manager` 等词如果仍出现在 active source 中，必须能被当前合同解释为 domain handler、refs-only adapter、authority function、diagnostic 或 history/tombstone；否则就是功能/结构差距。尤其是 MAS 这类历史上存在 supervisor / runtime transport / SQLite sidecar 的仓，不能因为 handoff 投影已经正确就写成物理形态完成；仍需继续做 rename、split、delete、archive 或 tombstone，直到源码读者一眼能看出 generic runtime owner 在 OPL。
+
+成熟 agent/runtime 项目的共同经验支持这条分层，而不是要求 OPL 引入它们作为依赖。OpenAI Agents SDK 把 agent 定义为 instructions、tools、handoffs、guardrails、sessions 等组合，并把 `Agent` 与 `Runner` 的 orchestration 责任分开；LangGraph 把 graph state persistence 拆成 checkpointer、thread、store 和 replay；AutoGen 把 agents、teams、tools/workbench 与 state/termination 分层；CrewAI 推荐用 YAML/config 声明 agent role/goal/tools，再由 crew/process 承载协作流程。OPL 吸收的是“声明、工具/authority、运行编排、持久化、工作台、证据门分离”的工程经验，不把这些框架写成 OPL provider、executor 或 domain authority。参考 2026-05-19 live check 的 [OpenAI Agents SDK Agents](https://openai.github.io/openai-agents-python/agents/)、[LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence)、[AutoGen AgentChat agents](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/agents.html)、[AutoGen teams](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/teams.html) 与 [CrewAI agents](https://docs.crewai.com/en/concepts/agents)。
+
 OPL 是知识工程驱动的智能体开发运行框架。标准 OPL Agent 必须把复杂工作先拆成 stage，并为每个 stage 明确：
 
 - `prompt`：执行、修订、handoff、review/audit 所需提示词。
