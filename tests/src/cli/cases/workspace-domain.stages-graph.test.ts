@@ -224,8 +224,11 @@ function buildAdmittedStagePlane(targetDomainId: string, owner: string) {
           runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
           properties: [],
           runtime_assumptions: [],
-          monitor_refs: [],
-          source_scope_refs: [],
+          monitor_refs: [{ ref_kind: 'json_pointer', ref: `/runtime_inventory/stage_${stageNumber}`, role: 'runtime_assumption_monitor' }],
+          source_scope_refs: [{ ref_kind: 'json_pointer', ref: `/source_scope/stage_${stageNumber}`, role: 'launch_source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'json_pointer', ref: `/cohort_query/stage_${stageNumber}`, role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: `queue:${targetDomainId}/stage_${stageNumber}`, role: 'launch_trigger' }],
+          dashboard_metric_refs: [{ ref_kind: 'metric_ref', ref: `metric:${targetDomainId}.stage_${stageNumber}`, role: 'operator_metric' }],
           artifact_scope_refs: [],
           workspace_scope_refs: [],
         },
@@ -363,10 +366,19 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_proof_bundle.proof_bundle;
+    const cohortLoop = runCli(['stages', 'cohort-loop', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_cohort_loop.projection;
     assert.equal(proofBundle.admission_status, 'admitted');
     assert.equal(proofBundle.admission_summary.admitted_stages_count, 6);
     assert.equal(proofBundle.authority_boundary.proof_passed, true);
     assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
+    assert.equal(cohortLoop.surface_kind, 'opl_family_stage_cohort_loop');
+    assert.equal(cohortLoop.summary.closed_loop_ready_count, 6);
+    assert.equal(cohortLoop.summary.blocker_count, 0);
+    assert.equal(cohortLoop.authority_boundary.graphflow_runtime_dependency, false);
+    assert.equal(cohortLoop.authority_boundary.can_write_source_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

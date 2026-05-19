@@ -15,6 +15,9 @@ import {
   buildFamilyStageAssumptionLifecycleProjection,
 } from './family-stage-assumption-lifecycle.ts';
 import {
+  buildFamilyStageCohortLoopProjection,
+} from './family-stage-cohort-loop.ts';
+import {
   buildFamilyStagePackRegistryEntry,
   buildFamilyStagePackRegistryProjection,
 } from './family-stage-pack-registry.ts';
@@ -780,6 +783,19 @@ export function buildFamilyStageAssumptionsInspect(contracts: FrameworkContracts
       project_id: entry.project_id,
       project: entry.project,
       projection: buildFamilyStageAssumptionLifecycleProjection(plane),
+    },
+  };
+}
+
+export function buildFamilyStageCohortLoopInspect(contracts: FrameworkContracts, args: string[]) {
+  const parsed = parseOptionArgs(args, ['domain']);
+  const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  return {
+    version: 'g2',
+    family_stage_cohort_loop: {
+      project_id: entry.project_id,
+      project: entry.project,
+      projection: buildFamilyStageCohortLoopProjection(plane),
     },
   };
 }
