@@ -206,10 +206,24 @@ test('family stage admission admits contracted static core and recorded boundary
   assert.equal(review.status, 'admitted');
   assert.equal(review.summary.admitted_stages_count, 2);
   assert.equal(review.summary.blockers_count, 0);
+  assert.equal(review.summary.verified_core_eligible_count, 1);
+  assert.equal(review.summary.durable_runtime_only_count, 1);
+  assert.equal(review.summary.runtime_boundary_required_count, 1);
   assert.equal(review.stage_results[0]?.trust_lane, 'domain_agent');
   assert.equal(review.stage_results[0]?.static_check_eligible, true);
+  assert.deepEqual(review.stage_results[0]?.mode_tags, {
+    verified_core_eligible: true,
+    durable_runtime_only: false,
+    runtime_boundary_required: false,
+  });
   assert.equal(review.stage_results[1]?.effect_boundary, true);
+  assert.deepEqual(review.stage_results[1]?.mode_tags, {
+    verified_core_eligible: false,
+    durable_runtime_only: true,
+    runtime_boundary_required: true,
+  });
   assert.deepEqual(review.stage_results[1]?.runtime_event_refs, ['runtime_event:publication_review.gate_recorded']);
+  assert.deepEqual(review.failure_localization, []);
   assert.equal(review.authority_boundary.can_write_domain_truth, false);
   assert.equal(review.authority_boundary.can_authorize_quality_verdict, false);
 });
@@ -227,6 +241,17 @@ test('family stage admission blocks unsatisfied composition obligations', () => 
 
   assert.equal(review.status, 'blocked');
   assert.equal(review.summary.blocked_stages_count, 1);
+  assert.deepEqual(review.failure_localization.map((item) => [item.lane, item.code, item.stage_id, item.target_stage_id]), [
+    ['domain', 'composition_obligation_not_satisfied', 'manuscript_authoring', 'publication_review'],
+  ]);
+  assert.equal(review.failure_localization[0]?.source_ref, 'family_stage:publication_review');
+  assert.deepEqual(review.failure_localization[0]?.minimal_counterexample, {
+    lane: 'domain',
+    code: 'composition_obligation_not_satisfied',
+    stage_id: 'manuscript_authoring',
+    target_stage_id: 'publication_review',
+    source_ref: 'family_stage:publication_review',
+  });
   assert.ok(
     review.findings.some((finding) => finding.code === 'composition_obligation_not_satisfied'),
   );
@@ -284,6 +309,14 @@ test('family stage admission blocks runtime guards without runtime event refs', 
 
   assert.equal(review.status, 'blocked');
   assert.deepEqual(review.stage_results[0]?.runtime_event_refs, []);
+  assert.deepEqual(review.stage_results[0]?.mode_tags, {
+    verified_core_eligible: false,
+    durable_runtime_only: true,
+    runtime_boundary_required: true,
+  });
+  assert.deepEqual(review.failure_localization.map((item) => [item.lane, item.code, item.stage_id, item.source_ref]), [
+    ['runtime', 'runtime_guard_missing_runtime_event_refs', 'manuscript_authoring', 'family_stage:manuscript_authoring'],
+  ]);
   assert.ok(
     review.findings.some((finding) =>
       finding.code === 'runtime_guard_missing_runtime_event_refs'
@@ -313,6 +346,9 @@ test('family stage admission blocks runtime guards without event recording', () 
   });
 
   assert.equal(review.status, 'blocked');
+  assert.deepEqual(review.failure_localization.map((item) => [item.lane, item.code, item.stage_id]), [
+    ['runtime', 'runtime_guard_without_event_recording', 'manuscript_authoring'],
+  ]);
   assert.ok(
     review.findings.some((finding) =>
       finding.code === 'runtime_guard_without_event_recording'
@@ -338,7 +374,12 @@ test('family stage admission schema freezes OPL non-authority read model', () =>
   const stageResultRequired = (((schema.$defs as JsonRecord).stage_result as JsonRecord).required as string[]);
   const findingProperties = (((schema.$defs as JsonRecord).finding as JsonRecord).properties as JsonRecord);
   assert.ok(stageResultRequired.includes('runtime_event_refs'));
+  assert.ok(stageResultRequired.includes('mode_tags'));
+  assert.ok((schema.required as string[]).includes('failure_localization'));
+  assert.ok((((schema.$defs as JsonRecord).mode_tags as JsonRecord).required as string[]).includes('verified_core_eligible'));
   assert.equal(Boolean(findingProperties.runtime_event_refs_missing_reason), true);
   assert.equal(Boolean(findingProperties.assumption_id), true);
+  assert.equal(Boolean(findingProperties.failure_lane), true);
+  assert.equal(Boolean(findingProperties.source_ref), true);
   assert.equal(Boolean(findingProperties.minimal_counterexample), true);
 });

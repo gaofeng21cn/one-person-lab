@@ -15,6 +15,7 @@
     "graph_summary",
     "nodes",
     "edges",
+    "failure_localization",
     "admission_status",
     "integrity",
     "authority_boundary"
@@ -55,6 +56,13 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/edge"
+      }
+    },
+    "failure_localization": {
+      "type": "array",
+      "description": "Projection-only failure/blocker localization by trust/source lane for scheduler and operator drilldown. It is not a domain verdict.",
+      "items": {
+        "$ref": "#/$defs/failure_localization"
       }
     },
     "admission_status": {
@@ -128,6 +136,9 @@
         "needs_contracts_node_count",
         "missing_edge_count",
         "runtime_enforced_node_count",
+        "verified_core_eligible_node_count",
+        "durable_runtime_only_node_count",
+        "runtime_boundary_required_node_count",
         "monitor_ref_count"
       ],
       "properties": {
@@ -155,6 +166,18 @@
           "type": "integer",
           "minimum": 0
         },
+        "verified_core_eligible_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "durable_runtime_only_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runtime_boundary_required_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
         "monitor_ref_count": {
           "type": "integer",
           "minimum": 0
@@ -172,6 +195,7 @@
         "trust_lane",
         "admission_status",
         "guarantee_modes",
+        "mode_tags",
         "static_check_eligible",
         "runtime_enforced",
         "domain_owned_judgment",
@@ -228,6 +252,9 @@
             "$ref": "#/$defs/guarantee_mode"
           }
         },
+        "mode_tags": {
+          "$ref": "#/$defs/mode_tags"
+        },
         "static_check_eligible": {
           "type": "boolean"
         },
@@ -263,6 +290,97 @@
         "monitor_ref_count": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "mode_tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Machine-readable split between verified static core eligibility and durable runtime boundaries while keeping guarantee_modes compatible.",
+      "required": [
+        "verified_core_eligible",
+        "durable_runtime_only",
+        "runtime_boundary_required"
+      ],
+      "properties": {
+        "verified_core_eligible": {
+          "type": "boolean"
+        },
+        "durable_runtime_only": {
+          "type": "boolean"
+        },
+        "runtime_boundary_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "failure_lane": {
+      "type": "string",
+      "enum": [
+        "ai",
+        "human",
+        "external",
+        "provider",
+        "runtime",
+        "domain",
+        "artifact",
+        "source",
+        "monitor",
+        "executor"
+      ]
+    },
+    "failure_localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane",
+        "severity",
+        "code",
+        "stage_id",
+        "target_stage_id",
+        "action_id",
+        "assumption_id",
+        "source_ref",
+        "minimal_counterexample"
+      ],
+      "properties": {
+        "lane": {
+          "$ref": "#/$defs/failure_lane"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "blocker",
+            "warning"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "target_stage_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "action_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "assumption_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     },
