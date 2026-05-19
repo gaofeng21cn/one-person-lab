@@ -23,6 +23,8 @@ OPL family 的最高优先级是目标架构，而不是迁就当前实现分布
 
 标准 OPL Agent 的默认形态是 `Declarative Domain Pack + OPL generated/hosted surfaces + standard authority functions`。domain repo 默认提交 stage graph、prompt/skill/knowledge refs、policy table、domain schema、transition table、artifact/source/memory policy、receipt schema、fixtures、tests 和必要的 authority function；CLI、MCP、Skill/product-entry metadata、sidecar、status/read model、workbench、harness、queue、attempt ledger、generic transition runner、runtime lifecycle、operator projection 和 App drilldown 默认由 OPL Framework / One Person Lab App 生成、托管或提供通用 primitive。
 
+真实语义必须归位到 `agent/` pack，而不是散落在 `src/`、`packages/`、旧 wrapper 或只有目录骨架的空 scaffold 里。标准 agent repo 的 `contracts/pack_compiler_input.json` 必须声明 canonical `agent/` pack root 和 `required_domain_pack_paths`；`contracts/stage_control_plane.json` 的每个 stage 必须引用真实 `agent/prompts/*`、`agent/skills/*` 或明确 skill id、`agent/knowledge/*` 与 `agent/quality_gates/*`。这些 ref 指向的文件必须存在、非空、没有占位标记，并且承载该 domain 的 prompt、stage policy、skill policy、knowledge 和 quality gate 语义。`opl agents scaffold --validate <repo>` 是这一层的机器守门；空 `agents/`、只有 README 的目录、只靠 `src/` / `packages/` 承载领域语义、或 stage 缺 prompt/skill/knowledge/evaluation refs 都不能写成标准 OPL Agent。
+
 OPL 是知识工程驱动的智能体开发运行框架。标准 OPL Agent 必须把复杂工作先拆成 stage，并为每个 stage 明确：
 
 - `prompt`：执行、修订、handoff、review/audit 所需提示词。
