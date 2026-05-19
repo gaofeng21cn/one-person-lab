@@ -12,13 +12,16 @@ import type { DomainManifestCatalogEntry } from './types.ts';
 type DomainManifestErrorCode = 'command_failed' | 'command_timeout' | 'invalid_json' | 'invalid_manifest';
 type JsonRecord = Record<string, unknown>;
 
-export function resolveManifestCommandTimeoutMs(defaultTimeoutMs = 30_000) {
+export function resolveManifestCommandTimeoutMs(defaultTimeoutMs?: number) {
+  if (defaultTimeoutMs !== undefined) {
+    return Number.isInteger(defaultTimeoutMs) && defaultTimeoutMs > 0 ? defaultTimeoutMs : 30_000;
+  }
   const raw = process.env.OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS?.trim();
   const parsed = raw ? Number.parseInt(raw, 10) : NaN;
   if (Number.isInteger(parsed) && parsed > 0) {
     return parsed;
   }
-  return defaultTimeoutMs;
+  return 30_000;
 }
 
 function commandTimedOut(result: ReturnType<typeof spawnSync>) {
