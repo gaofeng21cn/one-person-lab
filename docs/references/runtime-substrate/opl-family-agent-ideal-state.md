@@ -19,7 +19,7 @@ Date: `2026-05-19`
 
 理想状态下，`OPL Framework` 是知识工程驱动的完整生产级智能体开发与运行框架。它负责开发接入、domain admission、stage-led runtime、provider-backed durable workflow、typed queue、attempt ledger、human gate、retry/dead-letter、memory/artifact/lifecycle locator、operator projection、App/workbench 投影、质量证据承载和跨 domain 审计。
 
-它的智能体原则是 AI-first, contract-light。OPL 不追求把专家智能写成越来越厚的固定流程；它把开放式规划、创作、评审、路线判断、诊断和修订交给 `Codex CLI` 等 AI executor、domain stage pack、prompt、skill、knowledge、rubric 与 quality gate，让后续 AI 能力提升能直接转化为 Agent 能力提升。合同只负责 owner boundary、权限、安全、审计、receipt、阻塞、恢复、projection 和 fail-closed，不负责替 AI executor 决定怎么思考或怎么完成专家工作。
+它的智能体原则是 AI-first、AI 原生专家判断优先、contract-light。OPL 不追求把专家智能写成越来越厚的固定流程；它把开放式规划、创作、评审、路线判断、诊断和修订交给 `Codex CLI` 等 AI executor、domain stage pack、prompt、skill、knowledge、rubric 与 quality gate，让后续 AI 能力提升能直接转化为 Agent 能力提升。合同只负责 owner boundary、权限、安全、审计、receipt、阻塞、恢复、projection 和 fail-closed 这些下限，不负责替 AI executor 决定怎么思考或怎么完成专家工作，也不让机械分数、checklist 或 contract completeness 替代专家判断。
 
 `MAS`、`MAG`、`RCA` 以及未来 Patent、Award、Thesis、Review 等 `Foundry Agents` 是基于 OPL Framework 的垂类智能体。它们持有领域知识、stage 语义、领域真相、质量 / export verdict、artifact authority、memory body 和 owner receipt；它们复用 OPL 的运行外围能力，不重复维护通用 runtime、queue、attempt ledger、session store、SQLite lifecycle engine、workspace/source shell、artifact index、memory locator、operator projection 或 generated wrapper。
 
