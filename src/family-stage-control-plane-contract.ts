@@ -61,6 +61,10 @@ export interface FamilyStageContract extends JsonRecord {
   runtime_assumptions: Array<string | FamilyStageRuntimeAssumption>;
   monitor_refs: FamilyStageSurfaceRef[];
   source_scope_refs: FamilyStageSurfaceRef[];
+  cohort_query_refs?: FamilyStageSurfaceRef[];
+  trigger_refs?: FamilyStageSurfaceRef[];
+  metric_refs?: FamilyStageSurfaceRef[];
+  dashboard_metric_refs?: FamilyStageSurfaceRef[];
   artifact_scope_refs: FamilyStageSurfaceRef[];
   workspace_scope_refs: FamilyStageSurfaceRef[];
 }
@@ -234,6 +238,10 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     runtime_assumptions: normalizeRuntimeAssumptions(value.runtime_assumptions, 'stage_contract.runtime_assumptions'),
     monitor_refs: normalizeSurfaceRefs(value.monitor_refs, 'stage_contract.monitor_refs'),
     source_scope_refs: normalizeSurfaceRefs(value.source_scope_refs, 'stage_contract.source_scope_refs'),
+    cohort_query_refs: normalizeSurfaceRefs(value.cohort_query_refs, 'stage_contract.cohort_query_refs'),
+    trigger_refs: normalizeSurfaceRefs(value.trigger_refs, 'stage_contract.trigger_refs'),
+    metric_refs: normalizeSurfaceRefs(value.metric_refs, 'stage_contract.metric_refs'),
+    dashboard_metric_refs: normalizeSurfaceRefs(value.dashboard_metric_refs, 'stage_contract.dashboard_metric_refs'),
     artifact_scope_refs: normalizeSurfaceRefs(value.artifact_scope_refs, 'stage_contract.artifact_scope_refs'),
     workspace_scope_refs: normalizeSurfaceRefs(value.workspace_scope_refs, 'stage_contract.workspace_scope_refs'),
   };

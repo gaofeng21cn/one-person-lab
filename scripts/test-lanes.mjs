@@ -44,6 +44,7 @@ const lanes = {
       'tests/src/agent-lab-maturity-controls.test.ts',
       'tests/src/generic-substrate-projection.test.ts',
       'tests/src/family-stage-proof-bundle.test.ts',
+      'tests/src/family-stage-cohort-loop.test.ts',
       'tests/src/family-stage-assumption-lifecycle.test.ts',
       'tests/src/family-stage-replay-certification.test.ts',
       'tests/src/family-stage-pack-registry.test.ts',

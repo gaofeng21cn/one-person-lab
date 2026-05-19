@@ -50,13 +50,15 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-action-catalog.schema.json`
   - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
 - `family-stage-control-plane.schema.json`
-  - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, runtime-assumption monitor refs, and authority boundary
+  - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, runtime-assumption monitor refs, cohort / trigger / metric refs, and authority boundary
 - `family-stage-admission.schema.json`
   - OPL-owned stage admission read model for stage contracts, trust lanes, effect-boundary runtime-event requirements, composition obligations, admission findings, and OPL non-authority boundaries
 - `family-stage-proof-bundle.schema.json`
   - lightweight proof-carrying stage-pack bundle for OPL scheduling / admission consumption, carrying composition obligations, assumptions, receipt refs, runtime-event requirements, test / proof refs, blockers, and OPL non-authority boundaries
 - `family-stage-graph-projection.schema.json`
   - graph projection of one family stage pack for scheduler/App consumption, carrying nodes, handoff edges, admission state, guarantee modes, integrity digest, and OPL non-authority boundaries
+- `family-stage-cohort-loop.schema.json`
+  - refs-only source scope / cohort query / trigger / monitor-metric loop projection for one stage pack, with typed blockers when the same source set cannot be traced from launch to operator monitoring; OPL does not evaluate source truth or introduce a GraphFlow runtime
 - `family-stage-pack-registry.schema.json`
   - stage-pack library / registry projection keyed by integrity hash, including reusable pack refs, active attempt binding, migration policy, and migration blockers
 - `family-stage-replay-certification.schema.json`
@@ -196,6 +198,8 @@ The GraphFlow / GFL operational-assumption monitor pattern lands here as two lig
 
 The scope refs make launch scope explicit: `source_scope_refs` freeze the source cohort, `artifact_scope_refs` freeze the artifact set, and `workspace_scope_refs` freeze the workspace/runtime scope that the stage is allowed to use. OPL projects these refs and counts only. The `guarantee_mode` projection distinguishes `static_admission_only`, `runtime_enforced`, `domain_owned_judgment`, and `observability_only`; it is an operator/scheduler read model, not a proof assistant result or domain verdict.
 
+GraphFlow / GFL's cohort search / trigger / dashboard closed-loop pattern maps to the refs-only `family-stage-cohort-loop` projection. `source_scope_refs` freezes the source cohort or source set, `cohort_query_refs` points to the auditable query, `trigger_refs` points to the queue / launch / schedule trigger, and `monitor_refs`, `metric_refs`, or `dashboard_metric_refs` point to post-launch observation for the same cohort. Missing links become typed blockers with minimal counterexamples. The projection is a scheduler/App launch-readiness and operator drilldown input only; it does not execute queries, write source truth, or authorize domain readiness or quality verdicts.
+
 `family-stage-proof-bundle.schema.json`, `family-stage-graph-projection.schema.json`, `family-stage-pack-registry.schema.json`, and `family-stage-replay-certification.schema.json` are the machine-readable OPL projections over that stage pack. The proof bundle carries composition, receipt, runtime-event, proof-ref, and integrity metadata; the graph projection carries nodes, edges, guarantee modes, graph summary, and the same integrity digest; the registry exposes reusable library refs, active attempt binding, and hash migration blockers; replay certification checks proof-bundle obligations against append-only event log refs, attempt ledger refs, runtime event refs, and closeout receipt refs. These surfaces are read-only scheduler/App inputs and do not execute stages, re-query AI / human / external sources, verify external signatures, write domain truth, mutate artifacts, or authorize domain readiness.
 
 Runtime effects remain in the `runtime_enforced_boundary`: executor output, human approval, external-system responses, artifact mutation, memory writeback, domain quality / publication / fundability / visual verdicts, and owner receipts. Unsatisfied composition, stale evidence, owner conflicts, receipt conflicts, or missing executor binding must become a conflict envelope, human gate, or route-back. `Codex CLI` remains the default executor; non-default adapters require explicit selection plus independent receipt and audit evidence.
@@ -270,6 +274,7 @@ This directory does not:
 - [`family-stage-admission.schema.json`](./family-stage-admission.schema.json)
 - [`family-stage-proof-bundle.schema.json`](./family-stage-proof-bundle.schema.json)
 - [`family-stage-graph-projection.schema.json`](./family-stage-graph-projection.schema.json)
+- [`family-stage-cohort-loop.schema.json`](./family-stage-cohort-loop.schema.json)
 - [`family-stage-integrity-metadata.schema.json`](./family-stage-integrity-metadata.schema.json)
 - [`family-domain-memory-ref.schema.json`](./family-domain-memory-ref.schema.json)
 - [`family-domain-memory-writeback.schema.json`](./family-domain-memory-writeback.schema.json)

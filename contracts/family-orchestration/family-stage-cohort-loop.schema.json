@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-cohort-loop.schema.json",
+  "title": "OPL Family Stage Cohort Loop",
+  "description": "Refs-only projection that checks whether a stage pack connects source scope, cohort query, trigger, and monitor/metric refs for closed-loop scheduling and operator visibility. It does not evaluate source truth or introduce a GraphFlow runtime dependency.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "plane_id",
+    "target_domain_id",
+    "summary",
+    "stages",
+    "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_family_stage_cohort_loop" },
+    "version": { "const": "family-stage-cohort-loop.v1" },
+    "plane_id": { "type": "string", "minLength": 1 },
+    "target_domain_id": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_count",
+        "closed_loop_ready_count",
+        "blocked_stage_count",
+        "missing_scope_count",
+        "missing_query_count",
+        "missing_trigger_count",
+        "missing_monitor_or_metric_count",
+        "blocker_count"
+      ],
+      "properties": {
+        "stage_count": { "type": "integer", "minimum": 0 },
+        "closed_loop_ready_count": { "type": "integer", "minimum": 0 },
+        "blocked_stage_count": { "type": "integer", "minimum": 0 },
+        "missing_scope_count": { "type": "integer", "minimum": 0 },
+        "missing_query_count": { "type": "integer", "minimum": 0 },
+        "missing_trigger_count": { "type": "integer", "minimum": 0 },
+        "missing_monitor_or_metric_count": { "type": "integer", "minimum": 0 },
+        "blocker_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
+  },
+  "$defs": {
+    "closure_status": {
+      "type": "string",
+      "enum": [
+        "closed_loop_ready",
+        "missing_scope",
+        "missing_query",
+        "missing_trigger",
+        "missing_monitor_or_metric"
+      ]
+    },
+    "surface_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ref"],
+      "properties": {
+        "ref_kind": { "type": "string", "minLength": 1 },
+        "ref": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "role": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_id",
+        "owner",
+        "closure_status",
+        "source_scope_refs",
+        "cohort_query_refs",
+        "trigger_refs",
+        "monitor_refs",
+        "metric_refs",
+        "dashboard_metric_refs",
+        "counts",
+        "blockers"
+      ],
+      "properties": {
+        "stage_id": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "closure_status": { "$ref": "#/$defs/closure_status" },
+        "source_scope_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "cohort_query_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "trigger_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "monitor_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "metric_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "dashboard_metric_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "counts": { "$ref": "#/$defs/counts" },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/blocker" } }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_scope_ref_count",
+        "cohort_query_ref_count",
+        "trigger_ref_count",
+        "monitor_ref_count",
+        "metric_ref_count",
+        "dashboard_metric_ref_count"
+      ],
+      "properties": {
+        "source_scope_ref_count": { "type": "integer", "minimum": 0 },
+        "cohort_query_ref_count": { "type": "integer", "minimum": 0 },
+        "trigger_ref_count": { "type": "integer", "minimum": 0 },
+        "monitor_ref_count": { "type": "integer", "minimum": 0 },
+        "metric_ref_count": { "type": "integer", "minimum": 0 },
+        "dashboard_metric_ref_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker_kind", "blocker_id", "stage_id", "minimal_counterexample", "repair_action"],
+      "properties": {
+        "blocker_kind": { "const": "cohort_loop_blocker" },
+        "blocker_id": {
+          "type": "string",
+          "enum": [
+            "cohort_scope_missing",
+            "cohort_query_missing",
+            "cohort_trigger_missing",
+            "cohort_monitor_or_metric_missing"
+          ]
+        },
+        "stage_id": { "type": "string", "minLength": 1 },
+        "minimal_counterexample": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stage_id", "missing_field", "reason"],
+          "properties": {
+            "stage_id": { "type": "string", "minLength": 1 },
+            "missing_field": {
+              "type": "string",
+              "enum": [
+                "source_scope_refs",
+                "cohort_query_refs",
+                "trigger_refs",
+                "monitor_refs_or_metric_refs"
+              ]
+            },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        },
+        "repair_action": {
+          "type": "string",
+          "enum": [
+            "declare_source_scope_ref",
+            "declare_cohort_query_ref",
+            "declare_trigger_ref",
+            "declare_monitor_or_metric_ref"
+          ]
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "graphflow_runtime_dependency",
+        "can_execute_stage",
+        "can_write_source_truth",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body"
+      ],
+      "properties": {
+        "opl_role": { "const": "cohort_loop_projection_only" },
+        "graphflow_runtime_dependency": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_source_truth": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "opl_family_stage_cohort_loop",
+      "version": "family-stage-cohort-loop.v1",
+      "plane_id": "mas_stage_control_plane",
+      "target_domain_id": "med-autoscience",
+      "summary": {
+        "stage_count": 1,
+        "closed_loop_ready_count": 1,
+        "blocked_stage_count": 0,
+        "missing_scope_count": 0,
+        "missing_query_count": 0,
+        "missing_trigger_count": 0,
+        "missing_monitor_or_metric_count": 0,
+        "blocker_count": 0
+      },
+      "stages": [
+        {
+          "stage_id": "manuscript_authoring",
+          "owner": "med-autoscience",
+          "closure_status": "closed_loop_ready",
+          "source_scope_refs": [{ "ref_kind": "json_pointer", "ref": "/source_scope", "role": "launch_source_scope" }],
+          "cohort_query_refs": [{ "ref_kind": "json_pointer", "ref": "/cohort_query", "role": "cohort_query" }],
+          "trigger_refs": [{ "ref_kind": "queue_ref", "ref": "queue:mas/manuscript_authoring", "role": "launch_trigger" }],
+          "monitor_refs": [],
+          "metric_refs": [{ "ref_kind": "metric_ref", "ref": "metric:source_freshness", "role": "cohort_metric" }],
+          "dashboard_metric_refs": [],
+          "counts": {
+            "source_scope_ref_count": 1,
+            "cohort_query_ref_count": 1,
+            "trigger_ref_count": 1,
+            "monitor_ref_count": 0,
+            "metric_ref_count": 1,
+            "dashboard_metric_ref_count": 0
+          },
+          "blockers": []
+        }
+      ],
+      "authority_boundary": {
+        "opl_role": "cohort_loop_projection_only",
+        "graphflow_runtime_dependency": false,
+        "can_execute_stage": false,
+        "can_write_source_truth": false,
+        "can_write_domain_truth": false,
+        "can_authorize_domain_ready": false,
+        "can_authorize_quality_verdict": false,
+        "can_mutate_artifact_body": false
+      }
+    }
+  ]
+}

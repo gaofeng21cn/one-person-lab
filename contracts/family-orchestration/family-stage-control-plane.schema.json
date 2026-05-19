@@ -252,6 +252,34 @@
           },
           "description": "Refs that freeze the source cohort or source set used by this stage before launch. OPL projects these refs but does not own source truth."
         },
+        "cohort_query_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs to auditable cohort/source queries that bind stage launch scope to execution and monitoring. OPL projects refs only and does not evaluate source truth."
+        },
+        "trigger_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs to launch, schedule, or queue trigger surfaces that bind the cohort query to a stage attempt."
+        },
+        "metric_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs to metrics computed over the same cohort or source scope after launch."
+        },
+        "dashboard_metric_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs to dashboard/operator metrics for the same cohort or source scope. These are observability refs, not readiness verdicts."
+        },
         "artifact_scope_refs": {
           "type": "array",
           "items": {

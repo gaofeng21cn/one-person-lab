@@ -43,6 +43,7 @@ import {
 } from '../../family-domain-memory.ts';
 import {
   buildFamilyStageAssumptionsInspect,
+  buildFamilyStageCohortLoopInspect,
   buildFamilyStageGraphInspect,
   buildFamilyStagePackRegistryInspect,
   buildFamilyStageProofBundleInspect,
@@ -720,6 +721,13 @@ export function buildPublicCommandSpecs(
       examples: ['opl stages assumptions --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyStageAssumptionsInspect(getContracts(), args),
+    },
+    'stages cohort-loop': {
+      usage: 'opl stages cohort-loop --domain <domain>',
+      summary: 'Project source scope, cohort query, trigger, and monitor/metric closure for one domain stage pack.',
+      examples: ['opl stages cohort-loop --domain mas'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageCohortLoopInspect(getContracts(), args),
     },
     'stages registry': {
       usage: 'opl stages registry --domain <domain> [--previous-stage-pack-hash <hash>] [--migration-policy <continue_old_hash|migrate_to_new_hash|blocked_human_gate>]',
