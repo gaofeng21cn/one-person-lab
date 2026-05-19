@@ -66,7 +66,9 @@
       "recovery_probe_count",
       "recovery_passed_count",
       "scorecard_passed_count",
+      "ai_review_approved_count",
       "improvement_candidate_count",
+      "promotion_gate_passed_count",
       "promotable_candidate_count",
       "memory_body_observed",
       "forbidden_authority_flag_count"
@@ -84,6 +86,33 @@
       "receipt_refs",
       "mechanism_evolution_input_refs"
     ]
+  },
+  "independent_ai_review_assessment_surface": {
+    "surface_kind": "opl_agent_lab_independent_ai_review_assessment",
+    "assessment_modes": [
+      "real_independent_ai_review",
+      "missing_real_independent_review",
+      "synthetic_fixture",
+      "generated_fixture",
+      "fixture_receipt"
+    ],
+    "approval_requires": [
+      "receipt_source=real_independent_ai_review",
+      "assessment_mode=real_independent_ai_review",
+      "receipt_ref",
+      "reviewer_ref",
+      "reviewer_agent_ref",
+      "reviewed_mechanism_candidate_ref",
+      "request_ref",
+      "response_ref",
+      "evidence_refs",
+      "no_shared_context=true",
+      "forbidden_write_scan_ref",
+      "verdict",
+      "risk_tier"
+    ],
+    "fixture_or_generated_receipts": "review_pending and never counted as AI review approval",
+    "authority_boundary": "scorecard.passed and fixture/domain suite pass are structural or domain scorecard signals only; they cannot authorize automatic mechanism promotion without a real independent AI review assessment"
   },
   "longline_surface": {
     "surface_kind": "opl_agent_lab_longline_summary",
@@ -241,6 +270,7 @@
       "mechanism_promotion_policy",
       "mechanism_version_ledger",
       "independent_ai_review_receipt",
+      "independent_ai_review_assessment",
       "integration_contracts",
       "review_trace_ledger",
       "log_driven_mechanism_candidates",
@@ -255,7 +285,22 @@
       "prompt_ref",
       "rubric_gap_ref"
     ],
-    "automatic_mechanism_promotion_ready": true,
+    "automatic_mechanism_promotion_ready": false,
+    "required_review_provenance_fields": [
+      "receipt_ref",
+      "receipt_source",
+      "assessment_mode",
+      "reviewer_ref",
+      "reviewer_agent_ref",
+      "reviewed_mechanism_candidate_ref",
+      "request_ref",
+      "response_ref",
+      "evidence_refs",
+      "no_shared_context",
+      "forbidden_write_scan_ref",
+      "verdict",
+      "risk_tier"
+    ],
     "risk_tiers": {
       "low_risk": {
         "auto_promotion": "auto_promote_to_stable"
@@ -269,10 +314,11 @@
     },
     "mechanism_promotion_policy": {
       "policy_ref": "mechanism-promotion-policy:agent-lab/risk-tiered-auto-promotion",
-      "automatic_mechanism_promotion_ready": true,
+      "automatic_mechanism_promotion_ready": false,
       "automatic_model_training_ready": false,
       "risk_tiers": "low_risk auto-promotes to stable; medium_risk auto-promotes to canary; high_risk routes to owner or human gate",
       "independent_ai_review_receipt_required": true,
+      "real_independent_ai_review_assessment_required": true,
       "promotion_receipt_required": true,
       "rollback_target_required": true,
       "no_forbidden_write_proof_required": true,
@@ -291,12 +337,19 @@
     "independent_ai_review_receipt": {
       "receipt_kind": "independent_ai_review_receipt_ref",
       "required_fields": [
+        "receipt_ref",
+        "receipt_source",
+        "assessment_mode",
+        "reviewer_ref",
         "reviewer_agent_ref",
         "reviewed_mechanism_candidate_ref",
+        "request_ref",
+        "response_ref",
+        "evidence_refs",
+        "no_shared_context",
         "risk_tier",
-        "review_status",
         "forbidden_write_scan_ref",
-        "owner_or_human_gate_ref"
+        "verdict"
       ]
     },
     "rollback": {
@@ -487,13 +540,13 @@
     ],
     "refs_only": true,
     "automatic_model_training_ready": false,
-    "automatic_mechanism_promotion_ready": true,
+    "automatic_mechanism_promotion_ready": false,
     "writes_domain_truth": false,
     "writes_memory_body": false,
     "mutates_artifact": false,
     "writes_owner_receipt": false,
     "can_accept_or_reject_memory_writeback": false,
-    "risk_policy": "low and medium risk mechanism candidates can auto-promote to canary only with independent AI review receipt, promotion receipt, rollback target, and no-forbidden-write proof; high risk candidates route to owner or human gate",
+    "risk_policy": "low and medium risk mechanism candidates can auto-promote only with a real independent AI review assessment, promotion receipt, rollback target, and no-forbidden-write proof; fixture scorecards, generated receipts, and structural suite pass stay review_pending or blocked_from_auto_promotion; high risk candidates route to owner or human gate",
     "authority_boundary": "optimization emits risk-tiered mechanism candidate refs, canary promotion receipt refs, rollback target refs, no-forbidden-write proof refs, and RL transition refs only; it cannot train or deploy weights, write domain truth, write memory bodies, mutate artifacts, write owner receipts, accept or reject memory writeback, override domain owner verdicts, or mutate credential, network, or write policy"
   },
   "evolution_surface": {
@@ -515,6 +568,7 @@
       "mechanism_promotion_decision",
       "independent_ai_review_receipt_ref",
       "independent_ai_review_receipt",
+      "independent_ai_review_assessment",
       "promotion_receipt_ref",
       "promotion_receipt",
       "rollback_target_ref",
@@ -531,8 +585,8 @@
     "writes_owner_receipt": false,
     "can_accept_or_reject_memory_writeback": false,
     "automatic_model_training_ready": false,
-    "automatic_mechanism_promotion_ready": true,
-    "risk_policy": "low and medium risk mechanism changes can auto-promote through canary only with independent AI review receipt, promotion receipt, rollback target, and no-forbidden-write proof; high risk changes route to owner or human gate",
+    "automatic_mechanism_promotion_ready": false,
+    "risk_policy": "low and medium risk mechanism changes can auto-promote through canary only with a real independent AI review assessment, promotion receipt, rollback target, and no-forbidden-write proof; fixture scorecards, generated receipts, and structural suite pass stay review_pending or blocked_from_auto_promotion; high risk changes route to owner or human gate",
     "authority_boundary": "evolution emits mechanism candidate refs, evidence-delta refs, independent AI review receipt refs, canary promotion receipt refs, rollback target refs, and no-forbidden-write proof refs; it cannot write domain truth, memory body, artifacts, owner receipts, model weights, credential policy, network policy, write policy, or domain owner receipts"
   },
   "complete_control_plane_surface": {
@@ -572,6 +626,7 @@
       "ready_to_emit_review_trace_ledger",
       "ready_to_emit_log_driven_mechanism_candidates",
       "ready_to_emit_aris_maturity_controls",
+      "ai_review_approved_count",
       "automatic_model_training_ready",
       "automatic_mechanism_promotion_ready",
       "app_workbench_consumption_ready"
