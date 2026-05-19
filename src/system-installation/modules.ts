@@ -320,6 +320,10 @@ function resolvePackagedModuleSourcePath(spec: DomainModuleSpec) {
   return readPackagedModuleGitSnapshot(sourcePath, spec) ? sourcePath : null;
 }
 
+function fullRuntimeModuleOverridesAreLaunchSources() {
+  return Boolean(normalizeOptionalString(process.env.OPL_FULL_RUNTIME_HOME));
+}
+
 function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const managedCheckoutPath = resolveManagedModulePath(spec);
   const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
@@ -354,6 +358,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
       if (
         candidate.origin === 'env_override'
         && !pathsReferToSameLocation(candidate.path, managedCheckoutPath)
+        && !fullRuntimeModuleOverridesAreLaunchSources()
       ) {
         continue;
       }
