@@ -218,7 +218,8 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
     assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
     assert.equal(drilldown.summary.lifecycle_reconcile_extra_ref_count, 0);
     assert.equal(drilldown.summary.lifecycle_reconcile_stale_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_delete_can_execute, false);
+    assert.equal(drilldown.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
+    assert.equal(drilldown.summary.lifecycle_domain_physical_delete_can_execute, false);
     assert.equal(drilldown.summary.lifecycle_opl_cleanup_apply_can_execute, true);
     assert.equal(drilldown.summary.safe_action_ref_count >= 2, true);
     assert.equal(drilldown.summary.freshness_signal_count >= 1, true);
@@ -525,6 +526,13 @@ test('runtime action execute can create OPL-owned stage production attempt reque
 
     assert.equal(dryRun.execution.execution_kind, 'opl_cli_stage_attempt_create');
     assert.equal(dryRun.execution.execution_status, 'dry_run');
+    assert.equal(dryRun.route.route_status, 'request_route_available');
+    assert.equal(dryRun.route.request_scope, 'opl_owned_stage_attempt_request_only');
+    assert.equal(dryRun.route.creates_domain_action, false);
+    assert.equal(dryRun.route.creates_owner_receipt, false);
+    assert.deepEqual(dryRun.route.owner_receipt_refs, []);
+    assert.equal(dryRun.route.closes_expected_receipt_refs, false);
+    assert.equal(dryRun.route.closes_monitor_freshness, false);
     assert.equal(dryRun.execution.result, null);
     assert.equal(
       dryRun.execution.executed_runtime_command.includes('opl family-runtime attempt create --domain medautoscience --stage review'),
@@ -544,6 +552,13 @@ test('runtime action execute can create OPL-owned stage production attempt reque
 
     assert.equal(execution.execution.execution_kind, 'opl_cli_stage_attempt_create');
     assert.equal(execution.execution.execution_status, 'executed');
+    assert.equal(execution.route.route_status, 'request_route_available');
+    assert.equal(execution.route.request_scope, 'opl_owned_stage_attempt_request_only');
+    assert.equal(execution.route.creates_domain_action, false);
+    assert.equal(execution.route.creates_owner_receipt, false);
+    assert.deepEqual(execution.route.owner_receipt_refs, []);
+    assert.equal(execution.route.closes_expected_receipt_refs, false);
+    assert.equal(execution.route.closes_monitor_freshness, false);
     assert.equal(execution.authority_boundary.can_write_domain_truth, false);
     assert.equal(
       execution.execution.result.family_runtime_stage_attempt.attempt.domain_id,

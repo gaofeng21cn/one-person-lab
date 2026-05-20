@@ -30,6 +30,10 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
 
     assert.equal(closeout.surface_kind, 'opl_family_runtime_production_closeout');
     assert.equal(closeout.surface_role, 'derived_operator_attention_lens');
+    assert.equal(
+      closeout.lens_policy,
+      'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
+    );
     assert.equal(closeout.closeout_mode, 'dry_run_summary');
     assert.equal(closeout.family_defaults, true);
     assert.equal(closeout.selected_provider, 'temporal');
@@ -37,13 +41,21 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(closeout.selected_executor_kind, 'codex_cli');
     assert.equal(closeout.summary.domain_ready_authorized, false);
     assert.equal(closeout.summary.production_ready_authorized, false);
-    assert.equal(closeout.summary.closeout_item_count >= 1, true);
-    assert.equal(closeout.attention_queue.length >= 1, true);
+    assert.equal(closeout.summary.closeout_item_count, 4);
+    assert.equal(closeout.summary.open_safe_action_item_count, 4);
+    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count, 4);
+    assert.equal(closeout.production_closeout_open_safe_action_item_count, 4);
+    assert.equal(closeout.summary.closed_item_count, 0);
+    assert.equal(closeout.attention_queue.length, 4);
 
     const stageItem = closeout.closeout_items.find(
       (item: { claim_scope: string }) => item.claim_scope === 'stage_production_caller_request',
     ) ?? closeout.closeout_items[0];
     assert.equal(stageItem.owner, 'opl');
+    assert.equal(stageItem.status, 'open_safe_action_request_route_available');
+    assert.equal(stageItem.closeout_item_is_completion_claim, false);
+    assert.equal(stageItem.route_status, 'request_route_available');
+    assert.equal(stageItem.route_semantics, 'open_safe_action_request_apply_verify_route');
     assert.equal(stageItem.receipt_ref, null);
     assert.equal(stageItem.typed_blocker_ref, null);
     assert.equal(stageItem.not_authorized_claims.includes('domain_ready'), true);
