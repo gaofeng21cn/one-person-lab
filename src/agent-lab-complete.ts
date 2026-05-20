@@ -25,6 +25,7 @@ export {
   buildAgentLabLogDrivenMechanismCandidateReadModel,
 } from './agent-lab-control-read-models.ts';
 export { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
+export { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
 export { buildAgentLabOptimizeResult } from './agent-lab-optimizer-read-models.ts';
 export { buildAgentLabVariantComparisonReadModel } from './agent-lab-variant-comparison.ts';
 import {
@@ -256,6 +257,7 @@ export function buildCompleteAgentLabControlPlane() {
     longlineResult.result_id,
   ]);
   const aheEvidence = sampleResult.ahe_evidence;
+  const executorCapabilityAperture = sampleResult.executor_capability_aperture;
   const variantComparison = buildAgentLabVariantComparisonReadModel({
     suiteResult: sampleResult,
     sourceRefs: [sampleResult.result_id, longlineResult.result_id],
@@ -333,6 +335,7 @@ export function buildCompleteAgentLabControlPlane() {
     },
     loop_steps: [
       'collect_trajectory_refs',
+      'collect_executor_capability_aperture_refs',
       'collect_ahe_failure_root_cause_fix_and_falsification_refs',
       'collect_usage_and_blocker_event_refs',
       'mine_real_logs_into_mechanism_candidate_refs',
@@ -363,6 +366,7 @@ export function buildCompleteAgentLabControlPlane() {
     ],
     log_driven_candidate_read_model: logDrivenCandidates,
     ahe_evidence_read_model: aheEvidence,
+    executor_capability_aperture: executorCapabilityAperture,
     integration_contract_read_model: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     aris_maturity_controls: arisMaturityControls,
@@ -391,6 +395,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_log_driven_mechanism_candidates: true,
     ready_to_emit_aris_maturity_controls: true,
     ready_to_emit_ahe_evidence_read_model: true,
+    ready_to_emit_executor_capability_aperture: true,
     ready_to_emit_variant_comparison_read_model: true,
     ready_to_emit_token_cost_estimates: true,
     ai_review_approved_count: 0,
@@ -417,6 +422,7 @@ export function buildCompleteAgentLabControlPlane() {
     log_driven_mechanism_candidates: logDrivenCandidates,
     aris_maturity_controls: arisMaturityControls,
     ahe_evidence: aheEvidence,
+    executor_capability_aperture: executorCapabilityAperture,
     variant_comparison: variantComparison,
     token_cost_estimates: [tokenCostEstimate],
     developer_mode_repair_routes: developerModeRepairRoutes,
@@ -494,6 +500,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.log_driven_mechanism_candidates.read_model_id,
       complete.aris_maturity_controls.read_model_id,
       complete.ahe_evidence.read_model_id,
+      complete.executor_capability_aperture.read_model_id,
       complete.variant_comparison.read_model_id,
       complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
       developerModeRepairRoutes.read_model_id,
@@ -509,6 +516,7 @@ export function buildAgentLabWorkbenchReadModel() {
       log_driven_mechanism_candidate_read_model_ref: complete.log_driven_mechanism_candidates.read_model_id,
       aris_maturity_controls_ref: complete.aris_maturity_controls.read_model_id,
       ahe_evidence_read_model_ref: complete.ahe_evidence.read_model_id,
+      executor_capability_aperture_ref: complete.executor_capability_aperture.read_model_id,
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
       token_cost_estimate_refs: complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
       sample_ref_summary: agentLabRefSummary(sample),
@@ -528,6 +536,7 @@ export function buildAgentLabWorkbenchReadModel() {
     log_driven_mechanism_candidates: complete.log_driven_mechanism_candidates,
     aris_maturity_controls: complete.aris_maturity_controls,
     ahe_evidence: complete.ahe_evidence,
+    executor_capability_aperture: complete.executor_capability_aperture,
     variant_comparison: variantComparison,
     token_cost_estimates: complete.token_cost_estimates,
     promotion_gates: promotionGates(results),

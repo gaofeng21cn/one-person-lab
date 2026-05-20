@@ -63,6 +63,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
   assert.equal(result.readiness.ready_to_emit_ahe_evidence_read_model, true);
+  assert.equal(result.readiness.ready_to_emit_executor_capability_aperture, true);
   assert.equal(result.readiness.ready_to_emit_variant_comparison_read_model, true);
   assert.equal(result.readiness.ready_to_emit_token_cost_estimates, true);
   assert.equal(result.readiness.automatic_mechanism_promotion_ready, false);
@@ -78,6 +79,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'opl_agent_lab_developer_mode_repair_route_read_model');
   assert.deepEqual(result.optimizer_loop.loop_steps, [
     'collect_trajectory_refs',
+    'collect_executor_capability_aperture_refs',
     'collect_ahe_failure_root_cause_fix_and_falsification_refs',
     'collect_usage_and_blocker_event_refs',
     'mine_real_logs_into_mechanism_candidate_refs',
@@ -122,6 +124,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.optimizer_loop.ahe_evidence_read_model.read_model_id,
     result.ahe_evidence.read_model_id);
+  assert.equal(result.optimizer_loop.executor_capability_aperture.read_model_id,
+    result.executor_capability_aperture.read_model_id);
   assert.equal(result.optimizer_loop.aris_maturity_controls.read_model_id,
     result.aris_maturity_controls.read_model_id);
   assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
@@ -137,6 +141,11 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.token_cost_estimates[0].totals.uncertainty_range_usd.high, 66.028);
   assert.equal(result.token_cost_estimates[0].authority_boundary.can_claim_actual_invoice_cost, false);
   assert.equal(result.token_cost_estimates[0].authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.executor_capability_aperture.surface_kind,
+    'opl_agent_lab_executor_capability_aperture_read_model');
+  assert.equal(result.executor_capability_aperture.summary.codex_cli_task_count, 3);
+  assert.equal(result.executor_capability_aperture.summary.non_default_executor_task_count, 0);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_constrain_executor_reasoning, false);
   assert.equal(result.optimizer_loop.mechanism_object.promotion_mode,
     'risk_tiered_auto_promotion_with_independent_ai_review');
   assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
@@ -172,6 +181,8 @@ test('Agent Lab workbench read model is ready for App consumption without taking
     result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.source_results.aris_maturity_controls_ref, result.aris_maturity_controls.read_model_id);
   assert.equal(result.source_results.ahe_evidence_read_model_ref, result.ahe_evidence.read_model_id);
+  assert.equal(result.source_results.executor_capability_aperture_ref,
+    result.executor_capability_aperture.read_model_id);
   assert.equal(result.source_results.variant_comparison_read_model_ref, result.variant_comparison.read_model_id);
   assert.deepEqual(result.source_results.token_cost_estimate_refs,
     result.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
@@ -179,6 +190,9 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.aris_maturity_controls.summary.assurance_level_count, 4);
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
+  assert.equal(result.executor_capability_aperture.surface_kind,
+    'opl_agent_lab_executor_capability_aperture_read_model');
+  assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.variant_comparison.summary.variant_count, 3);
   assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);

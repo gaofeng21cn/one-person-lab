@@ -8,6 +8,7 @@ import { mechanismEvolutionInputRefs, mechanismEvolutionInputsForTask } from './
 import { buildProductionEvidenceGateResult } from './agent-lab-production-evidence.ts';
 import { buildSampleAgentLabSuite } from './agent-lab-sample-suite.ts';
 import { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
+import { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
 export {
   buildAgentLabCostEstimate,
   buildAgentLabCostEstimateReadModel,
@@ -15,6 +16,7 @@ export {
 } from './agent-lab-token-cost-estimate.ts';
 export { REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS } from './agent-lab-independent-ai-review.ts';
 export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
+export { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -50,6 +52,7 @@ export type AgentLabTaskManifest = {
   improvement_candidate: AgentLabImprovementCandidate;
   promotion_gate: AgentLabPromotionGate;
   mechanism_evolution_inputs?: JsonRecord;
+  executor_capability_aperture?: JsonRecord;
   authority_boundary?: JsonRecord;
 };
 
@@ -77,6 +80,7 @@ export type AgentLabTrajectory = {
   receipt_refs: string[];
   repair_refs: string[];
   trace_refs?: string[];
+  executor_capability_aperture?: JsonRecord;
   authority_boundary?: JsonRecord;
   [key: string]: unknown;
 };
@@ -673,6 +677,7 @@ function domainSummary(runs: ReturnType<typeof buildRun>[]) {
 export function runAgentLabSuite(input: AgentLabSuite) {
   const runs = input.tasks.map(buildRun);
   const aheEvidence = buildAgentLabAheEvidenceReadModel({ suite: input, results: runs });
+  const executorCapabilityAperture = buildAgentLabExecutorCapabilityApertureReadModel({ suite: input });
   const requiredObservations = input.required_observations ?? REQUIRED_OBSERVATIONS;
   const observationResult = buildObservations(input, runs);
   const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
@@ -741,9 +746,11 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       risk_task_refs: unique(aheEvidence.tasks.flatMap((task) => task.risk_task_refs)),
       next_run_falsification_refs: unique(aheEvidence.tasks.flatMap((task) =>
         task.next_run_falsification_refs)),
+      executor_capability_aperture_refs: executorCapabilityAperture.tasks.map((task) => task.aperture_ref),
     },
     runs,
     ahe_evidence: aheEvidence,
+    executor_capability_aperture: executorCapabilityAperture,
     domain_summary: domainSummary(runs),
     production_evidence_gate_result: productionEvidenceGateResult,
     longline_summary: buildLonglineSummary(input),

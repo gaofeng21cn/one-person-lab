@@ -15,6 +15,9 @@ test('agent-lab sample exposes a minimal framework read-model sample', () => {
   assert.equal(output.agent_lab_sample.sample_result.summary.ai_review_approved_count, 0);
   assert.equal(output.agent_lab_sample.sample_result.summary.promotable_candidate_count, 0);
   assert.equal(output.agent_lab_sample.sample_result.summary.promotion_gate_passed_count, 3);
+  assert.equal(output.agent_lab_sample.sample_result.executor_capability_aperture.summary.codex_cli_task_count, 3);
+  assert.equal(output.agent_lab_sample.sample_result.executor_capability_aperture.authority_boundary
+    .can_constrain_executor_reasoning, false);
   assert.deepEqual(output.agent_lab_sample.ref_summary.scorecard_refs, [
     'quality-scorecard:mas/paper-repair-smoke',
     'quality-scorecard:mag/grant-section-smoke',
@@ -73,6 +76,7 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_integration_contracts, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_review_trace_ledger, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
+  assert.equal(output.agent_lab_complete.readiness.ready_to_emit_executor_capability_aperture, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_token_cost_estimates, true);
   assert.equal(output.agent_lab_complete.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(output.agent_lab_complete.readiness.automatic_model_training_ready, false);
@@ -89,6 +93,11 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].authority_boundary.can_claim_actual_invoice_cost,
     false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.surface_kind,
+    'opl_agent_lab_executor_capability_aperture_read_model');
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.semantic_boundary,
+    'launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
 });
 
 test('agent-lab workbench exposes the App-ready read model', () => {
@@ -108,6 +117,9 @@ test('agent-lab workbench exposes the App-ready read model', () => {
   assert.equal(output.agent_lab_workbench.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
   assert.deepEqual(output.agent_lab_workbench.source_results.token_cost_estimate_refs,
     output.agent_lab_workbench.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
+  assert.equal(output.agent_lab_workbench.source_results.executor_capability_aperture_ref,
+    output.agent_lab_workbench.executor_capability_aperture.read_model_id);
+  assert.equal(output.agent_lab_workbench.executor_capability_aperture.summary.codex_cli_task_count, 3);
   assert.equal(output.agent_lab_workbench.promotion_gates.length, 6);
   assert.equal(output.agent_lab_workbench.online_learning_refs.transitions.length, 6);
   assert.equal(output.agent_lab_workbench.online_learning_refs.can_train_or_deploy_model_weights, false);
