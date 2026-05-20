@@ -1,27 +1,6 @@
-import { FrameworkContractError } from './contracts.ts';
-import { parseAttemptArgs } from './family-runtime-command-parts/attempt.ts';
 import {
-  parseLifecycleApplyArgs,
-  parseLifecycleReconcileArgs,
-} from './family-runtime-command-parts/lifecycle.ts';
-import {
-  parseProviderOnlyArgs,
-  parseProviderSloTickArgs,
-  parseResidencyProofArgs,
-} from './family-runtime-command-parts/provider.ts';
-import { parseProductionCloseoutArgs } from './family-runtime-command-parts/production-closeout.ts';
-import {
-  parseApproveArgs,
-  parseEnqueueArgs,
-  parseIntakeArgs,
-  parseQueueArgs,
-  parseTickArgs,
-} from './family-runtime-command-parts/queue.ts';
-import {
-  parseSchedulerLifecycleArgs,
-  parseSchedulerTickArgs,
-} from './family-runtime-command-parts/scheduler.ts';
-import { parseRuntimeProcessArgs } from './family-runtime-command-parts/service-worker.ts';
+  parseRegisteredFamilyRuntimeCommand,
+} from './family-runtime-command-parts/registry.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type FamilyRuntimeDomainId,
@@ -165,71 +144,5 @@ export const DOMAIN_ADAPTERS: Record<FamilyRuntimeDomainId, {
 };
 
 export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandInput {
-  const [mode, ...rest] = args;
-  if (!mode || mode === 'status') {
-    return parseProviderOnlyArgs('status', rest);
-  }
-  if (mode === 'doctor' || mode === 'install' || mode === 'repair') {
-    return parseProviderOnlyArgs(mode, rest);
-  }
-  if (mode === 'worker' || mode === 'service') {
-    return parseRuntimeProcessArgs(mode, rest);
-  }
-  if (mode === 'residency' && rest[0] === 'proof') {
-    return parseResidencyProofArgs(rest);
-  }
-  if (mode === 'provider-slo' && rest[0] === 'tick') {
-    return parseProviderSloTickArgs(rest);
-  }
-  if (mode === 'scheduler' && rest[0] === 'tick') {
-    return parseSchedulerTickArgs(rest);
-  }
-  if (
-    mode === 'scheduler'
-    && (rest[0] === 'status' || rest[0] === 'install' || rest[0] === 'remove' || rest[0] === 'trigger')
-  ) {
-    return parseSchedulerLifecycleArgs(rest);
-  }
-  if (mode === 'lifecycle' && rest[0] === 'apply') {
-    return parseLifecycleApplyArgs(rest);
-  }
-  if (mode === 'lifecycle' && rest[0] === 'reconcile') {
-    return parseLifecycleReconcileArgs(rest);
-  }
-  if (mode === 'production-closeout') {
-    return parseProductionCloseoutArgs([mode, ...rest]);
-  }
-  if (mode === 'notify' && rest[0] === 'list') {
-    return { mode: 'notify_list' };
-  }
-  if (mode === 'events' && rest[0] === 'export') {
-    return { mode: 'events_export' };
-  }
-  if (mode === 'queue') {
-    const parsed = parseQueueArgs(rest);
-    if (parsed) {
-      return parsed;
-    }
-  }
-  if (mode === 'attempt') {
-    const parsed = parseAttemptArgs(rest);
-    if (parsed) {
-      return parsed;
-    }
-  }
-  if (mode === 'tick') {
-    return parseTickArgs(rest);
-  }
-  if (mode === 'intake') {
-    return parseIntakeArgs(rest);
-  }
-  if (mode === 'approve') {
-    return parseApproveArgs(rest);
-  }
-  if (mode === 'enqueue') {
-    return parseEnqueueArgs(rest);
-  }
-  throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|production-closeout|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
-  });
+  return parseRegisteredFamilyRuntimeCommand(args);
 }

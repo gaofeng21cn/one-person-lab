@@ -41,7 +41,7 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
     {
       gate_id: 'provider_readiness_single_truth',
       pollution_point: 'provider readiness single truth',
-      status: 'attention_required',
+      status: 'guarded',
       owner: 'one-person-lab',
       source_evidence: [
         'src/production-functional-closeout-provider-readiness.ts',
@@ -52,7 +52,7 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
       required_boundary:
         'Temporal-backed provider readiness is the production substrate truth; local/offline provider status cannot stand in for Full online readiness.',
       next_action:
-        'Keep provider readiness claims routed through the Temporal readiness/proof surfaces and reject secondary ready/domain-ready wording.',
+        'Keep production closeout provider readiness routed through buildTemporalWorkerReadiness and reject secondary ready/domain-ready wording.',
     },
     {
       gate_id: 'generated_surface_drift_owner_claim',
@@ -89,10 +89,11 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
     {
       gate_id: 'family_runtime_parser_monolith',
       pollution_point: 'family-runtime parser monolith',
-      status: 'attention_required',
+      status: 'guarded',
       owner: 'one-person-lab',
       source_evidence: [
         'src/family-runtime-command.ts',
+        'src/family-runtime-command-parts/registry.ts',
         'src/family-runtime-command-parts/shared.ts',
         'src/family-runtime-command-parts/provider.ts',
         'tests/src/cli/cases/family-runtime.test.ts',
@@ -101,7 +102,7 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
       required_boundary:
         'Family runtime command parsing must stay split by provider/queue/lifecycle/stage responsibilities and must not become a semantic owner.',
       next_action:
-        'Keep new runtime command semantics in command-parts modules with focused tests instead of re-growing one parser surface.',
+        'Route new runtime command semantics through the command-parts registry and keep behavior tests focused on command ownership boundaries.',
     },
     {
       gate_id: 'stage_launch_guarantee_clarity',

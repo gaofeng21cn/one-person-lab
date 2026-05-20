@@ -461,6 +461,19 @@ test('framework production-closeout reports functional blockers without taking d
     assert.equal(closeout.summary.physical_skeleton_audit_pending_count, 0);
     assert.equal(closeout.summary.resolved_stage_plane_count, 3);
     assert.equal(closeout.summary.provider_ready, false);
+    assert.equal(
+      closeout.provider_readiness.canonical_readiness_surface_ref,
+      'src/family-runtime-temporal-readiness.ts#buildTemporalWorkerReadiness',
+    );
+    assert.equal(closeout.provider_readiness.canonical_worker_readiness.surface_kind, 'temporal_worker_readiness');
+    assert.equal(
+      closeout.provider_readiness.readiness_status,
+      closeout.provider_readiness.canonical_worker_readiness.readiness_status,
+    );
+    assert.equal(
+      closeout.provider_readiness.repair_action.next_command,
+      closeout.provider_readiness.canonical_worker_readiness.repair_action.next_command,
+    );
     assert.equal(closeout.authority_boundary.opl_writes_domain_truth, false);
     assert.equal(closeout.authority_boundary.opl_writes_domain_artifact, false);
     assert.equal(closeout.authority_boundary.opl_writes_domain_memory_body, false);

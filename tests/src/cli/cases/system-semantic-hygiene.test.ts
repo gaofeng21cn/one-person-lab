@@ -20,6 +20,8 @@ test('system semantic hygiene exposes six machine gates without production or do
   assert.equal(output.version, 'g2');
   assert.equal(audit.surface_kind, 'opl_framework_semantic_hygiene_audit');
   assert.equal(audit.summary.gate_count, 6);
+  assert.equal(audit.summary.guarded_gate_count, 6);
+  assert.equal(audit.summary.attention_required_gate_count, 0);
   assert.equal(audit.summary.production_or_domain_ready, false);
   assert.equal(audit.summary.production_ready_claim_count, 0);
   assert.equal(audit.summary.domain_ready_claim_count, 0);
@@ -56,6 +58,34 @@ test('system semantic hygiene exposes six machine gates without production or do
 
   const nextActionIds = audit.next_actions.map((action: { gate_id: string }) => action.gate_id).sort();
   assert.deepEqual(nextActionIds, [...EXPECTED_GATES].sort());
+
+  const providerGate = gates.get('provider_readiness_single_truth') as {
+    status?: unknown;
+    source_evidence?: { ref?: unknown }[];
+    next_action?: unknown;
+  };
+  assert.equal(providerGate.status, 'guarded');
+  assert.equal(
+    providerGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'src/family-runtime-temporal-readiness.ts'
+    ),
+    true,
+  );
+  assert.match(String(providerGate.next_action), /buildTemporalWorkerReadiness/);
+
+  const parserGate = gates.get('family_runtime_parser_monolith') as {
+    status?: unknown;
+    source_evidence?: { ref?: unknown }[];
+    next_action?: unknown;
+  };
+  assert.equal(parserGate.status, 'guarded');
+  assert.equal(
+    parserGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'src/family-runtime-command-parts/registry.ts'
+    ),
+    true,
+  );
+  assert.match(String(parserGate.next_action), /command-parts registry/);
 });
 
 test('help advertises the semantic hygiene system command', () => {
