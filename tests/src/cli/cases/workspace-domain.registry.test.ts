@@ -143,6 +143,21 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(manifestOutput.domain_manifests.summary.manifest_configured_count, 3);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.equal(manifestOutput.domain_manifests.opl_meta_agent_registry.surface_kind, 'opl_meta_agent_registry_extension');
+    assert.equal(manifestOutput.domain_manifests.opl_meta_agent_registry.project_id, 'opl-meta-agent');
+    assert.equal(manifestOutput.domain_manifests.opl_meta_agent_registry.status, 'resolved');
+    assert.equal(
+      manifestOutput.domain_manifests.opl_meta_agent_registry.summary.app_workbench_section_count,
+      6,
+    );
+    assert.equal(
+      manifestOutput.domain_manifests.opl_meta_agent_registry.summary.claims_domain_ready,
+      false,
+    );
+    assert.equal(
+      manifestOutput.domain_manifests.opl_meta_agent_registry.authority_boundary.can_authorize_target_domain_quality_or_export,
+      false,
+    );
     assert.ok(
       manifestOutput.domain_manifests.notes.some((note: string) =>
         note.includes('opl workspace list') && note.includes('opl domain manifests'),
