@@ -38,6 +38,13 @@ function realIndependentAiReviewReceipt(candidateRef: string, riskTier = 'low_ri
   };
 }
 
+function assertStringRef(value: unknown, pattern: RegExp) {
+  if (typeof value !== 'string') {
+    assert.fail(`Expected string ref, got ${typeof value}`);
+  }
+  assert.match(value, pattern);
+}
+
 test('Agent Lab complete control plane exposes eval adapters, observability exports, and optimizer boundary', () => {
   const result = buildCompleteAgentLabControlPlane();
 
@@ -192,7 +199,23 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.summary.route_count, 2);
   assert.equal(result.summary.direct_owner_route_count, 1);
   assert.equal(result.summary.fork_pr_route_count, 1);
+  assert.equal(result.summary.live_closeout_drill_count, 2);
+  assert.equal(result.summary.live_closeout_ready_count, 2);
   assert.equal(result.summary.follow_up_queue_item_ref_count, 2);
+  assert.equal(result.live_closeout_evidence.surface_kind,
+    'opl_agent_lab_developer_mode_live_closeout_evidence_read_model');
+  assert.equal(result.live_closeout_evidence.status, 'closeout_refs_ready');
+  assert.equal(result.live_closeout_evidence.refs_only, true);
+  assert.equal(result.live_closeout_evidence.summary.direct_fix_drill_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.fork_pr_drill_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.forbidden_owner_receipt_write_count, 0);
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('route_eligibility'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('patrol_observation_ref'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('diff_ref'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('verification_refs'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('no_forbidden_write_ref'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('commit_ref_or_fork_pr_refs'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('external_owner_acceptance_ref'));
 
   for (const route of result.routes) {
     assert.match(route.issue_ref, /^issue-ref:/);
@@ -218,6 +241,37 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.ok(forkRoute);
   assert.equal(directRoute.repo_developer_match_required, true);
   assert.equal(forkRoute.repo_developer_match_required, false);
+
+  const directDrill = result.live_closeout_evidence.drills.find((drill: any) =>
+    drill.route_decision === 'direct-fix');
+  const forkPrDrill = result.live_closeout_evidence.drills.find((drill: any) =>
+    drill.route_decision === 'fork-PR');
+  assert.ok(directDrill);
+  assert.ok(forkPrDrill);
+  assert.equal(directDrill.route_status, 'closeout_refs_ready');
+  assert.equal(directDrill.closeout_refs.route_eligibility, 'eligible_direct_fix');
+  assertStringRef(directDrill.closeout_refs.patrol_observation_ref, /^patrol-observation-ref:/);
+  assertStringRef(directDrill.closeout_refs.diff_ref, /^diff-ref:/);
+  assert.ok(directDrill.closeout_refs.verification_refs.every((ref: string) =>
+    ref.startsWith('test-result-ref:')));
+  assertStringRef(directDrill.closeout_refs.no_forbidden_write_ref, /^no-forbidden-write-ref:/);
+  assertStringRef(directDrill.closeout_refs.commit_ref, /^git-commit-ref:/);
+  assert.equal(directDrill.closeout_refs.fork_repo_ref, null);
+  assert.equal(directDrill.closeout_refs.pr_review_ref, null);
+  assertStringRef(directDrill.closeout_refs.owner_acceptance_ref, /^external-owner-ref:/);
+  assert.equal(forkPrDrill.route_status, 'closeout_refs_ready');
+  assert.equal(forkPrDrill.closeout_refs.route_eligibility, 'eligible_fork_pr');
+  assertStringRef(forkPrDrill.closeout_refs.patrol_observation_ref, /^patrol-observation-ref:/);
+  assertStringRef(forkPrDrill.closeout_refs.diff_ref, /^diff-ref:/);
+  assert.ok(forkPrDrill.closeout_refs.verification_refs.every((ref: string) =>
+    ref.startsWith('test-result-ref:')));
+  assertStringRef(forkPrDrill.closeout_refs.no_forbidden_write_ref, /^no-forbidden-write-ref:/);
+  assert.equal(forkPrDrill.closeout_refs.commit_ref, null);
+  assertStringRef(forkPrDrill.closeout_refs.fork_repo_ref, /^github-fork-ref:/);
+  assertStringRef(forkPrDrill.closeout_refs.pr_review_ref, /^github-pr-review-ref:/);
+  assertStringRef(forkPrDrill.closeout_refs.owner_acceptance_ref, /^external-owner-ref:/);
+  assert.equal(result.live_closeout_evidence.non_authority_outputs.writes_owner_receipt, false);
+  assert.equal(result.live_closeout_evidence.non_authority_outputs.modifies_managed_runtime, false);
   assert.equal(result.non_authority_outputs.writes_domain_truth, false);
   assert.equal(result.non_authority_outputs.writes_domain_artifact, false);
   assert.equal(result.non_authority_outputs.writes_memory_body, false);
