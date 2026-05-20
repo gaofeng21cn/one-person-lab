@@ -6,6 +6,8 @@ import {
 } from './stage-production-evidence-route-common.ts';
 import {
   buildStageProductionEvidencePayloadWorkorder,
+  STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS,
+  STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
 } from '../stage-production-evidence-payload-preflight.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -313,6 +315,23 @@ function commandRef(args: string[]) {
   )).join(' ')}`;
 }
 
+function shellSingleQuotedJson(value: unknown) {
+  return `'${JSON.stringify(value).replaceAll("'", "'\\''")}'`;
+}
+
+function runtimeActionExecuteCommand(input: {
+  actionId: string;
+  payload?: JsonRecord | null;
+  dryRun?: boolean;
+}) {
+  return [
+    'opl runtime action execute',
+    `--action ${input.actionId}`,
+    ...(input.dryRun ? ['--dry-run'] : []),
+    ...(input.payload ? [`--payload ${shellSingleQuotedJson(input.payload)}`] : []),
+  ].join(' ');
+}
+
 function hasOpenStageEvidenceObligation(stage: JsonRecord) {
   return recordList(stage.evidence_obligations).some((obligation) => (
     (stringValue(obligation.obligation_id) === 'expected_receipt'
@@ -351,8 +370,26 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
         domain_receipt_refs_should_cover: unobservedExpectedReceiptRefs,
         evidence_refs_should_cover_monitor_freshness: unobservedMonitorRefs,
         typed_blocker_refs_may_close_instead_of_success: true,
+        required_any_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
+        optional_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS],
         no_regression_refs_recommended: true,
         owner_chain_refs_recommended: true,
+      }
+    : null;
+  const actionId = `stage-production-evidence:${commandDomainId}:${stageId}:${mode}`;
+  const recordedReceiptRef = stringList(stage.stage_evidence_receipt_refs)[0] ?? null;
+  const successPayloadExample = recordMode
+    ? {
+        domain_receipt_refs: unobservedExpectedReceiptRefs.filter((ref) => !ref.startsWith('owner_receipt:')),
+        evidence_refs: unobservedMonitorRefs.filter((ref) => !ref.startsWith('monitor_freshness:')),
+        typed_blocker_refs: [],
+      }
+    : null;
+  const typedBlockerPayloadExample = recordMode
+    ? {
+        domain_receipt_refs: [],
+        evidence_refs: [],
+        typed_blocker_refs: ['<domain-owned-typed-blocker-ref>'],
       }
     : null;
   const args = [
@@ -368,12 +405,13 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     requestPackId,
     '--source-ref',
     sourceRef,
+    ...(mode === 'verify' && recordedReceiptRef ? ['--receipt-ref', recordedReceiptRef] : []),
   ];
   const route = {
     ref: commandRef(args),
     opl_cli_args: args,
     role: 'operator_action_route',
-    action_id: `stage-production-evidence:${commandDomainId}:${stageId}:${mode}`,
+    action_id: actionId,
     action_kind: mode === 'verify'
       ? 'stage_production_evidence_receipt_verify'
       : 'stage_production_evidence_receipt_record',
@@ -403,6 +441,27 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     payload_template_policy: recordMode
       ? 'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit'
       : 'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
+    empty_payload_template_is_success_evidence: false,
+    payload_preflight_error_code: recordMode ? 'cli_usage_error' : null,
+    payload_preflight_blocked_error_kind: recordMode
+      ? 'stage_production_evidence_payload_preflight_blocked'
+      : null,
+    copyable_runtime_action_execute_commands: recordMode
+      ? {
+          dry_run_with_empty_template_blocks:
+            runtimeActionExecuteCommand({ actionId, payload: payloadTemplate, dryRun: true }),
+          dry_run_success_path:
+            runtimeActionExecuteCommand({ actionId, payload: successPayloadExample, dryRun: true }),
+          record_success_path:
+            runtimeActionExecuteCommand({ actionId, payload: successPayloadExample }),
+          dry_run_typed_blocker_path:
+            runtimeActionExecuteCommand({ actionId, payload: typedBlockerPayloadExample, dryRun: true }),
+          record_typed_blocker_path:
+            runtimeActionExecuteCommand({ actionId, payload: typedBlockerPayloadExample }),
+        }
+      : {
+          verify_recorded_receipt: runtimeActionExecuteCommand({ actionId }),
+        },
     creates_domain_action: false,
     creates_owner_receipt: false,
     owner_receipt_refs: [],
@@ -423,12 +482,11 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     monitor_refs: stringList(stage.monitor_refs),
     unobserved_monitor_refs: unobservedMonitorRefs,
     required_operator_payload_refs: mode === 'verify' ? [] : [
-      'domain_receipt_refs',
-      'evidence_refs',
-      'typed_blocker_refs',
-      'no_regression_refs',
-      'owner_chain_refs',
+      ...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
     ],
+    optional_operator_payload_refs: mode === 'verify'
+      ? []
+      : [...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS],
     required_evidence_refs: [
       ...unobservedExpectedReceiptRefs,
       ...unobservedMonitorRefs,

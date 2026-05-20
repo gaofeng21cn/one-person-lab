@@ -157,6 +157,16 @@ function summarizeSafeAction(action: JsonRecord | null) {
     payload_template: record(action.payload_template),
     payload_ref_hints: record(action.payload_ref_hints),
     payload_template_policy: stringValue(action.payload_template_policy),
+    payload_workorder: record(action.payload_workorder),
+    payload_preflight_policy: stringValue(action.payload_preflight_policy),
+    payload_preflight_error_code: stringValue(action.payload_preflight_error_code),
+    payload_preflight_blocked_error_kind: stringValue(action.payload_preflight_blocked_error_kind),
+    empty_payload_template_is_success_evidence:
+      action.empty_payload_template_is_success_evidence === true,
+    copyable_runtime_action_execute_commands:
+      record(action.copyable_runtime_action_execute_commands),
+    required_operator_payload_refs: stringList(action.required_operator_payload_refs),
+    optional_operator_payload_refs: stringList(action.optional_operator_payload_refs),
     route_requires_domain_or_app_payload: action.route_requires_domain_or_app_payload === true,
     can_close_without_domain_or_app_payload: action.can_close_without_domain_or_app_payload !== false,
   };
@@ -245,6 +255,10 @@ function missingEvidenceItems(drilldown: JsonRecord) {
         payload_template: record(action?.payload_template),
         payload_ref_hints: record(action?.payload_ref_hints),
         payload_template_policy: stringValue(action?.payload_template_policy),
+        payload_workorder: record(action?.payload_workorder),
+        copyable_runtime_action_execute_commands:
+          record(action?.copyable_runtime_action_execute_commands),
+        required_operator_payload_refs: stringList(action?.required_operator_payload_refs),
         route_requires_domain_or_app_payload: action?.route_requires_domain_or_app_payload === true,
       };
     });

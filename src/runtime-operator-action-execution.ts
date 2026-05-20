@@ -245,6 +245,32 @@ function stageProductionEvidenceRecordArgs(
   };
 }
 
+function stageProductionEvidenceVerifyResult(result: JsonRecord, route: JsonRecord) {
+  const apply = isRecord(result.external_evidence_apply) ? result.external_evidence_apply : {};
+  if (stringValue(apply.status) !== 'blocked') {
+    return result;
+  }
+  return {
+    ...result,
+    stage_production_evidence_receipt_verify_error: {
+      surface_kind: 'opl_stage_production_evidence_receipt_verify_error',
+      error_kind: 'stage_production_evidence_receipt_not_recorded',
+      status: 'blocked',
+      action_id: stringValue(route.action_id),
+      request_id: stringValue(route.request_id),
+      request_pack_id: stringValue(route.request_pack_id),
+      required_before_verify: [
+        'record_stage_production_evidence_receipt_with_domain_receipt_refs',
+        'record_stage_production_evidence_receipt_with_evidence_refs',
+        'record_stage_production_evidence_receipt_with_typed_blocker_refs',
+      ],
+      empty_payload_template_is_success_evidence: false,
+      domain_ready_authorized: false,
+      production_ready_authorized: false,
+    },
+  };
+}
+
 function providerSchedulerArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const args = stringList(route.opl_cli_args);
   if (args.length === 0) {
@@ -411,6 +437,7 @@ async function executeRoute(
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
     const stageEvidenceRecordAction = actionKind === 'stage_production_evidence_receipt_record';
+    const stageEvidenceVerifyAction = actionKind === 'stage_production_evidence_receipt_verify';
     const stageEvidenceRecord = stageEvidenceRecordAction
       ? stageProductionEvidenceRecordArgs(route, options.payload, commandOrSurfaceRef, {
           dryRun: options.dryRun,
@@ -448,7 +475,12 @@ async function executeRoute(
                     stage_production_evidence_payload_preflight: stageEvidenceRecord.preflight,
                   }
                 : {}),
-              ...runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3))),
+              ...(stageEvidenceVerifyAction
+                ? stageProductionEvidenceVerifyResult(
+                    runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3))) as JsonRecord,
+                    route,
+                  )
+                : runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3)))),
             }
           : legacyCleanupAction
             ? runFamilyAgentLegacyCleanupApply(contracts, runtimeArgs.slice(3))
