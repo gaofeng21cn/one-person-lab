@@ -480,6 +480,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
       2,
     );
+    assert.equal(
+      drilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
+      2,
+    );
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -804,6 +808,25 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(stageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(stageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
     assert.equal(stageProductionEvidenceRecordRoute.can_close_without_domain_or_app_payload, false);
+    assert.deepEqual(stageProductionEvidenceRecordRoute.payload_template, {
+      domain_receipt_refs: [],
+      evidence_refs: [],
+      typed_blocker_refs: [],
+      no_regression_refs: [],
+      owner_chain_refs: [],
+    });
+    assert.deepEqual(
+      stageProductionEvidenceRecordRoute.payload_ref_hints.domain_receipt_refs_should_cover,
+      ['mas:review-receipt', 'owner_receipt:review'],
+    );
+    assert.deepEqual(
+      stageProductionEvidenceRecordRoute.payload_ref_hints.evidence_refs_should_cover_monitor_freshness,
+      ['metric:review/currentness'],
+    );
+    assert.equal(
+      stageProductionEvidenceRecordRoute.payload_template_policy,
+      'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',
+    );
     assert.equal(
       stageProductionEvidenceRecordRoute.open_reason,
       'unobserved_expected_receipt_or_monitor_freshness_refs_require_domain_app_or_live_payload_before_closure',
@@ -899,6 +922,14 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(bridgeStageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(bridgeStageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
     assert.equal(bridgeStageProductionEvidenceRecordRoute.can_close_without_domain_or_app_payload, false);
+    assert.deepEqual(
+      bridgeStageProductionEvidenceRecordRoute.payload_template,
+      stageProductionEvidenceRecordRoute.payload_template,
+    );
+    assert.deepEqual(
+      bridgeStageProductionEvidenceRecordRoute.payload_ref_hints,
+      stageProductionEvidenceRecordRoute.payload_ref_hints,
+    );
     assert.equal(
       drilldown.app_execution_bridge.route_submission_policy.domain_routes_are_queued_for_approval,
       true,

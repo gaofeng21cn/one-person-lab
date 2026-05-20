@@ -154,6 +154,9 @@ function summarizeSafeAction(action: JsonRecord | null) {
     open_reason: stringValue(action.open_reason),
     payload_requirement: stringValue(action.payload_requirement),
     payload_owner: stringValue(action.payload_owner),
+    payload_template: record(action.payload_template),
+    payload_ref_hints: record(action.payload_ref_hints),
+    payload_template_policy: stringValue(action.payload_template_policy),
     route_requires_domain_or_app_payload: action.route_requires_domain_or_app_payload === true,
     can_close_without_domain_or_app_payload: action.can_close_without_domain_or_app_payload !== false,
   };
@@ -239,6 +242,9 @@ function missingEvidenceItems(drilldown: JsonRecord) {
         open_reason: stringValue(action?.open_reason),
         payload_requirement: stringValue(action?.payload_requirement),
         payload_owner: stringValue(action?.payload_owner),
+        payload_template: record(action?.payload_template),
+        payload_ref_hints: record(action?.payload_ref_hints),
+        payload_template_policy: stringValue(action?.payload_template_policy),
         route_requires_domain_or_app_payload: action?.route_requires_domain_or_app_payload === true,
       };
     });

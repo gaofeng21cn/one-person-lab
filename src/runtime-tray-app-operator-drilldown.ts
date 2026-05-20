@@ -683,6 +683,10 @@ function appExecutionBridge(
       open_reason: 'open_reason' in ref ? ref.open_reason : null,
       payload_requirement: 'payload_requirement' in ref ? ref.payload_requirement : null,
       payload_owner: 'payload_owner' in ref ? ref.payload_owner : null,
+      payload_template: 'payload_template' in ref ? ref.payload_template : null,
+      payload_ref_hints: 'payload_ref_hints' in ref ? ref.payload_ref_hints : null,
+      payload_template_policy:
+        'payload_template_policy' in ref ? ref.payload_template_policy : null,
       route_requires_domain_or_app_payload:
         'route_requires_domain_or_app_payload' in ref ? ref.route_requires_domain_or_app_payload : false,
       can_close_without_domain_or_app_payload:
