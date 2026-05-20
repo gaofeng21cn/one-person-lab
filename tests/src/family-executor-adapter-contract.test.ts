@@ -83,6 +83,7 @@ function assertLayeredExecutorPolicy(surface: JsonObject) {
     activation_status: 'example_only_not_default_active',
     default_active_backend: 'codex_cli',
     sample_non_default_backend: 'hermes_agent',
+    sample_stage_level_explicit_backend: 'antigravity_cli',
     activation_requires: 'explicit_request_or_runtime_manager_handoff_config',
   });
   if ('domain_repo_provider_catalog_forbidden' in surface) {
@@ -104,10 +105,21 @@ test('family executor defaults split canonical name, stage-selection status, and
   assert.equal(defaults.default_executor_mode, 'autonomous');
   assert.equal(defaults.default_model, 'inherit_local_codex_default');
   assert.equal(defaults.default_reasoning_effort, 'inherit_local_codex_default');
-  assert.deepEqual(contract.canonical_executor_backends, ['codex_cli', 'hermes_agent', 'claude_code']);
+  const expectedBackends = ['codex_cli', 'hermes_agent', 'claude_code', 'antigravity_cli'];
+  assert.deepEqual(contract.canonical_executor_backends, expectedBackends);
   assert.equal(executorRegistry.surface_kind, 'opl_agent_executor_registry');
   assert.equal(executorRegistry.request_contract, 'AgentExecutionRequest');
   assert.equal(executorRegistry.receipt_contract, 'AgentExecutionReceipt');
+  assert.deepEqual(executorRegistry.stage_level_policy_fields, [
+    'executor_kind',
+    'model',
+    'reasoning_effort',
+    'provider',
+    'executor_binding_ref',
+    'executor_labels',
+    'required_capabilities',
+    'receipt_requirements',
+  ]);
   assert.deepEqual(executorRegistry.default_resolution_order, [
     'cli_flag',
     'stage_attempt_input',
@@ -115,14 +127,19 @@ test('family executor defaults split canonical name, stage-selection status, and
     'codex_cli',
   ]);
   assert.ok(!(retiredAliasField in contract));
-  assert.deepEqual((executionShapes.structured_call as JsonObject).allowed_backends, ['codex_cli', 'hermes_agent', 'claude_code']);
-  assert.deepEqual((executionShapes.agent_loop as JsonObject).allowed_backends, ['codex_cli', 'hermes_agent', 'claude_code']);
+  assert.deepEqual((executionShapes.structured_call as JsonObject).allowed_backends, expectedBackends);
+  assert.deepEqual((executionShapes.agent_loop as JsonObject).allowed_backends, expectedBackends);
   assert.equal(executorLabels.codex_cli, 'Codex CLI');
   assert.equal(executorLabels.hermes_agent, 'Hermes-Agent');
   assert.equal(executorLabels.claude_code, 'Claude Code');
+  assert.equal(executorLabels.antigravity_cli, 'Antigravity CLI');
   assert.equal(executorStatuses.codex_cli, 'default');
   assert.equal(executorStatuses.hermes_agent, 'experimental');
   assert.equal(executorStatuses.claude_code, 'experimental');
+  assert.equal(executorStatuses.antigravity_cli, 'experimental_non_default_explicit_adapter');
+  assert.equal((contract.stage_level_executor_policy as JsonObject).default_executor_kind, 'codex_cli');
+  assert.equal((contract.stage_level_executor_policy as JsonObject).non_default_executor_binding_required, true);
+  assert.equal(((contract.executor_backend_notes as JsonObject).antigravity_cli as JsonObject).quality_tool_resume_equivalence_with_codex_cli, false);
   assert.equal(guardrails.hermes_agent_requires_full_agent_loop, true);
   assert.equal(guardrails.hermes_agent_not_provider_or_gateway_surface, true);
   assert.equal(guardrails.non_default_executor_requires_explicit_selection, true);
@@ -180,27 +197,31 @@ test('family manifests use the same split executor declaration', () => {
 
   assert.equal(executorDefaults.default_executor_name, 'codex_cli');
   assert.equal(executorDefaults.default_executor_mode, 'autonomous');
-  assert.deepEqual(executorDefaults.canonical_executor_backends, ['codex_cli', 'hermes_agent', 'claude_code']);
+  assert.deepEqual(executorDefaults.canonical_executor_backends, ['codex_cli', 'hermes_agent', 'claude_code', 'antigravity_cli']);
   assert.equal(Object.prototype.hasOwnProperty.call(executorDefaults, retiredAliasField), false);
   assert.deepEqual(((executorDefaults.execution_shapes as JsonObject).structured_call as JsonObject).allowed_backends, [
     'codex_cli',
     'hermes_agent',
     'claude_code',
+    'antigravity_cli',
   ]);
   assert.deepEqual(((executorDefaults.execution_shapes as JsonObject).agent_loop as JsonObject).allowed_backends, [
     'codex_cli',
     'hermes_agent',
     'claude_code',
+    'antigravity_cli',
   ]);
   assert.deepEqual(executorDefaults.executor_labels, {
     codex_cli: 'Codex CLI',
     hermes_agent: 'Hermes-Agent',
     claude_code: 'Claude Code',
+    antigravity_cli: 'Antigravity CLI',
   });
   assert.deepEqual(executorDefaults.executor_statuses, {
     codex_cli: 'default',
     hermes_agent: 'experimental',
     claude_code: 'experimental',
+    antigravity_cli: 'experimental_non_default_explicit_adapter',
   });
   assert.equal(executorDefaults.hermes_agent_requires_full_agent_loop, true);
   assert.equal(executorDefaults.hermes_agent_not_provider_or_gateway_surface, true);

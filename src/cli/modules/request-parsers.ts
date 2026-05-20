@@ -132,6 +132,9 @@ function parseProductEntryArgs(
       case '--provider':
         parsed.provider = value;
         break;
+      case '--reasoning-effort':
+        parsed.reasoningEffort = value;
+        break;
       case '--workspace-path':
         parsed.workspacePath = value;
         break;
@@ -771,6 +774,9 @@ function parseExecutorExecArgs(
         break;
       case '--provider':
         parsed.provider = value;
+        break;
+      case '--reasoning-effort':
+        parsed.reasoningEffort = value;
         break;
       default:
         throw buildUsageError(`Unknown option for executor command: ${token}.`, spec, {

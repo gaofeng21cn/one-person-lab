@@ -25,12 +25,37 @@ function makeExecutable(name: string, body: string) {
 
 test('agent executor registry resolves explicit, stage-attempt, env, and default order', () => {
   assert.equal(resolveAgentExecutorKind({ explicitExecutor: 'hermes-agent' }), 'hermes_agent');
+  assert.equal(resolveAgentExecutorKind({ explicitExecutor: 'antigravity-cli' }), 'antigravity_cli');
   assert.equal(resolveAgentExecutorKind({ stageAttemptExecutor: 'claude_code' }), 'claude_code');
   assert.equal(resolveAgentExecutorKind({ env: { OPL_EXECUTOR_KIND: 'claude_code' } }), 'claude_code');
   assert.equal(resolveAgentExecutorKind({}), 'codex_cli');
   assert.throws(
     () => resolveAgentExecutorKind({ explicitExecutor: 'external_llm' }),
     /Unsupported OPL executor kind/,
+  );
+});
+
+test('agent executor registry resolves request policy before stage policy', () => {
+  assert.equal(
+    resolveAgentExecutorKind({
+      explicitExecutor: null,
+      stageAttemptExecutor: null,
+      requestExecutorPolicy: {
+        executor_kind: 'antigravity_cli',
+      },
+      stageAttemptExecutorPolicy: {
+        executor_kind: 'claude_code',
+      },
+    }),
+    'antigravity_cli',
+  );
+  assert.equal(
+    resolveAgentExecutorKind({
+      stageAttemptExecutorPolicy: {
+        executor_kind: 'antigravity_cli',
+      },
+    }),
+    'antigravity_cli',
   );
 });
 
@@ -65,6 +90,58 @@ exit 64
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('codex_cli executor passes model, provider, and reasoning effort as explicit request policy', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-agent-executor-codex-policy-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-agent-executor-policy"}\\n'
+  printf '{"item":{"type":"agent_message","text":"Codex policy done"}}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = runAgentExecutor({
+      executor_kind: 'codex_cli',
+      prompt: 'Run a default executor task with a policy.',
+      cwd: repoRoot,
+      model: 'gpt-5.5',
+      provider: 'openai',
+      reasoning_effort: 'high',
+    });
+
+    assert.equal(receipt.executor_kind, 'codex_cli');
+    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
+      'exec',
+      '--skip-git-repo-check',
+      '--full-auto',
+      '--json',
+      '--cd',
+      repoRoot,
+      '--model',
+      'gpt-5.5',
+      '--config',
+      'model_provider="openai"',
+      '--config',
+      'model_reasoning_effort="high"',
+      'Run a default executor task with a policy.',
+    ]);
+    assert.equal(receipt.proof?.reasoning_effort, 'high');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
   }
 });
 
@@ -263,6 +340,122 @@ test('claude_code execution uses configured binary without Codex fallback', () =
     assert.equal(receipt.exit_code, 0);
     assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
     assert.equal(receipt.proof?.fallback_allowed, false);
+  } finally {
+    fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('antigravity_cli execution uses configured binary and passes stage model policy without Codex fallback', () => {
+  const fake = makeExecutable(
+    'antigravity',
+    [
+      '#!/bin/sh',
+      'printf \'executor=%s\\n\' "$1"',
+      'printf \'model=%s\\n\' "$2"',
+      'printf \'reasoning=%s\\n\' "$3"',
+      'printf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:antigravity-html"]}\\n\'',
+    ].join('\n'),
+  );
+  try {
+    const receipt = runAgentExecutor({
+      prompt: 'Build RCA HTML route.',
+      cwd: repoRoot,
+      stage_attempt_executor_policy: {
+        executor_kind: 'antigravity_cli',
+        model: 'gemini-3.5-flash',
+        reasoning_effort: 'high',
+        provider: 'google',
+        executor_binding_ref: 'executor-binding:antigravity/rca-html-route',
+      },
+      env: { OPL_ANTIGRAVITY_CLI_BIN: fake.file, PATH: '' },
+    });
+
+    assert.equal(receipt.executor_kind, 'antigravity_cli');
+    assert.equal(receipt.exit_code, 0);
+    assert.equal(receipt.stdout_preview.includes('model=gemini-3.5-flash'), true);
+    assert.equal(receipt.stdout_preview.includes('reasoning=high'), true);
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.equal(receipt.proof?.fallback_allowed, false);
+    assert.equal(receipt.proof?.model, 'gemini-3.5-flash');
+    assert.equal(receipt.proof?.reasoning_effort, 'high');
+    assert.equal(receipt.executor_envelope.selected_executor_is_default_quality_path, false);
+    assert.equal(receipt.executor_envelope.quality_equivalence_claim, false);
+  } finally {
+    fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('non-default stage executor policy fails closed without an executor binding ref', () => {
+  const fake = makeExecutable(
+    'antigravity',
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:should-not-run"]}\\n\'\n',
+  );
+  try {
+    assert.throws(
+      () => runAgentExecutor({
+        prompt: 'Build RCA HTML route without binding proof.',
+        cwd: repoRoot,
+        stage_attempt_executor_policy: {
+          executor_kind: 'antigravity_cli',
+          model: 'gemini-3.5-flash',
+          reasoning_effort: 'high',
+          provider: 'google',
+        },
+        env: { OPL_ANTIGRAVITY_CLI_BIN: fake.file, PATH: '' },
+      }),
+      (error) => error instanceof FrameworkContractError
+        && error.code === 'contract_shape_invalid'
+        && error.details?.executor_kind === 'antigravity_cli'
+        && error.details?.policy_kind === 'stage_attempt_executor_policy'
+        && error.details?.fallback_allowed === false,
+    );
+  } finally {
+    fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('explicit antigravity_cli execution produces a receipt without Codex equivalence claims', () => {
+  const fake = makeExecutable(
+    'antigravity',
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:antigravity-run"]}\\n\'\n',
+  );
+  try {
+    const receipt = runAgentExecutor({
+      executor_kind: 'antigravity_cli',
+      prompt: 'Run through Antigravity CLI.',
+      cwd: repoRoot,
+      env: { OPL_ANTIGRAVITY_CLI_BIN: fake.file, PATH: '' },
+    });
+
+    assert.equal(receipt.executor_kind, 'antigravity_cli');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:antigravity-run']);
+    assert.equal(receipt.proof?.fallback_allowed, false);
+    assert.equal(receipt.non_equivalence_notice, 'connectivity_lifecycle_receipt_audit_only');
+    assert.equal(receipt.executor_envelope.selected_executor_is_default_quality_path, false);
+    assert.equal(receipt.executor_envelope.reasoning_equivalence_claim, false);
+    assert.equal(receipt.executor_envelope.tool_semantics_equivalence_claim, false);
+    assert.equal(receipt.executor_envelope.resume_equivalence_claim, false);
+    assert.equal(receipt.executor_envelope.quality_equivalence_claim, false);
+  } finally {
+    fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('executor doctor reports Antigravity CLI binary readiness from explicit env path', () => {
+  const fake = makeExecutable('antigravity', '#!/usr/bin/env bash\nprintf "antigravity fake\\n"\n');
+  try {
+    const doctor = inspectAgentExecutor('antigravity_cli', {
+      env: {
+        OPL_ANTIGRAVITY_CLI_BIN: fake.file,
+        PATH: '',
+      },
+    });
+
+    assert.equal(doctor.executor_kind, 'antigravity_cli');
+    assert.equal(doctor.ready, true);
+    assert.equal(doctor.binary_path, fake.file);
+    assert.equal(doctor.resolution_source, 'OPL_ANTIGRAVITY_CLI_BIN');
+    assert.equal(doctor.fallback_allowed, false);
   } finally {
     fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
   }

@@ -10,15 +10,25 @@ import {
   runCodexCommand,
 } from './codex.ts';
 
-export const AGENT_EXECUTOR_KINDS = ['codex_cli', 'hermes_agent', 'claude_code'] as const;
+export const AGENT_EXECUTOR_KINDS = ['codex_cli', 'hermes_agent', 'claude_code', 'antigravity_cli'] as const;
 
 export type AgentExecutorKind = typeof AGENT_EXECUTOR_KINDS[number];
 
 type JsonRecord = Record<string, unknown>;
 
+export type StageAttemptExecutorPolicy = {
+  executor_kind?: AgentExecutorKind | string | null;
+  model?: string | null;
+  provider?: string | null;
+  reasoning_effort?: string | null;
+  executor_binding_ref?: string | null;
+};
+
 export type AgentExecutionRequest = {
   executor_kind?: AgentExecutorKind | string | null;
   stage_attempt_executor_kind?: AgentExecutorKind | string | null;
+  request_executor_policy?: StageAttemptExecutorPolicy | null;
+  stage_attempt_executor_policy?: StageAttemptExecutorPolicy | null;
   mode?: string | null;
   prompt: string;
   cwd?: string | null;
@@ -26,6 +36,7 @@ export type AgentExecutionRequest = {
   context_refs?: string[];
   model?: string | null;
   provider?: string | null;
+  reasoning_effort?: string | null;
   json?: boolean;
   domain_payload?: JsonRecord | null;
   env?: Record<string, string | undefined>;
@@ -66,6 +77,8 @@ export type AgentExecutorDoctor = {
 type ResolveInput = {
   explicitExecutor?: string | null;
   stageAttemptExecutor?: string | null;
+  requestExecutorPolicy?: StageAttemptExecutorPolicy | null;
+  stageAttemptExecutorPolicy?: StageAttemptExecutorPolicy | null;
   env?: Record<string, string | undefined>;
 };
 
@@ -99,8 +112,60 @@ export function resolveAgentExecutorKind(input: ResolveInput): AgentExecutorKind
   const env = envOf(input.env);
   return normalizeExecutorKind(text(input.explicitExecutor))
     ?? normalizeExecutorKind(text(input.stageAttemptExecutor))
+    ?? normalizeExecutorKind(text(input.requestExecutorPolicy?.executor_kind))
+    ?? normalizeExecutorKind(text(input.stageAttemptExecutorPolicy?.executor_kind))
     ?? normalizeExecutorKind(text(env.OPL_EXECUTOR_KIND))
     ?? 'codex_cli';
+}
+
+function resolvePolicyValue(
+  explicitValue: string | null | undefined,
+  requestPolicyValue: string | null | undefined,
+  stagePolicyValue: string | null | undefined,
+) {
+  return text(explicitValue) ?? text(requestPolicyValue) ?? text(stagePolicyValue);
+}
+
+function selectedPolicyFor(request: AgentExecutionRequest, executorKind: AgentExecutorKind) {
+  const requestPolicyKind = normalizeExecutorKind(text(request.request_executor_policy?.executor_kind));
+  if (requestPolicyKind === executorKind) {
+    return { policy: request.request_executor_policy, policy_kind: 'request_executor_policy' };
+  }
+  const stagePolicyKind = normalizeExecutorKind(text(request.stage_attempt_executor_policy?.executor_kind));
+  if (stagePolicyKind === executorKind) {
+    return { policy: request.stage_attempt_executor_policy, policy_kind: 'stage_attempt_executor_policy' };
+  }
+  return { policy: null, policy_kind: null };
+}
+
+function assertNonDefaultPolicyBinding(request: AgentExecutionRequest, executorKind: AgentExecutorKind) {
+  if (executorKind === 'codex_cli') {
+    return;
+  }
+  const selectedPolicy = selectedPolicyFor(request, executorKind);
+  if (!selectedPolicy.policy) {
+    return;
+  }
+  const executorBindingRef = text(selectedPolicy.policy.executor_binding_ref);
+  if (executorBindingRef) {
+    return;
+  }
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Non-default executor policy requires executor_binding_ref before launch.',
+    {
+      executor_kind: executorKind,
+      policy_kind: selectedPolicy.policy_kind,
+      required: ['executor_binding_ref'],
+      fallback_allowed: false,
+      authority_boundary: {
+        non_default_executor_can_be_default_path: false,
+        can_claim_quality_equivalence: false,
+        can_claim_tool_semantics_equivalence: false,
+        can_claim_resume_equivalence: false,
+      },
+    },
+  );
 }
 
 function executableCandidate(filePath: string | null) {
@@ -138,10 +203,18 @@ function resolveBinary(input: {
     return executableCandidate(envPath) ? { path: envPath, source: 'OPL_HERMES_AGENT_EXECUTOR_BIN' } : null;
   }
   const envPath = text(input.env.OPL_CLAUDE_CODE_BIN);
-  if (executableCandidate(envPath)) {
-    return { path: envPath, source: 'OPL_CLAUDE_CODE_BIN' };
+  if (input.kind === 'claude_code') {
+    if (executableCandidate(envPath)) {
+      return { path: envPath, source: 'OPL_CLAUDE_CODE_BIN' };
+    }
+    const pathCandidate = findExecutableInPath('claude', input.env);
+    return pathCandidate ? { path: pathCandidate, source: 'PATH' } : null;
   }
-  const pathCandidate = findExecutableInPath('claude', input.env);
+  const antigravityEnvPath = text(input.env.OPL_ANTIGRAVITY_CLI_BIN);
+  if (executableCandidate(antigravityEnvPath)) {
+    return { path: antigravityEnvPath, source: 'OPL_ANTIGRAVITY_CLI_BIN' };
+  }
+  const pathCandidate = findExecutableInPath('antigravity', input.env);
   return pathCandidate ? { path: pathCandidate, source: 'PATH' } : null;
 }
 
@@ -151,6 +224,9 @@ function capabilitiesFor(executorKind: AgentExecutorKind) {
   }
   if (executorKind === 'hermes_agent') {
     return ['full_agent_loop_receipt', 'tool_event_proof', 'session_id'];
+  }
+  if (executorKind === 'antigravity_cli') {
+    return ['cli_process_receipt', 'html_route_candidate', 'json_or_text_output'];
   }
   return ['cli_process_receipt', 'json_or_text_output'];
 }
@@ -353,11 +429,27 @@ function normalizeReceipt(value: unknown, fallback: {
 
 function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExecutorKind): AgentExecutionReceipt {
   const json = request.json ?? true;
+  const model = resolvePolicyValue(
+    request.model,
+    request.request_executor_policy?.model,
+    request.stage_attempt_executor_policy?.model,
+  );
+  const provider = resolvePolicyValue(
+    request.provider,
+    request.request_executor_policy?.provider,
+    request.stage_attempt_executor_policy?.provider,
+  );
+  const reasoningEffort = resolvePolicyValue(
+    request.reasoning_effort,
+    request.request_executor_policy?.reasoning_effort,
+    request.stage_attempt_executor_policy?.reasoning_effort,
+  );
   const args = buildCodexExecArgs(request.prompt, {
     cwd: request.cwd ?? undefined,
     json,
-    model: request.model ?? undefined,
-    provider: request.provider ?? undefined,
+    model: model ?? undefined,
+    provider: provider ?? undefined,
+    reasoningEffort: reasoningEffort ?? undefined,
   });
   const result = runCodexCommand(args);
   const parsed = json ? parseCodexExecOutput(result.stdout) : null;
@@ -380,6 +472,9 @@ function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExe
     proof: {
       command_preview: buildCodexCliPreview(args),
       default_executor: true,
+      model: model ?? null,
+      provider: provider ?? null,
+      reasoning_effort: reasoningEffort ?? null,
     },
   };
 }
@@ -390,6 +485,21 @@ function runExternalExecutor(request: AgentExecutionRequest, executorKind: Agent
   const cwd = request.cwd ? path.resolve(request.cwd) : process.cwd();
   const childEnv = { ...process.env, ...env };
   const timeout = normalizeTimeoutMs(request.timeout_ms);
+  const model = resolvePolicyValue(
+    request.model,
+    request.request_executor_policy?.model,
+    request.stage_attempt_executor_policy?.model,
+  );
+  const provider = resolvePolicyValue(
+    request.provider,
+    request.request_executor_policy?.provider,
+    request.stage_attempt_executor_policy?.provider,
+  );
+  const reasoningEffort = resolvePolicyValue(
+    request.reasoning_effort,
+    request.request_executor_policy?.reasoning_effort,
+    request.stage_attempt_executor_policy?.reasoning_effort,
+  );
 
   if (executorKind === 'hermes_agent') {
     const result = spawnSync(doctor.binary_path!, [], {
@@ -441,7 +551,15 @@ function runExternalExecutor(request: AgentExecutionRequest, executorKind: Agent
     };
   }
 
-  const result = spawnSync(doctor.binary_path!, [request.prompt], {
+  const externalArgs = executorKind === 'antigravity_cli'
+    ? [
+        request.prompt,
+        ...(model ? [model] : []),
+        ...(reasoningEffort ? [reasoningEffort] : []),
+        ...(provider ? [provider] : []),
+      ]
+    : [request.prompt];
+  const result = spawnSync(doctor.binary_path!, externalArgs, {
     cwd,
     env: childEnv,
     encoding: 'utf8',
@@ -473,6 +591,9 @@ function runExternalExecutor(request: AgentExecutionRequest, executorKind: Agent
       binary_path: doctor.binary_path,
       resolution_source: doctor.resolution_source,
       fallback_allowed: false,
+      model: model ?? null,
+      provider: provider ?? null,
+      reasoning_effort: reasoningEffort ?? null,
     },
   };
 }
@@ -481,6 +602,8 @@ export function runAgentExecutor(request: AgentExecutionRequest): AgentExecution
   const executorKind = resolveAgentExecutorKind({
     explicitExecutor: request.executor_kind ?? null,
     stageAttemptExecutor: request.stage_attempt_executor_kind ?? null,
+    requestExecutorPolicy: request.request_executor_policy,
+    stageAttemptExecutorPolicy: request.stage_attempt_executor_policy,
     env: request.env,
   });
   if (!request.prompt.trim()) {
@@ -488,6 +611,7 @@ export function runAgentExecutor(request: AgentExecutionRequest): AgentExecution
       required: ['prompt'],
     });
   }
+  assertNonDefaultPolicyBinding(request, executorKind);
   if (executorKind === 'codex_cli') {
     return runCodexExecutor(request, executorKind);
   }
@@ -526,6 +650,8 @@ export function runAgentExecutorRequestFile(requestPath: string) {
   const receipt = runAgentExecutor({
     executor_kind: text(payload.executor_kind) as AgentExecutorKind | null,
     stage_attempt_executor_kind: text(payload.stage_attempt_executor_kind) as AgentExecutorKind | null,
+    request_executor_policy: isRecord(payload.request_executor_policy) ? payload.request_executor_policy : null,
+    stage_attempt_executor_policy: isRecord(payload.stage_attempt_executor_policy) ? payload.stage_attempt_executor_policy : null,
     mode: text(payload.mode),
     prompt: text(payload.prompt) ?? '',
     cwd: text(payload.cwd),
@@ -535,6 +661,7 @@ export function runAgentExecutorRequestFile(requestPath: string) {
       : [],
     model: text(payload.model),
     provider: text(payload.provider),
+    reasoning_effort: text(payload.reasoning_effort),
     json: payload.json !== false,
     domain_payload: isRecord(payload.domain_payload) ? payload.domain_payload : null,
   });

@@ -621,13 +621,14 @@ export function buildInternalCommandSpecs(
     },
     exec: {
       usage:
-        'opl exec [--executor <codex_cli|hermes_agent|claude_code>] [--cd <path>] [--model <model>] [--provider <provider>] <prompt...>',
+        'opl exec [--executor <codex_cli|hermes_agent|claude_code|antigravity_cli>] [--cd <path>] [--model <model>] [--provider <provider>] [--reasoning-effort <effort>] <prompt...>',
       summary:
         'Run an OPL agent executor. Codex CLI remains the default; non-default executors require explicit selection.',
       examples: [
         'opl exec "Plan a medical grant proposal revision loop."',
         'opl exec --executor hermes_agent --cd /Users/gaofeng/workspace/med-autoscience "Run a receipt-gated research stage."',
         'opl exec --executor claude_code --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
+        'opl exec --executor antigravity_cli --model gemini-3.5-flash --reasoning-effort high "Build an RCA HTML route candidate."',
         'opl exec --model gpt-5.4 "Summarize current workspace status."',
       ],
       handler: (args) => {
@@ -643,18 +644,20 @@ export function buildInternalCommandSpecs(
             cwd: parsed.cwd,
             model: parsed.model,
             provider: parsed.provider,
+            reasoning_effort: parsed.reasoningEffort,
             json: true,
           }),
         };
       },
     },
     'executor doctor': {
-      usage: 'opl executor doctor [--executor <codex_cli|hermes_agent|claude_code>]',
+      usage: 'opl executor doctor [--executor <codex_cli|hermes_agent|claude_code|antigravity_cli>]',
       summary: 'Inspect one OPL agent executor adapter without running a task.',
       examples: [
         'opl executor doctor',
         'opl executor doctor --executor hermes_agent',
         'opl executor doctor --executor claude_code',
+        'opl executor doctor --executor antigravity_cli',
       ],
       handler: (args) => runAgentExecutorDoctor({
         executorKind: parseExecutorOption(args, commandSpecs['executor doctor']),

@@ -36,6 +36,7 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
     json,
     model: input.model,
     provider: input.provider,
+    reasoningEffort: input.reasoningEffort,
   });
 
   if (input.dryRun) {
@@ -52,6 +53,7 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
           workspace_path: input.workspacePath ?? null,
           model: input.model ?? null,
           provider: input.provider ?? null,
+          reasoning_effort: input.reasoningEffort ?? null,
         },
         codex: {
           command_preview: buildCodexCliPreview(codexArgs),
@@ -67,6 +69,7 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
     cwd: input.workspacePath,
     model: input.model,
     provider: input.provider,
+    reasoning_effort: input.reasoningEffort,
     json,
   });
   if (receipt.executor_kind === 'codex_cli') {
@@ -97,6 +100,7 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
         workspace_path: input.workspacePath ?? null,
         model: input.model ?? null,
         provider: input.provider ?? null,
+        reasoning_effort: input.reasoningEffort ?? null,
       },
       agent_execution_receipt: receipt,
       codex: {

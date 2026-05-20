@@ -12,9 +12,9 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 `contra
 
 - `OPL Framework` 是完整智能体开发/运行框架，持有 Codex-default activation、Temporal-backed provider、typed queue、stage attempt、receipt/projection、shared contracts/indexes、Agent Lab、generated surface、safe action shell 和跨仓治理。
 - `One Person Lab App` 是面向人的工作台，消费 framework/provider 状态和 domain-owned projection，展示任务、阶段、阻塞、source refs、artifact refs、memory refs、SLO、repair、workorder 和 owner-aware action。
-- `Foundry Agents` 当前包括 `MAS`、`MAG`、`RCA`。它们持有各自的 domain truth、quality/export verdict、artifact authority、memory body / accept-reject decision、owner receipt 和 direct app skill path。
+- `Foundry Agents` 当前包括 `MAS`、`MAG`、`RCA`。它们持有各自的 domain truth、quality/export verdict、artifact authority、memory body / accept-reject decision、owner receipt 和 direct app skill path；OPL 只消费 refs，不写入 body、truth、artifact、owner receipt 或 quality verdict。
 
-`Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent` 与 `claude_code` 同属显式非默认 executor adapter/backend，只能以 receipt/audit/fail-closed 证明连接，不承诺行为、质量、工具语义或 resume 等价。
+`Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent`、`claude_code` 与 `antigravity_cli` 同属显式非默认 executor adapter/backend，只能以 receipt/audit/fail-closed 证明连接，不承诺行为、质量、工具语义或 resume 等价。
 
 `MDS` 不进入 OPL 顶层 agent 列表。它只作为 MAS 显式声明的 source provenance、historical fixture、explicit archive import、backend audit、upstream intake 或 parity oracle reference。
 

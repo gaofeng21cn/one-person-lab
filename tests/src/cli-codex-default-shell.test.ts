@@ -362,6 +362,47 @@ exit 0
   }
 });
 
+test('explicit opl exec accepts reasoning effort and passes it to Codex config', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-explicit-exec-reasoning-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-reasoning"}\\n'
+  printf '{"item":{"type":"agent_message","text":"reasoning ok"}}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+
+  try {
+    const payload = runCli(
+      ['exec', '--executor', 'codex_cli', '--model', 'gpt-5.5', '--provider', 'openai', '--reasoning-effort', 'high', 'hello'],
+      {
+        OPL_CODEX_BIN: codexPath,
+      },
+    );
+
+    assert.equal(payload.agent_execution_receipt.executor_kind, 'codex_cli');
+    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
+      'exec',
+      '--skip-git-repo-check',
+      '--full-auto',
+      '--json',
+      '--model',
+      'gpt-5.5',
+      '--config',
+      'model_provider="openai"',
+      '--config',
+      'model_reasoning_effort="high"',
+      'hello',
+    ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
 test('installed opl launcher supports explicit non-default executor selection', () => {
   const fakeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-claude-'));
   const claudePath = path.join(fakeRoot, 'claude');

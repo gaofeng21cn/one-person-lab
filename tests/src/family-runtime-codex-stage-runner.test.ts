@@ -127,6 +127,93 @@ test('agent stage runner records a selected non-default executor receipt without
   }
 });
 
+test('agent stage runner applies stage-level executor policy for Antigravity HTML routes', async () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-antigravity-stage-runner-'));
+  const antigravityPath = path.join(fixtureRoot, 'antigravity');
+  fs.writeFileSync(
+    antigravityPath,
+    [
+      '#!/bin/sh',
+      'printf \'model=%s\\n\' "$2"',
+      'printf \'reasoning=%s\\n\' "$3"',
+      'printf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:stage-antigravity-html"]}\\n\'',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  try {
+    const receipt = await runAgentStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_antigravity_runner_test',
+        stage_id: 'rca-html-route',
+        stage_attempt_executor_policy: {
+          executor_kind: 'antigravity_cli',
+          model: 'gemini-3.5-flash',
+          reasoning_effort: 'high',
+          provider: 'google',
+          executor_binding_ref: 'executor-binding:antigravity/rca-html-route',
+        },
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+      },
+      stagePacketRef: 'packet:rca-html',
+      env: {
+        OPL_ANTIGRAVITY_CLI_BIN: antigravityPath,
+        PATH: '',
+      },
+    });
+
+    const agentReceipt = requireAgentStageRunnerReceipt(receipt);
+    assert.equal(agentReceipt.runner_status.executor_kind, 'antigravity_cli');
+    assert.equal(agentReceipt.agent_execution_receipt.executor_kind, 'antigravity_cli');
+    assert.equal(agentReceipt.agent_execution_receipt.stdout_preview.includes('model=gemini-3.5-flash'), true);
+    assert.equal(agentReceipt.agent_execution_receipt.stdout_preview.includes('reasoning=high'), true);
+    assert.equal(requireCloseoutRefs(agentReceipt.agent_execution_receipt)[0], 'receipt:stage-antigravity-html');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent stage runner blocks non-default stage policy without executor binding ref', async () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-antigravity-stage-runner-blocked-'));
+  const antigravityPath = path.join(fixtureRoot, 'antigravity');
+  fs.writeFileSync(
+    antigravityPath,
+    '#!/bin/sh\nprintf \'{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:should-not-run"]}\\n\'\n',
+    { mode: 0o755 },
+  );
+  try {
+    await assert.rejects(
+      () => runAgentStageRunner({
+        attempt: {
+          stage_attempt_id: 'sat_antigravity_missing_binding_test',
+          stage_id: 'rca-html-route',
+          stage_attempt_executor_policy: {
+            executor_kind: 'antigravity_cli',
+            model: 'gemini-3.5-flash',
+            reasoning_effort: 'high',
+            provider: 'google',
+          },
+          workspace_locator: {
+            workspace_root: fixtureRoot,
+          },
+        },
+        stagePacketRef: 'packet:rca-html',
+        env: {
+          OPL_ANTIGRAVITY_CLI_BIN: antigravityPath,
+          PATH: '',
+        },
+      }),
+      (error) => error instanceof FrameworkContractError
+        && error.code === 'contract_shape_invalid'
+        && error.details?.executor_kind === 'antigravity_cli'
+        && error.details?.policy_kind === 'stage_attempt_executor_policy',
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner ignores invalid timeout env values', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
