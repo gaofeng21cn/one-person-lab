@@ -2,6 +2,7 @@ import type { FrameworkContracts } from './types.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
+import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -123,7 +124,68 @@ function readOnlyExpectedRefs(route: JsonRecord) {
   ];
 }
 
-function readOnlyCloseoutItem(route: JsonRecord, index: number) {
+function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
+  const actionKind = stringValue(route.action_kind) ?? '';
+  if (actionKind.startsWith('provider_scheduler_')) {
+    const summary = record(drilldown.summary);
+    const cadenceSatisfied = stringValue(summary.provider_slo_cadence_window_status)
+      === 'window_cadence_satisfied';
+    const capabilitySatisfied = stringValue(summary.provider_slo_capability_status)
+      === 'capability_slo_satisfied';
+    const observedReceiptCount = typeof summary.provider_slo_cadence_window_observed_receipt_count === 'number'
+      ? summary.provider_slo_cadence_window_observed_receipt_count
+      : 0;
+    if (!cadenceSatisfied || !capabilitySatisfied || observedReceiptCount <= 0) {
+      return null;
+    }
+    return {
+      status: 'closed_by_receipt_ref',
+      receipt_ref: 'opl://family-runtime/provider-slo/cadence-window/current',
+      receipt_refs: [
+        'opl://family-runtime/provider-slo/cadence-window/current',
+        'opl://family-runtime/provider-slo/capability/current',
+      ],
+      freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/summary/provider_slo_cadence_window_status',
+      closure_reason:
+        'Temporal provider cadence and capability SLO receipts are satisfied in the OPL-owned provider read model.',
+    };
+  }
+
+  if (actionKind === 'legacy_cleanup_apply' || actionKind === 'legacy_cleanup_verify') {
+    const targetDomainId = stringValue(route.domain_id);
+    if (!targetDomainId) {
+      return null;
+    }
+    const args = stringList(route.opl_cli_args);
+    const sourceRefIndex = args.indexOf('--source-ref');
+    const sourceRef = sourceRefIndex >= 0 ? stringValue(args[sourceRefIndex + 1]) : null;
+    const receiptIndex = readFamilyRuntimeLifecycleApplyReceipts({
+      target_domain_id: targetDomainId,
+      source_ref: sourceRef ?? undefined,
+    });
+    const receipts = recordList(receiptIndex.receipts).filter((receipt) =>
+      stringValue(receipt.status) === 'applied'
+    );
+    if (receipts.length === 0) {
+      return null;
+    }
+    const receiptRefs = receipts
+      .map((receipt) => stringValue(receipt.receipt_ref))
+      .filter((ref): ref is string => Boolean(ref));
+    return {
+      status: 'closed_by_receipt_ref',
+      receipt_ref: receiptRefs[0] ?? null,
+      receipt_refs: receiptRefs,
+      freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/lifecycle_ledger_refs',
+      closure_reason:
+        'OPL refs-only lifecycle cleanup ledger has an applied receipt for this legacy cleanup plan.',
+    };
+  }
+
+  return null;
+}
+
+function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonRecord) {
   const actionId = stringValue(route.action_id) ?? `route:${index + 1}`;
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   const typedBlockerRefs = stringList(route.typed_blocker_refs);
@@ -131,6 +193,11 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number) {
     ...stringList(route.freshness_refs),
     ...stringList(route.monitor_refs),
   ];
+  const closure = refsOnlyClosureReceipt(route, drilldown);
+  const itemStatus = stringValue(closure?.status) ?? 'open_safe_action_request_route_available';
+  const closureReceiptRef = stringValue(closure?.receipt_ref);
+  const closureReceiptRefs = stringList(closure?.receipt_refs);
+  const closureFreshnessRef = stringValue(closure?.freshness_ref);
   return {
     item_id: `production-closeout:${actionId}`,
     action_id: actionId,
@@ -142,20 +209,26 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number) {
     mode: actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
       ? 'verify'
       : 'request_or_apply_via_safe_action',
-    status: 'open_safe_action_request_route_available',
+    status: itemStatus,
     closeout_item_is_completion_claim: false,
     route_status: stringValue(route.route_status) ?? 'request_route_available',
     route_semantics: 'open_safe_action_request_apply_verify_route',
-    receipt_ref: null,
-    receipt_refs: [],
+    receipt_ref: closureReceiptRef,
+    receipt_refs: closureReceiptRefs,
     typed_blocker_ref: typedBlockerRefs[0] ?? null,
     typed_blocker_refs: typedBlockerRefs,
+    closeout_status_detail: itemStatus === 'closed_by_receipt_ref'
+      ? readOnlyClaimScope(route) === 'provider_scheduler_cadence'
+        ? 'closed_by_opl_provider_slo_receipt'
+        : 'closed_by_opl_cleanup_ledger_receipt'
+      : null,
     replay_ref: stringValue(route.ref)
       ?? stringValue(route.action_ref)
       ?? `opl runtime action execute --action ${actionId}`,
-    freshness_ref: freshnessRefs[0] ?? freshnessRef(route),
+    freshness_ref: freshnessRefs[0] ?? closureFreshnessRef ?? freshnessRef(route),
     freshness_refs: freshnessRefs,
     expected_refs: readOnlyExpectedRefs(route),
+    closure_reason: stringValue(closure?.closure_reason),
     blocked_reason: stringValue(route.blocked_reason),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
@@ -217,7 +290,7 @@ export async function runFamilyRuntimeProductionCloseout(
   const routes = recordList(bridge.safe_action_routes).filter((route) =>
     readOnlyRouteMatchesDefaults(route, input)
   );
-  const closeoutItems = routes.map(readOnlyCloseoutItem);
+  const closeoutItems = routes.map((route, index) => readOnlyCloseoutItem(route, index, drilldown));
   const openItems = closeoutItems.filter((item) =>
     item.status === 'open_safe_action_request_route_available'
   );
