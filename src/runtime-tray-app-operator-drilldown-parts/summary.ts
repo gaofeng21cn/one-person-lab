@@ -172,6 +172,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     stage_production_evidence_obligation_open_count: numberValue(stageProductionSummary.evidence_obligation_open_count),
     stage_production_evidence_obligation_blocked_by_domain_typed_blocker_count: numberValue(stageProductionSummary.evidence_obligation_blocked_by_domain_typed_blocker_count),
     stage_production_attempt_request_route_count: countBy(input.actionRefs, (ref) => ref.action_kind === 'stage_production_attempt_request'),
+    stage_production_evidence_receipt_action_route_count: countBy(input.actionRefs, (ref) => (
+      ref.action_kind === 'stage_production_evidence_receipt_record'
+      || ref.action_kind === 'stage_production_evidence_receipt_verify'
+    )),
     external_evidence_action_route_count: countBy(input.actionRefs, (ref) => (
       ref.action_kind === 'external_evidence_receipt_record'
       || ref.action_kind === 'external_evidence_receipt_verify'

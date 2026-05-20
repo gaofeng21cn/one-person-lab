@@ -137,6 +137,7 @@ User / Codex / CLI / One Person Lab App
 ### Workbench 与 projection
 
 - OPL App/workbench 应提供 route graph、stage attempt drilldown、running/recent items、review/repair queue、artifact gallery、package/export lifecycle、memory refs、functional privatization audit、quality/readiness projection、provider scheduler cadence、provider SLO/repair 和 owner-aware action routing。
+- OPL 应把 admitted stage 的 expected receipt / monitor freshness 缺口投影成 body-free refs-only evidence request，并提供 `record` / `verify` safe action route。该 route 只记录或验证 domain/App/live evidence refs、typed blocker refs、no-regression refs 或 owner-chain refs，不执行 domain action、不签 domain owner receipt、不声明 stage complete 或 domain ready。
 - App 只能展示 refs、receipt、blocked reason、next owner 和 safe action；domain verdict 必须回到 domain owner surface。
 
 ## 通用能力上收边界
@@ -267,7 +268,7 @@ OPL/provider 保存 attempt metadata、workflow id、provider receipt、queue it
 
 - OPL generated/hosted surfaces 成为 MAS/MAG/RCA 的生产默认 wrapper/caller；domain repo 只保留 domain handler、refs-only adapter、authority function 或 diagnostic cleanup。
 - Temporal-backed provider 能长期承载 stage attempt，并证明 restart/re-query、signal、retry/dead-letter、human gate/resume 和 no-forbidden-write。
-- App/workbench 能按 owner drill down provider readiness、stage attempt、route graph、source refs、artifact refs、memory refs、quality/readiness、review/repair、SLO 和 safe actions。
+- App/workbench 能按 owner drill down provider readiness、stage attempt、route graph、source refs、artifact refs、memory refs、quality/readiness、review/repair、SLO、expected receipt / monitor freshness evidence 和 safe actions。
 - Memory / artifact / lifecycle transport 在真实 workspace 中只传 refs 和 receipt；body 与 verdict 留在 domain。
 - MAS/MAG/RCA 的 private platform residue 完成 OPL 上收、generated surface 替换、refs-only 收薄或 tombstone。
 - MAS/MAG/RCA 的必要私有函数完成逐项 AI-first 审计；适合 AI 评估、创作、评审或路线判断的内容都由 stage output 持有，代码不以函数调用替代 OPL stage。

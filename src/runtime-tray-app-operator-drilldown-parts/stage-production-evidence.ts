@@ -8,8 +8,15 @@ import {
 import {
   buildFamilyStageProofBundle,
 } from '../family-stage-proof-bundle.ts';
+import {
+  listExternalEvidenceReceipts,
+} from '../external-evidence-ledger.ts';
 import type { FamilyStageSurfaceRef } from '../family-stage-control-plane-contract.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  familyRuntimeCommandDomainId,
+  stageProductionEvidenceRequestId,
+} from './stage-production-evidence-route-common.ts';
 
 type StageProductionEvidenceStatus =
   | 'production_caller_evidence_observed'
@@ -166,6 +173,39 @@ function attemptObservedRefs(attempt: JsonRecord) {
   ]);
 }
 
+function stageEvidenceReceipts(input: {
+  targetDomainId: string | null;
+  projectId: string | null;
+  stageId: string;
+}) {
+  const commandDomainId = familyRuntimeCommandDomainId(input.targetDomainId, input.projectId);
+  if (!commandDomainId) {
+    return [];
+  }
+  return listExternalEvidenceReceipts({
+    domain_id: commandDomainId,
+    request_id: stageProductionEvidenceRequestId(commandDomainId, input.stageId),
+  });
+}
+
+function receiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .flatMap((receipt) => [
+    receipt.receipt_ref,
+    ...receipt.receipt_refs,
+    ...receipt.evidence_refs,
+    ...receipt.no_regression_refs,
+    ...receipt.owner_chain_refs,
+  ]));
+}
+
+function typedBlockerRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .flatMap((receipt) => receipt.typed_blocker_refs));
+}
+
 function attemptExecutorKind(attempt: JsonRecord) {
   return stringValue(attempt.executor_kind)
     ?? stringValue(attemptLaunchInvocation(attempt).selected_executor_kind);
@@ -299,20 +339,41 @@ function stageProductionEvidence(
 
   const stages = plane.stages.map((stage) => {
     const stageAttempts = attemptsByStage.get(stage.stage_id) ?? [];
+    const externalStageEvidenceReceipts = stageEvidenceReceipts({
+      targetDomainId: plane.target_domain_id,
+      projectId: project.project_id,
+      stageId: stage.stage_id,
+    });
+    const stageEvidenceReceiptStatus = externalStageEvidenceReceipts.some((receipt) =>
+      receipt.receipt_status === 'verified'
+    )
+      ? 'verified'
+      : externalStageEvidenceReceipts.length > 0
+        ? 'recorded'
+        : 'missing';
+    const externalStageEvidenceRefs = receiptRefsForStageEvidence(externalStageEvidenceReceipts);
+    const externalStageTypedBlockerRefs = typedBlockerRefsForStageEvidence(externalStageEvidenceReceipts);
     const observedRefs = uniqueStrings(stageAttempts.flatMap(attemptObservedRefs));
+    const allObservedRefs = uniqueStrings([
+      ...observedRefs,
+      ...externalStageEvidenceRefs,
+    ]);
     const stageAttemptRefs = uniqueStrings(stageAttempts
       .map(attemptRef)
       .filter((ref): ref is string => Boolean(ref)));
     const stageAttemptStatuses = uniqueStrings(stageAttempts
       .map((attempt) => stringValue(attempt.status))
       .filter((status): status is string => Boolean(status)));
-    const domainOwnedTypedBlockerRefs = uniqueStrings(stageAttempts.flatMap(attemptDomainTypedBlockerRefs));
+    const domainOwnedTypedBlockerRefs = uniqueStrings([
+      ...stageAttempts.flatMap(attemptDomainTypedBlockerRefs),
+      ...externalStageTypedBlockerRefs,
+    ]);
     const reviewerReceiptRefs = uniqueStrings(stageAttempts.flatMap(attemptReviewerReceiptRefs));
     const gateReceiptRefs = uniqueStrings(stageAttempts.flatMap(attemptGateReceiptRefs));
     const domainOwnedTypedBlockerCount = stageAttempts.reduce(
       (count, attempt) => count + attemptDomainTypedBlockerCount(attempt),
       0,
-    );
+    ) + externalStageTypedBlockerRefs.length;
     const launchInvocations = stageAttempts
       .map(attemptLaunchInvocation)
       .filter((invocation) => Object.keys(invocation).length > 0);
@@ -342,10 +403,10 @@ function stageProductionEvidence(
       ...refValues(cohortStage?.metric_refs),
       ...refValues(cohortStage?.dashboard_metric_refs),
     ]);
-    const observedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => observedRefs.includes(ref));
-    const unobservedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => !observedRefs.includes(ref));
-    const observedMonitorFreshnessRefs = monitorRefs.filter((ref) => observedRefs.includes(ref));
-    const unobservedMonitorFreshnessRefs = monitorRefs.filter((ref) => !observedRefs.includes(ref));
+    const observedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => allObservedRefs.includes(ref));
+    const unobservedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => !allObservedRefs.includes(ref));
+    const observedMonitorFreshnessRefs = monitorRefs.filter((ref) => allObservedRefs.includes(ref));
+    const unobservedMonitorFreshnessRefs = monitorRefs.filter((ref) => !allObservedRefs.includes(ref));
     const triggerRefs = refValues(cohortStage?.trigger_refs);
     const cohortQueryRefs = refValues(cohortStage?.cohort_query_refs);
     const missingEvidence = [
@@ -355,12 +416,12 @@ function stageProductionEvidence(
         ? 'expected_receipt_ref_not_observed'
         : null,
       sourceScopeRefs.length > 0
-        && !sourceScopeRefs.some((ref) => observedRefs.includes(ref))
+        && !sourceScopeRefs.some((ref) => allObservedRefs.includes(ref))
         ? 'source_scope_ref_not_observed'
         : null,
       runtimeRequirement?.required === true
         && runtimeRequirement.runtime_event_refs.length > 0
-        && !runtimeRequirement.runtime_event_refs.some((ref) => observedRefs.includes(ref))
+        && !runtimeRequirement.runtime_event_refs.some((ref) => allObservedRefs.includes(ref))
         ? 'runtime_event_ref_not_observed'
         : null,
       unobservedMonitorFreshnessRefs.length > 0
@@ -437,6 +498,11 @@ function stageProductionEvidence(
       expected_receipt_refs: expectedReceiptRefs,
       reviewer_receipt_refs: reviewerReceiptRefs,
       gate_receipt_refs: gateReceiptRefs,
+      stage_evidence_receipt_status: stageEvidenceReceiptStatus,
+      stage_evidence_receipt_refs: uniqueStrings(externalStageEvidenceReceipts.map((receipt) => receipt.receipt_ref)),
+      verified_stage_evidence_receipt_refs: uniqueStrings(externalStageEvidenceReceipts
+        .filter((receipt) => receipt.receipt_status === 'verified')
+        .map((receipt) => receipt.receipt_ref)),
       independent_reviewer_gate_policy: {
         surface_kind: 'opl_stage_independent_reviewer_gate_policy',
         reviewer_attempt_must_be_separate_from_execution_attempt: true,
@@ -449,7 +515,7 @@ function stageProductionEvidence(
       expected_receipt_declared: expectedReceiptRefs.length > 0,
       observed_expected_receipt_refs: observedExpectedReceiptRefs,
       unobserved_expected_receipt_refs: unobservedExpectedReceiptRefs,
-      observed_evidence_refs: observedRefs,
+      observed_evidence_refs: allObservedRefs,
       monitor_freshness_refs: observedMonitorFreshnessRefs,
       unobserved_monitor_refs: unobservedMonitorFreshnessRefs,
       domain_owned_typed_blocker_refs: domainOwnedTypedBlockerRefs,

@@ -1,4 +1,9 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  familyRuntimeCommandDomainId,
+  stageProductionEvidenceRequestId,
+  stageProductionEvidenceRequestPackId,
+} from './stage-production-evidence-route-common.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -68,26 +73,6 @@ function attemptIdFromRef(ref: string | null) {
   }
   const prefix = 'opl://stage_attempts/';
   return ref.startsWith(prefix) ? ref.slice(prefix.length) : null;
-}
-
-function familyRuntimeCommandDomainId(domainId: string | null, projectId: string | null): string | null {
-  const normalizedValues = [domainId, projectId].flatMap((value) => {
-    if (!value) {
-      return [];
-    }
-    const normalized = value.trim().toLowerCase().replaceAll('_', '-');
-    return [normalized, normalized.replaceAll('-', '')];
-  });
-  if (normalizedValues.some((value) => value === 'medautoscience' || value === 'med-autoscience' || value === 'mas')) {
-    return 'medautoscience';
-  }
-  if (normalizedValues.some((value) => value === 'medautogrant' || value === 'med-autogrant' || value === 'mag')) {
-    return 'medautogrant';
-  }
-  if (normalizedValues.some((value) => value === 'redcube' || value === 'redcube-ai' || value === 'redcubeai' || value === 'rca')) {
-    return 'redcube';
-  }
-  return null;
 }
 
 export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonRecord) {
@@ -316,5 +301,131 @@ export function buildStageProductionAttemptStartRoutes(stageProductionEvidence: 
         },
       };
     })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));
+}
+
+function commandRef(args: string[]) {
+  return `opl ${args.map((arg) => (
+    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
+  )).join(' ')}`;
+}
+
+function hasOpenStageEvidenceObligation(stage: JsonRecord) {
+  return recordList(stage.evidence_obligations).some((obligation) => (
+    (stringValue(obligation.obligation_id) === 'expected_receipt'
+      || stringValue(obligation.obligation_id) === 'monitor_freshness')
+    && stringValue(obligation.status) === 'open'
+  ));
+}
+
+function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
+  const commandDomainId = familyRuntimeCommandDomainId(
+    stringValue(stage.target_domain_id),
+    stringValue(stage.project_id),
+  );
+  const stageId = stringValue(stage.stage_id);
+  if (!commandDomainId || !stageId) {
+    return null;
+  }
+  const requestId = stageProductionEvidenceRequestId(commandDomainId, stageId);
+  const requestPackId = stageProductionEvidenceRequestPackId(commandDomainId);
+  const sourceRef = stringValue(stage.ref)
+    ?? `/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/${commandDomainId}/${stageId}`;
+  const args = [
+    'agents',
+    'evidence',
+    'apply',
+    '--domain',
+    commandDomainId,
+    '--request-id',
+    requestId,
+    ...(mode === 'verify' ? ['--mode', 'verify'] : []),
+    '--request-pack-id',
+    requestPackId,
+    '--source-ref',
+    sourceRef,
+  ];
+  return {
+    ref: commandRef(args),
+    opl_cli_args: args,
+    role: 'operator_action_route',
+    action_id: `stage-production-evidence:${commandDomainId}:${stageId}:${mode}`,
+    action_kind: mode === 'verify'
+      ? 'stage_production_evidence_receipt_verify'
+      : 'stage_production_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    route_status: mode === 'verify' ? 'verify_route_available' : 'record_route_available',
+    request_scope: 'opl_owned_stage_evidence_refs_only_receipt',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    route_closure_policy:
+      'records_or_verifies_refs_only_stage_expected_receipt_and_monitor_freshness_without_domain_action_or_ready_claim',
+    creates_domain_action: false,
+    creates_owner_receipt: false,
+    owner_receipt_refs: [],
+    closes_expected_receipt_refs: mode === 'verify',
+    closes_monitor_freshness: mode === 'verify',
+    stage_attempt_id: null,
+    domain_id: commandDomainId,
+    target_domain_id: stringValue(stage.target_domain_id),
+    project_id: stringValue(stage.project_id),
+    stage_id: stageId,
+    request_id: requestId,
+    request_pack_id: requestPackId,
+    evidence_route_kind: 'stage_production_evidence',
+    evidence_source_ref: sourceRef,
+    missing_production_evidence: stringList(stage.missing_production_evidence),
+    expected_receipt_refs: stringList(stage.expected_receipt_refs),
+    unobserved_expected_receipt_refs: stringList(stage.unobserved_expected_receipt_refs),
+    monitor_refs: stringList(stage.monitor_refs),
+    unobserved_monitor_refs: stringList(stage.unobserved_monitor_refs),
+    required_operator_payload_refs: mode === 'verify' ? [] : [
+      'domain_receipt_refs',
+      'evidence_refs',
+      'typed_blocker_refs',
+      'no_regression_refs',
+      'owner_chain_refs',
+    ],
+    required_evidence_refs: [
+      ...stringList(stage.unobserved_expected_receipt_refs),
+      ...stringList(stage.unobserved_monitor_refs),
+    ],
+    required_return_shapes: [
+      'domain_owner_receipt_ref',
+      'monitor_freshness_ref',
+      'domain_typed_blocker_ref',
+      'no_regression_ref',
+    ],
+    required_receipt_shapes: [
+      'stage_expected_receipt_ref',
+      'stage_monitor_freshness_ref',
+    ],
+    can_execute: false as const,
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      can_record_stage_expected_receipt_refs: true,
+      can_record_stage_monitor_freshness_refs: true,
+      creates_domain_action: false,
+      creates_owner_receipt: false,
+      closes_domain_ready: false,
+    },
+  };
+}
+
+export function buildStageProductionEvidenceReceiptRoutes(stageProductionEvidence: JsonRecord) {
+  return uniqueRefs(recordList(stageProductionEvidence.stages)
+    .filter((stage) => (
+      stringValue(stage.admission_status) === 'admitted'
+      && hasOpenStageEvidenceObligation(stage)
+      && (
+        stringList(stage.unobserved_expected_receipt_refs).length > 0
+        || stringList(stage.unobserved_monitor_refs).length > 0
+      )
+    ))
+    .map((stage) => stageEvidenceRoute(
+      stage,
+      stringValue(stage.stage_evidence_receipt_status) === 'recorded' ? 'verify' : 'record',
+    ))
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));
 }

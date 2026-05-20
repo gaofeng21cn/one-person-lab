@@ -171,7 +171,11 @@ function externalEvidenceApplyArgs(
     });
   }
   const actionKind = stringValue(route.action_kind);
-  if (actionKind === 'external_evidence_receipt_verify' || actionKind === 'evidence_gate_receipt_verify') {
+  if (
+    actionKind === 'external_evidence_receipt_verify'
+    || actionKind === 'evidence_gate_receipt_verify'
+    || actionKind === 'stage_production_evidence_receipt_verify'
+  ) {
     return args;
   }
   const evidenceRefs = refsFromPayload(payload, ['evidence_refs', 'evidence_ref']);
@@ -279,6 +283,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_record'
     || actionKind === 'evidence_gate_receipt_verify'
+    || actionKind === 'stage_production_evidence_receipt_record'
+    || actionKind === 'stage_production_evidence_receipt_verify'
   ) {
     return {
       executionKind: 'opl_cli_external_evidence_apply',
@@ -315,6 +321,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'external_evidence_receipt_verify',
       'evidence_gate_receipt_record',
       'evidence_gate_receipt_verify',
+      'stage_production_evidence_receipt_record',
+      'stage_production_evidence_receipt_verify',
       'provider_scheduler_status',
       'provider_scheduler_install',
       'provider_scheduler_trigger',
@@ -376,7 +384,9 @@ async function executeRoute(
     const externalEvidenceAction = actionKind === 'external_evidence_receipt_record'
       || actionKind === 'external_evidence_receipt_verify'
       || actionKind === 'evidence_gate_receipt_record'
-      || actionKind === 'evidence_gate_receipt_verify';
+      || actionKind === 'evidence_gate_receipt_verify'
+      || actionKind === 'stage_production_evidence_receipt_record'
+      || actionKind === 'stage_production_evidence_receipt_verify';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
     const { executionKind, runtimeArgs } = externalEvidenceAction
