@@ -14,6 +14,20 @@ const OMA_RELATIVE_CONTRACT_REFS = {
   scaleoutEvidence: 'contracts/real_target_agent_scaleout_evidence.json',
 } as const;
 
+const PATCH_LOOP_REF_FIELDS = [
+  'blocked_suite_result_ref',
+  'developer_patch_work_order_ref',
+  'patch_traceability_matrix_ref',
+  'target_repo_verification_refs',
+  'target_runtime_read_model_consumption_ref',
+  'workspace_environment_proof_ref',
+  'no_forbidden_write_proof_ref',
+  'target_owner_receipt_or_typed_blocker_ref',
+  'patch_absorption_ref',
+  'worktree_cleanup_ref',
+  'agent_lab_re_evaluation_ref',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -121,6 +135,78 @@ function scaleoutTargetRefs(scaleoutEvidence: JsonRecord) {
   }));
 }
 
+function firstString(values: unknown) {
+  return stringList(values)[0] ?? null;
+}
+
+function patchLoopCloseoutTargetRefs(scaleoutEvidence: JsonRecord) {
+  const closeout = record(scaleoutEvidence.multi_target_scaleout_closeout);
+  return recordList(closeout.target_agents).map((target) => {
+    const domainId = optionalString(target.domain_id) ?? 'target-agent';
+    const ownerReceiptOrBlocker = firstString(target.target_agent_owner_receipt_refs)
+      ?? firstString(target.typed_blocker_refs)
+      ?? `typed-blocker:opl-meta-agent/${domainId}/owner-receipt-or-blocker-missing`;
+    const cleanupRef = firstString(target.cleanup_closeout_refs)
+      ?? `worktree-cleanup:${domainId}/not-recorded`;
+    const agentLabResultRef = firstString(target.agent_lab_result_refs)
+      ?? `agent-lab-run-result:opl-meta-agent/${domainId}/not-recorded`;
+    const noForbiddenWriteRef = firstString(target.no_forbidden_write_proof_refs)
+      ?? `no-forbidden-write:${domainId}/not-recorded`;
+
+    return {
+      domain_id: domainId,
+      status: ownerReceiptOrBlocker.startsWith('typed-blocker:')
+        ? 'owner_typed_blocker_recorded'
+        : 'owner_receipt_recorded',
+      refs: {
+        blocked_suite_result_ref: agentLabResultRef,
+        developer_patch_work_order_ref: optionalString(target.developer_patch_work_order_ref)
+          ?? `developer-patch-work-order:opl-meta-agent/${domainId}/agent-evidence`,
+        patch_traceability_matrix_ref: optionalString(target.patch_traceability_matrix_ref)
+          ?? `patch-traceability:opl-meta-agent/${domainId}/agent-evidence`,
+        target_repo_verification_refs: stringList(target.target_repo_verification_refs).length > 0
+          ? stringList(target.target_repo_verification_refs)
+          : [`target-verification:${domainId}/agent-evidence`],
+        target_runtime_read_model_consumption_ref:
+          optionalString(target.target_runtime_read_model_consumption_ref)
+            ?? `target-runtime-read-model:${domainId}/agent-evidence`,
+        workspace_environment_proof_ref: optionalString(target.workspace_environment_proof_ref)
+          ?? `workspace-environment-proof:${domainId}/agent-evidence`,
+        no_forbidden_write_proof_ref: noForbiddenWriteRef,
+        target_owner_receipt_or_typed_blocker_ref: ownerReceiptOrBlocker,
+        patch_absorption_ref: optionalString(target.patch_absorption_ref)
+          ?? `patch-absorption:${domainId}/agent-evidence`,
+        worktree_cleanup_ref: cleanupRef,
+        agent_lab_re_evaluation_ref: optionalString(target.agent_lab_re_evaluation_ref)
+          ?? agentLabResultRef,
+      },
+    };
+  });
+}
+
+function flattenPatchLoopRefs(targets: ReturnType<typeof patchLoopCloseoutTargetRefs>) {
+  const refs = targets.flatMap((target) =>
+    Object.entries(target.refs).flatMap(([role, value]) => {
+      const values = Array.isArray(value) ? value : [value];
+      return values.map((ref) => ({
+        ref,
+        role,
+        domain_id: target.domain_id,
+        status: target.status,
+      }));
+    })
+  );
+  const seen = new Set<string>();
+  return refs.filter((entry) => {
+    const key = `${entry.domain_id}:${entry.role}:${entry.ref}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
 function sectionById(appProjection: JsonRecord, sectionId: string) {
   return recordList(appProjection.workbench_sections).find((section) =>
     optionalString(section.section_id) === sectionId
@@ -140,6 +226,7 @@ function buildOmaSections(payloads: {
   const discoveryReceipt = record(registration.discovery_receipt);
   const drilldownReceipt = record(appProjection.drilldown_readiness_receipt);
   const scaleoutCloseout = record(scaleoutEvidence.multi_target_scaleout_closeout);
+  const patchLoopTargets = patchLoopCloseoutTargetRefs(scaleoutEvidence);
 
   return {
     target_brief: {
@@ -208,6 +295,14 @@ function buildOmaSections(payloads: {
         ...scaleoutTargetRefs(scaleoutEvidence),
       ],
     },
+    patch_loop_closeout: {
+      surface_kind: 'opl_meta_agent_patch_loop_closeout_read_model',
+      status: patchLoopTargets.length > 0 ? 'refs_only_patch_loop_refs_projected' : 'not_observed',
+      required_ref_fields: [...PATCH_LOOP_REF_FIELDS],
+      targets: patchLoopTargets,
+      refs: flattenPatchLoopRefs(patchLoopTargets),
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
   };
 }
 
@@ -257,6 +352,8 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
   const status = resolvedCount === files.length ? 'resolved' : 'blocked';
   const omaSections = buildOmaSections({ registration, appProjection, scaleoutEvidence });
   const scaleoutCloseout = record(scaleoutEvidence.multi_target_scaleout_closeout);
+  const patchLoopCloseout = record(omaSections.patch_loop_closeout);
+  const patchLoopTargets = recordList(patchLoopCloseout.targets);
 
   return {
     surface_kind: 'opl_meta_agent_registry_extension',
@@ -275,6 +372,12 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
       app_workbench_section_count: recordList(appProjection.workbench_sections).length,
       scaleout_target_count: recordList(scaleoutCloseout.target_agents).length,
       scaleout_status: optionalString(scaleoutCloseout.status) ?? optionalString(scaleoutEvidence.evidence_status),
+      patch_loop_ref_count: recordList(patchLoopCloseout.refs).length,
+      patch_loop_target_count: patchLoopTargets.length,
+      patch_loop_closed_count: patchLoopTargets.filter((target) =>
+        optionalString(target.status) === 'owner_receipt_recorded'
+        || optionalString(target.status) === 'owner_typed_blocker_recorded'
+      ).length,
       discovery_receipt_status: optionalString(record(registration.discovery_receipt).status),
       app_drilldown_receipt_status: optionalString(record(appProjection.drilldown_readiness_receipt).status),
       claims_domain_ready: false,
