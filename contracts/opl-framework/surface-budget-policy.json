@@ -1,0 +1,122 @@
+{
+  "contract_kind": "opl_surface_budget_policy.v1",
+  "owner": "one-person-lab",
+  "state": "active_policy",
+  "purpose": "Keep OPL AI-first and contract-light by limiting default surfaces to the Minimal Trust Kernel and attention entries.",
+  "surface_model": {
+    "minimal_trust_kernel": {
+      "role": "contract_floor",
+      "covers": [
+        "launch_safety",
+        "authority_boundary",
+        "owner_boundary",
+        "selected_executor_binding",
+        "scope_refs",
+        "runtime_event_refs",
+        "receipt_refs",
+        "replay_audit_refs",
+        "route_back_refs"
+      ],
+      "does_not_cover": [
+        "ai_reasoning_strategy",
+        "stage_internal_planning",
+        "domain_quality_verdict",
+        "artifact_authority",
+        "production_ready_verdict",
+        "fixed_workflow_compilation"
+      ]
+    },
+    "attention_entry": {
+      "role": "default_operator_app_entry",
+      "payload_style": "summary_first",
+      "default_stage_command": "opl stages readiness --domain <domain>"
+    },
+    "diagnostic_lens": {
+      "role": "explicit_drilldown_only",
+      "author_required_by_default": false,
+      "default_help_surface": false,
+      "default_doc_entry": false,
+      "can_block_launch_by_default": false,
+      "folded_into_attention_entry": true
+    },
+    "history_reference": {
+      "role": "provenance_only",
+      "can_define_current_runtime": false,
+      "can_define_default_surface": false
+    }
+  },
+  "default_surface_allowed_reasons": [
+    "launch_safety",
+    "authority_boundary",
+    "evidence_replay_audit_route_back",
+    "repeated_app_runtime_consumption"
+  ],
+  "default_surface_denied_reasons": [
+    "ai_reasoning_strategy",
+    "stage_internal_planning",
+    "domain_quality_claim",
+    "artifact_authority_claim",
+    "workflow_shape_preference",
+    "paper_or_framework_learning_point_only",
+    "single_consumer_diagnostic_only"
+  ],
+  "default_doc_entry_budget": {
+    "stage_default_commands": [
+      "opl stages readiness --domain <domain>"
+    ],
+    "stage_diagnostic_commands": [
+      "opl stages graph --domain <domain>",
+      "opl stages proof-bundle --domain <domain>",
+      "opl stages assumptions --domain <domain>",
+      "opl stages cohort-loop --domain <domain>",
+      "opl stages runtime-budget --domain <domain>",
+      "opl stages registry --domain <domain>",
+      "opl stages source-spec --domain <domain>",
+      "opl stages replay-certification --domain <domain>"
+    ],
+    "forbidden_default_stage_commands": [
+      "opl stages graph --domain <domain>",
+      "opl stages proof-bundle --domain <domain>",
+      "opl stages assumptions --domain <domain>",
+      "opl stages cohort-loop --domain <domain>",
+      "opl stages runtime-budget --domain <domain>",
+      "opl stages registry --domain <domain>",
+      "opl stages source-spec --domain <domain>",
+      "opl stages replay-certification --domain <domain>",
+      "opl stages capacity-budget --domain <domain>",
+      "opl stages domain-validity --domain <domain>"
+    ]
+  },
+  "promotion_gate": {
+    "new_surface_default_state": "diagnostic_lens_or_reference",
+    "default_surface_requires_any_reason_from": [
+      "launch_safety",
+      "authority_boundary",
+      "evidence_replay_audit_route_back",
+      "repeated_app_runtime_consumption"
+    ],
+    "hard_gate_requires_any_reason_from": [
+      "launch_safety",
+      "authority_boundary",
+      "evidence_replay_audit_route_back"
+    ],
+    "repeated_app_runtime_consumption_requires": {
+      "minimum_distinct_consumers": 2,
+      "allowed_consumers": [
+        "app",
+        "operator_cli",
+        "queue",
+        "provider",
+        "runtime_action_shell"
+      ]
+    }
+  },
+  "authority_boundary": {
+    "can_claim_domain_ready": false,
+    "can_claim_quality_verdict": false,
+    "can_claim_artifact_authority": false,
+    "can_claim_production_ready": false,
+    "can_replace_ai_executor_planning": false,
+    "can_replace_domain_owner": false
+  }
+}

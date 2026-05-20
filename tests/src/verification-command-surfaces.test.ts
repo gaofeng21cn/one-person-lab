@@ -133,6 +133,7 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
     'contracts/opl-framework/functional-agent-runtime-harness-contract.json',
     'contracts/opl-framework/family-runtime-online-substrate-contract.json',
     'contracts/opl-framework/fresh-install-test-matrix.json',
+    'contracts/opl-framework/surface-budget-policy.json',
   ];
 
   const npmRunPattern = /npm run ([a-z0-9:-]+)/gi;
@@ -156,6 +157,62 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
         `${relativePath} references missing test file: ${filePath}`,
       );
     }
+  }
+});
+
+test('surface budget policy keeps diagnostic lenses out of default stage entrypoints', () => {
+  const policy = JSON.parse(read('contracts/opl-framework/surface-budget-policy.json')) as {
+    contract_kind: string;
+    default_surface_allowed_reasons: string[];
+    default_doc_entry_budget: {
+      stage_default_commands: string[];
+      stage_diagnostic_commands: string[];
+      forbidden_default_stage_commands: string[];
+    };
+    promotion_gate: {
+      new_surface_default_state: string;
+      default_surface_requires_any_reason_from: string[];
+      hard_gate_requires_any_reason_from: string[];
+      repeated_app_runtime_consumption_requires: {
+        minimum_distinct_consumers: number;
+        allowed_consumers: string[];
+      };
+    };
+    authority_boundary: Record<string, boolean>;
+  };
+
+  assert.equal(policy.contract_kind, 'opl_surface_budget_policy.v1');
+  assert.deepEqual(policy.default_surface_allowed_reasons, [
+    'launch_safety',
+    'authority_boundary',
+    'evidence_replay_audit_route_back',
+    'repeated_app_runtime_consumption',
+  ]);
+  assert.deepEqual(policy.default_doc_entry_budget.stage_default_commands, [
+    'opl stages readiness --domain <domain>',
+  ]);
+  assert.equal(
+    policy.default_doc_entry_budget.stage_diagnostic_commands.includes('opl stages proof-bundle --domain <domain>'),
+    true,
+  );
+  assert.equal(
+    policy.default_doc_entry_budget.forbidden_default_stage_commands.includes('opl stages capacity-budget --domain <domain>'),
+    true,
+  );
+  assert.equal(
+    policy.default_doc_entry_budget.forbidden_default_stage_commands.includes('opl stages domain-validity --domain <domain>'),
+    true,
+  );
+  assert.equal(policy.promotion_gate.new_surface_default_state, 'diagnostic_lens_or_reference');
+  assert.deepEqual(
+    policy.promotion_gate.default_surface_requires_any_reason_from,
+    policy.default_surface_allowed_reasons,
+  );
+  assert.equal(policy.promotion_gate.repeated_app_runtime_consumption_requires.minimum_distinct_consumers, 2);
+  assert.equal(policy.promotion_gate.repeated_app_runtime_consumption_requires.allowed_consumers.includes('app'), true);
+
+  for (const [claim, allowed] of Object.entries(policy.authority_boundary)) {
+    assert.equal(allowed, false, `${claim} must remain false in OPL surface budget policy`);
   }
 });
 

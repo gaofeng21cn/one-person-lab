@@ -220,18 +220,27 @@ test('default help surface recommends stages readiness and hides diagnostic stag
   const output = runCli(['help']);
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
   const examples = output.help.examples.join('\n');
+  const diagnosticStageCommands = [
+    ...familyStageDiagnosticLensCommands(),
+    'stages graph',
+    'stages registry',
+    'stages source-spec',
+  ];
 
   assert.equal(commands.includes('stages readiness'), true);
   assert.match(examples, /opl stages readiness --domain mas/);
   assert.doesNotMatch(examples, /capacity-budget/);
   assert.doesNotMatch(examples, /domain-validity/);
 
-  for (const command of familyStageDiagnosticLensCommands()) {
+  for (const command of diagnosticStageCommands) {
     assert.equal(commands.includes(command), false);
-    assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
     const scopedHelp = runCli(['help', ...command.split(' ')]);
     assert.equal(scopedHelp.help.command, command);
     assert.match(scopedHelp.help.summary, /Diagnostic drilldown/);
+  }
+
+  for (const command of familyStageDiagnosticLensCommands()) {
+    assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
   }
 });
 
@@ -251,9 +260,14 @@ test('public stage diagnostic commands require centralized derived-lens registry
     ),
     () => contracts,
   );
+  const registeredDerivedLensCommands = new Set(familyStageDiagnosticLensCommands());
 
   for (const [command, spec] of Object.entries(publicSpecs)) {
-    if (command.startsWith('stages ') && spec.help_surface === 'diagnostic_drilldown') {
+    if (
+      command.startsWith('stages ')
+      && spec.help_surface === 'diagnostic_drilldown'
+      && registeredDerivedLensCommands.has(command)
+    ) {
       assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
     }
   }
@@ -261,6 +275,33 @@ test('public stage diagnostic commands require centralized derived-lens registry
   for (const command of familyStageDiagnosticLensCommands()) {
     assert.equal(publicSpecs[command]?.help_surface, 'diagnostic_drilldown');
   }
+});
+
+test('public stage commands keep readiness as the only default operator surface', () => {
+  const contracts = loadFrameworkContracts({ contractsDir });
+  const publicSpecs = buildPublicCommandSpecs(
+    buildInternalCommandSpecs(
+      {
+        helpRequested: false,
+        jsonOutput: true,
+        textOutput: false,
+        command: null,
+        args: [],
+        loadOptions: { contractsDir },
+      },
+      () => contracts,
+    ),
+    () => contracts,
+  );
+  const defaultStageCommands = Object.entries(publicSpecs)
+    .filter(([command, spec]) => command.startsWith('stages ') && spec.help_surface !== 'diagnostic_drilldown')
+    .map(([command]) => command);
+
+  assert.deepEqual(defaultStageCommands, [
+    'stages list',
+    'stages inspect',
+    'stages readiness',
+  ]);
 });
 
 test('removed UI adapter command surfaces are not retained as compatibility aliases', () => {
