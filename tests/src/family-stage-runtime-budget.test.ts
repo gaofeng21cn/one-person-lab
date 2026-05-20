@@ -206,6 +206,8 @@ test('family stage runtime budget schema freezes projection-only authority bound
   assert.equal(Boolean(stageProperties.boundary_count), true);
   assert.equal(Boolean(stageProperties.runtime_guard_count), true);
   assert.equal(Boolean(stageProperties.unmonitored_boundary_count), true);
+  assert.equal(Boolean(record(properties).usage_cost_projection), true);
+  assert.equal(Boolean(stageProperties.usage_cost_estimate_ref), true);
   assert.equal(record(authority.opl_role).const, 'runtime_budget_projection_only');
   assert.equal(record(authority.graphflow_runtime_dependency).const, false);
   assert.equal(record(authority.probability_truth_claim).const, false);
@@ -213,4 +215,40 @@ test('family stage runtime budget schema freezes projection-only authority bound
   assert.equal(record(authority.can_authorize_domain_ready).const, false);
   assert.equal(record(authority.can_authorize_quality_verdict).const, false);
   assert.equal(record(authority.can_mutate_artifact_body).const, false);
+});
+
+test('family stage runtime budget schema freezes refs-only usage cost estimate companion boundary', () => {
+  const schema = readJson('contracts/family-orchestration/family-stage-runtime-budget.schema.json');
+  const defs = record(schema.$defs);
+  const usageCostProjection = record(defs.usage_cost_projection);
+  const usageProperties = record(usageCostProjection.properties);
+  const usageAuthority = record(record(defs.usage_cost_authority_boundary).properties);
+  const example = record(Array.isArray(schema.examples) ? schema.examples[0] : null);
+  const exampleUsage = record(example.usage_cost_projection);
+
+  assert.equal(record(usageProperties.surface_kind).const, 'opl_family_stage_usage_cost_budget_projection');
+  assert.equal(record(usageProperties.projection_role).const, 'usage_cost_estimate_projection_only');
+  assert.equal(record(usageProperties.refs_only).const, true);
+  assert.ok((usageCostProjection.required as string[]).includes('model_pricing_profile_ref'));
+  assert.ok((usageCostProjection.required as string[]).includes('calibration_sample_refs'));
+  assert.ok((usageCostProjection.required as string[]).includes('estimated_cost_usd_p50'));
+  assert.ok((usageCostProjection.required as string[]).includes('estimated_cost_usd_p90'));
+  assert.equal(Boolean(usageProperties.visual_stage_profile_refs), true);
+  assert.equal(Boolean(usageProperties.artifact_locator_refs), true);
+  assert.equal(record(usageAuthority.opl_role).const, 'refs_only_usage_cost_estimate_projection');
+  assert.equal(record(usageAuthority.can_read_domain_body).const, false);
+  assert.equal(record(usageAuthority.can_read_artifact_body).const, false);
+  assert.equal(record(usageAuthority.can_execute_stage).const, false);
+  assert.equal(record(usageAuthority.can_write_domain_truth).const, false);
+  assert.equal(record(usageAuthority.can_authorize_domain_ready).const, false);
+  assert.equal(record(usageAuthority.can_authorize_quality_verdict).const, false);
+  assert.equal(record(usageAuthority.can_mutate_artifact_body).const, false);
+  assert.equal(record(usageAuthority.can_authorize_artifact_mutation).const, false);
+  assert.equal(record(usageAuthority.can_authorize_budget_spend).const, false);
+  assert.equal(record(usageAuthority.can_write_owner_receipt).const, false);
+  assert.equal(exampleUsage.target_domain_id, 'redcube-ai');
+  assert.equal(exampleUsage.task_family, 'ppt_deck');
+  assert.equal(exampleUsage.model_id, 'gpt-5.5');
+  assert.equal(exampleUsage.reasoning_effort, 'xhigh');
+  assert.equal(record(exampleUsage.authority_boundary).can_authorize_budget_spend, false);
 });

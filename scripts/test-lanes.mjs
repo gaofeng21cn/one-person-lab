@@ -51,6 +51,7 @@ const lanes = {
       'tests/src/functional-agent-runtime-harness.test.ts',
       'tests/src/family-runtime-lifecycle-index.test.ts',
       'tests/src/agent-lab.test.ts',
+      'tests/src/agent-lab-token-cost-estimate.test.ts',
       'tests/src/agent-lab-complete.test.ts',
       'tests/src/agent-lab-ahe-evidence.test.ts',
       'tests/src/agent-lab-maturity-controls.test.ts',

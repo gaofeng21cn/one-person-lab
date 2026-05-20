@@ -1,6 +1,7 @@
 import {
   agentLabRefSummary,
   assessIndependentAiReviewReceipt,
+  buildAgentLabCostEstimate,
   buildSampleAgentLabResult,
   REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS,
   runAgentLabSuite,
@@ -259,6 +260,7 @@ export function buildCompleteAgentLabControlPlane() {
     suiteResult: sampleResult,
     sourceRefs: [sampleResult.result_id, longlineResult.result_id],
   });
+  const tokenCostEstimate = buildAgentLabCostEstimate({ preset: 'rca-ppt-40' });
   const evalAdapters = [
     {
       adapter_id: 'opl-native-agent-lab',
@@ -390,6 +392,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_aris_maturity_controls: true,
     ready_to_emit_ahe_evidence_read_model: true,
     ready_to_emit_variant_comparison_read_model: true,
+    ready_to_emit_token_cost_estimates: true,
     ai_review_approved_count: 0,
     automatic_mechanism_promotion_ready: false,
     automatic_model_training_ready: false,
@@ -415,6 +418,7 @@ export function buildCompleteAgentLabControlPlane() {
     aris_maturity_controls: arisMaturityControls,
     ahe_evidence: aheEvidence,
     variant_comparison: variantComparison,
+    token_cost_estimates: [tokenCostEstimate],
     developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
     non_goals: [
@@ -491,6 +495,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.aris_maturity_controls.read_model_id,
       complete.ahe_evidence.read_model_id,
       complete.variant_comparison.read_model_id,
+      complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
       developerModeRepairRoutes.read_model_id,
     ]),
     status: 'ready_for_app_workbench_consumption',
@@ -505,6 +510,7 @@ export function buildAgentLabWorkbenchReadModel() {
       aris_maturity_controls_ref: complete.aris_maturity_controls.read_model_id,
       ahe_evidence_read_model_ref: complete.ahe_evidence.read_model_id,
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
+      token_cost_estimate_refs: complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
       sample_ref_summary: agentLabRefSummary(sample),
       longline_ref_summary: agentLabRefSummary(longline),
     },
@@ -523,6 +529,7 @@ export function buildAgentLabWorkbenchReadModel() {
     aris_maturity_controls: complete.aris_maturity_controls,
     ahe_evidence: complete.ahe_evidence,
     variant_comparison: variantComparison,
+    token_cost_estimates: complete.token_cost_estimates,
     promotion_gates: promotionGates(results),
     developer_mode_repair_routes: developerModeRepairRoutes,
     online_learning_refs: {
