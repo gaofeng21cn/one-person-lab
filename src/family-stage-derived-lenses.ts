@@ -7,6 +7,8 @@ export type FamilyStageDerivedLensId =
 
 export type FamilyStageDerivedLensRole = 'default_operator_entry' | 'diagnostic_drilldown';
 
+export const DEFAULT_STAGE_OPERATOR_COMMAND = 'stages readiness';
+
 export interface FamilyStageDerivedLensDefinition {
   lens_id: FamilyStageDerivedLensId;
   command: string;
@@ -20,17 +22,13 @@ export interface FamilyStageDerivedLensDefinition {
   folded_into_readiness: true;
 }
 
-export type FamilyStageDerivedLens =
-  | {
-    lens_id: 'stage_readiness';
-    command: typeof DEFAULT_STAGE_OPERATOR_COMMAND;
-    role: 'default_operator_entry';
-    folded_into_command: null;
-    default_help_surface: true;
-  }
-  | FamilyStageDerivedLensDefinition;
-
-export const DEFAULT_STAGE_OPERATOR_COMMAND = 'stages readiness';
+export type FamilyStageDerivedLens = {
+  lens_id: 'stage_readiness' | FamilyStageDerivedLensId;
+  command: string;
+  role: FamilyStageDerivedLensRole;
+  folded_into_command: typeof DEFAULT_STAGE_OPERATOR_COMMAND | null;
+  default_help_surface: boolean;
+};
 
 export const FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES: FamilyStageDerivedLensDefinition[] = [
   {
@@ -103,7 +101,13 @@ export const FAMILY_STAGE_DERIVED_LENSES: FamilyStageDerivedLens[] = [
     folded_into_command: null,
     default_help_surface: true,
   },
-  ...FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES,
+  ...FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES.map((lens) => ({
+    lens_id: lens.lens_id,
+    command: lens.command,
+    role: lens.role,
+    folded_into_command: lens.folded_into_command,
+    default_help_surface: lens.default_help_surface,
+  })),
 ];
 
 export const FAMILY_STAGE_KERNEL_BLOCKER_SOURCES = [
