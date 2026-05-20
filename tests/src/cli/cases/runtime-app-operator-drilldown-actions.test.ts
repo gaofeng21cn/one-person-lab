@@ -703,6 +703,10 @@ test('runtime action execute records and verifies stage production evidence rece
       drilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
       1,
     );
+    assert.equal(
+      drilldown.summary.stage_production_evidence_payload_workorder_count,
+      1,
+    );
     const route = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
@@ -855,6 +859,10 @@ test('runtime action execute records and verifies stage production evidence rece
       recordedDrilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
       0,
     );
+    assert.equal(
+      recordedDrilldown.summary.stage_production_evidence_payload_workorder_count,
+      0,
+    );
 
     const verifyExecution = runCli([
       'runtime',
@@ -882,7 +890,10 @@ test('runtime action execute records and verifies stage production evidence rece
       (entry: { stage_id: string }) => entry.stage_id === 'review',
     );
     assert.equal(stage.stage_evidence_receipt_status, 'verified');
-    assert.deepEqual(stage.observed_expected_receipt_refs, ['mas:review-receipt']);
+    assert.deepEqual(stage.observed_expected_receipt_refs, [
+      'mas:review-receipt',
+      'mas://receipts/review-owner-instance.json',
+    ]);
     assert.deepEqual(stage.monitor_freshness_refs, ['metric:review/currentness']);
     assert.equal(
       stage.missing_production_evidence.includes('expected_receipt_ref_not_observed'),

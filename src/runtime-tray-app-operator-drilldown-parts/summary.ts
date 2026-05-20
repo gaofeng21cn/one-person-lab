@@ -186,6 +186,11 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
         ref.action_kind === 'stage_production_evidence_receipt_record'
         && Object.keys(record(ref.payload_template)).length > 0
       )),
+    stage_production_evidence_payload_workorder_count:
+      countBy(input.actionRefs, (ref) => (
+        ref.action_kind === 'stage_production_evidence_receipt_record'
+        && record(ref.payload_workorder).surface_kind === 'opl_stage_production_evidence_payload_workorder'
+      )),
     external_evidence_action_route_count: countBy(input.actionRefs, (ref) => (
       ref.action_kind === 'external_evidence_receipt_record'
       || ref.action_kind === 'external_evidence_receipt_verify'
