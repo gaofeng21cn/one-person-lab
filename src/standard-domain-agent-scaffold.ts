@@ -20,6 +20,7 @@ import {
   REQUIRED_VERIFICATION,
   SCAFFOLD_MARKER,
   STARTER_STAGE_ID,
+  WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 
 type ScaffoldMode = 'describe' | 'generate' | 'validate';
@@ -355,6 +356,14 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
       path: 'contracts/private_functional_surface_policy.json',
       content: json({
         ...PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
+        domain_id: domainId,
+        marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
+      path: 'contracts/workspace_lifecycle_policy.json',
+      content: json({
+        ...WORKSPACE_FILE_LIFECYCLE_POLICY,
         domain_id: domainId,
         marker: SCAFFOLD_MARKER,
       }),
@@ -729,6 +738,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/owner_receipt_contract.json',
     'contracts/functional_privatization_audit.json',
     'contracts/private_functional_surface_policy.json',
+    'contracts/workspace_lifecycle_policy.json',
   ];
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));
   const actionCatalog = readJsonFile(path.join(repoDir, 'contracts/action_catalog.json'));
@@ -967,6 +977,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
         audit_policy: 'OPL defaults to the attention_required watchlist from structured blockers, migration classes, and active-caller flags; cleared/stable boundary entries stay in the full module inventory for traceability.',
       },
       private_functional_surface_admission_policy: PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
+      workspace_file_lifecycle_policy: WORKSPACE_FILE_LIFECYCLE_POLICY,
       required_verification: REQUIRED_VERIFICATION,
       template_files: templateFiles.map((file) => file.path),
       write_plan: writePlan,

@@ -10,10 +10,11 @@ Machine boundary: 本文是人读边界说明。机器真相继续归 workspace/
 OPL 只负责通用 workspace/source intake shell：
 
 - workspace registry、source locator、source readiness projection 和 source refs 的通用传输；
+- workspace / source scope refs 到外部 workspace root 的定位；源码仓只保存 locator、index、schema、receipt refs 和 retention / restore policy；
 - source intake 到 stage attempt、operator workbench、artifact locator 和 domain projection 的只读连接；
 - generic shell、refs、receipt envelope、freshness/status projection 和 App drilldown 语义。
 
-OPL 不判断医学来源、基金材料、视觉素材、引用质量、研究路线、fundability、visual direction 或任何 domain source truth。
+OPL 不判断医学来源、基金材料、视觉素材、引用质量、研究路线、fundability、visual direction 或任何 domain source truth。真实 source body、workspace state、work-in-progress 和运行输入应位于外部 workspace root；developer checkout 不承载这些运行状态。
 
 ## 四仓分工
 
