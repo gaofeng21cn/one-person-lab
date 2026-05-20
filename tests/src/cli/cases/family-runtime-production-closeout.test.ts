@@ -48,6 +48,22 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageItem.typed_blocker_ref, null);
     assert.equal(stageItem.not_authorized_claims.includes('domain_ready'), true);
     assert.equal(stageItem.not_authorized_claims.includes('quality_verdict'), true);
+    assert.equal(closeout.next_action_ledger.surface_kind, 'opl_family_runtime_production_tail_next_action_ledger');
+    assert.equal(closeout.next_action_ledger.summary.next_action_item_count, closeout.attention_queue.length);
+    assert.equal(closeout.next_action_ledger.authority_boundary.can_read_memory_body, false);
+    assert.equal(closeout.next_action_ledger.authority_boundary.can_read_artifact_body, false);
+    assert.equal(closeout.next_action_ledger.authority_boundary.can_claim_receipt_closure, false);
+    const stageNextAction = closeout.next_action_ledger.next_action_items.find(
+      (item: { source_tail_item_id: string }) => item.source_tail_item_id === stageItem.item_id,
+    );
+    assert.equal(stageNextAction.owner, 'opl');
+    assert.equal(stageNextAction.domain, stageItem.domain_id ?? stageItem.owner);
+    assert.equal(stageNextAction.stage_or_request, stageItem.stage_id ?? stageItem.claim_scope);
+    assert.equal(stageNextAction.required_receipt_type.length > 0, true);
+    assert.equal(stageNextAction.current_ref, stageItem.replay_ref);
+    assert.equal(stageNextAction.next_safe_action_route, stageItem.replay_ref);
+    assert.equal(stageNextAction.authority_boundary.can_write_domain_truth, false);
+    assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
     assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
     assert.equal(closeout.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
