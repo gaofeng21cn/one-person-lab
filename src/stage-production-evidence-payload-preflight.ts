@@ -8,10 +8,13 @@ export type StageProductionEvidencePayloadPreflight = {
   surface_kind: 'opl_stage_production_evidence_payload_preflight';
   status: StageProductionEvidencePayloadPreflightStatus;
   route_requires_domain_or_app_payload: boolean;
+  required_any_operator_payload_refs: string[];
+  optional_operator_payload_refs: string[];
   success_path_ready: boolean;
   typed_blocker_path_ready: boolean;
   can_record_refs_only_receipt: boolean;
   missing_payload_fields: string[];
+  forbidden_payload_fields: string[];
   forbidden_placeholder_refs: string[];
   uncovered_expected_receipt_refs: string[];
   uncovered_monitor_freshness_refs: string[];
@@ -24,6 +27,30 @@ export type StageProductionEvidencePayloadPreflight = {
   };
   policy: string;
 };
+
+export const STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS = [
+  'domain_receipt_refs',
+  'evidence_refs',
+  'typed_blocker_refs',
+] as const;
+
+export const STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS = [
+  'no_regression_refs',
+  'owner_chain_refs',
+] as const;
+
+const FORBIDDEN_PAYLOAD_FIELDS = [
+  'domain_truth',
+  'domain_truth_body',
+  'artifact',
+  'artifact_body',
+  'memory',
+  'memory_body',
+  'quality_verdict',
+  'export_verdict',
+  'domain_ready',
+  'production_ready',
+] as const;
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -67,7 +94,9 @@ function requiredMonitorFreshnessRefs(route: JsonRecord) {
 }
 
 function looksLikePlaceholderRef(ref: string) {
-  return ref === 'owner_receipt'
+  return ref.includes('<')
+    || ref.includes('>')
+    || ref === 'owner_receipt'
     || ref === 'monitor_freshness'
     || ref === 'no_regression'
     || ref === 'typed_blocker'
@@ -101,24 +130,47 @@ function uncoveredObligationRefs(input: {
 export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) {
   const expectedReceiptRefs = requiredExpectedReceiptRefs(route);
   const monitorFreshnessRefs = requiredMonitorFreshnessRefs(route);
+  const actionId = stringValue(route.action_id);
+  const successPayloadTemplate = {
+    domain_receipt_refs: concreteRefs(expectedReceiptRefs).length > 0
+      ? concreteRefs(expectedReceiptRefs)
+      : ['<domain-owned-receipt-ref>'],
+    evidence_refs: concreteRefs(monitorFreshnessRefs).length > 0
+      ? concreteRefs(monitorFreshnessRefs)
+      : ['<monitor-freshness-evidence-ref>'],
+    typed_blocker_refs: [],
+  };
+  const typedBlockerPayloadTemplate = {
+    domain_receipt_refs: [],
+    evidence_refs: [],
+    typed_blocker_refs: ['<domain-owned-typed-blocker-ref>'],
+  };
+  const runtimeActionCommand = (payload: JsonRecord, dryRun = false) => actionId
+    ? [
+        'opl runtime action execute',
+        `--action ${actionId}`,
+        ...(dryRun ? ['--dry-run'] : []),
+        `--payload '${JSON.stringify(payload)}'`,
+      ].join(' ')
+    : null;
   return {
     surface_kind: 'opl_stage_production_evidence_payload_workorder',
     request_id: stringValue(route.request_id),
     request_pack_id: stringValue(route.request_pack_id),
-    action_id: stringValue(route.action_id),
+    action_id: actionId,
     target_domain_id: stringValue(route.target_domain_id),
     command_domain_id: stringValue(route.domain_id),
     project_id: stringValue(route.project_id),
     stage_id: stringValue(route.stage_id),
     payload_owner: 'domain_repository_or_app_live_operator',
     route_requires_domain_or_app_payload: true,
+    required_any_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
     accepted_payload_fields: [
-      'domain_receipt_refs',
-      'evidence_refs',
-      'typed_blocker_refs',
-      'no_regression_refs',
-      'owner_chain_refs',
+      ...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
+      ...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS,
+      'receipt_ref',
     ],
+    optional_payload_fields: [...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS],
     success_path_requires: {
       domain_receipt_refs_cover: concreteRefs(expectedReceiptRefs),
       domain_receipt_instance_required_for_declared_refs:
@@ -133,8 +185,15 @@ export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) 
       requires_typed_blocker_refs: true,
       may_close_instead_of_success: true,
     },
+    copyable_runtime_action_execute_commands: {
+      dry_run_success_path: runtimeActionCommand(successPayloadTemplate, true),
+      record_success_path: runtimeActionCommand(successPayloadTemplate),
+      dry_run_typed_blocker_path: runtimeActionCommand(typedBlockerPayloadTemplate, true),
+      record_typed_blocker_path: runtimeActionCommand(typedBlockerPayloadTemplate),
+    },
     no_regression_refs_recommended: true,
     owner_chain_refs_recommended: true,
+    empty_payload_template_is_success_evidence: false,
     rejected_payload_policy: [
       'empty_payload_template',
       'placeholder_or_declared_contract_refs_without_instance_evidence',
@@ -170,6 +229,9 @@ export function preflightStageProductionEvidencePayload(
   const typedBlockerRefs = refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']);
   const noRegressionRefs = refsFromPayload(payload, ['no_regression_refs', 'no_regression_ref']);
   const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
+  const forbiddenPayloadFields = FORBIDDEN_PAYLOAD_FIELDS.filter((field) =>
+    Object.prototype.hasOwnProperty.call(payload, field)
+  );
   const allRefs = uniqueStrings([
     ...domainReceiptRefs,
     ...evidenceRefs,
@@ -193,20 +255,26 @@ export function preflightStageProductionEvidencePayload(
   const typedBlockerPathReady = typedBlockerRefs.length > 0 && forbiddenPlaceholderRefs.length === 0;
   const successPathReady = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
+    && forbiddenPayloadFields.length === 0
     && uncoveredExpectedReceiptRefs.length === 0
     && uncoveredMonitorFreshnessRefs.length === 0;
-  const canRecordRefsOnlyReceipt = successPathReady || typedBlockerPathReady;
+  const typedBlockerPathReadyWithPolicy = typedBlockerPathReady
+    && forbiddenPayloadFields.length === 0;
+  const canRecordRefsOnlyReceipt = successPathReady || typedBlockerPathReadyWithPolicy;
   return {
     surface_kind: 'opl_stage_production_evidence_payload_preflight',
     status: canRecordRefsOnlyReceipt ? 'ready_to_record' : 'blocked',
     route_requires_domain_or_app_payload: true,
+    required_any_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
+    optional_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS],
     success_path_ready: successPathReady,
-    typed_blocker_path_ready: typedBlockerPathReady,
+    typed_blocker_path_ready: typedBlockerPathReadyWithPolicy,
     can_record_refs_only_receipt: canRecordRefsOnlyReceipt,
-    missing_payload_fields: typedBlockerPathReady ? [] : missingPayloadFields,
+    missing_payload_fields: typedBlockerPathReadyWithPolicy ? [] : missingPayloadFields,
+    forbidden_payload_fields: forbiddenPayloadFields,
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
-    uncovered_expected_receipt_refs: typedBlockerPathReady ? [] : uncoveredExpectedReceiptRefs,
-    uncovered_monitor_freshness_refs: typedBlockerPathReady ? [] : uncoveredMonitorFreshnessRefs,
+    uncovered_expected_receipt_refs: typedBlockerPathReadyWithPolicy ? [] : uncoveredExpectedReceiptRefs,
+    uncovered_monitor_freshness_refs: typedBlockerPathReadyWithPolicy ? [] : uncoveredMonitorFreshnessRefs,
     accepted_ref_counts: {
       domain_receipt_refs: domainReceiptRefs.length,
       evidence_refs: evidenceRefs.length,
@@ -229,6 +297,9 @@ export function assertStageProductionEvidencePayloadReady(route: JsonRecord, pay
     'Stage production evidence record action requires real domain/App/live refs before OPL can record refs-only receipt.',
     {
       action_id: stringValue(route.action_id),
+      error_kind: 'stage_production_evidence_payload_preflight_blocked',
+      required_any_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
+      empty_payload_template_is_success_evidence: false,
       preflight,
       payload_workorder: buildStageProductionEvidencePayloadWorkorder(route),
     },
