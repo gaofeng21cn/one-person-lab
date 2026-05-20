@@ -163,6 +163,38 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
         migration_class: 'refs_only_adapter',
         owner: 'med-autoscience',
       },
+      {
+        module_id: 'package_lifecycle_adapter',
+        classification: 'split_owner_boundary',
+        migration_class: 'refs_only_adapter',
+        owner: 'med-autoscience',
+        forbidden_generic_owner_flags: {
+          mas_owns_generic_artifact_lifecycle_shell: false,
+          mas_owns_generic_workbench: false,
+        },
+        bridge_exit_gate: {
+          gate_id: 'package_lifecycle_adapter_bridge_exit_gate',
+          bridge_role: 'package_lifecycle_refs_adapter_until_opl_artifact_shell_live',
+          bridge_owner: 'med_autoscience_migration_bridge',
+          replacement_owner: 'one-person-lab',
+          replacement_surface: 'opl_artifact_package_lifecycle_shell',
+          exit_gate_ref: '/mag_consumer_thinning_contract/opl_replacement_expectations/0',
+          current_status: 'bridge_until_exit_gates_pass',
+          required_before_retire: [
+            'domain_authority_refs_preserved',
+            'no_regression_proof_recorded',
+          ],
+          retained_rca_authority: [
+            'domain_artifact_authority',
+            'package_owner_receipt_refs',
+          ],
+          after_exit_rca_surface: 'artifact_authority_and_package_receipt_refs',
+          can_delete_without_no_active_caller_proof: false,
+          declares_replacement_complete: false,
+          rca_can_own_replacement_runtime: false,
+          opl_can_issue_owner_receipt: false,
+        },
+      },
     ],
     bridge_exit_gate: {
       remaining_evidence_gate_ids: ['real_package_lifecycle_receipt'],
@@ -1029,9 +1061,32 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(
       drilldown.domain_evidence_request_refs.remaining_bridge_modules.some(
-        (ref: { ref: string; module_id: string }) =>
+        (ref: {
+          ref: string;
+          module_id: string;
+          replacement_owner: string;
+          replacement_surface: string;
+          classification: string;
+          migration_class: string;
+          retained_domain_authority: string[];
+          required_before_retire: string[];
+          domain_can_own_replacement_runtime: boolean;
+          declares_replacement_complete: boolean;
+          forbidden_generic_owner_flags: {
+            mas_owns_generic_artifact_lifecycle_shell: boolean;
+          };
+        }) =>
           ref.ref === 'package_lifecycle_adapter'
-          && ref.module_id === 'package_lifecycle_adapter',
+          && ref.module_id === 'package_lifecycle_adapter'
+          && ref.classification === 'refs_only_domain_adapter'
+          && ref.migration_class === 'refs_only_domain_adapter'
+          && ref.replacement_owner === 'one-person-lab'
+          && ref.replacement_surface === 'opl_artifact_package_lifecycle_shell'
+          && ref.retained_domain_authority.includes('package_owner_receipt_refs')
+          && ref.required_before_retire.includes('no_regression_proof_recorded')
+          && ref.domain_can_own_replacement_runtime === false
+          && ref.declares_replacement_complete === false
+          && ref.forbidden_generic_owner_flags.mas_owns_generic_artifact_lifecycle_shell === false,
       ),
       true,
     );
