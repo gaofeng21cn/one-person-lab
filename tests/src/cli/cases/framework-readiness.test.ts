@@ -11,7 +11,47 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.surface_kind, 'opl_framework_readiness_summary');
   assert.equal(readiness.owner, 'one-person-lab');
   assert.equal(readiness.family_defaults, true);
+  assert.equal(readiness.detail_level, 'summary');
+  assert.equal(
+    readiness.projection_detail_policy,
+    'attention_first_kernel_floor_default_with_embedded_compatibility_drilldowns',
+  );
+  assert.equal(readiness.readiness_model.mode, 'ai_first_contract_light');
+  assert.equal(readiness.readiness_model.default_payload, 'operator_attention_summary');
+  assert.equal(readiness.readiness_model.ai_executor_internal_strategy_is_contract, false);
+  assert.equal(readiness.attention_first_payload.surface_kind, 'opl_framework_readiness_attention_first_payload');
+  assert.equal(
+    readiness.attention_first_payload.summary.hard_blocker_count,
+    readiness.summary.framework_kernel_hard_blocker_count,
+  );
+  assert.equal(readiness.attention_first_payload.summary.open_tail_count > 0, true);
+  assert.equal(readiness.attention_first_payload.blockers.length, 0);
+  assert.equal(readiness.attention_first_payload.warnings.length > 0, true);
+  assert.deepEqual(
+    readiness.attention_first_payload.diagnostic_drilldown_refs,
+    readiness.diagnostic_drilldowns.map((lens: { embedded_payload_ref: string }) => lens.embedded_payload_ref),
+  );
+  assert.match(readiness.attention_first_payload.claim_policy, /emits_no_domain_quality_artifact_or_production_ready/);
+  assert.equal(readiness.kernel_floor.policy, 'minimum_control_plane_boundary_and_recoverability_floor_only');
+  assert.equal(readiness.kernel_floor.ai_executor_strategy_contract, false);
+  assert.equal(readiness.kernel_floor.domain_quality_strategy_contract, false);
+  assert.equal(readiness.kernel_floor.diagnostic_lenses_can_claim_ready_verdicts, false);
+  assert.equal(readiness.diagnostic_drilldowns.every((lens: { role: string; default_surface: boolean }) => (
+    lens.role === 'diagnostic_drilldown' && lens.default_surface === false
+  )), true);
+  assert.deepEqual(readiness.excluded_ready_verdicts, [
+    'domain_ready_verdict',
+    'quality_verdict',
+    'artifact_authority_verdict',
+    'production_ready_verdict',
+  ]);
+  assert.equal(Object.hasOwn(readiness, 'domain_ready_verdict'), false);
+  assert.equal(Object.hasOwn(readiness, 'quality_verdict'), false);
+  assert.equal(Object.hasOwn(readiness, 'artifact_authority_verdict'), false);
+  assert.equal(Object.hasOwn(readiness, 'production_ready_verdict'), false);
   assert.equal(readiness.summary.control_plane_available, true);
+  assert.equal(readiness.summary.framework_kernel_hard_blocker_count, 0);
+  assert.equal(readiness.summary.agent_structural_conformance_blocker_count, 0);
   assert.equal(readiness.summary.semantic_hygiene_gate_count, 6);
   assert.equal(readiness.summary.agent_structural_conformance_status, 'passed');
   assert.equal(readiness.summary.pack_compiler_ready_domain_count, 3);
@@ -28,7 +68,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.production_closeout_open_safe_action_item_count,
     readiness.production_closeout_safe_action_tail.production_closeout_open_safe_action_item_count,
   );
-  assert.equal(readiness.summary.production_or_domain_ready, false);
+  assert.equal(Object.hasOwn(readiness.summary, 'production_or_domain_ready'), false);
 
   assert.equal(
     readiness.source_commands.includes('opl system semantic-hygiene --json'),
@@ -69,6 +109,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.agent_conformance_tail.agent_readiness_production_evidence_tail_count,
     readiness.summary.agent_readiness_production_evidence_tail_count,
   );
+  assert.equal(Object.hasOwn(readiness.agent_conformance_tail, 'production_or_domain_ready'), false);
   assert.equal(
     readiness.app_operator_production_tail.app_operator_production_evidence_tail_open_item_count,
     readiness.summary.app_operator_production_evidence_tail_open_item_count,

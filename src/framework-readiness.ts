@@ -82,6 +82,155 @@ function statusFrom(openTailCount: number, attentionGateCount: number, hardBlock
   return 'framework_control_plane_available';
 }
 
+function frameworkKernelFloor() {
+  return {
+    surface_kind: 'opl_framework_readiness_kernel_floor',
+    policy: 'minimum_control_plane_boundary_and_recoverability_floor_only',
+    hard_blocker_sources: [
+      'agent_structural_conformance',
+      'stage_launch_kernel_hard_blockers',
+      'forbidden_authority_boundary',
+      'provider_substrate_unavailable',
+      'receipt_replay_audit_baseline_missing',
+    ],
+    advisory_sources: [
+      'semantic_hygiene_attention',
+      'production_evidence_tail',
+      'stage_production_caller_tail',
+      'production_closeout_safe_action_tail',
+      'provider_slo_status',
+    ],
+    ai_executor_strategy_contract: false,
+    domain_quality_strategy_contract: false,
+    diagnostic_lenses_can_claim_ready_verdicts: false,
+  };
+}
+
+function frameworkDiagnosticDrilldowns() {
+  return [
+    {
+      lens_id: 'semantic_hygiene',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.semantic_hygiene,
+      embedded_payload_ref: '/framework_readiness/semantic_hygiene',
+    },
+    {
+      lens_id: 'agent_conformance_tail',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.agents_readiness,
+      embedded_payload_ref: '/framework_readiness/agent_conformance_tail',
+    },
+    {
+      lens_id: 'stage_readiness',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.stages_readiness_mas,
+      embedded_payload_ref: '/framework_readiness/stages',
+    },
+    {
+      lens_id: 'app_operator_production_tail',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.app_operator_drilldown,
+      embedded_payload_ref: '/framework_readiness/app_operator_production_tail',
+    },
+    {
+      lens_id: 'production_closeout_safe_action_tail',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.family_runtime_production_closeout,
+      embedded_payload_ref: '/framework_readiness/production_closeout_safe_action_tail',
+    },
+    {
+      lens_id: 'provider_slo_status',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.app_operator_drilldown,
+      embedded_payload_ref: '/framework_readiness/provider_slo_status',
+    },
+  ];
+}
+
+function frameworkAttentionFirstPayload(input: {
+  status: string;
+  hardBlockerCount: number;
+  semanticAttentionGateCount: number;
+  stageWarningCount: number;
+  openTailCount: number;
+  providerSloCadenceWindowStatus: unknown;
+  providerSloCapabilityStatus: unknown;
+}) {
+  const blockers = input.hardBlockerCount > 0
+    ? [{
+        blocker_id: 'framework_kernel_hard_blocker_present',
+        count: input.hardBlockerCount,
+        route_ref: '/framework_readiness/stages',
+      }]
+    : [];
+  const warnings = [
+    ...(input.semanticAttentionGateCount > 0
+      ? [{
+          warning_id: 'semantic_hygiene_attention_required',
+          count: input.semanticAttentionGateCount,
+          drilldown_ref: '/framework_readiness/semantic_hygiene',
+        }]
+      : []),
+    ...(input.stageWarningCount > 0
+      ? [{
+          warning_id: 'stage_readiness_advisory_warnings',
+          count: input.stageWarningCount,
+          drilldown_ref: '/framework_readiness/stages',
+        }]
+      : []),
+    ...(input.openTailCount > 0
+      ? [{
+          warning_id: 'production_evidence_tail_attention',
+          count: input.openTailCount,
+          drilldown_ref: '/framework_readiness/production_closeout_safe_action_tail',
+        }]
+      : []),
+  ];
+  const nextSafeActions = blockers.length > 0
+    ? [{
+        action_id: 'inspect_framework_kernel_blockers',
+        command: 'opl framework readiness --family-defaults --json',
+        authority: 'diagnostic_only',
+      }]
+    : warnings.length > 0
+      ? [{
+          action_id: 'review_framework_attention_items',
+          command: 'opl framework readiness --family-defaults --json',
+          authority: 'operator_attention_only',
+        }]
+      : [{
+          action_id: 'no_framework_readiness_action_required',
+          authority: 'no_op',
+        }];
+
+  return {
+    surface_kind: 'opl_framework_readiness_attention_first_payload',
+    status: input.status,
+    summary: {
+      hard_blocker_count: input.hardBlockerCount,
+      warning_count: warnings.length,
+      recommendation_count: warnings.length,
+      open_tail_count: input.openTailCount,
+      provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
+      provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
+    },
+    blockers,
+    warnings,
+    recommendations: warnings,
+    next_safe_actions: nextSafeActions,
+    kernel_floor_ref: '/framework_readiness/kernel_floor',
+    diagnostic_drilldown_refs: frameworkDiagnosticDrilldowns().map((lens) => lens.embedded_payload_ref),
+    claim_policy:
+      'attention_payload_reports_operator_work_only_and_emits_no_domain_quality_artifact_or_production_ready_verdict',
+  };
+}
+
 export async function buildFrameworkReadinessSummary(
   contracts: FrameworkContracts,
   input: FrameworkReadinessInput,
@@ -131,6 +280,9 @@ export async function buildFrameworkReadinessSummary(
     numberValue(closeoutSummary.production_closeout_open_safe_action_item_count);
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
   const openTailCount = appOpenTailCount + stageProductionCallerTailCount + productionCloseoutOpenSafeActionCount;
+  const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
+  const hardBlockerCount = agentHardBlockerCount + stageHardBlockerCount;
+  const frameworkStatus = statusFrom(openTailCount, semanticAttentionGateCount, hardBlockerCount);
 
   return {
     version: 'g1',
@@ -138,12 +290,41 @@ export async function buildFrameworkReadinessSummary(
       surface_kind: 'opl_framework_readiness_summary',
       owner: 'one-person-lab',
       family_defaults: input.familyDefaults === true,
-      status: statusFrom(openTailCount, semanticAttentionGateCount, stageHardBlockerCount),
+      detail_level: 'summary',
+      projection_detail_policy:
+        'attention_first_kernel_floor_default_with_embedded_compatibility_drilldowns',
+      readiness_model: {
+        mode: 'ai_first_contract_light',
+        default_payload: 'operator_attention_summary',
+        kernel_floor: 'minimum_control_plane_boundary_and_recoverability_floor_only',
+        diagnostic_drilldowns_are_operator_or_audit_aids: true,
+        ai_executor_internal_strategy_is_contract: false,
+      },
+      status: frameworkStatus,
+      attention_first_payload: frameworkAttentionFirstPayload({
+        status: frameworkStatus,
+        hardBlockerCount,
+        semanticAttentionGateCount,
+        stageWarningCount,
+        openTailCount,
+        providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
+        providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
+      }),
+      kernel_floor: frameworkKernelFloor(),
+      diagnostic_drilldowns: frameworkDiagnosticDrilldowns(),
+      excluded_ready_verdicts: [
+        'domain_ready_verdict',
+        'quality_verdict',
+        'artifact_authority_verdict',
+        'production_ready_verdict',
+      ],
       summary: {
         control_plane_available: true,
+        framework_kernel_hard_blocker_count: hardBlockerCount,
         semantic_hygiene_gate_count: numberValue(semanticSummary.gate_count),
         semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
         agent_structural_conformance_status: stringValue(agentSummary.structural_conformance_status),
+        agent_structural_conformance_blocker_count: agentHardBlockerCount,
         agent_readiness_production_evidence_tail_count:
           numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
         pack_compiler_ready_domain_count: numberValue(packSummary.ready_domain_count),
@@ -160,7 +341,6 @@ export async function buildFrameworkReadinessSummary(
         production_closeout_open_safe_action_item_count: productionCloseoutOpenSafeActionCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
         provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
-        production_or_domain_ready: false,
       },
       source_commands: Object.values(SOURCE_COMMANDS),
       evidence_counter_taxonomy: {
@@ -190,7 +370,6 @@ export async function buildFrameworkReadinessSummary(
           numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
         agent_readiness_production_evidence_tail_policy:
           agentSummary.agent_readiness_production_evidence_tail_policy ?? null,
-        production_or_domain_ready: false,
         authority_boundary: agentReadiness.authority_boundary ?? authorityBoundary(),
       },
       pack_compiler: {
