@@ -1,6 +1,6 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, repoRoot, runCli, test } from '../helpers.ts';
 
-test('family-runtime required admission warns but does not block launch without closed cohort loop refs', () => {
+test('family-runtime required admission warns but does not block launch without advisory lens refs', () => {
   const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-family-runtime-cohort-loop-warning-`);
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
@@ -95,19 +95,19 @@ test('family-runtime required admission warns but does not block launch without 
     assert.equal(gate.blocked_reason, null);
     assert.deepEqual(gate.blocker_findings, []);
     assert.equal(gate.inspected_cohort_loop_stage.closure_status, 'missing_query');
-    assert.deepEqual(gate.findings.map((finding: { code: string }) => finding.code), [
+    const advisoryFindingCodes = gate.findings.map((finding: { code: string }) => finding.code);
+    assert.deepEqual(advisoryFindingCodes, [
       'cohort_query_missing',
       'cohort_trigger_missing',
       'cohort_monitor_or_metric_missing',
+      'runtime_budget_monitor_refs_missing',
+      'runtime_budget_expected_success_ref_or_boundary_success_rate_ref_missing',
+      'runtime_budget_boundary_monitor_coverage_missing',
     ]);
     assert.equal(gate.findings.every((finding: { severity: string }) => finding.severity === 'warning'), true);
     assert.deepEqual(
       gate.recommendation_findings.map((finding: { code: string }) => finding.code),
-      [
-        'cohort_query_missing',
-        'cohort_trigger_missing',
-        'cohort_monitor_or_metric_missing',
-      ],
+      advisoryFindingCodes,
     );
     assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
