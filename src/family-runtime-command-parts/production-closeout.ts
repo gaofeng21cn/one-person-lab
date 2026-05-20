@@ -7,6 +7,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
   let familyDefaults = false;
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let executorKind: 'codex_cli' | undefined;
+  let detailLevel: 'summary' | 'full' = 'summary';
 
   for (let index = 1; index < rest.length; index += 1) {
     const token = rest[index];
@@ -31,10 +32,21 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
       }
       executorKind = value;
       index += 1;
+    } else if (token === '--full') {
+      detailLevel = 'full';
+    } else if (token === '--detail' && value) {
+      if (value !== 'summary' && value !== 'full') {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime production-closeout --detail must be summary or full.', {
+          detail: value,
+          allowed_detail_levels: ['summary', 'full'],
+        });
+      }
+      detailLevel = value;
+      index += 1;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime production-closeout option: ${token}.`, {
         option: token,
-        usage: 'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli',
+        usage: 'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli [--detail summary|full] [--full]',
       });
     }
   }
@@ -50,6 +62,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
       familyDefaults,
       providerKind: providerKind ?? 'temporal',
       executorKind: executorKind ?? 'codex_cli',
+      detailLevel,
     },
   };
 }

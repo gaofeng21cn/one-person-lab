@@ -10,6 +10,7 @@ type ProductionCloseoutInput = {
   familyDefaults: boolean;
   providerKind: FamilyRuntimeProviderKind;
   executorKind: 'codex_cli';
+  detailLevel?: 'summary' | 'full';
 };
 
 const NOT_AUTHORIZED_CLAIMS = [
@@ -277,6 +278,72 @@ function authorityBoundary() {
   };
 }
 
+function closeoutCounts(
+  closeoutItems: ReturnType<typeof readOnlyCloseoutItem>[],
+  openItems: ReturnType<typeof readOnlyCloseoutItem>[],
+  closedItems: ReturnType<typeof readOnlyCloseoutItem>[],
+  nextActionLedger: ReturnType<typeof buildProductionTailNextActionLedger>,
+) {
+  return {
+    closeout_item_count: closeoutItems.length,
+    closed_item_count: closedItems.length,
+    open_safe_action_item_count: openItems.length,
+    production_closeout_open_safe_action_item_count: openItems.length,
+    next_action_item_count: nextActionLedger.summary.next_action_item_count,
+    next_action_group_count: nextActionLedger.summary.next_action_group_count,
+    provider_scheduler_item_count: closeoutItems.filter((item) =>
+      item.claim_scope === 'provider_scheduler_cadence'
+    ).length,
+    stage_production_caller_item_count: closeoutItems.filter((item) =>
+      item.claim_scope === 'stage_production_caller_request'
+    ).length,
+    external_evidence_item_count: closeoutItems.filter((item) =>
+      item.claim_scope === 'external_evidence_receipt'
+    ).length,
+    evidence_gate_item_count: closeoutItems.filter((item) =>
+      item.claim_scope === 'evidence_gate_receipt'
+    ).length,
+    legacy_cleanup_item_count: closeoutItems.filter((item) =>
+      item.claim_scope === 'legacy_cleanup_ledger'
+    ).length,
+    domain_ready_authorized: false,
+    production_ready_authorized: false,
+    not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
+  };
+}
+
+function attentionQueueItem(item: ReturnType<typeof readOnlyCloseoutItem>) {
+  return {
+    item_id: item.item_id,
+    owner: item.owner,
+    domain_id: item.domain_id,
+    stage_id: item.stage_id,
+    claim_scope: item.claim_scope,
+    next_safe_action_ref: item.replay_ref,
+    missing_or_expected_refs: item.expected_refs,
+  };
+}
+
+function nextSafeActions(
+  openItems: ReturnType<typeof readOnlyCloseoutItem>[],
+  limit = 5,
+) {
+  return openItems.slice(0, limit).map((item) => ({
+    item_id: item.item_id,
+    action_id: item.action_id,
+    action_kind: item.action_kind,
+    owner: item.owner,
+    domain_id: item.domain_id ?? null,
+    stage_id: item.stage_id ?? null,
+    claim_scope: item.claim_scope,
+    route_status: item.route_status,
+    next_safe_action_ref: item.replay_ref,
+    expected_ref_count: item.expected_refs.length,
+    typed_blocker_ref: item.typed_blocker_ref,
+    closeout_item_is_completion_claim: false,
+  }));
+}
+
 export async function runFamilyRuntimeProductionCloseout(
   contracts: FrameworkContracts,
   input: ProductionCloseoutInput,
@@ -309,69 +376,58 @@ export async function runFamilyRuntimeProductionCloseout(
     tailItems: closeoutItems,
     sourceRef: '/family_runtime_production_closeout/closeout_items',
   });
+  const counts = closeoutCounts(closeoutItems, openItems, closedItems, nextActionLedger);
+  const detailLevel = input.detailLevel ?? 'summary';
+  const commonPayload = {
+    surface_kind: 'opl_family_runtime_production_closeout',
+    surface_role: 'derived_operator_attention_lens',
+    lens_policy: 'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
+    closeout_mode: 'dry_run_summary',
+    family_defaults: input.familyDefaults === true,
+    selected_provider: input.providerKind,
+    effective_provider: stringValue(record(snapshot.runtime_tray_snapshot.runtime_health).provider_kind)
+      ?? input.providerKind,
+    selected_executor_kind: input.executorKind,
+    route_source: 'opl runtime app-operator-drilldown --detail full',
+    action_execution_surface: 'opl runtime action execute',
+    orchestration_policy:
+      'reads_app_operator_safe_action_routes_and_reports_refs_only_closure_without_domain_authority',
+    apply_supported: false,
+    apply_policy:
+      'batch_apply_is_not_supported_here; execute individual refs-only safe action routes through opl runtime action execute',
+    summary: counts,
+    production_closeout_open_safe_action_item_count: openItems.length,
+    source_refs: {
+      app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
+      app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
+    },
+    authority_boundary: authorityBoundary(),
+    not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
+  };
+  if (detailLevel === 'full') {
+    return {
+      version: 'g2',
+      family_runtime_production_closeout: {
+        ...commonPayload,
+        detail_level: 'full',
+        projection_detail_policy: 'full_diagnostic_payload_requested_explicitly',
+        closeout_items: closeoutItems,
+        attention_queue: openItems.map(attentionQueueItem),
+        next_action_ledger: nextActionLedger,
+      },
+    };
+  }
   return {
     version: 'g2',
     family_runtime_production_closeout: {
-      surface_kind: 'opl_family_runtime_production_closeout',
-      surface_role: 'derived_operator_attention_lens',
-      lens_policy: 'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
-      closeout_mode: 'dry_run_summary',
-      family_defaults: input.familyDefaults === true,
-      selected_provider: input.providerKind,
-      effective_provider: stringValue(record(snapshot.runtime_tray_snapshot.runtime_health).provider_kind)
-        ?? input.providerKind,
-      selected_executor_kind: input.executorKind,
-      route_source: 'opl runtime app-operator-drilldown --detail full',
-      action_execution_surface: 'opl runtime action execute',
-      orchestration_policy:
-        'reads_app_operator_safe_action_routes_and_reports_refs_only_closure_without_domain_authority',
-      apply_supported: false,
-      apply_policy:
-        'batch_apply_is_not_supported_here; execute individual refs-only safe action routes through opl runtime action execute',
-      summary: {
-        closeout_item_count: closeoutItems.length,
-        closed_item_count: closedItems.length,
-        open_safe_action_item_count: openItems.length,
-        production_closeout_open_safe_action_item_count: openItems.length,
-        next_action_item_count: nextActionLedger.summary.next_action_item_count,
-        next_action_group_count: nextActionLedger.summary.next_action_group_count,
-        provider_scheduler_item_count: closeoutItems.filter((item) =>
-          item.claim_scope === 'provider_scheduler_cadence'
-        ).length,
-        stage_production_caller_item_count: closeoutItems.filter((item) =>
-          item.claim_scope === 'stage_production_caller_request'
-        ).length,
-        external_evidence_item_count: closeoutItems.filter((item) =>
-          item.claim_scope === 'external_evidence_receipt'
-        ).length,
-        evidence_gate_item_count: closeoutItems.filter((item) =>
-          item.claim_scope === 'evidence_gate_receipt'
-        ).length,
-        legacy_cleanup_item_count: closeoutItems.filter((item) =>
-          item.claim_scope === 'legacy_cleanup_ledger'
-        ).length,
-        domain_ready_authorized: false,
-        production_ready_authorized: false,
-        not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
-      },
-      production_closeout_open_safe_action_item_count: openItems.length,
-      closeout_items: closeoutItems,
-      attention_queue: openItems.map((item) => ({
-        item_id: item.item_id,
-        owner: item.owner,
-        domain_id: item.domain_id,
-        stage_id: item.stage_id,
-        claim_scope: item.claim_scope,
-        next_safe_action_ref: item.replay_ref,
-        missing_or_expected_refs: item.expected_refs,
-      })),
-      next_action_ledger: nextActionLedger,
-      source_refs: {
-        app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
-        app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
-      },
-      authority_boundary: authorityBoundary(),
-      not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
+      ...commonPayload,
+      detail_level: 'summary',
+      projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
+      counts,
+      next_safe_actions: nextSafeActions(openItems),
+      full_detail_args: ['--detail', 'full'],
+      full_detail_command:
+        'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
     },
   };
 }

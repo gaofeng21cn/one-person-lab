@@ -452,6 +452,7 @@ export function buildInternalCommandSpecs(
         'opl family-runtime scheduler remove --provider temporal',
         'opl family-runtime scheduler tick --provider temporal',
         'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli --json',
+        'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
         'opl family-runtime tick --source temporal-worker --hydrate',
         'opl family-runtime queue list',
       ],
