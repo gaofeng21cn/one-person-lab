@@ -442,6 +442,40 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageNextAction.next_safe_action_route, stageItem.replay_ref);
     assert.equal(stageNextAction.authority_boundary.can_write_domain_truth, false);
     assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
+    assert.equal(fullCloseout.evidence_requirement_ledger.model_version, 'evidence_requirement.v1');
+    assert.equal(
+      fullCloseout.evidence_requirement_ledger.summary.requirement_count,
+      fullCloseout.closeout_items.length,
+    );
+    assert.equal(
+      fullCloseout.evidence_requirement_ledger.summary.open_requirement_count,
+      fullCloseout.attention_queue.length,
+    );
+    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.refs_only, true);
+    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_read_memory_body, false);
+    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_claim_production_ready, false);
+    const workorderPacket = fullCloseout.stage_evidence_workorder_packet;
+    assert.equal(workorderPacket.surface_kind, 'opl_stage_evidence_workorder_packet');
+    assert.equal(
+      workorderPacket.summary.workorder_count,
+      fullCloseout.summary.stage_production_evidence_receipt_item_count,
+    );
+    assert.equal(
+      workorderPacket.summary.route_requires_domain_or_app_payload_count,
+      workorderPacket.summary.workorder_count,
+    );
+    assert.equal(workorderPacket.summary.typed_blocker_path_available_count, workorderPacket.summary.workorder_count);
+    assert.equal(workorderPacket.summary.success_payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(workorderPacket.authority_boundary.can_write_domain_truth, false);
+    assert.equal(workorderPacket.authority_boundary.can_generate_domain_owner_receipt, false);
+    assert.equal(workorderPacket.authority_boundary.closes_production_ready, false);
+    const firstWorkorder = workorderPacket.workorders[0];
+    assert.equal(firstWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(firstWorkorder.route_requires_domain_or_app_payload, true);
+    assert.equal(firstWorkorder.can_close_without_domain_or_app_payload, false);
+    assert.equal(firstWorkorder.payload_workorder.surface_kind, 'opl_stage_production_evidence_payload_workorder');
+    assert.equal(firstWorkorder.authority_boundary.can_read_artifact_body, false);
     assert.equal(fullCloseout.authority_boundary.can_write_domain_truth, false);
     assert.equal(fullCloseout.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
