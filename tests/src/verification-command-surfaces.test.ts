@@ -73,6 +73,15 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
   ], {
     cwd: repoRoot,
     encoding: 'utf8',
+    env: {
+      ...process.env,
+      PYTHONPYCACHEPREFIX: path.join(repoRoot, 'stale-pycache'),
+      UV_PROJECT_ENVIRONMENT: path.join(repoRoot, 'stale-uv-env'),
+      NPM_CONFIG_CACHE: path.join(repoRoot, 'stale-npm-cache'),
+      NODE_COMPILE_CACHE: path.join(repoRoot, 'stale-node-cache'),
+      CARGO_TARGET_DIR: path.join(repoRoot, 'stale-cargo-target'),
+      XDG_CACHE_HOME: path.join(repoRoot, 'stale-xdg-cache'),
+    },
   });
 
   assert.equal(result.status, 0, result.stderr);
