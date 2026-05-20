@@ -626,7 +626,7 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'agent_lab_sample_suite',
     'agent_lab_longline_suite',
     'agent_lab_external_suite',
-    'mas_production_evidence_suite',
+    'agent_production_evidence_suite',
   ]);
   assert.ok(contract.result_surface.ref_fields.includes('mechanism_evolution_input_refs'));
   assert.ok(contract.result_surface.ref_fields.includes('production_evidence_gate_result_refs'));
@@ -635,14 +635,14 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.result_surface.ref_fields.includes('production_evidence_required_receipt_refs'));
   assert.equal(contract.external_suite_runner_surface.surface_kind, 'opl_agent_lab_external_suite_run');
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
-  assert.ok(contract.external_suite_runner_surface.accepted_suite_kinds.includes('mas_production_evidence_suite'));
-  assert.equal(contract.mas_production_evidence_gate_surface.surface_kind,
-    'opl_agent_lab_mas_production_evidence_gate_result');
-  assert.equal(contract.mas_production_evidence_gate_surface.refs_only, true);
-  assert.equal(contract.mas_production_evidence_gate_surface.domain_verdict_claimed, false);
-  assert.ok(contract.mas_production_evidence_gate_surface.input_ref_groups.includes('owner_route_refs'));
-  assert.ok(contract.mas_production_evidence_gate_surface.input_ref_groups.includes('required_receipt_refs'));
-  assert.ok(contract.mas_production_evidence_gate_surface.consumer_outputs.includes(
+  assert.ok(contract.external_suite_runner_surface.accepted_suite_kinds.includes('agent_production_evidence_suite'));
+  assert.equal(contract.production_evidence_gate_surface.surface_kind,
+    'opl_agent_lab_production_evidence_gate_result');
+  assert.equal(contract.production_evidence_gate_surface.refs_only, true);
+  assert.equal(contract.production_evidence_gate_surface.domain_verdict_claimed, false);
+  assert.ok(contract.production_evidence_gate_surface.input_ref_groups.includes('owner_route_refs'));
+  assert.ok(contract.production_evidence_gate_surface.input_ref_groups.includes('required_receipt_refs'));
+  assert.ok(contract.production_evidence_gate_surface.consumer_outputs.includes(
     'agent_lab_run.suite_result.production_evidence_gate_result',
   ));
   assert.ok(contract.result_surface.summary_fields.includes('regression_guard_only_count'));
