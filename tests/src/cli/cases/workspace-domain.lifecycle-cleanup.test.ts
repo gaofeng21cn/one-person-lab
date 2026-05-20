@@ -194,6 +194,8 @@ test('legacy cleanup gate emits executable OPL lifecycle apply plan without doma
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,
+      projection_cache_used_count: 0,
+      live_failed_project_ids: [],
     },
     projects: [
       {
@@ -261,6 +263,8 @@ test('agents legacy-cleanup apply records controlled cleanup receipts from the s
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,
+      projection_cache_used_count: 0,
+      live_failed_project_ids: [],
     },
     projects: [
       {
@@ -341,6 +345,8 @@ test('agents legacy-cleanup apply blocks a non-ready skeleton cleanup plan', () 
       manifest_configured_count: 1,
       resolved_count: 1,
       failed_count: 0,
+      projection_cache_used_count: 0,
+      live_failed_project_ids: [],
     },
     projects: [
       {

@@ -44,6 +44,7 @@ export type AgentExecutionReceipt = {
   exit_code: number;
   closeout_packet: JsonRecord | null;
   executor_contract?: JsonRecord | null;
+  executor_envelope: JsonRecord;
   capabilities: string[];
   non_equivalence_notice: 'codex_cli_first_class_default' | 'connectivity_lifecycle_receipt_audit_only';
   proof: JsonRecord | null;
@@ -56,6 +57,7 @@ export type AgentExecutorDoctor = {
   binary_path: string | null;
   resolution_source: string | null;
   capabilities: string[];
+  executor_envelope: JsonRecord;
   issues: string[];
   non_equivalence_notice: AgentExecutionReceipt['non_equivalence_notice'];
   fallback_allowed: false;
@@ -153,6 +155,34 @@ function capabilitiesFor(executorKind: AgentExecutorKind) {
   return ['cli_process_receipt', 'json_or_text_output'];
 }
 
+function executorEnvelopeFor(executorKind: AgentExecutorKind) {
+  const isDefault = executorKind === 'codex_cli';
+  return {
+    surface_kind: 'opl_agent_executor_envelope',
+    default_executor_kind: 'codex_cli',
+    selected_executor_kind: executorKind,
+    default_quality_path: 'codex_cli',
+    selected_executor_is_default_quality_path: isDefault,
+    adapter_receipt_only: !isDefault,
+    non_default_receipt_policy: isDefault
+      ? null
+      : 'adapter_receipt_only_no_reasoning_tool_resume_or_quality_equivalence',
+    reasoning_equivalence_claim: false,
+    tool_semantics_equivalence_claim: false,
+    resume_equivalence_claim: false,
+    quality_equivalence_claim: false,
+    fallback_allowed: false,
+    authority_boundary: {
+      codex_cli: 'default_quality_path',
+      non_default_executor: 'connectivity_lifecycle_receipt_audit_only',
+      can_claim_reasoning_equivalence: false,
+      can_claim_tool_semantics_equivalence: false,
+      can_claim_resume_equivalence: false,
+      can_claim_quality_equivalence: false,
+    },
+  };
+}
+
 export function inspectAgentExecutor(
   kind: AgentExecutorKind | string,
   options: { env?: Record<string, string | undefined> } = {},
@@ -167,6 +197,7 @@ export function inspectAgentExecutor(
     binary_path: binary?.path ?? null,
     resolution_source: binary?.source ?? null,
     capabilities: capabilitiesFor(executorKind),
+    executor_envelope: executorEnvelopeFor(executorKind),
     issues: binary ? [] : [`${executorKind}_binary_missing`],
     non_equivalence_notice: executorKind === 'codex_cli'
       ? 'codex_cli_first_class_default'
@@ -309,6 +340,7 @@ function normalizeReceipt(value: unknown, fallback: {
     exit_code: typeof payload.exit_code === 'number' ? payload.exit_code : 0,
     closeout_packet: isRecord(payload.closeout_packet) ? payload.closeout_packet : null,
     executor_contract: isRecord(payload.executor_contract) ? payload.executor_contract : null,
+    executor_envelope: executorEnvelopeFor(fallback.kind),
     capabilities: Array.isArray(payload.capabilities)
       ? payload.capabilities.filter((entry): entry is string => typeof entry === 'string')
       : capabilitiesFor(fallback.kind),
@@ -342,6 +374,7 @@ function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExe
     exit_code: result.exitCode,
     closeout_packet: parseOptionalCloseout(result.stdout),
     executor_contract: null,
+    executor_envelope: executorEnvelopeFor(executorKind),
     capabilities: capabilitiesFor(executorKind),
     non_equivalence_notice: 'codex_cli_first_class_default',
     proof: {
@@ -433,6 +466,7 @@ function runExternalExecutor(request: AgentExecutionRequest, executorKind: Agent
     exit_code: result.status ?? 1,
     closeout_packet: parseOptionalCloseout(result.stdout ?? ''),
     executor_contract: null,
+    executor_envelope: executorEnvelopeFor(executorKind),
     capabilities: capabilitiesFor(executorKind),
     non_equivalence_notice: 'connectivity_lifecycle_receipt_audit_only',
     proof: {

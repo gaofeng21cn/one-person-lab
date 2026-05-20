@@ -134,6 +134,12 @@ export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonR
         project_id: stringValue(stage.project_id),
         stage_id: stageId,
         missing_production_evidence: stringList(stage.missing_production_evidence),
+        evidence_obligations: recordList(stage.evidence_obligations),
+        evidence_obligation_summary: isRecord(stage.evidence_obligation_summary)
+          ? stage.evidence_obligation_summary
+          : {},
+        domain_owned_typed_blocker_refs: stringList(stage.domain_owned_typed_blocker_refs),
+        executor_envelope: isRecord(stage.executor_envelope) ? stage.executor_envelope : {},
         expected_receipt_refs: stringList(stage.expected_receipt_refs),
         source_scope_refs: stringList(stage.source_scope_refs),
         artifact_scope_refs: stringList(stage.artifact_scope_refs),

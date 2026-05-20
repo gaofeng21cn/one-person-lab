@@ -1049,11 +1049,6 @@ export function buildAppOperatorDrilldown(input: {
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
-  const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
-    providerContinuousProof: input.providerContinuousProof,
-    stageAttempts: attempts,
-  });
-  const productionEvidenceTailSummary = record(productionEvidenceTailLedger.summary);
   const periodicRefs = periodicExecutionRefs(providerActionRefs);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
@@ -1076,6 +1071,17 @@ export function buildAppOperatorDrilldown(input: {
     input.domainManifestProjects,
     input.providerContinuousProof,
   );
+  const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
+    providerContinuousProof: input.providerContinuousProof,
+    stageAttempts: attempts,
+    appOperatorDrilldown: {
+      stage_production_evidence: stageProductionEvidence,
+      domain_dispatch_evidence: domainDispatchEvidence,
+      domain_evidence_request_refs: evidenceRequests,
+      domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
+    },
+  });
+  const productionEvidenceTailSummary = record(productionEvidenceTailLedger.summary);
   const actionRefs = uniqueRefs([
     ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
@@ -1188,6 +1194,16 @@ export function buildAppOperatorDrilldown(input: {
       stage_production_evidence_monitor_declared_stage_count: numberValue(stageProductionEvidenceSummary.monitor_declared_stage_count),
       stage_production_evidence_monitor_freshness_observed_stage_count: numberValue(stageProductionEvidenceSummary.monitor_freshness_observed_stage_count),
       stage_production_evidence_monitor_freshness_unobserved_stage_count: numberValue(stageProductionEvidenceSummary.monitor_freshness_unobserved_stage_count),
+      stage_production_evidence_stages_with_domain_typed_blocker_count:
+        numberValue(stageProductionEvidenceSummary.stages_with_domain_typed_blocker_count),
+      stage_production_evidence_obligation_count:
+        numberValue(stageProductionEvidenceSummary.evidence_obligation_count),
+      stage_production_evidence_obligation_closed_count:
+        numberValue(stageProductionEvidenceSummary.evidence_obligation_closed_count),
+      stage_production_evidence_obligation_open_count:
+        numberValue(stageProductionEvidenceSummary.evidence_obligation_open_count),
+      stage_production_evidence_obligation_blocked_by_domain_typed_blocker_count:
+        numberValue(stageProductionEvidenceSummary.evidence_obligation_blocked_by_domain_typed_blocker_count),
       stage_production_attempt_request_route_count:
         actionRefs.filter((ref) => ref.action_kind === 'stage_production_attempt_request').length,
       external_evidence_action_route_count:
@@ -1356,7 +1372,7 @@ export function buildAppOperatorDrilldown(input: {
       'does_not_authorize_quality_readiness_or_export_verdict',
       'does_not_directly_execute_domain_actions',
     ],
-  }, input.detailLevel ?? 'full');
+  }, input.detailLevel ?? 'summary');
 }
 
 export type { AppOperatorDrilldownDetailLevel };

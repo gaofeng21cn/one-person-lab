@@ -105,7 +105,23 @@ export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv 
 }
 
 export function shouldUseManagedShellScratchCwd(command: string | null | undefined) {
-  return Boolean(command?.match(/(?:^|[;&|]\s*)uv\s+run\b/));
+  const value = command?.trim();
+  if (!value) {
+    return false;
+  }
+
+  if (isReadOnlyProductEntryCommand(value)) {
+    return false;
+  }
+
+  return Boolean(value.match(/(?:^|[;&|]\s*)uv\s+run\b/));
+}
+
+function isReadOnlyProductEntryCommand(command: string) {
+  const normalized = command.replace(/\s+/g, ' ');
+  return Boolean(normalized.match(
+    /(?:^|[;&|]\s*)uv\s+run\s+(?:(?:python|python3)\s+-m\s+[\w.-]+\s+|[\w.-]+\s+)product\s+(?:manifest|status)\b/,
+  ));
 }
 
 export function buildManagedShellScratchCwd(cwd: string, env: NodeJS.ProcessEnv = process.env) {

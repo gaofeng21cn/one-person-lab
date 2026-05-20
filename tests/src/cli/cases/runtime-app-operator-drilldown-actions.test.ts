@@ -195,11 +195,11 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const output = runCli(['runtime', 'snapshot'], {
+    const output = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-    const drilldown = output.runtime_tray_snapshot.app_operator_drilldown;
+    const drilldown = output.app_operator_drilldown;
 
     assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
     assert.equal(drilldown.authority_boundary.can_read_memory_body, false);

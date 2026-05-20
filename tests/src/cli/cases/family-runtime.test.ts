@@ -1,6 +1,18 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, fs, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
+import {
+  assert,
+  buildManifestCommand,
+  createFamilyContractsFixtureRoot,
+  fs,
+  loadFamilyManifestFixtures,
+  os,
+  path,
+  repoRoot,
+  runCli,
+  shellSingleQuote,
+  test,
+} from '../helpers.ts';
 
 function createDispatchFixture(body: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-'));
@@ -71,6 +83,67 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.domain_adapters.medautogrant.truth_owner, 'med-autogrant');
     assert.equal(output.family_runtime.stage_attempts.total, 0);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime production-closeout reports safe-action evidence tail without authority claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-closeout-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+
+  try {
+    for (const [project, manifest] of [
+      ['medautoscience', fixtures.medautoscience],
+      ['medautogrant', fixtures.medautogrant],
+      ['redcube', fixtures.redcube],
+    ] as const) {
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        project,
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(manifest),
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      });
+    }
+
+    const closeout = runCli([
+      'family-runtime',
+      'production-closeout',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const report = closeout.family_runtime_production_closeout;
+
+    assert.equal(report.surface_kind, 'opl_family_runtime_production_closeout');
+    assert.equal(report.closeout_mode, 'dry_run_summary');
+    assert.equal(report.apply_supported, false);
+    assert.equal(report.summary.domain_ready_authorized, false);
+    assert.equal(report.summary.production_ready_authorized, false);
+    assert.equal(report.summary.provider_scheduler_item_count, 4);
+    assert.equal(report.summary.open_safe_action_item_count > 0, true);
+    assert.equal(report.authority_boundary.can_write_domain_truth, false);
+    assert.equal(report.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(
+      report.closeout_items.some((item: { action_kind: string }) =>
+        item.action_kind === 'provider_scheduler_status'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

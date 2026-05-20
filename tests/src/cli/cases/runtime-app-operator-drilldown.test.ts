@@ -380,7 +380,28 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const snapshot = output.runtime_tray_snapshot;
-    const drilldown = snapshot.app_operator_drilldown;
+    const snapshotDrilldown = snapshot.app_operator_drilldown;
+    assert.equal(snapshotDrilldown.detail_level, 'summary');
+    assert.equal(
+      snapshotDrilldown.projection_detail_policy,
+      'attention_first_default_full_refs_via_explicit_drilldown',
+    );
+    assert.equal(snapshotDrilldown.route_graph_refs, undefined);
+    assert.equal(snapshotDrilldown.operator_action_routing_refs, undefined);
+    assert.equal(
+      snapshotDrilldown.attention_first_payload.next_safe_action.submit_via,
+      'opl runtime action execute',
+    );
+    assert.equal(
+      snapshotDrilldown.attention_first_payload.provider_health.authority_boundary.can_write_domain_truth,
+      false,
+    );
+
+    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const drilldown = fullOutput.app_operator_drilldown;
 
     assert.equal(drilldown.surface_kind, 'opl_app_operator_drilldown_read_model');
     assert.equal(drilldown.projection_scope, 'runtime_snapshot');
@@ -462,6 +483,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_evidence_monitor_freshness_observed_stage_count, 0);
     assert.equal(drilldown.summary.stage_production_evidence_monitor_freshness_unobserved_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_attempt_request_route_count, 1);
+    assert.equal(drilldown.summary.production_evidence_tail_item_count >= 3, true);
+    assert.equal(drilldown.summary.production_evidence_tail_open_item_count >= 1, true);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);
@@ -732,6 +755,21 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(
       drilldown.app_execution_bridge.route_submission_policy.direct_domain_action_execution_allowed,
       false,
+    );
+    const stageTailItem = drilldown.production_evidence_tail_ledger.tail_items.find(
+      (item: { claim_scope: string; tail_id: string }) =>
+        item.claim_scope === 'stage_production_caller_executor_receipt_monitor'
+        && item.tail_id.includes(':review:'),
+    );
+    assert.equal(stageTailItem.status, 'open');
+    assert.equal(stageTailItem.owner_group, 'medautoscience');
+    assert.equal(stageTailItem.receipt_ref, null);
+    assert.equal(stageTailItem.typed_blocker_ref, null);
+    assert.equal(stageTailItem.not_authorized_claims.includes('domain_ready'), true);
+    assert.equal(stageTailItem.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(
+      stageTailItem.next_verification_command,
+      'opl runtime app-operator-drilldown --detail full --json',
     );
     assert.equal(drilldown.app_execution_bridge.authority_boundary.can_write_domain_truth, false);
     assert.equal(

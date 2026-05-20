@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import { resolveBindingManifest } from './domain-manifest/resolver.ts';
+import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { getActiveWorkspaceBinding } from './workspace-registry.ts';
 
@@ -281,12 +282,10 @@ function projectionFromPayload(payload: unknown, source: JsonRecord): MasManaged
   };
 }
 
-function projectionFromManifest() {
-  const binding = getActiveWorkspaceBinding('medautoscience');
-  if (!binding?.direct_entry.manifest_command) {
+export function projectionFromMasManifestEntry(entry: DomainManifestCatalogEntry | null | undefined) {
+  if (!entry?.manifest_command) {
     return null;
   }
-  const entry = resolveBindingManifest('medautoscience', 'med-autoscience', binding);
   if (entry.status !== 'resolved' || !entry.manifest) {
     return null;
   }
@@ -299,6 +298,14 @@ function projectionFromManifest() {
     manifest_command: entry.manifest_command,
     projection_ref: '/progress_projection/domain_projection',
   });
+}
+
+function projectionFromManifest() {
+  const binding = getActiveWorkspaceBinding('medautoscience');
+  if (!binding?.direct_entry.manifest_command) {
+    return null;
+  }
+  return projectionFromMasManifestEntry(resolveBindingManifest('medautoscience', 'med-autoscience', binding));
 }
 
 function projectionFromSidecar() {
@@ -327,6 +334,8 @@ function projectionFromSidecar() {
   }
 }
 
-export function readMasManagedProviderProjection(): MasManagedProviderProjection | null {
-  return projectionFromManifest() ?? projectionFromSidecar();
+export function readMasManagedProviderProjection(
+  options: { includeManifest?: boolean } = {},
+): MasManagedProviderProjection | null {
+  return (options.includeManifest === false ? null : projectionFromManifest()) ?? projectionFromSidecar();
 }

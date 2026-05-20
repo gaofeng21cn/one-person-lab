@@ -67,6 +67,7 @@ import {
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
+import { runFamilyRuntimeProductionCloseout } from './family-runtime-production-closeout.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -695,6 +696,9 @@ export async function runFamilyRuntime(args: string[]) {
         family_runtime_lifecycle_reconcile: reconcileFamilyRuntimeLifecycleRefs(parsed.input),
       };
     }
+    if (parsed.mode === 'production_closeout') {
+      return runFamilyRuntimeProductionCloseout(loadFrameworkContracts(), parsed.input);
+    }
     if (parsed.mode === 'enqueue') {
       return {
         version: 'g2',
@@ -809,7 +813,7 @@ export async function runFamilyRuntime(args: string[]) {
         || defaultStageLaunchAdmissionGate.gate_action === 'block_stage_launch';
       const temporal_start = parsed.input.start
         && attempt.status !== 'blocked'
-          ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt)
+          ? await (await temporalProviderModule()).startTemporalStageAttemptWorkflow(attempt, { paths })
         : null;
       insertEvent(db, {
         taskId: attempt.task_id,
@@ -855,7 +859,7 @@ export async function runFamilyRuntime(args: string[]) {
     if (parsed.mode === 'attempt_start') {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
       const { startTemporalStageAttemptWorkflow } = await temporalProviderModule();
-      const temporal_start = await startTemporalStageAttemptWorkflow(attempt);
+      const temporal_start = await startTemporalStageAttemptWorkflow(attempt, { paths });
       insertEvent(db, {
         taskId: attempt.task_id,
         domainId: attempt.domain_id,
@@ -902,7 +906,7 @@ export async function runFamilyRuntime(args: string[]) {
     if (parsed.mode === 'attempt_query') {
       const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
       const attempt = localQuery.stage_attempt_query.attempt;
-      const temporal_query = await queryTemporalStageAttemptReadModel(attempt);
+      const temporal_query = await queryTemporalStageAttemptReadModel(attempt, { paths });
       return {
         version: 'g2',
         family_runtime_stage_attempt_query: {
@@ -920,6 +924,7 @@ export async function runFamilyRuntime(args: string[]) {
             signalKind: parsed.signalKind,
             payload: parsed.payload,
             source: parsed.source,
+            paths,
           })
         : null;
       insertEvent(db, {
