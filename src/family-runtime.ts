@@ -67,7 +67,7 @@ import {
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
-import { runFamilyRuntimeProductionCloseout } from './family-runtime-production-closeout.ts';
+import { runFamilyRuntimeProductionCloseoutCommand } from './family-runtime-production-closeout-command.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -536,13 +536,7 @@ export async function runFamilyRuntime(args: string[]) {
         },
       };
     }
-    if (parsed.mode === 'service_status') {
-      return await runTemporalServiceCommand(db, paths, parsed);
-    }
-    if (parsed.mode === 'service_start') {
-      return await runTemporalServiceCommand(db, paths, parsed);
-    }
-    if (parsed.mode === 'service_stop') {
+    if (parsed.mode === 'service_status' || parsed.mode === 'service_start' || parsed.mode === 'service_stop') {
       return await runTemporalServiceCommand(db, paths, parsed);
     }
     if (parsed.mode === 'worker_start') {
@@ -697,7 +691,7 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'production_closeout') {
-      return runFamilyRuntimeProductionCloseout(loadFrameworkContracts(), parsed.input);
+      return runFamilyRuntimeProductionCloseoutCommand(parsed.input);
     }
     if (parsed.mode === 'enqueue') {
       return {

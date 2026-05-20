@@ -58,6 +58,21 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 当 OPL primitive、pack compiler 或 App shell 还不够成熟时，应在 OPL 层定义缺口、必要时调研外部成熟系统，并把结论沉淀为 OPL generic primitive / generated surface / policy；不得让 MAS/MAG/RCA 各自复制私有平台。
 - 文档和计划必须先设理想态，再找差距；差距不是妥协清单。为了理想态，可以做革命式重构并完全抛弃旧模块、旧接口、旧测试、旧目录和旧文案；处理清楚 active caller、替代 surface、provenance 和必要证据后，不保留历史兼容面。
 
+## OPL 10 项原则
+
+这 10 项原则是核心五件套、active gap、closure matrix 与 contracts README 的共同读法。它们把 `AI-first`、`executor-first`、`Codex-first` 和 `contract-light` 拆开：开放式专家工作优先交给 AI executor；stage 内最小执行单位是 Agent executor；当前默认且第一公民 executor 是 `Codex CLI`；合同只保边界、安全、审计、receipt、阻塞、恢复和 projection 下限。
+
+1. Stage pack 是启动单位；OPL 准入并启动 stage，不启动自由形态 workflow script。
+2. AI-first 执行不被静态合同写死；合同只绑定 prompt、tools、knowledge refs、expected receipt 和 authority boundary。
+3. `Codex CLI` 是默认 selected executor；`hermes_agent`、Claude Code 或其他 executor adapter 只能显式绑定，并以 receipt / audit / fail-closed 证明连接。
+4. AI 原生专家判断优先；机械分数、checklist、contract completeness、descriptor ready、provider completion 和 generated-surface proof 只能作为 advisory，除非独立 AI stage 或 domain-owned quality gate 返回 receipt / typed blocker / route-back verdict，否则不能替代专家判断。
+5. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
+6. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
+7. `runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。
+8. Hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate 或 executor binding 缺失。
+9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --domain <domain>` 的 advisory refs，不作为独立 launch-authority schema。
+10. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref，不用 fallback verdict 补语义。
+
 ## 当前公开产品模型
 
 - 当前主线公开模型固定为：
@@ -88,7 +103,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 ## 合同面
 
 - `contracts/` 只保留机器可读真相，不承载叙事规则。
-- 修改网关合同、公开边界或已收录领域表述时，必须同步更新文档与测试。
+- 修改 machine-readable contracts、公开边界或已收录领域表述时，必须同步更新文档与测试。
 - admitted domain 仓对外应继续暴露本地 CLI、程序/脚本与 repo-tracked contract；`OPL` activation 只消费这些稳定 surface。
 
 ## 目标优先级

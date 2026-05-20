@@ -26,6 +26,7 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
   const expectedParserParts = [
     'attempt.ts',
     'lifecycle.ts',
+    'production-closeout.ts',
     'provider.ts',
     'queue.ts',
     'scheduler.ts',

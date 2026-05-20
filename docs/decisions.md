@@ -34,6 +34,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 后续优化优先投向 domain stage pack、prompt、skill、knowledge、rubric、quality gate、AI reviewer/auditor attempt 和 executor adapter 能力，而不是把领域判断迁入 OPL 机械规则。
 - 该原则不改变 domain ownership：MAS/MAG/RCA 继续持有 domain truth、quality/export verdict、artifact authority、memory body / accept-reject decision 和 owner receipt；OPL 只托管、调度、投影和审计边界。
 
+本决策的 10 项 stage-led 合同读法同步为：Stage pack 是启动单位；AI-first 执行不被静态合同写死；默认 selected executor 是 `Codex CLI`，非默认 adapter 必须显式绑定；AI 原生专家判断优先于机械信号；`requires` / `ensures` 在启动前检查；`verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority；`runtime_enforced_boundary` 覆盖 AI、人、外部系统、artifact、memory 和 domain verdict；hard blocker 只覆盖启动安全、越权、关键 runtime event、composition、hard human gate 或 executor binding；capacity / monitor / assumption / cohort-loop / replay / domain-owner review 只进入 advisory refs；descriptor / read model / generated / provider / cleanup proof 不能替代 production evidence，未闭合边界必须返回 typed blocker、human gate、receipt conflict 或 route-back ref。
+
 ## 2026-05-18
 
 ### 决策：One Person Lab App 的产品运行路径默认使用 OPL-managed environment，developer checkout 只能显式 override

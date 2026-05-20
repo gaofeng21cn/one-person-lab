@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { Client, Connection, ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy } from '@temporalio/client';
+import { ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy } from '@temporalio/client';
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
@@ -40,7 +40,12 @@ import {
   probeTemporalServer,
   resolveTemporalAddressForPaths,
 } from './family-runtime-temporal-service.ts';
-import type { familyRuntimePaths } from './family-runtime-store.ts';
+import {
+  requireTemporalAddress,
+  type TemporalClientOptions,
+  type TemporalWorkerPaths,
+  withTemporalClient,
+} from './family-runtime-temporal-client.ts';
 
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
   stage_attempt_id: string;
@@ -58,11 +63,6 @@ type TemporalWorkerState = {
   status: 'starting' | 'ready';
 };
 
-type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
-type TemporalClientOptions = {
-  paths?: TemporalWorkerPaths;
-  addressOverride?: string | null;
-};
 type TemporalSchedulerInfoProjection = {
   num_actions_skipped_overlap?: number;
   running_actions?: unknown[];
@@ -71,21 +71,6 @@ type TemporalSchedulerInfoProjection = {
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
-}
-
-function requireTemporalAddress() {
-  const address = process.env.OPL_TEMPORAL_ADDRESS?.trim() || process.env.TEMPORAL_ADDRESS?.trim() || null;
-  if (!address) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal provider start/query/signal requires OPL_TEMPORAL_ADDRESS or TEMPORAL_ADDRESS.',
-      {
-        required_env: ['OPL_TEMPORAL_ADDRESS'],
-        provider_kind: 'temporal',
-      },
-    );
-  }
-  return address;
 }
 
 function temporalWorkerStatePath(paths: TemporalWorkerPaths) {
@@ -168,20 +153,6 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     surface_kind: 'temporal_worker_lifecycle_status',
     lifecycle_status: readiness.readiness_status,
   };
-}
-
-async function withTemporalClient<T>(
-  fn: (client: Client, connection: Connection) => Promise<T>,
-  options: TemporalClientOptions = {},
-) {
-  const resolvedAddress = options.addressOverride
-    ?? (options.paths ? resolveTemporalAddressForPaths(options.paths).address : null);
-  const connection = await Connection.connect({ address: resolvedAddress || requireTemporalAddress() });
-  try {
-    return await fn(new Client({ connection, namespace: resolveTemporalNamespace() }), connection);
-  } finally {
-    await connection.close();
-  }
 }
 
 function signalNameFor(kind: TemporalStageAttemptSignalKind) {

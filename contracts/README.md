@@ -10,6 +10,21 @@
 - 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的显式可选 backend/audit/oracle companion 进入环境管理和投影，不作为默认安装依赖或顶层 domain-agent entry。
 - 已退役的旧入口词族不是 OPL 当前合同面；若只在历史 gateway 语料或 domain 仓内部 command/schema contract 中出现，必须按对应层级阅读。
 
+## 合同下限 10 原则
+
+这些原则解释 contracts 目录的边界：OPL 是 `AI-first / executor-first / Codex-first` 的 stage-led framework，合同只保下限，不把智能行为写死。
+
+1. Stage pack 是启动单位；OPL 准入并启动 stage，不启动自由形态 workflow script。
+2. AI-first 执行不被静态合同写死；合同只绑定 prompt、tools、knowledge refs、expected receipt 和 authority boundary。
+3. `Codex CLI` 是默认 selected executor；`hermes_agent`、Claude Code 或其他 executor adapter 只能显式绑定，并以 receipt / audit / fail-closed 证明连接。
+4. AI 原生专家判断优先；机械分数、checklist、contract completeness、descriptor ready、provider completion 和 generated-surface proof 只能作为 advisory，不能替代独立 AI stage、domain-owned quality gate、owner receipt、typed blocker 或 route-back verdict。
+5. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
+6. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
+7. `runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。
+8. Hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate 或 executor binding 缺失。
+9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --domain <domain>` 的 advisory refs，不作为独立 launch-authority schema。
+10. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref。
+
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-framework/*.json`：当前 stage-led OPL framework、App consumer surface、Foundry package/domain-agent catalog、runtime 与 supporting-surface contract

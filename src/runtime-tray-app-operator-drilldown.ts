@@ -41,6 +41,9 @@ import {
   periodicExecutionRefs,
   providerSloRefs,
 } from './runtime-tray-app-operator-drilldown-parts/provider-periodic-refs.ts';
+import {
+  buildAppOperatorDrilldownSummary,
+} from './runtime-tray-app-operator-drilldown-parts/summary.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1054,12 +1057,10 @@ export function buildAppOperatorDrilldown(input: {
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
   const typedBlockers = typedBlockerRefs(attempts, input.domainProjectionIngestion);
   const domainDispatchEvidence = buildDomainDispatchEvidence(attempts);
-  const domainDispatchEvidenceSummary = record(domainDispatchEvidence.summary);
   const stageProductionEvidence = buildStageProductionEvidence({
     domainManifestProjects: input.domainManifestProjects,
     attempts,
   });
-  const stageProductionEvidenceSummary = record(stageProductionEvidence.summary);
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
@@ -1081,7 +1082,6 @@ export function buildAppOperatorDrilldown(input: {
       domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     },
   });
-  const productionEvidenceTailSummary = record(productionEvidenceTailLedger.summary);
   const actionRefs = uniqueRefs([
     ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
@@ -1113,186 +1113,35 @@ export function buildAppOperatorDrilldown(input: {
         ? 'available'
         : 'empty',
     projection_policy: 'refs_only_no_domain_truth_memory_body_artifact_body_or_verdict',
-    summary: {
-      stage_attempt_count: attempts.length,
-      domain_projection_ref_count: domainRefs.length,
-      route_graph_ref_count: routeRefs.length,
-      decision_map_ref_count: decisionRefs.length,
-      review_repair_queue_item_count: reviewItems.length,
-      artifact_gallery_item_count: artifactRefs.length,
-      package_ref_count: packageLifecycle.package_refs.length,
-      export_ref_count: packageLifecycle.export_refs.length,
-      memory_ref_count: memoryRefs.consumed_memory_refs.length,
-      memory_writeback_ref_count: memoryRefs.writeback_receipt_refs.length,
-      quality_ref_count: qualityRefs.quality_refs.length,
-      readiness_ref_count: qualityRefs.readiness_refs.length,
-      provider_slo_action_count: providerActionRefs.length,
-      provider_cadence_window_status: providerCadenceWindow.window_status,
-      provider_cadence_window_long_evidence_ready: providerCadenceWindow.long_window_evidence_ready,
-      provider_cadence_window_expected_receipt_count:
-        providerCadenceWindow.expected_slo_execution_receipt_count,
-      provider_cadence_window_observed_receipt_count:
-        providerCadenceWindow.observed_slo_execution_receipt_count,
-      provider_cadence_window_missing_receipt_count:
-        providerCadenceWindow.missing_slo_execution_receipt_count,
-      provider_cadence_window_blocked_repair_receipt_count:
-        providerCadenceWindow.blocked_repair_receipt_count,
-      provider_capability_slo_status: providerCapabilitySlo.status,
-      provider_capability_restart_requery_ready: providerCapabilitySlo.restart_requery_ready,
-      provider_capability_signal_history_ready: providerCapabilitySlo.signal_history_ready,
-      provider_capability_typed_closeout_ready: providerCapabilitySlo.typed_closeout_required_ready,
-      provider_capability_missing_closeout_block_ready: providerCapabilitySlo.missing_closeout_block_ready,
-      provider_capability_retry_dead_letter_ready: providerCapabilitySlo.retry_dead_letter_boundary_ready,
-      provider_capability_domain_truth_boundary_preserved:
-        providerCapabilitySlo.domain_truth_boundary_preserved,
-      periodic_execution_ref_count: periodicRefs.refs.length,
-      operator_action_route_count: actionRefs.length,
-      operator_executable_route_count: actionRefs.filter((ref) => (
-        ref.execution_policy === 'opl_safe_action_shell'
-      )).length,
-      opl_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'opl').length,
-      provider_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'provider').length,
-      domain_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'domain').length,
-      user_owned_action_route_count: actionRefs.filter((ref) => ref.owner === 'user').length,
-      owner_receipt_ref_count: ownerReceipts.length,
-      typed_blocker_ref_count: typedBlockers.refs.length,
-      typed_blocker_count: typedBlockers.blockers.length,
-      domain_dispatch_evidence_domain_count:
-        numberValue(domainDispatchEvidenceSummary.domain_count),
-      domain_dispatch_evidence_attempt_count:
-        numberValue(domainDispatchEvidenceSummary.attempt_count),
-      domain_dispatch_evidence_owner_receipt_ref_count:
-        numberValue(domainDispatchEvidenceSummary.owner_receipt_ref_count),
-      domain_dispatch_evidence_typed_blocker_ref_count:
-        numberValue(domainDispatchEvidenceSummary.typed_blocker_ref_count),
-      domain_dispatch_evidence_typed_blocker_count:
-        numberValue(domainDispatchEvidenceSummary.typed_blocker_count),
-      domain_dispatch_evidence_no_regression_ref_count:
-        numberValue(domainDispatchEvidenceSummary.no_regression_evidence_ref_count),
-      domain_dispatch_evidence_memory_writeback_ref_count:
-        numberValue(domainDispatchEvidenceSummary.memory_writeback_ref_count),
-      domain_dispatch_evidence_domain_ready_claim_count:
-        numberValue(domainDispatchEvidenceSummary.domain_ready_claim_count),
-      stage_production_evidence_domain_count:
-        numberValue(stageProductionEvidenceSummary.domain_count),
-      stage_production_evidence_stage_count:
-        numberValue(stageProductionEvidenceSummary.stage_count),
-      stage_production_evidence_observed_stage_count:
-        numberValue(stageProductionEvidenceSummary.observed_stage_count),
-      stage_production_evidence_missing_caller_stage_count:
-        numberValue(stageProductionEvidenceSummary.missing_production_caller_stage_count),
-      stage_production_evidence_missing_expected_receipt_stage_count:
-        numberValue(stageProductionEvidenceSummary.missing_expected_receipt_stage_count),
-      stage_production_evidence_expected_receipt_declared_stage_count: numberValue(stageProductionEvidenceSummary.expected_receipt_declared_stage_count),
-      stage_production_evidence_expected_receipt_observed_stage_count: numberValue(stageProductionEvidenceSummary.expected_receipt_observed_stage_count),
-      stage_production_evidence_expected_receipt_unobserved_stage_count: numberValue(stageProductionEvidenceSummary.expected_receipt_unobserved_stage_count),
-      stage_production_evidence_missing_executor_binding_stage_count:
-        numberValue(stageProductionEvidenceSummary.missing_executor_binding_stage_count),
-      stage_production_evidence_executor_binding_observed_stage_count: numberValue(stageProductionEvidenceSummary.executor_binding_observed_stage_count),
-      stage_production_evidence_missing_monitor_freshness_stage_count:
-        numberValue(stageProductionEvidenceSummary.missing_monitor_freshness_stage_count),
-      stage_production_evidence_monitor_declared_stage_count: numberValue(stageProductionEvidenceSummary.monitor_declared_stage_count),
-      stage_production_evidence_monitor_freshness_observed_stage_count: numberValue(stageProductionEvidenceSummary.monitor_freshness_observed_stage_count),
-      stage_production_evidence_monitor_freshness_unobserved_stage_count: numberValue(stageProductionEvidenceSummary.monitor_freshness_unobserved_stage_count),
-      stage_production_evidence_stages_with_domain_typed_blocker_count:
-        numberValue(stageProductionEvidenceSummary.stages_with_domain_typed_blocker_count),
-      stage_production_evidence_obligation_count:
-        numberValue(stageProductionEvidenceSummary.evidence_obligation_count),
-      stage_production_evidence_obligation_closed_count:
-        numberValue(stageProductionEvidenceSummary.evidence_obligation_closed_count),
-      stage_production_evidence_obligation_open_count:
-        numberValue(stageProductionEvidenceSummary.evidence_obligation_open_count),
-      stage_production_evidence_obligation_blocked_by_domain_typed_blocker_count:
-        numberValue(stageProductionEvidenceSummary.evidence_obligation_blocked_by_domain_typed_blocker_count),
-      stage_production_attempt_request_route_count:
-        actionRefs.filter((ref) => ref.action_kind === 'stage_production_attempt_request').length,
-      external_evidence_action_route_count:
-        actionRefs.filter((ref) => (
-          ref.action_kind === 'external_evidence_receipt_record'
-          || ref.action_kind === 'external_evidence_receipt_verify'
-        )).length,
-      evidence_gate_action_route_count:
-        actionRefs.filter((ref) => (
-          ref.action_kind === 'evidence_gate_receipt_record'
-          || ref.action_kind === 'evidence_gate_receipt_verify'
-        )).length,
-      freshness_signal_count: freshness.length,
-      source_ref_count: refFamilies.summary.source_ref_count,
-      artifact_ref_count: refFamilies.summary.artifact_ref_count,
-      ref_family_memory_ref_count: refFamilies.summary.memory_ref_count,
-      safe_action_ref_count: safeActions.length,
-      app_execution_bridge_safe_action_route_count:
-        executionBridge.summary.safe_action_route_count,
-      app_execution_bridge_supervised_periodic_command_count:
-        executionBridge.summary.supervised_periodic_command_count,
-      lifecycle_index_ref_count: lifecycleRefs.summary.lifecycle_index_ref_count,
-      lifecycle_restore_proof_ref_count: lifecycleRefs.summary.restore_proof_ref_count,
-      lifecycle_domain_artifact_mutation_receipt_ref_count:
-        lifecycleRefs.summary.domain_artifact_mutation_receipt_ref_count,
-      lifecycle_reconcile_missing_ref_count: lifecycleRefs.summary.lifecycle_reconcile_missing_ref_count,
-      lifecycle_reconcile_extra_ref_count: lifecycleRefs.summary.lifecycle_reconcile_extra_ref_count,
-      lifecycle_reconcile_stale_ref_count: lifecycleRefs.summary.lifecycle_reconcile_stale_ref_count,
-      lifecycle_delete_can_execute: lifecycleRefs.summary.lifecycle_delete_can_execute,
-      lifecycle_opl_cleanup_apply_can_execute: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
-      functional_privatization_default_watchlist_count: functionalSummary.default_watchlist_count,
-      functional_privatization_semantic_equivalence_review_count:
-        functionalSummary.semantic_equivalence_review_count,
-      functional_privatization_active_private_generic_residue_count:
-        functionalSummary.active_private_generic_residue_count,
-      functional_privatization_blocker_count: functionalSummary.blocker_count,
-      domain_external_evidence_request_count:
-        evidenceRequests.summary.external_evidence_request_count,
-      domain_open_evidence_request_count:
-        evidenceRequests.summary.open_request_count,
-      domain_recorded_evidence_receipt_request_count:
-        evidenceRequests.summary.recorded_receipt_request_count,
-      domain_verified_evidence_receipt_request_count:
-        evidenceRequests.summary.verified_receipt_request_count,
-      domain_external_evidence_receipt_count:
-        evidenceRequests.summary.external_evidence_receipt_count,
-      domain_external_verified_evidence_receipt_count:
-        evidenceRequests.summary.external_verified_receipt_count,
-      domain_evidence_gate_count:
-        evidenceRequests.summary.evidence_gate_count,
-      domain_remaining_evidence_gate_count:
-        evidenceRequests.summary.remaining_evidence_gate_count,
-      domain_open_evidence_gate_request_count:
-        evidenceRequests.summary.open_evidence_gate_request_count,
-      domain_recorded_evidence_gate_request_count:
-        evidenceRequests.summary.recorded_evidence_gate_request_count,
-      domain_verified_evidence_gate_request_count:
-        evidenceRequests.summary.verified_evidence_gate_request_count,
-      domain_evidence_gate_receipt_count:
-        evidenceRequests.summary.evidence_gate_receipt_count,
-      domain_evidence_gate_verified_receipt_count:
-        evidenceRequests.summary.evidence_gate_verified_receipt_count,
-      domain_opl_replacement_expectation_count:
-        evidenceRequests.summary.opl_replacement_expectation_count,
-      domain_replacement_surface_available_count:
-        evidenceRequests.summary.replacement_surface_available_count,
-      domain_remaining_bridge_module_count:
-        evidenceRequests.summary.remaining_bridge_module_count,
-      production_evidence_tail_item_count:
-        numberValue(productionEvidenceTailSummary.tail_item_count),
-      production_evidence_tail_open_item_count:
-        numberValue(productionEvidenceTailSummary.open_tail_item_count),
-      production_evidence_tail_owner_group_count:
-        numberValue(productionEvidenceTailSummary.owner_group_count),
-      production_evidence_tail_blocking_item_count:
-        numberValue(productionEvidenceTailSummary.blocking_tail_item_count),
-      domain_legacy_cleanup_plan_count:
-        legacyCleanupPlans.summary.legacy_cleanup_plan_count,
-      domain_legacy_cleanup_ready_plan_count:
-        legacyCleanupPlans.summary.legacy_cleanup_ready_plan_count,
-      domain_legacy_cleanup_blocked_plan_count:
-        legacyCleanupPlans.summary.legacy_cleanup_blocked_plan_count,
-      domain_legacy_cleanup_action_count:
-        legacyCleanupPlans.summary.legacy_cleanup_action_count,
-      domain_legacy_cleanup_opl_apply_ready_count:
-        legacyCleanupPlans.summary.legacy_cleanup_opl_apply_ready_count,
-      domain_legacy_cleanup_delete_ready_count:
-        legacyCleanupPlans.summary.legacy_cleanup_domain_delete_ready_count,
-    },
+    summary: buildAppOperatorDrilldownSummary({
+      attempts,
+      domainRefs,
+      routeRefs,
+      decisionRefs,
+      reviewItems,
+      artifactRefs,
+      packageLifecycle,
+      memoryRefs,
+      qualityRefs,
+      providerActionRefs,
+      providerCadenceWindow,
+      providerCapabilitySlo,
+      periodicRefs,
+      actionRefs,
+      ownerReceipts,
+      typedBlockers,
+      domainDispatchEvidence,
+      stageProductionEvidence,
+      freshness,
+      refFamilies,
+      safeActions,
+      executionBridge,
+      lifecycleRefs,
+      functionalSummary,
+      evidenceRequests,
+      productionEvidenceTailLedger,
+      legacyCleanupPlans,
+    }),
     route_graph_refs: {
       surface_kind: 'opl_app_drilldown_route_graph_refs',
       refs: routeRefs,

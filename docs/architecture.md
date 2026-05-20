@@ -11,6 +11,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 OPL 的设计取向是 AI-first、AI 原生专家判断优先、contract-light：框架通过 stage、prompt、skill、knowledge、quality gate 和 selected executor 承接 AI 能力进步；合同只做 owner boundary、权限、安全、审计、receipt、阻塞、恢复和 projection 这些下限，不把专家拆解、创作、评审、路线判断或修订策略固化成脚本引擎，也不让机械检查替代专家 stage 判断。
 
+当前架构同步采用 OPL 10 项原则作为 stage-led 合同读法：stage pack 是启动单位，stage 内最小执行单位是 Agent executor，默认 selected executor 是 `Codex CLI`；非默认 executor adapter 只能显式绑定并返回 receipt / audit / fail-closed 证据。`verified_static_core` 只覆盖 identity、owner、refs、scope、composition 和 forbidden-authority；AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict 进入 `runtime_enforced_boundary`。因此 contract 只保启动安全、权限、审计、replay、route-back 和 projection 下限，不承诺 domain quality 或 production closure。
+
 OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。
 
 `OPL` 的当前主链路是：
