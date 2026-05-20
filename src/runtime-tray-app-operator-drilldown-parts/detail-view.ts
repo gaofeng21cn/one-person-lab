@@ -28,6 +28,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'domain_evidence_request_refs',
   'production_evidence_tail_ledger',
   'domain_legacy_cleanup_plan_refs',
+  'opl_meta_agent_workbench_refs',
   'functional_privatization_audit_summary',
 ] as const;
 

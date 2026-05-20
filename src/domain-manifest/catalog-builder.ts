@@ -6,6 +6,23 @@ import {
   hydrateDomainManifestCatalogFromProjectionCache,
   writeResolvedDomainManifestProjectionCache,
 } from './projection-cache.ts';
+import { buildOplMetaAgentRegistryExtension } from '../opl-meta-agent-consumption.ts';
+import type { DomainManifestCatalogEntry } from './types.ts';
+
+export type DomainManifestCatalog = {
+  summary: {
+    total_projects_count: number;
+    active_bindings_count: number;
+    manifest_configured_count: number;
+    resolved_count: number;
+    failed_count: number;
+    projection_cache_used_count: number;
+    live_failed_project_ids: string[];
+  };
+  projects: DomainManifestCatalogEntry[];
+  opl_meta_agent_registry?: ReturnType<typeof buildOplMetaAgentRegistryExtension>;
+  notes: string[];
+};
 
 export function buildDomainManifestCatalog(
   contracts: FrameworkContracts,
@@ -73,10 +90,12 @@ export function buildDomainManifestCatalog(
         live_failed_project_ids: [...liveFailedProjectIds],
       },
       projects,
+      opl_meta_agent_registry: buildOplMetaAgentRegistryExtension(),
       notes: [
         'This surface executes the domain-owned manifest_command for active admitted-domain bindings only.',
         '`opl workspace list` remains the non-executing registry; `opl domain manifests` is the sibling discovery surface that resolves machine-readable product-entry manifests.',
+        '`opl_meta_agent_registry` is a refs-only registry/App projection extension and does not expand production domain truth or readiness authority.',
       ],
-    },
+    } satisfies DomainManifestCatalog,
   };
 }
