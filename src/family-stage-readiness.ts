@@ -22,6 +22,7 @@ import {
 } from './family-stage-proof-bundle.ts';
 import {
   buildFamilyStageReplayCertification,
+  buildFamilyStageReplayEvidenceFromControlPlane,
 } from './family-stage-replay-certification.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -156,7 +157,10 @@ export function buildStageReadinessSummary(
   const cohortLoop = buildFamilyStageCohortLoopProjection(plane);
   const assumptions = buildFamilyStageAssumptionLifecycleProjection(plane);
   const runtimeBudget = buildFamilyStageRuntimeBudgetProjection(plane);
-  const replayCertification = buildFamilyStageReplayCertification(proofBundle);
+  const replayCertification = buildFamilyStageReplayCertification(
+    proofBundle,
+    buildFamilyStageReplayEvidenceFromControlPlane(plane),
+  );
   const drilldownRefs = [
     `opl stages inspect --domain ${domain} --stage <stage_id>`,
     `opl stages proof-bundle --domain ${domain}`,
