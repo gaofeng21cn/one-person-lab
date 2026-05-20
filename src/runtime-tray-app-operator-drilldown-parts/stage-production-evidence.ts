@@ -472,12 +472,16 @@ function stageProductionEvidence(
     const sourceScopeRefs = refValues(stage.stage_contract?.source_scope_refs);
     const artifactScopeRefs = refValues(stage.stage_contract?.artifact_scope_refs);
     const workspaceScopeRefs = refValues(stage.stage_contract?.workspace_scope_refs);
-    const monitorRefs = uniqueStrings([
+    const declaredMonitorFreshnessRefs = refValues(stage.stage_contract?.monitor_freshness_refs);
+    const fallbackMonitorRefs = uniqueStrings([
       ...refValues(stage.stage_contract?.monitor_refs),
       ...refValues(cohortStage?.monitor_refs),
       ...refValues(cohortStage?.metric_refs),
       ...refValues(cohortStage?.dashboard_metric_refs),
     ]);
+    const monitorRefs = declaredMonitorFreshnessRefs.length > 0
+      ? declaredMonitorFreshnessRefs
+      : fallbackMonitorRefs;
     const expectedReceiptObservedRefs = uniqueStrings([
       ...stageAttempts.flatMap(attemptExpectedReceiptObservedRefs),
       ...domainReceiptRefsForStageEvidence(externalStageEvidenceReceipts),
@@ -591,6 +595,9 @@ function stageProductionEvidence(
       cohort_query_refs: cohortQueryRefs,
       trigger_refs: triggerRefs,
       monitor_refs: monitorRefs,
+      monitor_ref_projection_source: declaredMonitorFreshnessRefs.length > 0
+        ? 'explicit_stage_contract_monitor_freshness_refs'
+        : 'stage_monitor_refs_and_cohort_metrics_fallback',
       runtime_event_refs: runtimeRequirement?.runtime_event_refs ?? [],
       expected_receipt_refs: expectedReceiptRefs,
       reviewer_receipt_refs: reviewerReceiptRefs,

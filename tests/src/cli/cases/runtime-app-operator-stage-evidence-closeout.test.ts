@@ -49,6 +49,13 @@ function manifestWithStageEvidenceRequest() {
           runtime_event_refs: ['runtime_event:review.receipt_recorded'],
           runtime_assumptions: [],
           monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'monitor' }],
+          monitor_freshness_refs: [
+            {
+              ref_kind: 'metric_ref',
+              ref: 'metric:review/declared-freshness',
+              role: 'declared_monitor_freshness',
+            },
+          ],
           source_scope_refs: [],
           cohort_query_refs: [],
           trigger_refs: [],
@@ -127,6 +134,16 @@ test('stage production evidence record routes expose fail-closed workorder and c
       'evidence_refs',
       'typed_blocker_refs',
     ]);
+    assert.deepEqual(route.payload_ref_hints.evidence_refs_should_cover_monitor_freshness, [
+      'metric:review/declared-freshness',
+    ]);
+    assert.deepEqual(route.payload_workorder.success_path_requires.evidence_refs_cover_monitor_freshness, [
+      'metric:review/declared-freshness',
+    ]);
+    assert.equal(
+      drilldown.stage_production_evidence.stages[0].monitor_ref_projection_source,
+      'explicit_stage_contract_monitor_freshness_refs',
+    );
     assert.deepEqual(route.payload_workorder.required_any_payload_refs, [
       'domain_receipt_refs',
       'evidence_refs',
@@ -183,7 +200,7 @@ test('stage production evidence preflight rejects empty templates and placeholde
       'stage-production-evidence:medautoscience:review:record',
       '--payload',
       JSON.stringify({
-        evidence_refs: ['metric:review/currentness'],
+        evidence_refs: ['metric:review/declared-freshness'],
         domain_receipt_refs: ['mas:review-receipt', '<domain-owned-receipt-ref>'],
       }),
     ], {
@@ -214,7 +231,7 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
       '--payload',
       JSON.stringify({
         receipt_ref: 'mas-stage-review-current-receipt',
-        evidence_refs: ['metric:review/currentness'],
+        evidence_refs: ['metric:review/declared-freshness'],
         domain_receipt_refs: ['mas:review-receipt', 'mas://receipts/review-owner-instance.json'],
       }),
     ], {
