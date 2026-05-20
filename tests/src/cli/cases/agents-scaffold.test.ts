@@ -142,8 +142,22 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
   assert.equal(scaffold.required_contract_surfaces.includes('pack_compiler_input'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('generated_surface_handoff'), true);
   assert.equal(scaffold.required_contract_surfaces.includes('functional_privatization_audit'), true);
+  assert.equal(scaffold.required_contract_surfaces.includes('workspace_lifecycle_policy'), true);
   assert.equal(scaffold.required_verification.includes('functional_privatization_audit_no_generic_owner'), true);
+  assert.equal(scaffold.required_verification.includes('workspace_file_lifecycle_policy_declared'), true);
   assert.equal(scaffold.required_verification.includes('generated_surface_handoff_parity'), true);
+  assert.equal(
+    scaffold.workspace_file_lifecycle_policy.surface_kind,
+    'opl_domain_workspace_file_lifecycle_policy',
+  );
+  assert.equal(
+    scaffold.workspace_file_lifecycle_policy.repo_source_boundaries.runtime_artifacts_live_in_source_repo,
+    false,
+  );
+  assert.equal(
+    scaffold.workspace_file_lifecycle_policy.workspace_runtime_artifact_roots.repo_source_policy,
+    'locator_index_schema_receipt_refs_only',
+  );
   assert.equal(
     scaffold.functional_privatization_audit_contract.surface_kind,
     'opl_functional_privatization_audit_contract',
@@ -215,6 +229,7 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/functional_privatization_audit.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/private_functional_surface_policy.json')), true);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/README.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/stages/domain_intake.md')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'agent/prompts/domain_intake.md')), true);
@@ -312,6 +327,17 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(
       privateSurfacePolicy.forbidden_private_surface_classes.includes('generic_cli_mcp_product_wrapper'),
       true,
+    );
+    const workspaceLifecyclePolicy = JSON.parse(
+      fs.readFileSync(path.join(targetDir, 'contracts/workspace_lifecycle_policy.json'), 'utf8'),
+    );
+    assert.equal(
+      workspaceLifecyclePolicy.repo_source_boundaries.runtime_artifacts_live_in_source_repo,
+      false,
+    );
+    assert.equal(
+      workspaceLifecyclePolicy.authority_boundary.policy_can_claim_domain_ready_or_artifact_authority,
+      false,
     );
 
     const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;

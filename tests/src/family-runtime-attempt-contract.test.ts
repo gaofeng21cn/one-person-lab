@@ -254,12 +254,28 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   assert.ok(scaffold.generated_surface_contract.surfaces.includes('skill'));
   assert.ok(scaffold.required_contract_surfaces.includes('pack_compiler_input'));
   assert.ok(scaffold.required_contract_surfaces.includes('generated_surface_handoff'));
+  assert.ok(scaffold.required_contract_surfaces.includes('workspace_lifecycle_policy'));
   assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'));
   assert.ok(scaffold.retirement_gate_required_evidence.includes('no_active_default_caller'));
   assert.ok(scaffold.required_verification.includes('git_diff_check'));
   assert.ok(scaffold.required_verification.includes('agent_pack_required_paths_resolve'));
   assert.ok(scaffold.required_verification.includes('stage_prompt_skill_knowledge_quality_gate_refs_resolve'));
   assert.ok(scaffold.required_verification.includes('generated_surface_handoff_parity'));
+  assert.ok(scaffold.required_verification.includes('workspace_file_lifecycle_policy_declared'));
+  assert.equal(scaffold.workspace_file_lifecycle_policy.surface_kind, 'opl_domain_workspace_file_lifecycle_policy');
+  assert.equal(
+    scaffold.workspace_file_lifecycle_policy.repo_source_boundaries.runtime_artifacts_live_in_source_repo,
+    false,
+  );
+  assert.equal(
+    scaffold.workspace_file_lifecycle_policy.workspace_runtime_artifact_roots.repo_source_policy,
+    'locator_index_schema_receipt_refs_only',
+  );
+  assert.equal(
+    scaffold.workspace_file_lifecycle_policy.authority_boundary
+      .policy_can_claim_domain_ready_or_artifact_authority,
+    false,
+  );
   assert.equal(scaffold.agent_pack_contract.canonical_semantic_pack_root, 'agent/');
   assert.deepEqual(scaffold.agent_pack_contract.required_sections, [
     'agent/prompts',

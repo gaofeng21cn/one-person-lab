@@ -3,6 +3,7 @@ import {
   DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
   MINIMAL_AUTHORITY_FUNCTIONS,
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
+  WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-policy.ts';
 
 export {
@@ -10,6 +11,7 @@ export {
   DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
   MINIMAL_AUTHORITY_FUNCTIONS,
   PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
+  WORKSPACE_FILE_LIFECYCLE_POLICY,
 };
 
 export const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
@@ -157,6 +159,7 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'legacy_retirement_tombstone_proof',
   'private_functional_surface_policy',
   'functional_privatization_audit',
+  'workspace_lifecycle_policy',
 ] as const;
 
 export const REQUIRED_VERIFICATION = [
@@ -173,6 +176,7 @@ export const REQUIRED_VERIFICATION = [
   'generated_surface_handoff_parity',
   'generated_surface_no_domain_owner',
   'functional_privatization_audit_no_generic_owner',
+  'workspace_file_lifecycle_policy_declared',
 ] as const;
 
 export const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';

@@ -49,9 +49,9 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/public/` | 仓库首页之后的公开产品方向支撑 | roadmap、task map、operating model、UHS 叙事。 |
 | `docs/product/` | One Person Lab App/workbench、operator entry、product entry、action-routing shell | public surface index 与 App/workbench 消费边界。 |
 | `docs/runtime/` | framework runtime、provider/executor、control plane、projection/read model、resume/wakeup、repair 语义 | runtime 命名与边界合同。 |
-| `docs/delivery/` | 通用 artifact/package/export lifecycle shell、locator、restore/retention、handoff projection | artifact/package lifecycle boundary。domain delivery authority 留在 MAS/MAG/RCA。 |
-| `docs/source/` | 通用 workspace/source intake shell、locator、source readiness projection、source truth transport | workspace/source intake boundary。domain source semantics 留在 MAS/MAG/RCA。 |
-| `docs/policies/` | 稳定治理规则、运行纪律、repo-local 维护规则 | docs lifecycle policy。硬约束仍以 core five 和 contracts 为准。 |
+| `docs/delivery/` | 通用 artifact/package/export lifecycle shell、locator、restore/retention、handoff projection | artifact/package lifecycle boundary。domain delivery authority 留在 MAS/MAG/RCA；runtime artifact body 外置规则回 policies。 |
+| `docs/source/` | 通用 workspace/source intake shell、locator、source readiness projection、source truth transport | workspace/source intake boundary。domain source semantics 留在 MAS/MAG/RCA；workspace state body 外置规则回 policies。 |
+| `docs/policies/` | 稳定治理规则、运行纪律、repo-local 维护规则、workspace/file lifecycle | docs lifecycle policy 与 workspace/file lifecycle policy。硬约束仍以 core five 和 contracts 为准。 |
 | `docs/specs/` | 当前仍有效的 domain admission、shared boundary、runtime/product boundary 规格支撑 | domain onboarding、shared runtime/domain contracts。 |
 | `docs/references/` | north-star、positioning、integration、governance、verification、operating support | runtime substrate、convergence governance、current support、domain admission、operating governance。旧 examples / matrix 语料已进入 history。 |
 | `docs/history/` | retired route、completed plans、tombstone、provenance、process archive | gateway/federation/frontdoor/OMX/runtime-substrate/process history。 |
@@ -79,6 +79,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/delivery/artifact-package-lifecycle-boundary.md` | `active_support` | 通用 artifact/package/export lifecycle shell 与 domain delivery authority split。 | 保持 delivery 支撑；不写 domain verdict。 |
 | `docs/source/workspace-source-intake-boundary.md` | `active_support` | 通用 workspace/source intake shell 与 domain source semantics split。 | 保持 source 支撑；不写领域 source truth。 |
 | `docs/policies/docs-lifecycle-policy.md` | `active_policy` | docs taxonomy、中文 canonical 和 direct-retirement 政策。 | 保持 policy；硬约束必要时同步 `invariants.md`。 |
+| `docs/policies/runtime-artifact-hygiene-policy.md` | `active_policy` | workspace / file lifecycle、repo-source 边界、developer checkout hygiene 和运行生成物外置政策。 | 保持 policy；source/delivery/runtime 文档只解释各自边界，不复制完整生命周期规则。 |
 | `docs/specs/*` | `active_spec_support` | 当前仍有效的 domain admission、shared runtime/domain 和 boundary specs。 | 保持 specs 支撑；机器合同仍回 `contracts/`。 |
 | `docs/references/runtime-substrate/opl-family-agent-ideal-state.md` | `active_support` | OPL Framework、Foundry Agents 与 App 的 north-star 目标态。 | 主参考；不能写成当前完成事实。 |
 | `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md` | `active_support` | stage-led framework roadmap、runtime substrate 与旧面退役顺序。 | 保持 roadmap；状态需服从 core five 和 fresh evidence。 |
@@ -163,7 +164,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | 是否解释 runtime/provider/executor/control plane/projection/watch/repair？ | 放 `docs/runtime/`。 |
 | 是否解释 artifact/package/export lifecycle shell 或 domain deliverable support？ | 放 `docs/delivery/`。 |
 | 是否解释 workspace/source intake、source readiness 或 source truth transport？ | 放 `docs/source/`。 |
-| 是否是长期规则或 repo-local discipline？ | 放 `docs/policies/`，必要时同步 `invariants.md`。 |
+| 是否是长期规则、repo-local discipline、developer checkout hygiene 或 workspace/file lifecycle 政策？ | 放 `docs/policies/`，必要时同步 `invariants.md`。 |
 | 是否定义当前 active spec 或 boundary spec？ | 放 `docs/specs/`。 |
 | 是否是目标态、支撑参考、外部学习、governance 或 verification support？ | 放 `docs/references/`。 |
 | 是否只是旧路线、完成计划、provenance 或 tombstone？ | 放 `docs/history/`。 |
