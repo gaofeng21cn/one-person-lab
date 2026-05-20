@@ -41,7 +41,7 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 
 - 保持旧 gateway / federation wording 只作为 provenance / reference material，同时把 runtime / activation 语义写成主线
 - 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
-- 保持 provider-backed stage runtime 的诚实表达：Temporal 是 production online runtime 的必需 substrate，`hermes_agent` 是 canonical 的显式非默认 executor adapter/backend，并通过独立 receipt、audit 与 fail-closed gate 约束；旧 Hermes provider / Gateway 语料只保留为 provenance、diagnostic、fixture 或负向 guard
+- 保持 provider-backed stage runtime 的诚实表达：Temporal 是 production online runtime 的必需 substrate，`hermes_agent`、`claude_code` 与 `antigravity_cli` 是 canonical 的显式非默认 executor adapter/backend，并通过独立 receipt、audit、executor binding ref 与 fail-closed gate 约束；旧 Hermes provider / Gateway 语料只保留为 provenance、diagnostic、fixture 或负向 guard
 - 保持 public help、当前文档与 operator-facing guidance 不再展示默认 Hermes/Gateway/frontdoor/local-manager wording；保留旧名时必须显式属于 legacy/provenance/diagnostic/history/fixture
 - 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime truth 演进
 - 保持 candidate domain 沿定义、审查与 onboarding 路径推进

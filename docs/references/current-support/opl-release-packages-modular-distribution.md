@@ -197,6 +197,6 @@ Full 首次安装包是 App repo 标准 App 之外的额外 GitHub Release asset
 - 文件名使用 `One-Person-Lab-Full-<version>-mac-arm64.dmg`，与标准更新包分开。
 - 随包 runtime 首启安装到稳定路径 `~/Library/Application Support/OPL/runtime/current`，App 后续从该路径引用 runtime。
 - runtime 版本只写入 `~/Library/Application Support/OPL/runtime/current.json` 和 `runtime/current/.opl-full-runtime-installed.json`，不进入安装目录名，后续 Full 包刷新同一路径。
-- runtime payload 包含 MAS/MAG/RCA、当前 family runtime provider 所需 payload / manifest、`officecli` CLI binary、MAS/MAG/RCA domain skills、officecli skill 组与 `ui-ux-pro-max`；Temporal-backed provider 是 production online runtime 的必需 substrate。`hermes_agent` 与 `claude_code` 是 canonical 显式 opt-in executor adapter/backend，可作为 proof / diagnostic payload 保留，但不作为 Full 默认在线底座。App 首启仍执行统一 `opl install --skip-gui-open`，把模块、provider profile/readiness 与 skills 同步到标准 OPL state / Codex 可见目录。
+- runtime payload 包含 MAS/MAG/RCA、当前 family runtime provider 所需 payload / manifest、`officecli` CLI binary、MAS/MAG/RCA domain skills、officecli skill 组与 `ui-ux-pro-max`；Temporal-backed provider 是 production online runtime 的必需 substrate。`hermes_agent`、`claude_code` 与 `antigravity_cli` 是 canonical 显式 opt-in executor adapter/backend，可作为 proof / diagnostic / stage-level policy payload 保留，但不作为 Full 默认在线底座。App 首启仍执行统一 `opl install --skip-gui-open`，把模块、provider profile/readiness 与 skills 同步到标准 OPL state / Codex 可见目录。
 - `latest*.yml` 只引用标准 `One-Person-Lab-<version>-mac-arm64.*` 资产，不引用 Full DMG。
 - Full 包的签名/公证模式与当前标准 GitHub DMG 保持一致：CI 配置 Developer ID secrets 时走签名/公证校验；未配置时仍可产出同等未签名 Release asset，不阻断首次安装包验证和上传。
