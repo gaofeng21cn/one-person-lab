@@ -187,6 +187,13 @@ function buildStagePlane(overrides: {
               ensures: ['review_receipt_ready'],
               boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
               runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
+              expected_receipt_refs: [
+                {
+                  ref_kind: 'receipt_ref_template',
+                  ref: 'receipt:mas/publication-review/domain-owner-or-typed-blocker',
+                  role: 'domain_owner_receipt_or_typed_blocker_expected',
+                },
+              ],
               properties: [],
               runtime_assumptions: [],
               monitor_refs: [],
@@ -272,6 +279,14 @@ test('stage proof bundle projects an admitted stage pack into consumable obligat
     assumptions: ['same_source_refs_keep_same_handoff_refs', 'deterministic_handoff_refs'],
   });
   assert.ok(bundle.expected_receipt_refs.some((ref) => ref.ref === 'mas:publication_review_receipt'));
+  assert.ok(bundle.expected_receipt_refs.some((ref) =>
+    ref.ref === 'receipt:mas/publication-review/domain-owner-or-typed-blocker'
+    && ref.reason === 'explicit_stage_contract_expected_receipt_ref'
+  ));
+  assert.equal(
+    bundle.expected_receipt_refs.some((ref) => ref.ref === 'owner_receipt:publication_review'),
+    false,
+  );
   assert.ok(bundle.expected_receipt_refs.some((ref) => ref.ref === 'human_gate:publication_quality_gate'));
   assert.deepEqual(bundle.runtime_event_requirements.find((entry) => entry.stage_id === 'publication_review'), {
     stage_id: 'publication_review',

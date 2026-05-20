@@ -360,6 +360,15 @@ function buildExpectedReceiptRefs(
 ): FamilyStageProofBundleExpectedReceiptRef[] {
   const actionsById = new Map(actionCatalog?.actions.map((action) => [action.action_id, action]) ?? []);
   return plane.stages.flatMap((stage) => {
+    const contractRefs = (stage.stage_contract?.expected_receipt_refs ?? []).flatMap((ref) => (
+      Array.isArray(ref.ref) ? ref.ref : [ref.ref]
+    ))
+      .filter((ref): ref is string => typeof ref === 'string' && ref.trim().length > 0)
+      .map((ref) => ({
+        stage_id: stage.stage_id,
+        ref,
+        reason: 'explicit_stage_contract_expected_receipt_ref',
+      }));
     const explicit = [
       ...readStringList(stage.authority_boundary.expected_receipt_refs),
       ...readStringList(stage.authority_boundary.owner_receipt_refs),
@@ -370,6 +379,7 @@ function buildExpectedReceiptRefs(
       reason: 'explicit_stage_authority_boundary_ref',
     }));
     const trustRequired = stage.trust_boundary?.owner_receipt_required === true
+      && contractRefs.length === 0
       ? [{
           stage_id: stage.stage_id,
           ref: `owner_receipt:${stage.stage_id}`,
@@ -383,7 +393,7 @@ function buildExpectedReceiptRefs(
         reason: `action_catalog_gate:${actionRef}`,
       })) ?? []
     ));
-    return [...explicit, ...trustRequired, ...gateRefs];
+    return [...contractRefs, ...explicit, ...trustRequired, ...gateRefs];
   });
 }
 
