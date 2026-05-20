@@ -425,6 +425,27 @@
       "owner_acceptance_ref_policy": "external_owner_ref_only",
       "authority_boundary": "The dynamic route builder classifies Developer Mode projection, repo permission, and patrol observation refs into blocked, observe-only, direct-fix, fork-PR, or mixed route decisions. It emits closeout refs only. owner_acceptance_ref must be an external owner ref and OPL cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, or quality verdicts."
     },
+    "live_closeout_evidence": {
+      "surface_kind": "opl_agent_lab_developer_mode_live_closeout_evidence_read_model",
+      "status": "closeout_refs_ready",
+      "refs_only": true,
+      "evidence_scope": "developer_mode_agent_lab_repair_closeout_drills",
+      "required_closeout_ref_groups": [
+        "route_eligibility",
+        "patrol_observation_ref",
+        "diff_ref",
+        "verification_refs",
+        "no_forbidden_write_ref",
+        "commit_ref_or_fork_pr_refs",
+        "external_owner_acceptance_ref"
+      ],
+      "route_drills": [
+        "repo direct-fix drill must include route eligibility, patrol observation, diff, focused verification refs, no-forbidden-write ref, commit ref, and external owner acceptance ref",
+        "non-owner fork/PR drill must include route eligibility, patrol observation, diff, focused verification refs, no-forbidden-write ref, fork repo ref, PR review ref, and external owner acceptance ref"
+      ],
+      "owner_acceptance_policy": "external_owner_acceptance_ref_only_no_opl_owner_receipt_write",
+      "authority_boundary": "Developer Mode live closeout evidence is a refs-only read model for route eligibility, patrol observation, diff, verification, no-forbidden-write, commit or fork/PR, and external owner acceptance refs. It can prove route closeout evidence is present; it cannot fabricate owner receipt, write managed runtime truth, write domain truth, write memory body, mutate artifact body, or issue quality verdicts."
+    },
     "non_authority_outputs": {
       "writes_domain_truth": false,
       "writes_domain_artifact": false,
@@ -835,6 +856,7 @@
     "OPL can expose a complete eval adapter, observability export, and optimizer-loop control plane without requiring external services in core",
     "OPL can expose an App/workbench-ready read model with eval adapter, observability export, optimizer candidate, promotion gate, and online learning refs",
     "OPL can expose Developer Mode patrol repair routes as refs-only issue, blocker, owner route, candidate fix, worktree, branch, PR, acceptance evidence, and follow-up queue item projections",
+    "OPL can expose Developer Mode live closeout evidence drills for repo direct-fix and non-owner fork/PR routes using route eligibility, patrol observation, diff, verification, no-forbidden-write, commit or fork/PR, and external owner acceptance refs",
     "OPL can expose integration contracts with activation predicate, canonical entry, artifact verifier, failure policy, typed blocker, owner route, retry/dead-letter, and rollback refs",
     "OPL can record independent AI reviewer, web research, and mechanism patch trace refs with request, response, evidence, diff, contract, test result, reviewer agent, and no-shared-context refs",
     "OPL can mine usage logs, failure modes, user interrupts, convergence iterations, tool failures, and blockers into refs-only prompt, skill, rubric, and workflow-default mechanism candidate refs",
@@ -858,6 +880,7 @@
     "memory body application",
     "writeback accept or reject decision",
     "developer-mode repair merged, accepted, or applied by OPL",
+    "developer-mode owner receipt fabricated by OPL",
     "managed runtime mutation through Developer Mode patrol projection",
     "default agent configuration promotion",
     "high risk mechanism candidate promotion without owner or human gate",

@@ -398,6 +398,112 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
     },
   ];
+  const liveCloseoutEvidenceDrills = [
+    buildDeveloperModeAgentLabRepairRoute({
+      developer_mode_projection: {
+        surface_id: 'opl_developer_mode',
+        status: 'limited',
+        effective_state: 'active_mixed_routes',
+        allowed_route: 'mixed_direct_and_pr',
+        mode: 'developer_apply_safe',
+      },
+      repo_permission: {
+        target_id: 'med-autoscience',
+        repo: 'gaofeng21cn/med-autoscience',
+        repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
+        status: 'ready',
+        permission: 'write',
+        direct_write_allowed: true,
+        allowed_route: 'direct_repo_fix',
+      },
+      patrol_observation_refs: {
+        patrol_observation_ref: 'patrol-observation-ref:mas/developer-mode-direct-fix-drill',
+        issue_ref: 'issue-ref:mas/developer-mode-direct-fix-drill',
+        blocker_ref: 'blocker-ref:mas/agent-call-interface-regression',
+        diff_ref: 'diff-ref:mas/developer-mode-direct-fix-drill',
+        verification_refs: [
+          'test-result-ref:mas/developer-mode-direct-fix-focused',
+          'test-result-ref:mas/no-forbidden-write-focused',
+        ],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:mas/developer-mode-direct-fix-drill',
+        commit_ref: 'git-commit-ref:mas/developer-mode-direct-fix-drill',
+        owner_acceptance_ref: 'external-owner-ref:mas/developer-mode-direct-fix-accepted',
+      },
+    }),
+    buildDeveloperModeAgentLabRepairRoute({
+      developer_mode_projection: {
+        surface_id: 'opl_developer_mode',
+        status: 'limited',
+        effective_state: 'active_mixed_routes',
+        allowed_route: 'mixed_direct_and_pr',
+        mode: 'developer_apply_safe',
+      },
+      repo_permission: {
+        target_id: 'redcube-ai',
+        repo: 'redcube-ai/redcube-ai',
+        repo_url: 'https://github.com/redcube-ai/redcube-ai.git',
+        status: 'limited',
+        permission: 'read',
+        direct_write_allowed: false,
+        allowed_route: 'fork_pull_request',
+      },
+      patrol_observation_refs: {
+        patrol_observation_ref: 'patrol-observation-ref:rca/developer-mode-fork-pr-drill',
+        issue_ref: 'issue-ref:rca/developer-mode-fork-pr-drill',
+        blocker_ref: 'blocker-ref:rca/render-review-regression',
+        diff_ref: 'diff-ref:rca/developer-mode-fork-pr-drill',
+        verification_refs: [
+          'test-result-ref:rca/developer-mode-fork-pr-focused',
+          'test-result-ref:rca/no-forbidden-write-focused',
+        ],
+        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/developer-mode-fork-pr-drill',
+        fork_repo_ref: 'github-fork-ref:developer-mode-operator/redcube-ai',
+        pr_review_ref: 'github-pr-review-ref:rca/developer-mode-fork-pr-drill',
+        owner_acceptance_ref: 'external-owner-ref:rca/developer-mode-fork-pr-accepted',
+      },
+    }),
+  ];
+  const liveCloseoutEvidence = {
+    surface_kind: 'opl_agent_lab_developer_mode_live_closeout_evidence_read_model',
+    version: 'opl-agent-lab.v1.developer-mode-live-closeout-evidence',
+    status: liveCloseoutEvidenceDrills.every((drill) => drill.route_status === 'closeout_refs_ready')
+      ? 'closeout_refs_ready'
+      : 'closeout_refs_incomplete',
+    refs_only: true,
+    evidence_scope: 'developer_mode_agent_lab_repair_closeout_drills',
+    required_closeout_ref_groups: [
+      'route_eligibility',
+      'patrol_observation_ref',
+      'diff_ref',
+      'verification_refs',
+      'no_forbidden_write_ref',
+      'commit_ref_or_fork_pr_refs',
+      'external_owner_acceptance_ref',
+    ],
+    drills: liveCloseoutEvidenceDrills,
+    summary: {
+      drill_count: liveCloseoutEvidenceDrills.length,
+      direct_fix_drill_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.route_decision === 'direct-fix').length,
+      fork_pr_drill_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.route_decision === 'fork-PR').length,
+      closeout_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.route_status === 'closeout_refs_ready').length,
+      forbidden_owner_receipt_write_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.closeout_refs.owner_acceptance_ref?.startsWith('owner-receipt-ref:')).length,
+    },
+    owner_acceptance_policy: 'external_owner_acceptance_ref_only_no_opl_owner_receipt_write',
+    non_authority_outputs: {
+      writes_domain_truth: false,
+      writes_domain_artifact: false,
+      writes_memory_body: false,
+      writes_quality_verdict: false,
+      writes_owner_receipt: false,
+      modifies_managed_runtime: false,
+      writes_follow_up_queue_body: false,
+    },
+    authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+  };
 
   return {
     surface_kind: 'opl_agent_lab_developer_mode_repair_route_read_model',
@@ -436,10 +542,13 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       ],
     },
     routes,
+    live_closeout_evidence: liveCloseoutEvidence,
     summary: {
       route_count: routes.length,
       direct_owner_route_count: routes.filter((route) => route.route_mode === 'repo_developer_direct_fix').length,
       fork_pr_route_count: routes.filter((route) => route.route_mode === 'fork_pull_request').length,
+      live_closeout_drill_count: liveCloseoutEvidence.summary.drill_count,
+      live_closeout_ready_count: liveCloseoutEvidence.summary.closeout_ready_count,
       dynamic_route_decision_count: 5,
       closeout_ref_field_count: 10,
       issue_ref_count: unique(routes.map((route) => route.issue_ref)).length,

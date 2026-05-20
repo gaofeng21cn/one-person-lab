@@ -124,6 +124,8 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 
 当 authenticated GitHub identity 对目标 repo 具备 developer / collaborator 写权限时，Developer Mode 可以把低风险和中风险 Agent Lab candidate 路由到受控 repo 修复、测试、canary 和 rollback-capable promotion 路径；没有直接写权限时，只允许生成 fork / branch / pull request。当前动态 route builder 会读取 Developer Mode projection、repo permission 和 patrol observation refs，并输出 `blocked`、`observe-only`、`direct-fix`、`fork-PR` 或 `mixed`。closeout refs 必须包含 `developer_mode_projection_ref`、`route_eligibility`、`patrol_observation_ref`、`diff_ref`、`verification_refs`、`no_forbidden_write_ref`，并按 direct-fix / fork-PR 路径补 `commit_ref` 或 `fork_repo_ref` / `pr_review_ref`；`owner_acceptance_ref` 只能是外部 owner ref。高风险 surface 必须进入 owner/human gate。所有路径都必须保留 evidence、diff、验证命令和 owner-visible closeout；不得静默修改 managed runtime、domain truth、artifact、memory body、quality verdict、credential/network/write policy 或 owner receipt。
 
+`developer_mode_repair_routes.live_closeout_evidence` 是 Developer Mode / Agent Lab repair closeout 的 refs-only 读模型。它固定两类 drill：具备 repo developer 权限时的真实 repo direct-fix route，以及无 owner 写权限时的 non-owner fork / pull request route。每条 drill 只表达 `route_eligibility`、patrol observation、diff、focused verification、no-forbidden-write、commit 或 fork/PR、external owner acceptance refs；OPL 不把这些 refs 升级成 owner receipt，也不把 route closeout 写成 managed runtime truth 或 domain truth。缺少外部 owner acceptance ref 时，closeout 只能停在 evidence incomplete 或 owner gate route，不得由 OPL 伪造 owner acceptance。
+
 ## 输入与输出
 
 允许输入：
