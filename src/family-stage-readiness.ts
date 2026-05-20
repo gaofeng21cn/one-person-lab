@@ -24,12 +24,16 @@ import {
   buildFamilyStageReplayCertification,
   buildFamilyStageReplayEvidenceFromControlPlane,
 } from './family-stage-replay-certification.ts';
+import {
+  FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES,
+  FAMILY_STAGE_KERNEL_BLOCKER_SOURCES,
+} from './family-stage-derived-lenses.ts';
 
 type JsonRecord = Record<string, unknown>;
 
 type FamilyStageReadinessStatus = 'launch_blocked' | 'launch_warning' | 'launch_observable';
 
-interface FamilyStageReadinessCheck {
+export interface FamilyStageReadinessCheck {
   check_id:
     | 'stage_admission'
     | 'proof_bundle'
@@ -44,7 +48,7 @@ interface FamilyStageReadinessCheck {
   drilldown_ref: string;
 }
 
-interface FamilyStageReadinessIssue {
+export interface FamilyStageReadinessIssue {
   severity: 'blocker' | 'warning';
   code: string;
   message: string;
@@ -53,7 +57,7 @@ interface FamilyStageReadinessIssue {
   minimal_counterexample?: JsonRecord;
 }
 
-interface FamilyStageReadinessSummary {
+export interface FamilyStageReadinessSummary {
   project_id: string;
   project: string;
   target_domain_id: string;
@@ -108,6 +112,35 @@ interface FamilyStageReadinessSummary {
     can_replace_ai_expert_judgment: false;
     contract_completeness_is_quality_verdict: false;
     graphflow_runtime_dependency: false;
+  };
+}
+
+export interface FamilyStageOperatorReadiness {
+  status: FamilyStageReadinessStatus;
+  summary: FamilyStageReadinessSummary['summary'] & {
+    lens_count: number;
+    diagnostic_lens_count: number;
+  };
+  blockers: FamilyStageReadinessIssue[];
+  warnings: FamilyStageReadinessIssue[];
+  recommendations: FamilyStageReadinessIssue[];
+  next_safe_actions: string[];
+  lens_summary: Array<FamilyStageReadinessCheck & {
+    role: 'stage_kernel_gate' | 'diagnostic_only';
+    author_required: boolean;
+    default_surface: boolean;
+    can_block_launch: boolean;
+  }>;
+  drilldown_refs: string[];
+  stage_kernel: {
+    surface_kind: 'opl_stage_kernel_contract_floor';
+    hard_blocker_sources: typeof FAMILY_STAGE_KERNEL_BLOCKER_SOURCES;
+    derived_lenses_can_block_launch: false;
+  };
+  authority_boundary: FamilyStageReadinessSummary['authority_boundary'] & {
+    can_claim_domain_ready: false;
+    can_claim_artifact_authority: false;
+    can_claim_production_ready: false;
   };
 }
 
@@ -341,6 +374,78 @@ export function buildStageReadinessSummary(
       can_replace_ai_expert_judgment: false,
       contract_completeness_is_quality_verdict: false,
       graphflow_runtime_dependency: false,
+    },
+  };
+}
+
+function nextSafeActions(summary: FamilyStageReadinessSummary) {
+  if (summary.hard_blockers.length > 0) {
+    return [
+      'resolve_stage_kernel_blockers',
+      'record_missing_runtime_boundary_events_or_executor_binding_refs',
+      'rerun_opl_stages_readiness_detail_full',
+    ];
+  }
+  if (summary.warnings.length > 0) {
+    return [
+      'review_advisory_lens_warnings',
+      'open_diagnostic_drilldown_only_when_needed',
+      'keep_ai_executor_strategy_uncontracted',
+    ];
+  }
+  return [
+    'launch_candidate_can_enter_provider_queue_with_owner_receipt_boundary',
+    'keep_domain_quality_and_artifact_verdicts_with_domain_owner',
+  ];
+}
+
+export function buildStageOperatorReadiness(
+  summary: FamilyStageReadinessSummary,
+): FamilyStageOperatorReadiness {
+  const lensById = new Map(FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES.map((lens) => [lens.lens_id, lens]));
+  const lensSummary = summary.checks.map((check) => {
+    if (check.check_id === 'stage_admission') {
+      return {
+        ...check,
+        role: 'stage_kernel_gate' as const,
+        author_required: true,
+        default_surface: true,
+        can_block_launch: true,
+      };
+    }
+    const lens = lensById.get(check.check_id);
+    return {
+      ...check,
+      role: 'diagnostic_only' as const,
+      author_required: lens?.author_required ?? false,
+      default_surface: lens?.default_surface ?? false,
+      can_block_launch: lens?.can_block_launch ?? false,
+    };
+  });
+
+  return {
+    status: summary.launch_readiness_status,
+    summary: {
+      ...summary.summary,
+      lens_count: summary.checks.length,
+      diagnostic_lens_count: FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES.length,
+    },
+    blockers: summary.hard_blockers,
+    warnings: summary.warnings,
+    recommendations: summary.recommendations,
+    next_safe_actions: nextSafeActions(summary),
+    lens_summary: lensSummary,
+    drilldown_refs: summary.drilldown_refs,
+    stage_kernel: {
+      surface_kind: 'opl_stage_kernel_contract_floor',
+      hard_blocker_sources: FAMILY_STAGE_KERNEL_BLOCKER_SOURCES,
+      derived_lenses_can_block_launch: false,
+    },
+    authority_boundary: {
+      ...summary.authority_boundary,
+      can_claim_domain_ready: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
     },
   };
 }

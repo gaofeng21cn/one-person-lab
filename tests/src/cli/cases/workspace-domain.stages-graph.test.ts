@@ -460,44 +460,70 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
       OPL_STATE_DIR: stateRoot,
     }).family_stage_readiness;
 
+    assert.equal(readiness.detail_level, 'summary');
     assert.equal(Object.hasOwn(readiness, 'surface_kind'), false);
     assert.equal(Object.hasOwn(readiness, 'version'), false);
-    assert.equal(readiness.launch_readiness_status, 'launch_warning');
+    assert.equal(readiness.status, 'launch_warning');
     assert.equal(readiness.summary.stage_count, 6);
     assert.equal(readiness.summary.admitted_stage_count, 6);
     assert.equal(readiness.summary.hard_blocker_count, 0);
     assert.equal(readiness.summary.cohort_loop_warning_count, 0);
     assert.equal(readiness.summary.replay_evidence_warning_count > 0, true);
     assert.deepEqual(readiness.recommendations, readiness.warnings);
-    assert.equal(readiness.checks.some((entry: { check_id: string }) => entry.check_id === 'stage_admission'), true);
-    assert.equal(readiness.checks.some((entry: { check_id: string }) => entry.check_id === 'proof_bundle'), true);
+    assert.equal(readiness.lens_summary.some((entry: { check_id: string }) => entry.check_id === 'stage_admission'), true);
+    assert.equal(readiness.lens_summary.some((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
+      entry.check_id === 'stage_admission'
+      && entry.role === 'stage_kernel_gate'
+      && entry.author_required === true
+      && entry.default_surface === true
+      && entry.can_block_launch === true
+    )), true);
+    assert.equal(readiness.lens_summary.some((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
+      entry.check_id === 'proof_bundle'
+      && entry.role === 'diagnostic_only'
+      && entry.author_required === false
+      && entry.default_surface === false
+      && entry.can_block_launch === false
+    )), true);
     assert.equal(readiness.drilldown_refs.includes('opl stages proof-bundle --domain mas'), true);
     assert.equal(readiness.drilldown_refs.includes('opl stages replay-certification --domain mas'), true);
+    assert.deepEqual(readiness.stage_kernel.hard_blocker_sources, [
+      'stage_identity',
+      'stage_owner',
+      'stage_goal',
+      'selected_executor_binding',
+      'authority_boundary',
+      'requires_ensures_composition',
+      'scope_refs',
+      'runtime_event_refs',
+      'receipt_replay_audit_refs',
+    ]);
+    assert.equal(readiness.stage_kernel.derived_lenses_can_block_launch, false);
+    assert.deepEqual(readiness.full_detail_args, ['--detail', 'full']);
     assert.equal(Object.hasOwn(readiness, 'domain_ready_status'), false);
     assert.equal(Object.hasOwn(readiness, 'quality_verdict'), false);
-    assert.equal(
-      readiness.ai_first_contract_light_policy.expert_judgment_priority,
-      'ai_native_expert_judgment_first',
-    );
-    assert.equal(
-      readiness.ai_first_contract_light_policy.contract_floor_policy,
-      'contracts_preserve_minimum_safety_audit_recovery_floor_only',
-    );
-    assert.equal(
-      readiness.ai_first_contract_light_policy.mechanical_signals_policy,
-      'mechanical_scores_checklists_and_contract_completeness_are_advisory_not_quality_verdicts',
-    );
-    assert.equal(
-      readiness.ai_first_contract_light_policy.does_not_contract.includes('mechanical_quality_substitute'),
-      true,
-    );
     assert.equal(readiness.authority_boundary.opl_role, 'stage_readiness_cli_summary_only');
     assert.equal(readiness.authority_boundary.ai_internal_strategy_contract, false);
     assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(readiness.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(readiness.authority_boundary.can_claim_artifact_authority, false);
+    assert.equal(readiness.authority_boundary.can_claim_production_ready, false);
     assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(readiness.authority_boundary.can_replace_ai_expert_judgment, false);
     assert.equal(readiness.authority_boundary.contract_completeness_is_quality_verdict, false);
     assert.equal(readiness.authority_boundary.graphflow_runtime_dependency, false);
+
+    const full = runCli(['stages', 'readiness', '--domain', 'mas', '--detail', 'full'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_readiness;
+    assert.equal(full.detail_level, 'full');
+    assert.equal(full.family_stage_readiness.launch_readiness_status, 'launch_warning');
+    assert.equal(full.family_stage_readiness.checks.some((entry: { check_id: string }) => entry.check_id === 'proof_bundle'), true);
+    assert.equal(
+      full.family_stage_readiness.ai_first_contract_light_policy.expert_judgment_priority,
+      'ai_native_expert_judgment_first',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -526,11 +552,11 @@ test('family stage readiness consumes declared replay evidence refs by default',
       OPL_STATE_DIR: stateRoot,
     }).family_stage_readiness;
 
-    const replayCheck = readiness.checks.find((entry: { check_id: string }) => (
+    const replayCheck = readiness.lens_summary.find((entry: { check_id: string }) => (
       entry.check_id === 'replay_certification'
     ));
     assert.ok(replayCheck);
-    assert.equal(readiness.launch_readiness_status, 'launch_warning');
+    assert.equal(readiness.status, 'launch_warning');
     assert.equal(readiness.summary.replay_evidence_warning_count, 0);
     assert.equal(replayCheck.status, 'ok');
     assert.equal(replayCheck.warning_count, 0);
@@ -577,9 +603,9 @@ test('family stage readiness fails closed when launch-safety evidence is missing
       OPL_STATE_DIR: stateRoot,
     }).family_stage_readiness;
 
-    assert.equal(readiness.launch_readiness_status, 'launch_blocked');
+    assert.equal(readiness.status, 'launch_blocked');
     assert.equal(readiness.summary.hard_blocker_count >= 2, true);
-    assert.deepEqual(readiness.hard_blockers.map((entry: { code: string }) => entry.code), [
+    assert.deepEqual(readiness.blockers.map((entry: { code: string }) => entry.code), [
       'effect_boundary_without_event_recording',
       'effect_boundary_missing_runtime_event_refs',
     ]);
@@ -617,7 +643,7 @@ test('family stage readiness treats lightweight authoring fields as warnings ins
       OPL_STATE_DIR: stateRoot,
     }).family_stage_readiness;
 
-    assert.equal(readiness.launch_readiness_status, 'launch_warning');
+    assert.equal(readiness.status, 'launch_warning');
     assert.equal(readiness.summary.hard_blocker_count, 0);
     assert.equal(readiness.summary.assumption_warning_count, 1);
     assert.equal(readiness.summary.cohort_loop_warning_count, 4);
