@@ -978,6 +978,9 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     family_action_catalog: familyActionCatalog,
     family_stage_control_plane: familyStageControlPlane,
     ...familyTransitionSurfaces,
+    family_transition_materialization: isRecord(manifest.family_transition_materialization)
+      ? manifest.family_transition_materialization
+      : null,
     grant_transition_oracle: grantTransitionOracle,
     visual_transition_spec: familyTransitionSurfaces.visual_transition_spec,
     domain_memory_descriptor: domainMemoryDescriptor,

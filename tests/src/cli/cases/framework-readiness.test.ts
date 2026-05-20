@@ -24,7 +24,12 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.attention_first_payload.summary.hard_blocker_count,
     readiness.summary.framework_kernel_hard_blocker_count,
   );
-  assert.equal(readiness.attention_first_payload.summary.open_tail_count > 0, true);
+  assert.equal(
+    readiness.attention_first_payload.summary.open_tail_count,
+    readiness.summary.app_operator_production_evidence_tail_open_item_count
+      + readiness.summary.stage_production_caller_tail_open_item_count
+      + readiness.summary.production_closeout_open_safe_action_item_count,
+  );
   assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
     readiness.summary.framework_kernel_hard_blocker_count > 0,
