@@ -12,6 +12,7 @@ import {
 } from '../modules/agent-lab-public-payloads.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { buildOplFrameworkLocator } from '../../opl-framework-locator.ts';
+import { buildFrameworkReadinessSummary } from '../../framework-readiness.ts';
 import { buildProductionFunctionalCloseout } from '../../production-functional-closeout.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../system-installation/modules.ts';
@@ -270,6 +271,21 @@ export function buildPublicCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, publicCommandSpecs['framework locate']);
         return buildOplFrameworkLocator();
+      },
+    },
+    'framework readiness': {
+      usage: 'opl framework readiness --family-defaults',
+      summary:
+        'Read the default framework/operator readiness summary across semantic hygiene, agent, stage, App/operator, provider SLO, and safe-action tail surfaces.',
+      examples: ['opl framework readiness --family-defaults --json'],
+      group: 'framework',
+      handler: (args) => {
+        if (args.length !== 1 || args[0] !== '--family-defaults') {
+          throw buildUsageError('framework readiness requires --family-defaults.', publicCommandSpecs['framework readiness'], {
+            required: ['--family-defaults'],
+          });
+        }
+        return buildFrameworkReadinessSummary(getContracts(), { familyDefaults: true });
       },
     },
     'framework production-closeout': {
