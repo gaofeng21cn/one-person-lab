@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `north_star_reference`
 State: `active_support`
 Machine boundary: 本文是人读目标态参考。机器可读真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace 与 App 证据。
-Date: `2026-05-19`
+Date: `2026-05-21`
 
 ## 文档读法
 
@@ -12,6 +12,7 @@ Date: `2026-05-19`
 - 主文档不保存历史演变、dated follow-through 或 closeout 流水。过程性记录归档到 [OPL family 文档过程归档 2026-05](../../history/process/plans/2026-05-18-opl-family-doc-process-history.md)。
 - 目标态优先于现状。MAS/MAG/RCA 当前已经存在的 runtime、sidecar、status、workbench、session、memory/artifact lifecycle 或 CLI/MCP/product shell 只能作为迁移输入，不是目标态约束。
 - Provider ready、descriptor aligned、skeleton evidence observed 或 provider completion 都不能写成 domain ready、publication-ready、fundability-ready、visual-ready 或 production soak complete。
+- Framework readiness hard blocker、production closeout open item 或 App workorder 读数归零，也只能说明 OPL workorder accounting / refs-only transport 当前闭合；`stage_readiness_warning_count` 这类 advisory / diagnostic warning 不能被写成 domain ready blocker，也不能反向证明真实 owner-chain、App 用户路径、memory/artifact/lifecycle scaleout 或 long-soak 已完成。
 - `opl agents interfaces --repo-dir <domain> --json` 返回 `status=ready` 只表示 OPL 可以从现有 descriptor / action / stage / memory / audit source 生成接口描述，并且这些描述只路由到 domain handler target。它不等于生成面已经成为生产唯一 caller，也不等于旧 wrapper、sidecar、session、workbench 或 lifecycle 面已经物理退役。
 - 目标态不要求兼容旧平台面。旧模块、旧接口、旧测试、旧文档入口、旧 CLI alias、facade、wrapper、Gateway/frontdoor/Hermes/local-manager/MDS-default 等词面，只能作为迁移输入、history/tombstone/provenance 或 negative guard；一旦 replacement 与 no-active-caller proof 成立，应直接清理，不新增 compatibility alias 或第二入口。
 
