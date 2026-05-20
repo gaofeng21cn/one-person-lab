@@ -220,6 +220,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     functional_privatization_default_watchlist_count: input.functionalSummary.default_watchlist_count,
     functional_privatization_semantic_equivalence_review_count: input.functionalSummary.semantic_equivalence_review_count,
     functional_privatization_active_private_generic_residue_count: input.functionalSummary.active_private_generic_residue_count,
+    functional_privatization_standard_domain_pack_inventory_count:
+      input.functionalSummary.standard_domain_pack_inventory_count,
+    functional_privatization_authority_function_inventory_count:
+      input.functionalSummary.authority_function_inventory_count,
+    functional_privatization_private_platform_residue_inventory_count:
+      input.functionalSummary.private_platform_residue_inventory_count,
     functional_privatization_blocker_count: input.functionalSummary.blocker_count,
     domain_external_evidence_request_count: evidenceRequestSummary.external_evidence_request_count,
     domain_open_evidence_request_count: evidenceRequestSummary.open_request_count,

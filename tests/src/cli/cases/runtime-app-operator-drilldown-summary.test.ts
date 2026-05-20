@@ -174,6 +174,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.domain_dispatch_evidence, undefined);
     assert.equal(summaryDrilldown.stage_production_evidence, undefined);
     assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
+    assert.equal(summaryDrilldown.functional_privatization_audit_refs, undefined);
     assert.equal(summaryDrilldown.opl_meta_agent_workbench_refs, undefined);
     assert.equal(
       ['resolved', 'not_bound'].includes(summaryDrilldown.summary.opl_meta_agent_registry_status),
@@ -279,6 +280,14 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       ),
       true,
     );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.lazy_load_targets.some(
+        (target: { section: string; detail_args: string[] }) =>
+          target.section === 'functional_privatization_audit_refs'
+          && target.detail_args.join(' ') === '--detail full',
+      ),
+      true,
+    );
 
     const aionConsumption = buildOplAionRuntimeConsumptionContract();
     assert.deepEqual(aionConsumption.default_read_model_command, ['runtime', 'app-operator-drilldown']);
@@ -331,6 +340,34 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       );
     }
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
+    assert.equal(
+      fullDrilldown.functional_privatization_audit_refs.surface_kind,
+      'opl_app_drilldown_functional_privatization_audit_refs',
+    );
+    assert.equal(fullDrilldown.functional_privatization_audit_refs.domains.length, 1);
+    assert.equal(
+      fullDrilldown.functional_privatization_audit_refs.domains[0].domain_id,
+      'medautoscience',
+    );
+    assert.equal(
+      fullDrilldown.functional_privatization_audit_refs.domains[0]
+        .private_platform_residue_inventory.length,
+      fullDrilldown.functional_privatization_audit_refs.domains[0].summary
+        .private_platform_residue_inventory_count,
+    );
+    assert.equal(
+      fullDrilldown.functional_privatization_audit_refs.domains[0].authority_boundary
+        .can_write_domain_truth,
+      false,
+    );
+    assert.equal(
+      fullDrilldown.functional_privatization_audit_refs.summary.private_platform_residue_inventory_count,
+      summaryDrilldown.summary.functional_privatization_private_platform_residue_inventory_count,
+    );
+    assert.equal(
+      fullDrilldown.functional_privatization_audit_refs.authority_boundary.can_write_memory_body,
+      false,
+    );
     assert.equal(fullDrilldown.domain_dispatch_evidence.attempts.length, 12);
     assert.equal(fullDrilldown.stage_production_evidence.stages.length, 12);
     assert.equal(

@@ -30,6 +30,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'domain_legacy_cleanup_plan_refs',
   'opl_meta_agent_workbench_refs',
   'functional_privatization_audit_summary',
+  'functional_privatization_audit_refs',
 ] as const;
 
 const LAZY_LOAD_TARGETS = SUMMARY_DRILLDOWN_KEYS.map((section) => ({

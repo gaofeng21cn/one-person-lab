@@ -135,6 +135,25 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
   assert.equal(drilldown.functional_privatization_audit_summary.default_watchlist_count, 0);
   assert.equal(drilldown.functional_privatization_audit_summary.semantic_equivalence_review_count, 0);
   assert.equal(
+    drilldown.functional_privatization_audit_refs.summary.active_private_generic_residue_count,
+    drilldown.functional_privatization_audit_summary.active_private_generic_residue_count,
+  );
+  assert.equal(
+    drilldown.functional_privatization_audit_refs.domains.some(
+      (domain: { domain_id: string; module_refs: { module_id: string }[] }) =>
+        domain.domain_id === 'medautoscience'
+        && domain.module_refs.some((module) => module.module_id === 'package_lifecycle_adapter'),
+    ),
+    true,
+  );
+  assert.equal(
+    drilldown.functional_privatization_audit_refs.domains.every(
+      (domain: { authority_boundary: { can_write_domain_truth: boolean } }) =>
+        domain.authority_boundary.can_write_domain_truth === false,
+    ),
+    true,
+  );
+  assert.equal(
     drilldown.domain_projection_refs.refs.some(
       (ref: { ref: string }) => ref.ref === 'mas://runtime/control/latest.json',
     ),
