@@ -8,6 +8,7 @@ import {
   buildAgentLabOptimizeResult,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
+  buildDeveloperModeAgentLabRepairRoute,
   buildDeveloperModeAgentLabRepairRouteReadModel,
 } from '../../src/agent-lab-complete.ts';
 import { buildSampleAgentLabSuite } from '../../src/agent-lab.ts';
@@ -212,6 +213,140 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.authority_boundary.can_write_owner_receipt, false);
   assert.equal(result.authority_boundary.can_modify_managed_runtime, false);
+});
+
+test('Agent Lab Developer Mode dynamic repair route gates direct, fork, observe, mixed, and blocked closeout', () => {
+  const baseProjection = {
+    status: 'ready',
+    effective_state: 'enabled',
+    mode: 'developer_mode',
+    surface_id: 'developer-mode-surface:opl/main',
+  };
+  const basePatrolRefs = {
+    patrol_observation_ref: 'patrol-observation-ref:agent-lab/direct-ready',
+    diff_ref: 'diff-ref:opl/agent-lab-direct-ready',
+    verification_refs: ['test-result-ref:opl/agent-lab-direct-ready'],
+    no_forbidden_write_ref: 'no-forbidden-write-ref:opl/agent-lab-direct-ready',
+    owner_acceptance_ref: 'external-owner-ref:opl/framework-owner/direct-ready',
+  };
+
+  const direct = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: baseProjection,
+    repo_permission: {
+      target_id: 'repo:one-person-lab',
+      repo: 'one-person-lab',
+      permission: 'write',
+      direct_write_allowed: true,
+      allowed_route: 'direct_repo_fix',
+    },
+    patrol_observation_refs: {
+      ...basePatrolRefs,
+      commit_ref: 'git-commit-ref:opl/direct-ready',
+    },
+  });
+  assert.equal(direct.surface_kind, 'opl_agent_lab_developer_mode_dynamic_repair_route');
+  assert.equal(direct.route_decision, 'direct-fix');
+  assert.equal(direct.route_status, 'closeout_refs_ready');
+  assert.equal(direct.closeout_refs.route_eligibility, 'eligible_direct_fix');
+  assert.equal(direct.closeout_refs.commit_ref, 'git-commit-ref:opl/direct-ready');
+  assert.deepEqual(direct.missing_closeout_refs, []);
+  assert.equal(direct.authority_boundary.writes_owner_receipt, false);
+  assert.equal(direct.authority_boundary.writes_domain_truth, false);
+
+  const fork = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: baseProjection,
+    repo_permission: {
+      target_id: 'repo:external-agent',
+      repo: 'external-agent',
+      permission: 'read',
+      direct_write_allowed: false,
+      allowed_route: 'fork_pull_request',
+    },
+    patrol_observation_refs: {
+      ...basePatrolRefs,
+      patrol_observation_ref: 'patrol-observation-ref:agent-lab/fork-ready',
+      fork_repo_ref: 'fork-repo-ref:external-agent/operator-fork',
+      pr_review_ref: 'pr-review-ref:external-agent/agent-lab-patrol',
+    },
+  });
+  assert.equal(fork.route_decision, 'fork-PR');
+  assert.equal(fork.route_status, 'closeout_refs_ready');
+  assert.equal(fork.closeout_refs.route_eligibility, 'eligible_fork_pr');
+  assert.equal(fork.closeout_refs.fork_repo_ref, 'fork-repo-ref:external-agent/operator-fork');
+  assert.equal(fork.closeout_refs.pr_review_ref, 'pr-review-ref:external-agent/agent-lab-patrol');
+  assert.deepEqual(fork.missing_closeout_refs, []);
+
+  const observeOnly = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: {
+      ...baseProjection,
+      effective_state: 'observe_only',
+      allowed_route: 'observe_only',
+    },
+    repo_permission: {
+      target_id: 'repo:observe-only-agent',
+      repo: 'observe-only-agent',
+      permission: 'read',
+    },
+    patrol_observation_refs: ['patrol-observation-ref:agent-lab/observe-only'],
+  });
+  assert.equal(observeOnly.route_decision, 'observe-only');
+  assert.equal(observeOnly.route_status, 'closeout_refs_incomplete');
+  assert.equal(observeOnly.closeout_refs.route_eligibility, 'eligible_observe_only');
+  assert.ok(observeOnly.missing_closeout_refs.includes('diff_ref'));
+  assert.ok(observeOnly.missing_closeout_refs.includes('external_owner_acceptance_ref'));
+
+  const mixed = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: {
+      ...baseProjection,
+      allowed_route: 'mixed_direct_and_pr',
+    },
+    repo_permission: {
+      target_id: 'repo:family-agents',
+      direct_write_repo_count: 1,
+      pr_route_repo_count: 1,
+    },
+    patrol_observation_refs: basePatrolRefs,
+  });
+  assert.equal(mixed.route_decision, 'mixed');
+  assert.equal(mixed.route_status, 'closeout_refs_ready');
+  assert.equal(mixed.closeout_refs.route_eligibility, 'eligible_mixed_routes');
+
+  const blockedProjection = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: {
+      ...baseProjection,
+      status: 'blocked',
+    },
+    repo_permission: {
+      target_id: 'repo:blocked-agent',
+      repo: 'blocked-agent',
+      permission: 'write',
+    },
+    patrol_observation_refs: basePatrolRefs,
+  });
+  assert.equal(blockedProjection.route_decision, 'blocked');
+  assert.equal(blockedProjection.route_status, 'blocked');
+  assert.equal(blockedProjection.closeout_refs.route_eligibility, 'blocked_developer_mode_projection');
+
+  const ownerReceiptNotAccepted = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: baseProjection,
+    repo_permission: {
+      target_id: 'repo:one-person-lab',
+      repo: 'one-person-lab',
+      permission: 'write',
+      direct_write_allowed: true,
+    },
+    patrol_observation_refs: {
+      ...basePatrolRefs,
+      owner_acceptance_ref: 'owner-receipt-ref:opl/framework-owner/not-external',
+      commit_ref: 'git-commit-ref:opl/not-accepted',
+    },
+  });
+  assert.equal(ownerReceiptNotAccepted.route_decision, 'blocked');
+  assert.equal(ownerReceiptNotAccepted.route_status, 'blocked');
+  assert.equal(ownerReceiptNotAccepted.closeout_refs.route_eligibility,
+    'blocked_owner_acceptance_ref_must_be_external_owner_ref');
+  assert.equal(ownerReceiptNotAccepted.closeout_refs.owner_acceptance_ref, null);
+  assert.ok(ownerReceiptNotAccepted.missing_closeout_refs.includes('external_owner_acceptance_ref'));
 });
 
 test('Agent Lab mechanism read model makes mechanism editable surfaces first-class without write authority', () => {
