@@ -730,10 +730,29 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'opl_agent_lab_developer_mode_repair_route_read_model');
   assert.equal(contract.developer_mode_repair_route_surface.cli, 'opl agent-lab workbench');
   assert.equal(contract.developer_mode_repair_route_surface.refs_only, true);
+  assert.ok(contract.developer_mode_repair_route_surface.input_refs.includes('developer_mode_projection_ref'));
+  assert.ok(contract.developer_mode_repair_route_surface.input_refs.includes('repo_permission_ref'));
   assert.deepEqual(contract.developer_mode_repair_route_surface.route_modes, [
     'repo_developer_direct_fix',
     'fork_pull_request',
   ]);
+  assert.equal(contract.developer_mode_repair_route_surface.dynamic_route_builder.surface_kind,
+    'opl_agent_lab_developer_mode_dynamic_repair_route');
+  assert.deepEqual(contract.developer_mode_repair_route_surface.dynamic_route_builder.route_decisions, [
+    'blocked',
+    'observe-only',
+    'direct-fix',
+    'fork-PR',
+    'mixed',
+  ]);
+  assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder.closeout_ref_fields.includes(
+    'developer_mode_projection_ref',
+  ));
+  assert.ok(contract.developer_mode_repair_route_surface.dynamic_route_builder.closeout_ref_fields.includes(
+    'owner_acceptance_ref',
+  ));
+  assert.equal(contract.developer_mode_repair_route_surface.dynamic_route_builder.owner_acceptance_ref_policy,
+    'external_owner_ref_only');
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('candidate_fix_ref'));
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('repo_worktree_ref'));
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('pr_ref'));

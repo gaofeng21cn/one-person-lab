@@ -9,6 +9,13 @@ import {
 import { buildLonglineAgentLabResult } from './agent-lab-longline.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 export {
+  buildDeveloperModeAgentLabRepairRoute,
+} from './agent-lab-developer-mode.ts';
+import {
+  DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER,
+  DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+} from './agent-lab-developer-mode.ts';
+export {
   buildAgentLabArisMaturityControlsReadModel,
   buildAgentLabLogDrivenMechanismCandidateReadModel,
 } from './agent-lab-control-read-models.ts';
@@ -36,24 +43,6 @@ import {
 const AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,
   can_train_or_deploy_model_weights: false,
-};
-
-const DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY = {
-  ...AUTHORITY_BOUNDARY,
-  opl: 'agent_lab_developer_mode_patrol_repair_route_projection_refs_only',
-  can_emit_issue_or_blocker_refs: true,
-  can_emit_candidate_fix_refs: true,
-  can_emit_repo_worktree_branch_refs: true,
-  can_emit_pr_refs: true,
-  can_emit_acceptance_evidence_refs: true,
-  can_emit_follow_up_queue_item_refs: true,
-  writes_domain_truth: false,
-  writes_domain_artifact: false,
-  writes_memory_body: false,
-  writes_quality_verdict: false,
-  writes_owner_receipt: false,
-  modifies_managed_runtime: false,
-  writes_follow_up_queue_body: false,
 };
 
 const MECHANISM_EDITABLE_SURFACES = [
@@ -839,6 +828,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
     status: 'ready_for_developer_mode_patrol_consumption',
     developer_mode_required: true,
     refs_only: true,
+    dynamic_route_builder: DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER,
     inputs: {
       issue_or_blocker_ref: 'issue-ref | blocker-ref',
       github_identity_ref: 'github-user-ref',
@@ -850,6 +840,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       no_repo_developer_match: 'route_to_fork_pull_request',
       developer_mode_disabled: 'projection_visible_but_execution_not_eligible',
       acceptance_required_before_apply: true,
+      owner_acceptance_ref: 'external_owner_ref_only',
     },
     patrol_projection: {
       patrol_ref: 'agent-lab-patrol-ref:developer-mode/default',
@@ -871,6 +862,8 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       route_count: routes.length,
       direct_owner_route_count: routes.filter((route) => route.route_mode === 'repo_developer_direct_fix').length,
       fork_pr_route_count: routes.filter((route) => route.route_mode === 'fork_pull_request').length,
+      dynamic_route_decision_count: 5,
+      closeout_ref_field_count: 10,
       issue_ref_count: unique(routes.map((route) => route.issue_ref)).length,
       blocker_ref_count: unique(routes.map((route) => route.blocker_ref)).length,
       follow_up_queue_item_ref_count: unique(routes.map((route) => route.follow_up_queue_item_ref)).length,

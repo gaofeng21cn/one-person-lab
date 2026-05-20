@@ -311,6 +311,8 @@
     "developer_mode_required": true,
     "refs_only": true,
     "input_refs": [
+      "developer_mode_projection_ref",
+      "repo_permission_ref",
       "issue_ref",
       "blocker_ref",
       "github_identity_ref",
@@ -330,6 +332,35 @@
       "repo_developer_direct_fix",
       "fork_pull_request"
     ],
+    "dynamic_route_builder": {
+      "surface_kind": "opl_agent_lab_developer_mode_dynamic_repair_route",
+      "input_refs": [
+        "developer_mode_projection_ref",
+        "repo_permission_ref",
+        "agent_lab_patrol_observation_ref"
+      ],
+      "route_decisions": [
+        "blocked",
+        "observe-only",
+        "direct-fix",
+        "fork-PR",
+        "mixed"
+      ],
+      "closeout_ref_fields": [
+        "developer_mode_projection_ref",
+        "route_eligibility",
+        "patrol_observation_ref",
+        "diff_ref",
+        "verification_refs",
+        "no_forbidden_write_ref",
+        "commit_ref",
+        "fork_repo_ref",
+        "pr_review_ref",
+        "owner_acceptance_ref"
+      ],
+      "owner_acceptance_ref_policy": "external_owner_ref_only",
+      "authority_boundary": "The dynamic route builder classifies Developer Mode projection, repo permission, and patrol observation refs into blocked, observe-only, direct-fix, fork-PR, or mixed route decisions. It emits closeout refs only. owner_acceptance_ref must be an external owner ref and OPL cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, or quality verdicts."
+    },
     "non_authority_outputs": {
       "writes_domain_truth": false,
       "writes_domain_artifact": false,

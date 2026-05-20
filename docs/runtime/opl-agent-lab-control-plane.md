@@ -112,7 +112,7 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - mechanism version / canary / rollback refs；
 - follow-up queue item。
 
-当 authenticated GitHub identity 对目标 repo 具备 developer / collaborator 写权限时，Developer Mode 可以把低风险和中风险 Agent Lab candidate 路由到受控 repo 修复、测试、canary 和 rollback-capable promotion 路径；没有直接写权限时，只允许生成 fork / branch / pull request。高风险 surface 必须进入 owner/human gate。所有路径都必须保留 evidence、diff、验证命令和 owner-visible closeout；不得静默修改 managed runtime、domain truth、artifact、memory body、quality verdict、credential/network/write policy 或 owner receipt。
+当 authenticated GitHub identity 对目标 repo 具备 developer / collaborator 写权限时，Developer Mode 可以把低风险和中风险 Agent Lab candidate 路由到受控 repo 修复、测试、canary 和 rollback-capable promotion 路径；没有直接写权限时，只允许生成 fork / branch / pull request。当前动态 route builder 会读取 Developer Mode projection、repo permission 和 patrol observation refs，并输出 `blocked`、`observe-only`、`direct-fix`、`fork-PR` 或 `mixed`。closeout refs 必须包含 `developer_mode_projection_ref`、`route_eligibility`、`patrol_observation_ref`、`diff_ref`、`verification_refs`、`no_forbidden_write_ref`，并按 direct-fix / fork-PR 路径补 `commit_ref` 或 `fork_repo_ref` / `pr_review_ref`；`owner_acceptance_ref` 只能是外部 owner ref。高风险 surface 必须进入 owner/human gate。所有路径都必须保留 evidence、diff、验证命令和 owner-visible closeout；不得静默修改 managed runtime、domain truth、artifact、memory body、quality verdict、credential/network/write policy 或 owner receipt。
 
 ## 输入与输出
 
