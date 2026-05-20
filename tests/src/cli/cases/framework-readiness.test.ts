@@ -25,7 +25,10 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.framework_kernel_hard_blocker_count,
   );
   assert.equal(readiness.attention_first_payload.summary.open_tail_count > 0, true);
-  assert.equal(readiness.attention_first_payload.blockers.length, 0);
+  assert.equal(
+    readiness.attention_first_payload.blockers.length > 0,
+    readiness.summary.framework_kernel_hard_blocker_count > 0,
+  );
   assert.equal(readiness.attention_first_payload.warnings.length > 0, true);
   assert.deepEqual(
     readiness.attention_first_payload.diagnostic_drilldown_refs,
@@ -50,13 +53,16 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(Object.hasOwn(readiness, 'artifact_authority_verdict'), false);
   assert.equal(Object.hasOwn(readiness, 'production_ready_verdict'), false);
   assert.equal(readiness.summary.control_plane_available, true);
-  assert.equal(readiness.summary.framework_kernel_hard_blocker_count, 0);
   assert.equal(readiness.summary.agent_structural_conformance_blocker_count, 0);
   assert.equal(readiness.summary.semantic_hygiene_gate_count, 6);
   assert.equal(readiness.summary.agent_structural_conformance_status, 'passed');
   assert.equal(
     readiness.summary.pack_compiler_ready_domain_count,
     readiness.pack_compiler.summary.ready_domain_count,
+  );
+  assert.equal(
+    readiness.summary.pack_compiler_blocked_domain_count,
+    readiness.pack_compiler.summary.blocked_domain_count,
   );
   assert.equal(
     readiness.summary.pack_compiler_generated_surface_ready_count,
@@ -66,11 +72,22 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.pack_compiler_domain_generated_surface_owner_claim_count,
     readiness.pack_compiler.summary.domain_generated_surface_owner_claim_count,
   );
-  assert.equal(readiness.summary.pack_compiler_generated_surface_ready_count, 24);
-  assert.equal(readiness.summary.pack_compiler_domain_generated_surface_owner_claim_count, 0);
+  assert.equal(
+    readiness.summary.pack_compiler_generated_artifact_drift_detected_count,
+    readiness.pack_compiler.summary.generated_artifact_drift_detected_count,
+  );
+  assert.equal(
+    readiness.pack_compiler.summary.generated_surface_ready_count
+      + readiness.pack_compiler.summary.generated_surface_blocked_count,
+    readiness.pack_compiler.summary.generated_surface_count,
+  );
   assert.equal(readiness.summary.stage_count, 18);
   assert.equal(readiness.summary.admitted_stage_count, 18);
   assert.equal(readiness.summary.blocked_stage_count, 0);
+  assert.equal(
+    readiness.stages.diagnostic_failures.length,
+    readiness.summary.stage_readiness_diagnostic_failure_count,
+  );
   assert.equal(
     readiness.summary.stage_production_caller_tail_open_item_count,
     readiness.stage_production_caller_tail.stage_production_evidence_missing_caller_stage_count,

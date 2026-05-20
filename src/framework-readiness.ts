@@ -1,5 +1,7 @@
 import type { FrameworkContracts } from './types.ts';
 import { buildAgentReadinessSummary } from './agent-readiness.ts';
+import { FrameworkContractError } from './contracts.ts';
+import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { buildDomainPackCompilerList } from './domain-pack-compiler.ts';
 import {
   buildFamilyStageReadinessInspect,
@@ -48,8 +50,81 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function diagnosticFailure(sourceId: string, sourceCommand: string, error: unknown) {
+  if (error instanceof FrameworkContractError) {
+    return {
+      source_id: sourceId,
+      source_command: sourceCommand,
+      status: 'diagnostic_unavailable',
+      error_code: error.code,
+      message: error.message,
+      exit_code: error.exitCode,
+      details: error.details ?? {},
+      blocking_policy: 'diagnostic_unavailable_blocks_framework_kernel_summary_but_does_not_claim_domain_ready',
+    };
+  }
+  return {
+    source_id: sourceId,
+    source_command: sourceCommand,
+    status: 'diagnostic_unavailable',
+    error_code: 'unexpected_framework_readiness_diagnostic_error',
+    message: error instanceof Error ? error.message : String(error),
+    exit_code: 1,
+    details: {},
+    blocking_policy: 'diagnostic_unavailable_blocks_framework_kernel_summary_but_does_not_claim_domain_ready',
+  };
+}
+
 function stageReadinessSummary(readiness: JsonRecord) {
   return record(readiness.summary);
+}
+
+function buildStageReadinessDiagnostic(
+  contracts: FrameworkContracts,
+  domain: 'mas' | 'mag' | 'rca',
+  domainManifests: ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'],
+) {
+  const sourceCommand = SOURCE_COMMANDS[`stages_readiness_${domain}`];
+  try {
+    return {
+      readiness: record(buildFamilyStageReadinessInspect(
+        contracts,
+        ['--domain', domain],
+        { domainManifests },
+      ).family_stage_readiness),
+      failure: null,
+    };
+  } catch (error) {
+    const failure = diagnosticFailure(`stages_readiness_${domain}`, sourceCommand, error);
+    return {
+      readiness: {
+        surface_kind: 'opl_family_stage_readiness_diagnostic_unavailable',
+        detail_level: 'summary',
+        status: 'diagnostic_unavailable',
+        summary: {
+          stage_count: 0,
+          admitted_stage_count: 0,
+          needs_contracts_stage_count: 0,
+          blocked_stage_count: 0,
+          hard_blocker_count: 1,
+          warning_count: 0,
+          diagnostic_failure_count: 1,
+        },
+        diagnostic_failure: failure,
+        authority_boundary: {
+          can_execute_stage: false,
+          can_write_domain_truth: false,
+          can_authorize_domain_ready: false,
+          can_authorize_quality_verdict: false,
+          can_mutate_artifact_body: false,
+          can_claim_domain_ready: false,
+          can_claim_artifact_authority: false,
+          can_claim_production_ready: false,
+        },
+      },
+      failure,
+    };
+  }
 }
 
 function authorityBoundary() {
@@ -156,19 +231,37 @@ function frameworkDiagnosticDrilldowns() {
 function frameworkAttentionFirstPayload(input: {
   status: string;
   hardBlockerCount: number;
+  packCompilerBlockerCount: number;
+  diagnosticFailureCount: number;
   semanticAttentionGateCount: number;
   stageWarningCount: number;
   openTailCount: number;
   providerSloCadenceWindowStatus: unknown;
   providerSloCapabilityStatus: unknown;
 }) {
-  const blockers = input.hardBlockerCount > 0
-    ? [{
-        blocker_id: 'framework_kernel_hard_blocker_present',
-        count: input.hardBlockerCount,
-        route_ref: '/framework_readiness/stages',
-      }]
-    : [];
+  const blockers = [
+    ...(input.packCompilerBlockerCount > 0
+      ? [{
+          blocker_id: 'pack_compiler_framework_kernel_blocker_present',
+          count: input.packCompilerBlockerCount,
+          route_ref: '/framework_readiness/pack_compiler',
+        }]
+      : []),
+    ...(input.diagnosticFailureCount > 0
+      ? [{
+          blocker_id: 'framework_diagnostic_unavailable',
+          count: input.diagnosticFailureCount,
+          route_ref: '/framework_readiness/diagnostic_failures',
+        }]
+      : []),
+    ...(input.hardBlockerCount > input.packCompilerBlockerCount + input.diagnosticFailureCount
+      ? [{
+          blocker_id: 'framework_kernel_hard_blocker_present',
+          count: input.hardBlockerCount - input.packCompilerBlockerCount - input.diagnosticFailureCount,
+          route_ref: '/framework_readiness/stages',
+        }]
+      : []),
+  ];
   const warnings = [
     ...(input.semanticAttentionGateCount > 0
       ? [{
@@ -238,11 +331,21 @@ export async function buildFrameworkReadinessSummary(
   const semanticHygiene = buildOplFrameworkSemanticHygieneAudit(contracts);
   const agentReadiness = record(buildAgentReadinessSummary(['--family-defaults']).agent_readiness);
   const packCompiler = record(buildDomainPackCompilerList(contracts).domain_pack_compiler);
-  const familyStages = record(buildFamilyStagesList(contracts).family_stages);
+  const domainManifests = buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: 120_000,
+    manifestCommandTimeoutPolicy: 'fixed',
+    useProjectionCacheOnFailure: true,
+  }).domain_manifests;
+  const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
+  const stageReadinessDiagnostics = {
+    mas: buildStageReadinessDiagnostic(contracts, 'mas', domainManifests),
+    mag: buildStageReadinessDiagnostic(contracts, 'mag', domainManifests),
+    rca: buildStageReadinessDiagnostic(contracts, 'rca', domainManifests),
+  };
   const stageReadiness = {
-    mas: record(buildFamilyStageReadinessInspect(contracts, ['--domain', 'mas']).family_stage_readiness),
-    mag: record(buildFamilyStageReadinessInspect(contracts, ['--domain', 'mag']).family_stage_readiness),
-    rca: record(buildFamilyStageReadinessInspect(contracts, ['--domain', 'rca']).family_stage_readiness),
+    mas: stageReadinessDiagnostics.mas.readiness,
+    mag: stageReadinessDiagnostics.mag.readiness,
+    rca: stageReadinessDiagnostics.rca.readiness,
   };
   const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
     appOperatorDrilldownDetailLevel: 'summary',
@@ -274,6 +377,18 @@ export async function buildFrameworkReadinessSummary(
     (total, summary) => total + numberValue(record(summary).warning_count),
     0,
   );
+  const diagnosticFailures = Object.values(stageReadinessDiagnostics)
+    .map((entry) => entry.failure)
+    .filter((entry): entry is ReturnType<typeof diagnosticFailure> => entry !== null);
+  const stageReadinessDiagnosticFailureCount = diagnosticFailures.length;
+  const packCompilerBlockedDomainCount = numberValue(packSummary.blocked_domain_count);
+  const packCompilerOwnerClaimCount = numberValue(packSummary.domain_generated_surface_owner_claim_count);
+  const packCompilerDriftDetectedCount = numberValue(packSummary.generated_artifact_drift_detected_count);
+  const packCompilerBlockerCount = Math.max(
+    packCompilerBlockedDomainCount,
+    packCompilerOwnerClaimCount,
+    packCompilerDriftDetectedCount,
+  );
   const appOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
   const stageProductionCallerTailCount = numberValue(appSummary.stage_production_evidence_missing_caller_stage_count);
   const productionCloseoutOpenSafeActionCount =
@@ -281,7 +396,8 @@ export async function buildFrameworkReadinessSummary(
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
   const openTailCount = appOpenTailCount + stageProductionCallerTailCount + productionCloseoutOpenSafeActionCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
-  const hardBlockerCount = agentHardBlockerCount + stageHardBlockerCount;
+  const hardBlockerCount =
+    agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + stageReadinessDiagnosticFailureCount;
   const frameworkStatus = statusFrom(openTailCount, semanticAttentionGateCount, hardBlockerCount);
 
   return {
@@ -304,6 +420,8 @@ export async function buildFrameworkReadinessSummary(
       attention_first_payload: frameworkAttentionFirstPayload({
         status: frameworkStatus,
         hardBlockerCount,
+        packCompilerBlockerCount,
+        diagnosticFailureCount: stageReadinessDiagnosticFailureCount,
         semanticAttentionGateCount,
         stageWarningCount,
         openTailCount,
@@ -328,13 +446,16 @@ export async function buildFrameworkReadinessSummary(
         agent_readiness_production_evidence_tail_count:
           numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
         pack_compiler_ready_domain_count: numberValue(packSummary.ready_domain_count),
+        pack_compiler_blocked_domain_count: packCompilerBlockedDomainCount,
         pack_compiler_generated_surface_ready_count: numberValue(packSummary.generated_surface_ready_count),
+        pack_compiler_generated_artifact_drift_detected_count: packCompilerDriftDetectedCount,
         pack_compiler_domain_generated_surface_owner_claim_count:
-          numberValue(packSummary.domain_generated_surface_owner_claim_count),
+          packCompilerOwnerClaimCount,
         stage_count: numberValue(stagesSummary.stages_count),
         admitted_stage_count: numberValue(stagesSummary.admitted_stages_count),
         blocked_stage_count: numberValue(stagesSummary.blocked_stages_count),
         stage_readiness_hard_blocker_count: stageHardBlockerCount,
+        stage_readiness_diagnostic_failure_count: stageReadinessDiagnosticFailureCount,
         stage_readiness_warning_count: stageWarningCount,
         app_operator_production_evidence_tail_open_item_count: appOpenTailCount,
         stage_production_caller_tail_open_item_count: stageProductionCallerTailCount,
@@ -386,6 +507,7 @@ export async function buildFrameworkReadinessSummary(
         ],
         summary: stagesSummary,
         readiness_by_domain: stageSummaries,
+        diagnostic_failures: diagnosticFailures,
         authority_boundary: {
           can_execute_stage: false,
           can_claim_stage_completion: false,
