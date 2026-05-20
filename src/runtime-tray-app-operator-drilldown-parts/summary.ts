@@ -191,7 +191,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     lifecycle_reconcile_missing_ref_count: lifecycleSummary.lifecycle_reconcile_missing_ref_count,
     lifecycle_reconcile_extra_ref_count: lifecycleSummary.lifecycle_reconcile_extra_ref_count,
     lifecycle_reconcile_stale_ref_count: lifecycleSummary.lifecycle_reconcile_stale_ref_count,
-    lifecycle_delete_can_execute: lifecycleSummary.lifecycle_delete_can_execute,
+    lifecycle_domain_physical_delete_requires_owner_receipt:
+      lifecycleSummary.lifecycle_domain_physical_delete_requires_owner_receipt,
+    lifecycle_domain_physical_delete_can_execute:
+      lifecycleSummary.lifecycle_domain_physical_delete_can_execute,
     lifecycle_opl_cleanup_apply_can_execute: lifecycleSummary.lifecycle_opl_cleanup_apply_can_execute,
     functional_privatization_default_watchlist_count: input.functionalSummary.default_watchlist_count,
     functional_privatization_semantic_equivalence_review_count: input.functionalSummary.semantic_equivalence_review_count,
@@ -222,7 +225,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domain_legacy_cleanup_blocked_plan_count: legacyCleanupSummary.legacy_cleanup_blocked_plan_count,
     domain_legacy_cleanup_action_count: legacyCleanupSummary.legacy_cleanup_action_count,
     domain_legacy_cleanup_opl_apply_ready_count: legacyCleanupSummary.legacy_cleanup_opl_apply_ready_count,
-    domain_legacy_cleanup_delete_ready_count: legacyCleanupSummary.legacy_cleanup_domain_delete_ready_count,
+    domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
+      legacyCleanupSummary.legacy_cleanup_opl_cleanup_ledger_ready_count,
+    domain_legacy_cleanup_domain_physical_delete_requires_owner_receipt_count:
+      legacyCleanupSummary.legacy_cleanup_domain_physical_delete_requires_owner_receipt_count,
+    domain_legacy_cleanup_domain_physical_delete_can_execute_count:
+      legacyCleanupSummary.legacy_cleanup_domain_physical_delete_can_execute_count,
     deprecated_alias_metadata: productionEvidenceTailDeprecatedAliasMetadata,
   };
 }

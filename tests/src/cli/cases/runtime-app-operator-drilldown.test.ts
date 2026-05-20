@@ -467,7 +467,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.domain_legacy_cleanup_blocked_plan_count, 0);
     assert.equal(drilldown.summary.domain_legacy_cleanup_action_count, 1);
     assert.equal(drilldown.summary.domain_legacy_cleanup_opl_apply_ready_count, 1);
-    assert.equal(drilldown.summary.domain_legacy_cleanup_delete_ready_count, 0);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_opl_cleanup_ledger_ready_count, 1);
+    assert.equal(
+      drilldown.summary.domain_legacy_cleanup_domain_physical_delete_requires_owner_receipt_count,
+      1,
+    );
+    assert.equal(drilldown.summary.domain_legacy_cleanup_domain_physical_delete_can_execute_count, 0);
+    assert.equal(drilldown.summary.domain_legacy_cleanup_delete_ready_count, undefined);
     assert.equal(drilldown.summary.stage_production_evidence_domain_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_evidence_observed_stage_count, 1);
@@ -483,8 +489,12 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_evidence_monitor_freshness_observed_stage_count, 0);
     assert.equal(drilldown.summary.stage_production_evidence_monitor_freshness_unobserved_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_attempt_request_route_count, 1);
-    assert.equal(drilldown.summary.production_evidence_tail_item_count >= 3, true);
-    assert.equal(drilldown.summary.production_evidence_tail_open_item_count >= 1, true);
+    assert.equal(drilldown.summary.app_operator_production_evidence_tail_item_count >= 1, true);
+    assert.equal(drilldown.summary.app_operator_production_evidence_tail_open_item_count >= 1, true);
+    assert.equal(
+      drilldown.summary.deprecated_alias_metadata.production_evidence_tail_item_count.alias_for,
+      'app_operator_production_evidence_tail_item_count',
+    );
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);
@@ -551,7 +561,19 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'ready',
     );
     assert.equal(
-      drilldown.domain_legacy_cleanup_plan_refs.refs[0].domain_delete_can_execute,
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].delete_ready,
+      undefined,
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].opl_cleanup_ledger_ready,
+      true,
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].domain_physical_delete_requires_owner_receipt,
+      true,
+    );
+    assert.equal(
+      drilldown.domain_legacy_cleanup_plan_refs.refs[0].domain_physical_delete_can_execute,
       false,
     );
     assert.equal(
@@ -589,6 +611,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(legacyCleanupApplyRoute.route_target_kind, 'opl_cli');
     assert.equal(legacyCleanupApplyRoute.execution_policy, 'opl_safe_action_shell');
     assert.equal(legacyCleanupApplyRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(legacyCleanupApplyRoute.opl_cleanup_ledger_ready, true);
+    assert.equal(legacyCleanupApplyRoute.domain_physical_delete_requires_owner_receipt, true);
+    assert.equal(legacyCleanupApplyRoute.domain_physical_delete_can_execute, false);
+    assert.equal(legacyCleanupApplyRoute.domain_delete_ready, undefined);
     assert.deepEqual(legacyCleanupApplyRoute.opl_cli_args, [
       'agents',
       'legacy-cleanup',
@@ -658,6 +684,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
         && ref.stage_id === 'review',
     );
     assert.equal(stageProductionAttemptRoute.owner, 'opl');
+    assert.equal(stageProductionAttemptRoute.route_status, 'request_route_available');
+    assert.equal(stageProductionAttemptRoute.request_scope, 'opl_owned_stage_attempt_request_only');
+    assert.equal(stageProductionAttemptRoute.creates_domain_action, false);
+    assert.equal(stageProductionAttemptRoute.creates_owner_receipt, false);
+    assert.deepEqual(stageProductionAttemptRoute.owner_receipt_refs, []);
+    assert.equal(stageProductionAttemptRoute.closes_expected_receipt_refs, false);
+    assert.equal(stageProductionAttemptRoute.closes_monitor_freshness, false);
     assert.equal(stageProductionAttemptRoute.route_target_kind, 'opl_cli');
     assert.equal(stageProductionAttemptRoute.execution_policy, 'opl_safe_action_shell');
     assert.equal(stageProductionAttemptRoute.execution_surface, 'opl runtime action execute');
@@ -712,6 +745,16 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       (ref: { action_id: string }) => ref.action_id === stageProductionAttemptRoute.action_id,
     );
     assert.equal(bridgeStageProductionAttemptRoute.can_submit_to_safe_action_shell, true);
+    assert.equal(bridgeStageProductionAttemptRoute.route_status, 'request_route_available');
+    assert.equal(
+      bridgeStageProductionAttemptRoute.request_scope,
+      'opl_owned_stage_attempt_request_only',
+    );
+    assert.equal(bridgeStageProductionAttemptRoute.creates_domain_action, false);
+    assert.equal(bridgeStageProductionAttemptRoute.creates_owner_receipt, false);
+    assert.deepEqual(bridgeStageProductionAttemptRoute.owner_receipt_refs, []);
+    assert.equal(bridgeStageProductionAttemptRoute.closes_expected_receipt_refs, false);
+    assert.equal(bridgeStageProductionAttemptRoute.closes_monitor_freshness, false);
     assert.equal(
       bridgeStageProductionAttemptRoute.action_ref.includes('opl family-runtime attempt create'),
       true,
@@ -751,6 +794,14 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(
       drilldown.app_execution_bridge.route_submission_policy.opl_cli_routes_can_create_stage_attempt_requests,
       true,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.route_submission_policy.stage_attempt_requests_close_expected_receipts,
+      false,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.route_submission_policy.stage_attempt_requests_close_monitor_freshness,
+      false,
     );
     assert.equal(
       drilldown.app_execution_bridge.route_submission_policy.direct_domain_action_execution_allowed,

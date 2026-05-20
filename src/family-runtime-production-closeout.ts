@@ -151,7 +151,14 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number) {
       ? 'closed_by_receipt_ref'
       : typedBlockerRefs.length > 0
         ? 'closed_by_domain_owned_typed_blocker'
-        : 'open_safe_action_available',
+        : 'open_safe_action_request_route_available',
+    route_status: receiptRefs.length > 0
+      ? 'closed_by_receipt_ref'
+      : typedBlockerRefs.length > 0
+        ? 'closed_by_domain_owned_typed_blocker'
+        : 'request_route_available',
+    route_semantics: 'open_safe_action_request_apply_verify_route',
+    closeout_item_is_completion_claim: false,
     receipt_ref: receiptRefs[0] ?? null,
     receipt_refs: receiptRefs,
     typed_blocker_ref: typedBlockerRefs[0] ?? null,
@@ -224,8 +231,8 @@ export async function runFamilyRuntimeProductionCloseout(
     readOnlyRouteMatchesDefaults(route, input)
   );
   const closeoutItems = routes.map(readOnlyCloseoutItem);
-  const openItems = closeoutItems.filter((item) => item.status === 'open_safe_action_available');
-  const closedItems = closeoutItems.filter((item) => item.status !== 'open_safe_action_available');
+  const openItems = closeoutItems.filter((item) => item.status === 'open_safe_action_request_route_available');
+  const closedItems = closeoutItems.filter((item) => item.status !== 'open_safe_action_request_route_available');
   const nextActionLedger = buildProductionTailNextActionLedger({
     surfaceKind: 'opl_family_runtime_production_tail_next_action_ledger',
     sourceTailSummary: {
@@ -243,6 +250,7 @@ export async function runFamilyRuntimeProductionCloseout(
     family_runtime_production_closeout: {
       surface_kind: 'opl_family_runtime_production_closeout',
       surface_role: 'derived_operator_attention_lens',
+      lens_policy: 'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
       closeout_mode: 'dry_run_summary',
       family_defaults: input.familyDefaults === true,
       selected_provider: input.providerKind,
@@ -260,6 +268,7 @@ export async function runFamilyRuntimeProductionCloseout(
         closeout_item_count: closeoutItems.length,
         closed_item_count: closedItems.length,
         open_safe_action_item_count: openItems.length,
+        production_closeout_open_safe_action_item_count: openItems.length,
         next_action_item_count: nextActionLedger.summary.next_action_item_count,
         next_action_group_count: nextActionLedger.summary.next_action_group_count,
         provider_scheduler_item_count: closeoutItems.filter((item) =>
@@ -281,6 +290,7 @@ export async function runFamilyRuntimeProductionCloseout(
         production_ready_authorized: false,
         not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
       },
+      production_closeout_open_safe_action_item_count: openItems.length,
       closeout_items: closeoutItems,
       attention_queue: openItems.map((item) => ({
         item_id: item.item_id,

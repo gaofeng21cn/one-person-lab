@@ -575,7 +575,9 @@ function lifecycleLedgerRefs() {
       lifecycle_reconcile_extra_ref_count: numberValue(record(reconcile.summary).extra_ref_count),
       lifecycle_reconcile_stale_ref_count: numberValue(record(reconcile.summary).stale_ref_count),
       lifecycle_delete_ready_proof_status: stringValue(record(reconcile.delete_ready_proof).proof_status),
-      lifecycle_delete_can_execute: record(reconcile.summary).can_execute_domain_physical_delete === true,
+      lifecycle_domain_physical_delete_requires_owner_receipt: true,
+      lifecycle_domain_physical_delete_can_execute:
+        record(reconcile.summary).can_execute_domain_physical_delete === true,
       lifecycle_opl_cleanup_apply_can_execute: record(reconcile.summary).opl_cleanup_apply_can_execute === true,
     },
     reconcile_projection: reconcile,
@@ -626,6 +628,8 @@ function appExecutionBridge(
       provider_signal_routes_emit_provider_receipts: true,
       opl_cli_routes_can_execute_framework_queries: true,
       opl_cli_routes_can_create_stage_attempt_requests: true,
+      stage_attempt_requests_close_expected_receipts: false,
+      stage_attempt_requests_close_monitor_freshness: false,
       app_surface_routes_are_projection_only: true,
     },
     safe_action_routes: safeActionRoutes.map((ref) => ({
@@ -645,6 +649,24 @@ function appExecutionBridge(
       expected_receipt_refs:
         'expected_receipt_refs' in ref ? ref.expected_receipt_refs : [],
       execution_surface: ref.execution_surface,
+      route_status: 'route_status' in ref ? ref.route_status : null,
+      request_scope: 'request_scope' in ref ? ref.request_scope : null,
+      route_closure_policy: 'route_closure_policy' in ref ? ref.route_closure_policy : null,
+      creates_domain_action: 'creates_domain_action' in ref ? ref.creates_domain_action : false,
+      creates_owner_receipt: 'creates_owner_receipt' in ref ? ref.creates_owner_receipt : false,
+      owner_receipt_refs: 'owner_receipt_refs' in ref ? ref.owner_receipt_refs : [],
+      closes_expected_receipt_refs:
+        'closes_expected_receipt_refs' in ref ? ref.closes_expected_receipt_refs : false,
+      closes_monitor_freshness:
+        'closes_monitor_freshness' in ref ? ref.closes_monitor_freshness : false,
+      opl_cleanup_ledger_ready:
+        'opl_cleanup_ledger_ready' in ref ? ref.opl_cleanup_ledger_ready : null,
+      domain_physical_delete_requires_owner_receipt:
+        'domain_physical_delete_requires_owner_receipt' in ref
+          ? ref.domain_physical_delete_requires_owner_receipt
+          : null,
+      domain_physical_delete_can_execute:
+        'domain_physical_delete_can_execute' in ref ? ref.domain_physical_delete_can_execute : null,
       submit_via: 'opl runtime action execute',
       dry_run_supported: true,
       approve_domain_action_supported: ref.owner === 'domain',
@@ -666,7 +688,11 @@ function appExecutionBridge(
       domain_artifact_mutation_receipt_ref_count:
         lifecycleRefs.summary.domain_artifact_mutation_receipt_ref_count,
       cleanup_apply_ready: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
-      domain_delete_ready: lifecycleRefs.summary.lifecycle_delete_can_execute,
+      opl_cleanup_ledger_ready: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
+      domain_physical_delete_requires_owner_receipt:
+        lifecycleRefs.summary.lifecycle_domain_physical_delete_requires_owner_receipt,
+      domain_physical_delete_can_execute:
+        lifecycleRefs.summary.lifecycle_domain_physical_delete_can_execute,
       domain_delete_executed_by_opl: false,
       reconcile_status: lifecycleRefs.summary.lifecycle_reconcile_status,
     },
@@ -675,7 +701,11 @@ function appExecutionBridge(
       supervised_periodic_command_count: supervisedPeriodicCommands.length,
       lifecycle_index_ref_count: lifecycleRefs.summary.lifecycle_index_ref_count,
       cleanup_apply_ready: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
-      domain_delete_ready: lifecycleRefs.summary.lifecycle_delete_can_execute,
+      opl_cleanup_ledger_ready: lifecycleRefs.summary.lifecycle_opl_cleanup_apply_can_execute,
+      domain_physical_delete_requires_owner_receipt:
+        lifecycleRefs.summary.lifecycle_domain_physical_delete_requires_owner_receipt,
+      domain_physical_delete_can_execute:
+        lifecycleRefs.summary.lifecycle_domain_physical_delete_can_execute,
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -757,9 +787,10 @@ function legacyCleanupPlanRefs(
       skeleton_status: stringValue(inspection.skeleton_status),
       gate_status: stringValue(gate.status),
       plan_status: stringValue(plan.plan_status),
-      delete_ready: deleteGate.delete_ready === true,
+      opl_cleanup_ledger_ready: deleteGate.opl_cleanup_apply_can_execute === true,
       opl_cleanup_apply_can_execute: deleteGate.opl_cleanup_apply_can_execute === true,
-      domain_delete_can_execute: deleteGate.can_execute_domain_physical_delete === true,
+      domain_physical_delete_requires_owner_receipt: true,
+      domain_physical_delete_can_execute: deleteGate.can_execute_domain_physical_delete === true,
       blocked_reasons: stringList(deleteGate.blocked_reasons).length > 0
         ? stringList(deleteGate.blocked_reasons)
         : stringList(plan.blocked_reasons),
@@ -809,8 +840,12 @@ function legacyCleanupPlanRefs(
       legacy_cleanup_action_count: plans.reduce((count, plan) => count + plan.action_count, 0),
       legacy_cleanup_opl_apply_ready_count:
         plans.filter((plan) => plan.opl_cleanup_apply_can_execute).length,
-      legacy_cleanup_domain_delete_ready_count:
-        plans.filter((plan) => plan.domain_delete_can_execute).length,
+      legacy_cleanup_opl_cleanup_ledger_ready_count:
+        plans.filter((plan) => plan.opl_cleanup_ledger_ready).length,
+      legacy_cleanup_domain_physical_delete_requires_owner_receipt_count:
+        plans.filter((plan) => plan.domain_physical_delete_requires_owner_receipt).length,
+      legacy_cleanup_domain_physical_delete_can_execute_count:
+        plans.filter((plan) => plan.domain_physical_delete_can_execute).length,
     },
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),
