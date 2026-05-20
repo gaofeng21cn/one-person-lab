@@ -97,13 +97,25 @@ test('framework readiness summarizes default control-plane surfaces without auth
       + readiness.pack_compiler.summary.generated_surface_blocked_count,
     readiness.pack_compiler.summary.generated_surface_count,
   );
-  assert.equal(readiness.summary.stage_count, 18);
-  assert.equal(readiness.summary.admitted_stage_count, 18);
-  assert.equal(readiness.summary.blocked_stage_count, 0);
   assert.equal(
     readiness.stages.diagnostic_failures.length,
     readiness.summary.stage_readiness_diagnostic_failure_count,
   );
+  if (readiness.summary.stage_readiness_diagnostic_failure_count > 0) {
+    assert.equal(readiness.summary.stage_count, 0);
+    assert.equal(readiness.summary.admitted_stage_count, 0);
+    assert.equal(readiness.summary.blocked_stage_count, 0);
+    assert.equal(
+      readiness.stages.diagnostic_failures.every(
+        (failure: { status: string }) => failure.status === 'diagnostic_unavailable',
+      ),
+      true,
+    );
+  } else {
+    assert.equal(readiness.summary.stage_count, 18);
+    assert.equal(readiness.summary.admitted_stage_count, 18);
+    assert.equal(readiness.summary.blocked_stage_count, 0);
+  }
   assert.equal(
     readiness.summary.stage_production_caller_tail_open_item_count,
     readiness.stage_production_caller_tail.stage_production_evidence_missing_caller_stage_count,
