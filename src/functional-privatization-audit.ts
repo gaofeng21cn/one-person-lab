@@ -44,6 +44,8 @@ export type FunctionalPrivatizationAuditItem = {
   standardization_layer_reason: string;
   semantic_equivalence_status: 'cleared_by_boundary' | 'review_required';
   semantic_equivalence_reason: string;
+  bridge_exit_gate: JsonRecord | null;
+  forbidden_generic_owner_flags: JsonRecord;
 };
 
 export type FunctionalExternalEvidenceRequest = {
@@ -690,6 +692,10 @@ function itemFromRecord(
       || itemClass === 'retire_tombstone'
       || itemClass === 'provenance_or_fixture',
     blocker,
+    bridge_exit_gate: isRecord(record.bridge_exit_gate) ? record.bridge_exit_gate : null,
+    forbidden_generic_owner_flags: isRecord(record.forbidden_generic_owner_flags)
+      ? record.forbidden_generic_owner_flags
+      : {},
   });
 }
 

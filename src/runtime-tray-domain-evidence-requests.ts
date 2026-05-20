@@ -19,6 +19,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
@@ -74,6 +78,36 @@ function summarizeExternalEvidenceReceipts(receipts: ExternalEvidenceReceipt[]) 
       receipt.direct_hosted_parity_refs
     ))),
     owner_chain_refs: uniqueStrings(receipts.flatMap((receipt) => receipt.owner_chain_refs)),
+  };
+}
+
+function functionalAuditModules(audit: JsonRecord | null | undefined) {
+  return [
+    ...recordList(audit?.modules),
+    ...recordList(isRecord(audit?.privatized_functional_module_audit)
+      ? audit.privatized_functional_module_audit.modules
+      : []),
+  ];
+}
+
+function bridgeModuleRecord(audit: JsonRecord | null | undefined, moduleId: string) {
+  return functionalAuditModules(audit).find((module) =>
+    stringValue(module.module_id) === moduleId
+  ) ?? {};
+}
+
+function bridgeModuleAuthorityBoundary(module: JsonRecord, bridgeExitGate: JsonRecord) {
+  const flags = isRecord(module.forbidden_generic_owner_flags)
+    ? module.forbidden_generic_owner_flags
+    : {};
+  return {
+    ...refsOnlyAuthorityBoundary(),
+    domain_bridge_can_own_replacement_runtime: bridgeExitGate.rca_can_own_replacement_runtime === true,
+    replacement_owner: stringValue(bridgeExitGate.replacement_owner),
+    replacement_surface: stringValue(bridgeExitGate.replacement_surface),
+    forbidden_generic_owner_flags: flags,
+    domain_may_keep_only_retained_authority_refs: true,
+    opl_can_issue_domain_owner_receipt: bridgeExitGate.opl_can_issue_owner_receipt === true,
   };
 }
 
@@ -224,15 +258,39 @@ export function buildDomainEvidenceRequestRefs(
     if (!gates) {
       return [];
     }
-    return gates.remaining_bridge_module_ids.map((moduleId) => ({
-      ref: moduleId,
-      role: 'remaining_bridge_module',
-      domain_id: audit.target_domain_id ?? project.project_id,
-      module_id: moduleId,
-      module_status: 'allowed_refs_only_or_minimal_authority_until_evidence_gate_closes',
-      source_refs: gates.source_refs,
-      can_execute: false,
-    }));
+    return gates.remaining_bridge_module_ids.map((moduleId) => {
+      const module = bridgeModuleRecord(audit, moduleId);
+      const bridgeExitGate = isRecord(module.bridge_exit_gate) ? module.bridge_exit_gate : {};
+      return {
+        ref: moduleId,
+        role: 'remaining_bridge_module',
+        domain_id: audit.target_domain_id ?? project.project_id,
+        module_id: moduleId,
+        module_status: 'allowed_refs_only_or_minimal_authority_until_evidence_gate_closes',
+        classification: stringValue(module.classification) ?? stringValue(module.migration_class),
+        migration_class: stringValue(module.migration_class),
+        owner: stringValue(module.owner),
+        bridge_owner: stringValue(bridgeExitGate.bridge_owner),
+        bridge_role: stringValue(bridgeExitGate.bridge_role),
+        replacement_owner: stringValue(bridgeExitGate.replacement_owner),
+        replacement_surface: stringValue(bridgeExitGate.replacement_surface),
+        exit_gate_ref: stringValue(bridgeExitGate.exit_gate_ref),
+        bridge_exit_gate_status: stringValue(bridgeExitGate.current_status),
+        required_before_retire: stringList(bridgeExitGate.required_before_retire),
+        retained_domain_authority: stringList(bridgeExitGate.retained_rca_authority),
+        after_exit_domain_surface: stringValue(bridgeExitGate.after_exit_rca_surface),
+        can_delete_without_no_active_caller_proof:
+          bridgeExitGate.can_delete_without_no_active_caller_proof === true,
+        declares_replacement_complete: bridgeExitGate.declares_replacement_complete === true,
+        domain_can_own_replacement_runtime: bridgeExitGate.rca_can_own_replacement_runtime === true,
+        forbidden_generic_owner_flags: isRecord(module.forbidden_generic_owner_flags)
+          ? module.forbidden_generic_owner_flags
+          : {},
+        source_refs: gates.source_refs,
+        authority_boundary: bridgeModuleAuthorityBoundary(module, bridgeExitGate),
+        can_execute: false,
+      };
+    });
   });
   return {
     surface_kind: 'opl_app_drilldown_domain_evidence_request_refs',
