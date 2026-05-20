@@ -15,12 +15,12 @@
 
 这里只把 GraphFlow / GFL 吸收为治理词汇：boundary、evidence、audit、replay、route-back。OPL 不把 GraphFlow / GFL 引入为 runtime、provider、executor、planner、proof assistant、workflow compiler、stage runner 或 domain verdict authority。
 
-当前 active contract narrative 是 **AI-first、contract-light**，surface 收敛为 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget`。Minimal Trust Kernel 只保启动安全、owner boundary、allowed refs、expected receipt、audit、replay 与 route-back 证据；Readiness 是默认 operator / App 聚合面，不新增 domain verdict；Derived Diagnostic Lenses 解释 assumption、cohort visibility、runtime budget、replay、failure localization 或缺失证据，并作为 advisory 输入折叠进 readiness，不作为 standalone 默认 CLI 或 schema 目标。Surface Budget 由 `contracts/opl-framework/surface-budget-policy.json` 冻结：新增 default surface 只允许服务 launch safety、authority boundary、evidence / replay / audit / route-back，或 App/runtime 反复消费。
+当前 active contract narrative 是 **AI-first、contract-light**，surface 收敛为 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`。Minimal Trust Kernel 只保启动安全、owner boundary、allowed refs、expected receipt、audit、replay 与 route-back 证据；Readiness 是默认 operator / App 聚合面，不新增 domain verdict；Derived Diagnostic Lenses 解释 assumption、cohort visibility、runtime budget、replay、failure localization 或缺失证据，并作为 advisory 输入折叠进 readiness，不作为 standalone 默认 CLI 或 schema 目标。Surface Budget 由 `contracts/opl-framework/surface-budget-policy.json` 冻结：新增 default surface 只允许服务 launch safety、authority boundary、evidence / replay / audit / route-back，或 App/runtime 反复消费。AI Capability Aperture 保留更强 executor、更丰富 domain pack 和独立 reviewer 的开放式专家执行空间，但不把 strategy ref 完整性升级成 launch hard gate。
 
 当前 stage-led 合同基本原则是：
 
 1. Stage pack 是启动单位；OPL 准入并启动 stage，不启动自由形态 workflow script。
-2. AI-first 执行不被静态合同写死；合同只绑定 prompt、tool、knowledge ref、expected receipt 和 authority boundary。
+2. AI-first 执行不被静态合同写死；合同绑定 expected receipt 与 authority boundary，prompt / tool / knowledge / rubric refs 是推荐显式声明的 AI strategy refs，不构成 OPL launch hard gate。
 3. AI 原生专家判断优先；机械分数、checklist、contract completeness、descriptor ready、provider completion 和 generated-surface proof 只能作为 advisory，除非独立 AI stage 或 domain-owned quality gate 返回 receipt / typed blocker / route-back verdict，否则不能替代专家判断。
 4. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
 5. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
