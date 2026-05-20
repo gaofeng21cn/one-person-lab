@@ -1,6 +1,7 @@
 import type { FrameworkContracts } from './types.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+import { buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -225,6 +226,18 @@ export async function runFamilyRuntimeProductionCloseout(
   const closeoutItems = routes.map(readOnlyCloseoutItem);
   const openItems = closeoutItems.filter((item) => item.status === 'open_safe_action_available');
   const closedItems = closeoutItems.filter((item) => item.status !== 'open_safe_action_available');
+  const nextActionLedger = buildProductionTailNextActionLedger({
+    surfaceKind: 'opl_family_runtime_production_tail_next_action_ledger',
+    sourceTailSummary: {
+      tail_item_count: closeoutItems.length,
+      open_tail_item_count: openItems.length,
+      typed_blocker_tail_item_count:
+        closeoutItems.filter((item) => item.status === 'closed_by_domain_owned_typed_blocker').length,
+      closed_tail_item_count: closedItems.length,
+    },
+    tailItems: closeoutItems,
+    sourceRef: '/family_runtime_production_closeout/closeout_items',
+  });
   return {
     version: 'g2',
     family_runtime_production_closeout: {
@@ -247,6 +260,8 @@ export async function runFamilyRuntimeProductionCloseout(
         closeout_item_count: closeoutItems.length,
         closed_item_count: closedItems.length,
         open_safe_action_item_count: openItems.length,
+        next_action_item_count: nextActionLedger.summary.next_action_item_count,
+        next_action_group_count: nextActionLedger.summary.next_action_group_count,
         provider_scheduler_item_count: closeoutItems.filter((item) =>
           item.claim_scope === 'provider_scheduler_cadence'
         ).length,
@@ -276,6 +291,7 @@ export async function runFamilyRuntimeProductionCloseout(
         next_safe_action_ref: item.replay_ref,
         missing_or_expected_refs: item.expected_refs,
       })),
+      next_action_ledger: nextActionLedger,
       source_refs: {
         app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
         app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',

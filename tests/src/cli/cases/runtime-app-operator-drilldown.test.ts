@@ -771,6 +771,46 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       stageTailItem.next_verification_command,
       'opl runtime app-operator-drilldown --detail full --json',
     );
+    const nextActionLedger = drilldown.production_evidence_tail_ledger.next_action_ledger;
+    assert.equal(
+      nextActionLedger.surface_kind,
+      'opl_app_drilldown_production_tail_next_action_ledger',
+    );
+    assert.equal(
+      nextActionLedger.summary.open_tail_item_count,
+      drilldown.production_evidence_tail_ledger.summary.open_tail_item_count,
+    );
+    assert.equal(nextActionLedger.authority_boundary.reads_declared_refs_only, true);
+    assert.equal(nextActionLedger.authority_boundary.can_read_memory_body, false);
+    assert.equal(nextActionLedger.authority_boundary.can_read_artifact_body, false);
+    assert.equal(nextActionLedger.authority_boundary.can_claim_receipt_closure, false);
+    const stageNextAction = nextActionLedger.next_action_items.find(
+      (item: { stage_id: string | null; domain: string }) =>
+        item.domain === 'medautoscience' && item.stage_id === 'review',
+    );
+    assert.equal(stageNextAction.owner, 'medautoscience');
+    assert.equal(stageNextAction.domain, 'medautoscience');
+    assert.equal(stageNextAction.stage_or_request, 'review');
+    assert.equal(
+      stageNextAction.required_receipt_type,
+      'stage_production_caller_owner_receipt_or_domain_typed_blocker',
+    );
+    assert.equal(stageNextAction.current_ref, stageTailItem.replay_ref);
+    assert.equal(
+      stageNextAction.next_safe_action_route,
+      'opl runtime app-operator-drilldown --detail full --json',
+    );
+    assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
+    assert.equal(stageNextAction.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(
+      nextActionLedger.groups.some(
+        (group: { owner: string; domain: string; stage_or_request: string }) =>
+          group.owner === 'medautoscience'
+          && group.domain === 'medautoscience'
+          && group.stage_or_request === 'review',
+      ),
+      true,
+    );
     assert.equal(drilldown.app_execution_bridge.authority_boundary.can_write_domain_truth, false);
     assert.equal(
       drilldown.operator_action_routing_refs.refs.some(
