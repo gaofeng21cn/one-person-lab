@@ -428,6 +428,256 @@ function unique(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+type DeveloperModeProjection = {
+  status?: string | null;
+  effective_state?: string | null;
+  mode?: string | null;
+  allowed_route?: string | null;
+  surface_id?: string | null;
+  repo_authority?: unknown;
+};
+
+type DeveloperModeRepoPermission = {
+  target_id?: string | null;
+  repo?: string | null;
+  repo_url?: string | null;
+  permission?: string | null;
+  direct_write_allowed?: boolean | null;
+  allowed_route?: string | null;
+  status?: string | null;
+  direct_write_repo_count?: number | null;
+  pr_route_repo_count?: number | null;
+  blocked_repo_count?: number | null;
+};
+
+type DeveloperModePatrolRefs = {
+  patrol_observation_ref?: string | null;
+  issue_ref?: string | null;
+  blocker_ref?: string | null;
+  diff_ref?: string | null;
+  verification_refs?: string[] | null;
+  no_forbidden_write_ref?: string | null;
+  commit_ref?: string | null;
+  fork_repo_ref?: string | null;
+  pr_review_ref?: string | null;
+  owner_acceptance_ref?: string | null;
+};
+
+type NormalizedDeveloperModePatrolRefs = {
+  patrol_observation_ref: string | null;
+  issue_ref: string | null;
+  blocker_ref: string | null;
+  diff_ref: string | null;
+  verification_refs: string[];
+  no_forbidden_write_ref: string | null;
+  commit_ref: string | null;
+  fork_repo_ref: string | null;
+  pr_review_ref: string | null;
+  owner_acceptance_ref: string | null;
+};
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function stringList(value: unknown) {
+  if (Array.isArray(value)) {
+    return unique(value.map(optionalString).filter((entry): entry is string => Boolean(entry)));
+  }
+  const entry = optionalString(value);
+  return entry ? [entry] : [];
+}
+
+function stableProjectionRef(projection: DeveloperModeProjection) {
+  return stableId('developer-mode-projection-ref', [
+    projection.surface_id ?? null,
+    projection.status ?? null,
+    projection.effective_state ?? null,
+    projection.mode ?? null,
+    projection.allowed_route ?? null,
+  ]);
+}
+
+function normalizePatrolRefs(refs: DeveloperModePatrolRefs | string[]): NormalizedDeveloperModePatrolRefs {
+  if (Array.isArray(refs)) {
+    return {
+      patrol_observation_ref: refs[0] ?? null,
+      issue_ref: null,
+      blocker_ref: null,
+      diff_ref: null,
+      verification_refs: [],
+      no_forbidden_write_ref: null,
+      commit_ref: null,
+      fork_repo_ref: null,
+      pr_review_ref: null,
+      owner_acceptance_ref: null,
+    };
+  }
+  return {
+    patrol_observation_ref: optionalString(refs.patrol_observation_ref),
+    issue_ref: optionalString(refs.issue_ref),
+    blocker_ref: optionalString(refs.blocker_ref),
+    diff_ref: optionalString(refs.diff_ref),
+    verification_refs: stringList(refs.verification_refs),
+    no_forbidden_write_ref: optionalString(refs.no_forbidden_write_ref),
+    commit_ref: optionalString(refs.commit_ref),
+    fork_repo_ref: optionalString(refs.fork_repo_ref),
+    pr_review_ref: optionalString(refs.pr_review_ref),
+    owner_acceptance_ref: optionalString(refs.owner_acceptance_ref),
+  };
+}
+
+function ownerAcceptanceIsExternalOwnerRef(ref: string | null) {
+  return ref === null || ref.startsWith('external-owner-ref:');
+}
+
+function repairRouteEligibility(input: {
+  projection: DeveloperModeProjection;
+  repoPermission: DeveloperModeRepoPermission;
+  patrolRefs: NormalizedDeveloperModePatrolRefs;
+}) {
+  const projectionStatus = optionalString(input.projection.status);
+  const effectiveState = optionalString(input.projection.effective_state);
+  const projectionRoute = optionalString(input.projection.allowed_route);
+  const repoRoute = optionalString(input.repoPermission.allowed_route);
+  if (
+    projectionStatus === 'blocked'
+    || effectiveState === 'blocked'
+    || projectionRoute === 'blocked'
+    || input.repoPermission.status === 'blocked'
+    || repoRoute === 'blocked'
+  ) {
+    return { routeDecision: 'blocked', routeEligibility: 'blocked_developer_mode_projection' };
+  }
+  if (!ownerAcceptanceIsExternalOwnerRef(input.patrolRefs.owner_acceptance_ref)) {
+    return {
+      routeDecision: 'blocked',
+      routeEligibility: 'blocked_owner_acceptance_ref_must_be_external_owner_ref',
+    };
+  }
+  if (effectiveState === 'observe_only' || input.projection.mode === 'external_observe' || projectionRoute === 'observe_only') {
+    return { routeDecision: 'observe-only', routeEligibility: 'eligible_observe_only' };
+  }
+  if (
+    input.repoPermission.direct_write_allowed === true
+    || repoRoute === 'direct_repo_fix'
+    || input.repoPermission.permission === 'write'
+  ) {
+    return { routeDecision: 'direct-fix', routeEligibility: 'eligible_direct_fix' };
+  }
+  if (repoRoute === 'fork_pull_request' || input.repoPermission.permission === 'read') {
+    return { routeDecision: 'fork-PR', routeEligibility: 'eligible_fork_pr' };
+  }
+  const directCount = Number(input.repoPermission.direct_write_repo_count ?? 0);
+  const prCount = Number(input.repoPermission.pr_route_repo_count ?? 0);
+  if (projectionRoute === 'mixed_direct_and_pr' || directCount + prCount > 1) {
+    return { routeDecision: 'mixed', routeEligibility: 'eligible_mixed_routes' };
+  }
+  return { routeDecision: 'blocked', routeEligibility: 'blocked_no_supported_repo_route' };
+}
+
+function missingCloseoutRefs(input: {
+  routeDecision: string;
+  patrolRefs: NormalizedDeveloperModePatrolRefs;
+}) {
+  const missing: string[] = [];
+  if (!input.patrolRefs.patrol_observation_ref) {
+    missing.push('patrol_observation_ref');
+  }
+  if (!input.patrolRefs.diff_ref) {
+    missing.push('diff_ref');
+  }
+  if (input.patrolRefs.verification_refs.length === 0) {
+    missing.push('verification_refs');
+  }
+  if (!input.patrolRefs.no_forbidden_write_ref) {
+    missing.push('no_forbidden_write_ref');
+  }
+  if (input.routeDecision === 'direct-fix' && !input.patrolRefs.commit_ref) {
+    missing.push('commit_ref');
+  }
+  if (input.routeDecision === 'fork-PR') {
+    if (!input.patrolRefs.fork_repo_ref) {
+      missing.push('fork_repo_ref');
+    }
+    if (!input.patrolRefs.pr_review_ref) {
+      missing.push('pr_review_ref');
+    }
+  }
+  if (!input.patrolRefs.owner_acceptance_ref) {
+    missing.push('external_owner_acceptance_ref');
+  }
+  return unique(missing);
+}
+
+export function buildDeveloperModeAgentLabRepairRoute(input: {
+  developer_mode_projection: DeveloperModeProjection;
+  repo_permission: DeveloperModeRepoPermission;
+  patrol_observation_refs: DeveloperModePatrolRefs | string[];
+}) {
+  const patrolRefs = normalizePatrolRefs(input.patrol_observation_refs);
+  const eligibility = repairRouteEligibility({
+    projection: input.developer_mode_projection,
+    repoPermission: input.repo_permission,
+    patrolRefs,
+  });
+  const ownerAcceptanceRef = eligibility.routeEligibility === 'blocked_owner_acceptance_ref_must_be_external_owner_ref'
+    ? null
+    : patrolRefs.owner_acceptance_ref;
+  const developerModeProjectionRef = stableProjectionRef(input.developer_mode_projection);
+  const routeDecision = eligibility.routeDecision as 'blocked' | 'observe-only' | 'direct-fix' | 'fork-PR' | 'mixed';
+  const closeoutRefs = {
+    developer_mode_projection_ref: developerModeProjectionRef,
+    route_eligibility: eligibility.routeEligibility,
+    patrol_observation_ref: patrolRefs.patrol_observation_ref,
+    diff_ref: patrolRefs.diff_ref,
+    verification_refs: patrolRefs.verification_refs,
+    no_forbidden_write_ref: patrolRefs.no_forbidden_write_ref,
+    commit_ref: routeDecision === 'direct-fix' ? patrolRefs.commit_ref : null,
+    fork_repo_ref: routeDecision === 'fork-PR' ? patrolRefs.fork_repo_ref : null,
+    pr_review_ref: routeDecision === 'fork-PR' ? patrolRefs.pr_review_ref : null,
+    owner_acceptance_ref: ownerAcceptanceRef,
+  };
+  const missing = missingCloseoutRefs({
+    routeDecision,
+    patrolRefs: {
+      ...patrolRefs,
+      owner_acceptance_ref: ownerAcceptanceRef,
+    },
+  });
+  return {
+    surface_kind: 'opl_agent_lab_developer_mode_dynamic_repair_route',
+    version: 'opl-agent-lab.v1.developer-mode-dynamic-repair-route',
+    route_ref: stableId('developer-mode-repair-route', [
+      developerModeProjectionRef,
+      input.repo_permission.target_id ?? input.repo_permission.repo ?? 'unknown_repo',
+      patrolRefs.patrol_observation_ref ?? 'missing_patrol_observation',
+      eligibility.routeEligibility,
+    ]),
+    route_decision: routeDecision,
+    route_status: missing.length === 0 && routeDecision !== 'blocked'
+      ? 'closeout_refs_ready'
+      : routeDecision === 'blocked'
+        ? 'blocked'
+        : 'closeout_refs_incomplete',
+    developer_mode_projection_ref: developerModeProjectionRef,
+    repo_permission: input.repo_permission,
+    issue_ref: patrolRefs.issue_ref,
+    blocker_ref: patrolRefs.blocker_ref,
+    closeout_refs: closeoutRefs,
+    missing_closeout_refs: missing,
+    refs_only: true,
+    authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+    non_goals: [
+      'does_not_write_owner_receipt',
+      'does_not_write_domain_truth',
+      'does_not_write_memory_body',
+      'does_not_mutate_artifact_body',
+      'does_not_modify_managed_runtime',
+    ],
+  };
+}
+
 function suiteResults() {
   return {
     sample: buildSampleAgentLabResult(),
