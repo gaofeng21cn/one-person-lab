@@ -26,6 +26,7 @@ import {
   buildStageProductionEvidence,
 } from './runtime-tray-app-operator-drilldown-parts/stage-production-evidence.ts';
 import {
+  buildStageProductionAttemptStartRoutes,
   buildStageProductionAttemptRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/stage-production-action-routes.ts';
 import {
@@ -1120,6 +1121,7 @@ export function buildAppOperatorDrilldown(input: {
   const actionRefs = uniqueRefs([
     ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
+    ...buildStageProductionAttemptStartRoutes(record(stageProductionEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),

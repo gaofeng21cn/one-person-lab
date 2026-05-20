@@ -102,6 +102,38 @@ function attemptDomainTypedBlockerRefs(attempt: JsonRecord) {
   ]);
 }
 
+function attemptReviewerReceiptRefs(attempt: JsonRecord) {
+  const routeImpact = record(attempt.route_impact);
+  const controlled = record(attempt.controlled_apply_contract);
+  const transition = transitionEvidence(attempt);
+  const launchInvocation = attemptLaunchInvocation(attempt);
+  return uniqueStrings([
+    ...refsFromRecord(attempt, ['reviewer_receipt_ref', 'reviewer_receipt_refs']),
+    ...refsFromRecord(attempt, ['independent_review_receipt_ref', 'independent_review_receipt_refs']),
+    ...refsFromRecord(routeImpact, ['reviewer_receipt_ref', 'reviewer_receipt_refs']),
+    ...refsFromRecord(routeImpact, ['independent_review_receipt_ref', 'independent_review_receipt_refs']),
+    ...refsFromRecord(controlled, ['reviewer_receipt_ref', 'reviewer_receipt_refs']),
+    ...refsFromRecord(transition, ['reviewer_receipt_ref', 'reviewer_receipt_refs']),
+    ...refsFromRecord(launchInvocation, ['reviewer_receipt_ref', 'reviewer_receipt_refs']),
+  ]);
+}
+
+function attemptGateReceiptRefs(attempt: JsonRecord) {
+  const routeImpact = record(attempt.route_impact);
+  const controlled = record(attempt.controlled_apply_contract);
+  const transition = transitionEvidence(attempt);
+  const launchInvocation = attemptLaunchInvocation(attempt);
+  return uniqueStrings([
+    ...refsFromRecord(attempt, ['gate_receipt_ref', 'gate_receipt_refs']),
+    ...refsFromRecord(attempt, ['independent_gate_receipt_ref', 'independent_gate_receipt_refs']),
+    ...refsFromRecord(routeImpact, ['gate_receipt_ref', 'gate_receipt_refs']),
+    ...refsFromRecord(routeImpact, ['independent_gate_receipt_ref', 'independent_gate_receipt_refs']),
+    ...refsFromRecord(controlled, ['gate_receipt_ref', 'gate_receipt_refs']),
+    ...refsFromRecord(transition, ['gate_receipt_ref', 'gate_receipt_refs']),
+    ...refsFromRecord(launchInvocation, ['gate_receipt_ref', 'gate_receipt_refs']),
+  ]);
+}
+
 function attemptDomainTypedBlockerCount(attempt: JsonRecord) {
   const routeImpact = record(attempt.route_impact);
   const controlled = record(attempt.controlled_apply_contract);
@@ -271,7 +303,12 @@ function stageProductionEvidence(
     const stageAttemptRefs = uniqueStrings(stageAttempts
       .map(attemptRef)
       .filter((ref): ref is string => Boolean(ref)));
+    const stageAttemptStatuses = uniqueStrings(stageAttempts
+      .map((attempt) => stringValue(attempt.status))
+      .filter((status): status is string => Boolean(status)));
     const domainOwnedTypedBlockerRefs = uniqueStrings(stageAttempts.flatMap(attemptDomainTypedBlockerRefs));
+    const reviewerReceiptRefs = uniqueStrings(stageAttempts.flatMap(attemptReviewerReceiptRefs));
+    const gateReceiptRefs = uniqueStrings(stageAttempts.flatMap(attemptGateReceiptRefs));
     const domainOwnedTypedBlockerCount = stageAttempts.reduce(
       (count, attempt) => count + attemptDomainTypedBlockerCount(attempt),
       0,
@@ -384,6 +421,7 @@ function stageProductionEvidence(
       production_evidence_status: status,
       attempt_count: stageAttempts.length,
       stage_attempt_refs: stageAttemptRefs,
+      stage_attempt_statuses: stageAttemptStatuses,
       selected_executor_kinds: selectedExecutorKinds,
       default_executor_attempt_count: defaultExecutorAttemptCount,
       non_default_executor_attempt_count: nonDefaultExecutorAttemptCount,
@@ -397,6 +435,17 @@ function stageProductionEvidence(
       monitor_refs: monitorRefs,
       runtime_event_refs: runtimeRequirement?.runtime_event_refs ?? [],
       expected_receipt_refs: expectedReceiptRefs,
+      reviewer_receipt_refs: reviewerReceiptRefs,
+      gate_receipt_refs: gateReceiptRefs,
+      independent_reviewer_gate_policy: {
+        surface_kind: 'opl_stage_independent_reviewer_gate_policy',
+        reviewer_attempt_must_be_separate_from_execution_attempt: true,
+        gate_attempt_must_be_separate_from_execution_attempt: true,
+        same_attempt_self_review_valid: false,
+        closes_domain_ready: false,
+        closes_quality_or_export_verdict: false,
+        missing_reviewer_or_gate_is_route_back_or_typed_blocker_input: true,
+      },
       expected_receipt_declared: expectedReceiptRefs.length > 0,
       observed_expected_receipt_refs: observedExpectedReceiptRefs,
       unobserved_expected_receipt_refs: unobservedExpectedReceiptRefs,

@@ -580,6 +580,23 @@ test('runtime action execute can create OPL-owned stage production attempt reque
       execution.execution.result.family_runtime_stage_attempt.launch_invocation.executor_binding_ref,
       'opl://executors/codex-cli/default',
     );
+
+    const startDryRun = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-attempt-start:medautoscience:review',
+      '--dry-run',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(startDryRun.execution.execution_kind, 'opl_cli_stage_attempt_create_and_start');
+    assert.equal(startDryRun.execution.execution_status, 'dry_run');
+    assert.equal(startDryRun.execution.executed_runtime_command.includes('opl family-runtime attempt start'), true);
+    assert.equal(startDryRun.authority_boundary.can_write_domain_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
