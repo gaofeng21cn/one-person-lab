@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -z "${OPL_REPO_TEMP_ENV_ACTIVE:-}" ]; then
+  exec "$(dirname "$0")/run-with-repo-temp-env.sh" "$0" "$@"
+fi
+
 lane="${1:-smoke}"
 
 node scripts/line-budget.mjs

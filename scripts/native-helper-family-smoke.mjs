@@ -505,7 +505,7 @@ function resolveHelper(binary) {
   if (fs.existsSync(cacheCandidate)) {
     return { source: 'state_cache', path: cacheCandidate };
   }
-  const targetDebug = path.join(repoRoot, 'target', 'debug', binary);
+  const targetDebug = path.join(process.env.CARGO_TARGET_DIR ?? path.join(repoRoot, 'target'), 'debug', binary);
   if (fs.existsSync(targetDebug)) {
     return { source: 'workspace_target_debug', path: targetDebug };
   }

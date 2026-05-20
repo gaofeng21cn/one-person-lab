@@ -5,7 +5,16 @@ import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const pythonCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-python-cache-'));
+const ownsPythonCacheRoot = !process.env.OPL_REPO_TEMP_ROOT;
+const pythonCacheRoot = process.env.OPL_REPO_TEMP_ROOT
+  ? path.join(process.env.OPL_REPO_TEMP_ROOT, 'node-test-python-cache')
+  : fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-python-cache-'));
+fs.mkdirSync(pythonCacheRoot, { recursive: true });
+if (ownsPythonCacheRoot) {
+  process.on('exit', () => {
+    fs.rmSync(pythonCacheRoot, { recursive: true, force: true });
+  });
+}
 
 const nodeTest = (files, options = {}) => ({
   kind: 'node-test',
@@ -215,6 +224,15 @@ function spawnStep(commandName, args) {
     env: {
       ...process.env,
       NODE_NO_WARNINGS: '1',
+      TMPDIR: process.env.TMPDIR || path.join(pythonCacheRoot, 'tmp') + path.sep,
+      NODE_COMPILE_CACHE: process.env.NODE_COMPILE_CACHE || path.join(pythonCacheRoot, 'node-compile-cache'),
+      NPM_CONFIG_CACHE: process.env.NPM_CONFIG_CACHE || path.join(pythonCacheRoot, 'npm-cache'),
+      npm_config_cache: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE || path.join(pythonCacheRoot, 'npm-cache'),
+      UV_CACHE_DIR: process.env.UV_CACHE_DIR || path.join(pythonCacheRoot, 'uv-cache'),
+      UV_PROJECT_ENVIRONMENT: process.env.UV_PROJECT_ENVIRONMENT || path.join(pythonCacheRoot, 'uv-project-venv'),
+      PIP_CACHE_DIR: process.env.PIP_CACHE_DIR || path.join(pythonCacheRoot, 'pip-cache'),
+      CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR || path.join(pythonCacheRoot, 'cargo-target'),
+      XDG_CACHE_HOME: process.env.XDG_CACHE_HOME || path.join(pythonCacheRoot, 'xdg-cache'),
       PYTHONDONTWRITEBYTECODE: process.env.PYTHONDONTWRITEBYTECODE || '1',
       PYTHONPYCACHEPREFIX: process.env.PYTHONPYCACHEPREFIX || path.join(pythonCacheRoot, 'pycache'),
       PYTEST_ADDOPTS: [

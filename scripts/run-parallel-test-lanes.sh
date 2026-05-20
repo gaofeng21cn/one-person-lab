@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -z "${OPL_REPO_TEMP_ENV_ACTIVE:-}" ]; then
+  exec "$(dirname "$0")/run-with-repo-temp-env.sh" "$0" "$@"
+fi
+
 if [[ "${1:-}" != "full" ]]; then
   echo "Usage: $0 full" >&2
   exit 2

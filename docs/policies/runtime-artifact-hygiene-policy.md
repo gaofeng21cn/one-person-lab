@@ -18,6 +18,7 @@ OPL 系列仓库的开发 checkout 只承载 repo-source、合同、测试和文
 - Python 测试入口必须显式设置 `PYTHONDONTWRITEBYTECODE`、`PYTHONPYCACHEPREFIX`、pytest `cache_dir` 和仓外 project venv 路径；使用 `uv sync` 时必须通过 `UV_PROJECT_ENVIRONMENT` 或等价机制把 project venv 指向临时目录。
 - Python package 测试不得为了验证本仓代码而把当前项目安装回源码目录；需要依赖同步时，应使用不安装项目本体的环境同步方式，并通过 `PYTHONPATH` 或等价源码入口读取待测代码。
 - Node、shell、native helper 或 product-entry 测试只要会启动 Python 子进程，也必须继承同一套仓外 cache 环境。
+- OPL 主仓的默认验证入口必须先进入 `scripts/run-with-repo-temp-env.sh`，统一设置 `OPL_REPO_TEMP_ROOT`、`TMPDIR`、`PYTHONPYCACHEPREFIX`、pytest `cache_dir`、`UV_PROJECT_ENVIRONMENT`、`NPM_CONFIG_CACHE`、`NODE_COMPILE_CACHE`、`CARGO_TARGET_DIR` 和 `XDG_CACHE_HOME`。同一次验证里的 Node、Python、Cargo 和 npm 子进程共享这个外部临时根。
 
 ## 目录边界
 
@@ -29,5 +30,7 @@ OPL 系列仓库的开发 checkout 只承载 repo-source、合同、测试和文
 ## 守门口径
 
 `.gitignore` 和 repo hygiene 测试是兜底守门，不是主要治理手段。若一次验证后开发 checkout 出现 `.venv`、`__pycache__`、`.pytest_cache` 或 `*.egg-info`，应修启动入口、环境传播或 build/sync 方式；清理已有生成物只是收口步骤。
+
+不可避免且确实属于本机运行环境的目录必须显式 ignore，并且 repo hygiene 只阻断两类问题：被错误纳入 Git 的 forbidden path，以及新出现但尚未 ignore 的运行生成物。已 ignore 的 `node_modules/`、`dist/`、`target/`、`.worktrees/`、`.DS_Store`、Python cache 等本机状态不得阻断提交面；需要清掉短生命周期 Python / pytest / Finder 残留时使用 `scripts/repo-hygiene.sh --fix`。
 
 长期规则需要冻结时，同步上提到 `docs/invariants.md` 或相应机器合同；本文件负责解释维护纪律和落地口径。

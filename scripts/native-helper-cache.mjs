@@ -11,7 +11,7 @@ const targetTriple = `${process.platform}-${process.arch}`;
 const stateDir = process.env.OPL_STATE_DIR
   ?? path.join(process.env.HOME ?? rootDir, 'Library/Application Support/OPL/state');
 const cacheDir = path.join(stateDir, 'native-helper', 'bin', targetTriple, crateVersion);
-const sourceDir = path.join(rootDir, 'target', 'debug');
+const sourceDir = path.join(process.env.CARGO_TARGET_DIR ?? path.join(rootDir, 'target'), 'debug');
 const binaries = [
   'opl-sysprobe',
   'opl-doctor-native',

@@ -107,6 +107,8 @@ const expectedTestScripts = {
 
 const fullLanePatterns = [
   /Usage: \$0 full/,
+  /run-with-repo-temp-env\.sh/,
+  /OPL_REPO_TEMP_ENV_ACTIVE/,
   /parallel_lanes=\(/,
   /serial_lanes=\(/,
   /"test:fast"/,
@@ -158,6 +160,11 @@ test('GitHub native helper prebuild workflow packs release artifacts across supp
 test('lint includes the tracked code line-budget guard', () => {
   assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs && node ./scripts/line-budget.mjs');
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
+});
+
+test('package.json exposes repo hygiene check and cleanup entrypoints', () => {
+  assert.equal(packageJson.scripts?.['repo:hygiene'], 'scripts/repo-hygiene.sh');
+  assert.equal(packageJson.scripts?.['repo:hygiene:fix'], 'scripts/repo-hygiene.sh --fix');
 });
 
 test('package.json exposes a single test lane registry for active test ownership', () => {
