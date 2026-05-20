@@ -500,11 +500,7 @@ export function buildFamilyStagesList(contracts: FrameworkContracts, options: Ma
   };
 }
 
-function findDomainEntry(
-  contracts: FrameworkContracts,
-  domain: string,
-  options: ManifestCatalogOptions = {},
-) {
+function findDomainEntry(contracts: FrameworkContracts, domain: string, options: ManifestCatalogOptions = {}) {
   const index = buildStageIndex(contracts, options);
   const normalized = normalizeDomainSelection(domain);
   const entry = index.domain_manifests.projects.find((candidate) => {
@@ -840,11 +836,7 @@ export function buildFamilyStageGraphInspect(contracts: FrameworkContracts, args
   };
 }
 
-export function buildFamilyStageReadinessInspect(
-  contracts: FrameworkContracts,
-  args: string[],
-  options: ManifestCatalogOptions = {},
-): { version: 'g2'; family_stage_readiness: Record<string, unknown> } {
+export function buildFamilyStageReadinessInspect(contracts: FrameworkContracts, args: string[], options: ManifestCatalogOptions = {}): { version: 'g2'; family_stage_readiness: Record<string, unknown> } {
   const parsed = parseStageReadinessArgs(args);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain, options);
   const summary = buildStageReadinessSummary(entry, plane, parsed.domain.trim());
