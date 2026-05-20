@@ -143,6 +143,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl framework readiness --family-defaults',
         'opl framework production-closeout',
         'opl family-runtime status',
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli',
         'opl family-runtime repair',
         'opl install --modules mas,mag,rca',
         'opl doctor',

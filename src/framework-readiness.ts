@@ -26,8 +26,8 @@ const SOURCE_COMMANDS = {
   stages_readiness_mag: 'opl stages readiness --domain mag --json',
   stages_readiness_rca: 'opl stages readiness --domain rca --json',
   app_operator_drilldown: 'opl runtime app-operator-drilldown --json',
-  family_runtime_production_closeout:
-    'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli --json',
+  family_runtime_evidence_worklist:
+    'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -40,6 +40,16 @@ function record(value: unknown): JsonRecord {
 
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function countValue(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (isRecord(value)) {
+    return numberValue(value.value);
+  }
+  return 0;
 }
 
 function booleanValue(value: unknown) {
@@ -228,12 +238,12 @@ function frameworkKernelFloor() {
     ],
     advisory_sources: [
       'semantic_hygiene_attention',
-      'production_evidence_tail',
-      'stage_production_caller_tail',
-      'production_closeout_safe_action_tail',
+      'agent_structural_evidence_tail',
+      'app_live_evidence_tail',
+      'stage_receipt_freshness_tail',
       'provider_slo_status',
     ],
-    ai_executor_strategy_contract: false,
+    ai_executor_internal_strategy_is_contract: false,
     domain_quality_strategy_contract: false,
     diagnostic_lenses_can_claim_ready_verdicts: false,
   };
@@ -270,11 +280,11 @@ function frameworkDiagnosticDrilldowns() {
       embedded_payload_ref: '/framework_readiness/app_operator_production_tail',
     },
     {
-      lens_id: 'production_closeout_safe_action_tail',
+      lens_id: 'evidence_worklist',
       role: 'diagnostic_drilldown',
       default_surface: false,
-      source_command: SOURCE_COMMANDS.family_runtime_production_closeout,
-      embedded_payload_ref: '/framework_readiness/production_closeout_safe_action_tail',
+      source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
+      embedded_payload_ref: '/framework_readiness/evidence_worklist',
     },
     {
       lens_id: 'provider_slo_status',
@@ -293,10 +303,15 @@ function frameworkAttentionFirstPayload(input: {
   diagnosticFailureCount: number;
   semanticAttentionGateCount: number;
   stageWarningCount: number;
-  openTailCount: number;
+  agentStructuralEvidenceTailCount: number;
+  appLiveEvidenceTailCount: number;
+  stageReceiptFreshnessTailCount: number;
   providerSloCadenceWindowStatus: unknown;
   providerSloCapabilityStatus: unknown;
 }) {
+  const openTailCount = input.agentStructuralEvidenceTailCount
+    + input.appLiveEvidenceTailCount
+    + input.stageReceiptFreshnessTailCount;
   const blockers = [
     ...(input.packCompilerBlockerCount > 0
       ? [{
@@ -335,11 +350,11 @@ function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/stages',
         }]
       : []),
-    ...(input.openTailCount > 0
+    ...(openTailCount > 0
       ? [{
-          warning_id: 'production_evidence_tail_attention',
-          count: input.openTailCount,
-          drilldown_ref: '/framework_readiness/production_closeout_safe_action_tail',
+          warning_id: 'framework_evidence_tail_attention',
+          count: openTailCount,
+          drilldown_ref: '/framework_readiness/evidence_tails',
         }]
       : []),
   ];
@@ -367,7 +382,10 @@ function frameworkAttentionFirstPayload(input: {
       hard_blocker_count: input.hardBlockerCount,
       warning_count: warnings.length,
       recommendation_count: warnings.length,
-      open_tail_count: input.openTailCount,
+      open_tail_count: openTailCount,
+      agent_structural_evidence_tail_open_count: input.agentStructuralEvidenceTailCount,
+      app_live_evidence_tail_open_count: input.appLiveEvidenceTailCount,
+      stage_receipt_freshness_tail_open_count: input.stageReceiptFreshnessTailCount,
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
@@ -417,6 +435,7 @@ export async function buildFrameworkReadinessSummary(
       familyDefaults: true,
       providerKind: 'temporal',
       executorKind: 'codex_cli',
+      commandAlias: 'evidence-worklist',
     })).family_runtime_production_closeout,
   );
 
@@ -458,10 +477,18 @@ export async function buildFrameworkReadinessSummary(
   );
   const appOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
   const stageProductionCallerTailCount = numberValue(appSummary.stage_production_evidence_missing_caller_stage_count);
-  const productionCloseoutOpenSafeActionCount =
-    numberValue(closeoutSummary.production_closeout_open_safe_action_item_count);
+  const evidenceWorklistOpenCount = countValue(closeoutSummary.open_worklist_item_count)
+    || countValue(closeoutSummary.production_closeout_open_safe_action_item_count);
+  const stageReceiptFreshnessOpenWorkorderCount =
+    countValue(closeoutSummary.stage_receipt_freshness_open_workorder_count);
+  const agentStructuralEvidenceTailCount =
+    numberValue(agentSummary.agent_readiness_production_evidence_tail_count);
+  const appLiveEvidenceTailCount = appOpenTailCount;
+  const stageReceiptFreshnessTailCount =
+    stageProductionCallerTailCount + stageReceiptFreshnessOpenWorkorderCount;
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
-  const openTailCount = appOpenTailCount + stageProductionCallerTailCount + productionCloseoutOpenSafeActionCount;
+  const openTailCount =
+    agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
     agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
@@ -475,7 +502,7 @@ export async function buildFrameworkReadinessSummary(
       family_defaults: input.familyDefaults === true,
       detail_level: 'summary',
       projection_detail_policy:
-        'attention_first_kernel_floor_default_with_embedded_compatibility_drilldowns',
+        'attention_first_kernel_floor_default_with_drilldown_refs',
       readiness_model: {
         mode: 'ai_first_contract_light',
         default_payload: 'operator_attention_summary',
@@ -491,7 +518,9 @@ export async function buildFrameworkReadinessSummary(
         diagnosticFailureCount,
         semanticAttentionGateCount,
         stageWarningCount,
-        openTailCount,
+        agentStructuralEvidenceTailCount,
+        appLiveEvidenceTailCount,
+        stageReceiptFreshnessTailCount,
         providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
         providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
       }),
@@ -506,46 +535,47 @@ export async function buildFrameworkReadinessSummary(
       summary: {
         control_plane_available: true,
         framework_kernel_hard_blocker_count: hardBlockerCount,
-        semantic_hygiene_gate_count: numberValue(semanticSummary.gate_count),
-        semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
-        agent_structural_conformance_status: stringValue(agentSummary.structural_conformance_status),
-        agent_structural_conformance_blocker_count: agentHardBlockerCount,
-        agent_readiness_diagnostic_failure_count: agentReadinessDiagnosticFailureCount,
-        agent_readiness_production_evidence_tail_count:
-          numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
-        pack_compiler_ready_domain_count: numberValue(packSummary.ready_domain_count),
-        pack_compiler_blocked_domain_count: packCompilerBlockedDomainCount,
-        pack_compiler_generated_surface_ready_count: numberValue(packSummary.generated_surface_ready_count),
-        pack_compiler_generated_artifact_drift_detected_count: packCompilerDriftDetectedCount,
-        pack_compiler_domain_generated_surface_owner_claim_count:
-          packCompilerOwnerClaimCount,
-        stage_count: numberValue(stagesSummary.stages_count),
-        admitted_stage_count: numberValue(stagesSummary.admitted_stages_count),
-        blocked_stage_count: numberValue(stagesSummary.blocked_stages_count),
-        stage_readiness_hard_blocker_count: stageHardBlockerCount,
-        stage_readiness_diagnostic_failure_count: stageReadinessDiagnosticFailureCount,
         framework_diagnostic_failure_count: diagnosticFailureCount,
-        stage_readiness_warning_count: stageWarningCount,
-        app_operator_production_evidence_tail_open_item_count: appOpenTailCount,
-        stage_production_caller_tail_open_item_count: stageProductionCallerTailCount,
-        production_closeout_open_safe_action_item_count: productionCloseoutOpenSafeActionCount,
+        semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
+        agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,
+        app_live_evidence_tail_open_count: appLiveEvidenceTailCount,
+        stage_receipt_freshness_tail_open_count: stageReceiptFreshnessTailCount,
+        open_tail_count: openTailCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
         provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
       },
       source_commands: Object.values(SOURCE_COMMANDS),
       evidence_counter_taxonomy: {
-        agent_readiness_production_evidence_tail_count:
-          'agents readiness structural-conformance tail only',
-        app_operator_production_evidence_tail_open_item_count:
-          'App/operator production-evidence tail ledger open items',
-        stage_production_caller_tail_open_item_count:
-          'stage production caller scaleout gap from App/operator stage production evidence',
-        production_closeout_open_safe_action_item_count:
-          'family-runtime production-closeout open safe-action request/apply/verify routes',
+        agent_structural_evidence_tail:
+          'agents readiness structural-conformance evidence tail only',
+        app_live_evidence_tail:
+          'App/operator live production evidence tail ledger open items',
+        stage_receipt_freshness_tail:
+          'stage production caller, expected receipt, and monitor freshness workorders',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
         deprecated_alias_policy:
-          'legacy production_evidence_tail_* aliases stay inside source drilldowns and are not emitted as framework readiness defaults',
+          'legacy production_evidence_tail_* and production_closeout_* aliases stay inside source drilldowns and are not emitted as framework readiness defaults',
+      },
+      evidence_tails: {
+        agent_structural_evidence_tail: {
+          source_command: SOURCE_COMMANDS.agents_readiness,
+          open_item_count: agentStructuralEvidenceTailCount,
+          structural_conformance_status: agentSummary.structural_conformance_status ?? null,
+          blocking_policy: 'operator_attention_only_not_domain_or_production_ready',
+        },
+        app_live_evidence_tail: {
+          source_command: SOURCE_COMMANDS.app_operator_drilldown,
+          open_item_count: appLiveEvidenceTailCount,
+          blocking_policy: 'operator_attention_only_for_app_live_and_domain_owner_evidence',
+        },
+        stage_receipt_freshness_tail: {
+          source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
+          open_item_count: stageReceiptFreshnessTailCount,
+          production_caller_request_open_item_count: stageProductionCallerTailCount,
+          receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
+          blocking_policy: 'operator_worklist_only_without_owner_receipt_or_monitor_freshness_authority',
+        },
       },
       semantic_hygiene: {
         source_command: SOURCE_COMMANDS.semantic_hygiene,
@@ -614,14 +644,16 @@ export async function buildFrameworkReadinessSummary(
           'request_route_available_creates_opl_stage_attempt_request_only_without_domain_action_or_owner_receipt_closure',
         authority_boundary: authorityBoundary(),
       },
-      production_closeout_safe_action_tail: {
-        source_command: SOURCE_COMMANDS.family_runtime_production_closeout,
+      evidence_worklist: {
+        source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
         surface_role: familyRuntimeCloseout.surface_role ?? null,
+        worklist_role: familyRuntimeCloseout.worklist_role ?? null,
         lens_policy: familyRuntimeCloseout.lens_policy ?? null,
         closeout_item_count: numberValue(closeoutSummary.closeout_item_count),
         closed_item_count: numberValue(closeoutSummary.closed_item_count),
-        open_safe_action_item_count: productionCloseoutOpenSafeActionCount,
-        production_closeout_open_safe_action_item_count: productionCloseoutOpenSafeActionCount,
+        open_worklist_item_count: evidenceWorklistOpenCount,
+        closed_refs_only_item_count: countValue(closeoutSummary.closed_refs_only_item_count),
+        stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
         next_action_item_count: numberValue(closeoutSummary.next_action_item_count),
         provider_scheduler_item_count: numberValue(closeoutSummary.provider_scheduler_item_count),
         stage_production_caller_item_count: numberValue(closeoutSummary.stage_production_caller_item_count),

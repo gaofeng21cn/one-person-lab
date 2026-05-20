@@ -115,7 +115,7 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
 
     const closeout = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -127,8 +127,10 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
     });
     const report = closeout.family_runtime_production_closeout;
 
-    assert.equal(report.surface_kind, 'opl_family_runtime_production_closeout');
+    assert.equal(report.surface_kind, 'opl_family_runtime_evidence_worklist');
+    assert.equal(report.command_alias, 'evidence-worklist');
     assert.equal(report.closeout_mode, 'dry_run_summary');
+    assert.equal(report.worklist_mode, 'refs_only_summary');
     assert.equal(report.detail_level, 'summary');
     assert.equal(
       report.projection_detail_policy,
@@ -138,8 +140,11 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
     assert.equal(report.summary.domain_ready_authorized, false);
     assert.equal(report.summary.production_ready_authorized, false);
     assert.equal(report.summary.provider_scheduler_item_count, 4);
+    assert.equal(report.summary.open_worklist_item_count > 0, true);
+    assert.equal(report.summary.closed_refs_only_item_count, 0);
     assert.equal(report.summary.open_safe_action_item_count > 0, true);
     assert.equal(report.counts.open_safe_action_item_count, report.summary.open_safe_action_item_count);
+    assert.equal(report.counts.open_worklist_item_count, report.summary.open_worklist_item_count);
     assert.equal(report.next_safe_actions.length > 0, true);
     assert.equal(report.next_safe_actions.length <= 5, true);
     assert.deepEqual(report.full_detail_args, ['--detail', 'full']);
@@ -151,7 +156,7 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
 
     const fullCloseout = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -163,12 +168,29 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).family_runtime_production_closeout;
     assert.equal(fullCloseout.detail_level, 'full');
+    assert.equal(fullCloseout.command_alias, 'evidence-worklist');
     assert.equal(
       fullCloseout.closeout_items.some((item: { action_kind: string }) =>
         item.action_kind === 'provider_scheduler_status'
       ),
       true,
     );
+
+    const compat = runCli([
+      'family-runtime',
+      'production-closeout',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).family_runtime_production_closeout;
+    assert.equal(compat.command_alias, 'production-closeout');
+    assert.equal(compat.deprecated_alias_of, 'evidence-worklist');
+    assert.equal(compat.summary.production_closeout_open_safe_action_item_count.deprecated_alias_of, 'open_worklist_item_count');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });

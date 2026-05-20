@@ -364,7 +364,7 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|production-closeout|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|evidence-worklist|production-closeout|queue list|queue inspect|approve|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
@@ -376,8 +376,9 @@ export function buildPublicCommandSpecs(
         'opl family-runtime scheduler trigger --provider temporal',
         'opl family-runtime scheduler remove --provider temporal',
         'opl family-runtime scheduler tick --provider temporal',
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
+        'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
         'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli --json',
-        'opl family-runtime production-closeout --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
       ],
       group: 'runtime',
     }),

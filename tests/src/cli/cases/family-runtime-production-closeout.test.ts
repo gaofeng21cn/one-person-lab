@@ -331,7 +331,7 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
 
     const output = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -342,8 +342,10 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     });
     const closeout = output.family_runtime_production_closeout;
 
-    assert.equal(closeout.surface_kind, 'opl_family_runtime_production_closeout');
+    assert.equal(closeout.surface_kind, 'opl_family_runtime_evidence_worklist');
     assert.equal(closeout.surface_role, 'derived_operator_attention_lens');
+    assert.equal(closeout.worklist_role, 'refs_only_operator_evidence_worklist');
+    assert.equal(closeout.command_alias, 'evidence-worklist');
     assert.equal(closeout.detail_level, 'summary');
     assert.equal(
       closeout.projection_detail_policy,
@@ -361,14 +363,25 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(closeout.summary.domain_ready_authorized, false);
     assert.equal(closeout.summary.production_ready_authorized, false);
     assert.equal(closeout.summary.closeout_item_count, 49);
+    assert.equal(closeout.summary.open_worklist_item_count, 49);
+    assert.equal(closeout.summary.closed_refs_only_item_count, 0);
+    assert.equal(closeout.summary.stage_receipt_freshness_open_workorder_count, 18);
     assert.equal(closeout.summary.open_safe_action_item_count, 49);
-    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count, 49);
-    assert.equal(closeout.production_closeout_open_safe_action_item_count, 49);
+    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count.value, 49);
+    assert.equal(
+      closeout.summary.production_closeout_open_safe_action_item_count.deprecated_alias_of,
+      'open_worklist_item_count',
+    );
+    assert.equal(closeout.production_closeout_open_safe_action_item_count.value, 49);
+    assert.equal(closeout.open_worklist_item_count, 49);
+    assert.equal(closeout.closed_refs_only_item_count, 0);
+    assert.equal(closeout.stage_receipt_freshness_open_workorder_count, 18);
     assert.equal(closeout.summary.closed_item_count, 0);
     assert.equal(closeout.counts.open_safe_action_item_count, 49);
+    assert.equal(closeout.counts.open_worklist_item_count, 49);
     assert.equal(closeout.counts.next_action_item_count, 49);
     assert.deepEqual(closeout.full_detail_args, ['--detail', 'full']);
-    assert.match(closeout.full_detail_command, /--detail full --json/);
+    assert.match(closeout.full_detail_command, /evidence-worklist .*--detail full --json/);
     assert.equal(closeout.closeout_items, undefined);
     assert.equal(closeout.attention_queue, undefined);
     assert.equal(closeout.next_action_ledger, undefined);
@@ -385,7 +398,7 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
 
     const fullOutput = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -399,6 +412,7 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     });
     const fullCloseout = fullOutput.family_runtime_production_closeout;
     assert.equal(fullCloseout.detail_level, 'full');
+    assert.equal(fullCloseout.command_alias, 'evidence-worklist');
     assert.equal(fullCloseout.closeout_items.length, 49);
     assert.equal(fullCloseout.attention_queue.length, 49);
 
@@ -578,11 +592,17 @@ test('family-runtime production-closeout closes only OPL-owned provider and clea
     }));
     const closeout = output.family_runtime_production_closeout;
 
+    assert.equal(closeout.surface_kind, 'opl_family_runtime_evidence_worklist');
+    assert.equal(closeout.deprecated_alias_of, 'evidence-worklist');
+    assert.equal(closeout.deprecated_alias.deprecated_alias_of, 'evidence-worklist');
     assert.equal(closeout.summary.closeout_item_count, 49);
     assert.equal(closeout.summary.closed_item_count, 10);
+    assert.equal(closeout.summary.open_worklist_item_count, 39);
+    assert.equal(closeout.summary.closed_refs_only_item_count, 10);
     assert.equal(closeout.summary.open_safe_action_item_count, 39);
-    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count, 39);
-    assert.equal(closeout.production_closeout_open_safe_action_item_count, 39);
+    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count.value, 39);
+    assert.equal(closeout.production_closeout_open_safe_action_item_count.value, 39);
+    assert.equal(closeout.open_worklist_item_count, 39);
     assert.equal(closeout.detail_level, 'summary');
     assert.equal(closeout.closeout_items, undefined);
     assert.equal(closeout.attention_queue, undefined);
@@ -746,7 +766,7 @@ test('family-runtime production-closeout classifies verified external blockers w
 
     const before = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -788,7 +808,7 @@ test('family-runtime production-closeout classifies verified external blockers w
 
     const recordedCloseout = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -819,7 +839,7 @@ test('family-runtime production-closeout classifies verified external blockers w
 
     const after = runCli([
       'family-runtime',
-      'production-closeout',
+      'evidence-worklist',
       '--family-defaults',
       '--provider',
       'temporal',
@@ -832,7 +852,9 @@ test('family-runtime production-closeout classifies verified external blockers w
     })).family_runtime_production_closeout;
 
     assert.equal(after.summary.open_safe_action_item_count, 43);
+    assert.equal(after.summary.open_worklist_item_count, 43);
     assert.equal(after.summary.closed_item_count, 6);
+    assert.equal(after.summary.closed_refs_only_item_count, 6);
     assert.equal(after.next_action_ledger.summary.typed_blocker_tail_item_count, 2);
     assert.equal(after.next_action_ledger.summary.next_action_item_count, 45);
     const blockerItems = after.closeout_items.filter((item: { status: string }) =>
