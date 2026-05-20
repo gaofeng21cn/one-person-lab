@@ -1,6 +1,7 @@
 import { stableId } from './family-runtime-ids.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY, FORBIDDEN_TRUE_AUTHORITY_FLAGS } from './agent-lab-authority.ts';
 import { mechanismEvolutionInputRefs, mechanismEvolutionInputsForTask } from './agent-lab-mechanism-inputs.ts';
+import { buildProductionEvidenceGateResult } from './agent-lab-production-evidence.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -151,10 +152,12 @@ export type AgentLabPromotionGate = {
 
 export type AgentLabSuite = {
   suite_id: string;
-  suite_kind?: 'agent_lab_sample_suite' | 'agent_lab_longline_suite' | string;
+  suite_kind?: 'agent_lab_sample_suite' | 'agent_lab_longline_suite' | 'mas_production_evidence_suite' | string;
   tasks: AgentLabTaskManifest[];
   required_observations?: AgentLabObservationKey[];
   longline_summary?: AgentLabLonglineSummaryInput;
+  mas_production_evidence_gate?: JsonRecord;
+  production_evidence_gate?: JsonRecord;
   authority_boundary?: JsonRecord;
 };
 
@@ -527,6 +530,7 @@ function buildRun(task: AgentLabTaskManifest) {
 
 function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRun>[]) {
   const promotionSafetyAssessments = runs.map((run) => run.promotion_safety_assessment);
+  const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
   const recoveryProbeRefs = unique(input.tasks.flatMap((task) =>
     task.recovery_probes.map((probe) => probe.probe_ref)));
   const scorecardRefs = unique(input.tasks.map((task) => task.scorecard.scorecard_ref));
@@ -576,6 +580,12 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       artifact_refs: unique(input.tasks.flatMap((task) => task.trajectory.artifact_refs)),
       receipt_refs: unique(input.tasks.flatMap((task) => task.trajectory.receipt_refs)),
       mechanism_evolution_input_refs: mechanismEvolutionInputRefs,
+      production_evidence_gate_result_refs: productionEvidenceGateResult?.gate_result_refs ?? [],
+      production_evidence_gate_refs: productionEvidenceGateResult?.gate_ids ?? [],
+      production_evidence_owner_route_refs: productionEvidenceGateResult?.owner_route_refs ?? [],
+      production_evidence_no_forbidden_write_refs: productionEvidenceGateResult?.no_forbidden_write_proof_refs ?? [],
+      production_evidence_typed_blocker_refs: productionEvidenceGateResult?.typed_blocker_refs ?? [],
+      production_evidence_required_receipt_refs: productionEvidenceGateResult?.required_receipt_refs ?? [],
       forbidden_authority_flags: forbiddenAuthorityFlags,
     },
     counters: {
@@ -607,6 +617,7 @@ export function runAgentLabSuite(input: AgentLabSuite) {
   const runs = input.tasks.map(buildRun);
   const requiredObservations = input.required_observations ?? REQUIRED_OBSERVATIONS;
   const observationResult = buildObservations(input, runs);
+  const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
   const missingObservations = requiredObservations.filter(
     (observation) => !observationResult.observations[observation],
   );
@@ -614,7 +625,10 @@ export function runAgentLabSuite(input: AgentLabSuite) {
   const aiReviewApprovedCount = runs.filter((run) =>
     run.independent_ai_review_assessment.ai_review_approved).length;
   const promotionGatePassedCount = input.tasks.filter((task) => task.promotion_gate.gate_status === 'passed').length;
-  const status: AgentLabStatus = missingObservations.length === 0 && blockedRuns.length === 0 ? 'passed' : 'blocked';
+  const productionEvidenceGateBlocked = productionEvidenceGateResult?.status === 'blocked';
+  const status: AgentLabStatus = missingObservations.length === 0 && blockedRuns.length === 0 && !productionEvidenceGateBlocked
+    ? 'passed'
+    : 'blocked';
 
   return {
     surface_kind: 'opl_agent_lab_suite_result',
@@ -660,6 +674,7 @@ export function runAgentLabSuite(input: AgentLabSuite) {
     refs: observationResult.refs,
     runs,
     domain_summary: domainSummary(runs),
+    production_evidence_gate_result: productionEvidenceGateResult,
     longline_summary: buildLonglineSummary(input),
     authority_boundary: {
       ...AGENT_LAB_AUTHORITY_BOUNDARY,
@@ -935,6 +950,11 @@ export function agentLabRefSummary(result: ReturnType<typeof runAgentLabSuite>) 
     recovery_probe_refs: result.refs.recovery_probe_refs,
     improvement_candidate_refs: result.refs.improvement_candidate_refs,
     promotion_gate_refs: result.refs.promotion_gate_refs,
+    production_evidence_gate_result_refs: result.refs.production_evidence_gate_result_refs,
+    production_evidence_gate_refs: result.refs.production_evidence_gate_refs,
+    production_evidence_owner_route_refs: result.refs.production_evidence_owner_route_refs,
+    production_evidence_typed_blocker_refs: result.refs.production_evidence_typed_blocker_refs,
+    production_evidence_required_receipt_refs: result.refs.production_evidence_required_receipt_refs,
     blocked_run_count: result.summary.blocked_run_count,
     authority_boundary: result.authority_boundary,
   };
