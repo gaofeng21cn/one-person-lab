@@ -3,6 +3,7 @@ import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
+import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -183,6 +184,53 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
     };
   }
 
+  if (actionKind.startsWith('external_evidence_') || actionKind.startsWith('evidence_gate_')) {
+    const domainId = stringValue(route.domain_id);
+    const requestId = stringValue(route.request_id);
+    if (!domainId || !requestId) {
+      return null;
+    }
+    const receipts = listExternalEvidenceReceipts({
+      domain_id: domainId,
+      request_id: requestId,
+    });
+    const verifiedReceipt = receipts.find((receipt) => receipt.receipt_status === 'verified');
+    if (!verifiedReceipt) {
+      return null;
+    }
+    const allReceiptRefs = [
+      verifiedReceipt.receipt_ref,
+      ...verifiedReceipt.receipt_refs,
+      ...verifiedReceipt.evidence_refs,
+      ...verifiedReceipt.no_regression_refs,
+      ...verifiedReceipt.release_dist_refs,
+      ...verifiedReceipt.direct_hosted_parity_refs,
+      ...verifiedReceipt.owner_chain_refs,
+    ].filter(Boolean);
+    if (verifiedReceipt.typed_blocker_refs.length > 0 && verifiedReceipt.receipt_refs.length === 0) {
+      return {
+        status: 'closed_by_domain_owned_typed_blocker',
+        receipt_ref: verifiedReceipt.receipt_ref,
+        receipt_refs: [verifiedReceipt.receipt_ref, ...verifiedReceipt.typed_blocker_refs],
+        typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0],
+        typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
+        freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+        closure_reason:
+          'OPL refs-only evidence ledger verified a domain-owned typed blocker for this external evidence request; this records request closure without claiming production success.',
+      };
+    }
+    return {
+      status: 'closed_by_receipt_ref',
+      receipt_ref: verifiedReceipt.receipt_ref,
+      receipt_refs: allReceiptRefs,
+      typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0] ?? null,
+      typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
+      freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+      closure_reason:
+        'OPL refs-only evidence ledger verified a domain-owned receipt for this external evidence request.',
+    };
+  }
+
   return null;
 }
 
@@ -199,6 +247,12 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
   const closureReceiptRef = stringValue(closure?.receipt_ref);
   const closureReceiptRefs = stringList(closure?.receipt_refs);
   const closureFreshnessRef = stringValue(closure?.freshness_ref);
+  const closureTypedBlockerRefs = stringList(closure?.typed_blocker_refs);
+  const closureTypedBlockerRef = stringValue(closure?.typed_blocker_ref);
+  const allTypedBlockerRefs = [
+    ...typedBlockerRefs,
+    ...closureTypedBlockerRefs,
+  ];
   return {
     item_id: `production-closeout:${actionId}`,
     action_id: actionId,
@@ -216,13 +270,17 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     route_semantics: 'open_safe_action_request_apply_verify_route',
     receipt_ref: closureReceiptRef,
     receipt_refs: closureReceiptRefs,
-    typed_blocker_ref: typedBlockerRefs[0] ?? null,
-    typed_blocker_refs: typedBlockerRefs,
-    closeout_status_detail: itemStatus === 'closed_by_receipt_ref'
-      ? readOnlyClaimScope(route) === 'provider_scheduler_cadence'
-        ? 'closed_by_opl_provider_slo_receipt'
-        : 'closed_by_opl_cleanup_ledger_receipt'
-      : null,
+    typed_blocker_ref: typedBlockerRefs[0] ?? closureTypedBlockerRef ?? null,
+    typed_blocker_refs: allTypedBlockerRefs,
+    closeout_status_detail: itemStatus === 'closed_by_domain_owned_typed_blocker'
+      ? 'closed_by_domain_owned_typed_blocker_ref'
+      : itemStatus === 'closed_by_receipt_ref'
+        ? readOnlyClaimScope(route) === 'provider_scheduler_cadence'
+          ? 'closed_by_opl_provider_slo_receipt'
+          : readOnlyClaimScope(route) === 'legacy_cleanup_ledger'
+            ? 'closed_by_opl_cleanup_ledger_receipt'
+            : 'closed_by_opl_external_evidence_ledger_receipt'
+        : null,
     replay_ref: stringValue(route.ref)
       ?? stringValue(route.action_ref)
       ?? `opl runtime action execute --action ${actionId}`,
@@ -233,6 +291,69 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     blocked_reason: stringValue(route.blocked_reason),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
+}
+
+function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
+  const domainEvidence = record(drilldown.domain_evidence_request_refs);
+  const receipts = [
+    ...recordList(domainEvidence.external_receipts),
+    ...recordList(domainEvidence.evidence_gate_receipts),
+  ].filter((receipt) => stringValue(receipt.receipt_status) === 'verified');
+  return receipts.map((receipt, index) => {
+    const role = stringValue(receipt.role) ?? 'external_evidence_receipt';
+    const domainId = stringValue(receipt.domain_id);
+    const requestId = stringValue(receipt.request_id) ?? stringValue(receipt.gate_id) ?? `receipt:${index + 1}`;
+    const receiptRef = stringValue(receipt.ref) ?? stringValue(receipt.receipt_ref);
+    const typedBlockerRefs = stringList(receipt.typed_blocker_refs);
+    const receiptRefs = [
+      receiptRef,
+      ...stringList(receipt.domain_receipt_refs),
+      ...stringList(receipt.evidence_refs),
+      ...stringList(receipt.no_regression_refs),
+      ...stringList(receipt.release_dist_refs),
+      ...stringList(receipt.direct_hosted_parity_refs),
+      ...stringList(receipt.owner_chain_refs),
+    ].filter((ref): ref is string => Boolean(ref));
+    const typedBlockerOnly = typedBlockerRefs.length > 0
+      && stringList(receipt.domain_receipt_refs).length === 0;
+    const claimScope = role === 'evidence_gate_receipt'
+      ? 'evidence_gate_receipt'
+      : 'external_evidence_receipt';
+    return {
+      item_id: `production-closeout:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
+      action_id: `${role}:${domainId ?? 'domain'}:${requestId}:verified`,
+      action_kind: typedBlockerOnly
+        ? 'domain_owned_typed_blocker_verified'
+        : `${role}_verified`,
+      claim_scope: claimScope,
+      owner: 'opl',
+      domain_id: domainId,
+      stage_id: null,
+      mode: 'verify',
+      status: typedBlockerOnly
+        ? 'closed_by_domain_owned_typed_blocker'
+        : 'closed_by_receipt_ref',
+      closeout_item_is_completion_claim: false,
+      route_status: 'receipt_verified',
+      route_semantics: 'verified_refs_only_receipt_projection',
+      receipt_ref: receiptRef,
+      receipt_refs: receiptRefs,
+      typed_blocker_ref: typedBlockerRefs[0] ?? null,
+      typed_blocker_refs: typedBlockerRefs,
+      closeout_status_detail: typedBlockerOnly
+        ? 'closed_by_domain_owned_typed_blocker_ref'
+        : 'closed_by_opl_external_evidence_ledger_receipt',
+      replay_ref: receiptRef ?? `/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs`,
+      freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+      freshness_refs: [],
+      expected_refs: [],
+      closure_reason: typedBlockerOnly
+        ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this evidence request; this does not claim production success.'
+        : 'OPL refs-only evidence ledger verified a domain-owned evidence receipt.',
+      blocked_reason: null,
+      not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
+    };
+  });
 }
 
 function readOnlyRouteMatchesDefaults(route: JsonRecord, input: ProductionCloseoutInput) {
@@ -357,7 +478,10 @@ export async function runFamilyRuntimeProductionCloseout(
   const routes = recordList(bridge.safe_action_routes).filter((route) =>
     readOnlyRouteMatchesDefaults(route, input)
   );
-  const closeoutItems = routes.map((route, index) => readOnlyCloseoutItem(route, index, drilldown));
+  const closeoutItems = [
+    ...routes.map((route, index) => readOnlyCloseoutItem(route, index, drilldown)),
+    ...externalEvidenceReceiptCloseoutItems(drilldown),
+  ];
   const openItems = closeoutItems.filter((item) =>
     item.status === 'open_safe_action_request_route_available'
   );

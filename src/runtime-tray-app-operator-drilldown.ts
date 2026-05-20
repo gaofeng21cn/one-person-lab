@@ -674,6 +674,17 @@ function appExecutionBridge(
       creates_domain_action: 'creates_domain_action' in ref ? ref.creates_domain_action : false,
       creates_owner_receipt: 'creates_owner_receipt' in ref ? ref.creates_owner_receipt : false,
       owner_receipt_refs: 'owner_receipt_refs' in ref ? ref.owner_receipt_refs : [],
+      request_id: 'request_id' in ref ? ref.request_id : null,
+      request_pack_id: 'request_pack_id' in ref ? ref.request_pack_id : null,
+      evidence_route_kind: 'evidence_route_kind' in ref ? ref.evidence_route_kind : null,
+      evidence_source_ref: 'evidence_source_ref' in ref ? ref.evidence_source_ref : null,
+      required_evidence_refs:
+        'required_evidence_refs' in ref ? ref.required_evidence_refs : [],
+      required_return_shapes:
+        'required_return_shapes' in ref ? ref.required_return_shapes : [],
+      required_receipt_shapes:
+        'required_receipt_shapes' in ref ? ref.required_receipt_shapes : [],
+      typed_blocker_refs: 'typed_blocker_refs' in ref ? ref.typed_blocker_refs : [],
       closes_expected_receipt_refs:
         'closes_expected_receipt_refs' in ref ? ref.closes_expected_receipt_refs : false,
       closes_monitor_freshness:
