@@ -334,6 +334,7 @@ export async function buildFrameworkReadinessSummary(
   const domainManifests = buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: 120_000,
     manifestCommandTimeoutPolicy: 'fixed',
+    materializeFamilyTransitions: false,
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
   const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
