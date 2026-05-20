@@ -210,7 +210,10 @@ test('install bootstrap-only on macOS prepares managed Node and uses a source ar
     assert.equal(fs.readFileSync(path.join(installDir, '.opl-install-source'), 'utf8').trim(), 'archive');
     assert.equal(fs.existsSync(gitLog), true);
     assert.equal(fs.readFileSync(gitLog, 'utf8').includes('clone'), false);
-    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), ['install', 'link']);
+    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), [
+      'install --ignore-scripts',
+      'link --ignore-scripts',
+    ]);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

@@ -231,8 +231,13 @@ fi
 cd "$INSTALL_DIR"
 
 log "Installing OPL CLI"
-npm install
-npm link
+if [ "$BOOTSTRAP_ONLY" = "1" ]; then
+  npm install --ignore-scripts
+  npm link --ignore-scripts
+else
+  npm install
+  npm link
+fi
 
 if [ "$BOOTSTRAP_ONLY" = "1" ]; then
   log "OPL CLI is ready"
