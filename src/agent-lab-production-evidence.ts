@@ -7,7 +7,6 @@ type AgentLabProductionEvidenceGateStatus = 'passed' | 'blocked';
 export type AgentLabProductionEvidenceSuiteInput = {
   suite_id: string;
   suite_kind?: string;
-  mas_production_evidence_gate?: JsonRecord;
   production_evidence_gate?: JsonRecord;
 };
 
@@ -45,9 +44,6 @@ function stringRecordRefs(record: JsonRecord | null, keys: string[]) {
 }
 
 function evidenceGateInput(input: AgentLabProductionEvidenceSuiteInput) {
-  if (isRecord(input.mas_production_evidence_gate)) {
-    return input.mas_production_evidence_gate;
-  }
   if (isRecord(input.production_evidence_gate)) {
     return input.production_evidence_gate;
   }
@@ -59,8 +55,8 @@ export function buildProductionEvidenceGateResult(
   runs: AgentLabProductionEvidenceRunInput[],
 ) {
   const gateInput = evidenceGateInput(input);
-  const isMasProductionEvidenceSuite = input.suite_kind === 'mas_production_evidence_suite' || Boolean(gateInput);
-  if (!isMasProductionEvidenceSuite) {
+  const isProductionEvidenceSuite = input.suite_kind === 'agent_production_evidence_suite' || Boolean(gateInput);
+  if (!isProductionEvidenceSuite) {
     return undefined;
   }
 
@@ -93,11 +89,11 @@ export function buildProductionEvidenceGateResult(
     || gateInput?.domain_ready_claimed === true
     || gateInput?.quality_verdict_claimed === true;
   const missingRequiredRefs = unique([
-    gateIds.length === 0 ? 'mas_production_evidence_gate_id_missing' : '',
-    ownerRouteRefs.length === 0 ? 'mas_owner_route_ref_missing' : '',
-    noForbiddenWriteProofRefs.length === 0 ? 'mas_no_forbidden_write_ref_missing' : '',
-    requiredReceiptRefs.length === 0 ? 'mas_required_owner_receipt_ref_missing' : '',
-    domainVerdictClaimed ? 'mas_domain_verdict_claimed_by_opl_forbidden' : '',
+    gateIds.length === 0 ? 'production_evidence_gate_id_missing' : '',
+    ownerRouteRefs.length === 0 ? 'production_evidence_owner_route_ref_missing' : '',
+    noForbiddenWriteProofRefs.length === 0 ? 'production_evidence_no_forbidden_write_ref_missing' : '',
+    requiredReceiptRefs.length === 0 ? 'production_evidence_required_receipt_ref_missing' : '',
+    domainVerdictClaimed ? 'production_evidence_domain_verdict_claimed_by_opl_forbidden' : '',
   ]);
   const status: AgentLabProductionEvidenceGateStatus = missingRequiredRefs.length === 0 ? 'passed' : 'blocked';
   const resultRef = stableId('oalpeg', [
@@ -112,12 +108,12 @@ export function buildProductionEvidenceGateResult(
   ]);
 
   return {
-    surface_kind: 'opl_agent_lab_mas_production_evidence_gate_result',
+    surface_kind: 'opl_agent_lab_production_evidence_gate_result',
     result_ref: resultRef,
     gate_result_refs: providedGateResultRefs.length > 0
       ? providedGateResultRefs
-      : [`gate-result-ref:opl-agent-lab/mas-production-evidence/${resultRef}`],
-    suite_kind: input.suite_kind ?? 'mas_production_evidence_suite',
+      : [`gate-result-ref:opl-agent-lab/production-evidence/${resultRef}`],
+    suite_kind: input.suite_kind ?? 'agent_production_evidence_suite',
     status,
     gate_ids: gateIds,
     owner_route_refs: ownerRouteRefs,
