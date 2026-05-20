@@ -350,6 +350,7 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
         : 'closed_by_receipt_ref',
       closeout_item_is_completion_claim: false,
       route_status: 'receipt_verified',
+      route_status_detail: null,
       route_semantics: 'verified_refs_only_receipt_projection',
       receipt_ref: receiptRef,
       receipt_refs: receiptRefs,
@@ -365,6 +366,12 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
       closure_reason: typedBlockerOnly
         ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this evidence request; this does not claim production success.'
         : 'OPL refs-only evidence ledger verified a domain-owned evidence receipt.',
+      open_reason: null,
+      payload_requirement: null,
+      payload_owner: 'domain_repository_or_app_live_operator',
+      route_requires_domain_or_app_payload: false,
+      can_close_without_domain_or_app_payload: true,
+      opl_generated_receipt_policy: null,
       blocked_reason: null,
       not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
     };

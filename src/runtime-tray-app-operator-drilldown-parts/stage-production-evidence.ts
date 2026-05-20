@@ -220,6 +220,22 @@ function attemptObservedRefs(attempt: JsonRecord) {
   ]);
 }
 
+function attemptExpectedReceiptObservedRefs(attempt: JsonRecord) {
+  const routeImpact = record(attempt.route_impact);
+  const controlled = record(attempt.controlled_apply_contract);
+  const transition = transitionEvidence(attempt);
+  const launchInvocation = attemptLaunchInvocation(attempt);
+  return uniqueStrings([
+    ...stringList(attempt.closeout_refs),
+    ...stringList(controlled.owner_receipt_refs),
+    ...stringList(routeImpact.owner_receipt_refs),
+    ...refsFromRecord(transition, ['owner_receipt_ref', 'owner_receipt_refs']),
+    ...refsFromRecord(launchInvocation, ['owner_receipt_ref', 'owner_receipt_refs']),
+    ...attemptReviewerReceiptRefs(attempt),
+    ...attemptGateReceiptRefs(attempt),
+  ]);
+}
+
 function stageEvidenceReceipts(input: {
   targetDomainId: string | null;
   projectId: string | null;
@@ -245,6 +261,18 @@ function receiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceRe
     ...receipt.no_regression_refs,
     ...receipt.owner_chain_refs,
   ]));
+}
+
+function domainReceiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .flatMap((receipt) => receipt.receipt_refs));
+}
+
+function evidenceRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .flatMap((receipt) => receipt.evidence_refs));
 }
 
 function typedBlockerRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
@@ -450,21 +478,31 @@ function stageProductionEvidence(
       ...refValues(cohortStage?.metric_refs),
       ...refValues(cohortStage?.dashboard_metric_refs),
     ]);
+    const expectedReceiptObservedRefs = uniqueStrings([
+      ...stageAttempts.flatMap(attemptExpectedReceiptObservedRefs),
+      ...domainReceiptRefsForStageEvidence(externalStageEvidenceReceipts),
+    ]);
     const observedExpectedReceiptRefs = observedExpectedRefs({
       expectedRefs: expectedReceiptRefs,
-      observedRefs: allObservedRefs,
+      observedRefs: expectedReceiptObservedRefs,
     });
     const unobservedExpectedReceiptRefs = unobservedExpectedRefs({
       expectedRefs: expectedReceiptRefs,
-      observedRefs: allObservedRefs,
+      observedRefs: expectedReceiptObservedRefs,
     });
     const observedMonitorFreshnessRefs = observedExpectedRefs({
       expectedRefs: monitorRefs,
-      observedRefs: allObservedRefs,
+      observedRefs: uniqueStrings([
+        ...observedRefs,
+        ...evidenceRefsForStageEvidence(externalStageEvidenceReceipts),
+      ]),
     });
     const unobservedMonitorFreshnessRefs = unobservedExpectedRefs({
       expectedRefs: monitorRefs,
-      observedRefs: allObservedRefs,
+      observedRefs: uniqueStrings([
+        ...observedRefs,
+        ...evidenceRefsForStageEvidence(externalStageEvidenceReceipts),
+      ]),
     });
     const triggerRefs = refValues(cohortStage?.trigger_refs);
     const cohortQueryRefs = refValues(cohortStage?.cohort_query_refs);

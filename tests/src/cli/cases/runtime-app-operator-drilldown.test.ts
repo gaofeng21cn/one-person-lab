@@ -519,10 +519,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_evidence_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_evidence_observed_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_caller_stage_count, 1);
-    assert.equal(drilldown.summary.stage_production_evidence_missing_expected_receipt_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_missing_expected_receipt_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_declared_stage_count, 2);
     assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_observed_stage_count, 1);
-    assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_unobserved_stage_count, 2);
+    assert.equal(drilldown.summary.stage_production_evidence_expected_receipt_unobserved_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_executor_binding_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_executor_binding_observed_stage_count, 1);
     assert.equal(drilldown.summary.stage_production_evidence_missing_monitor_freshness_stage_count, 2);
@@ -686,7 +686,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(writeProductionEvidence.expected_receipt_refs.includes('receipt:write-closeout'), true);
     assert.equal(writeProductionEvidence.expected_receipt_declared, true);
     assert.deepEqual(writeProductionEvidence.observed_expected_receipt_refs, ['receipt:write-closeout']);
-    assert.deepEqual(writeProductionEvidence.unobserved_expected_receipt_refs, ['owner_receipt:write']);
+    assert.deepEqual(writeProductionEvidence.unobserved_expected_receipt_refs, []);
     assert.equal(writeProductionEvidence.observed_evidence_refs.includes('receipt:write-closeout'), true);
     assert.equal(writeProductionEvidence.observed_evidence_refs.includes('source:dataset'), true);
     assert.deepEqual(writeProductionEvidence.monitor_freshness_refs, []);
