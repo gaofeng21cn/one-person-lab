@@ -15,7 +15,6 @@ const BASELINE = new Map([
   ['src/standard-domain-agent-conformance.ts', 1087],
   ['tests/src/cli/cases/agents-conformance.test.ts', 1156],
   ['tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts', 1123],
-  ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1037],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
