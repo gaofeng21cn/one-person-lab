@@ -73,6 +73,7 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_integration_contracts, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_review_trace_ledger, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
+  assert.equal(output.agent_lab_complete.readiness.ready_to_emit_stage_executor_policy_read_model, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_token_cost_estimates, true);
   assert.equal(output.agent_lab_complete.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(output.agent_lab_complete.readiness.automatic_model_training_ready, false);
@@ -84,6 +85,7 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.integration_contracts.summary.contract_count, 3);
   assert.equal(output.agent_lab_complete.review_trace_ledger.summary.independent_no_shared_context_count, 2);
   assert.equal(output.agent_lab_complete.log_driven_mechanism_candidates.summary.candidate_count, 4);
+  assert.equal(output.agent_lab_complete.stage_executor_policy.trial_ready_candidate_count, 1);
   assert.equal(output.agent_lab_complete.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].preset_id, 'rca-ppt-40');
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
@@ -104,6 +106,9 @@ test('agent-lab workbench exposes the App-ready read model', () => {
     'opl_agent_lab_integration_contract_read_model');
   assert.equal(output.agent_lab_workbench.review_trace_ledger.surface_kind, 'opl_agent_lab_review_trace_ledger');
   assert.equal(output.agent_lab_workbench.log_driven_mechanism_candidates.summary.high_risk_count, 0);
+  assert.equal(output.agent_lab_workbench.stage_executor_policy.default_executor_kind, 'codex_cli');
+  assert.equal(output.agent_lab_workbench.stage_executor_policy.authority_boundary.can_change_default_executor,
+    false);
   assert.equal(output.agent_lab_workbench.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_workbench.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
   assert.deepEqual(output.agent_lab_workbench.source_results.token_cost_estimate_refs,
@@ -112,6 +117,27 @@ test('agent-lab workbench exposes the App-ready read model', () => {
   assert.equal(output.agent_lab_workbench.online_learning_refs.transitions.length, 6);
   assert.equal(output.agent_lab_workbench.online_learning_refs.can_train_or_deploy_model_weights, false);
   assert.equal(output.agent_lab_workbench.authority_boundary.can_write_domain_truth, false);
+});
+
+test('agent-lab stage-executor-policy exposes refs-only optimization candidates', () => {
+  const output = runCli(['agent-lab', 'stage-executor-policy', '--json']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.agent_lab_stage_executor_policy.surface_kind,
+    'opl_agent_lab_stage_executor_policy_read_model');
+  assert.equal(output.agent_lab_stage_executor_policy.default_executor_kind, 'codex_cli');
+  assert.equal(output.agent_lab_stage_executor_policy.trial_ready_candidate_count, 1);
+  assert.equal(output.agent_lab_stage_executor_policy.blocked_candidate_count, 1);
+  assert.equal(output.agent_lab_stage_executor_policy.test_matrix.non_default_executor_launch_policy,
+    'explicit_binding_required_fail_closed');
+  assert.equal(output.agent_lab_stage_executor_policy.recommended_trials[0].executor_kind, 'antigravity_cli');
+  assert.equal(output.agent_lab_stage_executor_policy.recommended_trials[0].model, 'gemini-3.5-flash');
+  assert.equal(output.agent_lab_stage_executor_policy.recommended_trials[0].reasoning_effort, 'high');
+  assert.equal(output.agent_lab_stage_executor_policy.recommended_trials[0].can_start_as_default, false);
+  assert.equal(output.agent_lab_stage_executor_policy.typed_blockers[0].blocker_kind,
+    'non_default_executor_binding_ref_missing');
+  assert.equal(output.agent_lab_stage_executor_policy.authority_boundary.can_execute_non_default_executor, false);
+  assert.equal(output.agent_lab_stage_executor_policy.authority_boundary.can_claim_quality_equivalence, false);
 });
 
 test('agent-lab mechanism exposes a first-class refs-only mechanism object', () => {

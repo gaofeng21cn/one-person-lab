@@ -5,6 +5,7 @@ import {
   buildAgentLabEvolutionResult,
   buildAgentLabMechanismReadModel,
   buildAgentLabOptimizeResult,
+  buildAgentLabStageExecutorPolicyReadModel,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
   type AgentLabExportTarget,
@@ -66,6 +67,13 @@ function buildAgentLabMechanismPayload() {
   return {
     version: 'g2',
     agent_lab_mechanism: buildAgentLabMechanismReadModel(),
+  };
+}
+
+function buildAgentLabStageExecutorPolicyPayload() {
+  return {
+    version: 'g2',
+    agent_lab_stage_executor_policy: buildAgentLabStageExecutorPolicyReadModel(),
   };
 }
 
@@ -248,5 +256,6 @@ export {
   buildAgentLabOptimizePayload,
   buildAgentLabRunPayload,
   buildAgentLabSamplePayload,
+  buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
 };

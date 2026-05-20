@@ -8,6 +8,7 @@ import {
   buildAgentLabOptimizePayload,
   buildAgentLabRunPayload,
   buildAgentLabSamplePayload,
+  buildAgentLabStageExecutorPolicyPayload,
   buildAgentLabWorkbenchPayload,
 } from '../modules/agent-lab-public-payloads.ts';
 import { assertNoArgs } from '../modules/support.ts';
@@ -63,6 +64,16 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       handler: (args) => {
         assertNoArgs(args, specs['agent-lab mechanism']);
         return buildAgentLabMechanismPayload();
+      },
+    },
+    'agent-lab stage-executor-policy': {
+      usage: 'opl agent-lab stage-executor-policy',
+      summary: 'Show refs-only stage executor policy candidates, trial gates, and non-default binding blockers.',
+      examples: ['opl agent-lab stage-executor-policy --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, specs['agent-lab stage-executor-policy']);
+        return buildAgentLabStageExecutorPolicyPayload();
       },
     },
     'agent-lab cost-estimate': {

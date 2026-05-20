@@ -6,6 +6,7 @@ import {
   buildAgentLabEvolutionResult,
   buildAgentLabMechanismReadModel,
   buildAgentLabOptimizeResult,
+  buildAgentLabStageExecutorPolicyReadModel,
   buildAgentLabVariantComparisonReadModel,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
@@ -64,6 +65,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
   assert.equal(result.readiness.ready_to_emit_ahe_evidence_read_model, true);
   assert.equal(result.readiness.ready_to_emit_variant_comparison_read_model, true);
+  assert.equal(result.readiness.ready_to_emit_stage_executor_policy_read_model, true);
   assert.equal(result.readiness.ready_to_emit_token_cost_estimates, true);
   assert.equal(result.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(result.readiness.automatic_model_training_ready, false);
@@ -86,6 +88,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'score_with_domain_owned_scorecard_refs',
     'validate_cross_surface_integration_contracts',
     'select_mechanism_editable_surface_refs',
+    'evaluate_stage_executor_policy_candidates',
     'emit_meta_edit_receipt_ref',
     'generate_next_mechanism_candidate_ref',
     'classify_mechanism_change_risk',
@@ -126,6 +129,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.aris_maturity_controls.read_model_id);
   assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
     result.variant_comparison.read_model_id);
+  assert.equal(result.optimizer_loop.stage_executor_policy_read_model.read_model_id,
+    result.stage_executor_policy.read_model_id);
   assert.equal(result.token_cost_estimates.length, 1);
   assert.equal(result.token_cost_estimates[0].surface_kind, 'opl_agent_lab_cost_estimate');
   assert.equal(result.token_cost_estimates[0].preset_id, 'rca-ppt-40');
@@ -139,6 +144,11 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.token_cost_estimates[0].authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.optimizer_loop.mechanism_object.promotion_mode,
     'risk_tiered_auto_promotion_with_independent_ai_review');
+  assert.equal(result.stage_executor_policy.surface_kind, 'opl_agent_lab_stage_executor_policy_read_model');
+  assert.equal(result.stage_executor_policy.trial_ready_candidate_count, 1);
+  assert.equal(result.stage_executor_policy.blocked_candidate_count, 1);
+  assert.equal(result.stage_executor_policy.test_matrix.non_default_executor_launch_policy,
+    'explicit_binding_required_fail_closed');
   assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
   assert.equal(result.mechanism_control_plane.mechanism_ref, 'mechanism:agent-lab/default-stage-led-agent-mechanism');
   assert.equal(result.mechanism_control_plane.mechanism_promotion_policy.automatic_mechanism_promotion_ready, false);
@@ -173,6 +183,8 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.source_results.aris_maturity_controls_ref, result.aris_maturity_controls.read_model_id);
   assert.equal(result.source_results.ahe_evidence_read_model_ref, result.ahe_evidence.read_model_id);
   assert.equal(result.source_results.variant_comparison_read_model_ref, result.variant_comparison.read_model_id);
+  assert.equal(result.source_results.stage_executor_policy_read_model_ref,
+    result.stage_executor_policy.read_model_id);
   assert.deepEqual(result.source_results.token_cost_estimate_refs,
     result.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
   assert.equal(result.aris_maturity_controls.summary.effort_level_count, 4);
@@ -182,6 +194,9 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.variant_comparison.summary.variant_count, 3);
   assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);
+  assert.equal(result.stage_executor_policy.surface_kind, 'opl_agent_lab_stage_executor_policy_read_model');
+  assert.equal(result.stage_executor_policy.default_executor_kind, 'codex_cli');
+  assert.equal(result.stage_executor_policy.authority_boundary.can_execute_non_default_executor, false);
   assert.equal(result.token_cost_estimates.length, 1);
   assert.equal(result.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
   assert.equal(result.token_cost_estimates[0].calibration.calibration_status,
@@ -194,6 +209,50 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.online_learning_refs.can_train_or_deploy_model_weights, false);
   assert.equal(result.online_learning_refs.can_promote_default_agent_without_gate, false);
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('Agent Lab stage executor policy read model supports controlled non-default executor trials', () => {
+  const result = buildAgentLabStageExecutorPolicyReadModel(['suite:rca-html-policy-smoke']);
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_stage_executor_policy_read_model');
+  assert.equal(result.status, 'ready_for_refs_only_stage_executor_policy_optimization');
+  assert.equal(result.default_executor_kind, 'codex_cli');
+  assert.deepEqual(result.canonical_non_default_executor_kinds, [
+    'hermes_agent',
+    'claude_code',
+    'antigravity_cli',
+  ]);
+  assert.equal(result.candidate_count, 3);
+  assert.equal(result.trial_ready_candidate_count, 1);
+  assert.equal(result.blocked_candidate_count, 1);
+
+  const antigravity = result.policy_candidates.find((candidate: any) =>
+    candidate.executor_policy.executor_kind === 'antigravity_cli');
+  assert.ok(antigravity);
+  assert.equal(antigravity.stage_pattern_ref, 'stage-pattern:rca-html-visual-deliverable-build');
+  assert.equal(antigravity.executor_policy.model, 'gemini-3.5-flash');
+  assert.equal(antigravity.executor_policy.reasoning_effort, 'high');
+  assert.equal(antigravity.executor_policy.executor_binding_ref,
+    'executor-binding:antigravity/rca-html-route');
+  assert.equal(antigravity.can_launch_without_binding, false);
+  assert.equal(antigravity.can_claim_quality_equivalence, false);
+  assert.ok(antigravity.required_test_refs.includes(
+    'test-ref:agent-lab/stage-executor-policy/rca-html-render-probe',
+  ));
+
+  assert.equal(result.test_matrix.baseline_executor_kind, 'codex_cli');
+  assert.equal(result.test_matrix.non_default_executor_launch_policy,
+    'explicit_binding_required_fail_closed');
+  assert.equal(result.test_matrix.quality_equivalence_policy,
+    'never_claim_equivalence_from_connectivity_or_speed');
+  assert.equal(result.recommended_trials.length, 1);
+  assert.equal(result.recommended_trials[0].executor_kind, 'antigravity_cli');
+  assert.equal(result.recommended_trials[0].can_start_as_default, false);
+  assert.equal(result.typed_blockers[0].blocker_kind, 'non_default_executor_binding_ref_missing');
+  assert.equal(result.typed_blockers[0].fallback_allowed, false);
+  assert.equal(result.authority_boundary.can_execute_non_default_executor, false);
+  assert.equal(result.authority_boundary.can_change_default_executor, false);
+  assert.equal(result.authority_boundary.can_claim_quality_equivalence, false);
 });
 
 test('Agent Lab Developer Mode repair route projects patrol fixes as refs only', () => {

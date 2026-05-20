@@ -821,6 +821,9 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('review_trace_ledger'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('aris_maturity_controls'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('variant_comparison_read_model'));
+  assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes(
+    'stage_executor_policy_read_model',
+  ));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('automatic_mechanism_promotion_ready'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ai_review_approved_count'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ready_to_emit_integration_contracts'));
@@ -836,6 +839,25 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   ));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
     'ready_to_emit_variant_comparison_read_model',
+  ));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
+    'ready_to_emit_stage_executor_policy_read_model',
+  ));
+  assert.equal(contract.stage_executor_policy_surface.surface_kind,
+    'opl_agent_lab_stage_executor_policy_read_model');
+  assert.equal(contract.stage_executor_policy_surface.cli, 'opl agent-lab stage-executor-policy');
+  assert.equal(contract.stage_executor_policy_surface.refs_only, true);
+  assert.ok(contract.stage_executor_policy_surface.canonical_non_default_executor_kinds.includes(
+    'antigravity_cli',
+  ));
+  assert.equal(contract.stage_executor_policy_surface.canonical_trial_example.executor_kind, 'antigravity_cli');
+  assert.equal(contract.stage_executor_policy_surface.canonical_trial_example.model, 'gemini-3.5-flash');
+  assert.equal(contract.stage_executor_policy_surface.canonical_trial_example.reasoning_effort, 'high');
+  assert.equal(contract.stage_executor_policy_surface.canonical_trial_example.default_path, false);
+  assert.ok(contract.stage_executor_policy_surface.required_policy_fields.includes('executor_binding_ref'));
+  assert.ok(contract.stage_executor_policy_surface.required_test_refs.includes('artifact_render_probe_ref'));
+  assert.ok(contract.stage_executor_policy_surface.fail_closed_policies.includes(
+    'missing binding emits typed blocker rather than falling back to codex_cli',
   ));
   assert.equal(contract.integration_contract_surface.surface_kind,
     'opl_agent_lab_integration_contract_read_model');
