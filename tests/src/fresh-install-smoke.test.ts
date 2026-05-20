@@ -219,6 +219,100 @@ test('install bootstrap-only on macOS prepares managed Node and uses a source ar
   }
 });
 
+test('install bootstrap-only on macOS uses an existing git checkout while Command Line Tools install', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-existing-checkout-no-clt-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const fakeUsrBin = path.join(homeRoot, 'usr-bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const xcodeSelectLog = path.join(homeRoot, 'xcode-select.log');
+  const gitLog = path.join(homeRoot, 'git.log');
+  const npmLog = path.join(homeRoot, 'npm.log');
+  fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(fakeUsrBin, { recursive: true });
+  fs.writeFileSync(path.join(installDir, 'package.json'), '{}\n');
+
+  fs.writeFileSync(
+    path.join(fakeBin, 'uname'),
+    [
+      '#!/usr/bin/env bash',
+      'if [ "${1:-}" = "-s" ]; then printf "Darwin\\n"; exit 0; fi',
+      'if [ "${1:-}" = "-m" ]; then printf "arm64\\n"; exit 0; fi',
+      'exec /usr/bin/uname "$@"',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeUsrBin, 'git'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(gitLog)}`,
+      'if [ "${1:-}" = "--version" ]; then',
+      '  printf "xcode-select: note: no developer tools were found\\n" >&2',
+      '  exit 1',
+      'fi',
+      'exit 1',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeUsrBin, 'xcode-select'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(xcodeSelectLog)}`,
+      'if [ "${1:-}" = "-p" ]; then exit 1; fi',
+      'if [ "${1:-}" = "--install" ]; then exit 0; fi',
+      'exit 1',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'npm'),
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(npmLog)}`,
+      'exit 0',
+    ].join('\n'),
+  );
+  fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+  for (const command of ['uname', 'node', 'npm']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+  for (const command of ['git', 'xcode-select']) {
+    fs.chmodSync(path.join(fakeUsrBin, command), 0o755);
+  }
+
+  try {
+    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        HOME: homeRoot,
+        OPL_INSTALL_DIR: installDir,
+        OPL_SYSTEM_GIT_PATH: path.join(fakeUsrBin, 'git'),
+        OPL_XCODE_SELECT: path.join(fakeUsrBin, 'xcode-select'),
+        PATH: `${fakeBin}:${fakeUsrBin}:/usr/bin:/bin`,
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /Using existing One Person Lab checkout/);
+    assert.match(result.stdout, /OPL CLI is ready/);
+    assert.match(result.stderr, /Command Line Tools installer/);
+    assert.match(result.stderr, /continue using this existing One Person Lab checkout/);
+    assert.match(result.stderr, /background maintenance will resume/);
+    assert.equal(result.stderr.includes('Homebrew'), false);
+    assert.equal(result.stderr.includes('brew install'), false);
+    assert.equal(result.stderr.includes('install Node'), false);
+    assert.equal(result.stderr.includes('install Git'), false);
+    assert.deepEqual(fs.readFileSync(xcodeSelectLog, 'utf8').trim().split('\n'), ['-p', '--install']);
+    assert.equal(fs.existsSync(gitLog), false);
+    assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), [
+      'install --ignore-scripts',
+      'link --ignore-scripts',
+    ]);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('fresh-install smoke runner validates local clean-room scenarios', () => {
   const result = spawnSync(process.execPath, [smokeScript], {
     cwd: repoRoot,
