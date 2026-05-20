@@ -560,6 +560,13 @@ test('runtime action execute can create OPL-owned stage production attempt reque
     assert.equal(execution.route.closes_expected_receipt_refs, false);
     assert.equal(execution.route.closes_monitor_freshness, false);
     assert.equal(execution.authority_boundary.can_write_domain_truth, false);
+    assert.equal(execution.route.route_status, 'request_route_available');
+    assert.equal(execution.route.request_scope, 'opl_owned_stage_attempt_request_only');
+    assert.equal(execution.route.creates_domain_action, false);
+    assert.equal(execution.route.creates_owner_receipt, false);
+    assert.deepEqual(execution.route.owner_receipt_refs, []);
+    assert.equal(execution.route.closes_expected_receipt_refs, false);
+    assert.equal(execution.route.closes_monitor_freshness, false);
     assert.equal(
       execution.execution.result.family_runtime_stage_attempt.attempt.domain_id,
       'medautoscience',

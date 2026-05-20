@@ -79,6 +79,10 @@ function buildRoute(plan: JsonRecord, mode: 'apply' | 'verify') {
     source_ref: sourceRef,
     plan_status: stringValue(plan.plan_status),
     gate_status: stringValue(plan.gate_status),
+    opl_cleanup_ledger_ready: plan.opl_cleanup_ledger_ready === true,
+    domain_physical_delete_requires_owner_receipt:
+      plan.domain_physical_delete_requires_owner_receipt !== false,
+    domain_physical_delete_can_execute: plan.domain_physical_delete_can_execute === true,
     action_count: typeof plan.action_count === 'number' ? plan.action_count : 0,
     opl_cleanup_ledger_ready: plan.opl_cleanup_ledger_ready === true,
     domain_physical_delete_requires_owner_receipt:

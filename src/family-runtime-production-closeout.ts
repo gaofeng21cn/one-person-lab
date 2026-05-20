@@ -126,11 +126,6 @@ function readOnlyExpectedRefs(route: JsonRecord) {
 function readOnlyCloseoutItem(route: JsonRecord, index: number) {
   const actionId = stringValue(route.action_id) ?? `route:${index + 1}`;
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
-  const receiptRefs = [
-    ...stringList(route.receipt_refs),
-    ...stringList(route.owner_receipt_refs),
-    ...stringList(route.verified_receipt_refs),
-  ];
   const typedBlockerRefs = stringList(route.typed_blocker_refs);
   const freshnessRefs = [
     ...stringList(route.freshness_refs),
@@ -147,20 +142,12 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number) {
     mode: actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
       ? 'verify'
       : 'request_or_apply_via_safe_action',
-    status: receiptRefs.length > 0
-      ? 'closed_by_receipt_ref'
-      : typedBlockerRefs.length > 0
-        ? 'closed_by_domain_owned_typed_blocker'
-        : 'open_safe_action_request_route_available',
-    route_status: receiptRefs.length > 0
-      ? 'closed_by_receipt_ref'
-      : typedBlockerRefs.length > 0
-        ? 'closed_by_domain_owned_typed_blocker'
-        : 'request_route_available',
-    route_semantics: 'open_safe_action_request_apply_verify_route',
+    status: 'open_safe_action_request_route_available',
     closeout_item_is_completion_claim: false,
-    receipt_ref: receiptRefs[0] ?? null,
-    receipt_refs: receiptRefs,
+    route_status: stringValue(route.route_status) ?? 'request_route_available',
+    route_semantics: 'open_safe_action_request_apply_verify_route',
+    receipt_ref: null,
+    receipt_refs: [],
     typed_blocker_ref: typedBlockerRefs[0] ?? null,
     typed_blocker_refs: typedBlockerRefs,
     replay_ref: stringValue(route.ref)
@@ -231,8 +218,12 @@ export async function runFamilyRuntimeProductionCloseout(
     readOnlyRouteMatchesDefaults(route, input)
   );
   const closeoutItems = routes.map(readOnlyCloseoutItem);
-  const openItems = closeoutItems.filter((item) => item.status === 'open_safe_action_request_route_available');
-  const closedItems = closeoutItems.filter((item) => item.status !== 'open_safe_action_request_route_available');
+  const openItems = closeoutItems.filter((item) =>
+    item.status === 'open_safe_action_request_route_available'
+  );
+  const closedItems = closeoutItems.filter((item) =>
+    item.status !== 'open_safe_action_request_route_available'
+  );
   const nextActionLedger = buildProductionTailNextActionLedger({
     surfaceKind: 'opl_family_runtime_production_tail_next_action_ledger',
     sourceTailSummary: {

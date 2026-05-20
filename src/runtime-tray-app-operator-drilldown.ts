@@ -629,6 +629,7 @@ function appExecutionBridge(
       provider_signal_routes_emit_provider_receipts: true,
       opl_cli_routes_can_execute_framework_queries: true,
       opl_cli_routes_can_create_stage_attempt_requests: true,
+      stage_attempt_requests_create_owner_receipts: false,
       stage_attempt_requests_close_expected_receipts: false,
       stage_attempt_requests_close_monitor_freshness: false,
       app_surface_routes_are_projection_only: true,
@@ -638,6 +639,8 @@ function appExecutionBridge(
       action_kind: ref.action_kind,
       owner: ref.owner,
       route_target_kind: ref.route_target_kind,
+      ...('route_status' in ref ? { route_status: ref.route_status } : {}),
+      ...('request_scope' in ref ? { request_scope: ref.request_scope } : {}),
       action_ref: ref.ref,
       opl_cli_args: 'opl_cli_args' in ref ? ref.opl_cli_args : null,
       stage_attempt_id: ref.stage_attempt_id,
@@ -649,6 +652,18 @@ function appExecutionBridge(
         'missing_production_evidence' in ref ? ref.missing_production_evidence : [],
       expected_receipt_refs:
         'expected_receipt_refs' in ref ? ref.expected_receipt_refs : [],
+      ...('creates_domain_action' in ref
+        ? { creates_domain_action: ref.creates_domain_action }
+        : {}),
+      ...('creates_owner_receipt' in ref
+        ? { creates_owner_receipt: ref.creates_owner_receipt }
+        : {}),
+      ...('closes_expected_receipt_refs' in ref
+        ? { closes_expected_receipt_refs: ref.closes_expected_receipt_refs }
+        : {}),
+      ...('closes_monitor_freshness' in ref
+        ? { closes_monitor_freshness: ref.closes_monitor_freshness }
+        : {}),
       execution_surface: ref.execution_surface,
       route_status: 'route_status' in ref ? ref.route_status : null,
       request_scope: 'request_scope' in ref ? ref.request_scope : null,
@@ -1129,28 +1144,8 @@ export function buildAppOperatorDrilldown(input: {
   const lifecycleRefs = lifecycleLedgerRefs();
   const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
   const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
-  const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
-    sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
-    sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
-    sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
-    sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
-    sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
-    sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),
-    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
-    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
-    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
-  ]);
-
-  return applyAppOperatorDrilldownDetail({
-    surface_kind: 'opl_app_operator_drilldown_read_model',
-    projection_scope: 'runtime_snapshot',
-    consumer: 'one_person_lab_app_operator_workbench',
-    availability:
-      attempts.length > 0 || domainRefs.length > 0 || providerActionRefs.length > 0
-        ? 'available'
-        : 'empty',
-    projection_policy: 'refs_only_no_domain_truth_memory_body_artifact_body_or_verdict',
-    summary: buildAppOperatorDrilldownSummary({
+  const summary = {
+    ...buildAppOperatorDrilldownSummary({
       attempts,
       domainRefs,
       routeRefs,
@@ -1179,6 +1174,35 @@ export function buildAppOperatorDrilldown(input: {
       productionEvidenceTailLedger,
       legacyCleanupPlans,
     }),
+    domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
+      record(legacyCleanupPlans.summary).legacy_cleanup_opl_cleanup_ledger_ready_count,
+    domain_legacy_cleanup_domain_physical_delete_requires_owner_receipt_count:
+      record(legacyCleanupPlans.summary)
+        .legacy_cleanup_domain_physical_delete_requires_owner_receipt_count,
+    domain_legacy_cleanup_delete_ready_count: undefined,
+  };
+  const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
+    sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
+    sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
+    sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
+    sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
+    sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
+  ]);
+
+  return applyAppOperatorDrilldownDetail({
+    surface_kind: 'opl_app_operator_drilldown_read_model',
+    projection_scope: 'runtime_snapshot',
+    consumer: 'one_person_lab_app_operator_workbench',
+    availability:
+      attempts.length > 0 || domainRefs.length > 0 || providerActionRefs.length > 0
+        ? 'available'
+        : 'empty',
+    projection_policy: 'refs_only_no_domain_truth_memory_body_artifact_body_or_verdict',
+    summary,
     route_graph_refs: {
       surface_kind: 'opl_app_drilldown_route_graph_refs',
       refs: routeRefs,
