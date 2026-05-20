@@ -32,6 +32,10 @@ function stringList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function unique(values: string[]) {
+  return [...new Set(values)];
+}
+
 function recordList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
@@ -211,6 +215,12 @@ function productionAcceptanceTailItem(
       refs.next_verification_refs,
       refs.next_verification_command_refs,
     );
+    const agentLabHandoffRefs = unique([
+      ...stringList(payload.agent_lab_handoff_refs),
+      ...stringList(refs.agent_lab_handoff_refs),
+      ...stringList(evidenceTail.agent_lab_handoff_refs),
+      ...stringList(closureEvidence.agent_lab_handoff_refs),
+    ]);
     const evidenceRef = firstString(
       payload.evidence_ref,
       payload.receipt_ref,
@@ -286,6 +296,9 @@ function productionAcceptanceTailItem(
       doc_ref: docRef,
       verification_ref: verificationRef,
       next_verification_command: verificationRef,
+      advisory_refs: {
+        agent_lab_handoff_refs: agentLabHandoffRefs,
+      },
       tail_refs: structuredTailRefs({
         repoDir,
         contractRef: relativePath,
