@@ -6,6 +6,7 @@ import {
   buildAgentLabEvolutionResult,
   buildAgentLabMechanismReadModel,
   buildAgentLabOptimizeResult,
+  buildAgentLabVariantComparisonReadModel,
   buildAgentLabWorkbenchReadModel,
   buildCompleteAgentLabControlPlane,
   buildDeveloperModeAgentLabRepairRoute,
@@ -54,6 +55,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_review_trace_ledger, true);
   assert.equal(result.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
+  assert.equal(result.readiness.ready_to_emit_variant_comparison_read_model, true);
   assert.equal(result.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(result.readiness.automatic_model_training_ready, false);
   assert.equal(result.readiness.automatic_default_agent_promotion_ready,
@@ -83,6 +85,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'auto_promote_low_and_medium_risk_with_versioned_canary',
     'route_high_risk_to_owner_or_human_gate',
     'record_rollback_target_ref',
+    'compare_best_of_n_variant_candidate_refs',
     'record_evolution_segment_refs',
   ]);
   assert.equal(result.integration_contracts.surface_kind, 'opl_agent_lab_integration_contract_read_model');
@@ -109,6 +112,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.optimizer_loop.aris_maturity_controls.read_model_id,
     result.aris_maturity_controls.read_model_id);
+  assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
+    result.variant_comparison.read_model_id);
   assert.equal(result.optimizer_loop.mechanism_object.promotion_mode,
     'risk_tiered_auto_promotion_with_independent_ai_review');
   assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
@@ -143,8 +148,12 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.source_results.log_driven_mechanism_candidate_read_model_ref,
     result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.source_results.aris_maturity_controls_ref, result.aris_maturity_controls.read_model_id);
+  assert.equal(result.source_results.variant_comparison_read_model_ref, result.variant_comparison.read_model_id);
   assert.equal(result.aris_maturity_controls.summary.effort_level_count, 4);
   assert.equal(result.aris_maturity_controls.summary.assurance_level_count, 4);
+  assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
+  assert.equal(result.variant_comparison.summary.variant_count, 3);
+  assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);
   assert.equal(result.optimizer_candidates.length, 6);
   assert.equal(result.promotion_gates.length, 6);
   assert.equal(result.developer_mode_repair_routes.status, 'ready_for_developer_mode_patrol_consumption');
@@ -466,6 +475,7 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   assert.equal(result.log_driven_mechanism_candidates.surface_kind,
     'opl_agent_lab_log_driven_mechanism_candidate_read_model');
   assert.equal(result.aris_maturity_controls.surface_kind, 'opl_agent_lab_aris_maturity_controls_read_model');
+  assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.log_mined_candidate_refs.length, 4);
   assert.equal(result.mechanism_promotion_decision.automatic_mechanism_promotion_ready, false);
   assert.equal(result.mechanism_promotion_decision.promotion_decision, 'blocked_from_auto_promotion');
@@ -491,6 +501,9 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   assert.equal(result.next_mechanism_candidate.source_candidate_refs.length, 3);
   assert.equal(result.next_mechanism_candidate.source_transition_refs.length, 3);
   assert.equal(result.next_mechanism_candidate.source_log_mined_candidate_refs.length, 4);
+  assert.equal(result.next_mechanism_candidate.source_variant_candidate_refs.length, 3);
+  assert.equal(result.next_mechanism_candidate.selected_variant_candidate_ref,
+    result.variant_comparison.selected_candidate_ref);
   assert.equal(result.next_mechanism_candidate.source_maturity_control_refs.length, 4);
   assert.equal(result.next_mechanism_candidate.review_trace_ledger_ref, result.review_trace_ledger.ledger_ref);
   assert.equal(result.next_mechanism_candidate.default_promotion, false);
@@ -614,4 +627,88 @@ test('Agent Lab optimize auto-promotes only when real review and promotion safet
   assert.equal(approvedCandidate.promotion_safety_assessment.automatic_mechanism_promotion_ready, true);
   assert.equal(approvedCandidate.automatic_mechanism_promotion_ready, true);
   assert.equal(approvedCandidate.promotion_decision, 'auto_promote_to_canary');
+});
+
+test('Agent Lab variant comparison exposes winner-only promotion eligibility and loser learning refs', () => {
+  const suite = buildSampleAgentLabSuite();
+  const firstCandidateRef = suite.tasks[0].improvement_candidate.candidate_ref;
+  const secondCandidateRef = suite.tasks[1].improvement_candidate.candidate_ref;
+  const firstFailureDeltaRef = 'failure-delta:mas/variant-prompt-routing';
+  const secondFailureDeltaRef = 'failure-delta:mag/variant-stage-policy';
+  const firstReviewReceipt = realIndependentAiReviewReceipt(firstCandidateRef, 'low_risk');
+  const secondReviewReceipt = realIndependentAiReviewReceipt(secondCandidateRef, 'medium_risk');
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    improvement_candidate: {
+      ...suite.tasks[0].improvement_candidate,
+      evidence_refs: [...suite.tasks[0].improvement_candidate.evidence_refs, firstFailureDeltaRef],
+    },
+    mechanism_evolution_inputs: {
+      ...(suite.tasks[0].mechanism_evolution_inputs ?? {}),
+      independent_ai_review_receipt: firstReviewReceipt,
+    },
+    promotion_gate: {
+      ...suite.tasks[0].promotion_gate,
+      failure_delta_refs: [firstFailureDeltaRef],
+      independent_ai_review_receipt_refs: [firstReviewReceipt.receipt_ref],
+      promotion_receipt_refs: ['mechanism-promotion-receipt:mas/variant-prompt-routing'],
+      rollback_target_refs: ['mechanism-version-ref:mas/variant-prompt-routing-current'],
+      canary_observation_refs: ['canary-observation-ref:mas/variant-prompt-routing'],
+    },
+  };
+  suite.tasks[1] = {
+    ...suite.tasks[1],
+    improvement_candidate: {
+      ...suite.tasks[1].improvement_candidate,
+      evidence_refs: [...suite.tasks[1].improvement_candidate.evidence_refs, secondFailureDeltaRef],
+    },
+    mechanism_evolution_inputs: {
+      ...(suite.tasks[1].mechanism_evolution_inputs ?? {}),
+      independent_ai_review_receipt: secondReviewReceipt,
+    },
+    promotion_gate: {
+      ...suite.tasks[1].promotion_gate,
+      failure_delta_refs: [secondFailureDeltaRef],
+      independent_ai_review_receipt_refs: [secondReviewReceipt.receipt_ref],
+      promotion_receipt_refs: ['mechanism-promotion-receipt:mag/variant-stage-policy'],
+      rollback_target_refs: ['mechanism-version-ref:mag/variant-stage-policy-current'],
+      canary_observation_refs: ['canary-observation-ref:mag/variant-stage-policy'],
+    },
+  };
+
+  const suiteResult = buildAgentLabOptimizeResult(suite).suite_result;
+  const comparison = buildAgentLabVariantComparisonReadModel({
+    suiteResult,
+    selectedCandidateRef: secondCandidateRef,
+  });
+  const winner = comparison.variants.find((variant: any) => variant.candidate_ref === secondCandidateRef);
+  const unselectedPromotable = comparison.variants.find((variant: any) =>
+    variant.candidate_ref === firstCandidateRef);
+
+  assert.equal(comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
+  assert.equal(comparison.selected_candidate_ref, secondCandidateRef);
+  assert.deepEqual(comparison.promotion_eligibility.risk_tiered_promotion_gate_candidate_refs, [
+    secondCandidateRef,
+  ]);
+  assert.ok(winner);
+  assert.equal(winner.role, 'winner');
+  assert.equal(winner.promotion_eligibility.selected_for_risk_tiered_gate, true);
+  assert.equal(winner.promotion_eligibility.eligible_for_risk_tiered_promotion_gate, true);
+  assert.equal(winner.promotion_eligibility.can_authorize_domain_ready, false);
+  assert.equal(winner.promotion_eligibility.can_promote_default_agent, false);
+  assert.ok(unselectedPromotable);
+  assert.equal(unselectedPromotable.role, 'loser');
+  assert.equal(unselectedPromotable.learning_only, true);
+  assert.equal(unselectedPromotable.promotion_eligibility.selected_for_risk_tiered_gate, false);
+  assert.equal(unselectedPromotable.promotion_eligibility.eligible_for_risk_tiered_promotion_gate, false);
+  assert.ok(unselectedPromotable.promotion_eligibility.blocked_reason_refs.includes(
+    'blocked-ref:agent-lab/unselected-variant-learning-only',
+  ));
+  assert.ok(comparison.per_variant_evidence_delta.every((delta: any) =>
+    delta.domain_truth_delta_written === false
+    && delta.memory_body_delta_written === false
+    && delta.artifact_delta_written === false));
+  assert.equal(comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);
+  assert.equal(comparison.promotion_eligibility.unselected_variants_can_promote_default_agent, false);
+  assert.equal(comparison.promotion_eligibility.selected_winner_required_for_existing_promotion_gate, true);
 });
