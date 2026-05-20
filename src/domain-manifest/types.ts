@@ -498,6 +498,7 @@ export interface NormalizedDomainManifest {
   family_transition_spec_descriptor: JsonRecord | null;
   family_transition_spec: FamilyTransitionSpec | null;
   family_transition_matrix_cases: FamilyTransitionMatrixCase[];
+  family_transition_materialization: JsonRecord | null;
   family_transition: NormalizedFamilyTransitionProjection;
   grant_transition_oracle: GrantTransitionOracle | null;
   visual_transition_spec: VisualTransitionSpec | null;
