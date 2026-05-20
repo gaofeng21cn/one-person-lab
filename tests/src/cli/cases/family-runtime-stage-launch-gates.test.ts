@@ -7,6 +7,26 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
+function bindMedAutoScienceManifest(
+  stateRoot: string,
+  fixtureContractsRoot: string,
+  masManifest: Record<string, unknown>,
+) {
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(masManifest),
+  ], {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+  });
+}
+
 test('family-runtime attempt create projects launch invocation and gates non-default executor binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-launch-invocation-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -283,11 +303,289 @@ test('family-runtime required admission warns without blocking when cohort loop 
     assert.equal(gate.status, 'allowed');
     assert.equal(gate.blocked_reason, null);
     assert.equal(gate.inspected_cohort_loop_stage.closure_status, 'missing_query');
-    assert.deepEqual(gate.findings.map((finding: { code: string }) => finding.code), [
-      'cohort_query_missing',
-      'cohort_trigger_missing',
-      'cohort_monitor_or_metric_missing',
-    ]);
+    const findingCodes = gate.findings.map((finding: { code: string }) => finding.code);
+    assert.equal(findingCodes.includes('cohort_query_missing'), true);
+    assert.equal(findingCodes.includes('cohort_trigger_missing'), true);
+    assert.equal(findingCodes.includes('cohort_monitor_or_metric_missing'), true);
+    assert.equal(gate.findings.every((finding: { severity: string }) => finding.severity === 'warning'), true);
+    assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime required admission only blocks Stage Kernel launch evidence gaps', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-stage-kernel-gate-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const baseStage = {
+    stage_id: 'scout',
+    stage_kind: 'planning',
+    title: 'Scout',
+    summary: 'Plan from explicit source refs.',
+    goal: 'Prepare an admitted planning stage under MAS authority.',
+    owner: 'med-autoscience',
+    domain_stage_refs: ['scout'],
+    inputs: [],
+    knowledge_refs: [],
+    skills: [],
+    prompt_refs: [],
+    allowed_action_refs: [],
+    outputs: [],
+    evaluation: [],
+    handoff: null,
+    source_refs: [],
+    freshness: null,
+    action_parity: null,
+    stage_contract: {
+      requires: ['sources_ready'],
+      ensures: ['plan_ready'],
+      boundary_assumptions: ['domain_truth_remains_domain_owned'],
+      properties: [],
+      runtime_assumptions: [],
+      monitor_refs: [],
+      source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
+      cohort_query_refs: [{ ref_kind: 'json_pointer', ref: '/cohort_query/scout', role: 'cohort_query' }],
+      trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:mas/scout', role: 'launch_trigger' }],
+      metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:mas/scout/freshness', role: 'cohort_metric' }],
+      artifact_scope_refs: [],
+      workspace_scope_refs: [],
+    },
+    trust_boundary: {
+      lane: 'domain_agent',
+      static_check_eligible: true,
+      effect_boundary: false,
+      records_runtime_events: false,
+    },
+    authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
+  };
+  const manifestForStage = (stage: unknown) => ({
+    ...fixtures.medautoscience,
+    family_stage_control_plane: {
+      surface_kind: 'family_stage_control_plane',
+      version: 'family-stage-control-plane.v1',
+      plane_id: 'med_autoscience_stage_control_plane',
+      target_domain_id: 'med-autoscience',
+      owner: 'med-autoscience',
+      authority_boundary: { opl_role: 'projection_consumer_only' },
+      stages: [stage],
+      notes: [],
+    },
+  });
+  const baseArgs = [
+    'family-runtime',
+    'attempt',
+    'create',
+    '--domain',
+    'medautoscience',
+    '--stage',
+    'scout',
+    '--provider',
+    'local_sqlite',
+    '--workspace-locator',
+    '{"workspace_root":"/tmp/mas"}',
+    '--require-stage-admission',
+  ];
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  });
+  try {
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
+      ...baseStage,
+      authority_boundary: {},
+    }));
+    const missingAuthority = runCli([
+      ...baseArgs,
+      '--source-fingerprint',
+      'sha256:stage-kernel-missing-authority',
+    ], env);
+    assert.equal(missingAuthority.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(missingAuthority.family_runtime_stage_attempt.stage_launch_admission_gate.status, 'blocked');
+    assert.equal(
+      missingAuthority.family_runtime_stage_attempt.stage_launch_admission_gate.blocked_reason,
+      'stage_admission_blocked',
+    );
+    assert.equal(
+      missingAuthority.family_runtime_stage_attempt.stage_launch_admission_gate.blocker_findings.some(
+        (finding: { code: string }) => finding.code === 'missing_authority_boundary_role',
+      ),
+      true,
+    );
+
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
+      ...baseStage,
+      stage_contract: {
+        ...baseStage.stage_contract,
+        runtime_event_refs: [],
+      },
+      trust_boundary: {
+        lane: 'human_gate',
+        static_check_eligible: false,
+        effect_boundary: true,
+        records_runtime_events: true,
+        runtime_event_refs: [],
+      },
+    }));
+    const missingRuntimeEvents = runCli([
+      ...baseArgs,
+      '--new-attempt',
+      '--source-fingerprint',
+      'sha256:stage-kernel-missing-runtime-events',
+    ], env);
+    assert.equal(missingRuntimeEvents.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(
+      missingRuntimeEvents.family_runtime_stage_attempt.stage_launch_admission_gate.blocked_reason,
+      'stage_admission_blocked',
+    );
+    assert.equal(
+      missingRuntimeEvents.family_runtime_stage_attempt.stage_launch_admission_gate.blocker_findings.some(
+        (finding: { code: string }) => finding.code === 'effect_boundary_missing_runtime_event_refs',
+      ),
+      true,
+    );
+
+    const missingBinding = runCli([
+      ...baseArgs,
+      '--new-attempt',
+      '--source-fingerprint',
+      'sha256:stage-kernel-missing-executor-binding',
+      '--executor-kind',
+      'hermes_agent',
+    ], env);
+    assert.equal(missingBinding.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(
+      missingBinding.family_runtime_stage_attempt.launch_invocation.blocker_reason,
+      'non_default_executor_binding_ref_missing',
+    );
+
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
+      ...baseStage,
+      stage_contract: {
+        ...baseStage.stage_contract,
+        source_scope_refs: [],
+        artifact_scope_refs: [],
+        workspace_scope_refs: [],
+      },
+    }));
+    const missingScope = runCli([
+      ...baseArgs,
+      '--new-attempt',
+      '--source-fingerprint',
+      'sha256:stage-kernel-missing-scope',
+    ], env);
+    assert.equal(missingScope.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(
+      missingScope.family_runtime_stage_attempt.stage_launch_admission_gate.blocked_reason,
+      'stage_admission_stage_kernel_blocked',
+    );
+    assert.equal(
+      missingScope.family_runtime_stage_attempt.stage_launch_admission_gate.blocker_findings.some(
+        (finding: { code: string }) => finding.code === 'missing_scope_refs',
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime required admission keeps assumption cohort and runtime-budget gaps advisory', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-advisory-gate-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = {
+    ...fixtures.medautoscience,
+    family_stage_control_plane: {
+      surface_kind: 'family_stage_control_plane',
+      version: 'family-stage-control-plane.v1',
+      plane_id: 'med_autoscience_stage_control_plane',
+      target_domain_id: 'med-autoscience',
+      owner: 'med-autoscience',
+      authority_boundary: { opl_role: 'projection_consumer_only' },
+      stages: [
+        {
+          stage_id: 'scout',
+          stage_kind: 'planning',
+          title: 'Scout',
+          summary: 'Plan from explicit source refs.',
+          goal: 'Prepare an admitted planning stage under MAS authority.',
+          owner: 'med-autoscience',
+          domain_stage_refs: ['scout'],
+          inputs: [],
+          knowledge_refs: [],
+          skills: [],
+          prompt_refs: [],
+          allowed_action_refs: [],
+          outputs: [],
+          evaluation: [],
+          handoff: null,
+          source_refs: [],
+          freshness: null,
+          action_parity: null,
+          stage_contract: {
+            requires: ['sources_ready'],
+            ensures: ['plan_ready'],
+            boundary_assumptions: ['domain_truth_remains_domain_owned'],
+            properties: [],
+            runtime_event_refs: ['runtime_event:scout.launch_recorded'],
+            runtime_assumptions: [
+              {
+                assumption_id: 'fresh_source_locator',
+                invalidated_by: ['source:freshness/window-expired'],
+                monitor_refs: [],
+              },
+            ],
+            monitor_refs: [],
+            source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
+            artifact_scope_refs: [],
+            workspace_scope_refs: [],
+          },
+          trust_boundary: {
+            lane: 'domain_agent',
+            static_check_eligible: false,
+            effect_boundary: true,
+            records_runtime_events: true,
+            runtime_event_refs: ['runtime_event:scout.launch_recorded'],
+          },
+          authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
+        },
+      ],
+      notes: [],
+    },
+  };
+  try {
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
+
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'scout',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--source-fingerprint',
+      'sha256:scout-advisory',
+      '--require-stage-admission',
+    ], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const gate = created.family_runtime_stage_attempt.stage_launch_admission_gate;
+    const findingCodes = gate.findings.map((finding: { code: string }) => finding.code);
+
+    assert.equal(created.family_runtime_stage_attempt.attempt.status, 'queued');
+    assert.equal(gate.status, 'allowed');
+    assert.equal(gate.blocked_reason, null);
+    assert.equal(gate.blocker_findings.length, 0);
+    assert.equal(findingCodes.includes('runtime_assumption_stale'), true);
+    assert.equal(findingCodes.includes('cohort_query_missing'), true);
+    assert.equal(findingCodes.includes('cohort_monitor_or_metric_missing'), true);
+    assert.equal(findingCodes.includes('runtime_budget_monitor_refs_missing'), true);
     assert.equal(gate.findings.every((finding: { severity: string }) => finding.severity === 'warning'), true);
     assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
