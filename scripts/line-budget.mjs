@@ -7,7 +7,6 @@ process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map([
-  ['src/cli/cases/public-command-specs.ts', 1010],
   ['src/family-domain-agent-skeleton.ts', 1145],
   ['src/family-runtime-lifecycle-index.ts', 1205],
   ['src/family-runtime-temporal-provider.ts', 1008],

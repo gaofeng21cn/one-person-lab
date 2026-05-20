@@ -64,6 +64,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
   assert.equal(result.readiness.ready_to_emit_ahe_evidence_read_model, true);
   assert.equal(result.readiness.ready_to_emit_variant_comparison_read_model, true);
+  assert.equal(result.readiness.ready_to_emit_token_cost_estimates, true);
   assert.equal(result.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(result.readiness.automatic_model_training_ready, false);
   assert.equal(result.readiness.automatic_default_agent_promotion_ready,
@@ -125,6 +126,17 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.aris_maturity_controls.read_model_id);
   assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
     result.variant_comparison.read_model_id);
+  assert.equal(result.token_cost_estimates.length, 1);
+  assert.equal(result.token_cost_estimates[0].surface_kind, 'opl_agent_lab_cost_estimate');
+  assert.equal(result.token_cost_estimates[0].preset_id, 'rca-ppt-40');
+  assert.equal(result.token_cost_estimates[0].domain_id, 'redcube-ai');
+  assert.equal(result.token_cost_estimates[0].models.text_model, 'gpt-5.5');
+  assert.equal(result.token_cost_estimates[0].models.reasoning_effort, 'xhigh');
+  assert.equal(result.token_cost_estimates[0].models.image_model, 'gpt-image-2');
+  assert.equal(result.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
+  assert.equal(result.token_cost_estimates[0].totals.uncertainty_range_usd.high, 66.028);
+  assert.equal(result.token_cost_estimates[0].authority_boundary.can_claim_actual_invoice_cost, false);
+  assert.equal(result.token_cost_estimates[0].authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.optimizer_loop.mechanism_object.promotion_mode,
     'risk_tiered_auto_promotion_with_independent_ai_review');
   assert.equal(result.mechanism_control_plane.surface_kind, 'opl_agent_lab_mechanism_read_model');
@@ -161,6 +173,8 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.source_results.aris_maturity_controls_ref, result.aris_maturity_controls.read_model_id);
   assert.equal(result.source_results.ahe_evidence_read_model_ref, result.ahe_evidence.read_model_id);
   assert.equal(result.source_results.variant_comparison_read_model_ref, result.variant_comparison.read_model_id);
+  assert.deepEqual(result.source_results.token_cost_estimate_refs,
+    result.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
   assert.equal(result.aris_maturity_controls.summary.effort_level_count, 4);
   assert.equal(result.aris_maturity_controls.summary.assurance_level_count, 4);
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
@@ -168,6 +182,10 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.variant_comparison.summary.variant_count, 3);
   assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);
+  assert.equal(result.token_cost_estimates.length, 1);
+  assert.equal(result.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
+  assert.equal(result.token_cost_estimates[0].calibration.calibration_status,
+    'estimated_from_stage_profile_without_provider_usage_receipt');
   assert.equal(result.optimizer_candidates.length, 6);
   assert.equal(result.promotion_gates.length, 6);
   assert.equal(result.developer_mode_repair_routes.status, 'ready_for_developer_mode_patrol_consumption');

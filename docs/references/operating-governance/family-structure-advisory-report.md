@@ -33,7 +33,18 @@ safe_to_keep:
 
 needs_design_pass:
 
-- none from the current advisory scan.
+- Current advisory scan flags these OPL-owned files over the 1000-line source threshold:
+  - `src/runtime-tray-app-operator-drilldown.ts`
+  - `src/family-runtime-lifecycle-index.ts`
+  - `tests/src/cli/cases/agents-conformance.test.ts`
+  - `src/family-domain-agent-skeleton.ts`
+  - `tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts`
+  - `src/standard-domain-agent-conformance.ts`
+  - `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
+  - `src/family-stage-control-plane.ts`
+  - `src/family-runtime-temporal-provider.ts`
+
+These are design-pass inputs only. Do not mechanically split them unless a real owner boundary, generated/source separation, or reusable OPL primitive falls out of the code path.
 
 mechanical_residue:
 
@@ -43,6 +54,7 @@ public_surface_risk:
 
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
 - `contracts/family-orchestration/family-stage-proof-bundle.schema.json`
+- `contracts/opl-framework/agent-lab-contract.json`
 
 These are the current large machine-readable public surfaces in the advisory scan. They are not immediate split targets, but future edits should prefer schema modularity or generated/source separation over growing them further.
 

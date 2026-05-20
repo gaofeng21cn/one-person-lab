@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/family-orchestration/family-stage-runtime-budget.schema.json",
   "title": "OPL Family Stage Runtime Budget Projection",
-  "description": "Refs-only runtime reliability and capacity budget projection over a FamilyStageControlPlane. It absorbs GraphFlow-style boundary compounding as an operator projection without calculating unverified probabilities or introducing a GraphFlow runtime dependency.",
+  "description": "Refs-only runtime reliability, capacity, and optional usage/cost budget projection over a FamilyStageControlPlane. It absorbs GraphFlow-style boundary compounding and token/cost estimate refs as operator projections without calculating unverified probabilities, spending authorization, or introducing a GraphFlow runtime dependency.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -48,6 +48,12 @@
     "stages": {
       "type": "array",
       "items": { "$ref": "#/$defs/stage" }
+    },
+    "usage_cost_projection": {
+      "oneOf": [
+        { "$ref": "#/$defs/usage_cost_projection" },
+        { "type": "null" }
+      ]
     },
     "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
   },
@@ -121,7 +127,85 @@
         "metric_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
         "dashboard_metric_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
         "runtime_event_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "usage_cost_estimate_ref": {
+          "oneOf": [
+            { "$ref": "#/$defs/surface_ref" },
+            { "type": "null" }
+          ]
+        },
         "minimal_counterexamples": { "type": "array", "items": { "$ref": "#/$defs/counterexample" } }
+      }
+    },
+    "usage_cost_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "projection_role",
+        "refs_only",
+        "target_domain_id",
+        "task_family",
+        "model_id",
+        "reasoning_effort",
+        "route_profile",
+        "stage_estimate_refs",
+        "model_pricing_profile_ref",
+        "calibration_sample_refs",
+        "estimated_cost_usd_p50",
+        "estimated_cost_usd_p90",
+        "confidence",
+        "authority_boundary"
+      ],
+      "properties": {
+        "surface_kind": { "const": "opl_family_stage_usage_cost_budget_projection" },
+        "projection_role": { "const": "usage_cost_estimate_projection_only" },
+        "refs_only": { "const": true },
+        "target_domain_id": { "type": "string", "minLength": 1 },
+        "task_family": { "type": "string", "minLength": 1 },
+        "model_id": { "type": "string", "minLength": 1 },
+        "reasoning_effort": { "type": "string", "minLength": 1 },
+        "route_profile": { "type": "string", "minLength": 1 },
+        "stage_estimate_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "model_pricing_profile_ref": { "$ref": "#/$defs/surface_ref" },
+        "calibration_sample_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "visual_stage_profile_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "artifact_locator_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "estimated_cost_usd_p50": { "type": "number", "minimum": 0 },
+        "estimated_cost_usd_p90": { "type": "number", "minimum": 0 },
+        "soft_cap_usd": { "type": "number", "minimum": 0 },
+        "hard_cap_usd": { "type": "number", "minimum": 0 },
+        "confidence": { "type": "string", "enum": ["low", "medium", "high"] },
+        "authority_boundary": { "$ref": "#/$defs/usage_cost_authority_boundary" }
+      }
+    },
+    "usage_cost_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_role",
+        "can_read_domain_body",
+        "can_read_artifact_body",
+        "can_execute_stage",
+        "can_write_domain_truth",
+        "can_authorize_domain_ready",
+        "can_authorize_quality_verdict",
+        "can_mutate_artifact_body",
+        "can_authorize_artifact_mutation",
+        "can_authorize_budget_spend",
+        "can_write_owner_receipt"
+      ],
+      "properties": {
+        "opl_role": { "const": "refs_only_usage_cost_estimate_projection" },
+        "can_read_domain_body": { "const": false },
+        "can_read_artifact_body": { "const": false },
+        "can_execute_stage": { "const": false },
+        "can_write_domain_truth": { "const": false },
+        "can_authorize_domain_ready": { "const": false },
+        "can_authorize_quality_verdict": { "const": false },
+        "can_mutate_artifact_body": { "const": false },
+        "can_authorize_artifact_mutation": { "const": false },
+        "can_authorize_budget_spend": { "const": false },
+        "can_write_owner_receipt": { "const": false }
       }
     },
     "counterexample": {
@@ -201,9 +285,51 @@
           "metric_refs": [{ "ref_kind": "metric_ref", "ref": "metric:runtime/boundary_success_rate", "role": "boundary_success_rate" }],
           "dashboard_metric_refs": [],
           "runtime_event_refs": ["event:stage-runtime-guard"],
+          "usage_cost_estimate_ref": null,
           "minimal_counterexamples": []
         }
       ],
+      "usage_cost_projection": {
+        "surface_kind": "opl_family_stage_usage_cost_budget_projection",
+        "projection_role": "usage_cost_estimate_projection_only",
+        "refs_only": true,
+        "target_domain_id": "redcube-ai",
+        "task_family": "ppt_deck",
+        "model_id": "gpt-5.5",
+        "reasoning_effort": "xhigh",
+        "route_profile": "image_first_40_page_ppt",
+        "stage_estimate_refs": [
+          { "ref_kind": "usage_cost_estimate_ref", "ref": "usage-cost-estimate:rca/ppt-deck-40/stage/storyline", "role": "stage_estimate" }
+        ],
+        "model_pricing_profile_ref": { "ref_kind": "model_pricing_profile_ref", "ref": "pricing-profile:openai/gpt-5.5/current", "role": "model_pricing_profile" },
+        "calibration_sample_refs": [
+          { "ref_kind": "usage_calibration_sample_ref", "ref": "usage-sample:rca/ppt-deck/historical-p50", "role": "calibration_sample" }
+        ],
+        "visual_stage_profile_refs": [
+          { "ref_kind": "visual_stage_profile_ref", "ref": "visual-profile:rca/ppt-deck/image-pages", "role": "domain_visual_profile" }
+        ],
+        "artifact_locator_refs": [
+          { "ref_kind": "artifact_locator_ref", "ref": "artifact-locator:rca/ppt-deck/output", "role": "artifact_locator" }
+        ],
+        "estimated_cost_usd_p50": 45,
+        "estimated_cost_usd_p90": 90,
+        "soft_cap_usd": 75,
+        "hard_cap_usd": 150,
+        "confidence": "medium",
+        "authority_boundary": {
+          "opl_role": "refs_only_usage_cost_estimate_projection",
+          "can_read_domain_body": false,
+          "can_read_artifact_body": false,
+          "can_execute_stage": false,
+          "can_write_domain_truth": false,
+          "can_authorize_domain_ready": false,
+          "can_authorize_quality_verdict": false,
+          "can_mutate_artifact_body": false,
+          "can_authorize_artifact_mutation": false,
+          "can_authorize_budget_spend": false,
+          "can_write_owner_receipt": false
+        }
+      },
       "authority_boundary": {
         "opl_role": "runtime_budget_projection_only",
         "graphflow_runtime_dependency": false,
