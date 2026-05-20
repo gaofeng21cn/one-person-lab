@@ -203,10 +203,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.opl_meta_agent_patch_loop_closed_count,
       metaAgentBound ? 2 : 0,
     );
-    assert.equal(
-      summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= (metaAgentBound ? 2 : 0),
-      true,
-    );
+    if (metaAgentBound) {
+      assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
+    }
     assert.equal(
       summaryDrilldown.attention_first_payload.surface_kind,
       'opl_app_drilldown_attention_first_payload',
