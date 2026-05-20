@@ -137,7 +137,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
           route_impact: {
             decision: 'bounded_repair',
             owner_receipt_refs: [`owner-receipt:summary-${index}`],
-            typed_blocker_refs: [`blocker:summary-${index}`],
+            typed_blocker_refs: [],
             quality_refs: [`publication_eval/${index}.json`],
             readiness_refs: [`controller_decisions/${index}.json`],
             repair_command: `medautosci sidecar dispatch --task task-${index}.json --format json`,
@@ -207,8 +207,37 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.missing_evidence.items.length <= 5,
       true,
     );
+    const firstMissingEvidence = summaryDrilldown.attention_first_payload.missing_evidence.items[0];
+    assert.equal(firstMissingEvidence.next_safe_action_id, 'stage-production-evidence:medautoscience:write_0:record');
+    assert.equal(
+      firstMissingEvidence.payload_requirement,
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+    );
+    assert.equal(firstMissingEvidence.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(firstMissingEvidence.route_requires_domain_or_app_payload, true);
+    assert.deepEqual(firstMissingEvidence.required_operator_payload_refs, [
+      'domain_receipt_refs',
+      'evidence_refs',
+      'typed_blocker_refs',
+    ]);
+    assert.equal(
+      firstMissingEvidence.payload_workorder.surface_kind,
+      'opl_stage_production_evidence_payload_workorder',
+    );
+    assert.equal(
+      firstMissingEvidence.payload_workorder.typed_blocker_path.accepted,
+      true,
+    );
     assert.equal(typeof summaryDrilldown.attention_first_payload.next_safe_action.action_id, 'string');
     assert.equal(summaryDrilldown.attention_first_payload.next_safe_action.action_id.length > 0, true);
+    assert.equal(
+      summaryDrilldown.attention_first_payload.next_safe_action.action_id,
+      'stage-production-evidence:medautoscience:write_0:record',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.next_safe_action.route_requires_domain_or_app_payload,
+      true,
+    );
     assert.equal(
       summaryDrilldown.attention_first_payload.next_safe_action.submit_via,
       'opl runtime action execute',

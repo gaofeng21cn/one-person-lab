@@ -97,7 +97,22 @@ function authorityBoundary(drilldown: JsonRecord) {
 }
 
 function safeActionRoutes(drilldown: JsonRecord) {
-  return recordList(record(drilldown.app_execution_bridge).safe_action_routes);
+  const routes = [
+    ...recordList(record(drilldown.operator_action_routing_refs).refs),
+    ...recordList(record(drilldown.app_execution_bridge).safe_action_routes),
+  ];
+  const seen = new Set<string>();
+  return routes.filter((route) => {
+    const key = firstString(route.action_id, route.ref, route.action_ref);
+    if (!key) {
+      return true;
+    }
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 function actionPriority(action: JsonRecord) {
@@ -105,23 +120,29 @@ function actionPriority(action: JsonRecord) {
   if (actionKind === 'stage_production_attempt_request') {
     return 0;
   }
+  if (actionKind === 'stage_production_evidence_receipt_record') {
+    return 1;
+  }
+  if (actionKind === 'stage_production_evidence_receipt_verify') {
+    return 2;
+  }
   if (actionKind === 'external_evidence_receipt_record'
     || actionKind === 'evidence_gate_receipt_record') {
-    return 1;
+    return 3;
   }
   if (actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_verify') {
-    return 2;
+    return 4;
   }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
-    return 3;
+    return 5;
   }
   if (actionKind === 'legacy_cleanup_apply'
     || actionKind === 'legacy_cleanup_verify') {
-    return 4;
+    return 6;
   }
-  return 5;
+  return 7;
 }
 
 function summarizeSafeAction(action: JsonRecord | null) {
@@ -173,12 +194,32 @@ function summarizeSafeAction(action: JsonRecord | null) {
 }
 
 function findSafeActionForStage(actions: JsonRecord[], stage: JsonRecord) {
-  const domainId = firstString(stage.target_domain_id, stage.domain_id, stage.project_id);
+  const stageDomainIds = stringList([
+    stage.target_domain_id,
+    stage.domain_id,
+    stage.project_id,
+  ]);
   const stageId = stringValue(stage.stage_id);
+  const domainMatches = (action: JsonRecord) => {
+    const actionDomainIds = stringList([
+      action.target_domain_id,
+      action.domain_id,
+      action.project_id,
+    ]);
+    return actionDomainIds.some((actionDomainId) => stageDomainIds.includes(actionDomainId));
+  };
   return actions.find((action) =>
     stringValue(action.action_kind) === 'stage_production_attempt_request'
     && stringValue(action.stage_id) === stageId
-    && firstString(action.domain_id, action.target_domain_id, action.project_id) === domainId
+    && domainMatches(action)
+  ) ?? actions.find((action) =>
+    stringValue(action.action_kind) === 'stage_production_evidence_receipt_record'
+    && stringValue(action.stage_id) === stageId
+    && domainMatches(action)
+  ) ?? actions.find((action) =>
+    stringValue(action.action_kind) === 'stage_production_evidence_receipt_verify'
+    && stringValue(action.stage_id) === stageId
+    && domainMatches(action)
   ) ?? null;
 }
 
