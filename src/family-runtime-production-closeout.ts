@@ -32,6 +32,7 @@ const CLOSEOUT_ACTION_KINDS = new Set([
   'provider_scheduler_trigger',
   'provider_scheduler_tick',
   'stage_production_attempt_request',
+  'stage_production_evidence_receipt_verify',
   'external_evidence_receipt_verify',
   'evidence_gate_receipt_verify',
   'legacy_cleanup_verify',
@@ -100,6 +101,9 @@ function readOnlyClaimScope(route: JsonRecord) {
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   if (actionKind === 'stage_production_attempt_request') {
     return 'stage_production_caller_request';
+  }
+  if (actionKind.startsWith('stage_production_evidence_')) {
+    return 'stage_production_evidence_receipt';
   }
   if (actionKind.startsWith('external_evidence')) {
     return 'external_evidence_receipt';
@@ -184,7 +188,11 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
     };
   }
 
-  if (actionKind.startsWith('external_evidence_') || actionKind.startsWith('evidence_gate_')) {
+  if (
+    actionKind.startsWith('external_evidence_')
+    || actionKind.startsWith('evidence_gate_')
+    || actionKind.startsWith('stage_production_evidence_')
+  ) {
     const domainId = stringValue(route.domain_id);
     const requestId = stringValue(route.request_id);
     if (!domainId || !requestId) {
@@ -361,6 +369,7 @@ function readOnlyRouteMatchesDefaults(route: JsonRecord, input: ProductionCloseo
   const args = stringList(route.opl_cli_args);
   const closeoutKind = actionKind.startsWith('provider_scheduler_')
     || actionKind === 'stage_production_attempt_request'
+    || actionKind.startsWith('stage_production_evidence_')
     || actionKind.startsWith('external_evidence_')
     || actionKind.startsWith('evidence_gate_')
     || actionKind.startsWith('legacy_cleanup_');

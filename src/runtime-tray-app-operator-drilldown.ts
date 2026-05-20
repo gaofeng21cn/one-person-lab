@@ -28,6 +28,7 @@ import {
 import {
   buildStageProductionAttemptStartRoutes,
   buildStageProductionAttemptRoutes,
+  buildStageProductionEvidenceReceiptRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/stage-production-action-routes.ts';
 import {
   buildExternalEvidenceActionRoutes,
@@ -655,6 +656,12 @@ function appExecutionBridge(
         'missing_production_evidence' in ref ? ref.missing_production_evidence : [],
       expected_receipt_refs:
         'expected_receipt_refs' in ref ? ref.expected_receipt_refs : [],
+      unobserved_expected_receipt_refs:
+        'unobserved_expected_receipt_refs' in ref ? ref.unobserved_expected_receipt_refs : [],
+      monitor_refs:
+        'monitor_refs' in ref ? ref.monitor_refs : [],
+      unobserved_monitor_refs:
+        'unobserved_monitor_refs' in ref ? ref.unobserved_monitor_refs : [],
       ...('creates_domain_action' in ref
         ? { creates_domain_action: ref.creates_domain_action }
         : {}),
@@ -680,6 +687,8 @@ function appExecutionBridge(
       evidence_source_ref: 'evidence_source_ref' in ref ? ref.evidence_source_ref : null,
       required_evidence_refs:
         'required_evidence_refs' in ref ? ref.required_evidence_refs : [],
+      required_operator_payload_refs:
+        'required_operator_payload_refs' in ref ? ref.required_operator_payload_refs : [],
       required_return_shapes:
         'required_return_shapes' in ref ? ref.required_return_shapes : [],
       required_receipt_shapes:
@@ -1152,6 +1161,7 @@ export function buildAppOperatorDrilldown(input: {
     ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
     ...buildStageProductionAttemptStartRoutes(record(stageProductionEvidence)),
+    ...buildStageProductionEvidenceReceiptRoutes(record(stageProductionEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),

@@ -610,6 +610,186 @@ test('runtime action execute can create OPL-owned stage production attempt reque
   }
 });
 
+test('runtime action execute records and verifies stage production evidence receipts through OPL ledger only', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-stage-evidence-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  masManifest.family_stage_control_plane = {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'med_autoscience_stage_control_plane',
+    target_domain_id: 'med-autoscience',
+    owner: 'med-autoscience',
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: [
+      {
+        stage_id: 'review',
+        stage_kind: 'review',
+        title: 'Review',
+        summary: 'Review from draft refs.',
+        goal: 'Return review refs under MAS authority.',
+        owner: 'med-autoscience',
+        domain_stage_refs: ['review'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['draft_ready'],
+          ensures: ['review_ready'],
+          boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:review', role: 'source_scope' }],
+          cohort_query_refs: [],
+          trigger_refs: [],
+          metric_refs: [],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
+        },
+        trust_boundary: {
+          lane: 'domain_agent',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: [],
+          owner_receipt_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['mas:review-receipt'],
+          can_authorize_quality_verdict: false,
+        },
+      },
+    ],
+    notes: [],
+  };
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 1);
+    const route = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'stage-production-evidence:medautoscience:review:record',
+    );
+    assert.equal(route.action_kind, 'stage_production_evidence_receipt_record');
+    assert.equal(route.request_id, 'stage_production_evidence:medautoscience:review');
+    assert.equal(route.request_pack_id, 'medautoscience.stage_production_evidence');
+    assert.deepEqual(route.required_evidence_refs, [
+      'mas:review-receipt',
+      'owner_receipt:review',
+      'metric:review/currentness',
+    ]);
+    assert.equal(route.creates_domain_action, false);
+    assert.equal(route.creates_owner_receipt, false);
+    assert.equal(route.closes_expected_receipt_refs, false);
+    assert.equal(route.closes_monitor_freshness, false);
+    assert.equal(route.authority_boundary.can_write_domain_truth, false);
+
+    const recordExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:record',
+      '--payload',
+      JSON.stringify({
+        evidence_refs: ['metric:review/currentness'],
+        domain_receipt_refs: ['mas:review-receipt', 'owner_receipt:review'],
+        no_regression_refs: ['mas:no-regression:review-currentness'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(recordExecution.execution.execution_kind, 'opl_cli_external_evidence_apply');
+    assert.equal(recordExecution.execution.result.external_evidence_apply.status, 'recorded');
+    assert.equal(recordExecution.execution.result.external_evidence_apply.authority_boundary.opl_records_refs_only, true);
+    assert.equal(recordExecution.authority_boundary.can_write_domain_truth, false);
+
+    const recordedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const verifyRoute = recordedDrilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'stage-production-evidence:medautoscience:review:verify',
+    );
+    assert.equal(verifyRoute.action_kind, 'stage_production_evidence_receipt_verify');
+    assert.equal(verifyRoute.closes_expected_receipt_refs, true);
+    assert.equal(verifyRoute.closes_monitor_freshness, true);
+
+    const verifyExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(verifyExecution.execution.execution_kind, 'opl_cli_external_evidence_apply');
+    assert.equal(verifyExecution.execution.result.external_evidence_apply.status, 'verified');
+    assert.equal(
+      verifyExecution.execution.result.external_evidence_apply.receipt.receipt_refs.includes('mas:review-receipt'),
+      true,
+    );
+
+    const verifiedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const stage = verifiedDrilldown.stage_production_evidence.stages.find(
+      (entry: { stage_id: string }) => entry.stage_id === 'review',
+    );
+    assert.equal(stage.stage_evidence_receipt_status, 'verified');
+    assert.deepEqual(stage.observed_expected_receipt_refs, ['mas:review-receipt', 'owner_receipt:review']);
+    assert.deepEqual(stage.monitor_freshness_refs, ['metric:review/currentness']);
+    assert.equal(
+      stage.missing_production_evidence.includes('expected_receipt_ref_not_observed'),
+      false,
+    );
+    assert.equal(
+      stage.missing_production_evidence.includes('monitor_freshness_ref_not_observed'),
+      false,
+    );
+    assert.equal(stage.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(verifiedDrilldown.summary.stage_production_evidence_receipt_action_route_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime action execute can run provider scheduler routes from App drilldown', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-scheduler-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
