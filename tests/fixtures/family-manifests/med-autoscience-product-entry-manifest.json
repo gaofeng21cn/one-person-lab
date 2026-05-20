@@ -165,7 +165,8 @@
     "canonical_executor_backends": [
       "codex_cli",
       "hermes_agent",
-      "claude_code"
+      "claude_code",
+      "antigravity_cli"
     ],
     "executor_registry": {
       "surface_kind": "opl_agent_executor_registry",
@@ -185,7 +186,8 @@
         "allowed_backends": [
           "codex_cli",
           "hermes_agent",
-          "claude_code"
+          "claude_code",
+          "antigravity_cli"
         ]
       },
       "agent_loop": {
@@ -193,7 +195,8 @@
         "allowed_backends": [
           "codex_cli",
           "hermes_agent",
-          "claude_code"
+          "claude_code",
+          "antigravity_cli"
         ]
       }
     },
@@ -261,12 +264,14 @@
     "executor_labels": {
       "codex_cli": "Codex CLI",
       "hermes_agent": "Hermes-Agent",
-      "claude_code": "Claude Code"
+      "claude_code": "Claude Code",
+      "antigravity_cli": "Antigravity CLI"
     },
     "executor_statuses": {
       "codex_cli": "default",
       "hermes_agent": "experimental",
-      "claude_code": "experimental"
+      "claude_code": "experimental",
+      "antigravity_cli": "experimental_non_default_explicit_adapter"
     },
     "ownership_boundaries": {
       "opl_owns": [
@@ -301,6 +306,7 @@
       "activation_status": "example_only_not_default_active",
       "default_active_backend": "codex_cli",
       "sample_non_default_backend": "hermes_agent",
+      "sample_stage_level_explicit_backend": "antigravity_cli",
       "activation_requires": "explicit_request_or_runtime_manager_handoff_config"
     },
     "chat_completion_only_executor_forbidden": true,

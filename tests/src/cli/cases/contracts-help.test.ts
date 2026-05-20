@@ -667,9 +667,10 @@ test('help returns command discovery and runnable examples', () => {
     output.help.commands.some(
       (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
         entry.command === 'exec'
-        && /--executor <codex_cli\|hermes_agent\|claude_code>/.test(entry.usage)
+        && /--executor <codex_cli\|hermes_agent\|claude_code\|antigravity_cli>/.test(entry.usage)
         && entry.examples.some((example) => example.includes('--executor hermes_agent'))
         && entry.examples.some((example) => example.includes('--executor claude_code'))
+        && entry.examples.some((example) => example.includes('--executor antigravity_cli'))
         && /Codex CLI remains the default/.test(entry.summary),
     ),
   );
@@ -677,9 +678,10 @@ test('help returns command discovery and runnable examples', () => {
     output.help.commands.some(
       (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
         entry.command === 'executor doctor'
-        && /--executor <codex_cli\|hermes_agent\|claude_code>/.test(entry.usage)
+        && /--executor <codex_cli\|hermes_agent\|claude_code\|antigravity_cli>/.test(entry.usage)
         && entry.examples.some((example) => example.includes('--executor hermes_agent'))
-        && entry.examples.some((example) => example.includes('--executor claude_code')),
+        && entry.examples.some((example) => example.includes('--executor claude_code'))
+        && entry.examples.some((example) => example.includes('--executor antigravity_cli')),
     ),
   );
   assert.ok(

@@ -38,6 +38,7 @@ export interface CodexExecOptions {
   json?: boolean;
   model?: string;
   provider?: string;
+  reasoningEffort?: string;
 }
 
 export interface ParsedCodexExecOutput {
@@ -147,6 +148,10 @@ export function buildCodexExecArgs(
 
   if (options.provider) {
     args.push('--config', `model_provider=${quoteTomlString(options.provider)}`);
+  }
+
+  if (options.reasoningEffort) {
+    args.push('--config', `model_reasoning_effort=${quoteTomlString(options.reasoningEffort)}`);
   }
 
   args.push(prompt);

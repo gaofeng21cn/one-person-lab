@@ -22,6 +22,7 @@ type ProductEntryCliInput = {
   requestKind?: string;
   model?: string;
   provider?: string;
+  reasoningEffort?: string;
   workspacePath?: string;
   skills: string[];
 };
@@ -189,6 +190,7 @@ type AgentExecutorCliInput = {
   cwd?: string;
   model?: string;
   provider?: string;
+  reasoningEffort?: string;
   prompt: string;
 };
 

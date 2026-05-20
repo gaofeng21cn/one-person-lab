@@ -21,7 +21,8 @@
   "canonical_executor_backends": [
     "codex_cli",
     "hermes_agent",
-    "claude_code"
+    "claude_code",
+    "antigravity_cli"
   ],
   "executor_registry": {
     "surface_kind": "opl_agent_executor_registry",
@@ -33,7 +34,17 @@
       "OPL_EXECUTOR_KIND",
       "codex_cli"
     ],
-    "non_default_equivalence": "connectivity_lifecycle_receipt_audit_only"
+    "non_default_equivalence": "connectivity_lifecycle_receipt_audit_only",
+    "stage_level_policy_fields": [
+      "executor_kind",
+      "model",
+      "reasoning_effort",
+      "provider",
+      "executor_binding_ref",
+      "executor_labels",
+      "required_capabilities",
+      "receipt_requirements"
+    ]
   },
   "execution_shapes": {
     "structured_call": {
@@ -41,7 +52,8 @@
       "allowed_backends": [
         "codex_cli",
         "hermes_agent",
-        "claude_code"
+        "claude_code",
+        "antigravity_cli"
       ]
     },
     "agent_loop": {
@@ -49,9 +61,26 @@
       "allowed_backends": [
         "codex_cli",
         "hermes_agent",
-        "claude_code"
+        "claude_code",
+        "antigravity_cli"
       ]
     }
+  },
+  "stage_level_executor_policy": {
+    "owner": "domain_stage_contract_or_opl_handoff_envelope",
+    "scope": "per-stage explicit executor/model/reasoning/provider selection and receipt requirements",
+    "fields": {
+      "executor_kind": "canonical backend key selected for the stage; defaults to codex_cli unless explicitly bound",
+      "model": "stage-selected model id or inherit_local_codex_default for Codex CLI default paths",
+      "reasoning_effort": "stage-selected reasoning effort or inherit_local_codex_default for Codex CLI default paths",
+      "provider": "runtime/provider reference for the selected executor; provider catalog ownership stays outside domain repos",
+      "executor_binding_ref": "auditable reference to the explicit non-default binding, handoff, or runtime-manager selection",
+      "executor_labels": "human-readable labels for selected and candidate executors",
+      "required_capabilities": "stage-declared capabilities the selected executor must prove before launch",
+      "receipt_requirements": "required execution receipt fields, tool/event proof, status, and fail-closed evidence"
+    },
+    "default_executor_kind": "codex_cli",
+    "non_default_executor_binding_required": true
   },
   "layered_executor_semantics": {
     "user_interaction_shell": {
@@ -117,12 +146,23 @@
   "executor_labels": {
     "codex_cli": "Codex CLI",
     "hermes_agent": "Hermes-Agent",
-    "claude_code": "Claude Code"
+    "claude_code": "Claude Code",
+    "antigravity_cli": "Antigravity CLI"
   },
   "executor_statuses": {
     "codex_cli": "default",
     "hermes_agent": "experimental",
-    "claude_code": "experimental"
+    "claude_code": "experimental",
+    "antigravity_cli": "experimental_non_default_explicit_adapter"
+  },
+  "executor_backend_notes": {
+    "antigravity_cli": {
+      "status": "experimental_non_default_explicit_adapter",
+      "recommended_example_scope": "rca_html_route_stage_selection_with_gemini_flash_or_high",
+      "requires_explicit_stage_binding": true,
+      "quality_tool_resume_equivalence_with_codex_cli": false,
+      "default_path": false
+    }
   },
   "guardrails": {
     "chat_completion_only_executor_forbidden": true,
@@ -171,6 +211,7 @@
     "activation_status": "example_only_not_default_active",
     "default_active_backend": "codex_cli",
     "sample_non_default_backend": "hermes_agent",
+    "sample_stage_level_explicit_backend": "antigravity_cli",
     "activation_requires": "explicit_request_or_runtime_manager_handoff_config"
   },
   "topology_split": {

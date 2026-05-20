@@ -74,7 +74,7 @@ Date: `2026-05-18`
 
 2026-05-14 Agent Executor Adapter closeout 校准：
 
-- OPL 已持有统一 executor registry / request / receipt 边界，当前 canonical executor kind 包括 `codex_cli`、`hermes_agent` 与 `claude_code`；默认选择顺序保持显式输入优先，未显式选择时仍回到 `codex_cli`。
+- OPL 已持有统一 executor registry / request / receipt 边界，当前 canonical executor kind 包括 `codex_cli`、`hermes_agent`、`claude_code` 与 `antigravity_cli`；默认选择顺序保持显式输入优先，未显式选择时仍回到 `codex_cli`。
 - `opl exec`、executor doctor/run 入口、Product Entry、Temporal stage activity、Codex stage runner 和 family-runtime runner 均按 OPL executor/receipt 边界解释；显式选择非默认 executor 时不得静默 fallback 到 Codex。
 - `Claude Code` 作为显式 opt-in adapter；v1 验收是可接入、可运行、可回执、可审计、fail-closed，不承诺 reasoning、工具语义、resume、质量或输出效果与 Codex CLI 等价。
 - `Hermes-Agent` 作为显式 opt-in adapter；v1 验收是可接入、可运行、可回执、可审计、fail-closed，并额外要求完整 agent loop 与 tool event proof，不承诺 reasoning、工具语义、resume、质量或输出效果与 Codex CLI 等价。

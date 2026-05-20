@@ -24,6 +24,7 @@ export type ProductEntryCliInput = {
   requestKind?: string;
   model?: string;
   provider?: string;
+  reasoningEffort?: string;
   workspacePath?: string;
   skills: string[];
 };
@@ -34,6 +35,7 @@ export type ProductEntryExecInput = {
   executorKind?: string;
   model?: string;
   provider?: string;
+  reasoningEffort?: string;
   workspacePath?: string;
   json?: boolean;
 };

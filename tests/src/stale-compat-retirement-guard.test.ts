@@ -221,18 +221,18 @@ test('core executor surfaces keep hermes_agent in the canonical explicit non-def
     guardrails?: Record<string, unknown>;
   };
 
-  assert.deepEqual(contract.canonical_executor_backends, ['codex_cli', 'hermes_agent', 'claude_code']);
+  assert.deepEqual(contract.canonical_executor_backends, ['codex_cli', 'hermes_agent', 'claude_code', 'antigravity_cli']);
   assert.equal(contract.executor_registry?.non_default_equivalence, 'connectivity_lifecycle_receipt_audit_only');
   assert.equal(contract.guardrails?.hermes_agent_not_provider_or_gateway_surface, true);
 
   const requiredDocPatterns: Array<[string, RegExp]> = [
     [
       'docs/status.md',
-      /`hermes_agent` 与 `claude_code` 同属显式非默认 executor adapter\/backend/,
+      /`hermes_agent`、`claude_code` 与 `antigravity_cli` 同属显式非默认 executor adapter\/backend/,
     ],
     [
       'docs/decisions.md',
-      /`hermes_agent` 仍可作为显式非默认 executor adapter\/backend/,
+      /`hermes_agent` 仍可作为显式非默认 executor adapter\/backend.*`antigravity_cli`/s,
     ],
     [
       'docs/references/runtime-substrate/hermes-agent-truth-reset-and-target-state.md',
@@ -240,7 +240,7 @@ test('core executor surfaces keep hermes_agent in the canonical explicit non-def
     ],
     [
       'docs/references/runtime-substrate/family-executor-adapter-defaults.md',
-      /`canonical_executor_backends = \[codex_cli, hermes_agent, claude_code\]`/,
+      /`canonical_executor_backends = \[codex_cli, hermes_agent, claude_code, antigravity_cli\]`/,
     ],
   ];
 

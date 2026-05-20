@@ -11,6 +11,7 @@ import {
   runAgentExecutor,
   type AgentExecutionReceipt,
   type AgentExecutorKind,
+  type StageAttemptExecutorPolicy,
 } from './agent-executor.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -153,6 +154,19 @@ function normalizeAgentExecutorStageMode(value?: string | null): AgentExecutorKi
     return normalized as AgentExecutorKind;
   }
   return null;
+}
+
+function executorPolicyFromAttempt(attempt: JsonRecord): StageAttemptExecutorPolicy | null {
+  const direct = isRecord(attempt.stage_attempt_executor_policy)
+    ? attempt.stage_attempt_executor_policy
+    : isRecord(attempt.executor_policy)
+      ? attempt.executor_policy
+      : null;
+  return direct;
+}
+
+function executorKindFromAttemptPolicy(attempt: JsonRecord) {
+  return normalizeAgentExecutorStageMode(optionalString(executorPolicyFromAttempt(attempt)?.executor_kind));
 }
 
 function buildAgentStageRunnerReceipt(input: {
@@ -323,12 +337,15 @@ export async function runAgentStageRunner(input: {
   env?: Record<string, string | undefined>;
 }) {
   const executorKind = normalizeAgentExecutorStageMode(input.runnerMode)
-    ?? normalizeAgentExecutorStageMode(optionalString(input.attempt.executor_kind));
+    ?? normalizeAgentExecutorStageMode(optionalString(input.attempt.executor_kind))
+    ?? executorKindFromAttemptPolicy(input.attempt);
   if (!executorKind || executorKind === 'codex_cli') {
     return await runCodexStageRunner(input);
   }
+  const stageAttemptExecutorPolicy = executorPolicyFromAttempt(input.attempt);
   const receipt = runAgentExecutor({
     executor_kind: executorKind,
+    stage_attempt_executor_policy: stageAttemptExecutorPolicy,
     mode: 'stage_activity',
     prompt: runnerPromptFor(input),
     cwd: workspaceRootFromAttempt(input.attempt),
