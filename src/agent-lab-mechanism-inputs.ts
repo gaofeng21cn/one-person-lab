@@ -246,6 +246,12 @@ export function mechanismEvolutionInputsForTask(task: AgentLabMechanismInputTask
         typeof inputs.independent_ai_review_receipt.reviewed_mechanism_candidate_ref === 'string'
           ? inputs.independent_ai_review_receipt.reviewed_mechanism_candidate_ref
           : undefined,
+      execution_attempt_ref: typeof inputs.independent_ai_review_receipt.execution_attempt_ref === 'string'
+        ? inputs.independent_ai_review_receipt.execution_attempt_ref
+        : undefined,
+      review_attempt_ref: typeof inputs.independent_ai_review_receipt.review_attempt_ref === 'string'
+        ? inputs.independent_ai_review_receipt.review_attempt_ref
+        : undefined,
       request_ref: typeof inputs.independent_ai_review_receipt.request_ref === 'string'
         ? inputs.independent_ai_review_receipt.request_ref
         : undefined,
@@ -341,6 +347,12 @@ export function mechanismEvolutionInputRefs(
     ...value.evidence_delta_refs,
     ...(value.independent_ai_review_receipt_ref ? [value.independent_ai_review_receipt_ref] : []),
     ...(value.independent_ai_review_receipt?.receipt_ref ? [value.independent_ai_review_receipt.receipt_ref] : []),
+    ...(value.independent_ai_review_receipt?.execution_attempt_ref
+      ? [value.independent_ai_review_receipt.execution_attempt_ref]
+      : []),
+    ...(value.independent_ai_review_receipt?.review_attempt_ref
+      ? [value.independent_ai_review_receipt.review_attempt_ref]
+      : []),
     ...(value.independent_ai_review_receipt?.request_ref ? [value.independent_ai_review_receipt.request_ref] : []),
     ...(value.independent_ai_review_receipt?.response_ref ? [value.independent_ai_review_receipt.response_ref] : []),
     ...(value.independent_ai_review_receipt?.evidence_refs ?? []),

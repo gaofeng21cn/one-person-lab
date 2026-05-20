@@ -51,6 +51,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 - `family-runtime-attempt-contract.json`
 - `family-transition-runner-contract.json`
 - `functional-agent-runtime-harness-contract.json`
+- `agent-lab-mag-live-acceptance-suite.json`
 - `domain-pack-compiler-contract.json`
 - `generic-substrate-projection-contract.json`
 - `standard-domain-agent-skeleton-contract.json`

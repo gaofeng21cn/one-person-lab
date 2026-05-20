@@ -25,6 +25,7 @@ export const MECHANISM_RISK_TIERS = {
     required_gates: [
       'independent_ai_review',
       'regression_suite_passed',
+      'canary_observation',
       'no_forbidden_write_proof',
       'rollback_target_ref',
     ],
@@ -84,6 +85,8 @@ export function buildIndependentAiReviewReceipt(input: {
     reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
     reviewed_mechanism_candidate_ref: candidateRef,
     review_context_inherits_executor_context: false,
+    execution_attempt_ref: 'stage-attempt-ref:agent-lab/generated-fixture-execution',
+    review_attempt_ref: 'stage-attempt-ref:agent-lab/generated-fixture-review',
     verdict,
     risk_tier: riskTier,
     source_refs: input.sourceRefs ?? [
@@ -147,6 +150,7 @@ export function buildMechanismPromotionPolicy(
     required_gate_refs: [
       independentReviewRef,
       'regression-suite:agent-lab/mechanism-promotion',
+      'canary-observation-ref:agent-lab/mechanism-auto-promotion',
       'no-forbidden-write:agent-lab/mechanism-policy',
       ROLLBACK_TARGET_REF,
     ],
@@ -233,8 +237,8 @@ export function buildMechanismPromotionDecision(input: {
     ])}`,
     rollback_target_ref: ROLLBACK_TARGET_REF,
     canary: {
-      required: riskTier === 'medium_risk',
-      status: promotedToStatus === 'canary' ? 'active' : 'not_required',
+      required: riskTier !== 'high_risk',
+      status: riskTier !== 'high_risk' && gatesPassed ? 'observed' : 'missing_or_not_required',
       observation_ref: 'canary-observation-ref:agent-lab/mechanism-auto-promotion',
     },
     high_risk_owner_or_human_gate_required: riskTier === 'high_risk',
