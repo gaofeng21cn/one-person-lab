@@ -6,12 +6,14 @@ import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from './family-conflict-envelope.ts';
 import { buildFamilyStageAdmissionReview } from './family-stage-admission.ts';
 import { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
+import { buildFamilyStageRuntimeBudgetProjection } from './family-stage-runtime-budget.ts';
 import type {
   FamilyStageAdmissionReview,
   FamilyStageAdmissionStageResult,
 } from './family-stage-admission.ts';
 import type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
 import type { FamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
+import type { FamilyStageDescriptor } from './family-stage-control-plane-contract.ts';
 import {
   insertEvent,
   insertNotification,
@@ -19,6 +21,21 @@ import {
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+
+const STAGE_KERNEL_LAUNCH_BLOCKER_CODES = new Set([
+  'missing_stage_contract',
+  'missing_requires_contract',
+  'missing_ensures_contract',
+  'missing_scope_refs',
+  'missing_authority_boundary_role',
+  'invalid_opl_authority_role',
+  'forbidden_opl_authority',
+  'effect_boundary_without_event_recording',
+  'runtime_guard_without_event_recording',
+  'effect_boundary_missing_runtime_event_refs',
+  'runtime_guard_missing_runtime_event_refs',
+  'human_review_gate_budget_blocked',
+]);
 
 export type StageAdmissionLaunchGateInput = {
   domainId: FamilyRuntimeDomainId;
@@ -98,6 +115,35 @@ function stageResult(review: FamilyStageAdmissionReview, stageId: string) {
   return review.stage_results.find((stage) => stage.stage_id === stageId) ?? null;
 }
 
+function stageLaunchBlockerFindings(findings: FamilyStageAdmissionReview['findings']) {
+  return findings.filter((finding) => (
+    finding.severity === 'blocker'
+    && STAGE_KERNEL_LAUNCH_BLOCKER_CODES.has(finding.code)
+  ));
+}
+
+function scopeRefFindings(stage: FamilyStageDescriptor): FamilyStageAdmissionReview['findings'] {
+  const contract = stage.stage_contract;
+  if (!contract) {
+    return [];
+  }
+  if (contract.source_scope_refs.length + contract.artifact_scope_refs.length + contract.workspace_scope_refs.length > 0) {
+    return [];
+  }
+  return [{
+    severity: 'blocker',
+    code: 'missing_scope_refs',
+    message: 'Stage launch requires at least one source, artifact, or workspace scope ref.',
+    stage_id: stage.stage_id,
+    failure_lane: 'source',
+    source_ref: `family_stage:${stage.stage_id}`,
+    minimal_counterexample: {
+      stage_id: stage.stage_id,
+      missing_field: 'source_scope_refs_or_artifact_scope_refs_or_workspace_scope_refs',
+    },
+  }];
+}
+
 function statusForMissing(input: StageAdmissionLaunchGateInput, reason: string): StageAdmissionLaunchGateResult {
   const required = input.requireAdmission === true;
   const status = required ? 'blocked' : 'not_applicable';
@@ -167,8 +213,11 @@ export function buildStageAdmissionLaunchGateFromReview(
   if (!inspectedStage) {
     return statusForMissing(input, 'stage_admission_stage_missing');
   }
+  const inspectedDescriptor = input.plane.stages.find((stage) => stage.stage_id === input.stageId) ?? null;
   const cohortLoop = buildFamilyStageCohortLoopProjection(input.plane);
   const inspectedCohortLoopStage = cohortLoop.stages.find((stage) => stage.stage_id === input.stageId) ?? null;
+  const runtimeBudget = buildFamilyStageRuntimeBudgetProjection(input.plane);
+  const inspectedRuntimeBudgetStage = runtimeBudget.stages.find((stage) => stage.stage_id === input.stageId) ?? null;
   const stageFindings = input.review.findings.filter((finding) => finding.stage_id === input.stageId);
   const cohortLoopNeedsAttention = input.requireAdmission === true
     && inspectedCohortLoopStage !== null
@@ -184,11 +233,31 @@ export function buildStageAdmissionLaunchGateFromReview(
         minimal_counterexample: cohortBlocker.minimal_counterexample,
       }))
     : [];
-  const findings = [...stageFindings, ...cohortLoopFindings];
-  const blockerFindings = findings.filter((finding) => finding.severity === 'blocker');
-  const recommendationFindings = findings.filter((finding) => finding.severity === 'warning');
-  const blockedReason = inspectedStage.status !== 'admitted'
-    ? `stage_admission_${inspectedStage.status}`
+  const runtimeBudgetFindings: FamilyStageAdmissionReview['findings'] = input.requireAdmission === true
+    && inspectedRuntimeBudgetStage !== null
+    && inspectedRuntimeBudgetStage.reliability_budget_status !== 'ready'
+    ? inspectedRuntimeBudgetStage.minimal_counterexamples.map((budgetCounterexample) => ({
+        severity: 'warning' as const,
+        code: `runtime_budget_${budgetCounterexample.missing_field}_missing`,
+        message: budgetCounterexample.reason,
+        stage_id: input.stageId,
+        failure_lane: budgetCounterexample.missing_field === 'monitor_refs' ? 'monitor' as const : 'runtime' as const,
+        source_ref: `family_stage_runtime_budget:${input.stageId}`,
+        minimal_counterexample: { ...budgetCounterexample },
+      }))
+    : [];
+  const findings = [
+    ...stageFindings,
+    ...(input.requireAdmission === true && inspectedDescriptor ? scopeRefFindings(inspectedDescriptor) : []),
+    ...cohortLoopFindings,
+    ...runtimeBudgetFindings,
+  ];
+  const blockerFindings = stageLaunchBlockerFindings(findings);
+  const recommendationFindings = findings.filter((finding) => !blockerFindings.includes(finding));
+  const blockedReason = blockerFindings.length > 0
+    ? inspectedStage.status === 'admitted'
+      ? 'stage_admission_stage_kernel_blocked'
+      : `stage_admission_${inspectedStage.status}`
     : null;
   const subject = buildFamilyConflictSubject({
     domain: input.domainId,
@@ -228,7 +297,7 @@ export function buildStageAdmissionLaunchGateFromReview(
             authority: 'opl_runtime',
             status: 'blocked',
             reason: blockedReason,
-            evidenceRefs: findings.map((finding) => `finding:${finding.code}`),
+            evidenceRefs: blockerFindings.map((finding) => `finding:${finding.code}`),
             allowedNextActions: ['repair_stage_contract', 'retry_after_admission'],
             forbiddenActions: ['start_executor_without_stage_admission', 'fallback_complete'],
             failClosed: true,

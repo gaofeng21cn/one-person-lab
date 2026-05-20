@@ -197,6 +197,15 @@ function hasRequiredGate(stage: FamilyStageDescriptor, actionsById: Map<string, 
 
 function inspectAuthorityBoundary(stage: FamilyStageDescriptor, findings: FamilyStageAdmissionFinding[]) {
   const oplRole = optionalString(stage.authority_boundary.opl_role);
+  if (!oplRole) {
+    pushFinding(findings, {
+      severity: 'blocker',
+      code: 'missing_authority_boundary_role',
+      message: 'Stage authority_boundary must declare the OPL role before runtime launch.',
+      stage_id: stage.stage_id,
+    });
+    return;
+  }
   if (oplRole && !ALLOWED_OPL_ROLES.has(oplRole)) {
     pushFinding(findings, {
       severity: 'blocker',
