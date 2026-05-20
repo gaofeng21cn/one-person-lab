@@ -11,7 +11,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 OPL 的设计取向是 AI-first、AI 原生专家判断优先、contract-light：框架通过 stage、prompt、skill、knowledge、quality gate 和 selected executor 承接 AI 能力进步；合同只做 owner boundary、权限、安全、审计、receipt、阻塞、恢复和 projection 这些下限，不把专家拆解、创作、评审、路线判断或修订策略固化成脚本引擎，也不让机械检查替代专家 stage 判断。
 
-当前架构同步采用 OPL 10 项原则作为 stage-led 合同读法：stage pack 是启动单位，stage 内最小执行单位是 Agent executor，默认 selected executor 是 `Codex CLI`；非默认 executor adapter 只能显式绑定并返回 receipt / audit / fail-closed 证据。`verified_static_core` 只覆盖 identity、owner、refs、scope、composition 和 forbidden-authority；AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict 进入 `runtime_enforced_boundary`。因此 contract 只保启动安全、权限、审计、replay、route-back 和 projection 下限，不承诺 domain quality 或 production closure。
+当前 active 叙事统一为 `Stage Kernel + Readiness + Derived Diagnostic Lenses`。Stage Kernel 是最小合同核：stage pack 是启动单位，stage 内最小执行单位是 Agent executor，默认 selected executor 是 `Codex CLI`；非默认 executor adapter 只能显式绑定并返回 receipt / audit / fail-closed 证据。Readiness 是 operator / App 默认聚合面，只读 admission、scope、receipt、replay、assumption、monitor 和 evidence gap，不产生 domain ready、artifact ready、quality verdict 或 production closure。Derived Diagnostic Lenses 只用于解释 blocker、stale assumption、replay gap、failure localization、runtime budget 或 route-back evidence；这些 lens 可以被 readiness 折叠消费，但不得升级为 runtime planner、proof assistant、workflow compiler、domain verdict 或质量权威。
 
 OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。
 
@@ -37,7 +37,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `One Person Lab App` 是 user-facing workbench：它消费 Framework 的 runtime/activation truth 和 domain-owned projection，不成为 domain runtime、quality verdict 或 artifact authority
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
-- OPL 的合同面必须保持 contract-light 且只保下限：`family-stage-control-plane`、action catalog、receipt、proof bundle 和 projection 只约束启动条件、owner、权限、安全、审计、恢复与路由；stage 内的开放式思考、写作、评审、诊断和迭代由 AI executor 与 domain-owned workflow 承担
+- OPL 的合同面必须保持 contract-light 且只保下限：Stage Kernel 约束启动条件、owner、权限、安全、审计、replay、恢复与 route-back；Readiness 只聚合 launch/evidence gap；Derived Diagnostic Lenses 只解释缺口，不接管 stage 内开放式思考、写作、评审、诊断和迭代
 - readiness、scorecard、schema completeness、contract completeness、provider completion 与 generated-surface proof 只能定位 advisory、blocker 或 evidence gap；专家质量判断必须来自独立 AI stage、domain-owned quality gate、owner receipt、typed blocker 或 route-back receipt
 - 涉及知识交付、专家判断或正式质量裁决的复杂步骤必须保持为独立 stage，例如 MAS AI 审稿、publication quality review、MAG fundability review、RCA visual review；不得把这类工作折叠成另一个 stage 的函数、helper 或后处理
 - AI-first quality gate 是独立审核任务：执行 attempt 产出 artifacts / refs / closeout packet，审核 attempt 只读取这些显式输入和必要上下游 refs，产出 gate receipt / typed blocker / route-back；同一个 `Codex CLI` attempt 不能在同一上下文里自审并推进下一 stage
@@ -221,9 +221,9 @@ Stage progression 的 AI-first quality gate 需要独立 reviewer / gate attempt
 
 #### Stage Pack Admission 与 Trust Lanes
 
-默认 operator / App 检查入口是 `opl stages readiness --domain <domain>`。它把 admission、proof bundle、assumption lifecycle、cohort loop、replay certification、scope refs、`guarantee_mode` 和 runtime/capacity/domain-validity advisory refs 聚成 launch-readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是维护者诊断 drilldown，不是普通首屏，也不是独立学习目标。
+默认 operator / App 检查入口是 `opl stages readiness --domain <domain>`。它把 Stage Kernel admission、scope refs、expected receipt refs、proof/replay refs、assumption/monitor refs 和 evidence gap 聚成 readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是 Derived Diagnostic Lenses，服务维护者 drilldown，不是普通首屏，也不是独立学习目标。
 
-GraphFlow / GFL 论文中值得 OPL 吸收的是把可静态验证的流程核心和运行时信任边界拆开的模式。OPL 只吸收这个 AI-first、AI 原生专家判断优先、contract-light 的 contract pattern，不引入重型证明器、GraphFlow / GFL runtime dependency、固定 workflow 编译链，也不把 GraphFlow graph engine、planner 或 executor 作为 OPL 的 provider、stage runner、domain quality authority 或 domain authority。
+GraphFlow / GFL 在 active narrative 中只提供治理词汇：boundary、evidence、audit、replay、route-back。OPL 不吸收其 runtime、planner、proof assistant、workflow compiler、stage runner、executor 或 domain verdict 角色；详细参考映射只保留在 [GraphFlow / GFL contract vocabulary reference](./references/runtime-substrate/graphflow-gfl-contract-vocabulary.md)。
 
 OPL 的 stage pack admission 应形成独立准入门：一个可启动的 stage pack 必须声明 stage id、owner、stage goal、输入/输出 refs、`requires`、`ensures`、knowledge refs、skill / prompt / evaluation refs、allowed action refs、handoff、trust lane、authority boundary、launch profile 和 selected executor binding。准入通过只表示这个 pack 可以进入 OPL queue / provider / executor 启动路径，不表示 domain task 已完成、artifact 已可信、memory writeback 已接受或质量 gate 已通过。
 
@@ -231,14 +231,14 @@ OPL 的 stage pack admission 应形成独立准入门：一个可启动的 stage
 
 Stage pack 的 launch scope 必须能被机器读面看见：`source_scope_refs` 冻结本次启动使用的 source cohort 或 source set，`artifact_scope_refs` 冻结允许读取、产出或对账的 artifact set，`workspace_scope_refs` 冻结 workspace / runtime scope。OPL 只投影这些 refs 与计数，不拥有 source truth、artifact authority 或 workspace truth；scope 缺失、过期或冲突时应形成 blocker、human gate 或 route-back。
 
-OPL 采用两层 trust lane：
+Stage Kernel 采用两层 trust lane：
 
 - `verified_static_core`：stage descriptor 形状、id、owner、requires / ensures、输入输出 ref shape、allowed action refs、executor binding、authority boundary、manifest provenance 和 schema/parity check。这里可以被 OPL 静态验证或在 admission 时 fail-closed。
 - `runtime_enforced_boundary`：Agent executor 输出、LLM 判断、人类批准、外部系统返回、artifact mutation、memory writeback、domain quality / publication / fundability / visual verdict、owner receipt 和 long-running provider history。这里只能通过独立 attempt、receipt、gate、typed blocker、SLO 和 no-forbidden-write proof 运行时约束，不能写成静态证明已经保证。
 
 `guarantee_mode` 是给 scheduler / App / operator 的保证读法，不是 domain verdict。`static_admission_only` 只说明 descriptor 和组合可准入；`runtime_enforced` 表示需要运行时 receipt、event、gate 或 guard 约束；`domain_owned_judgment` 表示质量、truth、artifact 或 memory 判断回到 domain owner；`observability_only` 只说明 OPL 可以显示状态或 refs。任何 observability-only 或 domain-owned judgment projection 都不能被 App 写成 ready。
 
-GraphFlow / GFL 的后续吸收点已经落成只读机器面，并按 AI-first、AI 原生专家判断优先、contract-light 原则降重。`family-stage-pack-registry` 把 stage pack hash 当作 reusable library key，hash 变化必须声明 migration policy，并把 active attempt 绑定到旧 hash、迁移到新 hash，或进入 human gate blocker；`family-stage-replay-certification` 用 proof bundle obligation 对照 append-only event log、attempt ledger、runtime event 和 closeout receipt refs，replay 时只读记录，不重新问 AI、人或外部系统；`family-stage-assumption-lifecycle` 把 runtime assumptions 的 current / stale / missing monitor / missing owner 状态投影给 scheduler / App，stale 或缺 monitor 的 assumption 默认形成 warning 和 minimal counterexample。`opl stages readiness --domain <domain>` 聚合这些 surface 作为 operator 默认入口；它只阻断启动安全、越权、边界事件和 replay/audit 基础证据缺口，不产生 domain ready、quality、artifact 或 owner receipt verdict。
+Derived Diagnostic Lenses 是从 Stage Kernel 派生的只读解释面。`family-stage-pack-registry`、`family-stage-replay-certification`、`family-stage-assumption-lifecycle`、`family-stage-cohort-loop` 与 `family-stage-runtime-budget` 可以提供 hash migration、replay/audit、assumption freshness、cohort visibility 或 runtime observability 解释；`opl stages readiness --domain <domain>` 只把它们折叠为 warning、recommendation、typed blocker、human gate 或 route-back ref。它们不产生 domain ready、quality、artifact、owner receipt verdict，也不成为独立 runtime 目标。
 
 Agent 选择、绑定和启动必须发生在已准入 stage pack 之上。默认 selected executor 是 `Codex CLI`；`hermes_agent`、`claude_code` 或其他 executor 只有在 stage pack、domain route 或显式 runtime switch 声明后才能绑定。启动包必须携带 admitted stage pack ref、selected executor、provider attempt id、workspace/runtime roots、identity / idempotency key、consumed refs、authority boundary 和 expected receipt refs；executor 完成只代表 attempt 结束，只有 domain owner receipt / gate receipt 到位才代表 stage progression 可继续。
 

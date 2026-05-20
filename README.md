@@ -27,7 +27,7 @@ That is the architectural advantage: One Person Lab productizes the delivery log
 
 - **Stages are the delivery unit**: the system tracks what each expert stage should produce across definition, preparation, execution, review, revision, and delivery.
 - **Evidence and quality gates are built in**: source material, criteria, and receipts make progress, rework points, and delivery rationale explicit.
-- **AI-first, expert-judgment-first, contract-light**: decomposition, creation, judgment, and revision stay with Codex and other AI executors; contracts preserve the safety, audit, and recovery floor without letting mechanical checks replace expert stage judgment.
+- **AI-first, contract-light stage surfaces**: OPL keeps the active surface slim as `Stage Kernel + Readiness + Derived Diagnostic Lenses`; Codex and domain agents retain open-ended expert judgment while contracts preserve the safety, audit, replay, and route-back floor.
 - **Domain agents carry domain judgment**: medical research, grant writing, and visual delivery are owned by specialized agents, while One Person Lab provides shared runtime, discovery, recovery, and presentation.
 - **Long tasks can continue**: attempts, handoffs, receipts, progress, and artifacts are organized as traceable state across sessions.
 - **The product family can expand**: Research, Grant, and Presentation Foundry share the same stage-led foundation, with Patent, Award, Thesis, and Review lines planned.
@@ -119,7 +119,7 @@ This repository maintains the One Person Lab framework layer:
 - Runtime providers, typed queue, stage attempt ledger, runtime snapshots, and projection consumption.
 - Machine-readable contracts, module discovery, `opl module exec`, and skill synchronization.
 
-OPL follows an AI-first, expert-judgment-first, contract-light principle: framework contracts govern owner boundaries, permissions, safety, auditability, receipts, blockers, and recovery as a minimum floor; open-ended planning, writing, review, route judgment, and revision remain with the selected AI executor and domain agent so the system can keep benefiting from future AI improvements.
+OPL follows an AI-first, contract-light surface model: the active framework narrative is `Stage Kernel + Readiness + Derived Diagnostic Lenses`. The kernel admits stage packs and binds owner boundaries, permissions, prompts/tools/knowledge refs, expected receipts, audit, replay, and route-back evidence. Readiness aggregates launch and evidence gaps without issuing domain verdicts. Diagnostic lenses can explain blockers, stale assumptions, replay gaps, or route-back evidence, but they do not become runtime planners, proof assistants, workflow compilers, or quality authorities.
 
 Temporal-backed provider support is the production online runtime target. Local providers are used for development, testing, and offline diagnostics. Codex CLI is the current first-class executor; Hermes-Agent, Claude Code, and similar tools can enter as explicit executor adapters with receipts and auditability.
 
