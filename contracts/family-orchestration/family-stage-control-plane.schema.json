@@ -230,6 +230,20 @@
           },
           "description": "Machine-readable refs to runtime boundary events recorded by the domain/runtime owner for effect-boundary or runtime-guarded stages; OPL checks declaration completeness only and does not emit these events."
         },
+        "expected_receipt_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Domain-owned expected receipt or typed-blocker refs for this stage. OPL projects these refs into stage evidence workorders; if present they replace the generic owner_receipt:<stage> fallback. OPL cannot create or sign these receipts."
+        },
+        "monitor_freshness_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Domain/App/live freshness refs that can satisfy monitor freshness for this stage. OPL records refs-only evidence and cannot generate freshness evidence."
+        },
         "replay_evidence_refs": {
           "type": "array",
           "items": {
