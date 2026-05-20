@@ -133,6 +133,15 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     true,
   );
   assert.equal(drilldown.functional_privatization_audit_summary.default_watchlist_count, 0);
+  assert.equal(drilldown.summary.functional_privatization_action_required_count, 0);
+  assert.equal(
+    drilldown.summary.functional_privatization_hidden_cleared_count,
+    drilldown.functional_privatization_audit_summary.default_hidden_cleared_count,
+  );
+  assert.equal(
+    drilldown.summary.functional_privatization_audit_default_policy,
+    'audit_action_required_first_full_inventory_via_explicit_drilldown',
+  );
   assert.equal(drilldown.functional_privatization_audit_summary.semantic_equivalence_review_count, 0);
   assert.equal(
     drilldown.functional_privatization_audit_refs.summary.active_private_generic_residue_count,

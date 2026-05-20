@@ -175,6 +175,19 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.stage_production_evidence, undefined);
     assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
     assert.equal(summaryDrilldown.functional_privatization_audit_refs, undefined);
+    assert.equal(
+      summaryDrilldown.summary.functional_privatization_audit_default_policy,
+      'audit_action_required_first_full_inventory_via_explicit_drilldown',
+    );
+    assert.equal(summaryDrilldown.summary.functional_privatization_action_required_count, 0);
+    assert.equal(
+      summaryDrilldown.summary.functional_privatization_hidden_cleared_count >= 0,
+      true,
+    );
+    assert.equal(
+      summaryDrilldown.summary.functional_privatization_private_platform_residue_inventory_detail_policy,
+      'full_detail_inventory_not_default_action_required_count',
+    );
     assert.equal(summaryDrilldown.opl_meta_agent_workbench_refs, undefined);
     assert.equal(
       ['resolved', 'not_bound'].includes(summaryDrilldown.summary.opl_meta_agent_registry_status),
@@ -364,6 +377,11 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       fullDrilldown.functional_privatization_audit_refs.summary.private_platform_residue_inventory_count,
       summaryDrilldown.summary.functional_privatization_private_platform_residue_inventory_count,
     );
+    assert.equal(
+      summaryDrilldown.summary.functional_privatization_hidden_cleared_count,
+      fullDrilldown.functional_privatization_audit_summary.default_hidden_cleared_count,
+    );
+    assert.equal(summaryDrilldown.summary.functional_privatization_action_required_count, 0);
     assert.equal(
       fullDrilldown.functional_privatization_audit_refs.authority_boundary.can_write_memory_body,
       false,

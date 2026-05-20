@@ -74,6 +74,7 @@ type FunctionalPrivatizationSummaryRecord = {
   domain_authority_count?: unknown;
   retire_tombstone_count?: unknown;
   default_watchlist_count?: unknown;
+  default_hidden_cleared_count?: unknown;
   default_watchlist_module_ids?: unknown;
   active_private_generic_residue_count?: unknown;
   semantic_equivalence_review_count?: unknown;
@@ -800,6 +801,7 @@ function functionalPrivatizationSummary(projects: DomainManifestCatalogEntry[]) 
       retire_tombstone_count: sum('retire_tombstone_count'),
     },
     default_watchlist_count: sum('default_watchlist_count'),
+    default_hidden_cleared_count: sum('default_hidden_cleared_count'),
     default_watchlist_module_ids: uniqueStrings(summaries.flatMap((summary) =>
       stringList(summary.default_watchlist_module_ids)
     )),

@@ -218,6 +218,17 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       lifecycleSummary.lifecycle_domain_physical_delete_can_execute,
     lifecycle_opl_cleanup_apply_can_execute: lifecycleSummary.lifecycle_opl_cleanup_apply_can_execute,
     functional_privatization_default_watchlist_count: input.functionalSummary.default_watchlist_count,
+    functional_privatization_action_required_count: Math.max(
+      numberValue(input.functionalSummary.default_watchlist_count),
+      numberValue(input.functionalSummary.active_private_generic_residue_count),
+      numberValue(input.functionalSummary.semantic_equivalence_review_count),
+      numberValue(input.functionalSummary.blocker_count),
+    ),
+    functional_privatization_hidden_cleared_count: input.functionalSummary.default_hidden_cleared_count,
+    functional_privatization_audit_default_policy:
+      'audit_action_required_first_full_inventory_via_explicit_drilldown',
+    functional_privatization_private_platform_residue_inventory_detail_policy:
+      'full_detail_inventory_not_default_action_required_count',
     functional_privatization_semantic_equivalence_review_count: input.functionalSummary.semantic_equivalence_review_count,
     functional_privatization_active_private_generic_residue_count: input.functionalSummary.active_private_generic_residue_count,
     functional_privatization_standard_domain_pack_inventory_count:
