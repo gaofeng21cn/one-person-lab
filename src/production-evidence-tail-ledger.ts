@@ -1,14 +1,20 @@
-type JsonRecord = Record<string, unknown>;
+import {
+  evidenceRequirementFromTailItem,
+  evidenceTailAuthorityBoundary,
+  evidenceTailItem,
+  firstString,
+  isRecord,
+  normalizeEvidenceTailStatus,
+  stringList,
+  stringValue,
+  type JsonRecord,
+} from './evidence-requirement.ts';
 
 export const PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY =
   'production_evidence_tail_not_a_structural_conformance_stage_launch_or_artifact_authority_pass_condition';
 
 export const PRODUCTION_TAIL_NEXT_ACTION_LEDGER_POLICY =
   'refs_only_next_action_routes_derived_from_declared_tail_refs_without_reading_memory_or_artifact_bodies';
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function record(value: unknown): JsonRecord {
   return isRecord(value) ? value : {};
@@ -18,65 +24,38 @@ function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function tailAuthorityBoundary(extra: JsonRecord = {}) {
-  return {
-    can_claim_domain_ready: false,
-    can_claim_production_ready: false,
-    can_claim_artifact_authority: false,
-    can_write_domain_truth: false,
-    can_write_memory_body: false,
-    can_read_memory_body: false,
-    can_read_artifact_body: false,
-    can_mutate_artifact: false,
-    ...extra,
-  };
-}
-
-function normalizeTailStatus(status: string | null) {
-  if (status === 'closed') {
-    return 'closed';
-  }
-  if (status === 'domain_owned_typed_blocker') {
-    return 'domain_owned_typed_blocker';
-  }
-  return 'open';
+  return evidenceTailAuthorityBoundary(extra);
 }
 
 function normalizedConformanceTailItem(item: JsonRecord, index: number) {
   const domainOwner = stringValue(item.domain_owner) ?? 'domain_repo';
-  const status = normalizeTailStatus(stringValue(item.status));
+  const status = normalizeEvidenceTailStatus(stringValue(item.status));
   const tailId = stringValue(item.tail_id)
     ?? stringValue(item.tail_item)
     ?? `${domainOwner}:production_evidence_tail:${index + 1}`;
-  return {
-    tail_id: tailId,
-    tail_item: stringValue(item.tail_item) ?? tailId,
+  return evidenceTailItem({
+    tailId,
+    tailItem: stringValue(item.tail_item) ?? tailId,
     status,
-    owner_group: domainOwner,
-    repo_path: stringValue(item.repo_path),
-    domain_owner: domainOwner,
-    evidence_ref: stringValue(item.evidence_ref),
-    doc_ref: stringValue(item.doc_ref),
-    next_verification_command: stringValue(item.next_verification_command),
-    blocking_policy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
-    authority_boundary: tailAuthorityBoundary({
+    ownerGroup: domainOwner,
+    claimScope: 'agent_structural_conformance_production_acceptance_tail',
+    currentRef: stringValue(item.evidence_ref) ?? stringValue(item.doc_ref),
+    evidenceRef: stringValue(item.evidence_ref),
+    docRef: stringValue(item.doc_ref),
+    nextVerificationCommand: stringValue(item.next_verification_command),
+    blockingPolicy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
+    authorityBoundary: {
       source_authority_boundary: isRecord(item.authority_boundary) ? item.authority_boundary : null,
-    }),
-  };
+    },
+    extra: {
+      repo_path: stringValue(item.repo_path),
+    },
+  });
 }
 
 function summarizeTailItems(tailItems: JsonRecord[]) {
@@ -93,38 +72,8 @@ function summarizeTailItems(tailItems: JsonRecord[]) {
   };
 }
 
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const direct = stringValue(value);
-    if (direct) {
-      return direct;
-    }
-    if (Array.isArray(value)) {
-      for (const entry of value) {
-        const nested = stringValue(entry);
-        if (nested) {
-          return nested;
-        }
-        if (isRecord(entry)) {
-          const ref = stringValue(entry.ref) ?? stringValue(entry.source_ref);
-          if (ref) {
-            return ref;
-          }
-        }
-      }
-    }
-  }
-  return null;
-}
-
 function normalizeLedgerStatus(status: string | null) {
-  if (status === 'closed' || status === 'closed_by_receipt_ref') {
-    return 'closed';
-  }
-  if (status === 'domain_owned_typed_blocker' || status === 'closed_by_domain_owned_typed_blocker') {
-    return 'domain_owned_typed_blocker';
-  }
-  return 'open';
+  return normalizeEvidenceTailStatus(status);
 }
 
 function defaultRequiredReceiptType(item: JsonRecord) {
@@ -180,25 +129,28 @@ function currentRef(item: JsonRecord) {
 }
 
 function normalizeNextActionItem(item: JsonRecord, index: number) {
-  const owner = firstString(item.owner, item.owner_group, item.domain_owner) ?? 'one-person-lab';
-  const domain = firstString(item.domain_id, item.domain, item.domain_owner, item.owner_group) ?? owner;
-  const stage = firstString(item.stage_id);
-  const request = firstString(item.request_id, item.gate_id);
-  const status = normalizeLedgerStatus(stringValue(item.status));
+  const requirement = evidenceRequirementFromTailItem(item);
+  const owner = requirement.owner;
+  const domain = requirement.domain_id;
+  const stage = requirement.stage_id;
+  const request = requirement.request_id;
+  const status = normalizeLedgerStatus(requirement.status);
   return {
-    item_id: `next-action:${firstString(item.tail_id, item.item_id) ?? index + 1}`,
-    source_tail_item_id: firstString(item.tail_id, item.item_id),
+    item_id: `next-action:${firstString(item.tail_id, item.item_id, requirement.requirement_id) ?? index + 1}`,
+    source_tail_item_id: firstString(item.tail_id, item.item_id, requirement.requirement_id),
     status,
     owner,
     domain,
-    stage_or_request: stage ?? request ?? firstString(item.claim_scope, item.tail_item) ?? 'production_tail',
+    stage_or_request: stage ?? request ?? requirement.claim_scope,
     stage_id: stage,
     request_id: request,
     required_receipt_type:
-      firstString(item.required_receipt_type, item.required_receipt_shape) ?? defaultRequiredReceiptType(item),
-    current_ref: currentRef(item),
-    next_safe_action_route: nextSafeActionRoute(item, status),
+      firstString(requirement.required_receipt_type, item.required_receipt_shape) ?? defaultRequiredReceiptType(item),
+    current_ref: requirement.current_ref ?? currentRef(item),
+    next_safe_action_route: nextSafeActionRoute({ ...item, next_safe_action_route: requirement.next_safe_action_route }, status),
     blocking_policy: firstString(item.blocking_policy) ?? PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
+    evidence_requirement_model: 'evidence_requirement.v1',
+    evidence_requirement: requirement,
     authority_boundary: tailAuthorityBoundary({
       source_authority_boundary: isRecord(item.authority_boundary) ? item.authority_boundary : null,
       current_ref_is_locator_only: true,
@@ -273,7 +225,7 @@ export function buildProductionTailNextActionLedger(input: {
   };
 }
 
-function closureTailItem(input: {
+export function buildCanonicalEvidenceTailItem(input: {
   tailId: string;
   tailItem: string;
   status: 'open' | 'closed' | 'domain_owned_typed_blocker';
@@ -286,45 +238,43 @@ function closureTailItem(input: {
   currentRef?: string | null;
   nextSafeActionRoute?: string | null;
   receiptRef?: string | null;
+  receiptRefs?: string[];
   typedBlockerRef?: string | null;
+  typedBlockerRefs?: string[];
   replayRef?: string | null;
   freshnessRef?: string | null;
+  freshnessRefs?: string[];
   evidenceRefs?: string[];
+  expectedRefs?: string[];
   nextVerificationCommand?: string | null;
 }) {
-  return {
-    tail_id: input.tailId,
-    tail_item: input.tailItem,
+  return evidenceTailItem({
+    tailId: input.tailId,
+    tailItem: input.tailItem,
     status: input.status,
-    owner_group: input.ownerGroup,
-    owner: input.ownerGroup,
-    domain_id: input.domainId ?? input.ownerGroup,
-    domain_owner: input.ownerGroup,
-    stage_id: input.stageId ?? null,
-    request_id: input.requestId ?? null,
-    claim_scope: input.claimScope,
-    required_receipt_type: input.requiredReceiptType ?? 'declared_owner_receipt_or_typed_blocker',
-    current_ref: input.currentRef ?? null,
-    next_safe_action_route: input.nextSafeActionRoute ?? null,
-    receipt_ref: input.receiptRef ?? null,
-    typed_blocker_ref: input.typedBlockerRef ?? null,
-    replay_ref: input.replayRef ?? null,
-    freshness_ref: input.freshnessRef ?? null,
-    evidence_refs: input.evidenceRefs ?? [],
-    evidence_ref: input.receiptRef ?? input.typedBlockerRef ?? input.evidenceRefs?.[0] ?? null,
-    next_verification_command: input.nextVerificationCommand ?? null,
-    not_authorized_claims: [
-      'domain_ready',
-      'quality_verdict',
-      'artifact_authority',
-      'memory_body_access',
-      'production_ready',
-    ],
-    blocking_policy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
-    authority_boundary: tailAuthorityBoundary({
+    ownerGroup: input.ownerGroup,
+    domainId: input.domainId,
+    stageId: input.stageId,
+    requestId: input.requestId,
+    claimScope: input.claimScope,
+    requiredReceiptType: input.requiredReceiptType,
+    currentRef: input.currentRef,
+    nextSafeActionRoute: input.nextSafeActionRoute,
+    receiptRef: input.receiptRef,
+    receiptRefs: input.receiptRefs ?? (input.receiptRef ? [input.receiptRef] : []),
+    typedBlockerRef: input.typedBlockerRef,
+    typedBlockerRefs: input.typedBlockerRefs ?? (input.typedBlockerRef ? [input.typedBlockerRef] : []),
+    replayRef: input.replayRef,
+    freshnessRef: input.freshnessRef,
+    freshnessRefs: input.freshnessRefs,
+    evidenceRefs: input.evidenceRefs,
+    expectedRefs: input.expectedRefs,
+    nextVerificationCommand: input.nextVerificationCommand,
+    blockingPolicy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
+    authorityBoundary: {
       receipt_or_blocker_is_domain_owned_claim_only: true,
-    }),
-  };
+    },
+  });
 }
 
 export function buildConformanceProductionEvidenceTailLedger(conformanceReport: JsonRecord) {
@@ -355,30 +305,29 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
   const missingReceiptCount = numberValue(cadenceWindow.missing_slo_execution_receipt_count);
   const providerTailItems = longWindowReady
     ? []
-    : [{
-        tail_id: `framework:provider:${providerKind}_long_soak_evidence`,
-        tail_item: 'provider_long_window_slo_evidence',
+    : [evidenceTailItem({
+        tailId: `framework:provider:${providerKind}_long_soak_evidence`,
+        tailItem: 'provider_long_window_slo_evidence',
         status: 'open',
-        owner: 'one-person-lab',
-        owner_group: 'one-person-lab',
-        domain_id: 'one-person-lab',
-        domain_owner: 'one-person-lab',
-        stage_id: null,
-        request_id: 'provider_long_window_slo_evidence',
-        required_receipt_type: 'provider_slo_execution_receipt',
-        current_ref: stringValue(input.providerContinuousProof.ref)
+        ownerGroup: 'one-person-lab',
+        domainId: 'one-person-lab',
+        requestId: 'provider_long_window_slo_evidence',
+        claimScope: 'provider_scheduler_cadence',
+        requiredReceiptType: 'provider_slo_execution_receipt',
+        currentRef: stringValue(input.providerContinuousProof.ref)
           ?? '/runtime_tray_snapshot/provider_continuous_proof',
-        next_safe_action_route: `opl family-runtime residency proof --provider ${providerKind} --production`,
-        evidence_ref: null,
-        doc_ref: 'docs/active/production-framework-closure-gap-matrix.md#production_temporal_residency',
-        next_verification_command: `opl family-runtime residency proof --provider ${providerKind} --production`,
-        missing_receipt_count: missingReceiptCount,
-        blocking_policy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
-        authority_boundary: tailAuthorityBoundary({
+        nextSafeActionRoute: `opl family-runtime residency proof --provider ${providerKind} --production`,
+        docRef: 'docs/active/production-framework-closure-gap-matrix.md#production_temporal_residency',
+        nextVerificationCommand: `opl family-runtime residency proof --provider ${providerKind} --production`,
+        blockingPolicy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
+        authorityBoundary: {
           provider_completion_can_claim_domain_ready: false,
           provider_history_can_claim_quality_verdict: false,
-        }),
-      }];
+        },
+        extra: {
+          missing_receipt_count: missingReceiptCount,
+        },
+      })];
   const attemptTailItems = (input.stageAttempts ?? []).flatMap((attempt, index) => {
     const routeImpact = record(attempt.route_impact);
     const ownerReceiptRefs = [
@@ -393,30 +342,33 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
       return [];
     }
     const stageAttemptId = stringValue(attempt.stage_attempt_id) ?? `attempt:${index + 1}`;
-    return [{
-      tail_id: `stage_attempt:${stageAttemptId}:domain_owner_chain_evidence`,
-      tail_item: 'stage_attempt_domain_owner_chain_evidence',
+    return [evidenceTailItem({
+      tailId: `stage_attempt:${stageAttemptId}:domain_owner_chain_evidence`,
+      tailItem: 'stage_attempt_domain_owner_chain_evidence',
       status: typedBlockerRefs.length > 0 ? 'domain_owned_typed_blocker' : 'closed',
-      owner: stringValue(attempt.domain_id) ?? 'domain_repo',
-      owner_group: stringValue(attempt.domain_id) ?? 'domain_repo',
-      domain_id: stringValue(attempt.domain_id) ?? 'domain_repo',
-      domain_owner: stringValue(attempt.domain_id) ?? 'domain_repo',
-      stage_id: stringValue(attempt.stage_id),
-      request_id: stageAttemptId,
-      required_receipt_type: 'stage_attempt_owner_receipt_or_domain_typed_blocker',
-      current_ref: ownerReceiptRefs[0] ?? typedBlockerRefs[0] ?? null,
-      next_safe_action_route: `opl family-runtime attempt query ${stageAttemptId}`,
-      evidence_ref: ownerReceiptRefs[0] ?? typedBlockerRefs[0] ?? null,
-      doc_ref: null,
-      next_verification_command: `opl family-runtime attempt query ${stageAttemptId}`,
-      owner_receipt_refs: ownerReceiptRefs,
-      typed_blocker_refs: typedBlockerRefs,
-      blocking_policy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
-      authority_boundary: tailAuthorityBoundary({
+      ownerGroup: stringValue(attempt.domain_id) ?? 'domain_repo',
+      domainId: stringValue(attempt.domain_id) ?? 'domain_repo',
+      stageId: stringValue(attempt.stage_id),
+      requestId: stageAttemptId,
+      claimScope: 'stage_attempt_owner_receipt',
+      requiredReceiptType: 'stage_attempt_owner_receipt_or_domain_typed_blocker',
+      currentRef: ownerReceiptRefs[0] ?? typedBlockerRefs[0] ?? null,
+      nextSafeActionRoute: `opl family-runtime attempt query ${stageAttemptId}`,
+      receiptRef: ownerReceiptRefs[0],
+      receiptRefs: ownerReceiptRefs,
+      typedBlockerRef: typedBlockerRefs[0],
+      typedBlockerRefs,
+      evidenceRefs: [...ownerReceiptRefs, ...typedBlockerRefs],
+      nextVerificationCommand: `opl family-runtime attempt query ${stageAttemptId}`,
+      blockingPolicy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
+      authorityBoundary: {
         owner_receipt_can_claim_domain_ready_for_opl: false,
         typed_blocker_can_claim_domain_ready_for_opl: false,
-      }),
-    }];
+      },
+      extra: {
+        owner_receipt_refs: ownerReceiptRefs,
+      },
+    })];
   });
   const drilldown = record(input.appOperatorDrilldown);
   const stageEvidence = record(drilldown.stage_production_evidence);
@@ -429,7 +381,7 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
     const stageId = stringValue(stage.stage_id) ?? 'unknown_stage';
     const typedBlockerRefs = stringList(stage.typed_blocker_refs);
     const receiptRefs = stringList(stage.observed_expected_receipt_refs);
-    return [closureTailItem({
+    return [buildCanonicalEvidenceTailItem({
       tailId: `stage:${domain}:${stageId}:production_evidence`,
       tailItem: 'stage_production_evidence',
       status: typedBlockerRefs.length > 0
@@ -475,7 +427,7 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
       ...stringList(item.receipt_refs),
       ...stringList(item.domain_receipt_refs),
     ];
-    return closureTailItem({
+    return buildCanonicalEvidenceTailItem({
       tailId: `external:${domain}:${requestId}`,
       tailItem: 'external_evidence_or_gate_request',
       status: typedBlockerRefs.length > 0
@@ -517,7 +469,7 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
     const domain = stringValue(item.domain_id) ?? 'domain_repo';
     const receiptRefs = stringList(item.receipt_refs);
     const typedBlockerRefs = stringList(item.typed_blocker_refs);
-    return closureTailItem({
+    return buildCanonicalEvidenceTailItem({
       tailId: `legacy:${domain}:${stringValue(item.action_id) ?? index + 1}`,
       tailItem: 'legacy_cleanup_ledger',
       status: typedBlockerRefs.length > 0
