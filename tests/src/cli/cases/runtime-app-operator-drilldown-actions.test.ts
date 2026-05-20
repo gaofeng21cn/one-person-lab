@@ -694,6 +694,10 @@ test('runtime action execute records and verifies stage production evidence rece
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).app_operator_drilldown;
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 1);
+    assert.equal(
+      drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
+      1,
+    );
     const route = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
@@ -710,6 +714,25 @@ test('runtime action execute records and verifies stage production evidence rece
     assert.equal(route.creates_owner_receipt, false);
     assert.equal(route.closes_expected_receipt_refs, false);
     assert.equal(route.closes_monitor_freshness, false);
+    assert.equal(
+      route.route_status_detail,
+      'record_route_available_waiting_for_domain_app_or_live_refs_payload',
+    );
+    assert.equal(
+      route.open_reason,
+      'unobserved_expected_receipt_or_monitor_freshness_refs_require_domain_app_or_live_payload_before_closure',
+    );
+    assert.equal(
+      route.payload_requirement,
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+    );
+    assert.equal(route.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(route.route_requires_domain_or_app_payload, true);
+    assert.equal(route.can_close_without_domain_or_app_payload, false);
+    assert.equal(
+      route.opl_generated_receipt_policy,
+      'OPL_must_not_generate_domain_owner_receipts_monitor_freshness_or_no_regression_refs',
+    );
     assert.equal(route.authority_boundary.can_write_domain_truth, false);
 
     const recordExecution = runCli([
@@ -745,6 +768,21 @@ test('runtime action execute records and verifies stage production evidence rece
     assert.equal(verifyRoute.action_kind, 'stage_production_evidence_receipt_verify');
     assert.equal(verifyRoute.closes_expected_receipt_refs, true);
     assert.equal(verifyRoute.closes_monitor_freshness, true);
+    assert.equal(
+      verifyRoute.route_status_detail,
+      'verify_route_available_for_recorded_refs_only_stage_evidence_receipt',
+    );
+    assert.equal(
+      verifyRoute.payload_requirement,
+      'previously_recorded_opl_refs_only_receipt_required_to_verify_stage_evidence',
+    );
+    assert.equal(verifyRoute.payload_owner, 'opl_external_evidence_ledger');
+    assert.equal(verifyRoute.route_requires_domain_or_app_payload, false);
+    assert.equal(verifyRoute.can_close_without_domain_or_app_payload, true);
+    assert.equal(
+      recordedDrilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
+      0,
+    );
 
     const verifyExecution = runCli([
       'runtime',

@@ -444,6 +444,10 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.operator_action_route_count, 24);
     assert.equal(drilldown.summary.operator_executable_route_count, 14);
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 2);
+    assert.equal(
+      drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
+      2,
+    );
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -752,6 +756,27 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(stageProductionAttemptStartRoute.authority_boundary.can_write_domain_truth, false);
     assert.equal(stageProductionAttemptStartRoute.authority_boundary.creates_domain_owner_receipt, false);
 
+    const stageProductionEvidenceRecordRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_kind: string; stage_id: string }) =>
+        ref.action_kind === 'stage_production_evidence_receipt_record'
+        && ref.stage_id === 'review',
+    );
+    assert.equal(
+      stageProductionEvidenceRecordRoute.route_status_detail,
+      'record_route_available_waiting_for_domain_app_or_live_refs_payload',
+    );
+    assert.equal(
+      stageProductionEvidenceRecordRoute.payload_requirement,
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+    );
+    assert.equal(stageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(stageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
+    assert.equal(stageProductionEvidenceRecordRoute.can_close_without_domain_or_app_payload, false);
+    assert.equal(
+      stageProductionEvidenceRecordRoute.open_reason,
+      'unobserved_expected_receipt_or_monitor_freshness_refs_require_domain_app_or_live_payload_before_closure',
+    );
+
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',
     );
@@ -827,6 +852,21 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       ),
       true,
     );
+    const bridgeStageProductionEvidenceRecordRoute = drilldown.app_execution_bridge.safe_action_routes.find(
+      (ref: { action_id: string }) => ref.action_id === stageProductionEvidenceRecordRoute.action_id,
+    );
+    assert.equal(bridgeStageProductionEvidenceRecordRoute.can_submit_to_safe_action_shell, true);
+    assert.equal(
+      bridgeStageProductionEvidenceRecordRoute.route_status_detail,
+      'record_route_available_waiting_for_domain_app_or_live_refs_payload',
+    );
+    assert.equal(
+      bridgeStageProductionEvidenceRecordRoute.payload_requirement,
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+    );
+    assert.equal(bridgeStageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(bridgeStageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
+    assert.equal(bridgeStageProductionEvidenceRecordRoute.can_close_without_domain_or_app_payload, false);
     assert.equal(
       drilldown.app_execution_bridge.route_submission_policy.domain_routes_are_queued_for_approval,
       true,
