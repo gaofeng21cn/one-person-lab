@@ -587,3 +587,13 @@ test('agent-lab command surface does not embed the independent meta-agent produc
   assert.equal(examples.some((example) => example.includes('meta-builder')), false);
   assert.equal(examples.some((example) => example.includes('meta-agent')), false);
 });
+
+test('agent-lab command surface does not add domain-specific production evidence lanes', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+  const examples = output.help.examples as string[];
+
+  assert.equal(commands.some((command: string) => command === 'agent-lab mag-live-acceptance'), false);
+  assert.equal(commands.some((command: string) => command.includes('mag-live-acceptance')), false);
+  assert.equal(examples.some((example) => example.includes('mag-live-acceptance')), false);
+});

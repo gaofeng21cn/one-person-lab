@@ -539,6 +539,7 @@ test('agents conformance reads domain-owned production acceptance evidence witho
       owner_receipt_refs: ['receipt:mag/production-default-caller'],
       doc_refs: ['docs/status.md#production-acceptance'],
       next_verification_command_refs: ['mag production acceptance --json'],
+      agent_lab_handoff_refs: ['agent-lab-handoff:mag/owner-receipt-scaleout'],
     },
     authority_boundary: {
       domain_ready_claimed: false,
@@ -612,6 +613,10 @@ test('agents conformance reads domain-owned production acceptance evidence witho
   assert.equal(
     mag.evidence_tail_classification.tail_items[0].next_verification_command,
     'mag production acceptance --json',
+  );
+  assert.deepEqual(
+    mag.evidence_tail_classification.tail_items[0].advisory_refs.agent_lab_handoff_refs,
+    ['agent-lab-handoff:mag/owner-receipt-scaleout'],
   );
   assert.equal(mag.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
 
