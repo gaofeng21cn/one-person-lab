@@ -1,7 +1,13 @@
 import { stableId } from './family-runtime-ids.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY, FORBIDDEN_TRUE_AUTHORITY_FLAGS } from './agent-lab-authority.ts';
+import {
+  isFixtureReviewReceipt,
+  REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS,
+} from './agent-lab-independent-ai-review.ts';
 import { mechanismEvolutionInputRefs, mechanismEvolutionInputsForTask } from './agent-lab-mechanism-inputs.ts';
 import { buildProductionEvidenceGateResult } from './agent-lab-production-evidence.ts';
+export { REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS } from './agent-lab-independent-ai-review.ts';
+export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -80,24 +86,6 @@ export type AgentLabScorecard = {
   quality_gate_refs: string[];
   authority_boundary?: JsonRecord;
 };
-
-export const REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS = [
-  'receipt_ref',
-  'receipt_source',
-  'assessment_mode',
-  'reviewer_ref',
-  'reviewer_agent_ref',
-  'reviewed_mechanism_candidate_ref',
-  'execution_attempt_ref',
-  'review_attempt_ref',
-  'request_ref',
-  'response_ref',
-  'evidence_refs',
-  'no_shared_context',
-  'forbidden_write_scan_ref',
-  'verdict',
-  'risk_tier',
-];
 
 export type AgentLabIndependentAiReviewAssessment = {
   surface_kind: 'opl_agent_lab_independent_ai_review_assessment';
@@ -278,17 +266,6 @@ function stringList(value: unknown): string[] {
     return [];
   }
   return unique(value.filter((entry): entry is string => typeof entry === 'string'));
-}
-
-function isFixtureReviewReceipt(receiptSource: string, assessmentMode: string) {
-  return receiptSource === 'synthetic_fixture'
-    || receiptSource === 'generated_fixture'
-    || receiptSource === 'fixture'
-    || receiptSource.endsWith('_fixture')
-    || assessmentMode === 'synthetic_fixture'
-    || assessmentMode === 'generated_fixture'
-    || assessmentMode === 'fixture_receipt'
-    || assessmentMode.endsWith('_fixture');
 }
 
 export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLabIndependentAiReviewAssessment {
@@ -1014,24 +991,4 @@ export function buildSampleAgentLabSuite(): AgentLabSuite {
 
 export function buildSampleAgentLabResult() {
   return runAgentLabSuite(buildSampleAgentLabSuite());
-}
-
-export function agentLabRefSummary(result: ReturnType<typeof runAgentLabSuite>) {
-  return {
-    surface_kind: 'opl_agent_lab_ref_summary',
-    suite_id: result.suite_id,
-    status: result.status,
-    task_refs: result.refs.task_refs,
-    scorecard_refs: result.refs.domain_quality_scorecard_refs,
-    recovery_probe_refs: result.refs.recovery_probe_refs,
-    improvement_candidate_refs: result.refs.improvement_candidate_refs,
-    promotion_gate_refs: result.refs.promotion_gate_refs,
-    production_evidence_gate_result_refs: result.refs.production_evidence_gate_result_refs,
-    production_evidence_gate_refs: result.refs.production_evidence_gate_refs,
-    production_evidence_owner_route_refs: result.refs.production_evidence_owner_route_refs,
-    production_evidence_typed_blocker_refs: result.refs.production_evidence_typed_blocker_refs,
-    production_evidence_required_receipt_refs: result.refs.production_evidence_required_receipt_refs,
-    blocked_run_count: result.summary.blocked_run_count,
-    authority_boundary: result.authority_boundary,
-  };
 }
