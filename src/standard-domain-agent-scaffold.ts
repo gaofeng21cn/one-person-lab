@@ -331,6 +331,8 @@ function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile
             'declarative_pack',
             'minimal_authority_function',
             'refs_only_domain_adapter',
+            'domain_handler_target',
+            'native_helper_implementation',
             'temporary_migration_bridge',
             'diagnostic_cleanup_path',
             'provenance_or_fixture',

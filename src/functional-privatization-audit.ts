@@ -181,6 +181,8 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
     'declarative_pack',
     'minimal_authority_function',
     'refs_only_domain_adapter',
+    'domain_handler_target',
+    'native_helper_implementation',
     'temporary_migration_bridge',
     'diagnostic_cleanup_path',
     'provenance_or_fixture',
@@ -453,6 +455,8 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
     || text === 'refs_only_adapter'
     || text === 'refs_only_domain_adapter'
     || text === 'refs_only_projection'
+    || text === 'domain_handler_target'
+    || text === 'domain_handler_target_only'
   ) {
     return 'refs_only_domain_adapter';
   }
@@ -477,6 +481,8 @@ function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
     text === 'minimal_authority_function'
     || text === 'domain_minimal_authority_function'
     || text === 'authority_function'
+    || text === 'native_helper_implementation'
+    || text === 'domain_specific_native_helper_implementation'
   ) {
     return 'minimal_authority_function';
   }
