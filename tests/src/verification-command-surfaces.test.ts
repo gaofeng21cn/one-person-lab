@@ -29,6 +29,12 @@ function listJsonFiles(relativeDir: string): string[] {
 test('repo hygiene blocks generated tmp artifacts from git', () => {
   const gitignore = read('.gitignore');
   assert.match(gitignore, /^tmp\/$/m);
+  assert.match(gitignore, /^build\/$/m);
+  assert.match(gitignore, /^out\/$/m);
+  assert.match(gitignore, /^\.venv\/$/m);
+  assert.match(gitignore, /^\.pytest_cache\/$/m);
+  assert.match(gitignore, /^\*\.egg-info\/$/m);
+  assert.match(gitignore, /^coverage\/$/m);
 
   const result = spawnSync('git', ['ls-files', 'tmp'], {
     cwd: repoRoot,
@@ -37,6 +43,57 @@ test('repo hygiene blocks generated tmp artifacts from git', () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout.trim(), '');
+
+  const hygieneScript = read('scripts/repo-hygiene.sh');
+  assert.match(hygieneScript, /git ls-files --others --exclude-standard/);
+  assert.match(hygieneScript, /Route the producer to OPL_REPO_TEMP_ROOT/);
+  assert.match(hygieneScript, /scripts\/repo-hygiene\.sh \[--fix\]/);
+});
+
+test('repo temp env wrapper routes tool caches outside the checkout', () => {
+  const result = spawnSync('bash', [
+    'scripts/run-with-repo-temp-env.sh',
+    process.execPath,
+    '-e',
+    [
+      'const keys = [',
+      '"OPL_REPO_TEMP_ENV_ACTIVE",',
+      '"OPL_REPO_TEMP_ROOT",',
+      '"TMPDIR",',
+      '"PYTHONPYCACHEPREFIX",',
+      '"PYTEST_ADDOPTS",',
+      '"UV_PROJECT_ENVIRONMENT",',
+      '"NPM_CONFIG_CACHE",',
+      '"NODE_COMPILE_CACHE",',
+      '"CARGO_TARGET_DIR",',
+      '"XDG_CACHE_HOME"',
+      '];',
+      'console.log(JSON.stringify(Object.fromEntries(keys.map((key) => [key, process.env[key]]))));',
+    ].join(' '),
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const env = JSON.parse(result.stdout) as Record<string, string>;
+  const tempRoot = env.OPL_REPO_TEMP_ROOT;
+
+  assert.equal(env.OPL_REPO_TEMP_ENV_ACTIVE, '1');
+  assert.equal(path.isAbsolute(tempRoot), true);
+  assert.equal(tempRoot.startsWith(repoRoot), false);
+  [
+    env.TMPDIR,
+    env.PYTHONPYCACHEPREFIX,
+    env.UV_PROJECT_ENVIRONMENT,
+    env.NPM_CONFIG_CACHE,
+    env.NODE_COMPILE_CACHE,
+    env.CARGO_TARGET_DIR,
+    env.XDG_CACHE_HOME,
+  ].forEach((value) => {
+    assert.equal(value.startsWith(tempRoot), true);
+  });
+  assert.match(env.PYTEST_ADDOPTS, new RegExp(`cache_dir=${tempRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 });
 
 test('tracked files do not contain Google API key literals', () => {
@@ -112,6 +169,8 @@ test('machine-readable framework contracts do not pin human docs paths', () => {
 test('scripts/verify.sh provides the canonical verification wrapper', () => {
   const verifyScript = read('scripts/verify.sh');
 
+  assert.match(verifyScript, /run-with-repo-temp-env\.sh/);
+  assert.match(verifyScript, /OPL_REPO_TEMP_ENV_ACTIVE/);
   assert.match(verifyScript, /node scripts\/line-budget\.mjs/);
   assert.equal(
     (verifyScript.match(/node scripts\/line-budget\.mjs/g) ?? []).length,
@@ -153,6 +212,11 @@ test('OPL harness pytest cache defaults outside the checkout', () => {
 test('node test lanes propagate Python cache isolation to spawned tests', () => {
   const testLanes = read('scripts/test-lanes.mjs');
 
+  assert.match(testLanes, /OPL_REPO_TEMP_ROOT/);
+  assert.match(testLanes, /NODE_COMPILE_CACHE/);
+  assert.match(testLanes, /NPM_CONFIG_CACHE/);
+  assert.match(testLanes, /UV_PROJECT_ENVIRONMENT/);
+  assert.match(testLanes, /CARGO_TARGET_DIR/);
   assert.match(testLanes, /opl-node-test-python-cache-/);
   assert.match(testLanes, /PYTHONDONTWRITEBYTECODE/);
   assert.match(testLanes, /PYTHONPYCACHEPREFIX/);
@@ -163,11 +227,15 @@ test('node test lanes propagate Python cache isolation to spawned tests', () => 
 test('native helper prebuild script handles platform executable names', () => {
   const prebuildScript = read('scripts/native-helper-prebuild.mjs');
   const cacheScript = read('scripts/native-helper-cache.mjs');
+  const smokeScript = read('scripts/native-helper-family-smoke.mjs');
   const runtime = read('src/native-helper-runtime.ts');
 
   assert.match(prebuildScript, /targetTriple\.startsWith\('win32-'\)/);
   assert.match(prebuildScript, /--force-local/);
+  assert.match(prebuildScript, /process\.env\.CARGO_TARGET_DIR/);
   assert.match(cacheScript, /process\.platform === 'win32'/);
+  assert.match(cacheScript, /process\.env\.CARGO_TARGET_DIR/);
+  assert.match(smokeScript, /process\.env\.CARGO_TARGET_DIR/);
   assert.match(runtime, /nativeHelperExecutableName/);
 });
 

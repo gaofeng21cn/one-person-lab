@@ -251,12 +251,13 @@ function resolveSourceDir() {
   if (explicit) {
     return path.resolve(explicit);
   }
-  for (const candidate of [path.join(rootDir, 'target', 'release'), path.join(rootDir, 'target', 'debug')]) {
+  const cargoTargetRoot = process.env.CARGO_TARGET_DIR ?? path.join(rootDir, 'target');
+  for (const candidate of [path.join(cargoTargetRoot, 'release'), path.join(cargoTargetRoot, 'debug')]) {
     if (helperBinaries.every((binary) => fs.existsSync(path.join(candidate, binaryFileName(binary))))) {
       return candidate;
     }
   }
-  return path.join(rootDir, 'target', 'release');
+  return path.join(cargoTargetRoot, 'release');
 }
 
 function restoreReleaseArchive() {
