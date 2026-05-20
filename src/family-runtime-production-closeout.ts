@@ -64,6 +64,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function uniqueStringList(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+}
+
 function commandRef(args: string[]) {
   if (args[0] === 'agents') {
     return `opl ${args.join(' ')}`;
@@ -520,6 +524,136 @@ function nextSafeActions(
   }));
 }
 
+function stageEvidenceWorkorderItem(route: JsonRecord) {
+  const workorder = record(route.payload_workorder);
+  const actionId = stringValue(route.action_id);
+  const typedBlockerPath = record(workorder.typed_blocker_path);
+  return {
+    item_id: `stage-evidence-workorder:${actionId ?? 'unknown'}`,
+    action_id: actionId,
+    action_kind: stringValue(route.action_kind),
+    domain_id: stringValue(route.domain_id),
+    target_domain_id: stringValue(route.target_domain_id),
+    project_id: stringValue(route.project_id),
+    stage_id: stringValue(route.stage_id),
+    request_id: stringValue(route.request_id),
+    request_pack_id: stringValue(route.request_pack_id),
+    payload_owner: stringValue(route.payload_owner) ?? stringValue(workorder.payload_owner),
+    route_requires_domain_or_app_payload: route.route_requires_domain_or_app_payload === true,
+    can_close_without_domain_or_app_payload: route.can_close_without_domain_or_app_payload !== false,
+    action_ref: stringValue(route.ref) ?? stringValue(route.action_ref),
+    payload_template: record(route.payload_template),
+    required_evidence_refs: stringList(route.required_evidence_refs),
+    expected_receipt_refs: stringList(route.expected_receipt_refs),
+    unobserved_expected_receipt_refs: stringList(route.unobserved_expected_receipt_refs),
+    monitor_refs: stringList(route.monitor_refs),
+    unobserved_monitor_refs: stringList(route.unobserved_monitor_refs),
+    payload_workorder: workorder,
+    accepted_payload_fields: stringList(workorder.accepted_payload_fields),
+    success_path_requires: record(workorder.success_path_requires),
+    typed_blocker_path: typedBlockerPath,
+    typed_blocker_path_available: typedBlockerPath.accepted === true,
+    rejected_payload_policy: stringList(workorder.rejected_payload_policy),
+    authority_boundary: {
+      route: isRecord(route.authority_boundary) ? route.authority_boundary : {},
+      workorder: isRecord(workorder.authority_boundary) ? workorder.authority_boundary : {},
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_generate_domain_owner_receipt: false,
+      can_generate_monitor_freshness: false,
+    },
+  };
+}
+
+function buildStageEvidenceWorkorderPacket(operatorRoutes: JsonRecord[]) {
+  const items = operatorRoutes
+    .filter((route) =>
+      stringValue(route.action_kind) === 'stage_production_evidence_receipt_record'
+      && route.route_requires_domain_or_app_payload === true
+      && record(route.payload_workorder).surface_kind === 'opl_stage_production_evidence_payload_workorder'
+    )
+    .map(stageEvidenceWorkorderItem);
+  const domainIds = uniqueStringList(items.map((item) => item.domain_id));
+  const stageIds = uniqueStringList(items.map((item) =>
+    item.domain_id && item.stage_id ? `${item.domain_id}:${item.stage_id}` : null
+  ));
+  return {
+    surface_kind: 'opl_stage_evidence_workorder_packet',
+    packet_policy:
+      'refs_only_operator_workorders_for_stage_expected_receipt_and_monitor_freshness_closure',
+    source_ref: '/runtime_tray_snapshot/app_operator_drilldown/operator_action_routing_refs',
+    action_execution_surface: 'opl runtime action execute',
+    summary: {
+      workorder_count: items.length,
+      domain_count: domainIds.length,
+      stage_count: stageIds.length,
+      domain_ids: domainIds,
+      route_requires_domain_or_app_payload_count:
+        items.filter((item) => item.route_requires_domain_or_app_payload).length,
+      typed_blocker_path_available_count:
+        items.filter((item) => item.typed_blocker_path_available).length,
+      payload_template_count:
+        items.filter((item) => Object.keys(item.payload_template).length > 0).length,
+      success_payload_owner: 'domain_repository_or_app_live_operator',
+    },
+    workorders: items,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_or_export: false,
+      can_generate_domain_owner_receipt: false,
+      can_generate_monitor_freshness: false,
+      closes_stage_complete: false,
+      closes_production_ready: false,
+    },
+  };
+}
+
+function buildEvidenceRequirementLedger(closeoutItems: ReturnType<typeof readOnlyCloseoutItem>[]) {
+  const requirements = closeoutItems.map((item) => item.evidence_requirement);
+  const domainIds = uniqueStringList(requirements.map((requirement) => requirement.domain_id));
+  const ownerIds = uniqueStringList(requirements.map((requirement) => requirement.owner));
+  const stageKeys = uniqueStringList(requirements.map((requirement) =>
+    requirement.stage_id ? `${requirement.domain_id}:${requirement.stage_id}` : null
+  ));
+  return {
+    surface_kind: 'opl_evidence_requirement_ledger',
+    model_version: EVIDENCE_REQUIREMENT_MODEL_VERSION,
+    ledger_policy:
+      'canonical_refs_only_requirement_projection_without_domain_truth_artifact_or_memory_body_access',
+    source_ref: '/family_runtime_production_closeout/closeout_items',
+    summary: {
+      requirement_count: requirements.length,
+      open_requirement_count:
+        requirements.filter((requirement) => requirement.status === 'open').length,
+      closed_requirement_count:
+        requirements.filter((requirement) => requirement.status === 'closed').length,
+      typed_blocker_requirement_count:
+        requirements.filter((requirement) => requirement.status === 'domain_owned_typed_blocker').length,
+      domain_count: domainIds.length,
+      owner_count: ownerIds.length,
+      stage_count: stageKeys.length,
+      domain_ids: domainIds,
+      model_version: EVIDENCE_REQUIREMENT_MODEL_VERSION,
+    },
+    requirements,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_mutate_artifact: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_claim_production_ready: false,
+      refs_only: true,
+    },
+  };
+}
+
 export async function runFamilyRuntimeProductionCloseout(
   contracts: FrameworkContracts,
   input: ProductionCloseoutInput,
@@ -530,6 +664,8 @@ export async function runFamilyRuntimeProductionCloseout(
   });
   const drilldown = record(snapshot.runtime_tray_snapshot.app_operator_drilldown);
   const bridge = record(drilldown.app_execution_bridge);
+  const operatorActionRouting = record(drilldown.operator_action_routing_refs);
+  const operatorRoutes = recordList(operatorActionRouting.refs);
   const routes = recordList(bridge.safe_action_routes).filter((route) =>
     readOnlyRouteMatchesDefaults(route, input)
   );
@@ -555,6 +691,8 @@ export async function runFamilyRuntimeProductionCloseout(
     tailItems: closeoutItems,
     sourceRef: '/family_runtime_production_closeout/closeout_items',
   });
+  const evidenceRequirementLedger = buildEvidenceRequirementLedger(closeoutItems);
+  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
   const counts = closeoutCounts(closeoutItems, openItems, closedItems, nextActionLedger);
   const detailLevel = input.detailLevel ?? 'summary';
   const commonPayload = {
@@ -593,6 +731,8 @@ export async function runFamilyRuntimeProductionCloseout(
         closeout_items: closeoutItems,
         attention_queue: openItems.map(attentionQueueItem),
         next_action_ledger: nextActionLedger,
+        evidence_requirement_ledger: evidenceRequirementLedger,
+        stage_evidence_workorder_packet: stageEvidenceWorkorderPacket,
       },
     };
   }
