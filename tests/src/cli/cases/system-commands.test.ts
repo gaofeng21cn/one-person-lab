@@ -1,6 +1,10 @@
 import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+import {
+  familyStageDiagnosticLensCommands,
+  familyStageDerivedLensByCommand,
+} from '../../../../src/family-stage-derived-lenses.ts';
 import { buildDomainManifestCatalog } from '../../../../src/management/domain-manifest-catalog.ts';
 import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/management/readiness.ts';
 import { buildOplDashboard } from '../../../../src/management/runtime-dashboard.ts';
@@ -203,10 +207,60 @@ test('help supports explicit text output for human readers', () => {
   assert.match(root.stdout, /One Person Lab \(OPL\)/);
   assert.match(root.stdout, /Fast start:/);
   assert.match(root.stdout, /opl install/);
+  assert.match(root.stdout, /opl stages readiness --domain mas/);
+  assert.doesNotMatch(root.stdout, /capacity-budget/);
+  assert.doesNotMatch(root.stdout, /domain-validity/);
 
   const scoped = runCliRaw(['help', 'install', '--text']);
   assert.match(scoped.stdout, /One Person Lab command: install/);
   assert.match(scoped.stdout, /One-shot install/);
+});
+
+test('default help surface recommends stages readiness and hides diagnostic stage lenses', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+  const examples = output.help.examples.join('\n');
+
+  assert.equal(commands.includes('stages readiness'), true);
+  assert.match(examples, /opl stages readiness --domain mas/);
+  assert.doesNotMatch(examples, /capacity-budget/);
+  assert.doesNotMatch(examples, /domain-validity/);
+
+  for (const command of familyStageDiagnosticLensCommands()) {
+    assert.equal(commands.includes(command), false);
+    assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
+    const scopedHelp = runCli(['help', ...command.split(' ')]);
+    assert.equal(scopedHelp.help.command, command);
+    assert.match(scopedHelp.help.summary, /Diagnostic drilldown/);
+  }
+});
+
+test('public stage diagnostic commands require centralized derived-lens registry declarations', () => {
+  const contracts = loadFrameworkContracts({ contractsDir });
+  const publicSpecs = buildPublicCommandSpecs(
+    buildInternalCommandSpecs(
+      {
+        helpRequested: false,
+        jsonOutput: true,
+        textOutput: false,
+        command: null,
+        args: [],
+        loadOptions: { contractsDir },
+      },
+      () => contracts,
+    ),
+    () => contracts,
+  );
+
+  for (const [command, spec] of Object.entries(publicSpecs)) {
+    if (command.startsWith('stages ') && spec.help_surface === 'diagnostic_drilldown') {
+      assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
+    }
+  }
+
+  for (const command of familyStageDiagnosticLensCommands()) {
+    assert.equal(publicSpecs[command]?.help_surface, 'diagnostic_drilldown');
+  }
 });
 
 test('removed UI adapter command surfaces are not retained as compatibility aliases', () => {

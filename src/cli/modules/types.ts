@@ -8,6 +8,7 @@ type CommandSpec = {
   examples: string[];
   handler: CommandHandler;
   group?: string;
+  help_surface?: 'default' | 'diagnostic_drilldown';
 };
 
 type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';
