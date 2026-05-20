@@ -35,6 +35,13 @@
       "type": "object",
       "additionalProperties": true
     },
+    "replay_evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/surface_ref"
+      },
+      "description": "Refs-only replay evidence declared at plane level for readiness/replay projection. Classification is explicit via each ref role/ref_kind and grants no OPL execution, domain truth, domain-ready, or quality-verdict authority."
+    },
     "stages": {
       "type": "array",
       "minItems": 1,
@@ -222,6 +229,13 @@
             "minLength": 1
           },
           "description": "Machine-readable refs to runtime boundary events recorded by the domain/runtime owner for effect-boundary or runtime-guarded stages; OPL checks declaration completeness only and does not emit these events."
+        },
+        "replay_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Refs-only replay evidence declared for this stage contract. Classification is explicit via each ref role/ref_kind, such as append_only_event_log_ref, attempt_ledger_ref, recorded_runtime_event_ref, or closeout_receipt_ref."
         },
         "runtime_assumptions": {
           "type": "array",

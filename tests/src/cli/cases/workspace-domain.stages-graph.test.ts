@@ -188,7 +188,11 @@ function buildAdmittedActionCatalog(targetDomainId: string, owner: string) {
   };
 }
 
-function buildAdmittedStagePlane(targetDomainId: string, owner: string) {
+function buildAdmittedStagePlane(
+  targetDomainId: string,
+  owner: string,
+  options: { replayEvidenceRefs?: boolean } = {},
+) {
   return {
     surface_kind: 'family_stage_control_plane',
     version: 'family-stage-control-plane.v1',
@@ -196,6 +200,20 @@ function buildAdmittedStagePlane(targetDomainId: string, owner: string) {
     target_domain_id: targetDomainId,
     owner,
     authority_boundary: { opl_role: 'projection_consumer_only' },
+    replay_evidence_refs: options.replayEvidenceRefs
+      ? [
+          {
+            ref_kind: 'append_only_event_log_ref',
+            ref: `event-log:${targetDomainId}/stages`,
+            role: 'append_only_event_log_ref',
+          },
+          {
+            ref_kind: 'attempt_ledger_ref',
+            ref: `attempt-ledger:opl/${targetDomainId}`,
+            role: 'attempt_ledger_ref',
+          },
+        ]
+      : [],
     stages: Array.from({ length: 6 }, (_entry, index) => {
       const stageNumber = index + 1;
       return {
@@ -222,6 +240,14 @@ function buildAdmittedStagePlane(targetDomainId: string, owner: string) {
           ensures: [`stage_${stageNumber}_receipt_ready`],
           boundary_assumptions: ['domain_truth_remains_domain_owned'],
           runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
+          replay_evidence_refs: options.replayEvidenceRefs
+            ? [
+                {
+                  role: 'recorded_runtime_event_ref',
+                  ref: `runtime_event:${targetDomainId}.stage_${stageNumber}`,
+                },
+              ]
+            : [],
           properties: [],
           runtime_assumptions: [],
           monitor_refs: [{ ref_kind: 'json_pointer', ref: `/runtime_inventory/stage_${stageNumber}`, role: 'runtime_assumption_monitor' }],
@@ -252,6 +278,14 @@ function withAdmittedStagePack(payload: JsonRecord, targetDomainId: string, owne
     attachManifestSurface(payload, 'family_action_catalog', buildAdmittedActionCatalog(targetDomainId, owner)),
     'family_stage_control_plane',
     buildAdmittedStagePlane(targetDomainId, owner),
+  );
+}
+
+function withReplayEvidenceStagePack(payload: JsonRecord, targetDomainId: string, owner: string) {
+  return attachManifestSurface(
+    attachManifestSurface(payload, 'family_action_catalog', buildAdmittedActionCatalog(targetDomainId, owner)),
+    'family_stage_control_plane',
+    buildAdmittedStagePlane(targetDomainId, owner, { replayEvidenceRefs: true }),
   );
 }
 
@@ -464,6 +498,46 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
     assert.equal(readiness.authority_boundary.can_replace_ai_expert_judgment, false);
     assert.equal(readiness.authority_boundary.contract_completeness_is_quality_verdict, false);
     assert.equal(readiness.authority_boundary.graphflow_runtime_dependency, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family stage readiness consumes declared replay evidence refs by default', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-readiness-replay-evidence-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const manifest = withReplayEvidenceStagePack(fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience');
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_readiness;
+
+    const replayCheck = readiness.checks.find((entry: { check_id: string }) => (
+      entry.check_id === 'replay_certification'
+    ));
+    assert.ok(replayCheck);
+    assert.equal(readiness.launch_readiness_status, 'launch_warning');
+    assert.equal(readiness.summary.replay_evidence_warning_count, 0);
+    assert.equal(replayCheck.status, 'ok');
+    assert.equal(replayCheck.warning_count, 0);
+    assert.equal(readiness.warnings.some((entry: { code: string }) => entry.code.includes('replay')), false);
+    assert.equal(readiness.warnings.every((entry: { code: string }) => entry.code.startsWith('runtime_budget_')), true);
+    assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -8,7 +8,10 @@ import { buildFamilyStageAdmissionReview } from '../../src/family-stage-admissio
 import type { FamilyActionCatalog } from '../../src/family-action-catalog-contract.ts';
 import type { FamilyStageControlPlane } from '../../src/family-stage-control-plane-contract.ts';
 import { buildFamilyStageProofBundle } from '../../src/family-stage-proof-bundle.ts';
-import { buildFamilyStageReplayCertification } from '../../src/family-stage-replay-certification.ts';
+import {
+  buildFamilyStageReplayCertification,
+  buildFamilyStageReplayEvidenceFromControlPlane,
+} from '../../src/family-stage-replay-certification.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -196,6 +199,57 @@ test('stage replay certification passes with append-only log, attempt ledger, ru
   assert.equal(certification.authority_boundary.can_requery_human, false);
   assert.equal(certification.authority_boundary.can_requery_external_system, false);
   assert.equal(certification.authority_boundary.can_write_domain_truth, false);
+});
+
+test('stage replay certification blocks when no replay evidence refs are declared', () => {
+  const certification = buildFamilyStageReplayCertification(proofBundle());
+
+  assert.equal(certification.replay_status, 'blocked');
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'append_only_event_log_ref_missing'));
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'attempt_ledger_ref_missing'));
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'runtime_event_ref_missing'));
+  assert.ok(certification.blockers.some((entry) => entry.blocker_id === 'expected_receipt_ref_missing'));
+  assert.equal(certification.authority_boundary.can_requery_ai, false);
+  assert.equal(certification.authority_boundary.can_requery_human, false);
+  assert.equal(certification.authority_boundary.can_requery_external_system, false);
+  assert.equal(certification.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(certification.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('stage replay certification consumes plane and stage-contract replay evidence refs', () => {
+  const plane = buildStagePlane();
+  plane.replay_evidence_refs = [
+    { ref_kind: 'append_only_event_log_ref', ref: 'event-log:mas/stages' },
+    { role: 'attempt_ledger_ref', ref: 'attempt-ledger:opl/mas' },
+  ];
+  const reviewStage = plane.stages.find((stage) => stage.stage_id === 'publication_review');
+  assert.ok(reviewStage?.stage_contract);
+  reviewStage.stage_contract.replay_evidence_refs = [
+    { role: 'recorded_runtime_event_ref', ref: 'runtime_event:publication_review.gate_recorded' },
+    { ref_kind: 'closeout_receipt_ref', ref: 'mas:publication_review_receipt' },
+    { ref_kind: 'owner_receipt_ref', ref: 'owner_receipt:publication_review' },
+    { role: 'replay_receipt_ref', ref_kind: 'receipt_ref', ref: 'human_gate:publication_quality_gate' },
+    { ref_kind: 'receipt_ref', ref: 'unclassified:receipt' },
+  ];
+
+  const evidence = buildFamilyStageReplayEvidenceFromControlPlane(plane);
+  assert.deepEqual(evidence, {
+    append_only_event_log_refs: ['event-log:mas/stages'],
+    attempt_ledger_refs: ['attempt-ledger:opl/mas'],
+    recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
+    closeout_receipt_refs: [
+      'mas:publication_review_receipt',
+      'owner_receipt:publication_review',
+      'human_gate:publication_quality_gate',
+    ],
+  });
+
+  const certification = buildFamilyStageReplayCertification(proofBundle(), evidence);
+  assert.equal(certification.replay_status, 'replay_ready');
+  assert.equal(certification.summary.blocker_count, 0);
+  assert.equal(certification.authority_boundary.can_write_domain_truth, false);
+  assert.equal(certification.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(certification.authority_boundary.can_authorize_quality_verdict, false);
 });
 
 test('stage replay certification blocks missing runtime event refs with minimal counterexample', () => {

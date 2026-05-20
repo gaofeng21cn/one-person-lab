@@ -58,6 +58,7 @@ export interface FamilyStageContract extends JsonRecord {
   boundary_assumptions: string[];
   properties: string[];
   runtime_event_refs?: string[];
+  replay_evidence_refs?: FamilyStageSurfaceRef[];
   runtime_assumptions: Array<string | FamilyStageRuntimeAssumption>;
   monitor_refs: FamilyStageSurfaceRef[];
   source_scope_refs: FamilyStageSurfaceRef[];
@@ -100,6 +101,7 @@ export interface FamilyStageControlPlane {
   target_domain_id: string;
   owner: string;
   authority_boundary: JsonRecord;
+  replay_evidence_refs?: FamilyStageSurfaceRef[];
   stages: FamilyStageDescriptor[];
   notes: string[];
 }
@@ -235,6 +237,7 @@ function normalizeStageContract(value: unknown): FamilyStageContract | null {
     boundary_assumptions: readStringList(value.boundary_assumptions),
     properties: readStringList(value.properties),
     runtime_event_refs: readStringList(value.runtime_event_refs),
+    replay_evidence_refs: normalizeSurfaceRefs(value.replay_evidence_refs, 'stage_contract.replay_evidence_refs'),
     runtime_assumptions: normalizeRuntimeAssumptions(value.runtime_assumptions, 'stage_contract.runtime_assumptions'),
     monitor_refs: normalizeSurfaceRefs(value.monitor_refs, 'stage_contract.monitor_refs'),
     source_scope_refs: normalizeSurfaceRefs(value.source_scope_refs, 'stage_contract.source_scope_refs'),
@@ -346,6 +349,7 @@ export function normalizeFamilyStageControlPlane(
     target_domain_id: requireString(value.target_domain_id, `${field}.target_domain_id`),
     owner: requireString(value.owner, `${field}.owner`),
     authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : {},
+    replay_evidence_refs: normalizeSurfaceRefs(value.replay_evidence_refs, `${field}.replay_evidence_refs`),
     stages,
     notes: readStringList(value.notes),
   };
