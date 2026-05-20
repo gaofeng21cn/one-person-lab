@@ -444,6 +444,12 @@ function hasRequiredContractFiles(rootPath: string): boolean {
   );
 }
 
+function hasAnyRequiredContractFile(rootPath: string): boolean {
+  return REQUIRED_CONTRACT_FILE_NAMES.some((fileName) =>
+    fs.existsSync(path.join(rootPath, fileName)),
+  );
+}
+
 function describeContractsRootSource(source: ContractsRootSource): string {
   switch (source) {
     case 'cli_flag':
@@ -593,7 +599,11 @@ function resolveContractsLocation(
   if (options.source === 'cwd') {
     const cwdSearchRoot = path.resolve(options.searchFrom);
     const cwdContractsDir = resolveContractsDirFromSearchRoot(cwdSearchRoot);
-    if (hasRequiredContractFiles(cwdSearchRoot) || fs.existsSync(cwdContractsDir)) {
+    if (
+      hasRequiredContractFiles(cwdSearchRoot)
+      || hasRequiredContractFiles(cwdContractsDir)
+      || hasAnyRequiredContractFile(cwdContractsDir)
+    ) {
       return {
         contractsDir: cwdContractsDir,
         source: options.source,
