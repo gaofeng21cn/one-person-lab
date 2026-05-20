@@ -203,6 +203,24 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     policy.default_doc_entry_budget.forbidden_default_stage_commands.includes('opl stages domain-validity --domain <domain>'),
     true,
   );
+  for (const command of [
+    'opl stages capacity-budget --domain <domain>',
+    'opl stages domain-validity --domain <domain>',
+    'opl stages guarantee --domain <domain>',
+    'opl stages property --domain <domain>',
+    'opl stages isolation --domain <domain>',
+  ]) {
+    assert.equal(
+      policy.default_doc_entry_budget.forbidden_default_stage_commands.includes(command),
+      true,
+      `${command} must stay out of default stage entrypoints`,
+    );
+    assert.equal(
+      policy.default_doc_entry_budget.stage_default_commands.includes(command),
+      false,
+      `${command} must not be a default stage command`,
+    );
+  }
   assert.equal(policy.promotion_gate.new_surface_default_state, 'diagnostic_lens_or_reference');
   assert.deepEqual(
     policy.promotion_gate.default_surface_requires_any_reason_from,

@@ -25,11 +25,15 @@ import {
   buildFamilyStageReplayEvidenceFromControlPlane,
 } from './family-stage-replay-certification.ts';
 import {
+  FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS,
   FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES,
   FAMILY_STAGE_KERNEL_BLOCKER_SOURCES,
+  FAMILY_STAGE_KERNEL_REQUIRED_REFS,
 } from './family-stage-derived-lenses.ts';
 
 type JsonRecord = Record<string, unknown>;
+
+const DEFAULT_STAGE_READINESS_ATTENTION_LIMIT = 5;
 
 type FamilyStageReadinessStatus = 'launch_blocked' | 'launch_warning' | 'launch_observable';
 
@@ -120,6 +124,11 @@ export interface FamilyStageOperatorReadiness {
   summary: FamilyStageReadinessSummary['summary'] & {
     lens_count: number;
     diagnostic_lens_count: number;
+    displayed_blocker_count: number;
+    displayed_warning_count: number;
+    displayed_recommendation_count: number;
+    full_warning_count: number;
+    full_recommendation_count: number;
   };
   blockers: FamilyStageReadinessIssue[];
   warnings: FamilyStageReadinessIssue[];
@@ -132,10 +141,19 @@ export interface FamilyStageOperatorReadiness {
     can_block_launch: boolean;
   }>;
   drilldown_refs: string[];
+  full_detail_policy: 'default_payload_is_attention_limited_full_diagnostics_via_detail_full';
   stage_kernel: {
     surface_kind: 'opl_stage_kernel_contract_floor';
     hard_blocker_sources: typeof FAMILY_STAGE_KERNEL_BLOCKER_SOURCES;
+    kernel_required_refs: typeof FAMILY_STAGE_KERNEL_REQUIRED_REFS;
     derived_lenses_can_block_launch: false;
+  };
+  ai_capability_aperture: {
+    surface_kind: 'opl_ai_capability_aperture';
+    ai_strategy_refs_are_launch_blockers_by_default: false;
+    ai_strategy_advisory_refs: typeof FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS;
+    contract_floor: 'boundary_safety_audit_replay_route_back_only';
+    executor_strategy_owner: 'selected_ai_executor_and_domain_owner';
   };
   authority_boundary: FamilyStageReadinessSummary['authority_boundary'] & {
     can_claim_domain_ready: false;
@@ -399,6 +417,10 @@ function nextSafeActions(summary: FamilyStageReadinessSummary) {
   ];
 }
 
+function attentionItems<T>(items: T[], limit = DEFAULT_STAGE_READINESS_ATTENTION_LIMIT) {
+  return items.slice(0, limit);
+}
+
 export function buildStageOperatorReadiness(
   summary: FamilyStageReadinessSummary,
 ): FamilyStageOperatorReadiness {
@@ -422,6 +444,9 @@ export function buildStageOperatorReadiness(
       can_block_launch: lens?.can_block_launch ?? false,
     };
   });
+  const blockers = attentionItems(summary.hard_blockers);
+  const warnings = attentionItems(summary.warnings);
+  const recommendations = attentionItems(summary.recommendations);
 
   return {
     status: summary.launch_readiness_status,
@@ -429,17 +454,31 @@ export function buildStageOperatorReadiness(
       ...summary.summary,
       lens_count: summary.checks.length,
       diagnostic_lens_count: FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES.length,
+      displayed_blocker_count: blockers.length,
+      displayed_warning_count: warnings.length,
+      displayed_recommendation_count: recommendations.length,
+      full_warning_count: summary.warnings.length,
+      full_recommendation_count: summary.recommendations.length,
     },
-    blockers: summary.hard_blockers,
-    warnings: summary.warnings,
-    recommendations: summary.recommendations,
+    blockers,
+    warnings,
+    recommendations,
     next_safe_actions: nextSafeActions(summary),
     lens_summary: lensSummary,
     drilldown_refs: summary.drilldown_refs,
+    full_detail_policy: 'default_payload_is_attention_limited_full_diagnostics_via_detail_full',
     stage_kernel: {
       surface_kind: 'opl_stage_kernel_contract_floor',
       hard_blocker_sources: FAMILY_STAGE_KERNEL_BLOCKER_SOURCES,
+      kernel_required_refs: FAMILY_STAGE_KERNEL_REQUIRED_REFS,
       derived_lenses_can_block_launch: false,
+    },
+    ai_capability_aperture: {
+      surface_kind: 'opl_ai_capability_aperture',
+      ai_strategy_refs_are_launch_blockers_by_default: false,
+      ai_strategy_advisory_refs: FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS,
+      contract_floor: 'boundary_safety_audit_replay_route_back_only',
+      executor_strategy_owner: 'selected_ai_executor_and_domain_owner',
     },
     authority_boundary: {
       ...summary.authority_boundary,
