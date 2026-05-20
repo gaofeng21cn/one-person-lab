@@ -65,6 +65,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
   assert.equal(result.readiness.ready_to_emit_ahe_evidence_read_model, true);
   assert.equal(result.readiness.ready_to_emit_executor_capability_aperture, true);
+  assert.equal(result.readiness.ready_to_emit_codex_attempt_trace_flywheel, true);
   assert.equal(result.readiness.ready_to_emit_variant_comparison_read_model, true);
   assert.equal(result.readiness.ready_to_emit_stage_executor_policy_read_model, true);
   assert.equal(result.readiness.ready_to_emit_token_cost_estimates, true);
@@ -82,6 +83,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.deepEqual(result.optimizer_loop.loop_steps, [
     'collect_trajectory_refs',
     'collect_executor_capability_aperture_refs',
+    'standardize_codex_attempt_trace_refs',
     'collect_ahe_failure_root_cause_fix_and_falsification_refs',
     'collect_usage_and_blocker_event_refs',
     'mine_real_logs_into_mechanism_candidate_refs',
@@ -101,6 +103,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'route_high_risk_to_owner_or_human_gate',
     'record_rollback_target_ref',
     'compare_best_of_n_variant_candidate_refs',
+    'fork_blocked_evidence_into_variant_candidate_refs',
+    'emit_replay_fork_eval_evidence_delta_refs',
     'record_evolution_segment_refs',
   ]);
   assert.equal(result.integration_contracts.surface_kind, 'opl_agent_lab_integration_contract_read_model');
@@ -120,6 +124,10 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.aris_maturity_controls.controls.fail_closed_invariants.missing_context_policy,
     'fail_closed_with_typed_blocker_ref');
   assert.equal(result.aris_maturity_controls.controls.mcp_stream_reliability_policy.no_silent_drop, true);
+  assert.equal(result.codex_attempt_trace_flywheel.surface_kind,
+    'opl_agent_lab_codex_attempt_trace_flywheel');
+  assert.equal(result.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
+  assert.equal(result.codex_attempt_trace_flywheel.summary.fork_candidate_count, 0);
   assert.equal(result.optimizer_loop.integration_contract_read_model.read_model_id,
     result.integration_contracts.read_model_id);
   assert.equal(result.optimizer_loop.review_trace_ledger.ledger_ref, result.review_trace_ledger.ledger_ref);
@@ -129,6 +137,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.ahe_evidence.read_model_id);
   assert.equal(result.optimizer_loop.executor_capability_aperture.read_model_id,
     result.executor_capability_aperture.read_model_id);
+  assert.equal(result.optimizer_loop.codex_attempt_trace_flywheel.read_model_id,
+    result.codex_attempt_trace_flywheel.read_model_id);
   assert.equal(result.optimizer_loop.aris_maturity_controls.read_model_id,
     result.aris_maturity_controls.read_model_id);
   assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
@@ -193,6 +203,8 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.source_results.ahe_evidence_read_model_ref, result.ahe_evidence.read_model_id);
   assert.equal(result.source_results.executor_capability_aperture_ref,
     result.executor_capability_aperture.read_model_id);
+  assert.equal(result.source_results.codex_attempt_trace_flywheel_ref,
+    result.codex_attempt_trace_flywheel.read_model_id);
   assert.equal(result.source_results.variant_comparison_read_model_ref, result.variant_comparison.read_model_id);
   assert.equal(result.source_results.stage_executor_policy_read_model_ref,
     result.stage_executor_policy.read_model_id);
@@ -205,6 +217,9 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.executor_capability_aperture.surface_kind,
     'opl_agent_lab_executor_capability_aperture_read_model');
   assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
+  assert.equal(result.codex_attempt_trace_flywheel.surface_kind,
+    'opl_agent_lab_codex_attempt_trace_flywheel');
+  assert.equal(result.codex_attempt_trace_flywheel.summary.trace_ready_count, 3);
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.variant_comparison.summary.variant_count, 3);
   assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);
@@ -696,7 +711,9 @@ test('Agent Lab export envelope maps refs to connector payloads without uploadin
   assert.equal(inspect.upload_external_service, false);
   assert.equal(inspect.reads_domain_body, false);
   assert.equal((inspect.connector_payload as any).tasks.length, 6);
-  assert.equal((openinference.connector_payload as any).traces.length, 4);
+  assert.equal((openinference.connector_payload as any).traces.length, 6);
+  assert.ok((openinference.connector_payload as any).traces.some((trace: any) =>
+    trace.trace_ref === 'trace-ref:codex/mag-grant-section-smoke'));
   assert.equal((langfuse.connector_payload as any).datasets.length, 2);
   assert.equal((phoenix.connector_payload as any).experiments.length, 2);
   assert.equal((json.connector_payload as any).suite_results.length, 2);

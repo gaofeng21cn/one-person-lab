@@ -79,6 +79,7 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_stage_executor_policy_read_model, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_executor_capability_aperture, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_token_cost_estimates, true);
+  assert.equal(output.agent_lab_complete.readiness.ready_to_emit_codex_attempt_trace_flywheel, true);
   assert.equal(output.agent_lab_complete.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(output.agent_lab_complete.readiness.automatic_model_training_ready, false);
   assert.equal(output.agent_lab_complete.readiness.automatic_default_agent_promotion_ready,
@@ -90,6 +91,7 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.review_trace_ledger.summary.independent_no_shared_context_count, 2);
   assert.equal(output.agent_lab_complete.log_driven_mechanism_candidates.summary.candidate_count, 4);
   assert.equal(output.agent_lab_complete.stage_executor_policy.trial_ready_candidate_count, 1);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
   assert.equal(output.agent_lab_complete.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].preset_id, 'rca-ppt-40');
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
@@ -118,6 +120,9 @@ test('agent-lab workbench exposes the App-ready read model', () => {
   assert.equal(output.agent_lab_workbench.stage_executor_policy.default_executor_kind, 'codex_cli');
   assert.equal(output.agent_lab_workbench.stage_executor_policy.authority_boundary.can_change_default_executor,
     false);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.surface_kind,
+    'opl_agent_lab_codex_attempt_trace_flywheel');
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.summary.trace_ready_count, 3);
   assert.equal(output.agent_lab_workbench.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_workbench.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
   assert.deepEqual(output.agent_lab_workbench.source_results.token_cost_estimate_refs,
@@ -194,7 +199,9 @@ test('agent-lab export emits refs-only connector envelopes for optional targets'
   assert.equal(inspect.agent_lab_export.upload_external_service, false);
   assert.equal(inspect.agent_lab_export.reads_domain_body, false);
   assert.equal(inspect.agent_lab_export.connector_payload.tasks.length, 6);
-  assert.equal(openinference.agent_lab_export.connector_payload.traces.length, 4);
+  assert.equal(openinference.agent_lab_export.connector_payload.traces.length, 6);
+  assert.ok(openinference.agent_lab_export.connector_payload.traces.some((trace: any) =>
+    trace.trace_ref === 'trace-ref:codex/mag-grant-section-smoke'));
   assert.equal(langfuse.agent_lab_export.connector_payload.datasets.length, 2);
   assert.equal(phoenix.agent_lab_export.connector_payload.experiments.length, 2);
   assert.equal(json.agent_lab_export.connector_payload.suite_results.length, 2);

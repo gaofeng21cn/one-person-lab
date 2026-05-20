@@ -13,6 +13,7 @@ type JsonRecord = Record<string, unknown>;
 export interface FamilyStageReplayEvidence {
   append_only_event_log_refs?: string[];
   attempt_ledger_refs?: string[];
+  codex_attempt_trace_refs?: string[];
   recorded_runtime_event_refs?: string[];
   closeout_receipt_refs?: string[];
   closeout_packet?: JsonRecord | null;
@@ -67,6 +68,7 @@ export interface FamilyStageReplayCertification {
     missing_receipt_ref_count: number;
     append_only_event_log_ref_count: number;
     attempt_ledger_ref_count: number;
+    codex_attempt_trace_ref_count: number;
     blocker_count: number;
   };
   stage_results: FamilyStageReplayCertificationStage[];
@@ -109,6 +111,9 @@ const REPLAY_EVIDENCE_BUCKET_BY_ROLE: Record<string, FamilyStageReplayEvidenceBu
   attempt_ledger_refs: 'attempt_ledger_refs',
   stage_attempt_ledger_ref: 'attempt_ledger_refs',
   opl_stage_attempt_ledger_ref: 'attempt_ledger_refs',
+  codex_attempt_trace_ref: 'attempt_ledger_refs',
+  codex_attempt_trace_refs: 'attempt_ledger_refs',
+  agent_lab_codex_attempt_trace_ref: 'attempt_ledger_refs',
   recorded_runtime_event_ref: 'recorded_runtime_event_refs',
   recorded_runtime_event_refs: 'recorded_runtime_event_refs',
   runtime_event_ref: 'recorded_runtime_event_refs',
@@ -125,6 +130,7 @@ const REPLAY_EVIDENCE_BUCKET_BY_REF_KIND: Record<string, FamilyStageReplayEviden
   append_only_event_log_ref: 'append_only_event_log_refs',
   event_log_ref: 'append_only_event_log_refs',
   attempt_ledger_ref: 'attempt_ledger_refs',
+  codex_attempt_trace_ref: 'attempt_ledger_refs',
   runtime_event_ref: 'recorded_runtime_event_refs',
   recorded_runtime_event_ref: 'recorded_runtime_event_refs',
   closeout_receipt_ref: 'closeout_receipt_refs',
@@ -255,6 +261,7 @@ export function buildFamilyStageReplayCertification(
 ): FamilyStageReplayCertification {
   const appendOnlyEventLogRefs = evidence.append_only_event_log_refs ?? [];
   const attemptLedgerRefs = evidence.attempt_ledger_refs ?? [];
+  const codexAttemptTraceRefs = evidence.codex_attempt_trace_refs ?? [];
   const recordedRuntimeEventRefs = uniq([
     ...(evidence.recorded_runtime_event_refs ?? []),
     ...runtimeEventRefsFromPacket(evidence.closeout_packet ?? null),
@@ -304,6 +311,11 @@ export function buildFamilyStageReplayCertification(
     ));
   }
   if (attemptLedgerRefs.length === 0) {
+    if (codexAttemptTraceRefs.length > 0) {
+      attemptLedgerRefs.push(...codexAttemptTraceRefs);
+    }
+  }
+  if (attemptLedgerRefs.length === 0) {
     blockers.push(blocker(
       'attempt_ledger_ref_missing',
       'record_attempt_ledger_ref',
@@ -346,6 +358,7 @@ export function buildFamilyStageReplayCertification(
       missing_receipt_ref_count: stageResults.reduce((count, stage) => count + stage.missing_receipt_refs.length, 0),
       append_only_event_log_ref_count: appendOnlyEventLogRefs.length,
       attempt_ledger_ref_count: attemptLedgerRefs.length,
+      codex_attempt_trace_ref_count: codexAttemptTraceRefs.length,
       blocker_count: blockers.length,
     },
     stage_results: stageResults,

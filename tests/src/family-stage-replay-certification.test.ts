@@ -184,6 +184,7 @@ test('stage replay certification passes with append-only log, attempt ledger, ru
   const certification = buildFamilyStageReplayCertification(proofBundle(), {
     append_only_event_log_refs: ['event-log:mas/stages'],
     attempt_ledger_refs: ['attempt-ledger:opl/mas'],
+    codex_attempt_trace_refs: ['codex-attempt-trace-ref:mas/publication-review'],
     recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
     closeout_receipt_refs: ['mas:publication_review_receipt', 'owner_receipt:publication_review', 'human_gate:publication_quality_gate'],
   });
@@ -194,6 +195,7 @@ test('stage replay certification passes with append-only log, attempt ledger, ru
   assert.equal(certification.summary.replay_ready_stage_count, 2);
   assert.equal(certification.summary.missing_runtime_event_ref_count, 0);
   assert.equal(certification.summary.missing_receipt_ref_count, 0);
+  assert.equal(certification.summary.codex_attempt_trace_ref_count, 1);
   assert.equal(certification.authority_boundary.replay_reads_append_only_log_refs_only, true);
   assert.equal(certification.authority_boundary.can_requery_ai, false);
   assert.equal(certification.authority_boundary.can_requery_human, false);
@@ -220,7 +222,7 @@ test('stage replay certification consumes plane and stage-contract replay eviden
   const plane = buildStagePlane();
   plane.replay_evidence_refs = [
     { ref_kind: 'append_only_event_log_ref', ref: 'event-log:mas/stages' },
-    { role: 'attempt_ledger_ref', ref: 'attempt-ledger:opl/mas' },
+    { role: 'codex_attempt_trace_ref', ref: 'codex-attempt-trace-ref:mas/publication-review' },
   ];
   const reviewStage = plane.stages.find((stage) => stage.stage_id === 'publication_review');
   assert.ok(reviewStage?.stage_contract);
@@ -235,7 +237,7 @@ test('stage replay certification consumes plane and stage-contract replay eviden
   const evidence = buildFamilyStageReplayEvidenceFromControlPlane(plane);
   assert.deepEqual(evidence, {
     append_only_event_log_refs: ['event-log:mas/stages'],
-    attempt_ledger_refs: ['attempt-ledger:opl/mas'],
+    attempt_ledger_refs: ['codex-attempt-trace-ref:mas/publication-review'],
     recorded_runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
     closeout_receipt_refs: [
       'mas:publication_review_receipt',

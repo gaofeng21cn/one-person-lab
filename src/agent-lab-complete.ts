@@ -26,6 +26,7 @@ export {
 } from './agent-lab-control-read-models.ts';
 export { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
 export { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
+export { buildAgentLabCodexAttemptTraceFlywheel } from './agent-lab-codex-attempt-flywheel.ts';
 export { buildAgentLabOptimizeResult } from './agent-lab-optimizer-read-models.ts';
 export { buildAgentLabVariantComparisonReadModel } from './agent-lab-variant-comparison.ts';
 import {
@@ -260,6 +261,7 @@ export function buildCompleteAgentLabControlPlane() {
   ]);
   const aheEvidence = sampleResult.ahe_evidence;
   const executorCapabilityAperture = sampleResult.executor_capability_aperture;
+  const codexAttemptTraceFlywheel = sampleResult.codex_attempt_trace_flywheel;
   const variantComparison = buildAgentLabVariantComparisonReadModel({
     suiteResult: sampleResult,
     sourceRefs: [sampleResult.result_id, longlineResult.result_id],
@@ -342,6 +344,7 @@ export function buildCompleteAgentLabControlPlane() {
     loop_steps: [
       'collect_trajectory_refs',
       'collect_executor_capability_aperture_refs',
+      'standardize_codex_attempt_trace_refs',
       'collect_ahe_failure_root_cause_fix_and_falsification_refs',
       'collect_usage_and_blocker_event_refs',
       'mine_real_logs_into_mechanism_candidate_refs',
@@ -361,6 +364,8 @@ export function buildCompleteAgentLabControlPlane() {
       'route_high_risk_to_owner_or_human_gate',
       'record_rollback_target_ref',
       'compare_best_of_n_variant_candidate_refs',
+      'fork_blocked_evidence_into_variant_candidate_refs',
+      'emit_replay_fork_eval_evidence_delta_refs',
       'record_evolution_segment_refs',
     ],
     pattern_refs: [
@@ -374,6 +379,7 @@ export function buildCompleteAgentLabControlPlane() {
     log_driven_candidate_read_model: logDrivenCandidates,
     ahe_evidence_read_model: aheEvidence,
     executor_capability_aperture: executorCapabilityAperture,
+    codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
     integration_contract_read_model: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     aris_maturity_controls: arisMaturityControls,
@@ -404,6 +410,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_aris_maturity_controls: true,
     ready_to_emit_ahe_evidence_read_model: true,
     ready_to_emit_executor_capability_aperture: true,
+    ready_to_emit_codex_attempt_trace_flywheel: true,
     ready_to_emit_variant_comparison_read_model: true,
     ready_to_emit_stage_executor_policy_read_model: true,
     ready_to_emit_token_cost_estimates: true,
@@ -432,6 +439,7 @@ export function buildCompleteAgentLabControlPlane() {
     aris_maturity_controls: arisMaturityControls,
     ahe_evidence: aheEvidence,
     executor_capability_aperture: executorCapabilityAperture,
+    codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
     variant_comparison: variantComparison,
     stage_executor_policy: stageExecutorPolicy,
     token_cost_estimates: [tokenCostEstimate],
@@ -446,6 +454,7 @@ export function buildCompleteAgentLabControlPlane() {
       'model training or weight deployment inside OPL core',
       'domain truth, artifact, memory body, quality verdict, owner receipt, or managed runtime mutation from developer-mode patrol routes',
       'ARIS runtime dependency',
+      'Codex attempt trace replay as domain quality verdict',
     ],
     authority_boundary: AUTHORITY_BOUNDARY,
   };
@@ -511,6 +520,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.aris_maturity_controls.read_model_id,
       complete.ahe_evidence.read_model_id,
       complete.executor_capability_aperture.read_model_id,
+      complete.codex_attempt_trace_flywheel.read_model_id,
       complete.variant_comparison.read_model_id,
       complete.stage_executor_policy.read_model_id,
       complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
@@ -528,6 +538,7 @@ export function buildAgentLabWorkbenchReadModel() {
       aris_maturity_controls_ref: complete.aris_maturity_controls.read_model_id,
       ahe_evidence_read_model_ref: complete.ahe_evidence.read_model_id,
       executor_capability_aperture_ref: complete.executor_capability_aperture.read_model_id,
+      codex_attempt_trace_flywheel_ref: complete.codex_attempt_trace_flywheel.read_model_id,
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
       stage_executor_policy_read_model_ref: complete.stage_executor_policy.read_model_id,
       token_cost_estimate_refs: complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
@@ -549,6 +560,7 @@ export function buildAgentLabWorkbenchReadModel() {
     aris_maturity_controls: complete.aris_maturity_controls,
     ahe_evidence: complete.ahe_evidence,
     executor_capability_aperture: complete.executor_capability_aperture,
+    codex_attempt_trace_flywheel: complete.codex_attempt_trace_flywheel,
     variant_comparison: variantComparison,
     stage_executor_policy: complete.stage_executor_policy,
     token_cost_estimates: complete.token_cost_estimates,
@@ -711,6 +723,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     ...suiteResult.refs.mechanism_evolution_input_refs,
   ]);
   const aheEvidence = suiteResult.ahe_evidence;
+  const codexAttemptTraceFlywheel = suiteResult.codex_attempt_trace_flywheel;
   const variantComparison = buildAgentLabVariantComparisonReadModel({ suiteResult });
   const trajectoryRefs = suiteResult.refs.trajectory_refs;
   const scorecardRefs = suiteResult.refs.domain_quality_scorecard_refs;
@@ -757,6 +770,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     log_driven_mechanism_candidates: logDrivenCandidates,
     aris_maturity_controls: arisMaturityControls,
     ahe_evidence: aheEvidence,
+    codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
     variant_comparison: variantComparison,
     log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     mechanism_promotion_decision: mechanismPromotionDecision,
@@ -795,10 +809,15 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
         ...suiteResult.refs.mechanism_evolution_input_refs,
         ...suiteResult.refs.receipt_refs,
         ...suiteResult.refs.promotion_gate_refs,
+        ...codexAttemptTraceFlywheel.refs.evidence_delta_refs,
       ],
       blocked_evidence_refs: suiteResult.status === 'passed'
-        ? []
-        : [...suiteResult.missing_observations, ...suiteResult.refs.forbidden_authority_flags],
+        ? codexAttemptTraceFlywheel.refs.blocked_evidence_refs
+        : [
+          ...suiteResult.missing_observations,
+          ...suiteResult.refs.forbidden_authority_flags,
+          ...codexAttemptTraceFlywheel.refs.blocked_evidence_refs,
+        ],
       domain_truth_delta_written: false,
       memory_body_delta_written: false,
       artifact_delta_written: false,
@@ -810,7 +829,9 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
       source_transition_refs: transitionRefs,
       source_log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
       source_variant_candidate_refs: variantComparison.variant_candidate_refs,
+      source_replay_fork_eval_variant_candidate_refs: codexAttemptTraceFlywheel.refs.variant_candidate_refs,
       selected_variant_candidate_ref: variantComparison.selected_candidate_ref,
+      codex_attempt_trace_flywheel_ref: codexAttemptTraceFlywheel.read_model_id,
       source_mechanism_evolution_input_refs: suiteResult.refs.mechanism_evolution_input_refs,
       source_maturity_control_refs: arisMaturityControls.source_pattern_refs,
       integration_contract_ref: integrationContracts.integration_contracts[1].contract_ref,
@@ -898,6 +919,7 @@ export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
   const reviewTraceEntries = complete.review_trace_ledger.trace_entries;
   const logDrivenCandidates = complete.log_driven_mechanism_candidates;
   const arisMaturityControls = complete.aris_maturity_controls;
+  const codexAttemptTraceFlywheel = complete.codex_attempt_trace_flywheel;
 
   return {
     surface_kind: 'opl_agent_lab_export_envelope',
@@ -923,6 +945,15 @@ export function buildAgentLabExportEnvelope(target: AgentLabExportTarget) {
         arisMaturityControls.controls.fail_closed_invariants.policy_ref,
         arisMaturityControls.controls.mcp_stream_reliability_policy.policy_ref,
       ],
+      codex_attempt_trace_refs: codexAttemptTraceFlywheel.refs.attempt_trace_refs,
+      codex_command_refs: codexAttemptTraceFlywheel.refs.command_refs,
+      codex_file_refs: codexAttemptTraceFlywheel.refs.file_refs,
+      codex_subagent_refs: codexAttemptTraceFlywheel.refs.subagent_refs,
+      codex_worktree_refs: codexAttemptTraceFlywheel.refs.worktree_refs,
+      codex_test_refs: codexAttemptTraceFlywheel.refs.test_refs,
+      codex_web_source_refs: codexAttemptTraceFlywheel.refs.web_source_refs,
+      codex_review_receipt_refs: codexAttemptTraceFlywheel.refs.review_receipt_refs,
+      codex_variant_candidate_refs: codexAttemptTraceFlywheel.refs.variant_candidate_refs,
     },
     connector_payload: connectorPayload(target, results),
     authority_boundary: AUTHORITY_BOUNDARY,

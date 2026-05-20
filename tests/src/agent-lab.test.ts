@@ -97,6 +97,24 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.ok(Array.isArray(result.refs.targeted_fix_refs));
   assert.ok(Array.isArray(result.refs.risk_task_refs));
   assert.ok(Array.isArray(result.refs.next_run_falsification_refs));
+  assert.equal(result.codex_attempt_trace_flywheel.surface_kind,
+    'opl_agent_lab_codex_attempt_trace_flywheel');
+  assert.equal(result.codex_attempt_trace_flywheel.summary.attempt_count, 3);
+  assert.equal(result.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
+  assert.equal(result.codex_attempt_trace_flywheel.summary.trace_ready_count, 3);
+  assert.equal(result.codex_attempt_trace_flywheel.summary.typed_blocker_count, 0);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_domain_ready,
+    false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_promote_default_agent,
+    false);
+  assert.ok(result.refs.codex_attempt_trace_refs.length === 3);
+  assert.ok(result.refs.codex_command_refs.includes('command-ref:codex/mas-paper-repair-smoke'));
+  assert.ok(result.refs.codex_file_refs.includes('file-ref:mas/current-package-fixture'));
+  assert.ok(result.refs.codex_subagent_refs.includes('subagent-ref:codex/mas-reviewer-repair'));
+  assert.ok(result.refs.codex_worktree_refs.includes('worktree-ref:codex/mas-paper-repair-smoke'));
+  assert.ok(result.refs.codex_test_refs.includes('test-ref:mas/paper-autonomy-smoke'));
+  assert.ok(result.refs.codex_web_source_refs.includes('source-ref:mas/reviewer-guideline-fixture'));
+  assert.ok(result.refs.codex_review_receipt_refs.includes('review-receipt-ref:mas/ai-reviewer-fixture'));
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
   assert.equal(result.executor_capability_aperture.surface_kind,
@@ -372,6 +390,13 @@ test('Agent Lab blocks failure-delta promotion attempts without safety refs', ()
   assert.ok(blockedRun.failure_taxonomy.includes('promotion_canary_observation_ref_missing'));
   assert.ok(result.missing_observations.includes('promotion_gates_observed'));
   assert.deepEqual(result.refs.failure_delta_refs, [failureDeltaRef]);
+  assert.ok(result.codex_attempt_trace_flywheel.summary.fork_candidate_count >= 2);
+  assert.ok(result.codex_attempt_trace_flywheel.refs.blocked_evidence_refs.includes(failureDeltaRef));
+  assert.ok(result.codex_attempt_trace_flywheel.variant_candidates.every((candidate: any) =>
+    candidate.evidence_delta.domain_truth_delta_written === false
+    && candidate.evidence_delta.memory_body_delta_written === false
+    && candidate.evidence_delta.artifact_delta_written === false
+    && candidate.promotion_eligibility.can_promote_default_agent === false));
 });
 
 test('Agent Lab allows medium-risk auto-promotion only with real failure delta and safety refs', () => {
