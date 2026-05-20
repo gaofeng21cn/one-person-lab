@@ -137,7 +137,7 @@ User / Codex / CLI / One Person Lab App
 ### Workbench 与 projection
 
 - OPL App/workbench 应提供 route graph、stage attempt drilldown、running/recent items、review/repair queue、artifact gallery、package/export lifecycle、memory refs、functional privatization audit、quality/readiness projection、provider scheduler cadence、provider SLO/repair 和 owner-aware action routing。
-- OPL 应把 admitted stage 的 expected receipt / monitor freshness 缺口投影成 body-free refs-only evidence request，并提供 `record` / `verify` safe action route。该 route 只记录或验证 domain/App/live evidence refs、typed blocker refs、no-regression refs 或 owner-chain refs，不执行 domain action、不签 domain owner receipt、不声明 stage complete 或 domain ready。
+- OPL 应把 admitted stage 的 expected receipt / monitor freshness 缺口投影成 body-free refs-only evidence request，并提供 `record` / `verify` safe action route。该 route 只记录或验证 domain/App/live evidence refs、typed blocker refs、no-regression refs 或 owner-chain refs，不执行 domain action、不签 domain owner receipt、不声明 stage complete 或 domain ready。Record route 必须同时给出空 `payload_template`、机器可审计 `payload_workorder` 与 preflight 规则：expected receipt 只能由真实 domain receipt instance ref 或 domain-owned typed blocker 覆盖，monitor freshness 只能由真实 evidence ref 或 domain-owned typed blocker 覆盖，声明型占位 ref、OPL ledger receipt ref、memory/artifact/domain truth body 都不能被当作成功 payload。
 - App 只能展示 refs、receipt、blocked reason、next owner 和 safe action；domain verdict 必须回到 domain owner surface。
 
 ## 通用能力上收边界
