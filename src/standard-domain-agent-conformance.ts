@@ -517,10 +517,10 @@ function buildPhysicalMorphologyChecks(repoDir: string, domainId: string) {
   const policyChecks = physicalMorphologyPolicyChecks(repoDir, domainId);
   const forbiddenTokens = forbiddenPhysicalMorphologyTokens(domainId);
   const forbiddenNameResidue = scanForbiddenNameResidue(repoDir, forbiddenTokens, policyChecks.allowed_residue_prefixes);
+  const residueClassification = classifyForbiddenNameResidue(forbiddenNameResidue);
   const blockers = unique([
     ...policyChecks.blockers,
-    ...forbiddenNameResidue
-      .filter((entry) => entry.allowed !== true)
+    ...residueClassification.active_forbidden_name_residue
       .map((entry) => `active_forbidden_name_residue:${entry.token}:${entry.path}`),
   ]);
   return {
@@ -529,6 +529,9 @@ function buildPhysicalMorphologyChecks(repoDir: string, domainId: string) {
     policy_sources: policyChecks.policy_sources,
     required_parity_gates: policyChecks.required_parity_gates,
     allowed_tombstone_provenance_locations: policyChecks.allowed_residue_prefixes,
+    residue_classification_summary: residueClassification.summary,
+    active_forbidden_name_residue: residueClassification.active_forbidden_name_residue,
+    allowed_name_residue: residueClassification.allowed_name_residue,
     forbidden_name_residue: forbiddenNameResidue,
     blockers,
   };
@@ -829,6 +832,58 @@ function scanForbiddenNameResidue(
       }];
     });
   });
+}
+
+function classifyForbiddenNameResidue(entries: JsonRecord[]) {
+  const activeForbiddenNameResidue = entries.filter((entry) => entry.allowed !== true);
+  const allowedNameResidue = entries.filter((entry) => entry.allowed === true).map((entry) => ({
+    ...entry,
+    allowance_classification: allowedResidueClassification(optionalString(entry.path)),
+  }));
+  const allowedByClassification = countBy(allowedNameResidue.map((entry) => (
+    optionalString(entry.allowance_classification) ?? 'allowed_other'
+  )));
+  return {
+    summary: {
+      status: activeForbiddenNameResidue.length === 0
+        ? 'no_active_forbidden_name_residue'
+        : 'active_forbidden_name_residue_present',
+      total_match_count: entries.length,
+      active_forbidden_name_residue_count: activeForbiddenNameResidue.length,
+      allowed_name_residue_count: allowedNameResidue.length,
+      allowed_name_residue_by_classification: allowedByClassification,
+      allowed_name_residue_note: 'Allowed entries are policy, contract, test, history, tombstone, or provenance guard references and do not make the physical morphology gate fail.',
+      legacy_field_note: 'forbidden_name_residue keeps the raw compatible scan; use active_forbidden_name_residue_count for blocker count.',
+    },
+    active_forbidden_name_residue: activeForbiddenNameResidue,
+    allowed_name_residue: allowedNameResidue,
+  };
+}
+
+function allowedResidueClassification(relativePath: string | null) {
+  if (!relativePath) {
+    return 'allowed_other';
+  }
+  if (relativePath.startsWith('docs/history/') || relativePath.startsWith('docs/references/') || relativePath.startsWith('docs/specs/')) {
+    return 'history_tombstone_or_provenance';
+  }
+  if (relativePath.startsWith('tests/')) {
+    return 'contract_or_legacy_guard_test';
+  }
+  if (relativePath.startsWith('contracts/')) {
+    return 'machine_contract_policy_or_projection';
+  }
+  if (relativePath.startsWith('runtime/authority_functions/')) {
+    return 'authority_function_policy_manifest';
+  }
+  return 'allowed_other';
+}
+
+function countBy(values: string[]) {
+  return values.reduce<Record<string, number>>((counts, value) => {
+    counts[value] = (counts[value] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 function escapeRegex(value: string) {

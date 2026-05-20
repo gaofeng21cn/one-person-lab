@@ -825,6 +825,39 @@ test('agents conformance allows opl-meta-agent contract guard tests to name forb
     ),
     true,
   );
+  const morphologyChecks = report.reports[0].physical_morphology_checks;
+  assert.equal(morphologyChecks.residue_classification_summary.status, 'no_active_forbidden_name_residue');
+  assert.equal(morphologyChecks.residue_classification_summary.active_forbidden_name_residue_count, 0);
+  assert.equal(
+    morphologyChecks.residue_classification_summary.allowed_name_residue_count,
+    morphologyChecks.forbidden_name_residue.length,
+  );
+  assert.equal(
+    morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
+      .contract_or_legacy_guard_test,
+    6,
+  );
+  assert.equal(
+    morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
+      .machine_contract_policy_or_projection,
+    6,
+  );
+  assert.equal(
+    morphologyChecks.residue_classification_summary.allowed_name_residue_by_classification
+      .authority_function_policy_manifest,
+    6,
+  );
+  assert.deepEqual(morphologyChecks.active_forbidden_name_residue, []);
+  assert.equal(
+    morphologyChecks.allowed_name_residue.every((entry: { allowance_classification: string }) =>
+      [
+        'authority_function_policy_manifest',
+        'contract_or_legacy_guard_test',
+        'machine_contract_policy_or_projection',
+      ].includes(entry.allowance_classification)
+    ),
+    true,
+  );
   assert.deepEqual(report.reports[0].blockers, []);
 });
 
@@ -946,6 +979,14 @@ test('agents conformance blocks exact MAG legacy residue tokens', () => {
   ]).standard_domain_agent_conformance;
 
   assert.equal(report.status, 'blocked');
+  const morphologyChecks = report.reports[0].physical_morphology_checks;
+  assert.equal(morphologyChecks.residue_classification_summary.status, 'active_forbidden_name_residue_present');
+  assert.equal(morphologyChecks.residue_classification_summary.active_forbidden_name_residue_count, 1);
+  assert.equal(morphologyChecks.residue_classification_summary.allowed_name_residue_count, 0);
+  assert.deepEqual(morphologyChecks.allowed_name_residue, []);
+  assert.deepEqual(morphologyChecks.active_forbidden_name_residue, [
+    { token: 'attempt_ledger', path: 'contracts/action_catalog.json', allowed: false },
+  ]);
   assert.equal(
     report.reports[0].blockers.includes('active_forbidden_name_residue:attempt_ledger:contracts/action_catalog.json'),
     true,
