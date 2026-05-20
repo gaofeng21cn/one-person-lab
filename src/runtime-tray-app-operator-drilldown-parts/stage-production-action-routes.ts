@@ -172,8 +172,6 @@ export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonR
         request_scope: 'opl_owned_stage_attempt_request_only',
         execution_policy: 'opl_safe_action_shell',
         execution_surface: 'opl runtime action execute',
-        route_status: 'request_route_available',
-        request_scope: 'opl_owned_stage_attempt_request_only',
         route_closure_policy:
           'creates_opl_stage_attempt_request_only_without_domain_action_owner_receipt_or_monitor_closure',
         creates_domain_action: false,

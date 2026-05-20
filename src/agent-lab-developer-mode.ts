@@ -281,7 +281,10 @@ function closeoutMissingRefs(
     return Array.isArray(value) ? value.length === 0 : !value;
   });
 
-  if (rawOwnerAcceptanceRef && !sanitizedOwnerAcceptanceRef) {
+  if (
+    (rawOwnerAcceptanceRef && !sanitizedOwnerAcceptanceRef)
+    || (decision === 'observe-only' && !sanitizedOwnerAcceptanceRef)
+  ) {
     missing.push('external_owner_acceptance_ref');
   }
 
@@ -315,6 +318,11 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       initial.eligibility,
     ]),
     route_decision: decision,
+    route_status: missingCloseoutRefs.length === 0 && decision !== 'blocked'
+      ? 'closeout_refs_ready'
+      : decision === 'blocked'
+        ? 'blocked'
+        : 'closeout_refs_incomplete',
     developer_mode_projection_ref: developerModeProjectionRef,
     patrol_observation_refs: unique([
       refs.patrol_observation_ref ?? '',
@@ -322,6 +330,8 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       refs.blocker_ref ?? '',
     ]),
     repo_permission: isRecord(input.repo_permission) ? input.repo_permission : {},
+    issue_ref: refs.issue_ref,
+    blocker_ref: refs.blocker_ref,
     closeout_refs: {
       developer_mode_projection_ref: developerModeProjectionRef,
       route_eligibility: eligibility,
@@ -337,6 +347,13 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
     missing_closeout_refs: missingCloseoutRefs,
     refs_only: true,
     authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
+    non_goals: [
+      'does_not_write_owner_receipt',
+      'does_not_write_domain_truth',
+      'does_not_write_memory_body',
+      'does_not_mutate_artifact_body',
+      'does_not_modify_managed_runtime',
+    ],
   };
 }
 
