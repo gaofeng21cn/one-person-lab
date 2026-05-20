@@ -155,6 +155,14 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       false,
     );
     assert.equal(
+      manifestOutput.domain_manifests.opl_meta_agent_registry.summary.patch_loop_target_count,
+      2,
+    );
+    assert.equal(
+      manifestOutput.domain_manifests.opl_meta_agent_registry.oma_sections.patch_loop_closeout.refs.length >= 11,
+      true,
+    );
+    assert.equal(
       manifestOutput.domain_manifests.opl_meta_agent_registry.authority_boundary.can_authorize_target_domain_quality_or_export,
       false,
     );

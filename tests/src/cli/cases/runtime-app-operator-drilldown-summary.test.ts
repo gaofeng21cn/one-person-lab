@@ -181,6 +181,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_domain_ready, false);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_quality_verdict, false);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_default_promotion, false);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_patch_loop_ref_count >= 11, true);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_patch_loop_target_count, 2);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_patch_loop_closed_count, 2);
     assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
     assert.equal(
       summaryDrilldown.attention_first_payload.surface_kind,
@@ -254,6 +257,27 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       false,
     );
     assert.equal(fullDrilldown.oma_sections.mechanism_proposal.refs.length > 0, true);
+    assert.equal(fullDrilldown.oma_sections.patch_loop_closeout.refs.length >= 11, true);
+    assert.deepEqual(
+      fullDrilldown.oma_sections.patch_loop_closeout.required_ref_fields,
+      [
+        'blocked_suite_result_ref',
+        'developer_patch_work_order_ref',
+        'patch_traceability_matrix_ref',
+        'target_repo_verification_refs',
+        'target_runtime_read_model_consumption_ref',
+        'workspace_environment_proof_ref',
+        'no_forbidden_write_proof_ref',
+        'target_owner_receipt_or_typed_blocker_ref',
+        'patch_absorption_ref',
+        'worktree_cleanup_ref',
+        'agent_lab_re_evaluation_ref',
+      ],
+    );
+    assert.equal(
+      fullDrilldown.oma_sections.patch_loop_closeout.authority_boundary.can_write_target_domain_truth,
+      false,
+    );
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
     assert.equal(fullDrilldown.domain_dispatch_evidence.attempts.length, 12);
     assert.equal(fullDrilldown.stage_production_evidence.stages.length, 12);
