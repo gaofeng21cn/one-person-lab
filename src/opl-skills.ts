@@ -4,6 +4,8 @@ import { spawnSync } from 'node:child_process';
 
 import { FrameworkContractError } from './contracts.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
+import { registerOplFamilyCodexPlugins } from './system-installation/codex-plugin-registry.ts';
+import type { OplModuleId } from './system-installation/shared.ts';
 import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
   resolveFamilyWorkspaceRootFromRepoRoot as resolveFamilyWorkspaceRootFromRepoRootImpl,
@@ -498,6 +500,15 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => inspectFamilySkillPack(spec));
   const packs = inspectedPacks.map((inspected) => runInstaller(inspected, resolvedHome ?? undefined));
+  const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: OplModuleId } => (
+    pack.sync_status === 'synced'
+    && ['medautoscience', 'medautogrant', 'redcube'].includes(pack.domain_id)
+  ));
+  const codex_plugin_registry = registerOplFamilyCodexPlugins(
+    syncedFamilyPluginPacks.map((pack) => pack.domain_id),
+    new Map(syncedFamilyPluginPacks.map((pack) => [pack.domain_id, pack.repo_root])),
+    resolvedHome ?? undefined,
+  );
   const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined, {
     mode: options.companionMode ?? 'observe',
     superpowersProfile: options.superpowersProfile ?? 'keep',
@@ -510,6 +521,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
       workspace_root: resolveDefaultFamilyWorkspaceRoot(),
       home: resolvedHome ?? process.env.HOME ?? null,
       packs,
+      codex_plugin_registry,
       companion_skills,
       summary: {
         total: packs.length,
