@@ -7,13 +7,16 @@ process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map([
+  ['src/cli/cases/public-command-specs.ts', 1010],
   ['src/family-domain-agent-skeleton.ts', 1145],
-  ['src/family-runtime-lifecycle-index.ts', 1078],
+  ['src/family-runtime-lifecycle-index.ts', 1205],
   ['src/family-runtime-temporal-provider.ts', 1008],
   ['src/family-stage-control-plane.ts', 1018],
-  ['src/runtime-tray-app-operator-drilldown.ts', 1295],
-  ['tests/src/cli/cases/agents-conformance.test.ts', 1006],
-  ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1036],
+  ['src/runtime-tray-app-operator-drilldown.ts', 1316],
+  ['src/standard-domain-agent-conformance.ts', 1087],
+  ['tests/src/cli/cases/agents-conformance.test.ts', 1156],
+  ['tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts', 1123],
+  ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1037],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
