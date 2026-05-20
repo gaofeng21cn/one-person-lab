@@ -14,7 +14,7 @@ OPL family runtime 的生产在线架构已经从 Hermes-first online substrate 
 
 Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 stage 内默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
 
-`hermes_agent` 的定位是显式非默认 executor adapter/backend；旧 Hermes runtime / Gateway / provider 只归历史 provenance、诊断语料、负向 guard 或历史参考材料。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate、active provider interface、Gateway bridge、provider proof surface、install/update target 或 readiness surface；local provider 只作为 dev/CI/offline diagnostic baseline。
+`hermes_agent`、`claude_code` 与 `antigravity_cli` 的定位是显式非默认 executor adapter/backend；旧 Hermes runtime / Gateway / provider 只归历史 provenance、诊断语料、负向 guard 或历史参考材料。Temporal provider 是生产在线路径的必需底座；Hermes 不再作为目标 session/wakeup substrate、active provider interface、Gateway bridge、provider proof surface、install/update target 或 readiness surface；local provider 只作为 dev/CI/offline diagnostic baseline。
 
 2026-05-14 closeout：Temporal provider 的 repo code path、worker lifecycle contract、CLI start/query/signal、typed closeout ingestion、fail-closed readiness、repo-native Temporal live residency proof、Agent Executor Adapter 接入链路和本机 managed production proof 都已经落地。显式 Temporal provider view 为 `full_online_ready=true`、`durable_online_ready=true`，`opl family-runtime residency proof --provider temporal --production` 返回 `production_residency_proven`，并把 proof receipt 写入 runtime event ledger；`framework production-closeout` 可读到 `provider_continuous_proof.continuous_proof_status=all_observed_proofs_proven`，`runtime snapshot` 已把 provider proof 投到 operator attention/recent item。task-bound bridge 当前 ledger `total=4` / `completed=4`，已覆盖 MAS typed blocker、MAG sidecar receipt refs 和 RCA no-regression evidence refs。剩余验收集中在周期性长时 residency / SLO、真实 domain stage activity soak、MAS owner-chain guarded apply 和真实 cost/progress 校准。
 
@@ -162,7 +162,7 @@ Provider 层不持有：
 验收：
 
 - 默认新投入不再新增 Hermes-first session/wakeup 功能。
-- 当前 active surface 不再提供 Hermes provider bridge、Gateway cron、frontdoor/local-manager 或 compatibility alias；旧名称只允许以 history/provenance/diagnostic source ref 或负向 guard 出现。`hermes_agent` executor adapter 只可通过显式 executor selection 使用。
+- 当前 active surface 不再提供 Hermes provider bridge、Gateway cron、frontdoor/local-manager 或 compatibility alias；旧名称只允许以 history/provenance/diagnostic source ref 或负向 guard 出现。`hermes_agent`、`claude_code` 与 `antigravity_cli` executor adapter 只可通过显式 executor selection 使用。
 - 清理旧 alias、旧 vocabulary 和过时 docs，避免二次污染。
 
 ## 退役方案
@@ -176,7 +176,7 @@ Provider 层不持有：
 
 保留但降级：
 
-- Hermes-Agent：`hermes_agent` 作为显式非默认 executor adapter/backend 保留；Hermes provider bridge、Gateway cron、compatibility alias、default executor、provider proof surface 或 readiness path 不恢复。
+- Hermes-Agent：`hermes_agent` 作为显式非默认 executor adapter/backend 保留；Hermes provider bridge、Gateway cron、compatibility alias、default executor、provider proof surface 或 readiness path 不恢复。其他非默认 executor adapter 同样只能通过显式 selection 和独立 receipt / audit 进入，不影响 Temporal provider 默认底座。
 - Local provider：开发、CI、离线诊断、fixture 和 fail-closed baseline；不能替代 production online readiness。
 
 不得退役：

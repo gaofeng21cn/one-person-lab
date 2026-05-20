@@ -8,7 +8,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 ## 顶层定位
 
 - `OPL` 是面向高价值知识工作的完整智能体运行框架。它以 `Codex-default session runtime` 为默认交互底座，以 stage-led family framework 承接长期自治、恢复、队列、human gate、trace、projection 与交付收口。
-- `OPL` 的默认交互与具体执行 runtime 是 `Codex CLI`；`Codex CLI` 是阶段内默认最小执行单元。Full online family runtime 的 readiness 对象是已配置且 ready 的 Temporal-backed family runtime provider。Temporal 是 OPL production online runtime 的必需 substrate，local provider 只能作为 dev/CI/offline diagnostic baseline，不能替代 Full online readiness；`hermes_agent` 只允许作为显式非默认 executor adapter/backend，Hermes provider / Gateway / readiness / compat 面只允许作为历史 provenance、诊断语料或负向 guard。
+- `OPL` 的默认交互与具体执行 runtime 是 `Codex CLI`；`Codex CLI` 是阶段内默认最小执行单元。Full online family runtime 的 readiness 对象是已配置且 ready 的 Temporal-backed family runtime provider。Temporal 是 OPL production online runtime 的必需 substrate，local provider 只能作为 dev/CI/offline diagnostic baseline，不能替代 Full online readiness；`hermes_agent`、`claude_code` 与 `antigravity_cli` 只允许作为显式非默认 executor adapter/backend，Hermes provider / Gateway / readiness / compat 面只允许作为历史 provenance、诊断语料或负向 guard。
 - `Codex CLI` 是 OPL 的受管 runtime dependency：OPL 必须检测实际命中的 binary、版本、最低版本策略和 PATH 候选；同版本兼容 wrapper / alias 归并到当前有效入口，低于当前最低版本或当前命中版本无法解析的 Codex CLI 只能进入 `attention_needed`，不得被报告为 ready。
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
 - 大型任务必须按 stage 作为可观察、可恢复、可审计的工作单元推进；不得把开放式知识工作降级成只靠硬编码步骤或固定脚本后处理的流程。
@@ -29,7 +29,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 新 GraphFlow / GFL 学习点默认先进入 reference/history 或现有 Derived Diagnostic Lenses，再由 `opl stages readiness` 折叠成 warning / recommendation / typed blocker / route-back ref；不得新增 standalone 默认 CLI/schema 目标，只有影响启动安全或 OPL 越权才升级为 hard gate。
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层和 typed family queue owner，不得被写成 domain scheduler、domain truth owner、domain quality owner、domain artifact owner 或 concrete executor。
 - family runtime provider 负责 stage-attempt durability、wakeup、retry/dead-letter、human-gate transport、status query 与 execution history。生产在线路径必须由 Temporal-backed provider 承接；缺少 Temporal service、worker 或 readiness proof 时，OPL production readiness 必须 fail-closed 为可修复 blocker，而不是退回 local provider 宣称在线可用。
-- `hermes_agent` 可作为显式非默认 executor adapter/backend。该 adapter 不得被写成 provider、provider proof surface、readiness path、MAS/MAG/RCA domain truth、quality、artifact、publication gate 或默认 concrete executor owner，也不得被 fork/vendor 成 OPL 私有 runtime kernel。
+- `hermes_agent`、`claude_code` 与 `antigravity_cli` 可作为显式非默认 executor adapter/backend。非默认 adapter 不得被写成 provider、provider proof surface、readiness path、MAS/MAG/RCA domain truth、quality、artifact、publication gate 或默认 concrete executor owner，也不得被 fork/vendor 成 OPL 私有 runtime kernel。
 - OPL 应上收 domain-neutral 的智能体运行外围能力：stage attempt ledger、typed queue、checkpoint / closeout / receipt、source fingerprint / idempotency、artifact index、file lifecycle、retention、restore proof、migration ledger、workspace lifecycle、human gate / resume token 和 operator projection。任何上收都必须保留 domain truth owner 不变。
 - MAS/MAG/RCA 的目标接入形态是统一 `domain-agent skeleton`：`agent/`、`contracts/`、`runtime/authority_functions/`、`src/` 或 `packages/`、`docs/` 这些 repo-source 边界应可由 OPL 发现、校验和托管；workspace / source / artifact locator、index、schema、receipt refs、retention / restore policy 只以 contract、policy 和 receipt ref 暴露，真实 workspace state、runtime artifact body、receipt 实例和交付物实例必须在外部 workspace / runtime artifact root。domain 内部业务实现、语言和 quality gate 可以不同。
 - 标准 OPL Agent 的真实语义必须在 `agent/` pack 和对应 machine-readable contracts 中归位。`agent/` 下必须有 prompt、stage、skill、knowledge、quality gate 的真实语义文件；`pack_compiler_input.required_domain_pack_paths` 必须解析到这些文件；每个 stage 必须声明 prompt refs、skill refs 或 skill id、knowledge refs 和 evaluation refs。空 `agents/` / `agent/` 目录、只有 README 的 skeleton、只靠 `src/` / `packages/` 承载领域语义、或缺失 stage-level prompt/skill/knowledge/evaluation refs 的 repo 不能被视为标准 OPL Agent。
@@ -65,7 +65,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 1. Stage pack 是启动单位；OPL 准入并启动 stage，不启动自由形态 workflow script。
 2. AI-first 执行不被静态合同写死；合同只绑定 prompt、tools、knowledge refs、expected receipt 和 authority boundary。
-3. `Codex CLI` 是默认 selected executor；`hermes_agent`、Claude Code 或其他 executor adapter 只能显式绑定，并以 receipt / audit / fail-closed 证明连接。
+3. `Codex CLI` 是默认 selected executor；`hermes_agent`、`claude_code`、`antigravity_cli` 或其他 executor adapter 只能通过 request、stage attempt 或 handoff 显式绑定，并以 `executor_binding_ref`、receipt / audit / fail-closed 证明连接。
 4. AI 原生专家判断优先；机械分数、checklist、contract completeness、descriptor ready、provider completion 和 generated-surface proof 只能作为 advisory，除非独立 AI stage 或 domain-owned quality gate 返回 receipt / typed blocker / route-back verdict，否则不能替代专家判断。
 5. `requires` / `ensures` 组合在启动前检查；domain judgment 仍是 runtime / domain-owned 结果。
 6. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。

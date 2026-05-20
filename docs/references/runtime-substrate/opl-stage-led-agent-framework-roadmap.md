@@ -24,7 +24,7 @@ Date: `2026-05-18`
 
 - OPL 作为 stage-led、以 Agent executor 为最小执行单位的智能体框架的顶层设计。
 - Temporal / retired Hermes-provider / local provider 的 runtime substrate 取舍，其中 Temporal 是 production online OPL 的必需 substrate，local provider 只保留 dev/CI/offline diagnostic baseline，Hermes provider / Gateway / proof-provider / readiness / compatibility surface 只保留 history/provenance/diagnostic/negative-guard 角色。
-- `hermes_agent` 作为 canonical 显式非默认 executor adapter/backend 单独保留，必须通过独立 receipt、audit、full-loop proof 和 fail-closed gate。
+- `hermes_agent`、`claude_code` 与 `antigravity_cli` 作为 canonical 显式非默认 executor adapter/backend 单独保留，必须通过独立 receipt、audit、executor binding ref 和 fail-closed gate；其中 `hermes_agent` 额外要求 full-loop proof，`antigravity_cli` 只作为 stage-level explicit model/reasoning selection 示例。
 - `TypeScript`、`Python`、`Go`、`Rust` 在 framework 与 domain agent 中的分工。
 - MAS / MAG / RCA 的 stage/action/projection descriptor 接入、direct skill 等价和 OPL-hosted path。
 - MAS 已验证的 SQLite 持久化、file lifecycle、restore proof、artifact index、retention 和 lifecycle 管理经验如何上收到 OPL framework。
@@ -75,9 +75,11 @@ Date: `2026-05-18`
 2026-05-14 Agent Executor Adapter closeout 校准：
 
 - OPL 已持有统一 executor registry / request / receipt 边界，当前 canonical executor kind 包括 `codex_cli`、`hermes_agent`、`claude_code` 与 `antigravity_cli`；默认选择顺序保持显式输入优先，未显式选择时仍回到 `codex_cli`。
+- Stage-level executor policy 已能在 request / stage attempt 中显式携带 `executor_kind`、`model`、`reasoning_effort`、`provider`、`executor_binding_ref`、`executor_labels`、`required_capabilities` 与 `receipt_requirements`；非默认 executor 缺少 binding ref 时 fail-closed。
 - `opl exec`、executor doctor/run 入口、Product Entry、Temporal stage activity、Codex stage runner 和 family-runtime runner 均按 OPL executor/receipt 边界解释；显式选择非默认 executor 时不得静默 fallback 到 Codex。
 - `Claude Code` 作为显式 opt-in adapter；v1 验收是可接入、可运行、可回执、可审计、fail-closed，不承诺 reasoning、工具语义、resume、质量或输出效果与 Codex CLI 等价。
 - `Hermes-Agent` 作为显式 opt-in adapter；v1 验收是可接入、可运行、可回执、可审计、fail-closed，并额外要求完整 agent loop 与 tool event proof，不承诺 reasoning、工具语义、resume、质量或输出效果与 Codex CLI 等价。
+- `Antigravity CLI` 作为显式 opt-in experimental adapter；v1 验收是可接入、可运行、可回执、可审计、fail-closed，并可在类似 RCA HTML route 中表达 Gemini model / reasoning effort 选择，不成为默认执行器，也不承诺 reasoning、工具语义、resume、质量或输出效果与 Codex CLI 等价。
 - Hermes provider proof surface、Gateway cron、readiness path 和 compatibility alias 已退出 active surface，只能 fail-closed 或保留为历史/诊断/负向 guard 证据。
 - MAG/RCA 只消费 OPL executor receipt / proof refs；MAS 只声明 executor requirement、接收 OPL typed closeout / domain-task receipt。三仓均不成为 generic executor owner。
 - OPL App / TUI 是前端、工作台和 read-model：可以展示 receipt 或承载显式 executor 选择，但无显式选择时仍保持 Codex CLI 默认交互语义。
@@ -185,7 +187,7 @@ Date: `2026-05-18`
 - 可以引入外部 runtime dependency；Temporal 是当前生产级 durable execution substrate 的优先候选。
 - 引入 Temporal 的目标是 durable workflow history、activity retry/timeout、heartbeat、signal/query、long-run recovery 和 human gate，不是把 domain truth 迁进 Temporal。
 - 旧 Hermes provider/Gateway 路线不再承担目标 session/wakeup substrate、provider、默认 executor、Codex CLI 备线、可选安装模块、provider proof surface 或 readiness path。
-- `hermes_agent` 是 canonical 显式非默认 executor adapter/backend；其他旧 Hermes 引用只属于历史 provenance、诊断语料或负向 guard 语境。
+- `hermes_agent`、`claude_code` 与 `antigravity_cli` 是 canonical 显式非默认 executor adapter/backend；其他旧 Hermes 引用只属于历史 provenance、诊断语料或负向 guard 语境。
 - 不引入新依赖只为“看起来像框架”；依赖必须能替代当前 OPL 自己难以可靠维护的 durable execution 能力，并能通过 fixture workflow、real domain soak 和 direct skill parity 验收。
 
 对比依据：
@@ -335,7 +337,7 @@ User / Codex App / OPL GUI / CLI
   -> typed family queue / wakeup / approval / retry
   -> family runtime provider (Temporal required; local dev/CI/offline diagnostic)
   -> domain app skill or domain capability surface
-  -> explicit agent executor (Codex CLI default; hermes_agent/claude_code opt-in)
+  -> explicit agent executor (Codex CLI default; hermes_agent/claude_code/antigravity_cli opt-in)
   -> domain-owned quality gate / truth reducer / artifact authority
 ```
 
