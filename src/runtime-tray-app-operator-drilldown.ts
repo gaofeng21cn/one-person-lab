@@ -644,6 +644,7 @@ function appExecutionBridge(
       owner: ref.owner,
       route_target_kind: ref.route_target_kind,
       ...('route_status' in ref ? { route_status: ref.route_status } : {}),
+      ...('route_status_detail' in ref ? { route_status_detail: ref.route_status_detail } : {}),
       ...('request_scope' in ref ? { request_scope: ref.request_scope } : {}),
       action_ref: ref.ref,
       opl_cli_args: 'opl_cli_args' in ref ? ref.opl_cli_args : null,
@@ -676,8 +677,18 @@ function appExecutionBridge(
         : {}),
       execution_surface: ref.execution_surface,
       route_status: 'route_status' in ref ? ref.route_status : null,
+      route_status_detail: 'route_status_detail' in ref ? ref.route_status_detail : null,
       request_scope: 'request_scope' in ref ? ref.request_scope : null,
       route_closure_policy: 'route_closure_policy' in ref ? ref.route_closure_policy : null,
+      open_reason: 'open_reason' in ref ? ref.open_reason : null,
+      payload_requirement: 'payload_requirement' in ref ? ref.payload_requirement : null,
+      payload_owner: 'payload_owner' in ref ? ref.payload_owner : null,
+      route_requires_domain_or_app_payload:
+        'route_requires_domain_or_app_payload' in ref ? ref.route_requires_domain_or_app_payload : false,
+      can_close_without_domain_or_app_payload:
+        'can_close_without_domain_or_app_payload' in ref ? ref.can_close_without_domain_or_app_payload : true,
+      opl_generated_receipt_policy:
+        'opl_generated_receipt_policy' in ref ? ref.opl_generated_receipt_policy : null,
       creates_domain_action: 'creates_domain_action' in ref ? ref.creates_domain_action : false,
       creates_owner_receipt: 'creates_owner_receipt' in ref ? ref.creates_owner_receipt : false,
       owner_receipt_refs: 'owner_receipt_refs' in ref ? ref.owner_receipt_refs : [],

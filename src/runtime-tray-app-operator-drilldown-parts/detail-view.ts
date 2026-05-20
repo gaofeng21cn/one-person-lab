@@ -150,6 +150,12 @@ function summarizeSafeAction(action: JsonRecord | null) {
     project_id: stringValue(action.project_id),
     missing_production_evidence: stringList(action.missing_production_evidence),
     expected_receipt_refs: stringList(action.expected_receipt_refs),
+    route_status_detail: stringValue(action.route_status_detail),
+    open_reason: stringValue(action.open_reason),
+    payload_requirement: stringValue(action.payload_requirement),
+    payload_owner: stringValue(action.payload_owner),
+    route_requires_domain_or_app_payload: action.route_requires_domain_or_app_payload === true,
+    can_close_without_domain_or_app_payload: action.can_close_without_domain_or_app_payload !== false,
   };
 }
 
@@ -230,6 +236,10 @@ function missingEvidenceItems(drilldown: JsonRecord) {
         missing: stringList(stage.missing_production_evidence),
         detail_ref: stringValue(stage.ref),
         next_safe_action_id: stringValue(action?.action_id),
+        open_reason: stringValue(action?.open_reason),
+        payload_requirement: stringValue(action?.payload_requirement),
+        payload_owner: stringValue(action?.payload_owner),
+        route_requires_domain_or_app_payload: action?.route_requires_domain_or_app_payload === true,
       };
     });
   const domainEvidence = record(drilldown.domain_evidence_request_refs);

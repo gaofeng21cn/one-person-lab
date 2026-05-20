@@ -614,10 +614,30 @@ test('family-runtime production-closeout closes only OPL-owned provider and clea
     const stageItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'stage_production_caller_request'
     );
+    const stageEvidenceItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'stage_production_evidence_receipt'
+    );
     for (const item of [...externalItems, ...gateItems, ...stageItems]) {
       assert.equal(item.status, 'open_safe_action_request_route_available');
       assert.equal(item.receipt_ref, null);
     }
+    assert.equal(stageEvidenceItems.length > 0, true);
+    assert.equal(
+      stageEvidenceItems.every((item: {
+        status: string;
+        route_requires_domain_or_app_payload: boolean;
+        payload_owner: string;
+      }) =>
+        item.status === 'open_safe_action_request_route_available'
+        && item.route_requires_domain_or_app_payload
+        && item.payload_owner === 'domain_repository_or_app_live_operator'
+      ),
+      true,
+    );
+    assert.equal(
+      fullCloseout.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count,
+      stageEvidenceItems.length,
+    );
     assert.equal(fullCloseout.next_action_ledger.summary.next_action_item_count, 39);
     assert.equal(fullCloseout.authority_boundary.can_write_domain_truth, false);
     assert.equal(fullCloseout.authority_boundary.can_claim_production_ready, false);

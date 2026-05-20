@@ -275,6 +275,7 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     status: itemStatus,
     closeout_item_is_completion_claim: false,
     route_status: stringValue(route.route_status) ?? 'request_route_available',
+    route_status_detail: stringValue(route.route_status_detail),
     route_semantics: 'open_safe_action_request_apply_verify_route',
     receipt_ref: closureReceiptRef,
     receipt_refs: closureReceiptRefs,
@@ -296,6 +297,12 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     freshness_refs: freshnessRefs,
     expected_refs: readOnlyExpectedRefs(route),
     closure_reason: stringValue(closure?.closure_reason),
+    open_reason: stringValue(route.open_reason),
+    payload_requirement: stringValue(route.payload_requirement),
+    payload_owner: stringValue(route.payload_owner),
+    route_requires_domain_or_app_payload: route.route_requires_domain_or_app_payload === true,
+    can_close_without_domain_or_app_payload: route.can_close_without_domain_or_app_payload !== false,
+    opl_generated_receipt_policy: stringValue(route.opl_generated_receipt_policy),
     blocked_reason: stringValue(route.blocked_reason),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
@@ -430,6 +437,11 @@ function closeoutCounts(
     external_evidence_item_count: closeoutItems.filter((item) =>
       item.claim_scope === 'external_evidence_receipt'
     ).length,
+    stage_production_evidence_receipt_item_count: closeoutItems.filter((item) =>
+      item.claim_scope === 'stage_production_evidence_receipt'
+    ).length,
+    stage_production_evidence_receipt_requires_domain_or_app_payload_count:
+      closeoutItems.filter((item) => item.route_requires_domain_or_app_payload === true).length,
     evidence_gate_item_count: closeoutItems.filter((item) =>
       item.claim_scope === 'evidence_gate_receipt'
     ).length,
@@ -451,6 +463,10 @@ function attentionQueueItem(item: ReturnType<typeof readOnlyCloseoutItem>) {
     claim_scope: item.claim_scope,
     next_safe_action_ref: item.replay_ref,
     missing_or_expected_refs: item.expected_refs,
+    open_reason: item.open_reason,
+    payload_requirement: item.payload_requirement,
+    payload_owner: item.payload_owner,
+    route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload,
   };
 }
 
@@ -467,9 +483,14 @@ function nextSafeActions(
     stage_id: item.stage_id ?? null,
     claim_scope: item.claim_scope,
     route_status: item.route_status,
+    route_status_detail: item.route_status_detail,
     next_safe_action_ref: item.replay_ref,
     expected_ref_count: item.expected_refs.length,
     typed_blocker_ref: item.typed_blocker_ref,
+    open_reason: item.open_reason,
+    payload_requirement: item.payload_requirement,
+    payload_owner: item.payload_owner,
+    route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload,
     closeout_item_is_completion_claim: false,
   }));
 }

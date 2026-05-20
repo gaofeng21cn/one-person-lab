@@ -331,6 +331,7 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
   const requestPackId = stageProductionEvidenceRequestPackId(commandDomainId);
   const sourceRef = stringValue(stage.ref)
     ?? `/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/${commandDomainId}/${stageId}`;
+  const recordMode = mode === 'record';
   const args = [
     'agents',
     'evidence',
@@ -356,11 +357,24 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     owner: 'opl',
     route_target_kind: 'opl_cli',
     route_status: mode === 'verify' ? 'verify_route_available' : 'record_route_available',
+    route_status_detail: recordMode
+      ? 'record_route_available_waiting_for_domain_app_or_live_refs_payload'
+      : 'verify_route_available_for_recorded_refs_only_stage_evidence_receipt',
     request_scope: 'opl_owned_stage_evidence_refs_only_receipt',
     execution_policy: 'opl_safe_action_shell',
     execution_surface: 'opl runtime action execute',
     route_closure_policy:
       'records_or_verifies_refs_only_stage_expected_receipt_and_monitor_freshness_without_domain_action_or_ready_claim',
+    open_reason: recordMode
+      ? 'unobserved_expected_receipt_or_monitor_freshness_refs_require_domain_app_or_live_payload_before_closure'
+      : null,
+    payload_requirement: recordMode
+      ? 'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness'
+      : 'previously_recorded_opl_refs_only_receipt_required_to_verify_stage_evidence',
+    payload_owner: recordMode ? 'domain_repository_or_app_live_operator' : 'opl_external_evidence_ledger',
+    route_requires_domain_or_app_payload: recordMode,
+    can_close_without_domain_or_app_payload: !recordMode,
+    opl_generated_receipt_policy: 'OPL_must_not_generate_domain_owner_receipts_monitor_freshness_or_no_regression_refs',
     creates_domain_action: false,
     creates_owner_receipt: false,
     owner_receipt_refs: [],
