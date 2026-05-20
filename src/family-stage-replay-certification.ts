@@ -3,6 +3,10 @@ import type {
   FamilyStageProofBundleExpectedReceiptRef,
   FamilyStageProofBundleRuntimeEventRequirement,
 } from './family-stage-proof-bundle.ts';
+import type {
+  FamilyStageControlPlane,
+  FamilyStageSurfaceRef,
+} from './family-stage-control-plane-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -90,6 +94,92 @@ function readStringList(value: unknown) {
 
 function uniq(values: string[]) {
   return [...new Set(values)];
+}
+
+type FamilyStageReplayEvidenceBucket =
+  | 'append_only_event_log_refs'
+  | 'attempt_ledger_refs'
+  | 'recorded_runtime_event_refs'
+  | 'closeout_receipt_refs';
+
+const REPLAY_EVIDENCE_BUCKET_BY_ROLE: Record<string, FamilyStageReplayEvidenceBucket> = {
+  append_only_event_log_ref: 'append_only_event_log_refs',
+  append_only_event_log_refs: 'append_only_event_log_refs',
+  attempt_ledger_ref: 'attempt_ledger_refs',
+  attempt_ledger_refs: 'attempt_ledger_refs',
+  stage_attempt_ledger_ref: 'attempt_ledger_refs',
+  opl_stage_attempt_ledger_ref: 'attempt_ledger_refs',
+  recorded_runtime_event_ref: 'recorded_runtime_event_refs',
+  recorded_runtime_event_refs: 'recorded_runtime_event_refs',
+  runtime_event_ref: 'recorded_runtime_event_refs',
+  runtime_event_refs: 'recorded_runtime_event_refs',
+  closeout_receipt_ref: 'closeout_receipt_refs',
+  closeout_receipt_refs: 'closeout_receipt_refs',
+  owner_receipt_ref: 'closeout_receipt_refs',
+  domain_owner_receipt_ref: 'closeout_receipt_refs',
+  stage_closeout_receipt_ref: 'closeout_receipt_refs',
+  replay_receipt_ref: 'closeout_receipt_refs',
+};
+
+const REPLAY_EVIDENCE_BUCKET_BY_REF_KIND: Record<string, FamilyStageReplayEvidenceBucket> = {
+  append_only_event_log_ref: 'append_only_event_log_refs',
+  event_log_ref: 'append_only_event_log_refs',
+  attempt_ledger_ref: 'attempt_ledger_refs',
+  runtime_event_ref: 'recorded_runtime_event_refs',
+  recorded_runtime_event_ref: 'recorded_runtime_event_refs',
+  closeout_receipt_ref: 'closeout_receipt_refs',
+  owner_receipt_ref: 'closeout_receipt_refs',
+};
+
+function normalizedToken(value: string | undefined) {
+  return value?.trim().toLowerCase().replace(/[-\s]+/g, '_') ?? '';
+}
+
+function replayEvidenceBucket(ref: FamilyStageSurfaceRef): FamilyStageReplayEvidenceBucket | null {
+  const roleBucket = REPLAY_EVIDENCE_BUCKET_BY_ROLE[normalizedToken(ref.role)];
+  if (roleBucket) {
+    return roleBucket;
+  }
+  return REPLAY_EVIDENCE_BUCKET_BY_REF_KIND[normalizedToken(ref.ref_kind)] ?? null;
+}
+
+function surfaceRefValues(ref: FamilyStageSurfaceRef) {
+  const values = Array.isArray(ref.ref) ? ref.ref : [ref.ref];
+  return values.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+}
+
+export function buildFamilyStageReplayEvidenceFromControlPlane(
+  plane: FamilyStageControlPlane,
+): FamilyStageReplayEvidence {
+  const evidence: Required<Pick<
+    FamilyStageReplayEvidence,
+    | 'append_only_event_log_refs'
+    | 'attempt_ledger_refs'
+    | 'recorded_runtime_event_refs'
+    | 'closeout_receipt_refs'
+  >> = {
+    append_only_event_log_refs: [],
+    attempt_ledger_refs: [],
+    recorded_runtime_event_refs: [],
+    closeout_receipt_refs: [],
+  };
+  const refs = [
+    ...(plane.replay_evidence_refs ?? []),
+    ...plane.stages.flatMap((stage) => stage.stage_contract?.replay_evidence_refs ?? []),
+  ];
+  for (const ref of refs) {
+    const bucket = replayEvidenceBucket(ref);
+    if (!bucket) {
+      continue;
+    }
+    evidence[bucket].push(...surfaceRefValues(ref));
+  }
+  return {
+    append_only_event_log_refs: uniq(evidence.append_only_event_log_refs),
+    attempt_ledger_refs: uniq(evidence.attempt_ledger_refs),
+    recorded_runtime_event_refs: uniq(evidence.recorded_runtime_event_refs),
+    closeout_receipt_refs: uniq(evidence.closeout_receipt_refs),
+  };
 }
 
 function closeoutRefsFromPacket(packet: JsonRecord | null | undefined) {
