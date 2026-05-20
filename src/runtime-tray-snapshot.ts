@@ -17,6 +17,7 @@ import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane
 import { buildStageAttemptWorkbench } from './runtime-tray-stage-attempt-workbench.ts';
 import { buildStageAttemptTrayItems } from './runtime-tray-stage-attempt-items.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { projectionFromMasManifestEntry } from './family-runtime-mas-managed-provider-projection.ts';
 import { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
 import { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
@@ -32,6 +33,8 @@ const PROJECT_LABELS: Record<string, string> = {
   medautogrant: 'MAG',
   redcube: 'RCA',
 };
+const RUNTIME_TRAY_SUMMARY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
+const RUNTIME_TRAY_FULL_MANIFEST_COMMAND_TIMEOUT_MS = 120_000;
 
 const RUNNING_STATUSES = new Set([
   'active',
@@ -685,16 +688,33 @@ function buildMasStudyProjection(
 
 export async function buildRuntimeTraySnapshot(
   contracts: FrameworkContracts,
-  options: { appOperatorDrilldownDetailLevel?: AppOperatorDrilldownDetailLevel } = {},
+  options: {
+    appOperatorDrilldownDetailLevel?: AppOperatorDrilldownDetailLevel;
+    providerKind?: ReturnType<typeof resolveFamilyRuntimeProviderKind>;
+  } = {},
 ) {
-  const providerKind = resolveFamilyRuntimeProviderKind();
+  const providerKind = resolveFamilyRuntimeProviderKind(options.providerKind);
   const familyProviderPaths = familyRuntimePaths();
-  const masManagedProviderProjection = readMasManagedProviderProjection();
+  const sidecarMasManagedProviderProjection = readMasManagedProviderProjection({
+    includeManifest: false,
+  });
+  const summaryDetail = options.appOperatorDrilldownDetailLevel !== 'full';
+  const domainManifests = buildDomainManifestCatalog(contracts, {
+    manifestCommandTimeoutMs: summaryDetail
+      ? RUNTIME_TRAY_SUMMARY_MANIFEST_COMMAND_TIMEOUT_MS
+      : RUNTIME_TRAY_FULL_MANIFEST_COMMAND_TIMEOUT_MS,
+    manifestCommandTimeoutPolicy: 'fixed',
+    useProjectionCacheOnFailure: summaryDetail,
+  }).domain_manifests;
+  const masManagedProviderProjection =
+    projectionFromMasManifestEntry(domainManifests.projects.find((entry) => (
+      entry.project_id === 'medautoscience'
+    )))
+    ?? sidecarMasManagedProviderProjection;
   const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyProviderPaths, {
     managedProviderProjection: masManagedProviderProjection,
   });
   const providerReady = lifecycleProvider.ready === true;
-  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const stageAttemptWorkbench = await buildStageAttemptWorkbench({
     managedProviderProjection: masManagedProviderProjection,
   });
@@ -828,6 +848,28 @@ export async function buildRuntimeTraySnapshot(
         ...domainProjectionIngestion.source_refs,
         ...masStudyProjection.source_refs,
       ]),
+      domain_manifest_projection_cache: {
+        surface_kind: 'opl_runtime_tray_domain_manifest_projection_cache',
+        projection_policy:
+          'summary_reads_may_use_stale_projection_cache_when_live_domain_manifest_times_out_full_detail_requires_live_refresh',
+        summary: {
+          cache_used_count: domainManifests.summary.projection_cache_used_count ?? 0,
+          live_failed_project_ids: domainManifests.summary.live_failed_project_ids ?? [],
+        },
+        projects: domainManifests.projects
+          .filter((entry) => entry.manifest_cache)
+          .map((entry) => ({
+            project_id: entry.project_id,
+            status: entry.status,
+            cache: entry.manifest_cache,
+          })),
+        authority_boundary: {
+          cache_is_domain_truth: false,
+          can_authorize_domain_ready: false,
+          can_authorize_quality_or_export_verdict: false,
+          live_manifest_refresh_required_for_production_closeout: true,
+        },
+      },
       daemon_policy: {
         local_daemon_added: false,
         runtime_kernel_owner: 'provider_backed_family_runtime',

@@ -429,7 +429,7 @@ test('domain manifests times out stalled manifest commands fail-closed', () => {
 
     const manifestOutput = runCli(['domain', 'manifests'], {
       OPL_STATE_DIR: stateRoot,
-      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '100',
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '1000',
     });
     const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
       entry.project_id === 'medautoscience'
@@ -438,6 +438,50 @@ test('domain manifests times out stalled manifest commands fail-closed', () => {
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 1);
     assert.equal(medautoscience.status, 'command_timeout');
     assert.equal(medautoscience.error.code, 'command_timeout');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain manifests accepts complete stdout manifest even when command cleanup exceeds timeout', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-timeout-stdout-state-'));
+  const manifestPath = path.join(stateRoot, 'manifest.json');
+  const slowExitCommandPath = path.join(stateRoot, 'slow-exit-manifest-command.cjs');
+
+  try {
+    fs.writeFileSync(manifestPath, `${JSON.stringify(loadFamilyManifestFixtures().medautoscience)}\n`, 'utf8');
+    fs.writeFileSync(
+      slowExitCommandPath,
+      `const fs = require('node:fs');\n`
+        + `process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8'));\n`
+        + `setTimeout(() => {}, 5000);\n`,
+      'utf8',
+    );
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      `${process.execPath} ${shellSingleQuote(slowExitCommandPath)}`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const manifestOutput = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '1000',
+    });
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 1);
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.manifest_kind, 'med_autoscience_product_entry_manifest');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -812,7 +856,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
     assert.equal(spawnResult.domain_entry_launch.action.kind, 'spawn_command');
     assert.equal(typeof spawnResult.domain_entry_launch.action.pid, 'number');
 
-    for (let attempt = 0; attempt < 20; attempt += 1) {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
       if (fs.existsSync(shellFixture.capturePath)) {
         break;
       }

@@ -105,7 +105,7 @@ const lanes = {
       'tests/src/family-incident-learning-loop.test.ts',
       'tests/src/family-product-operator-projection.test.ts',
       'tests/src/quality-details.test.ts',
-    ]),
+    ], { batchSize: 20 }),
   ],
   regression: [
     nodeTest([

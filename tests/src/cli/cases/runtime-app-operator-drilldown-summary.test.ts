@@ -10,6 +10,9 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { buildOplAionRuntimeConsumptionContract } from '../../../../src/aionui-acp-shell.ts';
+import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
+import { loadFrameworkContracts } from '../../../../src/contracts.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -154,25 +157,82 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     });
     const summaryDrilldown = summaryOutput.app_operator_drilldown;
     assert.equal(summaryDrilldown.detail_level, 'summary');
+    assert.equal(
+      summaryDrilldown.projection_detail_policy,
+      'attention_first_default_full_refs_via_explicit_drilldown',
+    );
     assert.equal(summaryDrilldown.summary.stage_attempt_count, 12);
     assert.equal(summaryDrilldown.summary.route_graph_ref_count, 12);
     assert.equal(summaryDrilldown.summary.operator_action_route_count > 36, true);
-    assert.equal(summaryDrilldown.route_graph_refs.refs.length <= 10, true);
-    assert.equal(summaryDrilldown.operator_action_routing_refs.refs.length <= 10, true);
-    assert.equal(summaryDrilldown.production_evidence_tail_ledger.tail_items.length <= 10, true);
-    assert.equal(summaryDrilldown.domain_dispatch_evidence.attempts.length, 10);
-    assert.equal(summaryDrilldown.stage_production_evidence.stages.length, 10);
-    assert.equal(summaryDrilldown.route_graph_refs.omitted_ref_count, 2);
-    assert.equal(summaryDrilldown.domain_dispatch_evidence.omitted_ref_count, 2);
-    assert.equal(summaryDrilldown.stage_production_evidence.omitted_ref_count, 2);
     assert.equal(
-      summaryDrilldown.operator_action_routing_refs.omitted_ref_count,
-      summaryDrilldown.summary.operator_action_route_count - 10,
+      summaryDrilldown.summary.stage_production_attempt_request_route_count,
+      summaryDrilldown.summary.stage_production_evidence_missing_caller_stage_count,
+    );
+    assert.equal(summaryDrilldown.route_graph_refs, undefined);
+    assert.equal(summaryDrilldown.operator_action_routing_refs, undefined);
+    assert.equal(summaryDrilldown.production_evidence_tail_ledger, undefined);
+    assert.equal(summaryDrilldown.domain_dispatch_evidence, undefined);
+    assert.equal(summaryDrilldown.stage_production_evidence, undefined);
+    assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
+    assert.equal(
+      summaryDrilldown.attention_first_payload.surface_kind,
+      'opl_app_drilldown_attention_first_payload',
+    );
+    assert.deepEqual(summaryDrilldown.attention_first_payload.full_detail_args, ['--detail', 'full']);
+    assert.deepEqual(
+      Object.keys(summaryDrilldown.attention_first_payload).filter((key) => (
+        [
+          'owner',
+          'blocking',
+          'advisory',
+          'missing_evidence',
+          'next_safe_action',
+          'provider_health',
+        ].includes(key)
+      )),
+      ['owner', 'blocking', 'advisory', 'missing_evidence', 'next_safe_action', 'provider_health'],
     );
     assert.equal(
-      summaryDrilldown.production_evidence_tail_ledger.omitted_ref_count,
-      summaryDrilldown.summary.production_evidence_tail_item_count - 10,
+      summaryDrilldown.attention_first_payload.missing_evidence.items.length <= 5,
+      true,
     );
+    assert.equal(typeof summaryDrilldown.attention_first_payload.next_safe_action.action_id, 'string');
+    assert.equal(summaryDrilldown.attention_first_payload.next_safe_action.action_id.length > 0, true);
+    assert.equal(
+      summaryDrilldown.attention_first_payload.next_safe_action.submit_via,
+      'opl runtime action execute',
+    );
+    assert.deepEqual(
+      summaryDrilldown.attention_first_payload.next_safe_action.submit_args.slice(0, 4),
+      ['runtime', 'action', 'execute', '--action'],
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.provider_health.health_status,
+      'attention_required',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.lazy_load_targets.some(
+        (target: { section: string; detail_args: string[] }) =>
+          target.section === 'operator_action_routing_refs'
+          && target.detail_args.join(' ') === '--detail full',
+      ),
+      true,
+    );
+
+    const aionConsumption = buildOplAionRuntimeConsumptionContract();
+    assert.deepEqual(aionConsumption.default_read_model_command, ['runtime', 'app-operator-drilldown']);
+    assert.equal(aionConsumption.default_payload_ref, '/app_operator_drilldown/attention_first_payload');
+    assert.deepEqual(aionConsumption.full_detail_command, [
+      'runtime',
+      'app-operator-drilldown',
+      '--detail',
+      'full',
+    ]);
+    assert.equal(
+      aionConsumption.action_submission.surface,
+      summaryDrilldown.attention_first_payload.next_safe_action.submit_via,
+    );
+    assert.equal(aionConsumption.authority_boundary.can_write_domain_truth, false);
 
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
@@ -183,6 +243,12 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
     assert.equal(fullDrilldown.domain_dispatch_evidence.attempts.length, 12);
     assert.equal(fullDrilldown.stage_production_evidence.stages.length, 12);
+    assert.equal(
+      fullDrilldown.operator_action_routing_refs.refs.filter(
+        (route: { action_kind: string }) => route.action_kind === 'stage_production_attempt_request',
+      ).length,
+      summaryDrilldown.summary.stage_production_attempt_request_route_count,
+    );
     assert.equal(
       fullDrilldown.production_evidence_tail_ledger.tail_items.length,
       summaryDrilldown.summary.production_evidence_tail_item_count,
@@ -196,6 +262,79 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(fullDrilldown.stage_production_evidence.omitted_ref_count, 0);
     assert.equal(fullDrilldown.operator_action_routing_refs.omitted_ref_count, 0);
     assert.equal(fullDrilldown.production_evidence_tail_ledger.omitted_ref_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime tray summary can use a non-authoritative manifest projection cache when live manifest is slow', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-cache-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const manifest = buildManyStageManifest(2);
+  const manifestPath = path.join(stateRoot, 'manifest.json');
+  const slowCommandPath = path.join(stateRoot, 'slow-manifest.cjs');
+
+  try {
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, 'utf8');
+    fs.writeFileSync(
+      slowCommandPath,
+      `const fs = require('node:fs');\n`
+        + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 11000);\n`,
+      'utf8',
+    );
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      `${process.execPath} ${slowCommandPath}`,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '15000',
+    });
+
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+    try {
+      const snapshot = await buildRuntimeTraySnapshot(loadFrameworkContracts(), {
+        appOperatorDrilldownDetailLevel: 'summary',
+      });
+      const tray = snapshot.runtime_tray_snapshot;
+      assert.equal(tray.app_operator_drilldown.summary.stage_production_evidence_stage_count, 2);
+      assert.equal(tray.domain_manifest_projection_cache.summary.cache_used_count, 1);
+      assert.deepEqual(tray.domain_manifest_projection_cache.summary.live_failed_project_ids, ['medautoscience']);
+      assert.equal(
+        tray.domain_manifest_projection_cache.authority_boundary.cache_is_domain_truth,
+        false,
+      );
+      assert.equal(
+        tray.domain_manifest_projection_cache.authority_boundary.live_manifest_refresh_required_for_production_closeout,
+        true,
+      );
+    } finally {
+      if (previousStateDir === undefined) {
+        delete process.env.OPL_STATE_DIR;
+      } else {
+        process.env.OPL_STATE_DIR = previousStateDir;
+      }
+      if (previousContractsDir === undefined) {
+        delete process.env.OPL_CONTRACTS_DIR;
+      } else {
+        process.env.OPL_CONTRACTS_DIR = previousContractsDir;
+      }
+    }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

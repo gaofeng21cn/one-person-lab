@@ -137,7 +137,19 @@ export function resolveBindingManifest(
   const timeoutMs = resolveManifestCommandTimeoutMs(options.timeoutMs, timeoutPolicy);
   const result = executeManifestCommand(binding, manifestCommand, timeoutMs);
 
+  const parseResolvedStdout = () => {
+    const parsed = parseManifestPayload(result.stdout ?? '');
+    return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed);
+  };
+
   if (commandTimedOut(result)) {
+    if ((result.stdout ?? '').trim().length > 0) {
+      try {
+        return parseResolvedStdout();
+      } catch {
+        // A command that timed out without a complete manifest remains fail-closed.
+      }
+    }
     return buildCommandFailureEntry(
       projectId,
       project,
@@ -163,8 +175,7 @@ export function resolveBindingManifest(
   }
 
   try {
-    const parsed = parseManifestPayload(result.stdout ?? '');
-    return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed);
+    return parseResolvedStdout();
   } catch (error) {
     const code = error instanceof SyntaxError ? 'invalid_json' : 'invalid_manifest';
     return buildCommandFailureEntry(

@@ -59,6 +59,10 @@ type TemporalWorkerState = {
 };
 
 type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
+type TemporalClientOptions = {
+  paths?: TemporalWorkerPaths;
+  addressOverride?: string | null;
+};
 type TemporalSchedulerInfoProjection = {
   num_actions_skipped_overlap?: number;
   running_actions?: unknown[];
@@ -168,9 +172,11 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
 
 async function withTemporalClient<T>(
   fn: (client: Client, connection: Connection) => Promise<T>,
-  addressOverride?: string | null,
+  options: TemporalClientOptions = {},
 ) {
-  const connection = await Connection.connect({ address: addressOverride || requireTemporalAddress() });
+  const resolvedAddress = options.addressOverride
+    ?? (options.paths ? resolveTemporalAddressForPaths(options.paths).address : null);
+  const connection = await Connection.connect({ address: resolvedAddress || requireTemporalAddress() });
   try {
     return await fn(new Client({ connection, namespace: resolveTemporalNamespace() }), connection);
   } finally {
@@ -188,7 +194,10 @@ function signalNameFor(kind: TemporalStageAttemptSignalKind) {
   return resumeSignal;
 }
 
-export async function startTemporalStageAttemptWorkflow(attempt: StageAttemptPayload) {
+export async function startTemporalStageAttemptWorkflow(
+  attempt: StageAttemptPayload,
+  options: TemporalClientOptions = {},
+) {
   if (attempt.provider_kind !== 'temporal') {
     throw new FrameworkContractError('cli_usage_error', 'Temporal start requires a temporal stage attempt.', {
       stage_attempt_id: attempt.stage_attempt_id,
@@ -218,10 +227,13 @@ export async function startTemporalStageAttemptWorkflow(attempt: StageAttemptPay
         domain: 'truth_quality_artifact_gate_owner',
       },
     };
-  });
+  }, options);
 }
 
-export async function queryTemporalStageAttemptWorkflow(attempt: StageAttemptPayload) {
+export async function queryTemporalStageAttemptWorkflow(
+  attempt: StageAttemptPayload,
+  options: TemporalClientOptions = {},
+) {
   if (attempt.provider_kind !== 'temporal') {
     return null;
   }
@@ -244,7 +256,7 @@ export async function queryTemporalStageAttemptWorkflow(attempt: StageAttemptPay
         domain: 'truth_quality_artifact_gate_owner',
       },
     };
-  });
+  }, options);
 }
 
 export async function signalTemporalStageAttemptWorkflow(input: {
@@ -252,6 +264,7 @@ export async function signalTemporalStageAttemptWorkflow(input: {
   signalKind: TemporalStageAttemptSignalKind;
   payload: Record<string, unknown>;
   source?: string;
+  paths?: TemporalWorkerPaths;
 }) {
   if (input.attempt.provider_kind !== 'temporal') {
     return null;
@@ -276,7 +289,7 @@ export async function signalTemporalStageAttemptWorkflow(input: {
         domain: 'truth_quality_artifact_gate_owner',
       },
     };
-  });
+  }, { paths: input.paths });
 }
 
 function temporalAddressForScheduler(paths: TemporalWorkerPaths) {
@@ -406,7 +419,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
       }
       throw error;
     }
-  }, temporalAddressForScheduler(paths));
+  }, { addressOverride: temporalAddressForScheduler(paths) });
 }
 
 export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
@@ -456,7 +469,7 @@ export async function inspectTemporalSchedulerCadence(paths: TemporalWorkerPaths
       }
       throw error;
     }
-  }, temporalAddressForScheduler(paths));
+  }, { addressOverride: temporalAddressForScheduler(paths) });
 }
 
 export async function removeTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
@@ -481,7 +494,7 @@ export async function removeTemporalSchedulerCadence(paths: TemporalWorkerPaths)
       }
       throw error;
     }
-  }, temporalAddressForScheduler(paths));
+  }, { addressOverride: temporalAddressForScheduler(paths) });
 }
 
 export async function triggerTemporalSchedulerCadence(paths: TemporalWorkerPaths) {
@@ -494,7 +507,7 @@ export async function triggerTemporalSchedulerCadence(paths: TemporalWorkerPaths
       trigger_status: 'triggered',
       schedule_id: scheduleId,
     };
-  }, temporalAddressForScheduler(paths));
+  }, { addressOverride: temporalAddressForScheduler(paths) });
 }
 
 function temporalProductionProbeInput(
@@ -810,7 +823,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         provider_completion_is_domain_ready: false,
       },
     };
-    }, address);
+    }, { addressOverride: address });
   } catch (error) {
     const blockerIds = ['temporal_worker_transport_probe_failed'];
     return {

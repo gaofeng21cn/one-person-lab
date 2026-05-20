@@ -43,6 +43,45 @@ export function buildOplShellMcpWiring() {
   };
 }
 
+export function buildOplAionRuntimeConsumptionContract() {
+  return {
+    surface_kind: 'opl_aion_runtime_consumption_contract',
+    shell_adapter: 'aionui',
+    consumer: 'one_person_lab_app_runtime_page',
+    default_read_model_command: ['runtime', 'app-operator-drilldown'],
+    default_detail_level: 'summary',
+    default_payload_ref: '/app_operator_drilldown/attention_first_payload',
+    default_sections: [
+      'owner',
+      'blocking',
+      'advisory',
+      'missing_evidence',
+      'next_safe_action',
+      'provider_health',
+    ],
+    full_detail_command: ['runtime', 'app-operator-drilldown', '--detail', 'full'],
+    full_detail_policy: 'explicit_drilldown_lazy_load_only',
+    action_submission: {
+      surface: 'opl runtime action execute',
+      action_id_ref: '/app_operator_drilldown/attention_first_payload/next_safe_action/action_id',
+      requires_full_detail_payload_before_submit: false,
+      domain_actions_are_queued_or_approval_gated: true,
+      app_executes_domain_action_directly: false,
+    },
+    authority_boundary: {
+      opl: 'read_model_and_safe_action_shell_owner',
+      aionui: 'consumer_shell_only',
+      domain: 'truth_memory_artifact_quality_export_owner',
+      can_write_domain_truth: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
 export function inferOplWorkspaceLabel(options: {
   workspacePath?: string | null;
   fallbackLabel?: string | null;

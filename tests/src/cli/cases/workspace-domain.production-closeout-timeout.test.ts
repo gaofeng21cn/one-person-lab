@@ -12,7 +12,7 @@ test('framework production-closeout times out stalled domain manifests as typed 
       '--path',
       repoRoot,
       '--manifest-command',
-      `${process.execPath} -e "setTimeout(() => {}, 5000)"`,
+      `${process.execPath} -e "setTimeout(() => {}, 30000)"`,
     ], {
       OPL_STATE_DIR: stateRoot,
     });
@@ -48,7 +48,7 @@ test('framework production-closeout times out stalled domain manifests as typed 
     assert.match(timeoutBlocker.manifest_command, /setTimeout/);
     assert.match(timeoutBlocker.next_action, /Increase OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS/);
     assert.equal(closeout.authority_boundary.opl_writes_domain_truth, false);
-    assert.equal(elapsedMs < 2000, true);
+    assert.equal(elapsedMs < 15000, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

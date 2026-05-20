@@ -16,6 +16,17 @@ type StageProductionEvidenceStatus =
   | 'stage_pack_ready_waiting_for_production_caller'
   | 'stage_pack_blocked';
 
+type StageProductionEvidenceObligationId =
+  | 'production_caller'
+  | 'selected_executor_binding'
+  | 'expected_receipt'
+  | 'monitor_freshness';
+
+type StageProductionEvidenceObligationStatus =
+  | 'closed_by_observed_evidence'
+  | 'blocked_by_domain_owned_typed_blocker'
+  | 'open';
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -42,6 +53,13 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function refsFromRecord(value: JsonRecord, keys: string[]) {
+  return uniqueStrings(keys.flatMap((key) => {
+    const entry = value[key];
+    return typeof entry === 'string' ? [entry] : stringList(entry);
+  }));
+}
+
 function refValues(refs: FamilyStageSurfaceRef[] | undefined) {
   return uniqueStrings((refs ?? []).flatMap((ref) => (
     Array.isArray(ref.ref)
@@ -62,6 +80,37 @@ function attemptSourceRefs(attempt: JsonRecord) {
       ? [`source_fingerprint:${stringValue(attempt.source_fingerprint)}`]
       : []),
   ]);
+}
+
+function transitionEvidence(attempt: JsonRecord) {
+  return record(record(attempt.transition_bridge_evidence).evidence);
+}
+
+function attemptRef(attempt: JsonRecord) {
+  const stageAttemptId = stringValue(attempt.stage_attempt_id);
+  return stageAttemptId ? `opl://stage_attempts/${stageAttemptId}` : null;
+}
+
+function attemptDomainTypedBlockerRefs(attempt: JsonRecord) {
+  const routeImpact = record(attempt.route_impact);
+  const controlled = record(attempt.controlled_apply_contract);
+  const transition = transitionEvidence(attempt);
+  return uniqueStrings([
+    ...refsFromRecord(routeImpact, ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...refsFromRecord(controlled, ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...refsFromRecord(transition, ['typed_blocker_ref', 'typed_blocker_refs']),
+  ]);
+}
+
+function attemptDomainTypedBlockerCount(attempt: JsonRecord) {
+  const routeImpact = record(attempt.route_impact);
+  const controlled = record(attempt.controlled_apply_contract);
+  const transition = transitionEvidence(attempt);
+  return attemptDomainTypedBlockerRefs(attempt).length
+    + recordList(routeImpact.typed_blockers).length
+    + recordList(controlled.typed_blockers).length
+    + recordList(transition.typed_blockers).length
+    + Number(transition.typed_blocker_count ?? 0);
 }
 
 function attemptObservedRefs(attempt: JsonRecord) {
@@ -88,6 +137,77 @@ function attemptObservedRefs(attempt: JsonRecord) {
 function attemptExecutorKind(attempt: JsonRecord) {
   return stringValue(attempt.executor_kind)
     ?? stringValue(attemptLaunchInvocation(attempt).selected_executor_kind);
+}
+
+function executorEnvelope(selectedExecutorKinds: string[]) {
+  const nonDefaultExecutorKinds = selectedExecutorKinds.filter((kind) => kind !== 'codex_cli');
+  return {
+    surface_kind: 'opl_stage_executor_envelope',
+    default_executor_kind: 'codex_cli',
+    default_quality_path: 'codex_cli',
+    selected_executor_kinds: selectedExecutorKinds,
+    codex_cli_default_quality_path_observed: selectedExecutorKinds.includes('codex_cli'),
+    non_default_executor_kinds: nonDefaultExecutorKinds,
+    non_default_adapter_receipt_only: nonDefaultExecutorKinds.length > 0,
+    non_default_receipt_policy: 'adapter_receipt_only_no_reasoning_tool_resume_or_quality_equivalence',
+    reasoning_equivalence_claim: false,
+    tool_semantics_equivalence_claim: false,
+    resume_equivalence_claim: false,
+    quality_equivalence_claim: false,
+    authority_boundary: {
+      codex_cli: 'default_quality_path',
+      non_default_executor: 'adapter_receipt_only',
+      can_claim_reasoning_equivalence: false,
+      can_claim_tool_semantics_equivalence: false,
+      can_claim_resume_equivalence: false,
+      can_claim_quality_equivalence: false,
+    },
+  };
+}
+
+function evidenceObligation(input: {
+  obligationId: StageProductionEvidenceObligationId;
+  required: boolean;
+  observedRefs: string[];
+  unobservedRefs: string[];
+  domainOwnedTypedBlockerRefs: string[];
+  domainOwnedTypedBlockerCount: number;
+}) {
+  const unobservedRefs = uniqueStrings(input.required ? input.unobservedRefs : []);
+  const observedRefs = uniqueStrings(input.observedRefs);
+  const domainOwnedTypedBlockerRefs = uniqueStrings(input.domainOwnedTypedBlockerRefs);
+  const status: StageProductionEvidenceObligationStatus =
+    !input.required || unobservedRefs.length === 0
+      ? 'closed_by_observed_evidence'
+      : domainOwnedTypedBlockerRefs.length > 0 || input.domainOwnedTypedBlockerCount > 0
+        ? 'blocked_by_domain_owned_typed_blocker'
+        : 'open';
+  return {
+    obligation_id: input.obligationId,
+    required: input.required,
+    status,
+    observed_refs: observedRefs,
+    unobserved_refs: unobservedRefs,
+    domain_owned_typed_blocker_refs: domainOwnedTypedBlockerRefs,
+    domain_owned_typed_blocker_count: input.domainOwnedTypedBlockerCount,
+    resolution_policy:
+      'close_with_observed_refs_or_domain_owned_typed_blocker_without_domain_truth_or_quality_verdict',
+  };
+}
+
+function obligationSummary(obligations: ReturnType<typeof evidenceObligation>[]) {
+  return {
+    obligation_count: obligations.length,
+    closed_count: obligations.filter((obligation) =>
+      obligation.status === 'closed_by_observed_evidence'
+    ).length,
+    open_count: obligations.filter((obligation) =>
+      obligation.status === 'open'
+    ).length,
+    blocked_by_domain_typed_blocker_count: obligations.filter((obligation) =>
+      obligation.status === 'blocked_by_domain_owned_typed_blocker'
+    ).length,
+  };
 }
 
 function productionEvidenceStatus(input: {
@@ -148,6 +268,14 @@ function stageProductionEvidence(
   const stages = plane.stages.map((stage) => {
     const stageAttempts = attemptsByStage.get(stage.stage_id) ?? [];
     const observedRefs = uniqueStrings(stageAttempts.flatMap(attemptObservedRefs));
+    const stageAttemptRefs = uniqueStrings(stageAttempts
+      .map(attemptRef)
+      .filter((ref): ref is string => Boolean(ref)));
+    const domainOwnedTypedBlockerRefs = uniqueStrings(stageAttempts.flatMap(attemptDomainTypedBlockerRefs));
+    const domainOwnedTypedBlockerCount = stageAttempts.reduce(
+      (count, attempt) => count + attemptDomainTypedBlockerCount(attempt),
+      0,
+    );
     const launchInvocations = stageAttempts
       .map(attemptLaunchInvocation)
       .filter((invocation) => Object.keys(invocation).length > 0);
@@ -207,20 +335,60 @@ function stageProductionEvidence(
       hasAttempt: stageAttempts.length > 0,
       observedRefCount: observedRefs.length,
     });
+    const admissionStatus = admissionByStage.get(stage.stage_id)?.status ?? admission.status;
+    const obligations = [
+      evidenceObligation({
+        obligationId: 'production_caller',
+        required: admissionStatus === 'admitted',
+        observedRefs: stageAttemptRefs,
+        unobservedRefs: stageAttempts.length === 0 ? ['production_caller_attempt'] : [],
+        domainOwnedTypedBlockerRefs,
+        domainOwnedTypedBlockerCount,
+      }),
+      evidenceObligation({
+        obligationId: 'selected_executor_binding',
+        required: admissionStatus === 'admitted',
+        observedRefs: uniqueStrings([
+          ...selectedExecutorKinds.map((kind) => `executor_kind:${kind}`),
+          ...executorBindingRefs,
+        ]),
+        unobservedRefs: selectedExecutorKinds.length === 0 ? ['selected_executor_binding'] : [],
+        domainOwnedTypedBlockerRefs,
+        domainOwnedTypedBlockerCount,
+      }),
+      evidenceObligation({
+        obligationId: 'expected_receipt',
+        required: expectedReceiptRefs.length > 0,
+        observedRefs: observedExpectedReceiptRefs,
+        unobservedRefs: unobservedExpectedReceiptRefs,
+        domainOwnedTypedBlockerRefs,
+        domainOwnedTypedBlockerCount,
+      }),
+      evidenceObligation({
+        obligationId: 'monitor_freshness',
+        required: monitorRefs.length > 0,
+        observedRefs: observedMonitorFreshnessRefs,
+        unobservedRefs: unobservedMonitorFreshnessRefs,
+        domainOwnedTypedBlockerRefs,
+        domainOwnedTypedBlockerCount,
+      }),
+    ];
     return {
       ref: `/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/${plane.target_domain_id}/${stage.stage_id}`,
       project_id: project.project_id,
       target_domain_id: plane.target_domain_id,
       stage_id: stage.stage_id,
       owner: stage.owner,
-      admission_status: admissionByStage.get(stage.stage_id)?.status ?? admission.status,
+      admission_status: admissionStatus,
       cohort_loop_status: cohortStage?.closure_status ?? 'missing_scope',
       production_evidence_status: status,
       attempt_count: stageAttempts.length,
+      stage_attempt_refs: stageAttemptRefs,
       selected_executor_kinds: selectedExecutorKinds,
       default_executor_attempt_count: defaultExecutorAttemptCount,
       non_default_executor_attempt_count: nonDefaultExecutorAttemptCount,
       executor_binding_refs: executorBindingRefs,
+      executor_envelope: executorEnvelope(selectedExecutorKinds),
       source_scope_refs: sourceScopeRefs,
       artifact_scope_refs: artifactScopeRefs,
       workspace_scope_refs: workspaceScopeRefs,
@@ -235,10 +403,15 @@ function stageProductionEvidence(
       observed_evidence_refs: observedRefs,
       monitor_freshness_refs: observedMonitorFreshnessRefs,
       unobserved_monitor_refs: unobservedMonitorFreshnessRefs,
+      domain_owned_typed_blocker_refs: domainOwnedTypedBlockerRefs,
+      domain_owned_typed_blocker_count: domainOwnedTypedBlockerCount,
+      evidence_obligations: obligations,
+      evidence_obligation_summary: obligationSummary(obligations),
       missing_production_evidence: uniqueStrings(missingEvidence),
       authority_boundary: authorityBoundary(),
     };
   });
+  const evidenceObligations = stages.flatMap((stage) => stage.evidence_obligations);
   return {
     project_id: project.project_id,
     target_domain_id: plane.target_domain_id,
@@ -278,6 +451,19 @@ function stageProductionEvidence(
     ).length,
     monitor_freshness_unobserved_stage_count: stages.filter((stage) =>
       stage.unobserved_monitor_refs.length > 0
+    ).length,
+    stages_with_domain_typed_blocker_count: stages.filter((stage) =>
+      stage.domain_owned_typed_blocker_refs.length > 0 || stage.domain_owned_typed_blocker_count > 0
+    ).length,
+    evidence_obligation_count: evidenceObligations.length,
+    evidence_obligation_closed_count: evidenceObligations.filter((obligation) =>
+      obligation.status === 'closed_by_observed_evidence'
+    ).length,
+    evidence_obligation_open_count: evidenceObligations.filter((obligation) =>
+      obligation.status === 'open'
+    ).length,
+    evidence_obligation_blocked_by_domain_typed_blocker_count: evidenceObligations.filter((obligation) =>
+      obligation.status === 'blocked_by_domain_owned_typed_blocker'
     ).length,
     stages,
   };
@@ -338,6 +524,16 @@ export function buildStageProductionEvidence(input: {
         domains.reduce((count, domain) => count + domain.monitor_freshness_observed_stage_count, 0),
       monitor_freshness_unobserved_stage_count:
         domains.reduce((count, domain) => count + domain.monitor_freshness_unobserved_stage_count, 0),
+      stages_with_domain_typed_blocker_count:
+        domains.reduce((count, domain) => count + domain.stages_with_domain_typed_blocker_count, 0),
+      evidence_obligation_count:
+        domains.reduce((count, domain) => count + domain.evidence_obligation_count, 0),
+      evidence_obligation_closed_count:
+        domains.reduce((count, domain) => count + domain.evidence_obligation_closed_count, 0),
+      evidence_obligation_open_count:
+        domains.reduce((count, domain) => count + domain.evidence_obligation_open_count, 0),
+      evidence_obligation_blocked_by_domain_typed_blocker_count:
+        domains.reduce((count, domain) => count + domain.evidence_obligation_blocked_by_domain_typed_blocker_count, 0),
       provider_completion_is_domain_ready: false,
       projection_can_authorize_domain_ready: false,
     },

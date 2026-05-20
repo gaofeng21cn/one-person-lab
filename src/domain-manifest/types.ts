@@ -543,4 +543,5 @@ export interface DomainManifestCatalogEntry {
     stderr: string | null;
     timeout_ms?: number | null;
   } | null;
+  manifest_cache?: JsonRecord | null;
 }

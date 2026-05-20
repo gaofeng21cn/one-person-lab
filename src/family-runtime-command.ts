@@ -9,6 +9,7 @@ import {
   parseProviderSloTickArgs,
   parseResidencyProofArgs,
 } from './family-runtime-command-parts/provider.ts';
+import { parseProductionCloseoutArgs } from './family-runtime-command-parts/production-closeout.ts';
 import {
   parseApproveArgs,
   parseEnqueueArgs,
@@ -63,6 +64,14 @@ export type FamilyRuntimeCommandInput =
   | { mode: 'provider_slo_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean }
   | { mode: 'scheduler_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean; limit?: number; hydrate?: boolean }
   | { mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger'; providerKind?: FamilyRuntimeProviderKind }
+  | {
+    mode: 'production_closeout';
+    input: {
+      familyDefaults: boolean;
+      providerKind: FamilyRuntimeProviderKind;
+      executorKind: 'codex_cli';
+    };
+  }
   | {
     mode: 'lifecycle_apply';
     input: {
@@ -186,6 +195,9 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'lifecycle' && rest[0] === 'reconcile') {
     return parseLifecycleReconcileArgs(rest);
   }
+  if (mode === 'production-closeout') {
+    return parseProductionCloseoutArgs([mode, ...rest]);
+  }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };
   }
@@ -217,6 +229,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     return parseEnqueueArgs(rest);
   }
   throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|production-closeout|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export',
   });
 }

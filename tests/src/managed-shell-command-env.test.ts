@@ -61,6 +61,18 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
 
   try {
     assert.equal(shouldUseManagedShellScratchCwd('uv run python -m pkg'), true);
+    assert.equal(
+      shouldUseManagedShellScratchCwd(
+        'uv run python -m med_autoscience.cli product manifest --profile /tmp/profile.toml --format json',
+      ),
+      false,
+    );
+    assert.equal(
+      shouldUseManagedShellScratchCwd(
+        'uv run python -m med_autogrant product status --input /tmp/workspace.json --format json',
+      ),
+      false,
+    );
     assert.equal(shouldUseManagedShellScratchCwd(`${process.execPath} -e "process.stdout.write('uv run')"`) , false);
     assert.equal(shouldUseManagedShellScratchCwd('npm run product manifest'), false);
 
