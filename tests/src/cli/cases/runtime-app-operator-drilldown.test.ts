@@ -441,8 +441,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.provider_cadence_window_missing_receipt_count, 7);
     assert.equal(drilldown.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
     assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
-    assert.equal(drilldown.summary.operator_action_route_count, 20);
-    assert.equal(drilldown.summary.operator_executable_route_count, 10);
+    assert.equal(drilldown.summary.operator_action_route_count, 22);
+    assert.equal(drilldown.summary.operator_executable_route_count, 12);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -720,6 +720,29 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       reviewProductionEvidence.expected_receipt_refs,
     );
     assert.equal(stageProductionAttemptRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(stageProductionAttemptRoute.production_attempt_chain.start_action_id,
+      'stage-production-attempt-start:medautoscience:review');
+    assert.equal(
+      stageProductionAttemptRoute.production_attempt_chain.reviewer_attempt_must_be_separate_from_execution_attempt,
+      true,
+    );
+    assert.equal(
+      stageProductionAttemptRoute.production_attempt_chain.gate_attempt_must_be_separate_from_execution_attempt,
+      true,
+    );
+    assert.equal(stageProductionAttemptRoute.production_attempt_chain.closes_domain_ready, false);
+
+    const stageProductionAttemptStartRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_kind: string; stage_id: string }) =>
+        ref.action_kind === 'stage_production_attempt_start'
+        && ref.stage_id === 'review',
+    );
+    assert.equal(stageProductionAttemptStartRoute.owner, 'opl');
+    assert.equal(stageProductionAttemptStartRoute.route_target_kind, 'opl_cli');
+    assert.equal(stageProductionAttemptStartRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(stageProductionAttemptStartRoute.opl_cli_args.includes('--start'), true);
+    assert.equal(stageProductionAttemptStartRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(stageProductionAttemptStartRoute.authority_boundary.creates_domain_owner_receipt, false);
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',
@@ -770,6 +793,15 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.deepEqual(
       bridgeStageProductionAttemptRoute.expected_receipt_refs,
       stageProductionAttemptRoute.expected_receipt_refs,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean; opl_cli_args: string[] }) =>
+          ref.action_id === stageProductionAttemptStartRoute.action_id
+          && ref.can_submit_to_safe_action_shell
+          && ref.opl_cli_args.includes('--start'),
+      ),
+      true,
     );
     assert.equal(
       drilldown.app_execution_bridge.safe_action_routes.some(

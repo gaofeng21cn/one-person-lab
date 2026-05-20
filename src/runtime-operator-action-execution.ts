@@ -138,6 +138,18 @@ function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) 
   return args;
 }
 
+function stageAttemptStartArgs(route: JsonRecord, commandOrSurfaceRef: string) {
+  const args = stringList(route.opl_cli_args);
+  if (args[0] === 'attempt' && args[1] === 'start' && args[2]) {
+    return args;
+  }
+  const createArgs = stageAttemptCreateArgs(route, commandOrSurfaceRef);
+  if (!createArgs.includes('--start')) {
+    return [...createArgs, '--start'];
+  }
+  return createArgs;
+}
+
 function externalEvidenceApplyArgs(
   route: JsonRecord,
   payload: JsonRecord,
@@ -256,6 +268,12 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       runtimeArgs: stageAttemptCreateArgs(route, commandOrSurfaceRef),
     };
   }
+  if (actionKind === 'stage_production_attempt_start') {
+    return {
+      executionKind: 'opl_cli_stage_attempt_create_and_start',
+      runtimeArgs: stageAttemptStartArgs(route, commandOrSurfaceRef),
+    };
+  }
   if (
     actionKind === 'external_evidence_receipt_record'
     || actionKind === 'external_evidence_receipt_verify'
@@ -292,6 +310,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     supported_action_kinds: [
       'stage_attempt_query',
       'stage_production_attempt_request',
+      'stage_production_attempt_start',
       'external_evidence_receipt_record',
       'external_evidence_receipt_verify',
       'evidence_gate_receipt_record',
