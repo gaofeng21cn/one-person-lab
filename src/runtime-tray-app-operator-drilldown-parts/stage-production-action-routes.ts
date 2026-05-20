@@ -4,6 +4,9 @@ import {
   stageProductionEvidenceRequestId,
   stageProductionEvidenceRequestPackId,
 } from './stage-production-evidence-route-common.ts';
+import {
+  buildStageProductionEvidencePayloadWorkorder,
+} from '../stage-production-evidence-payload-preflight.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -366,7 +369,7 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     '--source-ref',
     sourceRef,
   ];
-  return {
+  const route = {
     ref: commandRef(args),
     opl_cli_args: args,
     role: 'operator_action_route',
@@ -450,6 +453,14 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
       closes_domain_ready: false,
     },
   };
+  return recordMode
+    ? {
+        ...route,
+        payload_workorder: buildStageProductionEvidencePayloadWorkorder(route),
+        payload_preflight_policy:
+          'opl_preflights_stage_evidence_payload_before_recording_refs_only_receipt',
+      }
+    : route;
 }
 
 export function buildStageProductionEvidenceReceiptRoutes(stageProductionEvidence: JsonRecord) {

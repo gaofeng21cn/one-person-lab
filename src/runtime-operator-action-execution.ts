@@ -10,6 +10,10 @@ import {
 import {
   runFamilyAgentLegacyCleanupApply,
 } from './family-domain-agent-skeleton.ts';
+import {
+  assertStageProductionEvidencePayloadReady,
+  preflightStageProductionEvidencePayload,
+} from './stage-production-evidence-payload-preflight.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -224,6 +228,23 @@ function externalEvidenceApplyArgs(
   return [...args, ...extraArgs];
 }
 
+function stageProductionEvidenceRecordArgs(
+  route: JsonRecord,
+  payload: JsonRecord,
+  commandOrSurfaceRef: string,
+  options: { dryRun: boolean },
+) {
+  const preflight = options.dryRun
+    ? preflightStageProductionEvidencePayload(route, payload)
+    : assertStageProductionEvidencePayloadReady(route, payload);
+  return {
+    runtimeArgs: externalEvidenceApplyArgs(route, payload, commandOrSurfaceRef, {
+      allowEmptyRecordPayload: options.dryRun,
+    }),
+    preflight,
+  };
+}
+
 function providerSchedulerArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const args = stringList(route.opl_cli_args);
   if (args.length === 0) {
@@ -389,12 +410,19 @@ async function executeRoute(
       || actionKind === 'stage_production_evidence_receipt_verify';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
+    const stageEvidenceRecordAction = actionKind === 'stage_production_evidence_receipt_record';
+    const stageEvidenceRecord = stageEvidenceRecordAction
+      ? stageProductionEvidenceRecordArgs(route, options.payload, commandOrSurfaceRef, {
+          dryRun: options.dryRun,
+        })
+      : null;
     const { executionKind, runtimeArgs } = externalEvidenceAction
       ? {
           executionKind: 'opl_cli_external_evidence_apply',
-          runtimeArgs: externalEvidenceApplyArgs(route, options.payload, commandOrSurfaceRef, {
-            allowEmptyRecordPayload: options.dryRun,
-          }),
+          runtimeArgs: stageEvidenceRecord?.runtimeArgs
+            ?? externalEvidenceApplyArgs(route, options.payload, commandOrSurfaceRef, {
+              allowEmptyRecordPayload: options.dryRun,
+            }),
         }
       : oplCliRuntimeArgs(route, commandOrSurfaceRef);
     return {
@@ -408,9 +436,20 @@ async function executeRoute(
           ? `opl ${runtimeArgs.join(' ')}`
           : `opl family-runtime ${runtimeArgs.join(' ')}`,
       result: options.dryRun
-        ? null
+        ? (stageEvidenceRecord
+            ? {
+                stage_production_evidence_payload_preflight: stageEvidenceRecord.preflight,
+              }
+            : null)
         : externalEvidenceAction
-          ? runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3)))
+          ? {
+              ...(stageEvidenceRecord
+                ? {
+                    stage_production_evidence_payload_preflight: stageEvidenceRecord.preflight,
+                  }
+                : {}),
+              ...runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3))),
+            }
           : legacyCleanupAction
             ? runFamilyAgentLegacyCleanupApply(contracts, runtimeArgs.slice(3))
             : await runFamilyRuntime(runtimeArgs),
