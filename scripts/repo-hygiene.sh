@@ -21,7 +21,7 @@ if [ "${fix}" = "1" ]; then
       -path './dist' -prune -o \
       -path './target' -prune -o \
       -path './.worktrees' -prune -o \
-      \( -name '__pycache__' -o -name '.pytest_cache' -o -name '*.egg-info' -o -name '.DS_Store' \) \
+      \( -name '.venv' -o -name '__pycache__' -o -name '.pytest_cache' -o -name '*.egg-info' -o -name '.DS_Store' \) \
       -print
   )
 fi
