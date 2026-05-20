@@ -78,9 +78,21 @@ export function buildAgentReadinessSummary(args: string[]) {
         generated_artifact_drift_detected_count: 0,
         domain_generated_surface_owner_claim_count: domainGeneratedSurfaceOwnerClaimCount,
         generated_interface_blocked_count: generatedInterfaceBlockedCount,
-        production_evidence_tail_count: tailCount,
-        production_evidence_tail_policy:
+        agent_readiness_production_evidence_tail_count: tailCount,
+        agent_readiness_production_evidence_tail_policy:
           'reported_separately_not_a_structural_pass_condition',
+        deprecated_alias_metadata: {
+          production_evidence_tail_count: {
+            deprecated: true,
+            alias_for: 'agent_readiness_production_evidence_tail_count',
+            value: tailCount,
+          },
+          production_evidence_tail_policy: {
+            deprecated: true,
+            alias_for: 'agent_readiness_production_evidence_tail_policy',
+            value: 'reported_separately_not_a_structural_pass_condition',
+          },
+        },
         production_or_domain_ready: false,
       },
       gates: {

@@ -251,7 +251,24 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     assert.equal(
       fullDrilldown.production_evidence_tail_ledger.tail_items.length,
-      summaryDrilldown.summary.production_evidence_tail_item_count,
+      summaryDrilldown.summary.app_operator_production_evidence_tail_item_count,
+    );
+    assert.equal(summaryDrilldown.summary.app_operator_production_evidence_tail_open_item_count > 0, true);
+    assert.deepEqual(
+      Object.keys(summaryDrilldown.summary).filter((key) => key.startsWith('production_evidence_tail_')),
+      [],
+    );
+    assert.equal(
+      summaryDrilldown.summary.deprecated_alias_metadata.production_evidence_tail_item_count.value,
+      summaryDrilldown.summary.app_operator_production_evidence_tail_item_count,
+    );
+    assert.equal(
+      summaryDrilldown.summary.provider_slo_cadence_window_status,
+      summaryDrilldown.summary.provider_cadence_window_status,
+    );
+    assert.equal(
+      summaryDrilldown.summary.provider_slo_capability_status,
+      summaryDrilldown.summary.provider_capability_slo_status,
     );
     assert.equal(
       fullDrilldown.operator_action_routing_refs.refs.length,
