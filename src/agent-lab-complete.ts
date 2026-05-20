@@ -19,6 +19,7 @@ export {
   buildAgentLabArisMaturityControlsReadModel,
   buildAgentLabLogDrivenMechanismCandidateReadModel,
 } from './agent-lab-control-read-models.ts';
+export { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
 export { buildAgentLabVariantComparisonReadModel } from './agent-lab-variant-comparison.ts';
 import {
   buildAgentLabArisMaturityControlsReadModel,
@@ -248,6 +249,7 @@ export function buildCompleteAgentLabControlPlane() {
     sampleResult.result_id,
     longlineResult.result_id,
   ]);
+  const aheEvidence = sampleResult.ahe_evidence;
   const variantComparison = buildAgentLabVariantComparisonReadModel({
     suiteResult: sampleResult,
     sourceRefs: [sampleResult.result_id, longlineResult.result_id],
@@ -324,6 +326,7 @@ export function buildCompleteAgentLabControlPlane() {
     },
     loop_steps: [
       'collect_trajectory_refs',
+      'collect_ahe_failure_root_cause_fix_and_falsification_refs',
       'collect_usage_and_blocker_event_refs',
       'mine_real_logs_into_mechanism_candidate_refs',
       'optional_web_research_for_mechanism_context',
@@ -352,6 +355,7 @@ export function buildCompleteAgentLabControlPlane() {
       'aris:review-trace',
     ],
     log_driven_candidate_read_model: logDrivenCandidates,
+    ahe_evidence_read_model: aheEvidence,
     integration_contract_read_model: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     aris_maturity_controls: arisMaturityControls,
@@ -379,6 +383,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_review_trace_ledger: true,
     ready_to_emit_log_driven_mechanism_candidates: true,
     ready_to_emit_aris_maturity_controls: true,
+    ready_to_emit_ahe_evidence_read_model: true,
     ready_to_emit_variant_comparison_read_model: true,
     ai_review_approved_count: 0,
     automatic_mechanism_promotion_ready: false,
@@ -403,6 +408,7 @@ export function buildCompleteAgentLabControlPlane() {
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
     aris_maturity_controls: arisMaturityControls,
+    ahe_evidence: aheEvidence,
     variant_comparison: variantComparison,
     developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
@@ -560,6 +566,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.review_trace_ledger.ledger_ref,
       complete.log_driven_mechanism_candidates.read_model_id,
       complete.aris_maturity_controls.read_model_id,
+      complete.ahe_evidence.read_model_id,
       complete.variant_comparison.read_model_id,
       developerModeRepairRoutes.read_model_id,
     ]),
@@ -573,6 +580,7 @@ export function buildAgentLabWorkbenchReadModel() {
       review_trace_ledger_ref: complete.review_trace_ledger.ledger_ref,
       log_driven_mechanism_candidate_read_model_ref: complete.log_driven_mechanism_candidates.read_model_id,
       aris_maturity_controls_ref: complete.aris_maturity_controls.read_model_id,
+      ahe_evidence_read_model_ref: complete.ahe_evidence.read_model_id,
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
       sample_ref_summary: agentLabRefSummary(sample),
       longline_ref_summary: agentLabRefSummary(longline),
@@ -590,6 +598,7 @@ export function buildAgentLabWorkbenchReadModel() {
     review_trace_ledger: complete.review_trace_ledger,
     log_driven_mechanism_candidates: complete.log_driven_mechanism_candidates,
     aris_maturity_controls: complete.aris_maturity_controls,
+    ahe_evidence: complete.ahe_evidence,
     variant_comparison: variantComparison,
     promotion_gates: promotionGates(results),
     developer_mode_repair_routes: developerModeRepairRoutes,
@@ -749,6 +758,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     suiteResult.result_id,
     ...suiteResult.refs.mechanism_evolution_input_refs,
   ]);
+  const aheEvidence = suiteResult.ahe_evidence;
   const variantComparison = buildAgentLabVariantComparisonReadModel({ suiteResult });
   const trajectoryRefs = suiteResult.refs.trajectory_refs;
   const scorecardRefs = suiteResult.refs.domain_quality_scorecard_refs;
@@ -794,6 +804,7 @@ export function buildAgentLabEvolutionResult(input: AgentLabSuite) {
     review_trace_ledger: reviewTraceLedger,
     log_driven_mechanism_candidates: logDrivenCandidates,
     aris_maturity_controls: arisMaturityControls,
+    ahe_evidence: aheEvidence,
     variant_comparison: variantComparison,
     log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     mechanism_promotion_decision: mechanismPromotionDecision,
@@ -970,6 +981,8 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
   const suiteResult = runAgentLabSuite(input);
   const candidates = optimizerCandidates([suiteResult]);
   const transitions = rlTransitionRefs([suiteResult]);
+  const aheEvidence = suiteResult.ahe_evidence;
+  const variantComparison = buildAgentLabVariantComparisonReadModel({ suiteResult });
   const logDrivenCandidates = buildAgentLabLogDrivenMechanismCandidateReadModel([
     suiteResult.result_id,
     ...suiteResult.refs.mechanism_evolution_input_refs,
@@ -1002,6 +1015,8 @@ export function buildAgentLabOptimizeResult(input: AgentLabSuite) {
       ai_review_approved_count: aiReviewApprovedCount,
       candidates,
     },
+    ahe_evidence: aheEvidence,
+    variant_comparison: variantComparison,
     log_driven_mechanism_candidates: logDrivenCandidates,
     log_mined_candidate_refs: logDrivenCandidates.log_mined_candidate_refs,
     rl_transition_refs: {

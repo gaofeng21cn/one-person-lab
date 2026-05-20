@@ -95,6 +95,16 @@ ARIS 的可学习点以模式进入 OPL Agent Lab，不作为 runtime dependency
 - permission / current-date fail-closed invariant：需要 permission scope、sandbox policy 和 current-date context refs；缺失时输出 typed blocker 与 owner route，不能用隐式默认权限或陈旧日期继续推进。
 - MCP / stream reliability policy：把 MCP tool result、stream event ordering、stream closeout receipt、retry/dead-letter 和 stream replay refs 固定为 reliability policy；禁止静默丢 event 或把 stream payload body 纳入 OPL。
 
+## AHE 模式吸收
+
+AHE 的可学习点以模式进入 OPL Agent Lab，不作为 runtime dependency 或外部真相源，也不引入 AHE、NexAU、harbor 或 E2B。
+
+Agent Lab 当前把 `evidence -> root cause -> targeted fix -> predicted impact -> next-run falsification` 落成 refs-only read model。suite task、mechanism evolution input 或 run result 可携带 `change_evaluation_refs`、`failure_evidence_refs`、`root_cause_refs`、`targeted_fix_refs`、`predicted_impact_refs`、`risk_task_refs` 和 `next_run_falsification_refs`；缺 `change_evaluation`、`failure_evidence`、`root_cause`、`targeted_fix` 或 `next_run_falsification` 时输出 `ahe_evidence_refs_missing` typed blocker。fixture、generated、suite-pass、scorecard、schema-complete 或 provider-completion refs 只能进入 `review_pending` 或 advisory evidence，不能授权 promotion。
+
+best-of-N candidate comparison 落在 `opl_agent_lab_variant_comparison_read_model`。外部 suite 或 evolve/optimize result 可以携带多个 `variant_candidate_refs`，read model 输出 selected winner、loser refs、per-variant evidence delta、predicted flip refs、risk refs、regression count 和 promotion eligibility。只有被选中的 winner 可以进入既有 risk-tiered promotion gate；未选 variant 是 learning-only refs，不能授权 domain ready、quality verdict、artifact readiness、memory apply 或 default agent promotion。
+
+`run/complete/workbench/optimize/evolve` 共享同一套 AHE read model 语义：App/workbench 可以展示“证据是什么、根因是什么、改什么、预期改善什么、下一轮如何证伪”，但只能消费 refs、blocker、risk route 和 promotion gate 状态。真实 domain owner receipt、domain truth、quality/export verdict、artifact body、memory body 和 high-risk default promotion 仍由对应 domain owner 或 owner/human gate 持有。
+
 ## Developer Mode 与外围巡检
 
 `OPL Developer Mode` 开启时，Agent Lab 是外围 AI 巡检、问题归因和改进候选的优先承载面。Developer Mode 的系统配置由 OPL state 持有，App 设置页应暴露开关和当前模式；安装流程可以在检测到配置的 GitHub developer login 时默认开启，但用户必须能手动切换。
@@ -125,6 +135,7 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - regression、soak、fixture、parity、direct-skill equivalence 和 no-forbidden-write evidence。
 - usage logs、failed route refs、research wiki refs、experiment / analysis queue manifest refs。
 - MAS suite 投影的 typed body-free mechanism evolution refs：`runtime_event_ledger_refs`、`provider_switch_hygiene_refs`、`claim_assurance_map_refs`，以及对应的 `runtime_event_ledger`、`provider_switch_hygiene`、`claim_assurance_map` 只读 refs surface。
+- AHE-style change/evidence refs：`change_evaluation_refs`、`failure_evidence_refs`、`root_cause_refs`、`targeted_fix_refs`、`predicted_impact_refs`、`risk_task_refs`、`next_run_falsification_refs` 与 `variant_candidate_refs`。
 
 允许输出：
 
@@ -137,6 +148,8 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - `agent_lab_version_ledger_entry`：机制版本、promotion decision、canary refs 和 rollback refs；
 - `agent_lab_projection`：给 CLI/App/workbench 的 read-only 改进看板；
 - `agent_lab_follow_up_queue_item`：进入 OPL typed queue 或 domain owner backlog 的后续动作引用。
+- `opl_agent_lab_ahe_evidence_read_model`：把 evidence、root cause、targeted fix、predicted impact 和 next-run falsification refs 规整成 per-task read model、summary 和 typed blocker。
+- `opl_agent_lab_variant_comparison_read_model`：把 best-of-N variant candidate refs 规整成 winner/loser、per-variant evidence delta、predicted flip/risk refs、regression count 和 promotion eligibility。
 
 禁止输出：
 
@@ -176,6 +189,8 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 - Review trace ledger：`opl agent-lab complete/workbench/mechanism/evolve --json` 暴露 `opl_agent_lab_review_trace_ledger`，记录 independent reviewer、web research、mechanism patch 的 request/response/evidence/diff/contract/test/reviewer/no-shared-context refs。
 - Log-driven mechanism candidates：`opl agent-lab complete/workbench/mechanism/optimize/evolve --json` 暴露 `opl_agent_lab_log_driven_mechanism_candidate_read_model`，把 usage log、failure mode、user interrupt、convergence iteration、tool failure 和 blocker refs 转成 prompt / skill / rubric / workflow-default 候选。
 - ARIS maturity controls：`opl agent-lab complete/workbench/mechanism/evolve --json` 暴露 `opl_agent_lab_aris_maturity_controls_read_model`，把 ARIS v0.4.11 的 effort/assurance 双轴、helper inventory/drift report、permission/current-date fail-closed invariant、MCP/stream reliability policy 吸收为 refs-only 控制面；该 surface 明确 `runtime_dependency_required=false`，不读取 helper、MCP 或 stream body。
+- AHE evidence/falsification controls：`opl agent-lab run/complete/workbench/optimize/evolve --json` 暴露 `opl_agent_lab_ahe_evidence_read_model`，把 change evaluation、failure evidence、root cause、targeted fix、predicted impact、risk task 和 next-run falsification refs 规整成 per-task read model；缺必需 refs 时输出 typed blocker，fixture/generated/suite-pass refs 只进入 advisory review。
+- Variant comparison controls：`opl agent-lab complete/workbench/optimize/evolve --json` 暴露 `opl_agent_lab_variant_comparison_read_model`，输出 selected winner、losers、per-variant evidence delta、predicted flip/risk refs、regression count 和 promotion eligibility；未选 variant 为 learning-only refs，不能授权 domain ready 或 default promotion。
 - CLI external suite：`opl agent-lab run --suite <suite.json> --json`，运行声明兼容 OPL Agent Lab 的 domain agent 或 OPL-compatible meta-agent 仓生成的 OPL-compatible Agent Lab suite JSON，返回同一套 refs-only suite result、ref summary 和 authority boundary。`agent_production_evidence_suite` 会额外投影 domain agent production evidence gate result refs、gate ids、owner route refs、no-forbidden-write refs、typed blocker refs 和 required receipt refs，并固定 `domain_verdict_claimed=false`。
 - CLI workbench：`opl agent-lab workbench --json`，把 complete / sample / longline / run 语义规整成 App/workbench 可直接消费的 read model，包含 eval adapters、observability export readiness、optimizer candidates、promotion gates、online learning refs 和 authority boundary，并显式返回 `app_workbench_consumption_ready=true`。
 - CLI mechanism：`opl agent-lab mechanism --json`，输出 first-class mechanism read model，包含 `mechanism_ref`、`mechanism_version`、`editable_surfaces`、`meta_edit_receipt`、`evolution_segment`、`evidence_delta` 和 `next_mechanism_candidate`。该入口严格 refs-only，不写 domain truth、memory body、artifact，不训练权重；promotion 由风险分级、独立 AI reviewer、version ledger、canary 和 rollback refs 约束。
@@ -221,6 +236,8 @@ domain agent production evidence suite 是这个 external suite 入口的 refs-o
 | Review trace ledger | `ready_for_mechanism_patch_replay_and_audit` | independent reviewer、web research、mechanism patch 的 request/response/evidence/diff/contract/test/reviewer/no-shared-context refs 已进入 complete/workbench/mechanism/evolve read model。 |
 | Log-driven candidate miner | `ready_for_usage_log_driven_meta_optimize` | usage logs、failure modes、user interrupts、convergence iterations、tool failures 和 blockers 已能生成 refs-only prompt/skill/rubric/workflow-default mechanism candidates。 |
 | ARIS pattern intake | `machine_surfaces_landed_no_runtime_dependency` | research wiki / failed route memory、direct-evidence review、integration failure policy、experiment queue manifest、usage-log meta optimize、effort/assurance 双轴、helper inventory/drift report、permission/current-date fail-closed invariant 与 MCP/stream reliability policy 已落成 refs-only 机器面，不依赖 ARIS runtime。 |
+| AHE pattern intake | `machine_surfaces_landed_no_runtime_dependency` | evidence/root-cause/targeted-fix/predicted-impact/next-run-falsification refs 与 best-of-N variant comparison 已落成 refs-only 机器面，不依赖 AHE/NexAU/harbor/E2B runtime。 |
+| Variant comparison | `winner_selection_read_model_ready` | external suite、optimize 或 evolve result 可投影多个 candidate refs；winner 进入既有 risk-tiered gate，loser 只保留 learning refs，不授权 domain ready 或 default promotion。 |
 | RL boundary | `downstream_ready_after_stable_trajectory_and_reward_surfaces` | 可输出 transition refs；不在 OPL core 训练或部署模型权重。 |
 | App/workbench read model | `ready_for_app_workbench_consumption` | `opl agent-lab workbench --json` 输出完整 read model，`app_workbench_consumption_ready=true`。 |
 | Optional connector export | `ready_for_connector_consumption_refs_only` | `opl agent-lab export --target ... --json` 输出 refs-only envelope，不上传外部服务，不读 domain body。 |

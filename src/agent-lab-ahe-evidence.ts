@@ -173,6 +173,11 @@ export function buildAgentLabAheEvidenceReadModel(input: {
   return {
     surface_kind: 'opl_agent_lab_ahe_evidence_read_model',
     version: 'opl-agent-lab.v1.ahe-evidence',
+    read_model_id: stableId('oalahem', [
+      input.suite.suite_id,
+      tasks.map((task) => task.read_model_ref),
+      tasks.map((task) => task.status),
+    ]),
     suite_id: input.suite.suite_id,
     status: tasks.some((task) => task.status === 'typed_blocker')
       ? 'typed_blocker'
