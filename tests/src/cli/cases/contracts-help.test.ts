@@ -46,6 +46,29 @@ test('contract validate falls back to the active CLI repo contracts when cwd has
   }
 });
 
+test('contract validate ignores domain package OPL contracts when they are not framework registries', () => {
+  const domainCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-package-cwd-'));
+  const domainContractsDir = path.join(domainCwd, 'contracts', 'opl-framework');
+
+  try {
+    fs.mkdirSync(domainContractsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(domainContractsDir, 'family-contract-adoption.json'),
+      JSON.stringify({
+        contract_kind: 'domain_opl_family_contract_adoption.v1',
+        owner: 'domain-agent',
+      }, null, 2),
+    );
+
+    const output = runCliInCwd(['contract', 'validate'], domainCwd);
+
+    assert.equal(output.validation.contracts_dir, contractsDir);
+    assert.equal(output.validation.contracts_root_source, 'cli_entry');
+  } finally {
+    fs.rmSync(domainCwd, { recursive: true, force: true });
+  }
+});
+
 test('contract validate resolves repo contracts through a symlinked CLI entry path', () => {
   const unrelatedCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-link-cwd-'));
   const linkedCliRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-link-'));
