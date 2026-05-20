@@ -54,7 +54,18 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.summary.agent_structural_conformance_blocker_count, 0);
   assert.equal(readiness.summary.semantic_hygiene_gate_count, 6);
   assert.equal(readiness.summary.agent_structural_conformance_status, 'passed');
-  assert.equal(readiness.summary.pack_compiler_ready_domain_count, 3);
+  assert.equal(
+    readiness.summary.pack_compiler_ready_domain_count,
+    readiness.pack_compiler.summary.ready_domain_count,
+  );
+  assert.equal(
+    readiness.summary.pack_compiler_generated_surface_ready_count,
+    readiness.pack_compiler.summary.generated_surface_ready_count,
+  );
+  assert.equal(
+    readiness.summary.pack_compiler_domain_generated_surface_owner_claim_count,
+    readiness.pack_compiler.summary.domain_generated_surface_owner_claim_count,
+  );
   assert.equal(readiness.summary.pack_compiler_generated_surface_ready_count, 24);
   assert.equal(readiness.summary.pack_compiler_domain_generated_surface_owner_claim_count, 0);
   assert.equal(readiness.summary.stage_count, 18);
