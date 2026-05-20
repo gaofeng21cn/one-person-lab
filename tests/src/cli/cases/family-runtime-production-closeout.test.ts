@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import {
   assert,
   buildManifestCommand,
@@ -11,6 +13,18 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+
+function familyRuntimeEnv(
+  stateRoot: string,
+  fixtureContractsRoot: string,
+  extra: Record<string, string> = {},
+) {
+  return {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    ...extra,
+  };
+}
 
 function productionCloseoutStage(stageId: string, owner: string) {
   return {
@@ -63,6 +77,89 @@ function productionCloseoutStage(stageId: string, owner: string) {
       can_authorize_quality_verdict: false,
     },
   };
+}
+
+function insertProviderCapabilityReceipts(stateRoot: string) {
+  runCli(['family-runtime', 'events', 'export'], {
+    OPL_STATE_DIR: stateRoot,
+  });
+  const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+  const createdAt = new Date().toISOString();
+  const result = spawnSync(process.execPath, [
+    '--experimental-strip-types',
+    '-e',
+    `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+const checks = {
+  external_temporal_server_reachable: true,
+  managed_worker_ready: true,
+  worker_completed_attempt: true,
+  worker_restart_requery: true,
+  signal_history_preserved: true,
+  typed_closeout_required_for_completed: true,
+  missing_closeout_blocks_completion: true,
+  retry_or_dead_letter_boundary_observed: true,
+  domain_truth_boundary_preserved: true
+};
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_production_closeout_provider_proof',
+    'temporal_residency_proof',
+    'test',
+    JSON.stringify({
+      provider_kind: 'temporal',
+      proof_mode: 'external_temporal_service_worker',
+      closeout_status: 'production_residency_proven',
+      proof_receipt: {
+        receipt_kind: 'temporal_production_residency_proof',
+        receipt_status: 'proven',
+        provider_kind: 'temporal'
+      }
+    }),
+    ${JSON.stringify(createdAt)}
+  );
+db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
+  .run(
+    'evt_production_closeout_provider_capability',
+    'temporal_provider_slo_execution_receipt',
+    'test',
+    JSON.stringify({
+      surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+      provider_kind: 'temporal',
+      command: 'opl family-runtime residency proof --provider temporal --production',
+      execution_status: 'executed',
+      receipt_status: 'proven',
+      receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+      production_capability_receipt: {
+        surface_kind: 'opl_temporal_provider_production_capability_receipt',
+        provider_kind: 'temporal',
+        receipt_status: 'proven',
+        capability_status: 'capability_proven',
+        checks,
+        failed_check_ids: [],
+        proven_check_count: Object.keys(checks).length,
+        required_check_count: Object.keys(checks).length
+      },
+      repair_receipt: {
+        repair_status: 'executed',
+        can_execute_domain_repair: false
+      },
+      authority_boundary: {
+        can_authorize_domain_ready: false
+      }
+    }),
+    ${JSON.stringify(createdAt)}
+  );
+db.close();`,
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NODE_NO_WARNINGS: '1',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr);
 }
 
 function withProductionCloseoutSurfaces(
@@ -228,8 +325,7 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
         '--manifest-command',
         buildManifestCommand(manifest),
       ], {
-        OPL_STATE_DIR: stateRoot,
-        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+        ...familyRuntimeEnv(stateRoot, fixtureContractsRoot),
       });
     }
 
@@ -242,8 +338,7 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
       '--executor-kind',
       'codex_cli',
     ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      ...familyRuntimeEnv(stateRoot, fixtureContractsRoot),
     });
     const closeout = output.family_runtime_production_closeout;
 
@@ -297,6 +392,175 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
     assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
     assert.equal(closeout.authority_boundary.can_authorize_quality_verdict, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime production-closeout closes only OPL-owned provider and cleanup receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-production-closeout-closed-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const baseManifests = loadFamilyManifestFixtures();
+  const manifests = {
+    medautogrant: withProductionCloseoutSurfaces(
+      baseManifests.medautogrant,
+      ['fundability_strategy', 'specific_aims_and_structure', 'proposal_authoring'],
+      { externalEvidenceRequestCount: 6, cleanupReady: true },
+    ),
+    medautoscience: withProductionCloseoutSurfaces(
+      baseManifests.medautoscience,
+      [
+        'direction_and_route_selection',
+        'baseline_and_evidence_setup',
+        'bounded_analysis_campaign',
+        'manuscript_authoring',
+        'review_and_quality_gate',
+        'finalize_and_publication_handoff',
+      ],
+      { cleanupReady: true },
+    ),
+    redcube: withProductionCloseoutSurfaces(
+      baseManifests.redcube,
+      [
+        'source_intake',
+        'communication_strategy',
+        'visual_direction',
+        'artifact_creation',
+        'review_and_revision',
+        'package_and_handoff',
+      ],
+      { evidenceGateCount: 3, cleanupReady: true },
+    ),
+  };
+
+  try {
+    for (const [project, manifest] of Object.entries(manifests)) {
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        project,
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(manifest),
+      ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+    }
+
+    insertProviderCapabilityReceipts(stateRoot);
+    for (const [domain, actionDomain, sourceRef] of [
+      ['medautogrant', 'medautogrant', 'opl://agents/med-autogrant/legacy-cleanup-plan'],
+      ['medautoscience', 'medautoscience', 'opl://agents/med-autoscience/legacy-cleanup-plan'],
+      ['redcube', 'redcube', 'opl://agents/redcube_ai/legacy-cleanup-plan'],
+    ]) {
+      const applied = runCli([
+        'runtime',
+        'action',
+        'execute',
+        '--action',
+        `legacy-cleanup:${actionDomain}:apply`,
+      ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+      assert.equal(applied.runtime_operator_action_execution.execution.execution_status, 'executed');
+      const verified = runCli([
+        'agents',
+        'legacy-cleanup',
+        'apply',
+        '--domain',
+        domain,
+        '--mode',
+        'verify',
+        '--source-ref',
+        sourceRef,
+      ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+      assert.equal(
+        verified.family_agent_legacy_cleanup_apply.lifecycle_apply.status,
+        'verified',
+      );
+    }
+
+    const output = runCli([
+      'family-runtime',
+      'production-closeout',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
+      OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+    }));
+    const closeout = output.family_runtime_production_closeout;
+
+    assert.equal(closeout.summary.closeout_item_count, 34);
+    assert.equal(closeout.summary.closed_item_count, 10);
+    assert.equal(closeout.summary.open_safe_action_item_count, 24);
+    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count, 24);
+    assert.equal(closeout.production_closeout_open_safe_action_item_count, 24);
+    assert.equal(closeout.attention_queue.length, 24);
+
+    const providerItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'provider_scheduler_cadence'
+    );
+    assert.equal(providerItems.length, 4);
+    assert.equal(
+      providerItems.every((item: { status: string }) =>
+        item.status === 'closed_by_receipt_ref'
+      ),
+      true,
+    );
+    assert.equal(
+      providerItems.every((item: { closeout_status_detail: string }) =>
+        item.closeout_status_detail === 'closed_by_opl_provider_slo_receipt'
+      ),
+      true,
+    );
+    assert.equal(
+      providerItems.every((item: { receipt_ref: string | null }) =>
+        item.receipt_ref === 'opl://family-runtime/provider-slo/cadence-window/current'
+      ),
+      true,
+    );
+
+    const cleanupItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'legacy_cleanup_ledger'
+    );
+    assert.equal(cleanupItems.length, 6);
+    assert.equal(
+      cleanupItems.every((item: { status: string }) =>
+        item.status === 'closed_by_receipt_ref'
+      ),
+      true,
+    );
+    assert.equal(
+      cleanupItems.every((item: { closeout_status_detail: string }) =>
+        item.closeout_status_detail === 'closed_by_opl_cleanup_ledger_receipt'
+      ),
+      true,
+    );
+    assert.equal(
+      cleanupItems.every((item: { receipt_refs: string[] }) =>
+        item.receipt_refs.length > 0
+      ),
+      true,
+    );
+
+    const externalItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'external_evidence_receipt'
+    );
+    const gateItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'evidence_gate_receipt'
+    );
+    const stageItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'stage_production_caller_request'
+    );
+    for (const item of [...externalItems, ...gateItems, ...stageItems]) {
+      assert.equal(item.status, 'open_safe_action_request_route_available');
+      assert.equal(item.receipt_ref, null);
+    }
+    assert.equal(closeout.next_action_ledger.summary.next_action_item_count, 24);
+    assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
+    assert.equal(closeout.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

@@ -339,9 +339,136 @@ function lifecycleIndexPayload(input: {
       total_ref_count: refs.length,
       filtered_domain_id: input.domainId?.trim() || null,
     },
-    refs,
+  refs,
     authority_boundary: lifecycleIndexAuthorityBoundary(),
   };
+}
+
+function lifecycleApplyReceiptPayload(input: {
+  rows: Array<{
+    receipt_ref: string;
+    target_domain_id: string;
+    source_ref: string;
+    mode: string;
+    status: string;
+    receipt_json: string;
+    created_at: string;
+  }>;
+  lifecycleIndexDb: string;
+  targetDomainId?: string;
+  sourceRef?: string;
+  status?: 'resolved' | 'missing';
+}) {
+  const receipts = input.rows.map((row) => {
+    const receipt = parsePayload(row.receipt_json);
+    return {
+      receipt_ref: row.receipt_ref,
+      target_domain_id: row.target_domain_id,
+      source_ref: row.source_ref,
+      mode: row.mode,
+      status: row.status,
+      restore_proof_refs: normalizeStringList(receipt.restore_proof_refs),
+      domain_artifact_mutation_receipt_refs: normalizeStringList(
+        receipt.domain_artifact_mutation_receipt_refs,
+      ),
+      domain_owner_handoff_receipt_refs: normalizeStringList(
+        receipt.domain_owner_handoff_receipt_refs,
+      ),
+      no_active_caller_refs: normalizeStringList(receipt.no_active_caller_refs),
+      replacement_parity_refs: normalizeStringList(receipt.replacement_parity_refs),
+      receipt,
+      created_at: row.created_at,
+    };
+  });
+  return {
+    surface_kind: 'family_runtime_lifecycle_apply_receipt_index',
+    owner: 'one-person-lab',
+    status: input.status ?? 'resolved',
+    lifecycle_index_db: input.lifecycleIndexDb,
+    filtered_target_domain_id: input.targetDomainId?.trim() || null,
+    filtered_source_ref: input.sourceRef?.trim() || null,
+    summary: {
+      receipt_count: receipts.length,
+      applied_receipt_count: receipts.filter((receipt) => receipt.status === 'applied').length,
+      verified_receipt_count: receipts.filter((receipt) => receipt.status === 'verified').length,
+      blocked_receipt_count: receipts.filter((receipt) => receipt.status === 'blocked').length,
+    },
+    receipts,
+    authority_boundary: lifecycleApplyAuthorityBoundary(),
+  };
+}
+
+export function readFamilyRuntimeLifecycleApplyReceipts(input: {
+  target_domain_id?: string;
+  source_ref?: string;
+} = {}) {
+  const paths = familyRuntimeLifecycleIndexPaths();
+  if (!fs.existsSync(paths.lifecycle_index_db)) {
+    return lifecycleApplyReceiptPayload({
+      rows: [],
+      lifecycleIndexDb: paths.lifecycle_index_db,
+      targetDomainId: input.target_domain_id,
+      sourceRef: input.source_ref,
+      status: 'missing',
+    });
+  }
+
+  const db = new DatabaseSync(paths.lifecycle_index_db, { readOnly: true });
+  try {
+    const table = db.prepare(`
+      SELECT name FROM sqlite_master
+      WHERE type = 'table' AND name = 'lifecycle_apply_receipts'
+    `).get();
+    if (!table) {
+      return lifecycleApplyReceiptPayload({
+        rows: [],
+        lifecycleIndexDb: paths.lifecycle_index_db,
+        targetDomainId: input.target_domain_id,
+        sourceRef: input.source_ref,
+      });
+    }
+
+    const targetDomainId = input.target_domain_id?.trim();
+    const sourceRef = input.source_ref?.trim();
+    const rows = targetDomainId && sourceRef
+      ? db.prepare(`
+        SELECT * FROM lifecycle_apply_receipts
+        WHERE target_domain_id = ? AND source_ref = ?
+        ORDER BY created_at DESC
+      `).all(targetDomainId, sourceRef)
+      : targetDomainId
+        ? db.prepare(`
+          SELECT * FROM lifecycle_apply_receipts
+          WHERE target_domain_id = ?
+          ORDER BY created_at DESC
+        `).all(targetDomainId)
+        : sourceRef
+          ? db.prepare(`
+            SELECT * FROM lifecycle_apply_receipts
+            WHERE source_ref = ?
+            ORDER BY created_at DESC
+          `).all(sourceRef)
+          : db.prepare(`
+            SELECT * FROM lifecycle_apply_receipts
+            ORDER BY created_at DESC
+          `).all();
+    return lifecycleApplyReceiptPayload({
+      rows: rows as Array<{
+        receipt_ref: string;
+        target_domain_id: string;
+        source_ref: string;
+        mode: string;
+        status: string;
+        receipt_json: string;
+        created_at: string;
+      }>,
+      lifecycleIndexDb: paths.lifecycle_index_db,
+      targetDomainId: input.target_domain_id,
+      sourceRef: input.source_ref,
+    });
+  } finally {
+    db.close();
+  }
 }
 
 export function listFamilyRuntimeLifecycleRefs(input: { domain_id?: string } = {}) {
