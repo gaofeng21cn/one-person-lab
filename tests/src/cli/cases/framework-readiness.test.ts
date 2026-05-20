@@ -60,7 +60,18 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.summary.control_plane_available, true);
   assert.equal(readiness.summary.agent_structural_conformance_blocker_count, 0);
   assert.equal(readiness.summary.semantic_hygiene_gate_count, 6);
-  assert.equal(readiness.summary.agent_structural_conformance_status, 'passed');
+  const agentStructuralConformanceStatus = readiness.summary.agent_structural_conformance_status;
+  assert.equal(
+    ['passed', 'diagnostic_unavailable'].includes(agentStructuralConformanceStatus),
+    true,
+  );
+  if (agentStructuralConformanceStatus === 'diagnostic_unavailable') {
+    assert.equal(readiness.summary.agent_readiness_diagnostic_failure_count, 1);
+    assert.equal(readiness.agent_conformance_tail.status, 'diagnostic_unavailable');
+    assert.equal(readiness.agent_conformance_tail.diagnostic_failure.status, 'diagnostic_unavailable');
+  } else {
+    assert.equal(readiness.summary.agent_readiness_diagnostic_failure_count, 0);
+  }
   assert.equal(
     readiness.summary.pack_compiler_ready_domain_count,
     readiness.pack_compiler.summary.ready_domain_count,

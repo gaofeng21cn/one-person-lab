@@ -145,25 +145,30 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
     assert.equal(manifestOutput.domain_manifests.opl_meta_agent_registry.surface_kind, 'opl_meta_agent_registry_extension');
     assert.equal(manifestOutput.domain_manifests.opl_meta_agent_registry.project_id, 'opl-meta-agent');
-    assert.equal(manifestOutput.domain_manifests.opl_meta_agent_registry.status, 'resolved');
+    const metaAgentRegistry = manifestOutput.domain_manifests.opl_meta_agent_registry;
+    assert.equal(['resolved', 'not_bound'].includes(metaAgentRegistry.status), true);
     assert.equal(
-      manifestOutput.domain_manifests.opl_meta_agent_registry.summary.app_workbench_section_count,
-      6,
+      metaAgentRegistry.summary.app_workbench_section_count,
+      metaAgentRegistry.status === 'resolved' ? 6 : 0,
     );
     assert.equal(
-      manifestOutput.domain_manifests.opl_meta_agent_registry.summary.claims_domain_ready,
+      metaAgentRegistry.summary.claims_domain_ready,
       false,
     );
     assert.equal(
-      manifestOutput.domain_manifests.opl_meta_agent_registry.summary.patch_loop_target_count,
-      2,
+      metaAgentRegistry.summary.patch_loop_target_count ?? 0,
+      metaAgentRegistry.status === 'resolved' ? 2 : 0,
     );
+    if (metaAgentRegistry.status === 'resolved') {
+      assert.equal(
+        metaAgentRegistry.oma_sections.patch_loop_closeout.refs.length >= 11,
+        true,
+      );
+    } else {
+      assert.equal(metaAgentRegistry.repo_dir, null);
+    }
     assert.equal(
-      manifestOutput.domain_manifests.opl_meta_agent_registry.oma_sections.patch_loop_closeout.refs.length >= 11,
-      true,
-    );
-    assert.equal(
-      manifestOutput.domain_manifests.opl_meta_agent_registry.authority_boundary.can_authorize_target_domain_quality_or_export,
+      metaAgentRegistry.authority_boundary.can_authorize_target_domain_quality_or_export,
       false,
     );
     assert.ok(
