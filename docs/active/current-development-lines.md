@@ -10,7 +10,7 @@ Date: `2026-05-20`
 
 OPL 当前开发继续按 Codex-default、provider-backed、framework-first 执行：先守住 OPL 作为完整智能体开发/运行框架，再让 MAS/MAG/RCA 作为标准 OPL Agents 消费 framework surface，并用真实 domain owner receipt / App evidence / long soak 验收目标结构。
 
-当前 OPL 已有 Temporal provider、stage attempt ledger、typed queue、typed closeout、production closeout read model、domain descriptor aggregation、functional runtime harness、generic substrate projection、Agent Lab、pack compiler handoff、external evidence refs-only receipt ledger、App/operator drilldown read model、App runtime 页面消费路径、managed clean runner 和 `opl system startup-maintenance` App 启动维护机器入口。新补的 `stage_evidence_workorder_packet` 把 expected receipt / monitor freshness 的 18 个 open workorder 聚合成可审计 closeout packet，说明 OPL 不只看见缺口，也能把缺口转成受控 safe action 和 operator workorder；真实 closure 仍必须由 MAS/MAG/RCA 或 App/live operator 提供 owner receipt、monitor evidence、typed blocker、no-regression 或 long-soak refs。
+当前 OPL 已有 Temporal provider、stage attempt ledger、typed queue、typed closeout、production closeout read model、domain descriptor aggregation、functional runtime harness、generic substrate projection、Agent Lab、pack compiler handoff、external evidence refs-only receipt ledger、App/operator drilldown read model、App runtime 页面消费路径、managed clean runner 和 `opl system startup-maintenance` App 启动维护机器入口。新补的 `stage_evidence_workorder_packet` 把 expected receipt / monitor freshness 的 18 个 open workorder 聚合成可审计 closeout packet，说明 OPL 不只看见缺口，也能把缺口转成受控 safe action 和 operator workorder；App/operator drilldown 也已消费 OMA patch-loop closeout refs，让 developer work order、target verification、owner receipt / typed blocker、patch absorption、cleanup 与 Agent Lab re-evaluation 能在 OPL 工作台按 refs-only 方式被审计。真实 closure 仍必须由 MAS/MAG/RCA 或 App/live operator 提供 owner receipt、monitor evidence、typed blocker、no-regression 或 long-soak refs。
 
 dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档到 [OPL family 文档过程归档 2026-05](../history/process/plans/2026-05-18-opl-family-doc-process-history.md)。本文只保留当前顺序和 owner 边界。
 
@@ -46,7 +46,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
 | `generated_surface` | OPL pack compiler / generated surface | 从 domain descriptor/stage/action/memory/transition/receipt metadata 派生 entry/status/sidecar/workbench/harness，并迁移生产 caller。 |
 | `domain_private_residue` | OPL functional audit + domain repos | 按 OPL replacement、generated surface、refs-only adapter、minimal authority function、tombstone 分类收薄或删除；MAS runner/supervisor/workbench/SQLite lifecycle writer 是当前最高优先级物理收薄面。 |
 | `lifecycle_memory_artifact` | OPL primitive + domain owner receipt | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 |
-| `app_workbench` | One Person Lab App / OPL product surface | 消费 App/operator drilldown、safe action routes、cleanup plan、workorder packet 和 OPL Meta Agent refs-only workbench sections；继续补真实用户路径、截图、发布包和长时证据。 |
+| `app_workbench` | One Person Lab App / OPL product surface | 消费 App/operator drilldown、safe action routes、cleanup plan、workorder packet、OMA patch-loop closeout refs 和 OPL Meta Agent refs-only workbench sections；继续补真实用户路径、截图、发布包和长时证据。 |
 | `legacy_cleanup` | OPL gate + domain repo owner | replacement proof 和 no-active-caller proof 后直接删除或 tombstone；OPL 可写 cleanup ledger / tombstone refs，domain repo 文件删除需要 domain owner receipt。 |
 
 ## 合并与退役规则
