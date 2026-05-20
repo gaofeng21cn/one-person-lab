@@ -37,6 +37,15 @@
     "helper_inventory_report_refs",
     "permission_current_date_invariant_refs",
     "mcp_stream_reliability_policy_refs"
+    ,
+    "change_evaluation_refs",
+    "predicted_impact_refs",
+    "failure_evidence_refs",
+    "root_cause_refs",
+    "targeted_fix_refs",
+    "risk_task_refs",
+    "next_run_falsification_refs",
+    "variant_candidate_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -104,8 +113,63 @@
       "production_evidence_owner_route_refs",
       "production_evidence_no_forbidden_write_refs",
       "production_evidence_typed_blocker_refs",
-      "production_evidence_required_receipt_refs"
+      "production_evidence_required_receipt_refs",
+      "change_evaluation_refs",
+      "predicted_impact_refs",
+      "failure_evidence_refs",
+      "root_cause_refs",
+      "targeted_fix_refs",
+      "risk_task_refs",
+      "next_run_falsification_refs"
     ]
+  },
+  "ahe_evidence_surface": {
+    "surface_kind": "opl_agent_lab_ahe_evidence_read_model",
+    "version": "opl-agent-lab.v1.ahe-evidence",
+    "refs_only": true,
+    "required_ref_fields": [
+      "change_evaluation_refs",
+      "failure_evidence_refs",
+      "root_cause_refs",
+      "targeted_fix_refs",
+      "next_run_falsification_refs"
+    ],
+    "optional_ref_fields": [
+      "predicted_impact_refs",
+      "risk_task_refs"
+    ],
+    "statuses": [
+      "ready_for_review",
+      "review_pending",
+      "typed_blocker"
+    ],
+    "promotion_policy": "AHE evidence refs are falsification and review inputs only; fixture, generated, suite-pass, scorecard, provider completion, or schema-completeness refs remain advisory and cannot authorize automatic promotion.",
+    "forbidden_authority": [
+      "domain_truth_mutation",
+      "memory_body_write",
+      "artifact_body_mutation",
+      "domain_quality_or_export_verdict",
+      "default_agent_promotion"
+    ]
+  },
+  "variant_comparison_surface": {
+    "surface_kind": "opl_agent_lab_variant_comparison_read_model",
+    "version": "opl-agent-lab.v1.variant-comparison",
+    "refs_only": true,
+    "input_ref_groups": [
+      "variant_candidate_refs",
+      "promotion_gate_refs",
+      "failure_delta_refs",
+      "mechanism_evolution_input_refs"
+    ],
+    "output_ref_groups": [
+      "winner_candidate_ref",
+      "loser_candidate_refs",
+      "per_variant_evidence_delta",
+      "predicted_flip_refs",
+      "risk_refs"
+    ],
+    "promotion_policy": "only the selected winner can enter the existing risk-tiered promotion gate; unselected variants are learning-only refs and cannot authorize domain readiness or default agent promotion"
   },
   "independent_ai_review_assessment_surface": {
     "surface_kind": "opl_agent_lab_independent_ai_review_assessment",
@@ -687,6 +751,8 @@
       "review_trace_ledger",
       "log_driven_mechanism_candidates",
       "log_mined_candidate_refs",
+      "ahe_evidence",
+      "variant_comparison",
       "next_mechanism_candidate",
       "mechanism_promotion_decision",
       "independent_ai_review_receipt_ref",
@@ -731,9 +797,11 @@
       "loop_steps",
       "pattern_refs",
       "log_driven_candidate_read_model",
+      "ahe_evidence_read_model",
       "integration_contract_read_model",
       "review_trace_ledger",
       "aris_maturity_controls",
+      "variant_comparison_read_model",
       "rl_boundary"
     ],
     "readiness_fields": [
@@ -749,6 +817,8 @@
       "ready_to_emit_review_trace_ledger",
       "ready_to_emit_log_driven_mechanism_candidates",
       "ready_to_emit_aris_maturity_controls",
+      "ready_to_emit_ahe_evidence_read_model",
+      "ready_to_emit_variant_comparison_read_model",
       "ai_review_approved_count",
       "automatic_model_training_ready",
       "automatic_mechanism_promotion_ready",

@@ -90,6 +90,15 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.ok(result.refs.recovery_probe_refs.includes('recovery-probe:common/resume-after-interruption'));
   assert.ok(result.refs.improvement_candidate_refs.includes('improvement-candidate:mag/stage-policy-tightening'));
   assert.ok(result.refs.promotion_gate_refs.includes('promotion-gate:rca/visual-route-smoke'));
+  assert.ok(Array.isArray(result.refs.change_evaluation_refs));
+  assert.ok(Array.isArray(result.refs.predicted_impact_refs));
+  assert.ok(Array.isArray(result.refs.failure_evidence_refs));
+  assert.ok(Array.isArray(result.refs.root_cause_refs));
+  assert.ok(Array.isArray(result.refs.targeted_fix_refs));
+  assert.ok(Array.isArray(result.refs.risk_task_refs));
+  assert.ok(Array.isArray(result.refs.next_run_falsification_refs));
+  assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
+  assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
   assert.equal(result.authority_boundary.can_authorize_domain_ready, false);
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.authority_boundary.can_authorize_export_verdict, false);
@@ -633,6 +642,14 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.result_surface.ref_fields.includes('production_evidence_owner_route_refs'));
   assert.ok(contract.result_surface.ref_fields.includes('production_evidence_typed_blocker_refs'));
   assert.ok(contract.result_surface.ref_fields.includes('production_evidence_required_receipt_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('change_evaluation_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('predicted_impact_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('failure_evidence_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('root_cause_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('targeted_fix_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('risk_task_refs'));
+  assert.ok(contract.result_surface.ref_fields.includes('next_run_falsification_refs'));
+  assert.ok(contract.input_surfaces.includes('variant_candidate_refs'));
   assert.equal(contract.external_suite_runner_surface.surface_kind, 'opl_agent_lab_external_suite_run');
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
   assert.ok(contract.external_suite_runner_surface.accepted_suite_kinds.includes('agent_production_evidence_suite'));
@@ -671,6 +688,14 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.input_surfaces.includes('helper_inventory_report_refs'));
   assert.ok(contract.input_surfaces.includes('permission_current_date_invariant_refs'));
   assert.ok(contract.input_surfaces.includes('mcp_stream_reliability_policy_refs'));
+  assert.equal(contract.ahe_evidence_surface.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
+  assert.ok(contract.ahe_evidence_surface.required_ref_fields.includes('failure_evidence_refs'));
+  assert.ok(contract.ahe_evidence_surface.required_ref_fields.includes('root_cause_refs'));
+  assert.ok(contract.ahe_evidence_surface.required_ref_fields.includes('targeted_fix_refs'));
+  assert.equal(contract.variant_comparison_surface.surface_kind,
+    'opl_agent_lab_variant_comparison_read_model');
+  assert.ok(contract.variant_comparison_surface.input_ref_groups.includes('variant_candidate_refs'));
+  assert.ok(contract.variant_comparison_surface.output_ref_groups.includes('winner_candidate_ref'));
   assert.equal(contract.mechanism_evolution_input_surface.surface_kind,
     'opl_agent_lab_mechanism_evolution_input_refs');
   assert.equal(contract.mechanism_evolution_input_surface.refs_only, true);
@@ -774,6 +799,8 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.evolution_surface.outputs.includes('review_trace_ledger'));
   assert.ok(contract.evolution_surface.outputs.includes('log_driven_mechanism_candidates'));
   assert.ok(contract.evolution_surface.outputs.includes('log_mined_candidate_refs'));
+  assert.ok(contract.evolution_surface.outputs.includes('ahe_evidence'));
+  assert.ok(contract.evolution_surface.outputs.includes('variant_comparison'));
   assert.ok(contract.evolution_surface.outputs.includes('mechanism_promotion_decision'));
   assert.ok(contract.evolution_surface.outputs.includes('independent_ai_review_receipt'));
   assert.ok(contract.evolution_surface.outputs.includes('promotion_receipt'));
@@ -784,9 +811,11 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.ok(contract.complete_control_plane_surface.eval_adapters.includes('inspect-ai'));
   assert.ok(contract.complete_control_plane_surface.observability_exports.includes('langfuse'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('log_driven_candidate_read_model'));
+  assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('ahe_evidence_read_model'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('integration_contract_read_model'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('review_trace_ledger'));
   assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('aris_maturity_controls'));
+  assert.ok(contract.complete_control_plane_surface.optimizer_loop_fields.includes('variant_comparison_read_model'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('automatic_mechanism_promotion_ready'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ai_review_approved_count'));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes('ready_to_emit_integration_contracts'));
@@ -796,6 +825,12 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   ));
   assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
     'ready_to_emit_aris_maturity_controls',
+  ));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
+    'ready_to_emit_ahe_evidence_read_model',
+  ));
+  assert.ok(contract.complete_control_plane_surface.readiness_fields.includes(
+    'ready_to_emit_variant_comparison_read_model',
   ));
   assert.equal(contract.integration_contract_surface.surface_kind,
     'opl_agent_lab_integration_contract_read_model');

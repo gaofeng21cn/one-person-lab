@@ -55,6 +55,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.readiness.ready_to_emit_review_trace_ledger, true);
   assert.equal(result.readiness.ready_to_emit_log_driven_mechanism_candidates, true);
   assert.equal(result.readiness.ready_to_emit_aris_maturity_controls, true);
+  assert.equal(result.readiness.ready_to_emit_ahe_evidence_read_model, true);
   assert.equal(result.readiness.ready_to_emit_variant_comparison_read_model, true);
   assert.equal(result.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(result.readiness.automatic_model_training_ready, false);
@@ -69,6 +70,7 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'opl_agent_lab_developer_mode_repair_route_read_model');
   assert.deepEqual(result.optimizer_loop.loop_steps, [
     'collect_trajectory_refs',
+    'collect_ahe_failure_root_cause_fix_and_falsification_refs',
     'collect_usage_and_blocker_event_refs',
     'mine_real_logs_into_mechanism_candidate_refs',
     'optional_web_research_for_mechanism_context',
@@ -110,6 +112,8 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.optimizer_loop.review_trace_ledger.ledger_ref, result.review_trace_ledger.ledger_ref);
   assert.equal(result.optimizer_loop.log_driven_candidate_read_model.read_model_id,
     result.log_driven_mechanism_candidates.read_model_id);
+  assert.equal(result.optimizer_loop.ahe_evidence_read_model.read_model_id,
+    result.ahe_evidence.read_model_id);
   assert.equal(result.optimizer_loop.aris_maturity_controls.read_model_id,
     result.aris_maturity_controls.read_model_id);
   assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
@@ -148,9 +152,12 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.source_results.log_driven_mechanism_candidate_read_model_ref,
     result.log_driven_mechanism_candidates.read_model_id);
   assert.equal(result.source_results.aris_maturity_controls_ref, result.aris_maturity_controls.read_model_id);
+  assert.equal(result.source_results.ahe_evidence_read_model_ref, result.ahe_evidence.read_model_id);
   assert.equal(result.source_results.variant_comparison_read_model_ref, result.variant_comparison.read_model_id);
   assert.equal(result.aris_maturity_controls.summary.effort_level_count, 4);
   assert.equal(result.aris_maturity_controls.summary.assurance_level_count, 4);
+  assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
+  assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.variant_comparison.summary.variant_count, 3);
   assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);
@@ -475,6 +482,7 @@ test('Agent Lab evolution result emits versioned auto-promotion decisions withou
   assert.equal(result.log_driven_mechanism_candidates.surface_kind,
     'opl_agent_lab_log_driven_mechanism_candidate_read_model');
   assert.equal(result.aris_maturity_controls.surface_kind, 'opl_agent_lab_aris_maturity_controls_read_model');
+  assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.log_mined_candidate_refs.length, 4);
   assert.equal(result.mechanism_promotion_decision.automatic_mechanism_promotion_ready, false);
@@ -543,6 +551,8 @@ test('Agent Lab optimize returns gated candidate and RL transition refs without 
   const result = buildAgentLabOptimizeResult(buildSampleAgentLabSuite());
 
   assert.equal(result.surface_kind, 'opl_agent_lab_optimize_result');
+  assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
+  assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.status, 'review_pending');
   assert.equal(result.suite_result.status, 'passed');
   assert.equal(result.gated_optimizer_candidate_set.candidate_count, 3);

@@ -7,6 +7,7 @@ import {
 import { mechanismEvolutionInputRefs, mechanismEvolutionInputsForTask } from './agent-lab-mechanism-inputs.ts';
 import { buildProductionEvidenceGateResult } from './agent-lab-production-evidence.ts';
 import { buildSampleAgentLabSuite } from './agent-lab-sample-suite.ts';
+import { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
 export { REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS } from './agent-lab-independent-ai-review.ts';
 export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
 
@@ -666,6 +667,7 @@ function domainSummary(runs: ReturnType<typeof buildRun>[]) {
 
 export function runAgentLabSuite(input: AgentLabSuite) {
   const runs = input.tasks.map(buildRun);
+  const aheEvidence = buildAgentLabAheEvidenceReadModel({ suite: input, results: runs });
   const requiredObservations = input.required_observations ?? REQUIRED_OBSERVATIONS;
   const observationResult = buildObservations(input, runs);
   const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
@@ -724,8 +726,19 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       memory_body_observed: observationResult.counters.memory_body_observed,
       forbidden_authority_flag_count: observationResult.counters.forbidden_authority_flag_count,
     },
-    refs: observationResult.refs,
+    refs: {
+      ...observationResult.refs,
+      change_evaluation_refs: unique(aheEvidence.tasks.flatMap((task) => task.change_evaluation_refs)),
+      predicted_impact_refs: unique(aheEvidence.tasks.flatMap((task) => task.predicted_impact_refs)),
+      failure_evidence_refs: unique(aheEvidence.tasks.flatMap((task) => task.failure_evidence_refs)),
+      root_cause_refs: unique(aheEvidence.tasks.flatMap((task) => task.root_cause_refs)),
+      targeted_fix_refs: unique(aheEvidence.tasks.flatMap((task) => task.targeted_fix_refs)),
+      risk_task_refs: unique(aheEvidence.tasks.flatMap((task) => task.risk_task_refs)),
+      next_run_falsification_refs: unique(aheEvidence.tasks.flatMap((task) =>
+        task.next_run_falsification_refs)),
+    },
     runs,
+    ahe_evidence: aheEvidence,
     domain_summary: domainSummary(runs),
     production_evidence_gate_result: productionEvidenceGateResult,
     longline_summary: buildLonglineSummary(input),
