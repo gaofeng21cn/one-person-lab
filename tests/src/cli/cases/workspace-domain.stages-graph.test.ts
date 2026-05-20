@@ -469,7 +469,16 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
     assert.equal(readiness.summary.hard_blocker_count, 0);
     assert.equal(readiness.summary.cohort_loop_warning_count, 0);
     assert.equal(readiness.summary.replay_evidence_warning_count > 0, true);
+    assert.equal(readiness.summary.displayed_warning_count, readiness.warnings.length);
+    assert.equal(readiness.summary.displayed_recommendation_count, readiness.recommendations.length);
+    assert.equal(readiness.summary.full_warning_count, readiness.summary.warning_count);
+    assert.equal(readiness.summary.full_recommendation_count, readiness.summary.warning_count);
+    assert.equal(readiness.warnings.length <= 5, true);
     assert.deepEqual(readiness.recommendations, readiness.warnings);
+    assert.equal(
+      readiness.full_detail_policy,
+      'default_payload_is_attention_limited_full_diagnostics_via_detail_full',
+    );
     assert.equal(readiness.lens_summary.some((entry: { check_id: string }) => entry.check_id === 'stage_admission'), true);
     assert.equal(readiness.lens_summary.some((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
       entry.check_id === 'stage_admission'
@@ -498,7 +507,36 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
       'runtime_event_refs',
       'receipt_replay_audit_refs',
     ]);
+    assert.deepEqual(readiness.stage_kernel.kernel_required_refs, [
+      'stage_id',
+      'owner',
+      'goal',
+      'requires',
+      'ensures',
+      'authority_boundary',
+      'trust_lane',
+      'selected_executor_binding',
+      'source_scope_refs_or_artifact_scope_refs_or_workspace_scope_refs',
+      'runtime_event_refs_for_effect_or_runtime_guard_boundaries',
+      'expected_receipt_refs',
+      'replay_audit_refs',
+      'route_back_refs',
+    ]);
     assert.equal(readiness.stage_kernel.derived_lenses_can_block_launch, false);
+    assert.equal(readiness.ai_capability_aperture.ai_strategy_refs_are_launch_blockers_by_default, false);
+    assert.deepEqual(readiness.ai_capability_aperture.ai_strategy_advisory_refs, [
+      'prompt_refs',
+      'skill_refs',
+      'knowledge_refs',
+      'evaluation_refs',
+      'runtime_assumptions',
+      'monitor_refs',
+      'cohort_query_refs',
+      'trigger_refs',
+      'runtime_budget_refs',
+      'domain_review_refs',
+    ]);
+    assert.equal(readiness.ai_capability_aperture.executor_strategy_owner, 'selected_ai_executor_and_domain_owner');
     assert.deepEqual(readiness.full_detail_args, ['--detail', 'full']);
     assert.equal(Object.hasOwn(readiness, 'domain_ready_status'), false);
     assert.equal(Object.hasOwn(readiness, 'quality_verdict'), false);
@@ -645,6 +683,17 @@ test('family stage readiness treats lightweight authoring fields as warnings ins
 
     assert.equal(readiness.status, 'launch_warning');
     assert.equal(readiness.summary.hard_blocker_count, 0);
+    assert.equal(readiness.summary.full_warning_count, readiness.summary.warning_count);
+    assert.equal(readiness.warnings.length <= 5, true);
+    assert.equal(readiness.ai_capability_aperture.ai_strategy_refs_are_launch_blockers_by_default, false);
+    assert.equal(
+      readiness.ai_capability_aperture.ai_strategy_advisory_refs.includes('prompt_refs'),
+      true,
+    );
+    assert.equal(
+      readiness.ai_capability_aperture.ai_strategy_advisory_refs.includes('knowledge_refs'),
+      true,
+    );
     assert.equal(readiness.summary.assumption_warning_count, 1);
     assert.equal(readiness.summary.cohort_loop_warning_count, 4);
     assert.equal(

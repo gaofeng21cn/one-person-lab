@@ -84,7 +84,10 @@
       "opl stages source-spec --domain <domain>",
       "opl stages replay-certification --domain <domain>",
       "opl stages capacity-budget --domain <domain>",
-      "opl stages domain-validity --domain <domain>"
+      "opl stages domain-validity --domain <domain>",
+      "opl stages guarantee --domain <domain>",
+      "opl stages property --domain <domain>",
+      "opl stages isolation --domain <domain>"
     ]
   },
   "promotion_gate": {

@@ -1,8 +1,11 @@
 export type FamilyStageDerivedLensId =
+  | 'stage_graph'
   | 'proof_bundle'
   | 'cohort_loop'
   | 'runtime_assumptions'
   | 'runtime_budget'
+  | 'stage_pack_registry'
+  | 'stage_pack_source_spec'
   | 'replay_certification';
 
 export type FamilyStageDerivedLensRole = 'default_operator_entry' | 'diagnostic_drilldown';
@@ -31,6 +34,18 @@ export type FamilyStageDerivedLens = {
 };
 
 export const FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES: FamilyStageDerivedLensDefinition[] = [
+  {
+    lens_id: 'stage_graph',
+    command: 'stages graph',
+    role: 'diagnostic_drilldown',
+    author_required: false,
+    default_surface: false,
+    default_help_surface: false,
+    can_block_launch: false,
+    drilldown_command: 'opl stages graph --domain <domain>',
+    folded_into_command: DEFAULT_STAGE_OPERATOR_COMMAND,
+    folded_into_readiness: true,
+  },
   {
     lens_id: 'proof_bundle',
     command: 'stages proof-bundle',
@@ -80,6 +95,30 @@ export const FAMILY_STAGE_DERIVED_DIAGNOSTIC_LENSES: FamilyStageDerivedLensDefin
     folded_into_readiness: true,
   },
   {
+    lens_id: 'stage_pack_registry',
+    command: 'stages registry',
+    role: 'diagnostic_drilldown',
+    author_required: false,
+    default_surface: false,
+    default_help_surface: false,
+    can_block_launch: false,
+    drilldown_command: 'opl stages registry --domain <domain>',
+    folded_into_command: DEFAULT_STAGE_OPERATOR_COMMAND,
+    folded_into_readiness: true,
+  },
+  {
+    lens_id: 'stage_pack_source_spec',
+    command: 'stages source-spec',
+    role: 'diagnostic_drilldown',
+    author_required: false,
+    default_surface: false,
+    default_help_surface: false,
+    can_block_launch: false,
+    drilldown_command: 'opl stages source-spec --domain <domain>',
+    folded_into_command: DEFAULT_STAGE_OPERATOR_COMMAND,
+    folded_into_readiness: true,
+  },
+  {
     lens_id: 'replay_certification',
     command: 'stages replay-certification',
     role: 'diagnostic_drilldown',
@@ -120,6 +159,35 @@ export const FAMILY_STAGE_KERNEL_BLOCKER_SOURCES = [
   'scope_refs',
   'runtime_event_refs',
   'receipt_replay_audit_refs',
+] as const;
+
+export const FAMILY_STAGE_KERNEL_REQUIRED_REFS = [
+  'stage_id',
+  'owner',
+  'goal',
+  'requires',
+  'ensures',
+  'authority_boundary',
+  'trust_lane',
+  'selected_executor_binding',
+  'source_scope_refs_or_artifact_scope_refs_or_workspace_scope_refs',
+  'runtime_event_refs_for_effect_or_runtime_guard_boundaries',
+  'expected_receipt_refs',
+  'replay_audit_refs',
+  'route_back_refs',
+] as const;
+
+export const FAMILY_STAGE_AI_STRATEGY_ADVISORY_REFS = [
+  'prompt_refs',
+  'skill_refs',
+  'knowledge_refs',
+  'evaluation_refs',
+  'runtime_assumptions',
+  'monitor_refs',
+  'cohort_query_refs',
+  'trigger_refs',
+  'runtime_budget_refs',
+  'domain_review_refs',
 ] as const;
 
 export function familyStageDerivedLensFor(id: FamilyStageDerivedLensId) {

@@ -221,16 +221,22 @@ test('default help surface recommends stages readiness and hides diagnostic stag
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
   const examples = output.help.examples.join('\n');
   const diagnosticStageCommands = [
-    ...familyStageDiagnosticLensCommands(),
-    'stages graph',
-    'stages registry',
-    'stages source-spec',
+    ...new Set(familyStageDiagnosticLensCommands()),
+  ];
+  const forbiddenDefaultEntrypoints = [
+    'capacity-budget',
+    'domain-validity',
+    'guarantee',
+    'property',
+    'isolation',
   ];
 
   assert.equal(commands.includes('stages readiness'), true);
   assert.match(examples, /opl stages readiness --domain mas/);
-  assert.doesNotMatch(examples, /capacity-budget/);
-  assert.doesNotMatch(examples, /domain-validity/);
+  for (const forbidden of forbiddenDefaultEntrypoints) {
+    assert.doesNotMatch(examples, new RegExp(forbidden));
+    assert.equal(commands.includes(`stages ${forbidden}`), false);
+  }
 
   for (const command of diagnosticStageCommands) {
     assert.equal(commands.includes(command), false);
@@ -261,16 +267,27 @@ test('public stage diagnostic commands require centralized derived-lens registry
     () => contracts,
   );
   const registeredDerivedLensCommands = new Set(familyStageDiagnosticLensCommands());
+  const supportDiagnosticCommands = new Set<string>();
+  const unregisteredDiagnosticCommands: string[] = [];
 
   for (const [command, spec] of Object.entries(publicSpecs)) {
     if (
       command.startsWith('stages ')
       && spec.help_surface === 'diagnostic_drilldown'
-      && registeredDerivedLensCommands.has(command)
     ) {
-      assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
+      if (registeredDerivedLensCommands.has(command)) {
+        assert.equal(familyStageDerivedLensByCommand(command)?.role, 'diagnostic_drilldown');
+      } else if (!supportDiagnosticCommands.has(command)) {
+        unregisteredDiagnosticCommands.push(command);
+      }
     }
   }
+
+  assert.deepEqual(
+    unregisteredDiagnosticCommands,
+    [],
+    'Public stage diagnostic commands must be registered derived lenses or explicit support diagnostics.',
+  );
 
   for (const command of familyStageDiagnosticLensCommands()) {
     assert.equal(publicSpecs[command]?.help_surface, 'diagnostic_drilldown');
