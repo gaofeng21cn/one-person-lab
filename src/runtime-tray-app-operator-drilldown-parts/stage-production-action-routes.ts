@@ -332,6 +332,26 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
   const sourceRef = stringValue(stage.ref)
     ?? `/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/${commandDomainId}/${stageId}`;
   const recordMode = mode === 'record';
+  const unobservedExpectedReceiptRefs = stringList(stage.unobserved_expected_receipt_refs);
+  const unobservedMonitorRefs = stringList(stage.unobserved_monitor_refs);
+  const payloadTemplate = recordMode
+    ? {
+        domain_receipt_refs: [],
+        evidence_refs: [],
+        typed_blocker_refs: [],
+        no_regression_refs: [],
+        owner_chain_refs: [],
+      }
+    : null;
+  const payloadRefHints = recordMode
+    ? {
+        domain_receipt_refs_should_cover: unobservedExpectedReceiptRefs,
+        evidence_refs_should_cover_monitor_freshness: unobservedMonitorRefs,
+        typed_blocker_refs_may_close_instead_of_success: true,
+        no_regression_refs_recommended: true,
+        owner_chain_refs_recommended: true,
+      }
+    : null;
   const args = [
     'agents',
     'evidence',
@@ -375,6 +395,11 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     route_requires_domain_or_app_payload: recordMode,
     can_close_without_domain_or_app_payload: !recordMode,
     opl_generated_receipt_policy: 'OPL_must_not_generate_domain_owner_receipts_monitor_freshness_or_no_regression_refs',
+    payload_template: payloadTemplate,
+    payload_ref_hints: payloadRefHints,
+    payload_template_policy: recordMode
+      ? 'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit'
+      : 'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
     creates_domain_action: false,
     creates_owner_receipt: false,
     owner_receipt_refs: [],
@@ -391,9 +416,9 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
     evidence_source_ref: sourceRef,
     missing_production_evidence: stringList(stage.missing_production_evidence),
     expected_receipt_refs: stringList(stage.expected_receipt_refs),
-    unobserved_expected_receipt_refs: stringList(stage.unobserved_expected_receipt_refs),
+    unobserved_expected_receipt_refs: unobservedExpectedReceiptRefs,
     monitor_refs: stringList(stage.monitor_refs),
-    unobserved_monitor_refs: stringList(stage.unobserved_monitor_refs),
+    unobserved_monitor_refs: unobservedMonitorRefs,
     required_operator_payload_refs: mode === 'verify' ? [] : [
       'domain_receipt_refs',
       'evidence_refs',
@@ -402,8 +427,8 @@ function stageEvidenceRoute(stage: JsonRecord, mode: 'record' | 'verify') {
       'owner_chain_refs',
     ],
     required_evidence_refs: [
-      ...stringList(stage.unobserved_expected_receipt_refs),
-      ...stringList(stage.unobserved_monitor_refs),
+      ...unobservedExpectedReceiptRefs,
+      ...unobservedMonitorRefs,
     ],
     required_return_shapes: [
       'domain_owner_receipt_ref',

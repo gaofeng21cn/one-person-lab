@@ -698,6 +698,10 @@ test('runtime action execute records and verifies stage production evidence rece
       drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
       1,
     );
+    assert.equal(
+      drilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
+      1,
+    );
     const route = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
@@ -729,6 +733,25 @@ test('runtime action execute records and verifies stage production evidence rece
     assert.equal(route.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(route.route_requires_domain_or_app_payload, true);
     assert.equal(route.can_close_without_domain_or_app_payload, false);
+    assert.deepEqual(route.payload_template, {
+      domain_receipt_refs: [],
+      evidence_refs: [],
+      typed_blocker_refs: [],
+      no_regression_refs: [],
+      owner_chain_refs: [],
+    });
+    assert.deepEqual(route.payload_ref_hints.domain_receipt_refs_should_cover, [
+      'mas:review-receipt',
+      'owner_receipt:review',
+    ]);
+    assert.deepEqual(route.payload_ref_hints.evidence_refs_should_cover_monitor_freshness, [
+      'metric:review/currentness',
+    ]);
+    assert.equal(route.payload_ref_hints.typed_blocker_refs_may_close_instead_of_success, true);
+    assert.equal(
+      route.payload_template_policy,
+      'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',
+    );
     assert.equal(
       route.opl_generated_receipt_policy,
       'OPL_must_not_generate_domain_owner_receipts_monitor_freshness_or_no_regression_refs',
@@ -779,8 +802,18 @@ test('runtime action execute records and verifies stage production evidence rece
     assert.equal(verifyRoute.payload_owner, 'opl_external_evidence_ledger');
     assert.equal(verifyRoute.route_requires_domain_or_app_payload, false);
     assert.equal(verifyRoute.can_close_without_domain_or_app_payload, true);
+    assert.equal(verifyRoute.payload_template, null);
+    assert.equal(verifyRoute.payload_ref_hints, null);
+    assert.equal(
+      verifyRoute.payload_template_policy,
+      'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
+    );
     assert.equal(
       recordedDrilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
+      0,
+    );
+    assert.equal(
+      recordedDrilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
       0,
     );
 
