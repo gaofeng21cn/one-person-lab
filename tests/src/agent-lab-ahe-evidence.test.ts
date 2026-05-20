@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { buildAgentLabAheEvidenceReadModel } from '../../src/agent-lab-ahe-evidence.ts';
+import { buildAgentLabCodexAttemptTraceFlywheel } from '../../src/agent-lab-codex-attempt-flywheel.ts';
 import { buildSampleAgentLabSuite } from '../../src/agent-lab.ts';
 
 function aheRefs(suffix: string) {
@@ -62,6 +63,56 @@ test('Agent Lab AHE evidence helper normalizes and deduplicates task and result 
   assert.equal(task.promotion_authorization.authorized, false);
   assert.equal(result.summary.promotion_authorized_count, 0);
   assert.equal(task.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('Agent Lab Codex attempt trace flywheel normalizes trace refs and forks blocked evidence', () => {
+  const suite = buildSampleAgentLabSuite();
+  suite.tasks = [suite.tasks[0]];
+  const taskId = suite.tasks[0].task_id;
+  const failureDeltaRef = 'failure-delta:mas/reviewer-repair-prompt';
+
+  const result = buildAgentLabCodexAttemptTraceFlywheel({
+    suite,
+    results: [
+      {
+        task_id: taskId,
+        status: 'blocked',
+        failure_taxonomy: ['promotion_independent_ai_review_receipt_missing'],
+        promotion_safety_assessment: {
+          missing_required_refs: ['promotion_independent_ai_review_receipt_missing'],
+          failure_delta_refs: [failureDeltaRef],
+        },
+      },
+    ],
+  });
+  const attempt = result.attempts[0];
+
+  assert.equal(result.surface_kind, 'opl_agent_lab_codex_attempt_trace_flywheel');
+  assert.equal(result.refs_only, true);
+  assert.equal(result.summary.attempt_count, 1);
+  assert.equal(result.summary.codex_cli_attempt_count, 1);
+  assert.equal(result.summary.blocked_evidence_attempt_count, 1);
+  assert.equal(result.summary.fork_candidate_count, 2);
+  assert.equal(result.summary.promotion_eligible_candidate_count, 0);
+  assert.equal(attempt.status, 'blocked_evidence_ready_for_fork');
+  assert.deepEqual(attempt.generated_typed_blocker_refs, []);
+  assert.ok(result.refs.command_refs.includes('command-ref:codex/mas-paper-repair-smoke'));
+  assert.ok(result.refs.file_refs.includes('file-ref:mas/current-package-fixture'));
+  assert.ok(result.refs.subagent_refs.includes('subagent-ref:codex/mas-reviewer-repair'));
+  assert.ok(result.refs.worktree_refs.includes('worktree-ref:codex/mas-paper-repair-smoke'));
+  assert.ok(result.refs.test_refs.includes('test-ref:mas/paper-autonomy-smoke'));
+  assert.ok(result.refs.web_source_refs.includes('source-ref:mas/reviewer-guideline-fixture'));
+  assert.ok(result.refs.review_receipt_refs.includes('review-receipt-ref:mas/ai-reviewer-fixture'));
+  assert.ok(result.refs.blocked_evidence_refs.includes(failureDeltaRef));
+  assert.equal(result.variant_candidates.length, 2);
+  assert.ok(result.variant_candidates.every((candidate) =>
+    candidate.evidence_delta.blocked_evidence_refs.includes(failureDeltaRef)
+    && candidate.predicted_impact_refs.length > 0
+    && candidate.next_run_falsification_refs.length > 0
+    && candidate.promotion_eligibility.eligible_for_variant_eval
+    && candidate.promotion_eligibility.eligible_for_existing_promotion_gate === false
+    && candidate.promotion_eligibility.can_authorize_domain_ready === false
+    && candidate.promotion_eligibility.can_promote_default_agent === false));
 });
 
 test('Agent Lab AHE evidence helper emits typed blocker when required refs are missing', () => {

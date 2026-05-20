@@ -8,6 +8,7 @@ import { mechanismEvolutionInputRefs, mechanismEvolutionInputsForTask } from './
 import { buildProductionEvidenceGateResult } from './agent-lab-production-evidence.ts';
 import { buildSampleAgentLabSuite } from './agent-lab-sample-suite.ts';
 import { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
+import { buildAgentLabCodexAttemptTraceFlywheel } from './agent-lab-codex-attempt-flywheel.ts';
 export {
   buildAgentLabCostEstimate,
   buildAgentLabCostEstimateReadModel,
@@ -77,6 +78,15 @@ export type AgentLabTrajectory = {
   receipt_refs: string[];
   repair_refs: string[];
   trace_refs?: string[];
+  command_refs?: string[];
+  file_refs?: string[];
+  subagent_refs?: string[];
+  worktree_refs?: string[];
+  test_refs?: string[];
+  web_source_refs?: string[];
+  typed_blocker_refs?: string[];
+  review_receipt_refs?: string[];
+  next_run_falsification_refs?: string[];
   authority_boundary?: JsonRecord;
   [key: string]: unknown;
 };
@@ -644,6 +654,14 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       production_evidence_typed_blocker_refs: productionEvidenceGateResult?.typed_blocker_refs ?? [],
       production_evidence_required_receipt_refs: productionEvidenceGateResult?.required_receipt_refs ?? [],
       forbidden_authority_flags: forbiddenAuthorityFlags,
+      command_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.command_refs))),
+      file_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.file_refs))),
+      subagent_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.subagent_refs))),
+      worktree_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.worktree_refs))),
+      test_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.test_refs))),
+      web_source_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.web_source_refs))),
+      typed_blocker_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.typed_blocker_refs))),
+      review_receipt_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.review_receipt_refs))),
     },
     counters: {
       memory_body_observed: memoryBodyObserved,
@@ -673,6 +691,7 @@ function domainSummary(runs: ReturnType<typeof buildRun>[]) {
 export function runAgentLabSuite(input: AgentLabSuite) {
   const runs = input.tasks.map(buildRun);
   const aheEvidence = buildAgentLabAheEvidenceReadModel({ suite: input, results: runs });
+  const codexAttemptTraceFlywheel = buildAgentLabCodexAttemptTraceFlywheel({ suite: input, results: runs });
   const requiredObservations = input.required_observations ?? REQUIRED_OBSERVATIONS;
   const observationResult = buildObservations(input, runs);
   const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
@@ -741,9 +760,21 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       risk_task_refs: unique(aheEvidence.tasks.flatMap((task) => task.risk_task_refs)),
       next_run_falsification_refs: unique(aheEvidence.tasks.flatMap((task) =>
         task.next_run_falsification_refs)),
+      codex_attempt_trace_refs: codexAttemptTraceFlywheel.refs.attempt_trace_refs,
+      codex_command_refs: codexAttemptTraceFlywheel.refs.command_refs,
+      codex_file_refs: codexAttemptTraceFlywheel.refs.file_refs,
+      codex_subagent_refs: codexAttemptTraceFlywheel.refs.subagent_refs,
+      codex_worktree_refs: codexAttemptTraceFlywheel.refs.worktree_refs,
+      codex_test_refs: codexAttemptTraceFlywheel.refs.test_refs,
+      codex_web_source_refs: codexAttemptTraceFlywheel.refs.web_source_refs,
+      codex_typed_blocker_refs: codexAttemptTraceFlywheel.refs.typed_blocker_refs,
+      codex_review_receipt_refs: codexAttemptTraceFlywheel.refs.review_receipt_refs,
+      codex_blocked_evidence_refs: codexAttemptTraceFlywheel.refs.blocked_evidence_refs,
+      codex_variant_candidate_refs: codexAttemptTraceFlywheel.refs.variant_candidate_refs,
     },
     runs,
     ahe_evidence: aheEvidence,
+    codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
     domain_summary: domainSummary(runs),
     production_evidence_gate_result: productionEvidenceGateResult,
     longline_summary: buildLonglineSummary(input),
