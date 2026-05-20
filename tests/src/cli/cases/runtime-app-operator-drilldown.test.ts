@@ -959,6 +959,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(stageTailItem.owner_group, 'medautoscience');
     assert.equal(stageTailItem.receipt_ref, null);
     assert.equal(stageTailItem.typed_blocker_ref, null);
+    assert.equal(stageTailItem.evidence_requirement_model, 'evidence_requirement.v1');
+    assert.equal(stageTailItem.evidence_requirement.requirement_id, stageTailItem.tail_id);
+    assert.equal(stageTailItem.evidence_requirement.requirement_kind, stageTailItem.tail_item);
+    assert.equal(stageTailItem.evidence_requirement.owner, stageTailItem.owner_group);
+    assert.equal(stageTailItem.evidence_requirement.domain_id, stageTailItem.domain_id);
+    assert.equal(stageTailItem.evidence_requirement.status, stageTailItem.status);
+    assert.equal(stageTailItem.evidence_requirement.current_ref, stageTailItem.current_ref);
     assert.equal(stageTailItem.not_authorized_claims.includes('domain_ready'), true);
     assert.equal(stageTailItem.authority_boundary.can_claim_domain_ready, false);
     assert.equal(
@@ -990,6 +997,11 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'stage_production_caller_owner_receipt_or_domain_typed_blocker',
     );
     assert.equal(stageNextAction.current_ref, stageTailItem.replay_ref);
+    assert.equal(stageNextAction.evidence_requirement_model, 'evidence_requirement.v1');
+    assert.equal(stageNextAction.evidence_requirement.requirement_id, stageTailItem.tail_id);
+    assert.equal(stageNextAction.evidence_requirement.owner, stageTailItem.owner_group);
+    assert.equal(stageNextAction.evidence_requirement.domain_id, stageTailItem.domain_id);
+    assert.equal(stageNextAction.evidence_requirement.status, stageTailItem.status);
     assert.equal(
       stageNextAction.next_safe_action_route,
       'opl runtime app-operator-drilldown --detail full --json',

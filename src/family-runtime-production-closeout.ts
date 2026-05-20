@@ -2,6 +2,10 @@ import type { FrameworkContracts } from './types.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
+import {
+  EVIDENCE_REQUIREMENT_MODEL_VERSION,
+  evidenceRequirementFromTailItem,
+} from './evidence-requirement.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
 
@@ -261,8 +265,10 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     ...typedBlockerRefs,
     ...closureTypedBlockerRefs,
   ];
-  return {
+  const item = {
     item_id: `production-closeout:${actionId}`,
+    tail_id: `production-closeout:${actionId}`,
+    tail_item: actionKind,
     action_id: actionId,
     action_kind: actionKind,
     claim_scope: readOnlyClaimScope(route),
@@ -306,6 +312,11 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     blocked_reason: stringValue(route.blocked_reason),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
+  return {
+    ...item,
+    evidence_requirement_model: EVIDENCE_REQUIREMENT_MODEL_VERSION,
+    evidence_requirement: evidenceRequirementFromTailItem(item),
+  };
 }
 
 function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
@@ -334,8 +345,10 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
     const claimScope = role === 'evidence_gate_receipt'
       ? 'evidence_gate_receipt'
       : 'external_evidence_receipt';
-    return {
+    const item = {
       item_id: `production-closeout:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
+      tail_id: `production-closeout:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
+      tail_item: role,
       action_id: `${role}:${domainId ?? 'domain'}:${requestId}:verified`,
       action_kind: typedBlockerOnly
         ? 'domain_owned_typed_blocker_verified'
@@ -374,6 +387,11 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
       opl_generated_receipt_policy: null,
       blocked_reason: null,
       not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
+    };
+    return {
+      ...item,
+      evidence_requirement_model: EVIDENCE_REQUIREMENT_MODEL_VERSION,
+      evidence_requirement: evidenceRequirementFromTailItem(item),
     };
   });
 }

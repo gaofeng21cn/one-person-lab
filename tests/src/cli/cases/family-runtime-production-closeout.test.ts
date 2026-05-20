@@ -412,6 +412,13 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageItem.route_semantics, 'open_safe_action_request_apply_verify_route');
     assert.equal(stageItem.receipt_ref, null);
     assert.equal(stageItem.typed_blocker_ref, null);
+    assert.equal(stageItem.evidence_requirement_model, 'evidence_requirement.v1');
+    assert.equal(stageItem.evidence_requirement.requirement_id, stageItem.tail_id);
+    assert.equal(stageItem.evidence_requirement.requirement_kind, stageItem.tail_item);
+    assert.equal(stageItem.evidence_requirement.owner, stageItem.owner);
+    assert.equal(stageItem.evidence_requirement.domain_id, stageItem.domain_id ?? stageItem.owner);
+    assert.equal(stageItem.evidence_requirement.status, 'open');
+    assert.equal(stageItem.evidence_requirement.current_ref, stageItem.replay_ref);
     assert.equal(stageItem.not_authorized_claims.includes('domain_ready'), true);
     assert.equal(stageItem.not_authorized_claims.includes('quality_verdict'), true);
     assert.equal(fullCloseout.next_action_ledger.surface_kind, 'opl_family_runtime_production_tail_next_action_ledger');
@@ -427,6 +434,11 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageNextAction.stage_or_request, stageItem.stage_id ?? stageItem.claim_scope);
     assert.equal(stageNextAction.required_receipt_type.length > 0, true);
     assert.equal(stageNextAction.current_ref, stageItem.replay_ref);
+    assert.equal(stageNextAction.evidence_requirement_model, 'evidence_requirement.v1');
+    assert.equal(stageNextAction.evidence_requirement.requirement_id, stageItem.tail_id);
+    assert.equal(stageNextAction.evidence_requirement.owner, stageItem.owner);
+    assert.equal(stageNextAction.evidence_requirement.domain_id, stageItem.domain_id ?? stageItem.owner);
+    assert.equal(stageNextAction.evidence_requirement.status, 'open');
     assert.equal(stageNextAction.next_safe_action_route, stageItem.replay_ref);
     assert.equal(stageNextAction.authority_boundary.can_write_domain_truth, false);
     assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
@@ -796,6 +808,10 @@ test('family-runtime production-closeout classifies verified external blockers w
     for (const item of blockerItems) {
       assert.equal(item.closeout_status_detail, 'closed_by_domain_owned_typed_blocker_ref');
       assert.equal(item.typed_blocker_refs.length, 1);
+      assert.equal(item.evidence_requirement_model, 'evidence_requirement.v1');
+      assert.equal(item.evidence_requirement.requirement_id, item.tail_id);
+      assert.equal(item.evidence_requirement.status, 'domain_owned_typed_blocker');
+      assert.equal(item.evidence_requirement.typed_blocker_ref, item.typed_blocker_ref);
       assert.equal(item.closeout_item_is_completion_claim, false);
       assert.equal(item.not_authorized_claims.includes('production_ready'), true);
     }
