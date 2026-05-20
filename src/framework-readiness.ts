@@ -442,9 +442,11 @@ export async function buildFrameworkReadinessSummary(
     ...Object.values(stageReadinessDiagnostics).map((entry) => entry.failure),
   ]
     .filter((entry): entry is ReturnType<typeof diagnosticFailure> => entry !== null);
+  const stageReadinessDiagnosticFailures = Object.values(stageReadinessDiagnostics)
+    .map((entry) => entry.failure)
+    .filter((entry): entry is ReturnType<typeof diagnosticFailure> => entry !== null);
   const agentReadinessDiagnosticFailureCount = agentReadinessDiagnostic.failure === null ? 0 : 1;
-  const stageReadinessDiagnosticFailureCount =
-    diagnosticFailures.length - agentReadinessDiagnosticFailureCount;
+  const stageReadinessDiagnosticFailureCount = stageReadinessDiagnosticFailures.length;
   const diagnosticFailureCount = diagnosticFailures.length;
   const packCompilerBlockedDomainCount = numberValue(packSummary.blocked_domain_count);
   const packCompilerOwnerClaimCount = numberValue(packSummary.domain_generated_surface_owner_claim_count);
@@ -575,7 +577,7 @@ export async function buildFrameworkReadinessSummary(
         ],
         summary: stagesSummary,
         readiness_by_domain: stageSummaries,
-        diagnostic_failures: diagnosticFailures,
+        diagnostic_failures: stageReadinessDiagnosticFailures,
         authority_boundary: {
           can_execute_stage: false,
           can_claim_stage_completion: false,
