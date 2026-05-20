@@ -64,18 +64,20 @@ Agent 主要负责：
 
 当前仓库承担的是这个角色的公开 framework 与产品面；其中部分 provider/runtime 能力仍处在从合同与测试证据走向生产常驻的阶段。
 
-### Domain Agent、Entry 与 Domain-Owned Runtime
+### Domain Agent、Entry 与 Domain-Owned Authority
 
 每个独立 `domain agent` 仓应保持三层分开：
 
 - `domain agent` 作为仓库对外公开主语
 - domain-owned entry surface 作为该工作流的稳定边界入口
-- domain-owned authority / runtime controller / delivery system 作为该工作流的执行、记录、治理与交付底座
+- domain-owned authority function / quality gate / delivery authority 作为该工作流的领域判断、授权、记录与交付底座
 
 例如：
 
-- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain entry、runtime truth、quality gate 与 delivery authority
-- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain entry、runtime truth、review gate 与 delivery authority
+- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain entry、research truth、publication quality gate、memory/artifact authority 与 delivery authority
+- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain entry、visual truth、review/export gate、artifact authority 与 delivery authority
+
+通用 stage attempt、queue、wakeup、retry/dead-letter、receipt/projection、generic lifecycle index、operator workbench 和 App drilldown 归 OPL Framework / One Person Lab App。domain repo 中仍存在的私有 runtime、session、workbench 或 sidecar 代码，只能按当前 gap plan 收薄为 authority function、domain handler target、refs-only adapter、diagnostic、history/tombstone 或 OPL generated/hosted target。
 
 ## Agent-first 执行
 
@@ -153,7 +155,7 @@ Rust native helper / index-only 工作可以支持 native assistance 与 indexed
 - 实验室顶层产品与控制语言
 - 跨 domain 语义最先冻结的地方
 - 独立 domain agent 仓之上的显式 activation 层
-- 连接各个 domain-owned runtime、但不吞并其身份的 shared modules / contracts / indexes owner
+- 连接各个 domain-owned authority surfaces、但不吞并其身份的 shared modules / contracts / indexes owner
 
 ## 为什么 Domain Entry 仍然必须保留
 
@@ -168,7 +170,7 @@ Rust native helper / index-only 工作可以支持 native assistance 与 indexed
 
 - Codex-default `OPL` runtime 加显式 activation 在 domain 之上
 - 显式而精简的 domain-owned entry 在中层
-- 明确的 domain-owned authority、runtime controller 与 delivery system 在下层
+- 明确的 domain-owned authority function、quality gate、memory/artifact authority 与 delivery authority 在下层
 
 ## 延伸阅读
 

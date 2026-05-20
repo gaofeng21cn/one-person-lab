@@ -1,13 +1,13 @@
 # OPL GUI 主线切换到 AionUI 的历史记录
 
 Owner: `One Person Lab`
-Purpose: `references_convergence_governance_2026_04_21_gui_mainline_pivot_to_aionui`
-State: `support_reference`
-Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
+Purpose: `historical_gui_mainline_pivot_to_aionui_2026_04_21`
+State: `history_only`
+Machine boundary: 本文是人读历史归档。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
 状态锚点：`2026-04-21`
 
-当前状态：历史参考。当前实现基线以 [`docs/status.md`](../../status.md)、[`docs/decisions.md`](../../decisions.md) 和 [OPL GUI Shell Adapter 边界说明](../current-support/opl-gui-shell-adapter-boundary.md) 为准。
+当前状态：历史归档。当前实现基线以 [`docs/status.md`](../../../status.md)、[`docs/decisions.md`](../../../decisions.md) 和 [OPL GUI Shell Adapter 边界说明](../../../references/current-support/opl-gui-shell-adapter-boundary.md) 为准。
 
 ## 结论
 

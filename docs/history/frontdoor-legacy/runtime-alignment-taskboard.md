@@ -15,7 +15,7 @@
 3. 每个仓当前的“下一棒”应该是什么
 4. 哪些事项仍应继续后置，不要抢跑
 
-当前统一 program、阶段名与离场条件，以 [`contract-convergence-v1-execution-board.md`](../../references/convergence-governance/contract-convergence-v1-execution-board.md) 为准；本任务板只保留当前活跃的收敛项。
+当前统一 program、阶段名与离场条件已经随 [Contract Convergence v1 执行板](../process/convergence-governance/contract-convergence-v1-execution-board-2026-04-11.md) 归档；本任务板只保留 frontdoor 时代的历史收敛项，当前主线回到核心五件套和 `docs/active/`。
 
 ## 零、当前统一阶段
 
