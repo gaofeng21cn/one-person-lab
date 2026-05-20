@@ -248,9 +248,14 @@ process.stdout.write(JSON.stringify({ repo: 'opl-meta-agent', sync: 'ok' }) + '\
     fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
     fs.mkdirSync(skillRoot, { recursive: true });
     fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    fs.mkdirSync(path.join(repoRoot, '.agents', 'plugins'), { recursive: true });
     fs.writeFileSync(
       path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
       JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
+    );
+    fs.writeFileSync(
+      path.join(repoRoot, '.agents', 'plugins', 'marketplace.json'),
+      JSON.stringify({ name: `${spec.canonicalPlugin}-local`, plugins: [] }, null, 2),
     );
     fs.writeFileSync(
       path.join(skillRoot, 'SKILL.md'),
@@ -739,11 +744,29 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
-  fs.mkdirSync(homeDir, { recursive: true });
+  const codexHome = path.join(homeDir, '.codex');
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(
+    path.join(codexHome, 'config.toml'),
+    [
+      '[mcp_servers]',
+      '',
+      '[mcp_servers.sentrux]',
+      'command = "/opt/homebrew/bin/sentrux"',
+      'args = ["mcp"]',
+      '',
+      '[mcp_servers.redcube-ai]',
+      'command = "node"',
+      'args = ["/Users/test/redcube-ai/apps/redcube-mcp/dist/server.js"]',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
 
   try {
     const output = runCli(['skill', 'sync'], {
       HOME: homeDir,
+      CODEX_HOME: codexHome,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
@@ -758,6 +781,9 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.packs[1].installer_result.repo, 'med-autogrant');
     assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
     assert.equal(output.skill_sync.packs[3].installer_result.repo, 'opl-meta-agent');
+    assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 3);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
@@ -771,6 +797,12 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
       assert.match(metadata, /display_name: "(Med Auto Science|Med Auto Grant|RedCube AI|OPL Meta Agent)"/);
       assert.match(metadata, new RegExp(`default_prompt: "Use \\$${skillName}\\b`));
     }
+    const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    assert.match(config, /\[mcp_servers\.sentrux\]/);
+    assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
+    assert.match(config, /\[plugins\."mas@mas-local"\]/);
+    assert.match(config, /\[plugins\."mag@mag-local"\]/);
+    assert.match(config, /\[plugins\."rca@rca-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

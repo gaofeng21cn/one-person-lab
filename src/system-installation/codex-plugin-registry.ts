@@ -9,6 +9,7 @@ type CodexFamilyPluginSpec = {
   marketplace_id: string;
   plugin_id: string;
   repo_name: string;
+  legacy_standalone_mcp_server_ids: string[];
 };
 
 export type CodexPluginRegistryItem = {
@@ -29,6 +30,7 @@ export type CodexPluginRegistryResult = {
     total: number;
     registered: number;
     missing_marketplace: number;
+    removed_standalone_mcp_servers: number;
   };
 };
 
@@ -38,18 +40,21 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     marketplace_id: 'mas-local',
     plugin_id: 'mas',
     repo_name: 'med-autoscience',
+    legacy_standalone_mcp_server_ids: ['med-autoscience', 'medautosci', 'mas'],
   },
   {
     module_id: 'medautogrant',
     marketplace_id: 'mag-local',
     plugin_id: 'mag',
     repo_name: 'med-autogrant',
+    legacy_standalone_mcp_server_ids: ['med-autogrant', 'medautogrant', 'mag'],
   },
   {
     module_id: 'redcube',
     marketplace_id: 'rca-local',
     plugin_id: 'rca',
     repo_name: 'redcube-ai',
+    legacy_standalone_mcp_server_ids: ['redcube-ai', 'redcube', 'rca'],
   },
 ];
 
@@ -67,20 +72,34 @@ function escapeTomlString(value: string) {
 }
 
 function removeTomlTable(text: string, tableHeader: string) {
+  return removeTomlTables(text, (header) => header === tableHeader).text;
+}
+
+function removeTomlTables(
+  text: string,
+  shouldRemove: (tableHeader: string) => boolean,
+) {
   const lines = text.split('\n');
   const kept: string[] = [];
   let skipping = false;
+  let removed = 0;
 
   for (const line of lines) {
     if (/^\[[^\]]+\]/.test(line.trim())) {
-      skipping = line.trim() === tableHeader;
+      skipping = shouldRemove(line.trim());
+      if (skipping) {
+        removed += 1;
+      }
     }
     if (!skipping) {
       kept.push(line);
     }
   }
 
-  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+  return {
+    text: kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd(),
+    removed,
+  };
 }
 
 function upsertTomlTable(text: string, tableHeader: string, bodyLines: string[]) {
@@ -89,9 +108,29 @@ function upsertTomlTable(text: string, tableHeader: string, bodyLines: string[])
   return `${withoutTable.trimEnd()}\n\n${table}\n`;
 }
 
+function quoteTomlTableSegment(value: string) {
+  return `"${escapeTomlString(value)}"`;
+}
+
+function buildStandaloneMcpServerTablePrefixes(spec: CodexFamilyPluginSpec) {
+  return spec.legacy_standalone_mcp_server_ids.flatMap((serverId) => [
+    `[mcp_servers.${serverId}]`,
+    `[mcp_servers.${quoteTomlTableSegment(serverId)}]`,
+    `[mcp_servers.${serverId}.`,
+    `[mcp_servers.${quoteTomlTableSegment(serverId)}.`,
+  ]);
+}
+
+function removeStandaloneMcpServerTables(text: string, spec: CodexFamilyPluginSpec) {
+  const prefixes = buildStandaloneMcpServerTablePrefixes(spec);
+  return removeTomlTables(text, (header) => prefixes.some((prefix) => header === prefix || header.startsWith(prefix)));
+}
+
 function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, repoPath: string) {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   let text = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+  const standaloneMcpRemoval = removeStandaloneMcpServerTables(text, spec);
+  text = standaloneMcpRemoval.text;
   text = upsertTomlTable(text, `[marketplaces.${spec.marketplace_id}]`, [
     'source_type = "local"',
     `source = "${escapeTomlString(repoPath)}"`,
@@ -100,6 +139,7 @@ function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, re
     'enabled = true',
   ]);
   fs.writeFileSync(configPath, text, 'utf8');
+  return standaloneMcpRemoval.removed;
 }
 
 export function registerOplFamilyCodexPlugins(
@@ -110,6 +150,7 @@ export function registerOplFamilyCodexPlugins(
   const codexConfigPath = resolveCodexConfigPath(home);
   const selected = new Set(selectedModules);
   const items: CodexPluginRegistryItem[] = [];
+  let removedStandaloneMcpServers = 0;
 
   for (const spec of FAMILY_PLUGIN_SPECS) {
     if (!selected.has(spec.module_id)) {
@@ -131,7 +172,7 @@ export function registerOplFamilyCodexPlugins(
       continue;
     }
 
-    registerCodexPlugin(codexConfigPath, spec, repoPath);
+    removedStandaloneMcpServers += registerCodexPlugin(codexConfigPath, spec, repoPath);
     items.push({
       module_id: spec.module_id,
       marketplace_id: spec.marketplace_id,
@@ -151,6 +192,7 @@ export function registerOplFamilyCodexPlugins(
       total: items.length,
       registered: items.filter((item) => item.status === 'registered').length,
       missing_marketplace: items.filter((item) => item.status === 'missing_marketplace').length,
+      removed_standalone_mcp_servers: removedStandaloneMcpServers,
     },
   };
 }
