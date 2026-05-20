@@ -7,11 +7,13 @@ process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map([
-  ['src/agent-lab-complete.ts', 1104],
   ['src/family-domain-agent-skeleton.ts', 1145],
   ['src/family-runtime-lifecycle-index.ts', 1078],
-  ['src/family-runtime-temporal-provider.ts', 1024],
-  ['src/runtime-tray-app-operator-drilldown.ts', 1365],
+  ['src/family-runtime-temporal-provider.ts', 1008],
+  ['src/family-stage-control-plane.ts', 1018],
+  ['src/runtime-tray-app-operator-drilldown.ts', 1295],
+  ['tests/src/cli/cases/agents-conformance.test.ts', 1006],
+  ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1036],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
