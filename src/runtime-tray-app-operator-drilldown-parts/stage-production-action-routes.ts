@@ -168,6 +168,8 @@ export function buildStageProductionAttemptRoutes(stageProductionEvidence: JsonR
         action_kind: 'stage_production_attempt_request',
         owner: 'opl',
         route_target_kind: 'opl_cli',
+        route_status: 'request_route_available',
+        request_scope: 'opl_owned_stage_attempt_request_only',
         execution_policy: 'opl_safe_action_shell',
         execution_surface: 'opl runtime action execute',
         route_status: 'request_route_available',
@@ -300,8 +302,20 @@ export function buildStageProductionAttemptStartRoutes(stageProductionEvidence: 
         runtime_event_refs: stringList(stage.runtime_event_refs),
         reviewer_receipt_refs: stringList(stage.reviewer_receipt_refs),
         gate_receipt_refs: stringList(stage.gate_receipt_refs),
+        owner_receipt_refs: [],
+        creates_domain_action: false,
+        creates_owner_receipt: false,
+        closes_expected_receipt_refs: false,
+        closes_monitor_freshness: false,
         can_execute: false as const,
-        authority_boundary: routeAuthorityBoundary(),
+        authority_boundary: {
+          ...routeAuthorityBoundary(),
+          can_create_opl_owned_stage_attempt_request: true,
+          creates_domain_action: false,
+          creates_owner_receipt: false,
+          closes_expected_receipt_refs: false,
+          closes_monitor_freshness: false,
+        },
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));
