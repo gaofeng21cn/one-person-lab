@@ -1,5 +1,6 @@
 import { FrameworkContractError } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
+import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import {
   runFamilyRuntimeLifecycleApply,
@@ -908,7 +909,6 @@ export function buildStandardDomainAgentSkeletonInspection(
   };
 }
 
-type DomainManifestCatalog = ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'];
 type ManifestCatalogOptions = {
   manifestCommandTimeoutMs?: number;
   domainManifests?: DomainManifestCatalog;

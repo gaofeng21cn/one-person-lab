@@ -45,6 +45,9 @@ import {
 import {
   buildAppOperatorDrilldownSummary,
 } from './runtime-tray-app-operator-drilldown-parts/summary.ts';
+import {
+  buildOplMetaAgentRegistryExtension,
+} from './opl-meta-agent-consumption.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1123,6 +1126,7 @@ export function buildAppOperatorDrilldown(input: {
     input.domainManifestProjects,
     input.providerContinuousProof,
   );
+  const oplMetaAgentRegistry = buildOplMetaAgentRegistryExtension();
   const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
     providerContinuousProof: input.providerContinuousProof,
     stageAttempts: attempts,
@@ -1173,6 +1177,7 @@ export function buildAppOperatorDrilldown(input: {
       evidenceRequests,
       productionEvidenceTailLedger,
       legacyCleanupPlans,
+      oplMetaAgentRegistry,
     }),
     domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
       record(legacyCleanupPlans.summary).legacy_cleanup_opl_cleanup_ledger_ready_count,
@@ -1272,6 +1277,8 @@ export function buildAppOperatorDrilldown(input: {
     domain_evidence_request_refs: evidenceRequests,
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
+    opl_meta_agent_workbench_refs: oplMetaAgentRegistry,
+    oma_sections: record(oplMetaAgentRegistry.oma_sections),
     functional_privatization_audit_summary: functionalSummary,
     authority_boundary: refsOnlyAuthorityBoundary(),
     source_refs: sourceRefs,

@@ -174,6 +174,14 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.domain_dispatch_evidence, undefined);
     assert.equal(summaryDrilldown.stage_production_evidence, undefined);
     assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
+    assert.equal(summaryDrilldown.opl_meta_agent_workbench_refs, undefined);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_registry_status, 'resolved');
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_app_workbench_section_count, 6);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_scaleout_target_count, 2);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_domain_ready, false);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_quality_verdict, false);
+    assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_default_promotion, false);
+    assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
     assert.equal(
       summaryDrilldown.attention_first_payload.surface_kind,
       'opl_app_drilldown_attention_first_payload',
@@ -240,6 +248,12 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     });
     const fullDrilldown = fullOutput.app_operator_drilldown;
     assert.equal(fullDrilldown.detail_level, 'full');
+    assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.status, 'resolved');
+    assert.equal(
+      fullDrilldown.opl_meta_agent_workbench_refs.authority_boundary.can_promote_default_agent_without_gate,
+      false,
+    );
+    assert.equal(fullDrilldown.oma_sections.mechanism_proposal.refs.length > 0, true);
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
     assert.equal(fullDrilldown.domain_dispatch_evidence.attempts.length, 12);
     assert.equal(fullDrilldown.stage_production_evidence.stages.length, 12);

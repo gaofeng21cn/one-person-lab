@@ -28,6 +28,7 @@ type AppOperatorDrilldownSummaryInput = {
   evidenceRequests: JsonRecord;
   productionEvidenceTailLedger: JsonRecord;
   legacyCleanupPlans: JsonRecord;
+  oplMetaAgentRegistry: JsonRecord;
 };
 
 function record(value: unknown): JsonRecord {
@@ -65,6 +66,7 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const evidenceRequestSummary = record(input.evidenceRequests.summary);
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
+  const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
   const productionEvidenceTailItemCount = numberValue(productionTailSummary.tail_item_count);
   const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
   const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
@@ -231,6 +233,14 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       legacyCleanupSummary.legacy_cleanup_domain_physical_delete_requires_owner_receipt_count,
     domain_legacy_cleanup_domain_physical_delete_can_execute_count:
       legacyCleanupSummary.legacy_cleanup_domain_physical_delete_can_execute_count,
+    opl_meta_agent_registry_status: input.oplMetaAgentRegistry.status ?? null,
+    opl_meta_agent_consumed_contract_count: numberValue(oplMetaAgentSummary.consumed_contract_count),
+    opl_meta_agent_resolved_contract_count: numberValue(oplMetaAgentSummary.resolved_contract_count),
+    opl_meta_agent_app_workbench_section_count: numberValue(oplMetaAgentSummary.app_workbench_section_count),
+    opl_meta_agent_scaleout_target_count: numberValue(oplMetaAgentSummary.scaleout_target_count),
+    opl_meta_agent_claims_domain_ready: oplMetaAgentSummary.claims_domain_ready === true,
+    opl_meta_agent_claims_quality_verdict: oplMetaAgentSummary.claims_quality_verdict === true,
+    opl_meta_agent_claims_default_promotion: oplMetaAgentSummary.claims_default_promotion === true,
     deprecated_alias_metadata: productionEvidenceTailDeprecatedAliasMetadata,
   };
 }
