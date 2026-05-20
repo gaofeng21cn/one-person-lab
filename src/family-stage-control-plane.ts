@@ -36,6 +36,7 @@ import {
   buildFamilyStageReplayCertification,
 } from './family-stage-replay-certification.ts';
 import {
+  buildStageOperatorReadiness,
   buildStageReadinessSummary,
 } from './family-stage-readiness.ts';
 import {
@@ -674,6 +675,17 @@ function parseOptionArgs(args: string[], required: string[]) {
   return parsed;
 }
 
+function parseStageReadinessArgs(args: string[]) {
+  const parsed = parseOptionArgs(args, ['domain']);
+  const detail = parsed.detail ?? 'summary';
+  if (detail !== 'summary' && detail !== 'full') {
+    throw new FrameworkContractError('cli_usage_error', `Unsupported stage readiness detail level: ${detail}.`, {
+      allowed_detail: ['summary', 'full'],
+    });
+  }
+  return { domain: parsed.domain, detail };
+}
+
 function parseRepeatedOptionArgs(args: string[], required: string[], repeated: string[] = []) {
   const parsed: Record<string, string> = {};
   const repeatedValues: Record<string, string[]> = Object.fromEntries(repeated.map((key) => [key, []]));
@@ -828,11 +840,23 @@ export function buildFamilyStageReadinessInspect(
   contracts: FrameworkContracts,
   args: string[],
 ): { version: 'g2'; family_stage_readiness: Record<string, unknown> } {
-  const parsed = parseOptionArgs(args, ['domain']);
+  const parsed = parseStageReadinessArgs(args);
   const { entry, plane } = findDomainEntry(contracts, parsed.domain);
+  const summary = buildStageReadinessSummary(entry, plane, parsed.domain.trim());
   return {
     version: 'g2',
-    family_stage_readiness: buildStageReadinessSummary(entry, plane, parsed.domain.trim()) as unknown as Record<string, unknown>,
+    family_stage_readiness: (
+      parsed.detail === 'full'
+        ? {
+            detail_level: 'full',
+            family_stage_readiness: summary,
+          }
+        : {
+            detail_level: 'summary',
+            ...buildStageOperatorReadiness(summary),
+            full_detail_args: ['--detail', 'full'],
+          }
+    ) as unknown as Record<string, unknown>,
   };
 }
 
