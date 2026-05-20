@@ -8,6 +8,8 @@ BOOTSTRAP_ONLY=${OPL_BOOTSTRAP_ONLY:-0}
 MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
 MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.21.1}
 INSTALL_SOURCE_MARKER=.opl-install-source
+SYSTEM_GIT_PATH=${OPL_SYSTEM_GIT_PATH:-/usr/bin/git}
+XCODE_SELECT=${OPL_XCODE_SELECT:-/usr/bin/xcode-select}
 
 INSTALL_ARGS=()
 for arg in "$@"; do
@@ -111,18 +113,18 @@ ensure_node_runtime() {
 
 git_is_usable() {
   command -v git >/dev/null 2>&1 || return 1
-  if is_darwin && [ "$(command -v git)" = "/usr/bin/git" ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
+  if is_darwin && [ "$(command -v git)" = "$SYSTEM_GIT_PATH" ] && ! "$XCODE_SELECT" -p >/dev/null 2>&1; then
     return 1
   fi
   git --version >/dev/null 2>&1
 }
 
 request_command_line_tools() {
-  if is_darwin && [ -x /usr/bin/xcode-select ]; then
-    /usr/bin/xcode-select --install >/dev/null 2>&1 || true
+  if is_darwin && [ -x "$XCODE_SELECT" ]; then
+    "$XCODE_SELECT" --install >/dev/null 2>&1 || true
     printf 'One Person Lab has opened the macOS Command Line Tools installer for Git-backed updates.\n' >&2
-    printf 'Finish that Apple installer, then retry setup in the One Person Lab App.\n' >&2
-    exit 69
+    printf 'You can continue using this existing One Person Lab checkout while the Apple installer finishes.\n' >&2
+    printf 'Git-backed background maintenance will resume after Command Line Tools are ready.\n' >&2
   fi
 }
 
@@ -192,14 +194,19 @@ mkdir -p "$(dirname "$INSTALL_DIR")"
 
 if [ -d "$INSTALL_DIR/.git" ]; then
   if ! git_is_usable; then
-    request_command_line_tools
-    printf 'One Person Lab needs Git to update the existing source checkout: %s\n' "$INSTALL_DIR" >&2
-    exit 1
+    if is_darwin; then
+      request_command_line_tools
+      log "Using existing One Person Lab checkout in $INSTALL_DIR"
+    else
+      printf 'One Person Lab needs Git to update the existing source checkout: %s\n' "$INSTALL_DIR" >&2
+      exit 1
+    fi
+  else
+    log "Updating One Person Lab in $INSTALL_DIR"
+    git -C "$INSTALL_DIR" fetch --prune origin "$BRANCH"
+    git -C "$INSTALL_DIR" checkout "$BRANCH"
+    git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
   fi
-  log "Updating One Person Lab in $INSTALL_DIR"
-  git -C "$INSTALL_DIR" fetch --prune origin "$BRANCH"
-  git -C "$INSTALL_DIR" checkout "$BRANCH"
-  git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
 elif [ -f "$INSTALL_DIR/$INSTALL_SOURCE_MARKER" ]; then
   install_from_archive
 else
