@@ -92,8 +92,10 @@ function resolveCommandSpec(
 }
 
 function buildRootHelp(commands: Record<string, CommandSpec>) {
-  const visibleEntries = Object.entries(commands);
-  const grouped = Object.entries(commands).reduce<Record<string, Array<{
+  const visibleEntries = Object.entries(commands).filter(([, spec]) => (
+    spec.help_surface !== 'diagnostic_drilldown'
+  ));
+  const grouped = visibleEntries.reduce<Record<string, Array<{
     command: string;
     usage: string;
     summary: string;

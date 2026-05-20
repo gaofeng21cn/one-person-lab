@@ -57,6 +57,9 @@ import {
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
 import {
+  requireFamilyStageDerivedLens,
+} from '../../family-stage-derived-lenses.ts';
+import {
   buildGenericSubstrateProjectionInspect,
   buildGenericSubstrateProjectionList,
   buildGenericSubstrateWorkbench,
@@ -739,9 +742,10 @@ export function buildPublicCommandSpecs(
     },
     'stages proof-bundle': {
       usage: 'opl stages proof-bundle --domain <domain>',
-      summary: 'Project one domain stage pack proof bundle for admission, runtime-event, idempotency, and receipt obligations.',
+      summary: 'Diagnostic drilldown for proof-bundle obligations folded into stages readiness; not the default operator path.',
       examples: ['opl stages proof-bundle --domain mas'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStageProofBundleInspect(getContracts(), args),
     },
     'stages graph': {
@@ -753,16 +757,18 @@ export function buildPublicCommandSpecs(
     },
     'stages assumptions': {
       usage: 'opl stages assumptions --domain <domain>',
-      summary: 'Project runtime assumption lifecycle status, monitor refs, and warning findings for one domain stage pack.',
+      summary: 'Diagnostic drilldown for runtime assumption lifecycle refs folded into stages readiness; not the default operator path.',
       examples: ['opl stages assumptions --domain mas'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStageAssumptionsInspect(getContracts(), args),
     },
     'stages cohort-loop': {
       usage: 'opl stages cohort-loop --domain <domain>',
-      summary: 'Project source scope, cohort query, trigger, and monitor/metric closure for one domain stage pack.',
+      summary: 'Diagnostic drilldown for cohort query, trigger, and monitor/metric refs folded into stages readiness; not the default operator path.',
       examples: ['opl stages cohort-loop --domain mas'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStageCohortLoopInspect(getContracts(), args),
     },
     'stages runtime-budget': {
@@ -770,6 +776,7 @@ export function buildPublicCommandSpecs(
       summary: 'Diagnostic drilldown for refs-only runtime boundary and monitor coverage folded into stages readiness/proof; not a standalone domain-ready verdict.',
       examples: ['opl stages runtime-budget --domain mas'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStageRuntimeBudgetInspect(getContracts(), args),
     },
     'stages registry': {
@@ -788,9 +795,10 @@ export function buildPublicCommandSpecs(
     },
     'stages replay-certification': {
       usage: 'opl stages replay-certification --domain <domain> [--append-only-event-log-ref <ref>] [--attempt-ledger-ref <ref>] [--recorded-runtime-event-ref <ref>] [--closeout-receipt-ref <ref>]',
-      summary: 'Certify replay readiness from proof-bundle obligations and recorded append-only event / receipt refs.',
+      summary: 'Diagnostic drilldown for replay readiness from proof-bundle obligations and recorded append-only event / receipt refs.',
       examples: ['opl stages replay-certification --domain mas --append-only-event-log-ref opl://events/mas --attempt-ledger-ref opl://attempts/mas'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStageReplayCertificationInspect(getContracts(), args),
     },
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
@@ -965,6 +973,12 @@ export function buildPublicCommandSpecs(
       group: 'runtime',
     }),
   };
+
+  for (const [command, spec] of Object.entries(publicCommandSpecs)) {
+    if (command.startsWith('stages ') && spec.help_surface === 'diagnostic_drilldown') {
+      requireFamilyStageDerivedLens(command);
+    }
+  }
 
   return publicCommandSpecs;
 }
