@@ -8,6 +8,7 @@ import {
   path,
   repoRoot,
   runCli,
+  shellSingleQuote,
   test,
 } from '../helpers.ts';
 
@@ -523,6 +524,137 @@ test('agents descriptor projects descriptor-only MAS transition specs as refresh
     assert.equal(inspect.family_agent_descriptor.descriptor_refs.family_transition.status, 'descriptor_only');
     assert.equal(transition.non_authority_flags.opl_writes_domain_truth, false);
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain manifests materializes descriptor-only MAS transition specs through study-state-matrix', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materialize-'));
+  const materializerRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materializer-'));
+  const materializerPath = path.join(materializerRoot, 'materialize-study-state-matrix.js');
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const manifest = {
+    ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
+    family_action_catalog: {
+      ...((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined) ?? {
+        surface_kind: 'family_action_catalog',
+        version: 'family-action-catalog.v1',
+        catalog_id: 'medautoscience.action-catalog.v1',
+        target_domain_id: 'medautoscience',
+        owner: 'med-autoscience',
+        authority_boundary: {
+          opl_role: 'generated_action_transport_only',
+          domain_role: 'medical_research_action_authority',
+        },
+        notes: [],
+      }),
+      actions: [
+        ...(((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined)?.actions as JsonRecord[] | undefined) ?? []),
+        {
+          action_id: 'study_state_matrix',
+          title: 'Materialize MAS study state matrix',
+          summary: 'Read-only study-state-matrix materialization for OPL transition runner.',
+          owner: 'med-autoscience',
+          effect: 'read_only',
+          source_command: {
+            command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
+            surface_kind: 'study_state_matrix',
+          },
+          input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
+          output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
+          workspace_locator_fields: ['profile_ref'],
+          human_gate_ids: [],
+          supported_surfaces: {
+            cli: {
+              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
+              surface_kind: 'study_state_matrix',
+            },
+            mcp: {
+              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
+              surface_kind: 'study_state_matrix',
+              public_runtime: false,
+              descriptor_only: true,
+            },
+            skill: {
+              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
+              command_contract_id: 'study_state_matrix',
+              surface_kind: 'study_state_matrix',
+            },
+            product_entry: {
+              action_key: 'study_state_matrix',
+              command: `${process.execPath} ${shellSingleQuote(materializerPath)}`,
+              surface_kind: 'study_state_matrix',
+            },
+            openai: { tool_name: 'study_state_matrix' },
+            ai_sdk: { tool_name: 'study_state_matrix' },
+          },
+          authority_boundary: {
+            runner_owner: 'OPL Framework',
+            domain_transition_owner: 'MedAutoScience',
+            can_write_domain_truth: false,
+            can_execute_domain_action: false,
+          },
+        },
+      ],
+    },
+  };
+  fs.mkdirSync(materializerRoot, { recursive: true });
+  fs.writeFileSync(
+    materializerPath,
+    [
+      'const payload = {',
+      '  surface: "study_state_matrix",',
+      '  domain_transition_table: {',
+      `    family_transition_spec: ${JSON.stringify(masFamilyTransitionSpec)},`,
+      `    family_transition_matrix_cases: ${JSON.stringify(masFamilyTransitionMatrixCases)}`,
+      '  }',
+      '};',
+      'process.stdout.write(JSON.stringify(payload));',
+      '',
+    ].join('\n'),
+  );
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], env);
+
+    const manifestOutput = runCli(['domain', 'manifests'], env);
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.family_transition_materialization.status, 'materialized');
+    assert.equal(
+      medautoscience.manifest.family_transition_materialization.command_source,
+      'family_action_catalog.study_state_matrix',
+    );
+    assert.equal(medautoscience.manifest.family_transition_spec.spec_id, 'mas-domain-transition-spec.v1');
+    assert.equal(medautoscience.manifest.family_transition_matrix_cases.length, 2);
+    assert.equal(medautoscience.manifest.family_transition.status, 'matrix_evaluated');
+    assert.equal(medautoscience.manifest.family_transition.matrix_result.summary.total, 2);
+    assert.equal(medautoscience.manifest.family_transition.matrix_result.summary.transition_applied, 2);
+
+    const inspect = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
+    const transition = inspect.family_agent_descriptor.family_transition;
+    assert.equal(transition.status, 'matrix_evaluated');
+    assert.equal(transition.materialization.status, 'materialized');
+    assert.equal(transition.non_authority_flags.opl_writes_domain_truth, false);
+  } finally {
+    fs.rmSync(materializerRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

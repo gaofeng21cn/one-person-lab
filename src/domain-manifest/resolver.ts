@@ -5,6 +5,7 @@ import {
   buildManagedShellCommandEnv,
   prepareManagedShellCommandCwd,
 } from '../managed-shell-command-env.ts';
+import { materializeFamilyTransitionSurfaces } from './family-transition-materializer.ts';
 import { normalizeManifest } from './normalizers.ts';
 import { isRecord } from './shared-utils.ts';
 import type { DomainManifestCatalogEntry } from './types.ts';
@@ -91,7 +92,15 @@ function buildResolvedManifestEntry(
   binding: WorkspaceBinding,
   manifestCommand: string,
   parsed: JsonRecord,
+  timeoutMs: number,
+  options: { materializeFamilyTransitions?: boolean } = {},
 ): DomainManifestCatalogEntry {
+  const materialized = options.materializeFamilyTransitions === false
+    ? parsed
+    : materializeFamilyTransitionSurfaces(parsed, {
+      binding,
+      timeoutMs,
+    });
   return {
     project_id: projectId,
     project,
@@ -99,7 +108,7 @@ function buildResolvedManifestEntry(
     workspace_path: binding.workspace_path,
     manifest_command: manifestCommand,
     status: 'resolved',
-    manifest: normalizeManifest(parsed),
+    manifest: normalizeManifest(materialized),
     error: null,
   };
 }
@@ -116,7 +125,11 @@ export function resolveBindingManifest(
   projectId: string,
   project: string,
   binding: WorkspaceBinding,
-  options: { timeoutMs?: number; timeoutPolicy?: ManifestCommandTimeoutPolicy } = {},
+  options: {
+    timeoutMs?: number;
+    timeoutPolicy?: ManifestCommandTimeoutPolicy;
+    materializeFamilyTransitions?: boolean;
+  } = {},
 ): DomainManifestCatalogEntry {
   const manifestCommand = binding.direct_entry.manifest_command;
   if (!manifestCommand) {
@@ -139,7 +152,9 @@ export function resolveBindingManifest(
 
   const parseResolvedStdout = () => {
     const parsed = parseManifestPayload(result.stdout ?? '');
-    return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed);
+    return buildResolvedManifestEntry(projectId, project, binding, manifestCommand, parsed, timeoutMs, {
+      materializeFamilyTransitions: options.materializeFamilyTransitions,
+    });
   };
 
   if (commandTimedOut(result)) {

@@ -274,6 +274,7 @@ function buildFamilyTransitionProjection(entry: DomainManifestCatalogEntry) {
     blocked_reason: transition?.blocked_reason ?? null,
     descriptor: transition?.descriptor ?? null,
     locator_refs: transition?.locator_refs ?? {},
+    materialization: entry.manifest?.family_transition_materialization ?? null,
     matrix_summary: transition?.matrix_result?.summary ?? null,
     authority_boundary: transition?.authority_boundary ?? null,
     non_authority_flags: transition?.non_authority_flags ?? {
