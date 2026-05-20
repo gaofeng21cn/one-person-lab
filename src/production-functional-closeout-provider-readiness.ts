@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { isRecord, optionalString } from './domain-manifest/shared-utils.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
+import { buildTemporalWorkerReadiness } from './family-runtime-temporal-readiness.ts';
 import { DEFAULT_TEMPORAL_TASK_QUEUE, resolveTemporalNamespace, resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { probeTemporalServer, resolveTemporalAddressForPaths } from './family-runtime-temporal-service.ts';
 
@@ -40,36 +41,6 @@ function readTemporalWorkerState(paths: FamilyRuntimePaths) {
   };
 }
 
-function temporalRepairAction(readinessStatus: string) {
-  const repairCommands = {
-    start_local_temporal_service: 'opl family-runtime service start --provider temporal',
-    configure_temporal_address: 'export OPL_TEMPORAL_ADDRESS=127.0.0.1:7233',
-    verify_temporal_server: 'opl family-runtime worker status --provider temporal',
-    start_managed_worker: 'opl family-runtime worker start --provider temporal',
-    rerun_production_proof: 'opl family-runtime residency proof --provider temporal --production',
-  };
-  const nextCommandByStatus: Record<string, string | null> = {
-    not_configured: repairCommands.start_local_temporal_service,
-    server_unreachable: repairCommands.start_local_temporal_service,
-    worker_not_ready: repairCommands.start_managed_worker,
-    ready: repairCommands.rerun_production_proof,
-  };
-  return {
-    surface_kind: 'temporal_worker_repair_action',
-    provider_kind: 'temporal',
-    action_id:
-      readinessStatus === 'ready'
-        ? 'none'
-        : readinessStatus === 'worker_not_ready'
-          ? 'start_temporal_worker'
-          : readinessStatus === 'server_unreachable'
-            ? 'repair_temporal_service'
-            : 'configure_temporal_service',
-    next_command: nextCommandByStatus[readinessStatus] ?? repairCommands.start_local_temporal_service,
-    repair_commands: repairCommands,
-  };
-}
-
 export async function buildProviderReadiness(paths: FamilyRuntimePaths) {
   const addressResolution = resolveTemporalAddressForPaths(paths);
   const address = addressResolution.address;
@@ -86,17 +57,27 @@ export async function buildProviderReadiness(paths: FamilyRuntimePaths) {
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const workerReady = Boolean(serverReachable && (envWorkerReady || (workerStateMatches && workerState.pid_alive)));
-  const readinessStatus =
-    !address
-      ? 'not_configured'
-      : !serverReachable
-        ? 'server_unreachable'
-        : !workerReady
-          ? 'worker_not_ready'
-          : 'ready';
+  const temporalReadiness = buildTemporalWorkerReadiness({
+    address,
+    addressSource: addressResolution.addressSource,
+    namespace,
+    taskQueue,
+    workerEnabled: envWorkerReady ? '1' : null,
+    workerStatus: workerStateMatches && workerState.pid_alive ? 'ready' : null,
+    serverReachable,
+    managedWorkerPid:
+      workerState.pid_alive && typeof workerState.state?.pid === 'number'
+        ? workerState.state.pid
+        : null,
+    managedWorkerStatePath: workerState.state_path,
+    temporalServiceLifecycle: addressResolution.serviceState,
+  });
+  const readinessStatus = temporalReadiness.readiness_status;
 
   return {
     surface_kind: 'opl_production_temporal_provider_readiness',
+    canonical_readiness_surface_ref: 'src/family-runtime-temporal-readiness.ts#buildTemporalWorkerReadiness',
+    canonical_worker_readiness: temporalReadiness,
     provider_kind: 'temporal',
     readiness_status: readinessStatus,
     production_provider_ready: readinessStatus === 'ready',
@@ -114,7 +95,7 @@ export async function buildProviderReadiness(paths: FamilyRuntimePaths) {
         : null,
     managed_worker_state_matches: workerStateMatches,
     service_state: addressResolution.serviceState,
-    repair_action: temporalRepairAction(readinessStatus),
+    repair_action: temporalReadiness.repair_action,
     typed_blocker:
       readinessStatus === 'ready'
         ? null
@@ -123,7 +104,7 @@ export async function buildProviderReadiness(paths: FamilyRuntimePaths) {
             blocker_id: `temporal_provider_${readinessStatus}`,
             owner: 'opl_provider_runtime',
             source_surface: 'opl_production_temporal_provider_readiness',
-            repair_command: temporalRepairAction(readinessStatus).next_command,
+            repair_command: temporalReadiness.repair_action.next_command,
             next_action: 'Bring the managed local Temporal service and worker to ready, then rerun production proof.',
           },
     authority_boundary: {
