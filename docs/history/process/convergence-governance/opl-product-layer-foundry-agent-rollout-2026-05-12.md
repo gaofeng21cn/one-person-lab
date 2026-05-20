@@ -1,11 +1,11 @@
 # OPL 产品分层与 Foundry Agent 发布形态落地记录（2026-05-12）
 
-State: `support_reference`
+State: `history_only`
 
-Status: `completed_closeout_reference`
+Status: `completed_closeout_history`
 Owner: `One Person Lab`
 Purpose: 记录 `OPL Framework -> One Person Lab App -> Foundry Agents` 三层产品模型的一次跨仓落地结果、验证结果与剩余风险。
-Machine boundary: 本文是人读 closeout 证据，不是机器接口。机器真相继续归 `contracts/opl-framework/*.json`、各 domain 仓 `contracts/runtime-program/current-program.json`、CLI/API 行为、App 代码和 repo-native tests。
+Machine boundary: 本文是人读 closeout 归档，不是机器接口。机器真相继续归 `contracts/opl-framework/*.json`、各 domain 仓 `contracts/runtime-program/current-program.json`、CLI/API 行为、App 代码和 repo-native tests。
 
 ## 结论
 

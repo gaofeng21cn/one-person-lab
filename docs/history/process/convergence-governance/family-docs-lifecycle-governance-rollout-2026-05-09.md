@@ -1,14 +1,14 @@
 # OPL Family Docs Lifecycle Governance Rollout 2026-05-09
 
-Status: `active family governance reference`
+Status: `historical_family_governance_rollout`
 Owner: `One Person Lab`
-Purpose: codify the MAS docs治理经验 into the OPL family documentation lifecycle standard
-State: `support_reference`
-Machine boundary: human-readable governance only; machine surfaces must use contracts, schemas, source paths, generated artifacts, CLI/API behavior, or semantic `human_doc:*` ids.
+Purpose: record the 2026-05-09 docs lifecycle governance rollout that later fed the current OPL family documentation lifecycle policy
+State: `history_only`
+Machine boundary: human-readable history only; machine surfaces must use contracts, schemas, source paths, generated artifacts, CLI/API behavior, or semantic `human_doc:*` ids.
 
 2026-05-14 update: 本记录中的“允许目录名差异 / role-equivalent information
 architecture”是当时的过渡口径。当前目录治理已由
-[OPL 系列项目开发主参考](../../active/opl-family-development-reference.md)
+[OPL 系列项目开发主参考](../../../active/opl-family-development-reference.md)
 刷新为同名 canonical docs taxonomy：OPL、MAS、MAG、RCA 统一使用
 `active/public/product/runtime/delivery/source/policies/specs/references/history`
 作为长期目录集合；旧 `program/plans/capabilities` 等目录能物理迁移就直接

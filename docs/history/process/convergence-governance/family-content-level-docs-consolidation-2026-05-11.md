@@ -1,10 +1,10 @@
 # OPL Family Content-Level Docs Consolidation 2026-05-11
 
-Status: `active family governance reference`
+Status: `historical_family_governance_record`
 Owner: `One Person Lab`
-Purpose: record the cross-repo content-level docs consolidation lane for the current OPL family
-State: `support_reference`
-Machine boundary: human-readable governance only. Machine behavior must use contracts, schemas, source paths, generated artifacts, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, or semantic `human_doc:*` ids.
+Purpose: record the 2026-05-11 cross-repo content-level docs consolidation lane that later fed the current OPL family docs portfolio rules
+State: `history_only`
+Machine boundary: human-readable history only. Machine behavior must use contracts, schemas, source paths, generated artifacts, CLI/API behavior, runtime ledgers, provider receipts, domain-owned manifests, or semantic `human_doc:*` ids.
 
 ## 结论
 
