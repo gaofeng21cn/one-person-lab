@@ -126,7 +126,7 @@ User / Codex / CLI / One Person Lab App
 - `local_sqlite` 只作为 dev/CI/offline diagnostic baseline。
 - OPL 持有 stage attempt、workflow id、activity、signal/query、heartbeat、retry/dead-letter、human gate、provider receipt、runtime event ledger 和 operator attention projection。
 - OPL runtime status 与 App/workbench 必须把 provider scheduler cadence、provider SLO receipt、repair command 和 domain-daemon replacement policy 作为同一套机器读面暴露；domain repo 不安装或维护自己的 scheduler / LaunchAgent / daemon。
-- `Codex CLI` 是当前第一公民 executor；`hermes_agent`、Claude Code 等只能作为显式非默认 executor adapter 接入，并以 receipt/audit/fail-closed 证明连接，不承诺行为或质量等价。
+- `Codex CLI` 是当前第一公民 executor；`hermes_agent`、Claude Code、`antigravity_cli` 等只能作为显式非默认 executor adapter 接入。非默认 executor 必须通过 stage-level executor policy 声明 `executor_kind`、能力要求、receipt 要求与 `executor_binding_ref`；缺少 binding ref 或 receipt/audit/fail-closed 证明时不得启动，也不承诺行为或质量等价。
 
 ### 状态、记忆与文件生命周期
 
