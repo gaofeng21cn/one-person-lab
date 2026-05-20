@@ -777,7 +777,12 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'owner_acceptance_ref',
   ));
   assert.equal(contract.developer_mode_repair_route_surface.dynamic_route_builder.owner_acceptance_ref_policy,
-    'external_owner_ref_only');
+    'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance');
+  assert.ok(contract.developer_mode_repair_route_surface.live_closeout_evidence.required_closeout_ref_groups.includes(
+    'external_owner_acceptance_ref',
+  ));
+  assert.equal(contract.developer_mode_repair_route_surface.live_closeout_evidence.owner_acceptance_policy,
+    'external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write');
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('candidate_fix_ref'));
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('repo_worktree_ref'));
   assert.ok(contract.developer_mode_repair_route_surface.output_refs.includes('pr_ref'));

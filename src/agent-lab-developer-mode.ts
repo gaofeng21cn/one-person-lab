@@ -97,7 +97,7 @@ export const DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER = {
     'pr_review_ref',
     'owner_acceptance_ref',
   ],
-  owner_acceptance_ref_policy: 'external_owner_ref_only',
+  owner_acceptance_ref_policy: 'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance',
 };
 
 function unique(values: string[]) {
@@ -244,14 +244,37 @@ function routeEligibility(
   };
 }
 
-function ownerAcceptanceRef(value: string | null) {
+function ownerAcceptanceRef(value: string | null, decision: DeveloperModeRouteDecision) {
+  const empty = {
+    ref: null,
+    kind: null,
+    isExternalOwnerRef: false,
+    isOwnerReceipt: false,
+    evidenceSource: null,
+  };
+
   if (!value) {
-    return null;
+    return empty;
   }
   if (value.startsWith('external-owner-ref:') || value.startsWith('external-owner-acceptance-ref:')) {
-    return value;
+    return {
+      ref: value,
+      kind: 'live_external_owner_ref',
+      isExternalOwnerRef: true,
+      isOwnerReceipt: false,
+      evidenceSource: 'live_external_owner_evidence',
+    };
   }
-  return null;
+  if (decision === 'fork-PR' && value.startsWith('repo-contract-fixture-ref:')) {
+    return {
+      ref: value,
+      kind: 'repo_contract_fixture_not_owner_receipt',
+      isExternalOwnerRef: false,
+      isOwnerReceipt: false,
+      evidenceSource: 'repo_contract_test_fixture',
+    };
+  }
+  return empty;
 }
 
 function requiredCloseoutRefsFor(decision: DeveloperModeRouteDecision) {
@@ -273,7 +296,7 @@ function requiredCloseoutRefsFor(decision: DeveloperModeRouteDecision) {
 function closeoutMissingRefs(
   decision: DeveloperModeRouteDecision,
   refs: ReturnType<typeof observationRefs>,
-  sanitizedOwnerAcceptanceRef: string | null,
+  sanitizedOwnerAcceptanceRef: ReturnType<typeof ownerAcceptanceRef>,
   rawOwnerAcceptanceRef: string | null,
 ) {
   const missing: string[] = requiredCloseoutRefsFor(decision).filter((field) => {
@@ -281,9 +304,12 @@ function closeoutMissingRefs(
     return Array.isArray(value) ? value.length === 0 : !value;
   });
 
+  const ownerAcceptanceRequired =
+    decision === 'direct-fix' || decision === 'fork-PR' || decision === 'observe-only';
+  const ownerAcceptanceClosedByExternalRef = sanitizedOwnerAcceptanceRef.isExternalOwnerRef === true;
   if (
-    (rawOwnerAcceptanceRef && !sanitizedOwnerAcceptanceRef)
-    || (decision === 'observe-only' && !sanitizedOwnerAcceptanceRef)
+    (rawOwnerAcceptanceRef && !sanitizedOwnerAcceptanceRef.ref)
+    || (ownerAcceptanceRequired && !ownerAcceptanceClosedByExternalRef)
   ) {
     missing.push('external_owner_acceptance_ref');
   }
@@ -294,8 +320,8 @@ function closeoutMissingRefs(
 export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentLabRepairRouteInput) {
   const refs = observationRefs(input.patrol_observation_refs);
   const initial = routeEligibility(input.developer_mode_projection, input.repo_permission);
-  const sanitizedOwnerAcceptanceRef = ownerAcceptanceRef(refs.owner_acceptance_ref);
-  const ownerAcceptanceBlocked = Boolean(refs.owner_acceptance_ref) && !sanitizedOwnerAcceptanceRef;
+  const sanitizedOwnerAcceptanceRef = ownerAcceptanceRef(refs.owner_acceptance_ref, initial.decision);
+  const ownerAcceptanceBlocked = Boolean(refs.owner_acceptance_ref) && !sanitizedOwnerAcceptanceRef.ref;
   const decision = ownerAcceptanceBlocked ? 'blocked' : initial.decision;
   const eligibility: DeveloperModeRouteEligibility = ownerAcceptanceBlocked
     ? 'blocked_owner_acceptance_ref_must_be_external_owner_ref'
@@ -342,7 +368,11 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       commit_ref: decision === 'direct-fix' ? refs.commit_ref : null,
       fork_repo_ref: decision === 'fork-PR' ? refs.fork_repo_ref : null,
       pr_review_ref: decision === 'fork-PR' ? refs.pr_review_ref : null,
-      owner_acceptance_ref: sanitizedOwnerAcceptanceRef,
+      owner_acceptance_ref: sanitizedOwnerAcceptanceRef.ref,
+      owner_acceptance_ref_kind: sanitizedOwnerAcceptanceRef.kind,
+      owner_acceptance_ref_is_external_owner_ref: sanitizedOwnerAcceptanceRef.isExternalOwnerRef,
+      owner_acceptance_is_owner_receipt: sanitizedOwnerAcceptanceRef.isOwnerReceipt,
+      evidence_source: sanitizedOwnerAcceptanceRef.evidenceSource,
     },
     missing_closeout_refs: missingCloseoutRefs,
     refs_only: true,
@@ -457,9 +487,9 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
           'test-result-ref:rca/no-forbidden-write-focused',
         ],
         no_forbidden_write_ref: 'no-forbidden-write-ref:rca/developer-mode-fork-pr-drill',
-        fork_repo_ref: 'github-fork-ref:developer-mode-operator/redcube-ai',
-        pr_review_ref: 'github-pr-review-ref:rca/developer-mode-fork-pr-drill',
-        owner_acceptance_ref: 'external-owner-ref:rca/developer-mode-fork-pr-accepted',
+        fork_repo_ref: 'repo-contract-fixture-ref:rca/developer-mode-fork-repo-drill',
+        pr_review_ref: 'repo-contract-fixture-ref:rca/developer-mode-pr-review-drill',
+        owner_acceptance_ref: 'repo-contract-fixture-ref:rca/developer-mode-fork-pr-owner-gate-drill',
       },
     }),
   ];
@@ -489,10 +519,17 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
         drill.route_decision === 'fork-PR').length,
       closeout_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.route_status === 'closeout_refs_ready').length,
+      live_external_owner_acceptance_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.closeout_refs.owner_acceptance_ref_kind === 'live_external_owner_ref').length,
+      repo_contract_fixture_drill_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.closeout_refs.evidence_source === 'repo_contract_test_fixture').length,
+      external_owner_acceptance_missing_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.missing_closeout_refs.includes('external_owner_acceptance_ref')).length,
       forbidden_owner_receipt_write_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.owner_acceptance_ref?.startsWith('owner-receipt-ref:')).length,
     },
-    owner_acceptance_policy: 'external_owner_acceptance_ref_only_no_opl_owner_receipt_write',
+    owner_acceptance_policy:
+      'external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write',
     non_authority_outputs: {
       writes_domain_truth: false,
       writes_domain_artifact: false,
@@ -524,7 +561,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       no_repo_developer_match: 'route_to_fork_pull_request',
       developer_mode_disabled: 'projection_visible_but_execution_not_eligible',
       acceptance_required_before_apply: true,
-      owner_acceptance_ref: 'external_owner_ref_only',
+      owner_acceptance_ref: 'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance',
     },
     patrol_projection: {
       patrol_ref: 'agent-lab-patrol-ref:developer-mode/default',
