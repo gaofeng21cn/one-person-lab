@@ -476,10 +476,22 @@ test('agents readiness aggregates structural gates and production evidence tail 
   assert.equal(readiness.summary.pack_compiler_blocked_domain_count, 0);
   assert.equal(readiness.summary.generated_interface_blocked_count, 0);
   assert.equal(readiness.summary.domain_generated_surface_owner_claim_count, 0);
-  assert.equal(readiness.summary.production_evidence_tail_count, 2);
+  assert.equal(readiness.summary.agent_readiness_production_evidence_tail_count, 2);
+  assert.deepEqual(
+    Object.keys(readiness.summary).filter((key) => key.startsWith('production_evidence_tail_')),
+    [],
+  );
   assert.equal(
-    readiness.summary.production_evidence_tail_policy,
+    readiness.summary.agent_readiness_production_evidence_tail_policy,
     'reported_separately_not_a_structural_pass_condition',
+  );
+  assert.equal(
+    readiness.summary.deprecated_alias_metadata.production_evidence_tail_count.value,
+    readiness.summary.agent_readiness_production_evidence_tail_count,
+  );
+  assert.equal(
+    readiness.summary.deprecated_alias_metadata.production_evidence_tail_policy.value,
+    readiness.summary.agent_readiness_production_evidence_tail_policy,
   );
   assert.equal(readiness.summary.production_or_domain_ready, false);
 

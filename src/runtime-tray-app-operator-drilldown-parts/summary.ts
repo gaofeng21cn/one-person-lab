@@ -65,6 +65,32 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const evidenceRequestSummary = record(input.evidenceRequests.summary);
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
+  const productionEvidenceTailItemCount = numberValue(productionTailSummary.tail_item_count);
+  const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
+  const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
+  const productionEvidenceTailBlockingItemCount = numberValue(productionTailSummary.blocking_tail_item_count);
+  const productionEvidenceTailDeprecatedAliasMetadata = {
+    production_evidence_tail_item_count: {
+      deprecated: true,
+      alias_for: 'app_operator_production_evidence_tail_item_count',
+      value: productionEvidenceTailItemCount,
+    },
+    production_evidence_tail_open_item_count: {
+      deprecated: true,
+      alias_for: 'app_operator_production_evidence_tail_open_item_count',
+      value: productionEvidenceTailOpenItemCount,
+    },
+    production_evidence_tail_owner_group_count: {
+      deprecated: true,
+      alias_for: 'app_operator_production_evidence_tail_owner_group_count',
+      value: productionEvidenceTailOwnerGroupCount,
+    },
+    production_evidence_tail_blocking_item_count: {
+      deprecated: true,
+      alias_for: 'app_operator_production_evidence_tail_blocking_item_count',
+      value: productionEvidenceTailBlockingItemCount,
+    },
+  };
 
   return {
     stage_attempt_count: input.attempts.length,
@@ -80,6 +106,19 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     quality_ref_count: qualityRefs.length,
     readiness_ref_count: readinessRefs.length,
     provider_slo_action_count: input.providerActionRefs.length,
+    provider_slo_cadence_window_status: input.providerCadenceWindow.window_status,
+    provider_slo_cadence_window_long_evidence_ready: input.providerCadenceWindow.long_window_evidence_ready,
+    provider_slo_cadence_window_expected_receipt_count: input.providerCadenceWindow.expected_slo_execution_receipt_count,
+    provider_slo_cadence_window_observed_receipt_count: input.providerCadenceWindow.observed_slo_execution_receipt_count,
+    provider_slo_cadence_window_missing_receipt_count: input.providerCadenceWindow.missing_slo_execution_receipt_count,
+    provider_slo_cadence_window_blocked_repair_receipt_count: input.providerCadenceWindow.blocked_repair_receipt_count,
+    provider_slo_capability_status: input.providerCapabilitySlo.status,
+    provider_slo_capability_restart_requery_ready: input.providerCapabilitySlo.restart_requery_ready,
+    provider_slo_capability_signal_history_ready: input.providerCapabilitySlo.signal_history_ready,
+    provider_slo_capability_typed_closeout_ready: input.providerCapabilitySlo.typed_closeout_required_ready,
+    provider_slo_capability_missing_closeout_block_ready: input.providerCapabilitySlo.missing_closeout_block_ready,
+    provider_slo_capability_retry_dead_letter_ready: input.providerCapabilitySlo.retry_dead_letter_boundary_ready,
+    provider_slo_capability_domain_truth_boundary_preserved: input.providerCapabilitySlo.domain_truth_boundary_preserved,
     provider_cadence_window_status: input.providerCadenceWindow.window_status,
     provider_cadence_window_long_evidence_ready: input.providerCadenceWindow.long_window_evidence_ready,
     provider_cadence_window_expected_receipt_count: input.providerCadenceWindow.expected_slo_execution_receipt_count,
@@ -174,15 +213,16 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domain_opl_replacement_expectation_count: evidenceRequestSummary.opl_replacement_expectation_count,
     domain_replacement_surface_available_count: evidenceRequestSummary.replacement_surface_available_count,
     domain_remaining_bridge_module_count: evidenceRequestSummary.remaining_bridge_module_count,
-    production_evidence_tail_item_count: numberValue(productionTailSummary.tail_item_count),
-    production_evidence_tail_open_item_count: numberValue(productionTailSummary.open_tail_item_count),
-    production_evidence_tail_owner_group_count: numberValue(productionTailSummary.owner_group_count),
-    production_evidence_tail_blocking_item_count: numberValue(productionTailSummary.blocking_tail_item_count),
+    app_operator_production_evidence_tail_item_count: productionEvidenceTailItemCount,
+    app_operator_production_evidence_tail_open_item_count: productionEvidenceTailOpenItemCount,
+    app_operator_production_evidence_tail_owner_group_count: productionEvidenceTailOwnerGroupCount,
+    app_operator_production_evidence_tail_blocking_item_count: productionEvidenceTailBlockingItemCount,
     domain_legacy_cleanup_plan_count: legacyCleanupSummary.legacy_cleanup_plan_count,
     domain_legacy_cleanup_ready_plan_count: legacyCleanupSummary.legacy_cleanup_ready_plan_count,
     domain_legacy_cleanup_blocked_plan_count: legacyCleanupSummary.legacy_cleanup_blocked_plan_count,
     domain_legacy_cleanup_action_count: legacyCleanupSummary.legacy_cleanup_action_count,
     domain_legacy_cleanup_opl_apply_ready_count: legacyCleanupSummary.legacy_cleanup_opl_apply_ready_count,
     domain_legacy_cleanup_delete_ready_count: legacyCleanupSummary.legacy_cleanup_domain_delete_ready_count,
+    deprecated_alias_metadata: productionEvidenceTailDeprecatedAliasMetadata,
   };
 }
