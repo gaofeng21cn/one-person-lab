@@ -60,6 +60,53 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function looksLikeDeclaredObligationRef(ref: string) {
+  return ref === 'owner_receipt'
+    || ref === 'monitor_freshness'
+    || ref === 'no_regression'
+    || ref === 'typed_blocker'
+    || ref === 'domain_receipt'
+    || ref.startsWith('owner_receipt:')
+    || ref.startsWith('monitor_freshness:')
+    || ref.startsWith('no_regression:')
+    || ref.startsWith('typed_blocker:')
+    || ref.startsWith('domain_receipt:');
+}
+
+function concreteRefs(refs: string[]) {
+  return refs.filter((ref) => !looksLikeDeclaredObligationRef(ref));
+}
+
+function observedExpectedRefs(input: {
+  expectedRefs: string[];
+  observedRefs: string[];
+}) {
+  const concreteExpectedRefs = concreteRefs(input.expectedRefs);
+  const declaredObligationRefs = input.expectedRefs.filter(looksLikeDeclaredObligationRef);
+  const concreteObservedRefs = concreteRefs(input.observedRefs);
+  return uniqueStrings([
+    ...concreteExpectedRefs.filter((ref) => input.observedRefs.includes(ref)),
+    ...(declaredObligationRefs.length > 0 && concreteObservedRefs.length > 0
+      ? concreteObservedRefs
+      : []),
+  ]);
+}
+
+function unobservedExpectedRefs(input: {
+  expectedRefs: string[];
+  observedRefs: string[];
+}) {
+  const concreteExpectedRefs = concreteRefs(input.expectedRefs);
+  const declaredObligationRefs = input.expectedRefs.filter(looksLikeDeclaredObligationRef);
+  const concreteObservedRefs = concreteRefs(input.observedRefs);
+  return uniqueStrings([
+    ...concreteExpectedRefs.filter((ref) => !input.observedRefs.includes(ref)),
+    ...(declaredObligationRefs.length > 0 && concreteObservedRefs.length === 0
+      ? declaredObligationRefs
+      : []),
+  ]);
+}
+
 function refsFromRecord(value: JsonRecord, keys: string[]) {
   return uniqueStrings(keys.flatMap((key) => {
     const entry = value[key];
@@ -403,10 +450,22 @@ function stageProductionEvidence(
       ...refValues(cohortStage?.metric_refs),
       ...refValues(cohortStage?.dashboard_metric_refs),
     ]);
-    const observedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => allObservedRefs.includes(ref));
-    const unobservedExpectedReceiptRefs = expectedReceiptRefs.filter((ref) => !allObservedRefs.includes(ref));
-    const observedMonitorFreshnessRefs = monitorRefs.filter((ref) => allObservedRefs.includes(ref));
-    const unobservedMonitorFreshnessRefs = monitorRefs.filter((ref) => !allObservedRefs.includes(ref));
+    const observedExpectedReceiptRefs = observedExpectedRefs({
+      expectedRefs: expectedReceiptRefs,
+      observedRefs: allObservedRefs,
+    });
+    const unobservedExpectedReceiptRefs = unobservedExpectedRefs({
+      expectedRefs: expectedReceiptRefs,
+      observedRefs: allObservedRefs,
+    });
+    const observedMonitorFreshnessRefs = observedExpectedRefs({
+      expectedRefs: monitorRefs,
+      observedRefs: allObservedRefs,
+    });
+    const unobservedMonitorFreshnessRefs = unobservedExpectedRefs({
+      expectedRefs: monitorRefs,
+      observedRefs: allObservedRefs,
+    });
     const triggerRefs = refValues(cohortStage?.trigger_refs);
     const cohortQueryRefs = refValues(cohortStage?.cohort_query_refs);
     const missingEvidence = [

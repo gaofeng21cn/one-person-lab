@@ -108,6 +108,14 @@ best-of-N candidate comparison 落在 `opl_agent_lab_variant_comparison_read_mod
 
 `run/complete/workbench/optimize/evolve` 共享同一套 AHE read model 语义：App/workbench 可以展示“证据是什么、根因是什么、改什么、预期改善什么、下一轮如何证伪”，但只能消费 refs、blocker、risk route 和 promotion gate 状态。真实 domain owner receipt、domain truth、quality/export verdict、artifact body、memory body 和 high-risk default promotion 仍由对应 domain owner 或 owner/human gate 持有。
 
+## Agent Lab / OMA 自进化分工
+
+Agent Lab 是 OPL Framework 的通用 eval / improvement control plane。它负责把 target agent 或 OMA 提交的 suite、stage attempt、provider receipt、domain-owned eval/proof refs 和 operator blocker 规整成 lab run、AHE evidence read model、variant comparison、mechanism candidate、risk review、promotion gate、rollback/canary 和 App/workbench read model。它判断“一个机制候选是否有足够 refs 进入下一轮证伪或 risk-tiered promotion gate”。
+
+`opl-meta-agent` 是独立 OPL-compatible Foundry Agent。它消费 Agent Lab 的 suite result / evidence read model / blocker / promotion route，把目标 agent 的 blocked evidence、owner route、allowed editable surfaces、verification refs 和 no-forbidden-write refs 转成 developer patch work order、target capability candidate、mechanism patch proposal 或 typed blocker。它判断“目标 agent 应该如何生成可执行修复任务、由谁改、改哪些文件、跑哪些验证、如何回填 owner receipt”。
+
+目标 domain agent 继续持有 domain truth、quality verdict、artifact authority、memory body 与 owner receipt。自进化闭环只能按 `target handoff -> Agent Lab evidence/gate -> OMA work order/proposal -> allowed patch -> target verification -> owner receipt -> Agent Lab re-evaluation` 流转；任何 suite pass、variant winner、work order、proposal、generated surface proof 或 App projection 都不能直接写成 domain ready、artifact readiness、quality verdict 或 default agent promotion。
+
 ## Developer Mode 与外围巡检
 
 `OPL Developer Mode` 开启时，Agent Lab 是外围 AI 巡检、问题归因和改进候选的优先承载面。Developer Mode 的系统配置由 OPL state 持有，App 设置页应暴露开关和当前模式；安装流程可以在检测到配置的 GitHub developer login 时默认开启，但用户必须能手动切换。

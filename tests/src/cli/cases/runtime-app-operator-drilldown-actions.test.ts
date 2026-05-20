@@ -8,6 +8,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 import { insertProviderProof } from './runtime-app-operator-drilldown-helpers.ts';
@@ -753,10 +754,44 @@ test('runtime action execute records and verifies stage production evidence rece
       'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',
     );
     assert.equal(
+      route.payload_preflight_policy,
+      'opl_preflights_stage_evidence_payload_before_recording_refs_only_receipt',
+    );
+    assert.equal(route.payload_workorder.surface_kind, 'opl_stage_production_evidence_payload_workorder');
+    assert.deepEqual(route.payload_workorder.success_path_requires.domain_receipt_refs_cover, [
+      'mas:review-receipt',
+    ]);
+    assert.deepEqual(
+      route.payload_workorder.success_path_requires.domain_receipt_instance_required_for_declared_refs,
+      ['owner_receipt:review'],
+    );
+    assert.equal(
       route.opl_generated_receipt_policy,
       'OPL_must_not_generate_domain_owner_receipts_monitor_freshness_or_no_regression_refs',
     );
     assert.equal(route.authority_boundary.can_write_domain_truth, false);
+
+    const blockedTemplateExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:record',
+      '--payload',
+      JSON.stringify(route.payload_template),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    assert.equal(blockedTemplateExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      blockedTemplateExecution.payload.error.details.preflight.status,
+      'blocked',
+    );
+    assert.deepEqual(
+      blockedTemplateExecution.payload.error.details.preflight.uncovered_expected_receipt_refs,
+      ['mas:review-receipt', 'owner_receipt:review'],
+    );
 
     const recordExecution = runCli([
       'runtime',
@@ -767,7 +802,7 @@ test('runtime action execute records and verifies stage production evidence rece
       '--payload',
       JSON.stringify({
         evidence_refs: ['metric:review/currentness'],
-        domain_receipt_refs: ['mas:review-receipt', 'owner_receipt:review'],
+        domain_receipt_refs: ['mas:review-receipt', 'mas://receipts/review-owner-instance.json'],
         no_regression_refs: ['mas:no-regression:review-currentness'],
       }),
     ], {
@@ -776,6 +811,10 @@ test('runtime action execute records and verifies stage production evidence rece
     }).runtime_operator_action_execution;
 
     assert.equal(recordExecution.execution.execution_kind, 'opl_cli_external_evidence_apply');
+    assert.equal(
+      recordExecution.execution.result.stage_production_evidence_payload_preflight.status,
+      'ready_to_record',
+    );
     assert.equal(recordExecution.execution.result.external_evidence_apply.status, 'recorded');
     assert.equal(recordExecution.execution.result.external_evidence_apply.authority_boundary.opl_records_refs_only, true);
     assert.equal(recordExecution.authority_boundary.can_write_domain_truth, false);
@@ -843,7 +882,7 @@ test('runtime action execute records and verifies stage production evidence rece
       (entry: { stage_id: string }) => entry.stage_id === 'review',
     );
     assert.equal(stage.stage_evidence_receipt_status, 'verified');
-    assert.deepEqual(stage.observed_expected_receipt_refs, ['mas:review-receipt', 'owner_receipt:review']);
+    assert.deepEqual(stage.observed_expected_receipt_refs, ['mas:review-receipt']);
     assert.deepEqual(stage.monitor_freshness_refs, ['metric:review/currentness']);
     assert.equal(
       stage.missing_production_evidence.includes('expected_receipt_ref_not_observed'),
