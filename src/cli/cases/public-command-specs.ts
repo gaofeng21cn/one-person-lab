@@ -276,7 +276,7 @@ export function buildPublicCommandSpecs(
     'framework readiness': {
       usage: 'opl framework readiness --family-defaults',
       summary:
-        'Read the default framework/operator readiness summary across semantic hygiene, agent, stage, App/operator, provider SLO, and safe-action tail surfaces.',
+        'Read the default attention-first framework readiness summary and Kernel floor without claiming domain, quality, artifact, or production ready.',
       examples: ['opl framework readiness --family-defaults --json'],
       group: 'framework',
       handler: (args) => {
@@ -674,7 +674,7 @@ export function buildPublicCommandSpecs(
     'agents readiness': {
       usage: 'opl agents readiness [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
       summary:
-        'Aggregate standard-agent readiness gates while reporting production evidence tails without claiming domain readiness.',
+        'Aggregate standard-agent Kernel-floor readiness as an attention-first operator summary without claiming domain, quality, artifact, or production ready.',
       examples: [
         'opl agents readiness --family-defaults',
         'opl agents readiness --agent mas=/path/to/med-autoscience',

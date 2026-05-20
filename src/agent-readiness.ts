@@ -36,6 +36,109 @@ function gate(
   };
 }
 
+function buildKernelFloor() {
+  return {
+    surface_kind: 'opl_agent_readiness_kernel_floor',
+    policy: 'minimum_structural_boundary_and_evidence_floor_only',
+    hard_blocker_sources: [
+      'standard_agent_scaffold',
+      'pack_compiler_binding',
+      'generated_interface_binding',
+      'semantic_hygiene',
+    ],
+    ai_executor_strategy_contract: false,
+    prompt_skill_knowledge_strategy_contract: false,
+    production_evidence_tail_can_block_structural_conformance: false,
+    contract_floor_can_claim_domain_or_quality_ready: false,
+  };
+}
+
+function buildDiagnosticDrilldowns() {
+  return [
+    {
+      lens_id: 'agent_conformance',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: 'opl agents conformance --family-defaults --json',
+      embedded_payload_ref: '/agent_readiness/conformance_report',
+    },
+    {
+      lens_id: 'production_evidence_tail_ledger',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: 'opl agents readiness --family-defaults --json',
+      embedded_payload_ref: '/agent_readiness/production_evidence_tail_ledger',
+    },
+    {
+      lens_id: 'pack_compiler',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: 'opl agents pack-compiler --json',
+      embedded_payload_ref: '/agent_readiness/gates/pack_compiler',
+    },
+  ];
+}
+
+function buildAttentionFirstPayload(
+  readinessStatus: string,
+  structuralConformanceStatus: string,
+  blockedCount: number,
+  tailCount: number,
+) {
+  const blockers = blockedCount > 0
+    ? [{
+        blocker_id: 'agent_structural_conformance_blocked',
+        count: blockedCount,
+        route_ref: 'opl agents conformance --family-defaults --json',
+      }]
+    : [];
+  const warnings = tailCount > 0
+    ? [{
+        warning_id: 'agent_production_evidence_tail_present',
+        count: tailCount,
+        policy: 'operator_attention_only_not_structural_or_domain_ready',
+        drilldown_ref: '/agent_readiness/production_evidence_tail_ledger',
+      }]
+    : [];
+  const nextSafeActions = blockers.length > 0
+    ? [{
+        action_id: 'inspect_agent_conformance_blockers',
+        command: 'opl agents conformance --family-defaults --json',
+        authority: 'diagnostic_only',
+      }]
+    : warnings.length > 0
+      ? [{
+          action_id: 'review_agent_production_evidence_tail',
+          command: 'opl agents readiness --family-defaults --json',
+          detail_ref: '/agent_readiness/production_evidence_tail_ledger',
+          authority: 'operator_attention_only',
+        }]
+      : [{
+          action_id: 'no_agent_readiness_action_required',
+          authority: 'no_op',
+        }];
+
+  return {
+    surface_kind: 'opl_agent_readiness_attention_first_payload',
+    status: readinessStatus,
+    summary: {
+      structural_conformance_status: structuralConformanceStatus,
+      blocker_count: blockedCount,
+      warning_count: warnings.length,
+      recommendation_count: warnings.length,
+      production_evidence_tail_count: tailCount,
+    },
+    blockers,
+    warnings,
+    recommendations: warnings,
+    next_safe_actions: nextSafeActions,
+    kernel_floor_ref: '/agent_readiness/kernel_floor',
+    diagnostic_drilldown_refs: buildDiagnosticDrilldowns().map((lens) => lens.embedded_payload_ref),
+    claim_policy:
+      'attention_payload_reports_operator_work_only_and_emits_no_domain_quality_artifact_or_production_ready_verdict',
+  };
+}
+
 export function buildAgentReadinessSummary(args: string[]) {
   const conformanceReport = buildStandardDomainAgentConformanceReport(args);
   const conformance = record(conformanceReport.standard_domain_agent_conformance);
@@ -62,16 +165,41 @@ export function buildAgentReadinessSummary(args: string[]) {
     : tailCount > 0
       ? 'passed_with_production_evidence_tail'
       : 'passed';
+  const structuralConformanceStatus = stringValue(summary.structural_conformance_status)
+    ?? (blockedCount === 0 ? 'passed' : 'blocked');
 
   return {
     version: 'g1',
     agent_readiness: {
       surface_kind: 'opl_agent_readiness_summary',
       owner: 'one-person-lab',
+      detail_level: 'summary',
+      projection_detail_policy:
+        'attention_first_kernel_floor_default_with_embedded_compatibility_drilldowns',
+      readiness_model: {
+        mode: 'ai_first_contract_light',
+        default_payload: 'operator_attention_summary',
+        kernel_floor: 'minimum_structural_boundary_and_evidence_floor_only',
+        diagnostic_drilldowns_are_authoring_or_audit_aids: true,
+        ai_executor_internal_strategy_is_contract: false,
+      },
       status: readinessStatus,
+      attention_first_payload: buildAttentionFirstPayload(
+        readinessStatus,
+        structuralConformanceStatus,
+        blockedCount,
+        tailCount,
+      ),
+      kernel_floor: buildKernelFloor(),
+      diagnostic_drilldowns: buildDiagnosticDrilldowns(),
+      excluded_ready_verdicts: [
+        'domain_ready_verdict',
+        'quality_verdict',
+        'artifact_authority_verdict',
+        'production_ready_verdict',
+      ],
       summary: {
-        structural_conformance_status: stringValue(summary.structural_conformance_status)
-          ?? (blockedCount === 0 ? 'passed' : 'blocked'),
+        structural_conformance_status: structuralConformanceStatus,
         conformance_passed_count: passedCount,
         conformance_blocked_count: blockedCount,
         pack_compiler_blocked_domain_count: packCompilerBlockedCount,
@@ -93,7 +221,6 @@ export function buildAgentReadinessSummary(args: string[]) {
             value: 'reported_separately_not_a_structural_pass_condition',
           },
         },
-        production_or_domain_ready: false,
       },
       gates: {
         scaffold_and_conformance: gate(
