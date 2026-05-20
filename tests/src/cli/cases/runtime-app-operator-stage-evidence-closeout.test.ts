@@ -273,3 +273,72 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('stage production evidence typed blocker receipt closes App production tail without readiness claim', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-blocker-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
+    runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:record',
+      '--payload',
+      JSON.stringify({
+        typed_blocker_refs: ['mas-typed-blocker:review-owner-receipt-pending'],
+        owner_chain_refs: ['mas://contracts/stage-evidence-handoff'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'stage-production-evidence:medautoscience:review:verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const stage = drilldown.stage_production_evidence.stages[0];
+    assert.deepEqual(stage.domain_owned_typed_blocker_refs, [
+      'mas-typed-blocker:review-owner-receipt-pending',
+    ]);
+    assert.equal(stage.evidence_obligation_summary.blocked_by_domain_typed_blocker_count, 4);
+
+    const tailItem = drilldown.production_evidence_tail_ledger.tail_items.find(
+      (item: { tail_item: string; stage_id: string }) =>
+        item.tail_item === 'stage_production_evidence' && item.stage_id === 'review',
+    );
+    assert.equal(tailItem.status, 'domain_owned_typed_blocker');
+    assert.equal(tailItem.typed_blocker_ref, 'mas-typed-blocker:review-owner-receipt-pending');
+    assert.deepEqual(tailItem.typed_blocker_refs, ['mas-typed-blocker:review-owner-receipt-pending']);
+    assert.equal(tailItem.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(
+      drilldown.production_evidence_tail_ledger.tail_items.some(
+        (item: { tail_item: string; stage_id: string; status: string }) =>
+          item.tail_item === 'stage_production_evidence'
+          && item.stage_id === 'review'
+          && item.status === 'open',
+      ),
+      false,
+    );
+    assert.equal(drilldown.production_evidence_tail_ledger.summary.typed_blocker_tail_item_count > 0, true);
+    assert.equal(
+      drilldown.summary.app_operator_production_evidence_tail_open_item_count,
+      drilldown.production_evidence_tail_ledger.summary.open_tail_item_count,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
