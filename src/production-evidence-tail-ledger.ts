@@ -379,7 +379,10 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
     }
     const domain = stringValue(stage.target_domain_id) ?? stringValue(stage.project_id) ?? 'domain_repo';
     const stageId = stringValue(stage.stage_id) ?? 'unknown_stage';
-    const typedBlockerRefs = stringList(stage.typed_blocker_refs);
+    const typedBlockerRefs = [
+      ...stringList(stage.typed_blocker_refs),
+      ...stringList(stage.domain_owned_typed_blocker_refs),
+    ];
     const receiptRefs = stringList(stage.observed_expected_receipt_refs);
     return [buildCanonicalEvidenceTailItem({
       tailId: `stage:${domain}:${stageId}:production_evidence`,
