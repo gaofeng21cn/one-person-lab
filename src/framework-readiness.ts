@@ -127,6 +127,64 @@ function buildStageReadinessDiagnostic(
   }
 }
 
+function buildAgentReadinessDiagnostic() {
+  try {
+    return {
+      readiness: record(buildAgentReadinessSummary(['--family-defaults']).agent_readiness),
+      failure: null,
+    };
+  } catch (error) {
+    const failure = diagnosticFailure('agents_readiness', SOURCE_COMMANDS.agents_readiness, error);
+    return {
+      readiness: {
+        surface_kind: 'opl_agent_readiness_summary',
+        owner: 'one-person-lab',
+        detail_level: 'summary',
+        status: 'diagnostic_unavailable',
+        summary: {
+          structural_conformance_status: 'diagnostic_unavailable',
+          conformance_passed_count: 0,
+          conformance_blocked_count: 0,
+          agent_readiness_production_evidence_tail_count: 0,
+          agent_readiness_production_evidence_tail_policy:
+            'diagnostic_unavailable_not_a_structural_or_domain_ready_claim',
+          diagnostic_failure_count: 1,
+        },
+        attention_first_payload: {
+          surface_kind: 'opl_agent_readiness_attention_first_payload',
+          status: 'diagnostic_unavailable',
+          summary: {
+            structural_conformance_status: 'diagnostic_unavailable',
+            blocker_count: 1,
+            warning_count: 0,
+            recommendation_count: 0,
+            production_evidence_tail_count: 0,
+          },
+          blockers: [{
+            blocker_id: 'agent_readiness_diagnostic_unavailable',
+            count: 1,
+            route_ref: 'opl agents readiness --family-defaults --json',
+          }],
+          warnings: [],
+          recommendations: [],
+          next_safe_actions: [{
+            action_id: 'inspect_agent_readiness_diagnostic',
+            command: 'opl agents readiness --family-defaults --json',
+            authority: 'diagnostic_only',
+          }],
+          kernel_floor_ref: '/agent_readiness/kernel_floor',
+          diagnostic_drilldown_refs: ['/agent_readiness/conformance_report'],
+          claim_policy:
+            'attention_payload_reports_operator_work_only_and_emits_no_domain_quality_artifact_or_production_ready_verdict',
+        },
+        diagnostic_failure: failure,
+        authority_boundary: authorityBoundary(),
+      },
+      failure,
+    };
+  }
+}
+
 function authorityBoundary() {
   return {
     opl_role: 'framework_readiness_summary_and_refs_only_operator_read_model',
@@ -329,7 +387,8 @@ export async function buildFrameworkReadinessSummary(
   input: FrameworkReadinessInput,
 ) {
   const semanticHygiene = buildOplFrameworkSemanticHygieneAudit(contracts);
-  const agentReadiness = record(buildAgentReadinessSummary(['--family-defaults']).agent_readiness);
+  const agentReadinessDiagnostic = buildAgentReadinessDiagnostic();
+  const agentReadiness = agentReadinessDiagnostic.readiness;
   const packCompiler = record(buildDomainPackCompilerList(contracts).domain_pack_compiler);
   const domainManifests = buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: 120_000,
@@ -378,10 +437,15 @@ export async function buildFrameworkReadinessSummary(
     (total, summary) => total + numberValue(record(summary).warning_count),
     0,
   );
-  const diagnosticFailures = Object.values(stageReadinessDiagnostics)
-    .map((entry) => entry.failure)
+  const diagnosticFailures = [
+    agentReadinessDiagnostic.failure,
+    ...Object.values(stageReadinessDiagnostics).map((entry) => entry.failure),
+  ]
     .filter((entry): entry is ReturnType<typeof diagnosticFailure> => entry !== null);
-  const stageReadinessDiagnosticFailureCount = diagnosticFailures.length;
+  const agentReadinessDiagnosticFailureCount = agentReadinessDiagnostic.failure === null ? 0 : 1;
+  const stageReadinessDiagnosticFailureCount =
+    diagnosticFailures.length - agentReadinessDiagnosticFailureCount;
+  const diagnosticFailureCount = diagnosticFailures.length;
   const packCompilerBlockedDomainCount = numberValue(packSummary.blocked_domain_count);
   const packCompilerOwnerClaimCount = numberValue(packSummary.domain_generated_surface_owner_claim_count);
   const packCompilerDriftDetectedCount = numberValue(packSummary.generated_artifact_drift_detected_count);
@@ -398,7 +462,7 @@ export async function buildFrameworkReadinessSummary(
   const openTailCount = appOpenTailCount + stageProductionCallerTailCount + productionCloseoutOpenSafeActionCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
-    agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + stageReadinessDiagnosticFailureCount;
+    agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
   const frameworkStatus = statusFrom(openTailCount, semanticAttentionGateCount, hardBlockerCount);
 
   return {
@@ -422,7 +486,7 @@ export async function buildFrameworkReadinessSummary(
         status: frameworkStatus,
         hardBlockerCount,
         packCompilerBlockerCount,
-        diagnosticFailureCount: stageReadinessDiagnosticFailureCount,
+        diagnosticFailureCount,
         semanticAttentionGateCount,
         stageWarningCount,
         openTailCount,
@@ -444,6 +508,7 @@ export async function buildFrameworkReadinessSummary(
         semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
         agent_structural_conformance_status: stringValue(agentSummary.structural_conformance_status),
         agent_structural_conformance_blocker_count: agentHardBlockerCount,
+        agent_readiness_diagnostic_failure_count: agentReadinessDiagnosticFailureCount,
         agent_readiness_production_evidence_tail_count:
           numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
         pack_compiler_ready_domain_count: numberValue(packSummary.ready_domain_count),
@@ -457,6 +522,7 @@ export async function buildFrameworkReadinessSummary(
         blocked_stage_count: numberValue(stagesSummary.blocked_stages_count),
         stage_readiness_hard_blocker_count: stageHardBlockerCount,
         stage_readiness_diagnostic_failure_count: stageReadinessDiagnosticFailureCount,
+        framework_diagnostic_failure_count: diagnosticFailureCount,
         stage_readiness_warning_count: stageWarningCount,
         app_operator_production_evidence_tail_open_item_count: appOpenTailCount,
         stage_production_caller_tail_open_item_count: stageProductionCallerTailCount,
@@ -492,6 +558,7 @@ export async function buildFrameworkReadinessSummary(
           numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
         agent_readiness_production_evidence_tail_policy:
           agentSummary.agent_readiness_production_evidence_tail_policy ?? null,
+        diagnostic_failure: agentReadinessDiagnostic.failure,
         authority_boundary: agentReadiness.authority_boundary ?? authorityBoundary(),
       },
       pack_compiler: {
