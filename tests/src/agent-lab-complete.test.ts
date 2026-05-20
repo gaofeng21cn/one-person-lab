@@ -218,14 +218,19 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.summary.direct_owner_route_count, 1);
   assert.equal(result.summary.fork_pr_route_count, 1);
   assert.equal(result.summary.live_closeout_drill_count, 2);
-  assert.equal(result.summary.live_closeout_ready_count, 2);
+  assert.equal(result.summary.live_closeout_ready_count, 1);
   assert.equal(result.summary.follow_up_queue_item_ref_count, 2);
+  assert.equal(result.route_policy.owner_acceptance_ref,
+    'external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance');
   assert.equal(result.live_closeout_evidence.surface_kind,
     'opl_agent_lab_developer_mode_live_closeout_evidence_read_model');
-  assert.equal(result.live_closeout_evidence.status, 'closeout_refs_ready');
+  assert.equal(result.live_closeout_evidence.status, 'closeout_refs_incomplete');
   assert.equal(result.live_closeout_evidence.refs_only, true);
   assert.equal(result.live_closeout_evidence.summary.direct_fix_drill_count, 1);
   assert.equal(result.live_closeout_evidence.summary.fork_pr_drill_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.live_external_owner_acceptance_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.repo_contract_fixture_drill_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.external_owner_acceptance_missing_count, 1);
   assert.equal(result.live_closeout_evidence.summary.forbidden_owner_receipt_write_count, 0);
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('route_eligibility'));
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('patrol_observation_ref'));
@@ -233,7 +238,9 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('verification_refs'));
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('no_forbidden_write_ref'));
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('commit_ref_or_fork_pr_refs'));
-  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('external_owner_acceptance_ref'));
+  assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes(
+    'external_owner_acceptance_ref',
+  ));
 
   for (const route of result.routes) {
     assert.match(route.issue_ref, /^issue-ref:/);
@@ -277,7 +284,10 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(directDrill.closeout_refs.fork_repo_ref, null);
   assert.equal(directDrill.closeout_refs.pr_review_ref, null);
   assertStringRef(directDrill.closeout_refs.owner_acceptance_ref, /^external-owner-ref:/);
-  assert.equal(forkPrDrill.route_status, 'closeout_refs_ready');
+  assert.equal(directDrill.closeout_refs.owner_acceptance_ref_kind, 'live_external_owner_ref');
+  assert.equal(directDrill.closeout_refs.owner_acceptance_is_owner_receipt, false);
+  assert.equal(directDrill.closeout_refs.evidence_source, 'live_external_owner_evidence');
+  assert.equal(forkPrDrill.route_status, 'closeout_refs_incomplete');
   assert.equal(forkPrDrill.closeout_refs.route_eligibility, 'eligible_fork_pr');
   assertStringRef(forkPrDrill.closeout_refs.patrol_observation_ref, /^patrol-observation-ref:/);
   assertStringRef(forkPrDrill.closeout_refs.diff_ref, /^diff-ref:/);
@@ -285,9 +295,15 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
     ref.startsWith('test-result-ref:')));
   assertStringRef(forkPrDrill.closeout_refs.no_forbidden_write_ref, /^no-forbidden-write-ref:/);
   assert.equal(forkPrDrill.closeout_refs.commit_ref, null);
-  assertStringRef(forkPrDrill.closeout_refs.fork_repo_ref, /^github-fork-ref:/);
-  assertStringRef(forkPrDrill.closeout_refs.pr_review_ref, /^github-pr-review-ref:/);
-  assertStringRef(forkPrDrill.closeout_refs.owner_acceptance_ref, /^external-owner-ref:/);
+  assertStringRef(forkPrDrill.closeout_refs.fork_repo_ref, /^repo-contract-fixture-ref:/);
+  assertStringRef(forkPrDrill.closeout_refs.pr_review_ref, /^repo-contract-fixture-ref:/);
+  assertStringRef(forkPrDrill.closeout_refs.owner_acceptance_ref, /^repo-contract-fixture-ref:/);
+  assert.equal(forkPrDrill.closeout_refs.owner_acceptance_ref_kind,
+    'repo_contract_fixture_not_owner_receipt');
+  assert.equal(forkPrDrill.closeout_refs.owner_acceptance_is_owner_receipt, false);
+  assert.equal(forkPrDrill.closeout_refs.evidence_source, 'repo_contract_test_fixture');
+  assert.equal(forkPrDrill.closeout_refs.owner_acceptance_ref_is_external_owner_ref, false);
+  assert.ok(forkPrDrill.missing_closeout_refs.includes('external_owner_acceptance_ref'));
   assert.equal(result.live_closeout_evidence.non_authority_outputs.writes_owner_receipt, false);
   assert.equal(result.live_closeout_evidence.non_authority_outputs.modifies_managed_runtime, false);
   assert.equal(result.non_authority_outputs.writes_domain_truth, false);
