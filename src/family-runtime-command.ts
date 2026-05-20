@@ -70,6 +70,7 @@ export type FamilyRuntimeCommandInput =
       familyDefaults: boolean;
       providerKind: FamilyRuntimeProviderKind;
       executorKind: 'codex_cli';
+      detailLevel?: 'summary' | 'full';
     };
   }
   | {

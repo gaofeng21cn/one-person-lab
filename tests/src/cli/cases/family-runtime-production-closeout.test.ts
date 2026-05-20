@@ -344,6 +344,11 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
 
     assert.equal(closeout.surface_kind, 'opl_family_runtime_production_closeout');
     assert.equal(closeout.surface_role, 'derived_operator_attention_lens');
+    assert.equal(closeout.detail_level, 'summary');
+    assert.equal(
+      closeout.projection_detail_policy,
+      'attention_first_default_full_refs_via_explicit_drilldown',
+    );
     assert.equal(
       closeout.lens_policy,
       'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
@@ -360,11 +365,46 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(closeout.summary.production_closeout_open_safe_action_item_count, 34);
     assert.equal(closeout.production_closeout_open_safe_action_item_count, 34);
     assert.equal(closeout.summary.closed_item_count, 0);
-    assert.equal(closeout.attention_queue.length, 34);
+    assert.equal(closeout.counts.open_safe_action_item_count, 34);
+    assert.equal(closeout.counts.next_action_item_count, 34);
+    assert.deepEqual(closeout.full_detail_args, ['--detail', 'full']);
+    assert.match(closeout.full_detail_command, /--detail full --json/);
+    assert.equal(closeout.closeout_items, undefined);
+    assert.equal(closeout.attention_queue, undefined);
+    assert.equal(closeout.next_action_ledger, undefined);
+    assert.equal(closeout.next_safe_actions.length <= 5, true);
+    assert.equal(closeout.next_safe_actions.length > 0, true);
+    assert.equal(closeout.next_safe_actions[0].owner, 'opl');
+    assert.equal(closeout.next_safe_actions[0].closeout_item_is_completion_claim, false);
+    assert.equal(typeof closeout.next_safe_actions[0].next_safe_action_ref, 'string');
+    assert.equal(closeout.next_safe_actions[0].next_safe_action_ref.length > 0, true);
+    assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
+    assert.equal(closeout.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(closeout.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(closeout.authority_boundary.can_claim_production_ready, false);
 
-    const stageItem = closeout.closeout_items.find(
+    const fullOutput = runCli([
+      'family-runtime',
+      'production-closeout',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const fullCloseout = fullOutput.family_runtime_production_closeout;
+    assert.equal(fullCloseout.detail_level, 'full');
+    assert.equal(fullCloseout.closeout_items.length, 34);
+    assert.equal(fullCloseout.attention_queue.length, 34);
+
+    const stageItem = fullCloseout.closeout_items.find(
       (item: { claim_scope: string }) => item.claim_scope === 'stage_production_caller_request',
-    ) ?? closeout.closeout_items[0];
+    ) ?? fullCloseout.closeout_items[0];
     assert.equal(stageItem.owner, 'opl');
     assert.equal(stageItem.status, 'open_safe_action_request_route_available');
     assert.equal(stageItem.closeout_item_is_completion_claim, false);
@@ -374,12 +414,12 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageItem.typed_blocker_ref, null);
     assert.equal(stageItem.not_authorized_claims.includes('domain_ready'), true);
     assert.equal(stageItem.not_authorized_claims.includes('quality_verdict'), true);
-    assert.equal(closeout.next_action_ledger.surface_kind, 'opl_family_runtime_production_tail_next_action_ledger');
-    assert.equal(closeout.next_action_ledger.summary.next_action_item_count, closeout.attention_queue.length);
-    assert.equal(closeout.next_action_ledger.authority_boundary.can_read_memory_body, false);
-    assert.equal(closeout.next_action_ledger.authority_boundary.can_read_artifact_body, false);
-    assert.equal(closeout.next_action_ledger.authority_boundary.can_claim_receipt_closure, false);
-    const stageNextAction = closeout.next_action_ledger.next_action_items.find(
+    assert.equal(fullCloseout.next_action_ledger.surface_kind, 'opl_family_runtime_production_tail_next_action_ledger');
+    assert.equal(fullCloseout.next_action_ledger.summary.next_action_item_count, fullCloseout.attention_queue.length);
+    assert.equal(fullCloseout.next_action_ledger.authority_boundary.can_read_memory_body, false);
+    assert.equal(fullCloseout.next_action_ledger.authority_boundary.can_read_artifact_body, false);
+    assert.equal(fullCloseout.next_action_ledger.authority_boundary.can_claim_receipt_closure, false);
+    const stageNextAction = fullCloseout.next_action_ledger.next_action_items.find(
       (item: { source_tail_item_id: string }) => item.source_tail_item_id === stageItem.item_id,
     );
     assert.equal(stageNextAction.owner, 'opl');
@@ -390,8 +430,8 @@ test('family-runtime production-closeout summarizes OPL-owned safe-action closur
     assert.equal(stageNextAction.next_safe_action_route, stageItem.replay_ref);
     assert.equal(stageNextAction.authority_boundary.can_write_domain_truth, false);
     assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
-    assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
-    assert.equal(closeout.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(fullCloseout.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullCloseout.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -497,9 +537,29 @@ test('family-runtime production-closeout closes only OPL-owned provider and clea
     assert.equal(closeout.summary.open_safe_action_item_count, 24);
     assert.equal(closeout.summary.production_closeout_open_safe_action_item_count, 24);
     assert.equal(closeout.production_closeout_open_safe_action_item_count, 24);
-    assert.equal(closeout.attention_queue.length, 24);
+    assert.equal(closeout.detail_level, 'summary');
+    assert.equal(closeout.closeout_items, undefined);
+    assert.equal(closeout.attention_queue, undefined);
+    assert.equal(closeout.next_action_ledger, undefined);
 
-    const providerItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+    const fullOutput = runCli([
+      'family-runtime',
+      'production-closeout',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
+      OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+    }));
+    const fullCloseout = fullOutput.family_runtime_production_closeout;
+    assert.equal(fullCloseout.detail_level, 'full');
+    assert.equal(fullCloseout.attention_queue.length, 24);
+
+    const providerItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'provider_scheduler_cadence'
     );
     assert.equal(providerItems.length, 4);
@@ -522,7 +582,7 @@ test('family-runtime production-closeout closes only OPL-owned provider and clea
       true,
     );
 
-    const cleanupItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+    const cleanupItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'legacy_cleanup_ledger'
     );
     assert.equal(cleanupItems.length, 6);
@@ -545,22 +605,22 @@ test('family-runtime production-closeout closes only OPL-owned provider and clea
       true,
     );
 
-    const externalItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+    const externalItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'external_evidence_receipt'
     );
-    const gateItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+    const gateItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'evidence_gate_receipt'
     );
-    const stageItems = closeout.closeout_items.filter((item: { claim_scope: string }) =>
+    const stageItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'stage_production_caller_request'
     );
     for (const item of [...externalItems, ...gateItems, ...stageItems]) {
       assert.equal(item.status, 'open_safe_action_request_route_available');
       assert.equal(item.receipt_ref, null);
     }
-    assert.equal(closeout.next_action_ledger.summary.next_action_item_count, 24);
-    assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
-    assert.equal(closeout.authority_boundary.can_claim_production_ready, false);
+    assert.equal(fullCloseout.next_action_ledger.summary.next_action_item_count, 24);
+    assert.equal(fullCloseout.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullCloseout.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
