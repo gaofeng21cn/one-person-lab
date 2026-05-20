@@ -99,6 +99,16 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.ok(Array.isArray(result.refs.next_run_falsification_refs));
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
+  assert.equal(result.executor_capability_aperture.surface_kind,
+    'opl_agent_lab_executor_capability_aperture_read_model');
+  assert.equal(result.executor_capability_aperture.semantic_boundary,
+    'launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
+  assert.equal(result.executor_capability_aperture.default_executor_kind, 'codex_cli');
+  assert.equal(result.executor_capability_aperture.summary.codex_cli_task_count, 3);
+  assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
+  assert.equal(result.executor_capability_aperture.summary.low_risk_count, 3);
+  assert.deepEqual(result.refs.executor_capability_aperture_refs,
+    result.executor_capability_aperture.tasks.map((task: any) => task.aperture_ref));
   assert.equal(result.authority_boundary.can_authorize_domain_ready, false);
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.authority_boundary.can_authorize_export_verdict, false);
@@ -118,6 +128,71 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(masRun.promotion_safety_assessment.safety_status, 'regression_guard_only');
   assert.equal(masRun.promotion_safety_assessment.automatic_mechanism_promotion_ready, false);
   assert.deepEqual(masRun.promotion_safety_assessment.failure_delta_refs, []);
+
+  const masAperture = result.executor_capability_aperture.tasks.find((entry: any) =>
+    entry.domain_id === 'med-autoscience');
+  assert.ok(masAperture);
+  assert.equal(masAperture.executor.executor_kind, 'codex_cli');
+  assert.equal(masAperture.executor.codex_first_class_executor, true);
+  assert.equal(masAperture.model_reasoning.does_not_constrain_ai_reasoning, true);
+  assert.equal(masAperture.capabilities.network.network_policy, 'offline');
+  assert.equal(masAperture.capabilities.sandbox.sandbox_policy, 'fixture_only_no_artifact_mutation');
+  assert.equal(masAperture.capabilities.worktree.workspace_locator_ref,
+    'workspace-locator:mas/sample-paper-repair');
+  assert.equal(masAperture.expected_receipt.expected_receipt_refs[0],
+    'owner-receipt:mas/publication-eval-fixture');
+  assert.equal(masAperture.audit_boundary.can_constrain_executor_reasoning, false);
+});
+
+test('Agent Lab executor capability aperture accepts declared non-default executor metadata as audit boundary only', () => {
+  const suite = buildSampleAgentLabSuite();
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    executor_capability_aperture: {
+      executor_kind: 'claude_code',
+      executor_binding_ref: 'executor-binding-ref:claude-code/mas-review-smoke',
+      model_reasoning: {
+        model_ref: 'model-profile:claude-code/sonnet-xhigh',
+        model: 'claude-sonnet',
+        reasoning_effort: 'high',
+        provider: 'claude_code',
+        source_ref: 'model-profile-ref:claude-code/declared',
+      },
+      required_capabilities: [
+        'capability-ref:executor/tool-use',
+        'capability-ref:executor/subagent-review',
+      ],
+      subagent_refs: ['subagent-ref:reviewer/independent-audit'],
+      expected_receipt_refs: ['executor-receipt:claude-code/mas-review-smoke'],
+      risk_lane: 'medium_risk',
+      budget: {
+        budget_ref: 'budget-ref:executor/mas-review-smoke',
+        max_minutes: 45,
+        max_stage_attempts: 4,
+      },
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+  const aperture = result.executor_capability_aperture.tasks[0];
+
+  assert.equal(result.executor_capability_aperture.summary.non_default_executor_task_count, 1);
+  assert.equal(result.executor_capability_aperture.summary.subagent_capability_declared_task_count, 1);
+  assert.equal(result.executor_capability_aperture.summary.medium_risk_count, 1);
+  assert.equal(aperture.executor.executor_kind, 'claude_code');
+  assert.equal(aperture.executor.executor_binding_ref, 'executor-binding-ref:claude-code/mas-review-smoke');
+  assert.equal(aperture.executor.non_default_executor_requires_binding_ref, true);
+  assert.equal(aperture.model_reasoning.model_ref, 'model-profile:claude-code/sonnet-xhigh');
+  assert.equal(aperture.model_reasoning.reasoning_effort, 'high');
+  assert.equal(aperture.model_reasoning.model_reasoning_is_launch_audit_metadata_only, true);
+  assert.ok(aperture.capabilities.tool.required_capability_refs.includes('capability-ref:executor/tool-use'));
+  assert.deepEqual(aperture.capabilities.subagent.subagent_refs, ['subagent-ref:reviewer/independent-audit']);
+  assert.equal(aperture.budget.max_minutes, 45);
+  assert.ok(aperture.expected_receipt.expected_receipt_refs.includes(
+    'executor-receipt:claude-code/mas-review-smoke',
+  ));
+  assert.equal(aperture.audit_boundary.can_replace_ai_judgment, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_constrain_executor_reasoning, false);
 });
 
 test('Agent Lab separates fixture scorecard pass from independent AI review and promotion safety approval', () => {

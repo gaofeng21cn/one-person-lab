@@ -131,6 +131,7 @@
       "targeted_fix_refs",
       "risk_task_refs",
       "next_run_falsification_refs",
+      "executor_capability_aperture_refs",
       "token_cost_estimate_refs",
       "stage_executor_policy_candidate_refs",
       "executor_binding_refs",
@@ -143,6 +144,37 @@
       "provider_routing_refs",
       "historical_usage_summary_refs"
     ]
+  },
+  "executor_capability_aperture_surface": {
+    "surface_kind": "opl_agent_lab_executor_capability_aperture_read_model",
+    "version": "opl-agent-lab.v1.executor-capability-aperture",
+    "refs_only": true,
+    "semantic_boundary": "launch_audit_receipt_boundary_only_not_ai_reasoning_contract",
+    "default_executor_kind": "codex_cli",
+    "codex_first": true,
+    "input_groups": [
+      "executor_kind",
+      "model_reasoning",
+      "tool_capability_refs",
+      "network_policy",
+      "sandbox_policy",
+      "workspace_locator_ref",
+      "worktree_policy_ref",
+      "subagent_refs",
+      "budget",
+      "expected_receipt_refs",
+      "risk_lane"
+    ],
+    "output_groups": [
+      "selected_executor_ref",
+      "executor_binding_ref",
+      "model_reasoning_launch_audit_metadata",
+      "capability_declarations",
+      "budget_launch_guard",
+      "expected_receipt_boundary",
+      "risk_lane"
+    ],
+    "authority_boundary": "The aperture records what OPL needs to launch, audit, replay, fork, review, and project a stage executor attempt. It does not encode or constrain Codex CLI internal reasoning, does not replace AI judgment, and cannot authorize domain truth, quality verdicts, artifact mutation, memory writes, owner receipts, or default agent promotion."
   },
   "ahe_evidence_surface": {
     "surface_kind": "opl_agent_lab_ahe_evidence_read_model",
