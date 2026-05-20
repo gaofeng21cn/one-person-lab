@@ -25,9 +25,16 @@
 9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --domain <domain>` 的 advisory refs，不作为独立 launch-authority schema。
 10. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref。
 
+## Surface Budget
+
+当前新增 surface 的默认治理规则由 `contracts/opl-framework/surface-budget-policy.json` 冻结。它把 OPL 默认面限制在 `Minimal Trust Kernel + Attention Entry + Diagnostic Lenses`：普通 operator / App 默认看 attention entry，stage 默认入口是 `opl stages readiness --domain <domain>`；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 只作为显式 diagnostic drilldown。
+
+新增能力只有满足以下任一条件，才允许升级为 default surface：影响 launch safety、影响 authority boundary、影响 evidence / replay / audit / route-back，或已经被 App / runtime 反复消费。升级为 hard gate 还必须证明缺失会造成错误启动、越权或不可审计 / 不可恢复。其他外部学习点、论文模式、单消费者诊断和 workflow preference 只能进入 refs、warning、diagnostic lens、reference 或 history。
+
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-framework/*.json`：当前 stage-led OPL framework、App consumer surface、Foundry package/domain-agent catalog、runtime 与 supporting-surface contract
+- `contracts/opl-framework/surface-budget-policy.json`：AI-first、contract-light 的 surface budget 机器政策；它限制 default surface / hard gate 的升级条件，并防止 diagnostic lenses 或旧 capacity/domain-validity 面回到普通 help/docs 入口
 - `contracts/opl-framework/README.md`：这些 active JSON contract 的人类可读说明
 - `contracts/opl-framework/runtime-manager-contract.json`：当前 OPL Runtime Manager 产品控制面合同；它冻结 OPL 如何管理 provider-backed family runtime、typed family queue、stage attempt ledger、domain dispatch、可选 native helper lifecycle、高频状态索引、prebuild/cache 策略与 freshness 口径，同时明确不复制 runtime kernel
 - `contracts/opl-framework/family-runtime-online-substrate-contract.json`：provider-backed family runtime 合同；它冻结 `local_sqlite` 与 `temporal` 的 owner split、queue state、stage attempt ledger、degraded diagnostic mode 与 forbidden authority

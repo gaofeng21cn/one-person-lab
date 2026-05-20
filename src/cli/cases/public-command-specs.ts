@@ -58,6 +58,7 @@ import {
   buildFamilyStagesList,
 } from '../../family-stage-control-plane.ts';
 import {
+  familyStageDiagnosticLensCommands,
   requireFamilyStageDerivedLens,
 } from '../../family-stage-derived-lenses.ts';
 import {
@@ -767,9 +768,10 @@ export function buildPublicCommandSpecs(
     },
     'stages graph': {
       usage: 'opl stages graph --domain <domain>',
-      summary: 'Project one domain stage pack as a graph for scheduler/App consumption, including admission, edges, guarantee modes, and integrity digest.',
+      summary: 'Diagnostic drilldown for one domain stage pack graph, including admission, edges, guarantee modes, and integrity digest; not the default operator path.',
       examples: ['opl stages graph --domain mas'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStageGraphInspect(getContracts(), args),
     },
     'stages assumptions': {
@@ -798,16 +800,18 @@ export function buildPublicCommandSpecs(
     },
     'stages registry': {
       usage: 'opl stages registry --domain <domain> [--library-status <candidate|admitted|reused|deprecated|superseded>] [--promotion-ref <ref>] [--deprecation-ref <ref>] [--supersession-ref <ref>] [--superseded-by-stage-pack-ref <ref>] [--reused-by-ref <ref>] [--previous-stage-pack-hash <hash>] [--migration-policy <continue_old_hash|migrate_to_new_hash|blocked_human_gate>] [--migration-policy-ref <ref>]',
-      summary: 'Project a reusable stage-pack registry entry with library lifecycle, integrity hash, and migration blockers.',
+      summary: 'Diagnostic drilldown for reusable stage-pack registry lifecycle, integrity hash, and migration blockers; not the default operator path.',
       examples: ['opl stages registry --domain mas --library-status deprecated --deprecation-ref human_gate:mas-pack-retire'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStagePackRegistryInspect(getContracts(), args),
     },
     'stages source-spec': {
       usage: 'opl stages source-spec --domain <domain> [--library-status <candidate|admitted|reused|deprecated|superseded>] [--promotion-ref <ref>] [--deprecation-ref <ref>] [--supersession-ref <ref>] [--superseded-by-stage-pack-ref <ref>] [--reused-by-ref <ref>] [--append-only-event-log-ref <ref>] [--attempt-ledger-ref <ref>] [--recorded-runtime-event-ref <ref>] [--closeout-receipt-ref <ref>]',
-      summary: 'Project a body-free diffable stage-pack source/spec bundle for human review from control-plane, proof, graph, registry, replay, assumption, and cohort refs.',
+      summary: 'Diagnostic drilldown for a body-free stage-pack source/spec bundle from control-plane, proof, graph, registry, replay, assumption, and cohort refs; not the default operator path.',
       examples: ['opl stages source-spec --domain mas --recorded-runtime-event-ref runtime_event:mas.stage_1'],
       group: 'domain',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => buildFamilyStagePackSourceSpecInspect(getContracts(), args),
     },
     'stages replay-certification': {
@@ -991,8 +995,13 @@ export function buildPublicCommandSpecs(
     }),
   };
 
+  const registeredDerivedLensCommands = new Set(familyStageDiagnosticLensCommands());
   for (const [command, spec] of Object.entries(publicCommandSpecs)) {
-    if (command.startsWith('stages ') && spec.help_surface === 'diagnostic_drilldown') {
+    if (
+      command.startsWith('stages ')
+      && spec.help_surface === 'diagnostic_drilldown'
+      && registeredDerivedLensCommands.has(command)
+    ) {
       requireFamilyStageDerivedLens(command);
     }
   }

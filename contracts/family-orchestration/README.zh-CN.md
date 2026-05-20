@@ -15,7 +15,7 @@
 
 这里只把 GraphFlow / GFL 吸收为治理词汇：boundary、evidence、audit、replay、route-back。OPL 不把 GraphFlow / GFL 引入为 runtime、provider、executor、planner、proof assistant、workflow compiler、stage runner 或 domain verdict authority。
 
-当前 active contract narrative 是 **AI-first、contract-light**，surface 收敛为 `Stage Kernel + Readiness + Derived Diagnostic Lenses`。Stage Kernel 只保启动安全、owner boundary、allowed refs、expected receipt、audit、replay 与 route-back 证据；Readiness 是默认 operator / App 聚合面，不新增 domain verdict；Derived Diagnostic Lenses 解释 assumption、cohort visibility、runtime budget、replay、failure localization 或缺失证据，并作为 advisory 输入折叠进 readiness，不作为 standalone 默认 CLI 或 schema 目标。
+当前 active contract narrative 是 **AI-first、contract-light**，surface 收敛为 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget`。Minimal Trust Kernel 只保启动安全、owner boundary、allowed refs、expected receipt、audit、replay 与 route-back 证据；Readiness 是默认 operator / App 聚合面，不新增 domain verdict；Derived Diagnostic Lenses 解释 assumption、cohort visibility、runtime budget、replay、failure localization 或缺失证据，并作为 advisory 输入折叠进 readiness，不作为 standalone 默认 CLI 或 schema 目标。Surface Budget 由 `contracts/opl-framework/surface-budget-policy.json` 冻结：新增 default surface 只允许服务 launch safety、authority boundary、evidence / replay / audit / route-back，或 App/runtime 反复消费。
 
 当前 stage-led 合同基本原则是：
 

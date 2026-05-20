@@ -11,7 +11,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 OPL 的设计取向是 AI-first、AI 原生专家判断优先、contract-light：框架通过 stage、prompt、skill、knowledge、quality gate 和 selected executor 承接 AI 能力进步；合同只做 owner boundary、权限、安全、审计、receipt、阻塞、恢复和 projection 这些下限，不把专家拆解、创作、评审、路线判断或修订策略固化成脚本引擎，也不让机械检查替代专家 stage 判断。
 
-当前 active 叙事统一为 `Stage Kernel + Readiness + Derived Diagnostic Lenses`。Stage Kernel 是最小合同核：stage pack 是启动单位，stage 内最小执行单位是 Agent executor，默认 selected executor 是 `Codex CLI`；非默认 executor adapter 只能显式绑定并返回 receipt / audit / fail-closed 证据。Readiness 是 operator / App 默认聚合面，只读 admission、scope、receipt、replay、assumption、monitor 和 evidence gap，不产生 domain ready、artifact ready、quality verdict 或 production closure。Derived Diagnostic Lenses 只用于解释 blocker、stale assumption、replay gap、failure localization、runtime budget 或 route-back evidence；这些 lens 可以被 readiness 折叠消费，但不得升级为 runtime planner、proof assistant、workflow compiler、domain verdict 或质量权威。
+当前 active 叙事统一为 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget`。Minimal Trust Kernel 是最小合同核：stage pack 是启动单位，stage 内最小执行单位是 Agent executor，默认 selected executor 是 `Codex CLI`；非默认 executor adapter 只能显式绑定并返回 receipt / audit / fail-closed 证据。Readiness 是 operator / App 默认聚合面，只读 admission、scope、receipt、replay、assumption、monitor 和 evidence gap，不产生 domain ready、artifact ready、quality verdict 或 production closure。Derived Diagnostic Lenses 只用于解释 blocker、stale assumption、replay gap、failure localization、runtime budget 或 route-back evidence；这些 lens 可以被 readiness 折叠消费，但不得升级为 runtime planner、proof assistant、workflow compiler、domain verdict 或质量权威。Surface Budget 是新增 surface 的治理预算：只有影响 launch safety、authority boundary、evidence / replay / audit / route-back，或已被 App / runtime 反复消费的 surface，才允许升级为默认入口；其他学习点先进入 refs、warning、diagnostic lens、reference 或 history。
 
 OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。
 
@@ -38,6 +38,7 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；Agent executor 是 stage 内最小执行单位，`Codex CLI` 是当前第一公民 executor
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
 - OPL 的合同面必须保持 contract-light 且只保下限：Stage Kernel 约束启动条件、owner、权限、安全、审计、replay、恢复与 route-back；Readiness 只聚合 launch/evidence gap；Derived Diagnostic Lenses 只解释缺口，不接管 stage 内开放式思考、写作、评审、诊断和迭代
+- OPL 的 surface budget 必须保持减法治理：新增 surface 默认是 diagnostic / reference；升级成 default surface 需要证明它服务 launch safety、authority boundary、evidence/replay/audit/route-back，或被 App / runtime 多次消费；升级成 hard gate 还必须证明缺失会导致错误启动、越权或不可审计 / 不可恢复
 - readiness、scorecard、schema completeness、contract completeness、provider completion 与 generated-surface proof 只能定位 advisory、blocker 或 evidence gap；专家质量判断必须来自独立 AI stage、domain-owned quality gate、owner receipt、typed blocker 或 route-back receipt
 - 涉及知识交付、专家判断或正式质量裁决的复杂步骤必须保持为独立 stage，例如 MAS AI 审稿、publication quality review、MAG fundability review、RCA visual review；不得把这类工作折叠成另一个 stage 的函数、helper 或后处理
 - AI-first quality gate 是独立审核任务：执行 attempt 产出 artifacts / refs / closeout packet，审核 attempt 只读取这些显式输入和必要上下游 refs，产出 gate receipt / typed blocker / route-back；同一个 `Codex CLI` attempt 不能在同一上下文里自审并推进下一 stage
@@ -221,7 +222,7 @@ Stage progression 的 AI-first quality gate 需要独立 reviewer / gate attempt
 
 #### Stage Pack Admission 与 Trust Lanes
 
-默认 operator / App 检查入口是 `opl stages readiness --domain <domain>`。它把 Stage Kernel admission、scope refs、expected receipt refs、proof/replay refs、assumption/monitor refs 和 evidence gap 聚成 readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是 Derived Diagnostic Lenses，服务维护者 drilldown，不是普通首屏，也不是独立学习目标。
+默认 operator / App 检查入口是 `opl stages readiness --domain <domain>`。它把 Minimal Trust Kernel admission、scope refs、expected receipt refs、proof/replay refs、assumption/monitor refs 和 evidence gap 聚成 readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是 Derived Diagnostic Lenses，服务维护者 drilldown，不是普通首屏，也不是独立学习目标。Surface Budget 的机器政策由 `contracts/opl-framework/surface-budget-policy.json` 冻结；默认文档和 help 不应把这些 drilldown 命令提升成普通 operator 路径。
 
 GraphFlow / GFL 在 active narrative 中只提供治理词汇：boundary、evidence、audit、replay、route-back。OPL 不吸收其 runtime、planner、proof assistant、workflow compiler、stage runner、executor 或 domain verdict 角色；详细参考映射只保留在 [GraphFlow / GFL contract vocabulary reference](./references/runtime-substrate/graphflow-gfl-contract-vocabulary.md)。
 
