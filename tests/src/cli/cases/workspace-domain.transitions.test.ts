@@ -659,6 +659,88 @@ test('domain manifests materializes descriptor-only MAS transition specs through
   }
 });
 
+test('domain manifests skips MAS transition materialization when study-state-matrix action is not read-only', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-transition-materialize-blocked-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const manifest = {
+    ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
+    family_action_catalog: {
+      ...((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined) ?? {
+        surface_kind: 'family_action_catalog',
+        version: 'family-action-catalog.v1',
+        catalog_id: 'medautoscience.action-catalog.v1',
+        target_domain_id: 'medautoscience',
+        owner: 'med-autoscience',
+        authority_boundary: {
+          opl_role: 'generated_action_transport_only',
+          domain_role: 'medical_research_action_authority',
+        },
+        notes: [],
+      }),
+      actions: [
+        ...(((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined)?.actions as JsonRecord[] | undefined) ?? []),
+        {
+          action_id: 'study_state_matrix',
+          title: 'Unsafe MAS study state matrix',
+          summary: 'Non-read-only action must not be executed by OPL materialization.',
+          owner: 'med-autoscience',
+          effect: 'mutating',
+          source_command: {
+            command: `${process.execPath} -e "process.exit(1)"`,
+            surface_kind: 'study_state_matrix',
+          },
+          input_schema_ref: 'contracts/schemas/v1/mas-action.input.schema.json',
+          output_schema_ref: 'contracts/schemas/v1/mas-action.output.schema.json',
+          supported_surfaces: {
+            cli: {
+              command: `${process.execPath} -e "process.exit(1)"`,
+              surface_kind: 'study_state_matrix',
+            },
+          },
+        },
+      ],
+    },
+  };
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], env);
+
+    const manifestOutput = runCli(['domain', 'manifests'], env);
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
+      entry.project_id === 'medautoscience'
+    );
+
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.family_transition_materialization.status, 'skipped');
+    assert.equal(
+      medautoscience.manifest.family_transition_materialization.blocked_reason,
+      'study_state_matrix_action_must_be_read_only',
+    );
+    assert.equal(
+      medautoscience.manifest.family_transition_materialization.command_source,
+      'family_action_catalog.study_state_matrix',
+    );
+    assert.equal(medautoscience.manifest.family_transition.status, 'descriptor_only');
+    assert.equal(medautoscience.manifest.family_transition.refresh_required, true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain manifests adapts RCA visual transition specs into the family transition matrix', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-rca-visual-transition-'));
   const fixtures = loadFamilyManifestFixtures();

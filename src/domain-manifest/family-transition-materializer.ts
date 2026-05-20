@@ -10,6 +10,25 @@ import { isRecord, optionalString } from './shared-utils.ts';
 
 type JsonRecord = Record<string, unknown>;
 
+type StudyStateMatrixCommandDescriptor =
+  | {
+    command: string;
+    source: string;
+  }
+  | {
+    command: null;
+    blocked_reason: string;
+    source: string;
+  };
+
+function blockedStudyStateMatrixCommandReason(
+  descriptor: StudyStateMatrixCommandDescriptor | null,
+) {
+  return descriptor && descriptor.command === null
+    ? descriptor.blocked_reason
+    : 'study_state_matrix_materialization_command_missing';
+}
+
 function rootPayload(payload: JsonRecord) {
   return unwrapManifestPayload(payload);
 }
@@ -51,7 +70,7 @@ function transitionDescriptor(root: JsonRecord) {
   return descriptor;
 }
 
-function commandDescriptorFromProductEntryShell(root: JsonRecord) {
+function commandDescriptorFromProductEntryShell(root: JsonRecord): StudyStateMatrixCommandDescriptor | null {
   const shell = isRecord(root.product_entry_shell) ? root.product_entry_shell : {};
   const entry = isRecord(shell.study_state_matrix) ? shell.study_state_matrix : null;
   const command = optionalString(entry?.command);
@@ -64,7 +83,7 @@ function commandDescriptorFromProductEntryShell(root: JsonRecord) {
   };
 }
 
-function commandDescriptorFromActionCatalog(root: JsonRecord) {
+function commandDescriptorFromActionCatalog(root: JsonRecord): StudyStateMatrixCommandDescriptor | null {
   const catalog = isRecord(root.family_action_catalog) ? root.family_action_catalog : null;
   const actions = Array.isArray(catalog?.actions) ? catalog.actions : [];
   for (const entry of actions) {
@@ -104,7 +123,7 @@ function commandDescriptorFromActionCatalog(root: JsonRecord) {
   return null;
 }
 
-function pickStudyStateMatrixCommand(root: JsonRecord) {
+function pickStudyStateMatrixCommand(root: JsonRecord): StudyStateMatrixCommandDescriptor | null {
   return commandDescriptorFromActionCatalog(root) ?? commandDescriptorFromProductEntryShell(root);
 }
 
@@ -263,7 +282,7 @@ export function materializeFamilyTransitionSurfaces(
         status: 'skipped',
         command: commandDescriptor?.command ?? null,
         commandSource: commandDescriptor?.source ?? null,
-        reason: commandDescriptor?.blocked_reason ?? 'study_state_matrix_materialization_command_missing',
+        reason: blockedStudyStateMatrixCommandReason(commandDescriptor),
       }),
     });
   }
