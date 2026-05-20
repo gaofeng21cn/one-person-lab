@@ -8,6 +8,11 @@ import { mechanismEvolutionInputRefs, mechanismEvolutionInputsForTask } from './
 import { buildProductionEvidenceGateResult } from './agent-lab-production-evidence.ts';
 import { buildSampleAgentLabSuite } from './agent-lab-sample-suite.ts';
 import { buildAgentLabAheEvidenceReadModel } from './agent-lab-ahe-evidence.ts';
+export {
+  buildAgentLabCostEstimate,
+  buildAgentLabCostEstimateReadModel,
+  type AgentLabCostEstimatePreset,
+} from './agent-lab-token-cost-estimate.ts';
 export { REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS } from './agent-lab-independent-ai-review.ts';
 export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
 

@@ -36,8 +36,7 @@
     "effort_assurance_axis_refs",
     "helper_inventory_report_refs",
     "permission_current_date_invariant_refs",
-    "mcp_stream_reliability_policy_refs"
-    ,
+    "mcp_stream_reliability_policy_refs",
     "change_evaluation_refs",
     "predicted_impact_refs",
     "failure_evidence_refs",
@@ -45,7 +44,14 @@
     "targeted_fix_refs",
     "risk_task_refs",
     "next_run_falsification_refs",
-    "variant_candidate_refs"
+    "variant_candidate_refs",
+    "token_cost_estimation_refs",
+    "model_profile_refs",
+    "pricing_schedule_refs",
+    "task_shape_refs",
+    "artifact_plan_refs",
+    "provider_routing_refs",
+    "historical_usage_summary_refs"
   ],
   "required_observations": [
     "task_manifests_observed",
@@ -120,7 +126,14 @@
       "root_cause_refs",
       "targeted_fix_refs",
       "risk_task_refs",
-      "next_run_falsification_refs"
+      "next_run_falsification_refs",
+      "token_cost_estimate_refs",
+      "model_profile_refs",
+      "pricing_schedule_refs",
+      "task_shape_refs",
+      "artifact_plan_refs",
+      "provider_routing_refs",
+      "historical_usage_summary_refs"
     ]
   },
   "ahe_evidence_surface": {
@@ -456,6 +469,70 @@
       "writes_follow_up_queue_body": false
     },
     "authority_boundary": "Developer Mode patrol and repair routes are refs-only projections for issue/blocker triage, branch/worktree routing, PR refs, acceptance evidence refs, and follow-up queue item refs; they do not write domain truth, artifacts, memory bodies, quality verdicts, owner receipts, or managed runtime state."
+  },
+  "token_cost_estimation_surface": {
+    "surface_kind": "opl_agent_lab_token_cost_estimate",
+    "status": "contract_ready_refs_only",
+    "refs_only": true,
+    "purpose": "operator budget estimation, route comparison, and App/workbench planning projection",
+    "scenario_kinds": [
+      "stage_attempt_budget_estimate",
+      "artifact_plan_budget_estimate",
+      "rca_ppt_deck_budget_estimate"
+    ],
+    "canonical_rca_example": {
+      "domain_id": "redcube-ai",
+      "artifact_kind": "ppt_deck",
+      "page_count": 40,
+      "text_model_profile_ref": "model-profile:gpt-5.5/reasoning-xhigh",
+      "image_model_profile_ref": "model-profile:gpt-image-2/default",
+      "estimate_policy_ref": "estimate-policy:agent-lab/refs-only-budget-range"
+    },
+    "input_ref_groups": [
+      "scenario_ref",
+      "task_shape_ref",
+      "artifact_plan_ref",
+      "provider_routing_ref",
+      "model_profile_refs",
+      "image_model_profile_refs",
+      "pricing_schedule_ref",
+      "historical_usage_summary_ref",
+      "estimate_policy_ref",
+      "assumption_refs"
+    ],
+    "output_fields": [
+      "estimate_ref",
+      "scenario_ref",
+      "token_estimate_range",
+      "image_unit_estimate_range",
+      "cost_estimate_range",
+      "currency",
+      "confidence_band",
+      "pricing_schedule_ref",
+      "assumption_refs",
+      "staleness_policy",
+      "non_billing_boundary",
+      "authority_boundary"
+    ],
+    "staleness_policy": "pricing and model profiles are temporally unstable; every estimate must carry the pricing_schedule_ref and stale-pricing blocker policy instead of embedding provider billing truth",
+    "forbidden_inputs": [
+      "provider_billing_ledger_body",
+      "invoice_body",
+      "payment_account_body",
+      "domain_artifact_body",
+      "domain_quality_verdict",
+      "owner_receipt_body"
+    ],
+    "forbidden_outputs": [
+      "provider_billing_claim",
+      "final_payable_amount",
+      "invoice",
+      "domain_quality_verdict",
+      "artifact_readiness_verdict",
+      "export_readiness_verdict",
+      "owner_receipt"
+    ],
+    "authority_boundary": "Token/cost estimation is a refs-only planning projection. It may estimate token ranges, image unit ranges, and cost ranges for scenarios such as an RCA 40-page PPT using gpt-5.5 xhigh plus gpt-image-2, but it is not a provider bill, not a final payable amount, not a domain quality verdict, and not an artifact or export readiness verdict."
   },
   "mechanism_surface": {
     "surface_kind": "opl_agent_lab_mechanism_read_model",
@@ -840,6 +917,7 @@
       "ready_to_emit_aris_maturity_controls",
       "ready_to_emit_ahe_evidence_read_model",
       "ready_to_emit_variant_comparison_read_model",
+      "ready_to_emit_token_cost_estimates",
       "ai_review_approved_count",
       "automatic_model_training_ready",
       "automatic_mechanism_promotion_ready",
@@ -861,6 +939,7 @@
     "OPL can record independent AI reviewer, web research, and mechanism patch trace refs with request, response, evidence, diff, contract, test result, reviewer agent, and no-shared-context refs",
     "OPL can mine usage logs, failure modes, user interrupts, convergence iterations, tool failures, and blockers into refs-only prompt, skill, rubric, and workflow-default mechanism candidate refs",
     "OPL can project ARIS v0.4.11 effort/assurance axes, helper inventory drift reports, permission/current-date fail-closed invariants, and MCP/stream reliability policies as refs-only maturity controls",
+    "OPL can project refs-only token, image unit, and cost estimate ranges for operator planning, including an RCA 40-page PPT budget estimate using gpt-5.5 xhigh plus gpt-image-2 model profile refs",
     "OPL can emit refs-only export envelopes for optional Inspect AI, OpenInference, Langfuse, Phoenix, and JSON consumers without uploading data",
     "OPL can run an external suite into gated optimizer candidate refs and RL transition refs without training weights or promoting a default agent",
     "OPL can auto-promote low and medium risk mechanism changes through canary when real failure/evidence delta, independent AI review, promotion receipt, rollback target, no-forbidden-write proof, and medium-risk canary refs are present",
@@ -885,7 +964,12 @@
     "default agent configuration promotion",
     "high risk mechanism candidate promotion without owner or human gate",
     "automatic model training or weight deployment",
-    "ARIS runtime dependency"
+    "ARIS runtime dependency",
+    "provider billing claim",
+    "final payable amount",
+    "RCA visual quality verdict from token/cost estimate",
+    "RCA artifact readiness verdict from token/cost estimate",
+    "RCA export readiness verdict from token/cost estimate"
   ],
   "domain_retained_authority": [
     "domain truth",
@@ -903,6 +987,8 @@
     "memory writeback accept/reject verdict",
     "domain ready verdict",
     "quality/export verdict",
+    "provider billing claim",
+    "final payable amount",
     "publication verdict",
     "fundability verdict",
     "visual quality verdict",

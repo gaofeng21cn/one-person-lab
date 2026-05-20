@@ -11,8 +11,10 @@ import {
 } from '../../agent-lab-complete.ts';
 import {
   agentLabRefSummary,
+  buildAgentLabCostEstimate,
   buildSampleAgentLabResult,
   runAgentLabSuite,
+  type AgentLabCostEstimatePreset,
   type AgentLabSuite,
 } from '../../agent-lab.ts';
 import { buildLonglineAgentLabResult } from '../../agent-lab-longline.ts';
@@ -65,6 +67,36 @@ function buildAgentLabMechanismPayload() {
     version: 'g2',
     agent_lab_mechanism: buildAgentLabMechanismReadModel(),
   };
+}
+
+function parseAgentLabCostEstimateArgs(args: string[], spec: CommandSpec) {
+  let preset: AgentLabCostEstimatePreset | null = null;
+  const allowedPresets = new Set(['rca-ppt-40']);
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--preset') {
+      throw buildUsageError(`Unknown option for agent-lab cost-estimate: ${token}.`, spec, { option: token });
+    }
+
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError('Missing value for option: --preset.', spec, { option: '--preset' });
+    }
+    if (!allowedPresets.has(value)) {
+      throw buildUsageError(`Unsupported agent-lab cost estimate preset: ${value}.`, spec, { option: '--preset' });
+    }
+    preset = value as AgentLabCostEstimatePreset;
+    index += 1;
+  }
+
+  if (!preset) {
+    throw buildUsageError('agent-lab cost-estimate requires --preset <rca-ppt-40>.', spec, {
+      option: '--preset',
+    });
+  }
+
+  return { preset };
 }
 
 function parseAgentLabSuiteArgs(args: string[], spec: CommandSpec, commandName: string) {
@@ -193,8 +225,22 @@ function buildAgentLabEvolvePayload(args: string[], spec: CommandSpec) {
   };
 }
 
+function buildAgentLabCostEstimatePayload(args: string[], spec: CommandSpec) {
+  const { preset } = parseAgentLabCostEstimateArgs(args, spec);
+  const costEstimate = buildAgentLabCostEstimate({ preset });
+  return {
+    version: 'g2',
+    agent_lab_cost_estimate: {
+      surface_id: 'opl_agent_lab_cost_estimate',
+      cost_estimate: costEstimate,
+      authority_boundary: costEstimate.authority_boundary,
+    },
+  };
+}
+
 export {
   buildAgentLabCompletePayload,
+  buildAgentLabCostEstimatePayload,
   buildAgentLabEvolvePayload,
   buildAgentLabExportPayload,
   buildAgentLabLonglinePayload,
