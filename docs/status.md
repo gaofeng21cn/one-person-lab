@@ -14,7 +14,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 `contra
 - `One Person Lab App` 是面向人的工作台，消费 framework/provider 状态和 domain-owned projection，展示任务、阶段、阻塞、source refs、artifact refs、memory refs、SLO、repair、workorder 和 owner-aware action。
 - `Foundry Agents` 当前包括 `MAS`、`MAG`、`RCA`。它们持有各自的 domain truth、quality/export verdict、artifact authority、memory body / accept-reject decision、owner receipt 和 direct app skill path。
 
-`Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent` 与 `claude_code` 只能作为显式非默认 executor adapter/backend 接入，并以 receipt/audit/fail-closed 证明连接，不承诺行为、质量、工具语义或 resume 等价。
+`Codex CLI` 是当前第一公民 executor。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent` 与 `claude_code` 同属显式非默认 executor adapter/backend，只能以 receipt/audit/fail-closed 证明连接，不承诺行为、质量、工具语义或 resume 等价。
 
 `MDS` 不进入 OPL 顶层 agent 列表。它只作为 MAS 显式声明的 source provenance、historical fixture、explicit archive import、backend audit、upstream intake 或 parity oracle reference。
 
@@ -23,6 +23,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 `contra
 OPL 已具备 framework 主干：domain descriptor / stage / action / memory discovery、Temporal provider code、service / worker lifecycle、typed family queue、stage attempt ledger、typed closeout、production closeout read model、provider proof / SLO projection、runtime snapshot、OPL-owned provider scheduler cadence/tick surface、safe runtime action shell、lifecycle refs-only SQLite index、external evidence refs-only receipt ledger、App/operator drilldown read model、refs-only `domain_dispatch_evidence` 和 refs-only `stage_production_evidence`。
 
 `runtime app-operator-drilldown` 默认 summary-first，完整 refs/routes 只在 `--detail full` 展开。App execution bridge 统一走 `opl runtime action execute`；OPL CLI route 可创建 provider-backed stage attempt request、执行 provider scheduler safe action、写 OPL cleanup ledger 或记录/验证 refs-only evidence receipt。Domain route 只进入 typed queue / approval，不直接执行 domain action、不写 domain truth、不签 domain owner receipt。
+
+Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only control plane。OPL 只消费 refs，不写入 body、truth、artifact、owner receipt 或 quality verdict；domain truth、quality/export verdict、artifact authority、memory body 和 owner receipt 仍归 MAS/MAG/RCA。
 
 2026-05-20 的 current readout：Temporal provider cadence / capability SLO 已由 provider receipt 关闭；provider scheduler 与 MAS/MAG/RCA legacy cleanup 已由 OPL refs-only ledger receipt 关闭；MAG external evidence request 与 RCA evidence gate 已作为 refs-only verified request/gate accounting 投到 App/operator。`stage_production_caller_tail_open_item_count=0`，但 stage expected receipt / monitor freshness 仍保留 open refs-only record/verify workorder；具体数量从 `opl framework readiness --family-defaults --json`、App drilldown 与 production closeout CLI 读取。
 

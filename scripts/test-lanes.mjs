@@ -108,6 +108,7 @@ const lanes = {
       'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts',
+      'tests/src/cli/cases/runtime-app-operator-drilldown-external-evidence-actions.test.ts',
       'tests/src/cli/cases/runtime-app-operator-stage-evidence-closeout.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
       'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',

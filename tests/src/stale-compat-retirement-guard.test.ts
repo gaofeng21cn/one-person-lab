@@ -412,8 +412,8 @@ test('domain admission references do not publish retired candidate backlog contr
 
 test('convergence governance snapshots do not promote gateway federation wording as current truth', () => {
   const scannedFiles = [
-    'docs/references/convergence-governance/contract-convergence-v1-execution-board.md',
-    'docs/references/convergence-governance/contract-convergence-v1-decision-note.md',
+    'docs/history/process/convergence-governance/contract-convergence-v1-execution-board-2026-04-11.md',
+    'docs/history/process/convergence-governance/contract-convergence-v1-decision-note-2026-04-08.md',
     'docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md',
   ];
 
