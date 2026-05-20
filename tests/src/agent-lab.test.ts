@@ -25,6 +25,8 @@ function realIndependentAiReviewReceipt(candidateRef: string, riskTier = 'low_ri
     reviewer_ref: 'reviewer-ref:agent-lab/external-independent-reviewer/run-001',
     reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
     reviewed_mechanism_candidate_ref: candidateRef,
+    execution_attempt_ref: `stage-attempt:executor:${candidateRef}`,
+    review_attempt_ref: `stage-attempt:reviewer:${candidateRef}`,
     request_ref: `review-request-ref:${candidateRef}`,
     response_ref: `review-response-ref:${candidateRef}`,
     evidence_refs: [
@@ -36,6 +38,13 @@ function realIndependentAiReviewReceipt(candidateRef: string, riskTier = 'low_ri
     forbidden_write_scan_ref: `no-forbidden-write-scan-ref:${candidateRef}`,
     verdict: 'approved_for_risk_tiered_auto_promotion',
     risk_tier: riskTier,
+  };
+}
+
+function sameAttemptIndependentAiReviewReceipt(candidateRef: string, riskTier = 'medium_risk') {
+  return {
+    ...realIndependentAiReviewReceipt(candidateRef, riskTier),
+    review_attempt_ref: `stage-attempt:executor:${candidateRef}`,
   };
 }
 
@@ -147,12 +156,107 @@ test('Agent Lab counts real independent AI review separately from automatic prom
   assert.equal(result.summary.promotable_candidate_count, 0);
   assert.equal(reviewedRun.independent_ai_review_assessment.ai_review_approved, true);
   assert.equal(reviewedRun.independent_ai_review_assessment.review_status, 'approved');
+  assert.equal(reviewedRun.independent_ai_review_assessment.attempt_separation_verified, true);
+  assert.equal(reviewedRun.independent_ai_review_assessment.execution_attempt_ref,
+    `stage-attempt:executor:${candidateRef}`);
+  assert.equal(reviewedRun.independent_ai_review_assessment.review_attempt_ref,
+    `stage-attempt:reviewer:${candidateRef}`);
   assert.equal(reviewedRun.promotion_safety_assessment.safety_status, 'regression_guard_only');
   assert.equal(reviewedRun.promotion_safety_assessment.automatic_mechanism_promotion_ready, false);
   assert.deepEqual(reviewedRun.independent_ai_review_assessment.missing_required_fields, []);
   assert.ok(reviewedRun.mechanism_evolution_input_refs.includes(
     `independent-ai-review-receipt:${candidateRef}`,
   ));
+});
+
+test('Agent Lab treats fixture, scorecard, schema completeness, and provider completion as advisory only', () => {
+  const suite = buildSampleAgentLabSuite();
+  const candidateRef = suite.tasks[0].improvement_candidate.candidate_ref;
+  suite.tasks[0] = {
+    ...suite.tasks[0],
+    improvement_candidate: {
+      ...suite.tasks[0].improvement_candidate,
+      evidence_refs: [
+        ...suite.tasks[0].improvement_candidate.evidence_refs,
+        'schema-completeness:agent-lab/manifest-valid',
+        'provider-completion:agent-lab/provider-run-completed',
+      ],
+    },
+    mechanism_evolution_inputs: {
+      ...(suite.tasks[0].mechanism_evolution_inputs ?? {}),
+      independent_ai_review_receipt: realIndependentAiReviewReceipt(candidateRef),
+    },
+    promotion_gate: {
+      ...suite.tasks[0].promotion_gate,
+      advisory_only_refs: [
+        'fixture:agent-lab/sample-suite-pass',
+        'schema-completeness:agent-lab/manifest-valid',
+        'provider-completion:agent-lab/provider-run-completed',
+      ],
+      independent_ai_review_receipt_refs: [`independent-ai-review-receipt:${candidateRef}`],
+      promotion_receipt_refs: ['mechanism-promotion-receipt:agent-lab/advisory-only'],
+      rollback_target_refs: ['mechanism-version-ref:agent-lab/current'],
+      canary_observation_refs: ['canary-observation-ref:agent-lab/advisory-only'],
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+  const reviewedRun = result.runs[0];
+
+  assert.equal(result.status, 'passed');
+  assert.equal(result.summary.ai_review_approved_count, 1);
+  assert.equal(result.summary.promotable_candidate_count, 0);
+  assert.equal(result.summary.regression_guard_only_count, 3);
+  assert.ok(result.summary.advisory_only_signal_count >= 3);
+  assert.equal(reviewedRun.independent_ai_review_assessment.ai_review_approved, true);
+  assert.equal(reviewedRun.promotion_safety_assessment.safety_status, 'regression_guard_only');
+  assert.equal(reviewedRun.promotion_safety_assessment.advisory_only_cannot_promote, true);
+  assert.equal(reviewedRun.promotion_safety_assessment.automatic_mechanism_promotion_ready, false);
+  assert.ok(reviewedRun.promotion_safety_assessment.advisory_only_refs.includes(
+    'schema-completeness:agent-lab/manifest-valid',
+  ));
+  assert.ok(reviewedRun.promotion_safety_assessment.advisory_only_refs.includes(
+    'provider-completion:agent-lab/provider-run-completed',
+  ));
+  assert.ok(result.refs.advisory_only_signal_refs.includes('fixture:agent-lab/sample-suite-pass'));
+});
+
+test('Agent Lab blocks promotion when executor and reviewer attempts are not independent', () => {
+  const suite = buildSampleAgentLabSuite();
+  const candidateRef = suite.tasks[1].improvement_candidate.candidate_ref;
+  const failureDeltaRef = 'failure-delta:mag/controlled-soak-stage-policy';
+  const reviewReceipt = sameAttemptIndependentAiReviewReceipt(candidateRef, 'medium_risk');
+  suite.tasks[1] = {
+    ...suite.tasks[1],
+    improvement_candidate: {
+      ...suite.tasks[1].improvement_candidate,
+      evidence_refs: [...suite.tasks[1].improvement_candidate.evidence_refs, failureDeltaRef],
+    },
+    mechanism_evolution_inputs: {
+      ...(suite.tasks[1].mechanism_evolution_inputs ?? {}),
+      independent_ai_review_receipt: reviewReceipt,
+    },
+    promotion_gate: {
+      ...suite.tasks[1].promotion_gate,
+      failure_delta_refs: [failureDeltaRef],
+      independent_ai_review_receipt_refs: [reviewReceipt.receipt_ref],
+      promotion_receipt_refs: ['mechanism-promotion-receipt:mag/controlled-soak-stage-policy'],
+      rollback_target_refs: ['mechanism-version-ref:mag/controlled-soak-current'],
+      canary_observation_refs: ['canary-observation-ref:mag/controlled-soak-stage-policy'],
+    },
+  };
+
+  const result = runAgentLabSuite(suite);
+  const blockedRun = result.runs[1];
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.summary.ai_review_approved_count, 0);
+  assert.equal(result.summary.promotable_candidate_count, 0);
+  assert.equal(blockedRun.independent_ai_review_assessment.attempt_separation_verified, false);
+  assert.equal(blockedRun.independent_ai_review_assessment.review_status, 'blocked_from_auto_promotion');
+  assert.equal(blockedRun.promotion_safety_assessment.safety_status, 'promotion_blocked');
+  assert.ok(blockedRun.failure_taxonomy.includes('promotion_independent_ai_attempt_separation_missing'));
+  assert.ok(blockedRun.failure_taxonomy.includes('promotion_real_independent_ai_review_missing'));
 });
 
 test('Agent Lab blocks failure-delta promotion attempts without safety refs', () => {

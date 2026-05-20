@@ -18,6 +18,8 @@
     "developer_mode_repair_route_refs",
     "integration_contract_refs",
     "review_trace_refs",
+    "execution_attempt_refs",
+    "review_attempt_refs",
     "usage_log_refs",
     "tool_failure_refs",
     "user_interrupt_refs",
@@ -72,6 +74,7 @@
       "promotion_gate_passed_count",
       "regression_guard_only_count",
       "promotion_safety_ready_count",
+      "advisory_only_signal_count",
       "promotion_safety_blocked_count",
       "owner_or_human_gate_required_count",
       "promotable_candidate_count",
@@ -92,6 +95,7 @@
       "rollback_target_refs",
       "canary_observation_refs",
       "failure_delta_refs",
+      "advisory_only_signal_refs",
       "artifact_refs",
       "receipt_refs",
       "mechanism_evolution_input_refs",
@@ -119,6 +123,9 @@
       "reviewer_ref",
       "reviewer_agent_ref",
       "reviewed_mechanism_candidate_ref",
+      "execution_attempt_ref",
+      "review_attempt_ref",
+      "execution_attempt_ref != review_attempt_ref",
       "request_ref",
       "response_ref",
       "evidence_refs",
@@ -128,6 +135,7 @@
       "risk_tier"
     ],
     "fixture_or_generated_receipts": "review_pending and never counted as AI review approval",
+    "attempt_separation": "the execution attempt and reviewer/auditor attempt must be separate refs and the review context must not inherit executor context",
     "authority_boundary": "scorecard.passed and fixture/domain suite pass are structural or domain scorecard signals only; they cannot authorize automatic mechanism promotion without a real independent AI review assessment and promotion safety assessment"
   },
   "promotion_safety_assessment_surface": {
@@ -145,10 +153,20 @@
       "regression_suite_refs",
       "no_forbidden_write_proof_refs",
       "real independent_ai_review_receipt_ref matching approved independent AI review assessment",
+      "separate execution_attempt_ref and review_attempt_ref for the AI reviewer/auditor attempt",
       "promotion_receipt_refs",
       "rollback_target_refs",
-      "canary_observation_refs for medium_risk"
+      "canary_observation_refs for low_risk and medium_risk"
     ],
+    "advisory_only_signals": [
+      "fixture pass",
+      "domain scorecard ref/pass",
+      "schema completeness",
+      "provider completion",
+      "contract completeness",
+      "descriptor or generated-surface readiness"
+    ],
+    "advisory_only_policy": "advisory-only signals can support regression visibility and operator triage but never set automatic_mechanism_promotion_ready=true",
     "high_risk_policy": "high_risk changes require owner_or_human_gate_refs and never set automatic_mechanism_promotion_ready=true",
     "authority_boundary": "promotion safety only gates OPL mechanism auto-promotion. It does not authorize domain ready, quality verdicts, artifact mutation, memory body writes, owner receipts, or production ready claims."
   },
@@ -359,6 +377,8 @@
       "reviewer_ref",
       "reviewer_agent_ref",
       "reviewed_mechanism_candidate_ref",
+      "execution_attempt_ref",
+      "review_attempt_ref",
       "request_ref",
       "response_ref",
       "evidence_refs",
@@ -385,10 +405,12 @@
       "risk_tiers": "low_risk auto-promotes to stable; medium_risk auto-promotes to canary; high_risk routes to owner or human gate",
       "independent_ai_review_receipt_required": true,
       "real_independent_ai_review_assessment_required": true,
+      "execution_review_attempt_separation_required": true,
       "promotion_receipt_required": true,
       "rollback_target_required": true,
       "no_forbidden_write_proof_required": true,
-      "canary_required_before_full_promotion": true
+      "canary_required_before_full_promotion": true,
+      "advisory_only_signals_cannot_promote": true
     },
     "mechanism_version_ledger": {
       "ledger_ref": "mechanism-version-ledger:agent-lab/default-stage-led-agent-mechanism",
@@ -409,6 +431,8 @@
         "reviewer_ref",
         "reviewer_agent_ref",
         "reviewed_mechanism_candidate_ref",
+        "execution_attempt_ref",
+        "review_attempt_ref",
         "request_ref",
         "response_ref",
         "evidence_refs",

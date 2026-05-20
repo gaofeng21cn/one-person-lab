@@ -42,6 +42,26 @@ test('agent-lab longline exposes the central cross-domain longline suite and rep
   assert.equal(output.agent_lab_longline.authority_boundary.can_write_domain_truth, false);
 });
 
+test('agent-lab run accepts the MAG live owner acceptance suite as refs-only coordination evidence', () => {
+  const suitePath = path.join(repoRoot, 'contracts/opl-framework/agent-lab-mag-live-acceptance-suite.json');
+  const output = runCli(['agent-lab', 'run', '--suite', suitePath, '--json']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.agent_lab_run.surface_id, 'opl_agent_lab_external_suite_run');
+  assert.equal(output.agent_lab_run.suite_result.status, 'passed');
+  assert.equal(output.agent_lab_run.suite_result.summary.owner_or_human_gate_required_count, 1);
+  assert.equal(output.agent_lab_run.suite_result.summary.promotable_candidate_count, 0);
+  assert.deepEqual(output.agent_lab_run.suite_result.domain_summary.map((entry: any) => entry.domain_id), [
+    'med-autogrant',
+  ]);
+  assert.ok(output.agent_lab_run.ref_summary.improvement_candidate_refs.includes(
+    'improvement-candidate:mag/owner-live-acceptance-receipt-scaleout',
+  ));
+  assert.equal(output.agent_lab_run.authority_boundary.can_write_domain_truth, false);
+  assert.equal(output.agent_lab_run.authority_boundary.can_write_memory_body, false);
+  assert.equal(output.agent_lab_run.authority_boundary.can_authorize_quality_verdict, false);
+});
+
 test('agent-lab complete exposes the complete eval, observability, and optimizer control plane', () => {
   const output = runCli(['agent-lab', 'complete', '--json']);
 

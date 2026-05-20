@@ -20,6 +20,8 @@ function realIndependentAiReviewReceipt(candidateRef: string, riskTier = 'low_ri
     reviewer_ref: 'reviewer-ref:agent-lab/external-independent-reviewer/run-001',
     reviewer_agent_ref: 'agent-ref:opl-agent-lab/independent-ai-reviewer',
     reviewed_mechanism_candidate_ref: candidateRef,
+    execution_attempt_ref: `stage-attempt:executor:${candidateRef}`,
+    review_attempt_ref: `stage-attempt:reviewer:${candidateRef}`,
     request_ref: `review-request-ref:${candidateRef}`,
     response_ref: `review-response-ref:${candidateRef}`,
     evidence_refs: [

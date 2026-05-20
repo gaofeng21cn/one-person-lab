@@ -88,6 +88,8 @@ export const REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS = [
   'reviewer_ref',
   'reviewer_agent_ref',
   'reviewed_mechanism_candidate_ref',
+  'execution_attempt_ref',
+  'review_attempt_ref',
   'request_ref',
   'response_ref',
   'evidence_refs',
@@ -113,6 +115,8 @@ export type AgentLabIndependentAiReviewAssessment = {
   reviewer_agent_ref: string | null;
   request_ref: string | null;
   response_ref: string | null;
+  execution_attempt_ref: string | null;
+  review_attempt_ref: string | null;
   evidence_refs: string[];
   forbidden_write_scan_ref: string | null;
   verdict: string | null;
@@ -122,6 +126,7 @@ export type AgentLabIndependentAiReviewAssessment = {
   required_provenance_fields: string[];
   missing_required_fields: string[];
   no_shared_context_verified: boolean;
+  attempt_separation_verified: boolean;
   fixture_or_generated_receipt: boolean;
 };
 
@@ -141,6 +146,7 @@ export type AgentLabPromotionGate = {
   required_refs: string[];
   regression_suite_refs: string[];
   no_forbidden_write_proof_refs: string[];
+  advisory_only_refs?: string[];
   failure_delta_refs?: string[];
   independent_ai_review_receipt_refs?: string[];
   promotion_receipt_refs?: string[];
@@ -202,6 +208,34 @@ const FORBIDDEN_MEMORY_BODY_KEYS = [
   'rejected_memory_body',
 ];
 
+const ADVISORY_ONLY_PROMOTION_PREFIXES = [
+  'fixture:',
+  'quality-scorecard:',
+  'scorecard:',
+  'schema-completeness:',
+  'schema-complete:',
+  'contract-completeness:',
+  'provider-completion:',
+  'provider-completion-ref:',
+  'provider-completion-proof:',
+  'descriptor-ready:',
+  'generated-surface-proof:',
+  'generated-bundle-ready:',
+  'harness-pass:',
+  'agent-lab-score:',
+];
+
+const ADVISORY_ONLY_PROMOTION_TOKENS = [
+  'fixture',
+  'schema_completeness',
+  'schema-completeness',
+  'schema_complete',
+  'schema-complete',
+  'provider_completion',
+  'provider-completion',
+  'scorecard',
+];
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -216,6 +250,19 @@ function optionalRefs(values: string[] | undefined) {
 
 function hasRefs(values: string[] | undefined) {
   return optionalRefs(values).length > 0;
+}
+
+function advisoryOnlyPromotionRefs(task: AgentLabTaskManifest) {
+  return unique([
+    ...optionalRefs(task.promotion_gate.advisory_only_refs),
+    ...task.promotion_gate.required_refs,
+    ...task.scorecard.evidence_refs,
+    ...task.scorecard.review_refs,
+    ...task.scorecard.quality_gate_refs,
+    ...task.improvement_candidate.evidence_refs,
+  ].filter((ref) =>
+    ADVISORY_ONLY_PROMOTION_PREFIXES.some((prefix) => ref.startsWith(prefix))
+    || ADVISORY_ONLY_PROMOTION_TOKENS.some((token) => ref.includes(token))));
 }
 
 function textField(record: JsonRecord | null, key: string): string | null {
@@ -252,6 +299,12 @@ export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLa
   const evidenceRefs = stringList(receipt?.evidence_refs);
   const noSharedContextVerified = receipt?.no_shared_context === true
     && receipt?.review_context_inherits_executor_context !== true;
+  const executionAttemptRef = textField(receipt, 'execution_attempt_ref');
+  const reviewAttemptRef = textField(receipt, 'review_attempt_ref');
+  const attemptSeparationVerified = Boolean(executionAttemptRef)
+    && Boolean(reviewAttemptRef)
+    && executionAttemptRef !== reviewAttemptRef
+    && noSharedContextVerified;
   const fields = {
     receipt_ref: textField(receipt, 'receipt_ref'),
     receipt_source: receiptSource === 'missing' ? null : receiptSource,
@@ -259,6 +312,8 @@ export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLa
     reviewer_ref: textField(receipt, 'reviewer_ref'),
     reviewer_agent_ref: textField(receipt, 'reviewer_agent_ref'),
     reviewed_mechanism_candidate_ref: textField(receipt, 'reviewed_mechanism_candidate_ref'),
+    execution_attempt_ref: executionAttemptRef,
+    review_attempt_ref: reviewAttemptRef,
     request_ref: textField(receipt, 'request_ref'),
     response_ref: textField(receipt, 'response_ref'),
     evidence_refs: evidenceRefs.length > 0 ? 'observed' : null,
@@ -275,6 +330,7 @@ export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLa
     && assessmentMode === 'real_independent_ai_review'
     && !fixtureOrGeneratedReceipt
     && missingRequiredFields.length === 0
+    && attemptSeparationVerified
     && (verdict === 'approved_for_risk_tiered_auto_promotion' || verdict === 'approved');
   const reviewStatus: AgentLabIndependentAiReviewStatus = aiReviewApproved
     ? 'approved'
@@ -292,6 +348,8 @@ export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLa
     reviewer_agent_ref: fields.reviewer_agent_ref,
     request_ref: fields.request_ref,
     response_ref: fields.response_ref,
+    execution_attempt_ref: fields.execution_attempt_ref,
+    review_attempt_ref: fields.review_attempt_ref,
     evidence_refs: evidenceRefs,
     forbidden_write_scan_ref: fields.forbidden_write_scan_ref,
     verdict,
@@ -301,6 +359,7 @@ export function assessIndependentAiReviewReceipt(receiptInput: unknown): AgentLa
     required_provenance_fields: [...REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS],
     missing_required_fields: missingRequiredFields,
     no_shared_context_verified: noSharedContextVerified,
+    attempt_separation_verified: attemptSeparationVerified,
     fixture_or_generated_receipt: fixtureOrGeneratedReceipt,
   };
 }
@@ -346,6 +405,7 @@ function buildPromotionSafetyAssessment(
 ) {
   const riskTier = promotionRiskTier(task);
   const deltaRefs = failureDeltaRefs(task);
+  const advisoryOnlyRefs = advisoryOnlyPromotionRefs(task);
   const missingRequiredRefs: string[] = [];
 
   if (task.promotion_gate.gate_status !== 'passed') {
@@ -367,6 +427,9 @@ function buildPromotionSafetyAssessment(
         : 'promotion_blocked' as AgentLabPromotionSafetyStatus,
       has_failure_delta: false,
       failure_delta_refs: deltaRefs,
+      advisory_only_refs: advisoryOnlyRefs,
+      advisory_only_signal_count: advisoryOnlyRefs.length,
+      advisory_only_cannot_promote: true,
       missing_required_refs: unique(missingRequiredRefs),
       automatic_mechanism_promotion_ready: false,
       authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
@@ -385,6 +448,9 @@ function buildPromotionSafetyAssessment(
         : 'promotion_blocked' as AgentLabPromotionSafetyStatus,
       has_failure_delta: true,
       failure_delta_refs: deltaRefs,
+      advisory_only_refs: advisoryOnlyRefs,
+      advisory_only_signal_count: advisoryOnlyRefs.length,
+      advisory_only_cannot_promote: true,
       missing_required_refs: unique(missingRequiredRefs),
       automatic_mechanism_promotion_ready: false,
       authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
@@ -398,6 +464,9 @@ function buildPromotionSafetyAssessment(
   if (independentAiReviewReceiptRefs.length > 0 && !independentAiReviewAssessment.ai_review_approved) {
     missingRequiredRefs.push('promotion_real_independent_ai_review_missing');
   }
+  if (independentAiReviewReceiptRefs.length > 0 && !independentAiReviewAssessment.attempt_separation_verified) {
+    missingRequiredRefs.push('promotion_independent_ai_attempt_separation_missing');
+  }
   if (independentAiReviewAssessment.receipt_ref
     && independentAiReviewReceiptRefs.length > 0
     && !independentAiReviewReceiptRefs.includes(independentAiReviewAssessment.receipt_ref)) {
@@ -409,7 +478,7 @@ function buildPromotionSafetyAssessment(
   if (!hasRefs(task.promotion_gate.rollback_target_refs)) {
     missingRequiredRefs.push('promotion_rollback_target_ref_missing');
   }
-  if (riskTier === 'medium_risk' && !hasRefs(task.promotion_gate.canary_observation_refs)) {
+  if (!hasRefs(task.promotion_gate.canary_observation_refs)) {
     missingRequiredRefs.push('promotion_canary_observation_ref_missing');
   }
 
@@ -422,6 +491,9 @@ function buildPromotionSafetyAssessment(
       : 'promotion_blocked' as AgentLabPromotionSafetyStatus,
     has_failure_delta: true,
     failure_delta_refs: deltaRefs,
+    advisory_only_refs: advisoryOnlyRefs,
+    advisory_only_signal_count: advisoryOnlyRefs.length,
+    advisory_only_cannot_promote: true,
     missing_required_refs: missing,
     automatic_mechanism_promotion_ready: missing.length === 0,
     authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
@@ -577,6 +649,8 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       canary_observation_refs: unique(input.tasks.flatMap((task) =>
         optionalRefs(task.promotion_gate.canary_observation_refs))),
       failure_delta_refs: unique(promotionSafetyAssessments.flatMap((assessment) => assessment.failure_delta_refs)),
+      advisory_only_signal_refs: unique(promotionSafetyAssessments.flatMap((assessment) =>
+        assessment.advisory_only_refs)),
       artifact_refs: unique(input.tasks.flatMap((task) => task.trajectory.artifact_refs)),
       receipt_refs: unique(input.tasks.flatMap((task) => task.trajectory.receipt_refs)),
       mechanism_evolution_input_refs: mechanismEvolutionInputRefs,
@@ -660,6 +734,8 @@ export function runAgentLabSuite(input: AgentLabSuite) {
         run.promotion_safety_assessment.safety_status === 'regression_guard_only').length,
       promotion_safety_ready_count: runs.filter((run) =>
         run.promotion_safety_assessment.safety_status === 'promotion_ready').length,
+      advisory_only_signal_count: unique(runs.flatMap((run) =>
+        run.promotion_safety_assessment.advisory_only_refs)).length,
       promotion_safety_blocked_count: runs.filter((run) =>
         run.promotion_safety_assessment.safety_status === 'promotion_blocked').length,
       owner_or_human_gate_required_count: runs.filter((run) =>

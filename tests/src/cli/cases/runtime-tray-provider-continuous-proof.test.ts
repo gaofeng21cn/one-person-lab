@@ -525,6 +525,7 @@ test('runtime snapshot routes stale proven provider proof to operator attention'
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-stale-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   try {
+    const staleProofCreatedAt = new Date(Date.now() - 5_000).toISOString();
     runCli(['family-runtime', 'events', 'export'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -550,7 +551,7 @@ db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source,
         provider_kind: 'temporal'
       }
     }),
-    '2026-05-13T00:00:00.000Z'
+    ${JSON.stringify(staleProofCreatedAt)}
   );
 db.close();`,
     ], {
