@@ -36,6 +36,21 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
     domain_allowed_role: 'domain_handler_target_or_refs_only_adapter',
   },
   {
+    subdomain_id: 'generated_action_metadata_command_registration_shell',
+    opl_primitive: 'opl_generated_action_metadata_registry',
+    surface_aliases: [
+      'action_catalog',
+      'action_metadata',
+      'domain_action_metadata',
+      'guarded_action',
+      'guarded_actions',
+      'guarded_action_catalog',
+      'command_registration',
+      'mcp_action_scaffold',
+    ],
+    domain_allowed_role: 'domain_action_ids_handler_refs_or_refs_only_metadata_source',
+  },
+  {
     subdomain_id: 'status_read_model_and_workbench_shell',
     opl_primitive: 'opl_generated_status_and_hosted_workbench_projection',
     surface_aliases: ['status', 'status_read_model', 'workbench', 'workbench_drilldown', 'portal', 'cockpit'],
@@ -341,16 +356,16 @@ function surfaceTextFromContracts(repoDir: string) {
 
 function sourceRefsForSubdomain(repoDir: string, aliases: readonly string[]) {
   const normalizedAliases = aliases.map((alias) => alias.toLowerCase());
-  const contractRefs = surfaceTextFromContracts(repoDir)
-    .filter((entry) => normalizedAliases.some((alias) => entry.text.toLowerCase().includes(alias)))
-    .map((entry) => `${entry.source_path}${entry.json_path === '$' ? '' : `#${entry.json_path}`}`);
   const filenameRefs = activeProgramFiles(repoDir)
     .filter((relativePath) => normalizedAliases.some((alias) => (
       relativePath.toLowerCase().includes(alias.replace(/_/g, '-'))
       || relativePath.toLowerCase().includes(alias)
     )))
     .slice(0, 12);
-  return unique([...contractRefs, ...filenameRefs]).slice(0, 20);
+  const contractRefs = surfaceTextFromContracts(repoDir)
+    .filter((entry) => normalizedAliases.some((alias) => entry.text.toLowerCase().includes(alias)))
+    .map((entry) => `${entry.source_path}${entry.json_path === '$' ? '' : `#${entry.json_path}`}`);
+  return unique([...filenameRefs, ...contractRefs]).slice(0, 20);
 }
 
 function explicitForbiddenOwnerClaims(repoDir: string) {

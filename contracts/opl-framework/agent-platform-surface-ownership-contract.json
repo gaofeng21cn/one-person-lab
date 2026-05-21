@@ -7,6 +7,7 @@
   "framework_owned_generic_subdomains": [
     "generated_cli_mcp_skill_product_shell",
     "generated_sidecar_dispatch_shell",
+    "generated_action_metadata_command_registration_shell",
     "status_read_model_and_workbench_shell",
     "workspace_source_artifact_memory_locator",
     "stage_attempt_queue_retry_dead_letter",

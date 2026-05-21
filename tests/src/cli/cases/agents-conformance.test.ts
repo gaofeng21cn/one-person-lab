@@ -509,7 +509,7 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(platformSurfaces.owner, 'one-person-lab');
   assert.equal(platformSurfaces.status, 'passed');
   assert.equal(platformSurfaces.summary.total_repo_count, 1);
-  assert.equal(platformSurfaces.summary.generic_subdomain_count, 6);
+  assert.equal(platformSurfaces.summary.generic_subdomain_count, 7);
   assert.equal(platformSurfaces.summary.explicit_forbidden_owner_claim_count, 0);
   assert.deepEqual(platformSurfaces.reports[0].retained_domain_authority, [
     'domain_truth',
@@ -527,6 +527,20 @@ test('agents conformance reports structural readiness separately from production
         surface.subdomain_id === 'generated_sidecar_dispatch_shell'
         && surface.owner === 'one-person-lab'
       )),
+    true,
+  );
+  const actionMetadataSurface = platformSurfaces.reports[0].generic_subdomains
+    .find((surface: { subdomain_id: string }) => (
+      surface.subdomain_id === 'generated_action_metadata_command_registration_shell'
+    ));
+  assert.equal(Boolean(actionMetadataSurface), true);
+  assert.equal(actionMetadataSurface.owner, 'one-person-lab');
+  assert.equal(
+    actionMetadataSurface.domain_allowed_role,
+    'domain_action_ids_handler_refs_or_refs_only_metadata_source',
+  );
+  assert.equal(
+    actionMetadataSurface.observed_source_refs.includes('contracts/action_catalog.json'),
     true,
   );
   assert.equal(platformSurfaces.authority_boundary.report_can_claim_domain_ready, false);
@@ -558,7 +572,7 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(repo.generated_surface_handoff_checks.generated_surface_owner, 'one-person-lab');
   assert.equal(repo.private_surface_checks.domain_can_claim_generic_runtime_owner, false);
   assert.equal(repo.platform_surface_ownership_checks.status, 'passed');
-  assert.equal(repo.platform_surface_ownership_checks.generic_subdomain_count, 6);
+  assert.equal(repo.platform_surface_ownership_checks.generic_subdomain_count, 7);
   assert.deepEqual(repo.platform_surface_ownership_checks.explicit_forbidden_owner_claims, []);
   assert.equal(repo.platform_surface_ownership_checks.authority_boundary.report_can_claim_production_ready, false);
   assert.equal(repo.generated_interface_checks.generated_interfaces_status, 'ready');
@@ -592,6 +606,57 @@ test('agents conformance reports structural readiness separately from production
   );
   assert.equal(repo.evidence_tail_classification.tail_items[0].repo_path, repoDir);
   assert.equal(repo.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
+});
+
+test('agents platform-surfaces projects RCA guarded action catalog as action metadata shell only', () => {
+  const repoDir = buildReadyAgentRepo();
+  retargetReadyRepo(repoDir, 'redcube-ai', 'RedCube AI');
+  configureReadyRcaMorphology(repoDir);
+  const guardedActionCatalogPath = path.join(
+    repoDir,
+    'packages',
+    'redcube-gateway',
+    'src',
+    'actions',
+    'product-sidecar-parts',
+    'guarded-action-catalog.ts',
+  );
+  fs.mkdirSync(path.dirname(guardedActionCatalogPath), { recursive: true });
+  fs.writeFileSync(
+    guardedActionCatalogPath,
+    [
+      'export const rcaGuardedActionCatalog = {',
+      "  surfaceKind: 'rca_guarded_action_catalog',",
+      "  role: 'domain_action_metadata_refs_only_source',",
+      '};',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  const platformSurfaces = runCli([
+    'agents',
+    'platform-surfaces',
+    '--agent',
+    `rca=${repoDir}`,
+  ]).agent_platform_surface_ownership;
+
+  const rcaReport = platformSurfaces.reports[0];
+  const actionMetadataSurface = rcaReport.generic_subdomains
+    .find((surface: { subdomain_id: string }) => (
+      surface.subdomain_id === 'generated_action_metadata_command_registration_shell'
+    ));
+
+  assert.equal(platformSurfaces.status, 'passed');
+  assert.equal(actionMetadataSurface.owner, 'one-person-lab');
+  assert.equal(
+    actionMetadataSurface.observed_source_refs.includes(
+      'packages/redcube-gateway/src/actions/product-sidecar-parts/guarded-action-catalog.ts',
+    ),
+    true,
+  );
+  assert.equal(rcaReport.authority_boundary.report_can_claim_domain_ready, false);
+  assert.equal(rcaReport.authority_boundary.report_can_claim_production_ready, false);
 });
 
 test('agents readiness aggregates structural gates and production evidence tail without claiming authority', () => {
