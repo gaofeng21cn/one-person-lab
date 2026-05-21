@@ -246,6 +246,7 @@ function frameworkKernelFloor() {
       'app_live_evidence_tail',
       'stage_receipt_freshness_tail',
       'evidence_envelope_attention',
+      'domain_dispatch_attention',
       'provider_slo_status',
     ],
     ai_executor_internal_strategy_is_contract: false,
@@ -299,6 +300,13 @@ function frameworkDiagnosticDrilldowns() {
       embedded_payload_ref: '/framework_readiness/evidence_envelope',
     },
     {
+      lens_id: 'domain_dispatch_attention',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.app_operator_drilldown,
+      embedded_payload_ref: '/framework_readiness/domain_dispatch_attention',
+    },
+    {
       lens_id: 'provider_slo_status',
       role: 'diagnostic_drilldown',
       default_surface: false,
@@ -320,6 +328,7 @@ function frameworkAttentionFirstPayload(input: {
   stageReceiptFreshnessTailCount: number;
   evidenceEnvelopeOpenCount: number;
   evidenceEnvelopeBlockedCount: number;
+  domainDispatchAttentionCount: number;
   providerSloCadenceWindowStatus: unknown;
   providerSloCapabilityStatus: unknown;
 }) {
@@ -327,6 +336,8 @@ function frameworkAttentionFirstPayload(input: {
     + input.appLiveEvidenceTailCount
     + input.stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
+  const totalOperatorAttentionTailCount =
+    openTailCount + evidenceEnvelopeAttentionCount + input.domainDispatchAttentionCount;
   const blockers = [
     ...(input.packCompilerBlockerCount > 0
       ? [{
@@ -381,6 +392,13 @@ function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/evidence_envelope',
         }]
       : []),
+    ...(input.domainDispatchAttentionCount > 0
+      ? [{
+          warning_id: 'domain_dispatch_attention',
+          count: input.domainDispatchAttentionCount,
+          drilldown_ref: '/framework_readiness/domain_dispatch_attention',
+        }]
+      : []),
   ];
   const nextSafeActions = blockers.length > 0
     ? [{
@@ -413,7 +431,8 @@ function frameworkAttentionFirstPayload(input: {
       evidence_envelope_open_count: input.evidenceEnvelopeOpenCount,
       evidence_envelope_blocked_count: input.evidenceEnvelopeBlockedCount,
       evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
-      total_operator_attention_tail_count: openTailCount + evidenceEnvelopeAttentionCount,
+      domain_dispatch_attention_count: input.domainDispatchAttentionCount,
+      total_operator_attention_tail_count: totalOperatorAttentionTailCount,
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
@@ -517,14 +536,18 @@ export async function buildFrameworkReadinessSummary(
   const stageReceiptFreshnessTailCount =
     stageProductionCallerTailCount + stageReceiptFreshnessOpenWorkorderCount;
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
+  const domainDispatchAttentionCount =
+    numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count);
   const openTailCount =
     agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
+  const totalOperatorAttentionTailCount =
+    openTailCount + evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
     agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
   const frameworkStatus = statusFrom(
-    openTailCount + evidenceEnvelopeAttentionCount,
+    totalOperatorAttentionTailCount,
     semanticAttentionGateCount,
     hardBlockerCount,
   );
@@ -558,6 +581,7 @@ export async function buildFrameworkReadinessSummary(
         stageReceiptFreshnessTailCount,
         evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
         evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
+        domainDispatchAttentionCount,
         providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
         providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
       }),
@@ -580,7 +604,8 @@ export async function buildFrameworkReadinessSummary(
         evidence_envelope_open_count: readinessEvidenceEnvelopeOpenCount,
         evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
         evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
-        total_operator_attention_tail_count: openTailCount + evidenceEnvelopeAttentionCount,
+        domain_dispatch_attention_count: domainDispatchAttentionCount,
+        total_operator_attention_tail_count: totalOperatorAttentionTailCount,
         open_tail_count: openTailCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
         provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
@@ -595,6 +620,8 @@ export async function buildFrameworkReadinessSummary(
           'stage production caller, expected receipt, and monitor freshness workorders',
         evidence_envelope:
           'single refs-only owner/scope/payload-kind claim reading across stage, external evidence, domain dispatch, and cleanup receipts',
+        domain_dispatch_attention:
+          'App/operator owner-chain dispatch attention derived from stage evidence typed blockers and missing owner-chain refs without authorizing domain ready',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
         retired_alias_policy:
@@ -716,6 +743,30 @@ export async function buildFrameworkReadinessSummary(
           'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
         authority_boundary:
           record(readinessEvidenceEnvelope.authority_boundary),
+      },
+      domain_dispatch_attention: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        attention_count: domainDispatchAttentionCount,
+        domain_count: numberValue(appSummary.domain_dispatch_attention_domain_count),
+        owner_receipt_ref_count:
+          numberValue(appSummary.domain_dispatch_attention_owner_receipt_ref_count),
+        direct_typed_blocker_ref_count:
+          numberValue(appSummary.domain_dispatch_attention_direct_typed_blocker_ref_count),
+        direct_typed_blocker_count:
+          numberValue(appSummary.domain_dispatch_attention_direct_typed_blocker_count),
+        typed_blocker_stage_count:
+          numberValue(appSummary.domain_dispatch_attention_typed_blocker_stage_count),
+        blocked_obligation_count:
+          numberValue(appSummary.domain_dispatch_attention_blocked_obligation_count),
+        missing_owner_chain_count:
+          numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count),
+        attention_policy:
+          appSummary.domain_dispatch_attention_policy
+            ?? 'stage_evidence_typed_blocker_or_missing_owner_chain_attention_only_no_domain_ready_claim',
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+        can_authorize_quality_or_export: false,
+        authority_boundary: authorityBoundary(),
       },
       provider_slo_status: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

@@ -337,6 +337,13 @@ test('stage production evidence typed blocker receipt closes App production tail
       drilldown.summary.app_operator_production_evidence_tail_open_item_count,
       drilldown.production_evidence_tail_ledger.summary.open_tail_item_count,
     );
+    assert.equal(drilldown.summary.domain_dispatch_attention_domain_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_attention_typed_blocker_stage_count, 1);
+    assert.equal(drilldown.summary.domain_dispatch_attention_missing_owner_chain_count, 1);
+    assert.equal(
+      drilldown.summary.domain_dispatch_attention_policy,
+      'stage_evidence_typed_blocker_or_missing_owner_chain_attention_only_no_domain_ready_claim',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

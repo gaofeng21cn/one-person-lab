@@ -73,6 +73,25 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
   const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
   const productionEvidenceTailBlockingItemCount = numberValue(productionTailSummary.blocking_tail_item_count);
+  const domainDispatchOwnerReceiptRefCount = numberValue(domainDispatchSummary.owner_receipt_ref_count);
+  const domainDispatchTypedBlockerRefCount = numberValue(domainDispatchSummary.typed_blocker_ref_count);
+  const domainDispatchTypedBlockerCount = numberValue(domainDispatchSummary.typed_blocker_count);
+  const stageTypedBlockerStageCount = numberValue(stageProductionSummary.stages_with_domain_typed_blocker_count);
+  const stageBlockedObligationCount =
+    numberValue(stageProductionSummary.evidence_obligation_blocked_by_domain_typed_blocker_count);
+  const stageExpectedReceiptUnobservedCount =
+    numberValue(stageProductionSummary.expected_receipt_unobserved_stage_count);
+  const stageMonitorFreshnessUnobservedCount =
+    numberValue(stageProductionSummary.monitor_freshness_unobserved_stage_count);
+  const domainDispatchAttentionDomainCount = numberValue(stageProductionSummary.domain_count);
+  const domainDispatchAttentionMissingOwnerChainCount = Math.max(
+    stageTypedBlockerStageCount,
+    domainDispatchOwnerReceiptRefCount === 0 && (
+      stageExpectedReceiptUnobservedCount > 0 || stageMonitorFreshnessUnobservedCount > 0
+    )
+      ? domainDispatchAttentionDomainCount
+      : 0,
+  );
 
   return {
     stage_attempt_count: input.attempts.length,
@@ -126,12 +145,21 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     typed_blocker_count: typedBlockers.length,
     domain_dispatch_evidence_domain_count: numberValue(domainDispatchSummary.domain_count),
     domain_dispatch_evidence_attempt_count: numberValue(domainDispatchSummary.attempt_count),
-    domain_dispatch_evidence_owner_receipt_ref_count: numberValue(domainDispatchSummary.owner_receipt_ref_count),
-    domain_dispatch_evidence_typed_blocker_ref_count: numberValue(domainDispatchSummary.typed_blocker_ref_count),
-    domain_dispatch_evidence_typed_blocker_count: numberValue(domainDispatchSummary.typed_blocker_count),
+    domain_dispatch_evidence_owner_receipt_ref_count: domainDispatchOwnerReceiptRefCount,
+    domain_dispatch_evidence_typed_blocker_ref_count: domainDispatchTypedBlockerRefCount,
+    domain_dispatch_evidence_typed_blocker_count: domainDispatchTypedBlockerCount,
     domain_dispatch_evidence_no_regression_ref_count: numberValue(domainDispatchSummary.no_regression_evidence_ref_count),
     domain_dispatch_evidence_memory_writeback_ref_count: numberValue(domainDispatchSummary.memory_writeback_ref_count),
     domain_dispatch_evidence_domain_ready_claim_count: numberValue(domainDispatchSummary.domain_ready_claim_count),
+    domain_dispatch_attention_domain_count: domainDispatchAttentionDomainCount,
+    domain_dispatch_attention_owner_receipt_ref_count: domainDispatchOwnerReceiptRefCount,
+    domain_dispatch_attention_direct_typed_blocker_ref_count: domainDispatchTypedBlockerRefCount,
+    domain_dispatch_attention_direct_typed_blocker_count: domainDispatchTypedBlockerCount,
+    domain_dispatch_attention_typed_blocker_stage_count: stageTypedBlockerStageCount,
+    domain_dispatch_attention_blocked_obligation_count: stageBlockedObligationCount,
+    domain_dispatch_attention_missing_owner_chain_count: domainDispatchAttentionMissingOwnerChainCount,
+    domain_dispatch_attention_policy:
+      'stage_evidence_typed_blocker_or_missing_owner_chain_attention_only_no_domain_ready_claim',
     stage_production_evidence_domain_count: numberValue(stageProductionSummary.domain_count),
     stage_production_evidence_stage_count: numberValue(stageProductionSummary.stage_count),
     stage_production_evidence_observed_stage_count: numberValue(stageProductionSummary.observed_stage_count),

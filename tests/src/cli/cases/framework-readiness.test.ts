@@ -56,7 +56,13 @@ test('framework readiness summarizes default control-plane surfaces without auth
   );
   assert.equal(
     readiness.attention_first_payload.summary.total_operator_attention_tail_count,
-    readiness.summary.open_tail_count + readiness.summary.evidence_envelope_attention_count,
+    readiness.summary.open_tail_count
+      + readiness.summary.evidence_envelope_attention_count
+      + readiness.summary.domain_dispatch_attention_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.domain_dispatch_attention_count,
+    readiness.summary.domain_dispatch_attention_count,
   );
   assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
@@ -179,6 +185,10 @@ test('framework readiness summarizes default control-plane surfaces without auth
     'single refs-only owner/scope/payload-kind claim reading across stage, external evidence, domain dispatch, and cleanup receipts',
   );
   assert.equal(
+    readiness.evidence_counter_taxonomy.domain_dispatch_attention,
+    'App/operator owner-chain dispatch attention derived from stage evidence typed blockers and missing owner-chain refs without authorizing domain ready',
+  );
+  assert.equal(
     Object.keys(readiness.summary).some((key) => key.startsWith('production_evidence_tail_')),
     false,
   );
@@ -223,6 +233,18 @@ test('framework readiness summarizes default control-plane surfaces without auth
     ),
     readiness.evidence_envelope.attention_envelope_count > 0,
   );
+  assert.equal(
+    readiness.attention_first_payload.warnings.some(
+      (warning: { warning_id: string }) => warning.warning_id === 'domain_dispatch_attention',
+    ),
+    readiness.domain_dispatch_attention.attention_count > 0,
+  );
+  assert.equal(
+    readiness.domain_dispatch_attention.attention_count,
+    readiness.summary.domain_dispatch_attention_count,
+  );
+  assert.equal(readiness.domain_dispatch_attention.can_claim_domain_ready, false);
+  assert.equal(readiness.domain_dispatch_attention.can_claim_production_ready, false);
   assert.equal(
     readiness.evidence_envelope.claim_policy,
     'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
