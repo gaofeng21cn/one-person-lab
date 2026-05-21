@@ -154,6 +154,125 @@ JSON
   }
 });
 
+test('family-runtime hydrates MAS runtime owner-route handoff export shape', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-owner-handoff-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-owner-handoff-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "med-autoscience",
+      "queue_owner": "one-person-lab",
+      "domain_truth_owner": "med-autoscience",
+      "recommended_task_kind": "domain_route/reconcile-apply",
+      "priority": 55,
+      "source": "mas-runtime-owner-route",
+      "dedupe_key": "mas:test:DM002:owner-route:quest_waiting_opl_runtime_owner_route",
+      "owner_route_ref": " quest_waiting_opl_runtime_owner_route ",
+      "owner_route_refs": ["mas_runtime_owner_route_handoff", " mas_runtime_owner_route_handoff "],
+      "owner_route": {"ref": " owner-route:mas/DM002/runtime-platform-repair "},
+      "runtime_state_path": "studies/DM002/runtime/state.json",
+      "reason": "quest_waiting_opl_runtime_owner_route",
+      "opl_runtime_owner_route_handoff": {
+        "surface_kind": "mas_runtime_owner_route_handoff",
+        "domain_truth_owner": "med-autoscience",
+        "queue_owner": "one-person-lab",
+        "recommended_task_kind": "domain_route/reconcile-apply",
+        "runtime_state_path": "studies/DM002/runtime/state.json",
+        "authority_boundary": {
+          "mas_writes_generic_runtime_queue": false,
+          "mas_submits_runtime_chat": false,
+          "mas_resumes_provider_worker": false,
+          "opl_writes_mas_truth": false
+        }
+      },
+      "payload": {
+        "profile": "/tmp/profile.toml",
+        "study_id": "DM002",
+        "continuation_reason": "quest_waiting_opl_runtime_owner_route"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","closeout_refs":["mas-receipt:DM002/owner-route-handoff-observed"]}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
+    });
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-handoff', '--hydrate'], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const task = queue.family_runtime_queue.tasks[0];
+    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
+    assert.equal(tick.family_runtime_tick.hydration.blocked_count, 0);
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.domain_id, 'medautoscience');
+    assert.equal(task.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(task.payload.queue_owner, 'one-person-lab');
+    assert.equal(task.payload.domain_truth_owner, 'med-autoscience');
+    assert.equal(task.payload.recommended_task_kind, 'domain_route/reconcile-apply');
+    assert.equal(task.payload.reason, 'quest_waiting_opl_runtime_owner_route');
+    assert.equal(task.payload.runtime_state_path, 'studies/DM002/runtime/state.json');
+    assert.deepEqual(task.payload.owner_route_refs, [
+      'mas_runtime_owner_route_handoff',
+      'quest_waiting_opl_runtime_owner_route',
+      'owner-route:mas/DM002/runtime-platform-repair',
+    ]);
+    assert.equal(task.domain_route.queue_owner, 'one-person-lab');
+    assert.equal(task.domain_route.domain_truth_owner, 'med-autoscience');
+    assert.equal(task.domain_route.runtime_owner_route_reason, 'quest_waiting_opl_runtime_owner_route');
+    assert.equal(task.domain_route.runtime_state_path, 'studies/DM002/runtime/state.json');
+    assert.equal(task.domain_route.exported_queue_owner, 'one-person-lab');
+    assert.equal(task.domain_route.exported_domain_truth_owner, 'med-autoscience');
+    assert.equal(task.domain_route.exported_recommended_task_kind, 'domain_route/reconcile-apply');
+    assert.equal(task.domain_route.owner_route_handoff.handoff_ref, 'mas_runtime_owner_route_handoff');
+    assert.equal(task.domain_route.owner_route_handoff.accepted_by, 'opl_runtime_owner_route');
+    assert.equal(
+      task.domain_route.owner_route_handoff.exported_handoff.authority_boundary.opl_writes_mas_truth,
+      false,
+    );
+    assert.equal(task.domain_route.authority_boundary.writes_mas_truth, false);
+    assert.equal(task.domain_route.authority_boundary.queue_owns_attempts_retry_and_dead_letter, true);
+    assert.equal(dispatchedTask.domain_id, 'medautoscience');
+    assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(dispatchedTask.domain_route.runtime_owner_route_reason, 'quest_waiting_opl_runtime_owner_route');
+    assert.deepEqual(dispatchedTask.domain_route.owner_route_refs, [
+      'mas_runtime_owner_route_handoff',
+      'quest_waiting_opl_runtime_owner_route',
+      'owner-route:mas/DM002/runtime-platform-repair',
+    ]);
+    assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
+    assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime rejects retired MAS runtime-prefixed task kinds', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-retired-alias-'));
   try {

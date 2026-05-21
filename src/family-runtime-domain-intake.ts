@@ -151,20 +151,65 @@ function taskPayloadBlockedByForbiddenWrite(payload: Record<string, unknown>) {
   return payload.domain_truth_write === true || payload.artifact_gate_override === true;
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .map((entry) => entry.trim())
+    : [];
+}
+
+function explicitRefFromRecord(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  for (const key of ['ref', 'route_ref', 'owner_route_ref', 'handoff_ref']) {
+    const ref = optionalString(value[key]);
+    if (ref) {
+      return ref;
+    }
+  }
+  return null;
+}
+
+function ownerRouteRefsFrom(item: Record<string, unknown>) {
+  return [...new Set([
+    ...stringList(item.owner_route_refs),
+    optionalString(item.owner_route_ref),
+    explicitRefFromRecord(item.owner_route),
+  ].filter((entry): entry is string => Boolean(entry)))];
+}
+
+function handoffPayloadFrom(item: Record<string, unknown>) {
+  const handoff = isRecord(item.opl_runtime_owner_route_handoff)
+    ? item.opl_runtime_owner_route_handoff
+    : isRecord(item.owner_route_handoff)
+      ? item.owner_route_handoff
+      : null;
+  if (!handoff) {
+    return {};
+  }
+  return {
+    opl_runtime_owner_route_handoff: handoff,
+  };
+}
+
 function pendingTaskInputFrom(
   domainId: FamilyRuntimeDomainId,
   item: Record<string, unknown>,
   source: string,
 ): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
-  const exportedDomain = typeof item.domain_id === 'string' ? item.domain_id : domainId;
-  const taskKind = typeof item.task_kind === 'string' ? item.task_kind.trim() : '';
+  const declaredDomain = typeof item.domain_id === 'string' ? item.domain_id : domainId;
+  const exportedDomain = canonicalFamilyRuntimeDomainId(declaredDomain);
+  const taskKind = optionalString(item.task_kind) ?? optionalString(item.recommended_task_kind) ?? '';
   const payload = taskPayloadFrom(item);
-  if (!isFamilyRuntimeDomainId(exportedDomain) || !taskKind) {
+  if (!exportedDomain || !isFamilyRuntimeDomainId(exportedDomain) || !taskKind) {
     return { blocked: { reason: 'invalid_domain_or_task_kind', task: item } };
   }
   if (taskPayloadBlockedByForbiddenWrite(payload)) {
     return { blocked: { reason: 'domain_forbidden_write', task: item } };
   }
+  const ownerRouteRefs = ownerRouteRefsFrom(item);
   return {
     input: {
       domainId: exportedDomain,
@@ -173,11 +218,17 @@ function pendingTaskInputFrom(
         ...payload,
         ...(typeof item.source_fingerprint === 'string' ? { source_fingerprint: item.source_fingerprint } : {}),
         ...(Array.isArray(item.source_refs) ? { source_refs: item.source_refs } : {}),
-        ...(Array.isArray(item.owner_route_refs) ? { owner_route_refs: item.owner_route_refs } : {}),
+        ...(ownerRouteRefs.length > 0 ? { owner_route_refs: ownerRouteRefs } : {}),
         ...(Array.isArray(item.owner_receipt_refs) ? { owner_receipt_refs: item.owner_receipt_refs } : {}),
         ...(Array.isArray(item.typed_blocker_refs) ? { typed_blocker_refs: item.typed_blocker_refs } : {}),
         ...(typeof item.dispatch_owner === 'string' ? { dispatch_owner: item.dispatch_owner } : {}),
         ...(typeof item.profile_name === 'string' ? { profile_name: item.profile_name } : {}),
+        ...(typeof item.domain_truth_owner === 'string' ? { domain_truth_owner: item.domain_truth_owner } : {}),
+        ...(typeof item.queue_owner === 'string' ? { queue_owner: item.queue_owner } : {}),
+        ...(typeof item.recommended_task_kind === 'string' ? { recommended_task_kind: item.recommended_task_kind } : {}),
+        ...(typeof item.reason === 'string' ? { reason: item.reason } : {}),
+        ...(typeof item.runtime_state_path === 'string' ? { runtime_state_path: item.runtime_state_path } : {}),
+        ...handoffPayloadFrom(item),
       },
       dedupeKey: typeof item.dedupe_key === 'string' ? item.dedupe_key : undefined,
       priority: Number.isInteger(item.priority) ? item.priority as number : 0,

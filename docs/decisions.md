@@ -13,7 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl family-runtime intake|tick --hydrate` 必须能消费 MAS sidecar export 的 `publication_aftercare/*` pending family task，并把它们投影为 OPL-owned queued task / stage attempt / dispatch state。
+- `opl family-runtime intake|tick --hydrate` 必须能消费 MAS sidecar export 的 `publication_aftercare/*` pending family task，以及 MAS runtime owner-route handoff 的 refs-only export shape，并把它们投影为 OPL-owned queued task / stage attempt / dispatch state。OPL intake 接受 MAS 使用 `med-autoscience` domain alias、`recommended_task_kind`、`owner_route_ref(s)`、`owner_route` explicit ref、`runtime_state_path`、`quest_waiting_opl_runtime_owner_route` reason 和 `opl_runtime_owner_route_handoff` envelope，但只把这些作为 queue/projection refs。
 - OPL queue status 可以展示 `owner_route_refs`、`owner_receipt_refs`、`typed_blocker_refs`、`source_refs`、`source_fingerprint` 与 publication aftercare reason，但这些只是 refs 和投影，不是 MAS quality verdict、study truth 或 artifact authority。
 - MAS sidecar dispatch 仍是 domain owner callable；OPL 只负责 queue、attempt、dispatch transport、retry/dead-letter 和 operator status。是否更新论文、publication gate、AI reviewer verdict 或 current package，继续由 MAS owner receipt / typed blocker 决定。
 - 任何 DM002 这类 paper-line 卡住时，优先检查 OPL family-runtime hydration / queue / attempt / dead-letter，再回到 MAS owner surface；不得把 liveness / redrive 仲裁补回 MAS 私有 runtime。

@@ -60,6 +60,12 @@ function stringField(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function recordField(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 export function masDomainRouteProjection(
   task: MasDomainRouteProjectionTask,
   payload: Record<string, unknown>,
@@ -81,6 +87,11 @@ export function masDomainRouteProjection(
     owner_receipt_refs: arrayField(payload.owner_receipt_refs),
     typed_blocker_refs: arrayField(payload.typed_blocker_refs),
     publication_aftercare_reason: stringField(payload.publication_aftercare_reason),
+    runtime_owner_route_reason: stringField(payload.reason ?? payload.continuation_reason),
+    runtime_state_path: stringField(payload.runtime_state_path),
+    exported_queue_owner: stringField(payload.queue_owner),
+    exported_domain_truth_owner: stringField(payload.domain_truth_owner),
+    exported_recommended_task_kind: stringField(payload.recommended_task_kind),
     idempotency_key: task.dedupe_key,
     authority_boundary: {
       writes_mas_truth: false,
@@ -91,6 +102,7 @@ export function masDomainRouteProjection(
       opl_owns_generic_runtime_queue_attempt_liveness_redrive: true,
     },
     owner_route_handoff: {
+      exported_handoff: recordField(payload.opl_runtime_owner_route_handoff),
       handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
       accepted_by: OPL_RUNTIME_OWNER_ROUTE,
       accepted_runtime_responsibilities: [
