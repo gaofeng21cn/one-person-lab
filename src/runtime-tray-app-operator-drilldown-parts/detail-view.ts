@@ -425,6 +425,88 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   };
 }
 
+function evidenceNextSteps(drilldown: JsonRecord) {
+  const attention = evidenceAfterContractAttention(drilldown);
+  const missingEvidence = missingEvidenceItems(drilldown);
+  const advisory = advisoryItems(drilldown);
+  const steps: JsonRecord[] = [];
+  if (numberValue(attention.domain_dispatch_attention_count) > 0) {
+    steps.push({
+      step_kind: 'domain_dispatch_owner_chain_scaleout',
+      owner: 'domain_repository_or_app_live_operator',
+      status: 'needs_domain_owned_receipt_or_typed_blocker_scaleout',
+      attention_count: attention.domain_dispatch_attention_count,
+      blocked_obligation_count: attention.domain_dispatch_blocked_obligation_count,
+      typed_blocker_stage_count: attention.domain_dispatch_typed_blocker_stage_count,
+      route_support_status: attention.route_support_status,
+      route_support_closes_owner_chain: false,
+      required_refs_any_of: [
+        'domain_owner_receipt_refs',
+        'typed_blocker_refs',
+        'no_regression_evidence_refs',
+        'memory_writeback_receipt_refs',
+      ],
+      full_detail_section: 'domain_dispatch_evidence',
+    });
+  }
+  if (numberValue(attention.evidence_envelope_attention_count) > 0) {
+    steps.push({
+      step_kind: 'evidence_envelope_scaleout',
+      owner: 'domain_repository_or_app_live_operator',
+      status: 'needs_open_or_blocked_envelope_followthrough',
+      attention_count: attention.evidence_envelope_attention_count,
+      open_envelope_count: attention.evidence_envelope_open_count,
+      blocked_envelope_count: attention.evidence_envelope_blocked_count,
+      required_refs_any_of: [
+        'evidence_refs',
+        'domain_receipt_refs',
+        'typed_blocker_refs',
+        'owner_chain_refs',
+      ],
+      full_detail_section: 'evidence_envelope',
+    });
+  }
+  for (const item of recordList(missingEvidence.items)) {
+    steps.push({
+      step_kind: 'stage_missing_evidence_followthrough',
+      owner: stringValue(item.owner) ?? 'domain_repository_or_app_live_operator',
+      status: 'needs_live_refs_or_typed_blocker',
+      domain_id: stringValue(item.domain_id),
+      stage_id: stringValue(item.stage_id),
+      missing: stringList(item.missing),
+      next_safe_action_id: stringValue(item.next_safe_action_id),
+      route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload === true,
+      full_detail_section: 'stage_production_evidence',
+    });
+  }
+  for (const item of recordList(advisory.items)) {
+    if (stringValue(item.status) !== 'domain_owned_typed_blocker') {
+      continue;
+    }
+    steps.push({
+      step_kind: 'domain_typed_blocker_followthrough',
+      owner: stringValue(item.owner) ?? 'domain_repository_or_app_live_operator',
+      status: 'domain_typed_blocker_requires_real_evidence_followthrough',
+      detail_ref: stringValue(item.detail_ref),
+      blocking_policy: stringValue(item.blocking_policy),
+      full_detail_section: 'stage_production_evidence',
+    });
+  }
+  return {
+    surface_kind: 'opl_app_drilldown_evidence_next_steps',
+    projection_policy:
+      'operator_guidance_only_no_safe_action_creation_no_domain_ready_claim',
+    items: steps.slice(0, DEFAULT_ATTENTION_ITEM_LIMIT),
+    omitted_count: Math.max(steps.length - DEFAULT_ATTENTION_ITEM_LIMIT, 0),
+    total_count: steps.length,
+    next_owner: steps.length > 0 ? 'domain_repository_or_app_live_operator' : null,
+    can_execute_domain_action: false,
+    can_create_owner_receipt: false,
+    can_close_domain_ready: false,
+    authority_boundary: authorityBoundary(drilldown),
+  };
+}
+
 function buildAttentionFirstPayload(drilldown: JsonRecord) {
   const actions = [...safeActionRoutes(drilldown)].sort((left, right) => (
     actionPriority(left) - actionPriority(right)
@@ -445,6 +527,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     advisory: advisoryItems(drilldown),
     missing_evidence: missingEvidenceItems(drilldown),
     evidence_after_contract: evidenceAfterContractAttention(drilldown),
+    evidence_next_steps: evidenceNextSteps(drilldown),
     next_safe_action: summarizeSafeAction(nextAction),
     additional_safe_action_count: Math.max(actions.length - (nextAction ? 1 : 0), 0),
     provider_health: providerHealth(drilldown),

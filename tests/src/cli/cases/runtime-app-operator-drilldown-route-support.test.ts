@@ -55,8 +55,14 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     providerContinuousProof: {},
     domainProjectionIngestion: {},
     domainManifestProjects: [],
-  }) as unknown as { attention_first_payload: { evidence_after_contract: Record<string, unknown> } };
+  }) as unknown as {
+    attention_first_payload: {
+      evidence_after_contract: Record<string, unknown>;
+      evidence_next_steps: Record<string, unknown>;
+    };
+  };
   const evidenceAfterContract = summaryDrilldown.attention_first_payload.evidence_after_contract;
+  const evidenceNextSteps = summaryDrilldown.attention_first_payload.evidence_next_steps;
   assert.equal(
     evidenceAfterContract.surface_kind,
     'opl_app_drilldown_evidence_after_contract_attention',
@@ -78,4 +84,9 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     (evidenceAfterContract.authority_boundary as Record<string, unknown>).route_support_closes_domain_ready,
     false,
   );
+  assert.equal(evidenceNextSteps.surface_kind, 'opl_app_drilldown_evidence_next_steps');
+  assert.equal(evidenceNextSteps.total_count, 0);
+  assert.equal(evidenceNextSteps.next_owner, null);
+  assert.equal(evidenceNextSteps.can_execute_domain_action, false);
+  assert.equal(evidenceNextSteps.can_create_owner_receipt, false);
 });
