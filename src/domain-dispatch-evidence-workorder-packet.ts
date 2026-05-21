@@ -294,3 +294,38 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     worklist_item_is_completion_claim: false,
   }));
 }
+
+export function compactDomainDispatchEvidenceWorkorderGroupAttentionItems(
+  packet: ReturnType<typeof buildDomainDispatchEvidenceWorkorderPacket>,
+  limit = 5,
+  refLimit = 3,
+) {
+  return packet.domain_stage_group_summary.groups.slice(0, limit).map((group) => ({
+    group_id: group.group_id,
+    canonical_domain_id: group.canonical_domain_id,
+    stage_id: group.stage_id,
+    route_domain_ids: group.route_domain_ids,
+    route_domain_id_policy: group.route_domain_id_policy,
+    workorder_count: group.workorder_count,
+    stage_attempt_count: group.stage_attempt_count,
+    sample_stage_attempt_ids: group.stage_attempt_ids.slice(0, refLimit),
+    stage_attempt_id_omitted_count: Math.max(group.stage_attempt_ids.length - refLimit, 0),
+    sample_action_refs: group.action_refs.slice(0, refLimit),
+    action_ref_omitted_count: Math.max(group.action_refs.length - refLimit, 0),
+    required_operator_payload_ref_count: group.required_operator_payload_ref_count,
+    required_operator_payload_refs: group.required_operator_payload_refs,
+    required_evidence_ref_count: group.required_evidence_ref_count,
+    sample_required_evidence_refs: group.required_evidence_refs.slice(0, refLimit),
+    required_evidence_ref_omitted_count:
+      Math.max(group.required_evidence_refs.length - refLimit, 0),
+    payload_owner: group.payload_owner,
+    route_requires_domain_or_app_payload: group.route_requires_domain_or_app_payload,
+    can_execute_domain_action: false,
+    can_create_owner_receipt: false,
+    can_close_domain_ready: false,
+    can_claim_production_ready: false,
+    full_detail_section: 'domain_dispatch_evidence',
+    worklist_item_is_completion_claim: false,
+    authority_boundary: group.authority_boundary,
+  }));
+}

@@ -2,6 +2,7 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
+  compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from '../domain-dispatch-evidence-workorder-packet.ts';
 import { canonicalOwnerId } from '../evidence-envelope.ts';
 
@@ -479,6 +480,10 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       numberValue(summary.domain_dispatch_attention_missing_owner_chain_count),
     domain_dispatch_evidence_workorder_packet_summary:
       domainDispatchWorkorders.summary,
+    domain_dispatch_evidence_workorder_group_attention_policy:
+      'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    domain_dispatch_evidence_workorder_group_attention_items:
+      domainDispatchWorkorders.group_attention_items,
     domain_dispatch_evidence_workorder_attention_items:
       domainDispatchWorkorders.attention_items,
     runtime_manager_route_support_task_kind_count: routeSupportTaskKindCount,
@@ -512,6 +517,7 @@ function domainDispatchEvidenceWorkorders(drilldown: JsonRecord) {
   const packet = buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
   return {
     summary: packet.summary,
+    group_attention_items: compactDomainDispatchEvidenceWorkorderGroupAttentionItems(packet),
     attention_items: compactDomainDispatchEvidenceWorkorderAttentionItems(packet),
   };
 }
@@ -606,6 +612,9 @@ function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
 
 function evidenceNextSteps(drilldown: JsonRecord) {
   const attention = evidenceAfterContractAttention(drilldown);
+  const domainDispatchGroups = recordList(
+    attention.domain_dispatch_evidence_workorder_group_attention_items,
+  );
   const domainDispatchWorkorders = recordList(attention.domain_dispatch_evidence_workorder_attention_items);
   const ownerPayloadGroups = recordList(attention.owner_payload_groups);
   const missingEvidence = missingEvidenceItems(drilldown);
@@ -630,29 +639,59 @@ function evidenceNextSteps(drilldown: JsonRecord) {
       full_detail_section: 'domain_dispatch_evidence',
     });
   }
-  for (const workorder of domainDispatchWorkorders) {
+  for (const group of domainDispatchGroups) {
     steps.push({
-      step_kind: 'domain_dispatch_evidence_workorder',
-      owner: stringValue(workorder.payload_owner) ?? 'domain_repository_or_app_live_operator',
-      status: 'needs_domain_or_app_live_refs_payload',
-      domain_id: stringValue(workorder.domain_id),
-      route_domain_id: stringValue(workorder.route_domain_id) ?? stringValue(workorder.domain_id),
-      canonical_domain_id: stringValue(workorder.canonical_domain_id),
-      domain_id_policy: stringValue(workorder.domain_id_policy),
-      stage_id: stringValue(workorder.stage_id),
-      stage_attempt_id: stringValue(workorder.stage_attempt_id),
-      action_id: stringValue(workorder.action_id),
-      next_safe_action_ref: stringValue(workorder.next_safe_action_ref),
-      route_requires_domain_or_app_payload:
-        workorder.route_requires_domain_or_app_payload === true,
-      required_operator_payload_refs: stringList(workorder.required_operator_payload_refs),
-      required_evidence_refs: stringList(workorder.required_evidence_refs),
+      step_kind: 'domain_dispatch_evidence_group_workorder',
+      owner: stringValue(group.payload_owner) ?? 'domain_repository_or_app_live_operator',
+      status: 'needs_domain_or_app_live_refs_payload_by_owner_stage_group',
+      canonical_domain_id: stringValue(group.canonical_domain_id),
+      stage_id: stringValue(group.stage_id),
+      route_domain_ids: stringList(group.route_domain_ids),
+      route_domain_id_policy: stringValue(group.route_domain_id_policy),
+      workorder_count: numberValue(group.workorder_count),
+      stage_attempt_count: numberValue(group.stage_attempt_count),
+      sample_stage_attempt_ids: stringList(group.sample_stage_attempt_ids),
+      stage_attempt_id_omitted_count: numberValue(group.stage_attempt_id_omitted_count),
+      sample_action_refs: stringList(group.sample_action_refs),
+      action_ref_omitted_count: numberValue(group.action_ref_omitted_count),
+      required_operator_payload_ref_count: numberValue(group.required_operator_payload_ref_count),
+      required_operator_payload_refs: stringList(group.required_operator_payload_refs),
+      required_evidence_ref_count: numberValue(group.required_evidence_ref_count),
+      sample_required_evidence_refs: stringList(group.sample_required_evidence_refs),
+      required_evidence_ref_omitted_count:
+        numberValue(group.required_evidence_ref_omitted_count),
       can_execute_domain_action: false,
       can_create_owner_receipt: false,
       can_close_domain_ready: false,
       can_claim_production_ready: false,
       full_detail_section: 'domain_dispatch_evidence',
     });
+  }
+  if (domainDispatchGroups.length === 0) {
+    for (const workorder of domainDispatchWorkorders) {
+      steps.push({
+        step_kind: 'domain_dispatch_evidence_workorder',
+        owner: stringValue(workorder.payload_owner) ?? 'domain_repository_or_app_live_operator',
+        status: 'needs_domain_or_app_live_refs_payload',
+        domain_id: stringValue(workorder.domain_id),
+        route_domain_id: stringValue(workorder.route_domain_id) ?? stringValue(workorder.domain_id),
+        canonical_domain_id: stringValue(workorder.canonical_domain_id),
+        domain_id_policy: stringValue(workorder.domain_id_policy),
+        stage_id: stringValue(workorder.stage_id),
+        stage_attempt_id: stringValue(workorder.stage_attempt_id),
+        action_id: stringValue(workorder.action_id),
+        next_safe_action_ref: stringValue(workorder.next_safe_action_ref),
+        route_requires_domain_or_app_payload:
+          workorder.route_requires_domain_or_app_payload === true,
+        required_operator_payload_refs: stringList(workorder.required_operator_payload_refs),
+        required_evidence_refs: stringList(workorder.required_evidence_refs),
+        can_execute_domain_action: false,
+        can_create_owner_receipt: false,
+        can_close_domain_ready: false,
+        can_claim_production_ready: false,
+        full_detail_section: 'domain_dispatch_evidence',
+      });
+    }
   }
   if (numberValue(attention.evidence_envelope_attention_count) > 0) {
     steps.push({
