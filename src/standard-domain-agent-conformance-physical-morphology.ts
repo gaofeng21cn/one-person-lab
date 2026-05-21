@@ -55,7 +55,7 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
 
 const REQUIRED_RCA_PHYSICAL_SURFACES = [
   'mcp_product_entry_domain_entry',
-  'product_entry_session_store',
+  'product_entry_session_snapshot_refs_adapter',
   'runtime_watch_projection',
   'product_sidecar_guarded_actions',
   'operator_evidence_stability_projection',
@@ -301,7 +301,7 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
     status: blockers.length === 0 ? 'declared' : 'blocked',
     policy_sources: ['contracts/physical_source_morphology_policy.json'],
     required_parity_gates: [
-      'mcp_product_entry_session_store_runtime_watch_sidecar_operator_evidence_classified',
+      'mcp_product_entry_session_snapshot_refs_adapter_runtime_watch_sidecar_operator_evidence_classified',
       'visual_authority_functions_not_generic_runtime',
       'legacy_managed_runtime_gateway_names_tombstoned',
     ],

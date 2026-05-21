@@ -438,7 +438,7 @@ function configureReadyRcaMorphology(repoDir: string) {
     status: 'active_source_classification_policy_landed',
     active_surface_classifications: [
       'mcp_product_entry_domain_entry',
-      'product_entry_session_store',
+      'product_entry_session_snapshot_refs_adapter',
       'runtime_watch_projection',
       'product_sidecar_guarded_actions',
       'operator_evidence_stability_projection',
