@@ -140,6 +140,41 @@ function scaleoutTargetRefs(scaleoutEvidence: JsonRecord) {
   }));
 }
 
+function targetHasAnyRef(target: JsonRecord, field: string) {
+  return stringList(target[field]).length > 0;
+}
+
+function countTargetsByRef(targets: JsonRecord[], field: string) {
+  return targets.filter((target) => targetHasAnyRef(target, field)).length;
+}
+
+function countTargetsWithOwnerReceiptOrBlocker(targets: JsonRecord[]) {
+  return targets.filter((target) =>
+    targetHasAnyRef(target, 'target_agent_owner_receipt_refs')
+    || targetHasAnyRef(target, 'typed_blocker_refs')
+  ).length;
+}
+
+function countBooleanClaims(targets: JsonRecord[], field: string) {
+  return targets.filter((target) => target[field] === true).length;
+}
+
+function evidenceAfterContractStatus(targets: JsonRecord[]) {
+  if (targets.length === 0) {
+    return 'not_observed';
+  }
+  const ownerOrBlockerCount = countTargetsWithOwnerReceiptOrBlocker(targets);
+  const agentLabCount = countTargetsByRef(targets, 'agent_lab_result_refs');
+  const noForbiddenWriteCount = countTargetsByRef(targets, 'no_forbidden_write_proof_refs');
+  const cleanupCount = countTargetsByRef(targets, 'cleanup_closeout_refs');
+  return ownerOrBlockerCount === targets.length
+    && agentLabCount === targets.length
+    && noForbiddenWriteCount === targets.length
+    && cleanupCount === targets.length
+    ? 'target_owner_receipt_or_typed_blocker_refs_projected'
+    : 'target_evidence_refs_incomplete';
+}
+
 function firstString(values: unknown) {
   return stringList(values)[0] ?? null;
 }
@@ -373,6 +408,15 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
         app_workbench_section_count: 0,
         scaleout_target_count: 0,
         scaleout_status: null,
+        evidence_after_contract_status: 'not_observed',
+        scaleout_owner_receipt_target_count: 0,
+        scaleout_typed_blocker_target_count: 0,
+        scaleout_owner_receipt_or_typed_blocker_target_count: 0,
+        scaleout_agent_lab_result_target_count: 0,
+        scaleout_no_forbidden_write_target_count: 0,
+        scaleout_cleanup_closeout_target_count: 0,
+        scaleout_domain_ready_claim_count: 0,
+        scaleout_default_promotion_claim_count: 0,
         patch_loop_ref_count: 0,
         patch_loop_target_count: 0,
         patch_loop_closed_count: 0,
@@ -398,6 +442,7 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
   const status = resolvedCount === files.length ? 'resolved' : 'blocked';
   const omaSections = buildOmaSections({ registration, appProjection, scaleoutEvidence });
   const scaleoutCloseout = record(scaleoutEvidence.multi_target_scaleout_closeout);
+  const scaleoutTargets = recordList(scaleoutCloseout.target_agents);
   const patchLoopCloseout = record(omaSections.patch_loop_closeout);
   const patchLoopTargets = recordList(patchLoopCloseout.targets);
 
@@ -416,8 +461,20 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
       consumed_contract_count: files.length,
       resolved_contract_count: resolvedCount,
       app_workbench_section_count: recordList(appProjection.workbench_sections).length,
-      scaleout_target_count: recordList(scaleoutCloseout.target_agents).length,
+      scaleout_target_count: scaleoutTargets.length,
       scaleout_status: optionalString(scaleoutCloseout.status) ?? optionalString(scaleoutEvidence.evidence_status),
+      evidence_after_contract_status: evidenceAfterContractStatus(scaleoutTargets),
+      scaleout_owner_receipt_target_count: countTargetsByRef(scaleoutTargets, 'target_agent_owner_receipt_refs'),
+      scaleout_typed_blocker_target_count: countTargetsByRef(scaleoutTargets, 'typed_blocker_refs'),
+      scaleout_owner_receipt_or_typed_blocker_target_count:
+        countTargetsWithOwnerReceiptOrBlocker(scaleoutTargets),
+      scaleout_agent_lab_result_target_count: countTargetsByRef(scaleoutTargets, 'agent_lab_result_refs'),
+      scaleout_no_forbidden_write_target_count:
+        countTargetsByRef(scaleoutTargets, 'no_forbidden_write_proof_refs'),
+      scaleout_cleanup_closeout_target_count: countTargetsByRef(scaleoutTargets, 'cleanup_closeout_refs'),
+      scaleout_domain_ready_claim_count: countBooleanClaims(scaleoutTargets, 'domain_ready_claimed'),
+      scaleout_default_promotion_claim_count:
+        countBooleanClaims(scaleoutTargets, 'default_promotion_claimed'),
       patch_loop_ref_count: recordList(patchLoopCloseout.refs).length,
       patch_loop_target_count: patchLoopTargets.length,
       patch_loop_closed_count: patchLoopTargets.filter((target) =>

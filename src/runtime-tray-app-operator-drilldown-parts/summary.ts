@@ -265,6 +265,24 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     opl_meta_agent_resolved_contract_count: numberValue(oplMetaAgentSummary.resolved_contract_count),
     opl_meta_agent_app_workbench_section_count: numberValue(oplMetaAgentSummary.app_workbench_section_count),
     opl_meta_agent_scaleout_target_count: numberValue(oplMetaAgentSummary.scaleout_target_count),
+    opl_meta_agent_evidence_after_contract_status:
+      oplMetaAgentSummary.evidence_after_contract_status ?? null,
+    opl_meta_agent_scaleout_owner_receipt_target_count:
+      numberValue(oplMetaAgentSummary.scaleout_owner_receipt_target_count),
+    opl_meta_agent_scaleout_typed_blocker_target_count:
+      numberValue(oplMetaAgentSummary.scaleout_typed_blocker_target_count),
+    opl_meta_agent_scaleout_owner_receipt_or_typed_blocker_target_count:
+      numberValue(oplMetaAgentSummary.scaleout_owner_receipt_or_typed_blocker_target_count),
+    opl_meta_agent_scaleout_agent_lab_result_target_count:
+      numberValue(oplMetaAgentSummary.scaleout_agent_lab_result_target_count),
+    opl_meta_agent_scaleout_no_forbidden_write_target_count:
+      numberValue(oplMetaAgentSummary.scaleout_no_forbidden_write_target_count),
+    opl_meta_agent_scaleout_cleanup_closeout_target_count:
+      numberValue(oplMetaAgentSummary.scaleout_cleanup_closeout_target_count),
+    opl_meta_agent_scaleout_domain_ready_claim_count:
+      numberValue(oplMetaAgentSummary.scaleout_domain_ready_claim_count),
+    opl_meta_agent_scaleout_default_promotion_claim_count:
+      numberValue(oplMetaAgentSummary.scaleout_default_promotion_claim_count),
     opl_meta_agent_patch_loop_ref_count: numberValue(oplMetaAgentSummary.patch_loop_ref_count),
     opl_meta_agent_patch_loop_target_count: numberValue(oplMetaAgentSummary.patch_loop_target_count),
     opl_meta_agent_patch_loop_closed_count: numberValue(oplMetaAgentSummary.patch_loop_closed_count),
