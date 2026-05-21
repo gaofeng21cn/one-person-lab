@@ -22,12 +22,12 @@
 6. `verified_static_core` 只覆盖 identity、owner、refs、scope、composition 与 forbidden-authority 约束。
 7. `runtime_enforced_boundary` 覆盖 AI 输出、人类决策、外部系统、artifact mutation、memory writeback 与 domain verdict。
 8. Hard blocker 只覆盖启动安全、越权、关键 runtime event 记录缺失、composition 不满足、hard human gate 或 executor binding 缺失。
-9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号折叠为 `opl stages readiness --domain <domain>` 的 advisory refs，不作为独立 launch-authority schema。
+9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号只进入 `opl framework readiness --family-defaults --json` 的 attention / drilldown refs；需要 stage 级展开时再读 `opl stages readiness --domain <domain>`，不作为独立 launch-authority schema 或默认真相入口。
 10. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref。
 
 ## Surface Budget
 
-当前新增 surface 的默认治理规则由 `contracts/opl-framework/surface-budget-policy.json` 冻结。它把 OPL 默认面限制在 `Minimal Trust Kernel + Attention Entry + Diagnostic Lenses`：普通 operator / App 默认看 attention entry，stage 默认入口是 `opl stages readiness --domain <domain>`；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 只作为显式 diagnostic drilldown。
+当前新增 surface 的默认治理规则由 `contracts/opl-framework/surface-budget-policy.json` 冻结。它把 OPL 默认面限制在 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`：普通 operator / App 默认看 `opl framework readiness --family-defaults --json`；`stages readiness`、`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 只作为显式 diagnostic drilldown。
 
 新增能力只有满足以下任一条件，才允许升级为 default surface：影响 launch safety、影响 authority boundary、影响 evidence / replay / audit / route-back，或已经被 App / runtime 反复消费。升级为 hard gate 还必须证明缺失会造成错误启动、越权或不可审计 / 不可恢复。其他外部学习点、论文模式、单消费者诊断和 workflow preference 只能进入 refs、warning、diagnostic lens、reference 或 history。
 
