@@ -316,6 +316,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       numberValue(standardAgentTemplateSummary.proof_command_count),
     standard_agent_template_consumption_app_operator_ref_count:
       numberValue(standardAgentTemplateSummary.app_operator_consumable_ref_count),
+    standard_agent_template_consumption_default_sample_count:
+      numberValue(standardAgentTemplateSummary.default_consumption_sample_count),
+    standard_agent_template_consumption_repeat_supported:
+      standardAgentTemplateSummary.repeat_consumption_supported === true,
     standard_agent_template_consumption_domain_ready_claim_count:
       numberValue(standardAgentTemplateSummary.domain_ready_claim_count),
     standard_agent_template_consumption_production_ready_claim_count:

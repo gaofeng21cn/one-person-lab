@@ -555,6 +555,12 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
       ...drilldown,
       detail_level: 'full',
       projection_detail_policy: 'full_refs_explicit_request',
+      attention_first_payload: {
+        ...buildAttentionFirstPayload(drilldown),
+        payload_policy:
+          'full_detail_attention_overlay_with_complete_refs_no_domain_ready_claim',
+        full_detail_args: [],
+      },
     };
     return {
       ...fullDrilldown,

@@ -191,10 +191,12 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     assert.equal(
       summaryDrilldown.summary.standard_agent_template_consumption_status,
-      'explicit_proof_command_available',
+      'explicit_repeat_consumption_proof_command_available',
     );
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_proof_command_count, 1);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_app_operator_ref_count, 1);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_default_sample_count, 3);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_repeat_supported, true);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_domain_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_production_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_artifact_authority_claim_count, 0);
@@ -438,6 +440,19 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     });
     const fullDrilldown = fullOutput.app_operator_drilldown;
     assert.equal(fullDrilldown.detail_level, 'full');
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract.surface_kind,
+      'opl_app_drilldown_evidence_after_contract_attention',
+    );
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract.domain_dispatch_attention_count,
+      fullDrilldown.summary.domain_dispatch_attention_count,
+    );
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract.authority_boundary.attention_count_is_hard_blocker,
+      false,
+    );
+    assert.deepEqual(fullDrilldown.attention_first_payload.full_detail_args, []);
     assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.status, metaAgentBound ? 'resolved' : 'not_bound');
     assert.equal(
       fullDrilldown.standard_agent_template_consumption_refs.surface_kind,
@@ -446,6 +461,18 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.deepEqual(
       fullDrilldown.standard_agent_template_consumption_refs.proof_command,
       ['agents', 'scaffold', '--consumption-evidence'],
+    );
+    assert.deepEqual(
+      fullDrilldown.standard_agent_template_consumption_refs.default_consumption_sample_domain_ids,
+      ['award-foundry', 'thesis-foundry', 'review-foundry'],
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.summary.default_consumption_sample_count,
+      3,
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.summary.repeat_consumption_supported,
+      true,
     );
     assert.equal(
       fullDrilldown.standard_agent_template_consumption_refs.authority_boundary.can_claim_domain_ready,

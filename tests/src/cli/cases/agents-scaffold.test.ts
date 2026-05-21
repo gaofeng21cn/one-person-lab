@@ -512,6 +512,58 @@ test('agents scaffold consumption evidence generates and validates an ephemeral 
     'does_not_claim_production_ready',
     'does_not_authorize_quality_or_export',
   ]);
+  assert.equal(evidence.consumption_cohort.sample_count, 1);
+  assert.equal(evidence.consumption_cohort.explicit_sample_requested, true);
+  assert.deepEqual(evidence.sample_domain_ids, ['award-foundry']);
+});
+
+test('agents scaffold consumption evidence repeats generate and validate across default new-agent samples', () => {
+  const evidence = runCli([
+    'agents',
+    'scaffold',
+    '--consumption-evidence',
+  ]).standard_domain_agent_template_consumption_evidence;
+
+  assert.equal(evidence.surface_kind, 'opl_standard_agent_template_consumption_evidence');
+  assert.equal(evidence.owner, 'one-person-lab');
+  assert.equal(evidence.status, 'passed');
+  assert.equal(evidence.proof_kind, 'repeat_ephemeral_generate_then_validate_new_agent_skeletons');
+  assert.deepEqual(evidence.sample_domain_ids, [
+    'award-foundry',
+    'thesis-foundry',
+    'review-foundry',
+  ]);
+  assert.equal(evidence.consumption_cohort.sample_count, 3);
+  assert.equal(evidence.consumption_cohort.passed_sample_count, 3);
+  assert.equal(evidence.consumption_cohort.blocked_sample_count, 0);
+  assert.equal(evidence.consumption_cohort.all_samples_passed, true);
+  assert.equal(evidence.consumption_cohort.explicit_sample_requested, false);
+  assert.deepEqual(
+    evidence.consumption_cohort.samples.map((sample: { generated_repo_dir_policy: string }) =>
+      sample.generated_repo_dir_policy
+    ),
+    [
+      'ephemeral_removed_after_validation',
+      'ephemeral_removed_after_validation',
+      'ephemeral_removed_after_validation',
+    ],
+  );
+  assert.deepEqual(
+    evidence.consumption_cohort.samples.map((sample: { validation_summary: { validation_status: string } }) =>
+      sample.validation_summary.validation_status
+    ),
+    ['passed', 'passed', 'passed'],
+  );
+  assert.deepEqual(
+    evidence.consumption_cohort.samples.map((sample: { validation_summary: { default_codex_executor_binding_count: number } }) =>
+      sample.validation_summary.default_codex_executor_binding_count
+    ),
+    [1, 1, 1],
+  );
+  assert.equal(
+    evidence.repeat_consumption_policy,
+    'default_command_runs_a_small_multi_domain_ephemeral_cohort_without_claiming_domain_ready_or_production_ready',
+  );
 });
 
 test('agents scaffold validation blocks empty or unreferenced agent directories', () => {
