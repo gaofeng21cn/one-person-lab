@@ -10,7 +10,9 @@ function closeoutUsage(commandAlias: ProductionCloseoutCommandAlias) {
 }
 
 export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeCommandInput {
-  const commandAlias = rest[0] === 'evidence-worklist' ? 'evidence-worklist' : 'production-closeout';
+  const commandAlias: ProductionCloseoutCommandAlias = rest[0] === 'evidence-worklist'
+    ? 'evidence-worklist'
+    : 'production-closeout';
   let familyDefaults = false;
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let executorKind: 'codex_cli' | undefined;

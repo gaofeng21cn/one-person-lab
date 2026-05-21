@@ -655,14 +655,7 @@ test('agents readiness aggregates structural gates and production evidence tail 
     readiness.summary.agent_readiness_production_evidence_tail_policy,
     'reported_separately_not_a_structural_pass_condition',
   );
-  assert.equal(
-    readiness.summary.deprecated_alias_metadata.production_evidence_tail_count.value,
-    readiness.summary.agent_readiness_production_evidence_tail_count,
-  );
-  assert.equal(
-    readiness.summary.deprecated_alias_metadata.production_evidence_tail_policy.value,
-    readiness.summary.agent_readiness_production_evidence_tail_policy,
-  );
+  assert.equal(Object.hasOwn(readiness.summary, 'deprecated_alias_metadata'), false);
   assert.equal(Object.hasOwn(readiness.summary, 'production_or_domain_ready'), false);
 
   assert.equal(readiness.gates.scaffold_and_conformance.status, 'passed');

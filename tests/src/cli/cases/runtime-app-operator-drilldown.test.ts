@@ -535,10 +535,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_attempt_request_route_count, 1);
     assert.equal(drilldown.summary.app_operator_production_evidence_tail_item_count >= 1, true);
     assert.equal(drilldown.summary.app_operator_production_evidence_tail_open_item_count >= 1, true);
-    assert.equal(
-      drilldown.summary.deprecated_alias_metadata.production_evidence_tail_item_count.alias_for,
-      'app_operator_production_evidence_tail_item_count',
-    );
+    assert.equal(Object.hasOwn(drilldown.summary, 'deprecated_alias_metadata'), false);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
     assert.equal(drilldown.route_graph_refs.refs[0].ref, `/stage_attempt_workbench/attempts/${attemptId}/route_decision_graph`);

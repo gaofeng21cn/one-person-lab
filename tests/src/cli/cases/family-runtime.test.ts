@@ -10,6 +10,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   shellSingleQuote,
   test,
 } from '../helpers.ts';
@@ -87,7 +88,7 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
   }
 });
 
-test('family-runtime production-closeout reports safe-action evidence tail without authority claims', () => {
+test('family-runtime evidence-worklist reports safe-action evidence tail without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-closeout-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
@@ -128,7 +129,7 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
     const report = closeout.family_runtime_production_closeout;
 
     assert.equal(report.surface_kind, 'opl_family_runtime_evidence_worklist');
-    assert.equal(report.command_alias, 'evidence-worklist');
+    assert.equal(report.command, 'evidence-worklist');
     assert.equal(report.closeout_mode, 'dry_run_summary');
     assert.equal(report.worklist_mode, 'refs_only_summary');
     assert.equal(report.detail_level, 'summary');
@@ -168,7 +169,7 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).family_runtime_production_closeout;
     assert.equal(fullCloseout.detail_level, 'full');
-    assert.equal(fullCloseout.command_alias, 'evidence-worklist');
+    assert.equal(fullCloseout.command, 'evidence-worklist');
     assert.equal(
       fullCloseout.closeout_items.some((item: { action_kind: string }) =>
         item.action_kind === 'provider_scheduler_status'
@@ -176,7 +177,7 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
       true,
     );
 
-    const compat = runCli([
+    const retiredAliasFailure = runCliFailure([
       'family-runtime',
       'production-closeout',
       '--family-defaults',
@@ -187,10 +188,9 @@ test('family-runtime production-closeout reports safe-action evidence tail witho
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).family_runtime_production_closeout;
-    assert.equal(compat.command_alias, 'production-closeout');
-    assert.equal(compat.deprecated_alias_of, 'evidence-worklist');
-    assert.equal(compat.summary.production_closeout_open_safe_action_item_count.deprecated_alias_of, 'open_worklist_item_count');
+    });
+    assert.equal(retiredAliasFailure.payload.error.code, 'unknown_command');
+    assert.match(retiredAliasFailure.payload.error.message, /Unknown family-runtime subcommand: production-closeout/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });

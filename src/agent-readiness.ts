@@ -218,18 +218,6 @@ export function buildAgentReadinessSummary(args: string[]) {
         agent_readiness_production_evidence_tail_count: tailCount,
         agent_readiness_production_evidence_tail_policy:
           'reported_separately_not_a_structural_pass_condition',
-        deprecated_alias_metadata: {
-          production_evidence_tail_count: {
-            deprecated: true,
-            alias_for: 'agent_readiness_production_evidence_tail_count',
-            value: tailCount,
-          },
-          production_evidence_tail_policy: {
-            deprecated: true,
-            alias_for: 'agent_readiness_production_evidence_tail_policy',
-            value: 'reported_separately_not_a_structural_pass_condition',
-          },
-        },
       },
       gates: {
         scaffold_and_conformance: gate(
