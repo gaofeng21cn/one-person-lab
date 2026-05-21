@@ -119,6 +119,42 @@ function limitedItems<T>(items: T[]) {
   };
 }
 
+function balancedAttentionItems(items: JsonRecord[]) {
+  const selectedIndexes = new Set<number>();
+  const seenKinds = new Set<string>();
+  const selected: JsonRecord[] = [];
+  for (const [index, item] of items.entries()) {
+    const kind = stringValue(item.step_kind) ?? `unknown:${index}`;
+    if (seenKinds.has(kind)) {
+      continue;
+    }
+    seenKinds.add(kind);
+    selectedIndexes.add(index);
+    selected.push(item);
+    if (selected.length >= DEFAULT_ATTENTION_ITEM_LIMIT) {
+      break;
+    }
+  }
+  if (selected.length < DEFAULT_ATTENTION_ITEM_LIMIT) {
+    for (const [index, item] of items.entries()) {
+      if (selectedIndexes.has(index)) {
+        continue;
+      }
+      selectedIndexes.add(index);
+      selected.push(item);
+      if (selected.length >= DEFAULT_ATTENTION_ITEM_LIMIT) {
+        break;
+      }
+    }
+  }
+  return {
+    items: selected,
+    omitted_count: Math.max(items.length - selected.length, 0),
+    total_count: items.length,
+    selection_policy: 'balanced_first_item_per_step_kind_then_original_order_refs_only',
+  };
+}
+
 function attentionCount(item: JsonRecord) {
   return numberValue(item.open_envelope_count) + numberValue(item.blocked_envelope_count);
 }
@@ -682,13 +718,15 @@ function evidenceNextSteps(drilldown: JsonRecord) {
       full_detail_section: 'stage_production_evidence',
     });
   }
+  const balancedSteps = balancedAttentionItems(steps);
   return {
     surface_kind: 'opl_app_drilldown_evidence_next_steps',
     projection_policy:
       'operator_guidance_only_no_safe_action_creation_no_domain_ready_claim',
-    items: steps.slice(0, DEFAULT_ATTENTION_ITEM_LIMIT),
-    omitted_count: Math.max(steps.length - DEFAULT_ATTENTION_ITEM_LIMIT, 0),
-    total_count: steps.length,
+    selection_policy: balancedSteps.selection_policy,
+    items: balancedSteps.items,
+    omitted_count: balancedSteps.omitted_count,
+    total_count: balancedSteps.total_count,
     next_owner: steps.length > 0 ? 'domain_repository_or_app_live_operator' : null,
     can_execute_domain_action: false,
     can_create_owner_receipt: false,

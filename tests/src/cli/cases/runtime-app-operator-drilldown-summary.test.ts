@@ -393,6 +393,10 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       'opl_app_drilldown_evidence_next_steps',
     );
     assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_next_steps.selection_policy,
+      'balanced_first_item_per_step_kind_then_original_order_refs_only',
+    );
+    assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.next_owner,
       'domain_repository_or_app_live_operator',
     );
@@ -408,6 +412,12 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.some(
         (item: { step_kind: string }) => item.step_kind === 'evidence_envelope_scaleout',
       ),
+      true,
+    );
+    assert.equal(
+      new Set(summaryDrilldown.attention_first_payload.evidence_next_steps.items.map(
+        (item: { step_kind: string }) => item.step_kind,
+      )).size > 1,
       true,
     );
     const ownerPayloadStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
@@ -446,14 +456,13 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     const stageMissingStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
       (item: { step_kind: string }) => item.step_kind === 'stage_missing_evidence_followthrough',
     );
-    if (stageMissingStep) {
-      assert.equal(stageMissingStep.owner, stageMissingStep.owner.toLowerCase());
-      assert.equal(stageMissingStep.owner.includes('-'), true);
-      assert.equal(
-        stageMissingStep.owner_id_policy,
-        'canonical_owner_id_source_owner_id_for_diagnostics_only',
-      );
-    }
+    assert.equal(Boolean(stageMissingStep), true);
+    assert.equal(stageMissingStep.owner, stageMissingStep.owner.toLowerCase());
+    assert.equal(stageMissingStep.owner.includes('-'), true);
+    assert.equal(
+      stageMissingStep.owner_id_policy,
+      'canonical_owner_id_source_owner_id_for_diagnostics_only',
+    );
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.length <= 5,
       true,
