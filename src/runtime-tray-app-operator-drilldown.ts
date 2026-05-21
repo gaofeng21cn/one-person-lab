@@ -1215,7 +1215,6 @@ export function buildAppOperatorDrilldown(input: {
       oplMetaAgentRegistry,
       standardAgentTemplateConsumption,
       evidenceEnvelope,
-      routeTransitionDrilldown: routeTransitionDrilldownRefs,
     }),
     route_transition_drilldown_stage_attempt_count:
       record(routeTransitionDrilldownRefs.summary).stage_attempt_count,
