@@ -67,6 +67,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function countValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
 function uniqueStringList(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
 }
@@ -717,8 +721,19 @@ export async function runFamilyRuntimeEvidenceWorklist(
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
   const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
+  const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const evidenceEnvelope = record(drilldown.evidence_envelope);
-  const counts = worklistCounts(worklistItems, openItems, closedItems, nextActionLedger);
+  const counts = {
+    ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
+    stage_source_scope_missing_workorder_count:
+      countValue(stageEvidenceWorkorderSummary.source_scope_missing_workorder_count),
+    stage_runtime_event_missing_workorder_count:
+      countValue(stageEvidenceWorkorderSummary.runtime_event_missing_workorder_count),
+    stage_source_scope_missing_ref_count:
+      countValue(stageEvidenceWorkorderSummary.source_scope_missing_ref_count),
+    stage_runtime_event_missing_ref_count:
+      countValue(stageEvidenceWorkorderSummary.runtime_event_missing_ref_count),
+  };
   const detailLevel = input.detailLevel ?? 'summary';
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
@@ -747,6 +762,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     open_worklist_item_count: openItems.length,
     closed_refs_only_item_count: closedItems.length,
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
+    stage_evidence_workorder_packet_summary: stageEvidenceWorkorderPacket.summary,
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',

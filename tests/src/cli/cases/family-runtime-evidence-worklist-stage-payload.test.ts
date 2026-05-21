@@ -181,6 +181,14 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
       worklist.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count > 0,
       true,
     );
+    assert.equal(worklist.summary.stage_source_scope_missing_workorder_count > 0, true);
+    assert.equal(worklist.summary.stage_runtime_event_missing_workorder_count > 0, true);
+    assert.equal(worklist.summary.stage_source_scope_missing_ref_count > 0, true);
+    assert.equal(worklist.summary.stage_runtime_event_missing_ref_count > 0, true);
+    assert.equal(
+      worklist.stage_evidence_workorder_packet_summary.source_scope_missing_workorder_count,
+      worklist.summary.stage_source_scope_missing_workorder_count,
+    );
     assert.equal(worklist.stage_evidence_workorder_packet.summary.workorder_count > 0, true);
     assert.equal(
       worklist.stage_evidence_workorder_packet.summary.source_scope_missing_workorder_count > 0,

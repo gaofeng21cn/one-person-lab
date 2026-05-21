@@ -43,6 +43,22 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.stage_receipt_freshness_tail_open_count,
   );
   assert.equal(
+    readiness.attention_first_payload.summary.stage_source_scope_missing_workorder_count,
+    readiness.summary.stage_source_scope_missing_workorder_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.stage_runtime_event_missing_workorder_count,
+    readiness.summary.stage_runtime_event_missing_workorder_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.stage_source_scope_missing_ref_count,
+    readiness.summary.stage_source_scope_missing_ref_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.stage_runtime_event_missing_ref_count,
+    readiness.summary.stage_runtime_event_missing_ref_count,
+  );
+  assert.equal(
     readiness.attention_first_payload.summary.evidence_envelope_open_count,
     readiness.summary.evidence_envelope_open_count,
   );
@@ -140,6 +156,30 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(
     readiness.summary.stage_receipt_freshness_tail_open_count,
     readiness.evidence_tails.stage_receipt_freshness_tail.open_item_count,
+  );
+  assert.equal(
+    readiness.summary.stage_source_scope_missing_workorder_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.source_scope_missing_workorder_count,
+  );
+  assert.equal(
+    readiness.summary.stage_runtime_event_missing_workorder_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.runtime_event_missing_workorder_count,
+  );
+  assert.equal(
+    readiness.summary.stage_source_scope_missing_ref_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.source_scope_missing_ref_count,
+  );
+  assert.equal(
+    readiness.summary.stage_runtime_event_missing_ref_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.runtime_event_missing_ref_count,
+  );
+  assert.equal(
+    readiness.evidence_worklist.stage_source_scope_missing_workorder_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.source_scope_missing_workorder_count,
+  );
+  assert.equal(
+    readiness.evidence_worklist.stage_runtime_event_missing_workorder_count,
+    readiness.evidence_tails.stage_receipt_freshness_tail.runtime_event_missing_workorder_count,
   );
   assert.equal(
     readiness.evidence_worklist.open_worklist_item_count,

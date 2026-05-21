@@ -337,6 +337,10 @@ function frameworkAttentionFirstPayload(input: {
   agentStructuralEvidenceTailCount: number;
   appLiveEvidenceTailCount: number;
   stageReceiptFreshnessTailCount: number;
+  stageSourceScopeMissingWorkorderCount: number;
+  stageRuntimeEventMissingWorkorderCount: number;
+  stageSourceScopeMissingRefCount: number;
+  stageRuntimeEventMissingRefCount: number;
   evidenceEnvelopeOpenCount: number;
   evidenceEnvelopeBlockedCount: number;
   domainDispatchAttentionCount: number;
@@ -439,6 +443,10 @@ function frameworkAttentionFirstPayload(input: {
       agent_structural_evidence_tail_open_count: input.agentStructuralEvidenceTailCount,
       app_live_evidence_tail_open_count: input.appLiveEvidenceTailCount,
       stage_receipt_freshness_tail_open_count: input.stageReceiptFreshnessTailCount,
+      stage_source_scope_missing_workorder_count: input.stageSourceScopeMissingWorkorderCount,
+      stage_runtime_event_missing_workorder_count: input.stageRuntimeEventMissingWorkorderCount,
+      stage_source_scope_missing_ref_count: input.stageSourceScopeMissingRefCount,
+      stage_runtime_event_missing_ref_count: input.stageRuntimeEventMissingRefCount,
       evidence_envelope_open_count: input.evidenceEnvelopeOpenCount,
       evidence_envelope_blocked_count: input.evidenceEnvelopeBlockedCount,
       evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
@@ -541,6 +549,14 @@ export async function buildFrameworkReadinessSummary(
   const evidenceWorklistOpenCount = countValue(worklistSummary.open_worklist_item_count);
   const stageReceiptFreshnessOpenWorkorderCount =
     countValue(worklistSummary.stage_receipt_freshness_open_workorder_count);
+  const stageSourceScopeMissingWorkorderCount =
+    countValue(worklistSummary.stage_source_scope_missing_workorder_count);
+  const stageRuntimeEventMissingWorkorderCount =
+    countValue(worklistSummary.stage_runtime_event_missing_workorder_count);
+  const stageSourceScopeMissingRefCount =
+    countValue(worklistSummary.stage_source_scope_missing_ref_count);
+  const stageRuntimeEventMissingRefCount =
+    countValue(worklistSummary.stage_runtime_event_missing_ref_count);
   const agentProductionEvidenceTailTotalCount =
     numberValue(agentSummary.agent_readiness_production_evidence_tail_count);
   const agentProductionEvidenceTailLedgerSummary = record(
@@ -624,6 +640,10 @@ export async function buildFrameworkReadinessSummary(
         agentStructuralEvidenceTailCount,
         appLiveEvidenceTailCount,
         stageReceiptFreshnessTailCount,
+        stageSourceScopeMissingWorkorderCount,
+        stageRuntimeEventMissingWorkorderCount,
+        stageSourceScopeMissingRefCount,
+        stageRuntimeEventMissingRefCount,
         evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
         evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
         domainDispatchAttentionCount,
@@ -646,6 +666,10 @@ export async function buildFrameworkReadinessSummary(
         agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,
         app_live_evidence_tail_open_count: appLiveEvidenceTailCount,
         stage_receipt_freshness_tail_open_count: stageReceiptFreshnessTailCount,
+        stage_source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
+        stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
+        stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
+        stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
         evidence_envelope_open_count: readinessEvidenceEnvelopeOpenCount,
         evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
         evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
@@ -696,6 +720,10 @@ export async function buildFrameworkReadinessSummary(
           open_item_count: stageReceiptFreshnessTailCount,
           production_caller_request_open_item_count: stageProductionCallerTailCount,
           receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
+          source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
+          runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
+          source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
+          runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
           blocking_policy: 'operator_worklist_only_without_owner_receipt_or_monitor_freshness_authority',
         },
       },
@@ -780,6 +808,10 @@ export async function buildFrameworkReadinessSummary(
         open_worklist_item_count: evidenceWorklistOpenCount,
         closed_refs_only_item_count: countValue(worklistSummary.closed_refs_only_item_count),
         stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
+        stage_source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
+        stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
+        stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
+        stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
         next_action_item_count: numberValue(worklistSummary.next_action_item_count),
         provider_scheduler_item_count: numberValue(worklistSummary.provider_scheduler_item_count),
         stage_production_caller_item_count: numberValue(worklistSummary.stage_production_caller_item_count),
