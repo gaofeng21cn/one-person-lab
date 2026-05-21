@@ -18,6 +18,7 @@ const EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY = {
   can_authorize_quality_verdict: false,
   can_mutate_artifact_body: false,
   can_write_domain_truth: false,
+  can_promote_default_agent: false,
   can_constrain_executor_reasoning: false,
   can_replace_ai_judgment: false,
 };
@@ -141,7 +142,51 @@ function budget(task: AgentLabTaskManifest) {
       : typeof resourceLimits.max_stage_attempts === 'number'
         ? resourceLimits.max_stage_attempts
         : null,
+    max_tokens: typeof declaredBudget.max_tokens === 'number'
+      ? declaredBudget.max_tokens
+      : typeof resourceLimits.max_tokens === 'number'
+        ? resourceLimits.max_tokens
+        : null,
+    max_cost_usd: typeof declaredBudget.max_cost_usd === 'number'
+      ? declaredBudget.max_cost_usd
+      : typeof resourceLimits.max_cost_usd === 'number'
+        ? resourceLimits.max_cost_usd
+        : null,
     budget_is_launch_guard_only: true,
+  };
+}
+
+function ttl(task: AgentLabTaskManifest) {
+  const declaredTtl = nestedRecord(task, 'ttl') ?? nestedRecord(task, 'lease_ttl') ?? {};
+  const ttlSeconds = typeof declaredTtl.ttl_seconds === 'number'
+    ? declaredTtl.ttl_seconds
+    : typeof declaredTtl.max_age_seconds === 'number'
+      ? declaredTtl.max_age_seconds
+      : null;
+  return {
+    ttl_seconds: ttlSeconds,
+    expires_after_ref: optionalString(declaredTtl.expires_after_ref) ?? null,
+    ttl_is_launch_audit_freshness_only: true,
+  };
+}
+
+function allowedEffects(task: AgentLabTaskManifest) {
+  const declaredEffects = nestedStringList(task, 'allowed_effects');
+  const allowedEffectRefs = declaredEffects.length > 0
+    ? declaredEffects
+    : [
+      'launch_stage_attempt',
+      'write_executor_receipt_ref',
+    ];
+  return {
+    allowed_effect_refs: allowedEffectRefs,
+    can_launch_stage_attempt: allowedEffectRefs.includes('launch_stage_attempt'),
+    can_write_executor_receipt_ref: allowedEffectRefs.includes('write_executor_receipt_ref'),
+    can_write_domain_truth: false,
+    can_authorize_quality_verdict: false,
+    can_mutate_artifact_body: false,
+    can_promote_default_agent: false,
+    effects_are_launch_audit_receipt_only: true,
   };
 }
 
@@ -176,6 +221,22 @@ function apertureForTask(task: AgentLabTaskManifest) {
     'closeout_receipt_ref_recording',
     ...nestedStringList(task, 'required_capabilities'),
   ]);
+  const ttlModel = ttl(task);
+  const budgetModel = budget(task);
+  const allowedEffectsModel = allowedEffects(task);
+  const riskLaneValue = riskLane(task);
+  const leaseRef = `executor-capability-lease:${stableId('oaleclease', [
+    task.task_id,
+    kind,
+    task.environment,
+    task.trajectory.stage_attempt_refs,
+    expectedReceiptRefs,
+    requiredCapabilities,
+    budgetModel,
+    ttlModel,
+    allowedEffectsModel.allowed_effect_refs,
+    riskLaneValue,
+  ])}`;
 
   return {
     task_id: task.task_id,
@@ -189,6 +250,51 @@ function apertureForTask(task: AgentLabTaskManifest) {
       expectedReceiptRefs,
       requiredCapabilities,
     ]),
+    executor_capability_lease: {
+      lease_kind: 'executor_capability_lease',
+      lease_ref: leaseRef,
+      issued_by: 'opl_runtime',
+      lease_status: 'runtime_issued',
+      executor_kind: kind,
+      model_reasoning: modelReasoning(task),
+      capabilities: {
+        tool: {
+          tool_call_refs: task.trajectory.tool_call_refs,
+          required_capability_refs: capabilityRefs(task),
+          can_execute_tools: task.trajectory.tool_call_refs.length > 0,
+        },
+        network: {
+          network_policy: task.environment.network_policy,
+          network_access_declared: task.environment.network_policy !== 'offline',
+        },
+        sandbox: {
+          sandbox_policy: task.environment.sandbox_policy,
+        },
+        worktree: {
+          workspace_locator_ref: task.environment.workspace_locator_ref,
+          worktree_policy_ref: nestedString(task, 'worktree_policy_ref') ?? null,
+          worktree_capability_declared: Boolean(task.environment.workspace_locator_ref),
+        },
+        subagent: {
+          subagent_refs: nestedStringList(task, 'subagent_refs'),
+          subagent_capability_declared: nestedStringList(task, 'subagent_refs').length > 0,
+        },
+      },
+      budget: budgetModel,
+      allowed_effects: allowedEffectsModel,
+      expected_receipts: {
+        expected_receipt_refs: expectedReceiptRefs,
+        expected_receipt_ref_count: expectedReceiptRefs.length,
+      },
+      ttl: ttlModel,
+      risk_lane: riskLaneValue,
+      constrains_launch_audit_and_receipt_only: true,
+      does_not_constrain_codex_internal_reasoning: true,
+      authority_boundary: {
+        ...EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY,
+        can_write_owner_receipt: false,
+      },
+    },
     executor: {
       executor_kind: kind,
       executor_kind_source: defaultCodex ? 'default_codex_cli' : 'declared_executor_binding',
@@ -228,14 +334,16 @@ function apertureForTask(task: AgentLabTaskManifest) {
         subagent_use_is_executor_runtime_choice: true,
       },
     },
-    budget: budget(task),
+    budget: budgetModel,
     expected_receipt: {
       expected_receipt_refs: expectedReceiptRefs,
       expected_receipt_ref_count: expectedReceiptRefs.length,
       closeout_receipt_required: expectedReceiptRefs.length > 0,
       receipt_is_boundary_evidence_only: true,
     },
-    risk_lane: riskLane(task),
+    ttl: ttlModel,
+    allowed_effects: allowedEffectsModel,
+    risk_lane: riskLaneValue,
     audit_boundary: {
       ...EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY,
       can_write_owner_receipt: false,
@@ -253,19 +361,25 @@ export function buildAgentLabExecutorCapabilityApertureReadModel(input: {
     task.capabilities.worktree.workspace_locator_ref,
   ]));
   return {
-    surface_kind: 'opl_agent_lab_executor_capability_aperture_read_model',
-    version: 'opl-agent-lab.v1.executor-capability-aperture',
+    surface_kind: 'opl_agent_lab_executor_capability_lease_read_model',
+    previous_surface_kind: 'opl_agent_lab_executor_capability_aperture_read_model',
+    lease_kind: 'executor_capability_lease',
+    read_model_role: 'runtime_issued_executor_capability_lease',
+    version: 'opl-agent-lab.v1.executor-capability-lease',
     read_model_id: stableId('oalecam', [
       input.suite.suite_id,
       tasks.map((task) => task.aperture_ref),
+      tasks.map((task) => task.executor_capability_lease.lease_ref),
       tasks.map((task) => task.risk_lane),
     ]),
     suite_id: input.suite.suite_id,
     refs_only: true,
     status: 'ready_for_executor_first_stage_launch_audit',
-    semantic_boundary: 'refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract',
+    semantic_boundary: 'runtime_issued_launch_audit_receipt_boundary_only_not_codex_internal_reasoning_contract',
     default_executor_kind: 'codex_cli',
     codex_first: true,
+    constrains_launch_audit_and_receipt_only: true,
+    does_not_constrain_codex_internal_reasoning: true,
     required_task_fields: [
       'executor_kind',
       'model_reasoning',
@@ -283,6 +397,10 @@ export function buildAgentLabExecutorCapabilityApertureReadModel(input: {
       task_count: tasks.length,
       codex_cli_task_count: tasks.filter((task) => task.executor.executor_kind === 'codex_cli').length,
       non_default_executor_task_count: tasks.filter((task) => task.executor.executor_kind !== 'codex_cli').length,
+      runtime_issued_lease_count: tasks.filter((task) =>
+        task.executor_capability_lease.lease_status === 'runtime_issued').length,
+      expiring_lease_count: tasks.filter((task) =>
+        typeof task.executor_capability_lease.ttl.ttl_seconds === 'number').length,
       tool_capability_declared_task_count: tasks.filter((task) => task.capabilities.tool.can_execute_tools).length,
       network_declared_task_count: tasks.filter((task) => task.capabilities.network.network_access_declared).length,
       worktree_capability_declared_task_count: tasks.filter((task) =>

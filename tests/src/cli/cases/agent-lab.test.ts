@@ -98,10 +98,30 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].authority_boundary.can_claim_actual_invoice_cost,
     false);
   assert.equal(output.agent_lab_complete.executor_capability_aperture.surface_kind,
-    'opl_agent_lab_executor_capability_aperture_read_model');
+    'opl_agent_lab_executor_capability_lease_read_model');
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.lease_kind,
+    'executor_capability_lease');
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.read_model_role,
+    'runtime_issued_executor_capability_lease');
   assert.equal(output.agent_lab_complete.executor_capability_aperture.semantic_boundary,
-    'refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
+    'runtime_issued_launch_audit_receipt_boundary_only_not_codex_internal_reasoning_contract');
   assert.equal(output.agent_lab_complete.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.summary.runtime_issued_lease_count, 3);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.constrains_launch_audit_and_receipt_only, true);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.does_not_constrain_codex_internal_reasoning,
+    true);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.tasks[0].executor_capability_lease.lease_kind,
+    'executor_capability_lease');
+  assert.match(output.agent_lab_complete.executor_capability_aperture.tasks[0].executor_capability_lease.lease_ref,
+    /^executor-capability-lease:/);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.tasks[0].executor_capability_lease
+    .allowed_effects.can_write_domain_truth, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.tasks[0].executor_capability_lease
+    .allowed_effects.can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.tasks[0].executor_capability_lease
+    .allowed_effects.can_mutate_artifact_body, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.tasks[0].executor_capability_lease
+    .allowed_effects.can_promote_default_agent, false);
   assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
     .can_change_default_executor, false);
   assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
@@ -120,6 +140,8 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
     .can_mutate_artifact_body, false);
   assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
     .can_write_domain_truth, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_promote_default_agent, false);
   assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
     .flywheel_can_authorize_domain_ready, false);
   assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
