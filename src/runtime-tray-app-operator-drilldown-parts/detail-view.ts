@@ -97,6 +97,10 @@ function limitedItems<T>(items: T[]) {
   };
 }
 
+function attentionCount(item: JsonRecord) {
+  return numberValue(item.open_envelope_count) + numberValue(item.blocked_envelope_count);
+}
+
 function authorityBoundary(drilldown: JsonRecord) {
   return record(drilldown.authority_boundary);
 }
@@ -372,6 +376,7 @@ function providerHealth(drilldown: JsonRecord) {
 
 function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
+  const ownerPayloadGroups = ownerPayloadAttentionGroups(drilldown);
   const evidenceEnvelopeAttentionCount = (
     numberValue(summary.evidence_envelope_open_count)
     + numberValue(summary.evidence_envelope_blocked_count)
@@ -393,6 +398,11 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     evidence_envelope_receipt_ref_count: numberValue(summary.evidence_envelope_receipt_ref_count),
     evidence_envelope_typed_blocker_ref_count:
       numberValue(summary.evidence_envelope_typed_blocker_ref_count),
+    owner_payload_group_attention_count: ownerPayloadGroups.total_count,
+    owner_payload_group_attention_omitted_count: ownerPayloadGroups.omitted_count,
+    owner_payload_group_attention_policy:
+      'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
+    owner_payload_groups: ownerPayloadGroups.items,
     domain_dispatch_attention_count: domainDispatchAttentionCount,
     domain_dispatch_typed_blocker_stage_count:
       numberValue(summary.domain_dispatch_attention_typed_blocker_stage_count),
@@ -426,8 +436,97 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   };
 }
 
+function ownerPayloadRequiredRefs(payloadKind: string | null) {
+  if (payloadKind === 'domain_owner_receipt_or_typed_blocker_refs') {
+    return [
+      'domain_owner_receipt_refs',
+      'typed_blocker_refs',
+      'owner_chain_refs',
+      'no_regression_evidence_refs',
+    ];
+  }
+  if (payloadKind === 'stage_expected_receipt_or_monitor_freshness_refs') {
+    return [
+      'domain_receipt_refs',
+      'typed_blocker_refs',
+      'monitor_freshness_refs',
+      'runtime_event_refs',
+    ];
+  }
+  if (payloadKind === 'domain_owned_typed_blocker_refs') {
+    return [
+      'typed_blocker_refs',
+      'typed_blocker_closeout_refs',
+      'owner_followthrough_refs',
+    ];
+  }
+  if (payloadKind === 'domain_owned_receipt_refs') {
+    return [
+      'domain_owned_receipt_refs',
+      'evidence_refs',
+      'owner_chain_refs',
+    ];
+  }
+  if (payloadKind === 'opl_cleanup_ledger_refs') {
+    return [
+      'opl_cleanup_ledger_refs',
+      'domain_physical_delete_owner_receipt_refs',
+      'restore_proof_refs',
+    ];
+  }
+  return [
+    'evidence_refs',
+    'domain_receipt_refs',
+    'typed_blocker_refs',
+  ];
+}
+
+function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
+  const envelopeSummary = record(record(drilldown.evidence_envelope).summary);
+  const groups = recordList(envelopeSummary.owner_payload_breakdown)
+    .map((group) => {
+      const payloadKind = stringValue(group.payload_kind);
+      const openCount = numberValue(group.open_envelope_count);
+      const blockedCount = numberValue(group.blocked_envelope_count);
+      return {
+        owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
+        payload_kind: payloadKind,
+        status: openCount > 0
+          ? 'needs_owner_payload_refs'
+          : 'blocked_by_domain_typed_blocker_refs',
+        attention_count: openCount + blockedCount,
+        envelope_count: numberValue(group.envelope_count),
+        open_envelope_count: openCount,
+        blocked_envelope_count: blockedCount,
+        closed_envelope_count: numberValue(group.closed_envelope_count),
+        receipt_ref_count: numberValue(group.receipt_ref_count),
+        typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
+        evidence_ref_count: numberValue(group.evidence_ref_count),
+        required_refs_any_of: ownerPayloadRequiredRefs(payloadKind),
+        full_detail_section: 'evidence_envelope',
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_close_domain_ready: false,
+          can_claim_production_ready: false,
+          refs_only: true,
+        },
+      };
+    })
+    .filter((group) => group.attention_count > 0)
+    .sort((left, right) => (
+      right.open_envelope_count - left.open_envelope_count
+      || right.blocked_envelope_count - left.blocked_envelope_count
+      || right.envelope_count - left.envelope_count
+      || String(left.owner).localeCompare(String(right.owner))
+      || String(left.payload_kind).localeCompare(String(right.payload_kind))
+    ));
+  return limitedItems(groups);
+}
+
 function evidenceNextSteps(drilldown: JsonRecord) {
   const attention = evidenceAfterContractAttention(drilldown);
+  const ownerPayloadGroups = recordList(attention.owner_payload_groups);
   const missingEvidence = missingEvidenceItems(drilldown);
   const advisory = advisoryItems(drilldown);
   const steps: JsonRecord[] = [];
@@ -465,6 +564,25 @@ function evidenceNextSteps(drilldown: JsonRecord) {
         'owner_chain_refs',
       ],
       full_detail_section: 'evidence_envelope',
+    });
+  }
+  for (const group of ownerPayloadGroups) {
+    steps.push({
+      step_kind: 'owner_payload_group_scaleout',
+      owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
+      payload_kind: stringValue(group.payload_kind),
+      status: stringValue(group.status) ?? 'needs_owner_payload_refs',
+      attention_count: attentionCount(group),
+      open_envelope_count: numberValue(group.open_envelope_count),
+      blocked_envelope_count: numberValue(group.blocked_envelope_count),
+      receipt_ref_count: numberValue(group.receipt_ref_count),
+      typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
+      evidence_ref_count: numberValue(group.evidence_ref_count),
+      required_refs_any_of: stringList(group.required_refs_any_of),
+      full_detail_section: 'evidence_envelope',
+      can_execute_domain_action: false,
+      can_create_owner_receipt: false,
+      can_close_domain_ready: false,
     });
   }
   for (const item of recordList(missingEvidence.items)) {

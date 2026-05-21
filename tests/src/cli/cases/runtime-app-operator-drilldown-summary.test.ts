@@ -298,6 +298,26 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         + summaryDrilldown.summary.evidence_envelope_blocked_count,
     );
     assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_group_attention_policy,
+      'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups.length <= 5,
+      true,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_group_attention_count,
+      summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups.length
+        + summaryDrilldown.attention_first_payload.evidence_after_contract
+          .owner_payload_group_attention_omitted_count,
+    );
+    const firstOwnerPayloadGroup =
+      summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups[0];
+    assert.equal(firstOwnerPayloadGroup.full_detail_section, 'evidence_envelope');
+    assert.equal(firstOwnerPayloadGroup.attention_count > 0, true);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_claim_production_ready, false);
+    assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.route_support_status,
       'catalog_available_refs_only',
     );
@@ -335,6 +355,13 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       ),
       true,
     );
+    const ownerPayloadStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
+      (item: { step_kind: string }) => item.step_kind === 'owner_payload_group_scaleout',
+    );
+    assert.equal(typeof ownerPayloadStep.owner, 'string');
+    assert.equal(ownerPayloadStep.full_detail_section, 'evidence_envelope');
+    assert.equal(ownerPayloadStep.can_create_owner_receipt, false);
+    assert.equal(ownerPayloadStep.can_close_domain_ready, false);
     const dispatchStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
       (item: { step_kind: string }) => item.step_kind === 'domain_dispatch_owner_chain_scaleout',
     );
@@ -468,6 +495,15 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.domain_dispatch_attention_count,
       fullDrilldown.summary.domain_dispatch_attention_count,
+    );
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups.length > 0,
+      true,
+    );
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups[0]
+        .full_detail_section,
+      'evidence_envelope',
     );
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.authority_boundary.attention_count_is_hard_blocker,
