@@ -30,6 +30,7 @@ type AppOperatorDrilldownSummaryInput = {
   legacyCleanupPlans: JsonRecord;
   oplMetaAgentRegistry: JsonRecord;
   evidenceEnvelope: JsonRecord;
+  runtimeManagerRouteSupport: JsonRecord;
 };
 
 function record(value: unknown): JsonRecord {
@@ -40,6 +41,12 @@ function record(value: unknown): JsonRecord {
 
 function list(value: unknown) {
   return Array.isArray(value) ? value : [];
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
 }
 
 function numberValue(value: unknown) {
@@ -69,6 +76,9 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
   const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
+  const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
+  const supportedTaskKinds = stringList(routeSupport.supported_task_kinds);
+  const routeSupportActionRefs = stringList(routeSupport.action_refs);
   const productionEvidenceTailItemCount = numberValue(productionTailSummary.tail_item_count);
   const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
   const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
@@ -107,6 +117,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     quality_ref_count: qualityRefs.length,
     readiness_ref_count: readinessRefs.length,
     provider_slo_action_count: input.providerActionRefs.length,
+    runtime_manager_mas_route_support_task_kind_count: supportedTaskKinds.length,
+    runtime_manager_mas_aftercare_route_support_count:
+      supportedTaskKinds.filter((taskKind) => taskKind.startsWith('publication_aftercare/')).length,
+    runtime_manager_mas_route_support_action_ref_count: routeSupportActionRefs.length,
     provider_slo_cadence_window_status: input.providerCadenceWindow.window_status,
     provider_slo_cadence_window_long_evidence_ready: input.providerCadenceWindow.long_window_evidence_ready,
     provider_slo_cadence_window_expected_receipt_count: input.providerCadenceWindow.expected_slo_execution_receipt_count,

@@ -13,6 +13,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'memory_writeback_refs',
   'quality_readiness_refs',
   'provider_slo_operator_action_refs',
+  'runtime_manager_route_support',
   'periodic_execution_refs',
   'operator_action_routing_refs',
   'owner_receipt_refs',

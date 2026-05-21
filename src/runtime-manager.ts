@@ -4,11 +4,9 @@ import {
 } from './family-runtime-providers.ts';
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
-  MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
-  MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE,
-  MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH,
   MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
   OPL_RUNTIME_OWNER_ROUTE,
+  buildMasDomainRouteSupportProjection,
 } from './family-runtime-mas-domain-route.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
@@ -393,37 +391,7 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
         stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
         wakeup_bridge: 'provider wakeup -> opl family-runtime tick --source <provider> --hydrate',
         webhook_bridge: 'provider signal/webhook -> opl family-runtime enqueue',
-        mas_domain_route_projection: {
-          owner_route_handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
-          accepted_runtime_owner_route_ref: OPL_RUNTIME_OWNER_ROUTE,
-          supported_task_kinds: [
-            MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
-            MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE,
-            MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH,
-          ],
-          action_refs: [
-            MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
-            'ai_reviewer_recheck_execute_dispatch',
-          ],
-          state_projection: [
-            'study_id',
-            'route_ref',
-            'action_ref',
-            'source_refs',
-            'source_fingerprint',
-            'idempotency_key',
-          ],
-          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
-          accepted_runtime_responsibilities: [
-            'generic_runtime_queue',
-            'stage_attempt_ledger',
-            'liveness_projection',
-            'provider_wakeup',
-            'redrive_retry_dead_letter',
-          ],
-          authority_boundary:
-            'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.',
-        },
+        mas_domain_route_projection: buildMasDomainRouteSupportProjection(),
       },
       family_scheduler_replacement: {
         ...FAMILY_SCHEDULER_REPLACEMENT,

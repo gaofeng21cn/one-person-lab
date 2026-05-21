@@ -54,6 +54,9 @@ import {
   buildEvidenceEnvelopeProjection,
 } from './evidence-envelope.ts';
 import {
+  buildMasDomainRouteSupportProjection,
+} from './family-runtime-mas-domain-route.ts';
+import {
   functionalPrivatizationAuditRefs,
   functionalPrivatizationSummary,
 } from './runtime-tray-app-operator-drilldown-parts/functional-privatization-audit-refs.ts';
@@ -876,6 +879,25 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
+function runtimeManagerRouteSupportRefs() {
+  return {
+    surface_kind: 'opl_app_drilldown_runtime_manager_route_support',
+    source_surface: 'opl_runtime_manager.family_runtime_queue.mas_domain_route_projection',
+    projection_policy:
+      'refs_only_supported_route_catalog_no_owner_chain_closure_or_domain_ready_claim',
+    mas_domain_route_projection: buildMasDomainRouteSupportProjection(),
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      can_claim_artifact_authority: false,
+      can_close_owner_chain: false,
+      can_record_owner_receipt: false,
+      can_authorize_publication_aftercare: false,
+    },
+  };
+}
+
 function providerCadenceWindowSummary(providerContinuousProof: JsonRecord) {
   const window = record(providerContinuousProof.cadence_window);
   return {
@@ -927,6 +949,7 @@ export function buildAppOperatorDrilldown(input: {
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
+  const runtimeManagerRouteSupport = runtimeManagerRouteSupportRefs();
   const periodicRefs = periodicExecutionRefs(providerActionRefs);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
@@ -994,6 +1017,7 @@ export function buildAppOperatorDrilldown(input: {
       providerActionRefs,
       providerCadenceWindow,
       providerCapabilitySlo,
+      runtimeManagerRouteSupport,
       periodicRefs,
       actionRefs,
       ownerReceipts,
@@ -1024,6 +1048,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
     sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
+    sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
     sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
@@ -1071,6 +1096,7 @@ export function buildAppOperatorDrilldown(input: {
       refs: providerActionRefs,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    runtime_manager_route_support: runtimeManagerRouteSupport,
     periodic_execution_refs: periodicRefs,
     operator_action_routing_refs: {
       surface_kind: 'opl_app_drilldown_operator_action_routing_refs',

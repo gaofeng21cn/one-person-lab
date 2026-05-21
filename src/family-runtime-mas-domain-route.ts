@@ -8,6 +8,37 @@ export const OPL_RUNTIME_OWNER_ROUTE = 'opl_runtime_owner_route';
 export const MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE = 'publication_aftercare/analysis-queue-progress';
 export const MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH = 'publication_aftercare/reviewer-refresh';
 
+export const MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS = [
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+  MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE,
+  MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH,
+] as const;
+
+export const MAS_DOMAIN_ROUTE_ACTION_REFS = [
+  MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
+  'ai_reviewer_recheck_execute_dispatch',
+] as const;
+
+const MAS_DOMAIN_ROUTE_STATE_PROJECTION_FIELDS = [
+  'study_id',
+  'route_ref',
+  'action_ref',
+  'source_refs',
+  'source_fingerprint',
+  'idempotency_key',
+] as const;
+
+const MAS_DOMAIN_ROUTE_ACCEPTED_RUNTIME_RESPONSIBILITIES = [
+  'generic_runtime_queue',
+  'stage_attempt_ledger',
+  'liveness_projection',
+  'provider_wakeup',
+  'redrive_retry_dead_letter',
+] as const;
+
+const MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY =
+  'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.';
+
 type MasDomainRouteProjectionTask = {
   domain_id: string;
   task_kind: string;
@@ -19,6 +50,19 @@ const MAS_OWNER_ROUTE_TASK_ACTIONS = new Map([
   [MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE, MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION],
   [MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH, 'ai_reviewer_recheck_execute_dispatch'],
 ]);
+
+export function buildMasDomainRouteSupportProjection() {
+  return {
+    owner_route_handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+    accepted_runtime_owner_route_ref: OPL_RUNTIME_OWNER_ROUTE,
+    supported_task_kinds: [...MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS],
+    action_refs: [...MAS_DOMAIN_ROUTE_ACTION_REFS],
+    state_projection: [...MAS_DOMAIN_ROUTE_STATE_PROJECTION_FIELDS],
+    repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+    accepted_runtime_responsibilities: [...MAS_DOMAIN_ROUTE_ACCEPTED_RUNTIME_RESPONSIBILITIES],
+    authority_boundary: MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY,
+  };
+}
 
 export function canonicalFamilyRuntimeTaskKind(
   domainId: FamilyRuntimeDomainId,
