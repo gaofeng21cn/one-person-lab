@@ -738,6 +738,9 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     const stageEvidenceItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'stage_production_evidence_receipt'
     );
+    const domainDispatchEvidenceItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
+      item.claim_scope === 'domain_dispatch_evidence_receipt'
+    );
     for (const item of [...externalItems, ...gateItems, ...stageItems]) {
       assert.equal(item.status, 'open_safe_action_request_route_available');
       assert.equal(item.receipt_ref, null);
@@ -758,6 +761,12 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(
       fullWorklist.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count,
       stageEvidenceItems.length,
+    );
+    assert.equal(
+      fullWorklist.summary.domain_dispatch_evidence_receipt_requires_domain_or_app_payload_count,
+      domainDispatchEvidenceItems.filter((item: { route_requires_domain_or_app_payload: boolean }) =>
+        item.route_requires_domain_or_app_payload
+      ).length,
     );
     assert.equal(fullWorklist.next_action_ledger.summary.next_action_item_count, 39);
     assert.equal(fullWorklist.authority_boundary.can_write_domain_truth, false);

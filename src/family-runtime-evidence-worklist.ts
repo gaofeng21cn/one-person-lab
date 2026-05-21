@@ -571,7 +571,10 @@ function worklistCounts(
       item.claim_scope === 'stage_production_evidence_receipt'
     ).length,
     stage_production_evidence_receipt_requires_domain_or_app_payload_count:
-      worklistItems.filter((item) => item.route_requires_domain_or_app_payload === true).length,
+      worklistItems.filter((item) =>
+        item.claim_scope === 'stage_production_evidence_receipt'
+        && item.route_requires_domain_or_app_payload === true
+      ).length,
     domain_dispatch_evidence_receipt_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'domain_dispatch_evidence_receipt'
     ).length,
