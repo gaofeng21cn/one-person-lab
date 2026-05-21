@@ -474,6 +474,47 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     );
     assert.equal(openEnvelope.status, 'open');
     assert.equal(openEnvelope.next_route, recordRoute.ref);
+    const openWorklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).family_runtime_evidence_worklist;
+    const openDispatchPacket = openWorklist.domain_dispatch_evidence_workorder_packet;
+    assert.equal(openDispatchPacket.surface_kind, 'opl_domain_dispatch_evidence_workorder_packet');
+    assert.equal(openDispatchPacket.summary.workorder_count, 1);
+    assert.equal(openDispatchPacket.summary.route_requires_domain_or_app_payload_count, 1);
+    assert.equal(openDispatchPacket.summary.success_payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(openWorklist.domain_dispatch_evidence_workorder_attention_items.length, 1);
+    const openDispatchWorkorder = openDispatchPacket.workorders[0];
+    assert.equal(openDispatchWorkorder.action_id, recordActionId);
+    assert.equal(openDispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
+    assert.equal(openDispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(openDispatchWorkorder.route_requires_domain_or_app_payload, true);
+    assert.equal(openDispatchWorkorder.can_close_without_domain_or_app_payload, false);
+    assert.equal(openDispatchWorkorder.can_execute, false);
+    assert.equal(openDispatchWorkorder.creates_domain_action, false);
+    assert.equal(openDispatchWorkorder.creates_owner_receipt, false);
+    assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('domain_receipt_refs'), true);
+    assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+    assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
+    assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
+    assert.equal(openDispatchWorkorder.typed_blocker_payload_path_available, true);
+    assert.equal(openDispatchWorkorder.owner_receipt_payload_path_available, true);
+    assert.equal(openDispatchWorkorder.owner_chain_payload_path_available, true);
+    assert.equal(openDispatchWorkorder.no_regression_payload_path_available, true);
+    assert.equal(openDispatchPacket.authority_boundary.can_generate_domain_owner_receipt, false);
+    assert.equal(openDispatchPacket.authority_boundary.can_execute_domain_action, false);
+    assert.equal(openDispatchPacket.authority_boundary.closes_domain_ready, false);
+    assert.equal(openDispatchPacket.authority_boundary.closes_production_ready, false);
 
     const blockedTemplateExecution = runCliFailure([
       'runtime',
@@ -587,6 +628,11 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(domainDispatchWorklistItem.status, 'open_safe_action_request_route_available');
     assert.equal(domainDispatchWorklistItem.route_requires_domain_or_app_payload, false);
     assert.equal(recordedWorklist.summary.domain_dispatch_evidence_receipt_item_count >= 1, true);
+    assert.equal(recordedWorklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count, 0);
+    assert.equal(
+      recordedWorklist.domain_dispatch_evidence_workorder_attention_items.length,
+      0,
+    );
 
     const verifyExecution = runCli([
       'runtime',

@@ -542,6 +542,49 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(firstWorkorder.can_close_without_domain_or_app_payload, false);
     assert.equal(firstWorkorder.payload_workorder.surface_kind, 'opl_stage_production_evidence_payload_workorder');
     assert.equal(firstWorkorder.authority_boundary.can_read_artifact_body, false);
+    const domainDispatchWorkorderPacket = fullWorklist.domain_dispatch_evidence_workorder_packet;
+    assert.equal(
+      domainDispatchWorkorderPacket.surface_kind,
+      'opl_domain_dispatch_evidence_workorder_packet',
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.workorder_count,
+      fullWorklist.summary.domain_dispatch_evidence_receipt_requires_domain_or_app_payload_count,
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.route_requires_domain_or_app_payload_count,
+      domainDispatchWorkorderPacket.summary.workorder_count,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+      domainDispatchWorkorderPacket.summary.workorder_count,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_attention_items.length,
+      Math.min(domainDispatchWorkorderPacket.summary.workorder_count, 10),
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.authority_boundary.can_generate_domain_owner_receipt,
+      false,
+    );
+    assert.equal(domainDispatchWorkorderPacket.authority_boundary.can_execute_domain_action, false);
+    assert.equal(domainDispatchWorkorderPacket.authority_boundary.closes_domain_ready, false);
+    assert.equal(domainDispatchWorkorderPacket.authority_boundary.closes_production_ready, false);
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_attention_items.every(
+        (item: { worklist_item_is_completion_claim: boolean }) =>
+          item.worklist_item_is_completion_claim === false,
+      ),
+      true,
+    );
+    assert.equal(
+      fullWorklist.summary.domain_dispatch_evidence_workorder_count,
+      domainDispatchWorkorderPacket.summary.workorder_count,
+    );
+    assert.equal(
+      fullWorklist.summary.domain_dispatch_evidence_workorder_stage_attempt_count,
+      domainDispatchWorkorderPacket.summary.stage_attempt_count,
+    );
     assert.equal(fullWorklist.authority_boundary.can_write_domain_truth, false);
     assert.equal(fullWorklist.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
@@ -767,6 +810,36 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       domainDispatchEvidenceItems.filter((item: { route_requires_domain_or_app_payload: boolean }) =>
         item.route_requires_domain_or_app_payload
       ).length,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count,
+      fullWorklist.summary.domain_dispatch_evidence_receipt_requires_domain_or_app_payload_count,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count,
+      domainDispatchEvidenceItems.filter((item: { route_requires_domain_or_app_payload: boolean }) =>
+        item.route_requires_domain_or_app_payload
+      ).length,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.summary.route_requires_domain_or_app_payload_count,
+      fullWorklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.summary.success_payload_owner,
+      'domain_repository_or_app_live_operator',
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.authority_boundary.can_write_domain_truth,
+      false,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.authority_boundary.can_generate_domain_owner_receipt,
+      false,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_packet.authority_boundary.closes_production_ready,
+      false,
     );
     assert.equal(fullWorklist.next_action_ledger.summary.next_action_item_count, 39);
     assert.equal(fullWorklist.authority_boundary.can_write_domain_truth, false);

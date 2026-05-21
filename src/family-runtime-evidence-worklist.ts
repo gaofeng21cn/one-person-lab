@@ -11,6 +11,10 @@ import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
 import {
   compactEvidenceEnvelopeProjection,
 } from './evidence-envelope.ts';
+import {
+  buildDomainDispatchEvidenceWorkorderPacket,
+  compactDomainDispatchEvidenceWorkorderAttentionItems,
+} from './domain-dispatch-evidence-workorder-packet.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -851,6 +855,12 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
+  const domainDispatchEvidenceWorkorderPacket =
+    buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
+  const domainDispatchEvidenceWorkorderSummary =
+    record(domainDispatchEvidenceWorkorderPacket.summary);
+  const domainDispatchEvidenceWorkorderAttentionItems =
+    compactDomainDispatchEvidenceWorkorderAttentionItems(domainDispatchEvidenceWorkorderPacket);
   const evidenceEnvelope = record(drilldown.evidence_envelope);
   const counts = {
     ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
@@ -862,6 +872,16 @@ export async function runFamilyRuntimeEvidenceWorklist(
       countValue(stageEvidenceWorkorderSummary.source_scope_missing_ref_count),
     stage_runtime_event_missing_ref_count:
       countValue(stageEvidenceWorkorderSummary.runtime_event_missing_ref_count),
+    domain_dispatch_evidence_workorder_count:
+      countValue(domainDispatchEvidenceWorkorderSummary.workorder_count),
+    domain_dispatch_evidence_workorder_domain_count:
+      countValue(domainDispatchEvidenceWorkorderSummary.domain_count),
+    domain_dispatch_evidence_workorder_stage_attempt_count:
+      countValue(domainDispatchEvidenceWorkorderSummary.stage_attempt_count),
+    domain_dispatch_evidence_workorder_required_operator_payload_ref_count:
+      countValue(domainDispatchEvidenceWorkorderSummary.required_operator_payload_ref_count),
+    domain_dispatch_evidence_workorder_required_evidence_ref_count:
+      countValue(domainDispatchEvidenceWorkorderSummary.required_evidence_ref_count),
   };
   const detailLevel = input.detailLevel ?? 'summary';
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
@@ -893,6 +913,10 @@ export async function runFamilyRuntimeEvidenceWorklist(
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
     stage_evidence_workorder_packet_summary: stageEvidenceWorkorderPacket.summary,
     stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
+    domain_dispatch_evidence_workorder_packet_summary:
+      domainDispatchEvidenceWorkorderPacket.summary,
+    domain_dispatch_evidence_workorder_attention_items:
+      domainDispatchEvidenceWorkorderAttentionItems,
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
@@ -914,6 +938,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
         next_action_ledger: nextActionLedger,
         evidence_requirement_ledger: evidenceRequirementLedger,
         stage_evidence_workorder_packet: stageEvidenceWorkorderPacket,
+        domain_dispatch_evidence_workorder_packet: domainDispatchEvidenceWorkorderPacket,
         evidence_envelope_full_ref:
           '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
       },
