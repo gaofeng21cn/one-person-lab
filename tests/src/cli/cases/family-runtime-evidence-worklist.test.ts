@@ -482,6 +482,28 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(fullWorklist.evidence_envelope.summary.domain_ready_claim_count, 0);
     assert.equal(fullWorklist.evidence_envelope.summary.production_ready_claim_count, 0);
     assert.equal(fullWorklist.evidence_envelope.summary.artifact_authority_claim_count, 0);
+    assert.equal(
+      fullWorklist.evidence_envelope.summary.owner_payload_breakdown_policy,
+      'refs_only_owner_and_payload_kind_action_breakdown_for_domain_or_app_live_operator_scaleout',
+    );
+    assert.equal(fullWorklist.evidence_envelope.summary.owner_payload_breakdown.length > 0, true);
+    assert.equal(
+      fullWorklist.evidence_envelope.summary.owner_payload_breakdown
+        .reduce((total: number, entry: { envelope_count: number }) => total + entry.envelope_count, 0),
+      fullWorklist.evidence_envelope.summary.envelope_count,
+    );
+    assert.equal(
+      fullWorklist.evidence_envelope.summary.owner_payload_breakdown
+        .reduce((total: number, entry: { open_envelope_count: number }) => total + entry.open_envelope_count, 0),
+      fullWorklist.evidence_envelope.summary.open_envelope_count,
+    );
+    assert.equal(
+      fullWorklist.evidence_envelope.summary.owner_payload_breakdown
+        .some((entry: { owner: string; open_envelope_count: number }) => (
+          entry.owner === 'med-autoscience' && entry.open_envelope_count > 0
+        )),
+      true,
+    );
     assert.deepEqual(fullWorklist.evidence_envelope.summary.owner_ids, [
       'med-autogrant',
       'med-autoscience',

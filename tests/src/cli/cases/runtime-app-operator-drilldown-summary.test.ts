@@ -441,6 +441,27 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     const fullDrilldown = fullOutput.app_operator_drilldown;
     assert.equal(fullDrilldown.detail_level, 'full');
     assert.equal(
+      fullDrilldown.evidence_envelope.summary.owner_payload_breakdown_policy,
+      'refs_only_owner_and_payload_kind_action_breakdown_for_domain_or_app_live_operator_scaleout',
+    );
+    assert.equal(
+      fullDrilldown.evidence_envelope.summary.owner_payload_breakdown
+        .reduce((total: number, entry: { envelope_count: number }) => total + entry.envelope_count, 0),
+      fullDrilldown.evidence_envelope.summary.envelope_count,
+    );
+    assert.equal(
+      fullDrilldown.evidence_envelope.summary.owner_payload_breakdown
+        .reduce((total: number, entry: { open_envelope_count: number }) => total + entry.open_envelope_count, 0),
+      fullDrilldown.evidence_envelope.summary.open_envelope_count,
+    );
+    assert.equal(
+      fullDrilldown.evidence_envelope.summary.owner_payload_breakdown
+        .reduce((total: number, entry: { blocked_envelope_count: number }) => (
+          total + entry.blocked_envelope_count
+        ), 0),
+      fullDrilldown.evidence_envelope.summary.blocked_envelope_count,
+    );
+    assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.surface_kind,
       'opl_app_drilldown_evidence_after_contract_attention',
     );

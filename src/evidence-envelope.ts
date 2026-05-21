@@ -432,6 +432,26 @@ function legacyCleanupEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
 function summarize(items: ReturnType<typeof envelope>[]) {
   const ownerIds = uniqueStrings(items.map((item) => item.owner));
   const payloadKinds = uniqueStrings(items.map((item) => item.payload_kind));
+  const ownerPayloadBreakdown = ownerIds.flatMap((owner) =>
+    payloadKinds
+      .map((payloadKind) => {
+        const matchingItems = items.filter((item) => (
+          item.owner === owner && item.payload_kind === payloadKind
+        ));
+        return {
+          owner,
+          payload_kind: payloadKind,
+          envelope_count: matchingItems.length,
+          open_envelope_count: matchingItems.filter((item) => item.status === 'open').length,
+          closed_envelope_count: matchingItems.filter((item) => item.status === 'closed').length,
+          blocked_envelope_count: matchingItems.filter((item) => item.status === 'blocked').length,
+          receipt_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.receipt_refs)).length,
+          typed_blocker_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.typed_blocker_refs)).length,
+          evidence_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.evidence_refs)).length,
+        };
+      })
+      .filter((entry) => entry.envelope_count > 0)
+  );
   return {
     envelope_count: items.length,
     open_envelope_count: items.filter((item) => item.status === 'open').length,
@@ -442,6 +462,9 @@ function summarize(items: ReturnType<typeof envelope>[]) {
     owner_ids: ownerIds,
     owner_id_policy: 'canonical_owner_ids_only_raw_aliases_in_full_detail_envelopes',
     payload_kinds: payloadKinds,
+    owner_payload_breakdown: ownerPayloadBreakdown,
+    owner_payload_breakdown_policy:
+      'refs_only_owner_and_payload_kind_action_breakdown_for_domain_or_app_live_operator_scaleout',
     receipt_ref_count: uniqueStrings(items.flatMap((item) => item.receipt_refs)).length,
     typed_blocker_ref_count: uniqueStrings(items.flatMap((item) => item.typed_blocker_refs)).length,
     evidence_ref_count: uniqueStrings(items.flatMap((item) => item.evidence_refs)).length,
