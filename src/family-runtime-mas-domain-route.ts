@@ -96,6 +96,10 @@ export function isMasOwnerRouteTask(domainId: string, taskKind: string) {
   return domainId === 'medautoscience' && MAS_OWNER_ROUTE_TASK_ACTIONS.has(taskKind);
 }
 
+export function masOwnerRouteActionRef(taskKind: string) {
+  return MAS_OWNER_ROUTE_TASK_ACTIONS.get(taskKind) ?? null;
+}
+
 function arrayField(value: unknown) {
   return Array.isArray(value) ? value : [];
 }

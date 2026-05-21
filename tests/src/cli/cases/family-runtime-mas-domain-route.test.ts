@@ -343,7 +343,20 @@ JSON
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","closeout_refs":["mas-receipt:DM002/aftercare-analysis-queued"]}
+{
+  "accepted": true,
+  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "closeout_packet": {
+    "surface_kind": "stage_attempt_closeout_packet",
+    "closeout_refs": ["mas-receipt:DM002/aftercare-analysis-queued"],
+    "next_owner": "med-autoscience",
+    "domain_ready_verdict": "domain_gate_pending",
+    "route_impact": {
+      "study_id": "DM002",
+      "decision": "publication_aftercare_analysis_queue_progress_dispatched"
+    }
+  }
+}
 JSON
 `,
     { mode: 0o755 },
@@ -352,13 +365,17 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
+    const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot));
+    const attempt = inspected.family_runtime_task.stage_attempts[0];
     const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].stage_id, 'publication_aftercare/analysis-queue-progress');
     assert.equal(task.task_kind, 'publication_aftercare/analysis-queue-progress');
     assert.equal(task.domain_route.route_ref, 'publication_aftercare/analysis-queue-progress');
     assert.equal(task.domain_route.action_ref, 'domain_route_reconcile_apply');
@@ -378,6 +395,15 @@ JSON
     ]);
     assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
     assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.stage_id, 'publication_aftercare/analysis-queue-progress');
+    assert.equal(attempt.task_id, task.task_id);
+    assert.equal(attempt.status, 'completed');
+    assert.deepEqual(attempt.closeout_refs, ['mas-receipt:DM002/aftercare-analysis-queued']);
+    assert.equal(attempt.workspace_locator.route_ref, 'publication_aftercare/analysis-queue-progress');
+    assert.equal(attempt.workspace_locator.action_ref, 'domain_route_reconcile_apply');
+    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -432,7 +458,20 @@ JSON
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","closeout_refs":["mas-receipt:DM002/aftercare-reviewer-refresh-queued"]}
+{
+  "accepted": true,
+  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "closeout_packet": {
+    "surface_kind": "stage_attempt_closeout_packet",
+    "closeout_refs": ["mas-receipt:DM002/aftercare-reviewer-refresh-queued"],
+    "next_owner": "med-autoscience",
+    "domain_ready_verdict": "domain_gate_pending",
+    "route_impact": {
+      "study_id": "DM002",
+      "decision": "publication_aftercare_reviewer_refresh_dispatched"
+    }
+  }
+}
 JSON
 `,
     { mode: 0o755 },
@@ -441,13 +480,17 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
       OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
+    const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot));
+    const attempt = inspected.family_runtime_task.stage_attempts[0];
     const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].stage_id, 'publication_aftercare/reviewer-refresh');
     assert.equal(task.task_kind, 'publication_aftercare/reviewer-refresh');
     assert.equal(task.domain_route.route_ref, 'publication_aftercare/reviewer-refresh');
     assert.equal(task.domain_route.action_ref, 'ai_reviewer_recheck_execute_dispatch');
@@ -464,6 +507,16 @@ JSON
     assert.deepEqual(dispatchedTask.domain_route.owner_route_refs, ['owner-route:mas/DM002/ai-reviewer-refresh']);
     assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
     assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.stage_id, 'publication_aftercare/reviewer-refresh');
+    assert.equal(attempt.task_id, task.task_id);
+    assert.equal(attempt.status, 'completed');
+    assert.deepEqual(attempt.closeout_refs, ['mas-receipt:DM002/aftercare-reviewer-refresh-queued']);
+    assert.equal(attempt.workspace_locator.route_ref, 'publication_aftercare/reviewer-refresh');
+    assert.equal(attempt.workspace_locator.action_ref, 'ai_reviewer_recheck_execute_dispatch');
+    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.opl_writes_publication_quality, false);
+    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
