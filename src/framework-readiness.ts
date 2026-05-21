@@ -250,12 +250,34 @@ function statusFrom(
   return 'framework_control_plane_available';
 }
 
+function ownerPayloadEvidenceClosureGate(payloadKind: string | null) {
+  if (payloadKind === 'domain_owner_receipt_or_typed_blocker_refs') {
+    return 'domain_owner_chain_receipt_or_typed_blocker_gate';
+  }
+  if (payloadKind === 'stage_expected_receipt_or_monitor_freshness_refs') {
+    return 'stage_expected_receipt_monitor_freshness_gate';
+  }
+  if (payloadKind === 'domain_owned_typed_blocker_refs') {
+    return 'domain_typed_blocker_followthrough_gate';
+  }
+  if (payloadKind === 'domain_owned_receipt_refs') {
+    return 'domain_owner_receipt_evidence_gate';
+  }
+  if (payloadKind === 'opl_cleanup_ledger_refs') {
+    return 'opl_cleanup_ledger_domain_physical_delete_owner_receipt_gate';
+  }
+  return 'domain_app_live_evidence_payload_gate';
+}
+
 function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
+  const payloadKind = stringValue(group.payload_kind);
   return {
     action_id: 'review_owner_payload_group_scaleout',
     action_kind: 'owner_payload_group_scaleout',
+    step_kind: 'owner_payload_group_scaleout',
+    evidence_closure_gate: ownerPayloadEvidenceClosureGate(payloadKind),
     owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
-    payload_kind: stringValue(group.payload_kind),
+    payload_kind: payloadKind,
     status: stringValue(group.status) ?? 'needs_owner_payload_refs',
     attention_count: numberValue(group.attention_count),
     open_envelope_count: numberValue(group.open_envelope_count),
@@ -278,6 +300,10 @@ function frameworkDomainDispatchGroupNextSafeAction(group: JsonRecord) {
   return {
     action_id: 'review_domain_dispatch_group_workorder',
     action_kind: 'domain_dispatch_evidence_group_workorder',
+    step_kind: 'domain_dispatch_evidence_group_workorder',
+    evidence_closure_gate: 'domain_dispatch_owner_chain_payload_gate',
+    payload_requirement:
+      'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
     owner: stringValue(group.payload_owner) ?? 'domain_repository_or_app_live_operator',
     canonical_domain_id: stringValue(group.canonical_domain_id),
     stage_id: stringValue(group.stage_id),
@@ -313,6 +339,8 @@ function frameworkAttentionNextSafeActions(input: {
   if (input.blockers.length > 0) {
     return [{
       action_id: 'inspect_framework_kernel_blockers',
+      step_kind: 'framework_kernel_blocker_inspection',
+      evidence_closure_gate: 'framework_kernel_hard_blocker_gate',
       command: 'opl framework readiness --family-defaults --json',
       authority: 'diagnostic_only',
     }];
@@ -320,12 +348,16 @@ function frameworkAttentionNextSafeActions(input: {
   if (input.warnings.length === 0) {
     return [{
       action_id: 'no_framework_readiness_action_required',
+      step_kind: 'no_framework_readiness_action_required',
+      evidence_closure_gate: 'none',
       authority: 'no_op',
     }];
   }
   return [
     {
       action_id: 'review_framework_attention_items',
+      step_kind: 'framework_attention_review',
+      evidence_closure_gate: 'operator_attention_triage_gate',
       command: 'opl framework readiness --family-defaults --json',
       authority: 'operator_attention_only',
     },

@@ -154,6 +154,8 @@ test('framework readiness summarizes default control-plane surfaces without auth
       nextSafeActions.map((action: { action_id: string }) => action.action_id),
       ['inspect_framework_kernel_blockers'],
     );
+    assert.equal(nextSafeActions[0].step_kind, 'framework_kernel_blocker_inspection');
+    assert.equal(nextSafeActions[0].evidence_closure_gate, 'framework_kernel_hard_blocker_gate');
   } else if (readiness.attention_first_payload.warnings.length > 0) {
     assert.equal(
       nextSafeActions.some(
@@ -161,14 +163,26 @@ test('framework readiness summarizes default control-plane surfaces without auth
       ),
       true,
     );
+    const frameworkReviewAction = nextSafeActions.find(
+      (action: { action_id: string }) => action.action_id === 'review_framework_attention_items',
+    );
+    assert.equal(frameworkReviewAction.step_kind, 'framework_attention_review');
+    assert.equal(frameworkReviewAction.evidence_closure_gate, 'operator_attention_triage_gate');
     const ownerPayloadAction = nextSafeActions.find(
       (action: { action_kind?: string }) => action.action_kind === 'owner_payload_group_scaleout',
     );
     assert.equal(Boolean(ownerPayloadAction), Boolean(firstOwnerPayloadGroup));
     if (firstOwnerPayloadGroup && ownerPayloadAction) {
       assert.equal(ownerPayloadAction.action_id, 'review_owner_payload_group_scaleout');
+      assert.equal(ownerPayloadAction.step_kind, 'owner_payload_group_scaleout');
       assert.equal(ownerPayloadAction.owner, firstOwnerPayloadGroup.owner);
       assert.equal(ownerPayloadAction.payload_kind, firstOwnerPayloadGroup.payload_kind);
+      assert.equal(
+        ownerPayloadAction.evidence_closure_gate,
+        firstOwnerPayloadGroup.payload_kind === 'domain_owner_receipt_or_typed_blocker_refs'
+          ? 'domain_owner_chain_receipt_or_typed_blocker_gate'
+          : 'domain_app_live_evidence_payload_gate',
+      );
       assert.equal(ownerPayloadAction.attention_count, firstOwnerPayloadGroup.attention_count);
       assert.deepEqual(ownerPayloadAction.required_refs_any_of, firstOwnerPayloadGroup.required_refs_any_of);
       assert.equal(ownerPayloadAction.full_detail_section, 'evidence_envelope');
@@ -184,6 +198,8 @@ test('framework readiness summarizes default control-plane surfaces without auth
       nextSafeActions.map((action: { action_id: string }) => action.action_id),
       ['no_framework_readiness_action_required'],
     );
+    assert.equal(nextSafeActions[0].step_kind, 'no_framework_readiness_action_required');
+    assert.equal(nextSafeActions[0].evidence_closure_gate, 'none');
   }
   assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
@@ -376,6 +392,15 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(Boolean(dispatchGroupAction), Boolean(firstDispatchWorkorderGroup));
     if (firstDispatchWorkorderGroup && dispatchGroupAction) {
       assert.equal(dispatchGroupAction.action_id, 'review_domain_dispatch_group_workorder');
+      assert.equal(dispatchGroupAction.step_kind, 'domain_dispatch_evidence_group_workorder');
+      assert.equal(
+        dispatchGroupAction.evidence_closure_gate,
+        'domain_dispatch_owner_chain_payload_gate',
+      );
+      assert.equal(
+        dispatchGroupAction.payload_requirement,
+        'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+      );
       assert.equal(dispatchGroupAction.owner, firstDispatchWorkorderGroup.payload_owner);
       assert.equal(
         dispatchGroupAction.canonical_domain_id,
