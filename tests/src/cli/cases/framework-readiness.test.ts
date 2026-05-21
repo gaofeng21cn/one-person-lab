@@ -252,6 +252,62 @@ test('framework readiness summarizes default control-plane surfaces without auth
     'command_domain_ids_for_opl_runtime_action_execute_routes_not_default_owner_semantics',
   );
   assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_policy,
+    'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+  );
+  assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_items.length,
+    Math.min(
+      readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.domain_stage_group_count,
+      5,
+    ),
+  );
+  assert.deepEqual(
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_group_attention_items.map(
+      (item: { group_id: string }) => item.group_id,
+    ),
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_items.map(
+      (item: { group_id: string }) => item.group_id,
+    ),
+  );
+  assert.deepEqual(
+    readiness.evidence_tails.stage_receipt_freshness_tail
+      .domain_dispatch_evidence_workorder_group_attention_items.map(
+        (item: { group_id: string }) => item.group_id,
+      ),
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_items.map(
+      (item: { group_id: string }) => item.group_id,
+    ),
+  );
+  const firstDispatchWorkorderGroup =
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_items[0];
+  if (firstDispatchWorkorderGroup) {
+    assert.equal(typeof firstDispatchWorkorderGroup.canonical_domain_id, 'string');
+    assert.equal(firstDispatchWorkorderGroup.canonical_domain_id.includes('-'), true);
+    assert.equal(typeof firstDispatchWorkorderGroup.stage_id, 'string');
+    assert.equal(firstDispatchWorkorderGroup.workorder_count > 0, true);
+    assert.equal(firstDispatchWorkorderGroup.stage_attempt_count > 0, true);
+    assert.equal(firstDispatchWorkorderGroup.sample_stage_attempt_ids.length <= 3, true);
+    assert.equal(firstDispatchWorkorderGroup.sample_action_refs.length <= 3, true);
+    assert.equal(firstDispatchWorkorderGroup.sample_required_evidence_refs.length <= 3, true);
+    assert.equal(firstDispatchWorkorderGroup.stage_attempt_id_omitted_count >= 0, true);
+    assert.equal(firstDispatchWorkorderGroup.action_ref_omitted_count >= 0, true);
+    assert.equal(firstDispatchWorkorderGroup.required_evidence_ref_omitted_count >= 0, true);
+    assert.equal(Object.hasOwn(firstDispatchWorkorderGroup, 'required_evidence_refs'), false);
+    assert.equal(firstDispatchWorkorderGroup.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(firstDispatchWorkorderGroup.route_requires_domain_or_app_payload, true);
+    assert.equal(firstDispatchWorkorderGroup.can_create_owner_receipt, false);
+    assert.equal(firstDispatchWorkorderGroup.can_close_domain_ready, false);
+    assert.equal(firstDispatchWorkorderGroup.can_claim_production_ready, false);
+    assert.equal(firstDispatchWorkorderGroup.worklist_item_is_completion_claim, false);
+  }
+  assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_route_attention_fallback_policy,
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_items.length > 0
+      ? 'route_workorders_available_in_evidence_worklist_and_full_drilldown_group_guidance_is_default'
+      : 'route_workorders_used_only_when_owner_stage_group_guidance_is_unavailable',
+  );
+  assert.equal(
     readiness.domain_dispatch_attention
       .domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
     readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
@@ -269,20 +325,18 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.evidence_worklist.domain_dispatch_evidence_workorder_attention_items.map(
       (item: { action_id: string }) => item.action_id,
     ),
-    readiness.attention_first_payload.domain_dispatch_evidence_workorder_attention_items.map(
-      (item: { action_id: string }) => item.action_id,
-    ),
-  );
-  assert.deepEqual(
     readiness.evidence_tails.stage_receipt_freshness_tail
       .domain_dispatch_evidence_workorder_attention_items.map(
         (item: { action_id: string }) => item.action_id,
       ),
-    readiness.attention_first_payload.domain_dispatch_evidence_workorder_attention_items.map(
-      (item: { action_id: string }) => item.action_id,
-    ),
   );
-  for (const dispatchWorkorder of readiness.attention_first_payload
+  assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_attention_items.length,
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_group_attention_items.length > 0
+      ? 0
+      : readiness.evidence_worklist.domain_dispatch_evidence_workorder_attention_items.length,
+  );
+  for (const dispatchWorkorder of readiness.evidence_worklist
     .domain_dispatch_evidence_workorder_attention_items) {
     assert.equal(dispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
     assert.equal(dispatchWorkorder.route_domain_id, dispatchWorkorder.domain_id);

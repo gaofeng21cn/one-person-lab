@@ -354,6 +354,7 @@ function frameworkAttentionFirstPayload(input: {
   stageSourceScopeMissingRefCount: number;
   stageRuntimeEventMissingRefCount: number;
   stageEvidenceWorkorderAttentionItems: JsonRecord[];
+  domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderSummary: JsonRecord;
   evidenceEnvelopeOpenCount: number;
@@ -473,8 +474,18 @@ function frameworkAttentionFirstPayload(input: {
     stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
     domain_dispatch_evidence_workorder_packet_summary:
       input.domainDispatchEvidenceWorkorderSummary,
+    domain_dispatch_evidence_workorder_group_attention_policy:
+      'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    domain_dispatch_evidence_workorder_group_attention_items:
+      input.domainDispatchEvidenceWorkorderGroupAttentionItems,
+    domain_dispatch_evidence_workorder_route_attention_fallback_policy:
+      input.domainDispatchEvidenceWorkorderGroupAttentionItems.length > 0
+        ? 'route_workorders_available_in_evidence_worklist_and_full_drilldown_group_guidance_is_default'
+        : 'route_workorders_used_only_when_owner_stage_group_guidance_is_unavailable',
     domain_dispatch_evidence_workorder_attention_items:
-      input.domainDispatchEvidenceWorkorderAttentionItems,
+      input.domainDispatchEvidenceWorkorderGroupAttentionItems.length > 0
+        ? []
+        : input.domainDispatchEvidenceWorkorderAttentionItems,
     blockers,
     warnings,
     recommendations: warnings,
@@ -582,6 +593,8 @@ export async function buildFrameworkReadinessSummary(
     recordList(familyRuntimeEvidenceWorklist.stage_evidence_workorder_attention_items);
   const domainDispatchEvidenceWorkorderAttentionItems =
     recordList(familyRuntimeEvidenceWorklist.domain_dispatch_evidence_workorder_attention_items);
+  const domainDispatchEvidenceWorkorderGroupAttentionItems =
+    recordList(familyRuntimeEvidenceWorklist.domain_dispatch_evidence_workorder_group_attention_items);
   const domainDispatchEvidenceWorkorderSummary =
     record(familyRuntimeEvidenceWorklist.domain_dispatch_evidence_workorder_packet_summary);
   const agentProductionEvidenceTailTotalCount =
@@ -674,6 +687,7 @@ export async function buildFrameworkReadinessSummary(
         stageSourceScopeMissingRefCount,
         stageRuntimeEventMissingRefCount,
         stageEvidenceWorkorderAttentionItems,
+        domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
         domainDispatchEvidenceWorkorderSummary,
         evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
@@ -759,6 +773,10 @@ export async function buildFrameworkReadinessSummary(
           stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
           domain_dispatch_evidence_workorder_packet_summary:
             domainDispatchEvidenceWorkorderSummary,
+          domain_dispatch_evidence_workorder_group_attention_policy:
+            'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+          domain_dispatch_evidence_workorder_group_attention_items:
+            domainDispatchEvidenceWorkorderGroupAttentionItems,
           domain_dispatch_evidence_workorder_attention_items:
             domainDispatchEvidenceWorkorderAttentionItems,
           blocking_policy: 'operator_worklist_only_without_owner_receipt_or_monitor_freshness_authority',
@@ -852,6 +870,10 @@ export async function buildFrameworkReadinessSummary(
         stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
         domain_dispatch_evidence_workorder_packet_summary:
           domainDispatchEvidenceWorkorderSummary,
+        domain_dispatch_evidence_workorder_group_attention_policy:
+          'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+        domain_dispatch_evidence_workorder_group_attention_items:
+          domainDispatchEvidenceWorkorderGroupAttentionItems,
         domain_dispatch_evidence_workorder_attention_items:
           domainDispatchEvidenceWorkorderAttentionItems,
         next_action_item_count: numberValue(worklistSummary.next_action_item_count),

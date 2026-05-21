@@ -315,6 +315,14 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       domainDispatchWorkorderPacket.summary.workorder_count,
     );
     assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_group_attention_policy,
+      'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_group_attention_items.length,
+      Math.min(domainDispatchWorkorderPacket.summary.domain_stage_group_count, 5),
+    );
+    assert.equal(
       domainDispatchWorkorderPacket.summary.domain_stage_grouping_policy,
       'bounded_canonical_owner_stage_groups_refs_only_no_domain_authority',
     );
@@ -340,6 +348,8 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
         true,
       );
       const dispatchGroup = domainDispatchWorkorderPacket.domain_stage_group_summary.groups[0];
+      const dispatchGroupAttentionItem =
+        fullWorklist.domain_dispatch_evidence_workorder_group_attention_items[0];
       assert.equal(typeof dispatchGroup.canonical_domain_id, 'string');
       assert.equal(dispatchGroup.canonical_domain_id.includes('-'), true);
       assert.equal(typeof dispatchGroup.stage_id, 'string');
@@ -355,6 +365,19 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       assert.equal(dispatchGroup.authority_boundary.can_generate_domain_owner_receipt, false);
       assert.equal(dispatchGroup.authority_boundary.can_execute_domain_action, false);
       assert.equal(dispatchGroup.authority_boundary.closes_production_ready, false);
+      assert.equal(dispatchGroupAttentionItem.canonical_domain_id, dispatchGroup.canonical_domain_id);
+      assert.equal(dispatchGroupAttentionItem.stage_id, dispatchGroup.stage_id);
+      assert.equal(dispatchGroupAttentionItem.workorder_count, dispatchGroup.workorder_count);
+      assert.equal(dispatchGroupAttentionItem.sample_stage_attempt_ids.length <= 3, true);
+      assert.equal(dispatchGroupAttentionItem.sample_action_refs.length <= 3, true);
+      assert.equal(dispatchGroupAttentionItem.sample_required_evidence_refs.length <= 3, true);
+      assert.equal(dispatchGroupAttentionItem.stage_attempt_id_omitted_count >= 0, true);
+      assert.equal(dispatchGroupAttentionItem.action_ref_omitted_count >= 0, true);
+      assert.equal(dispatchGroupAttentionItem.required_evidence_ref_omitted_count >= 0, true);
+      assert.equal(Object.hasOwn(dispatchGroupAttentionItem, 'required_evidence_refs'), false);
+      assert.equal(dispatchGroupAttentionItem.can_create_owner_receipt, false);
+      assert.equal(dispatchGroupAttentionItem.can_close_domain_ready, false);
+      assert.equal(dispatchGroupAttentionItem.can_claim_production_ready, false);
     }
     assert.equal(
       fullWorklist.domain_dispatch_evidence_workorder_attention_items.length,

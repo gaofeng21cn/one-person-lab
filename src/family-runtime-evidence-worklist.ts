@@ -14,6 +14,7 @@ import {
 import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
+  compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from './domain-dispatch-evidence-workorder-packet.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -861,6 +862,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
     buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
     record(domainDispatchEvidenceWorkorderPacket.summary);
+  const domainDispatchEvidenceWorkorderGroupAttentionItems =
+    compactDomainDispatchEvidenceWorkorderGroupAttentionItems(domainDispatchEvidenceWorkorderPacket);
   const domainDispatchEvidenceWorkorderAttentionItems =
     compactDomainDispatchEvidenceWorkorderAttentionItems(domainDispatchEvidenceWorkorderPacket);
   const evidenceEnvelope = record(drilldown.evidence_envelope);
@@ -917,6 +920,10 @@ export async function runFamilyRuntimeEvidenceWorklist(
     stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
     domain_dispatch_evidence_workorder_packet_summary:
       domainDispatchEvidenceWorkorderPacket.summary,
+    domain_dispatch_evidence_workorder_group_attention_policy:
+      'top_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    domain_dispatch_evidence_workorder_group_attention_items:
+      domainDispatchEvidenceWorkorderGroupAttentionItems,
     domain_dispatch_evidence_workorder_attention_items:
       domainDispatchEvidenceWorkorderAttentionItems,
     source_refs: {
