@@ -942,6 +942,8 @@ export function buildAppOperatorDrilldown(input: {
   detailLevel?: AppOperatorDrilldownDetailLevel;
 }) {
   const attempts = recordList(input.stageAttemptWorkbench.attempts);
+  const evidenceAttempts = recordList(input.stageAttemptWorkbench.evidence_attempts);
+  const operatorEvidenceAttempts = evidenceAttempts.length > 0 ? evidenceAttempts : attempts;
   const routeRefs = routeGraphRefs(attempts);
   const decisionRefs = decisionMapRefs(attempts);
   const reviewItems = reviewRepairItems(input.stageAttemptWorkbench);
@@ -957,10 +959,10 @@ export function buildAppOperatorDrilldown(input: {
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
   const typedBlockers = typedBlockerRefs(attempts, input.domainProjectionIngestion);
-  const domainDispatchEvidence = buildDomainDispatchEvidence(attempts);
+  const domainDispatchEvidence = buildDomainDispatchEvidence(operatorEvidenceAttempts);
   const stageProductionEvidence = buildStageProductionEvidence({
     domainManifestProjects: input.domainManifestProjects,
-    attempts,
+    attempts: operatorEvidenceAttempts,
   });
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);

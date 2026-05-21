@@ -397,10 +397,13 @@ function stageProductionEvidence(
     requirement.stage_id,
     requirement,
   ]));
+  const commandDomainId = familyRuntimeCommandDomainId(plane.target_domain_id, project.project_id);
   const attemptsByStage = new Map<string, JsonRecord[]>();
   for (const attempt of attempts) {
-    if (stringValue(attempt.domain_id) !== plane.target_domain_id
-      && stringValue(attempt.domain_id) !== project.project_id) {
+    const attemptDomainId = stringValue(attempt.domain_id);
+    if (attemptDomainId !== plane.target_domain_id
+      && attemptDomainId !== project.project_id
+      && attemptDomainId !== commandDomainId) {
       continue;
     }
     const stageId = stringValue(attempt.stage_id);

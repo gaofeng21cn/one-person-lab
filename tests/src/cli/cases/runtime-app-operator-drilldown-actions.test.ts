@@ -611,6 +611,169 @@ test('runtime action execute can create OPL-owned stage production attempt reque
   }
 });
 
+test('stage production evidence consumes older ledger attempts beyond default workbench list', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-production-full-ledger-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const magManifest = structuredClone(loadFamilyManifestFixtures().medautogrant);
+  const magManifestPayload = magManifest.product_entry_manifest as Record<string, unknown>;
+  magManifestPayload.family_stage_control_plane = {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'med_autogrant_stage_control_plane',
+    target_domain_id: 'med-autogrant',
+    owner: 'med-autogrant',
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: [
+      {
+        stage_id: 'fundability_strategy',
+        stage_kind: 'planning',
+        title: 'Fundability strategy',
+        summary: 'Review grant fit from explicit refs.',
+        goal: 'Return fundability strategy refs under MAG authority.',
+        owner: 'med-autogrant',
+        domain_stage_refs: ['fundability_strategy'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['grant_profile_ready'],
+          ensures: ['fundability_strategy_ready'],
+          boundary_assumptions: ['fundability_judgment_is_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:fundability_strategy.ai_decision_gate_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:fundability/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:fundability', role: 'source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:fundability/current', role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:fundability/current', role: 'trigger' }],
+          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:fundability/currentness', role: 'metric' }],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
+        },
+        trust_boundary: {
+          lane: 'ai_decision',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: ['runtime_event:fundability_strategy.ai_decision_gate_recorded'],
+          owner_receipt_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['receipt:mag/fundability/owner-receipt-or-typed-blocker'],
+          can_authorize_quality_verdict: false,
+        },
+      },
+    ],
+    notes: [],
+  };
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(magManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautogrant',
+      '--stage',
+      'fundability_strategy',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      JSON.stringify({
+        surface_kind: 'opl_stage_production_attempt_request_workspace_locator',
+        domain_id: 'med-autogrant',
+        command_domain_id: 'medautogrant',
+        stage_id: 'fundability_strategy',
+        workspace_binding_required: true,
+        source: 'test_stage_production_request',
+      }),
+      '--executor-kind',
+      'codex_cli',
+      '--executor-binding-ref',
+      'opl://executors/codex-cli/default',
+      '--require-stage-admission',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    for (let index = 0; index < 26; index += 1) {
+      runCli([
+        'family-runtime',
+        'attempt',
+        'create',
+        '--domain',
+        'medautoscience',
+        '--stage',
+        `overflow_${index}`,
+        '--provider',
+        'local_sqlite',
+        '--workspace-locator',
+        JSON.stringify({ workspace_root: `/tmp/overflow-${index}` }),
+        '--new-attempt',
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      });
+    }
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const snapshot = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_tray_snapshot;
+    const stageProductionEvidence = drilldown.stage_production_evidence.stages.find(
+      (stage: { target_domain_id: string; stage_id: string }) =>
+        stage.target_domain_id === 'med-autogrant'
+        && stage.stage_id === 'fundability_strategy',
+    );
+    assert.equal(stageProductionEvidence.stage_attempt_refs.length, 1);
+    assert.equal(snapshot.stage_attempt_workbench.attempts.length, 25);
+    assert.equal(snapshot.stage_attempt_workbench.evidence_attempt_count, 27);
+    assert.equal(snapshot.stage_attempt_workbench.attempt_list_limit, 25);
+    assert.equal(
+      stageProductionEvidence.missing_production_evidence.includes('production_caller_attempt_not_observed'),
+      false,
+    );
+    assert.equal(
+      stageProductionEvidence.missing_production_evidence.includes('selected_executor_binding_not_observed'),
+      false,
+    );
+    assert.deepEqual(stageProductionEvidence.selected_executor_kinds, ['codex_cli']);
+    assert.deepEqual(stageProductionEvidence.executor_binding_refs, ['opl://executors/codex-cli/default']);
+    assert.equal(stageProductionEvidence.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime action execute records and verifies stage production evidence receipts through OPL ledger only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-stage-evidence-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

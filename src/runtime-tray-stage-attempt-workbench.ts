@@ -861,12 +861,13 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
 
   const db = new DatabaseSync(queueDb, { readOnly: true });
   try {
-    const rows = listStageAttemptRows(db, 25) as StageAttemptWorkbenchRow[];
-    const attemptIds = rows.map((row) => row.stage_attempt_id);
+    const allRows = listStageAttemptRows(db) as StageAttemptWorkbenchRow[];
+    const rows = allRows.slice(0, 25);
+    const attemptIds = allRows.map((row) => row.stage_attempt_id);
     const latestCloseouts = latestStageAttemptCloseoutPacketsByAttempt(db, attemptIds);
     const signals = stageAttemptSignalsByAttempt(db, attemptIds);
-    const providerReadiness = await currentProviderReadinessByKind(rows, paths, options);
-    const attempts = rows.map((row) => {
+    const providerReadiness = await currentProviderReadinessByKind(allRows, paths, options);
+    const evidenceAttempts = allRows.map((row) => {
       const providerKind = providerKindForRow(row);
       return attemptProjection(
         row,
@@ -875,6 +876,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         providerKind ? providerReadiness.get(providerKind) ?? null : null,
       );
     });
+    const attempts = evidenceAttempts.slice(0, 25);
     const metadata = workbenchMetadata(attempts);
     return {
       surface_kind: 'opl_stage_attempt_workbench',
@@ -895,6 +897,9 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       control_loop_summary: metadata.summary.control_loop_summary,
       human_review_burden_budget: metadata.human_review_burden_budget,
       attempts,
+      evidence_attempts: evidenceAttempts,
+      evidence_attempt_count: evidenceAttempts.length,
+      attempt_list_limit: 25,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {
         opl: 'attempt_control_metadata_projection_only',
