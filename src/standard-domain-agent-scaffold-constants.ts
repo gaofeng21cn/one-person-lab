@@ -181,6 +181,8 @@ export const REQUIRED_VERIFICATION = [
 
 export const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
 export const STARTER_STAGE_ID = 'domain_intake';
+export const STANDARD_STAGE_PACK_CONFORMANCE_VERSION = 'standard-stage-pack.v2';
+export const DEFAULT_STAGE_EXECUTOR_BINDING_REF = 'default_codex_cli';
 export const REQUIRED_AGENT_PACK_SECTIONS = [
   { section: 'prompts', prefix: 'agent/prompts/' },
   { section: 'stages', prefix: 'agent/stages/' },
@@ -256,6 +258,14 @@ export const PACK_COMPILER_CONTRACT = {
     'domain_fixtures',
     'owner_receipt_schema',
     'no_forbidden_write_assertions',
+    'standard_stage_pack_v2_cross_refs',
+  ],
+  required_source_refs: [
+    'stage_graph_source_ref',
+    'quality_gate_source_ref',
+    'executor_policy_source_ref',
+    'functional_privatization_audit_source_ref',
+    'generated_surface_handoff_source_ref',
   ],
   generated_surfaces: OPL_GENERATED_SURFACES.map((surface) => surface.surface_id),
 } as const;
@@ -290,7 +300,12 @@ export const AGENT_PACK_CONTRACT = {
     'skills:agent/skills/* or skill_id',
     'knowledge_refs:agent/knowledge/*',
     'evaluation:agent/quality_gates/*',
+    'selected_executor:codex_cli default binding or explicit non-default executor binding',
+    'stage_contract.requires and stage_contract.ensures',
+    'stage_contract.expected_receipt_refs',
+    'independent_gate_policy:execution_review_separation',
   ],
+  conformance_version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   validator: 'opl agents scaffold --validate <repo-dir>',
   empty_agent_directory_policy: 'blocked',
 } as const;

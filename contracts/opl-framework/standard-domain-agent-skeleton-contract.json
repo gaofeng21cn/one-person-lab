@@ -154,6 +154,31 @@
       "provenance_or_history_tombstone",
       "no_retained_legacy_compatibility_entry"
     ],
+    "standard_stage_pack_v2_conformance": {
+      "version": "standard-stage-pack.v2",
+      "enforcement_contract": "contracts/pack_compiler_input.json#standard_stage_pack_conformance.required",
+      "enforcement_policy": "new OPL-generated scaffolds require v2; existing family repos without explicit v2 declaration remain advisory until migrated",
+      "default_selected_executor": "codex_cli",
+      "default_executor_binding_ref": "default_codex_cli",
+      "non_default_executor_policy": "explicit executor_binding_ref plus independent receipt and audit evidence required",
+      "required_stage_fields": [
+        "prompt_refs",
+        "skills",
+        "knowledge_refs",
+        "evaluation",
+        "selected_executor",
+        "stage_contract.requires",
+        "stage_contract.ensures",
+        "stage_contract.expected_receipt_refs",
+        "independent_gate_policy"
+      ],
+      "independent_gate_policy": {
+        "execution_review_separation_required": true,
+        "mechanical_completion_can_close_stage": false,
+        "provider_completion_can_claim_domain_ready": false,
+        "generated_surface_readiness_can_claim_quality_or_export": false
+      }
+    },
     "required_verification": [
       "direct_skill_path_parity",
       "opl_hosted_path_parity",

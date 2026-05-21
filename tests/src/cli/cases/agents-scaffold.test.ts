@@ -64,6 +64,20 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     ),
     true,
   );
+  assert.equal(scaffold.agent_pack_contract.conformance_version, 'standard-stage-pack.v2');
+  assert.equal(
+    scaffold.agent_pack_contract.stage_ref_requirements.includes(
+      'selected_executor:codex_cli default binding or explicit non-default executor binding',
+    ),
+    true,
+  );
+  assert.deepEqual(scaffold.pack_compiler_contract.required_source_refs, [
+    'stage_graph_source_ref',
+    'quality_gate_source_ref',
+    'executor_policy_source_ref',
+    'functional_privatization_audit_source_ref',
+    'generated_surface_handoff_source_ref',
+  ]);
   assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'), true);
   assert.equal(
     scaffold.private_functional_surface_admission_policy.surface_kind,
@@ -254,6 +268,18 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(packCompilerInput.generated_surface_owner, 'one-person-lab');
     assert.equal(packCompilerInput.domain_pack_owner, 'award-foundry');
     assert.equal(packCompilerInput.canonical_semantic_pack_root, 'agent/');
+    assert.deepEqual(packCompilerInput.source_refs, {
+      stage_graph_source_ref: 'contracts/stage_control_plane.json',
+      quality_gate_source_ref: 'agent/quality_gates/domain_acceptance.md',
+      executor_policy_source_ref: 'contracts/stage_control_plane.json#/stages/0/selected_executor',
+      functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
+      generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
+    });
+    assert.deepEqual(packCompilerInput.standard_stage_pack_conformance, {
+      version: 'standard-stage-pack.v2',
+      required: true,
+      enforcement_ref: 'contracts/stage_control_plane.json#stage_pack_conformance_version',
+    });
     assert.deepEqual(packCompilerInput.required_domain_pack_paths, [
       'agent/prompts/domain_intake.md',
       'agent/stages/domain_intake.md',
@@ -265,7 +291,21 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       fs.readFileSync(path.join(targetDir, 'contracts/stage_control_plane.json'), 'utf8'),
     );
     assert.equal(stageControlPlane.surface_kind, 'family_stage_control_plane');
+    assert.equal(stageControlPlane.stage_pack_conformance_version, 'standard-stage-pack.v2');
     assert.equal(stageControlPlane.stages.length, 1);
+    assert.equal(stageControlPlane.stages[0].stage_pack_conformance_version, 'standard-stage-pack.v2');
+    assert.deepEqual(stageControlPlane.stages[0].selected_executor, {
+      executor_kind: 'codex_cli',
+      default_executor: true,
+      executor_binding_ref: 'default_codex_cli',
+      binding_policy: 'default_first_class_executor_for_ai_first_stage_execution',
+      required_capabilities: [
+        'repo_context_reading',
+        'domain_skill_invocation',
+        'receipt_or_typed_blocker_return',
+        'no_forbidden_write_guard',
+      ],
+    });
     assert.deepEqual(stageControlPlane.stages[0].prompt_refs, [
       {
         ref_kind: 'repo_path',
@@ -292,6 +332,38 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
         ref_kind: 'repo_path',
         ref: 'agent/quality_gates/domain_acceptance.md',
         role: 'agent_quality_gate',
+      },
+    ]);
+    assert.deepEqual(stageControlPlane.stages[0].independent_gate_policy, {
+      gate_ref: 'agent/quality_gates/domain_acceptance.md',
+      gate_owner: 'award-foundry',
+      execution_review_separation_required: true,
+      mechanical_completion_can_close_stage: false,
+      provider_completion_can_claim_domain_ready: false,
+      generated_surface_readiness_can_claim_quality_or_export: false,
+    });
+    assert.deepEqual(stageControlPlane.stages[0].stage_contract.requires, [
+      'user_intent_ref',
+      'source_locator_refs',
+      'expected_deliverable_class_ref',
+      'domain_authority_owner_ref',
+    ]);
+    assert.deepEqual(stageControlPlane.stages[0].stage_contract.ensures, [
+      'domain_intake_receipt_or_typed_blocker_ref',
+      'next_stage_recommendation_ref',
+      'authority_boundary_ref',
+      'no_forbidden_write_evidence_ref',
+    ]);
+    assert.deepEqual(stageControlPlane.stages[0].stage_contract.expected_receipt_refs, [
+      {
+        ref_kind: 'domain_ref',
+        ref: 'intake_receipt_ref',
+        role: 'domain_owner_receipt',
+      },
+      {
+        ref_kind: 'domain_ref',
+        ref: 'typed_blocker_ref',
+        role: 'route_back_or_blocker',
       },
     ]);
     const generatedSurfaceHandoff = JSON.parse(
@@ -361,6 +433,17 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
       ],
     );
     assert.equal(validated.validation.stage_ref_validation.stage_count, 1);
+    assert.equal(validated.validation.stage_pack_v2_validation.status, 'passed');
+    assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
+    assert.equal(
+      validated.validation.stage_pack_v2_validation.stage_statuses[0].selected_executor_kind,
+      'codex_cli',
+    );
+    assert.equal(
+      validated.validation.stage_pack_v2_validation.stage_statuses[0].executor_binding_ref,
+      'default_codex_cli',
+    );
+    assert.deepEqual(validated.validation.stage_pack_v2_validation.blockers, []);
     assert.deepEqual(validated.validation.blockers, []);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
@@ -442,6 +525,62 @@ test('agents scaffold validation blocks legacy pack roots and README-only requir
     );
     assert.equal(
       validated.validation.blockers.includes('required_domain_pack_path_must_not_be_readme:agent/README.md'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation blocks generated skeletons missing stage pack v2 fields', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-pack-v2-missing-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'stage-pack-v2-missing',
+    ]);
+    const stageControlPlanePath = path.join(targetDir, 'contracts/stage_control_plane.json');
+    const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+    delete stageControlPlane.stage_pack_conformance_version;
+    delete stageControlPlane.stages[0].selected_executor;
+    delete stageControlPlane.stages[0].stage_contract.expected_receipt_refs;
+    stageControlPlane.stages[0].independent_gate_policy.execution_review_separation_required = false;
+    fs.writeFileSync(stageControlPlanePath, `${JSON.stringify(stageControlPlane, null, 2)}\n`);
+
+    const packCompilerPath = path.join(targetDir, 'contracts/pack_compiler_input.json');
+    const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerPath, 'utf8'));
+    delete packCompilerInput.source_refs.executor_policy_source_ref;
+    fs.writeFileSync(packCompilerPath, `${JSON.stringify(packCompilerInput, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.mode, 'validate');
+    assert.equal(validated.state, 'validation_blocked');
+    assert.equal(validated.validation.status, 'blocked');
+    assert.equal(validated.validation.stage_pack_v2_validation.status, 'blocked');
+    assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
+    assert.equal(
+      validated.validation.blockers.includes('stage_pack_v2_plane_version_missing'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('pack_compiler_source_ref_missing:executor_policy_source_ref'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('stage_pack_v2_missing_selected_executor:domain_intake'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('stage_pack_v2_missing_expected_receipt_refs:domain_intake'),
+      true,
+    );
+    assert.equal(
+      validated.validation.blockers.includes('stage_pack_v2_independent_gate_separation_required:domain_intake'),
       true,
     );
   } finally {

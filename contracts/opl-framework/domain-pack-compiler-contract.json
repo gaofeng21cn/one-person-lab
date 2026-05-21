@@ -20,6 +20,28 @@
     "family_agent_descriptor.runtime_surfaces",
     "family_agent_descriptor.functional_privatization_audit"
   ],
+  "standard_stage_pack_v2_cross_refs": {
+    "source_contract": "contracts/pack_compiler_input.json#source_refs",
+    "enforcement_contract": "contracts/pack_compiler_input.json#standard_stage_pack_conformance.required",
+    "enforcement_policy": "v2 is required for new OPL-generated scaffolds that explicitly declare standard_stage_pack_conformance.required=true or stage_pack_conformance_version=standard-stage-pack.v2; existing family repos without that declaration report advisory findings until migrated",
+    "required_source_refs": [
+      "stage_graph_source_ref",
+      "quality_gate_source_ref",
+      "executor_policy_source_ref",
+      "functional_privatization_audit_source_ref",
+      "generated_surface_handoff_source_ref"
+    ],
+    "stage_graph_source_ref": "contracts/stage_control_plane.json",
+    "quality_gate_source_ref": "agent/quality_gates/domain_acceptance.md",
+    "executor_policy_source_ref": "contracts/stage_control_plane.json#/stages/*/selected_executor",
+    "functional_privatization_audit_source_ref": "contracts/functional_privatization_audit.json",
+    "generated_surface_handoff_source_ref": "contracts/generated_surface_handoff.json",
+    "authority_boundary": {
+      "cross_refs_can_claim_domain_ready": false,
+      "cross_refs_can_replace_stage_expert_judgment": false,
+      "cross_refs_can_authorize_quality_or_export": false
+    }
+  },
   "generated_surface_projection": {
     "surface_kind": "opl_generated_surface_handoff_projection",
     "generated_surface_owner": "one-person-lab",
