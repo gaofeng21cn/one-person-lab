@@ -444,13 +444,9 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
 ];
 
 const REQUIRED_RCA_PHYSICAL_SURFACES = [
-  'mcp_product_entry_domain_entry',
-  'product_entry_session_store',
-  'runtime_watch_projection',
-  'product_sidecar_guarded_actions',
-  'operator_evidence_stability_projection',
-  'visual_authority_functions',
-  'legacy_managed_runtime_gateway_names',
+  'mcp_product_entry_domain_entry', 'product_entry_session_store', 'runtime_watch_projection',
+  'product_sidecar_guarded_actions', 'operator_evidence_stability_projection', 'visual_authority_functions',
+  'retired_product_entry_contract_tombstone_refs',
 ];
 
 const REQUIRED_META_SCRIPT_CLASSES = [
@@ -766,6 +762,9 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
   const policy = isRecord(policyFile.payload) ? policyFile.payload : null;
   const classifications = recordList(policy?.active_surface_classifications);
   const classifiedSurfaceIds = stringList(classifications.map((entry) => entry.surface_id));
+  const forbiddenActiveSurfaceIds = stringList(
+    (isRecord(policy?.legacy_name_policy) ? policy.legacy_name_policy : {}).forbidden_active_surface_ids,
+  );
   const ownerFlagViolations = classifications.flatMap((entry) => {
     const flags = isRecord(entry.forbidden_generic_owner_flags) ? entry.forbidden_generic_owner_flags : {};
     return Object.entries(flags)
@@ -781,6 +780,12 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
     ...REQUIRED_RCA_PHYSICAL_SURFACES
       .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
       .map((surfaceId) => `rca_physical_surface_unclassified:${surfaceId}`),
+    classifiedSurfaceIds.includes('legacy_managed_runtime_gateway_names')
+      ? 'rca_retired_legacy_surface_id_still_classified:legacy_managed_runtime_gateway_names'
+      : null,
+    forbiddenActiveSurfaceIds.includes('legacy_managed_runtime_gateway_names')
+      ? null
+      : 'rca_retired_legacy_surface_id_missing_from_forbidden_active_surface_ids',
     ...ownerFlagViolations,
   ].filter((entry): entry is string => Boolean(entry));
   return {
@@ -788,8 +793,8 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
     policy_sources: ['contracts/physical_source_morphology_policy.json'],
     required_parity_gates: [
       'mcp_product_entry_session_store_runtime_watch_sidecar_operator_evidence_classified',
-      'visual_authority_functions_not_generic_runtime',
-      'legacy_managed_runtime_gateway_names_tombstoned',
+      'visual_authority_functions_not_generic_runtime', 'retired_product_entry_contract_tombstone_refs_classified',
+      'legacy_managed_runtime_gateway_names_forbidden_as_active_surface_id',
     ],
     allowed_residue_prefixes: [
       ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
