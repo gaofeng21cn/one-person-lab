@@ -5,6 +5,8 @@ import {
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
+  MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+  OPL_RUNTIME_OWNER_ROUTE,
 } from './family-runtime-mas-domain-route.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
@@ -138,6 +140,8 @@ const FAMILY_SCHEDULER_REPLACEMENT = {
       replacement_role:
         'OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.',
       required_domain_refs: [
+        MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+        OPL_RUNTIME_OWNER_ROUTE,
         MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
         'mas_opl_runtime_workbench_projection',
         'sidecar_owner_receipt_or_typed_blocker',
@@ -388,6 +392,8 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
         wakeup_bridge: 'provider wakeup -> opl family-runtime tick --source <provider> --hydrate',
         webhook_bridge: 'provider signal/webhook -> opl family-runtime enqueue',
         mas_domain_route_projection: {
+          owner_route_handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+          accepted_runtime_owner_route_ref: OPL_RUNTIME_OWNER_ROUTE,
           supported_task_kinds: [
             MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
           ],
@@ -403,6 +409,13 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
             'idempotency_key',
           ],
           repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+          accepted_runtime_responsibilities: [
+            'generic_runtime_queue',
+            'stage_attempt_ledger',
+            'liveness_projection',
+            'provider_wakeup',
+            'redrive_retry_dead_letter',
+          ],
           authority_boundary:
             'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.',
         },

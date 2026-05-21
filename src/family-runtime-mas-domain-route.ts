@@ -3,6 +3,8 @@ import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 
 export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY = 'domain_route/reconcile-apply';
 export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION = 'domain_route_reconcile_apply';
+export const MAS_RUNTIME_OWNER_ROUTE_HANDOFF = 'mas_runtime_owner_route_handoff';
+export const OPL_RUNTIME_OWNER_ROUTE = 'opl_runtime_owner_route';
 export const MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE = 'publication_aftercare/analysis-queue-progress';
 export const MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH = 'publication_aftercare/reviewer-refresh';
 
@@ -86,6 +88,25 @@ export function masDomainRouteProjection(
       writes_artifact_gate: false,
       writes_current_package: false,
       queue_owns_attempts_retry_and_dead_letter: true,
+      opl_owns_generic_runtime_queue_attempt_liveness_redrive: true,
+    },
+    owner_route_handoff: {
+      handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+      accepted_by: OPL_RUNTIME_OWNER_ROUTE,
+      accepted_runtime_responsibilities: [
+        'generic_runtime_queue',
+        'stage_attempt_ledger',
+        'liveness_projection',
+        'provider_wakeup',
+        'redrive_retry_dead_letter',
+      ],
+      retained_domain_owner: 'med-autoscience',
+      authority_boundary: {
+        writes_domain_truth: false,
+        writes_domain_artifacts: false,
+        writes_domain_quality_verdict: false,
+        writes_current_package: false,
+      },
     },
   };
 }

@@ -312,7 +312,7 @@ MedAutoScience == MedDeepScientist
 
 不要把系统写成：
 
-- `OPL` 是 runtime owner
+- `OPL` 是 domain truth runtime owner，或能写 domain artifact / publication gate / current package
 - `Managed Runtime` 只是“更会长跑的 Codex”
 - `MedDeepScientist` 是 `MedAutoScience` 的系统本体
 - monorepo ingest 等于 domain-owned authority / runtime controller 与 execution engine 边界消失
@@ -320,8 +320,8 @@ MedAutoScience == MedDeepScientist
 
 应该把系统写成：
 
-- `OPL` 负责 stage-led framework 语言
-- domain repo 负责 domain-owned authority、runtime controller、delivery system 与 artifact truth
+- `OPL` 负责 stage-led framework 语言，并持有 generic runtime queue、attempt ledger、liveness、provider wakeup、redrive/retry/dead-letter 等 framework control-plane
+- domain repo 负责 domain-owned authority、domain route decision、owner receipt、quality gate、delivery system 与 artifact truth
 - execution engine 负责 execution plane
 - `host-agent runtime` 与 `managed runtime` 是 execution plane 的两种 deployment shape
 - future migration 只改 execution plane 的托管方式，不改写 domain contract

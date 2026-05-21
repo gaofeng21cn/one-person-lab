@@ -18,6 +18,8 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 
 当前 runtime conflict / blocker 机器语法统一在 `contracts/family-orchestration/family-conflict-envelope.schema.json`。`stage_attempt_query`、`stage_attempt_workbench`、`runtime_tray_snapshot.operator_conflicts[]` 与 `runtime_tray_snapshot.app_operator_drilldown` 只投影 envelope、refs、owner-aware action route 与 App drilldown targets；OPL 不把 provider/executor completion 解释成 domain ready、quality、readiness、artifact 或 export verdict。
 
+当前 MAS generic runtime handoff 的机器入口是 `contracts/opl-framework/runtime-manager-contract.json#/family_runtime_queue/mas_domain_route_projection` 与 `#/family_scheduler_replacement`。OPL 接收 `mas_runtime_owner_route_handoff`，并以 `opl_runtime_owner_route` 持有 generic runtime queue、stage attempt ledger、liveness projection、provider wakeup、redrive/retry/dead-letter；MAS 继续持有医学 domain truth、paper progress semantics、owner receipt、typed blocker、publication/artifact gate 与 current package authority。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |

@@ -46,12 +46,38 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.equal(
       output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[0],
+      'mas_runtime_owner_route_handoff',
+    );
+    assert.equal(
+      output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[1],
+      'opl_runtime_owner_route',
+    );
+    assert.equal(
+      output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[2],
       'domain_route/reconcile-apply',
     );
     assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
     assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.supported_task_kinds, [
       'domain_route/reconcile-apply',
     ]);
+    assert.equal(
+      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.owner_route_handoff_ref,
+      'mas_runtime_owner_route_handoff',
+    );
+    assert.equal(
+      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.accepted_runtime_owner_route_ref,
+      'opl_runtime_owner_route',
+    );
+    assert.deepEqual(
+      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.accepted_runtime_responsibilities,
+      [
+        'generic_runtime_queue',
+        'stage_attempt_ledger',
+        'liveness_projection',
+        'provider_wakeup',
+        'redrive_retry_dead_letter',
+      ],
+    );
     assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.action_refs, [
       'domain_route_reconcile_apply',
     ]);

@@ -227,7 +227,25 @@
     "provider_model": "provider_backed_stage_attempt_runtime",
     "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
     "wakeup_bridge": "provider wakeup -> opl family-runtime tick --source <provider> --hydrate",
-    "webhook_bridge": "provider signal/webhook -> opl family-runtime enqueue"
+    "webhook_bridge": "provider signal/webhook -> opl family-runtime enqueue",
+    "mas_domain_route_projection": {
+      "owner_route_handoff_ref": "mas_runtime_owner_route_handoff",
+      "accepted_runtime_owner_route_ref": "opl_runtime_owner_route",
+      "supported_task_kinds": [
+        "domain_route/reconcile-apply"
+      ],
+      "action_refs": [
+        "domain_route_reconcile_apply"
+      ],
+      "accepted_runtime_responsibilities": [
+        "generic_runtime_queue",
+        "stage_attempt_ledger",
+        "liveness_projection",
+        "provider_wakeup",
+        "redrive_retry_dead_letter"
+      ],
+      "authority_boundary": "OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package."
+    }
   },
   "family_scheduler_replacement": {
     "surface_kind": "opl_family_scheduler_replacement",
@@ -263,6 +281,8 @@
         "legacy_scheduler_residue_policy": "history_tombstone_or_negative_guard_only",
         "replacement_role": "OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.",
         "required_domain_refs": [
+          "mas_runtime_owner_route_handoff",
+          "opl_runtime_owner_route",
           "domain_route/reconcile-apply",
           "mas_opl_runtime_workbench_projection",
           "sidecar_owner_receipt_or_typed_blocker",

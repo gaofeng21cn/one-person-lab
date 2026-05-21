@@ -128,6 +128,20 @@ JSON
     assert.equal(task.family_runtime_task.task.task_kind, 'domain_route/reconcile-apply');
     assert.equal(task.family_runtime_task.task.domain_route.domain_truth_owner, 'med-autoscience');
     assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_mas_truth, false);
+    assert.equal(
+      task.family_runtime_task.task.domain_route.authority_boundary.opl_owns_generic_runtime_queue_attempt_liveness_redrive,
+      true,
+    );
+    assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.handoff_ref, 'mas_runtime_owner_route_handoff');
+    assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.accepted_by, 'opl_runtime_owner_route');
+    assert.deepEqual(task.family_runtime_task.task.domain_route.owner_route_handoff.accepted_runtime_responsibilities, [
+      'generic_runtime_queue',
+      'stage_attempt_ledger',
+      'liveness_projection',
+      'provider_wakeup',
+      'redrive_retry_dead_letter',
+    ]);
+    assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.authority_boundary.writes_domain_truth, false);
     assert.equal(attempt.stage_id, 'domain_route/reconcile-apply');
     assert.equal(attempt.workspace_locator.route_ref, 'domain_route/reconcile-apply');
     assert.equal(dispatchedTask.task_kind, 'domain_route/reconcile-apply');
@@ -237,6 +251,8 @@ JSON
     assert.deepEqual(task.domain_route.typed_blocker_refs, ['typed-blocker:mas/DM002/current-package-stale']);
     assert.equal(task.domain_route.authority_boundary.writes_mas_truth, false);
     assert.equal(task.domain_route.authority_boundary.queue_owns_attempts_retry_and_dead_letter, true);
+    assert.equal(task.domain_route.owner_route_handoff.handoff_ref, 'mas_runtime_owner_route_handoff');
+    assert.equal(task.domain_route.owner_route_handoff.accepted_by, 'opl_runtime_owner_route');
     assert.equal(dispatchedTask.domain_route.route_ref, 'publication_aftercare/analysis-queue-progress');
     assert.deepEqual(dispatchedTask.domain_route.owner_route_refs, [
       'owner-route:mas/DM002/unit_harmonized_validation_uncertainty_and_grouped_calibration',
