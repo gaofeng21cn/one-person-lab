@@ -39,12 +39,15 @@ needs_design_pass:
   - `tests/src/cli/cases/agents-conformance.test.ts`
   - `src/family-domain-agent-skeleton.ts`
   - `tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts`
-  - `src/standard-domain-agent-conformance.ts`
   - `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
   - `src/family-stage-control-plane.ts`
   - `src/family-runtime-temporal-provider.ts`
 
 These are design-pass inputs only. Do not mechanically split them unless a real owner boundary, generated/source separation, or reusable OPL primitive falls out of the code path.
+
+resolved_since_last_readout:
+
+- `src/standard-domain-agent-conformance.ts` was thinned below the blocking line budget by extracting physical morphology policy and active residue scanning into `src/standard-domain-agent-conformance-physical-morphology.ts` and shared helpers into `src/standard-domain-agent-conformance-utils.ts`. This is a semantic owner-boundary extraction, not a numeric split: conformance remains the thin read-only report aggregator, while physical morphology remains a scoped structural guard.
 
 mechanical_residue:
 

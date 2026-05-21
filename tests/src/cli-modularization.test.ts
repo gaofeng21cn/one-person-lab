@@ -45,3 +45,21 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
     assert.equal(fs.existsSync(path.join(partsRoot, fileName)), true, `${fileName} parser part is missing`);
   }
 });
+
+test('standard domain-agent conformance keeps physical morphology in scoped modules', () => {
+  const entryPath = path.join(repoRoot, 'src', 'standard-domain-agent-conformance.ts');
+  const morphologyPath = path.join(repoRoot, 'src', 'standard-domain-agent-conformance-physical-morphology.ts');
+  const utilsPath = path.join(repoRoot, 'src', 'standard-domain-agent-conformance-utils.ts');
+  const entrySource = fs.readFileSync(entryPath, 'utf8');
+  const morphologySource = fs.readFileSync(morphologyPath, 'utf8');
+  const entryLines = entrySource.trimEnd().split('\n').length;
+  const morphologyLines = morphologySource.trimEnd().split('\n').length;
+
+  assert.equal(fs.existsSync(morphologyPath), true);
+  assert.equal(fs.existsSync(utilsPath), true);
+  assert.ok(entryLines <= 600, `standard-domain-agent-conformance.ts should stay as a thin aggregator, got ${entryLines}`);
+  assert.ok(morphologyLines <= 700, `physical morphology checks should remain reviewable, got ${morphologyLines}`);
+  assert.match(entrySource, /buildPhysicalMorphologyChecks/);
+  assert.equal(entrySource.includes('ACTIVE_MORPHOLOGY_SCAN_ROOTS'), false);
+  assert.equal(morphologySource.includes('ACTIVE_MORPHOLOGY_SCAN_ROOTS'), true);
+});

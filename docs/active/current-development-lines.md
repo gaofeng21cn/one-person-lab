@@ -44,6 +44,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
 | `provider_runtime` | OPL Runtime Manager / Temporal provider | 固定 Temporal production provider，保持 cadence / capability SLO satisfied；继续补真实 domain owner-chain dispatch 和长时 operator evidence。 |
 | `stage_evidence_accounting` | OPL production closeout / App operator shell | workorder accounting 当前为 0；继续保留 refs-only route、payload preflight、typed blocker 和 domain/stage packet 作为未来 admitted stage 的 fail-closed 守门面。 |
 | `generated_surface` | OPL pack compiler / generated surface | 从 domain descriptor/stage/action/memory/transition/receipt metadata 派生 entry/status/sidecar/workbench/harness，并迁移生产 caller。 |
+| `conformance_physical_morphology` | OPL agents conformance | 保持 conformance 主入口为薄聚合器；physical morphology policy、active residue scan 和 provenance/tombstone allowance 只能在 scoped module 中演进，并由 line-budget / modularization tests 防回堆。 |
 | `domain_private_residue` | OPL functional audit + domain repos | 按 OPL replacement、generated surface、refs-only adapter、minimal authority function、tombstone 分类收薄或删除；MAS runner/supervisor/workbench/SQLite lifecycle writer 是当前最高优先级物理收薄面。 |
 | `lifecycle_memory_artifact` | OPL primitive + domain owner receipt | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 |
 | `app_workbench` | One Person Lab App / OPL product surface | 消费 App/operator drilldown、safe action routes、cleanup plan、stage evidence accounting、OMA patch-loop closeout refs 和 OPL Meta Agent refs-only workbench sections；继续补真实用户路径、截图、发布包和长时证据。 |
