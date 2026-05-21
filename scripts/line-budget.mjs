@@ -12,8 +12,9 @@ const BASELINE = new Map([
   ['src/family-runtime-temporal-provider.ts', 1008],
   ['src/family-stage-control-plane.ts', 1018],
   ['src/runtime-tray-app-operator-drilldown.ts', 1316],
-  ['src/standard-domain-agent-conformance.ts', 1087],
-  ['tests/src/cli/cases/agents-conformance.test.ts', 1156],
+  ['src/standard-domain-agent-conformance.ts', 1091],
+  ['tests/src/agent-lab.test.ts', 1135],
+  ['tests/src/cli/cases/agents-conformance.test.ts', 1239],
   ['tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts', 1123],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);

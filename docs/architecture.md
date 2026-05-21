@@ -224,7 +224,7 @@ Stage progression 的 AI-first quality gate 需要独立 reviewer / gate attempt
 
 #### Stage Pack Admission 与 Trust Lanes
 
-默认 operator / App 检查入口是 `opl stages readiness --domain <domain>`。它把 Minimal Trust Kernel admission、scope refs、expected receipt refs、proof/replay refs、assumption/monitor refs 和 evidence gap 聚成 readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是 Derived Diagnostic Lenses，服务维护者 drilldown，不是普通首屏，也不是独立学习目标。Surface Budget 的机器政策由 `contracts/opl-framework/surface-budget-policy.json` 冻结；默认文档和 help 不应把这些 drilldown 命令提升成普通 operator 路径。
+默认 operator / App 总入口是 `opl framework readiness --family-defaults --json`。`opl stages readiness --domain <domain>` 是 stage-level drilldown：它把 Minimal Trust Kernel admission、scope refs、expected receipt refs、proof/replay refs、assumption/monitor refs 和 evidence gap 聚成 readiness 摘要；`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 继续是 Derived Diagnostic Lenses，服务维护者 drilldown，不是普通首屏，也不是独立学习目标。Surface Budget 的机器政策由 `contracts/opl-framework/surface-budget-policy.json` 冻结；默认文档和 help 不应把这些 drilldown 命令提升成普通 operator 路径。
 
 GraphFlow / GFL 在 active narrative 中只提供治理词汇：boundary、evidence、audit、replay、route-back。OPL 不吸收其 runtime、planner、proof assistant、workflow compiler、stage runner、executor 或 domain verdict 角色；详细参考映射只保留在 [GraphFlow / GFL contract vocabulary reference](./references/runtime-substrate/graphflow-gfl-contract-vocabulary.md)。
 
