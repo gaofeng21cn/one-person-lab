@@ -125,6 +125,7 @@ const lanes = {
       'tests/src/cli/cases/runtime-app-operator-drilldown-external-evidence-actions.test.ts',
       'tests/src/cli/cases/runtime-app-operator-stage-evidence-closeout.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
+      'tests/src/cli/cases/runtime-app-operator-drilldown-owner-handoff.test.ts',
       'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',
       'tests/src/cli/cases/runtime-tray-provider-continuous-proof.test.ts',
       'tests/src/cli/cases/runtime-observability-export.test.ts',
@@ -240,6 +241,7 @@ const lanes = {
       'tests/src/cli/cases/runtime-app-operator-drilldown-external-evidence-actions.test.ts',
       'tests/src/cli/cases/runtime-app-operator-stage-evidence-closeout.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
+      'tests/src/cli/cases/runtime-app-operator-drilldown-owner-handoff.test.ts',
     ]),
   ],
   meta: [
