@@ -5,6 +5,7 @@ import { getActiveWorkspaceBinding } from './workspace-registry.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type EnqueueInput,
+  type FamilyRuntimeDomainProfiles,
   type FamilyRuntimeTaskScope,
   type FamilyRuntimeDomainId,
 } from './family-runtime-command.ts';
@@ -50,6 +51,7 @@ function masProductionProofArgs(paths?: ReturnType<typeof familyRuntimePaths>) {
 function exportCommandForDomain(
   domainId: FamilyRuntimeDomainId,
   paths?: ReturnType<typeof familyRuntimePaths>,
+  domainProfiles?: FamilyRuntimeDomainProfiles,
 ): DomainExportCommand | null {
   const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_EXPORT`]?.trim();
   if (override) {
@@ -61,7 +63,8 @@ function exportCommandForDomain(
     };
   }
   if (domainId === 'medautoscience') {
-    const profile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
+    const profile = domainProfiles?.medautoscience?.trim()
+      || process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
     if (profile) {
       const command = resolveOplModuleExecCommand('medautoscience', [
         'sidecar',
@@ -78,6 +81,7 @@ function exportCommandForDomain(
         source: 'module_exec_profile',
         owner_fingerprint: [
           'module_exec_profile',
+          profile,
           command.module_id,
           command.module.install_origin,
           command.module.git?.head_sha ?? 'unknown-head',
@@ -413,7 +417,12 @@ function exportedTaskInputs(
 export function hydrateDomainTasks(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
-  input: { domainId?: FamilyRuntimeDomainId; source: string; taskScope?: FamilyRuntimeTaskScope },
+  input: {
+    domainId?: FamilyRuntimeDomainId;
+    source: string;
+    taskScope?: FamilyRuntimeTaskScope;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
+  },
   enqueueTask: EnqueueTask,
 ) {
   const scopedDomainId = input.domainId ?? input.taskScope?.domainId;
@@ -425,7 +434,7 @@ export function hydrateDomainTasks(
   let blockedCount = 0;
   let filteredCount = 0;
   for (const domainId of domains) {
-    const command = exportCommandForDomain(domainId, paths);
+    const command = exportCommandForDomain(domainId, paths, input.domainProfiles);
     if (!command) {
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
       continue;

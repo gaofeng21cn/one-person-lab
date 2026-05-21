@@ -221,6 +221,126 @@ exit 44
   }
 });
 
+test('family-runtime intake --profile overrides active MAS workspace binding', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cli-profile-home-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cli-profile-'));
+  const stateRoot = path.join(homeRoot, 'opl-state');
+  const boundMasWorkspacePath = path.join(fixtureRoot, 'bound-med-autoscience');
+  const boundProfilePath = path.join(fixtureRoot, 'nfpitnet.workspace.toml');
+  const explicitProfilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const uvPath = path.join(fixtureRoot, 'uv');
+  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
+  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  fs.mkdirSync(boundMasWorkspacePath, { recursive: true });
+  fs.writeFileSync(boundProfilePath, '[workspace]\nname = "nfpitnet"\n', 'utf8');
+  fs.writeFileSync(explicitProfilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
+: > ${shellSingleQuote(uvArgvPath)}
+for arg in "$@"; do
+  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
+done
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "domain_route/reconcile-apply",
+      "priority": 55,
+      "source": "dm002-explicit-profile-owner-route",
+      "dedupe_key": "mas:dm-cvd:002-dm-china-us-mortality-attribution:owner-route",
+      "dispatch_owner": "med-autoscience",
+      "payload": {
+        "profile": "dm-cvd.workspace.toml",
+        "study_id": "002-dm-china-us-mortality-attribution",
+        "reason": "runtime_controller_redrive_required"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  const env = familyRuntimeEnv(stateRoot, {
+    HOME: homeRoot,
+    PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+  });
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      boundMasWorkspacePath,
+      '--profile',
+      boundProfilePath,
+    ], env);
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--profile',
+      explicitProfilePath,
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+      '--source',
+      'dm002-cli-profile-override',
+    ], env);
+    const exportResult = intake.family_runtime_intake.exports[0];
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(exportResult.command_source, 'module_exec_profile');
+    assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
+    assert.deepEqual(exportResult.command_preview, [
+      'uv',
+      'run',
+      '--directory',
+      masFixture.sourceRoot,
+      '--extra',
+      'analysis',
+      'medautosci',
+      'sidecar',
+      'export',
+      '--profile',
+      explicitProfilePath,
+      '--format',
+      'json',
+    ]);
+    assert.match(exportResult.command_preview.join(' '), /dm-cvd\.workspace\.toml/);
+    assert.doesNotMatch(exportResult.command_preview.join(' '), /nfpitnet\.workspace\.toml/);
+    assert.equal(
+      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(masFixture.sourceRoot),
+    );
+    assert.deepEqual(uvArgv, exportResult.command_preview.slice(1));
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, '002-dm-china-us-mortality-attribution');
+    assert.equal(
+      queue.family_runtime_queue.tasks[0].payload.opl_domain_export_context.command_source,
+      'module_exec_profile',
+    );
+    assert.match(
+      queue.family_runtime_queue.tasks[0].payload.opl_domain_export_context.owner_fingerprint,
+      /dm-cvd\.workspace\.toml/,
+    );
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime profile tick dispatches MAS tasks through OPL module checkout', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-dispatch-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-dispatch-'));

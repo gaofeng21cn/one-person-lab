@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
 import {
   parseFamilyRuntimeCommand,
+  type FamilyRuntimeDomainProfiles,
   type FamilyRuntimeTaskScope,
 } from './family-runtime-command.ts';
 import {
@@ -268,12 +269,14 @@ function runTick(
   limit: number,
   hydrate: boolean,
   taskScope?: FamilyRuntimeTaskScope,
+  domainProfiles?: FamilyRuntimeDomainProfiles,
 ) {
   return runFamilyRuntimeQueueTick(db, paths, {
     source,
     limit,
     hydrate,
     taskScope,
+    domainProfiles,
   }, { enqueueTask, dispatchTask });
 }
 
@@ -556,6 +559,7 @@ export async function runFamilyRuntime(args: string[]) {
             parsed.limit ?? 10,
             parsed.hydrate ?? false,
             parsed.taskScope,
+            parsed.domainProfiles,
           ),
           queue: queueSummary(db),
         },
@@ -573,6 +577,7 @@ export async function runFamilyRuntime(args: string[]) {
               domainId: parsed.domainId,
               source: parsed.source ?? 'manual',
               taskScope: parsed.taskScope,
+              domainProfiles: parsed.domainProfiles,
             },
             enqueueTask,
           ),

@@ -1,6 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import type { EnqueueInput, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
+import type {
+  EnqueueInput,
+  FamilyRuntimeDomainProfiles,
+  FamilyRuntimeTaskScope,
+} from './family-runtime-command.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
@@ -23,6 +27,7 @@ export function runFamilyRuntimeQueueTick(
     limit: number;
     hydrate: boolean;
     taskScope?: FamilyRuntimeTaskScope;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
   },
   handlers: {
     enqueueTask: EnqueueTask;
@@ -37,6 +42,7 @@ export function runFamilyRuntimeQueueTick(
     ? hydrateDomainTasks(db, paths, {
       source: `${input.source}:hydrate`,
       taskScope: input.taskScope,
+      domainProfiles: input.domainProfiles,
     }, handlers.enqueueTask)
     : {
       source: input.source,

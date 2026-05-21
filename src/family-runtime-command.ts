@@ -29,6 +29,8 @@ export type FamilyRuntimeTaskScope = {
   payloadMatches?: Array<{ path: string; value: string }>;
 };
 
+export type FamilyRuntimeDomainProfiles = Partial<Record<FamilyRuntimeDomainId, string>>;
+
 export type FamilyRuntimeCommandInput =
   | {
     mode: 'status' | 'doctor' | 'install' | 'repair';
@@ -87,8 +89,21 @@ export type FamilyRuntimeCommandInput =
     };
   }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
-  | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean; taskScope?: FamilyRuntimeTaskScope }
-  | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string; taskScope?: FamilyRuntimeTaskScope }
+  | {
+    mode: 'tick';
+    source?: string;
+    limit?: number;
+    hydrate?: boolean;
+    taskScope?: FamilyRuntimeTaskScope;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
+  }
+  | {
+    mode: 'intake';
+    domainId?: FamilyRuntimeDomainId;
+    source?: string;
+    taskScope?: FamilyRuntimeTaskScope;
+    domainProfiles?: FamilyRuntimeDomainProfiles;
+  }
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
   | { mode: 'attempt_inspect'; stageAttemptId: string }

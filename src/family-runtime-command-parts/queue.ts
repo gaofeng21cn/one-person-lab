@@ -1,6 +1,10 @@
 import { FrameworkContractError } from '../contracts.ts';
 import type { FamilyRuntimeDomainId } from '../family-runtime-types.ts';
-import type { FamilyRuntimeCommandInput, FamilyRuntimeTaskScope } from '../family-runtime-command.ts';
+import type {
+  FamilyRuntimeCommandInput,
+  FamilyRuntimeDomainProfiles,
+  FamilyRuntimeTaskScope,
+} from '../family-runtime-command.ts';
 import { assertDomainId, parsePayloadArg } from './shared.ts';
 
 export function parseTaskScopeOption(
@@ -42,6 +46,20 @@ function normalizedTaskScope(scope: FamilyRuntimeTaskScope) {
   return scope.domainId || (scope.payloadMatches?.length ?? 0) > 0 ? scope : undefined;
 }
 
+function setDomainProfile(
+  profiles: FamilyRuntimeDomainProfiles,
+  domainId: FamilyRuntimeDomainId | undefined,
+  profile: string,
+) {
+  const targetDomain = domainId ?? 'medautoscience';
+  if (targetDomain !== 'medautoscience') {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime --profile is currently supported only for medautoscience.', {
+      domain: targetDomain,
+    });
+  }
+  profiles[targetDomain] = profile;
+}
+
 export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   if (rest[0] === 'list') {
     return { mode: 'queue_list' };
@@ -63,12 +81,16 @@ export function parseTickArgs(rest: string[]): FamilyRuntimeCommandInput {
   let limit = 10;
   let hydrate = false;
   const taskScope: FamilyRuntimeTaskScope = {};
+  const domainProfiles: FamilyRuntimeDomainProfiles = {};
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
     if (token === '--hydrate') {
       hydrate = true;
     } else if (parseTaskScopeOption(taskScope, token, value)) {
+      index += 1;
+    } else if (token === '--profile' && value) {
+      setDomainProfile(domainProfiles, taskScope.domainId, value);
       index += 1;
     } else if (token === '--source' && value) {
       source = value;
@@ -87,13 +109,21 @@ export function parseTickArgs(rest: string[]): FamilyRuntimeCommandInput {
       limit,
     });
   }
-  return { mode: 'tick', source, limit, hydrate, taskScope: normalizedTaskScope(taskScope) };
+  return {
+    mode: 'tick',
+    source,
+    limit,
+    hydrate,
+    taskScope: normalizedTaskScope(taskScope),
+    domainProfiles,
+  };
 }
 
 export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
   let domainId: FamilyRuntimeDomainId | undefined;
   let source = 'manual';
   const taskScope: FamilyRuntimeTaskScope = {};
+  const domainProfiles: FamilyRuntimeDomainProfiles = {};
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
@@ -101,6 +131,9 @@ export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
       domainId = assertDomainId(value);
       index += 1;
     } else if (parseTaskScopeOption(taskScope, token, value)) {
+      index += 1;
+    } else if (token === '--profile' && value) {
+      setDomainProfile(domainProfiles, domainId ?? taskScope.domainId, value);
       index += 1;
     } else if (token === '--source' && value) {
       source = value;
@@ -116,6 +149,7 @@ export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
     domainId: domainId ?? taskScope.domainId,
     source,
     taskScope: normalizedTaskScope(taskScope),
+    domainProfiles,
   };
 }
 
