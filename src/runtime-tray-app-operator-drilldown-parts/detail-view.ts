@@ -1,4 +1,8 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  buildDomainDispatchEvidenceWorkorderPacket,
+  compactDomainDispatchEvidenceWorkorderAttentionItems,
+} from '../domain-dispatch-evidence-workorder-packet.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -377,6 +381,7 @@ function providerHealth(drilldown: JsonRecord) {
 function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
   const ownerPayloadGroups = ownerPayloadAttentionGroups(drilldown);
+  const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(drilldown);
   const evidenceEnvelopeAttentionCount = (
     numberValue(summary.evidence_envelope_open_count)
     + numberValue(summary.evidence_envelope_blocked_count)
@@ -410,6 +415,10 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       numberValue(summary.domain_dispatch_attention_blocked_obligation_count),
     domain_dispatch_missing_owner_chain_count:
       numberValue(summary.domain_dispatch_attention_missing_owner_chain_count),
+    domain_dispatch_evidence_workorder_packet_summary:
+      domainDispatchWorkorders.summary,
+    domain_dispatch_evidence_workorder_attention_items:
+      domainDispatchWorkorders.attention_items,
     runtime_manager_route_support_task_kind_count: routeSupportTaskKindCount,
     runtime_manager_aftercare_route_support_count: routeSupportAftercareCount,
     runtime_manager_route_support_action_ref_count:
@@ -433,6 +442,15 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       route_support_closes_production_ready: false,
       attention_count_is_hard_blocker: false,
     },
+  };
+}
+
+function domainDispatchEvidenceWorkorders(drilldown: JsonRecord) {
+  const operatorRoutes = recordList(record(drilldown.operator_action_routing_refs).refs);
+  const packet = buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
+  return {
+    summary: packet.summary,
+    attention_items: compactDomainDispatchEvidenceWorkorderAttentionItems(packet),
   };
 }
 
@@ -526,6 +544,7 @@ function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
 
 function evidenceNextSteps(drilldown: JsonRecord) {
   const attention = evidenceAfterContractAttention(drilldown);
+  const domainDispatchWorkorders = recordList(attention.domain_dispatch_evidence_workorder_attention_items);
   const ownerPayloadGroups = recordList(attention.owner_payload_groups);
   const missingEvidence = missingEvidenceItems(drilldown);
   const advisory = advisoryItems(drilldown);
@@ -546,6 +565,27 @@ function evidenceNextSteps(drilldown: JsonRecord) {
         'no_regression_evidence_refs',
         'memory_writeback_receipt_refs',
       ],
+      full_detail_section: 'domain_dispatch_evidence',
+    });
+  }
+  for (const workorder of domainDispatchWorkorders) {
+    steps.push({
+      step_kind: 'domain_dispatch_evidence_workorder',
+      owner: stringValue(workorder.payload_owner) ?? 'domain_repository_or_app_live_operator',
+      status: 'needs_domain_or_app_live_refs_payload',
+      domain_id: stringValue(workorder.domain_id),
+      stage_id: stringValue(workorder.stage_id),
+      stage_attempt_id: stringValue(workorder.stage_attempt_id),
+      action_id: stringValue(workorder.action_id),
+      next_safe_action_ref: stringValue(workorder.next_safe_action_ref),
+      route_requires_domain_or_app_payload:
+        workorder.route_requires_domain_or_app_payload === true,
+      required_operator_payload_refs: stringList(workorder.required_operator_payload_refs),
+      required_evidence_refs: stringList(workorder.required_evidence_refs),
+      can_execute_domain_action: false,
+      can_create_owner_receipt: false,
+      can_close_domain_ready: false,
+      can_claim_production_ready: false,
       full_detail_section: 'domain_dispatch_evidence',
     });
   }

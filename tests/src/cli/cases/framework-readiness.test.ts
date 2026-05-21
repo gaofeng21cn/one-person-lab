@@ -217,6 +217,46 @@ test('framework readiness summarizes default control-plane surfaces without auth
     ),
   );
   assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+  );
+  assert.equal(
+    readiness.evidence_tails.stage_receipt_freshness_tail
+      .domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+  );
+  assert.deepEqual(
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_attention_items.map(
+      (item: { action_id: string }) => item.action_id,
+    ),
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_attention_items.map(
+      (item: { action_id: string }) => item.action_id,
+    ),
+  );
+  assert.deepEqual(
+    readiness.evidence_tails.stage_receipt_freshness_tail
+      .domain_dispatch_evidence_workorder_attention_items.map(
+        (item: { action_id: string }) => item.action_id,
+      ),
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_attention_items.map(
+      (item: { action_id: string }) => item.action_id,
+    ),
+  );
+  for (const dispatchWorkorder of readiness.attention_first_payload
+    .domain_dispatch_evidence_workorder_attention_items) {
+    assert.equal(dispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
+    assert.equal(dispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(dispatchWorkorder.route_requires_domain_or_app_payload, true);
+    assert.equal(dispatchWorkorder.can_execute, false);
+    assert.equal(dispatchWorkorder.creates_domain_action, false);
+    assert.equal(dispatchWorkorder.creates_owner_receipt, false);
+    assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('domain_receipt_refs'), true);
+    assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+    assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
+    assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
+    assert.equal(dispatchWorkorder.worklist_item_is_completion_claim, false);
+  }
+  assert.equal(
     readiness.evidence_worklist.open_worklist_item_count,
     readiness.evidence_worklist.open_worklist_item_count,
   );

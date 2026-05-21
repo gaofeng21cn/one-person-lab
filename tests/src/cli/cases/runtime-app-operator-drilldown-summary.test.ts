@@ -292,6 +292,38 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.evidence_after_contract.domain_dispatch_attention_count,
       summaryDrilldown.summary.domain_dispatch_attention_count,
     );
+    const dispatchWorkorderSummary =
+      summaryDrilldown.attention_first_payload.evidence_after_contract
+        .domain_dispatch_evidence_workorder_packet_summary;
+    assert.equal(
+      dispatchWorkorderSummary.workorder_count,
+      summaryDrilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+    );
+    assert.equal(
+      dispatchWorkorderSummary.route_requires_domain_or_app_payload_count,
+      dispatchWorkorderSummary.workorder_count,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract
+        .domain_dispatch_evidence_workorder_attention_items.length,
+      Math.min(dispatchWorkorderSummary.workorder_count, 10),
+    );
+    const dispatchWorkorder =
+      summaryDrilldown.attention_first_payload.evidence_after_contract
+        .domain_dispatch_evidence_workorder_attention_items[0];
+    if (dispatchWorkorder) {
+      assert.equal(dispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
+      assert.equal(dispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
+      assert.equal(dispatchWorkorder.route_requires_domain_or_app_payload, true);
+      assert.equal(dispatchWorkorder.can_execute, false);
+      assert.equal(dispatchWorkorder.creates_domain_action, false);
+      assert.equal(dispatchWorkorder.creates_owner_receipt, false);
+      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('domain_receipt_refs'), true);
+      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
+      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
+      assert.equal(dispatchWorkorder.worklist_item_is_completion_claim, false);
+    }
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.evidence_envelope_attention_count,
       summaryDrilldown.summary.evidence_envelope_open_count
@@ -367,6 +399,19 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     if (dispatchStep) {
       assert.equal(dispatchStep.route_support_closes_owner_chain, false);
+    }
+    const dispatchWorkorderStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
+      (item: { step_kind: string }) => item.step_kind === 'domain_dispatch_evidence_workorder',
+    );
+    if (dispatchWorkorderStep) {
+      assert.equal(dispatchWorkorderStep.owner, 'domain_repository_or_app_live_operator');
+      assert.equal(dispatchWorkorderStep.route_requires_domain_or_app_payload, true);
+      assert.equal(dispatchWorkorderStep.can_create_owner_receipt, false);
+      assert.equal(dispatchWorkorderStep.can_close_domain_ready, false);
+      assert.equal(dispatchWorkorderStep.can_claim_production_ready, false);
+      assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('domain_receipt_refs'), true);
+      assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+      assert.equal(dispatchWorkorderStep.full_detail_section, 'domain_dispatch_evidence');
     }
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.length <= 5,
@@ -495,6 +540,20 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.domain_dispatch_attention_count,
       fullDrilldown.summary.domain_dispatch_attention_count,
+    );
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract
+        .domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+      fullDrilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+    );
+    assert.equal(
+      fullDrilldown.attention_first_payload.evidence_after_contract
+        .domain_dispatch_evidence_workorder_attention_items.length,
+      Math.min(
+        fullDrilldown.attention_first_payload.evidence_after_contract
+          .domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+        10,
+      ),
     );
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups.length > 0,
