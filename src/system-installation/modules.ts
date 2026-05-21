@@ -903,12 +903,46 @@ export function runOplModuleExec(
   moduleId: string,
   args: string[],
 ) {
+  const commandPreview = resolveOplModuleExecCommand(moduleId, args);
+  const current = commandPreview.module;
+  const result = runCommand(commandPreview.command, commandPreview.args, current.checkout_path);
+  const execResult: ModuleExecResult = {
+    module_id: commandPreview.module_id,
+    status: 'completed',
+    module: current,
+    working_directory: current.checkout_path,
+    command_preview: commandPreview.command_preview,
+    exit_code: result.exitCode,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    result: maybeParseJsonRecord(result.stdout),
+  };
+
+  if (result.exitCode !== 0) {
+    throw new FrameworkContractError(
+      'build_command_failed',
+      'OPL module exec command failed.',
+      execResult,
+      result.exitCode,
+    );
+  }
+
+  return {
+    version: 'g2',
+    module_exec: execResult,
+  };
+}
+
+export function resolveOplModuleExecCommand(
+  moduleId: string,
+  args: string[],
+) {
   const spec = findModuleSpecOrThrow(moduleId);
   const current = inspectModule(spec);
   if (!current.installed || current.health_status === 'missing') {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'Module exec requires an installed checkout.',
+      'Module command resolution requires an installed checkout.',
       {
         module_id: spec.module_id,
         checkout_path: current.checkout_path,
@@ -920,7 +954,7 @@ export function runOplModuleExec(
   if (current.health_status === 'invalid_checkout') {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'Module exec requires a valid git or packaged module checkout.',
+      'Module command resolution requires a valid git or packaged module checkout.',
       {
         module_id: spec.module_id,
         checkout_path: current.checkout_path,
@@ -953,30 +987,12 @@ export function runOplModuleExec(
     );
   }
 
-  const result = runCommand(commandPreview.command, commandPreview.args, current.checkout_path);
-  const execResult: ModuleExecResult = {
+  return {
     module_id: spec.module_id,
-    status: 'completed',
     module: current,
     working_directory: current.checkout_path,
     command_preview: [commandPreview.command, ...commandPreview.args],
-    exit_code: result.exitCode,
-    stdout: result.stdout,
-    stderr: result.stderr,
-    result: maybeParseJsonRecord(result.stdout),
-  };
-
-  if (result.exitCode !== 0) {
-    throw new FrameworkContractError(
-      'build_command_failed',
-      'OPL module exec command failed.',
-      execResult,
-      result.exitCode,
-    );
-  }
-
-  return {
-    version: 'g2',
-    module_exec: execResult,
+    command: commandPreview.command,
+    args: commandPreview.args,
   };
 }

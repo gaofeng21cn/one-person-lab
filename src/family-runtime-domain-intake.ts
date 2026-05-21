@@ -16,11 +16,12 @@ import {
   runFamilyRuntimeSidecarCommand,
   sidecarResultErrorMessage,
 } from './family-runtime-sidecar-process.ts';
+import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 
 type DomainExportCommand = {
   argv: string[];
   cwd: string;
-  source: 'env_override' | 'env_profile' | 'workspace_binding';
+  source: 'env_override' | 'module_exec_profile' | 'workspace_binding';
 };
 
 type EnqueueTaskResult = {
@@ -58,10 +59,19 @@ function exportCommandForDomain(
   if (domainId === 'medautoscience') {
     const profile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
     if (profile) {
+      const command = resolveOplModuleExecCommand('medautoscience', [
+        'sidecar',
+        'export',
+        '--profile',
+        profile,
+        ...masProductionProofArgs(paths),
+        '--format',
+        'json',
+      ]);
       return {
-        argv: ['medautosci', 'sidecar', 'export', '--profile', profile, ...masProductionProofArgs(paths), '--format', 'json'],
-        cwd: process.cwd(),
-        source: 'env_profile',
+        argv: command.command_preview,
+        cwd: command.working_directory,
+        source: 'module_exec_profile',
       };
     }
 

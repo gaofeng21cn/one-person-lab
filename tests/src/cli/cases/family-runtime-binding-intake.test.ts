@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -108,6 +108,115 @@ JSON
     assert.equal(queue.family_runtime_queue.tasks[0].payload.provider_attempt_id, 'opl-temporal:nfpitnet:DM002:provider-hosted-guarded-apply');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime profile hydrate resolves MAS export through OPL module checkout', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-home-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-module-'));
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const uvPath = path.join(fixtureRoot, 'uv');
+  const medautosciPath = path.join(fixtureRoot, 'medautosci');
+  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
+  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const legacyPathHitPath = path.join(fixtureRoot, 'legacy-path-hit');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
+: > ${shellSingleQuote(uvArgvPath)}
+for arg in "$@"; do
+  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
+done
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "med-autoscience",
+      "recommended_task_kind": "domain_route/reconcile-apply",
+      "priority": 55,
+      "source": "mas-runtime-owner-route",
+      "dedupe_key": "mas:dm002:owner-route:quest_waiting_opl_runtime_owner_route",
+      "owner_route_ref": "quest_waiting_opl_runtime_owner_route",
+      "runtime_state_path": "studies/002-dm-china-us-mortality-attribution/runtime/state.json",
+      "reason": "quest_waiting_opl_runtime_owner_route",
+      "payload": {
+        "profile": "dm-cvd.workspace.toml",
+        "study_id": "002-dm-china-us-mortality-attribution",
+        "source_fingerprint": "unit-harmonized-route"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    medautosciPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-medautosci-was-called\\n' > ${shellSingleQuote(legacyPathHitPath)}
+exit 44
+`,
+    { mode: 0o755 },
+  );
+  const env = familyRuntimeEnv(path.join(homeRoot, 'opl-state'), {
+    HOME: homeRoot,
+    PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: profilePath,
+  });
+  try {
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--source',
+      'dm002-profile-hydrate',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], env);
+    const exportResult = intake.family_runtime_intake.exports[0];
+    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(exportResult.status, 'completed');
+    assert.equal(exportResult.command_source, 'module_exec_profile');
+    assert.equal(exportResult.command_cwd, masFixture.sourceRoot);
+    assert.deepEqual(exportResult.command_preview, [
+      'uv',
+      'run',
+      '--directory',
+      masFixture.sourceRoot,
+      '--extra',
+      'analysis',
+      'medautosci',
+      'sidecar',
+      'export',
+      '--profile',
+      profilePath,
+      '--format',
+      'json',
+    ]);
+    assert.equal(fs.existsSync(legacyPathHitPath), false);
+    assert.equal(
+      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(masFixture.sourceRoot),
+    );
+    assert.deepEqual(uvArgv, exportResult.command_preview.slice(1));
+    assert.equal(queue.family_runtime_queue.tasks[0].task_kind, 'domain_route/reconcile-apply');
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, '002-dm-china-us-mortality-attribution');
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.reason, 'quest_waiting_opl_runtime_owner_route');
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
