@@ -304,6 +304,22 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       dispatchWorkorderSummary.workorder_count,
     );
     assert.equal(
+      dispatchWorkorderSummary.domain_id_policy,
+      'canonical_owner_facing_ids_only_workorder_items_keep_command_domain_ids_for_action_routes',
+    );
+    assert.equal(
+      dispatchWorkorderSummary.route_domain_id_policy,
+      'command_domain_ids_for_opl_runtime_action_execute_routes_not_default_owner_semantics',
+    );
+    assert.equal(
+      dispatchWorkorderSummary.domain_ids.every((domainId: string) => domainId.includes('-')),
+      true,
+    );
+    assert.equal(
+      dispatchWorkorderSummary.route_domain_ids.length,
+      dispatchWorkorderSummary.domain_ids.length,
+    );
+    assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract
         .domain_dispatch_evidence_workorder_attention_items.length,
       Math.min(dispatchWorkorderSummary.workorder_count, 10),

@@ -50,7 +50,7 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
-function canonicalOwnerId(value: string) {
+export function canonicalOwnerId(value: string) {
   const normalized = value.trim();
   const key = normalized.toLowerCase().replace(/[\s_]+/g, '-');
   const compact = key.replace(/-/g, '');

@@ -556,6 +556,22 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       domainDispatchWorkorderPacket.summary.workorder_count,
     );
     assert.equal(
+      domainDispatchWorkorderPacket.summary.domain_id_policy,
+      'canonical_owner_facing_ids_only_workorder_items_keep_command_domain_ids_for_action_routes',
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.route_domain_id_policy,
+      'command_domain_ids_for_opl_runtime_action_execute_routes_not_default_owner_semantics',
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.domain_ids.every((domainId: string) => domainId.includes('-')),
+      true,
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.route_domain_ids.length,
+      domainDispatchWorkorderPacket.summary.domain_ids.length,
+    );
+    assert.equal(
       fullWorklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
       domainDispatchWorkorderPacket.summary.workorder_count,
     );

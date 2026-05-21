@@ -236,6 +236,22 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
   );
   assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_packet_summary.domain_id_policy,
+    'canonical_owner_facing_ids_only_workorder_items_keep_command_domain_ids_for_action_routes',
+  );
+  assert.deepEqual(
+    [...readiness.attention_first_payload.domain_dispatch_evidence_workorder_packet_summary.domain_ids]
+      .sort(),
+    readiness.evidence_envelope.summary.owner_ids
+      .filter((owner: string) => owner !== 'one-person-lab')
+      .sort(),
+  );
+  assert.equal(
+    readiness.attention_first_payload.domain_dispatch_evidence_workorder_packet_summary
+      .route_domain_id_policy,
+    'command_domain_ids_for_opl_runtime_action_execute_routes_not_default_owner_semantics',
+  );
+  assert.equal(
     readiness.domain_dispatch_attention
       .domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
     readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,

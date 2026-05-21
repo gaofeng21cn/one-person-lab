@@ -1,3 +1,5 @@
+import { canonicalOwnerId } from './evidence-envelope.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -86,6 +88,9 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
     )
     .map(domainDispatchEvidenceWorkorderItem);
   const domainIds = uniqueStringList(items.map((item) => item.domain_id));
+  const canonicalOwnerDomainIds = uniqueStringList(domainIds.map((domainId) =>
+    domainId ? canonicalOwnerId(domainId) : null
+  ));
   const stageAttemptIds = uniqueStringList(items.map((item) =>
     item.domain_id && item.stage_attempt_id ? `${item.domain_id}:${item.stage_attempt_id}` : null
   ));
@@ -100,10 +105,15 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
     action_execution_surface: 'opl runtime action execute',
     summary: {
       workorder_count: items.length,
-      domain_count: domainIds.length,
+      domain_count: canonicalOwnerDomainIds.length,
       stage_count: stageIds.length,
       stage_attempt_count: stageAttemptIds.length,
-      domain_ids: domainIds,
+      domain_ids: canonicalOwnerDomainIds,
+      domain_id_policy:
+        'canonical_owner_facing_ids_only_workorder_items_keep_command_domain_ids_for_action_routes',
+      route_domain_ids: domainIds,
+      route_domain_id_policy:
+        'command_domain_ids_for_opl_runtime_action_execute_routes_not_default_owner_semantics',
       route_requires_domain_or_app_payload_count:
         items.filter((item) => item.route_requires_domain_or_app_payload).length,
       payload_template_count:
