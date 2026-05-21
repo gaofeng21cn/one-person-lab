@@ -85,6 +85,40 @@ export function providerSloRefs(providerContinuousProof: JsonRecord) {
   return uniqueRefs(commandRefs);
 }
 
+export function providerCadenceWindowSummary(providerContinuousProof: JsonRecord) {
+  const window = record(providerContinuousProof.cadence_window);
+  return {
+    window_status: stringValue(window.window_status),
+    long_window_evidence_ready: window.long_window_evidence_ready === true,
+    expected_slo_execution_receipt_count: typeof window.expected_slo_execution_receipt_count === 'number'
+      ? window.expected_slo_execution_receipt_count
+      : 0,
+    observed_slo_execution_receipt_count: typeof window.observed_slo_execution_receipt_count === 'number'
+      ? window.observed_slo_execution_receipt_count
+      : 0,
+    missing_slo_execution_receipt_count: typeof window.missing_slo_execution_receipt_count === 'number'
+      ? window.missing_slo_execution_receipt_count
+      : 0,
+    blocked_repair_receipt_count: typeof window.blocked_repair_receipt_count === 'number'
+      ? window.blocked_repair_receipt_count
+      : 0,
+  };
+}
+
+export function providerCapabilitySloSummary(providerContinuousProof: JsonRecord) {
+  const capability = record(providerContinuousProof.provider_capability_slo);
+  return {
+    status: stringValue(capability.status),
+    restart_requery_ready: capability.restart_requery_ready === true,
+    signal_history_ready: capability.signal_history_ready === true,
+    typed_closeout_required_ready: capability.typed_closeout_required_ready === true,
+    missing_closeout_block_ready: capability.missing_closeout_block_ready === true,
+    retry_dead_letter_boundary_ready: capability.retry_dead_letter_boundary_ready === true,
+    domain_truth_boundary_preserved: capability.domain_truth_boundary_preserved === true,
+  };
+}
+
+
 export function periodicExecutionRefs(providerActionRefs: ReturnType<typeof providerSloRefs>) {
   const scheduleId = 'opl-family-runtime-provider-scheduler';
   const schedulerRefs = [

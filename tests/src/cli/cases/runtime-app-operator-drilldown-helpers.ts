@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import {
   assert,
+  loadFamilyManifestFixtures,
   path,
   repoRoot,
 } from '../helpers.ts';
@@ -266,4 +267,277 @@ export function assertEvidenceTailAndDomainRefs(drilldown: any, snapshot: any) {
     snapshot.source_refs.some((ref: { role: string }) => ref.role === 'domain_legacy_cleanup_plan_refs'),
     true,
   );
+}
+
+export function buildMasAppOperatorDrilldownFixtureManifest() {
+  const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  masManifest.family_stage_control_plane = {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'med_autoscience_stage_control_plane',
+    target_domain_id: 'medautoscience',
+    owner: 'med-autoscience',
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: [
+      {
+        stage_id: 'write',
+        stage_kind: 'creation',
+        title: 'Write',
+        summary: 'Write from explicit refs.',
+        goal: 'Produce draft refs under MAS authority.',
+        owner: 'med-autoscience',
+        domain_stage_refs: ['write'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['sources_ready'],
+          ensures: ['draft_ready'],
+          boundary_assumptions: ['domain_truth_remains_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:write.owner_receipt_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:write/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:dataset', role: 'source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:write/current', role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:write/current', role: 'trigger' }],
+          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:write/currentness', role: 'metric' }],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [{ ref_kind: 'artifact_ref', ref: 'artifact:table', role: 'artifact_scope' }],
+          workspace_scope_refs: [{ ref_kind: 'workspace_ref', ref: 'workspace:/tmp/mas', role: 'workspace_scope' }],
+        },
+        trust_boundary: {
+          lane: 'domain_agent',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: ['runtime_event:write.owner_receipt_recorded'],
+          owner_receipt_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['receipt:write-closeout'],
+          can_write_domain_truth: false,
+          can_authorize_quality_verdict: false,
+        },
+      },
+      {
+        stage_id: 'review',
+        stage_kind: 'review',
+        title: 'Review',
+        summary: 'Review from draft refs.',
+        goal: 'Return review refs under MAS authority.',
+        owner: 'med-autoscience',
+        domain_stage_refs: ['review'],
+        inputs: [],
+        knowledge_refs: [],
+        skills: [],
+        prompt_refs: [],
+        allowed_action_refs: [],
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        freshness: null,
+        action_parity: null,
+        stage_contract: {
+          requires: ['draft_ready'],
+          ensures: ['review_ready'],
+          boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
+          properties: [],
+          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+          runtime_assumptions: [],
+          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'monitor' }],
+          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:review', role: 'source_scope' }],
+          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:review/current', role: 'cohort_query' }],
+          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:review/current', role: 'trigger' }],
+          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'metric' }],
+          dashboard_metric_refs: [],
+          artifact_scope_refs: [],
+          workspace_scope_refs: [],
+        },
+        trust_boundary: {
+          lane: 'human_gate',
+          static_check_eligible: false,
+          effect_boundary: true,
+          records_runtime_events: true,
+          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+          owner_receipt_required: true,
+          human_gate_required: true,
+        },
+        authority_boundary: {
+          opl_role: 'projection_consumer_only',
+          expected_receipt_refs: ['mas:review-receipt'],
+          can_authorize_quality_verdict: false,
+        },
+      },
+    ],
+    notes: [],
+  };
+
+  masManifest.runtime_inventory = {
+    ...((masManifest.runtime_inventory as Record<string, unknown>) ?? {}),
+    domain_projection: {
+      surface_kind: 'mas_runtime_inventory_projection',
+      source_refs: ['mas://runtime/inventory/latest.json'],
+    },
+  };
+  masManifest.progress_projection = {
+    ...((masManifest.progress_projection as Record<string, unknown>) ?? {}),
+    domain_projection: {
+      surface_kind: 'mas_progress_projection',
+      research_runtime_control_projection: {
+        surface_kind: 'research_runtime_control_projection',
+        source_refs: ['mas://runtime/control/latest.json'],
+      },
+      route_decision_graph_ref: 'mas://runtime/route-decision/latest.json',
+      quality_readiness_ref: 'mas://publication_eval/latest.json',
+    },
+  };
+  masManifest.artifact_inventory = {
+    ...((masManifest.artifact_inventory as Record<string, unknown>) ?? {}),
+    domain_projection: {
+      surface_kind: 'mas_artifact_inventory_projection',
+      artifact_refs: ['mas://artifacts/current-package.zip'],
+      package_lifecycle_ref: 'mas://artifacts/package-lifecycle/latest.json',
+    },
+  };
+  masManifest.functional_privatization_audit = {
+    target_domain_id: 'medautoscience',
+    modules: [
+      {
+        module_id: 'app_workbench_package_ref_consumption',
+        migration_class: 'refs_only_adapter',
+        owner: 'med-autoscience',
+      },
+      {
+        module_id: 'package_lifecycle_adapter',
+        classification: 'split_owner_boundary',
+        migration_class: 'refs_only_adapter',
+        owner: 'med-autoscience',
+        forbidden_generic_owner_flags: {
+          mas_owns_generic_artifact_lifecycle_shell: false,
+          mas_owns_generic_workbench: false,
+        },
+        bridge_exit_gate: {
+          gate_id: 'package_lifecycle_adapter_bridge_exit_gate',
+          bridge_role: 'package_lifecycle_refs_adapter_until_opl_artifact_shell_live',
+          bridge_owner: 'med_autoscience_migration_bridge',
+          replacement_owner: 'one-person-lab',
+          replacement_surface: 'opl_artifact_package_lifecycle_shell',
+          exit_gate_ref: '/mag_consumer_thinning_contract/opl_replacement_expectations/0',
+          current_status: 'bridge_until_exit_gates_pass',
+          required_before_retire: [
+            'domain_authority_refs_preserved',
+            'no_regression_proof_recorded',
+          ],
+          retained_rca_authority: [
+            'domain_artifact_authority',
+            'package_owner_receipt_refs',
+          ],
+          after_exit_rca_surface: 'artifact_authority_and_package_receipt_refs',
+          can_delete_without_no_active_caller_proof: false,
+          declares_replacement_complete: false,
+          rca_can_own_replacement_runtime: false,
+          opl_can_issue_owner_receipt: false,
+        },
+      },
+    ],
+    bridge_exit_gate: {
+      remaining_evidence_gate_ids: ['real_package_lifecycle_receipt'],
+      remaining_bridge_module_ids: ['package_lifecycle_adapter'],
+    },
+    mag_consumer_thinning_contract: {
+      external_evidence_request_pack: {
+        request_pack_id: 'mas.external_evidence_request_pack.fixture',
+        owner: 'med-autoscience',
+        request_owner: 'med-autoscience',
+        requested_from: ['one-person-lab', 'codex_app'],
+        policy: 'request_refs_receipt_shapes_and_parity_only_no_runtime_implementation',
+        requests: [
+          {
+            request_id: 'app_workbench_package_ref_consumption',
+            status: 'requested_not_received',
+            required_evidence_refs: ['mas://artifacts/package-lifecycle/latest.json'],
+            required_return_shapes: ['domain_owner_receipt', 'typed_blocker'],
+            required_receipt_shapes: ['lifecycle_receipt_ref'],
+            forbidden_payload_classes: ['domain_truth_body', 'artifact_body'],
+            accepted_payload_policy: 'refs_receipts_and_shape_metadata_only',
+            source_pointer: '/functional_privatization_audit/mag_consumer_thinning_contract/external_evidence_request_pack/requests/0',
+          },
+        ],
+      },
+      opl_replacement_expectations: [
+        {
+          primitive_id: 'artifact_package_lifecycle_shell',
+          owner: 'one-person-lab',
+          state: 'external_replacement_contract_expected',
+          opl_provides: ['package_lifecycle_shell', 'restore_ref_index'],
+          mag_keeps: ['domain_owner_receipt'],
+          implemented_in_mag: false,
+        },
+      ],
+    },
+  };
+  masManifest.standard_domain_agent_skeleton = {
+    surface_kind: 'standard_domain_agent_skeleton',
+    version: 'standard-domain-agent-skeleton.v1',
+    agent_id: 'mas',
+    repo_source_boundary: {
+      required_dirs: ['agent', 'contracts', 'runtime', 'docs'],
+      forbidden_dirs: ['artifacts'],
+    },
+    artifact_boundary: {
+      repo_contains_real_artifacts: false,
+      artifact_roots_are_locators: true,
+      workspace_artifact_locator_refs: ['workspace:/artifacts'],
+      runtime_artifact_locator_refs: ['runtime:/receipts'],
+    },
+    artifact_locator_contract: {
+      surface_kind: 'artifact_locator_contract',
+      locator_model: 'workspace_runtime_artifact_root',
+    },
+    authority_boundary: {
+      opl: 'framework_transport_and_projection_only',
+      domain: 'truth_quality_artifact_owner',
+    },
+  };
+  masManifest.physical_skeleton_follow_through = {
+    surface_kind: 'mas_physical_skeleton_follow_through',
+    status: 'minimum_repo_source_anchors_landed',
+    source_refs: [
+      'agent/README.md',
+      'contracts/README.md',
+      'runtime/README.md',
+      'docs/status.md',
+    ],
+    direct_skill_parity_refs: ['proof:mas:direct-skill-parity'],
+    opl_hosted_parity_refs: ['proof:mas:opl-hosted-parity'],
+    replacement_parity_refs: ['proof:mas:replacement-parity'],
+    provenance_refs: ['docs/history/runtime-substrate/mas-local-runtime-tombstone.md'],
+    legacy_active_path_policy: 'physically_removed_or_history_tombstone_only',
+    legacy_active_path_residue: [
+      {
+        path_family: 'default MAS local scheduler',
+        state: 'tombstone_only',
+        evidence_ref: 'docs/history/runtime-substrate/mas-local-scheduler-tombstone.md',
+      },
+    ],
+  };
+  masManifest.legacy_retirement_tombstone_proof = {
+    status: 'no_active_default_caller_proven',
+    active_default_callers: [],
+    tombstone_refs: ['docs/history/runtime-substrate/mas-local-scheduler-tombstone.md'],
+    source_refs: ['docs/decisions.md#temporal-runtime'],
+  };
+
+  return masManifest;
 }
