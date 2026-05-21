@@ -482,6 +482,16 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(fullWorklist.evidence_envelope.summary.domain_ready_claim_count, 0);
     assert.equal(fullWorklist.evidence_envelope.summary.production_ready_claim_count, 0);
     assert.equal(fullWorklist.evidence_envelope.summary.artifact_authority_claim_count, 0);
+    assert.deepEqual(fullWorklist.evidence_envelope.summary.owner_ids, [
+      'med-autogrant',
+      'med-autoscience',
+      'redcube-ai',
+      'one-person-lab',
+    ]);
+    assert.equal(
+      fullWorklist.evidence_envelope.summary.owner_id_policy,
+      'canonical_owner_ids_only_raw_aliases_in_full_detail_envelopes',
+    );
     assert.equal(fullWorklist.evidence_envelope.authority_boundary.can_write_domain_truth, false);
     assert.equal(fullWorklist.evidence_envelope.authority_boundary.can_claim_production_ready, false);
     assert.equal(fullWorklist.evidence_envelope.envelopes, undefined);
