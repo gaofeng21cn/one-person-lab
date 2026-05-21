@@ -19,6 +19,7 @@ import {
   REQUIRED_CONTRACT_SURFACES,
   REQUIRED_REPO_SOURCE_DIRS,
   REQUIRED_VERIFICATION,
+  STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
 import {
@@ -679,6 +680,7 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       pack_compiler_contract: PACK_COMPILER_CONTRACT,
       generated_surface_contract: GENERATED_SURFACE_CONTRACT,
       agent_pack_contract: AGENT_PACK_CONTRACT,
+      default_runtime_policy: STANDARD_AGENT_DEFAULT_RUNTIME_POLICY,
       opl_generated_surfaces: OPL_GENERATED_SURFACES,
       domain_retained_thin_surfaces: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,
       domain_retained_thin_surfaces_deprecated: DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED,

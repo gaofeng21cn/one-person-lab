@@ -16,6 +16,9 @@
   },
   "provider_runtime": {
     "provider_model": "provider_backed_stage_attempt_runtime",
+    "standard_agent_default_runtime_path": "opl_temporal_hosted_autonomous",
+    "temporal_hosted_autonomy_default_enabled": true,
+    "codex_app_drives_long_running_tasks": false,
     "allowed_providers": [
       "local_sqlite",
       "temporal"

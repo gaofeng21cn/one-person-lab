@@ -67,11 +67,17 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     ]);
     assert.equal(output.family_runtime.readiness.provider_ready, false);
     assert.equal(output.family_runtime.readiness.full_online_ready, false);
+    assert.equal(output.family_runtime.readiness.default_standard_agent_runtime_path, 'opl_temporal_hosted_autonomous');
+    assert.equal(output.family_runtime.readiness.temporal_hosted_autonomy_default_enabled, true);
+    assert.equal(output.family_runtime.readiness.codex_app_drives_long_running_tasks, false);
     assert.equal(output.family_runtime.readiness.degraded, true);
     assert.equal(output.family_runtime.readiness.degraded_reason, 'temporal_runtime_not_configured');
     assert.equal(output.family_runtime.provider_runtime.default_resolution.fallback, 'temporal');
     assert.equal(output.family_runtime.provider_runtime.default_resolution.fail_closed_when_temporal_not_ready, true);
     assert.equal(output.family_runtime.periodic_execution.surface_kind, 'opl_family_runtime_periodic_execution_summary');
+    assert.equal(output.family_runtime.periodic_execution.default_for_standard_agents, true);
+    assert.equal(output.family_runtime.periodic_execution.runtime_mode, 'provider_managed_autonomous_execution');
+    assert.equal(output.family_runtime.periodic_execution.domain_agent_internal_loop_allowed, false);
     assert.equal(output.family_runtime.periodic_execution.status, 'blocked_provider_not_ready');
     assert.equal(output.family_runtime.periodic_execution.scheduler_owner, 'opl_provider_runtime_manager');
     assert.equal(output.family_runtime.periodic_execution.cadence_owner, 'provider_backed_family_runtime');

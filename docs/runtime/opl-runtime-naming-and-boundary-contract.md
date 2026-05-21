@@ -5,7 +5,7 @@ Purpose: `runtime_naming_boundary_support`
 State: `active_support`
 Machine boundary: 本文是人读 runtime 命名与边界合同。机器 truth 继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和 semantic `human_doc:*` ids。
 
-> 当前状态说明（`2026-05-11`）：本文是 stage-led、以 Agent executor 为最小执行单位的 OPL framework 活跃 runtime 命名边界。当前默认公开口径是 `Codex-default executor -> explicit OPL activation -> provider-backed stage runtime -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
+> 当前状态说明（`2026-05-21`）：本文是 stage-led、以 Agent executor 为最小执行单位的 OPL framework 活跃 runtime 命名边界。当前默认公开口径是 `Codex-default executor -> OPL/Temporal hosted autonomous stage runtime -> MAS/MAG/RCA domain-agent entry`。标准 OPL Agent 默认进入 `opl_temporal_hosted_autonomous` 长跑路径；Codex App 只负责启动、观察、介入和展示，不承担外围持续驱动任务。MAS/MAG/RCA 不内置通用 daemon、scheduler 或 attempt loop。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。
 
 ## 目的
 
