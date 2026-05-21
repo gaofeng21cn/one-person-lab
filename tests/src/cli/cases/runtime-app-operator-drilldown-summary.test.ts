@@ -320,6 +320,15 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       dispatchWorkorderSummary.domain_ids.length,
     );
     assert.equal(
+      dispatchWorkorderSummary.domain_stage_grouping_policy,
+      'bounded_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    );
+    assert.equal(
+      dispatchWorkorderSummary.domain_stage_group_count <= dispatchWorkorderSummary.workorder_count,
+      true,
+    );
+    assert.equal(dispatchWorkorderSummary.domain_stage_group_omitted_count >= 0, true);
+    assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract
         .domain_dispatch_evidence_workorder_attention_items.length,
       Math.min(dispatchWorkorderSummary.workorder_count, 10),

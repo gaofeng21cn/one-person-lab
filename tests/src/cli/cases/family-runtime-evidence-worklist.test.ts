@@ -315,6 +315,48 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       domainDispatchWorkorderPacket.summary.workorder_count,
     );
     assert.equal(
+      domainDispatchWorkorderPacket.summary.domain_stage_grouping_policy,
+      'bounded_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.domain_stage_group_count,
+      domainDispatchWorkorderPacket.domain_stage_group_summary.total_group_count,
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.summary.domain_stage_group_omitted_count,
+      domainDispatchWorkorderPacket.domain_stage_group_summary.omitted_group_count,
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.domain_stage_group_summary.grouping_keys.join(','),
+      'canonical_domain_id,stage_id',
+    );
+    assert.equal(
+      domainDispatchWorkorderPacket.domain_stage_group_summary.groups.length <= 10,
+      true,
+    );
+    if (domainDispatchWorkorderPacket.summary.workorder_count > 0) {
+      assert.equal(
+        domainDispatchWorkorderPacket.domain_stage_group_summary.groups.length > 0,
+        true,
+      );
+      const dispatchGroup = domainDispatchWorkorderPacket.domain_stage_group_summary.groups[0];
+      assert.equal(typeof dispatchGroup.canonical_domain_id, 'string');
+      assert.equal(dispatchGroup.canonical_domain_id.includes('-'), true);
+      assert.equal(typeof dispatchGroup.stage_id, 'string');
+      assert.equal(dispatchGroup.workorder_count > 0, true);
+      assert.equal(dispatchGroup.stage_attempt_count > 0, true);
+      assert.equal(dispatchGroup.route_requires_domain_or_app_payload, true);
+      assert.equal(dispatchGroup.payload_owner, 'domain_repository_or_app_live_operator');
+      assert.equal(dispatchGroup.required_operator_payload_refs.includes('domain_receipt_refs'), true);
+      assert.equal(dispatchGroup.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+      assert.equal(dispatchGroup.required_operator_payload_refs.includes('owner_chain_refs'), true);
+      assert.equal(dispatchGroup.required_operator_payload_refs.includes('no_regression_refs'), true);
+      assert.equal(dispatchGroup.worklist_item_is_completion_claim, false);
+      assert.equal(dispatchGroup.authority_boundary.can_generate_domain_owner_receipt, false);
+      assert.equal(dispatchGroup.authority_boundary.can_execute_domain_action, false);
+      assert.equal(dispatchGroup.authority_boundary.closes_production_ready, false);
+    }
+    assert.equal(
       fullWorklist.domain_dispatch_evidence_workorder_attention_items.length,
       Math.min(domainDispatchWorkorderPacket.summary.workorder_count, 10),
     );

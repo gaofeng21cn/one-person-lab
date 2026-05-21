@@ -24,6 +24,10 @@ function uniqueStringList(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
 }
 
+function numberSum(values: number[]) {
+  return values.reduce((total, value) => total + value, 0);
+}
+
 function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
   const actionId = stringValue(route.action_id);
   const routeDomainId = stringValue(route.domain_id);
@@ -85,6 +89,98 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
   };
 }
 
+function domainStageGroupKey(item: ReturnType<typeof domainDispatchEvidenceWorkorderItem>) {
+  return [
+    item.canonical_domain_id ?? 'unknown-domain',
+    item.stage_id ?? 'unknown-stage',
+  ].join(':');
+}
+
+function domainStageWorkorderGroups(
+  items: Array<ReturnType<typeof domainDispatchEvidenceWorkorderItem>>,
+  limit = 10,
+) {
+  const groups = new Map<string, Array<ReturnType<typeof domainDispatchEvidenceWorkorderItem>>>();
+  for (const item of items) {
+    const key = domainStageGroupKey(item);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const allGroups = [...groups.entries()]
+    .map(([key, groupItems]) => {
+      const canonicalDomainId =
+        groupItems.find((item) => item.canonical_domain_id)?.canonical_domain_id ?? null;
+      const stageId = groupItems.find((item) => item.stage_id)?.stage_id ?? null;
+      const stageAttemptIds = uniqueStringList(groupItems.map((item) => item.stage_attempt_id));
+      const routeDomainIds = uniqueStringList(groupItems.map((item) => item.route_domain_id));
+      const requiredOperatorPayloadRefs = uniqueStringList(
+        groupItems.flatMap((item) => item.required_operator_payload_refs),
+      );
+      const requiredEvidenceRefs = uniqueStringList(
+        groupItems.flatMap((item) => item.required_evidence_refs),
+      );
+      return {
+        group_id: `domain-dispatch-evidence-workorder-group:${key}`,
+        canonical_domain_id: canonicalDomainId,
+        stage_id: stageId,
+        route_domain_ids: routeDomainIds,
+        route_domain_id_policy:
+          'command_domain_ids_for_opl_runtime_action_execute_routes_not_default_owner_semantics',
+        workorder_count: groupItems.length,
+        stage_attempt_count: stageAttemptIds.length,
+        stage_attempt_ids: stageAttemptIds,
+        action_refs: uniqueStringList(groupItems.map((item) => item.action_ref)),
+        required_operator_payload_ref_count: numberSum(
+          groupItems.map((item) => item.required_operator_payload_refs.length),
+        ),
+        required_operator_payload_refs: requiredOperatorPayloadRefs,
+        required_evidence_ref_count: numberSum(
+          groupItems.map((item) => item.required_evidence_refs.length),
+        ),
+        required_evidence_refs: requiredEvidenceRefs,
+        typed_blocker_payload_path_available_count:
+          groupItems.filter((item) => item.typed_blocker_payload_path_available).length,
+        owner_receipt_payload_path_available_count:
+          groupItems.filter((item) => item.owner_receipt_payload_path_available).length,
+        owner_chain_payload_path_available_count:
+          groupItems.filter((item) => item.owner_chain_payload_path_available).length,
+        no_regression_payload_path_available_count:
+          groupItems.filter((item) => item.no_regression_payload_path_available).length,
+        payload_owner: 'domain_repository_or_app_live_operator',
+        route_requires_domain_or_app_payload: true,
+        worklist_item_is_completion_claim: false,
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_read_memory_body: false,
+          can_read_artifact_body: false,
+          can_mutate_artifact: false,
+          can_authorize_domain_ready: false,
+          can_authorize_quality_or_export: false,
+          can_generate_domain_owner_receipt: false,
+          can_generate_typed_blocker: false,
+          can_generate_owner_chain_ref: false,
+          can_generate_no_regression_ref: false,
+          can_execute_domain_action: false,
+          closes_domain_ready: false,
+          closes_production_ready: false,
+        },
+      };
+    })
+    .sort((left, right) =>
+      right.workorder_count - left.workorder_count
+      || String(left.canonical_domain_id).localeCompare(String(right.canonical_domain_id))
+      || String(left.stage_id).localeCompare(String(right.stage_id))
+    );
+  return {
+    surface_kind: 'opl_domain_dispatch_evidence_workorder_domain_stage_group_summary',
+    grouping_policy:
+      'bounded_canonical_owner_stage_groups_refs_only_no_domain_authority',
+    grouping_keys: ['canonical_domain_id', 'stage_id'],
+    total_group_count: allGroups.length,
+    omitted_group_count: Math.max(allGroups.length - limit, 0),
+    groups: allGroups.slice(0, limit),
+  };
+}
+
 export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonRecord[]) {
   const items = operatorRoutes
     .filter((route) =>
@@ -102,6 +198,7 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
   const stageIds = uniqueStringList(items.map((item) =>
     item.domain_id && item.stage_id ? `${item.domain_id}:${item.stage_id}` : null
   ));
+  const domainStageGroupSummary = domainStageWorkorderGroups(items);
   return {
     surface_kind: 'opl_domain_dispatch_evidence_workorder_packet',
     packet_policy:
@@ -113,6 +210,9 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
       domain_count: canonicalOwnerDomainIds.length,
       stage_count: stageIds.length,
       stage_attempt_count: stageAttemptIds.length,
+      domain_stage_group_count: domainStageGroupSummary.total_group_count,
+      domain_stage_group_omitted_count: domainStageGroupSummary.omitted_group_count,
+      domain_stage_grouping_policy: domainStageGroupSummary.grouping_policy,
       domain_ids: canonicalOwnerDomainIds,
       domain_id_policy:
         'canonical_owner_facing_ids_only_workorder_items_keep_command_domain_ids_for_action_routes',
@@ -137,6 +237,7 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
         items.filter((item) => item.no_regression_payload_path_available).length,
       success_payload_owner: 'domain_repository_or_app_live_operator',
     },
+    domain_stage_group_summary: domainStageGroupSummary,
     workorders: items,
     authority_boundary: {
       can_write_domain_truth: false,
