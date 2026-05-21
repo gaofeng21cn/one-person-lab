@@ -221,6 +221,136 @@ exit 44
   }
 });
 
+test('family-runtime profile tick dispatches MAS tasks through OPL module checkout', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-dispatch-home-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-profile-dispatch-'));
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const uvPath = path.join(fixtureRoot, 'uv');
+  const medautosciPath = path.join(fixtureRoot, 'medautosci');
+  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
+  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
+  const legacyPathHitPath = path.join(fixtureRoot, 'legacy-dispatch-hit');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
+: > ${shellSingleQuote(uvArgvPath)}
+for arg in "$@"; do
+  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
+done
+if [[ " $* " == *" sidecar export "* ]]; then
+  cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "paper_autonomy/repair-recheck",
+      "priority": 60,
+      "source": "mas-runtime-owner-route",
+      "dedupe_key": "mas:dm003:repair-recheck:medical_prose_write_repair",
+      "dispatch_owner": "med-autoscience",
+      "payload": {
+        "profile": "dm-cvd.workspace.toml",
+        "study_id": "003-dpcc-primary-care-phenotype-treatment-gap",
+        "repair_work_unit": {
+          "work_unit_id": "medical_prose_write_repair",
+          "source_fingerprint": "medical-prose-write-repair-v1"
+        }
+      }
+    }
+  ]
+}
+JSON
+  exit 0
+fi
+if [[ " $* " == *" sidecar dispatch "* ]]; then
+  task_path=""
+  previous=""
+  for arg in "$@"; do
+    if [ "$previous" = "--task" ]; then
+      task_path="$arg"
+      break
+    fi
+    previous="$arg"
+  done
+  test -n "$task_path"
+  cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
+  cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","receipt_ref":"receipt:dm003/module-dispatch"}
+JSON
+  exit 0
+fi
+echo "unexpected uv command: $*" >&2
+exit 64
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    medautosciPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'legacy-path-medautosci-was-called\\n' > ${shellSingleQuote(legacyPathHitPath)}
+exit 44
+`,
+    { mode: 0o755 },
+  );
+  const env = familyRuntimeEnv(path.join(homeRoot, 'opl-state'), {
+    HOME: homeRoot,
+    PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: profilePath,
+  });
+  try {
+    const tick = runCli([
+      'family-runtime',
+      'tick',
+      '--source',
+      'dm003-profile-module-dispatch',
+      '--hydrate',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+    ], env);
+    const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
+    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
+    assert.equal(tick.family_runtime_tick.selected_count, 1);
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.deepEqual(tick.family_runtime_tick.dispatches[0].command_preview, [
+      'uv',
+      'run',
+      '--directory',
+      masFixture.sourceRoot,
+      '--extra',
+      'analysis',
+      'medautosci',
+      'sidecar',
+      'dispatch',
+      '--task',
+      tick.family_runtime_tick.dispatches[0].command_preview[10],
+      '--format',
+      'json',
+    ]);
+    assert.equal(fs.existsSync(legacyPathHitPath), false);
+    assert.equal(fs.existsSync(uvCwdPath), true);
+    assert.deepEqual(uvArgv, tick.family_runtime_tick.dispatches[0].command_preview.slice(1));
+    assert.equal(dispatchedTask.payload.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(dispatchedTask.payload.repair_work_unit.work_unit_id, 'medical_prose_write_repair');
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime hydrate consumes MAS scaleout guarded apply tasks as domain-owned exports', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-scaleout-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-scaleout-'));

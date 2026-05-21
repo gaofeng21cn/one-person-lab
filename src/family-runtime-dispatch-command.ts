@@ -1,5 +1,6 @@
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
+import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 
 export function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
   const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
@@ -9,6 +10,17 @@ export function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: stri
       return tokens.map((token) => token.replaceAll('{task}', taskPath));
     }
     return [...tokens, taskPath];
+  }
+
+  if (domainId === 'medautoscience') {
+    return resolveOplModuleExecCommand('medautoscience', [
+      'sidecar',
+      'dispatch',
+      '--task',
+      taskPath,
+      '--format',
+      'json',
+    ]).command_preview;
   }
 
   return [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'];
