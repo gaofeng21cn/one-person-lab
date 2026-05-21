@@ -73,7 +73,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 | MAS | ownership 方向正确，但仍是最大 residual 风险源 | 继续写成 `physical thinning tail`：runtime transport、sidecar、SQLite/lifecycle 等只可作为 domain bridge、receipt/typed-blocker、refs-only adapter 或 diagnostic；验收必须是 no-active-caller、OPL parity、domain receipt parity、tests 和 tombstone refs |
 | MAG | 结构边界较干净 | 主要缺口归测试/证据差距：live OPL-hosted grant-stage receipt、App/production caller receipt、long soak、workspace receipt scaleout |
 | RCA | 旧 managed runtime 退役较彻底 | 防止 artifact-heavy helper、product sidecar、native helper、artifact lifecycle 被复制成通用 runtime scaffold；RCA 只提供 visual pack、authority function 和 refs-only adapter |
-| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs 已能进入 OPL registry / App drilldown，full detail 可见 owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter 都不能授权目标 domain ready 或默认 promotion |
+| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs 已能进入 OPL registry / App drilldown，默认 summary 和 full detail 都可审计 owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter 都不能授权目标 domain ready 或默认 promotion |
 
 ## 下一轮可执行方向
 
@@ -87,7 +87,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
    统一 MAS/RCA/MAG/OMA 的 functional privatization audit 顶层 envelope，减少 App/operator drilldown 的 repo-specific adapter。
 
 4. `evidence_after_contract`
-   在 conformance 收敛后，优先投入真实 evidence：MAS paper-line parity 和 physical thinning，MAG/RCA controlled hosted stage soak，OMA real target patch/rerun/owner receipt scaleout，App release / default caller / long operator evidence。OMA 已把 real-target scaleout 的 refs-only owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 投到 App full detail，默认 summary 只保留总量；后续缺口是更多真实 target patch/rerun 样本和 live operator evidence。
+   在 conformance 收敛后，优先投入真实 evidence：MAS paper-line parity 和 physical thinning，MAG/RCA controlled hosted stage soak，OMA real target patch/rerun/owner receipt scaleout，App release / default caller / long operator evidence。OMA 已把 real-target scaleout 的 refs-only owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 投到 App 默认 summary 和 full detail；后续缺口是更多真实 target patch/rerun 样本和 live operator evidence。
 
 ## 不能写成
 
