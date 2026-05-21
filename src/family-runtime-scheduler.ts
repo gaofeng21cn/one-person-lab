@@ -7,6 +7,7 @@ import {
 } from './family-runtime-providers.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
   familyRuntimePaths,
@@ -121,8 +122,14 @@ export async function runSchedulerTick(
     force?: boolean;
     limit?: number;
     hydrate?: boolean;
+    taskScope?: FamilyRuntimeTaskScope;
   },
-  runQueueTick: (source: string, limit: number, hydrate: boolean) => SchedulerQueueTickResult,
+  runQueueTick: (
+    source: string,
+    limit: number,
+    hydrate: boolean,
+    taskScope?: FamilyRuntimeTaskScope,
+  ) => SchedulerQueueTickResult,
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
@@ -135,7 +142,7 @@ export async function runSchedulerTick(
   const providerSlo = await runTemporalProviderSloTick(db, paths, {
     force: input.force ?? false,
   });
-  const queueTick = runQueueTick(source, input.limit ?? 10, input.hydrate ?? true);
+  const queueTick = runQueueTick(source, input.limit ?? 10, input.hydrate ?? true, input.taskScope);
   insertEvent(db, {
     eventType: 'opl_scheduler_tick_completed',
     source,
@@ -144,6 +151,7 @@ export async function runSchedulerTick(
       force: input.force ?? false,
       hydrate: input.hydrate ?? true,
       limit: input.limit ?? 10,
+      task_scope: input.taskScope ?? null,
       provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
       queue_selected_count: queueTick.selected_count,
       queue_dispatches_count: queueTick.dispatches.length,
@@ -156,6 +164,7 @@ export async function runSchedulerTick(
     provider_kind: providerKind,
     tick_source: source,
     provider_slo: providerSlo,
+    task_scope: input.taskScope ?? null,
     queue_tick: queueTick,
     authority_boundary: {
       opl: 'scheduler_cadence_queue_and_provider_slo_owner',

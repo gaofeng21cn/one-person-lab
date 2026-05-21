@@ -1,13 +1,15 @@
 import { FrameworkContractError } from '../contracts.ts';
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
-import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
+import type { FamilyRuntimeCommandInput, FamilyRuntimeTaskScope } from '../family-runtime-command.ts';
 import { assertProviderKind } from './shared.ts';
+import { parseTaskScopeOption } from './queue.ts';
 
 export function parseSchedulerTickArgs(rest: string[]): FamilyRuntimeCommandInput {
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let force = false;
   let limit = 10;
   let hydrate = true;
+  const taskScope: FamilyRuntimeTaskScope = {};
   for (let index = 1; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
@@ -18,13 +20,15 @@ export function parseSchedulerTickArgs(rest: string[]): FamilyRuntimeCommandInpu
       force = true;
     } else if (token === '--no-hydrate') {
       hydrate = false;
+    } else if (parseTaskScopeOption(taskScope, token, value)) {
+      index += 1;
     } else if (token === '--limit' && value) {
       limit = Number.parseInt(value, 10);
       index += 1;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime scheduler tick option: ${token}.`, {
         option: token,
-        usage: 'opl family-runtime scheduler tick --provider temporal [--force] [--limit <n>] [--no-hydrate]',
+        usage: 'opl family-runtime scheduler tick --provider temporal [--force] [--limit <n>] [--no-hydrate] [--domain <domain>] [--study <study_id>] [--payload-match <path=value>]',
       });
     }
   }
@@ -33,7 +37,14 @@ export function parseSchedulerTickArgs(rest: string[]): FamilyRuntimeCommandInpu
       limit,
     });
   }
-  return { mode: 'scheduler_tick', providerKind, force, limit, hydrate };
+  return {
+    mode: 'scheduler_tick',
+    providerKind,
+    force,
+    limit,
+    hydrate,
+    taskScope: taskScope.domainId || (taskScope.payloadMatches?.length ?? 0) > 0 ? taskScope : undefined,
+  };
 }
 
 export function parseSchedulerLifecycleArgs(rest: string[]): FamilyRuntimeCommandInput {

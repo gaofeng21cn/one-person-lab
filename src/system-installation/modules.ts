@@ -9,7 +9,6 @@ import {
   resolveFamilyWorkspaceRootFromRepoRoot,
   syncFamilySkillPackFromRepoRoot,
 } from '../opl-skills.ts';
-
 import {
   type DomainModuleSpec,
   type OplModuleAction,
@@ -23,6 +22,7 @@ import {
   normalizeOptionalString,
   runCommand,
 } from './shared.ts';
+import { resolveModuleExecMaxBuffer } from './module-exec-buffer.ts';
 import {
   inspectGitRepo,
   isGitRepo,
@@ -905,7 +905,8 @@ export function runOplModuleExec(
 ) {
   const commandPreview = resolveOplModuleExecCommand(moduleId, args);
   const current = commandPreview.module;
-  const result = runCommand(commandPreview.command, commandPreview.args, current.checkout_path);
+  const maxBuffer = resolveModuleExecMaxBuffer();
+  const result = runCommand(commandPreview.command, commandPreview.args, current.checkout_path, { maxBuffer });
   const execResult: ModuleExecResult = {
     module_id: commandPreview.module_id,
     status: 'completed',
@@ -916,6 +917,7 @@ export function runOplModuleExec(
     stdout: result.stdout,
     stderr: result.stderr,
     result: maybeParseJsonRecord(result.stdout),
+    max_buffer_bytes: maxBuffer,
   };
 
   if (result.exitCode !== 0) {

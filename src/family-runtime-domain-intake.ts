@@ -5,6 +5,7 @@ import { getActiveWorkspaceBinding } from './workspace-registry.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type EnqueueInput,
+  type FamilyRuntimeTaskScope,
   type FamilyRuntimeDomainId,
 } from './family-runtime-command.ts';
 import {
@@ -17,6 +18,7 @@ import {
   sidecarResultErrorMessage,
 } from './family-runtime-sidecar-process.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
+import { payloadMatchesTaskScope } from './family-runtime-task-scope.ts';
 
 type DomainExportCommand = {
   argv: string[];
@@ -155,6 +157,16 @@ function canonicalFamilyRuntimeDomainId(value: unknown): FamilyRuntimeDomainId |
 
 function taskPayloadFrom(item: Record<string, unknown>) {
   return isRecord(item.payload) ? item.payload : {};
+}
+
+function inputMatchesTaskScope(input: EnqueueInput, taskScope?: FamilyRuntimeTaskScope) {
+  if (!taskScope) {
+    return true;
+  }
+  if (taskScope.domainId && input.domainId !== taskScope.domainId) {
+    return false;
+  }
+  return payloadMatchesTaskScope(input.payload, taskScope);
 }
 
 function taskPayloadBlockedByForbiddenWrite(payload: Record<string, unknown>) {
@@ -364,27 +376,33 @@ function exportedTaskInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
   source: string,
+  taskScope?: FamilyRuntimeTaskScope,
 ) {
   const pending = toPendingTaskInputs(domainId, output, source);
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
+  const exportedInputs = [...pending.inputs, ...transitions.inputs];
+  const inputs = exportedInputs.filter((taskInput) => inputMatchesTaskScope(taskInput, taskScope));
   return {
-    inputs: [...pending.inputs, ...transitions.inputs],
+    inputs,
     blocked: [...pending.blocked, ...transitions.blocked],
+    filtered_count: exportedInputs.length - inputs.length,
   };
 }
 
 export function hydrateDomainTasks(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
-  input: { domainId?: FamilyRuntimeDomainId; source: string },
+  input: { domainId?: FamilyRuntimeDomainId; source: string; taskScope?: FamilyRuntimeTaskScope },
   enqueueTask: EnqueueTask,
 ) {
-  const domains = input.domainId ? [input.domainId] : [...FAMILY_RUNTIME_DOMAIN_IDS];
+  const scopedDomainId = input.domainId ?? input.taskScope?.domainId;
+  const domains = scopedDomainId ? [scopedDomainId] : [...FAMILY_RUNTIME_DOMAIN_IDS];
   const exports = [];
   let enqueuedCount = 0;
   let requeuedCount = 0;
   let idempotentNoopCount = 0;
   let blockedCount = 0;
+  let filteredCount = 0;
   for (const domainId of domains) {
     const command = exportCommandForDomain(domainId, paths);
     if (!command) {
@@ -411,8 +429,9 @@ export function hydrateDomainTasks(
       continue;
     }
     const output = parseDispatchOutput(stdout);
-    const { inputs, blocked } = exportedTaskInputs(domainId, output, input.source);
+    const { inputs, blocked, filtered_count } = exportedTaskInputs(domainId, output, input.source, input.taskScope);
     blockedCount += blocked.length;
+    filteredCount += filtered_count;
     const acceptedTasks = [];
     for (const taskInput of inputs) {
       const resultPayload = enqueueTask(db, taskInput);
@@ -433,6 +452,7 @@ export function hydrateDomainTasks(
       command_cwd: command.cwd,
       command_source: command.source,
       exported_count: inputs.length + blocked.length,
+      filtered_count,
       enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
       requeued_count: acceptedTasks.filter((task) => task.requeued_from_terminal).length,
       idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
@@ -448,14 +468,18 @@ export function hydrateDomainTasks(
       requeued_count: requeuedCount,
       idempotent_noop_count: idempotentNoopCount,
       blocked_count: blockedCount,
+      filtered_count: filteredCount,
+      task_scope: input.taskScope ?? null,
     },
   });
   return {
     source: input.source,
+    task_scope: input.taskScope ?? null,
     enqueued_count: enqueuedCount,
     requeued_count: requeuedCount,
     idempotent_noop_count: idempotentNoopCount,
     blocked_count: blockedCount,
+    filtered_count: filteredCount,
     exports,
   };
 }

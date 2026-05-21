@@ -1,7 +1,46 @@
 import { FrameworkContractError } from '../contracts.ts';
 import type { FamilyRuntimeDomainId } from '../family-runtime-types.ts';
-import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
+import type { FamilyRuntimeCommandInput, FamilyRuntimeTaskScope } from '../family-runtime-command.ts';
 import { assertDomainId, parsePayloadArg } from './shared.ts';
+
+export function parseTaskScopeOption(
+  scope: FamilyRuntimeTaskScope,
+  token: string,
+  value: string | undefined,
+) {
+  if (token === '--domain' && value) {
+    scope.domainId = assertDomainId(value);
+    return true;
+  }
+  if ((token === '--study' || token === '--study-id') && value) {
+    scope.payloadMatches = [
+      ...(scope.payloadMatches ?? []),
+      { path: 'study_id', value },
+    ];
+    return true;
+  }
+  if (token === '--payload-match' && value) {
+    const separatorIndex = value.indexOf('=');
+    const path = value.slice(0, separatorIndex).trim();
+    const matchValue = value.slice(separatorIndex + 1).trim();
+    if (separatorIndex <= 0 || !path || !matchValue) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime task scope --payload-match requires path=value.', {
+        option: token,
+        value,
+      });
+    }
+    scope.payloadMatches = [
+      ...(scope.payloadMatches ?? []),
+      { path, value: matchValue },
+    ];
+    return true;
+  }
+  return false;
+}
+
+function normalizedTaskScope(scope: FamilyRuntimeTaskScope) {
+  return scope.domainId || (scope.payloadMatches?.length ?? 0) > 0 ? scope : undefined;
+}
 
 export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   if (rest[0] === 'list') {
@@ -23,11 +62,14 @@ export function parseTickArgs(rest: string[]): FamilyRuntimeCommandInput {
   let source = 'manual';
   let limit = 10;
   let hydrate = false;
+  const taskScope: FamilyRuntimeTaskScope = {};
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
     if (token === '--hydrate') {
       hydrate = true;
+    } else if (parseTaskScopeOption(taskScope, token, value)) {
+      index += 1;
     } else if (token === '--source' && value) {
       source = value;
       index += 1;
@@ -45,17 +87,20 @@ export function parseTickArgs(rest: string[]): FamilyRuntimeCommandInput {
       limit,
     });
   }
-  return { mode: 'tick', source, limit, hydrate };
+  return { mode: 'tick', source, limit, hydrate, taskScope: normalizedTaskScope(taskScope) };
 }
 
 export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
   let domainId: FamilyRuntimeDomainId | undefined;
   let source = 'manual';
+  const taskScope: FamilyRuntimeTaskScope = {};
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     const value = rest[index + 1];
     if (token === '--domain' && value) {
       domainId = assertDomainId(value);
+      index += 1;
+    } else if (parseTaskScopeOption(taskScope, token, value)) {
       index += 1;
     } else if (token === '--source' && value) {
       source = value;
@@ -66,7 +111,12 @@ export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
       });
     }
   }
-  return { mode: 'intake', domainId, source };
+  return {
+    mode: 'intake',
+    domainId: domainId ?? taskScope.domainId,
+    source,
+    taskScope: normalizedTaskScope(taskScope),
+  };
 }
 
 export function parseApproveArgs(rest: string[]): FamilyRuntimeCommandInput {

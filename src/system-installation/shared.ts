@@ -59,6 +59,10 @@ export type CommandResult = {
   stderr: string;
 };
 
+export type RunCommandOptions = {
+  maxBuffer?: number;
+};
+
 export type OplShellActionSpec = {
   strategy: 'env_override' | 'builtin' | 'manual_required';
   command_preview: string[];
@@ -139,6 +143,7 @@ export type ModuleExecResult = {
   stdout: string;
   stderr: string;
   result: Record<string, unknown> | null;
+  max_buffer_bytes?: number;
 };
 
 export type OplSystemActionInput = Partial<{
@@ -182,11 +187,17 @@ export function resolveSiblingWorkspaceRoot() {
   return path.dirname(resolveProjectRoot());
 }
 
-export function runCommand(command: string, args: string[], cwd?: string): CommandResult {
+export function runCommand(
+  command: string,
+  args: string[],
+  cwd?: string,
+  options: RunCommandOptions = {},
+): CommandResult {
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
     env: process.env,
+    ...(options.maxBuffer ? { maxBuffer: options.maxBuffer } : {}),
   });
 
   if (result.error) {

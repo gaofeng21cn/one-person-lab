@@ -532,6 +532,55 @@ printf '{"ok":true,"runner":"npm"}\\n'
   }
 });
 
+test('module exec captures large domain CLI stdout without default spawnSync ENOBUFS', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-buffer-home-'));
+  const fakeBinRoot = path.join(homeRoot, 'fake-bin');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  fs.mkdirSync(fakeBinRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBinRoot, 'uv'),
+    `#!/usr/bin/env bash
+set -euo pipefail
+python3 - <<'PY'
+import sys
+sys.stdout.write("x" * (2 * 1024 * 1024))
+PY
+`,
+    { mode: 0o755 },
+  );
+  const env = {
+    HOME: homeRoot,
+    PATH: `${fakeBinRoot}:${process.env.PATH ?? ''}`,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+  };
+
+  try {
+    const masExec = runCli(
+      ['module', 'exec', '--module', 'medautoscience', '--', 'sidecar', 'export', '--format', 'json'],
+      env,
+    ) as {
+      module_exec: {
+        module_id: string;
+        exit_code: number;
+        stdout: string;
+        max_buffer_bytes: number;
+        result: Record<string, unknown> | null;
+      };
+    };
+
+    assert.equal(masExec.module_exec.module_id, 'medautoscience');
+    assert.equal(masExec.module_exec.exit_code, 0);
+    assert.equal(masExec.module_exec.stdout.length, 2 * 1024 * 1024);
+    assert.equal(masExec.module_exec.result, null);
+    assert.equal(masExec.module_exec.max_buffer_bytes >= 2 * 1024 * 1024, true);
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('MDS runtime dependency install preserves project-local skills without syncing system-level skill packs', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-mds-skill-boundary-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');

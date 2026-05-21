@@ -1,7 +1,11 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
-import { parseFamilyRuntimeCommand, type EnqueueInput } from './family-runtime-command.ts';
+import {
+  parseFamilyRuntimeCommand,
+  type EnqueueInput,
+  type FamilyRuntimeTaskScope,
+} from './family-runtime-command.ts';
 import {
   ensureFamilyRuntimeProvider,
   inspectFamilyRuntimeProviders,
@@ -68,6 +72,7 @@ import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-qu
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
+import { runFamilyRuntimeQueueTick } from './family-runtime-tick.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -406,33 +411,14 @@ function runTick(
   source: string,
   limit: number,
   hydrate: boolean,
+  taskScope?: FamilyRuntimeTaskScope,
 ) {
-  const hydration = hydrate
-    ? hydrateDomainTasks(db, paths, { source: `${source}:hydrate` }, enqueueTask)
-    : { source, enqueued_count: 0, idempotent_noop_count: 0, blocked_count: 0, exports: [] };
-  const rows = db.prepare(`
-    SELECT * FROM tasks
-    WHERE status IN ('queued', 'retry_waiting')
-    ORDER BY priority DESC, created_at ASC
-    LIMIT ?
-  `).all(limit) as FamilyRuntimeTaskRow[];
-  insertEvent(db, {
-    eventType: 'tick_started',
+  return runFamilyRuntimeQueueTick(db, paths, {
     source,
-    payload: { limit, selected_count: rows.length },
-  });
-  const dispatches = rows.map((row) => dispatchTask(db, paths, row));
-  insertEvent(db, {
-    eventType: 'tick_completed',
-    source,
-    payload: { dispatches_count: dispatches.length },
-  });
-  return {
-    source,
-    hydration,
-    selected_count: rows.length,
-    dispatches,
-  };
+    limit,
+    hydrate,
+    taskScope,
+  }, { enqueueTask, dispatchTask });
 }
 
 function approveTask(
@@ -663,7 +649,7 @@ export async function runFamilyRuntime(args: string[]) {
           db,
           paths,
           parsed,
-          (source, limit, hydrate) => runTick(db, paths, source, limit, hydrate),
+          (source, limit, hydrate, taskScope) => runTick(db, paths, source, limit, hydrate, taskScope),
         ),
       };
     }
@@ -707,7 +693,14 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_tick: {
           surface_id: 'opl_family_runtime_tick',
-          ...runTick(db, paths, parsed.source ?? 'manual', parsed.limit ?? 10, parsed.hydrate ?? false),
+          ...runTick(
+            db,
+            paths,
+            parsed.source ?? 'manual',
+            parsed.limit ?? 10,
+            parsed.hydrate ?? false,
+            parsed.taskScope,
+          ),
           queue: queueSummary(db),
         },
       };
@@ -717,7 +710,16 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_intake: {
           surface_id: 'opl_family_runtime_intake',
-          ...hydrateDomainTasks(db, paths, { domainId: parsed.domainId, source: parsed.source ?? 'manual' }, enqueueTask),
+          ...hydrateDomainTasks(
+            db,
+            paths,
+            {
+              domainId: parsed.domainId,
+              source: parsed.source ?? 'manual',
+              taskScope: parsed.taskScope,
+            },
+            enqueueTask,
+          ),
           queue: queueSummary(db),
         },
       };

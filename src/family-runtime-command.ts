@@ -24,6 +24,11 @@ export type EnqueueInput = {
   requireStageAdmission?: boolean;
 };
 
+export type FamilyRuntimeTaskScope = {
+  domainId?: FamilyRuntimeDomainId;
+  payloadMatches?: Array<{ path: string; value: string }>;
+};
+
 export type FamilyRuntimeCommandInput =
   | {
     mode: 'status' | 'doctor' | 'install' | 'repair';
@@ -41,7 +46,14 @@ export type FamilyRuntimeCommandInput =
   }
   | { mode: 'residency_proof'; providerKind?: FamilyRuntimeProviderKind; live?: boolean; production?: boolean }
   | { mode: 'provider_slo_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean }
-  | { mode: 'scheduler_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean; limit?: number; hydrate?: boolean }
+  | {
+    mode: 'scheduler_tick';
+    providerKind?: FamilyRuntimeProviderKind;
+    force?: boolean;
+    limit?: number;
+    hydrate?: boolean;
+    taskScope?: FamilyRuntimeTaskScope;
+  }
   | { mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger'; providerKind?: FamilyRuntimeProviderKind }
   | {
     mode: 'evidence_worklist';
@@ -75,8 +87,8 @@ export type FamilyRuntimeCommandInput =
     };
   }
   | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
-  | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
-  | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
+  | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean; taskScope?: FamilyRuntimeTaskScope }
+  | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string; taskScope?: FamilyRuntimeTaskScope }
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
   | { mode: 'attempt_inspect'; stageAttemptId: string }
