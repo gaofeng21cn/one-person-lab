@@ -40,6 +40,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'domain_legacy_cleanup_plan_refs',
   'standard_agent_template_consumption_refs',
   'opl_meta_agent_workbench_refs',
+  'codex_app_runtime_role',
   'functional_privatization_audit_summary',
   'functional_privatization_audit_refs',
 ] as const;
@@ -814,6 +815,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     missing_evidence: missingEvidenceItems(drilldown),
     evidence_after_contract: evidenceAfterContractAttention(drilldown),
     evidence_next_steps: evidenceNextSteps(drilldown),
+    codex_app_runtime_role: record(drilldown.codex_app_runtime_role),
     next_safe_action: summarizeSafeAction(nextAction),
     additional_safe_action_count: Math.max(actions.length - (nextAction ? 1 : 0), 0),
     provider_health: providerHealth(drilldown),

@@ -16,6 +16,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 `contra
 
 `Codex CLI` 是当前第一公民 executor。标准 OPL Agent 的默认长跑路径是 `opl_temporal_hosted_autonomous`：任务启动后默认进入 OPL/Temporal 托管的 stage attempt runtime，由 OPL provider scheduler / typed queue / wakeup / resume-requery / retry-dead-letter / attempt ledger 持久在线推进；Codex App 只承担启动、观察、介入和投影入口，不作为外围持续驱动任务的主体。Domain agent 不允许内置或恢复通用 daemon、scheduler、attempt loop。Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent`、`claude_code` 与 `antigravity_cli` 同属显式非默认 executor adapter/backend，只能以 receipt/audit/fail-closed 证明连接，不承诺行为、质量、工具语义或 resume 等价。
 
+2026-05-22 追加：非生产证据层已经落到 App/operator 默认读面。`runtime app-operator-drilldown` 的 summary 与 `attention_first_payload.codex_app_runtime_role` 现在直接投影 `runtime_policy=opl_temporal_hosted_autonomous`、`codex_app_roles=[start, observe, intervene, display]`、`codex_app_drives_long_running_tasks=false`、`long_running_task_driver_owner=one-person-lab`、`long_running_task_driver_substrate=temporal`，并保持 `production_long_soak_claimed=false`、`production_evidence_gate_remains_open=true`。该 surface 只给 Codex App / operator 展示启动、观察、介入和展示边界，不新增 action、不写 domain truth、不创建 owner receipt、不关闭 Temporal long-soak 或 production evidence gate。
+
 `MDS` 不进入 OPL 顶层 agent 列表。它只作为 MAS 显式声明的 source provenance、historical fixture、explicit archive import、backend audit、upstream intake 或 parity oracle reference。
 
 ## 当前真实状态

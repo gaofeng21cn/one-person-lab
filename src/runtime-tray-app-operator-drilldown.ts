@@ -898,6 +898,38 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
+function codexAppRuntimeRole() {
+  return {
+    surface_kind: 'opl_app_drilldown_codex_app_runtime_role',
+    runtime_policy: 'opl_temporal_hosted_autonomous',
+    projection_policy:
+      'app_start_observe_intervene_display_only_provider_runs_long_tasks',
+    codex_app_roles: [
+      'start',
+      'observe',
+      'intervene',
+      'display',
+    ],
+    codex_app_drives_long_running_tasks: false,
+    long_running_task_driver_owner: 'one-person-lab',
+    long_running_task_driver_substrate: 'temporal',
+    default_stage_executor: 'codex_cli',
+    domain_agent_internal_daemon_allowed: false,
+    domain_agent_internal_scheduler_allowed: false,
+    domain_agent_internal_attempt_loop_allowed: false,
+    production_long_soak_claimed: false,
+    production_evidence_gate_remains_open: true,
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      can_claim_production_ready: false,
+      can_claim_domain_ready: false,
+      can_close_long_soak: false,
+      can_create_owner_receipt: false,
+      can_drive_long_running_task_loop: false,
+    },
+  };
+}
+
 function runtimeManagerRouteSupportRefs() {
   return {
     surface_kind: 'opl_app_drilldown_runtime_manager_route_support',
@@ -1094,6 +1126,7 @@ export function buildAppOperatorDrilldown(input: {
   const providerActionRefs = providerSloRefs(input.providerContinuousProof);
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
+  const appRuntimeRole = codexAppRuntimeRole();
   const runtimeManagerRouteSupport = runtimeManagerRouteSupportRefs();
   const routeTransitionDrilldownRefs = routeTransitionDrilldown({
     attempts,
@@ -1189,6 +1222,17 @@ export function buildAppOperatorDrilldown(input: {
       standardAgentTemplateConsumption,
       evidenceEnvelope,
     }),
+    codex_app_runtime_role_status: appRuntimeRole.runtime_policy,
+    codex_app_runtime_role_count: Array.isArray(appRuntimeRole.codex_app_roles)
+      ? appRuntimeRole.codex_app_roles.length
+      : 0,
+    codex_app_drives_long_running_tasks: appRuntimeRole.codex_app_drives_long_running_tasks,
+    codex_app_long_running_task_driver_owner: appRuntimeRole.long_running_task_driver_owner,
+    codex_app_long_running_task_driver_substrate:
+      appRuntimeRole.long_running_task_driver_substrate,
+    codex_app_production_long_soak_claimed: appRuntimeRole.production_long_soak_claimed,
+    codex_app_production_evidence_gate_remains_open:
+      appRuntimeRole.production_evidence_gate_remains_open,
     route_transition_drilldown_stage_attempt_count:
       record(routeTransitionDrilldownRefs.summary).stage_attempt_count,
     route_transition_drilldown_owner_route_ref_count:
@@ -1209,6 +1253,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/domain_projection_ingestion', 'domain_projection_ingestion'),
     sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/codex_app_runtime_role', 'codex_app_runtime_role'),
     sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
@@ -1233,6 +1278,7 @@ export function buildAppOperatorDrilldown(input: {
         : 'empty',
     projection_policy: 'refs_only_no_domain_truth_memory_body_artifact_body_or_verdict',
     summary,
+    codex_app_runtime_role: appRuntimeRole,
     route_graph_refs: {
       surface_kind: 'opl_app_drilldown_route_graph_refs',
       refs: routeRefs,
