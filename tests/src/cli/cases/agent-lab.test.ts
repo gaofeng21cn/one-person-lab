@@ -92,6 +92,12 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.log_driven_mechanism_candidates.summary.candidate_count, 4);
   assert.equal(output.agent_lab_complete.stage_executor_policy.trial_ready_candidate_count, 1);
   assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_bundle.surface_kind,
+    'opl_agent_lab_codex_attempt_trace_bundle');
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_bundle.summary.attempt_trace_count, 3);
+  assert.equal(output.agent_lab_complete.replay_fork_variant_cockpit.surface_kind,
+    'opl_agent_lab_replay_fork_variant_cockpit');
+  assert.equal(output.agent_lab_complete.replay_fork_variant_cockpit.summary.variant_count, 0);
   assert.equal(output.agent_lab_complete.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].preset_id, 'rca-ppt-40');
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
@@ -151,6 +157,14 @@ test('agent-lab workbench exposes the App-ready read model', () => {
   assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.surface_kind,
     'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.summary.trace_ready_count, 3);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_bundle.surface_kind,
+    'opl_agent_lab_codex_attempt_trace_bundle');
+  assert.equal(output.agent_lab_workbench.replay_fork_variant_cockpit.surface_kind,
+    'opl_agent_lab_replay_fork_variant_cockpit');
+  assert.equal(output.agent_lab_workbench.source_results.codex_attempt_trace_bundle_ref,
+    output.agent_lab_workbench.codex_attempt_trace_bundle.bundle_id);
+  assert.equal(output.agent_lab_workbench.source_results.replay_fork_variant_cockpit_ref,
+    output.agent_lab_workbench.replay_fork_variant_cockpit.cockpit_id);
   assert.equal(output.agent_lab_workbench.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_workbench.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
   assert.deepEqual(output.agent_lab_workbench.source_results.token_cost_estimate_refs,

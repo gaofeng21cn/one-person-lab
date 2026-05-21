@@ -89,10 +89,18 @@ test('Agent Lab Codex attempt trace flywheel normalizes trace refs and forks blo
 
   assert.equal(result.surface_kind, 'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(result.refs_only, true);
+  assert.equal(result.codex_attempt_trace_bundle.surface_kind, 'opl_agent_lab_codex_attempt_trace_bundle');
+  assert.equal(result.codex_attempt_trace_bundle.summary.attempt_trace_count, 1);
+  assert.equal(result.codex_attempt_trace_bundle.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.replay_fork_variant_cockpit.surface_kind, 'opl_agent_lab_replay_fork_variant_cockpit');
+  assert.equal(result.replay_fork_variant_cockpit.summary.blocked_evidence_ref_count >= 3, true);
+  assert.equal(result.replay_fork_variant_cockpit.summary.learning_only_variant_count, 3);
+  assert.equal(result.replay_fork_variant_cockpit.summary.promotion_eligible_variant_count, 0);
+  assert.equal(result.replay_fork_variant_cockpit.authority_boundary.can_mutate_artifact_body, false);
   assert.equal(result.summary.attempt_count, 1);
   assert.equal(result.summary.codex_cli_attempt_count, 1);
   assert.equal(result.summary.blocked_evidence_attempt_count, 1);
-  assert.equal(result.summary.fork_candidate_count, 2);
+  assert.equal(result.summary.fork_candidate_count, 3);
   assert.equal(result.summary.promotion_eligible_candidate_count, 0);
   assert.equal(attempt.status, 'blocked_evidence_ready_for_fork');
   assert.deepEqual(attempt.generated_typed_blocker_refs, []);
@@ -104,15 +112,24 @@ test('Agent Lab Codex attempt trace flywheel normalizes trace refs and forks blo
   assert.ok(result.refs.web_source_refs.includes('source-ref:mas/reviewer-guideline-fixture'));
   assert.ok(result.refs.review_receipt_refs.includes('review-receipt-ref:mas/ai-reviewer-fixture'));
   assert.ok(result.refs.blocked_evidence_refs.includes(failureDeltaRef));
-  assert.equal(result.variant_candidates.length, 2);
+  assert.equal(result.variant_candidates.length, 3);
   assert.ok(result.variant_candidates.every((candidate) =>
     candidate.evidence_delta.blocked_evidence_refs.includes(failureDeltaRef)
     && candidate.predicted_impact_refs.length > 0
     && candidate.next_run_falsification_refs.length > 0
+    && candidate.cost_duration.estimated_cost_units > 0
+    && candidate.cost_duration.estimated_duration_minutes > 0
+    && candidate.regression_count > 0
+    && candidate.learning_only === true
+    && candidate.authority_boundary.can_authorize_quality_verdict === false
+    && candidate.authority_boundary.can_mutate_artifact_body === false
     && candidate.promotion_eligibility.eligible_for_variant_eval
     && candidate.promotion_eligibility.eligible_for_existing_promotion_gate === false
     && candidate.promotion_eligibility.can_authorize_domain_ready === false
+    && candidate.promotion_eligibility.can_authorize_quality_verdict === false
+    && candidate.promotion_eligibility.can_mutate_artifact_body === false
     && candidate.promotion_eligibility.can_promote_default_agent === false));
+  assert.deepEqual(result.replay_fork_variant_cockpit.learning_only_variant_refs, result.refs.variant_candidate_refs);
 });
 
 test('Agent Lab AHE evidence helper emits typed blocker when required refs are missing', () => {
