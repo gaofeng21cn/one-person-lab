@@ -163,6 +163,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl agents pack-compiler',
         'opl agents pack-compiler inspect --domain mas',
         'opl agents interfaces --domain mas',
+        'opl agents platform-surfaces --family-defaults',
         'opl domain-memory list',
         'opl domain-memory migration-plan --domain mas',
         'opl stages list',

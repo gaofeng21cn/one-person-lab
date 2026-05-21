@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from './contracts.ts';
+import { buildAgentPlatformSurfaceOwnershipForRepo } from './agent-platform-surface-ownership.ts';
 import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
 import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
 import { validateStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
@@ -1017,6 +1018,7 @@ function buildRepoConformance(input: RepoInput) {
   const generatedSurfaceHandoffChecks = buildGeneratedSurfaceHandoffChecks(repoDir);
   const privateSurfaceChecks = buildPrivateSurfaceChecks(repoDir);
   const generatedInterfaceChecks = buildGeneratedInterfaceCheck(repoDir);
+  const platformSurfaceOwnershipChecks = buildAgentPlatformSurfaceOwnershipForRepo(repoDir, input.requested_agent_id);
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
   const workspaceFileLifecycleChecks = buildWorkspaceFileLifecycleChecks(repoDir);
   const evidenceTailClassification = buildEvidenceTailClassification(repoDir, domainId, generatedInterfaceChecks);
@@ -1026,6 +1028,7 @@ function buildRepoConformance(input: RepoInput) {
     ...generatedSurfaceHandoffChecks.blockers,
     ...privateSurfaceChecks.blockers,
     ...generatedInterfaceChecks.blockers,
+    ...platformSurfaceOwnershipChecks.blockers,
     ...physicalMorphologyChecks.blockers,
     ...workspaceFileLifecycleChecks.blockers,
   ]);
@@ -1046,6 +1049,7 @@ function buildRepoConformance(input: RepoInput) {
     generated_surface_handoff_checks: generatedSurfaceHandoffChecks,
     private_surface_checks: privateSurfaceChecks,
     generated_interface_checks: generatedInterfaceChecks,
+    platform_surface_ownership_checks: platformSurfaceOwnershipChecks,
     physical_morphology_checks: physicalMorphologyChecks,
     workspace_file_lifecycle_checks: workspaceFileLifecycleChecks,
     evidence_tail_classification: evidenceTailClassification,

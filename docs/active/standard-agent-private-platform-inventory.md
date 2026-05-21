@@ -16,6 +16,8 @@ Machine boundary: 本文是跨 repo 人读治理总账。机器真相继续归 O
 
 本轮 fresh scan 的结论是：没有发现应立即把 domain truth 或 quality verdict 迁入 OPL 的 surface；真正的风险集中在“仍有 active caller 的大型 repo-local handler / projection / sidecar / script 面容易被误读成 domain 私有平台”。这些 surface 当前必须按 `domain_authority_retained`、`opl_framework_migration_candidate`、`already_thin_adapter` 或 `needs_split_before_migration` 台账化，后续只在 OPL primitive、active caller cutover、owner receipt parity 与 no-forbidden-write proof 齐全后迁移、删除或 tombstone。
 
+2026-05-21 的上收执行线新增 OPL 机器承接面：`opl agents platform-surfaces --family-defaults --json`。该命令把 generic platform owner 判定从 domain repo-local 文档/测试口径上收到 OPL Framework，统一分类 `generated_cli_mcp_skill_product_shell`、`generated_sidecar_dispatch_shell`、`status_read_model_and_workbench_shell`、`workspace_source_artifact_memory_locator`、`stage_attempt_queue_retry_dead_letter` 与 `generic_transition_runner`。它只输出 ownership / migration gate / forbidden owner claim 检查，不生成 domain ready、quality verdict、artifact authority 或 production ready；domain repo 后续清理私有 wrapper、watch、scheduler、locator、workbench、sidecar 时，应引用该 OPL classifier 与对应 generated/substrate/lifecycle primitive，而不是继续在各仓扩写一套私有平台判断。
+
 ## 分类词表
 
 | class | 含义 | 迁移口径 |
@@ -71,6 +73,7 @@ OMA candidates: large script-level materializers should keep only developer work
 
 ## OPL framework primitive gaps
 
+- `opl agents platform-surfaces` 已提供 generic platform ownership classifier，但 production/default caller 仍需 direct/hosted parity evidence。
 - Generated CLI/MCP/Skill/product-entry/status/workbench caller must become production/default caller with direct/hosted parity evidence, not just descriptor readiness.
 - Generic sidecar dispatch shell and typed queue transport need domain owner receipt roundtrip and no-forbidden-write proof across MAS/MAG/RCA.
 - Generic status/read-model and App workbench shell need refs-only consumption of domain status without verdict generation.

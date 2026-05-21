@@ -152,6 +152,13 @@ export function buildAgentReadinessSummary(args: string[]) {
   const generatedInterfaceBlockedCount = reports.filter((report) =>
     stringValue(record(report.generated_interface_checks).status) === 'blocked'
   ).length;
+  const platformSurfaceBlockedCount = reports.filter((report) =>
+    stringValue(record(report.platform_surface_ownership_checks).status) === 'blocked'
+  ).length;
+  const explicitForbiddenOwnerClaimCount = reports.reduce((total, report) => {
+    const checks = record(report.platform_surface_ownership_checks);
+    return total + recordList(checks.explicit_forbidden_owner_claims).length;
+  }, 0);
   const domainGeneratedSurfaceOwnerClaimCount = reports.filter((report) => (
     record(report.generated_interface_checks).domain_repo_can_own_generated_surface === true
     || record(report.pack_compiler_checks).domain_repo_can_own_generated_surface === true
@@ -205,6 +212,8 @@ export function buildAgentReadinessSummary(args: string[]) {
         pack_compiler_blocked_domain_count: packCompilerBlockedCount,
         generated_artifact_drift_detected_count: 0,
         domain_generated_surface_owner_claim_count: domainGeneratedSurfaceOwnerClaimCount,
+        platform_surface_ownership_blocked_count: platformSurfaceBlockedCount,
+        explicit_forbidden_platform_owner_claim_count: explicitForbiddenOwnerClaimCount,
         generated_interface_blocked_count: generatedInterfaceBlockedCount,
         agent_readiness_production_evidence_tail_count: tailCount,
         agent_readiness_production_evidence_tail_policy:
@@ -243,6 +252,13 @@ export function buildAgentReadinessSummary(args: string[]) {
           reports.length - generatedInterfaceBlockedCount,
           generatedInterfaceBlockedCount,
           'generated_descriptors_route_to_domain_handler_targets_without_claiming_domain_truth',
+        ),
+        platform_surface_ownership: gate(
+          'platform_surface_ownership',
+          'opl agents platform-surfaces --family-defaults --json',
+          reports.length - platformSurfaceBlockedCount,
+          platformSurfaceBlockedCount,
+          'opl_owns_generic_platform_surfaces_domain_repos_keep_authority_refs_only',
         ),
         semantic_hygiene: gate(
           'semantic_hygiene',

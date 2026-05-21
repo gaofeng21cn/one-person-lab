@@ -20,6 +20,7 @@ import {
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
 } from '../../domain-pack-compiler.ts';
+import { buildAgentPlatformSurfaceOwnershipReport } from '../../agent-platform-surface-ownership.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -571,6 +572,17 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildGeneratedAgentInterfaces(getContracts(), args),
+    },
+    'agents platform-surfaces': {
+      usage: 'opl agents platform-surfaces [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
+      summary:
+        'Classify OPL-owned generic platform surfaces across standard agents while preserving domain truth, verdict, artifact, memory, and owner-receipt authority.',
+      examples: [
+        'opl agents platform-surfaces --family-defaults',
+        'opl agents platform-surfaces --agent mas=/path/to/med-autoscience',
+      ],
+      group: 'domain',
+      handler: (args) => buildAgentPlatformSurfaceOwnershipReport(args),
     },
     'agents conformance': {
       usage: 'opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',

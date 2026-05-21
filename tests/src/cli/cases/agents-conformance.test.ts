@@ -492,6 +492,39 @@ function writeProductionAcceptance(repoDir: string, fileName: string, payload: u
 
 test('agents conformance reports structural readiness separately from production evidence tail', () => {
   const repoDir = buildReadyAgentRepo();
+  const platformSurfaces = runCli([
+    'agents',
+    'platform-surfaces',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).agent_platform_surface_ownership;
+
+  assert.equal(platformSurfaces.surface_kind, 'opl_agent_platform_surface_ownership_report');
+  assert.equal(platformSurfaces.owner, 'one-person-lab');
+  assert.equal(platformSurfaces.status, 'passed');
+  assert.equal(platformSurfaces.summary.total_repo_count, 1);
+  assert.equal(platformSurfaces.summary.generic_subdomain_count, 6);
+  assert.equal(platformSurfaces.summary.explicit_forbidden_owner_claim_count, 0);
+  assert.deepEqual(platformSurfaces.reports[0].retained_domain_authority, [
+    'domain_truth',
+    'quality_or_export_or_publication_or_visual_verdict',
+    'artifact_body_and_mutation_authority',
+    'source_readiness_verdict',
+    'memory_body_accept_reject',
+    'owner_receipt_signing',
+    'typed_blocker_materialization',
+    'domain_specific_policy_rubric_or_quality_gate',
+  ]);
+  assert.equal(
+    platformSurfaces.reports[0].generic_subdomains
+      .some((surface: { subdomain_id: string; owner: string }) => (
+        surface.subdomain_id === 'generated_sidecar_dispatch_shell'
+        && surface.owner === 'one-person-lab'
+      )),
+    true,
+  );
+  assert.equal(platformSurfaces.authority_boundary.report_can_claim_domain_ready, false);
+
   const report = runCli([
     'agents',
     'conformance',
@@ -518,6 +551,10 @@ test('agents conformance reports structural readiness separately from production
   assert.deepEqual(repo.pack_compiler_checks.readme_required_paths, []);
   assert.equal(repo.generated_surface_handoff_checks.generated_surface_owner, 'one-person-lab');
   assert.equal(repo.private_surface_checks.domain_can_claim_generic_runtime_owner, false);
+  assert.equal(repo.platform_surface_ownership_checks.status, 'passed');
+  assert.equal(repo.platform_surface_ownership_checks.generic_subdomain_count, 6);
+  assert.deepEqual(repo.platform_surface_ownership_checks.explicit_forbidden_owner_claims, []);
+  assert.equal(repo.platform_surface_ownership_checks.authority_boundary.report_can_claim_production_ready, false);
   assert.equal(repo.generated_interface_checks.generated_interfaces_status, 'ready');
   assert.equal(repo.generated_interface_checks.generated_wrapper_bundle_status, 'ready');
   assert.equal(repo.generated_interface_checks.active_caller_target_proof_status, 'ready');
@@ -607,6 +644,8 @@ test('agents readiness aggregates structural gates and production evidence tail 
   assert.equal(readiness.summary.pack_compiler_blocked_domain_count, 0);
   assert.equal(readiness.summary.generated_interface_blocked_count, 0);
   assert.equal(readiness.summary.domain_generated_surface_owner_claim_count, 0);
+  assert.equal(readiness.summary.platform_surface_ownership_blocked_count, 0);
+  assert.equal(readiness.summary.explicit_forbidden_platform_owner_claim_count, 0);
   assert.equal(readiness.summary.agent_readiness_production_evidence_tail_count, 2);
   assert.deepEqual(
     Object.keys(readiness.summary).filter((key) => key.startsWith('production_evidence_tail_')),
@@ -638,6 +677,11 @@ test('agents readiness aggregates structural gates and production evidence tail 
   assert.equal(
     readiness.gates.generated_interfaces.policy,
     'generated_descriptors_route_to_domain_handler_targets_without_claiming_domain_truth',
+  );
+  assert.equal(readiness.gates.platform_surface_ownership.status, 'passed');
+  assert.equal(
+    readiness.gates.platform_surface_ownership.policy,
+    'opl_owns_generic_platform_surfaces_domain_repos_keep_authority_refs_only',
   );
   assert.equal(
     readiness.gates.semantic_hygiene.policy,
@@ -1151,6 +1195,45 @@ test('agents conformance blocks exact MAG legacy residue tokens', () => {
   ]);
   assert.equal(
     report.reports[0].blockers.includes('active_forbidden_name_residue:attempt_ledger:contracts/action_catalog.json'),
+    true,
+  );
+});
+
+test('agents platform-surfaces blocks explicit generic platform owner claims', () => {
+  const repoDir = buildReadyAgentRepo();
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner = true;
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const platformSurfaces = runCli([
+    'agents',
+    'platform-surfaces',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).agent_platform_surface_ownership;
+
+  assert.equal(platformSurfaces.status, 'blocked');
+  assert.equal(platformSurfaces.summary.explicit_forbidden_owner_claim_count, 1);
+  assert.match(
+    platformSurfaces.reports[0].blockers[0],
+    /domain_declares_generic_platform_owner:contracts\/functional_privatization_audit\.json/,
+  );
+  assert.equal(platformSurfaces.reports[0].authority_boundary.report_can_claim_domain_ready, false);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.reports[0].platform_surface_ownership_checks.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.some((blocker: string) => (
+      blocker.includes('domain_declares_generic_platform_owner:contracts/functional_privatization_audit.json')
+    )),
     true,
   );
 });

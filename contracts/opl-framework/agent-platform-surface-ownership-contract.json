@@ -1,0 +1,41 @@
+{
+  "contract_kind": "opl_agent_platform_surface_ownership_contract.v1",
+  "surface_kind": "opl_agent_platform_surface_ownership_contract",
+  "owner": "one-person-lab",
+  "scope": "Framework-owned classification of generic platform surfaces that standard domain agents must not own privately.",
+  "command": "opl agents platform-surfaces [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]",
+  "framework_owned_generic_subdomains": [
+    "generated_cli_mcp_skill_product_shell",
+    "generated_sidecar_dispatch_shell",
+    "status_read_model_and_workbench_shell",
+    "workspace_source_artifact_memory_locator",
+    "stage_attempt_queue_retry_dead_letter",
+    "generic_transition_runner"
+  ],
+  "domain_agent_retained_authority": [
+    "domain_truth",
+    "quality_or_export_or_publication_or_visual_verdict",
+    "artifact_body_and_mutation_authority",
+    "source_readiness_verdict",
+    "memory_body_accept_reject",
+    "owner_receipt_signing",
+    "typed_blocker_materialization",
+    "domain_specific_policy_rubric_or_quality_gate"
+  ],
+  "migration_gate": {
+    "replacement_parity_required": true,
+    "active_caller_cutover_required": true,
+    "domain_owner_receipt_or_typed_blocker_required": true,
+    "no_forbidden_write_proof_required": true,
+    "descriptor_ready_is_not_production_ready": true
+  },
+  "authority_boundary": {
+    "opl_owns_generic_platform_surfaces": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "opl_can_mutate_domain_artifacts": false,
+    "report_can_claim_domain_ready": false,
+    "report_can_claim_production_ready": false
+  }
+}
