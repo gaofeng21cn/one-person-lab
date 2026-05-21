@@ -65,6 +65,11 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     true,
   );
   assert.equal(scaffold.agent_pack_contract.conformance_version, 'standard-stage-pack.v2');
+  assert.equal(scaffold.default_runtime_policy.surface_kind, 'opl_standard_agent_default_runtime_policy');
+  assert.equal(scaffold.default_runtime_policy.default_runtime_path, 'opl_temporal_hosted_autonomous');
+  assert.equal(scaffold.default_runtime_policy.temporal_hosted_autonomy_default_enabled, true);
+  assert.equal(scaffold.default_runtime_policy.domain_agent_internal_daemon_allowed, false);
+  assert.equal(scaffold.default_runtime_policy.codex_app_drives_long_running_tasks, false);
   assert.equal(
     scaffold.agent_pack_contract.stage_ref_requirements.includes(
       'selected_executor:codex_cli default binding or explicit non-default executor binding',

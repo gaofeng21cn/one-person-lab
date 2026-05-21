@@ -146,6 +146,37 @@
       "generic_status_workbench_owner",
       "generated_surface_owner_in_domain_repo"
     ],
+    "default_runtime_policy": {
+      "surface_kind": "opl_standard_agent_default_runtime_policy",
+      "owner": "one-person-lab",
+      "default_runtime_path": "opl_temporal_hosted_autonomous",
+      "temporal_hosted_autonomy_default_enabled": true,
+      "runtime_owner": "one-person-lab",
+      "provider_owner": "one-person-lab",
+      "provider_kind_required_for_production": "temporal",
+      "default_executor_kind": "codex_cli",
+      "codex_app_drives_long_running_tasks": false,
+      "codex_app_role": "start_observe_intervene_project_only",
+      "provider_managed_surfaces": [
+        "stage_attempt_runtime",
+        "typed_queue",
+        "wakeup",
+        "resume_requery",
+        "retry_dead_letter",
+        "attempt_ledger",
+        "operator_projection"
+      ],
+      "domain_agent_internal_daemon_allowed": false,
+      "domain_agent_internal_scheduler_allowed": false,
+      "domain_agent_internal_attempt_loop_allowed": false,
+      "authority_boundary": {
+        "provider_completion_can_claim_domain_ready": false,
+        "provider_completion_can_claim_quality_or_export_verdict": false,
+        "provider_completion_can_write_domain_truth": false,
+        "provider_completion_can_issue_owner_receipt": false,
+        "domain_agent_can_install_generic_daemon": false
+      }
+    },
     "retirement_gate_required_evidence": [
       "replacement_contract_available",
       "active_callers_migrated",
@@ -368,7 +399,9 @@
         "prompt_refs:agent/prompts/*",
         "skills:agent/skills/* or skill_id",
         "knowledge_refs:agent/knowledge/*",
-        "evaluation:agent/quality_gates/*"
+        "evaluation:agent/quality_gates/*",
+        "selected_executor:codex_cli default binding or explicit non-default executor binding",
+        "runtime_policy:opl_temporal_hosted_autonomous default path"
       ],
       "validator": "opl agents scaffold --validate <repo-dir>",
       "empty_agent_directory_policy": "blocked"

@@ -121,6 +121,46 @@ export const OPL_OWNED_GENERIC_PRIMITIVES = [
   },
 ] as const;
 
+export const STANDARD_AGENT_DEFAULT_RUNTIME_POLICY = {
+  surface_kind: 'opl_standard_agent_default_runtime_policy',
+  owner: 'one-person-lab',
+  default_runtime_path: 'opl_temporal_hosted_autonomous',
+  temporal_hosted_autonomy_default_enabled: true,
+  runtime_owner: 'one-person-lab',
+  provider_owner: 'one-person-lab',
+  provider_kind_required_for_production: 'temporal',
+  default_executor_kind: 'codex_cli',
+  codex_app_drives_long_running_tasks: false,
+  codex_app_role: 'start_observe_intervene_project_only',
+  provider_managed_surfaces: [
+    'stage_attempt_runtime',
+    'typed_queue',
+    'wakeup',
+    'resume_requery',
+    'retry_dead_letter',
+    'attempt_ledger',
+    'operator_projection',
+  ],
+  domain_agent_internal_daemon_allowed: false,
+  domain_agent_internal_scheduler_allowed: false,
+  domain_agent_internal_attempt_loop_allowed: false,
+  domain_agent_retained_authority: [
+    'domain_truth',
+    'quality_or_export_verdict',
+    'artifact_authority',
+    'memory_body_accept_reject',
+    'owner_receipt',
+    'typed_blocker',
+  ],
+  authority_boundary: {
+    provider_completion_can_claim_domain_ready: false,
+    provider_completion_can_claim_quality_or_export_verdict: false,
+    provider_completion_can_write_domain_truth: false,
+    provider_completion_can_issue_owner_receipt: false,
+    domain_agent_can_install_generic_daemon: false,
+  },
+} as const;
+
 export const FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES = [
   'generic_scheduler_owner',
   'generic_daemon_owner',

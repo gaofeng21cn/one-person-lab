@@ -4,6 +4,18 @@
   "contract_ref": "contracts/opl-framework/family-runtime-online-substrate-contract.json",
   "provider_model": "provider_backed_stage_attempt_runtime",
   "scope": "OPL family provider-backed runtime substrate, typed queue, stage attempt ledger, dispatch, notification, approval, signal, and recovery bridge",
+  "standard_agent_default_runtime_policy": {
+    "surface_kind": "opl_standard_agent_default_runtime_policy",
+    "default_runtime_path": "opl_temporal_hosted_autonomous",
+    "temporal_hosted_autonomy_default_enabled": true,
+    "provider_kind_required_for_production": "temporal",
+    "default_executor_kind": "codex_cli",
+    "codex_app_drives_long_running_tasks": false,
+    "codex_app_role": "start_observe_intervene_project_only",
+    "domain_agent_internal_daemon_allowed": false,
+    "domain_agent_internal_scheduler_allowed": false,
+    "domain_agent_internal_attempt_loop_allowed": false
+  },
   "owner_split": {
     "family_runtime_provider_owner": "one-person-lab",
     "product_control_plane_owner": "one-person-lab",
@@ -59,7 +71,7 @@
     "action_kind": "provider_slo_cadence_execution",
     "command": "opl family-runtime residency proof --provider temporal --production",
     "execution_owner": "operator_or_infrastructure",
-    "execution_policy": "manual_or_supervised_no_auto_execution",
+    "execution_policy": "provider_scheduler_default_for_standard_agents",
     "expected_event_type": "temporal_provider_slo_execution_receipt",
     "expected_receipt_kind": "opl_temporal_provider_slo_execution_receipt",
     "max_proof_age_seconds": 86400,
