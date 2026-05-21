@@ -184,7 +184,7 @@
   "efficiency_nonregression_surface": {
     "surface_kind": "opl_agent_lab_efficiency_nonregression_read_model",
     "version": "opl-agent-lab.v1.efficiency-nonregression",
-    "cli": "opl agent-lab efficiency",
+    "cli": "opl agent-lab efficiency | opl agent-lab run/efficiency --suite <suite.json>",
     "refs_only": true,
     "purpose": "Project generic Agent Lab efficiency non-regression readiness from suite refs and explicit input refs without adding a domain-specific suite kind.",
     "input_ref_groups": [

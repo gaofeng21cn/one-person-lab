@@ -101,6 +101,41 @@ function buildAgentLabEfficiencyPayload() {
   };
 }
 
+function buildAgentLabRunEfficiencyPayload(args: string[], spec: CommandSpec) {
+  const { suitePath } = parseAgentLabRunArgs(args, spec);
+  const suite = readAgentLabSuiteFile(suitePath);
+  const suiteResult = runAgentLabSuite(suite);
+  const handoffRefs = collectEfficiencyHandoffProjections(suite);
+  const readModel = buildAgentLabEfficiencyNonRegressionReadModel({
+    suiteResults: [suiteResult],
+    handoffRefs,
+  });
+
+  return {
+    version: 'g2',
+    agent_lab_run_efficiency: {
+      surface_id: 'opl_agent_lab_efficiency_suite_run',
+      suite_path: suitePath,
+      suite_result: suiteResult,
+      read_model: readModel,
+      ref_summary: agentLabRefSummary(suiteResult),
+      authority_boundary: readModel.authority_boundary,
+    },
+  };
+}
+
+function collectEfficiencyHandoffProjections(suite: AgentLabSuite): Record<string, unknown>[] {
+  return Object.entries(suite as Record<string, unknown>)
+    .filter(([key, value]) => (
+      key === 'efficiency_handoff_projection' || key.endsWith('_efficiency_handoff_projection')
+    ) && isJsonRecord(value))
+    .map(([, value]) => value as Record<string, unknown>);
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
 function parseAgentLabCostEstimateArgs(args: string[], spec: CommandSpec) {
   let preset: AgentLabCostEstimatePreset | null = null;
   const allowedPresets = new Set(['rca-ppt-40']);
@@ -279,6 +314,7 @@ export {
   buildAgentLabLonglinePayload,
   buildAgentLabMechanismPayload,
   buildAgentLabOptimizePayload,
+  buildAgentLabRunEfficiencyPayload,
   buildAgentLabRunPayload,
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,

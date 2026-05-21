@@ -15,6 +15,7 @@ export type AgentLabEfficiencyNonRegressionRefs = {
 
 export type AgentLabEfficiencyNonRegressionInput = {
   suiteResults?: JsonRecord[];
+  handoffRefs?: JsonRecord[];
   explicitRefs?: AgentLabEfficiencyNonRegressionRefs;
 };
 
@@ -45,10 +46,84 @@ function textField(record: JsonRecord | null | undefined, key: string) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function nestedRecord(record: JsonRecord | null | undefined, key: string): JsonRecord {
+  const value = record?.[key];
+  return isRecord(value) ? value : {};
+}
+
+function firstString(...values: unknown[]) {
+  return values.find((value): value is string =>
+    typeof value === 'string' && value.trim().length > 0)?.trim() ?? null;
+}
+
 function addRef(target: string[], value: unknown) {
   if (typeof value === 'string' && value.trim().length > 0) {
     target.push(value.trim());
   }
+}
+
+function addRefs(target: string[], value: unknown) {
+  target.push(...stringList(value));
+}
+
+function collectEfficiencyHandoffRefs(
+  handoff: JsonRecord | undefined,
+): Required<AgentLabEfficiencyNonRegressionRefs> {
+  const groups: Required<AgentLabEfficiencyNonRegressionRefs> = {
+    duration_refs: [],
+    cost_refs: [],
+    cache_hit_refs: [],
+    reuse_scope_refs: [],
+    quality_floor_refs: [],
+    no_forbidden_write_refs: [],
+    owner_route_refs: [],
+  };
+
+  if (!handoff) {
+    return groups;
+  }
+
+  const signals = nestedRecord(handoff, 'efficiency_signal_refs');
+  const qualityFloor = nestedRecord(handoff, 'quality_floor_refs');
+  const authorityBoundary = nestedRecord(handoff, 'authority_boundary');
+  const suiteInput = nestedRecord(handoff, 'agent_lab_suite_input');
+  addRefs(groups.duration_refs, signals.duration_refs);
+  addRefs(groups.cost_refs, signals.cost_refs);
+  addRefs(groups.cache_hit_refs, signals.cache_refs);
+  addRefs(groups.reuse_scope_refs, signals.reuse_refs);
+  addRefs(groups.quality_floor_refs, qualityFloor.review_export_gate_refs);
+  addRefs(groups.quality_floor_refs, qualityFloor.screenshot_review_gate_refs);
+  addRefs(groups.quality_floor_refs, qualityFloor.visual_memory_authority_refs);
+  addRefs(groups.quality_floor_refs, qualityFloor.owner_receipt_refs);
+  addRefs(groups.quality_floor_refs, qualityFloor.export_authority_refs);
+
+  if (authorityBoundary.no_forbidden_write === true) {
+    groups.no_forbidden_write_refs.push(`no-forbidden-write:${handoff.owner ?? 'domain'}/efficiency-handoff`);
+  }
+  addRefs(groups.no_forbidden_write_refs, authorityBoundary.no_forbidden_write_refs);
+  addRef(groups.owner_route_refs, firstString(
+    handoff.owner_route_ref,
+    handoff.owner,
+    suiteInput.domain_id,
+  ));
+
+  return {
+    duration_refs: unique(groups.duration_refs),
+    cost_refs: unique(groups.cost_refs),
+    cache_hit_refs: unique(groups.cache_hit_refs),
+    reuse_scope_refs: unique(groups.reuse_scope_refs),
+    quality_floor_refs: unique(groups.quality_floor_refs),
+    no_forbidden_write_refs: unique(groups.no_forbidden_write_refs),
+    owner_route_refs: unique(groups.owner_route_refs),
+  };
+}
+
+function collectEfficiencyHandoffProjections(record: JsonRecord): JsonRecord[] {
+  return Object.entries(record)
+    .filter(([key, value]) => (
+      key === 'efficiency_handoff_projection' || key.endsWith('_efficiency_handoff_projection')
+    ) && isRecord(value))
+    .map(([, value]) => value as JsonRecord);
 }
 
 function collectSuiteEfficiencyRefs(suiteResults: JsonRecord[] = []): Required<AgentLabEfficiencyNonRegressionRefs> {
@@ -63,14 +138,22 @@ function collectSuiteEfficiencyRefs(suiteResults: JsonRecord[] = []): Required<A
   };
 
   for (const suiteResult of suiteResults) {
+    const handoffRefs = collectEfficiencyHandoffProjections(suiteResult).map(collectEfficiencyHandoffRefs);
     const refs = isRecord(suiteResult.refs) ? suiteResult.refs : {};
     groups.duration_refs.push(...stringList(refs.duration_refs));
+    groups.duration_refs.push(...handoffRefs.flatMap((handoff) => handoff.duration_refs));
     groups.cost_refs.push(...stringList(refs.cost_refs));
+    groups.cost_refs.push(...handoffRefs.flatMap((handoff) => handoff.cost_refs));
     groups.cache_hit_refs.push(...stringList(refs.cache_hit_refs));
+    groups.cache_hit_refs.push(...handoffRefs.flatMap((handoff) => handoff.cache_hit_refs));
     groups.reuse_scope_refs.push(...stringList(refs.reuse_scope_refs));
+    groups.reuse_scope_refs.push(...handoffRefs.flatMap((handoff) => handoff.reuse_scope_refs));
     groups.quality_floor_refs.push(...stringList(refs.quality_floor_refs));
+    groups.quality_floor_refs.push(...handoffRefs.flatMap((handoff) => handoff.quality_floor_refs));
     groups.no_forbidden_write_refs.push(...stringList(refs.no_forbidden_write_refs));
+    groups.no_forbidden_write_refs.push(...handoffRefs.flatMap((handoff) => handoff.no_forbidden_write_refs));
     groups.owner_route_refs.push(...stringList(refs.owner_route_refs));
+    groups.owner_route_refs.push(...handoffRefs.flatMap((handoff) => handoff.owner_route_refs));
 
     const runs = Array.isArray(suiteResult.runs) ? suiteResult.runs.filter(isRecord) : [];
     for (const run of runs) {
@@ -108,22 +191,77 @@ function collectSuiteEfficiencyRefs(suiteResults: JsonRecord[] = []): Required<A
   };
 }
 
+function collectEfficiencyHandoffs(handoffRefs: JsonRecord[] = []): Required<AgentLabEfficiencyNonRegressionRefs> {
+  const groups: Required<AgentLabEfficiencyNonRegressionRefs> = {
+    duration_refs: [],
+    cost_refs: [],
+    cache_hit_refs: [],
+    reuse_scope_refs: [],
+    quality_floor_refs: [],
+    no_forbidden_write_refs: [],
+    owner_route_refs: [],
+  };
+
+  for (const handoff of handoffRefs) {
+    const refs = collectEfficiencyHandoffRefs(handoff);
+    groups.duration_refs.push(...refs.duration_refs);
+    groups.cost_refs.push(...refs.cost_refs);
+    groups.cache_hit_refs.push(...refs.cache_hit_refs);
+    groups.reuse_scope_refs.push(...refs.reuse_scope_refs);
+    groups.quality_floor_refs.push(...refs.quality_floor_refs);
+    groups.no_forbidden_write_refs.push(...refs.no_forbidden_write_refs);
+    groups.owner_route_refs.push(...refs.owner_route_refs);
+  }
+
+  return {
+    duration_refs: unique(groups.duration_refs),
+    cost_refs: unique(groups.cost_refs),
+    cache_hit_refs: unique(groups.cache_hit_refs),
+    reuse_scope_refs: unique(groups.reuse_scope_refs),
+    quality_floor_refs: unique(groups.quality_floor_refs),
+    no_forbidden_write_refs: unique(groups.no_forbidden_write_refs),
+    owner_route_refs: unique(groups.owner_route_refs),
+  };
+}
+
 export function buildAgentLabEfficiencyNonRegressionReadModel(
   input: AgentLabEfficiencyNonRegressionInput = {},
 ) {
   const suiteGroups = collectSuiteEfficiencyRefs(input.suiteResults);
+  const handoffGroups = collectEfficiencyHandoffs(input.handoffRefs);
   const explicitRefs = input.explicitRefs ?? {};
   const evidenceGroups = {
-    duration_refs: unique([...suiteGroups.duration_refs, ...stringList(explicitRefs.duration_refs)]),
-    cost_refs: unique([...suiteGroups.cost_refs, ...stringList(explicitRefs.cost_refs)]),
-    cache_hit_refs: unique([...suiteGroups.cache_hit_refs, ...stringList(explicitRefs.cache_hit_refs)]),
-    reuse_scope_refs: unique([...suiteGroups.reuse_scope_refs, ...stringList(explicitRefs.reuse_scope_refs)]),
-    quality_floor_refs: unique([...suiteGroups.quality_floor_refs, ...stringList(explicitRefs.quality_floor_refs)]),
+    duration_refs: unique([
+      ...suiteGroups.duration_refs,
+      ...handoffGroups.duration_refs,
+      ...stringList(explicitRefs.duration_refs),
+    ]),
+    cost_refs: unique([...suiteGroups.cost_refs, ...handoffGroups.cost_refs, ...stringList(explicitRefs.cost_refs)]),
+    cache_hit_refs: unique([
+      ...suiteGroups.cache_hit_refs,
+      ...handoffGroups.cache_hit_refs,
+      ...stringList(explicitRefs.cache_hit_refs),
+    ]),
+    reuse_scope_refs: unique([
+      ...suiteGroups.reuse_scope_refs,
+      ...handoffGroups.reuse_scope_refs,
+      ...stringList(explicitRefs.reuse_scope_refs),
+    ]),
+    quality_floor_refs: unique([
+      ...suiteGroups.quality_floor_refs,
+      ...handoffGroups.quality_floor_refs,
+      ...stringList(explicitRefs.quality_floor_refs),
+    ]),
     no_forbidden_write_refs: unique([
       ...suiteGroups.no_forbidden_write_refs,
+      ...handoffGroups.no_forbidden_write_refs,
       ...stringList(explicitRefs.no_forbidden_write_refs),
     ]),
-    owner_route_refs: unique([...suiteGroups.owner_route_refs, ...stringList(explicitRefs.owner_route_refs)]),
+    owner_route_refs: unique([
+      ...suiteGroups.owner_route_refs,
+      ...handoffGroups.owner_route_refs,
+      ...stringList(explicitRefs.owner_route_refs),
+    ]),
   };
   const missingGroups = REQUIRED_GROUPS.filter((group) => evidenceGroups[group].length === 0);
   const typedBlockers = missingGroups.map((group) => ({

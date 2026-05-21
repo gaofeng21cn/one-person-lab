@@ -261,6 +261,83 @@ test('agent-lab efficiency exposes generic refs-only efficiency non-regression r
   assert.equal(output.agent_lab_efficiency.authority_boundary.can_write_owner_receipt, false);
 });
 
+test('agent-lab run/efficiency consumes an RCA refs-only handoff suite', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-efficiency-suite-'));
+  try {
+    const suitePath = path.join(fixtureRoot, 'rca-efficiency-suite.json');
+    const rcaHandoff = {
+      surface_kind: 'rca_efficiency_handoff_projection',
+      owner: 'redcube_ai',
+      consumer: 'opl_agent_lab',
+      refs_only: true,
+      agent_lab_suite_input: {
+        suite_kind: 'standard',
+        suite_id: 'redcube-ai.efficiency-observability.standard.v1',
+        domain_id: 'redcube-ai',
+        domain_specific_suite_kind_required: false,
+        claims_visual_ready: false,
+        claims_exportable: false,
+        claims_handoffable: false,
+      },
+      efficiency_signal_refs: {
+        duration_refs: ['workspace-runtime-ref:route-summary:run-1#/elapsed_ms'],
+        cost_refs: ['workspace-runtime-ref:route-summary:run-1#/cost_summary'],
+        cache_refs: ['workspace-runtime-ref:route-summary:run-1#/cache_status'],
+        reuse_refs: ['workspace-runtime-ref:route-artifact:run-1#/render_execution/reused_slide_ids'],
+      },
+      quality_floor_refs: {
+        review_export_gate_refs: ['workspace-runtime-ref:review-export:run-1'],
+        screenshot_review_gate_refs: ['workspace-runtime-ref:screenshot_review:run-1'],
+        visual_memory_authority_refs: ['redcube product manifest#/domain_memory_descriptor_locator/memory_locator'],
+        owner_receipt_refs: ['rca-owner-receipt:visual-stage:run-1'],
+        export_authority_refs: ['contracts/artifact_locator_contract.json'],
+      },
+      authority_boundary: {
+        no_forbidden_write: true,
+        opl_agent_lab_can_write_rca_visual_truth: false,
+        opl_agent_lab_can_authorize_quality_verdict: false,
+        opl_agent_lab_can_authorize_exportable: false,
+      },
+    };
+    fs.writeFileSync(suitePath, JSON.stringify({
+      suite_id: 'redcube-ai.efficiency-observability.standard.v1',
+      suite_kind: 'standard',
+      rca_efficiency_handoff_projection: rcaHandoff,
+      required_observations: [],
+      tasks: [],
+    }), 'utf8');
+
+    const output = runCli(['agent-lab', 'run/efficiency', '--suite', suitePath, '--json']);
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.agent_lab_run_efficiency.surface_id, 'opl_agent_lab_efficiency_suite_run');
+    assert.equal(output.agent_lab_run_efficiency.suite_result.suite_kind, 'standard');
+    assert.equal(output.agent_lab_run_efficiency.read_model.status, 'ready');
+    assert.deepEqual(output.agent_lab_run_efficiency.read_model.evidence_groups.duration_refs, [
+      'workspace-runtime-ref:route-summary:run-1#/elapsed_ms',
+    ]);
+    assert.deepEqual(output.agent_lab_run_efficiency.read_model.evidence_groups.cost_refs, [
+      'workspace-runtime-ref:route-summary:run-1#/cost_summary',
+    ]);
+    assert.deepEqual(output.agent_lab_run_efficiency.read_model.evidence_groups.cache_hit_refs, [
+      'workspace-runtime-ref:route-summary:run-1#/cache_status',
+    ]);
+    assert.deepEqual(output.agent_lab_run_efficiency.read_model.evidence_groups.reuse_scope_refs, [
+      'workspace-runtime-ref:route-artifact:run-1#/render_execution/reused_slide_ids',
+    ]);
+    assert.equal(output.agent_lab_run_efficiency.read_model.evidence_groups.quality_floor_refs.length, 5);
+    assert.deepEqual(output.agent_lab_run_efficiency.read_model.evidence_groups.no_forbidden_write_refs, [
+      'no-forbidden-write:redcube_ai/efficiency-handoff',
+    ]);
+    assert.deepEqual(output.agent_lab_run_efficiency.read_model.evidence_groups.owner_route_refs, ['redcube_ai']);
+    assert.equal(output.agent_lab_run_efficiency.authority_boundary.can_write_domain_truth, false);
+    assert.equal(output.agent_lab_run_efficiency.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(output.agent_lab_run_efficiency.authority_boundary.can_mutate_domain_artifact, false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('agent-lab stage-executor-policy exposes refs-only optimization candidates', () => {
   const output = runCli(['agent-lab', 'stage-executor-policy', '--json']);
 

@@ -7,6 +7,7 @@ import {
   buildAgentLabLonglinePayload,
   buildAgentLabMechanismPayload,
   buildAgentLabOptimizePayload,
+  buildAgentLabRunEfficiencyPayload,
   buildAgentLabRunPayload,
   buildAgentLabSamplePayload,
   buildAgentLabStageExecutorPolicyPayload,
@@ -125,6 +126,13 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       examples: ['opl agent-lab run --suite ./agent-lab-suite.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabRunPayload(args, specs['agent-lab run']),
+    },
+    'agent-lab run/efficiency': {
+      usage: 'opl agent-lab run/efficiency --suite <suite.json>',
+      summary: 'Run an external suite and project generic efficiency non-regression readiness from refs only.',
+      examples: ['opl agent-lab run/efficiency --suite ./agent-lab-suite.json --json'],
+      group: 'framework',
+      handler: (args) => buildAgentLabRunEfficiencyPayload(args, specs['agent-lab run/efficiency']),
     },
   };
 
