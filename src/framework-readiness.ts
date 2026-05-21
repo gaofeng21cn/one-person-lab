@@ -14,6 +14,9 @@ import {
   evidenceEnvelopeOpenCount,
   evidenceEnvelopeSummary,
 } from './evidence-envelope.ts';
+import {
+  buildMasDomainRouteSupportProjection,
+} from './family-runtime-mas-domain-route.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -247,6 +250,7 @@ function frameworkKernelFloor() {
       'stage_receipt_freshness_tail',
       'evidence_envelope_attention',
       'domain_dispatch_attention',
+      'runtime_manager_route_support',
       'provider_slo_status',
     ],
     ai_executor_internal_strategy_is_contract: false,
@@ -305,6 +309,13 @@ function frameworkDiagnosticDrilldowns() {
       default_surface: false,
       source_command: SOURCE_COMMANDS.app_operator_drilldown,
       embedded_payload_ref: '/framework_readiness/domain_dispatch_attention',
+    },
+    {
+      lens_id: 'runtime_manager_route_support',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.app_operator_drilldown,
+      embedded_payload_ref: '/framework_readiness/runtime_manager_route_support',
     },
     {
       lens_id: 'provider_slo_status',
@@ -538,6 +549,29 @@ export async function buildFrameworkReadinessSummary(
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
   const domainDispatchAttentionCount =
     numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count);
+  const runtimeManagerRouteSupport = record(appOperatorDrilldown.runtime_manager_route_support);
+  const runtimeManagerMasRouteSupport = Object.keys(record(runtimeManagerRouteSupport.mas_domain_route_projection)).length > 0
+    ? record(runtimeManagerRouteSupport.mas_domain_route_projection)
+    : buildMasDomainRouteSupportProjection();
+  const runtimeManagerRouteSupportTaskKinds = Array.isArray(runtimeManagerMasRouteSupport.supported_task_kinds)
+    ? runtimeManagerMasRouteSupport.supported_task_kinds
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+  const runtimeManagerRouteSupportActionRefs = Array.isArray(runtimeManagerMasRouteSupport.action_refs)
+    ? runtimeManagerMasRouteSupport.action_refs
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+  const runtimeManagerRouteSupportAuthorityBoundary = {
+    can_write_domain_truth: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+    can_close_owner_chain: false,
+    can_record_owner_receipt: false,
+    can_authorize_publication_aftercare: false,
+    ...record(runtimeManagerRouteSupport.authority_boundary),
+  };
+  const runtimeManagerAftercareRouteSupportCount =
+    runtimeManagerRouteSupportTaskKinds.filter((taskKind) => taskKind.startsWith('publication_aftercare/')).length;
   const openTailCount =
     agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
@@ -605,6 +639,9 @@ export async function buildFrameworkReadinessSummary(
         evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
         evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
         domain_dispatch_attention_count: domainDispatchAttentionCount,
+        runtime_manager_mas_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
+        runtime_manager_mas_aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
+        runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
         total_operator_attention_tail_count: totalOperatorAttentionTailCount,
         open_tail_count: openTailCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
@@ -622,6 +659,8 @@ export async function buildFrameworkReadinessSummary(
           'single refs-only owner/scope/payload-kind claim reading across stage, external evidence, domain dispatch, and cleanup receipts',
         domain_dispatch_attention:
           'App/operator owner-chain dispatch attention derived from stage evidence typed blockers and missing owner-chain refs without authorizing domain ready',
+        runtime_manager_route_support:
+          'Runtime Manager supported MAS route catalog projection only; support does not close owner-chain receipts or authorize domain ready',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
         retired_alias_policy:
@@ -767,6 +806,29 @@ export async function buildFrameworkReadinessSummary(
         can_claim_production_ready: false,
         can_authorize_quality_or_export: false,
         authority_boundary: authorityBoundary(),
+      },
+      runtime_manager_route_support: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        surface_kind: stringValue(runtimeManagerRouteSupport.surface_kind)
+          ?? 'opl_app_drilldown_runtime_manager_route_support',
+        source_surface: stringValue(runtimeManagerRouteSupport.source_surface)
+          ?? 'opl_runtime_manager.family_runtime_queue.mas_domain_route_projection',
+        projection_policy: stringValue(runtimeManagerRouteSupport.projection_policy)
+          ?? 'refs_only_supported_route_catalog_no_owner_chain_closure_or_domain_ready_claim',
+        owner_route_handoff_ref: stringValue(runtimeManagerMasRouteSupport.owner_route_handoff_ref),
+        accepted_runtime_owner_route_ref:
+          stringValue(runtimeManagerMasRouteSupport.accepted_runtime_owner_route_ref),
+        supported_task_kinds: runtimeManagerRouteSupportTaskKinds,
+        action_refs: runtimeManagerRouteSupportActionRefs,
+        task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
+        aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
+        action_ref_count: runtimeManagerRouteSupportActionRefs.length,
+        support_catalog_is_owner_chain_closure: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+        can_close_owner_chain: false,
+        can_authorize_quality_or_export: false,
+        authority_boundary: runtimeManagerRouteSupportAuthorityBoundary,
       },
       provider_slo_status: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

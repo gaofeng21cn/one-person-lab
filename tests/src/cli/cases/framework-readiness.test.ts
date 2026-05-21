@@ -73,6 +73,12 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.attention_first_payload.diagnostic_drilldown_refs,
     readiness.diagnostic_drilldowns.map((lens: { embedded_payload_ref: string }) => lens.embedded_payload_ref),
   );
+  assert.equal(
+    readiness.attention_first_payload.diagnostic_drilldown_refs.includes(
+      '/framework_readiness/runtime_manager_route_support',
+    ),
+    true,
+  );
   assert.match(readiness.attention_first_payload.claim_policy, /emits_no_domain_quality_artifact_or_production_ready/);
   assert.equal(readiness.kernel_floor.policy, 'minimum_control_plane_boundary_and_recoverability_floor_only');
   assert.equal(readiness.kernel_floor.ai_executor_internal_strategy_is_contract, false);
@@ -189,6 +195,10 @@ test('framework readiness summarizes default control-plane surfaces without auth
     'App/operator owner-chain dispatch attention derived from stage evidence typed blockers and missing owner-chain refs without authorizing domain ready',
   );
   assert.equal(
+    readiness.evidence_counter_taxonomy.runtime_manager_route_support,
+    'Runtime Manager supported MAS route catalog projection only; support does not close owner-chain receipts or authorize domain ready',
+  );
+  assert.equal(
     Object.keys(readiness.summary).some((key) => key.startsWith('production_evidence_tail_')),
     false,
   );
@@ -243,6 +253,24 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.domain_dispatch_attention.attention_count,
     readiness.summary.domain_dispatch_attention_count,
   );
+  assert.equal(
+    readiness.runtime_manager_route_support.task_kind_count,
+    readiness.summary.runtime_manager_mas_route_support_task_kind_count,
+  );
+  assert.equal(readiness.runtime_manager_route_support.aftercare_route_support_count, 2);
+  assert.equal(readiness.runtime_manager_route_support.action_ref_count, 2);
+  assert.deepEqual(readiness.runtime_manager_route_support.supported_task_kinds, [
+    'domain_route/reconcile-apply',
+    'publication_aftercare/analysis-queue-progress',
+    'publication_aftercare/reviewer-refresh',
+  ]);
+  assert.equal(
+    readiness.runtime_manager_route_support.support_catalog_is_owner_chain_closure,
+    false,
+  );
+  assert.equal(readiness.runtime_manager_route_support.can_claim_domain_ready, false);
+  assert.equal(readiness.runtime_manager_route_support.can_close_owner_chain, false);
+  assert.equal(readiness.runtime_manager_route_support.authority_boundary.can_write_domain_truth, false);
   assert.equal(readiness.domain_dispatch_attention.can_claim_domain_ready, false);
   assert.equal(readiness.domain_dispatch_attention.can_claim_production_ready, false);
   assert.equal(
