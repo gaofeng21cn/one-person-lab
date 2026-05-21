@@ -19,4 +19,5 @@ Machine boundary: 人读索引。硬约束仍以核心五件套、contracts、sc
 | --- | --- | --- | --- |
 | `docs-lifecycle-policy.md` | `active_policy` | OPL docs governance owner | 固定 canonical docs taxonomy、中文 canonical 规则和 direct-retirement 政策；硬约束需要同步上提到核心五件套或机器合同。 |
 | `domain-private-functional-surface-policy.md` | `active_policy` | OPL framework governance owner | 固定 OPL-compatible Agent 三层功能审计 taxonomy、authority function ABI、私有平台 residue 准入证据和退役门；新 Agent 默认是 declarative pack + OPL generated/hosted surfaces + standard authority functions。 |
+| `github-ci-automation-policy.md` | `active_policy` | OPL maintenance automation owner | 固定 GitHub CI 自动化对 current failure、superseded historical run、queued smoke cleanup 和 App/shell release owner 的分类口径。 |
 | `runtime-artifact-hygiene-policy.md` | `active_policy` | OPL framework governance owner | 固定 OPL family workspace / file lifecycle、repo-source 边界、开发 checkout 与运行生成物隔离纪律；具体守门由各仓 clean runner、验证入口、pytest 配置和 repo hygiene 测试承担。 |
