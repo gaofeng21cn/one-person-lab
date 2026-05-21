@@ -367,9 +367,16 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(closeout.summary.closed_refs_only_item_count, 0);
     assert.equal(closeout.summary.stage_receipt_freshness_open_workorder_count > 0, true);
     assert.equal(closeout.summary.open_safe_action_item_count, 49);
-    assert.equal(Object.hasOwn(closeout.summary, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(Object.hasOwn(closeout, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(Object.hasOwn(closeout, ['compatibility', 'aliases'].join('_')), false);
+    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count.value, 49);
+    assert.equal(
+      closeout.summary.production_closeout_open_safe_action_item_count.deprecated_alias_of,
+      'open_worklist_item_count',
+    );
+    assert.equal(closeout.production_closeout_open_safe_action_item_count.value, 49);
+    assert.equal(
+      closeout.production_closeout_open_safe_action_item_count.deprecated_alias_of,
+      'open_worklist_item_count',
+    );
     assert.equal(closeout.open_worklist_item_count, 49);
     assert.equal(closeout.closed_refs_only_item_count, 0);
     assert.equal(
@@ -415,6 +422,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(fullCloseout.command, 'evidence-worklist');
     assert.equal(fullCloseout.closeout_items.length, 49);
     assert.equal(fullCloseout.attention_queue.length, 49);
+    assert.equal(fullCloseout.production_closeout_open_safe_action_item_count.value, 49);
 
     const stageItem = fullCloseout.closeout_items.find(
       (item: { claim_scope: string }) => item.claim_scope === 'stage_production_caller_request',
@@ -613,6 +621,7 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
 
     assert.equal(closeout.surface_kind, 'opl_family_runtime_evidence_worklist');
     assert.equal(closeout.command, 'evidence-worklist');
+    assert.equal(closeout.command_alias, 'evidence-worklist');
     assert.equal(Object.hasOwn(closeout, 'deprecated_alias_of'), false);
     assert.equal(Object.hasOwn(closeout, 'deprecated_alias'), false);
     assert.equal(closeout.summary.closeout_item_count, 49);
@@ -620,8 +629,12 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(closeout.summary.open_worklist_item_count, 39);
     assert.equal(closeout.summary.closed_refs_only_item_count, 10);
     assert.equal(closeout.summary.open_safe_action_item_count, 39);
-    assert.equal(Object.hasOwn(closeout.summary, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(Object.hasOwn(closeout, 'production_closeout_open_safe_action_item_count'), false);
+    assert.equal(closeout.summary.production_closeout_open_safe_action_item_count.value, 39);
+    assert.equal(
+      closeout.summary.production_closeout_open_safe_action_item_count.deprecated_alias_of,
+      'open_worklist_item_count',
+    );
+    assert.equal(closeout.production_closeout_open_safe_action_item_count.value, 39);
     assert.equal(closeout.open_worklist_item_count, 39);
     assert.equal(closeout.detail_level, 'summary');
     assert.equal(closeout.closeout_items, undefined);
@@ -899,12 +912,25 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
   }
 });
 
-test('family-runtime evidence-worklist rejects retired production-closeout alias', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-retired-alias-'));
+test('family-runtime production-closeout remains a deprecated evidence-worklist alias', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-compat-alias-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
 
   try {
-    const failure = runCliFailure([
+    const canonical = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    }).family_runtime_production_closeout;
+    const compat = runCli([
       'family-runtime',
       'production-closeout',
       '--family-defaults',
@@ -916,10 +942,27 @@ test('family-runtime evidence-worklist rejects retired production-closeout alias
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-    });
+    }).family_runtime_production_closeout;
 
-    assert.equal(failure.payload.error.code, 'unknown_command');
-    assert.match(failure.payload.error.message, /Unknown family-runtime subcommand: production-closeout/);
+    assert.equal(canonical.command, 'evidence-worklist');
+    assert.equal(canonical.command_alias, 'evidence-worklist');
+    assert.equal(Object.hasOwn(canonical, 'deprecated_alias_of'), false);
+    assert.equal(compat.command, 'evidence-worklist');
+    assert.equal(compat.command_alias, 'production-closeout');
+    assert.equal(compat.deprecated_alias_of, 'evidence-worklist');
+    assert.equal(compat.deprecated_alias.command, 'production-closeout');
+    assert.equal(compat.deprecated_alias.deprecated_alias_of, 'evidence-worklist');
+    assert.match(compat.deprecated_alias.preferred_command, /family-runtime evidence-worklist/);
+    assert.equal(compat.summary.open_worklist_item_count, canonical.summary.open_worklist_item_count);
+    assert.equal(compat.open_worklist_item_count, canonical.open_worklist_item_count);
+    assert.equal(
+      compat.summary.production_closeout_open_safe_action_item_count.value,
+      compat.summary.open_worklist_item_count,
+    );
+    assert.equal(
+      compat.summary.production_closeout_open_safe_action_item_count.deprecated_alias_of,
+      'open_worklist_item_count',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
