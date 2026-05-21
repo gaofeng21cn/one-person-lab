@@ -59,6 +59,10 @@ function countValue(value: unknown) {
   return 0;
 }
 
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
 function booleanValue(value: unknown) {
   return typeof value === 'boolean' ? value : false;
 }
@@ -341,6 +345,7 @@ function frameworkAttentionFirstPayload(input: {
   stageRuntimeEventMissingWorkorderCount: number;
   stageSourceScopeMissingRefCount: number;
   stageRuntimeEventMissingRefCount: number;
+  stageEvidenceWorkorderAttentionItems: JsonRecord[];
   evidenceEnvelopeOpenCount: number;
   evidenceEnvelopeBlockedCount: number;
   domainDispatchAttentionCount: number;
@@ -455,6 +460,7 @@ function frameworkAttentionFirstPayload(input: {
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
+    stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
     blockers,
     warnings,
     recommendations: warnings,
@@ -557,6 +563,8 @@ export async function buildFrameworkReadinessSummary(
     countValue(worklistSummary.stage_source_scope_missing_ref_count);
   const stageRuntimeEventMissingRefCount =
     countValue(worklistSummary.stage_runtime_event_missing_ref_count);
+  const stageEvidenceWorkorderAttentionItems =
+    recordList(familyRuntimeEvidenceWorklist.stage_evidence_workorder_attention_items);
   const agentProductionEvidenceTailTotalCount =
     numberValue(agentSummary.agent_readiness_production_evidence_tail_count);
   const agentProductionEvidenceTailLedgerSummary = record(
@@ -644,6 +652,7 @@ export async function buildFrameworkReadinessSummary(
         stageRuntimeEventMissingWorkorderCount,
         stageSourceScopeMissingRefCount,
         stageRuntimeEventMissingRefCount,
+        stageEvidenceWorkorderAttentionItems,
         evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
         evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
         domainDispatchAttentionCount,
@@ -724,6 +733,7 @@ export async function buildFrameworkReadinessSummary(
           runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
           source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
           runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
+          stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
           blocking_policy: 'operator_worklist_only_without_owner_receipt_or_monitor_freshness_authority',
         },
       },
@@ -812,6 +822,7 @@ export async function buildFrameworkReadinessSummary(
         stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
         stage_source_scope_missing_ref_count: stageSourceScopeMissingRefCount,
         stage_runtime_event_missing_ref_count: stageRuntimeEventMissingRefCount,
+        stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
         next_action_item_count: numberValue(worklistSummary.next_action_item_count),
         provider_scheduler_item_count: numberValue(worklistSummary.provider_scheduler_item_count),
         stage_production_caller_item_count: numberValue(worklistSummary.stage_production_caller_item_count),

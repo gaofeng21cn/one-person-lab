@@ -59,6 +59,29 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.stage_runtime_event_missing_ref_count,
   );
   assert.equal(
+    readiness.attention_first_payload.stage_evidence_workorder_attention_items.length > 0,
+    readiness.summary.stage_receipt_freshness_tail_open_count > 0,
+  );
+  assert.equal(
+    readiness.attention_first_payload.stage_evidence_workorder_attention_items.length,
+    readiness.evidence_tails.stage_receipt_freshness_tail.stage_evidence_workorder_attention_items.length,
+  );
+  const stageEvidenceAttentionItem =
+    readiness.attention_first_payload.stage_evidence_workorder_attention_items[0];
+  assert.equal(typeof stageEvidenceAttentionItem.domain_id, 'string');
+  assert.equal(typeof stageEvidenceAttentionItem.stage_id, 'string');
+  assert.equal(
+    stageEvidenceAttentionItem.action_kind,
+    'stage_production_evidence_receipt_record',
+  );
+  assert.equal(stageEvidenceAttentionItem.route_requires_domain_or_app_payload, true);
+  assert.equal(stageEvidenceAttentionItem.can_close_without_domain_or_app_payload, false);
+  assert.equal(stageEvidenceAttentionItem.worklist_item_is_completion_claim, false);
+  assert.equal(stageEvidenceAttentionItem.required_evidence_ref_count > 0, true);
+  assert.equal(stageEvidenceAttentionItem.unobserved_source_scope_ref_count > 0, true);
+  assert.equal(stageEvidenceAttentionItem.unobserved_runtime_event_ref_count > 0, true);
+  assert.equal(stageEvidenceAttentionItem.next_safe_action_ref, stageEvidenceAttentionItem.action_ref);
+  assert.equal(
     readiness.attention_first_payload.summary.evidence_envelope_open_count,
     readiness.summary.evidence_envelope_open_count,
   );
@@ -180,6 +203,14 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(
     readiness.evidence_worklist.stage_runtime_event_missing_workorder_count,
     readiness.evidence_tails.stage_receipt_freshness_tail.runtime_event_missing_workorder_count,
+  );
+  assert.equal(
+    readiness.evidence_worklist.stage_evidence_workorder_attention_items.length,
+    readiness.evidence_tails.stage_receipt_freshness_tail.stage_evidence_workorder_attention_items.length,
+  );
+  assert.equal(
+    readiness.evidence_worklist.stage_evidence_workorder_attention_items[0].action_id,
+    readiness.attention_first_payload.stage_evidence_workorder_attention_items[0].action_id,
   );
   assert.equal(
     readiness.evidence_worklist.open_worklist_item_count,

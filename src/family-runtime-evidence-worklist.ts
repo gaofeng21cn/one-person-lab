@@ -641,6 +641,38 @@ function buildStageEvidenceWorkorderPacket(operatorRoutes: JsonRecord[]) {
   };
 }
 
+function compactStageEvidenceWorkorderAttentionItems(
+  packet: ReturnType<typeof buildStageEvidenceWorkorderPacket>,
+  limit = 10,
+) {
+  return packet.workorders.slice(0, limit).map((item) => ({
+    item_id: item.item_id,
+    action_id: item.action_id,
+    action_kind: item.action_kind,
+    domain_id: item.domain_id,
+    target_domain_id: item.target_domain_id,
+    project_id: item.project_id,
+    stage_id: item.stage_id,
+    request_id: item.request_id,
+    request_pack_id: item.request_pack_id,
+    payload_owner: item.payload_owner,
+    route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload,
+    can_close_without_domain_or_app_payload: item.can_close_without_domain_or_app_payload,
+    action_ref: item.action_ref,
+    next_safe_action_ref: item.action_ref,
+    required_evidence_ref_count: item.required_evidence_refs.length,
+    unobserved_expected_receipt_ref_count: item.unobserved_expected_receipt_refs.length,
+    unobserved_monitor_ref_count: item.unobserved_monitor_refs.length,
+    unobserved_source_scope_ref_count: item.unobserved_source_scope_refs.length,
+    unobserved_runtime_event_ref_count: item.unobserved_runtime_event_refs.length,
+    required_evidence_refs: item.required_evidence_refs,
+    unobserved_source_scope_refs: item.unobserved_source_scope_refs,
+    unobserved_runtime_event_refs: item.unobserved_runtime_event_refs,
+    typed_blocker_path_available: item.typed_blocker_path_available,
+    worklist_item_is_completion_claim: false,
+  }));
+}
+
 function buildEvidenceRequirementLedger(worklistItems: ReturnType<typeof readOnlyWorklistItem>[]) {
   const requirements = worklistItems.map((item) => item.evidence_requirement);
   const domainIds = uniqueStringList(requirements.map((requirement) => requirement.domain_id));
@@ -722,6 +754,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
   const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
+  const stageEvidenceWorkorderAttentionItems =
+    compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
   const evidenceEnvelope = record(drilldown.evidence_envelope);
   const counts = {
     ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
@@ -763,6 +797,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
     closed_refs_only_item_count: closedItems.length,
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
     stage_evidence_workorder_packet_summary: stageEvidenceWorkorderPacket.summary,
+    stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',

@@ -189,6 +189,17 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
       worklist.stage_evidence_workorder_packet_summary.source_scope_missing_workorder_count,
       worklist.summary.stage_source_scope_missing_workorder_count,
     );
+    assert.equal(worklist.stage_evidence_workorder_attention_items.length > 0, true);
+    assert.equal(
+      worklist.stage_evidence_workorder_attention_items[0].action_kind,
+      'stage_production_evidence_receipt_record',
+    );
+    assert.equal(worklist.stage_evidence_workorder_attention_items[0].domain_id, 'medautoscience');
+    assert.equal(worklist.stage_evidence_workorder_attention_items[0].stage_id, 'review');
+    assert.equal(worklist.stage_evidence_workorder_attention_items[0].required_evidence_ref_count, 2);
+    assert.equal(worklist.stage_evidence_workorder_attention_items[0].unobserved_source_scope_ref_count, 1);
+    assert.equal(worklist.stage_evidence_workorder_attention_items[0].unobserved_runtime_event_ref_count, 1);
+    assert.equal(worklist.stage_evidence_workorder_attention_items[0].worklist_item_is_completion_claim, false);
     assert.equal(worklist.stage_evidence_workorder_packet.summary.workorder_count > 0, true);
     assert.equal(
       worklist.stage_evidence_workorder_packet.summary.source_scope_missing_workorder_count > 0,
