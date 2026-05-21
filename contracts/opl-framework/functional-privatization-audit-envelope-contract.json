@@ -1,0 +1,50 @@
+{
+  "surface_kind": "opl_functional_privatization_audit_envelope_contract",
+  "version": "opl-functional-privatization-audit-envelope.v1",
+  "owner": "one-person-lab",
+  "contract_ref": "contracts/opl-framework/functional-privatization-audit-envelope-contract.json",
+  "purpose": "Normalize MAS, MAG, RCA, and standard scaffold private functional audits into one AI-first, contract-light OPL read-model envelope.",
+  "accepted_source_shapes": [
+    "functional_privatization_audit",
+    "privatized_functional_module_audit",
+    "functional_consumer_boundary",
+    "mag_consumer_thinning_contract.privatized_functional_module_audit",
+    "runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit"
+  ],
+  "normalized_inventory_layers": [
+    "standard_domain_pack_inventory",
+    "authority_function_inventory",
+    "private_platform_residue_inventory"
+  ],
+  "default_surface_reads": [
+    "default_watchlist_count",
+    "default_watchlist_module_ids",
+    "semantic_equivalence_review_count",
+    "semantic_equivalence_review_module_ids",
+    "active_private_generic_residue_count",
+    "blocker_count"
+  ],
+  "explicit_detail_surfaces": [
+    "modules",
+    "standard_domain_pack_inventory",
+    "authority_function_inventory",
+    "private_platform_residue_inventory",
+    "external_evidence_request_pack",
+    "evidence_gate_projection",
+    "opl_replacement_expectations"
+  ],
+  "ai_first_contract_light_policy": {
+    "contract_floor_only": true,
+    "expert_executor_strategy_contract": false,
+    "mechanical_completion_can_close_domain_quality": false,
+    "semantic_equivalence_requires_evidence_when_active_private": true
+  },
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "domain_can_claim_generic_runtime_owner": false,
+    "envelope_can_claim_domain_ready": false,
+    "envelope_can_claim_private_residue_deleted": false
+  }
+}

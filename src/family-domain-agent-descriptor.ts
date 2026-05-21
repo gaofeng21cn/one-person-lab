@@ -462,6 +462,7 @@ function buildFunctionalPrivatizationProjection(manifest: NormalizedDomainManife
   const audit = manifest?.functional_privatization_audit ?? null;
   return {
     status: componentStatus(entry, audit?.status === 'resolved'),
+    envelope: audit?.envelope ?? null,
     source_field: audit?.source_field ?? null,
     target_domain_id: audit?.target_domain_id ?? manifest?.target_domain_id ?? null,
     summary: audit?.summary ?? {

@@ -131,6 +131,7 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
     'contracts/opl-framework/runtime-manager-contract.json',
     'contracts/opl-framework/family-runtime-attempt-contract.json',
     'contracts/opl-framework/functional-agent-runtime-harness-contract.json',
+    'contracts/opl-framework/functional-privatization-audit-envelope-contract.json',
     'contracts/opl-framework/family-runtime-online-substrate-contract.json',
     'contracts/opl-framework/fresh-install-test-matrix.json',
     'contracts/opl-framework/surface-budget-policy.json',

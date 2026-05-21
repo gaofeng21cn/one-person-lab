@@ -1,3 +1,10 @@
+import {
+  buildEmptyFunctionalEvidenceGateProjection,
+  buildFunctionalPrivatizationAuditEnvelopeFromAudit,
+  FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT,
+  type FunctionalPrivatizationAuditEnvelope,
+} from './functional-privatization-envelope.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export type FunctionalPrivatizationMigrationClass =
@@ -99,6 +106,7 @@ export type FunctionalPrivatizationAudit = {
   surface_kind: 'opl_functional_privatization_audit';
   version: 'opl-functional-privatization-audit.v1';
   status: 'missing' | 'resolved';
+  envelope: FunctionalPrivatizationAuditEnvelope;
   source_field: string | null;
   target_domain_id: string | null;
   summary: {
@@ -169,11 +177,7 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT = {
     'private_platform_residue_inventory',
   ],
   accepted_source_fields: [
-    'functional_privatization_audit',
-    'privatized_functional_module_audit',
-    'functional_consumer_boundary',
-    'mag_consumer_thinning_contract.privatized_functional_module_audit',
-    'runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit',
+    ...FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.accepted_source_shapes,
   ],
   migration_classes: [
     'opl_hosted_surface',
@@ -225,7 +229,7 @@ const EMPTY_SUMMARY = {
   semantic_equivalence_review_count: 0,
   semantic_equivalence_cleared_count: 0,
   semantic_equivalence_review_module_ids: [],
-};
+} satisfies FunctionalPrivatizationAudit['summary'];
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -848,10 +852,22 @@ export function buildFunctionalPrivatizationAudit(
   manifest: JsonRecord | null | undefined,
 ): FunctionalPrivatizationAudit {
   if (!isRecord(manifest)) {
+    const blockers = ['functional_privatization_audit_missing'];
+    const gates = buildEmptyFunctionalEvidenceGateProjection();
     return {
       surface_kind: 'opl_functional_privatization_audit',
       version: 'opl-functional-privatization-audit.v1',
       status: 'missing',
+      envelope: buildFunctionalPrivatizationAuditEnvelopeFromAudit({
+        status: 'missing',
+        sourceField: null,
+        targetDomainId: null,
+        summary: EMPTY_SUMMARY,
+        evidenceGateProjection: gates,
+        externalEvidenceRequestPack: null,
+        replacementExpectations: [],
+        blockers,
+      }),
       source_field: null,
       target_domain_id: null,
       summary: EMPTY_SUMMARY,
@@ -861,19 +877,9 @@ export function buildFunctionalPrivatizationAudit(
       private_platform_residue_inventory: [],
       required_opl_replacement_primitives: [],
       external_evidence_request_pack: null,
-      evidence_gate_projection: {
-        surface_kind: 'opl_domain_evidence_gate_projection',
-        status: 'empty',
-        remaining_evidence_gate_ids: [],
-        remaining_bridge_module_ids: [],
-        source_refs: [],
-        summary: {
-          remaining_evidence_gate_count: 0,
-          remaining_bridge_module_count: 0,
-        },
-      },
+      evidence_gate_projection: gates,
       opl_replacement_expectations: [],
-      blockers: ['functional_privatization_audit_missing'],
+      blockers,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,
@@ -884,12 +890,25 @@ export function buildFunctionalPrivatizationAudit(
   }
   const { source, sourceField } = selectedAuditSource(manifest);
   if (!source) {
+    const blockers = ['functional_privatization_audit_missing'];
+    const gates = buildEmptyFunctionalEvidenceGateProjection();
+    const targetDomainId = stringValue(manifest.target_domain_id);
     return {
       surface_kind: 'opl_functional_privatization_audit',
       version: 'opl-functional-privatization-audit.v1',
       status: 'missing',
+      envelope: buildFunctionalPrivatizationAuditEnvelopeFromAudit({
+        status: 'missing',
+        sourceField: null,
+        targetDomainId,
+        summary: EMPTY_SUMMARY,
+        evidenceGateProjection: gates,
+        externalEvidenceRequestPack: null,
+        replacementExpectations: [],
+        blockers,
+      }),
       source_field: null,
-      target_domain_id: stringValue(manifest.target_domain_id),
+      target_domain_id: targetDomainId,
       summary: EMPTY_SUMMARY,
       modules: [],
       standard_domain_pack_inventory: [],
@@ -897,19 +916,9 @@ export function buildFunctionalPrivatizationAudit(
       private_platform_residue_inventory: [],
       required_opl_replacement_primitives: [],
       external_evidence_request_pack: null,
-      evidence_gate_projection: {
-        surface_kind: 'opl_domain_evidence_gate_projection',
-        status: 'empty',
-        remaining_evidence_gate_ids: [],
-        remaining_bridge_module_ids: [],
-        source_refs: [],
-        summary: {
-          remaining_evidence_gate_count: 0,
-          remaining_bridge_module_count: 0,
-        },
-      },
+      evidence_gate_projection: gates,
       opl_replacement_expectations: [],
-      blockers: ['functional_privatization_audit_missing'],
+      blockers,
       authority_boundary: {
         opl_can_write_domain_truth: false,
         opl_can_write_memory_body: false,
@@ -919,7 +928,7 @@ export function buildFunctionalPrivatizationAudit(
     };
   }
   const modules =
-    isRecord(source.functional_surface_classification)
+    sourceField === 'functional_consumer_boundary' || isRecord(source.functional_surface_classification)
       ? itemsFromMasBoundary(source)
       : itemsFromStructuredAudit(source);
   const requiredOplReplacementPrimitives = unique([
@@ -937,12 +946,23 @@ export function buildFunctionalPrivatizationAudit(
   const evidencePack = externalEvidenceRequestPack(source, manifest);
   const gates = evidenceGateProjection(source);
   const replacementExpectations = oplReplacementExpectations(source, manifest);
+  const targetDomainId = stringValue(source.target_domain_id) ?? stringValue(manifest.target_domain_id);
   return {
     surface_kind: 'opl_functional_privatization_audit',
     version: 'opl-functional-privatization-audit.v1',
     status: 'resolved',
+    envelope: buildFunctionalPrivatizationAuditEnvelopeFromAudit({
+      status: 'resolved',
+      sourceField,
+      targetDomainId,
+      summary,
+      evidenceGateProjection: gates,
+      externalEvidenceRequestPack: evidencePack,
+      replacementExpectations,
+      blockers,
+    }),
     source_field: sourceField,
-    target_domain_id: stringValue(source.target_domain_id) ?? stringValue(manifest.target_domain_id),
+    target_domain_id: targetDomainId,
     summary,
     modules,
     standard_domain_pack_inventory: standardDomainPackItems,
