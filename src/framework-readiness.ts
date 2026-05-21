@@ -226,12 +226,20 @@ function authorityBoundary() {
   };
 }
 
-function statusFrom(openTailCount: number, attentionGateCount: number, hardBlockerCount: number) {
+function statusFrom(
+  openTailCount: number,
+  operatorAttentionCount: number,
+  semanticAttentionGateCount: number,
+  hardBlockerCount: number,
+) {
   if (hardBlockerCount > 0) {
     return 'framework_control_plane_available_with_hard_blockers';
   }
-  if (openTailCount > 0 || attentionGateCount > 0) {
+  if (openTailCount > 0) {
     return 'framework_control_plane_available_with_open_production_tail';
+  }
+  if (operatorAttentionCount > 0 || semanticAttentionGateCount > 0) {
+    return 'framework_control_plane_available_with_operator_attention';
   }
   return 'framework_control_plane_available';
 }
@@ -623,11 +631,13 @@ export async function buildFrameworkReadinessSummary(
   const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
   const totalOperatorAttentionTailCount =
     openTailCount + evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
+  const operatorAttentionCount = evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
     agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
   const frameworkStatus = statusFrom(
-    totalOperatorAttentionTailCount,
+    openTailCount,
+    operatorAttentionCount,
     semanticAttentionGateCount,
     hardBlockerCount,
   );

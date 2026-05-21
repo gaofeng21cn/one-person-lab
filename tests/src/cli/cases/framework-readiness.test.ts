@@ -20,6 +20,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.readiness_model.default_payload, 'operator_attention_summary');
   assert.equal(readiness.readiness_model.ai_executor_internal_strategy_is_contract, false);
   assert.equal(readiness.attention_first_payload.surface_kind, 'opl_framework_readiness_attention_first_payload');
+  assert.equal(readiness.attention_first_payload.status, readiness.status);
   assert.equal(
     readiness.attention_first_payload.summary.hard_blocker_count,
     readiness.summary.framework_kernel_hard_blocker_count,
@@ -99,6 +100,20 @@ test('framework readiness summarizes default control-plane surfaces without auth
       + readiness.summary.evidence_envelope_attention_count
       + readiness.summary.domain_dispatch_attention_count,
   );
+  if (
+    readiness.summary.framework_kernel_hard_blocker_count === 0
+    && readiness.summary.open_tail_count === 0
+    && readiness.summary.total_operator_attention_tail_count > 0
+  ) {
+    assert.equal(
+      readiness.status,
+      'framework_control_plane_available_with_operator_attention',
+    );
+    assert.notEqual(
+      readiness.status,
+      'framework_control_plane_available_with_open_production_tail',
+    );
+  }
   assert.equal(
     readiness.attention_first_payload.summary.domain_dispatch_attention_count,
     readiness.summary.domain_dispatch_attention_count,
