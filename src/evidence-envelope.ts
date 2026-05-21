@@ -258,14 +258,23 @@ function stageEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
   });
 }
 
-function domainDispatchEnvelopes(drilldown: JsonRecord) {
+function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
+  const routeMap = actionByRequest(routes
+    .filter((route) => stringValue(route.action_kind)?.startsWith('domain_dispatch_evidence_')));
   return recordList(record(drilldown.domain_dispatch_evidence).attempts).map((attempt) => {
     const sourceDomainId = stringValue(attempt.domain_id) ?? 'domain';
     const domainId = canonicalOwnerId(sourceDomainId);
     const attemptId = stringValue(attempt.stage_attempt_id) ?? 'attempt';
+    const requestId = `domain_dispatch:${sourceDomainId}:${attemptId}`;
+    const canonicalRequestId = `domain_dispatch:${domainId}:${attemptId}`;
+    const route = routeMap.get(`${sourceDomainId}:${requestId}`)
+      ?? routeMap.get(`${domainId}:${canonicalRequestId}`)
+      ?? routeMap.get(`${sourceDomainId}:${canonicalRequestId}`)
+      ?? routeMap.get(`${domainId}:${requestId}`);
     const receiptRefs = uniqueStrings([
       ...stringList(attempt.owner_receipt_refs),
       ...stringList(attempt.writeback_receipt_refs),
+      ...stringList(attempt.verified_dispatch_evidence_receipt_refs),
     ]);
     const typedBlockerRefs = stringList(attempt.typed_blocker_refs);
     const evidenceRefs = stringList(attempt.no_regression_evidence_refs);
@@ -287,7 +296,7 @@ function domainDispatchEnvelopes(drilldown: JsonRecord) {
       typedBlockerRefs,
       evidenceRefs,
       sourceRefs: sourceRefs(stringValue(attempt.ref)),
-      nextRoute: null,
+      nextRoute: routeRef(route),
     });
   });
 }
@@ -515,7 +524,7 @@ export function buildEvidenceEnvelopeProjection(input: {
   const envelopes = [
     ...stageEnvelopes(drilldown, routes),
     ...externalEvidenceEnvelopes(drilldown, routes),
-    ...domainDispatchEnvelopes(drilldown),
+    ...domainDispatchEnvelopes(drilldown, routes),
     ...legacyCleanupEnvelopes(drilldown, routes),
   ];
   return {
@@ -528,6 +537,7 @@ export function buildEvidenceEnvelopeProjection(input: {
       '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
       '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence',
       '/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs',
+      '/runtime_tray_snapshot/app_operator_drilldown/operator_action_routing_refs',
     ],
     summary: summarize(envelopes),
     owner_alias_diagnostics: ownerAliasDiagnostics(envelopes),

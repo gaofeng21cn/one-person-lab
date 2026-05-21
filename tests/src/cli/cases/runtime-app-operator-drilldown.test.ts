@@ -476,8 +476,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.provider_cadence_window_missing_receipt_count, 7);
     assert.equal(drilldown.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
     assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
-    assert.equal(drilldown.summary.operator_action_route_count, 24);
-    assert.equal(drilldown.summary.operator_executable_route_count, 14);
+    assert.equal(drilldown.summary.operator_action_route_count, 25);
+    assert.equal(drilldown.summary.operator_executable_route_count, 15);
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 2);
     assert.equal(
       drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
@@ -487,6 +487,12 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
       2,
     );
+    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+    assert.equal(
+      drilldown.summary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+      1,
+    );
+    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_record_payload_template_count, 1);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -893,6 +899,40 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       stageProductionEvidenceRecordRoute.open_reason,
       'unobserved_stage_evidence_refs_require_domain_app_or_live_payload_before_closure',
     );
+
+    const domainDispatchEvidenceRecordRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_kind: string; stage_attempt_id: string }) =>
+        ref.action_kind === 'domain_dispatch_evidence_receipt_record'
+        && ref.stage_attempt_id === attemptId,
+    );
+    assert.equal(domainDispatchEvidenceRecordRoute.owner, 'opl');
+    assert.equal(domainDispatchEvidenceRecordRoute.route_target_kind, 'opl_cli');
+    assert.equal(domainDispatchEvidenceRecordRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(domainDispatchEvidenceRecordRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(domainDispatchEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
+    assert.equal(domainDispatchEvidenceRecordRoute.can_close_without_domain_or_app_payload, false);
+    assert.equal(domainDispatchEvidenceRecordRoute.creates_domain_action, false);
+    assert.equal(domainDispatchEvidenceRecordRoute.creates_owner_receipt, false);
+    assert.deepEqual(domainDispatchEvidenceRecordRoute.owner_receipt_refs, []);
+    assert.deepEqual(domainDispatchEvidenceRecordRoute.payload_template, {
+      domain_receipt_refs: [],
+      typed_blocker_refs: [],
+      no_regression_refs: [],
+      owner_chain_refs: [],
+      evidence_refs: [],
+    });
+    assert.equal(
+      domainDispatchEvidenceRecordRoute.payload_requirement,
+      'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
+    );
+    assert.equal(
+      domainDispatchEvidenceRecordRoute.open_reason,
+      'domain_dispatch_attempt_missing_owner_receipt_or_typed_blocker_refs',
+    );
+    assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.creates_owner_receipt, false);
+    assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.closes_domain_ready, false);
+    assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.closes_production_ready, false);
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',

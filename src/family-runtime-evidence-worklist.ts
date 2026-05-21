@@ -40,6 +40,7 @@ const CLOSEOUT_ACTION_KINDS = new Set([
   'provider_scheduler_tick',
   'stage_production_attempt_request',
   'stage_production_evidence_receipt_verify',
+  'domain_dispatch_evidence_receipt_verify',
   'external_evidence_receipt_verify',
   'evidence_gate_receipt_verify',
   'legacy_cleanup_verify',
@@ -119,6 +120,9 @@ function readOnlyClaimScope(route: JsonRecord) {
   }
   if (actionKind.startsWith('stage_production_evidence_')) {
     return 'stage_production_evidence_receipt';
+  }
+  if (actionKind.startsWith('domain_dispatch_evidence_')) {
+    return 'domain_dispatch_evidence_receipt';
   }
   if (actionKind.startsWith('external_evidence')) {
     return 'external_evidence_receipt';
@@ -213,6 +217,7 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
     actionKind.startsWith('external_evidence_')
     || actionKind.startsWith('evidence_gate_')
     || actionKind.startsWith('stage_production_evidence_')
+    || actionKind.startsWith('domain_dispatch_evidence_')
   ) {
     const domainId = stringValue(route.domain_id);
     const requestId = stringValue(route.request_id);
@@ -243,9 +248,13 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
         receipt_refs: [verifiedReceipt.receipt_ref, ...verifiedReceipt.typed_blocker_refs],
         typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0],
         typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
-        freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+        freshness_ref: actionKind.startsWith('domain_dispatch_evidence_')
+          ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
+          : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
         closure_reason:
-          'OPL refs-only evidence ledger verified a domain-owned typed blocker for this external evidence request; this records request closure without claiming production success.',
+          actionKind.startsWith('domain_dispatch_evidence_')
+            ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this domain dispatch evidence request; this records request closure without claiming domain or production readiness.'
+            : 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this external evidence request; this records request closure without claiming production success.',
       };
     }
     return {
@@ -254,9 +263,13 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
       receipt_refs: allReceiptRefs,
       typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0] ?? null,
       typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
-      freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
+      freshness_ref: actionKind.startsWith('domain_dispatch_evidence_')
+        ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
+        : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
       closure_reason:
-        'OPL refs-only evidence ledger verified a domain-owned receipt for this external evidence request.',
+        actionKind.startsWith('domain_dispatch_evidence_')
+          ? 'OPL refs-only evidence ledger verified domain dispatch owner-chain refs without claiming domain or production readiness.'
+          : 'OPL refs-only evidence ledger verified a domain-owned receipt for this external evidence request.',
     };
   }
 
@@ -413,12 +426,82 @@ function externalEvidenceReceiptWorklistItems(drilldown: JsonRecord) {
   });
 }
 
+function domainDispatchReceiptWorklistItems(drilldown: JsonRecord) {
+  const attempts = recordList(record(drilldown.domain_dispatch_evidence).attempts)
+    .filter((attempt) => stringValue(attempt.dispatch_evidence_receipt_status) === 'verified');
+  return attempts.flatMap((attempt, index) => {
+    const domainId = stringValue(attempt.domain_id);
+    const stageAttemptId = stringValue(attempt.stage_attempt_id) ?? `attempt:${index + 1}`;
+    const receiptRefs = [
+      ...stringList(attempt.verified_dispatch_evidence_receipt_refs),
+      ...stringList(attempt.owner_receipt_refs),
+      ...stringList(attempt.no_regression_evidence_refs),
+    ];
+    const typedBlockerRefs = stringList(attempt.typed_blocker_refs);
+    if (receiptRefs.length === 0 && typedBlockerRefs.length === 0) {
+      return [];
+    }
+    const typedBlockerOnly = typedBlockerRefs.length > 0
+      && stringList(attempt.owner_receipt_refs).length === 0;
+    const item = {
+      item_id: `evidence-worklist:domain-dispatch:${domainId ?? 'domain'}:${stageAttemptId}:verified`,
+      tail_id: `evidence-worklist:domain-dispatch:${domainId ?? 'domain'}:${stageAttemptId}:verified`,
+      tail_item: 'domain_dispatch_evidence_receipt',
+      action_id: `domain_dispatch:${domainId ?? 'domain'}:${stageAttemptId}:verify`,
+      action_kind: typedBlockerOnly
+        ? 'domain_dispatch_evidence_typed_blocker_verified'
+        : 'domain_dispatch_evidence_receipt_verified',
+      claim_scope: 'domain_dispatch_evidence_receipt',
+      owner: 'opl',
+      domain_id: domainId,
+      stage_id: stringValue(attempt.stage_id),
+      mode: 'verify',
+      status: typedBlockerOnly
+        ? 'closed_by_domain_owned_typed_blocker'
+        : 'closed_by_receipt_ref',
+      worklist_item_is_completion_claim: false,
+      route_status: 'receipt_verified',
+      route_status_detail: null,
+      route_semantics: 'verified_refs_only_domain_dispatch_receipt_projection',
+      receipt_ref: stringList(attempt.verified_dispatch_evidence_receipt_refs)[0] ?? null,
+      receipt_refs: uniqueStringList(receiptRefs),
+      typed_blocker_ref: typedBlockerRefs[0] ?? null,
+      typed_blocker_refs: typedBlockerRefs,
+      worklist_status_detail: typedBlockerOnly
+        ? 'closed_by_domain_owned_typed_blocker_ref'
+        : 'closed_by_opl_external_evidence_ledger_receipt',
+      replay_ref: stringValue(attempt.ref)
+        ?? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence',
+      freshness_ref: '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence',
+      freshness_refs: [],
+      expected_refs: [],
+      closure_reason: typedBlockerOnly
+        ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this domain dispatch evidence request; this does not claim domain or production readiness.'
+        : 'OPL refs-only evidence ledger verified domain dispatch owner-chain refs without claiming domain or production readiness.',
+      open_reason: null,
+      payload_requirement: null,
+      payload_owner: 'domain_repository_or_app_live_operator',
+      route_requires_domain_or_app_payload: false,
+      can_close_without_domain_or_app_payload: true,
+      opl_generated_receipt_policy: null,
+      blocked_reason: null,
+      not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
+    };
+    return [{
+      ...item,
+      evidence_requirement_model: EVIDENCE_REQUIREMENT_MODEL_VERSION,
+      evidence_requirement: evidenceRequirementFromTailItem(item),
+    }];
+  });
+}
+
 function readOnlyRouteMatchesDefaults(route: JsonRecord, input: EvidenceWorklistInput) {
   const actionKind = stringValue(route.action_kind) ?? '';
   const args = stringList(route.opl_cli_args);
   const worklistKind = actionKind.startsWith('provider_scheduler_')
     || actionKind === 'stage_production_attempt_request'
     || actionKind.startsWith('stage_production_evidence_')
+    || actionKind.startsWith('domain_dispatch_evidence_')
     || actionKind.startsWith('external_evidence_')
     || actionKind.startsWith('evidence_gate_')
     || actionKind.startsWith('legacy_cleanup_');
@@ -489,6 +572,14 @@ function worklistCounts(
     ).length,
     stage_production_evidence_receipt_requires_domain_or_app_payload_count:
       worklistItems.filter((item) => item.route_requires_domain_or_app_payload === true).length,
+    domain_dispatch_evidence_receipt_item_count: worklistItems.filter((item) =>
+      item.claim_scope === 'domain_dispatch_evidence_receipt'
+    ).length,
+    domain_dispatch_evidence_receipt_requires_domain_or_app_payload_count:
+      worklistItems.filter((item) =>
+        item.claim_scope === 'domain_dispatch_evidence_receipt'
+        && item.route_requires_domain_or_app_payload === true
+      ).length,
     evidence_gate_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'evidence_gate_receipt'
     ).length,
@@ -732,6 +823,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const worklistItems = [
     ...routes.map((route, index) => readOnlyWorklistItem(route, index, drilldown)),
     ...externalEvidenceReceiptWorklistItems(drilldown),
+    ...domainDispatchReceiptWorklistItems(drilldown),
   ];
   const openItems = worklistItems.filter((item) =>
     item.status === 'open_safe_action_request_route_available'

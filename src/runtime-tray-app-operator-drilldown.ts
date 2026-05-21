@@ -26,6 +26,9 @@ import {
   buildDomainDispatchEvidence,
 } from './runtime-tray-app-operator-drilldown-parts/domain-dispatch-evidence.ts';
 import {
+  buildDomainDispatchEvidenceReceiptRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/domain-dispatch-action-routes.ts';
+import {
   buildStageProductionEvidence,
 } from './runtime-tray-app-operator-drilldown-parts/stage-production-evidence.ts';
 import {
@@ -1166,6 +1169,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
     ...buildStageProductionAttemptStartRoutes(record(stageProductionEvidence)),
     ...buildStageProductionEvidenceReceiptRoutes(record(stageProductionEvidence)),
+    ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),

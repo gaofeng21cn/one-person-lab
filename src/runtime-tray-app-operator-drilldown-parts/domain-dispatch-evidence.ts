@@ -1,4 +1,7 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  listExternalEvidenceReceipts,
+} from '../external-evidence-ledger.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -39,6 +42,18 @@ function controlledApply(attempt: JsonRecord) {
 
 function routeImpact(attempt: JsonRecord) {
   return record(attempt.route_impact);
+}
+
+function externalDispatchReceipts(attempt: JsonRecord) {
+  const domainId = stringValue(attempt.domain_id);
+  const stageAttemptId = stringValue(attempt.stage_attempt_id);
+  if (!domainId || !stageAttemptId) {
+    return [];
+  }
+  return listExternalEvidenceReceipts({
+    domain_id: domainId,
+    request_id: `domain_dispatch:${domainId}:${stageAttemptId}`,
+  });
 }
 
 function domainReadyClaimed(verdict: string | null) {
@@ -83,6 +98,10 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
   const transition = transitionEvidence(attempt);
   const controlled = controlledApply(attempt);
   const impact = routeImpact(attempt);
+  const externalReceipts = externalDispatchReceipts(attempt);
+  const verifiedExternalReceipts = externalReceipts.filter((receipt) =>
+    receipt.receipt_status === 'verified'
+  );
   const domainReadyVerdict = stringValue(attempt.domain_ready_verdict)
     ?? stringValue(impact.domain_ready_verdict);
   const ownerReceiptRefs = uniqueStrings([
@@ -94,15 +113,20 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
       'domain_owner_receipt_ref',
       'domain_owner_receipt_refs',
     ]),
+    ...verifiedExternalReceipts.flatMap((receipt) => receipt.receipt_refs),
+    ...verifiedExternalReceipts.flatMap((receipt) => receipt.owner_chain_refs),
   ]);
   const typedBlockerRefs = uniqueStrings([
     ...stringList(transition.typed_blocker_refs),
     ...refsFromRecord(impact, ['typed_blocker_ref', 'typed_blocker_refs']),
+    ...verifiedExternalReceipts.flatMap((receipt) => receipt.typed_blocker_refs),
   ]);
   const noRegressionEvidenceRefs = uniqueStrings([
     ...stringList(controlled.no_regression_evidence_refs),
     ...stringList(transition.no_regression_evidence_refs),
     ...refsFromRecord(impact, ['no_regression_evidence_ref', 'no_regression_evidence_refs']),
+    ...verifiedExternalReceipts.flatMap((receipt) => receipt.no_regression_refs),
+    ...verifiedExternalReceipts.flatMap((receipt) => receipt.evidence_refs),
   ]);
   const writebackReceiptRefs = uniqueStrings(stringList(attempt.writeback_receipt_refs));
   const typedBlockerCount = Number(record(transition).typed_blocker_count ?? 0)
@@ -116,6 +140,14 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
     provider_kind: stringValue(attempt.provider_kind),
     local_status: stringValue(attempt.local_status),
     closeout_receipt_status: stringValue(attempt.closeout_receipt_status),
+    dispatch_evidence_receipt_status: verifiedExternalReceipts.length > 0
+      ? 'verified'
+      : externalReceipts.length > 0
+        ? 'recorded'
+        : 'missing',
+    dispatch_evidence_receipt_refs: uniqueStrings(externalReceipts.map((receipt) => receipt.receipt_ref)),
+    verified_dispatch_evidence_receipt_refs:
+      uniqueStrings(verifiedExternalReceipts.map((receipt) => receipt.receipt_ref)),
     decision: stringValue(impact.decision),
     next_owner: stringValue(attempt.next_owner) ?? stringValue(impact.next_owner),
     domain_ready_verdict: domainReadyVerdict,

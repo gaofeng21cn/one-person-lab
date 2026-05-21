@@ -14,6 +14,10 @@ import {
   assertStageProductionEvidencePayloadReady,
   preflightStageProductionEvidencePayload,
 } from './stage-production-evidence-payload-preflight.ts';
+import {
+  assertDomainDispatchEvidencePayloadReady,
+  preflightDomainDispatchEvidencePayload,
+} from './domain-dispatch-evidence-payload-preflight.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -179,6 +183,7 @@ function externalEvidenceApplyArgs(
     actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_verify'
     || actionKind === 'stage_production_evidence_receipt_verify'
+    || actionKind === 'domain_dispatch_evidence_receipt_verify'
   ) {
     return args;
   }
@@ -243,6 +248,23 @@ function stageProductionEvidenceRecordArgs(
   const preflight = options.dryRun
     ? preflightStageProductionEvidencePayload(route, payload)
     : assertStageProductionEvidencePayloadReady(route, payload);
+  return {
+    runtimeArgs: externalEvidenceApplyArgs(route, payload, commandOrSurfaceRef, {
+      allowEmptyRecordPayload: options.dryRun,
+    }),
+    preflight,
+  };
+}
+
+function domainDispatchEvidenceRecordArgs(
+  route: JsonRecord,
+  payload: JsonRecord,
+  commandOrSurfaceRef: string,
+  options: { dryRun: boolean },
+) {
+  const preflight = options.dryRun
+    ? preflightDomainDispatchEvidencePayload(payload)
+    : assertDomainDispatchEvidencePayloadReady(route, payload);
   return {
     runtimeArgs: externalEvidenceApplyArgs(route, payload, commandOrSurfaceRef, {
       allowEmptyRecordPayload: options.dryRun,
@@ -338,6 +360,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'evidence_gate_receipt_verify'
     || actionKind === 'stage_production_evidence_receipt_record'
     || actionKind === 'stage_production_evidence_receipt_verify'
+    || actionKind === 'domain_dispatch_evidence_receipt_record'
+    || actionKind === 'domain_dispatch_evidence_receipt_verify'
   ) {
     return {
       executionKind: 'opl_cli_external_evidence_apply',
@@ -376,6 +400,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'evidence_gate_receipt_verify',
       'stage_production_evidence_receipt_record',
       'stage_production_evidence_receipt_verify',
+      'domain_dispatch_evidence_receipt_record',
+      'domain_dispatch_evidence_receipt_verify',
       'provider_scheduler_status',
       'provider_scheduler_install',
       'provider_scheduler_trigger',
@@ -439,13 +465,21 @@ async function executeRoute(
       || actionKind === 'evidence_gate_receipt_record'
       || actionKind === 'evidence_gate_receipt_verify'
       || actionKind === 'stage_production_evidence_receipt_record'
-      || actionKind === 'stage_production_evidence_receipt_verify';
+      || actionKind === 'stage_production_evidence_receipt_verify'
+      || actionKind === 'domain_dispatch_evidence_receipt_record'
+      || actionKind === 'domain_dispatch_evidence_receipt_verify';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
     const stageEvidenceRecordAction = actionKind === 'stage_production_evidence_receipt_record';
     const stageEvidenceVerifyAction = actionKind === 'stage_production_evidence_receipt_verify';
+    const domainDispatchEvidenceRecordAction = actionKind === 'domain_dispatch_evidence_receipt_record';
     const stageEvidenceRecord = stageEvidenceRecordAction
       ? stageProductionEvidenceRecordArgs(route, options.payload, commandOrSurfaceRef, {
+          dryRun: options.dryRun,
+        })
+      : null;
+    const domainDispatchEvidenceRecord = domainDispatchEvidenceRecordAction
+      ? domainDispatchEvidenceRecordArgs(route, options.payload, commandOrSurfaceRef, {
           dryRun: options.dryRun,
         })
       : null;
@@ -453,6 +487,7 @@ async function executeRoute(
       ? {
           executionKind: 'opl_cli_external_evidence_apply',
           runtimeArgs: stageEvidenceRecord?.runtimeArgs
+            ?? domainDispatchEvidenceRecord?.runtimeArgs
             ?? externalEvidenceApplyArgs(route, options.payload, commandOrSurfaceRef, {
               allowEmptyRecordPayload: options.dryRun,
             }),
@@ -473,12 +508,21 @@ async function executeRoute(
             ? {
                 stage_production_evidence_payload_preflight: stageEvidenceRecord.preflight,
               }
+            : domainDispatchEvidenceRecord
+              ? {
+                  domain_dispatch_evidence_payload_preflight: domainDispatchEvidenceRecord.preflight,
+                }
             : null)
         : externalEvidenceAction
           ? {
               ...(stageEvidenceRecord
                 ? {
                     stage_production_evidence_payload_preflight: stageEvidenceRecord.preflight,
+                  }
+                : {}),
+              ...(domainDispatchEvidenceRecord
+                ? {
+                    domain_dispatch_evidence_payload_preflight: domainDispatchEvidenceRecord.preflight,
                   }
                 : {}),
               ...(stageEvidenceVerifyAction

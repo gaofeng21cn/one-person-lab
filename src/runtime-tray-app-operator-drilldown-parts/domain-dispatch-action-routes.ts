@@ -1,0 +1,254 @@
+import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
+function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const key = `${value.role ?? ''}:${value.ref}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function commandRef(args: string[]) {
+  return `opl ${args.map((arg) => (
+    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
+  )).join(' ')}`;
+}
+
+function shellSingleQuotedJson(value: unknown) {
+  return `'${JSON.stringify(value).replaceAll("'", "'\\''")}'`;
+}
+
+function runtimeActionExecuteCommand(input: {
+  actionId: string;
+  payload?: JsonRecord | null;
+  dryRun?: boolean;
+}) {
+  return [
+    'opl runtime action execute',
+    `--action ${input.actionId}`,
+    ...(input.dryRun ? ['--dry-run'] : []),
+    ...(input.payload ? [`--payload ${shellSingleQuotedJson(input.payload)}`] : []),
+  ].join(' ');
+}
+
+function refsOnlyAuthorityBoundary() {
+  return {
+    opl: 'app_operator_drilldown_refs_only',
+    domain: 'truth_memory_artifact_quality_export_owner',
+    provider: 'runtime_completion_owner_not_domain_ready_owner',
+    can_write_domain_truth: false,
+    can_write_memory_body: false,
+    can_read_memory_body: false,
+    can_read_artifact_body: false,
+    can_mutate_artifact: false,
+    can_authorize_quality_verdict: false,
+    can_authorize_submission_readiness: false,
+    can_authorize_export_verdict: false,
+    can_execute_domain_action: false,
+    can_execute_provider_signal: false,
+    provider_completion_is_domain_ready: false,
+  };
+}
+
+function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
+  const domainId = stringValue(attempt.domain_id);
+  const stageId = stringValue(attempt.stage_id);
+  const stageAttemptId = stringValue(attempt.stage_attempt_id);
+  if (!domainId || !stageAttemptId) {
+    return null;
+  }
+  const requestId = `domain_dispatch:${domainId}:${stageAttemptId}`;
+  const requestPackId = `${domainId}.domain_dispatch_evidence`;
+  const sourceRef = stringValue(attempt.ref)
+    ?? `/stage_attempt_workbench/attempts/${stageAttemptId}/domain_dispatch_evidence`;
+  const actionId = `${requestId}:${mode}`;
+  const recordMode = mode === 'record';
+  const recordedReceiptRef = stringList(attempt.dispatch_evidence_receipt_refs)[0] ?? null;
+  const payloadTemplate = recordMode
+    ? {
+        domain_receipt_refs: [],
+        typed_blocker_refs: [],
+        no_regression_refs: [],
+        owner_chain_refs: [],
+        evidence_refs: [],
+      }
+    : null;
+  const successPayloadExample = recordMode
+    ? {
+        domain_receipt_refs: [`<${domainId}-owner-receipt-ref>`],
+        typed_blocker_refs: [],
+        no_regression_refs: [`<${domainId}-no-regression-ref>`],
+        owner_chain_refs: [`<${domainId}-owner-chain-ref>`],
+        evidence_refs: [],
+      }
+    : null;
+  const typedBlockerPayloadExample = recordMode
+    ? {
+        domain_receipt_refs: [],
+        typed_blocker_refs: [`<${domainId}-typed-blocker-ref>`],
+        no_regression_refs: [],
+        owner_chain_refs: [],
+        evidence_refs: [],
+      }
+    : null;
+  const args = [
+    'agents',
+    'evidence',
+    'apply',
+    '--domain',
+    domainId,
+    '--request-id',
+    requestId,
+    ...(mode === 'verify' ? ['--mode', 'verify'] : []),
+    '--request-pack-id',
+    requestPackId,
+    '--source-ref',
+    sourceRef,
+    ...(mode === 'verify' && recordedReceiptRef ? ['--receipt-ref', recordedReceiptRef] : []),
+  ];
+  return {
+    ref: commandRef(args),
+    opl_cli_args: args,
+    role: 'operator_action_route',
+    action_id: actionId,
+    action_kind: mode === 'verify'
+      ? 'domain_dispatch_evidence_receipt_verify'
+      : 'domain_dispatch_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    route_status: mode === 'verify' ? 'verify_route_available' : 'record_route_available',
+    route_status_detail: recordMode
+      ? 'record_route_available_waiting_for_domain_owner_receipt_or_typed_blocker_payload'
+      : 'verify_route_available_for_recorded_refs_only_domain_dispatch_receipt',
+    request_scope: 'opl_owned_domain_dispatch_refs_only_receipt',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    route_closure_policy:
+      'records_or_verifies_refs_only_domain_dispatch_owner_receipt_or_typed_blocker_without_domain_action_or_ready_claim',
+    open_reason: recordMode
+      ? 'domain_dispatch_attempt_missing_owner_receipt_or_typed_blocker_refs'
+      : null,
+    payload_requirement: recordMode
+      ? 'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker'
+      : 'previously_recorded_opl_refs_only_receipt_required_to_verify_domain_dispatch_evidence',
+    payload_owner: recordMode ? 'domain_repository_or_app_live_operator' : 'opl_external_evidence_ledger',
+    route_requires_domain_or_app_payload: recordMode,
+    can_close_without_domain_or_app_payload: !recordMode,
+    opl_generated_receipt_policy:
+      'OPL_must_not_generate_domain_owner_receipts_typed_blockers_owner_chain_or_no_regression_refs',
+    payload_template: payloadTemplate,
+    payload_ref_hints: recordMode
+      ? {
+          domain_receipt_refs_should_cover: [
+            `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt`,
+          ],
+          typed_blocker_refs_may_close_instead_of_success: true,
+          owner_chain_refs_recommended: true,
+          no_regression_refs_recommended: true,
+          required_any_payload_refs: [
+            'domain_receipt_refs',
+            'typed_blocker_refs',
+            'owner_chain_refs',
+            'no_regression_refs',
+            'evidence_refs',
+          ],
+        }
+      : null,
+    payload_template_policy: recordMode
+      ? 'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit'
+      : 'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
+    empty_payload_template_is_success_evidence: false,
+    copyable_runtime_action_execute_commands: recordMode
+      ? {
+          dry_run_with_empty_template_blocks:
+            runtimeActionExecuteCommand({ actionId, payload: payloadTemplate, dryRun: true }),
+          dry_run_success_path:
+            runtimeActionExecuteCommand({ actionId, payload: successPayloadExample, dryRun: true }),
+          record_success_path:
+            runtimeActionExecuteCommand({ actionId, payload: successPayloadExample }),
+          dry_run_typed_blocker_path:
+            runtimeActionExecuteCommand({ actionId, payload: typedBlockerPayloadExample, dryRun: true }),
+          record_typed_blocker_path:
+            runtimeActionExecuteCommand({ actionId, payload: typedBlockerPayloadExample }),
+        }
+      : {
+          verify_recorded_receipt: runtimeActionExecuteCommand({ actionId }),
+        },
+    creates_domain_action: false,
+    creates_owner_receipt: false,
+    owner_receipt_refs: [],
+    closes_domain_dispatch_owner_chain: mode === 'verify',
+    stage_attempt_id: stageAttemptId,
+    domain_id: domainId,
+    stage_id: stageId,
+    request_id: requestId,
+    request_pack_id: requestPackId,
+    evidence_route_kind: 'domain_dispatch_evidence',
+    evidence_source_ref: sourceRef,
+    required_operator_payload_refs: mode === 'verify'
+      ? []
+      : [
+          'domain_receipt_refs',
+          'typed_blocker_refs',
+          'owner_chain_refs',
+          'no_regression_refs',
+          'evidence_refs',
+        ],
+    optional_operator_payload_refs: [],
+    required_evidence_refs: [
+      `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
+    ],
+    required_return_shapes: [
+      'domain_owner_receipt_ref',
+      'domain_typed_blocker_ref',
+      'owner_chain_ref',
+      'no_regression_ref',
+    ],
+    can_execute: false as const,
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      can_record_domain_dispatch_owner_receipt_refs: true,
+      can_record_domain_dispatch_typed_blocker_refs: true,
+      creates_domain_action: false,
+      creates_owner_receipt: false,
+      closes_domain_ready: false,
+      closes_production_ready: false,
+    },
+  };
+}
+
+export function buildDomainDispatchEvidenceReceiptRoutes(domainDispatchEvidence: JsonRecord) {
+  return uniqueRefs(recordList(domainDispatchEvidence.attempts)
+    .filter((attempt) => (
+      stringList(attempt.owner_receipt_refs).length === 0
+      && stringList(attempt.typed_blocker_refs).length === 0
+    ))
+    .map((attempt) => {
+      const hasRecordedButUnverifiedReceipt =
+        stringValue(attempt.dispatch_evidence_receipt_status) === 'recorded';
+      return domainDispatchRoute(attempt, hasRecordedButUnverifiedReceipt ? 'verify' : 'record');
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));
+}
