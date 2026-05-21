@@ -612,6 +612,14 @@ function buildStageEvidenceWorkorderPacket(operatorRoutes: JsonRecord[]) {
         items.filter((item) => item.typed_blocker_path_available).length,
       payload_template_count:
         items.filter((item) => Object.keys(item.payload_template).length > 0).length,
+      source_scope_missing_workorder_count:
+        items.filter((item) => item.unobserved_source_scope_refs.length > 0).length,
+      runtime_event_missing_workorder_count:
+        items.filter((item) => item.unobserved_runtime_event_refs.length > 0).length,
+      source_scope_missing_ref_count:
+        items.reduce((total, item) => total + item.unobserved_source_scope_refs.length, 0),
+      runtime_event_missing_ref_count:
+        items.reduce((total, item) => total + item.unobserved_runtime_event_refs.length, 0),
       success_payload_owner: 'domain_repository_or_app_live_operator',
     },
     workorders: items,

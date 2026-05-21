@@ -182,6 +182,22 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
       true,
     );
     assert.equal(worklist.stage_evidence_workorder_packet.summary.workorder_count > 0, true);
+    assert.equal(
+      worklist.stage_evidence_workorder_packet.summary.source_scope_missing_workorder_count > 0,
+      true,
+    );
+    assert.equal(
+      worklist.stage_evidence_workorder_packet.summary.runtime_event_missing_workorder_count > 0,
+      true,
+    );
+    assert.equal(
+      worklist.stage_evidence_workorder_packet.summary.source_scope_missing_ref_count > 0,
+      true,
+    );
+    assert.equal(
+      worklist.stage_evidence_workorder_packet.summary.runtime_event_missing_ref_count > 0,
+      true,
+    );
     const item = worklist.worklist_items.find((entry: { action_id: string }) =>
       entry.action_id === 'stage-production-evidence:medautoscience:review:record'
     );
