@@ -5,6 +5,7 @@ import {
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from '../domain-dispatch-evidence-workorder-packet.ts';
 import { canonicalOwnerId } from '../evidence-envelope.ts';
+import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -455,6 +456,13 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
   const routeSupportAftercareCount =
     numberValue(summary.runtime_manager_mas_aftercare_route_support_count);
+  const ownerHandoffPacket = buildOwnerHandoffPacket({
+    ownerPayloadGroups: ownerPayloadGroups.items,
+    domainDispatchGroupAttentionItems: domainDispatchWorkorders.group_attention_items,
+    evidenceEnvelopeAttentionCount,
+    domainDispatchAttentionCount,
+    itemLimit: DEFAULT_ATTENTION_ITEM_LIMIT,
+  });
   return {
     surface_kind: 'opl_app_drilldown_evidence_after_contract_attention',
     status: totalAttentionCount > 0 ? 'attention_required' : 'clear',
@@ -471,6 +479,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     owner_payload_group_attention_policy:
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_groups: ownerPayloadGroups.items,
+    owner_handoff_packet: ownerHandoffPacket,
     domain_dispatch_attention_count: domainDispatchAttentionCount,
     domain_dispatch_typed_blocker_stage_count:
       numberValue(summary.domain_dispatch_attention_typed_blocker_stage_count),

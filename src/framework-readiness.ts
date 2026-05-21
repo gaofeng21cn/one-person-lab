@@ -17,6 +17,13 @@ import {
 import {
   buildMasDomainRouteSupportProjection,
 } from './family-runtime-mas-domain-route.ts';
+import {
+  frameworkAttentionNextSafeActions,
+} from './framework-readiness-attention-actions.ts';
+import {
+  frameworkDiagnosticDrilldowns,
+  frameworkKernelFloor,
+} from './framework-readiness-static-surfaces.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -250,219 +257,6 @@ function statusFrom(
   return 'framework_control_plane_available';
 }
 
-function ownerPayloadEvidenceClosureGate(payloadKind: string | null) {
-  if (payloadKind === 'domain_owner_receipt_or_typed_blocker_refs') {
-    return 'domain_owner_chain_receipt_or_typed_blocker_gate';
-  }
-  if (payloadKind === 'stage_expected_receipt_or_monitor_freshness_refs') {
-    return 'stage_expected_receipt_monitor_freshness_gate';
-  }
-  if (payloadKind === 'domain_owned_typed_blocker_refs') {
-    return 'domain_typed_blocker_followthrough_gate';
-  }
-  if (payloadKind === 'domain_owned_receipt_refs') {
-    return 'domain_owner_receipt_evidence_gate';
-  }
-  if (payloadKind === 'opl_cleanup_ledger_refs') {
-    return 'opl_cleanup_ledger_domain_physical_delete_owner_receipt_gate';
-  }
-  return 'domain_app_live_evidence_payload_gate';
-}
-
-function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
-  const payloadKind = stringValue(group.payload_kind);
-  return {
-    action_id: 'review_owner_payload_group_scaleout',
-    action_kind: 'owner_payload_group_scaleout',
-    step_kind: 'owner_payload_group_scaleout',
-    evidence_closure_gate: ownerPayloadEvidenceClosureGate(payloadKind),
-    owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
-    payload_kind: payloadKind,
-    status: stringValue(group.status) ?? 'needs_owner_payload_refs',
-    attention_count: numberValue(group.attention_count),
-    open_envelope_count: numberValue(group.open_envelope_count),
-    blocked_envelope_count: numberValue(group.blocked_envelope_count),
-    receipt_ref_count: numberValue(group.receipt_ref_count),
-    typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
-    evidence_ref_count: numberValue(group.evidence_ref_count),
-    required_refs_any_of: stringList(group.required_refs_any_of),
-    full_detail_section: 'evidence_envelope',
-    authority: 'operator_attention_only',
-    can_execute_domain_action: false,
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_close_domain_ready: false,
-    can_claim_production_ready: false,
-  };
-}
-
-function frameworkDomainDispatchGroupNextSafeAction(group: JsonRecord) {
-  return {
-    action_id: 'review_domain_dispatch_group_workorder',
-    action_kind: 'domain_dispatch_evidence_group_workorder',
-    step_kind: 'domain_dispatch_evidence_group_workorder',
-    evidence_closure_gate: 'domain_dispatch_owner_chain_payload_gate',
-    payload_requirement:
-      'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
-    owner: stringValue(group.payload_owner) ?? 'domain_repository_or_app_live_operator',
-    canonical_domain_id: stringValue(group.canonical_domain_id),
-    stage_id: stringValue(group.stage_id),
-    route_domain_ids: stringList(group.route_domain_ids),
-    route_domain_id_policy: stringValue(group.route_domain_id_policy),
-    workorder_count: numberValue(group.workorder_count),
-    stage_attempt_count: numberValue(group.stage_attempt_count),
-    sample_stage_attempt_ids: stringList(group.sample_stage_attempt_ids),
-    stage_attempt_id_omitted_count: numberValue(group.stage_attempt_id_omitted_count),
-    sample_action_refs: stringList(group.sample_action_refs),
-    action_ref_omitted_count: numberValue(group.action_ref_omitted_count),
-    required_operator_payload_ref_count: numberValue(group.required_operator_payload_ref_count),
-    required_operator_payload_refs: stringList(group.required_operator_payload_refs),
-    required_evidence_ref_count: numberValue(group.required_evidence_ref_count),
-    sample_required_evidence_refs: stringList(group.sample_required_evidence_refs),
-    required_evidence_ref_omitted_count: numberValue(group.required_evidence_ref_omitted_count),
-    full_detail_section: 'domain_dispatch_evidence',
-    authority: 'operator_attention_only',
-    can_execute_domain_action: false,
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_close_domain_ready: false,
-    can_claim_production_ready: false,
-  };
-}
-
-function frameworkAttentionNextSafeActions(input: {
-  blockers: JsonRecord[];
-  warnings: JsonRecord[];
-  ownerPayloadGroups: JsonRecord[];
-  domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
-}) {
-  if (input.blockers.length > 0) {
-    return [{
-      action_id: 'inspect_framework_kernel_blockers',
-      step_kind: 'framework_kernel_blocker_inspection',
-      evidence_closure_gate: 'framework_kernel_hard_blocker_gate',
-      command: 'opl framework readiness --family-defaults --json',
-      authority: 'diagnostic_only',
-    }];
-  }
-  if (input.warnings.length === 0) {
-    return [{
-      action_id: 'no_framework_readiness_action_required',
-      step_kind: 'no_framework_readiness_action_required',
-      evidence_closure_gate: 'none',
-      authority: 'no_op',
-    }];
-  }
-  return [
-    {
-      action_id: 'review_framework_attention_items',
-      step_kind: 'framework_attention_review',
-      evidence_closure_gate: 'operator_attention_triage_gate',
-      command: 'opl framework readiness --family-defaults --json',
-      authority: 'operator_attention_only',
-    },
-    ...input.ownerPayloadGroups.slice(0, 1).map(frameworkOwnerPayloadGroupNextSafeAction),
-    ...input.domainDispatchEvidenceWorkorderGroupAttentionItems
-      .slice(0, 1)
-      .map(frameworkDomainDispatchGroupNextSafeAction),
-  ];
-}
-
-function frameworkKernelFloor() {
-  return {
-    surface_kind: 'opl_framework_readiness_kernel_floor',
-    policy: 'minimum_control_plane_boundary_and_recoverability_floor_only',
-    hard_blocker_sources: [
-      'agent_structural_conformance',
-      'stage_launch_kernel_hard_blockers',
-      'forbidden_authority_boundary',
-      'provider_substrate_unavailable',
-      'receipt_replay_audit_baseline_missing',
-    ],
-    advisory_sources: [
-      'semantic_hygiene_attention',
-      'agent_structural_evidence_tail',
-      'app_live_evidence_tail',
-      'stage_receipt_freshness_tail',
-      'evidence_envelope_attention',
-      'domain_dispatch_attention',
-      'runtime_manager_route_support',
-      'provider_slo_status',
-    ],
-    ai_executor_internal_strategy_is_contract: false,
-    domain_quality_strategy_contract: false,
-    diagnostic_lenses_can_claim_ready_verdicts: false,
-  };
-}
-
-function frameworkDiagnosticDrilldowns() {
-  return [
-    {
-      lens_id: 'semantic_hygiene',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.semantic_hygiene,
-      embedded_payload_ref: '/framework_readiness/semantic_hygiene',
-    },
-    {
-      lens_id: 'agent_conformance_tail',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.agents_readiness,
-      embedded_payload_ref: '/framework_readiness/agent_conformance_tail',
-    },
-    {
-      lens_id: 'stage_readiness',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.stages_readiness_mas,
-      embedded_payload_ref: '/framework_readiness/stages',
-    },
-    {
-      lens_id: 'app_operator_production_tail',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.app_operator_drilldown,
-      embedded_payload_ref: '/framework_readiness/app_operator_production_tail',
-    },
-    {
-      lens_id: 'evidence_worklist',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
-      embedded_payload_ref: '/framework_readiness/evidence_worklist',
-    },
-    {
-      lens_id: 'evidence_envelope',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
-      embedded_payload_ref: '/framework_readiness/evidence_envelope',
-    },
-    {
-      lens_id: 'domain_dispatch_attention',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.app_operator_drilldown,
-      embedded_payload_ref: '/framework_readiness/domain_dispatch_attention',
-    },
-    {
-      lens_id: 'runtime_manager_route_support',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.app_operator_drilldown,
-      embedded_payload_ref: '/framework_readiness/runtime_manager_route_support',
-    },
-    {
-      lens_id: 'provider_slo_status',
-      role: 'diagnostic_drilldown',
-      default_surface: false,
-      source_command: SOURCE_COMMANDS.app_operator_drilldown,
-      embedded_payload_ref: '/framework_readiness/provider_slo_status',
-    },
-  ];
-}
-
 function frameworkAttentionFirstPayload(input: {
   status: string;
   hardBlockerCount: number;
@@ -481,6 +275,7 @@ function frameworkAttentionFirstPayload(input: {
   ownerPayloadGroupAttentionCount: number;
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
+  ownerHandoffPacket: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderSummary: JsonRecord;
@@ -562,8 +357,10 @@ function frameworkAttentionFirstPayload(input: {
     blockers,
     warnings,
     ownerPayloadGroups: input.ownerPayloadGroups,
+    ownerHandoffPacket: input.ownerHandoffPacket,
     domainDispatchEvidenceWorkorderGroupAttentionItems:
       input.domainDispatchEvidenceWorkorderGroupAttentionItems,
+    itemLimit: 5,
   });
 
   return {
@@ -595,6 +392,7 @@ function frameworkAttentionFirstPayload(input: {
     owner_payload_group_attention_count: input.ownerPayloadGroupAttentionCount,
     owner_payload_group_attention_omitted_count: input.ownerPayloadGroupAttentionOmittedCount,
     owner_payload_groups: input.ownerPayloadGroups,
+    owner_handoff_packet: input.ownerHandoffPacket,
     domain_dispatch_evidence_workorder_packet_summary:
       input.domainDispatchEvidenceWorkorderSummary,
     domain_dispatch_evidence_workorder_group_attention_policy:
@@ -614,7 +412,8 @@ function frameworkAttentionFirstPayload(input: {
     recommendations: warnings,
     next_safe_actions: nextSafeActions,
     kernel_floor_ref: '/framework_readiness/kernel_floor',
-    diagnostic_drilldown_refs: frameworkDiagnosticDrilldowns().map((lens) => lens.embedded_payload_ref),
+    diagnostic_drilldown_refs: frameworkDiagnosticDrilldowns(SOURCE_COMMANDS)
+      .map((lens) => lens.embedded_payload_ref),
     claim_policy:
       'attention_payload_reports_operator_work_only_and_emits_no_domain_quality_artifact_or_production_ready_verdict',
   };
@@ -671,6 +470,7 @@ export async function buildFrameworkReadinessSummary(
   const readinessEvidenceEnvelopeBlockedCount = numberValue(readinessEvidenceEnvelopeSummary.blocked_envelope_count);
   const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
   const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
+  const ownerHandoffPacket = record(appEvidenceAfterContract.owner_handoff_packet);
   const ownerPayloadGroupAttentionCount =
     numberValue(appEvidenceAfterContract.owner_payload_group_attention_count);
   const ownerPayloadGroupAttentionOmittedCount =
@@ -819,6 +619,7 @@ export async function buildFrameworkReadinessSummary(
         ownerPayloadGroupAttentionCount,
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
+        ownerHandoffPacket,
         domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
         domainDispatchEvidenceWorkorderSummary,
@@ -829,7 +630,7 @@ export async function buildFrameworkReadinessSummary(
         providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
       }),
       kernel_floor: frameworkKernelFloor(),
-      diagnostic_drilldowns: frameworkDiagnosticDrilldowns(),
+      diagnostic_drilldowns: frameworkDiagnosticDrilldowns(SOURCE_COMMANDS),
       excluded_ready_verdicts: [
         'domain_ready_verdict',
         'quality_verdict',
@@ -1057,6 +858,10 @@ export async function buildFrameworkReadinessSummary(
         can_claim_production_ready: false,
         can_authorize_quality_or_export: false,
         authority_boundary: authorityBoundary(),
+      },
+      owner_handoff_packet: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        ...ownerHandoffPacket,
       },
       runtime_manager_route_support: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

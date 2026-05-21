@@ -146,6 +146,60 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(firstOwnerPayloadGroup.authority_boundary.can_close_domain_ready, false);
     assert.equal(firstOwnerPayloadGroup.authority_boundary.can_claim_production_ready, false);
   }
+  const ownerHandoffPacket = readiness.attention_first_payload.owner_handoff_packet;
+  assert.equal(
+    readiness.owner_handoff_packet.source_command,
+    'opl runtime app-operator-drilldown --json',
+  );
+  assert.equal(readiness.owner_handoff_packet.surface_kind, ownerHandoffPacket.surface_kind);
+  assert.equal(readiness.owner_handoff_packet.owner_count, ownerHandoffPacket.owner_count);
+  assert.deepEqual(readiness.owner_handoff_packet.owners, ownerHandoffPacket.owners);
+  assert.equal(ownerHandoffPacket.surface_kind, 'opl_app_operator_owner_handoff_packet');
+  assert.equal(
+    ownerHandoffPacket.projection_policy,
+    'bounded_owner_handoff_refs_only_no_domain_action_execution_or_receipt_creation',
+  );
+  assert.equal(ownerHandoffPacket.owner_count >= ownerHandoffPacket.owners.length, true);
+  assert.equal(ownerHandoffPacket.owners.length <= 5, true);
+  assert.equal(
+    ownerHandoffPacket.owner_count,
+    ownerHandoffPacket.owners.length + ownerHandoffPacket.owner_omitted_count,
+  );
+  assert.equal(
+    ownerHandoffPacket.evidence_envelope_attention_count,
+    readiness.attention_first_payload.summary.evidence_envelope_attention_count,
+  );
+  assert.equal(
+    ownerHandoffPacket.domain_dispatch_attention_count,
+    readiness.attention_first_payload.summary.domain_dispatch_attention_count,
+  );
+  assert.equal(ownerHandoffPacket.authority_boundary.can_execute_domain_action, false);
+  assert.equal(ownerHandoffPacket.authority_boundary.can_write_domain_truth, false);
+  assert.equal(ownerHandoffPacket.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(ownerHandoffPacket.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(ownerHandoffPacket.authority_boundary.can_close_owner_chain, false);
+  assert.equal(ownerHandoffPacket.authority_boundary.can_close_domain_ready, false);
+  assert.equal(ownerHandoffPacket.authority_boundary.can_claim_production_ready, false);
+  const firstOwnerHandoff = ownerHandoffPacket.owners[0];
+  if (firstOwnerHandoff) {
+    assert.equal(typeof firstOwnerHandoff.owner, 'string');
+    assert.equal(firstOwnerHandoff.status, 'handoff_required');
+    assert.equal(firstOwnerHandoff.attention_count > 0, true);
+    assert.equal(
+      firstOwnerHandoff.owner_payload_group_count
+        + firstOwnerHandoff.domain_dispatch_group_count > 0,
+      true,
+    );
+    assert.equal(firstOwnerHandoff.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(firstOwnerHandoff.required_refs_any_of.length > 0, true);
+    assert.equal(firstOwnerHandoff.full_detail_sections.length > 0, true);
+    assert.equal(firstOwnerHandoff.can_execute_domain_action, false);
+    assert.equal(firstOwnerHandoff.can_write_domain_truth, false);
+    assert.equal(firstOwnerHandoff.can_create_owner_receipt, false);
+    assert.equal(firstOwnerHandoff.can_close_owner_chain, false);
+    assert.equal(firstOwnerHandoff.can_close_domain_ready, false);
+    assert.equal(firstOwnerHandoff.can_claim_production_ready, false);
+  }
   const nextSafeActions = readiness.attention_first_payload.next_safe_actions;
   assert.equal(nextSafeActions.length > 0, true);
   assert.equal(nextSafeActions.length <= 5, true);
@@ -192,6 +246,37 @@ test('framework readiness summarizes default control-plane surfaces without auth
       assert.equal(ownerPayloadAction.can_create_owner_receipt, false);
       assert.equal(ownerPayloadAction.can_close_domain_ready, false);
       assert.equal(ownerPayloadAction.can_claim_production_ready, false);
+    }
+    const ownerHandoffAction = nextSafeActions.find(
+      (action: { action_kind?: string }) => action.action_kind === 'owner_handoff_packet_review',
+    );
+    assert.equal(Boolean(ownerHandoffAction), Boolean(firstOwnerHandoff));
+    if (firstOwnerHandoff && ownerHandoffAction) {
+      assert.equal(ownerHandoffAction.action_id, 'review_owner_handoff_packet');
+      assert.equal(ownerHandoffAction.step_kind, 'owner_handoff_packet_review');
+      assert.equal(
+        ownerHandoffAction.evidence_closure_gate,
+        'domain_or_app_live_owner_handoff_gate',
+      );
+      assert.equal(ownerHandoffAction.owner, firstOwnerHandoff.owner);
+      assert.equal(ownerHandoffAction.owner_count, ownerHandoffPacket.owner_count);
+      assert.equal(
+        ownerHandoffAction.top_owner_attention_count,
+        firstOwnerHandoff.attention_count,
+      );
+      assert.deepEqual(
+        ownerHandoffAction.required_refs_any_of,
+        firstOwnerHandoff.required_refs_any_of,
+      );
+      assert.equal(ownerHandoffAction.authority, 'operator_attention_only');
+      assert.equal(ownerHandoffAction.can_execute_domain_action, false);
+      assert.equal(ownerHandoffAction.can_write_domain_truth, false);
+      assert.equal(ownerHandoffAction.can_create_owner_receipt, false);
+      assert.equal(ownerHandoffAction.can_create_typed_blocker, false);
+      assert.equal(ownerHandoffAction.can_close_owner_chain, false);
+      assert.equal(ownerHandoffAction.can_close_domain_ready, false);
+      assert.equal(ownerHandoffAction.can_claim_production_ready, false);
+      assert.equal(ownerHandoffAction.can_authorize_quality_or_export, false);
     }
   } else {
     assert.deepEqual(
