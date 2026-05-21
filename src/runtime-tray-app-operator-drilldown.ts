@@ -119,6 +119,17 @@ function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]
   });
 }
 
+function uniqueRefsByValue<T extends { ref: string }>(values: T[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    if (seen.has(value.ref)) {
+      return false;
+    }
+    seen.add(value.ref);
+    return true;
+  });
+}
+
 function cleanupCommandDomainId(project: DomainManifestCatalogEntry, fallbackDomainId: string) {
   return stringValue(project.project_id)
     ?? stringValue(project.project)
@@ -901,6 +912,163 @@ function runtimeManagerRouteSupportRefs() {
   };
 }
 
+function refEntries(refs: string[], role: string, attempt: JsonRecord | null = null) {
+  return refs.map((ref) => ({
+    ref,
+    role,
+    domain_id: attempt ? stringValue(attempt.domain_id) : null,
+    stage_id: attempt ? stringValue(attempt.stage_id) : null,
+    stage_attempt_id: attempt ? stringValue(attempt.stage_attempt_id) : null,
+  }));
+}
+
+function routeTransitionDrilldown(input: {
+  attempts: JsonRecord[];
+  domainProjectionIngestion: JsonRecord;
+  runtimeManagerRouteSupport: JsonRecord;
+}) {
+  const stageAttemptRefs = uniqueRefs(input.attempts.flatMap((attempt) => {
+    const stageAttemptId = stringValue(attempt.stage_attempt_id);
+    const routeImpact = record(attempt.route_impact);
+    if (!stageAttemptId || Object.keys(routeImpact).length === 0) {
+      return [];
+    }
+    return [{
+      ref: `/stage_attempt_workbench/attempts/${stageAttemptId}/route_impact`,
+      role: 'stage_attempt_route_transition',
+      domain_id: stringValue(attempt.domain_id),
+      stage_id: stringValue(attempt.stage_id),
+      stage_attempt_id: stageAttemptId,
+      task_id: stringValue(attempt.task_id),
+      status: stringValue(attempt.status),
+      decision: stringValue(routeImpact.decision),
+      blocked_reason: stringValue(attempt.blocked_reason),
+    }];
+  }));
+  const transitionSpecRefs = uniqueRefs(input.attempts.flatMap((attempt) =>
+    refEntries(refsFromRecord(record(attempt.route_impact), [
+      'transition_spec_ref',
+      'transition_spec_refs',
+      'family_transition_spec_ref',
+      'family_transition_spec_refs',
+    ]), 'route_transition_spec', attempt)
+  ));
+  const materializationRefs = uniqueRefs(input.attempts.flatMap((attempt) =>
+    refEntries(refsFromRecord(record(attempt.route_impact), [
+      'transition_materialization_ref',
+      'transition_materialization_refs',
+      'matrix_result_ref',
+      'matrix_result_refs',
+    ]), 'route_transition_materialization', attempt)
+  ));
+  const ownerRouteRefs = uniqueRefsByValue([
+    ...input.attempts.flatMap((attempt) =>
+      refEntries(refsFromRecord(record(attempt.route_impact), [
+        'owner_route_ref',
+        'owner_route_refs',
+      ]), 'route_transition_owner_route', attempt)
+    ),
+    ...recordList(input.domainProjectionIngestion.items).flatMap((item) =>
+      stringList(item.owner_route_refs).map((ref) => ({
+        ref,
+        role: 'domain_projection_owner_route',
+        domain_id: stringValue(item.domain_id),
+        source_surface: stringValue(item.source_surface),
+      }))
+    ),
+  ]);
+  const ownerReceiptRefs = uniqueRefsByValue([
+    ...input.attempts.flatMap((attempt) =>
+      refEntries(refsFromRecord(record(attempt.route_impact), [
+        'owner_receipt_ref',
+        'owner_receipt_refs',
+        'domain_owner_receipt_ref',
+        'domain_owner_receipt_refs',
+      ]), 'route_transition_owner_receipt', attempt)
+    ),
+    ...recordList(input.domainProjectionIngestion.items).flatMap((item) =>
+      stringList(item.owner_receipt_refs).map((ref) => ({
+        ref,
+        role: 'domain_projection_owner_receipt',
+        domain_id: stringValue(item.domain_id),
+        source_surface: stringValue(item.source_surface),
+      }))
+    ),
+  ]);
+  const typedBlockerRefs = uniqueRefsByValue([
+    ...input.attempts.flatMap((attempt) =>
+      refEntries(refsFromRecord(record(attempt.route_impact), [
+        'typed_blocker_ref',
+        'typed_blocker_refs',
+      ]), 'route_transition_typed_blocker', attempt)
+    ),
+    ...recordList(input.domainProjectionIngestion.items).flatMap((item) =>
+      stringList(item.typed_blocker_refs).map((ref) => ({
+        ref,
+        role: 'domain_projection_typed_blocker',
+        domain_id: stringValue(item.domain_id),
+        source_surface: stringValue(item.source_surface),
+      }))
+    ),
+  ]);
+  const humanGateRefs = uniqueRefs(input.attempts.flatMap((attempt) => [
+    ...refEntries(refsFromRecord(record(attempt.route_impact), [
+      'human_gate_ref',
+      'human_gate_refs',
+    ]), 'route_transition_human_gate', attempt),
+    ...refEntries(stringList(attempt.human_gate_refs), 'stage_attempt_human_gate', attempt),
+  ]));
+  const deadLetterRefs = uniqueRefs(input.attempts.flatMap((attempt) => {
+    const stageAttemptId = stringValue(attempt.stage_attempt_id);
+    const deadLetter = record(attempt.dead_letter);
+    return [
+      ...refEntries(refsFromRecord(record(attempt.route_impact), [
+        'dead_letter_ref',
+        'dead_letter_refs',
+      ]), 'route_transition_dead_letter', attempt),
+      ...(stageAttemptId && Object.keys(deadLetter).length > 0
+        ? [{
+          ref: `/stage_attempt_workbench/attempts/${stageAttemptId}/dead_letter`,
+          role: 'stage_attempt_dead_letter',
+          domain_id: stringValue(attempt.domain_id),
+          stage_id: stringValue(attempt.stage_id),
+          stage_attempt_id: stageAttemptId,
+          reason: stringValue(deadLetter.reason),
+        }]
+        : []),
+    ];
+  }));
+  return {
+    surface_kind: 'opl_app_drilldown_route_transition_drilldown',
+    projection_policy: 'refs_only_no_domain_truth_or_owner_receipt_generation',
+    mas_route_support: record(input.runtimeManagerRouteSupport.mas_domain_route_projection),
+    transition_spec_refs: transitionSpecRefs,
+    materialization_refs: materializationRefs,
+    stage_attempt_refs: stageAttemptRefs,
+    owner_route_refs: ownerRouteRefs,
+    human_gate_refs: humanGateRefs,
+    dead_letter_refs: deadLetterRefs,
+    typed_blocker_refs: typedBlockerRefs,
+    owner_receipt_refs: ownerReceiptRefs,
+    summary: {
+      stage_attempt_count: stageAttemptRefs.length,
+      transition_spec_ref_count: transitionSpecRefs.length,
+      materialization_ref_count: materializationRefs.length,
+      owner_route_ref_count: ownerRouteRefs.length,
+      human_gate_ref_count: humanGateRefs.length,
+      dead_letter_ref_count: deadLetterRefs.length,
+      typed_blocker_ref_count: typedBlockerRefs.length,
+      owner_receipt_ref_count: ownerReceiptRefs.length,
+    },
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      can_record_owner_receipt: false,
+      can_close_owner_chain: false,
+      can_claim_domain_ready: false,
+    },
+  };
+}
+
 function providerCadenceWindowSummary(providerContinuousProof: JsonRecord) {
   const window = record(providerContinuousProof.cadence_window);
   return {
@@ -955,6 +1123,11 @@ export function buildAppOperatorDrilldown(input: {
   const providerCadenceWindow = providerCadenceWindowSummary(input.providerContinuousProof);
   const providerCapabilitySlo = providerCapabilitySloSummary(input.providerContinuousProof);
   const runtimeManagerRouteSupport = runtimeManagerRouteSupportRefs();
+  const routeTransitionDrilldownRefs = routeTransitionDrilldown({
+    attempts,
+    domainProjectionIngestion: input.domainProjectionIngestion,
+    runtimeManagerRouteSupport,
+  });
   const periodicRefs = periodicExecutionRefs(providerActionRefs);
   const domainRefs = domainProjectionRefs(input.domainProjectionIngestion);
   const ownerReceipts = ownerReceiptRefs(attempts, input.domainProjectionIngestion);
@@ -1042,7 +1215,16 @@ export function buildAppOperatorDrilldown(input: {
       oplMetaAgentRegistry,
       standardAgentTemplateConsumption,
       evidenceEnvelope,
+      routeTransitionDrilldown: routeTransitionDrilldownRefs,
     }),
+    route_transition_drilldown_stage_attempt_count:
+      record(routeTransitionDrilldownRefs.summary).stage_attempt_count,
+    route_transition_drilldown_owner_route_ref_count:
+      record(routeTransitionDrilldownRefs.summary).owner_route_ref_count,
+    route_transition_drilldown_human_gate_ref_count:
+      record(routeTransitionDrilldownRefs.summary).human_gate_ref_count,
+    route_transition_drilldown_dead_letter_ref_count:
+      record(routeTransitionDrilldownRefs.summary).dead_letter_ref_count,
     domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
       record(legacyCleanupPlans.summary).legacy_cleanup_opl_cleanup_ledger_ready_count,
     domain_legacy_cleanup_domain_physical_delete_requires_owner_receipt_count:
@@ -1056,6 +1238,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
     sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
     sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
@@ -1108,6 +1291,7 @@ export function buildAppOperatorDrilldown(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     runtime_manager_route_support: runtimeManagerRouteSupport,
+    route_transition_drilldown: routeTransitionDrilldownRefs,
     periodic_execution_refs: periodicRefs,
     operator_action_routing_refs: {
       surface_kind: 'opl_app_drilldown_operator_action_routing_refs',

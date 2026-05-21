@@ -90,3 +90,108 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   assert.equal(evidenceNextSteps.can_execute_domain_action, false);
   assert.equal(evidenceNextSteps.can_create_owner_receipt, false);
 });
+
+test('runtime App drilldown exposes route-as-transition refs in one operator projection', () => {
+  const drilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: {
+      attempts: [
+        {
+          stage_attempt_id: 'sat_mas_route_transition',
+          task_id: 'task_mas_route_transition',
+          domain_id: 'medautoscience',
+          stage_id: 'publication_aftercare',
+          status: 'dead_lettered',
+          blocked_reason: 'retry_budget_exhausted',
+          human_gate_refs: ['human-gate:mas/DM002/physician-decision'],
+          dead_letter: {
+            reason: 'retry_budget_exhausted',
+            task: { status: 'dead_letter' },
+          },
+          route_impact: {
+            decision: 'reviewer_refresh_owner_route_ref',
+            transition_spec_ref: 'contracts/medautoscience.transition.json',
+            transition_materialization_ref: 'contract-materialization:mas/transition',
+            matrix_result_ref: 'matrix:mas/transition',
+            owner_route_refs: ['owner-route:mas/DM002/ai-reviewer-refresh'],
+            owner_receipt_refs: ['owner-receipt:mas/DM002/reviewer-feedback-intake'],
+            typed_blocker_refs: ['typed-blocker:mas/DM002/reviewer-refresh-required'],
+            human_gate_refs: ['human-gate:mas/DM002/release-gate'],
+            dead_letter_refs: ['dead-letter:mas/DM002/retry-budget-exhausted'],
+          },
+        },
+      ],
+    },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {
+      items: [
+        {
+          domain_id: 'medautoscience',
+          source_surface: 'mas_domain_route_projection',
+          owner_route_refs: ['owner-route:mas/DM002/ai-reviewer-refresh'],
+          owner_receipt_refs: ['owner-receipt:mas/DM002/reviewer-feedback-intake'],
+          typed_blocker_refs: ['typed-blocker:mas/DM002/reviewer-refresh-required'],
+        },
+      ],
+    },
+    domainManifestProjects: [],
+    detailLevel: 'full',
+  });
+
+  assert.equal(
+    drilldown.route_transition_drilldown.surface_kind,
+    'opl_app_drilldown_route_transition_drilldown',
+  );
+  assert.equal(
+    drilldown.route_transition_drilldown.projection_policy,
+    'refs_only_no_domain_truth_or_owner_receipt_generation',
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.mas_route_support.supported_task_kinds,
+    buildMasDomainRouteSupportProjection().supported_task_kinds,
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.transition_spec_refs.map((ref: { ref: string }) => ref.ref),
+    ['contracts/medautoscience.transition.json'],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.materialization_refs.map((ref: { ref: string }) => ref.ref),
+    ['contract-materialization:mas/transition', 'matrix:mas/transition'],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.stage_attempt_refs.map((ref: { ref: string }) => ref.ref),
+    ['/stage_attempt_workbench/attempts/sat_mas_route_transition/route_impact'],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.owner_route_refs.map((ref: { ref: string }) => ref.ref),
+    ['owner-route:mas/DM002/ai-reviewer-refresh'],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.human_gate_refs.map((ref: { ref: string }) => ref.ref),
+    [
+      'human-gate:mas/DM002/release-gate',
+      'human-gate:mas/DM002/physician-decision',
+    ],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.dead_letter_refs.map((ref: { ref: string }) => ref.ref),
+    [
+      'dead-letter:mas/DM002/retry-budget-exhausted',
+      '/stage_attempt_workbench/attempts/sat_mas_route_transition/dead_letter',
+    ],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.typed_blocker_refs.map((ref: { ref: string }) => ref.ref),
+    ['typed-blocker:mas/DM002/reviewer-refresh-required'],
+  );
+  assert.deepEqual(
+    drilldown.route_transition_drilldown.owner_receipt_refs.map((ref: { ref: string }) => ref.ref),
+    ['owner-receipt:mas/DM002/reviewer-feedback-intake'],
+  );
+  assert.equal(drilldown.route_transition_drilldown.authority_boundary.can_write_domain_truth, false);
+  assert.equal(drilldown.route_transition_drilldown.authority_boundary.can_record_owner_receipt, false);
+  assert.equal(drilldown.route_transition_drilldown.authority_boundary.can_close_owner_chain, false);
+  assert.equal(drilldown.summary.route_transition_drilldown_stage_attempt_count, 1);
+  assert.equal(drilldown.summary.route_transition_drilldown_owner_route_ref_count, 1);
+  assert.equal(drilldown.summary.route_transition_drilldown_human_gate_ref_count, 2);
+  assert.equal(drilldown.summary.route_transition_drilldown_dead_letter_ref_count, 2);
+});

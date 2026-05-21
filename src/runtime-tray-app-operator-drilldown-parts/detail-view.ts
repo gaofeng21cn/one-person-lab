@@ -14,6 +14,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'quality_readiness_refs',
   'provider_slo_operator_action_refs',
   'runtime_manager_route_support',
+  'route_transition_drilldown',
   'periodic_execution_refs',
   'operator_action_routing_refs',
   'owner_receipt_refs',
