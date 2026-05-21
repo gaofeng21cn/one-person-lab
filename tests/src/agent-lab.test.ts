@@ -129,15 +129,24 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
   assert.equal(result.executor_capability_aperture.surface_kind,
+    'opl_agent_lab_executor_capability_lease_read_model');
+  assert.equal(result.executor_capability_aperture.previous_surface_kind,
     'opl_agent_lab_executor_capability_aperture_read_model');
+  assert.equal(result.executor_capability_aperture.lease_kind, 'executor_capability_lease');
+  assert.equal(result.executor_capability_aperture.read_model_role,
+    'runtime_issued_executor_capability_lease');
   assert.equal(result.executor_capability_aperture.semantic_boundary,
-    'refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
+    'runtime_issued_launch_audit_receipt_boundary_only_not_codex_internal_reasoning_contract');
   assert.equal(result.executor_capability_aperture.default_executor_kind, 'codex_cli');
   assert.equal(result.executor_capability_aperture.summary.codex_cli_task_count, 3);
   assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
+  assert.equal(result.executor_capability_aperture.summary.runtime_issued_lease_count, 3);
   assert.equal(result.executor_capability_aperture.summary.low_risk_count, 3);
+  assert.equal(result.executor_capability_aperture.constrains_launch_audit_and_receipt_only, true);
+  assert.equal(result.executor_capability_aperture.does_not_constrain_codex_internal_reasoning, true);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_change_default_executor, false);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_execute_non_default_executor, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_constrain_executor_reasoning, false);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_quality_equivalence, false);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_tool_semantics_equivalence, false);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_resume_equivalence, false);
@@ -172,6 +181,10 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.ok(masAperture);
   assert.equal(masAperture.executor.executor_kind, 'codex_cli');
   assert.equal(masAperture.executor.codex_first_class_executor, true);
+  assert.equal(masAperture.executor_capability_lease.lease_kind, 'executor_capability_lease');
+  assert.equal(masAperture.executor_capability_lease.issued_by, 'opl_runtime');
+  assert.equal(masAperture.executor_capability_lease.constrains_launch_audit_and_receipt_only, true);
+  assert.equal(masAperture.executor_capability_lease.does_not_constrain_codex_internal_reasoning, true);
   assert.equal(masAperture.model_reasoning.does_not_constrain_ai_reasoning, true);
   assert.equal(masAperture.capabilities.network.network_policy, 'offline');
   assert.equal(masAperture.capabilities.sandbox.sandbox_policy, 'fixture_only_no_artifact_mutation');

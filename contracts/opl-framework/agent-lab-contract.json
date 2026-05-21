@@ -168,12 +168,17 @@
     ]
   },
   "executor_capability_aperture_surface": {
-    "surface_kind": "opl_agent_lab_executor_capability_aperture_read_model",
-    "version": "opl-agent-lab.v1.executor-capability-aperture",
+    "surface_kind": "opl_agent_lab_executor_capability_lease_read_model",
+    "previous_surface_kind": "opl_agent_lab_executor_capability_aperture_read_model",
+    "lease_kind": "executor_capability_lease",
+    "read_model_role": "runtime_issued_executor_capability_lease",
+    "version": "opl-agent-lab.v1.executor-capability-lease",
     "refs_only": true,
-    "semantic_boundary": "refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract",
+    "semantic_boundary": "runtime_issued_launch_audit_receipt_boundary_only_not_codex_internal_reasoning_contract",
     "default_executor_kind": "codex_cli",
     "codex_first": true,
+    "constrains_launch_audit_and_receipt_only": true,
+    "does_not_constrain_codex_internal_reasoning": true,
     "input_groups": [
       "executor_kind",
       "model_reasoning",
@@ -190,10 +195,13 @@
     "output_groups": [
       "selected_executor_ref",
       "executor_binding_ref",
+      "executor_capability_lease_ref",
       "model_reasoning_launch_audit_metadata",
       "capability_declarations",
       "budget_launch_guard",
+      "allowed_effect_refs",
       "expected_receipt_boundary",
+      "ttl",
       "risk_lane"
     ],
     "authority_boundary": {
