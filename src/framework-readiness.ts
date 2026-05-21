@@ -354,6 +354,9 @@ function frameworkAttentionFirstPayload(input: {
   stageSourceScopeMissingRefCount: number;
   stageRuntimeEventMissingRefCount: number;
   stageEvidenceWorkorderAttentionItems: JsonRecord[];
+  ownerPayloadGroupAttentionCount: number;
+  ownerPayloadGroupAttentionOmittedCount: number;
+  ownerPayloadGroups: JsonRecord[];
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderSummary: JsonRecord;
@@ -472,6 +475,11 @@ function frameworkAttentionFirstPayload(input: {
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
     stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
+    owner_payload_group_attention_policy:
+      'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
+    owner_payload_group_attention_count: input.ownerPayloadGroupAttentionCount,
+    owner_payload_group_attention_omitted_count: input.ownerPayloadGroupAttentionOmittedCount,
+    owner_payload_groups: input.ownerPayloadGroups,
     domain_dispatch_evidence_workorder_packet_summary:
       input.domainDispatchEvidenceWorkorderSummary,
     domain_dispatch_evidence_workorder_group_attention_policy:
@@ -546,6 +554,12 @@ export async function buildFrameworkReadinessSummary(
   const readinessEvidenceEnvelopeSummary = evidenceEnvelopeSummary(readinessEvidenceEnvelope);
   const readinessEvidenceEnvelopeOpenCount = evidenceEnvelopeOpenCount(readinessEvidenceEnvelope);
   const readinessEvidenceEnvelopeBlockedCount = numberValue(readinessEvidenceEnvelopeSummary.blocked_envelope_count);
+  const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
+  const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
+  const ownerPayloadGroupAttentionCount =
+    numberValue(appEvidenceAfterContract.owner_payload_group_attention_count);
+  const ownerPayloadGroupAttentionOmittedCount =
+    numberValue(appEvidenceAfterContract.owner_payload_group_attention_omitted_count);
   const stageSummaries = Object.fromEntries(
     Object.entries(stageReadiness).map(([domain, readiness]) => [domain, stageReadinessSummary(readiness)]),
   );
@@ -687,6 +701,9 @@ export async function buildFrameworkReadinessSummary(
         stageSourceScopeMissingRefCount,
         stageRuntimeEventMissingRefCount,
         stageEvidenceWorkorderAttentionItems,
+        ownerPayloadGroupAttentionCount,
+        ownerPayloadGroupAttentionOmittedCount,
+        ownerPayloadGroups,
         domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
         domainDispatchEvidenceWorkorderSummary,

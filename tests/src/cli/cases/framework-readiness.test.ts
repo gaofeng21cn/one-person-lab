@@ -119,6 +119,34 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.domain_dispatch_attention_count,
   );
   assert.equal(
+    readiness.attention_first_payload.owner_payload_group_attention_policy,
+    'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
+  );
+  assert.equal(
+    readiness.attention_first_payload.owner_payload_groups.length <= 5,
+    true,
+  );
+  assert.equal(
+    readiness.attention_first_payload.owner_payload_group_attention_count,
+    readiness.attention_first_payload.owner_payload_groups.length
+      + readiness.attention_first_payload.owner_payload_group_attention_omitted_count,
+  );
+  const firstOwnerPayloadGroup = readiness.attention_first_payload.owner_payload_groups[0];
+  if (firstOwnerPayloadGroup) {
+    assert.equal(typeof firstOwnerPayloadGroup.owner, 'string');
+    assert.equal(firstOwnerPayloadGroup.owner.includes('-'), true);
+    assert.equal(typeof firstOwnerPayloadGroup.payload_kind, 'string');
+    assert.equal(firstOwnerPayloadGroup.attention_count > 0, true);
+    assert.equal(firstOwnerPayloadGroup.full_detail_section, 'evidence_envelope');
+    assert.equal(firstOwnerPayloadGroup.required_refs_any_of.includes('domain_owner_receipt_refs'), true);
+    assert.equal(firstOwnerPayloadGroup.required_refs_any_of.includes('typed_blocker_refs'), true);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.refs_only, true);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_write_domain_truth, false);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_close_domain_ready, false);
+    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_claim_production_ready, false);
+  }
+  assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
     readiness.summary.framework_kernel_hard_blocker_count > 0,
   );
