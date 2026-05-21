@@ -6,6 +6,15 @@ function disableRemoteCompanionInstall() {
   };
 }
 
+function removeTempTree(targetPath: string) {
+  fs.rmSync(targetPath, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 50,
+  });
+}
+
 test('skill companion apply installs Superpowers full bundle only in managed mode', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-superpowers-home-'));
   const superpowersRemote = createGitModuleRemoteFixture('superpowers', {
@@ -80,7 +89,7 @@ test('skill companion apply installs Superpowers full bundle only in managed mod
       true,
     );
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(superpowersRemote.fixtureRoot, { recursive: true, force: true });
+    removeTempTree(homeRoot);
+    removeTempTree(superpowersRemote.fixtureRoot);
   }
 });

@@ -12,7 +12,6 @@ const BASELINE = new Map([
   ['src/family-runtime-temporal-provider.ts', 1008],
   ['src/family-stage-control-plane.ts', 1018],
   ['src/runtime-tray-app-operator-drilldown.ts', 1329],
-  ['src/standard-domain-agent-conformance.ts', 1091],
   ['tests/src/agent-lab.test.ts', 1135],
   ['tests/src/cli/cases/agents-conformance.test.ts', 1239],
   ['tests/src/cli/cases/runtime-app-operator-drilldown.test.ts', 1020],
