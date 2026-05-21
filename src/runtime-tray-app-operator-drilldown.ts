@@ -6,6 +6,9 @@ import {
 import {
   buildStandardDomainAgentSkeletonInspection,
 } from './family-domain-agent-skeleton.ts';
+import {
+  buildStandardDomainAgentTemplateConsumptionReadModel,
+} from './standard-domain-agent-scaffold.ts';
 import type {
   ProviderContinuousProof,
 } from './family-domain-agent-provider-closure.ts';
@@ -972,6 +975,7 @@ export function buildAppOperatorDrilldown(input: {
     input.providerContinuousProof,
   );
   const oplMetaAgentRegistry = buildOplMetaAgentRegistryExtension();
+  const standardAgentTemplateConsumption = buildStandardDomainAgentTemplateConsumptionReadModel();
   const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
     providerContinuousProof: input.providerContinuousProof,
     stageAttempts: attempts,
@@ -1034,6 +1038,7 @@ export function buildAppOperatorDrilldown(input: {
       productionEvidenceTailLedger,
       legacyCleanupPlans,
       oplMetaAgentRegistry,
+      standardAgentTemplateConsumption,
       evidenceEnvelope,
     }),
     domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
@@ -1055,6 +1060,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope', 'evidence_envelope'),
+    sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs',
+      'standard_agent_template_consumption_refs',
+    ),
   ]);
 
   return applyAppOperatorDrilldownDetail({
@@ -1138,6 +1147,7 @@ export function buildAppOperatorDrilldown(input: {
     production_evidence_tail_ledger: productionEvidenceTailLedger,
     evidence_envelope: evidenceEnvelope,
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
+    standard_agent_template_consumption_refs: standardAgentTemplateConsumption,
     opl_meta_agent_workbench_refs: oplMetaAgentRegistry,
     oma_sections: record(oplMetaAgentRegistry.oma_sections),
     functional_privatization_audit_summary: functionalSummary,

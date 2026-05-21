@@ -174,6 +174,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.domain_dispatch_evidence, undefined);
     assert.equal(summaryDrilldown.stage_production_evidence, undefined);
     assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
+    assert.equal(summaryDrilldown.standard_agent_template_consumption_refs, undefined);
     assert.equal(summaryDrilldown.functional_privatization_audit_refs, undefined);
     assert.equal(
       summaryDrilldown.summary.functional_privatization_audit_default_policy,
@@ -188,6 +189,15 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.functional_privatization_private_platform_residue_inventory_detail_policy,
       'full_detail_inventory_not_default_action_required_count',
     );
+    assert.equal(
+      summaryDrilldown.summary.standard_agent_template_consumption_status,
+      'explicit_proof_command_available',
+    );
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_proof_command_count, 1);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_app_operator_ref_count, 1);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_domain_ready_claim_count, 0);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_production_ready_claim_count, 0);
+    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_artifact_authority_claim_count, 0);
     assert.equal(summaryDrilldown.opl_meta_agent_workbench_refs, undefined);
     assert.equal(
       ['resolved', 'not_bound'].includes(summaryDrilldown.summary.opl_meta_agent_registry_status),
@@ -315,6 +325,14 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(
       summaryDrilldown.attention_first_payload.lazy_load_targets.some(
         (target: { section: string; detail_args: string[] }) =>
+          target.section === 'standard_agent_template_consumption_refs'
+          && target.detail_args.join(' ') === '--detail full',
+      ),
+      true,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.lazy_load_targets.some(
+        (target: { section: string; detail_args: string[] }) =>
           target.section === 'functional_privatization_audit_refs'
           && target.detail_args.join(' ') === '--detail full',
       ),
@@ -343,6 +361,22 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     const fullDrilldown = fullOutput.app_operator_drilldown;
     assert.equal(fullDrilldown.detail_level, 'full');
     assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.status, metaAgentBound ? 'resolved' : 'not_bound');
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.surface_kind,
+      'opl_standard_agent_template_consumption_read_model',
+    );
+    assert.deepEqual(
+      fullDrilldown.standard_agent_template_consumption_refs.proof_command,
+      ['agents', 'scaffold', '--consumption-evidence'],
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.authority_boundary.can_claim_domain_ready,
+      false,
+    );
+    assert.equal(
+      fullDrilldown.standard_agent_template_consumption_refs.summary.production_ready_claim_count,
+      0,
+    );
     assert.equal(
       fullDrilldown.opl_meta_agent_workbench_refs.authority_boundary.can_promote_default_agent_without_gate,
       false,

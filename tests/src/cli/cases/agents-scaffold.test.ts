@@ -238,6 +238,19 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
     assert.equal(generated.generation_policy.creates_files, true);
     assert.equal(generated.write_summary.written_count, generated.template_files.length);
     assert.equal(generated.write_summary.skipped_existing_count, 0);
+    assert.equal(
+      generated.scaffold_consumption_refs.status,
+      'generated_template_pending_validation',
+    );
+    assert.equal(generated.scaffold_consumption_refs.app_operator_consumable, true);
+    assert.equal(
+      generated.scaffold_consumption_refs.claim_policy,
+      'template_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim',
+    );
+    assert.equal(
+      generated.scaffold_consumption_refs.authority_boundary.scaffold_validation_can_claim_domain_ready,
+      false,
+    );
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/domain_descriptor.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/pack_compiler_input.json')), true);
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/generated_surface_handoff.json')), true);
@@ -448,6 +461,52 @@ test('agents scaffold can generate and validate a declarative pack domain-agent 
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
+});
+
+test('agents scaffold consumption evidence generates and validates an ephemeral new agent skeleton', () => {
+  const evidence = runCli([
+    'agents',
+    'scaffold',
+    '--consumption-evidence',
+    '--domain-id',
+    'award-foundry',
+  ]).standard_domain_agent_template_consumption_evidence;
+
+  assert.equal(evidence.surface_kind, 'opl_standard_agent_template_consumption_evidence');
+  assert.equal(evidence.owner, 'one-person-lab');
+  assert.equal(evidence.status, 'passed');
+  assert.equal(evidence.proof_kind, 'ephemeral_generate_then_validate_new_agent_skeleton');
+  assert.equal(evidence.generated_repo_dir_policy, 'ephemeral_removed_after_validation');
+  assert.equal(fs.existsSync(evidence.generated_repo_dir_ref), false);
+  assert.equal(evidence.generation_summary.generated_written_file_count > 0, true);
+  assert.equal(
+    evidence.generation_summary.generated_written_file_count,
+    evidence.generation_summary.generated_template_file_count,
+  );
+  assert.equal(evidence.validation_summary.validation_status, 'passed');
+  assert.equal(evidence.validation_summary.blocker_count, 0);
+  assert.equal(evidence.validation_summary.consumed_pack_path_count, 5);
+  assert.equal(evidence.validation_summary.consumed_stage_count, 1);
+  assert.equal(evidence.validation_summary.selected_executor_binding_observed_count, 1);
+  assert.equal(evidence.validation_summary.default_codex_executor_binding_count, 1);
+  assert.equal(evidence.validation_summary.quality_gate_ref_resolved_stage_count, 1);
+  assert.equal(evidence.validation_summary.generated_surface_owner_verified, true);
+  assert.equal(evidence.validation_summary.private_surface_policy_guarded, true);
+  assert.equal(evidence.validation_summary.stage_pack_v2_status, 'passed');
+  assert.equal(evidence.scaffold_consumption_refs.status, 'validated_template_consumed');
+  assert.equal(evidence.scaffold_consumption_refs.validation_consumed_generated_repo, true);
+  assert.equal(evidence.scaffold_consumption_refs.default_codex_executor_binding_count, 1);
+  assert.equal(evidence.scaffold_consumption_refs.app_operator_consumable, true);
+  assert.equal(
+    evidence.scaffold_consumption_refs.authority_boundary.scaffold_validation_can_claim_production_ready,
+    false,
+  );
+  assert.deepEqual(evidence.non_goals, [
+    'does_not_claim_domain_ready',
+    'does_not_claim_artifact_authority',
+    'does_not_claim_production_ready',
+    'does_not_authorize_quality_or_export',
+  ]);
 });
 
 test('agents scaffold validation blocks empty or unreferenced agent directories', () => {

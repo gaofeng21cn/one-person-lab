@@ -519,11 +519,12 @@ export function buildPublicCommandSpecs(
     },
     'agents evidence apply': agentsEvidenceApplySpec,
     'agents scaffold': cloneCommandSpec(commandSpecs['agents scaffold'], {
-      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>]',
+      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>] | [--consumption-evidence]',
       examples: [
         'opl agents scaffold',
         'opl agents scaffold --target-dir /tmp/new-agent --domain-id award-foundry',
         'opl agents scaffold --validate /tmp/new-agent',
+        'opl agents scaffold --consumption-evidence',
       ],
       group: 'domain',
     }),

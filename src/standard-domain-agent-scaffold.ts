@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import {
@@ -127,6 +128,14 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 
 function readRecordArray(value: unknown) {
   return Array.isArray(value) ? value.filter(isPlainRecord) : [];
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return isPlainRecord(value) ? value : {};
+}
+
+function numberValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function refValues(refs: unknown) {
@@ -515,6 +524,118 @@ function buildGenericPrimitiveCompletion() {
   };
 }
 
+function countStageChecks(stageRefValidation: unknown, field: string) {
+  return readRecordArray(recordValue(stageRefValidation).stage_statuses)
+    .filter((stage) => readRecordArray(stage.checks)
+      .some((check) => check.field === field && check.status === 'ok'))
+    .length;
+}
+
+function countStagePackBindings(stagePackV2Validation: unknown, predicate: (stage: Record<string, unknown>) => boolean) {
+  return readRecordArray(recordValue(stagePackV2Validation).stage_statuses)
+    .filter(predicate)
+    .length;
+}
+
+function buildScaffoldConsumptionRefs(input: {
+  mode: ScaffoldMode | 'consumption_evidence';
+  domainId: string;
+  targetDir?: string | null;
+  templateFileCount?: number;
+  writtenCount?: number;
+  validation?: Record<string, unknown> | null;
+  ephemeralTargetRemoved?: boolean;
+}) {
+  const validation = input.validation ?? null;
+  const agentPackValidation = validation ? recordValue(validation.agent_pack_validation) : {};
+  const stageRefValidation = validation ? recordValue(validation.stage_ref_validation) : {};
+  const stagePackV2Validation = validation ? recordValue(validation.stage_pack_v2_validation) : {};
+  const blockers = validation ? readStringArray(validation.blockers) : [];
+  const validationStatus = validation ? readOptionalString(validation.status) : null;
+  const status = validation
+    ? (validationStatus === 'passed' ? 'validated_template_consumed' : 'validation_blocked')
+    : input.mode === 'generate'
+      ? 'generated_template_pending_validation'
+      : 'describe_only_no_generated_repo_consumed';
+  const selectedExecutorBindingObservedCount = countStagePackBindings(
+    stagePackV2Validation,
+    (stage) => Boolean(readOptionalString(stage.selected_executor_kind)),
+  );
+  const defaultCodexExecutorBindingCount = countStagePackBindings(
+    stagePackV2Validation,
+    (stage) =>
+      readOptionalString(stage.selected_executor_kind) === 'codex_cli'
+      && readOptionalString(stage.executor_binding_ref) === 'default_codex_cli',
+  );
+
+  return {
+    surface_kind: 'opl_standard_agent_template_consumption_refs',
+    owner: 'one-person-lab',
+    evidence_role: 'refs_only_new_agent_template_consumption',
+    status,
+    mode: input.mode,
+    domain_id: input.domainId,
+    scaffold_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+    source_command:
+      input.mode === 'consumption_evidence'
+        ? 'opl agents scaffold --consumption-evidence'
+        : input.mode === 'validate'
+          ? 'opl agents scaffold --validate <repo-dir>'
+          : input.mode === 'generate'
+            ? 'opl agents scaffold --target-dir <target-dir>'
+            : 'opl agents scaffold',
+    next_verification_command: input.ephemeralTargetRemoved === true
+      ? 'opl agents scaffold --consumption-evidence'
+      : input.targetDir
+        ? `opl agents scaffold --validate ${input.targetDir}`
+        : 'opl agents scaffold --target-dir <tmp-new-agent> && opl agents scaffold --validate <tmp-new-agent>',
+    target_dir_ref: input.targetDir ?? null,
+    target_dir_policy: input.ephemeralTargetRemoved === true
+      ? 'ephemeral_generated_repo_removed_after_validation'
+      : input.targetDir
+        ? 'explicit_user_target_dir'
+        : 'no_target_dir_in_describe_mode',
+    generated_template_file_count: input.templateFileCount ?? 0,
+    generated_written_file_count: input.writtenCount ?? 0,
+    validation_consumed_generated_repo: Boolean(validation),
+    validation_status: validationStatus,
+    blocker_count: blockers.length,
+    blockers,
+    consumed_pack_path_count: numberValue(agentPackValidation.semantic_listed_path_count),
+    consumed_pack_discovered_path_count: numberValue(agentPackValidation.discovered_path_count),
+    consumed_stage_count: numberValue(stageRefValidation.stage_count),
+    prompt_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'prompt_refs'),
+    skill_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'skills'),
+    knowledge_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'knowledge_refs'),
+    quality_gate_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'evaluation'),
+    selected_executor_binding_observed_count: selectedExecutorBindingObservedCount,
+    default_codex_executor_binding_count: defaultCodexExecutorBindingCount,
+    generated_surface_owner_verified: validation
+      ? !readStringArray(validation.authority_violations).some((violation) =>
+        violation.includes('generated_surface')
+      )
+      : false,
+    private_surface_policy_guarded: validation
+      ? readStringArray(validation.missing_forbidden_role_guards).length === 0
+      : false,
+    stage_pack_v2_status: readOptionalString(stagePackV2Validation.status),
+    app_operator_consumable: true,
+    app_operator_projection_ref: '/app_operator_drilldown/standard_agent_template_consumption_refs',
+    claim_policy:
+      'template_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim',
+    authority_boundary: {
+      refs_only: true,
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_mutate_domain_artifact_body: false,
+      opl_can_authorize_quality_or_export: false,
+      scaffold_validation_can_claim_domain_ready: false,
+      scaffold_validation_can_claim_artifact_authority: false,
+      scaffold_validation_can_claim_production_ready: false,
+    },
+  };
+}
+
 export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
   const domainId = normalizeDomainId(input.domainId);
   const domainLabel = domainLabelFromId(domainId, input.domainLabel);
@@ -642,6 +763,13 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       write_plan: writePlan,
       writes,
       write_summary: buildWriteSummary(writes, input.force === true),
+      scaffold_consumption_refs: buildScaffoldConsumptionRefs({
+        mode,
+        domainId,
+        targetDir,
+        templateFileCount: templateFiles.length,
+        writtenCount: writes.filter((write) => write.status === 'written').length,
+      }),
       generic_primitive_completion: buildGenericPrimitiveCompletion(),
       authority_boundary: {
         opl: 'framework_runtime_development_primitives_contracts_read_models_projection_and_checklist_owner',
@@ -653,4 +781,117 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       },
     },
   };
+}
+
+export function buildStandardDomainAgentTemplateConsumptionReadModel() {
+  return {
+    surface_kind: 'opl_standard_agent_template_consumption_read_model',
+    owner: 'one-person-lab',
+    status: 'explicit_proof_command_available',
+    projection_policy: 'refs_only_operator_projection_no_implicit_temp_generation',
+    proof_command: ['agents', 'scaffold', '--consumption-evidence'],
+    proof_command_shell: 'opl agents scaffold --consumption-evidence',
+    consumed_surface_refs: [
+      'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+      'contracts/pack_compiler_input.json',
+      'contracts/generated_surface_handoff.json',
+      'contracts/stage_control_plane.json',
+      'agent/prompts/domain_intake.md',
+      'agent/skills/domain_execution.md',
+      'agent/knowledge/domain_boundary.md',
+      'agent/quality_gates/domain_acceptance.md',
+    ],
+    expected_evidence_fields: [
+      'generated_written_file_count',
+      'validation_status',
+      'consumed_pack_path_count',
+      'consumed_stage_count',
+      'selected_executor_binding_observed_count',
+      'quality_gate_ref_resolved_stage_count',
+      'generated_surface_owner_verified',
+      'private_surface_policy_guarded',
+      'stage_pack_v2_status',
+    ],
+    summary: {
+      proof_command_count: 1,
+      app_operator_consumable_ref_count: 1,
+      domain_ready_claim_count: 0,
+      production_ready_claim_count: 0,
+      artifact_authority_claim_count: 0,
+    },
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_mutate_domain_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+    },
+  };
+}
+
+export function buildStandardDomainAgentScaffoldConsumptionEvidence(input: ScaffoldInput = {}) {
+  const domainId = normalizeDomainId(input.domainId);
+  const domainLabel = domainLabelFromId(domainId, input.domainLabel);
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-consumption-'));
+  try {
+    const generated = buildStandardDomainAgentScaffold({
+      targetDir,
+      domainId,
+      domainLabel,
+      force: true,
+    }).standard_domain_agent_scaffold;
+    const validation =
+      validateStandardDomainAgentScaffold({ repoDir: targetDir }).standard_domain_agent_scaffold_validation;
+    const refs = buildScaffoldConsumptionRefs({
+      mode: 'consumption_evidence',
+      domainId,
+      targetDir,
+      templateFileCount: Array.isArray(generated.template_files) ? generated.template_files.length : 0,
+      writtenCount: numberValue(recordValue(generated.write_summary).written_count),
+      validation,
+      ephemeralTargetRemoved: true,
+    });
+    return {
+      version: 'g2',
+      standard_domain_agent_template_consumption_evidence: {
+        surface_kind: 'opl_standard_agent_template_consumption_evidence',
+        owner: 'one-person-lab',
+        status: validation.status === 'passed' ? 'passed' : 'blocked',
+        proof_kind: 'ephemeral_generate_then_validate_new_agent_skeleton',
+        domain_id: domainId,
+        scaffold_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+        generated_repo_dir_ref: targetDir,
+        generated_repo_dir_policy: 'ephemeral_removed_after_validation',
+        generation_summary: {
+          generated_written_file_count: refs.generated_written_file_count,
+          generated_template_file_count: refs.generated_template_file_count,
+        },
+        validation_summary: {
+          validation_status: refs.validation_status,
+          blocker_count: refs.blocker_count,
+          consumed_pack_path_count: refs.consumed_pack_path_count,
+          consumed_stage_count: refs.consumed_stage_count,
+          selected_executor_binding_observed_count: refs.selected_executor_binding_observed_count,
+          default_codex_executor_binding_count: refs.default_codex_executor_binding_count,
+          quality_gate_ref_resolved_stage_count: refs.quality_gate_ref_resolved_stage_count,
+          generated_surface_owner_verified: refs.generated_surface_owner_verified,
+          private_surface_policy_guarded: refs.private_surface_policy_guarded,
+          stage_pack_v2_status: refs.stage_pack_v2_status,
+        },
+        scaffold_consumption_refs: refs,
+        non_goals: [
+          'does_not_claim_domain_ready',
+          'does_not_claim_artifact_authority',
+          'does_not_claim_production_ready',
+          'does_not_authorize_quality_or_export',
+        ],
+        authority_boundary: refs.authority_boundary,
+      },
+    };
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
 }

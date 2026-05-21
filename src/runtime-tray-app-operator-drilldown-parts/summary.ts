@@ -29,6 +29,7 @@ type AppOperatorDrilldownSummaryInput = {
   productionEvidenceTailLedger: JsonRecord;
   legacyCleanupPlans: JsonRecord;
   oplMetaAgentRegistry: JsonRecord;
+  standardAgentTemplateConsumption: JsonRecord;
   evidenceEnvelope: JsonRecord;
   runtimeManagerRouteSupport: JsonRecord;
 };
@@ -75,6 +76,7 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
   const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
+  const standardAgentTemplateSummary = record(input.standardAgentTemplateConsumption.summary);
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
   const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
   const supportedTaskKinds = stringList(routeSupport.supported_task_kinds);
@@ -309,6 +311,17 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       legacyCleanupSummary.legacy_cleanup_domain_physical_delete_requires_owner_receipt_count,
     domain_legacy_cleanup_domain_physical_delete_can_execute_count:
       legacyCleanupSummary.legacy_cleanup_domain_physical_delete_can_execute_count,
+    standard_agent_template_consumption_status: input.standardAgentTemplateConsumption.status ?? null,
+    standard_agent_template_consumption_proof_command_count:
+      numberValue(standardAgentTemplateSummary.proof_command_count),
+    standard_agent_template_consumption_app_operator_ref_count:
+      numberValue(standardAgentTemplateSummary.app_operator_consumable_ref_count),
+    standard_agent_template_consumption_domain_ready_claim_count:
+      numberValue(standardAgentTemplateSummary.domain_ready_claim_count),
+    standard_agent_template_consumption_production_ready_claim_count:
+      numberValue(standardAgentTemplateSummary.production_ready_claim_count),
+    standard_agent_template_consumption_artifact_authority_claim_count:
+      numberValue(standardAgentTemplateSummary.artifact_authority_claim_count),
     opl_meta_agent_registry_status: input.oplMetaAgentRegistry.status ?? null,
     opl_meta_agent_consumed_contract_count: numberValue(oplMetaAgentSummary.consumed_contract_count),
     opl_meta_agent_resolved_contract_count: numberValue(oplMetaAgentSummary.resolved_contract_count),

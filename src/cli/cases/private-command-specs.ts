@@ -7,7 +7,11 @@ import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { runRuntimeOperatorActionExecute } from '../../runtime-operator-action-execution.ts';
 import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../observability-export.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
-import { buildStandardDomainAgentScaffold, buildStandardDomainAgentScaffoldValidation } from '../../standard-domain-agent-scaffold.ts';
+import {
+  buildStandardDomainAgentScaffold,
+  buildStandardDomainAgentScaffoldConsumptionEvidence,
+  buildStandardDomainAgentScaffoldValidation,
+} from '../../standard-domain-agent-scaffold.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../agent-executor.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
@@ -35,6 +39,7 @@ function parseAgentsScaffoldArgs(
     domainLabel?: string;
     force?: boolean;
     validateRepoDir?: string;
+    consumptionEvidence?: boolean;
   } = {};
 
   for (let index = 0; index < args.length; index += 1) {
@@ -55,6 +60,9 @@ function parseAgentsScaffoldArgs(
       case '--validate':
         parsed.validateRepoDir = args[++index];
         break;
+      case '--consumption-evidence':
+        parsed.consumptionEvidence = true;
+        break;
       default:
         throw buildUsageError(`Unknown option for agents scaffold command: ${token}.`, spec, {
           option: token,
@@ -69,6 +77,12 @@ function parseAgentsScaffoldArgs(
   if (parsed.validateRepoDir && (parsed.targetDir || parsed.domainId || parsed.domainLabel || parsed.force)) {
     throw buildUsageError('--validate cannot be combined with scaffold generation options.', spec, {
       mutually_exclusive: ['--validate', '--target-dir', '--domain-id', '--domain-label', '--force'],
+    });
+  }
+
+  if (parsed.consumptionEvidence && (parsed.targetDir || parsed.validateRepoDir || parsed.force)) {
+    throw buildUsageError('--consumption-evidence cannot be combined with generation or validation paths.', spec, {
+      mutually_exclusive: ['--consumption-evidence', '--target-dir', '--validate', '--force'],
     });
   }
 
@@ -408,16 +422,20 @@ export function buildInternalCommandSpecs(
       },
     },
     'agents scaffold': {
-      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>]',
+      usage: 'opl agents scaffold [--target-dir <path>] [--domain-id <id>] [--domain-label <label>] [--force] | [--validate <repo-dir>] | [--consumption-evidence]',
       summary:
         'Show, generate, or validate the OPL-owned standard domain-agent scaffold without owning domain truth.',
       examples: [
         'opl agents scaffold',
         'opl agents scaffold --target-dir /tmp/new-agent --domain-id award-foundry',
         'opl agents scaffold --validate /tmp/new-agent',
+        'opl agents scaffold --consumption-evidence',
       ],
       handler: (args) => {
         const parsed = parseAgentsScaffoldArgs(args, commandSpecs['agents scaffold']);
+        if (parsed.consumptionEvidence) {
+          return buildStandardDomainAgentScaffoldConsumptionEvidence(parsed);
+        }
         if (parsed.validateRepoDir) {
           return buildStandardDomainAgentScaffoldValidation({ repoDir: parsed.validateRepoDir });
         }
