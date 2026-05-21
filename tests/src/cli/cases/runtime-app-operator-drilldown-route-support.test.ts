@@ -49,4 +49,33 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_close_owner_chain, false);
   assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_record_owner_receipt, false);
   assert.equal(drilldown.runtime_manager_route_support.authority_boundary.can_authorize_publication_aftercare, false);
+
+  const summaryDrilldown = buildAppOperatorDrilldown({
+    stageAttemptWorkbench: { attempts: [] },
+    providerContinuousProof: {},
+    domainProjectionIngestion: {},
+    domainManifestProjects: [],
+  }) as unknown as { attention_first_payload: { evidence_after_contract: Record<string, unknown> } };
+  const evidenceAfterContract = summaryDrilldown.attention_first_payload.evidence_after_contract;
+  assert.equal(
+    evidenceAfterContract.surface_kind,
+    'opl_app_drilldown_evidence_after_contract_attention',
+  );
+  assert.equal(evidenceAfterContract.status, 'clear');
+  assert.equal(
+    evidenceAfterContract.route_support_status,
+    'catalog_available_refs_only',
+  );
+  assert.equal(
+    evidenceAfterContract.runtime_manager_aftercare_route_support_count,
+    2,
+  );
+  assert.equal(
+    evidenceAfterContract.next_evidence_owner,
+    null,
+  );
+  assert.equal(
+    (evidenceAfterContract.authority_boundary as Record<string, unknown>).route_support_closes_domain_ready,
+    false,
+  );
 });

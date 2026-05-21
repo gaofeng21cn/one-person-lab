@@ -369,6 +369,62 @@ function providerHealth(drilldown: JsonRecord) {
   };
 }
 
+function evidenceAfterContractAttention(drilldown: JsonRecord) {
+  const summary = record(drilldown.summary);
+  const evidenceEnvelopeAttentionCount = (
+    numberValue(summary.evidence_envelope_open_count)
+    + numberValue(summary.evidence_envelope_blocked_count)
+  );
+  const domainDispatchAttentionCount = numberValue(summary.domain_dispatch_attention_count);
+  const totalAttentionCount = evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
+  const routeSupportTaskKindCount =
+    numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
+  const routeSupportAftercareCount =
+    numberValue(summary.runtime_manager_mas_aftercare_route_support_count);
+  return {
+    surface_kind: 'opl_app_drilldown_evidence_after_contract_attention',
+    status: totalAttentionCount > 0 ? 'attention_required' : 'clear',
+    attention_policy:
+      'summary_counts_only_full_refs_via_explicit_drilldown_no_domain_ready_claim',
+    evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
+    evidence_envelope_open_count: numberValue(summary.evidence_envelope_open_count),
+    evidence_envelope_blocked_count: numberValue(summary.evidence_envelope_blocked_count),
+    evidence_envelope_receipt_ref_count: numberValue(summary.evidence_envelope_receipt_ref_count),
+    evidence_envelope_typed_blocker_ref_count:
+      numberValue(summary.evidence_envelope_typed_blocker_ref_count),
+    domain_dispatch_attention_count: domainDispatchAttentionCount,
+    domain_dispatch_typed_blocker_stage_count:
+      numberValue(summary.domain_dispatch_attention_typed_blocker_stage_count),
+    domain_dispatch_blocked_obligation_count:
+      numberValue(summary.domain_dispatch_attention_blocked_obligation_count),
+    domain_dispatch_missing_owner_chain_count:
+      numberValue(summary.domain_dispatch_attention_missing_owner_chain_count),
+    runtime_manager_route_support_task_kind_count: routeSupportTaskKindCount,
+    runtime_manager_aftercare_route_support_count: routeSupportAftercareCount,
+    runtime_manager_route_support_action_ref_count:
+      numberValue(summary.runtime_manager_mas_route_support_action_ref_count),
+    route_support_status: routeSupportTaskKindCount > 0
+      ? 'catalog_available_refs_only'
+      : 'catalog_missing',
+    next_evidence_owner: totalAttentionCount > 0
+      ? 'domain_repository_or_app_live_operator'
+      : null,
+    full_detail_sections: [
+      'evidence_envelope',
+      'domain_dispatch_evidence',
+      'stage_production_evidence',
+      'runtime_manager_route_support',
+    ],
+    authority_boundary: {
+      ...authorityBoundary(drilldown),
+      route_support_closes_owner_chain: false,
+      route_support_closes_domain_ready: false,
+      route_support_closes_production_ready: false,
+      attention_count_is_hard_blocker: false,
+    },
+  };
+}
+
 function buildAttentionFirstPayload(drilldown: JsonRecord) {
   const actions = [...safeActionRoutes(drilldown)].sort((left, right) => (
     actionPriority(left) - actionPriority(right)
@@ -388,6 +444,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     blocking: blockingItems(drilldown),
     advisory: advisoryItems(drilldown),
     missing_evidence: missingEvidenceItems(drilldown),
+    evidence_after_contract: evidenceAfterContractAttention(drilldown),
     next_safe_action: summarizeSafeAction(nextAction),
     additional_safe_action_count: Math.max(actions.length - (nextAction ? 1 : 0), 0),
     provider_health: providerHealth(drilldown),

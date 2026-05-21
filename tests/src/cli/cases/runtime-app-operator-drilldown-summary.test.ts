@@ -261,11 +261,53 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
           'blocking',
           'advisory',
           'missing_evidence',
+          'evidence_after_contract',
           'next_safe_action',
           'provider_health',
         ].includes(key)
       )),
-      ['owner', 'blocking', 'advisory', 'missing_evidence', 'next_safe_action', 'provider_health'],
+      [
+        'owner',
+        'blocking',
+        'advisory',
+        'missing_evidence',
+        'evidence_after_contract',
+        'next_safe_action',
+        'provider_health',
+      ],
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.surface_kind,
+      'opl_app_drilldown_evidence_after_contract_attention',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.status,
+      'attention_required',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.domain_dispatch_attention_count,
+      summaryDrilldown.summary.domain_dispatch_attention_count,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.evidence_envelope_attention_count,
+      summaryDrilldown.summary.evidence_envelope_open_count
+        + summaryDrilldown.summary.evidence_envelope_blocked_count,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.route_support_status,
+      'catalog_available_refs_only',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.next_evidence_owner,
+      'domain_repository_or_app_live_operator',
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.authority_boundary.route_support_closes_owner_chain,
+      false,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract.authority_boundary.attention_count_is_hard_blocker,
+      false,
     );
     assert.equal(
       summaryDrilldown.attention_first_payload.missing_evidence.items.length <= 5,
