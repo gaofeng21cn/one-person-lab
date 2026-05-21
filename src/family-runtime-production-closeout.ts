@@ -746,15 +746,6 @@ export async function runFamilyRuntimeProductionCloseout(
       value: openItems.length,
       deprecated_alias_of: 'open_worklist_item_count',
     },
-    compatibility_aliases: {
-      production_closeout_open_safe_action_item_count: {
-        value: openItems.length,
-        deprecated_alias_of: 'open_worklist_item_count',
-      },
-      production_closeout_command: {
-        deprecated_alias_of: 'evidence-worklist',
-      },
-    },
     ...(deprecatedAlias ? { deprecated_alias: deprecatedAlias } : {}),
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',

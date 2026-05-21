@@ -1037,10 +1037,10 @@ function buildRepoConformance(input: RepoInput) {
     status: blockers.length === 0 ? 'passed' : 'blocked',
     blockers,
     scaffold_validation: {
-      status: scaffoldValidation.status,
-      blockers: scaffoldValidation.blockers,
+      status: scaffoldValidation.status, blockers: scaffoldValidation.blockers,
       agent_pack_validation: scaffoldValidation.agent_pack_validation,
       stage_ref_validation: scaffoldValidation.stage_ref_validation,
+      stage_pack_v2_validation: scaffoldValidation.stage_pack_v2_validation,
     },
     pack_compiler_checks: packCompilerChecks,
     generated_surface_handoff_checks: generatedSurfaceHandoffChecks,

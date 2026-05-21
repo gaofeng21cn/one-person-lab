@@ -42,6 +42,10 @@
       },
       "description": "Refs-only replay evidence declared at plane level for readiness/replay projection. Classification is explicit via each ref role/ref_kind and grants no OPL execution, domain truth, domain-ready, or quality-verdict authority."
     },
+    "stage_pack_conformance_version": {
+      "type": "string",
+      "description": "Standard stage pack conformance marker. New OPL-generated domain-agent scaffolds use standard-stage-pack.v2 so selected executor, requires/ensures, expected receipts, and independent gate policy are visible without turning those refs into domain verdict authority."
+    },
     "stages": {
       "type": "array",
       "minItems": 1,
@@ -124,6 +128,13 @@
           "type": "string",
           "minLength": 1
         },
+        "stage_pack_conformance_version": {
+          "type": "string",
+          "description": "Stage-level conformance marker. For standard-stage-pack.v2, the stage declares prompt/tool/knowledge/evaluation refs, selected executor, stage contract obligations, expected receipts, and independent gate policy."
+        },
+        "selected_executor": {
+          "$ref": "#/$defs/selected_executor"
+        },
         "domain_stage_refs": {
           "type": "array",
           "items": {
@@ -173,6 +184,9 @@
             "$ref": "#/$defs/surface_ref"
           }
         },
+        "independent_gate_policy": {
+          "$ref": "#/$defs/independent_gate_policy"
+        },
         "handoff": {
           "type": "object",
           "additionalProperties": true
@@ -189,6 +203,85 @@
         }
       },
       "additionalProperties": true
+    },
+    "selected_executor": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "executor_kind"
+      ],
+      "properties": {
+        "executor_kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Concrete executor selected for this stage. codex_cli is the default first-class executor; non-default adapters require explicit executor_binding_ref when launch admission is enforced."
+        },
+        "default_executor": {
+          "type": "boolean"
+        },
+        "executor_binding_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "binding_policy": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "executor_labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "receipt_requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          }
+        }
+      }
+    },
+    "independent_gate_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "gate_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gate_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_review_separation_required": {
+          "type": "boolean"
+        },
+        "mechanical_completion_can_close_stage": {
+          "type": "boolean"
+        },
+        "provider_completion_can_claim_domain_ready": {
+          "type": "boolean"
+        },
+        "generated_surface_readiness_can_claim_quality_or_export": {
+          "type": "boolean"
+        }
+      }
     },
     "stage_contract": {
       "type": "object",
