@@ -666,10 +666,30 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.evidence_envelope.summary.artifact_authority_claim_count, 0);
     assert.equal(drilldown.evidence_envelope.authority_boundary.can_write_domain_truth, false);
     assert.equal(drilldown.evidence_envelope.authority_boundary.can_claim_production_ready, false);
+    assert.deepEqual(drilldown.evidence_envelope.summary.owner_ids, [
+      'med-autoscience',
+      'one-person-lab',
+    ]);
+    assert.equal(
+      drilldown.evidence_envelope.summary.owner_id_policy,
+      'canonical_owner_ids_only_raw_aliases_in_full_detail_envelopes',
+    );
+    assert.deepEqual(
+      drilldown.evidence_envelope.owner_alias_diagnostics.aliases,
+      [
+        {
+          canonical_owner_id: 'med-autoscience',
+          source_owner_alias_ids: ['medautoscience'],
+        },
+      ],
+    );
     const reviewEnvelope = drilldown.evidence_envelope.envelopes.find(
       (entry: { envelope_id: string }) =>
-        entry.envelope_id === 'stage_production_evidence:medautoscience:review',
+        entry.envelope_id === 'stage_production_evidence:med-autoscience:review',
     );
+    assert.equal(reviewEnvelope.owner, 'med-autoscience');
+    assert.equal(reviewEnvelope.scope.domain_id, 'med-autoscience');
+    assert.equal(reviewEnvelope.scope.source_domain_id, 'medautoscience');
     assert.equal(reviewEnvelope.status, 'open');
     assert.equal(reviewEnvelope.payload_kind, 'stage_expected_receipt_or_monitor_freshness_refs');
     assert.equal(reviewEnvelope.scope.stage_id, 'review');

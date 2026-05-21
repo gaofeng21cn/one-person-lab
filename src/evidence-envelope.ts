@@ -2,6 +2,24 @@ import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked';
 
+const CANONICAL_OWNER_ALIASES = new Map([
+  ['mas', 'med-autoscience'],
+  ['medautoscience', 'med-autoscience'],
+  ['med-autoscience', 'med-autoscience'],
+  ['med-auto-science', 'med-autoscience'],
+  ['mag', 'med-autogrant'],
+  ['medautogrant', 'med-autogrant'],
+  ['med-autogrant', 'med-autogrant'],
+  ['med-auto-grant', 'med-autogrant'],
+  ['rca', 'redcube-ai'],
+  ['redcube', 'redcube-ai'],
+  ['redcubeai', 'redcube-ai'],
+  ['redcube-ai', 'redcube-ai'],
+  ['opl', 'one-person-lab'],
+  ['onepersonlab', 'one-person-lab'],
+  ['one-person-lab', 'one-person-lab'],
+]);
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -30,6 +48,29 @@ function numberValue(value: unknown) {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function canonicalOwnerId(value: string) {
+  const normalized = value.trim();
+  const key = normalized.toLowerCase().replace(/[\s_]+/g, '-');
+  const compact = key.replace(/-/g, '');
+  return CANONICAL_OWNER_ALIASES.get(key)
+    ?? CANONICAL_OWNER_ALIASES.get(compact)
+    ?? normalized;
+}
+
+function sourceAlias(canonical: string, source: string) {
+  return source !== canonical ? source : null;
+}
+
+function domainScope(domainId: string, extra: JsonRecord = {}) {
+  const canonicalDomainId = canonicalOwnerId(domainId);
+  const alias = sourceAlias(canonicalDomainId, domainId);
+  return {
+    ...extra,
+    domain_id: canonicalDomainId,
+    ...(alias ? { source_domain_id: domainId } : {}),
+  };
 }
 
 function refsFromRecord(value: JsonRecord, keys: string[]) {
@@ -108,9 +149,12 @@ function envelope(input: {
   sourceRefs?: string[];
   nextRoute?: string | null;
 }) {
+  const owner = canonicalOwnerId(input.owner);
+  const ownerAlias = sourceAlias(owner, input.owner);
   return {
     envelope_id: input.envelopeId,
-    owner: input.owner,
+    owner,
+    ...(ownerAlias ? { owner_source_id: input.owner } : {}),
     scope: input.scope,
     payload_kind: input.payloadKind,
     status: input.status,
@@ -174,7 +218,8 @@ function stageEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
     || stringValue(route.action_kind) === 'stage_production_attempt_request'
   ));
   return recordList(record(drilldown.stage_production_evidence).stages).map((stage) => {
-    const domainId = firstString(stage.target_domain_id, stage.domain_id, stage.project_id) ?? 'domain';
+    const sourceDomainId = firstString(stage.target_domain_id, stage.domain_id, stage.project_id) ?? 'domain';
+    const domainId = canonicalOwnerId(sourceDomainId);
     const stageId = stringValue(stage.stage_id) ?? 'stage';
     const typedBlockerRefs = stringList(stage.domain_owned_typed_blocker_refs);
     const receiptRefs = uniqueStrings([
@@ -190,18 +235,17 @@ function stageEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
       ...stringList(stage.runtime_event_refs),
       ...stringList(stage.observed_monitor_freshness_refs),
     ]);
-    const route = routeMap.get(`${domainId}:${stageId}`);
+    const route = routeMap.get(`${sourceDomainId}:${stageId}`) ?? routeMap.get(`${domainId}:${stageId}`);
     const open = stringList(stage.missing_production_evidence).length > 0
       || stringList(stage.unobserved_expected_receipt_refs).length > 0
       || stringList(stage.unobserved_monitor_freshness_refs).length > 0;
     return envelope({
       envelopeId: `stage_production_evidence:${domainId}:${stageId}`,
       owner: stringValue(stage.owner) ?? domainId,
-      scope: {
+      scope: domainScope(sourceDomainId, {
         scope_kind: 'stage_production_evidence',
-        domain_id: domainId,
         stage_id: stageId,
-      },
+      }),
       payloadKind: 'stage_expected_receipt_or_monitor_freshness_refs',
       status: statusFrom({ receiptRefs, typedBlockerRefs, open }),
       receiptRefs,
@@ -216,7 +260,8 @@ function stageEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
 
 function domainDispatchEnvelopes(drilldown: JsonRecord) {
   return recordList(record(drilldown.domain_dispatch_evidence).attempts).map((attempt) => {
-    const domainId = stringValue(attempt.domain_id) ?? 'domain';
+    const sourceDomainId = stringValue(attempt.domain_id) ?? 'domain';
+    const domainId = canonicalOwnerId(sourceDomainId);
     const attemptId = stringValue(attempt.stage_attempt_id) ?? 'attempt';
     const receiptRefs = uniqueStrings([
       ...stringList(attempt.owner_receipt_refs),
@@ -227,12 +272,11 @@ function domainDispatchEnvelopes(drilldown: JsonRecord) {
     return envelope({
       envelopeId: `domain_dispatch:${domainId}:${attemptId}`,
       owner: domainId,
-      scope: {
+      scope: domainScope(sourceDomainId, {
         scope_kind: 'domain_dispatch',
-        domain_id: domainId,
         stage_id: stringValue(attempt.stage_id),
         stage_attempt_id: stringValue(attempt.stage_attempt_id),
-      },
+      }),
       payloadKind: 'domain_owner_receipt_or_typed_blocker_refs',
       status: statusFrom({
         receiptRefs,
@@ -255,18 +299,18 @@ function externalEvidenceEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) 
   ));
   const domainEvidence = record(drilldown.domain_evidence_request_refs);
   const externalRequests = recordList(domainEvidence.external_requests).map((request) => {
-    const domainId = stringValue(request.domain_id) ?? 'domain';
+    const sourceDomainId = stringValue(request.domain_id) ?? 'domain';
+    const domainId = canonicalOwnerId(sourceDomainId);
     const requestId = stringValue(request.request_id) ?? 'request';
-    const route = routeMap.get(`${domainId}:${requestId}`);
+    const route = routeMap.get(`${sourceDomainId}:${requestId}`) ?? routeMap.get(`${domainId}:${requestId}`);
     const receiptStatus = stringValue(request.external_receipt_status);
     return envelope({
       envelopeId: `external_evidence:${domainId}:${requestId}`,
       owner: domainId,
-      scope: {
+      scope: domainScope(sourceDomainId, {
         scope_kind: 'external_evidence_request',
-        domain_id: domainId,
         request_id: requestId,
-      },
+      }),
       payloadKind: 'external_evidence_receipt_refs',
       status: statusFrom({
         receiptRefs: [],
@@ -279,19 +323,19 @@ function externalEvidenceEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) 
     });
   });
   const evidenceGates = recordList(domainEvidence.evidence_gates).map((gate) => {
-    const domainId = stringValue(gate.domain_id) ?? 'domain';
+    const sourceDomainId = stringValue(gate.domain_id) ?? 'domain';
+    const domainId = canonicalOwnerId(sourceDomainId);
     const requestId = firstString(gate.request_id, gate.gate_id) ?? 'gate';
-    const route = routeMap.get(`${domainId}:${requestId}`);
+    const route = routeMap.get(`${sourceDomainId}:${requestId}`) ?? routeMap.get(`${domainId}:${requestId}`);
     const receiptStatus = stringValue(gate.external_receipt_status);
     return envelope({
       envelopeId: `evidence_gate:${domainId}:${requestId}`,
       owner: domainId,
-      scope: {
+      scope: domainScope(sourceDomainId, {
         scope_kind: 'evidence_gate',
-        domain_id: domainId,
         request_id: requestId,
         gate_id: stringValue(gate.gate_id),
-      },
+      }),
       payloadKind: 'evidence_gate_receipt_refs',
       status: statusFrom({
         receiptRefs: [],
@@ -306,7 +350,8 @@ function externalEvidenceEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) 
     ...recordList(domainEvidence.external_receipts),
     ...recordList(domainEvidence.evidence_gate_receipts),
   ].map((receipt) => {
-    const domainId = stringValue(receipt.domain_id) ?? 'domain';
+    const sourceDomainId = stringValue(receipt.domain_id) ?? 'domain';
+    const domainId = canonicalOwnerId(sourceDomainId);
     const requestId = firstString(receipt.request_id, receipt.gate_id) ?? 'receipt';
     const typedBlockerRefs = stringList(receipt.typed_blocker_refs);
     const receiptRefs = uniqueStrings([
@@ -321,11 +366,10 @@ function externalEvidenceEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) 
     return envelope({
       envelopeId: `external_evidence_receipt:${domainId}:${requestId}`,
       owner: domainId,
-      scope: {
+      scope: domainScope(sourceDomainId, {
         scope_kind: stringValue(receipt.role) ?? 'external_evidence_receipt',
-        domain_id: domainId,
         request_id: requestId,
-      },
+      }),
       payloadKind: typedBlockerRefs.length > 0 && receiptRefs.length <= 1
         ? 'domain_owned_typed_blocker_refs'
         : 'domain_owned_receipt_refs',
@@ -350,8 +394,9 @@ function legacyCleanupEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
     .map((route) => [stringValue(route.source_ref) ?? stringValue(route.domain_id) ?? '', route]));
   return recordList(record(drilldown.domain_legacy_cleanup_plan_refs).refs).map((plan) => {
     const sourceRef = stringValue(plan.ref);
-    const domainId = stringValue(plan.command_domain_id) ?? stringValue(plan.domain_id) ?? 'domain';
-    const route = routeMap.get(sourceRef ?? '') ?? routeMap.get(domainId);
+    const sourceDomainId = stringValue(plan.command_domain_id) ?? stringValue(plan.domain_id) ?? 'domain';
+    const domainId = canonicalOwnerId(sourceDomainId);
+    const route = routeMap.get(sourceRef ?? '') ?? routeMap.get(sourceDomainId) ?? routeMap.get(domainId);
     const receiptRefs = uniqueStrings([
       ...stringList(plan.receipt_refs),
       ...stringList(plan.restore_proof_refs),
@@ -362,11 +407,10 @@ function legacyCleanupEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
     return envelope({
       envelopeId: `legacy_cleanup:${domainId}:${sourceRef ?? 'plan'}`,
       owner: 'one-person-lab',
-      scope: {
+      scope: domainScope(sourceDomainId, {
         scope_kind: 'legacy_cleanup',
-        domain_id: domainId,
         source_ref: sourceRef,
-      },
+      }),
       payloadKind: 'opl_cleanup_ledger_refs',
       status: statusFrom({
         receiptRefs,
@@ -396,6 +440,7 @@ function summarize(items: ReturnType<typeof envelope>[]) {
     owner_count: ownerIds.length,
     payload_kind_count: payloadKinds.length,
     owner_ids: ownerIds,
+    owner_id_policy: 'canonical_owner_ids_only_raw_aliases_in_full_detail_envelopes',
     payload_kinds: payloadKinds,
     receipt_ref_count: uniqueStrings(items.flatMap((item) => item.receipt_refs)).length,
     typed_blocker_ref_count: uniqueStrings(items.flatMap((item) => item.typed_blocker_refs)).length,
@@ -403,6 +448,35 @@ function summarize(items: ReturnType<typeof envelope>[]) {
     domain_ready_claim_count: items.filter((item) => item.claim_allowed.domain_ready).length,
     production_ready_claim_count: items.filter((item) => item.claim_allowed.production_ready).length,
     artifact_authority_claim_count: items.filter((item) => item.claim_allowed.artifact_authority).length,
+  };
+}
+
+function ownerAliasDiagnostics(items: ReturnType<typeof envelope>[]) {
+  const aliasesByOwner = new Map<string, Set<string>>();
+  for (const item of items) {
+    const aliases = uniqueStrings([
+      stringValue(item.owner_source_id),
+      stringValue(record(item.scope).source_domain_id),
+    ].filter((alias): alias is string => Boolean(alias)));
+    for (const alias of aliases) {
+      const canonical = canonicalOwnerId(alias);
+      if (canonical !== item.owner || alias === item.owner) {
+        continue;
+      }
+      const existing = aliasesByOwner.get(item.owner) ?? new Set<string>();
+      existing.add(alias);
+      aliasesByOwner.set(item.owner, existing);
+    }
+  }
+  return {
+    surface_kind: 'opl_evidence_envelope_owner_alias_diagnostics',
+    policy: 'full_detail_only_aliases_preserve_source_ids_without_expanding_default_owner_semantics',
+    canonical_owner_count: uniqueStrings(items.map((item) => item.owner)).length,
+    alias_group_count: aliasesByOwner.size,
+    aliases: [...aliasesByOwner.entries()].map(([owner, values]) => ({
+      canonical_owner_id: owner,
+      source_owner_alias_ids: [...values].sort(),
+    })),
   };
 }
 
@@ -433,6 +507,7 @@ export function buildEvidenceEnvelopeProjection(input: {
       '/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs',
     ],
     summary: summarize(envelopes),
+    owner_alias_diagnostics: ownerAliasDiagnostics(envelopes),
     envelopes,
     authority_boundary: authorityBoundary(),
   };
