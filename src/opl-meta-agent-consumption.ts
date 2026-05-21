@@ -33,6 +33,15 @@ const PATCH_LOOP_REF_FIELDS = [
   'agent_lab_re_evaluation_ref',
 ] as const;
 
+const SELF_EVOLUTION_OPERATOR_QUESTIONS = [
+  'failure_evidence',
+  'root_cause',
+  'targeted_fix',
+  'predicted_impact',
+  'next_run_falsification',
+  'owner_receipt_or_typed_blocker',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -272,6 +281,63 @@ function flattenPatchLoopRefs(targets: ReturnType<typeof patchLoopCloseoutTarget
   });
 }
 
+function refsArray(value: unknown) {
+  return Array.isArray(value) ? stringList(value) : stringList([value]);
+}
+
+function targetSixQuestionReady(target: ReturnType<typeof patchLoopCloseoutTargetRefs>[number]) {
+  return refsArray(target.refs.failure_evidence_refs).length > 0
+    && refsArray(target.refs.root_cause_refs).length > 0
+    && refsArray(target.refs.targeted_fix_refs).length > 0
+    && refsArray(target.refs.predicted_impact_refs).length > 0
+    && refsArray(target.refs.next_run_falsification_refs).length > 0
+    && Boolean(optionalString(target.refs.target_owner_receipt_or_typed_blocker_ref));
+}
+
+function buildSelfEvolutionCockpit(targets: ReturnType<typeof patchLoopCloseoutTargetRefs>) {
+  const rows = targets.map((target) => ({
+    domain_id: target.domain_id,
+    status: target.status,
+    six_question_ready: targetSixQuestionReady(target),
+    failure_evidence_refs: refsArray(target.refs.failure_evidence_refs),
+    root_cause_refs: refsArray(target.refs.root_cause_refs),
+    targeted_fix_refs: refsArray(target.refs.targeted_fix_refs),
+    predicted_impact_refs: refsArray(target.refs.predicted_impact_refs),
+    next_run_falsification_refs: refsArray(target.refs.next_run_falsification_refs),
+    owner_receipt_or_typed_blocker_ref:
+      optionalString(target.refs.target_owner_receipt_or_typed_blocker_ref),
+    blocked_suite_result_ref: optionalString(target.refs.blocked_suite_result_ref),
+    developer_patch_work_order_ref: optionalString(target.refs.developer_patch_work_order_ref),
+    patch_traceability_matrix_ref: optionalString(target.refs.patch_traceability_matrix_ref),
+    target_repo_verification_refs: refsArray(target.refs.target_repo_verification_refs),
+    target_runtime_read_model_consumption_ref:
+      optionalString(target.refs.target_runtime_read_model_consumption_ref),
+    workspace_environment_proof_ref: optionalString(target.refs.workspace_environment_proof_ref),
+    no_forbidden_write_proof_ref: optionalString(target.refs.no_forbidden_write_proof_ref),
+    patch_absorption_ref: optionalString(target.refs.patch_absorption_ref),
+    worktree_cleanup_ref: optionalString(target.refs.worktree_cleanup_ref),
+    agent_lab_re_evaluation_ref: optionalString(target.refs.agent_lab_re_evaluation_ref),
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  }));
+
+  return {
+    surface_kind: 'opl_meta_agent_self_evolution_cockpit_read_model',
+    status: rows.length > 0 ? 'refs_only_operator_cockpit_projected' : 'not_observed',
+    operator_questions: [...SELF_EVOLUTION_OPERATOR_QUESTIONS],
+    targets: rows,
+    summary: {
+      target_count: rows.length,
+      six_question_ready_count: rows.filter((row) => row.six_question_ready).length,
+      owner_receipt_or_typed_blocker_count:
+        rows.filter((row) => Boolean(row.owner_receipt_or_typed_blocker_ref)).length,
+      domain_ready_claim_count: 0,
+      quality_verdict_claim_count: 0,
+      default_promotion_claim_count: 0,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 function sectionById(appProjection: JsonRecord, sectionId: string) {
   return recordList(appProjection.workbench_sections).find((section) =>
     optionalString(section.section_id) === sectionId
@@ -292,6 +358,7 @@ function buildOmaSections(payloads: {
   const drilldownReceipt = record(appProjection.drilldown_readiness_receipt);
   const scaleoutCloseout = record(scaleoutEvidence.multi_target_scaleout_closeout);
   const patchLoopTargets = patchLoopCloseoutTargetRefs(scaleoutEvidence);
+  const selfEvolutionCockpit = buildSelfEvolutionCockpit(patchLoopTargets);
 
   return {
     target_brief: {
@@ -375,6 +442,7 @@ function buildOmaSections(payloads: {
       refs: flattenPatchLoopRefs(patchLoopTargets),
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    self_evolution_cockpit: selfEvolutionCockpit,
   };
 }
 
@@ -420,6 +488,8 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
         patch_loop_ref_count: 0,
         patch_loop_target_count: 0,
         patch_loop_closed_count: 0,
+        self_evolution_cockpit_target_count: 0,
+        self_evolution_cockpit_six_question_ready_count: 0,
         discovery_receipt_status: null,
         app_drilldown_receipt_status: null,
         claims_domain_ready: false,
@@ -445,6 +515,8 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
   const scaleoutTargets = recordList(scaleoutCloseout.target_agents);
   const patchLoopCloseout = record(omaSections.patch_loop_closeout);
   const patchLoopTargets = recordList(patchLoopCloseout.targets);
+  const selfEvolutionCockpit = record(omaSections.self_evolution_cockpit);
+  const selfEvolutionCockpitSummary = record(selfEvolutionCockpit.summary);
 
   return {
     surface_kind: 'opl_meta_agent_registry_extension',
@@ -481,6 +553,16 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
         optionalString(target.status) === 'owner_receipt_recorded'
         || optionalString(target.status) === 'owner_typed_blocker_recorded'
       ).length,
+      self_evolution_cockpit_target_count:
+        typeof selfEvolutionCockpitSummary.target_count === 'number'
+          ? selfEvolutionCockpitSummary.target_count
+          : recordList(selfEvolutionCockpit.targets).length,
+      self_evolution_cockpit_six_question_ready_count:
+        typeof selfEvolutionCockpitSummary.six_question_ready_count === 'number'
+          ? selfEvolutionCockpitSummary.six_question_ready_count
+          : recordList(selfEvolutionCockpit.targets).filter((target) =>
+            target.six_question_ready === true
+          ).length,
       discovery_receipt_status: optionalString(record(registration.discovery_receipt).status),
       app_drilldown_receipt_status: optionalString(record(appProjection.drilldown_readiness_receipt).status),
       claims_domain_ready: false,

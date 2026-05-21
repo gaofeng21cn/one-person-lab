@@ -310,6 +310,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     opl_meta_agent_patch_loop_ref_count: numberValue(oplMetaAgentSummary.patch_loop_ref_count),
     opl_meta_agent_patch_loop_target_count: numberValue(oplMetaAgentSummary.patch_loop_target_count),
     opl_meta_agent_patch_loop_closed_count: numberValue(oplMetaAgentSummary.patch_loop_closed_count),
+    opl_meta_agent_self_evolution_cockpit_target_count:
+      numberValue(oplMetaAgentSummary.self_evolution_cockpit_target_count),
+    opl_meta_agent_self_evolution_cockpit_six_question_ready_count:
+      numberValue(oplMetaAgentSummary.self_evolution_cockpit_six_question_ready_count),
     opl_meta_agent_claims_domain_ready: oplMetaAgentSummary.claims_domain_ready === true,
     opl_meta_agent_claims_quality_verdict: oplMetaAgentSummary.claims_quality_verdict === true,
     opl_meta_agent_claims_default_promotion: oplMetaAgentSummary.claims_default_promotion === true,

@@ -228,6 +228,14 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.opl_meta_agent_patch_loop_closed_count,
       metaAgentBound ? 2 : 0,
     );
+    assert.equal(
+      summaryDrilldown.summary.opl_meta_agent_self_evolution_cockpit_target_count,
+      metaAgentBound ? 2 : 0,
+    );
+    assert.equal(
+      summaryDrilldown.summary.opl_meta_agent_self_evolution_cockpit_six_question_ready_count,
+      metaAgentBound ? 2 : 0,
+    );
     if (metaAgentBound) {
       assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
     }
@@ -397,7 +405,36 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         assert.equal(Array.isArray(target.refs.next_run_falsification_refs), true);
       }
       assert.equal(
+        fullDrilldown.oma_sections.self_evolution_cockpit.surface_kind,
+        'opl_meta_agent_self_evolution_cockpit_read_model',
+      );
+      assert.deepEqual(
+        fullDrilldown.oma_sections.self_evolution_cockpit.operator_questions,
+        [
+          'failure_evidence',
+          'root_cause',
+          'targeted_fix',
+          'predicted_impact',
+          'next_run_falsification',
+          'owner_receipt_or_typed_blocker',
+        ],
+      );
+      assert.equal(fullDrilldown.oma_sections.self_evolution_cockpit.targets.length, 2);
+      for (const target of fullDrilldown.oma_sections.self_evolution_cockpit.targets) {
+        assert.equal(target.six_question_ready, true);
+        assert.equal(Array.isArray(target.failure_evidence_refs), true);
+        assert.equal(Array.isArray(target.root_cause_refs), true);
+        assert.equal(Array.isArray(target.targeted_fix_refs), true);
+        assert.equal(Array.isArray(target.predicted_impact_refs), true);
+        assert.equal(Array.isArray(target.next_run_falsification_refs), true);
+        assert.equal(typeof target.owner_receipt_or_typed_blocker_ref, 'string');
+      }
+      assert.equal(
         fullDrilldown.oma_sections.patch_loop_closeout.authority_boundary.can_write_target_domain_truth,
+        false,
+      );
+      assert.equal(
+        fullDrilldown.oma_sections.self_evolution_cockpit.authority_boundary.can_write_target_domain_truth,
         false,
       );
     }
