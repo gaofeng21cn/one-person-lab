@@ -92,16 +92,38 @@
   },
   "promotion_gate": {
     "new_surface_default_state": "diagnostic_lens_or_reference",
+    "new_default_surface_requires_any_ref_from": [
+      "replaced_or_folded_surface_ref",
+      "retired_surface_ref",
+      "folded_into_attention_entry_ref"
+    ],
     "default_surface_requires_any_reason_from": [
       "launch_safety",
       "authority_boundary",
       "evidence_replay_audit_route_back",
       "repeated_app_runtime_consumption"
     ],
+    "hard_gate_allowed_reasons": [
+      "launch_safety",
+      "authority_boundary",
+      "runtime_boundary_event",
+      "receipt_replay_audit_route_back"
+    ],
     "hard_gate_requires_any_reason_from": [
       "launch_safety",
       "authority_boundary",
-      "evidence_replay_audit_route_back"
+      "runtime_boundary_event",
+      "receipt_replay_audit_route_back"
+    ],
+    "hard_gate_denied_reason_classes": [
+      "advisory",
+      "diagnostic",
+      "graphflow_gfl_learning_point",
+      "capacity_budget",
+      "domain_validity",
+      "guarantee",
+      "property",
+      "isolation"
     ],
     "repeated_app_runtime_consumption_requires": {
       "minimum_distinct_consumers": 2,

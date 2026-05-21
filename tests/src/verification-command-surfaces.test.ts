@@ -171,8 +171,11 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     };
     promotion_gate: {
       new_surface_default_state: string;
+      new_default_surface_requires_any_ref_from: string[];
       default_surface_requires_any_reason_from: string[];
+      hard_gate_allowed_reasons: string[];
       hard_gate_requires_any_reason_from: string[];
+      hard_gate_denied_reason_classes: string[];
       repeated_app_runtime_consumption_requires: {
         minimum_distinct_consumers: number;
         allowed_consumers: string[];
@@ -222,10 +225,46 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
     );
   }
   assert.equal(policy.promotion_gate.new_surface_default_state, 'diagnostic_lens_or_reference');
+  assert.deepEqual(policy.promotion_gate.new_default_surface_requires_any_ref_from, [
+    'replaced_or_folded_surface_ref',
+    'retired_surface_ref',
+    'folded_into_attention_entry_ref',
+  ]);
   assert.deepEqual(
     policy.promotion_gate.default_surface_requires_any_reason_from,
     policy.default_surface_allowed_reasons,
   );
+  assert.deepEqual(policy.promotion_gate.hard_gate_allowed_reasons, [
+    'launch_safety',
+    'authority_boundary',
+    'runtime_boundary_event',
+    'receipt_replay_audit_route_back',
+  ]);
+  assert.deepEqual(
+    policy.promotion_gate.hard_gate_requires_any_reason_from,
+    policy.promotion_gate.hard_gate_allowed_reasons,
+  );
+  for (const deniedReasonClass of [
+    'advisory',
+    'diagnostic',
+    'graphflow_gfl_learning_point',
+    'capacity_budget',
+    'domain_validity',
+    'guarantee',
+    'property',
+    'isolation',
+  ]) {
+    assert.equal(
+      policy.promotion_gate.hard_gate_denied_reason_classes.includes(deniedReasonClass),
+      true,
+      `${deniedReasonClass} must not become a hard gate reason class by default`,
+    );
+    assert.equal(
+      policy.promotion_gate.hard_gate_allowed_reasons.includes(deniedReasonClass),
+      false,
+      `${deniedReasonClass} must not be an allowed hard gate reason`,
+    );
+  }
   assert.equal(policy.promotion_gate.repeated_app_runtime_consumption_requires.minimum_distinct_consumers, 2);
   assert.equal(policy.promotion_gate.repeated_app_runtime_consumption_requires.allowed_consumers.includes('app'), true);
 

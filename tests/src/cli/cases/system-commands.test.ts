@@ -321,6 +321,34 @@ test('public stage commands keep readiness as the only default operator surface'
   ]);
 });
 
+test('public specs do not reintroduce budget and validity lenses as default stage entries', () => {
+  const contracts = loadFrameworkContracts({ contractsDir });
+  const publicSpecs = buildPublicCommandSpecs(
+    buildInternalCommandSpecs(
+      {
+        helpRequested: false,
+        jsonOutput: true,
+        textOutput: false,
+        command: null,
+        args: [],
+        loadOptions: { contractsDir },
+      },
+      () => contracts,
+    ),
+    () => contracts,
+  );
+
+  for (const command of [
+    'stages capacity-budget',
+    'stages domain-validity',
+    'stages guarantee',
+    'stages property',
+    'stages isolation',
+  ]) {
+    assert.equal(publicSpecs[command], undefined, `${command} must not be a public default entrypoint`);
+  }
+});
+
 test('removed UI adapter command surfaces are not retained as compatibility aliases', () => {
   const removedUiAdapterPrefix = ['front', 'desk'].join('');
   const removedCommandShapes = [
