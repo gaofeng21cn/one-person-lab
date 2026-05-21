@@ -161,8 +161,20 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     );
     if (metaAgentRegistry.status === 'resolved') {
       assert.equal(
-        metaAgentRegistry.oma_sections.patch_loop_closeout.refs.length >= 11,
+        metaAgentRegistry.oma_sections.patch_loop_closeout.refs.length >= 16,
         true,
+      );
+      assert.ok(
+        metaAgentRegistry.oma_sections.patch_loop_closeout.required_ref_fields.includes('root_cause_refs'),
+      );
+      assert.ok(
+        metaAgentRegistry.oma_sections.patch_loop_closeout.required_ref_fields.includes('targeted_fix_refs'),
+      );
+      assert.ok(
+        metaAgentRegistry.oma_sections.patch_loop_closeout.required_ref_fields.includes('predicted_impact_refs'),
+      );
+      assert.ok(
+        metaAgentRegistry.oma_sections.patch_loop_closeout.required_ref_fields.includes('next_run_falsification_refs'),
       );
     } else {
       assert.equal(metaAgentRegistry.repo_dir, null);

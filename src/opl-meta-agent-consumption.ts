@@ -18,6 +18,11 @@ const PATCH_LOOP_REF_FIELDS = [
   'blocked_suite_result_ref',
   'developer_patch_work_order_ref',
   'patch_traceability_matrix_ref',
+  'failure_evidence_refs',
+  'root_cause_refs',
+  'targeted_fix_refs',
+  'predicted_impact_refs',
+  'next_run_falsification_refs',
   'target_repo_verification_refs',
   'target_runtime_read_model_consumption_ref',
   'workspace_environment_proof_ref',
@@ -139,6 +144,11 @@ function firstString(values: unknown) {
   return stringList(values)[0] ?? null;
 }
 
+function refListOrFallback(value: unknown, fallback: string) {
+  const refs = stringList(value);
+  return refs.length > 0 ? refs : [fallback];
+}
+
 function patchLoopCloseoutTargetRefs(scaleoutEvidence: JsonRecord) {
   const closeout = record(scaleoutEvidence.multi_target_scaleout_closeout);
   return recordList(closeout.target_agents).map((target) => {
@@ -164,6 +174,26 @@ function patchLoopCloseoutTargetRefs(scaleoutEvidence: JsonRecord) {
           ?? `developer-patch-work-order:opl-meta-agent/${domainId}/agent-evidence`,
         patch_traceability_matrix_ref: optionalString(target.patch_traceability_matrix_ref)
           ?? `patch-traceability:opl-meta-agent/${domainId}/agent-evidence`,
+        failure_evidence_refs: refListOrFallback(
+          target.failure_evidence_refs,
+          `typed-blocker:opl-meta-agent/${domainId}/failure-evidence-ref-missing`,
+        ),
+        root_cause_refs: refListOrFallback(
+          target.root_cause_refs,
+          `typed-blocker:opl-meta-agent/${domainId}/root-cause-ref-missing`,
+        ),
+        targeted_fix_refs: refListOrFallback(
+          target.targeted_fix_refs,
+          `typed-blocker:opl-meta-agent/${domainId}/targeted-fix-ref-missing`,
+        ),
+        predicted_impact_refs: refListOrFallback(
+          target.predicted_impact_refs,
+          `typed-blocker:opl-meta-agent/${domainId}/predicted-impact-ref-missing`,
+        ),
+        next_run_falsification_refs: refListOrFallback(
+          target.next_run_falsification_refs,
+          `typed-blocker:opl-meta-agent/${domainId}/next-run-falsification-ref-missing`,
+        ),
         target_repo_verification_refs: stringList(target.target_repo_verification_refs).length > 0
           ? stringList(target.target_repo_verification_refs)
           : [`target-verification:${domainId}/agent-evidence`],
@@ -299,6 +329,13 @@ function buildOmaSections(payloads: {
       surface_kind: 'opl_meta_agent_patch_loop_closeout_read_model',
       status: patchLoopTargets.length > 0 ? 'refs_only_patch_loop_refs_projected' : 'not_observed',
       required_ref_fields: [...PATCH_LOOP_REF_FIELDS],
+      ahe_patch_loop_ref_fields: [
+        'failure_evidence_refs',
+        'root_cause_refs',
+        'targeted_fix_refs',
+        'predicted_impact_refs',
+        'next_run_falsification_refs',
+      ],
       targets: patchLoopTargets,
       refs: flattenPatchLoopRefs(patchLoopTargets),
       authority_boundary: refsOnlyAuthorityBoundary(),
