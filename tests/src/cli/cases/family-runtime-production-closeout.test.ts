@@ -469,6 +469,25 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_write_domain_truth, false);
     assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_read_memory_body, false);
     assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_claim_production_ready, false);
+    assert.equal(fullCloseout.evidence_envelope.surface_kind, 'opl_evidence_envelope_projection');
+    assert.equal(fullCloseout.evidence_envelope.summary.envelope_count > 0, true);
+    assert.equal(fullCloseout.evidence_envelope.summary.open_envelope_count > 0, true);
+    assert.equal(
+      fullCloseout.evidence_envelope.summary.open_envelope_count
+        + fullCloseout.evidence_envelope.summary.closed_envelope_count
+        + fullCloseout.evidence_envelope.summary.blocked_envelope_count,
+      fullCloseout.evidence_envelope.summary.envelope_count,
+    );
+    assert.equal(fullCloseout.evidence_envelope.summary.domain_ready_claim_count, 0);
+    assert.equal(fullCloseout.evidence_envelope.summary.production_ready_claim_count, 0);
+    assert.equal(fullCloseout.evidence_envelope.summary.artifact_authority_claim_count, 0);
+    assert.equal(fullCloseout.evidence_envelope.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullCloseout.evidence_envelope.authority_boundary.can_claim_production_ready, false);
+    assert.equal(fullCloseout.evidence_envelope.envelopes, undefined);
+    assert.equal(
+      fullCloseout.evidence_envelope_full_ref,
+      '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
+    );
     const workorderPacket = fullCloseout.stage_evidence_workorder_packet;
     assert.equal(workorderPacket.surface_kind, 'opl_stage_evidence_workorder_packet');
     assert.equal(

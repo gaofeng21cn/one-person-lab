@@ -8,6 +8,9 @@ import {
 } from './evidence-requirement.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
+import {
+  compactEvidenceEnvelopeProjection,
+} from './evidence-envelope.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -698,6 +701,7 @@ export async function runFamilyRuntimeProductionCloseout(
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(closeoutItems);
   const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
+  const evidenceEnvelope = record(drilldown.evidence_envelope);
   const counts = closeoutCounts(closeoutItems, openItems, closedItems, nextActionLedger);
   const detailLevel = input.detailLevel ?? 'summary';
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
@@ -730,7 +734,9 @@ export async function runFamilyRuntimeProductionCloseout(
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
+      evidence_envelope_ref: '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
     },
+    evidence_envelope: compactEvidenceEnvelopeProjection(evidenceEnvelope),
     authority_boundary: authorityBoundary(),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
@@ -746,6 +752,8 @@ export async function runFamilyRuntimeProductionCloseout(
         next_action_ledger: nextActionLedger,
         evidence_requirement_ledger: evidenceRequirementLedger,
         stage_evidence_workorder_packet: stageEvidenceWorkorderPacket,
+        evidence_envelope_full_ref:
+          '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
       },
     };
   }

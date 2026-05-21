@@ -50,6 +50,9 @@ import {
 import {
   buildOplMetaAgentRegistryExtension,
 } from './opl-meta-agent-consumption.ts';
+import {
+  buildEvidenceEnvelopeProjection,
+} from './evidence-envelope.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1163,6 +1166,15 @@ export function buildAppOperatorDrilldown(input: {
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),
   ]);
+  const evidenceEnvelope = buildEvidenceEnvelopeProjection({
+    appOperatorDrilldown: {
+      stage_production_evidence: stageProductionEvidence,
+      domain_dispatch_evidence: domainDispatchEvidence,
+      domain_evidence_request_refs: evidenceRequests,
+      domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
+    },
+    operatorRoutes: actionRefs,
+  });
   const lifecycleRefs = lifecycleLedgerRefs();
   const safeActions = safeActionRefs(actionRefs, lifecycleRefs);
   const executionBridge = appExecutionBridge(actionRefs, periodicRefs, lifecycleRefs);
@@ -1196,6 +1208,7 @@ export function buildAppOperatorDrilldown(input: {
       productionEvidenceTailLedger,
       legacyCleanupPlans,
       oplMetaAgentRegistry,
+      evidenceEnvelope,
     }),
     domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
       record(legacyCleanupPlans.summary).legacy_cleanup_opl_cleanup_ledger_ready_count,
@@ -1214,6 +1227,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope', 'evidence_envelope'),
   ]);
 
   return applyAppOperatorDrilldownDetail({
@@ -1294,6 +1308,7 @@ export function buildAppOperatorDrilldown(input: {
     },
     domain_evidence_request_refs: evidenceRequests,
     production_evidence_tail_ledger: productionEvidenceTailLedger,
+    evidence_envelope: evidenceEnvelope,
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     opl_meta_agent_workbench_refs: oplMetaAgentRegistry,
     oma_sections: record(oplMetaAgentRegistry.oma_sections),

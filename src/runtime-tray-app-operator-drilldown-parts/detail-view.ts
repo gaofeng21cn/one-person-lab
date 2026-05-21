@@ -27,6 +27,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'domain_projection_refs',
   'domain_evidence_request_refs',
   'production_evidence_tail_ledger',
+  'evidence_envelope',
   'domain_legacy_cleanup_plan_refs',
   'opl_meta_agent_workbench_refs',
   'functional_privatization_audit_summary',
@@ -419,6 +420,8 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
         markFullRefsObject(record(fullDrilldown.operator_action_routing_refs), 'refs'),
       production_evidence_tail_ledger:
         markFullRefsObject(record(fullDrilldown.production_evidence_tail_ledger), 'tail_items'),
+      evidence_envelope:
+        markFullRefsObject(record(fullDrilldown.evidence_envelope), 'envelopes'),
       domain_dispatch_evidence:
         markFullRefsObject(record(fullDrilldown.domain_dispatch_evidence), 'attempts'),
       stage_production_evidence:

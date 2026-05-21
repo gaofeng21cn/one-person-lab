@@ -29,6 +29,7 @@ type AppOperatorDrilldownSummaryInput = {
   productionEvidenceTailLedger: JsonRecord;
   legacyCleanupPlans: JsonRecord;
   oplMetaAgentRegistry: JsonRecord;
+  evidenceEnvelope: JsonRecord;
 };
 
 function record(value: unknown): JsonRecord {
@@ -67,6 +68,7 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
   const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
+  const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
   const productionEvidenceTailItemCount = numberValue(productionTailSummary.tail_item_count);
   const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
   const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
@@ -236,6 +238,17 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     app_operator_production_evidence_tail_open_item_count: productionEvidenceTailOpenItemCount,
     app_operator_production_evidence_tail_owner_group_count: productionEvidenceTailOwnerGroupCount,
     app_operator_production_evidence_tail_blocking_item_count: productionEvidenceTailBlockingItemCount,
+    evidence_envelope_count: numberValue(evidenceEnvelopeSummary.envelope_count),
+    evidence_envelope_open_count: numberValue(evidenceEnvelopeSummary.open_envelope_count),
+    evidence_envelope_closed_count: numberValue(evidenceEnvelopeSummary.closed_envelope_count),
+    evidence_envelope_blocked_count: numberValue(evidenceEnvelopeSummary.blocked_envelope_count),
+    evidence_envelope_receipt_ref_count: numberValue(evidenceEnvelopeSummary.receipt_ref_count),
+    evidence_envelope_typed_blocker_ref_count: numberValue(evidenceEnvelopeSummary.typed_blocker_ref_count),
+    evidence_envelope_domain_ready_claim_count: numberValue(evidenceEnvelopeSummary.domain_ready_claim_count),
+    evidence_envelope_production_ready_claim_count:
+      numberValue(evidenceEnvelopeSummary.production_ready_claim_count),
+    evidence_envelope_artifact_authority_claim_count:
+      numberValue(evidenceEnvelopeSummary.artifact_authority_claim_count),
     domain_legacy_cleanup_plan_count: legacyCleanupSummary.legacy_cleanup_plan_count,
     domain_legacy_cleanup_ready_plan_count: legacyCleanupSummary.legacy_cleanup_ready_plan_count,
     domain_legacy_cleanup_blocked_plan_count: legacyCleanupSummary.legacy_cleanup_blocked_plan_count,

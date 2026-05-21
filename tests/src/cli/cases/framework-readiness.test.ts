@@ -159,6 +159,10 @@ test('framework readiness summarizes default control-plane surfaces without auth
     'stage production caller, expected receipt, and monitor freshness workorders',
   );
   assert.equal(
+    readiness.evidence_counter_taxonomy.evidence_envelope,
+    'single refs-only owner/scope/payload-kind claim reading across stage, external evidence, domain dispatch, and cleanup receipts',
+  );
+  assert.equal(
     Object.keys(readiness.summary).some((key) => key.startsWith('production_evidence_tail_')),
     false,
   );
@@ -183,6 +187,17 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.evidence_worklist.lens_policy,
     'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
   );
+  assert.equal(readiness.evidence_envelope.source_command, readiness.evidence_worklist.source_command);
+  assert.equal(readiness.evidence_envelope.summary.domain_ready_claim_count, 0);
+  assert.equal(readiness.evidence_envelope.summary.production_ready_claim_count, 0);
+  assert.equal(readiness.evidence_envelope.summary.artifact_authority_claim_count, 0);
+  assert.equal(readiness.evidence_envelope.open_envelope_count, readiness.evidence_envelope.summary.open_envelope_count);
+  assert.equal(
+    readiness.evidence_envelope.claim_policy,
+    'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
+  );
+  assert.equal(readiness.evidence_envelope.authority_boundary.can_write_domain_truth, false);
+  assert.equal(readiness.evidence_envelope.authority_boundary.can_claim_production_ready, false);
   assert.match(
     readiness.stage_production_caller_tail.route_policy,
     /creates_opl_stage_attempt_request_only/,

@@ -10,6 +10,10 @@ import {
 import { runFamilyRuntimeProductionCloseout } from './family-runtime-production-closeout.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
+import {
+  evidenceEnvelopeOpenCount,
+  evidenceEnvelopeSummary,
+} from './evidence-envelope.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -241,6 +245,7 @@ function frameworkKernelFloor() {
       'agent_structural_evidence_tail',
       'app_live_evidence_tail',
       'stage_receipt_freshness_tail',
+      'evidence_envelope_attention',
       'provider_slo_status',
     ],
     ai_executor_internal_strategy_is_contract: false,
@@ -285,6 +290,13 @@ function frameworkDiagnosticDrilldowns() {
       default_surface: false,
       source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
       embedded_payload_ref: '/framework_readiness/evidence_worklist',
+    },
+    {
+      lens_id: 'evidence_envelope',
+      role: 'diagnostic_drilldown',
+      default_surface: false,
+      source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
+      embedded_payload_ref: '/framework_readiness/evidence_envelope',
     },
     {
       lens_id: 'provider_slo_status',
@@ -444,6 +456,7 @@ export async function buildFrameworkReadinessSummary(
   const stagesSummary = record(familyStages.summary);
   const appSummary = record(appOperatorDrilldown.summary);
   const closeoutSummary = record(familyRuntimeCloseout.summary);
+  const readinessEvidenceEnvelope = record(familyRuntimeCloseout.evidence_envelope);
   const stageSummaries = Object.fromEntries(
     Object.entries(stageReadiness).map(([domain, readiness]) => [domain, stageReadinessSummary(readiness)]),
   );
@@ -550,6 +563,8 @@ export async function buildFrameworkReadinessSummary(
           'App/operator live production evidence tail ledger open items',
         stage_receipt_freshness_tail:
           'stage production caller, expected receipt, and monitor freshness workorders',
+        evidence_envelope:
+          'single refs-only owner/scope/payload-kind claim reading across stage, external evidence, domain dispatch, and cleanup receipts',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
         retired_alias_policy:
@@ -660,6 +675,15 @@ export async function buildFrameworkReadinessSummary(
         legacy_cleanup_item_count: numberValue(closeoutSummary.legacy_cleanup_item_count),
         closeout_item_is_completion_claim: false,
         authority_boundary: familyRuntimeCloseout.authority_boundary ?? authorityBoundary(),
+      },
+      evidence_envelope: {
+        source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
+        summary: evidenceEnvelopeSummary(readinessEvidenceEnvelope),
+        open_envelope_count: evidenceEnvelopeOpenCount(readinessEvidenceEnvelope),
+        claim_policy:
+          'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
+        authority_boundary:
+          record(readinessEvidenceEnvelope.authority_boundary),
       },
       provider_slo_status: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

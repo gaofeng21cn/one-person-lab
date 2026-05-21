@@ -535,6 +535,18 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.stage_production_attempt_request_route_count, 1);
     assert.equal(drilldown.summary.app_operator_production_evidence_tail_item_count >= 1, true);
     assert.equal(drilldown.summary.app_operator_production_evidence_tail_open_item_count >= 1, true);
+    assert.equal(drilldown.summary.evidence_envelope_count > 0, true);
+    assert.equal(drilldown.summary.evidence_envelope_open_count, 1);
+    assert.equal(
+      drilldown.summary.evidence_envelope_open_count
+        + drilldown.summary.evidence_envelope_closed_count
+        + drilldown.summary.evidence_envelope_blocked_count,
+      drilldown.summary.evidence_envelope_count,
+    );
+    assert.equal(drilldown.summary.evidence_envelope_blocked_count >= 0, true);
+    assert.equal(drilldown.summary.evidence_envelope_domain_ready_claim_count, 0);
+    assert.equal(drilldown.summary.evidence_envelope_production_ready_claim_count, 0);
+    assert.equal(drilldown.summary.evidence_envelope_artifact_authority_claim_count, 0);
     assert.equal(Object.hasOwn(drilldown.summary, 'deprecated_alias_metadata'), false);
 
     assert.equal(drilldown.route_graph_refs.surface_kind, 'opl_app_drilldown_route_graph_refs');
@@ -645,6 +657,26 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       drilldown.domain_legacy_cleanup_plan_refs.authority_boundary.can_move_or_delete_domain_repo_files,
       false,
     );
+    assert.equal(drilldown.evidence_envelope.surface_kind, 'opl_evidence_envelope_projection');
+    assert.equal(drilldown.evidence_envelope.total_ref_count, drilldown.summary.evidence_envelope_count);
+    assert.equal(drilldown.evidence_envelope.omitted_ref_count, 0);
+    assert.equal(drilldown.evidence_envelope.summary.open_envelope_count, 1);
+    assert.equal(drilldown.evidence_envelope.summary.domain_ready_claim_count, 0);
+    assert.equal(drilldown.evidence_envelope.summary.production_ready_claim_count, 0);
+    assert.equal(drilldown.evidence_envelope.summary.artifact_authority_claim_count, 0);
+    assert.equal(drilldown.evidence_envelope.authority_boundary.can_write_domain_truth, false);
+    assert.equal(drilldown.evidence_envelope.authority_boundary.can_claim_production_ready, false);
+    const reviewEnvelope = drilldown.evidence_envelope.envelopes.find(
+      (entry: { envelope_id: string }) =>
+        entry.envelope_id === 'stage_production_evidence:medautoscience:review',
+    );
+    assert.equal(reviewEnvelope.status, 'open');
+    assert.equal(reviewEnvelope.payload_kind, 'stage_expected_receipt_or_monitor_freshness_refs');
+    assert.equal(reviewEnvelope.scope.stage_id, 'review');
+    assert.equal(reviewEnvelope.claim_allowed.domain_ready, false);
+    assert.equal(reviewEnvelope.claim_allowed.production_ready, false);
+    assert.equal(typeof reviewEnvelope.next_route, 'string');
+    assert.equal(reviewEnvelope.next_route.length > 0, true);
     const legacyCleanupApplyRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) => ref.action_id === 'legacy-cleanup:medautoscience:apply',
     );

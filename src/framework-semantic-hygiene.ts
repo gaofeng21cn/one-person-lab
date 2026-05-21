@@ -4,6 +4,8 @@ export type SemanticHygieneGateId =
   | 'provider_readiness_single_truth'
   | 'generated_surface_drift_owner_claim'
   | 'app_operator_drilldown_overprojection'
+  | 'evidence_envelope_single_semantics'
+  | 'app_release_evidence_not_contract_only'
   | 'family_runtime_parser_monolith'
   | 'stage_launch_guarantee_clarity'
   | 'legacy_vocabulary_active_leakage';
@@ -85,6 +87,39 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
         'App/operator drilldown is refs-only projection and cannot authorize domain readiness, export quality, or artifact mutation.',
       next_action:
         'Keep drilldown outputs explicit about refs-only authority and add blockers when the projection lacks owner/source evidence.',
+    },
+    {
+      gate_id: 'evidence_envelope_single_semantics',
+      pollution_point: 'evidence envelope single semantics',
+      status: 'guarded',
+      owner: 'one-person-lab',
+      source_evidence: [
+        'src/evidence-envelope.ts',
+        'src/framework-readiness.ts',
+        'src/family-runtime-production-closeout.ts',
+        'src/runtime-tray-app-operator-drilldown.ts',
+      ],
+      current_state_claims: NO_READY_CLAIMS,
+      required_boundary:
+        'Stage evidence, external evidence, domain dispatch, and cleanup receipts must share the same owner/scope/payload_kind/claim_allowed/receipt_refs/typed_blocker_refs/next_route reading without becoming a second readiness source.',
+      next_action:
+        'Keep evidence envelopes as refs-only projections consumed by framework readiness and App drilldown; do not add domain-ready, artifact-ready, quality/export, or production-ready verdict fields.',
+    },
+    {
+      gate_id: 'app_release_evidence_not_contract_only',
+      pollution_point: 'App release evidence contract-only substitution',
+      status: 'guarded',
+      owner: 'one-person-lab-app',
+      source_evidence: [
+        '../one-person-lab-app/contracts/app-release-channel.json',
+        '../one-person-lab-app/scripts/validate-release-evidence-bundle.ts',
+        '../one-person-lab-app/tests/release/app-release-boundary.test.ts',
+      ],
+      current_state_claims: NO_READY_CLAIMS,
+      required_boundary:
+        'Packaged App release evidence must require real bundle files, JSON sidecars, screenshots, first-run/settings smoke, and release verification; contract-only proof cannot stand in for user-path evidence.',
+      next_action:
+        'Keep App release validators fail-closed on missing bundle artifacts and report missing evidence instead of claiming packaged App acceptance.',
     },
     {
       gate_id: 'family_runtime_parser_monolith',
