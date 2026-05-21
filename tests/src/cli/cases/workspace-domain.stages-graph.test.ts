@@ -494,6 +494,17 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
       && entry.default_surface === false
       && entry.can_block_launch === false
     )), true);
+    assert.equal(readiness.lens_summary.every((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
+      entry.check_id === 'stage_admission'
+        ? entry.role === 'stage_kernel_gate'
+          && entry.author_required === true
+          && entry.default_surface === true
+          && entry.can_block_launch === true
+        : entry.role === 'diagnostic_only'
+          && entry.author_required === false
+          && entry.default_surface === false
+          && entry.can_block_launch === false
+    )), true);
     assert.equal(readiness.drilldown_refs.includes('opl stages proof-bundle --domain mas'), true);
     assert.equal(readiness.drilldown_refs.includes('opl stages replay-certification --domain mas'), true);
     assert.deepEqual(readiness.stage_kernel.hard_blocker_sources, [
@@ -538,8 +549,19 @@ test('family stage readiness aggregates existing drilldown surfaces without doma
     ]);
     assert.equal(readiness.ai_capability_aperture.executor_strategy_owner, 'selected_ai_executor_and_domain_owner');
     assert.deepEqual(readiness.full_detail_args, ['--detail', 'full']);
-    assert.equal(Object.hasOwn(readiness, 'domain_ready_status'), false);
-    assert.equal(Object.hasOwn(readiness, 'quality_verdict'), false);
+    for (const forbiddenReadyField of [
+      'domain_ready_status',
+      'domain_ready_verdict',
+      'quality_verdict',
+      'artifact_authority_verdict',
+      'production_ready_verdict',
+      'artifact_ready_status',
+      'production_ready_status',
+      'domain_quality_verdict',
+    ]) {
+      assert.equal(Object.hasOwn(readiness, forbiddenReadyField), false, `${forbiddenReadyField} must stay out of readiness summary`);
+      assert.equal(Object.hasOwn(readiness.summary, forbiddenReadyField), false, `${forbiddenReadyField} must stay out of readiness counters`);
+    }
     assert.equal(readiness.authority_boundary.opl_role, 'stage_readiness_cli_summary_only');
     assert.equal(readiness.authority_boundary.ai_internal_strategy_contract, false);
     assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
