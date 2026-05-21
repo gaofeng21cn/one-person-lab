@@ -59,6 +59,8 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
     assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.supported_task_kinds, [
       'domain_route/reconcile-apply',
+      'publication_aftercare/analysis-queue-progress',
+      'publication_aftercare/reviewer-refresh',
     ]);
     assert.equal(
       output.runtime_manager.family_runtime_queue.mas_domain_route_projection.owner_route_handoff_ref,
@@ -80,6 +82,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.action_refs, [
       'domain_route_reconcile_apply',
+      'ai_reviewer_recheck_execute_dispatch',
     ]);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_install_domain_daemon, false);
@@ -172,6 +175,14 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
+    assert.deepEqual(
+      runtimeManagerContract.family_runtime_queue.mas_domain_route_projection.supported_task_kinds,
+      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.supported_task_kinds,
+    );
+    assert.deepEqual(
+      runtimeManagerContract.family_runtime_queue.mas_domain_route_projection.action_refs,
+      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.action_refs,
+    );
     assert.equal(
       runtimeManagerContract.standard_domain_agent_scaffold.surface_kind,
       output.runtime_manager.standard_domain_agent_scaffold.surface_kind,

@@ -384,6 +384,92 @@ JSON
   }
 });
 
+test('family-runtime hydrates MAS publication aftercare reviewer refresh refs without MAS truth writes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-reviewer-refresh-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-reviewer-refresh-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "publication_aftercare/reviewer-refresh",
+      "priority": 40,
+      "source": "mas-publication-aftercare",
+      "dedupe_key": "mas:dm-cvd:DM002:publication-aftercare:reviewer-refresh:sha256-reviewer",
+      "dispatch_owner": "med-autoscience",
+      "profile_name": "dm-cvd",
+      "source_fingerprint": "sha256-reviewer",
+      "source_refs": [
+        {"role": "reviewer_feedback", "ref": "studies/DM002/reviewer_feedback/latest.json"}
+      ],
+      "owner_route_refs": ["owner-route:mas/DM002/ai-reviewer-refresh"],
+      "owner_receipt_refs": ["owner-receipt:mas/DM002/reviewer-feedback-intake"],
+      "typed_blocker_refs": ["typed-blocker:mas/DM002/reviewer-refresh-required"],
+      "payload": {
+        "profile": "/tmp/dm-cvd.local.toml",
+        "study_id": "DM002",
+        "publication_aftercare_reason": "reviewer_refresh_owner_route_ref",
+        "authority_boundary": "mas_owner_route_task_ref_only"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","closeout_refs":["mas-receipt:DM002/aftercare-reviewer-refresh-queued"]}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test-hydrate', '--hydrate'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: `/bin/bash ${exportPath}`,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: `/bin/bash ${dispatchPath}`,
+    }));
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+    const task = queue.family_runtime_queue.tasks[0];
+    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.task_kind, 'publication_aftercare/reviewer-refresh');
+    assert.equal(task.domain_route.route_ref, 'publication_aftercare/reviewer-refresh');
+    assert.equal(task.domain_route.action_ref, 'ai_reviewer_recheck_execute_dispatch');
+    assert.equal(task.domain_route.study_id, 'DM002');
+    assert.equal(task.domain_route.publication_aftercare_reason, 'reviewer_refresh_owner_route_ref');
+    assert.deepEqual(task.domain_route.owner_route_refs, ['owner-route:mas/DM002/ai-reviewer-refresh']);
+    assert.deepEqual(task.domain_route.owner_receipt_refs, ['owner-receipt:mas/DM002/reviewer-feedback-intake']);
+    assert.deepEqual(task.domain_route.typed_blocker_refs, ['typed-blocker:mas/DM002/reviewer-refresh-required']);
+    assert.equal(task.domain_route.authority_boundary.writes_mas_truth, false);
+    assert.equal(task.domain_route.authority_boundary.writes_publication_quality, false);
+    assert.equal(task.domain_route.authority_boundary.queue_owns_attempts_retry_and_dead_letter, true);
+    assert.equal(dispatchedTask.domain_route.route_ref, 'publication_aftercare/reviewer-refresh');
+    assert.equal(dispatchedTask.domain_route.action_ref, 'ai_reviewer_recheck_execute_dispatch');
+    assert.deepEqual(dispatchedTask.domain_route.owner_route_refs, ['owner-route:mas/DM002/ai-reviewer-refresh']);
+    assert.equal(dispatchedTask.authority_boundary.opl, 'typed_queue_and_dispatch_only');
+    assert.equal(dispatchedTask.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime preserves MAS paper autonomy task projection through hydrate and dispatch', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-export-'));

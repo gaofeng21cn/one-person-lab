@@ -5,6 +5,8 @@ import {
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
+  MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE,
+  MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH,
   MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
   OPL_RUNTIME_OWNER_ROUTE,
 } from './family-runtime-mas-domain-route.ts';
@@ -396,9 +398,12 @@ export async function buildRuntimeManager(input: { persistNativeIndexes?: boolea
           accepted_runtime_owner_route_ref: OPL_RUNTIME_OWNER_ROUTE,
           supported_task_kinds: [
             MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+            MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE,
+            MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH,
           ],
           action_refs: [
             MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
+            'ai_reviewer_recheck_execute_dispatch',
           ],
           state_projection: [
             'study_id',

@@ -232,10 +232,13 @@
       "owner_route_handoff_ref": "mas_runtime_owner_route_handoff",
       "accepted_runtime_owner_route_ref": "opl_runtime_owner_route",
       "supported_task_kinds": [
-        "domain_route/reconcile-apply"
+        "domain_route/reconcile-apply",
+        "publication_aftercare/analysis-queue-progress",
+        "publication_aftercare/reviewer-refresh"
       ],
       "action_refs": [
-        "domain_route_reconcile_apply"
+        "domain_route_reconcile_apply",
+        "ai_reviewer_recheck_execute_dispatch"
       ],
       "accepted_runtime_responsibilities": [
         "generic_runtime_queue",
