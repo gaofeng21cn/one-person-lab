@@ -347,6 +347,8 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.live_closeout_evidence.summary.live_external_owner_acceptance_count, 1);
   assert.equal(result.live_closeout_evidence.summary.repo_contract_fixture_drill_count, 1);
   assert.equal(result.live_closeout_evidence.summary.external_owner_acceptance_missing_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.fixture_drill_owner_acceptance_open_count, 1);
+  assert.equal(result.live_closeout_evidence.summary.external_owner_closeout_refs_ready_count, 1);
   assert.equal(result.live_closeout_evidence.summary.forbidden_owner_receipt_write_count, 0);
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('route_eligibility'));
   assert.ok(result.live_closeout_evidence.required_closeout_ref_groups.includes('patrol_observation_ref'));
@@ -390,6 +392,7 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.ok(directDrill);
   assert.ok(forkPrDrill);
   assert.equal(directDrill.route_status, 'closeout_refs_ready');
+  assert.equal(directDrill.closeout_claim_status, 'external_owner_closeout_refs_ready');
   assert.equal(directDrill.closeout_refs.route_eligibility, 'eligible_direct_fix');
   assertStringRef(directDrill.closeout_refs.patrol_observation_ref, /^patrol-observation-ref:/);
   assertStringRef(directDrill.closeout_refs.diff_ref, /^diff-ref:/);
@@ -401,9 +404,11 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(directDrill.closeout_refs.pr_review_ref, null);
   assertStringRef(directDrill.closeout_refs.owner_acceptance_ref, /^external-owner-ref:/);
   assert.equal(directDrill.closeout_refs.owner_acceptance_ref_kind, 'live_external_owner_ref');
+  assert.equal(directDrill.closeout_refs.owner_acceptance_status, 'external_owner_acceptance_observed');
   assert.equal(directDrill.closeout_refs.owner_acceptance_is_owner_receipt, false);
   assert.equal(directDrill.closeout_refs.evidence_source, 'live_external_owner_evidence');
   assert.equal(forkPrDrill.route_status, 'closeout_refs_incomplete');
+  assert.equal(forkPrDrill.closeout_claim_status, 'fixture_drill_owner_acceptance_open');
   assert.equal(forkPrDrill.closeout_refs.route_eligibility, 'eligible_fork_pr');
   assertStringRef(forkPrDrill.closeout_refs.patrol_observation_ref, /^patrol-observation-ref:/);
   assertStringRef(forkPrDrill.closeout_refs.diff_ref, /^diff-ref:/);
@@ -416,6 +421,7 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assertStringRef(forkPrDrill.closeout_refs.owner_acceptance_ref, /^repo-contract-fixture-ref:/);
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_ref_kind,
     'repo_contract_fixture_not_owner_receipt');
+  assert.equal(forkPrDrill.closeout_refs.owner_acceptance_status, 'fixture_drill_not_owner_acceptance');
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_is_owner_receipt, false);
   assert.equal(forkPrDrill.closeout_refs.evidence_source, 'repo_contract_test_fixture');
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_ref_is_external_owner_ref, false);
@@ -487,6 +493,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
   assert.equal(direct.surface_kind, 'opl_agent_lab_developer_mode_dynamic_repair_route');
   assert.equal(direct.route_decision, 'direct-fix');
   assert.equal(direct.route_status, 'closeout_refs_ready');
+  assert.equal(direct.closeout_claim_status, 'external_owner_closeout_refs_ready');
   assert.equal(direct.closeout_refs.developer_mode_projection_ref, direct.developer_mode_projection_ref);
   assert.equal(direct.closeout_refs.route_eligibility, 'eligible_direct_fix');
   assert.equal(direct.closeout_refs.patrol_observation_ref, 'patrol-observation-ref:mas/live-blocker');
@@ -526,6 +533,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
 
   assert.equal(fork.route_decision, 'fork-PR');
   assert.equal(fork.route_status, 'closeout_refs_ready');
+  assert.equal(fork.closeout_claim_status, 'external_owner_closeout_refs_ready');
   assert.equal(fork.closeout_refs.route_eligibility, 'eligible_fork_pr');
   assert.equal(fork.closeout_refs.commit_ref, null);
   assert.equal(fork.closeout_refs.fork_repo_ref, 'github-fork-ref:developer/redcube-ai');
@@ -553,6 +561,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
 
   assert.equal(observeOnly.route_decision, 'observe-only');
   assert.equal(observeOnly.route_status, 'closeout_refs_incomplete');
+  assert.equal(observeOnly.closeout_claim_status, 'external_owner_acceptance_missing');
   assert.equal(observeOnly.closeout_refs.route_eligibility, 'eligible_observe_only');
   assert.ok(observeOnly.missing_closeout_refs.includes('diff_ref'));
   assert.ok(observeOnly.missing_closeout_refs.includes('external_owner_acceptance_ref'));
@@ -577,6 +586,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
 
   assert.equal(blocked.route_decision, 'blocked');
   assert.equal(blocked.route_status, 'blocked');
+  assert.equal(blocked.closeout_claim_status, 'blocked');
   assert.equal(blocked.closeout_refs.route_eligibility, 'blocked_developer_mode_projection');
 
   const mixed = buildDeveloperModeAgentLabRepairRoute({
@@ -587,6 +597,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
 
   assert.equal(mixed.route_decision, 'mixed');
   assert.equal(mixed.route_status, 'closeout_refs_ready');
+  assert.equal(mixed.closeout_claim_status, 'route_eligibility_only_not_route_closeout');
   assert.equal(mixed.closeout_refs.route_eligibility, 'eligible_mixed_routes');
 
   const invalidOwnerAcceptance = buildDeveloperModeAgentLabRepairRoute({
@@ -611,6 +622,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
 
   assert.equal(invalidOwnerAcceptance.route_decision, 'blocked');
   assert.equal(invalidOwnerAcceptance.route_status, 'blocked');
+  assert.equal(invalidOwnerAcceptance.closeout_claim_status, 'blocked');
   assert.equal(invalidOwnerAcceptance.closeout_refs.route_eligibility,
     'blocked_owner_acceptance_ref_must_be_external_owner_ref');
   assert.equal(invalidOwnerAcceptance.closeout_refs.owner_acceptance_ref, null);

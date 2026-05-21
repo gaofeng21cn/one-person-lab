@@ -614,6 +614,23 @@
         "pr_review_ref",
         "owner_acceptance_ref"
       ],
+      "closeout_status_fields": [
+        "route_status",
+        "closeout_claim_status",
+        "owner_acceptance_status"
+      ],
+      "closeout_claim_statuses": [
+        "blocked",
+        "external_owner_closeout_refs_ready",
+        "external_owner_acceptance_missing",
+        "fixture_drill_owner_acceptance_open",
+        "route_eligibility_only_not_route_closeout"
+      ],
+      "owner_acceptance_statuses": [
+        "external_owner_acceptance_observed",
+        "fixture_drill_not_owner_acceptance",
+        "missing_external_owner_acceptance"
+      ],
       "owner_acceptance_ref_policy": "external_owner_ref_only_fixture_refs_do_not_close_owner_acceptance",
       "authority_boundary": "The dynamic route builder classifies Developer Mode projection, repo permission, and patrol observation refs into blocked, observe-only, direct-fix, fork-PR, or mixed route decisions. It emits closeout refs only. owner_acceptance_ref must be an external owner ref. A repo-contract fixture ref may describe a non-owner fork/PR drill when external PR authority is unavailable, but it cannot close owner acceptance. OPL cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, or quality verdicts."
     },

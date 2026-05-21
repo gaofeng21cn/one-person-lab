@@ -248,6 +248,7 @@ function ownerAcceptanceRef(value: string | null, decision: DeveloperModeRouteDe
   const empty = {
     ref: null,
     kind: null,
+    status: 'missing_external_owner_acceptance',
     isExternalOwnerRef: false,
     isOwnerReceipt: false,
     evidenceSource: null,
@@ -260,6 +261,7 @@ function ownerAcceptanceRef(value: string | null, decision: DeveloperModeRouteDe
     return {
       ref: value,
       kind: 'live_external_owner_ref',
+      status: 'external_owner_acceptance_observed',
       isExternalOwnerRef: true,
       isOwnerReceipt: false,
       evidenceSource: 'live_external_owner_evidence',
@@ -269,6 +271,7 @@ function ownerAcceptanceRef(value: string | null, decision: DeveloperModeRouteDe
     return {
       ref: value,
       kind: 'repo_contract_fixture_not_owner_receipt',
+      status: 'fixture_drill_not_owner_acceptance',
       isExternalOwnerRef: false,
       isOwnerReceipt: false,
       evidenceSource: 'repo_contract_test_fixture',
@@ -317,6 +320,26 @@ function closeoutMissingRefs(
   return unique(missing);
 }
 
+function closeoutClaimStatus(
+  decision: DeveloperModeRouteDecision,
+  routeStatus: 'blocked' | 'closeout_refs_ready' | 'closeout_refs_incomplete',
+  missingCloseoutRefs: string[],
+  sanitizedOwnerAcceptanceRef: ReturnType<typeof ownerAcceptanceRef>,
+) {
+  if (routeStatus === 'blocked') {
+    return 'blocked';
+  }
+  if (missingCloseoutRefs.includes('external_owner_acceptance_ref')) {
+    return sanitizedOwnerAcceptanceRef.kind === 'repo_contract_fixture_not_owner_receipt'
+      ? 'fixture_drill_owner_acceptance_open'
+      : 'external_owner_acceptance_missing';
+  }
+  if (decision === 'mixed') {
+    return 'route_eligibility_only_not_route_closeout';
+  }
+  return 'external_owner_closeout_refs_ready';
+}
+
 export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentLabRepairRouteInput) {
   const refs = observationRefs(input.patrol_observation_refs);
   const initial = routeEligibility(input.developer_mode_projection, input.repo_permission);
@@ -333,6 +356,11 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
     sanitizedOwnerAcceptanceRef,
     refs.owner_acceptance_ref,
   );
+  const routeStatus = missingCloseoutRefs.length === 0 && decision !== 'blocked'
+    ? 'closeout_refs_ready'
+    : decision === 'blocked'
+      ? 'blocked'
+      : 'closeout_refs_incomplete';
 
   return {
     surface_kind: 'opl_agent_lab_developer_mode_dynamic_repair_route',
@@ -344,11 +372,13 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       initial.eligibility,
     ]),
     route_decision: decision,
-    route_status: missingCloseoutRefs.length === 0 && decision !== 'blocked'
-      ? 'closeout_refs_ready'
-      : decision === 'blocked'
-        ? 'blocked'
-        : 'closeout_refs_incomplete',
+    route_status: routeStatus,
+    closeout_claim_status: closeoutClaimStatus(
+      decision,
+      routeStatus,
+      missingCloseoutRefs,
+      sanitizedOwnerAcceptanceRef,
+    ),
     developer_mode_projection_ref: developerModeProjectionRef,
     patrol_observation_refs: unique([
       refs.patrol_observation_ref ?? '',
@@ -370,6 +400,7 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       pr_review_ref: decision === 'fork-PR' ? refs.pr_review_ref : null,
       owner_acceptance_ref: sanitizedOwnerAcceptanceRef.ref,
       owner_acceptance_ref_kind: sanitizedOwnerAcceptanceRef.kind,
+      owner_acceptance_status: sanitizedOwnerAcceptanceRef.status,
       owner_acceptance_ref_is_external_owner_ref: sanitizedOwnerAcceptanceRef.isExternalOwnerRef,
       owner_acceptance_is_owner_receipt: sanitizedOwnerAcceptanceRef.isOwnerReceipt,
       evidence_source: sanitizedOwnerAcceptanceRef.evidenceSource,
@@ -525,6 +556,10 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
         drill.closeout_refs.evidence_source === 'repo_contract_test_fixture').length,
       external_owner_acceptance_missing_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.missing_closeout_refs.includes('external_owner_acceptance_ref')).length,
+      fixture_drill_owner_acceptance_open_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.closeout_claim_status === 'fixture_drill_owner_acceptance_open').length,
+      external_owner_closeout_refs_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.closeout_claim_status === 'external_owner_closeout_refs_ready').length,
       forbidden_owner_receipt_write_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.owner_acceptance_ref?.startsWith('owner-receipt-ref:')).length,
     },
