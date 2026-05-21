@@ -444,9 +444,16 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
 ];
 
 const REQUIRED_RCA_PHYSICAL_SURFACES = [
-  'mcp_product_entry_domain_entry', 'product_entry_session_store', 'runtime_watch_projection',
-  'product_sidecar_guarded_actions', 'operator_evidence_stability_projection', 'visual_authority_functions',
-  'retired_product_entry_contract_tombstone_refs',
+  'mcp_product_entry_domain_entry',
+  'product_entry_session_store',
+  'runtime_watch_projection',
+  'product_sidecar_guarded_actions',
+  'operator_evidence_stability_projection',
+  'visual_authority_functions',
+];
+
+const REQUIRED_RCA_FORBIDDEN_LEGACY_SURFACE_IDS = [
+  'legacy_managed_runtime_gateway_names',
 ];
 
 const REQUIRED_META_SCRIPT_CLASSES = [
@@ -762,41 +769,59 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
   const policy = isRecord(policyFile.payload) ? policyFile.payload : null;
   const classifications = recordList(policy?.active_surface_classifications);
   const classifiedSurfaceIds = stringList(classifications.map((entry) => entry.surface_id));
-  const forbiddenActiveSurfaceIds = stringList(
-    (isRecord(policy?.legacy_name_policy) ? policy.legacy_name_policy : {}).forbidden_active_surface_ids,
-  );
+  const legacyNamePolicy = isRecord(policy?.legacy_name_policy) ? policy.legacy_name_policy : null;
+  const forbiddenActiveSurfaceIds = stringList(legacyNamePolicy?.forbidden_active_surface_ids);
   const ownerFlagViolations = classifications.flatMap((entry) => {
     const flags = isRecord(entry.forbidden_generic_owner_flags) ? entry.forbidden_generic_owner_flags : {};
     return Object.entries(flags)
       .filter(([, value]) => value !== false)
       .map(([flag]) => `rca_forbidden_owner_flag_true:${optionalString(entry.surface_id) ?? 'unknown'}:${flag}`);
   });
+  const legacyFlagViolations = [
+    legacyNamePolicy?.compatibility_alias_allowed === false
+      ? null
+      : 'rca_legacy_callable_old_name_must_be_false',
+    legacyNamePolicy?.active_generic_runtime_owner_allowed === false
+      ? null
+      : 'rca_legacy_active_generic_runtime_owner_must_be_false',
+    legacyNamePolicy?.active_generic_gateway_owner_allowed === false
+      ? null
+      : 'rca_legacy_active_generic_gateway_owner_must_be_false',
+    legacyNamePolicy?.active_generic_session_runtime_owner_allowed === false
+      ? null
+      : 'rca_legacy_active_generic_session_runtime_owner_must_be_false',
+  ].filter((entry): entry is string => Boolean(entry));
   const blockers = [
     policyFile.status === 'resolved' ? null : `rca_physical_source_morphology_policy_${policyFile.status}`,
     optionalString(policy?.canonical_pack_root) === 'agent/' ? null : 'rca_canonical_pack_root_must_be_agent_slash',
-    optionalString(policy?.status) === 'active_source_classification_policy_landed' ? null
+    optionalString(policy?.status) === 'active_source_classification_policy_landed'
+      ? null
       : 'rca_physical_source_morphology_policy_status_not_landed',
     ...REQUIRED_RCA_PHYSICAL_SURFACES
       .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
       .map((surfaceId) => `rca_physical_surface_unclassified:${surfaceId}`),
-    classifiedSurfaceIds.includes('legacy_managed_runtime_gateway_names')
-      ? 'rca_retired_legacy_surface_id_still_classified:legacy_managed_runtime_gateway_names' : null,
-    forbiddenActiveSurfaceIds.includes('legacy_managed_runtime_gateway_names') ? null
-      : 'rca_retired_legacy_surface_id_missing_from_forbidden_active_surface_ids',
+    ...REQUIRED_RCA_FORBIDDEN_LEGACY_SURFACE_IDS
+      .filter((surfaceId) => !forbiddenActiveSurfaceIds.includes(surfaceId))
+      .map((surfaceId) => `rca_forbidden_legacy_surface_id_missing:${surfaceId}`),
     ...ownerFlagViolations,
+    ...legacyFlagViolations,
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'declared' : 'blocked',
     policy_sources: ['contracts/physical_source_morphology_policy.json'],
     required_parity_gates: [
       'mcp_product_entry_session_store_runtime_watch_sidecar_operator_evidence_classified',
-      'visual_authority_functions_not_generic_runtime', 'retired_product_entry_contract_tombstone_refs_classified',
-      'legacy_managed_runtime_gateway_names_forbidden_as_active_surface_id',
+      'visual_authority_functions_not_generic_runtime',
+      'legacy_managed_runtime_gateway_names_tombstoned',
     ],
+    forbidden_legacy_surface_ids: forbiddenActiveSurfaceIds,
     allowed_residue_prefixes: [
-      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES, 'docs/history/',
-      'contracts/functional_privatization_audit.json', 'contracts/runtime-program/',
-      'packages/redcube-gateway/src/actions/product-sidecar-guarded-actions.ts', 'tests/',
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
+      'docs/history/',
+      'contracts/functional_privatization_audit.json',
+      'contracts/runtime-program/',
+      'packages/redcube-gateway/src/actions/product-sidecar-guarded-actions.ts',
+      'tests/',
       'contracts/physical_source_morphology_policy.json',
     ],
     blockers,

@@ -443,12 +443,9 @@ function configureReadyRcaMorphology(repoDir: string) {
       'product_sidecar_guarded_actions',
       'operator_evidence_stability_projection',
       'visual_authority_functions',
-      'retired_product_entry_contract_tombstone_refs',
     ].map((surface_id) => ({
       surface_id,
-      classification: surface_id === 'retired_product_entry_contract_tombstone_refs'
-        ? 'tombstone_or_provenance'
-        : 'domain_handler_or_refs_only_adapter',
+      classification: 'domain_handler_or_refs_only_adapter',
       forbidden_generic_owner_flags: {
         generic_runtime_owner: false,
         generated_surface_owner_in_domain_repo: false,
@@ -458,6 +455,10 @@ function configureReadyRcaMorphology(repoDir: string) {
       forbidden_active_surface_ids: [
         'legacy_managed_runtime_gateway_names',
       ],
+      compatibility_alias_allowed: false,
+      active_generic_runtime_owner_allowed: false,
+      active_generic_gateway_owner_allowed: false,
+      active_generic_session_runtime_owner_allowed: false,
     },
   });
 }
