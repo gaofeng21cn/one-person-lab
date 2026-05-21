@@ -443,6 +443,17 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('typed_blocker_refs'), true);
       assert.equal(dispatchWorkorderStep.full_detail_section, 'domain_dispatch_evidence');
     }
+    const stageMissingStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
+      (item: { step_kind: string }) => item.step_kind === 'stage_missing_evidence_followthrough',
+    );
+    if (stageMissingStep) {
+      assert.equal(stageMissingStep.owner, stageMissingStep.owner.toLowerCase());
+      assert.equal(stageMissingStep.owner.includes('-'), true);
+      assert.equal(
+        stageMissingStep.owner_id_policy,
+        'canonical_owner_id_source_owner_id_for_diagnostics_only',
+      );
+    }
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.length <= 5,
       true,
@@ -452,6 +463,18 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       true,
     );
     const firstMissingEvidence = summaryDrilldown.attention_first_payload.missing_evidence.items[0];
+    assert.equal(
+      summaryDrilldown.attention_first_payload.missing_evidence.items.every(
+        (item: { owner: string }) => item.owner === item.owner.toLowerCase(),
+      ),
+      true,
+    );
+    assert.equal(typeof firstMissingEvidence.owner, 'string');
+    assert.equal(firstMissingEvidence.owner.includes('-'), true);
+    assert.equal(
+      firstMissingEvidence.owner_id_policy,
+      'canonical_owner_id_source_owner_id_for_diagnostics_only',
+    );
     assert.equal(firstMissingEvidence.next_safe_action_id, 'stage-production-evidence:medautoscience:write_0:record');
     assert.equal(
       firstMissingEvidence.payload_requirement,

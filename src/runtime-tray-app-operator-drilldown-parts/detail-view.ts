@@ -3,6 +3,7 @@ import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
 } from '../domain-dispatch-evidence-workorder-packet.ts';
+import { canonicalOwnerId } from '../evidence-envelope.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -91,6 +92,23 @@ function firstString(...values: unknown[]) {
     }
   }
   return null;
+}
+
+function canonicalOwnerField(...values: unknown[]) {
+  const source = firstString(...values);
+  if (!source) {
+    return {
+      owner: 'domain_repository_or_app_live_operator',
+      owner_source_id: null,
+      owner_id_policy: 'canonical_owner_id_source_owner_id_for_diagnostics_only',
+    };
+  }
+  const owner = canonicalOwnerId(source);
+  return {
+    owner,
+    owner_source_id: owner === source ? null : source,
+    owner_id_policy: 'canonical_owner_id_source_owner_id_for_diagnostics_only',
+  };
 }
 
 function limitedItems<T>(items: T[]) {
@@ -295,8 +313,14 @@ function missingEvidenceItems(drilldown: JsonRecord) {
     .filter((stage) => stringList(stage.missing_production_evidence).length > 0)
     .map((stage) => {
       const action = findSafeActionForStage(actions, stage);
+      const ownerFields = canonicalOwnerField(
+        stage.target_domain_id,
+        stage.domain_id,
+        stage.project_id,
+        stage.owner,
+      );
       return {
-        owner: stringValue(stage.owner) ?? stringValue(stage.target_domain_id) ?? 'domain',
+        ...ownerFields,
         evidence_kind: 'stage_production_evidence',
         domain_id: firstString(stage.target_domain_id, stage.domain_id, stage.project_id),
         stage_id: stringValue(stage.stage_id),
@@ -321,8 +345,9 @@ function missingEvidenceItems(drilldown: JsonRecord) {
     .filter((request) => stringValue(request.external_receipt_status) !== 'verified')
     .map((request) => {
       const action = findSafeActionForEvidence(actions, request);
+      const ownerFields = canonicalOwnerField(request.domain_id);
       return {
-        owner: stringValue(request.domain_id) ?? 'domain',
+        ...ownerFields,
         evidence_kind: 'external_evidence_request',
         domain_id: stringValue(request.domain_id),
         request_id: stringValue(request.request_id),
@@ -335,8 +360,9 @@ function missingEvidenceItems(drilldown: JsonRecord) {
     .filter((gate) => stringValue(gate.external_receipt_status) !== 'verified')
     .map((gate) => {
       const action = findSafeActionForEvidence(actions, gate);
+      const ownerFields = canonicalOwnerField(gate.domain_id);
       return {
-        owner: stringValue(gate.domain_id) ?? 'domain',
+        ...ownerFields,
         evidence_kind: 'remaining_evidence_gate',
         domain_id: stringValue(gate.domain_id),
         gate_id: firstString(gate.gate_id, gate.request_id),
@@ -632,6 +658,8 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     steps.push({
       step_kind: 'stage_missing_evidence_followthrough',
       owner: stringValue(item.owner) ?? 'domain_repository_or_app_live_operator',
+      owner_source_id: stringValue(item.owner_source_id),
+      owner_id_policy: stringValue(item.owner_id_policy),
       status: 'needs_live_refs_or_typed_blocker',
       domain_id: stringValue(item.domain_id),
       stage_id: stringValue(item.stage_id),
