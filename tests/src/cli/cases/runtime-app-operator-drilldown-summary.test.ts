@@ -351,7 +351,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(firstMissingEvidence.next_safe_action_id, 'stage-production-evidence:medautoscience:write_0:record');
     assert.equal(
       firstMissingEvidence.payload_requirement,
-      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_source_scope_runtime_event_or_monitor_freshness',
     );
     assert.equal(firstMissingEvidence.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(firstMissingEvidence.route_requires_domain_or_app_payload, true);
@@ -359,6 +359,8 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       'domain_receipt_refs',
       'evidence_refs',
       'typed_blocker_refs',
+      'source_scope_refs',
+      'runtime_event_refs',
     ]);
     assert.equal(
       firstMissingEvidence.payload_workorder.surface_kind,

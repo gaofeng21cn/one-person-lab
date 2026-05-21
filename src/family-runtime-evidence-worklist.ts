@@ -590,7 +590,7 @@ function buildStageEvidenceWorkorderPacket(operatorRoutes: JsonRecord[]) {
   return {
     surface_kind: 'opl_stage_evidence_workorder_packet',
     packet_policy:
-      'refs_only_operator_workorders_for_stage_expected_receipt_and_monitor_freshness_closure',
+      'refs_only_operator_workorders_for_stage_expected_receipt_source_scope_runtime_event_and_monitor_freshness_closure',
     source_ref: '/runtime_tray_snapshot/app_operator_drilldown/operator_action_routing_refs',
     action_execution_surface: 'opl runtime action execute',
     summary: {

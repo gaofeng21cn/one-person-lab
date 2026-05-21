@@ -197,6 +197,8 @@ function externalEvidenceApplyArgs(
     'direct_hosted_parity_ref',
   ]);
   const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
+  const sourceScopeRefs = refsFromPayload(payload, ['source_scope_refs', 'source_scope_ref']);
+  const runtimeEventRefs = refsFromPayload(payload, ['runtime_event_refs', 'runtime_event_ref']);
   const receiptRef = stringValue(payload.receipt_ref);
   const extraArgs = [
     ...evidenceRefs.flatMap((ref) => ['--evidence-ref', ref]),
@@ -206,6 +208,8 @@ function externalEvidenceApplyArgs(
     ...releaseDistRefs.flatMap((ref) => ['--release-dist-ref', ref]),
     ...directHostedParityRefs.flatMap((ref) => ['--direct-hosted-parity-ref', ref]),
     ...ownerChainRefs.flatMap((ref) => ['--owner-chain-ref', ref]),
+    ...sourceScopeRefs.flatMap((ref) => ['--source-scope-ref', ref]),
+    ...runtimeEventRefs.flatMap((ref) => ['--runtime-event-ref', ref]),
     ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
   ];
   if (extraArgs.length === 0) {
@@ -218,6 +222,8 @@ function externalEvidenceApplyArgs(
         'evidence_refs',
         'domain_receipt_refs',
         'typed_blocker_refs',
+        'source_scope_refs',
+        'runtime_event_refs',
         'no_regression_refs',
         'release_dist_refs',
         'direct_hosted_parity_refs',

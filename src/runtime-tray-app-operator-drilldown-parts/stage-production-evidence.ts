@@ -27,7 +27,9 @@ type StageProductionEvidenceObligationId =
   | 'production_caller'
   | 'selected_executor_binding'
   | 'expected_receipt'
-  | 'monitor_freshness';
+  | 'monitor_freshness'
+  | 'source_scope'
+  | 'runtime_event';
 
 type StageProductionEvidenceObligationStatus =
   | 'closed_by_observed_evidence'
@@ -260,6 +262,8 @@ function receiptRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceRe
     ...receipt.evidence_refs,
     ...receipt.no_regression_refs,
     ...receipt.owner_chain_refs,
+    ...receipt.source_scope_refs,
+    ...receipt.runtime_event_refs,
   ]));
 }
 
@@ -273,6 +277,18 @@ function evidenceRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceR
   return uniqueStrings(receipts
     .filter((receipt) => receipt.receipt_status === 'verified')
     .flatMap((receipt) => receipt.evidence_refs));
+}
+
+function sourceScopeRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .flatMap((receipt) => receipt.source_scope_refs));
+}
+
+function runtimeEventRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
+  return uniqueStrings(receipts
+    .filter((receipt) => receipt.receipt_status === 'verified')
+    .flatMap((receipt) => receipt.runtime_event_refs));
 }
 
 function typedBlockerRefsForStageEvidence(receipts: ReturnType<typeof stageEvidenceReceipts>) {
@@ -511,6 +527,35 @@ function stageProductionEvidence(
         ...evidenceRefsForStageEvidence(externalStageEvidenceReceipts),
       ]),
     });
+    const observedSourceScopeRefs = observedExpectedRefs({
+      expectedRefs: sourceScopeRefs,
+      observedRefs: uniqueStrings([
+        ...observedRefs,
+        ...sourceScopeRefsForStageEvidence(externalStageEvidenceReceipts),
+      ]),
+    });
+    const unobservedSourceScopeRefs = unobservedExpectedRefs({
+      expectedRefs: sourceScopeRefs,
+      observedRefs: uniqueStrings([
+        ...observedRefs,
+        ...sourceScopeRefsForStageEvidence(externalStageEvidenceReceipts),
+      ]),
+    });
+    const runtimeEventRefs = runtimeRequirement?.runtime_event_refs ?? [];
+    const observedRuntimeEventRefs = observedExpectedRefs({
+      expectedRefs: runtimeEventRefs,
+      observedRefs: uniqueStrings([
+        ...observedRefs,
+        ...runtimeEventRefsForStageEvidence(externalStageEvidenceReceipts),
+      ]),
+    });
+    const unobservedRuntimeEventRefs = unobservedExpectedRefs({
+      expectedRefs: runtimeEventRefs,
+      observedRefs: uniqueStrings([
+        ...observedRefs,
+        ...runtimeEventRefsForStageEvidence(externalStageEvidenceReceipts),
+      ]),
+    });
     const triggerRefs = refValues(cohortStage?.trigger_refs);
     const cohortQueryRefs = refValues(cohortStage?.cohort_query_refs);
     const missingEvidence = [
@@ -519,13 +564,11 @@ function stageProductionEvidence(
       unobservedExpectedReceiptRefs.length > 0
         ? 'expected_receipt_ref_not_observed'
         : null,
-      sourceScopeRefs.length > 0
-        && !sourceScopeRefs.some((ref) => allObservedRefs.includes(ref))
+      unobservedSourceScopeRefs.length > 0
         ? 'source_scope_ref_not_observed'
         : null,
       runtimeRequirement?.required === true
-        && runtimeRequirement.runtime_event_refs.length > 0
-        && !runtimeRequirement.runtime_event_refs.some((ref) => allObservedRefs.includes(ref))
+        && unobservedRuntimeEventRefs.length > 0
         ? 'runtime_event_ref_not_observed'
         : null,
       unobservedMonitorFreshnessRefs.length > 0
@@ -574,6 +617,22 @@ function stageProductionEvidence(
         domainOwnedTypedBlockerRefs,
         domainOwnedTypedBlockerCount,
       }),
+      evidenceObligation({
+        obligationId: 'source_scope',
+        required: sourceScopeRefs.length > 0,
+        observedRefs: observedSourceScopeRefs,
+        unobservedRefs: unobservedSourceScopeRefs,
+        domainOwnedTypedBlockerRefs,
+        domainOwnedTypedBlockerCount,
+      }),
+      evidenceObligation({
+        obligationId: 'runtime_event',
+        required: runtimeRequirement?.required === true,
+        observedRefs: observedRuntimeEventRefs,
+        unobservedRefs: unobservedRuntimeEventRefs,
+        domainOwnedTypedBlockerRefs,
+        domainOwnedTypedBlockerCount,
+      }),
     ];
     return {
       ref: `/runtime_tray_snapshot/app_operator_drilldown/stage_production_evidence/${plane.target_domain_id}/${stage.stage_id}`,
@@ -601,7 +660,7 @@ function stageProductionEvidence(
       monitor_ref_projection_source: declaredMonitorFreshnessRefs.length > 0
         ? 'explicit_stage_contract_monitor_freshness_refs'
         : 'stage_monitor_refs_and_cohort_metrics_fallback',
-      runtime_event_refs: runtimeRequirement?.runtime_event_refs ?? [],
+      runtime_event_refs: runtimeEventRefs,
       expected_receipt_refs: expectedReceiptRefs,
       reviewer_receipt_refs: reviewerReceiptRefs,
       gate_receipt_refs: gateReceiptRefs,
@@ -622,6 +681,10 @@ function stageProductionEvidence(
       expected_receipt_declared: expectedReceiptRefs.length > 0,
       observed_expected_receipt_refs: observedExpectedReceiptRefs,
       unobserved_expected_receipt_refs: unobservedExpectedReceiptRefs,
+      observed_source_scope_refs: observedSourceScopeRefs,
+      unobserved_source_scope_refs: unobservedSourceScopeRefs,
+      observed_runtime_event_refs: observedRuntimeEventRefs,
+      unobserved_runtime_event_refs: unobservedRuntimeEventRefs,
       observed_evidence_refs: allObservedRefs,
       monitor_freshness_refs: observedMonitorFreshnessRefs,
       unobserved_monitor_refs: unobservedMonitorFreshnessRefs,

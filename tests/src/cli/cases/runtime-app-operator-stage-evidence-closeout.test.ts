@@ -118,6 +118,8 @@ test('stage production evidence record routes expose fail-closed workorder and c
       'domain_receipt_refs',
       'evidence_refs',
       'typed_blocker_refs',
+      'source_scope_refs',
+      'runtime_event_refs',
     ]);
     assert.deepEqual(route.optional_operator_payload_refs, [
       'no_regression_refs',
@@ -133,6 +135,8 @@ test('stage production evidence record routes expose fail-closed workorder and c
       'domain_receipt_refs',
       'evidence_refs',
       'typed_blocker_refs',
+      'source_scope_refs',
+      'runtime_event_refs',
     ]);
     assert.deepEqual(route.payload_ref_hints.evidence_refs_should_cover_monitor_freshness, [
       'metric:review/declared-freshness',
@@ -148,6 +152,8 @@ test('stage production evidence record routes expose fail-closed workorder and c
       'domain_receipt_refs',
       'evidence_refs',
       'typed_blocker_refs',
+      'source_scope_refs',
+      'runtime_event_refs',
     ]);
     assert.equal(route.payload_workorder.empty_payload_template_is_success_evidence, false);
     assert.match(
@@ -188,6 +194,8 @@ test('stage production evidence preflight rejects empty templates and placeholde
       'domain_receipt_refs',
       'evidence_refs',
       'typed_blocker_refs',
+      'source_scope_refs',
+      'runtime_event_refs',
     ]);
     assert.equal(emptyTemplate.payload.error.details.empty_payload_template_is_success_evidence, false);
     assert.equal(emptyTemplate.payload.error.details.preflight.status, 'blocked');
@@ -233,6 +241,7 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
         receipt_ref: 'mas-stage-review-current-receipt',
         evidence_refs: ['metric:review/declared-freshness'],
         domain_receipt_refs: ['mas:review-receipt', 'mas://receipts/review-owner-instance.json'],
+        runtime_event_refs: ['runtime_event:review.receipt_recorded'],
       }),
     ], {
       OPL_STATE_DIR: stateRoot,
@@ -313,7 +322,7 @@ test('stage production evidence typed blocker receipt closes App production tail
     assert.deepEqual(stage.domain_owned_typed_blocker_refs, [
       'mas-typed-blocker:review-owner-receipt-pending',
     ]);
-    assert.equal(stage.evidence_obligation_summary.blocked_by_domain_typed_blocker_count, 4);
+    assert.equal(stage.evidence_obligation_summary.blocked_by_domain_typed_blocker_count, 5);
 
     const tailItem = drilldown.production_evidence_tail_ledger.tail_items.find(
       (item: { tail_item: string; stage_id: string }) =>

@@ -855,7 +855,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(
       stageProductionEvidenceRecordRoute.payload_requirement,
-      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_source_scope_runtime_event_or_monitor_freshness',
     );
     assert.equal(stageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(stageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
@@ -866,6 +866,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       typed_blocker_refs: [],
       no_regression_refs: [],
       owner_chain_refs: [],
+      source_scope_refs: [],
+      runtime_event_refs: [],
     });
     assert.deepEqual(
       stageProductionEvidenceRecordRoute.payload_ref_hints.domain_receipt_refs_should_cover,
@@ -875,13 +877,21 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       stageProductionEvidenceRecordRoute.payload_ref_hints.evidence_refs_should_cover_monitor_freshness,
       ['metric:review/currentness'],
     );
+    assert.deepEqual(
+      stageProductionEvidenceRecordRoute.payload_ref_hints.source_scope_refs_should_cover,
+      ['source:review'],
+    );
+    assert.deepEqual(
+      stageProductionEvidenceRecordRoute.payload_ref_hints.runtime_event_refs_should_cover,
+      ['runtime_event:review.receipt_recorded'],
+    );
     assert.equal(
       stageProductionEvidenceRecordRoute.payload_template_policy,
       'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',
     );
     assert.equal(
       stageProductionEvidenceRecordRoute.open_reason,
-      'unobserved_expected_receipt_or_monitor_freshness_refs_require_domain_app_or_live_payload_before_closure',
+      'unobserved_stage_evidence_refs_require_domain_app_or_live_payload_before_closure',
     );
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
@@ -969,7 +979,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(
       bridgeStageProductionEvidenceRecordRoute.payload_requirement,
-      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_or_monitor_freshness',
+      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_source_scope_runtime_event_or_monitor_freshness',
     );
     assert.equal(bridgeStageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(bridgeStageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
