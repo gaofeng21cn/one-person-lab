@@ -580,6 +580,20 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       Math.min(domainDispatchWorkorderPacket.summary.workorder_count, 10),
     );
     assert.equal(
+      domainDispatchWorkorderPacket.workorders.every(
+        (item: { domain_id: string; route_domain_id: string; canonical_domain_id: string }) =>
+          item.route_domain_id === item.domain_id && item.canonical_domain_id.includes('-'),
+      ),
+      true,
+    );
+    assert.equal(
+      fullWorklist.domain_dispatch_evidence_workorder_attention_items.every(
+        (item: { domain_id: string; route_domain_id: string; canonical_domain_id: string }) =>
+          item.route_domain_id === item.domain_id && item.canonical_domain_id.includes('-'),
+      ),
+      true,
+    );
+    assert.equal(
       domainDispatchWorkorderPacket.authority_boundary.can_generate_domain_owner_receipt,
       false,
     );

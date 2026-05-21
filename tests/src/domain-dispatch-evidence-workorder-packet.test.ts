@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildDomainDispatchEvidenceWorkorderPacket } from '../../src/domain-dispatch-evidence-workorder-packet.ts';
+import {
+  buildDomainDispatchEvidenceWorkorderPacket,
+  compactDomainDispatchEvidenceWorkorderAttentionItems,
+} from '../../src/domain-dispatch-evidence-workorder-packet.ts';
 
 function domainDispatchRoute(domainId: string, stageAttemptId: string) {
   return {
@@ -65,8 +68,44 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
     packet.workorders.map((workorder) => workorder.domain_id).sort(),
     ['medautogrant', 'medautoscience', 'redcube'],
   );
+  assert.deepEqual(
+    packet.workorders.map((workorder) => workorder.route_domain_id).sort(),
+    ['medautogrant', 'medautoscience', 'redcube'],
+  );
+  assert.deepEqual(
+    packet.workorders.map((workorder) => workorder.canonical_domain_id).sort(),
+    ['med-autogrant', 'med-autoscience', 'redcube-ai'],
+  );
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      workorder.domain_id_policy
+        === 'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics'
+    ),
+    true,
+  );
   assert.equal(packet.summary.domain_count, 3);
   assert.equal(packet.summary.workorder_count, 3);
   assert.equal(packet.authority_boundary.can_generate_domain_owner_receipt, false);
   assert.equal(packet.authority_boundary.can_execute_domain_action, false);
+
+  const attentionItems = compactDomainDispatchEvidenceWorkorderAttentionItems(packet);
+  assert.deepEqual(
+    attentionItems.map((item) => item.domain_id).sort(),
+    ['medautogrant', 'medautoscience', 'redcube'],
+  );
+  assert.deepEqual(
+    attentionItems.map((item) => item.route_domain_id).sort(),
+    ['medautogrant', 'medautoscience', 'redcube'],
+  );
+  assert.deepEqual(
+    attentionItems.map((item) => item.canonical_domain_id).sort(),
+    ['med-autogrant', 'med-autoscience', 'redcube-ai'],
+  );
+  assert.equal(
+    attentionItems.every((item) =>
+      item.domain_id_policy
+        === 'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics'
+    ),
+    true,
+  );
 });

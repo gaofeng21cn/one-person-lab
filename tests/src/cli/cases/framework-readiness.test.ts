@@ -285,6 +285,13 @@ test('framework readiness summarizes default control-plane surfaces without auth
   for (const dispatchWorkorder of readiness.attention_first_payload
     .domain_dispatch_evidence_workorder_attention_items) {
     assert.equal(dispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
+    assert.equal(dispatchWorkorder.route_domain_id, dispatchWorkorder.domain_id);
+    assert.equal(typeof dispatchWorkorder.canonical_domain_id, 'string');
+    assert.equal(dispatchWorkorder.canonical_domain_id.includes('-'), true);
+    assert.equal(
+      dispatchWorkorder.domain_id_policy,
+      'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
+    );
     assert.equal(dispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(dispatchWorkorder.route_requires_domain_or_app_payload, true);
     assert.equal(dispatchWorkorder.can_execute, false);

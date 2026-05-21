@@ -329,6 +329,13 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         .domain_dispatch_evidence_workorder_attention_items[0];
     if (dispatchWorkorder) {
       assert.equal(dispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
+      assert.equal(dispatchWorkorder.route_domain_id, dispatchWorkorder.domain_id);
+      assert.equal(typeof dispatchWorkorder.canonical_domain_id, 'string');
+      assert.equal(dispatchWorkorder.canonical_domain_id.includes('-'), true);
+      assert.equal(
+        dispatchWorkorder.domain_id_policy,
+        'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
+      );
       assert.equal(dispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
       assert.equal(dispatchWorkorder.route_requires_domain_or_app_payload, true);
       assert.equal(dispatchWorkorder.can_execute, false);
@@ -421,6 +428,13 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     if (dispatchWorkorderStep) {
       assert.equal(dispatchWorkorderStep.owner, 'domain_repository_or_app_live_operator');
+      assert.equal(dispatchWorkorderStep.route_domain_id, dispatchWorkorderStep.domain_id);
+      assert.equal(typeof dispatchWorkorderStep.canonical_domain_id, 'string');
+      assert.equal(dispatchWorkorderStep.canonical_domain_id.includes('-'), true);
+      assert.equal(
+        dispatchWorkorderStep.domain_id_policy,
+        'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
+      );
       assert.equal(dispatchWorkorderStep.route_requires_domain_or_app_payload, true);
       assert.equal(dispatchWorkorderStep.can_create_owner_receipt, false);
       assert.equal(dispatchWorkorderStep.can_close_domain_ready, false);

@@ -26,12 +26,17 @@ function uniqueStringList(values: Array<string | null | undefined>) {
 
 function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
   const actionId = stringValue(route.action_id);
+  const routeDomainId = stringValue(route.domain_id);
   const requiredOperatorPayloadRefs = stringList(route.required_operator_payload_refs);
   return {
     item_id: `domain-dispatch-evidence-workorder:${actionId ?? 'unknown'}`,
     action_id: actionId,
     action_kind: stringValue(route.action_kind),
-    domain_id: stringValue(route.domain_id),
+    domain_id: routeDomainId,
+    route_domain_id: routeDomainId,
+    canonical_domain_id: routeDomainId ? canonicalOwnerId(routeDomainId) : null,
+    domain_id_policy:
+      'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
     stage_id: stringValue(route.stage_id),
     stage_attempt_id: stringValue(route.stage_attempt_id),
     request_id: stringValue(route.request_id),
@@ -160,6 +165,9 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     action_id: item.action_id,
     action_kind: item.action_kind,
     domain_id: item.domain_id,
+    route_domain_id: item.route_domain_id,
+    canonical_domain_id: item.canonical_domain_id,
+    domain_id_policy: item.domain_id_policy,
     stage_id: item.stage_id,
     stage_attempt_id: item.stage_attempt_id,
     request_id: item.request_id,
