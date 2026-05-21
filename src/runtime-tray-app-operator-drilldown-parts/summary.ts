@@ -71,28 +71,6 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
   const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
   const productionEvidenceTailBlockingItemCount = numberValue(productionTailSummary.blocking_tail_item_count);
-  const productionEvidenceTailDeprecatedAliasMetadata = {
-    production_evidence_tail_item_count: {
-      deprecated: true,
-      alias_for: 'app_operator_production_evidence_tail_item_count',
-      value: productionEvidenceTailItemCount,
-    },
-    production_evidence_tail_open_item_count: {
-      deprecated: true,
-      alias_for: 'app_operator_production_evidence_tail_open_item_count',
-      value: productionEvidenceTailOpenItemCount,
-    },
-    production_evidence_tail_owner_group_count: {
-      deprecated: true,
-      alias_for: 'app_operator_production_evidence_tail_owner_group_count',
-      value: productionEvidenceTailOwnerGroupCount,
-    },
-    production_evidence_tail_blocking_item_count: {
-      deprecated: true,
-      alias_for: 'app_operator_production_evidence_tail_blocking_item_count',
-      value: productionEvidenceTailBlockingItemCount,
-    },
-  };
 
   return {
     stage_attempt_count: input.attempts.length,
@@ -280,6 +258,5 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     opl_meta_agent_claims_domain_ready: oplMetaAgentSummary.claims_domain_ready === true,
     opl_meta_agent_claims_quality_verdict: oplMetaAgentSummary.claims_quality_verdict === true,
     opl_meta_agent_claims_default_promotion: oplMetaAgentSummary.claims_default_promotion === true,
-    deprecated_alias_metadata: productionEvidenceTailDeprecatedAliasMetadata,
   };
 }

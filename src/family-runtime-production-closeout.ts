@@ -16,7 +16,6 @@ type ProductionCloseoutInput = {
   providerKind: FamilyRuntimeProviderKind;
   executorKind: 'codex_cli';
   detailLevel?: 'summary' | 'full';
-  commandAlias?: 'evidence-worklist' | 'production-closeout';
 };
 
 const NOT_AUTHORIZED_CLAIMS = [
@@ -461,10 +460,6 @@ function closeoutCounts(
     closeout_item_count: closeoutItems.length,
     closed_item_count: closedItems.length,
     open_safe_action_item_count: openItems.length,
-    production_closeout_open_safe_action_item_count: {
-      value: openItems.length,
-      deprecated_alias_of: 'open_worklist_item_count',
-    },
     next_action_item_count: nextActionLedger.summary.next_action_item_count,
     next_action_group_count: nextActionLedger.summary.next_action_group_count,
     provider_scheduler_item_count: closeoutItems.filter((item) =>
@@ -705,18 +700,9 @@ export async function runFamilyRuntimeProductionCloseout(
   const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
   const counts = closeoutCounts(closeoutItems, openItems, closedItems, nextActionLedger);
   const detailLevel = input.detailLevel ?? 'summary';
-  const commandAlias = input.commandAlias ?? 'evidence-worklist';
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
   ).length;
-  const deprecatedAlias = commandAlias === 'production-closeout'
-    ? {
-        command: 'production-closeout',
-        deprecated_alias_of: 'evidence-worklist',
-        preferred_command:
-          'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
-      }
-    : null;
   const commonPayload = {
     surface_kind: 'opl_family_runtime_evidence_worklist',
     surface_role: 'derived_operator_attention_lens',
@@ -724,8 +710,7 @@ export async function runFamilyRuntimeProductionCloseout(
     lens_policy: 'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
     worklist_mode: 'refs_only_summary',
     closeout_mode: 'dry_run_summary',
-    command_alias: commandAlias,
-    ...(deprecatedAlias ? { deprecated_alias_of: deprecatedAlias.deprecated_alias_of } : {}),
+    command: 'evidence-worklist',
     family_defaults: input.familyDefaults === true,
     selected_provider: input.providerKind,
     effective_provider: stringValue(record(snapshot.runtime_tray_snapshot.runtime_health).provider_kind)
@@ -742,20 +727,6 @@ export async function runFamilyRuntimeProductionCloseout(
     open_worklist_item_count: openItems.length,
     closed_refs_only_item_count: closedItems.length,
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
-    production_closeout_open_safe_action_item_count: {
-      value: openItems.length,
-      deprecated_alias_of: 'open_worklist_item_count',
-    },
-    compatibility_aliases: {
-      production_closeout_open_safe_action_item_count: {
-        value: openItems.length,
-        deprecated_alias_of: 'open_worklist_item_count',
-      },
-      production_closeout_command: {
-        deprecated_alias_of: 'evidence-worklist',
-      },
-    },
-    ...(deprecatedAlias ? { deprecated_alias: deprecatedAlias } : {}),
     source_refs: {
       app_operator_drilldown_ref: '/runtime_tray_snapshot/app_operator_drilldown',
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',

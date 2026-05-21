@@ -435,7 +435,6 @@ export async function buildFrameworkReadinessSummary(
       familyDefaults: true,
       providerKind: 'temporal',
       executorKind: 'codex_cli',
-      commandAlias: 'evidence-worklist',
     })).family_runtime_production_closeout,
   );
 
@@ -477,8 +476,7 @@ export async function buildFrameworkReadinessSummary(
   );
   const appOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
   const stageProductionCallerTailCount = numberValue(appSummary.stage_production_evidence_missing_caller_stage_count);
-  const evidenceWorklistOpenCount = countValue(closeoutSummary.open_worklist_item_count)
-    || countValue(closeoutSummary.production_closeout_open_safe_action_item_count);
+  const evidenceWorklistOpenCount = countValue(closeoutSummary.open_worklist_item_count);
   const stageReceiptFreshnessOpenWorkorderCount =
     countValue(closeoutSummary.stage_receipt_freshness_open_workorder_count);
   const agentStructuralEvidenceTailCount =
@@ -554,8 +552,8 @@ export async function buildFrameworkReadinessSummary(
           'stage production caller, expected receipt, and monitor freshness workorders',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
-        deprecated_alias_policy:
-          'legacy production_evidence_tail_* and production_closeout_* aliases stay inside source drilldowns and are not emitted as framework readiness defaults',
+        retired_alias_policy:
+          'family-runtime evidence-worklist is the only active worklist command; legacy production_closeout aliases are removed from active machine outputs',
       },
       evidence_tails: {
         agent_structural_evidence_tail: {

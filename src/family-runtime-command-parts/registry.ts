@@ -45,7 +45,7 @@ function staticCommand(
   };
 }
 
-export const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|production-closeout|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export';
+export const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|intake|tick|enqueue|lifecycle apply|attempt create|attempt start|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|approve|notify list|events export';
 
 export const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {
@@ -101,10 +101,6 @@ export const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
     command_path: 'lifecycle reconcile',
     parse: (mode, rest) =>
       mode === 'lifecycle' && rest[0] === 'reconcile' ? parseLifecycleReconcileArgs(rest) : null,
-  },
-  {
-    command_path: 'production-closeout',
-    parse: (mode, rest) => mode === 'production-closeout' ? parseProductionCloseoutArgs([mode, ...rest]) : null,
   },
   {
     command_path: 'evidence-worklist',

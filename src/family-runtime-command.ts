@@ -50,7 +50,6 @@ export type FamilyRuntimeCommandInput =
       providerKind: FamilyRuntimeProviderKind;
       executorKind: 'codex_cli';
       detailLevel?: 'summary' | 'full';
-      commandAlias?: 'evidence-worklist' | 'production-closeout';
     };
   }
   | {

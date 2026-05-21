@@ -3,14 +3,18 @@ import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import { assertProviderKind } from './shared.ts';
 
-type ProductionCloseoutCommandAlias = 'evidence-worklist' | 'production-closeout';
-
-function closeoutUsage(commandAlias: ProductionCloseoutCommandAlias) {
-  return `opl family-runtime ${commandAlias} --family-defaults --provider temporal --executor-kind codex_cli [--detail summary|full] [--full]`;
+function closeoutUsage() {
+  return 'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli [--detail summary|full] [--full]';
 }
 
 export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeCommandInput {
-  const commandAlias = rest[0] === 'evidence-worklist' ? 'evidence-worklist' : 'production-closeout';
+  if (rest[0] !== 'evidence-worklist') {
+    throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${rest[0] ?? ''}.`, {
+      usage: closeoutUsage(),
+      retired_subcommands: ['production-closeout'],
+      replacement: 'evidence-worklist',
+    });
+  }
   let familyDefaults = false;
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let executorKind: 'codex_cli' | undefined;
@@ -24,7 +28,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
     } else if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
       if (providerKind !== 'temporal') {
-        throw new FrameworkContractError('cli_usage_error', `family-runtime ${commandAlias} supports only --provider temporal.`, {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime evidence-worklist supports only --provider temporal.', {
           provider_kind: providerKind,
           allowed_provider_kinds: ['temporal'],
         });
@@ -32,7 +36,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
       index += 1;
     } else if (token === '--executor-kind' && value) {
       if (value !== 'codex_cli') {
-        throw new FrameworkContractError('cli_usage_error', `family-runtime ${commandAlias} supports only --executor-kind codex_cli.`, {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime evidence-worklist supports only --executor-kind codex_cli.', {
           executor_kind: value,
           allowed_executor_kinds: ['codex_cli'],
         });
@@ -43,7 +47,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
       detailLevel = 'full';
     } else if (token === '--detail' && value) {
       if (value !== 'summary' && value !== 'full') {
-        throw new FrameworkContractError('cli_usage_error', `family-runtime ${commandAlias} --detail must be summary or full.`, {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime evidence-worklist --detail must be summary or full.', {
           detail: value,
           allowed_detail_levels: ['summary', 'full'],
         });
@@ -51,15 +55,15 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
       detailLevel = value;
       index += 1;
     } else {
-      throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime ${commandAlias} option: ${token}.`, {
+      throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime evidence-worklist option: ${token}.`, {
         option: token,
-        usage: closeoutUsage(commandAlias),
+        usage: closeoutUsage(),
       });
     }
   }
 
   if (!familyDefaults) {
-    throw new FrameworkContractError('cli_usage_error', `family-runtime ${commandAlias} requires --family-defaults.`, {
+    throw new FrameworkContractError('cli_usage_error', 'family-runtime evidence-worklist requires --family-defaults.', {
       required: ['--family-defaults'],
     });
   }
@@ -70,7 +74,6 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
       providerKind: providerKind ?? 'temporal',
       executorKind: executorKind ?? 'codex_cli',
       detailLevel,
-      commandAlias,
     },
   };
 }

@@ -403,10 +403,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       Object.keys(summaryDrilldown.summary).filter((key) => key.startsWith('production_evidence_tail_')),
       [],
     );
-    assert.equal(
-      summaryDrilldown.summary.deprecated_alias_metadata.production_evidence_tail_item_count.value,
-      summaryDrilldown.summary.app_operator_production_evidence_tail_item_count,
-    );
+    assert.equal(Object.hasOwn(summaryDrilldown.summary, 'deprecated_alias_metadata'), false);
     assert.equal(
       summaryDrilldown.summary.provider_slo_cadence_window_status,
       summaryDrilldown.summary.provider_cadence_window_status,
