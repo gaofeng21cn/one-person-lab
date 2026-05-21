@@ -203,35 +203,16 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       metaAgentBound ? 2 : 0,
     );
     assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_evidence_after_contract_status,
-      metaAgentBound ? 'target_owner_receipt_or_typed_blocker_refs_projected' : 'not_observed',
+      Object.keys(summaryDrilldown.summary).some((key) =>
+        key.startsWith('opl_meta_agent_scaleout_owner_receipt_')
+        || key.startsWith('opl_meta_agent_scaleout_typed_blocker_')
+        || key.startsWith('opl_meta_agent_scaleout_agent_lab_')
+        || key.startsWith('opl_meta_agent_scaleout_no_forbidden_write_')
+        || key.startsWith('opl_meta_agent_scaleout_cleanup_')
+        || key === 'opl_meta_agent_evidence_after_contract_status'
+      ),
+      false,
     );
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_scaleout_owner_receipt_target_count,
-      metaAgentBound ? 2 : 0,
-    );
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_scaleout_typed_blocker_target_count,
-      metaAgentBound ? 1 : 0,
-    );
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_scaleout_owner_receipt_or_typed_blocker_target_count,
-      metaAgentBound ? 2 : 0,
-    );
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_scaleout_agent_lab_result_target_count,
-      metaAgentBound ? 2 : 0,
-    );
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_scaleout_no_forbidden_write_target_count,
-      metaAgentBound ? 2 : 0,
-    );
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_scaleout_cleanup_closeout_target_count,
-      metaAgentBound ? 2 : 0,
-    );
-    assert.equal(summaryDrilldown.summary.opl_meta_agent_scaleout_domain_ready_claim_count, 0);
-    assert.equal(summaryDrilldown.summary.opl_meta_agent_scaleout_default_promotion_claim_count, 0);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_domain_ready, false);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_quality_verdict, false);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_default_promotion, false);
