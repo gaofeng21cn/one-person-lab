@@ -9,10 +9,17 @@ function exportOwnerFingerprint(payload: Record<string, unknown>) {
     : null;
 }
 
+function trimmedString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function sourceFingerprint(payload: Record<string, unknown>) {
-  return typeof payload.source_fingerprint === 'string' && payload.source_fingerprint.trim()
-    ? payload.source_fingerprint.trim()
-    : null;
+  const topLevelSourceFingerprint = trimmedString(payload.source_fingerprint);
+  if (topLevelSourceFingerprint) {
+    return topLevelSourceFingerprint;
+  }
+  const repairWorkUnit = isRecord(payload.repair_work_unit) ? payload.repair_work_unit : null;
+  return trimmedString(repairWorkUnit?.source_fingerprint);
 }
 
 export function deadLetterRedriveDecision(

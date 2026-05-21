@@ -17,6 +17,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - OPL queue status 可以展示 `owner_route_refs`、`owner_receipt_refs`、`typed_blocker_refs`、`source_refs`、`source_fingerprint` 与 publication aftercare reason，但这些只是 refs 和投影，不是 MAS quality verdict、study truth 或 artifact authority。
 - MAS sidecar dispatch 仍是 domain owner callable；OPL 只负责 queue、attempt、dispatch transport、retry/dead-letter 和 operator status。是否更新论文、publication gate、AI reviewer verdict 或 current package，继续由 MAS owner receipt / typed blocker 决定。
 - 任何 DM002 这类 paper-line 卡住时，优先检查 OPL family-runtime hydration / queue / attempt / dead-letter，再回到 MAS owner surface；不得把 liveness / redrive 仲裁补回 MAS 私有 runtime。
+- 2026-05-21 追加：OPL dead-letter redrive 的 source freshness 识别必须覆盖 MAS repair task 的明确 nested contract：`payload.repair_work_unit.source_fingerprint`。顶层 `payload.source_fingerprint` 继续优先；nested repair work-unit fingerprint 只作为已知 MAS work-unit contract 使用，不做任意深扫、宽松 token normalizer 或 heuristic fallback。同一 owner/export fingerprint 下，只有该 source fingerprint 变化才允许 dead-letter requeue；context refs 变化但 source fingerprint 不变时保持 idempotent noop。
 
 ## 2026-05-20
 
