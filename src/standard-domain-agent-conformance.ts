@@ -774,17 +774,14 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
   const blockers = [
     policyFile.status === 'resolved' ? null : `rca_physical_source_morphology_policy_${policyFile.status}`,
     optionalString(policy?.canonical_pack_root) === 'agent/' ? null : 'rca_canonical_pack_root_must_be_agent_slash',
-    optionalString(policy?.status) === 'active_source_classification_policy_landed'
-      ? null
+    optionalString(policy?.status) === 'active_source_classification_policy_landed' ? null
       : 'rca_physical_source_morphology_policy_status_not_landed',
     ...REQUIRED_RCA_PHYSICAL_SURFACES
       .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
       .map((surfaceId) => `rca_physical_surface_unclassified:${surfaceId}`),
     classifiedSurfaceIds.includes('legacy_managed_runtime_gateway_names')
-      ? 'rca_retired_legacy_surface_id_still_classified:legacy_managed_runtime_gateway_names'
-      : null,
-    forbiddenActiveSurfaceIds.includes('legacy_managed_runtime_gateway_names')
-      ? null
+      ? 'rca_retired_legacy_surface_id_still_classified:legacy_managed_runtime_gateway_names' : null,
+    forbiddenActiveSurfaceIds.includes('legacy_managed_runtime_gateway_names') ? null
       : 'rca_retired_legacy_surface_id_missing_from_forbidden_active_surface_ids',
     ...ownerFlagViolations,
   ].filter((entry): entry is string => Boolean(entry));
@@ -797,12 +794,9 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
       'legacy_managed_runtime_gateway_names_forbidden_as_active_surface_id',
     ],
     allowed_residue_prefixes: [
-      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
-      'docs/history/',
-      'contracts/functional_privatization_audit.json',
-      'contracts/runtime-program/',
-      'packages/redcube-gateway/src/actions/product-sidecar-guarded-actions.ts',
-      'tests/',
+      ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES, 'docs/history/',
+      'contracts/functional_privatization_audit.json', 'contracts/runtime-program/',
+      'packages/redcube-gateway/src/actions/product-sidecar-guarded-actions.ts', 'tests/',
       'contracts/physical_source_morphology_policy.json',
     ],
     blockers,
