@@ -262,6 +262,8 @@ export function buildCompleteAgentLabControlPlane() {
   const aheEvidence = sampleResult.ahe_evidence;
   const executorCapabilityAperture = sampleResult.executor_capability_aperture;
   const codexAttemptTraceFlywheel = sampleResult.codex_attempt_trace_flywheel;
+  const codexAttemptTraceBundle = codexAttemptTraceFlywheel.codex_attempt_trace_bundle;
+  const replayForkVariantCockpit = codexAttemptTraceFlywheel.replay_fork_variant_cockpit;
   const variantComparison = buildAgentLabVariantComparisonReadModel({
     suiteResult: sampleResult,
     sourceRefs: [sampleResult.result_id, longlineResult.result_id],
@@ -380,6 +382,8 @@ export function buildCompleteAgentLabControlPlane() {
     ahe_evidence_read_model: aheEvidence,
     executor_capability_aperture: executorCapabilityAperture,
     codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
+    codex_attempt_trace_bundle: codexAttemptTraceBundle,
+    replay_fork_variant_cockpit: replayForkVariantCockpit,
     integration_contract_read_model: integrationContracts,
     review_trace_ledger: reviewTraceLedger,
     aris_maturity_controls: arisMaturityControls,
@@ -440,6 +444,8 @@ export function buildCompleteAgentLabControlPlane() {
     ahe_evidence: aheEvidence,
     executor_capability_aperture: executorCapabilityAperture,
     codex_attempt_trace_flywheel: codexAttemptTraceFlywheel,
+    codex_attempt_trace_bundle: codexAttemptTraceBundle,
+    replay_fork_variant_cockpit: replayForkVariantCockpit,
     variant_comparison: variantComparison,
     stage_executor_policy: stageExecutorPolicy,
     token_cost_estimates: [tokenCostEstimate],
@@ -539,6 +545,8 @@ export function buildAgentLabWorkbenchReadModel() {
       ahe_evidence_read_model_ref: complete.ahe_evidence.read_model_id,
       executor_capability_aperture_ref: complete.executor_capability_aperture.read_model_id,
       codex_attempt_trace_flywheel_ref: complete.codex_attempt_trace_flywheel.read_model_id,
+      codex_attempt_trace_bundle_ref: complete.codex_attempt_trace_bundle.bundle_id,
+      replay_fork_variant_cockpit_ref: complete.replay_fork_variant_cockpit.cockpit_id,
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
       stage_executor_policy_read_model_ref: complete.stage_executor_policy.read_model_id,
       token_cost_estimate_refs: complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
@@ -561,6 +569,8 @@ export function buildAgentLabWorkbenchReadModel() {
     ahe_evidence: complete.ahe_evidence,
     executor_capability_aperture: complete.executor_capability_aperture,
     codex_attempt_trace_flywheel: complete.codex_attempt_trace_flywheel,
+    codex_attempt_trace_bundle: complete.codex_attempt_trace_bundle,
+    replay_fork_variant_cockpit: complete.replay_fork_variant_cockpit,
     variant_comparison: variantComparison,
     stage_executor_policy: complete.stage_executor_policy,
     token_cost_estimates: complete.token_cost_estimates,

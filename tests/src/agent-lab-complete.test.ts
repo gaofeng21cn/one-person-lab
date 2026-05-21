@@ -128,6 +128,10 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(result.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
   assert.equal(result.codex_attempt_trace_flywheel.summary.fork_candidate_count, 0);
+  assert.equal(result.codex_attempt_trace_bundle.surface_kind, 'opl_agent_lab_codex_attempt_trace_bundle');
+  assert.equal(result.codex_attempt_trace_bundle.summary.attempt_trace_count, 3);
+  assert.equal(result.replay_fork_variant_cockpit.surface_kind, 'opl_agent_lab_replay_fork_variant_cockpit');
+  assert.equal(result.replay_fork_variant_cockpit.summary.variant_count, 0);
   assert.equal(result.codex_attempt_trace_flywheel.semantic_boundary,
     'refs_only_evidence_learning_loop_not_domain_quality_or_training_authority');
   assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_authorize_domain_ready, false);
@@ -146,6 +150,10 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.executor_capability_aperture.read_model_id);
   assert.equal(result.optimizer_loop.codex_attempt_trace_flywheel.read_model_id,
     result.codex_attempt_trace_flywheel.read_model_id);
+  assert.equal(result.optimizer_loop.codex_attempt_trace_bundle.bundle_id,
+    result.codex_attempt_trace_bundle.bundle_id);
+  assert.equal(result.optimizer_loop.replay_fork_variant_cockpit.cockpit_id,
+    result.replay_fork_variant_cockpit.cockpit_id);
   assert.equal(result.optimizer_loop.aris_maturity_controls.read_model_id,
     result.aris_maturity_controls.read_model_id);
   assert.equal(result.optimizer_loop.variant_comparison_read_model.read_model_id,
@@ -241,6 +249,12 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.codex_attempt_trace_flywheel.surface_kind,
     'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(result.codex_attempt_trace_flywheel.summary.trace_ready_count, 3);
+  assert.equal(result.codex_attempt_trace_bundle.surface_kind, 'opl_agent_lab_codex_attempt_trace_bundle');
+  assert.equal(result.replay_fork_variant_cockpit.surface_kind, 'opl_agent_lab_replay_fork_variant_cockpit');
+  assert.equal(result.source_results.codex_attempt_trace_bundle_ref,
+    result.codex_attempt_trace_bundle.bundle_id);
+  assert.equal(result.source_results.replay_fork_variant_cockpit_ref,
+    result.replay_fork_variant_cockpit.cockpit_id);
   assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_domain_ready, false);
   assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_quality_verdict,
     false);

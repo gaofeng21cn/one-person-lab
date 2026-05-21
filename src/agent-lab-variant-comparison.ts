@@ -44,6 +44,7 @@ type AgentLabSuiteResult = {
       receipt_ref: string | null;
     };
     mechanism_evolution_input_refs: string[];
+    trajectory?: Record<string, unknown>;
   }>;
 };
 
@@ -53,6 +54,12 @@ function unique(values: string[]) {
 
 function optionalRefs(values: string[] | undefined) {
   return unique(Array.isArray(values) ? values : []);
+}
+
+function optionalRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 function riskRank(riskTier: string) {
@@ -149,6 +156,14 @@ export function buildAgentLabVariantComparisonReadModel(input: {
       artifact_delta_written: false,
     };
     const regressionCount = variantRegressionCount(run);
+    const trace = optionalRecord(run.trajectory);
+    const commandRefs = optionalRefs(trace.command_refs as string[] | undefined);
+    const fileRefs = optionalRefs(trace.file_refs as string[] | undefined);
+    const subagentRefs = optionalRefs(trace.subagent_refs as string[] | undefined);
+    const worktreeRefs = optionalRefs(trace.worktree_refs as string[] | undefined);
+    const testRefs = optionalRefs(trace.test_refs as string[] | undefined);
+    const webSourceRefs = optionalRefs(trace.web_source_refs as string[] | undefined);
+    const reviewerRefs = optionalRefs(trace.review_receipt_refs as string[] | undefined);
     const predictedFlipRefs = unique([
       ...run.promotion_safety_assessment.missing_required_refs.map((entry) =>
         `predicted-flip-ref:agent-lab/${candidateRef}/${entry}`),
@@ -177,11 +192,36 @@ export function buildAgentLabVariantComparisonReadModel(input: {
       promotion_gate_ref: run.promotion_gate.gate_ref,
       regression_count: regressionCount,
       evidence_delta: evidenceDelta,
+      command_refs: commandRefs,
+      file_refs: fileRefs,
+      subagent_refs: subagentRefs,
+      worktree_refs: worktreeRefs,
+      test_refs: testRefs,
+      web_source_refs: webSourceRefs,
+      reviewer_refs: reviewerRefs,
+      blocker_refs: evidenceDelta.blocked_evidence_refs,
+      predicted_impact_refs: predictedFlipRefs.map((ref) =>
+        ref.replace('predicted-flip-ref:', 'predicted-impact-ref:')),
       predicted_flip_refs: predictedFlipRefs,
+      next_run_falsification_refs: unique([
+        ...run.promotion_safety_assessment.missing_required_refs.map((entry) =>
+          `next-run-falsification-ref:agent-lab/${candidateRef}/${entry}`),
+        ...(regressionCount === 0 && !eligible
+          ? [`next-run-falsification-ref:agent-lab/${candidateRef}/selected-winner-gate`]
+          : []),
+      ]),
       risk_refs: riskRefs,
+      cost_duration: {
+        estimate_ref: `cost-duration-estimate-ref:agent-lab/${candidateRef}`,
+        estimate_basis: 'result_ref_and_regression_count_estimate_only',
+        estimated_cost_units: commandRefs.length + fileRefs.length + regressionCount + 1,
+        estimated_duration_minutes: 5 + (testRefs.length * 3) + (regressionCount * 2),
+        actual_provider_usage_receipt_ref: null,
+      },
       promotion_eligibility: {
         selected_for_risk_tiered_gate: isWinner,
         eligible_for_risk_tiered_promotion_gate: eligible,
+        promotion_eligible: eligible,
         blocked_reason_refs: eligible
           ? []
           : unique([
@@ -193,6 +233,8 @@ export function buildAgentLabVariantComparisonReadModel(input: {
               : ['blocked-ref:agent-lab/independent-ai-review-not-approved']),
           ]),
         can_authorize_domain_ready: false,
+        can_authorize_quality_verdict: false,
+        can_mutate_artifact_body: false,
         can_promote_default_agent: false,
       },
       learning_only: !isWinner,
