@@ -18,12 +18,16 @@ export type StageProductionEvidencePayloadPreflight = {
   forbidden_placeholder_refs: string[];
   uncovered_expected_receipt_refs: string[];
   uncovered_monitor_freshness_refs: string[];
+  uncovered_source_scope_refs: string[];
+  uncovered_runtime_event_refs: string[];
   accepted_ref_counts: {
     domain_receipt_refs: number;
     evidence_refs: number;
     typed_blocker_refs: number;
     no_regression_refs: number;
     owner_chain_refs: number;
+    source_scope_refs: number;
+    runtime_event_refs: number;
   };
   policy: string;
 };
@@ -37,6 +41,12 @@ export const STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS = [
 export const STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS = [
   'no_regression_refs',
   'owner_chain_refs',
+] as const;
+
+export const STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS = [
+  ...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
+  'source_scope_refs',
+  'runtime_event_refs',
 ] as const;
 
 const FORBIDDEN_PAYLOAD_FIELDS = [
@@ -93,6 +103,22 @@ function requiredMonitorFreshnessRefs(route: JsonRecord) {
   ]);
 }
 
+function requiredSourceScopeRefs(route: JsonRecord) {
+  const hints = isRecord(route.payload_ref_hints) ? route.payload_ref_hints : {};
+  return uniqueStrings([
+    ...stringList(route.unobserved_source_scope_refs),
+    ...stringList(hints.source_scope_refs_should_cover),
+  ]);
+}
+
+function requiredRuntimeEventRefs(route: JsonRecord) {
+  const hints = isRecord(route.payload_ref_hints) ? route.payload_ref_hints : {};
+  return uniqueStrings([
+    ...stringList(route.unobserved_runtime_event_refs),
+    ...stringList(hints.runtime_event_refs_should_cover),
+  ]);
+}
+
 function looksLikePlaceholderRef(ref: string) {
   return ref.includes('<')
     || ref.includes('>')
@@ -130,6 +156,8 @@ function uncoveredObligationRefs(input: {
 export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) {
   const expectedReceiptRefs = requiredExpectedReceiptRefs(route);
   const monitorFreshnessRefs = requiredMonitorFreshnessRefs(route);
+  const sourceScopeRefs = requiredSourceScopeRefs(route);
+  const runtimeEventRefs = requiredRuntimeEventRefs(route);
   const actionId = stringValue(route.action_id);
   const successPayloadTemplate = {
     domain_receipt_refs: concreteRefs(expectedReceiptRefs).length > 0
@@ -139,6 +167,8 @@ export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) 
       ? concreteRefs(monitorFreshnessRefs)
       : ['<monitor-freshness-evidence-ref>'],
     typed_blocker_refs: [],
+    source_scope_refs: concreteRefs(sourceScopeRefs),
+    runtime_event_refs: concreteRefs(runtimeEventRefs),
   };
   const typedBlockerPayloadTemplate = {
     domain_receipt_refs: [],
@@ -164,9 +194,9 @@ export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) 
     stage_id: stringValue(route.stage_id),
     payload_owner: 'domain_repository_or_app_live_operator',
     route_requires_domain_or_app_payload: true,
-    required_any_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
+    required_any_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS],
     accepted_payload_fields: [
-      ...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
+      ...STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS,
       ...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS,
       'receipt_ref',
     ],
@@ -178,6 +208,8 @@ export function buildStageProductionEvidencePayloadWorkorder(route: JsonRecord) 
       evidence_refs_cover_monitor_freshness: concreteRefs(monitorFreshnessRefs),
       evidence_instance_required_for_declared_monitor_refs:
         monitorFreshnessRefs.filter(looksLikePlaceholderRef),
+      source_scope_refs_cover: concreteRefs(sourceScopeRefs),
+      runtime_event_refs_cover: concreteRefs(runtimeEventRefs),
       real_refs_required: true,
     },
     typed_blocker_path: {
@@ -219,6 +251,8 @@ export function preflightStageProductionEvidencePayload(
 ): StageProductionEvidencePayloadPreflight {
   const expectedReceiptRefs = requiredExpectedReceiptRefs(route);
   const monitorFreshnessRefs = requiredMonitorFreshnessRefs(route);
+  const sourceScopeRefs = requiredSourceScopeRefs(route);
+  const runtimeEventRefs = requiredRuntimeEventRefs(route);
   const domainReceiptRefs = refsFromPayload(payload, [
     'domain_receipt_refs',
     'domain_receipt_ref',
@@ -229,6 +263,8 @@ export function preflightStageProductionEvidencePayload(
   const typedBlockerRefs = refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']);
   const noRegressionRefs = refsFromPayload(payload, ['no_regression_refs', 'no_regression_ref']);
   const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
+  const sourceScopePayloadRefs = refsFromPayload(payload, ['source_scope_refs', 'source_scope_ref']);
+  const runtimeEventPayloadRefs = refsFromPayload(payload, ['runtime_event_refs', 'runtime_event_ref']);
   const forbiddenPayloadFields = FORBIDDEN_PAYLOAD_FIELDS.filter((field) =>
     Object.prototype.hasOwnProperty.call(payload, field)
   );
@@ -238,6 +274,8 @@ export function preflightStageProductionEvidencePayload(
     ...typedBlockerRefs,
     ...noRegressionRefs,
     ...ownerChainRefs,
+    ...sourceScopePayloadRefs,
+    ...runtimeEventPayloadRefs,
   ]);
   const forbiddenPlaceholderRefs = allRefs.filter(looksLikePlaceholderRef);
   const uncoveredExpectedReceiptRefs = uncoveredObligationRefs({
@@ -248,16 +286,28 @@ export function preflightStageProductionEvidencePayload(
     requiredRefs: monitorFreshnessRefs,
     providedRefs: evidenceRefs,
   });
+  const uncoveredSourceScopeRefs = uncoveredObligationRefs({
+    requiredRefs: sourceScopeRefs,
+    providedRefs: sourceScopePayloadRefs,
+  });
+  const uncoveredRuntimeEventRefs = uncoveredObligationRefs({
+    requiredRefs: runtimeEventRefs,
+    providedRefs: runtimeEventPayloadRefs,
+  });
   const missingPayloadFields = [
-    domainReceiptRefs.length === 0 ? 'domain_receipt_refs' : null,
+    domainReceiptRefs.length === 0 && expectedReceiptRefs.length > 0 ? 'domain_receipt_refs' : null,
     evidenceRefs.length === 0 && monitorFreshnessRefs.length > 0 ? 'evidence_refs' : null,
+    sourceScopePayloadRefs.length === 0 && sourceScopeRefs.length > 0 ? 'source_scope_refs' : null,
+    runtimeEventPayloadRefs.length === 0 && runtimeEventRefs.length > 0 ? 'runtime_event_refs' : null,
   ].filter((field): field is string => Boolean(field));
   const typedBlockerPathReady = typedBlockerRefs.length > 0 && forbiddenPlaceholderRefs.length === 0;
   const successPathReady = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
     && forbiddenPayloadFields.length === 0
     && uncoveredExpectedReceiptRefs.length === 0
-    && uncoveredMonitorFreshnessRefs.length === 0;
+    && uncoveredMonitorFreshnessRefs.length === 0
+    && uncoveredSourceScopeRefs.length === 0
+    && uncoveredRuntimeEventRefs.length === 0;
   const typedBlockerPathReadyWithPolicy = typedBlockerPathReady
     && forbiddenPayloadFields.length === 0;
   const canRecordRefsOnlyReceipt = successPathReady || typedBlockerPathReadyWithPolicy;
@@ -265,7 +315,7 @@ export function preflightStageProductionEvidencePayload(
     surface_kind: 'opl_stage_production_evidence_payload_preflight',
     status: canRecordRefsOnlyReceipt ? 'ready_to_record' : 'blocked',
     route_requires_domain_or_app_payload: true,
-    required_any_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
+    required_any_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS],
     optional_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS],
     success_path_ready: successPathReady,
     typed_blocker_path_ready: typedBlockerPathReadyWithPolicy,
@@ -275,15 +325,19 @@ export function preflightStageProductionEvidencePayload(
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
     uncovered_expected_receipt_refs: typedBlockerPathReadyWithPolicy ? [] : uncoveredExpectedReceiptRefs,
     uncovered_monitor_freshness_refs: typedBlockerPathReadyWithPolicy ? [] : uncoveredMonitorFreshnessRefs,
+    uncovered_source_scope_refs: typedBlockerPathReadyWithPolicy ? [] : uncoveredSourceScopeRefs,
+    uncovered_runtime_event_refs: typedBlockerPathReadyWithPolicy ? [] : uncoveredRuntimeEventRefs,
     accepted_ref_counts: {
       domain_receipt_refs: domainReceiptRefs.length,
       evidence_refs: evidenceRefs.length,
       typed_blocker_refs: typedBlockerRefs.length,
       no_regression_refs: noRegressionRefs.length,
       owner_chain_refs: ownerChainRefs.length,
+      source_scope_refs: sourceScopePayloadRefs.length,
+      runtime_event_refs: runtimeEventPayloadRefs.length,
     },
     policy:
-      'record_requires_real_domain_app_or_live_refs_covering_unobserved_expected_receipt_and_monitor_freshness_or_domain_owned_typed_blocker_refs',
+      'record_requires_real_domain_app_or_live_refs_covering_unobserved_expected_receipt_source_scope_runtime_event_and_monitor_freshness_or_domain_owned_typed_blocker_refs',
   };
 }
 
@@ -298,7 +352,7 @@ export function assertStageProductionEvidencePayloadReady(route: JsonRecord, pay
     {
       action_id: stringValue(route.action_id),
       error_kind: 'stage_production_evidence_payload_preflight_blocked',
-      required_any_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS],
+      required_any_operator_payload_refs: [...STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS],
       empty_payload_template_is_success_evidence: false,
       preflight,
       payload_workorder: buildStageProductionEvidencePayloadWorkorder(route),

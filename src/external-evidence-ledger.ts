@@ -21,6 +21,8 @@ export type ExternalEvidenceApplyInput = {
   release_dist_refs?: string[];
   direct_hosted_parity_refs?: string[];
   owner_chain_refs?: string[];
+  source_scope_refs?: string[];
+  runtime_event_refs?: string[];
   receipt_ref?: string | null;
 };
 
@@ -40,6 +42,8 @@ export type ExternalEvidenceReceipt = {
   release_dist_refs: string[];
   direct_hosted_parity_refs: string[];
   owner_chain_refs: string[];
+  source_scope_refs: string[];
+  runtime_event_refs: string[];
   authority_boundary: {
     opl_can_write_domain_truth: false;
     opl_can_read_memory_body: false;
@@ -135,6 +139,8 @@ function readLedger(): ExternalEvidenceLedger {
       release_dist_refs: uniqueStrings(receipt.release_dist_refs),
       direct_hosted_parity_refs: uniqueStrings(receipt.direct_hosted_parity_refs),
       owner_chain_refs: uniqueStrings(receipt.owner_chain_refs),
+      source_scope_refs: uniqueStrings(receipt.source_scope_refs),
+      runtime_event_refs: uniqueStrings(receipt.runtime_event_refs),
       authority_boundary: refsOnlyAuthorityBoundary(),
     })),
   };
@@ -169,6 +175,8 @@ function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceR
   const release_dist_refs = uniqueStrings(input.release_dist_refs);
   const direct_hosted_parity_refs = uniqueStrings(input.direct_hosted_parity_refs);
   const owner_chain_refs = uniqueStrings(input.owner_chain_refs);
+  const source_scope_refs = uniqueStrings(input.source_scope_refs);
+  const runtime_event_refs = uniqueStrings(input.runtime_event_refs);
   const evidenceRefs = [
     ...evidence_refs,
     ...receipt_refs,
@@ -177,6 +185,8 @@ function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceR
     ...release_dist_refs,
     ...direct_hosted_parity_refs,
     ...owner_chain_refs,
+    ...source_scope_refs,
+    ...runtime_event_refs,
   ];
   if (input.mode === 'record' && evidenceRefs.length === 0) {
     throw new FrameworkContractError('cli_usage_error', 'agents evidence apply --mode record requires at least one refs-only evidence input.', {
@@ -188,6 +198,8 @@ function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceR
         '--release-dist-ref',
         '--direct-hosted-parity-ref',
         '--owner-chain-ref',
+        '--source-scope-ref',
+        '--runtime-event-ref',
       ],
     });
   }
@@ -207,6 +219,8 @@ function normalizedReceipt(input: ExternalEvidenceApplyInput): ExternalEvidenceR
     release_dist_refs,
     direct_hosted_parity_refs,
     owner_chain_refs,
+    source_scope_refs,
+    runtime_event_refs,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -304,6 +318,8 @@ export function parseExternalEvidenceApplyArgs(args: string[]): ExternalEvidence
     release_dist_refs: [],
     direct_hosted_parity_refs: [],
     owner_chain_refs: [],
+    source_scope_refs: [],
+    runtime_event_refs: [],
   };
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -364,9 +380,15 @@ export function parseExternalEvidenceApplyArgs(args: string[]): ExternalEvidence
       case '--owner-chain-ref':
         input.owner_chain_refs!.push(...splitList(takeValue()));
         break;
+      case '--source-scope-ref':
+        input.source_scope_refs!.push(...splitList(takeValue()));
+        break;
+      case '--runtime-event-ref':
+        input.runtime_event_refs!.push(...splitList(takeValue()));
+        break;
       default:
         throw new FrameworkContractError('cli_usage_error', `Unknown agents evidence apply option: ${token}.`, {
-          usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>]',
+          usage: 'opl agents evidence apply --domain <domain> --request-id <id> [--mode record|verify] [--evidence-ref <ref>] [--domain-receipt-ref <ref>] [--typed-blocker-ref <ref>] [--source-scope-ref <ref>] [--runtime-event-ref <ref>]',
         });
     }
   }
