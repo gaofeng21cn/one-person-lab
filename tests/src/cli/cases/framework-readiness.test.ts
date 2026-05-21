@@ -43,6 +43,22 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.stage_receipt_freshness_tail_open_count,
   );
   assert.equal(
+    readiness.attention_first_payload.summary.evidence_envelope_open_count,
+    readiness.summary.evidence_envelope_open_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.evidence_envelope_blocked_count,
+    readiness.summary.evidence_envelope_blocked_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.evidence_envelope_attention_count,
+    readiness.summary.evidence_envelope_attention_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.total_operator_attention_tail_count,
+    readiness.summary.open_tail_count + readiness.summary.evidence_envelope_attention_count,
+  );
+  assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
     readiness.summary.framework_kernel_hard_blocker_count > 0,
   );
@@ -180,7 +196,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.evidence_tails.app_live_evidence_tail.open_item_count,
   );
   assert.equal(
-    readiness.evidence_worklist.closeout_item_is_completion_claim,
+    readiness.evidence_worklist.worklist_item_is_completion_claim,
     false,
   );
   assert.equal(
@@ -192,6 +208,21 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.evidence_envelope.summary.production_ready_claim_count, 0);
   assert.equal(readiness.evidence_envelope.summary.artifact_authority_claim_count, 0);
   assert.equal(readiness.evidence_envelope.open_envelope_count, readiness.evidence_envelope.summary.open_envelope_count);
+  assert.equal(readiness.evidence_envelope.blocked_envelope_count, readiness.evidence_envelope.summary.blocked_envelope_count);
+  assert.equal(
+    readiness.evidence_envelope.attention_envelope_count,
+    readiness.evidence_envelope.open_envelope_count + readiness.evidence_envelope.blocked_envelope_count,
+  );
+  assert.equal(
+    readiness.summary.evidence_envelope_attention_count,
+    readiness.evidence_envelope.attention_envelope_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.warnings.some(
+      (warning: { warning_id: string }) => warning.warning_id === 'evidence_envelope_attention',
+    ),
+    readiness.evidence_envelope.attention_envelope_count > 0,
+  );
   assert.equal(
     readiness.evidence_envelope.claim_policy,
     'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',

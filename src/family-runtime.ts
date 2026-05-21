@@ -67,7 +67,7 @@ import {
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
-import { runFamilyRuntimeProductionCloseoutCommand } from './family-runtime-production-closeout-command.ts';
+import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -690,8 +690,8 @@ export async function runFamilyRuntime(args: string[]) {
         family_runtime_lifecycle_reconcile: reconcileFamilyRuntimeLifecycleRefs(parsed.input),
       };
     }
-    if (parsed.mode === 'production_closeout') {
-      return runFamilyRuntimeProductionCloseoutCommand(parsed.input);
+    if (parsed.mode === 'evidence_worklist') {
+      return runFamilyRuntimeEvidenceWorklistCommand(parsed.input);
     }
     if (parsed.mode === 'enqueue') {
       return {

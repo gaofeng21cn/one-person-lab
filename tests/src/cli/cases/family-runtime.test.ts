@@ -89,7 +89,7 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
 });
 
 test('family-runtime evidence-worklist reports safe-action evidence tail without authority claims', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-closeout-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-evidence-worklist-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
 
@@ -114,7 +114,7 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
       });
     }
 
-    const closeout = runCli([
+    const worklist = runCli([
       'family-runtime',
       'evidence-worklist',
       '--family-defaults',
@@ -126,11 +126,11 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-    const report = closeout.family_runtime_production_closeout;
+    const report = worklist.family_runtime_evidence_worklist;
 
     assert.equal(report.surface_kind, 'opl_family_runtime_evidence_worklist');
     assert.equal(report.command, 'evidence-worklist');
-    assert.equal(report.closeout_mode, 'dry_run_summary');
+    assert.equal(report.worklist_summary_mode, 'dry_run_summary');
     assert.equal(report.worklist_mode, 'refs_only_summary');
     assert.equal(report.detail_level, 'summary');
     assert.equal(
@@ -149,13 +149,13 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
     assert.equal(report.next_safe_actions.length > 0, true);
     assert.equal(report.next_safe_actions.length <= 5, true);
     assert.deepEqual(report.full_detail_args, ['--detail', 'full']);
-    assert.equal(report.closeout_items, undefined);
+    assert.equal(report.worklist_items, undefined);
     assert.equal(report.attention_queue, undefined);
     assert.equal(report.next_action_ledger, undefined);
     assert.equal(report.authority_boundary.can_write_domain_truth, false);
     assert.equal(report.authority_boundary.can_authorize_domain_ready, false);
 
-    const fullCloseout = runCli([
+    const fullWorklist = runCli([
       'family-runtime',
       'evidence-worklist',
       '--family-defaults',
@@ -167,11 +167,11 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).family_runtime_production_closeout;
-    assert.equal(fullCloseout.detail_level, 'full');
-    assert.equal(fullCloseout.command, 'evidence-worklist');
+    }).family_runtime_evidence_worklist;
+    assert.equal(fullWorklist.detail_level, 'full');
+    assert.equal(fullWorklist.command, 'evidence-worklist');
     assert.equal(
-      fullCloseout.closeout_items.some((item: { action_kind: string }) =>
+      fullWorklist.worklist_items.some((item: { action_kind: string }) =>
         item.action_kind === 'provider_scheduler_status'
       ),
       true,

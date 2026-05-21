@@ -10,7 +10,7 @@ import {
   parseProviderSloTickArgs,
   parseResidencyProofArgs,
 } from './provider.ts';
-import { parseProductionCloseoutArgs } from './production-closeout.ts';
+import { parseEvidenceWorklistArgs } from './evidence-worklist.ts';
 import {
   parseApproveArgs,
   parseEnqueueArgs,
@@ -104,7 +104,7 @@ export const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   },
   {
     command_path: 'evidence-worklist',
-    parse: (mode, rest) => mode === 'evidence-worklist' ? parseProductionCloseoutArgs([mode, ...rest]) : null,
+    parse: (mode, rest) => mode === 'evidence-worklist' ? parseEvidenceWorklistArgs([mode, ...rest]) : null,
   },
   staticCommand('notify list', { mode: 'notify_list' }),
   staticCommand('events export', { mode: 'events_export' }),

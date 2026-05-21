@@ -26,7 +26,7 @@ function familyRuntimeEnv(
   };
 }
 
-function productionCloseoutStage(stageId: string, owner: string) {
+function evidenceWorklistStage(stageId: string, owner: string) {
   return {
     stage_id: stageId,
     stage_kind: 'creation',
@@ -103,7 +103,7 @@ const checks = {
 };
 db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
   .run(
-    'evt_production_closeout_provider_proof',
+    'evt_evidence_worklist_provider_proof',
     'temporal_residency_proof',
     'test',
     JSON.stringify({
@@ -120,7 +120,7 @@ db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source,
   );
 db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
   .run(
-    'evt_production_closeout_provider_capability',
+    'evt_evidence_worklist_provider_capability',
     'temporal_provider_slo_execution_receipt',
     'test',
     JSON.stringify({
@@ -162,7 +162,7 @@ db.close();`,
   assert.equal(result.status, 0, result.stderr);
 }
 
-function withProductionCloseoutSurfaces(
+function withEvidenceWorklistSurfaces(
   manifest: Record<string, unknown>,
   stageIds: string[],
   options: {
@@ -174,7 +174,7 @@ function withProductionCloseoutSurfaces(
   if (manifest.product_entry_manifest && typeof manifest.product_entry_manifest === 'object') {
     return {
       ...manifest,
-      product_entry_manifest: withProductionCloseoutSurfaces(
+      product_entry_manifest: withEvidenceWorklistSurfaces(
         manifest.product_entry_manifest as Record<string, unknown>,
         stageIds,
         options,
@@ -190,11 +190,11 @@ function withProductionCloseoutSurfaces(
     family_stage_control_plane: {
       surface_kind: 'family_stage_control_plane',
       version: 'family-stage-control-plane.v1',
-      plane_id: `${targetDomainId}_production_closeout_plane`,
+      plane_id: `${targetDomainId}_evidence_worklist_plane`,
       target_domain_id: targetDomainId,
       owner,
       authority_boundary: { opl_role: 'projection_consumer_only' },
-      stages: stageIds.map((stageId) => productionCloseoutStage(stageId, owner)),
+      stages: stageIds.map((stageId) => evidenceWorklistStage(stageId, owner)),
       notes: [],
     },
     functional_privatization_audit: {
@@ -278,16 +278,16 @@ function withProductionCloseoutSurfaces(
 }
 
 test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure without domain authority', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-production-closeout-state-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
-    medautogrant: withProductionCloseoutSurfaces(
+    medautogrant: withEvidenceWorklistSurfaces(
       baseManifests.medautogrant,
       ['fundability_strategy', 'specific_aims_and_structure', 'proposal_authoring'],
       { externalEvidenceRequestCount: 6, cleanupReady: true },
     ),
-    medautoscience: withProductionCloseoutSurfaces(
+    medautoscience: withEvidenceWorklistSurfaces(
       baseManifests.medautoscience,
       [
         'direction_and_route_selection',
@@ -299,7 +299,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       ],
       { cleanupReady: true },
     ),
-    redcube: withProductionCloseoutSurfaces(
+    redcube: withEvidenceWorklistSurfaces(
       baseManifests.redcube,
       [
         'source_intake',
@@ -340,60 +340,61 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     ], {
       ...familyRuntimeEnv(stateRoot, fixtureContractsRoot),
     });
-    const closeout = output.family_runtime_production_closeout;
+    const worklist = output.family_runtime_evidence_worklist;
 
-    assert.equal(closeout.surface_kind, 'opl_family_runtime_evidence_worklist');
-    assert.equal(closeout.surface_role, 'derived_operator_attention_lens');
-    assert.equal(closeout.worklist_role, 'refs_only_operator_evidence_worklist');
-    assert.equal(closeout.command, 'evidence-worklist');
-    assert.equal(closeout.detail_level, 'summary');
+    assert.equal(worklist.surface_kind, 'opl_family_runtime_evidence_worklist');
+    assert.equal(worklist.surface_role, 'derived_operator_attention_lens');
+    assert.equal(worklist.worklist_role, 'refs_only_operator_evidence_worklist');
+    assert.equal(worklist.command, 'evidence-worklist');
+    assert.equal(worklist.detail_level, 'summary');
     assert.equal(
-      closeout.projection_detail_policy,
+      worklist.projection_detail_policy,
       'attention_first_default_full_refs_via_explicit_drilldown',
     );
     assert.equal(
-      closeout.lens_policy,
+      worklist.lens_policy,
       'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
     );
-    assert.equal(closeout.closeout_mode, 'dry_run_summary');
-    assert.equal(closeout.family_defaults, true);
-    assert.equal(closeout.selected_provider, 'temporal');
-    assert.equal(closeout.effective_provider, 'temporal');
-    assert.equal(closeout.selected_executor_kind, 'codex_cli');
-    assert.equal(closeout.summary.domain_ready_authorized, false);
-    assert.equal(closeout.summary.production_ready_authorized, false);
-    assert.equal(closeout.summary.closeout_item_count, 49);
-    assert.equal(closeout.summary.open_worklist_item_count, 49);
-    assert.equal(closeout.summary.closed_refs_only_item_count, 0);
-    assert.equal(closeout.summary.stage_receipt_freshness_open_workorder_count > 0, true);
-    assert.equal(closeout.summary.open_safe_action_item_count, 49);
-    assert.equal(Object.hasOwn(closeout.summary, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(Object.hasOwn(closeout, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(closeout.open_worklist_item_count, 49);
-    assert.equal(closeout.closed_refs_only_item_count, 0);
+    assert.equal(worklist.worklist_summary_mode, 'dry_run_summary');
+    assert.equal(worklist.family_defaults, true);
+    assert.equal(worklist.selected_provider, 'temporal');
+    assert.equal(worklist.effective_provider, 'temporal');
+    assert.equal(worklist.selected_executor_kind, 'codex_cli');
+    assert.equal(worklist.summary.domain_ready_authorized, false);
+    assert.equal(worklist.summary.production_ready_authorized, false);
+    assert.equal(worklist.summary.worklist_item_count, 49);
+    assert.equal(worklist.summary.open_worklist_item_count, 49);
+    assert.equal(worklist.summary.closed_refs_only_item_count, 0);
+    assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count > 0, true);
+    assert.equal(worklist.summary.open_safe_action_item_count, 49);
+    assert.equal(Object.hasOwn(worklist.summary, 'production_closeout_open_safe_action_item_count'), false);
+    assert.equal(Object.hasOwn(output, 'family_runtime_production_closeout'), false);
+    assert.equal(Object.hasOwn(worklist, 'production_closeout_open_safe_action_item_count'), false);
+    assert.equal(worklist.open_worklist_item_count, 49);
+    assert.equal(worklist.closed_refs_only_item_count, 0);
     assert.equal(
-      closeout.stage_receipt_freshness_open_workorder_count,
-      closeout.summary.stage_receipt_freshness_open_workorder_count,
+      worklist.stage_receipt_freshness_open_workorder_count,
+      worklist.summary.stage_receipt_freshness_open_workorder_count,
     );
-    assert.equal(closeout.summary.closed_item_count, 0);
-    assert.equal(closeout.counts.open_safe_action_item_count, 49);
-    assert.equal(closeout.counts.open_worklist_item_count, 49);
-    assert.equal(closeout.counts.next_action_item_count, 49);
-    assert.deepEqual(closeout.full_detail_args, ['--detail', 'full']);
-    assert.match(closeout.full_detail_command, /evidence-worklist .*--detail full --json/);
-    assert.equal(closeout.closeout_items, undefined);
-    assert.equal(closeout.attention_queue, undefined);
-    assert.equal(closeout.next_action_ledger, undefined);
-    assert.equal(closeout.next_safe_actions.length <= 5, true);
-    assert.equal(closeout.next_safe_actions.length > 0, true);
-    assert.equal(closeout.next_safe_actions[0].owner, 'opl');
-    assert.equal(closeout.next_safe_actions[0].closeout_item_is_completion_claim, false);
-    assert.equal(typeof closeout.next_safe_actions[0].next_safe_action_ref, 'string');
-    assert.equal(closeout.next_safe_actions[0].next_safe_action_ref.length > 0, true);
-    assert.equal(closeout.authority_boundary.can_write_domain_truth, false);
-    assert.equal(closeout.authority_boundary.can_authorize_domain_ready, false);
-    assert.equal(closeout.authority_boundary.can_authorize_quality_verdict, false);
-    assert.equal(closeout.authority_boundary.can_claim_production_ready, false);
+    assert.equal(worklist.summary.closed_worklist_item_count, 0);
+    assert.equal(worklist.counts.open_safe_action_item_count, 49);
+    assert.equal(worklist.counts.open_worklist_item_count, 49);
+    assert.equal(worklist.counts.next_action_item_count, 49);
+    assert.deepEqual(worklist.full_detail_args, ['--detail', 'full']);
+    assert.match(worklist.full_detail_command, /evidence-worklist .*--detail full --json/);
+    assert.equal(worklist.worklist_items, undefined);
+    assert.equal(worklist.attention_queue, undefined);
+    assert.equal(worklist.next_action_ledger, undefined);
+    assert.equal(worklist.next_safe_actions.length <= 5, true);
+    assert.equal(worklist.next_safe_actions.length > 0, true);
+    assert.equal(worklist.next_safe_actions[0].owner, 'opl');
+    assert.equal(worklist.next_safe_actions[0].worklist_item_is_completion_claim, false);
+    assert.equal(typeof worklist.next_safe_actions[0].next_safe_action_ref, 'string');
+    assert.equal(worklist.next_safe_actions[0].next_safe_action_ref.length > 0, true);
+    assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
+    assert.equal(worklist.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(worklist.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(worklist.authority_boundary.can_claim_production_ready, false);
 
     const fullOutput = runCli([
       'family-runtime',
@@ -409,19 +410,19 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-    const fullCloseout = fullOutput.family_runtime_production_closeout;
-    assert.equal(fullCloseout.detail_level, 'full');
-    assert.equal(fullCloseout.command, 'evidence-worklist');
-    assert.equal(fullCloseout.closeout_items.length, 49);
-    assert.equal(fullCloseout.attention_queue.length, 49);
-    assert.equal(Object.hasOwn(fullCloseout, 'production_closeout_open_safe_action_item_count'), false);
+    const fullWorklist = fullOutput.family_runtime_evidence_worklist;
+    assert.equal(fullWorklist.detail_level, 'full');
+    assert.equal(fullWorklist.command, 'evidence-worklist');
+    assert.equal(fullWorklist.worklist_items.length, 49);
+    assert.equal(fullWorklist.attention_queue.length, 49);
+    assert.equal(Object.hasOwn(fullWorklist, 'production_closeout_open_safe_action_item_count'), false);
 
-    const stageItem = fullCloseout.closeout_items.find(
+    const stageItem = fullWorklist.worklist_items.find(
       (item: { claim_scope: string }) => item.claim_scope === 'stage_production_caller_request',
-    ) ?? fullCloseout.closeout_items[0];
+    ) ?? fullWorklist.worklist_items[0];
     assert.equal(stageItem.owner, 'opl');
     assert.equal(stageItem.status, 'open_safe_action_request_route_available');
-    assert.equal(stageItem.closeout_item_is_completion_claim, false);
+    assert.equal(stageItem.worklist_item_is_completion_claim, false);
     assert.equal(stageItem.route_status, 'request_route_available');
     assert.equal(stageItem.route_semantics, 'open_safe_action_request_apply_verify_route');
     assert.equal(stageItem.receipt_ref, null);
@@ -435,12 +436,12 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(stageItem.evidence_requirement.current_ref, stageItem.replay_ref);
     assert.equal(stageItem.not_authorized_claims.includes('domain_ready'), true);
     assert.equal(stageItem.not_authorized_claims.includes('quality_verdict'), true);
-    assert.equal(fullCloseout.next_action_ledger.surface_kind, 'opl_family_runtime_production_tail_next_action_ledger');
-    assert.equal(fullCloseout.next_action_ledger.summary.next_action_item_count, fullCloseout.attention_queue.length);
-    assert.equal(fullCloseout.next_action_ledger.authority_boundary.can_read_memory_body, false);
-    assert.equal(fullCloseout.next_action_ledger.authority_boundary.can_read_artifact_body, false);
-    assert.equal(fullCloseout.next_action_ledger.authority_boundary.can_claim_receipt_closure, false);
-    const stageNextAction = fullCloseout.next_action_ledger.next_action_items.find(
+    assert.equal(fullWorklist.next_action_ledger.surface_kind, 'opl_family_runtime_evidence_worklist_next_action_ledger');
+    assert.equal(fullWorklist.next_action_ledger.summary.next_action_item_count, fullWorklist.attention_queue.length);
+    assert.equal(fullWorklist.next_action_ledger.authority_boundary.can_read_memory_body, false);
+    assert.equal(fullWorklist.next_action_ledger.authority_boundary.can_read_artifact_body, false);
+    assert.equal(fullWorklist.next_action_ledger.authority_boundary.can_claim_receipt_closure, false);
+    const stageNextAction = fullWorklist.next_action_ledger.next_action_items.find(
       (item: { source_tail_item_id: string }) => item.source_tail_item_id === stageItem.item_id,
     );
     assert.equal(stageNextAction.owner, 'opl');
@@ -456,43 +457,43 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(stageNextAction.next_safe_action_route, stageItem.replay_ref);
     assert.equal(stageNextAction.authority_boundary.can_write_domain_truth, false);
     assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
-    assert.equal(fullCloseout.evidence_requirement_ledger.model_version, 'evidence_requirement.v1');
+    assert.equal(fullWorklist.evidence_requirement_ledger.model_version, 'evidence_requirement.v1');
     assert.equal(
-      fullCloseout.evidence_requirement_ledger.summary.requirement_count,
-      fullCloseout.closeout_items.length,
+      fullWorklist.evidence_requirement_ledger.summary.requirement_count,
+      fullWorklist.worklist_items.length,
     );
     assert.equal(
-      fullCloseout.evidence_requirement_ledger.summary.open_requirement_count,
-      fullCloseout.attention_queue.length,
+      fullWorklist.evidence_requirement_ledger.summary.open_requirement_count,
+      fullWorklist.attention_queue.length,
     );
-    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.refs_only, true);
-    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_write_domain_truth, false);
-    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_read_memory_body, false);
-    assert.equal(fullCloseout.evidence_requirement_ledger.authority_boundary.can_claim_production_ready, false);
-    assert.equal(fullCloseout.evidence_envelope.surface_kind, 'opl_evidence_envelope_projection');
-    assert.equal(fullCloseout.evidence_envelope.summary.envelope_count > 0, true);
-    assert.equal(fullCloseout.evidence_envelope.summary.open_envelope_count > 0, true);
+    assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.refs_only, true);
+    assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.can_read_memory_body, false);
+    assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.can_claim_production_ready, false);
+    assert.equal(fullWorklist.evidence_envelope.surface_kind, 'opl_evidence_envelope_projection');
+    assert.equal(fullWorklist.evidence_envelope.summary.envelope_count > 0, true);
+    assert.equal(fullWorklist.evidence_envelope.summary.open_envelope_count > 0, true);
     assert.equal(
-      fullCloseout.evidence_envelope.summary.open_envelope_count
-        + fullCloseout.evidence_envelope.summary.closed_envelope_count
-        + fullCloseout.evidence_envelope.summary.blocked_envelope_count,
-      fullCloseout.evidence_envelope.summary.envelope_count,
+      fullWorklist.evidence_envelope.summary.open_envelope_count
+        + fullWorklist.evidence_envelope.summary.closed_envelope_count
+        + fullWorklist.evidence_envelope.summary.blocked_envelope_count,
+      fullWorklist.evidence_envelope.summary.envelope_count,
     );
-    assert.equal(fullCloseout.evidence_envelope.summary.domain_ready_claim_count, 0);
-    assert.equal(fullCloseout.evidence_envelope.summary.production_ready_claim_count, 0);
-    assert.equal(fullCloseout.evidence_envelope.summary.artifact_authority_claim_count, 0);
-    assert.equal(fullCloseout.evidence_envelope.authority_boundary.can_write_domain_truth, false);
-    assert.equal(fullCloseout.evidence_envelope.authority_boundary.can_claim_production_ready, false);
-    assert.equal(fullCloseout.evidence_envelope.envelopes, undefined);
+    assert.equal(fullWorklist.evidence_envelope.summary.domain_ready_claim_count, 0);
+    assert.equal(fullWorklist.evidence_envelope.summary.production_ready_claim_count, 0);
+    assert.equal(fullWorklist.evidence_envelope.summary.artifact_authority_claim_count, 0);
+    assert.equal(fullWorklist.evidence_envelope.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullWorklist.evidence_envelope.authority_boundary.can_claim_production_ready, false);
+    assert.equal(fullWorklist.evidence_envelope.envelopes, undefined);
     assert.equal(
-      fullCloseout.evidence_envelope_full_ref,
+      fullWorklist.evidence_envelope_full_ref,
       '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
     );
-    const workorderPacket = fullCloseout.stage_evidence_workorder_packet;
+    const workorderPacket = fullWorklist.stage_evidence_workorder_packet;
     assert.equal(workorderPacket.surface_kind, 'opl_stage_evidence_workorder_packet');
     assert.equal(
       workorderPacket.summary.workorder_count,
-      fullCloseout.summary.stage_production_evidence_receipt_item_count,
+      fullWorklist.summary.stage_production_evidence_receipt_item_count,
     );
     assert.equal(
       workorderPacket.summary.route_requires_domain_or_app_payload_count,
@@ -509,8 +510,8 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(firstWorkorder.can_close_without_domain_or_app_payload, false);
     assert.equal(firstWorkorder.payload_workorder.surface_kind, 'opl_stage_production_evidence_payload_workorder');
     assert.equal(firstWorkorder.authority_boundary.can_read_artifact_body, false);
-    assert.equal(fullCloseout.authority_boundary.can_write_domain_truth, false);
-    assert.equal(fullCloseout.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(fullWorklist.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullWorklist.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -518,16 +519,16 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
 });
 
 test('family-runtime evidence-worklist closes only OPL-owned provider and cleanup receipts', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-production-closeout-closed-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-closed-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
-    medautogrant: withProductionCloseoutSurfaces(
+    medautogrant: withEvidenceWorklistSurfaces(
       baseManifests.medautogrant,
       ['fundability_strategy', 'specific_aims_and_structure', 'proposal_authoring'],
       { externalEvidenceRequestCount: 6, cleanupReady: true },
     ),
-    medautoscience: withProductionCloseoutSurfaces(
+    medautoscience: withEvidenceWorklistSurfaces(
       baseManifests.medautoscience,
       [
         'direction_and_route_selection',
@@ -539,7 +540,7 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       ],
       { cleanupReady: true },
     ),
-    redcube: withProductionCloseoutSurfaces(
+    redcube: withEvidenceWorklistSurfaces(
       baseManifests.redcube,
       [
         'source_intake',
@@ -609,25 +610,26 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
     }));
-    const closeout = output.family_runtime_production_closeout;
+    const worklist = output.family_runtime_evidence_worklist;
 
-    assert.equal(closeout.surface_kind, 'opl_family_runtime_evidence_worklist');
-    assert.equal(closeout.command, 'evidence-worklist');
-    assert.equal(Object.hasOwn(closeout, 'command_alias'), false);
-    assert.equal(Object.hasOwn(closeout, 'deprecated_alias_of'), false);
-    assert.equal(Object.hasOwn(closeout, 'deprecated_alias'), false);
-    assert.equal(closeout.summary.closeout_item_count, 49);
-    assert.equal(closeout.summary.closed_item_count, 10);
-    assert.equal(closeout.summary.open_worklist_item_count, 39);
-    assert.equal(closeout.summary.closed_refs_only_item_count, 10);
-    assert.equal(closeout.summary.open_safe_action_item_count, 39);
-    assert.equal(Object.hasOwn(closeout.summary, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(Object.hasOwn(closeout, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(closeout.open_worklist_item_count, 39);
-    assert.equal(closeout.detail_level, 'summary');
-    assert.equal(closeout.closeout_items, undefined);
-    assert.equal(closeout.attention_queue, undefined);
-    assert.equal(closeout.next_action_ledger, undefined);
+    assert.equal(worklist.surface_kind, 'opl_family_runtime_evidence_worklist');
+    assert.equal(worklist.command, 'evidence-worklist');
+    assert.equal(Object.hasOwn(worklist, 'command_alias'), false);
+    assert.equal(Object.hasOwn(worklist, 'deprecated_alias_of'), false);
+    assert.equal(Object.hasOwn(worklist, 'deprecated_alias'), false);
+    assert.equal(worklist.summary.worklist_item_count, 49);
+    assert.equal(worklist.summary.closed_worklist_item_count, 10);
+    assert.equal(worklist.summary.open_worklist_item_count, 39);
+    assert.equal(worklist.summary.closed_refs_only_item_count, 10);
+    assert.equal(worklist.summary.open_safe_action_item_count, 39);
+    assert.equal(Object.hasOwn(worklist.summary, 'production_closeout_open_safe_action_item_count'), false);
+    assert.equal(Object.hasOwn(output, 'family_runtime_production_closeout'), false);
+    assert.equal(Object.hasOwn(worklist, 'production_closeout_open_safe_action_item_count'), false);
+    assert.equal(worklist.open_worklist_item_count, 39);
+    assert.equal(worklist.detail_level, 'summary');
+    assert.equal(worklist.worklist_items, undefined);
+    assert.equal(worklist.attention_queue, undefined);
+    assert.equal(worklist.next_action_ledger, undefined);
 
     const fullOutput = runCli([
       'family-runtime',
@@ -642,11 +644,11 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
     }));
-    const fullCloseout = fullOutput.family_runtime_production_closeout;
-    assert.equal(fullCloseout.detail_level, 'full');
-    assert.equal(fullCloseout.attention_queue.length, 39);
+    const fullWorklist = fullOutput.family_runtime_evidence_worklist;
+    assert.equal(fullWorklist.detail_level, 'full');
+    assert.equal(fullWorklist.attention_queue.length, 39);
 
-    const providerItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+    const providerItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'provider_scheduler_cadence'
     );
     assert.equal(providerItems.length, 4);
@@ -657,8 +659,8 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       true,
     );
     assert.equal(
-      providerItems.every((item: { closeout_status_detail: string }) =>
-        item.closeout_status_detail === 'closed_by_opl_provider_slo_receipt'
+      providerItems.every((item: { worklist_status_detail: string }) =>
+        item.worklist_status_detail === 'closed_by_opl_provider_slo_receipt'
       ),
       true,
     );
@@ -669,7 +671,7 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       true,
     );
 
-    const cleanupItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+    const cleanupItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'legacy_cleanup_ledger'
     );
     assert.equal(cleanupItems.length, 6);
@@ -680,8 +682,8 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       true,
     );
     assert.equal(
-      cleanupItems.every((item: { closeout_status_detail: string }) =>
-        item.closeout_status_detail === 'closed_by_opl_cleanup_ledger_receipt'
+      cleanupItems.every((item: { worklist_status_detail: string }) =>
+        item.worklist_status_detail === 'closed_by_opl_cleanup_ledger_receipt'
       ),
       true,
     );
@@ -692,16 +694,16 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       true,
     );
 
-    const externalItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+    const externalItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'external_evidence_receipt'
     );
-    const gateItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+    const gateItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'evidence_gate_receipt'
     );
-    const stageItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+    const stageItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'stage_production_caller_request'
     );
-    const stageEvidenceItems = fullCloseout.closeout_items.filter((item: { claim_scope: string }) =>
+    const stageEvidenceItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'stage_production_evidence_receipt'
     );
     for (const item of [...externalItems, ...gateItems, ...stageItems]) {
@@ -722,12 +724,12 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
       true,
     );
     assert.equal(
-      fullCloseout.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count,
+      fullWorklist.summary.stage_production_evidence_receipt_requires_domain_or_app_payload_count,
       stageEvidenceItems.length,
     );
-    assert.equal(fullCloseout.next_action_ledger.summary.next_action_item_count, 39);
-    assert.equal(fullCloseout.authority_boundary.can_write_domain_truth, false);
-    assert.equal(fullCloseout.authority_boundary.can_claim_production_ready, false);
+    assert.equal(fullWorklist.next_action_ledger.summary.next_action_item_count, 39);
+    assert.equal(fullWorklist.authority_boundary.can_write_domain_truth, false);
+    assert.equal(fullWorklist.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -735,16 +737,16 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
 });
 
 test('family-runtime evidence-worklist classifies verified external blockers without production authority', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-production-closeout-external-blocker-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-external-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const baseManifests = loadFamilyManifestFixtures();
   const manifests = {
-    medautogrant: withProductionCloseoutSurfaces(
+    medautogrant: withEvidenceWorklistSurfaces(
       baseManifests.medautogrant,
       ['fundability_strategy', 'specific_aims_and_structure', 'proposal_authoring'],
       { externalEvidenceRequestCount: 6 },
     ),
-    medautoscience: withProductionCloseoutSurfaces(
+    medautoscience: withEvidenceWorklistSurfaces(
       baseManifests.medautoscience,
       [
         'direction_and_route_selection',
@@ -755,7 +757,7 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
         'finalize_and_publication_handoff',
       ],
     ),
-    redcube: withProductionCloseoutSurfaces(
+    redcube: withEvidenceWorklistSurfaces(
       baseManifests.redcube,
       [
         'source_intake',
@@ -797,12 +799,12 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
-    })).family_runtime_production_closeout;
+    })).family_runtime_evidence_worklist;
 
-    const externalRecord = before.closeout_items.find((item: { claim_scope: string }) =>
+    const externalRecord = before.worklist_items.find((item: { claim_scope: string }) =>
       item.claim_scope === 'external_evidence_receipt'
     );
-    const gateRecord = before.closeout_items.find((item: { claim_scope: string }) =>
+    const gateRecord = before.worklist_items.find((item: { claim_scope: string }) =>
       item.claim_scope === 'evidence_gate_receipt'
     );
     assert.ok(externalRecord);
@@ -827,7 +829,7 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       assert.equal(recorded.execution.result.external_evidence_apply.status, 'recorded');
     }
 
-    const recordedCloseout = runCli([
+    const recordedWorklist = runCli([
       'family-runtime',
       'evidence-worklist',
       '--family-defaults',
@@ -839,9 +841,9 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
-    })).family_runtime_production_closeout;
+    })).family_runtime_evidence_worklist;
 
-    const verifyItems = recordedCloseout.closeout_items.filter((item: { action_kind: string }) =>
+    const verifyItems = recordedWorklist.worklist_items.filter((item: { action_kind: string }) =>
       item.action_kind === 'external_evidence_receipt_verify'
       || item.action_kind === 'evidence_gate_receipt_verify'
     );
@@ -870,26 +872,26 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       'full',
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
       OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
-    })).family_runtime_production_closeout;
+    })).family_runtime_evidence_worklist;
 
     assert.equal(after.summary.open_safe_action_item_count, 43);
     assert.equal(after.summary.open_worklist_item_count, 43);
-    assert.equal(after.summary.closed_item_count, 6);
+    assert.equal(after.summary.closed_worklist_item_count, 6);
     assert.equal(after.summary.closed_refs_only_item_count, 6);
     assert.equal(after.next_action_ledger.summary.typed_blocker_tail_item_count, 2);
     assert.equal(after.next_action_ledger.summary.next_action_item_count, 45);
-    const blockerItems = after.closeout_items.filter((item: { status: string }) =>
+    const blockerItems = after.worklist_items.filter((item: { status: string }) =>
       item.status === 'closed_by_domain_owned_typed_blocker'
     );
     assert.equal(blockerItems.length, 2);
     for (const item of blockerItems) {
-      assert.equal(item.closeout_status_detail, 'closed_by_domain_owned_typed_blocker_ref');
+      assert.equal(item.worklist_status_detail, 'closed_by_domain_owned_typed_blocker_ref');
       assert.equal(item.typed_blocker_refs.length, 1);
       assert.equal(item.evidence_requirement_model, 'evidence_requirement.v1');
       assert.equal(item.evidence_requirement.requirement_id, item.tail_id);
       assert.equal(item.evidence_requirement.status, 'domain_owned_typed_blocker');
       assert.equal(item.evidence_requirement.typed_blocker_ref, item.typed_blocker_ref);
-      assert.equal(item.closeout_item_is_completion_claim, false);
+      assert.equal(item.worklist_item_is_completion_claim, false);
       assert.equal(item.not_authorized_claims.includes('production_ready'), true);
     }
     assert.equal(after.authority_boundary.can_claim_production_ready, false);
@@ -928,7 +930,7 @@ test('family-runtime evidence-worklist rejects retired production-closeout alias
 });
 
 test('family-runtime evidence-worklist rejects non-production provider fallback', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-production-closeout-provider-state-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-provider-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
 
   try {

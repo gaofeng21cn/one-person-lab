@@ -5,14 +5,14 @@ import { assertProviderKind } from './shared.ts';
 
 const EVIDENCE_WORKLIST_COMMAND = 'evidence-worklist';
 
-function closeoutUsage() {
+function evidenceWorklistUsage() {
   return `opl family-runtime ${EVIDENCE_WORKLIST_COMMAND} --family-defaults --provider temporal --executor-kind codex_cli [--detail summary|full] [--full]`;
 }
 
-export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeCommandInput {
+export function parseEvidenceWorklistArgs(rest: string[]): FamilyRuntimeCommandInput {
   if (rest[0] !== EVIDENCE_WORKLIST_COMMAND) {
     throw new FrameworkContractError('unknown_command', `Unknown family-runtime subcommand: ${rest[0]}.`, {
-      usage: closeoutUsage(),
+      usage: evidenceWorklistUsage(),
     });
   }
   let familyDefaults = false;
@@ -57,7 +57,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime ${EVIDENCE_WORKLIST_COMMAND} option: ${token}.`, {
         option: token,
-        usage: closeoutUsage(),
+        usage: evidenceWorklistUsage(),
       });
     }
   }
@@ -68,7 +68,7 @@ export function parseProductionCloseoutArgs(rest: string[]): FamilyRuntimeComman
     });
   }
   return {
-    mode: 'production_closeout',
+    mode: 'evidence_worklist',
     input: {
       familyDefaults,
       providerKind: providerKind ?? 'temporal',

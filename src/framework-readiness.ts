@@ -7,7 +7,7 @@ import {
   buildFamilyStageReadinessInspect,
   buildFamilyStagesList,
 } from './family-stage-control-plane.ts';
-import { runFamilyRuntimeProductionCloseout } from './family-runtime-production-closeout.ts';
+import { runFamilyRuntimeEvidenceWorklist } from './family-runtime-evidence-worklist.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import {
@@ -318,12 +318,15 @@ function frameworkAttentionFirstPayload(input: {
   agentStructuralEvidenceTailCount: number;
   appLiveEvidenceTailCount: number;
   stageReceiptFreshnessTailCount: number;
+  evidenceEnvelopeOpenCount: number;
+  evidenceEnvelopeBlockedCount: number;
   providerSloCadenceWindowStatus: unknown;
   providerSloCapabilityStatus: unknown;
 }) {
   const openTailCount = input.agentStructuralEvidenceTailCount
     + input.appLiveEvidenceTailCount
     + input.stageReceiptFreshnessTailCount;
+  const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
   const blockers = [
     ...(input.packCompilerBlockerCount > 0
       ? [{
@@ -369,6 +372,15 @@ function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/evidence_tails',
         }]
       : []),
+    ...(evidenceEnvelopeAttentionCount > 0
+      ? [{
+          warning_id: 'evidence_envelope_attention',
+          count: evidenceEnvelopeAttentionCount,
+          open_count: input.evidenceEnvelopeOpenCount,
+          blocked_count: input.evidenceEnvelopeBlockedCount,
+          drilldown_ref: '/framework_readiness/evidence_envelope',
+        }]
+      : []),
   ];
   const nextSafeActions = blockers.length > 0
     ? [{
@@ -398,6 +410,10 @@ function frameworkAttentionFirstPayload(input: {
       agent_structural_evidence_tail_open_count: input.agentStructuralEvidenceTailCount,
       app_live_evidence_tail_open_count: input.appLiveEvidenceTailCount,
       stage_receipt_freshness_tail_open_count: input.stageReceiptFreshnessTailCount,
+      evidence_envelope_open_count: input.evidenceEnvelopeOpenCount,
+      evidence_envelope_blocked_count: input.evidenceEnvelopeBlockedCount,
+      evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
+      total_operator_attention_tail_count: openTailCount + evidenceEnvelopeAttentionCount,
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
@@ -442,12 +458,12 @@ export async function buildFrameworkReadinessSummary(
     providerKind: 'temporal',
   });
   const appOperatorDrilldown = record(runtimeSnapshot.runtime_tray_snapshot.app_operator_drilldown);
-  const familyRuntimeCloseout = record(
-    (await runFamilyRuntimeProductionCloseout(contracts, {
+  const familyRuntimeEvidenceWorklist = record(
+    (await runFamilyRuntimeEvidenceWorklist(contracts, {
       familyDefaults: true,
       providerKind: 'temporal',
       executorKind: 'codex_cli',
-    })).family_runtime_production_closeout,
+    })).family_runtime_evidence_worklist,
   );
 
   const semanticSummary = record(semanticHygiene.summary);
@@ -455,8 +471,11 @@ export async function buildFrameworkReadinessSummary(
   const packSummary = record(packCompiler.summary);
   const stagesSummary = record(familyStages.summary);
   const appSummary = record(appOperatorDrilldown.summary);
-  const closeoutSummary = record(familyRuntimeCloseout.summary);
-  const readinessEvidenceEnvelope = record(familyRuntimeCloseout.evidence_envelope);
+  const worklistSummary = record(familyRuntimeEvidenceWorklist.summary);
+  const readinessEvidenceEnvelope = record(familyRuntimeEvidenceWorklist.evidence_envelope);
+  const readinessEvidenceEnvelopeSummary = evidenceEnvelopeSummary(readinessEvidenceEnvelope);
+  const readinessEvidenceEnvelopeOpenCount = evidenceEnvelopeOpenCount(readinessEvidenceEnvelope);
+  const readinessEvidenceEnvelopeBlockedCount = numberValue(readinessEvidenceEnvelopeSummary.blocked_envelope_count);
   const stageSummaries = Object.fromEntries(
     Object.entries(stageReadiness).map(([domain, readiness]) => [domain, stageReadinessSummary(readiness)]),
   );
@@ -489,9 +508,9 @@ export async function buildFrameworkReadinessSummary(
   );
   const appOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
   const stageProductionCallerTailCount = numberValue(appSummary.stage_production_evidence_missing_caller_stage_count);
-  const evidenceWorklistOpenCount = countValue(closeoutSummary.open_worklist_item_count);
+  const evidenceWorklistOpenCount = countValue(worklistSummary.open_worklist_item_count);
   const stageReceiptFreshnessOpenWorkorderCount =
-    countValue(closeoutSummary.stage_receipt_freshness_open_workorder_count);
+    countValue(worklistSummary.stage_receipt_freshness_open_workorder_count);
   const agentStructuralEvidenceTailCount =
     numberValue(agentSummary.agent_readiness_production_evidence_tail_count);
   const appLiveEvidenceTailCount = appOpenTailCount;
@@ -500,10 +519,15 @@ export async function buildFrameworkReadinessSummary(
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
   const openTailCount =
     agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
+  const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
     agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
-  const frameworkStatus = statusFrom(openTailCount, semanticAttentionGateCount, hardBlockerCount);
+  const frameworkStatus = statusFrom(
+    openTailCount + evidenceEnvelopeAttentionCount,
+    semanticAttentionGateCount,
+    hardBlockerCount,
+  );
 
   return {
     version: 'g1',
@@ -532,6 +556,8 @@ export async function buildFrameworkReadinessSummary(
         agentStructuralEvidenceTailCount,
         appLiveEvidenceTailCount,
         stageReceiptFreshnessTailCount,
+        evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
+        evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
         providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
         providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
       }),
@@ -551,6 +577,10 @@ export async function buildFrameworkReadinessSummary(
         agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,
         app_live_evidence_tail_open_count: appLiveEvidenceTailCount,
         stage_receipt_freshness_tail_open_count: stageReceiptFreshnessTailCount,
+        evidence_envelope_open_count: readinessEvidenceEnvelopeOpenCount,
+        evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
+        evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
+        total_operator_attention_tail_count: openTailCount + evidenceEnvelopeAttentionCount,
         open_tail_count: openTailCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
         provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,
@@ -659,27 +689,29 @@ export async function buildFrameworkReadinessSummary(
       },
       evidence_worklist: {
         source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
-        surface_role: familyRuntimeCloseout.surface_role ?? null,
-        worklist_role: familyRuntimeCloseout.worklist_role ?? null,
-        lens_policy: familyRuntimeCloseout.lens_policy ?? null,
-        closeout_item_count: numberValue(closeoutSummary.closeout_item_count),
-        closed_item_count: numberValue(closeoutSummary.closed_item_count),
+        surface_role: familyRuntimeEvidenceWorklist.surface_role ?? null,
+        worklist_role: familyRuntimeEvidenceWorklist.worklist_role ?? null,
+        lens_policy: familyRuntimeEvidenceWorklist.lens_policy ?? null,
+        worklist_item_count: numberValue(worklistSummary.worklist_item_count),
+        closed_worklist_item_count: numberValue(worklistSummary.closed_worklist_item_count),
         open_worklist_item_count: evidenceWorklistOpenCount,
-        closed_refs_only_item_count: countValue(closeoutSummary.closed_refs_only_item_count),
+        closed_refs_only_item_count: countValue(worklistSummary.closed_refs_only_item_count),
         stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
-        next_action_item_count: numberValue(closeoutSummary.next_action_item_count),
-        provider_scheduler_item_count: numberValue(closeoutSummary.provider_scheduler_item_count),
-        stage_production_caller_item_count: numberValue(closeoutSummary.stage_production_caller_item_count),
-        external_evidence_item_count: numberValue(closeoutSummary.external_evidence_item_count),
-        evidence_gate_item_count: numberValue(closeoutSummary.evidence_gate_item_count),
-        legacy_cleanup_item_count: numberValue(closeoutSummary.legacy_cleanup_item_count),
-        closeout_item_is_completion_claim: false,
-        authority_boundary: familyRuntimeCloseout.authority_boundary ?? authorityBoundary(),
+        next_action_item_count: numberValue(worklistSummary.next_action_item_count),
+        provider_scheduler_item_count: numberValue(worklistSummary.provider_scheduler_item_count),
+        stage_production_caller_item_count: numberValue(worklistSummary.stage_production_caller_item_count),
+        external_evidence_item_count: numberValue(worklistSummary.external_evidence_item_count),
+        evidence_gate_item_count: numberValue(worklistSummary.evidence_gate_item_count),
+        legacy_cleanup_item_count: numberValue(worklistSummary.legacy_cleanup_item_count),
+        worklist_item_is_completion_claim: false,
+        authority_boundary: familyRuntimeEvidenceWorklist.authority_boundary ?? authorityBoundary(),
       },
       evidence_envelope: {
         source_command: SOURCE_COMMANDS.family_runtime_evidence_worklist,
-        summary: evidenceEnvelopeSummary(readinessEvidenceEnvelope),
-        open_envelope_count: evidenceEnvelopeOpenCount(readinessEvidenceEnvelope),
+        summary: readinessEvidenceEnvelopeSummary,
+        open_envelope_count: readinessEvidenceEnvelopeOpenCount,
+        blocked_envelope_count: readinessEvidenceEnvelopeBlockedCount,
+        attention_envelope_count: evidenceEnvelopeAttentionCount,
         claim_policy:
           'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
         authority_boundary:

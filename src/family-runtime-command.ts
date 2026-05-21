@@ -44,7 +44,7 @@ export type FamilyRuntimeCommandInput =
   | { mode: 'scheduler_tick'; providerKind?: FamilyRuntimeProviderKind; force?: boolean; limit?: number; hydrate?: boolean }
   | { mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger'; providerKind?: FamilyRuntimeProviderKind }
   | {
-    mode: 'production_closeout';
+    mode: 'evidence_worklist';
     input: {
       familyDefaults: boolean;
       providerKind: FamilyRuntimeProviderKind;

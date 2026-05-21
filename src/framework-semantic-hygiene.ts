@@ -96,7 +96,7 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
       source_evidence: [
         'src/evidence-envelope.ts',
         'src/framework-readiness.ts',
-        'src/family-runtime-production-closeout.ts',
+        'src/family-runtime-evidence-worklist.ts',
         'src/runtime-tray-app-operator-drilldown.ts',
       ],
       current_state_claims: NO_READY_CLAIMS,

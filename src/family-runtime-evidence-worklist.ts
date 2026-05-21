@@ -14,7 +14,7 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
-type ProductionCloseoutInput = {
+type EvidenceWorklistInput = {
   familyDefaults: boolean;
   providerKind: FamilyRuntimeProviderKind;
   executorKind: 'codex_cli';
@@ -253,7 +253,7 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
   return null;
 }
 
-function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonRecord) {
+function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonRecord) {
   const actionId = stringValue(route.action_id) ?? `route:${index + 1}`;
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
   const typedBlockerRefs = stringList(route.typed_blocker_refs);
@@ -273,8 +273,8 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     ...closureTypedBlockerRefs,
   ];
   const item = {
-    item_id: `production-closeout:${actionId}`,
-    tail_id: `production-closeout:${actionId}`,
+    item_id: `evidence-worklist:${actionId}`,
+    tail_id: `evidence-worklist:${actionId}`,
     tail_item: actionKind,
     action_id: actionId,
     action_kind: actionKind,
@@ -286,7 +286,7 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
       ? 'verify'
       : 'request_or_apply_via_safe_action',
     status: itemStatus,
-    closeout_item_is_completion_claim: false,
+    worklist_item_is_completion_claim: false,
     route_status: stringValue(route.route_status) ?? 'request_route_available',
     route_status_detail: stringValue(route.route_status_detail),
     route_semantics: 'open_safe_action_request_apply_verify_route',
@@ -294,7 +294,7 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
     receipt_refs: closureReceiptRefs,
     typed_blocker_ref: typedBlockerRefs[0] ?? closureTypedBlockerRef ?? null,
     typed_blocker_refs: allTypedBlockerRefs,
-    closeout_status_detail: itemStatus === 'closed_by_domain_owned_typed_blocker'
+    worklist_status_detail: itemStatus === 'closed_by_domain_owned_typed_blocker'
       ? 'closed_by_domain_owned_typed_blocker_ref'
       : itemStatus === 'closed_by_receipt_ref'
         ? readOnlyClaimScope(route) === 'provider_scheduler_cadence'
@@ -326,7 +326,7 @@ function readOnlyCloseoutItem(route: JsonRecord, index: number, drilldown: JsonR
   };
 }
 
-function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
+function externalEvidenceReceiptWorklistItems(drilldown: JsonRecord) {
   const domainEvidence = record(drilldown.domain_evidence_request_refs);
   const receipts = [
     ...recordList(domainEvidence.external_receipts),
@@ -353,8 +353,8 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
       ? 'evidence_gate_receipt'
       : 'external_evidence_receipt';
     const item = {
-      item_id: `production-closeout:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
-      tail_id: `production-closeout:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
+      item_id: `evidence-worklist:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
+      tail_id: `evidence-worklist:${role}:${domainId ?? 'domain'}:${requestId}:verified`,
       tail_item: role,
       action_id: `${role}:${domainId ?? 'domain'}:${requestId}:verified`,
       action_kind: typedBlockerOnly
@@ -368,7 +368,7 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
       status: typedBlockerOnly
         ? 'closed_by_domain_owned_typed_blocker'
         : 'closed_by_receipt_ref',
-      closeout_item_is_completion_claim: false,
+      worklist_item_is_completion_claim: false,
       route_status: 'receipt_verified',
       route_status_detail: null,
       route_semantics: 'verified_refs_only_receipt_projection',
@@ -376,7 +376,7 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
       receipt_refs: receiptRefs,
       typed_blocker_ref: typedBlockerRefs[0] ?? null,
       typed_blocker_refs: typedBlockerRefs,
-      closeout_status_detail: typedBlockerOnly
+      worklist_status_detail: typedBlockerOnly
         ? 'closed_by_domain_owned_typed_blocker_ref'
         : 'closed_by_opl_external_evidence_ledger_receipt',
       replay_ref: receiptRef ?? `/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs`,
@@ -403,16 +403,16 @@ function externalEvidenceReceiptCloseoutItems(drilldown: JsonRecord) {
   });
 }
 
-function readOnlyRouteMatchesDefaults(route: JsonRecord, input: ProductionCloseoutInput) {
+function readOnlyRouteMatchesDefaults(route: JsonRecord, input: EvidenceWorklistInput) {
   const actionKind = stringValue(route.action_kind) ?? '';
   const args = stringList(route.opl_cli_args);
-  const closeoutKind = actionKind.startsWith('provider_scheduler_')
+  const worklistKind = actionKind.startsWith('provider_scheduler_')
     || actionKind === 'stage_production_attempt_request'
     || actionKind.startsWith('stage_production_evidence_')
     || actionKind.startsWith('external_evidence_')
     || actionKind.startsWith('evidence_gate_')
     || actionKind.startsWith('legacy_cleanup_');
-  if (!closeoutKind || stringValue(route.owner) !== 'opl') {
+  if (!worklistKind || stringValue(route.owner) !== 'opl') {
     return false;
   }
   if (actionKind.startsWith('provider_scheduler_')) {
@@ -432,7 +432,7 @@ function readOnlyRouteMatchesDefaults(route: JsonRecord, input: ProductionCloseo
 
 function authorityBoundary() {
   return {
-    opl: 'production_closeout_derived_attention_lens_for_refs_only_safe_action_routes',
+    opl: 'evidence_worklist_derived_attention_lens_for_refs_only_safe_action_routes',
     provider: 'temporal_scheduler_and_provider_slo_receipt_owner',
     domain: 'truth_quality_artifact_domain_ready_owner',
     can_write_domain_truth: false,
@@ -447,10 +447,10 @@ function authorityBoundary() {
   };
 }
 
-function closeoutCounts(
-  closeoutItems: ReturnType<typeof readOnlyCloseoutItem>[],
-  openItems: ReturnType<typeof readOnlyCloseoutItem>[],
-  closedItems: ReturnType<typeof readOnlyCloseoutItem>[],
+function worklistCounts(
+  worklistItems: ReturnType<typeof readOnlyWorklistItem>[],
+  openItems: ReturnType<typeof readOnlyWorklistItem>[],
+  closedItems: ReturnType<typeof readOnlyWorklistItem>[],
   nextActionLedger: ReturnType<typeof buildProductionTailNextActionLedger>,
 ) {
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
@@ -460,29 +460,29 @@ function closeoutCounts(
     open_worklist_item_count: openItems.length,
     closed_refs_only_item_count: closedItems.length,
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
-    closeout_item_count: closeoutItems.length,
-    closed_item_count: closedItems.length,
+    worklist_item_count: worklistItems.length,
+    closed_worklist_item_count: closedItems.length,
     open_safe_action_item_count: openItems.length,
     next_action_item_count: nextActionLedger.summary.next_action_item_count,
     next_action_group_count: nextActionLedger.summary.next_action_group_count,
-    provider_scheduler_item_count: closeoutItems.filter((item) =>
+    provider_scheduler_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'provider_scheduler_cadence'
     ).length,
-    stage_production_caller_item_count: closeoutItems.filter((item) =>
+    stage_production_caller_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'stage_production_caller_request'
     ).length,
-    external_evidence_item_count: closeoutItems.filter((item) =>
+    external_evidence_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'external_evidence_receipt'
     ).length,
-    stage_production_evidence_receipt_item_count: closeoutItems.filter((item) =>
+    stage_production_evidence_receipt_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'stage_production_evidence_receipt'
     ).length,
     stage_production_evidence_receipt_requires_domain_or_app_payload_count:
-      closeoutItems.filter((item) => item.route_requires_domain_or_app_payload === true).length,
-    evidence_gate_item_count: closeoutItems.filter((item) =>
+      worklistItems.filter((item) => item.route_requires_domain_or_app_payload === true).length,
+    evidence_gate_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'evidence_gate_receipt'
     ).length,
-    legacy_cleanup_item_count: closeoutItems.filter((item) =>
+    legacy_cleanup_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'legacy_cleanup_ledger'
     ).length,
     domain_ready_authorized: false,
@@ -491,7 +491,7 @@ function closeoutCounts(
   };
 }
 
-function attentionQueueItem(item: ReturnType<typeof readOnlyCloseoutItem>) {
+function attentionQueueItem(item: ReturnType<typeof readOnlyWorklistItem>) {
   return {
     item_id: item.item_id,
     owner: item.owner,
@@ -508,7 +508,7 @@ function attentionQueueItem(item: ReturnType<typeof readOnlyCloseoutItem>) {
 }
 
 function nextSafeActions(
-  openItems: ReturnType<typeof readOnlyCloseoutItem>[],
+  openItems: ReturnType<typeof readOnlyWorklistItem>[],
   limit = 5,
 ) {
   return openItems.slice(0, limit).map((item) => ({
@@ -528,7 +528,7 @@ function nextSafeActions(
     payload_requirement: item.payload_requirement,
     payload_owner: item.payload_owner,
     route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload,
-    closeout_item_is_completion_claim: false,
+    worklist_item_is_completion_claim: false,
   }));
 }
 
@@ -621,8 +621,8 @@ function buildStageEvidenceWorkorderPacket(operatorRoutes: JsonRecord[]) {
   };
 }
 
-function buildEvidenceRequirementLedger(closeoutItems: ReturnType<typeof readOnlyCloseoutItem>[]) {
-  const requirements = closeoutItems.map((item) => item.evidence_requirement);
+function buildEvidenceRequirementLedger(worklistItems: ReturnType<typeof readOnlyWorklistItem>[]) {
+  const requirements = worklistItems.map((item) => item.evidence_requirement);
   const domainIds = uniqueStringList(requirements.map((requirement) => requirement.domain_id));
   const ownerIds = uniqueStringList(requirements.map((requirement) => requirement.owner));
   const stageKeys = uniqueStringList(requirements.map((requirement) =>
@@ -633,7 +633,7 @@ function buildEvidenceRequirementLedger(closeoutItems: ReturnType<typeof readOnl
     model_version: EVIDENCE_REQUIREMENT_MODEL_VERSION,
     ledger_policy:
       'canonical_refs_only_requirement_projection_without_domain_truth_artifact_or_memory_body_access',
-    source_ref: '/family_runtime_production_closeout/closeout_items',
+    source_ref: '/family_runtime_evidence_worklist/worklist_items',
     summary: {
       requirement_count: requirements.length,
       open_requirement_count:
@@ -662,9 +662,9 @@ function buildEvidenceRequirementLedger(closeoutItems: ReturnType<typeof readOnl
   };
 }
 
-export async function runFamilyRuntimeProductionCloseout(
+export async function runFamilyRuntimeEvidenceWorklist(
   contracts: FrameworkContracts,
-  input: ProductionCloseoutInput,
+  input: EvidenceWorklistInput,
 ) {
   const snapshot = await buildRuntimeTraySnapshot(contracts, {
     appOperatorDrilldownDetailLevel: 'full',
@@ -677,32 +677,32 @@ export async function runFamilyRuntimeProductionCloseout(
   const routes = recordList(bridge.safe_action_routes).filter((route) =>
     readOnlyRouteMatchesDefaults(route, input)
   );
-  const closeoutItems = [
-    ...routes.map((route, index) => readOnlyCloseoutItem(route, index, drilldown)),
-    ...externalEvidenceReceiptCloseoutItems(drilldown),
+  const worklistItems = [
+    ...routes.map((route, index) => readOnlyWorklistItem(route, index, drilldown)),
+    ...externalEvidenceReceiptWorklistItems(drilldown),
   ];
-  const openItems = closeoutItems.filter((item) =>
+  const openItems = worklistItems.filter((item) =>
     item.status === 'open_safe_action_request_route_available'
   );
-  const closedItems = closeoutItems.filter((item) =>
+  const closedItems = worklistItems.filter((item) =>
     item.status !== 'open_safe_action_request_route_available'
   );
   const nextActionLedger = buildProductionTailNextActionLedger({
-    surfaceKind: 'opl_family_runtime_production_tail_next_action_ledger',
+    surfaceKind: 'opl_family_runtime_evidence_worklist_next_action_ledger',
     sourceTailSummary: {
-      tail_item_count: closeoutItems.length,
+      tail_item_count: worklistItems.length,
       open_tail_item_count: openItems.length,
       typed_blocker_tail_item_count:
-        closeoutItems.filter((item) => item.status === 'closed_by_domain_owned_typed_blocker').length,
+        worklistItems.filter((item) => item.status === 'closed_by_domain_owned_typed_blocker').length,
       closed_tail_item_count: closedItems.length,
     },
-    tailItems: closeoutItems,
-    sourceRef: '/family_runtime_production_closeout/closeout_items',
+    tailItems: worklistItems,
+    sourceRef: '/family_runtime_evidence_worklist/worklist_items',
   });
-  const evidenceRequirementLedger = buildEvidenceRequirementLedger(closeoutItems);
+  const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
   const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
   const evidenceEnvelope = record(drilldown.evidence_envelope);
-  const counts = closeoutCounts(closeoutItems, openItems, closedItems, nextActionLedger);
+  const counts = worklistCounts(worklistItems, openItems, closedItems, nextActionLedger);
   const detailLevel = input.detailLevel ?? 'summary';
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
@@ -713,7 +713,7 @@ export async function runFamilyRuntimeProductionCloseout(
     worklist_role: 'refs_only_operator_evidence_worklist',
     lens_policy: 'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
     worklist_mode: 'refs_only_summary',
-    closeout_mode: 'dry_run_summary',
+    worklist_summary_mode: 'dry_run_summary',
     command: 'evidence-worklist',
     family_defaults: input.familyDefaults === true,
     selected_provider: input.providerKind,
@@ -743,11 +743,11 @@ export async function runFamilyRuntimeProductionCloseout(
   if (detailLevel === 'full') {
     return {
       version: 'g2',
-      family_runtime_production_closeout: {
+      family_runtime_evidence_worklist: {
         ...commonPayload,
         detail_level: 'full',
         projection_detail_policy: 'full_diagnostic_payload_requested_explicitly',
-        closeout_items: closeoutItems,
+        worklist_items: worklistItems,
         attention_queue: openItems.map(attentionQueueItem),
         next_action_ledger: nextActionLedger,
         evidence_requirement_ledger: evidenceRequirementLedger,
@@ -759,7 +759,7 @@ export async function runFamilyRuntimeProductionCloseout(
   }
   return {
     version: 'g2',
-    family_runtime_production_closeout: {
+    family_runtime_evidence_worklist: {
       ...commonPayload,
       detail_level: 'summary',
       projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
