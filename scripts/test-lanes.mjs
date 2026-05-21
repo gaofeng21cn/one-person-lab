@@ -227,6 +227,7 @@ const lanes = {
       'tests/src/stale-compat-retirement-guard.test.ts',
       'tests/src/cli/cases/system-semantic-hygiene.test.ts',
       'tests/src/cli/cases/framework-readiness.test.ts',
+      'tests/src/cli/cases/agents-conformance-stage-pack-v2.test.ts',
       'tests/src/family-product-operator-projection.test.ts',
     ], { batchSize: 10 }),
   ],
