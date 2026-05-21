@@ -746,7 +746,7 @@ export async function runFamilyRuntimeProductionCloseout(
       value: openItems.length,
       deprecated_alias_of: 'open_worklist_item_count',
     },
-    compatibility_aliases: {
+    retired_command_refs: {
       production_closeout_open_safe_action_item_count: {
         value: openItems.length,
         deprecated_alias_of: 'open_worklist_item_count',

@@ -13,8 +13,11 @@ case "$lane" in
   smoke)
     npm run test:smoke
     ;;
-  fast|meta)
+  fast)
     npm run test:fast
+    ;;
+  meta)
+    npm run test:meta
     ;;
   regression)
     npm run test:regression

@@ -11,7 +11,7 @@ if [[ "${1:-}" != "full" ]]; then
 fi
 
 parallel_lanes=(
-  "test:fast"
+  "test:fast:parallel"
   "test:fresh-install"
   "test:structure"
   "typecheck"
@@ -19,6 +19,8 @@ parallel_lanes=(
 )
 
 serial_lanes=(
+  "test:read-model-gates"
+  "test:meta"
   "test:regression"
   "test:integration"
   "test:artifact"
