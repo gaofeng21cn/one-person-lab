@@ -15,6 +15,11 @@ export {
   buildAgentLabCostEstimateReadModel,
   type AgentLabCostEstimatePreset,
 } from './agent-lab-token-cost-estimate.ts';
+export {
+  buildAgentLabEfficiencyNonRegressionReadModel,
+  type AgentLabEfficiencyNonRegressionInput,
+  type AgentLabEfficiencyNonRegressionRefs,
+} from './agent-lab-efficiency-nonregression.ts';
 export { REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS } from './agent-lab-independent-ai-review.ts';
 export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
 export { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
@@ -658,6 +663,49 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       production_evidence_typed_blocker_refs: productionEvidenceGateResult?.typed_blocker_refs ?? [],
       production_evidence_required_receipt_refs: productionEvidenceGateResult?.required_receipt_refs ?? [],
       forbidden_authority_flags: forbiddenAuthorityFlags,
+      duration_refs: unique(input.tasks.flatMap((task) => [
+        ...optionalRefs(task.trajectory.duration_refs as string[] | undefined),
+        typeof task.trajectory.duration_ref === 'string' ? task.trajectory.duration_ref : '',
+      ])),
+      cost_refs: unique(input.tasks.flatMap((task) => [
+        ...optionalRefs(task.trajectory.cost_refs as string[] | undefined),
+        typeof task.trajectory.cost_ref === 'string' ? task.trajectory.cost_ref : '',
+      ])),
+      cache_hit_refs: unique(input.tasks.flatMap((task) => [
+        ...optionalRefs(task.trajectory.cache_hit_refs as string[] | undefined),
+        typeof task.trajectory.cache_hit_ref === 'string' ? task.trajectory.cache_hit_ref : '',
+      ])),
+      reuse_scope_refs: unique(input.tasks.flatMap((task) => [
+        ...optionalRefs(task.trajectory.reuse_scope_refs as string[] | undefined),
+        typeof task.trajectory.reuse_scope_ref === 'string' ? task.trajectory.reuse_scope_ref : '',
+      ])),
+      quality_floor_refs: unique(input.tasks.flatMap((task) => {
+        const scorecard = task.scorecard as AgentLabScorecard & {
+          quality_floor_ref?: unknown;
+          quality_floor_refs?: unknown;
+        };
+        return [
+          ...optionalRefs(scorecard.quality_floor_refs as string[] | undefined),
+          typeof scorecard.quality_floor_ref === 'string' ? scorecard.quality_floor_ref : '',
+        ];
+      })),
+      no_forbidden_write_refs: unique(input.tasks.flatMap((task) => [
+        ...optionalRefs(task.promotion_gate.no_forbidden_write_proof_refs),
+        ...optionalRefs((task.promotion_gate as AgentLabPromotionGate & {
+          no_forbidden_write_refs?: string[];
+        }).no_forbidden_write_refs),
+      ])),
+      owner_route_refs: unique(input.tasks.flatMap((task) => [
+        ...optionalRefs((task.improvement_candidate as AgentLabImprovementCandidate & {
+          owner_route_refs?: string[];
+        }).owner_route_refs),
+        typeof (task.improvement_candidate as AgentLabImprovementCandidate & {
+          owner_route_ref?: unknown;
+        }).owner_route_ref === 'string'
+          ? (task.improvement_candidate as AgentLabImprovementCandidate & { owner_route_ref: string }).owner_route_ref
+          : '',
+        ...optionalRefs(task.promotion_gate.owner_or_human_gate_refs),
+      ])),
       command_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.command_refs))),
       file_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.file_refs))),
       subagent_refs: unique(input.tasks.flatMap((task) => optionalRefs(task.trajectory.subagent_refs))),

@@ -13,6 +13,7 @@ import {
 import {
   agentLabRefSummary,
   buildAgentLabCostEstimate,
+  buildAgentLabEfficiencyNonRegressionReadModel,
   buildSampleAgentLabResult,
   runAgentLabSuite,
   type AgentLabCostEstimatePreset,
@@ -74,6 +75,29 @@ function buildAgentLabStageExecutorPolicyPayload() {
   return {
     version: 'g2',
     agent_lab_stage_executor_policy: buildAgentLabStageExecutorPolicyReadModel(),
+  };
+}
+
+function buildAgentLabEfficiencyPayload() {
+  const readModel = buildAgentLabEfficiencyNonRegressionReadModel({
+    suiteResults: [buildSampleAgentLabResult(), buildLonglineAgentLabResult()],
+    explicitRefs: {
+      duration_refs: ['duration-ref:agent-lab/cli/default-wall-clock'],
+      cost_refs: ['cost-ref:agent-lab/cli/default-budget-envelope'],
+      cache_hit_refs: ['cache-hit-ref:agent-lab/cli/default-cache-observation'],
+      reuse_scope_refs: ['reuse-scope-ref:agent-lab/cli/default-shared-scope'],
+      quality_floor_refs: ['quality-floor-ref:agent-lab/cli/domain-owned-floor'],
+      no_forbidden_write_refs: ['no-forbidden-write-ref:agent-lab/cli/default-proof'],
+      owner_route_refs: ['owner-route:opl/framework-agent-lab-efficiency'],
+    },
+  });
+  return {
+    version: 'g2',
+    agent_lab_efficiency: {
+      surface_id: 'opl_agent_lab_efficiency_nonregression',
+      read_model: readModel,
+      authority_boundary: readModel.authority_boundary,
+    },
   };
 }
 
@@ -250,6 +274,7 @@ export {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
   buildAgentLabEvolvePayload,
+  buildAgentLabEfficiencyPayload,
   buildAgentLabExportPayload,
   buildAgentLabLonglinePayload,
   buildAgentLabMechanismPayload,

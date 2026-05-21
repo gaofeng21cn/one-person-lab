@@ -1,6 +1,7 @@
 import {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
+  buildAgentLabEfficiencyPayload,
   buildAgentLabEvolvePayload,
   buildAgentLabExportPayload,
   buildAgentLabLonglinePayload,
@@ -74,6 +75,16 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       handler: (args) => {
         assertNoArgs(args, specs['agent-lab stage-executor-policy']);
         return buildAgentLabStageExecutorPolicyPayload();
+      },
+    },
+    'agent-lab efficiency': {
+      usage: 'opl agent-lab efficiency',
+      summary: 'Show generic refs-only Agent Lab efficiency non-regression readiness.',
+      examples: ['opl agent-lab efficiency --json'],
+      group: 'framework',
+      handler: (args) => {
+        assertNoArgs(args, specs['agent-lab efficiency']);
+        return buildAgentLabEfficiencyPayload();
       },
     },
     'agent-lab cost-estimate': {

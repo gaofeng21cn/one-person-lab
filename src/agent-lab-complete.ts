@@ -35,6 +35,8 @@ import {
 } from './agent-lab-control-read-models.ts';
 import { buildAgentLabStageExecutorPolicyReadModel } from './agent-lab-stage-executor-policy.ts';
 export { buildAgentLabStageExecutorPolicyReadModel } from './agent-lab-stage-executor-policy.ts';
+export { buildAgentLabEfficiencyNonRegressionReadModel } from './agent-lab-efficiency-nonregression.ts';
+import { buildAgentLabEfficiencyNonRegressionReadModel } from './agent-lab-efficiency-nonregression.ts';
 import { stableId } from './family-runtime-ids.ts';
 import {
   AUTOMATIC_DEFAULT_AGENT_PROMOTION_READY,
@@ -56,6 +58,37 @@ import { buildAgentLabVariantComparisonReadModel } from './agent-lab-variant-com
 const AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,
   can_train_or_deploy_model_weights: false,
+};
+
+const DEFAULT_EFFICIENCY_NONREGRESSION_REFS = {
+  duration_refs: [
+    'duration-ref:agent-lab/sample-suite/wall-clock',
+    'duration-ref:agent-lab/longline-suite/wall-clock',
+  ],
+  cost_refs: [
+    'cost-ref:agent-lab/token-cost-estimate/rca-ppt-40',
+    'cost-ref:agent-lab/provider-budget-envelope',
+  ],
+  cache_hit_refs: [
+    'cache-hit-ref:agent-lab/source-pack-reuse',
+    'cache-hit-ref:agent-lab/stage-context-cache',
+  ],
+  reuse_scope_refs: [
+    'reuse-scope-ref:agent-lab/shared-source-intake',
+    'reuse-scope-ref:agent-lab/cross-domain-longline',
+  ],
+  quality_floor_refs: [
+    'quality-floor-ref:agent-lab/domain-owned-scorecard-floor',
+    'quality-floor-ref:agent-lab/no-quality-verdict-authority',
+  ],
+  no_forbidden_write_refs: [
+    'no-forbidden-write-ref:agent-lab/sample-suite',
+    'no-forbidden-write-ref:agent-lab/longline-suite',
+  ],
+  owner_route_refs: [
+    'owner-route:opl/framework-agent-lab-efficiency',
+    'owner-route:domain-owner/quality-floor',
+  ],
 };
 
 const MECHANISM_EDITABLE_SURFACES = [
@@ -273,6 +306,10 @@ export function buildCompleteAgentLabControlPlane() {
     longlineResult.result_id,
   ]);
   const tokenCostEstimate = buildAgentLabCostEstimate({ preset: 'rca-ppt-40' });
+  const efficiencyNonRegression = buildAgentLabEfficiencyNonRegressionReadModel({
+    suiteResults: [sampleResult, longlineResult],
+    explicitRefs: DEFAULT_EFFICIENCY_NONREGRESSION_REFS,
+  });
   const evalAdapters = [
     {
       adapter_id: 'opl-native-agent-lab',
@@ -418,6 +455,7 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_variant_comparison_read_model: true,
     ready_to_emit_stage_executor_policy_read_model: true,
     ready_to_emit_token_cost_estimates: true,
+    ready_to_emit_efficiency_nonregression_read_model: true,
     ai_review_approved_count: 0,
     automatic_mechanism_promotion_ready: false,
     automatic_model_training_ready: false,
@@ -449,6 +487,7 @@ export function buildCompleteAgentLabControlPlane() {
     variant_comparison: variantComparison,
     stage_executor_policy: stageExecutorPolicy,
     token_cost_estimates: [tokenCostEstimate],
+    efficiency_nonregression: efficiencyNonRegression,
     developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
     non_goals: [
@@ -530,6 +569,7 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.variant_comparison.read_model_id,
       complete.stage_executor_policy.read_model_id,
       complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
+      complete.efficiency_nonregression.read_model_id,
       developerModeRepairRoutes.read_model_id,
     ]),
     status: 'ready_for_app_workbench_consumption',
@@ -550,6 +590,7 @@ export function buildAgentLabWorkbenchReadModel() {
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
       stage_executor_policy_read_model_ref: complete.stage_executor_policy.read_model_id,
       token_cost_estimate_refs: complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
+      efficiency_nonregression_read_model_ref: complete.efficiency_nonregression.read_model_id,
       sample_ref_summary: agentLabRefSummary(sample),
       longline_ref_summary: agentLabRefSummary(longline),
     },
@@ -574,6 +615,7 @@ export function buildAgentLabWorkbenchReadModel() {
     variant_comparison: variantComparison,
     stage_executor_policy: complete.stage_executor_policy,
     token_cost_estimates: complete.token_cost_estimates,
+    efficiency_nonregression: complete.efficiency_nonregression,
     promotion_gates: promotionGates(results),
     developer_mode_repair_routes: developerModeRepairRoutes,
     online_learning_refs: {

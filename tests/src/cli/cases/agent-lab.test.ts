@@ -79,6 +79,7 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_stage_executor_policy_read_model, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_executor_capability_aperture, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_token_cost_estimates, true);
+  assert.equal(output.agent_lab_complete.readiness.ready_to_emit_efficiency_nonregression_read_model, true);
   assert.equal(output.agent_lab_complete.readiness.ready_to_emit_codex_attempt_trace_flywheel, true);
   assert.equal(output.agent_lab_complete.readiness.automatic_mechanism_promotion_ready, false);
   assert.equal(output.agent_lab_complete.readiness.automatic_model_training_ready, false);
@@ -103,6 +104,15 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
   assert.equal(output.agent_lab_complete.token_cost_estimates[0].authority_boundary.can_claim_actual_invoice_cost,
     false);
+  assert.equal(output.agent_lab_complete.efficiency_nonregression.surface_kind,
+    'opl_agent_lab_efficiency_nonregression_read_model');
+  assert.equal(output.agent_lab_complete.efficiency_nonregression.refs_only, true);
+  assert.equal(output.agent_lab_complete.efficiency_nonregression.status, 'ready');
+  assert.equal(output.agent_lab_complete.efficiency_nonregression.authority_boundary.can_write_domain_truth, false);
+  assert.equal(output.agent_lab_complete.efficiency_nonregression.authority_boundary.can_authorize_quality_verdict,
+    false);
+  assert.equal(output.agent_lab_complete.efficiency_nonregression.authority_boundary
+    .can_promote_default_agent_without_gate, false);
   assert.equal(output.agent_lab_complete.executor_capability_aperture.surface_kind,
     'opl_agent_lab_executor_capability_lease_read_model');
   assert.equal(output.agent_lab_complete.executor_capability_aperture.lease_kind,
@@ -189,8 +199,17 @@ test('agent-lab workbench exposes the App-ready read model', () => {
     output.agent_lab_workbench.replay_fork_variant_cockpit.cockpit_id);
   assert.equal(output.agent_lab_workbench.token_cost_estimates.length, 1);
   assert.equal(output.agent_lab_workbench.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
+  assert.equal(output.agent_lab_workbench.efficiency_nonregression.surface_kind,
+    'opl_agent_lab_efficiency_nonregression_read_model');
+  assert.equal(output.agent_lab_workbench.efficiency_nonregression.refs_only, true);
+  assert.equal(output.agent_lab_workbench.efficiency_nonregression.status, 'ready');
+  assert.equal(output.agent_lab_workbench.efficiency_nonregression.authority_boundary.can_write_owner_receipt, false);
+  assert.equal(output.agent_lab_workbench.efficiency_nonregression.authority_boundary.can_mutate_domain_artifact,
+    false);
   assert.deepEqual(output.agent_lab_workbench.source_results.token_cost_estimate_refs,
     output.agent_lab_workbench.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
+  assert.equal(output.agent_lab_workbench.source_results.efficiency_nonregression_read_model_ref,
+    output.agent_lab_workbench.efficiency_nonregression.read_model_id);
   assert.equal(output.agent_lab_workbench.source_results.executor_capability_aperture_ref,
     output.agent_lab_workbench.executor_capability_aperture.read_model_id);
   assert.equal(output.agent_lab_workbench.source_results.codex_attempt_trace_flywheel_ref,
@@ -218,6 +237,28 @@ test('agent-lab workbench exposes the App-ready read model', () => {
   assert.equal(output.agent_lab_workbench.online_learning_refs.transitions.length, 6);
   assert.equal(output.agent_lab_workbench.online_learning_refs.can_train_or_deploy_model_weights, false);
   assert.equal(output.agent_lab_workbench.authority_boundary.can_write_domain_truth, false);
+});
+
+test('agent-lab efficiency exposes generic refs-only efficiency non-regression readiness', () => {
+  const output = runCli(['agent-lab', 'efficiency', '--json']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.agent_lab_efficiency.surface_id, 'opl_agent_lab_efficiency_nonregression');
+  assert.equal(output.agent_lab_efficiency.read_model.surface_kind,
+    'opl_agent_lab_efficiency_nonregression_read_model');
+  assert.equal(output.agent_lab_efficiency.read_model.refs_only, true);
+  assert.equal(output.agent_lab_efficiency.read_model.status, 'ready');
+  assert.equal(output.agent_lab_efficiency.read_model.readiness_status, 'ready');
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.duration_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.cost_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.cache_hit_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.reuse_scope_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.quality_floor_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.no_forbidden_write_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.read_model.evidence_groups.owner_route_refs.length > 0, true);
+  assert.equal(output.agent_lab_efficiency.authority_boundary.can_write_domain_truth, false);
+  assert.equal(output.agent_lab_efficiency.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_efficiency.authority_boundary.can_write_owner_receipt, false);
 });
 
 test('agent-lab stage-executor-policy exposes refs-only optimization candidates', () => {

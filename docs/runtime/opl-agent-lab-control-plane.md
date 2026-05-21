@@ -66,10 +66,13 @@ Agent Lab 可以持有：
 - cross-domain comparison view；
 - owner route refs；
 - evidence refs、receipt refs、blocker refs 与 follow-up refs。
+- efficiency non-regression refs：duration、cost、cache hit、reuse scope、quality floor、no-forbidden-write 与 owner route refs。
 
 当 Agent Lab 展示 MAS/MAG/RCA 的质量、进度或交付状态时，只能引用 domain-owned eval/proof/receipt/artifact locator。它不能把 provider completion、harness pass、descriptor aligned、agent-lab score 或 OPL operator judgment 写成 domain ready verdict。
 
 当 Agent Lab 展示 token / cost estimation 时，只能输出基于 refs 和结构化 metadata 的预算估算投影。估算可以引用 model profile、pricing schedule、task shape、artifact plan、provider routing 和 historical usage summary refs，例如估算 `RCA` 一次 40 页 PPT 在 `gpt-5.5` `xhigh` 推理配置和 `gpt-image-2` 图像生成配置下的 token、image unit 与成本区间。该 surface 不是 OpenAI 或任意 provider 的真实账单，不读取 provider billing ledger，不声明最终应付金额，也不构成 RCA visual quality、artifact readiness、export readiness 或 domain owner verdict。
+
+`agent_efficiency_nonregression` 是通用效率非回归控制面，不是 RCA/MAS/MAG 专用 suite kind。它把 suite result 或显式输入里的 duration、cost、cache hit、reuse scope、quality floor、no-forbidden-write 和 owner route refs 规整成 `opl_agent_lab_efficiency_nonregression_read_model`，只输出 `ready` / `blocked`、typed blocker 和证据分组。该 surface 可以帮助 complete/workbench 判断“效率优化是否保留了质量下限与写权限边界”，但不能写 domain truth、quality verdict、artifact、owner receipt、memory body，也不能提升默认 executor。
 
 ## 自动进化与风险分级
 
@@ -154,6 +157,7 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - regression、soak、fixture、parity、direct-skill equivalence 和 no-forbidden-write evidence。
 - usage logs、failed route refs、research wiki refs、experiment / analysis queue manifest refs。
 - token / cost estimation refs：model profile refs、pricing schedule refs、task shape refs、artifact plan refs、provider routing refs、historical usage summary refs 和 estimate policy refs。
+- efficiency non-regression refs：`duration_refs`、`cost_refs`、`cache_hit_refs`、`reuse_scope_refs`、`quality_floor_refs`、`no_forbidden_write_refs` 与 `owner_route_refs`。
 - MAS suite 投影的 typed body-free mechanism evolution refs：`runtime_event_ledger_refs`、`provider_switch_hygiene_refs`、`claim_assurance_map_refs`，以及对应的 `runtime_event_ledger`、`provider_switch_hygiene`、`claim_assurance_map` 只读 refs surface。
 - AHE-style change/evidence refs：`change_evaluation_refs`、`failure_evidence_refs`、`root_cause_refs`、`targeted_fix_refs`、`predicted_impact_refs`、`risk_task_refs`、`next_run_falsification_refs` 与 `variant_candidate_refs`。
 
@@ -168,6 +172,7 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - `agent_lab_version_ledger_entry`：机制版本、promotion decision、canary refs 和 rollback refs；
 - `agent_lab_token_cost_estimate`：基于 refs 的 token、image unit 与成本估算结果，包含 scenario ref、model/profile refs、pricing schedule ref、assumption refs、estimate range、confidence band、staleness policy 和 non-billing boundary；
 - `agent_lab_stage_executor_policy`：基于 refs 的 stage executor policy candidate、比较假设、必需测试 refs、trial recommendation 与 typed blocker；可用于为某类 stage 评估更合适的 executor/model/reasoning effort，但不执行非默认 adapter、不改变默认 executor、不声明质量等价；
+- `opl_agent_lab_efficiency_nonregression_read_model`：通用效率非回归 read model，汇总 duration / cost / cache hit / reuse scope / quality floor / no-forbidden-write / owner route refs，并输出 ready/blocked 状态；
 - `agent_lab_projection`：给 CLI/App/workbench 的 read-only 改进看板；
 - `agent_lab_follow_up_queue_item`：进入 OPL typed queue 或 domain owner backlog 的后续动作引用。
 - `opl_agent_lab_ahe_evidence_read_model`：把 evidence、root cause、targeted fix、predicted impact 和 next-run falsification refs 规整成 per-task read model、summary 和 typed blocker。
@@ -184,6 +189,7 @@ Developer Mode 下的 Agent Lab 巡检可以默认随任务启动，读取 frame
 - receipt instance 伪造；
 - provider billing claim；
 - final payable amount；
+- default executor promotion；
 - 对 MAS/MAG/RCA 交付物的最终通过判断。
 
 机制演化输入的 MAS typed surface 必须保持 refs-only：允许进入 `agent_lab_evolve.suite_result.refs.mechanism_evolution_input_refs`、log-driven candidate source refs、optimizer candidate source refs、evidence delta 和 next mechanism candidate source refs；禁止把 runtime event ledger body、provider receipt body、executor transcript body、claim text body、domain truth、artifact body、owner receipt body、publication verdict、quality verdict 或 memory writeback accept/reject decision 写入 OPL Agent Lab。
@@ -218,6 +224,7 @@ Agent Lab 建在现有 OPL Framework control plane 之上：
 - CLI external suite：`opl agent-lab run --suite <suite.json> --json`，运行声明兼容 OPL Agent Lab 的 domain agent 或 OPL-compatible meta-agent 仓生成的 OPL-compatible Agent Lab suite JSON，返回同一套 refs-only suite result、ref summary 和 authority boundary。`agent_production_evidence_suite` 会额外投影 domain agent production evidence gate result refs、gate ids、owner route refs、no-forbidden-write refs、typed blocker refs 和 required receipt refs，并固定 `domain_verdict_claimed=false`。
 - CLI workbench：`opl agent-lab workbench --json`，把 complete / sample / longline / run 语义规整成 App/workbench 可直接消费的 read model，包含 eval adapters、observability export readiness、optimizer candidates、promotion gates、online learning refs 和 authority boundary，并显式返回 `app_workbench_consumption_ready=true`。
 - CLI mechanism：`opl agent-lab mechanism --json`，输出 first-class mechanism read model，包含 `mechanism_ref`、`mechanism_version`、`editable_surfaces`、`meta_edit_receipt`、`evolution_segment`、`evidence_delta` 和 `next_mechanism_candidate`。该入口严格 refs-only，不写 domain truth、memory body、artifact，不训练权重；promotion 由风险分级、独立 AI reviewer、version ledger、canary 和 rollback refs 约束。
+- CLI efficiency：`opl agent-lab efficiency --json`，输出通用 `opl_agent_lab_efficiency_nonregression_read_model`，从 generic suite refs 和显式输入 refs 汇总效率非回归证据；complete/workbench 同步投影该 read model 的 readiness。
 - CLI stage executor policy：`opl agent-lab stage-executor-policy --json`，输出 refs-only stage executor policy read model。该 surface 记录默认 `codex_cli` baseline、显式非默认 backend set、RCA HTML route 上 `antigravity_cli` + `gemini-3.5-flash` + `high` 的 controlled-trial candidate、必需 test refs、binding-ref gate、no-equivalence policy 和 typed blocker。它只支持后续比较与测试设计，不直接启动非默认 executor，不把速度或连接 receipt 写成质量、工具语义或 resume 等价，也不切换默认 executor。
 - CLI export：`opl agent-lab export --target <inspect-ai|openinference|langfuse|phoenix|json> --json`，输出 connector 可消费的 refs-only export envelope。该命令只整理 refs 和 connector-shaped metadata，不上传外部服务，不读取 domain body。
 - CLI optimize：`opl agent-lab optimize --suite <suite.json> --json`，运行外部 suite 后输出 risk-classified optimizer candidate set、review refs、version ledger refs 和 RL transition refs。该命令不训练或部署权重，不写 memory body，也不覆盖 domain owner verdict；fixture/domain scorecard pass 只代表 suite gate 通过，只有真实 failure/evidence delta、真实 `independent_ai_review_assessment`、promotion receipt、rollback、no-forbidden-write 和中风险 canary refs 齐全时，低/中风险候选才可进入自动推广，高风险只输出 owner/human gate route。
