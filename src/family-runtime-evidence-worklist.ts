@@ -143,6 +143,12 @@ function readOnlyExpectedRefs(route: JsonRecord) {
 
 function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
   const actionKind = stringValue(route.action_kind) ?? '';
+  if (
+    route.route_requires_domain_or_app_payload === true
+    && route.can_close_without_domain_or_app_payload === false
+  ) {
+    return null;
+  }
   if (actionKind.startsWith('provider_scheduler_')) {
     const summary = record(drilldown.summary);
     const cadenceSatisfied = stringValue(summary.provider_slo_cadence_window_status)
