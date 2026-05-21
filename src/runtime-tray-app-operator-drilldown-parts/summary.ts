@@ -94,13 +94,19 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const stageMonitorFreshnessUnobservedCount =
     numberValue(stageProductionSummary.monitor_freshness_unobserved_stage_count);
   const domainDispatchAttentionDomainCount = numberValue(stageProductionSummary.domain_count);
-  const domainDispatchAttentionMissingOwnerChainCount = Math.max(
-    stageTypedBlockerStageCount,
-    domainDispatchOwnerReceiptRefCount === 0 && (
-      stageExpectedReceiptUnobservedCount > 0 || stageMonitorFreshnessUnobservedCount > 0
-    )
-      ? domainDispatchAttentionDomainCount
-      : 0,
+  const uncoveredExpectedReceiptStageCount = Math.max(
+    0,
+    stageExpectedReceiptUnobservedCount - stageTypedBlockerStageCount,
+  );
+  const uncoveredMonitorFreshnessStageCount = Math.max(
+    0,
+    stageMonitorFreshnessUnobservedCount - stageTypedBlockerStageCount,
+  );
+  const domainDispatchAttentionMissingOwnerChainCount = domainDispatchOwnerReceiptRefCount === 0
+    ? Math.max(uncoveredExpectedReceiptStageCount, uncoveredMonitorFreshnessStageCount)
+    : 0;
+  const domainDispatchAttentionCount = (
+    stageTypedBlockerStageCount + domainDispatchAttentionMissingOwnerChainCount
   );
 
   return {
@@ -169,11 +175,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domain_dispatch_attention_owner_receipt_ref_count: domainDispatchOwnerReceiptRefCount,
     domain_dispatch_attention_direct_typed_blocker_ref_count: domainDispatchTypedBlockerRefCount,
     domain_dispatch_attention_direct_typed_blocker_count: domainDispatchTypedBlockerCount,
+    domain_dispatch_attention_count: domainDispatchAttentionCount,
     domain_dispatch_attention_typed_blocker_stage_count: stageTypedBlockerStageCount,
     domain_dispatch_attention_blocked_obligation_count: stageBlockedObligationCount,
     domain_dispatch_attention_missing_owner_chain_count: domainDispatchAttentionMissingOwnerChainCount,
     domain_dispatch_attention_policy:
-      'stage_evidence_typed_blocker_or_missing_owner_chain_attention_only_no_domain_ready_claim',
+      'typed_blocker_stage_or_uncovered_missing_owner_chain_attention_only_no_domain_ready_claim',
     stage_production_evidence_domain_count: numberValue(stageProductionSummary.domain_count),
     stage_production_evidence_stage_count: numberValue(stageProductionSummary.stage_count),
     stage_production_evidence_observed_stage_count: numberValue(stageProductionSummary.observed_stage_count),

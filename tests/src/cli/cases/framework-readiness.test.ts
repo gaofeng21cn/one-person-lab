@@ -262,6 +262,15 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.domain_dispatch_attention_count,
   );
   assert.equal(
+    readiness.domain_dispatch_attention.attention_count,
+    readiness.domain_dispatch_attention.typed_blocker_stage_count
+      + readiness.domain_dispatch_attention.missing_owner_chain_count,
+  );
+  assert.equal(
+    readiness.domain_dispatch_attention.attention_policy,
+    'typed_blocker_stage_or_uncovered_missing_owner_chain_attention_only_no_domain_ready_claim',
+  );
+  assert.equal(
     readiness.runtime_manager_route_support.task_kind_count,
     readiness.summary.runtime_manager_mas_route_support_task_kind_count,
   );

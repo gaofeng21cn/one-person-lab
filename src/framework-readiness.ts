@@ -555,7 +555,11 @@ export async function buildFrameworkReadinessSummary(
     stageProductionCallerTailCount + stageReceiptFreshnessOpenWorkorderCount;
   const semanticAttentionGateCount = numberValue(semanticSummary.attention_required_gate_count);
   const domainDispatchAttentionCount =
-    numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count);
+    numberValue(appSummary.domain_dispatch_attention_count)
+    || (
+      numberValue(appSummary.domain_dispatch_attention_typed_blocker_stage_count)
+      + numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count)
+    );
   const runtimeManagerRouteSupport = record(appOperatorDrilldown.runtime_manager_route_support);
   const runtimeManagerMasRouteSupport = Object.keys(record(runtimeManagerRouteSupport.mas_domain_route_projection)).length > 0
     ? record(runtimeManagerRouteSupport.mas_domain_route_projection)
@@ -814,7 +818,7 @@ export async function buildFrameworkReadinessSummary(
           numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count),
         attention_policy:
           appSummary.domain_dispatch_attention_policy
-            ?? 'stage_evidence_typed_blocker_or_missing_owner_chain_attention_only_no_domain_ready_claim',
+            ?? 'typed_blocker_stage_or_uncovered_missing_owner_chain_attention_only_no_domain_ready_claim',
         can_claim_domain_ready: false,
         can_claim_production_ready: false,
         can_authorize_quality_or_export: false,
