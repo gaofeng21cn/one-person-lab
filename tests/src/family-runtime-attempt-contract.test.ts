@@ -289,5 +289,13 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
     'skills:agent/skills/* or skill_id',
     'knowledge_refs:agent/knowledge/*',
     'evaluation:agent/quality_gates/*',
+    'selected_executor:codex_cli default binding or explicit non-default executor binding',
+    'runtime_policy:opl_temporal_hosted_autonomous default path',
   ]);
+  assert.equal(scaffold.default_runtime_policy.surface_kind, 'opl_standard_agent_default_runtime_policy');
+  assert.equal(scaffold.default_runtime_policy.default_runtime_path, 'opl_temporal_hosted_autonomous');
+  assert.equal(scaffold.default_runtime_policy.temporal_hosted_autonomy_default_enabled, true);
+  assert.equal(scaffold.default_runtime_policy.default_executor_kind, 'codex_cli');
+  assert.equal(scaffold.default_runtime_policy.domain_agent_internal_daemon_allowed, false);
+  assert.equal(scaffold.default_runtime_policy.codex_app_drives_long_running_tasks, false);
 });
