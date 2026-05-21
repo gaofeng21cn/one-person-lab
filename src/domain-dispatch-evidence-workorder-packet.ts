@@ -265,6 +265,7 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     item_id: item.item_id,
     action_id: item.action_id,
     action_kind: item.action_kind,
+    owner: item.canonical_domain_id ?? 'domain_repository_or_app_live_operator',
     domain_id: item.domain_id,
     route_domain_id: item.route_domain_id,
     canonical_domain_id: item.canonical_domain_id,
@@ -302,6 +303,7 @@ export function compactDomainDispatchEvidenceWorkorderGroupAttentionItems(
 ) {
   return packet.domain_stage_group_summary.groups.slice(0, limit).map((group) => ({
     group_id: group.group_id,
+    owner: group.canonical_domain_id ?? 'domain_repository_or_app_live_operator',
     canonical_domain_id: group.canonical_domain_id,
     stage_id: group.stage_id,
     route_domain_ids: group.route_domain_ids,

@@ -352,6 +352,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
         fullWorklist.domain_dispatch_evidence_workorder_group_attention_items[0];
       assert.equal(typeof dispatchGroup.canonical_domain_id, 'string');
       assert.equal(dispatchGroup.canonical_domain_id.includes('-'), true);
+      assert.equal(dispatchGroup.owner, dispatchGroup.canonical_domain_id);
       assert.equal(typeof dispatchGroup.stage_id, 'string');
       assert.equal(dispatchGroup.workorder_count > 0, true);
       assert.equal(dispatchGroup.stage_attempt_count > 0, true);
@@ -366,6 +367,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       assert.equal(dispatchGroup.authority_boundary.can_execute_domain_action, false);
       assert.equal(dispatchGroup.authority_boundary.closes_production_ready, false);
       assert.equal(dispatchGroupAttentionItem.canonical_domain_id, dispatchGroup.canonical_domain_id);
+      assert.equal(dispatchGroupAttentionItem.owner, dispatchGroup.canonical_domain_id);
       assert.equal(dispatchGroupAttentionItem.stage_id, dispatchGroup.stage_id);
       assert.equal(dispatchGroupAttentionItem.workorder_count, dispatchGroup.workorder_count);
       assert.equal(dispatchGroupAttentionItem.sample_stage_attempt_ids.length <= 3, true);

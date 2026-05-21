@@ -452,6 +452,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   if (firstDispatchWorkorderGroup) {
     assert.equal(typeof firstDispatchWorkorderGroup.canonical_domain_id, 'string');
     assert.equal(firstDispatchWorkorderGroup.canonical_domain_id.includes('-'), true);
+    assert.equal(firstDispatchWorkorderGroup.owner, firstDispatchWorkorderGroup.canonical_domain_id);
     assert.equal(typeof firstDispatchWorkorderGroup.stage_id, 'string');
     assert.equal(firstDispatchWorkorderGroup.workorder_count > 0, true);
     assert.equal(firstDispatchWorkorderGroup.stage_attempt_count > 0, true);
@@ -486,7 +487,8 @@ test('framework readiness summarizes default control-plane surfaces without auth
         dispatchGroupAction.payload_requirement,
         'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
       );
-      assert.equal(dispatchGroupAction.owner, firstDispatchWorkorderGroup.payload_owner);
+      assert.equal(dispatchGroupAction.owner, firstDispatchWorkorderGroup.canonical_domain_id);
+      assert.equal(dispatchGroupAction.payload_owner, firstDispatchWorkorderGroup.payload_owner);
       assert.equal(
         dispatchGroupAction.canonical_domain_id,
         firstDispatchWorkorderGroup.canonical_domain_id,
@@ -555,6 +557,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(dispatchWorkorder.route_domain_id, dispatchWorkorder.domain_id);
     assert.equal(typeof dispatchWorkorder.canonical_domain_id, 'string');
     assert.equal(dispatchWorkorder.canonical_domain_id.includes('-'), true);
+    assert.equal(dispatchWorkorder.owner, dispatchWorkorder.canonical_domain_id);
     assert.equal(
       dispatchWorkorder.domain_id_policy,
       'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',

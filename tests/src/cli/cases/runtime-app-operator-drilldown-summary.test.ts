@@ -344,6 +344,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     if (dispatchWorkorderGroup) {
       assert.equal(typeof dispatchWorkorderGroup.canonical_domain_id, 'string');
       assert.equal(dispatchWorkorderGroup.canonical_domain_id.includes('-'), true);
+      assert.equal(dispatchWorkorderGroup.owner, dispatchWorkorderGroup.canonical_domain_id);
       assert.equal(typeof dispatchWorkorderGroup.stage_id, 'string');
       assert.equal(dispatchWorkorderGroup.workorder_count > 0, true);
       assert.equal(dispatchWorkorderGroup.stage_attempt_count > 0, true);
@@ -382,6 +383,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       assert.equal(dispatchWorkorder.route_domain_id, dispatchWorkorder.domain_id);
       assert.equal(typeof dispatchWorkorder.canonical_domain_id, 'string');
       assert.equal(dispatchWorkorder.canonical_domain_id.includes('-'), true);
+      assert.equal(dispatchWorkorder.owner, dispatchWorkorder.canonical_domain_id);
       assert.equal(
         dispatchWorkorder.domain_id_policy,
         'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
@@ -491,9 +493,13 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     assert.equal(Boolean(dispatchWorkorderGroupStep), dispatchWorkorderGroups.length > 0);
     if (dispatchWorkorderGroupStep) {
-      assert.equal(dispatchWorkorderGroupStep.owner, 'domain_repository_or_app_live_operator');
       assert.equal(typeof dispatchWorkorderGroupStep.canonical_domain_id, 'string');
       assert.equal(dispatchWorkorderGroupStep.canonical_domain_id.includes('-'), true);
+      assert.equal(dispatchWorkorderGroupStep.owner, dispatchWorkorderGroupStep.canonical_domain_id);
+      assert.equal(
+        dispatchWorkorderGroupStep.payload_owner,
+        'domain_repository_or_app_live_operator',
+      );
       assert.equal(typeof dispatchWorkorderGroupStep.stage_id, 'string');
       assert.equal(dispatchWorkorderGroupStep.workorder_count > 0, true);
       assert.equal(dispatchWorkorderGroupStep.stage_attempt_count > 0, true);
@@ -520,10 +526,11 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       );
     }
     if (dispatchWorkorderStep) {
-      assert.equal(dispatchWorkorderStep.owner, 'domain_repository_or_app_live_operator');
       assert.equal(dispatchWorkorderStep.route_domain_id, dispatchWorkorderStep.domain_id);
       assert.equal(typeof dispatchWorkorderStep.canonical_domain_id, 'string');
       assert.equal(dispatchWorkorderStep.canonical_domain_id.includes('-'), true);
+      assert.equal(dispatchWorkorderStep.owner, dispatchWorkorderStep.canonical_domain_id);
+      assert.equal(dispatchWorkorderStep.payload_owner, 'domain_repository_or_app_live_operator');
       assert.equal(
         dispatchWorkorderStep.domain_id_policy,
         'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',

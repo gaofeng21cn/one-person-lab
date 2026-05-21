@@ -651,9 +651,14 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   for (const group of domainDispatchGroups) {
     steps.push({
       step_kind: 'domain_dispatch_evidence_group_workorder',
-      owner: stringValue(group.payload_owner) ?? 'domain_repository_or_app_live_operator',
+      owner: firstString(
+        group.owner,
+        group.canonical_domain_id,
+        group.payload_owner,
+      ) ?? 'domain_repository_or_app_live_operator',
       status: 'needs_domain_or_app_live_refs_payload_by_owner_stage_group',
       canonical_domain_id: stringValue(group.canonical_domain_id),
+      payload_owner: stringValue(group.payload_owner),
       stage_id: stringValue(group.stage_id),
       route_domain_ids: stringList(group.route_domain_ids),
       route_domain_id_policy: stringValue(group.route_domain_id_policy),
@@ -680,11 +685,16 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     for (const workorder of domainDispatchWorkorders) {
       steps.push({
         step_kind: 'domain_dispatch_evidence_workorder',
-        owner: stringValue(workorder.payload_owner) ?? 'domain_repository_or_app_live_operator',
+        owner: firstString(
+          workorder.owner,
+          workorder.canonical_domain_id,
+          workorder.payload_owner,
+        ) ?? 'domain_repository_or_app_live_operator',
         status: 'needs_domain_or_app_live_refs_payload',
         domain_id: stringValue(workorder.domain_id),
         route_domain_id: stringValue(workorder.route_domain_id) ?? stringValue(workorder.domain_id),
         canonical_domain_id: stringValue(workorder.canonical_domain_id),
+        payload_owner: stringValue(workorder.payload_owner),
         domain_id_policy: stringValue(workorder.domain_id_policy),
         stage_id: stringValue(workorder.stage_id),
         stage_attempt_id: stringValue(workorder.stage_attempt_id),

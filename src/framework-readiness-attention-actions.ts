@@ -76,7 +76,10 @@ function frameworkDomainDispatchGroupNextSafeAction(group: JsonRecord) {
     evidence_closure_gate: 'domain_dispatch_owner_chain_payload_gate',
     payload_requirement:
       'domain_app_or_live_refs_payload_required_to_record_domain_dispatch_owner_receipt_or_typed_blocker',
-    owner: stringValue(group.payload_owner) ?? 'domain_repository_or_app_live_operator',
+    owner: stringValue(group.owner)
+      ?? stringValue(group.canonical_domain_id)
+      ?? 'domain_repository_or_app_live_operator',
+    payload_owner: stringValue(group.payload_owner) ?? 'domain_repository_or_app_live_operator',
     canonical_domain_id: stringValue(group.canonical_domain_id),
     stage_id: stringValue(group.stage_id),
     route_domain_ids: stringList(group.route_domain_ids),
