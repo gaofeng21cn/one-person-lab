@@ -208,7 +208,15 @@ test('framework readiness summarizes default control-plane surfaces without auth
   );
   assert.equal(
     readiness.agent_conformance_tail.agent_readiness_production_evidence_tail_count,
+    readiness.evidence_tails.agent_structural_evidence_tail.total_item_count,
+  );
+  assert.equal(
     readiness.evidence_tails.agent_structural_evidence_tail.open_item_count,
+    readiness.agent_conformance_tail.agent_readiness_production_evidence_tail_open_count,
+  );
+  assert.equal(
+    readiness.evidence_tails.agent_structural_evidence_tail.open_item_count,
+    0,
   );
   assert.equal(Object.hasOwn(readiness.agent_conformance_tail, 'production_or_domain_ready'), false);
   assert.equal(

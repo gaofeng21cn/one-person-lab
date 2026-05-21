@@ -541,8 +541,15 @@ export async function buildFrameworkReadinessSummary(
   const evidenceWorklistOpenCount = countValue(worklistSummary.open_worklist_item_count);
   const stageReceiptFreshnessOpenWorkorderCount =
     countValue(worklistSummary.stage_receipt_freshness_open_workorder_count);
-  const agentStructuralEvidenceTailCount =
+  const agentProductionEvidenceTailTotalCount =
     numberValue(agentSummary.agent_readiness_production_evidence_tail_count);
+  const agentProductionEvidenceTailLedgerSummary = record(
+    record(record(agentReadiness).production_evidence_tail_ledger).summary,
+  );
+  const agentStructuralEvidenceTailCount =
+    numberValue(agentProductionEvidenceTailLedgerSummary.open_tail_item_count);
+  const agentProductionEvidenceTailClosedCount =
+    numberValue(agentProductionEvidenceTailLedgerSummary.closed_tail_item_count);
   const appLiveEvidenceTailCount = appOpenTailCount;
   const stageReceiptFreshnessTailCount =
     stageProductionCallerTailCount + stageReceiptFreshnessOpenWorkorderCount;
@@ -670,6 +677,8 @@ export async function buildFrameworkReadinessSummary(
         agent_structural_evidence_tail: {
           source_command: SOURCE_COMMANDS.agents_readiness,
           open_item_count: agentStructuralEvidenceTailCount,
+          total_item_count: agentProductionEvidenceTailTotalCount,
+          closed_item_count: agentProductionEvidenceTailClosedCount,
           structural_conformance_status: agentSummary.structural_conformance_status ?? null,
           blocking_policy: 'operator_attention_only_not_domain_or_production_ready',
         },
@@ -696,7 +705,11 @@ export async function buildFrameworkReadinessSummary(
         status: agentReadiness.status,
         structural_conformance_status: agentSummary.structural_conformance_status ?? null,
         agent_readiness_production_evidence_tail_count:
-          numberValue(agentSummary.agent_readiness_production_evidence_tail_count),
+          agentProductionEvidenceTailTotalCount,
+        agent_readiness_production_evidence_tail_open_count:
+          agentStructuralEvidenceTailCount,
+        agent_readiness_production_evidence_tail_closed_count:
+          agentProductionEvidenceTailClosedCount,
         agent_readiness_production_evidence_tail_policy:
           agentSummary.agent_readiness_production_evidence_tail_policy ?? null,
         diagnostic_failure: agentReadinessDiagnostic.failure,
