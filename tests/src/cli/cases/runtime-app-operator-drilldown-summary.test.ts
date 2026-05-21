@@ -359,6 +359,22 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       false,
     );
     if (metaAgentBound) {
+      assert.equal(
+        fullDrilldown.opl_meta_agent_workbench_refs.summary.evidence_after_contract_status,
+        'target_owner_receipt_or_typed_blocker_refs_projected',
+      );
+      assert.equal(
+        fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_owner_receipt_or_typed_blocker_target_count,
+        2,
+      );
+      assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_agent_lab_result_target_count, 2);
+      assert.equal(
+        fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_no_forbidden_write_target_count,
+        2,
+      );
+      assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_cleanup_closeout_target_count, 2);
+      assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_domain_ready_claim_count, 0);
+      assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_default_promotion_claim_count, 0);
       assert.equal(fullDrilldown.oma_sections.mechanism_proposal.refs.length > 0, true);
       assert.equal(fullDrilldown.oma_sections.patch_loop_closeout.refs.length >= 11, true);
       assert.deepEqual(

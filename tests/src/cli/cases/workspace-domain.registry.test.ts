@@ -161,6 +161,18 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     );
     if (metaAgentRegistry.status === 'resolved') {
       assert.equal(
+        metaAgentRegistry.summary.evidence_after_contract_status,
+        'target_owner_receipt_or_typed_blocker_refs_projected',
+      );
+      assert.equal(metaAgentRegistry.summary.scaleout_owner_receipt_target_count, 2);
+      assert.equal(metaAgentRegistry.summary.scaleout_typed_blocker_target_count, 1);
+      assert.equal(metaAgentRegistry.summary.scaleout_owner_receipt_or_typed_blocker_target_count, 2);
+      assert.equal(metaAgentRegistry.summary.scaleout_agent_lab_result_target_count, 2);
+      assert.equal(metaAgentRegistry.summary.scaleout_no_forbidden_write_target_count, 2);
+      assert.equal(metaAgentRegistry.summary.scaleout_cleanup_closeout_target_count, 2);
+      assert.equal(metaAgentRegistry.summary.scaleout_domain_ready_claim_count, 0);
+      assert.equal(metaAgentRegistry.summary.scaleout_default_promotion_claim_count, 0);
+      assert.equal(
         metaAgentRegistry.oma_sections.patch_loop_closeout.refs.length >= 16,
         true,
       );
@@ -177,6 +189,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
         metaAgentRegistry.oma_sections.patch_loop_closeout.required_ref_fields.includes('next_run_falsification_refs'),
       );
     } else {
+      assert.equal(metaAgentRegistry.summary.evidence_after_contract_status, 'not_observed');
       assert.equal(metaAgentRegistry.repo_dir, null);
     }
     assert.equal(
