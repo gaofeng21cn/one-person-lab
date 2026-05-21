@@ -17,6 +17,7 @@ import {
   buildFamilyProductEntrySurfaceFromManifest,
   buildFamilyProductEntryManifest,
   buildProductEntryContinuationSnapshot,
+  buildOplProductEntryLifecycleAdapterSurface,
   buildProductEntryShellCatalog,
   buildProductEntryShellLinkedSurface,
   buildProductEntrySurface,
@@ -33,6 +34,13 @@ import {
 } from '../../../src/product-entry-companions.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+function record(value: unknown) {
+  assert.equal(typeof value, 'object');
+  assert.notEqual(value, null);
+  assert.equal(Array.isArray(value), false);
+  return value as Record<string, any>;
+}
 
 function readFamilyManifestFixture(fileName: string) {
   const payload = JSON.parse(
@@ -109,6 +117,137 @@ test('product entry session helpers normalize runtime, continuation, and deliver
   });
 });
 
+test('OPL product-entry lifecycle adapter preserves framework and domain authority boundaries', () => {
+  const continuationSnapshot = buildProductEntryContinuationSnapshot({
+    latest_run_id: 'run-1',
+    extra_payload: {
+      latest_stage_execution_plan_ref: 'opl-stage-plan-1',
+      stage_execution_plan: {
+        summary: {
+          first_stage: 'draft',
+          terminal_stage: 'export',
+          planned_stage_count: 2,
+        },
+        control_policy: {
+          approval_required: true,
+        },
+        stage_attempts: [
+          { stage_id: 'draft' },
+          { stage_id: 'export' },
+        ],
+      },
+      runtime_projection: {
+        health_status: 'healthy',
+        worker_running: true,
+        active_run_id: 'run-1',
+        next_action: 'continue',
+        refs: {
+          stage_execution_plan_path: '/tmp/plan.json',
+          progress_projection_path: '/tmp/progress.json',
+        },
+      },
+    },
+  });
+  const adapter = buildOplProductEntryLifecycleAdapterSurface({
+    domain_id: 'redcube_ai',
+    domain_owner: 'redcube_ai',
+    runtime_owner: 'configured_family_runtime_provider',
+    entry_session_id: 'entry-session-1',
+    session_file: '/tmp/entry-session-1.json',
+    delivery_identity: {
+      deliverable_family: 'ppt_deck',
+      topic_id: 'topic-1',
+      deliverable_id: 'deliverable-1',
+      profile_id: null,
+    },
+    continuation_snapshot: continuationSnapshot,
+    runtime_loop_closure: {
+      artifact_pickup: {
+        artifact_refs: ['artifact-ref-1'],
+        artifact_ref_count: 1,
+      },
+      control_policy: {
+        approval_required: true,
+        continue_action: {
+          surface_kind: 'product_entry_session',
+        },
+      },
+      resume_point: {
+        checkpoint_locator_field: 'continuation_snapshot.latest_stage_execution_plan_ref',
+      },
+    },
+    review_projection: {
+      surface_kind: 'review_state',
+    },
+    publication_projection: {
+      surface_kind: 'publication_projection',
+    },
+    product_entry_session_command_template: 'redcube product session --entry-session-id <entry-session-id>',
+    direct_product_entry_command: 'redcube product invoke',
+    opl_hosted_handoff_ref: 'opl_framework:hosted_product_entry',
+    source: 'session',
+    entry_mode: 'redcube_product_entry',
+  });
+  const discovery = record(adapter.discovery);
+  const ownerSplit = record(discovery.owner_split);
+  const persistence = record(adapter.persistence);
+  const session = record(persistence.session);
+  const stageExecutionPlan = record(persistence.stage_execution_plan);
+  const lifecycle = record(adapter.lifecycle);
+  const reviewPublication = record(lifecycle.review_publication);
+  const reviewStateRef = record(reviewPublication.review_state_ref);
+  const ownerRouteDiscovery = record(adapter.owner_route_discovery);
+  const adoption = record(adapter.adoption);
+  const authorityBoundary = record(adapter.authority_boundary);
+
+  assert.equal(adapter.surface_kind, 'opl_family_lifecycle_adapter');
+  assert.equal(discovery.adoption_state, 'hydrated_session_projection');
+  assert.equal(ownerSplit.session_shell_owner, 'one-person-lab');
+  assert.equal(ownerSplit.stage_attempt_owner, 'one-person-lab');
+  assert.equal(ownerSplit.attempt_ledger_owner, 'one-person-lab');
+  assert.equal(ownerSplit.domain_truth_owner, 'redcube_ai');
+  assert.equal(session.entry_session_id, 'entry-session-1');
+  assert.equal(stageExecutionPlan.plan_ref, 'opl-stage-plan-1');
+  assert.equal(lifecycle.current_stage, 'draft');
+  assert.equal(reviewStateRef.owner, 'redcube_ai');
+  assert.equal(ownerRouteDiscovery.recommended_owner_route, 'resolve_review_gate');
+  assert.equal(adoption.next_surface_ref, '/session_continuity');
+  assert.equal(authorityBoundary.owns_domain_truth, false);
+  assert.equal(authorityBoundary.owns_canonical_artifacts, false);
+  assert.equal(authorityBoundary.owns_review_truth, false);
+  assert.equal(authorityBoundary.owns_concrete_executor, false);
+});
+
+test('OPL product-entry lifecycle adapter supports manifest-only discovery without session runtime ownership', () => {
+  const adapter = buildOplProductEntryLifecycleAdapterSurface({
+    domain_id: 'med_autogrant',
+    domain_owner: 'med_autogrant',
+    manifest_projection: true,
+    entry_session_id: 'ignored-at-manifest-level',
+    session_file: '/tmp/ignored.json',
+    product_entry_session_command_template: 'medautogrant product-entry session --entry-session-id <entry-session-id>',
+  });
+  const discovery = record(adapter.discovery);
+  const persistence = record(adapter.persistence);
+  const session = record(persistence.session);
+  const ownerRouteDiscovery = record(adapter.owner_route_discovery);
+  const candidateRoutes = ownerRouteDiscovery.candidate_routes as Record<string, unknown>[];
+  const nonGoals = adapter.non_goals as string[];
+
+  assert.equal(discovery.adoption_state, 'discoverable_manifest_projection');
+  assert.equal(session.entry_session_id, null);
+  assert.equal(session.session_file, null);
+  assert.equal(candidateRoutes[0].route_id, 'product_entry_session');
+  assert.deepEqual(
+    nonGoals.slice(0, 3),
+    [
+      'not_a_domain_truth_owner',
+      'not_a_canonical_artifact_owner',
+      'not_a_review_or_publication_projection_owner',
+    ],
+  );
+});
+
 test('product entry shell scaffold helpers normalize shell surfaces and operator loop actions', () => {
   const productEntryShell = buildProductEntryShellCatalog({
     product_entry: {
@@ -162,4 +301,3 @@ test('product entry shell scaffold helpers normalize shell surfaces and operator
     requires: ['entry_session_id'],
   });
 });
-

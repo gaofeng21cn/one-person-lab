@@ -40,6 +40,8 @@ Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only con
 
 同日 `opl agents conformance` 的实现边界也完成一次收薄：public conformance builder 保持为 scaffold、pack compiler、generated handoff、private audit、platform surface、physical morphology、workspace lifecycle 与 evidence tail 的薄聚合器；physical morphology policy、active path scan、legacy residue token 和 allowed tombstone/provenance 分类迁入 scoped module，并移除主文件的 line-budget baseline。这个改动只降低 OPL 自身 surface 混杂风险，不改变 conformance 的只读权威边界，也不声明 MAS/MAG/RCA/OMA production ready。
 
+2026-05-21 OPL shared `product-entry-companions` 新增 `buildOplProductEntryLifecycleAdapterSurface` primitive，用于生成 refs-only `opl_family_lifecycle_adapter`：session shell、stage attempt、attempt ledger、owner route discovery、adoption cursor 和 lifecycle projection 的 generic owner 固定在 OPL / one-person-lab；domain truth、review/publication projection、canonical artifact、concrete executor 与 artifact/memory body 仍显式不由 OPL 持有。该 primitive 是 RCA/MAG/MAS 退役私有 product-entry/session lifecycle adapter 的替代能力来源；它本身不代表任一 domain repo 已完成 shared package pin 更新、generated/hosted default caller 切换、production owner-chain evidence 或 domain ready。
+
 RCA physical morphology 的 legacy 名称口径已经按退役原则收口：`legacy_managed_runtime_gateway_names` 这类旧 managed/runtime/gateway surface id 必须通过 RCA `legacy_name_policy.forbidden_active_surface_ids` 和关闭 compatibility / generic owner flags 来证明退役，不能再要求它出现在 active surface classification 中。Conformance 只把它当负向 guard / tombstone proof 审计；这关闭的是结构 conformance blocker，不声明 RCA visual ready、artifact-producing owner receipt、long soak 或 App release/user path 完成。
 
 ## 当前差距
