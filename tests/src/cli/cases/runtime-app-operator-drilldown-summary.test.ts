@@ -449,6 +449,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
       assert.equal(dispatchWorkorder.worklist_item_is_completion_claim, false);
     }
+    const topDispatchOwner = dispatchWorkorderGroup?.canonical_domain_id
+      ?? dispatchWorkorder?.canonical_domain_id
+      ?? 'domain_repository_or_app_live_operator';
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.evidence_envelope_attention_count,
       summaryDrilldown.summary.evidence_envelope_open_count
@@ -498,10 +501,11 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.evidence_next_steps.selection_policy,
       'balanced_first_item_per_step_kind_then_original_order_refs_only',
     );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_next_steps.next_owner,
-      'domain_repository_or_app_live_operator',
-    );
+    const expectedNextOwner = topDispatchOwner === 'domain_repository_or_app_live_operator'
+      ? firstOwnerPayloadGroup.owner
+      : topDispatchOwner;
+    assert.equal(summaryDrilldown.attention_first_payload.evidence_next_steps.next_owner, expectedNextOwner);
+    assert.equal(summaryDrilldown.attention_first_payload.evidence_next_steps.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.can_execute_domain_action,
       false,
@@ -533,6 +537,8 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       (item: { step_kind: string }) => item.step_kind === 'domain_dispatch_owner_chain_scaleout',
     );
     if (dispatchStep) {
+      assert.equal(dispatchStep.owner, topDispatchOwner);
+      assert.equal(dispatchStep.payload_owner, 'domain_repository_or_app_live_operator');
       assert.equal(dispatchStep.route_support_closes_owner_chain, false);
     }
     const dispatchWorkorderStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(

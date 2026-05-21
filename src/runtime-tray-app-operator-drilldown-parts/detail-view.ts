@@ -620,6 +620,28 @@ function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
   return limitedItems(groups);
 }
 
+function topDispatchEvidenceOwner(
+  domainDispatchGroups: JsonRecord[],
+  domainDispatchWorkorders: JsonRecord[],
+) {
+  return firstString(
+    domainDispatchGroups[0]?.owner,
+    domainDispatchGroups[0]?.canonical_domain_id,
+    domainDispatchWorkorders[0]?.owner,
+    domainDispatchWorkorders[0]?.canonical_domain_id,
+  );
+}
+
+function topCanonicalEvidenceOwner(
+  domainDispatchGroups: JsonRecord[],
+  domainDispatchWorkorders: JsonRecord[],
+  ownerPayloadGroups: JsonRecord[],
+) {
+  return topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
+    ?? firstString(ownerPayloadGroups[0]?.owner)
+    ?? 'domain_repository_or_app_live_operator';
+}
+
 function evidenceNextSteps(drilldown: JsonRecord) {
   const attention = evidenceAfterContractAttention(drilldown);
   const domainDispatchGroups = recordList(
@@ -629,11 +651,19 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   const ownerPayloadGroups = recordList(attention.owner_payload_groups);
   const missingEvidence = missingEvidenceItems(drilldown);
   const advisory = advisoryItems(drilldown);
+  const dispatchOwner = topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
+    ?? 'domain_repository_or_app_live_operator';
+  const nextOwner = topCanonicalEvidenceOwner(
+    domainDispatchGroups,
+    domainDispatchWorkorders,
+    ownerPayloadGroups,
+  );
   const steps: JsonRecord[] = [];
   if (numberValue(attention.domain_dispatch_attention_count) > 0) {
     steps.push({
       step_kind: 'domain_dispatch_owner_chain_scaleout',
-      owner: 'domain_repository_or_app_live_operator',
+      owner: dispatchOwner,
+      payload_owner: 'domain_repository_or_app_live_operator',
       status: 'needs_domain_owned_receipt_or_typed_blocker_scaleout',
       attention_count: attention.domain_dispatch_attention_count,
       blocked_obligation_count: attention.domain_dispatch_blocked_obligation_count,
@@ -786,7 +816,8 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     items: balancedSteps.items,
     omitted_count: balancedSteps.omitted_count,
     total_count: balancedSteps.total_count,
-    next_owner: steps.length > 0 ? 'domain_repository_or_app_live_operator' : null,
+    next_owner: steps.length > 0 ? nextOwner : null,
+    payload_owner: steps.length > 0 ? 'domain_repository_or_app_live_operator' : null,
     can_execute_domain_action: false,
     can_create_owner_receipt: false,
     can_close_domain_ready: false,
