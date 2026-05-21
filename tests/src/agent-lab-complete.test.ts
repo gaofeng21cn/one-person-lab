@@ -172,7 +172,10 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.token_cost_estimates[0].authority_boundary.can_claim_actual_invoice_cost, false);
   assert.equal(result.token_cost_estimates[0].authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.executor_capability_aperture.surface_kind,
-    'opl_agent_lab_executor_capability_aperture_read_model');
+    'opl_agent_lab_executor_capability_lease_read_model');
+  assert.equal(result.executor_capability_aperture.lease_kind, 'executor_capability_lease');
+  assert.equal(result.executor_capability_aperture.read_model_role,
+    'runtime_issued_executor_capability_lease');
   assert.equal(result.executor_capability_aperture.summary.codex_cli_task_count, 3);
   assert.equal(result.executor_capability_aperture.summary.non_default_executor_task_count, 0);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_constrain_executor_reasoning, false);
@@ -239,7 +242,10 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.ahe_evidence.surface_kind, 'opl_agent_lab_ahe_evidence_read_model');
   assert.equal(result.ahe_evidence.summary.promotion_authorized_count, 0);
   assert.equal(result.executor_capability_aperture.surface_kind,
-    'opl_agent_lab_executor_capability_aperture_read_model');
+    'opl_agent_lab_executor_capability_lease_read_model');
+  assert.equal(result.executor_capability_aperture.lease_kind, 'executor_capability_lease');
+  assert.equal(result.executor_capability_aperture.read_model_role,
+    'runtime_issued_executor_capability_lease');
   assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_execute_non_default_executor, false);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_quality_equivalence, false);

@@ -7,6 +7,7 @@
 ## 定位
 
 - `AGENTS.md` 只约束工作方式、少量稳定身份边界和文档生命周期纪律，不承载项目知识细节或阶段完成判断。
+- `TASTE.md` 记录维护者可跨 OPL family 与相关项目复用的维护开发 taste；进行架构、代码、文档、测试、review、cleanup 和 closeout 判断时，应先按 `TASTE.md` 校准长期偏好，再读取项目事实与更深层规范。
 - 项目知识默认从 `README*`、`docs/README*`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md` 读取。
 - `OPL` 是以 Agent executor 为最小执行单位的 stage-led 完整智能体运行框架：当前第一公民 executor 是 `Codex CLI`，`Hermes-Agent`、Claude Code 等其他 executor 可以按显式 adapter 接入；OPL 只保证接入、生命周期、回执与投影边界可审计，不保证非默认 executor 的行为或效果与 `Codex CLI` 等价。
 - 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。这些仓持有各自的 domain truth、quality verdict、runtime owner、artifact authority 与直接 app skill 路径；OPL 持有 framework-level runtime / activation / discovery / projection。
@@ -14,6 +15,7 @@
 
 ## 开发原则
 
+- 维护开发判断默认遵循根层 `TASTE.md` 的原则；如果本仓事实、contracts、runtime evidence 或更深层 `AGENTS.md` 需要局部偏离，必须把偏离原因和适用范围写清楚。
 - 第一优先级：保持 `Codex CLI first-class executor -> explicit OPL activation -> provider-backed stage runtime / typed queue when durable orchestration is needed -> selected domain agent entry` 这条当前主链路；domain app skill 的 direct path 仍是一等入口，其他 executor 只通过显式 adapter 进入。
 - 第二优先级：把 shared modules / contracts / indexes 的共享边界放在 domain 仓之上，同时保留 domain-owned truth。
 - 第三优先级：保证 public docs、machine-readable contracts、reference docs 与 active domain agent 状态同步，不制造第二真相源。
