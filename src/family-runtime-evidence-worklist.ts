@@ -562,6 +562,8 @@ function stageEvidenceWorkorderItem(route: JsonRecord) {
     unobserved_expected_receipt_refs: stringList(route.unobserved_expected_receipt_refs),
     monitor_refs: stringList(route.monitor_refs),
     unobserved_monitor_refs: stringList(route.unobserved_monitor_refs),
+    unobserved_source_scope_refs: stringList(route.unobserved_source_scope_refs),
+    unobserved_runtime_event_refs: stringList(route.unobserved_runtime_event_refs),
     payload_workorder: workorder,
     accepted_payload_fields: stringList(workorder.accepted_payload_fields),
     success_path_requires: record(workorder.success_path_requires),

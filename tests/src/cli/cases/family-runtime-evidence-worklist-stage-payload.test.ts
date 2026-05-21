@@ -193,6 +193,10 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
     assert.equal(item.route_requires_domain_or_app_payload, true);
     assert.equal(item.can_close_without_domain_or_app_payload, false);
     assert.equal(workorder.action_id, item.action_id);
+    assert.deepEqual(workorder.unobserved_source_scope_refs, ['source:review']);
+    assert.deepEqual(workorder.unobserved_runtime_event_refs, [
+      'runtime_event:review.receipt_recorded',
+    ]);
     assert.equal(item.expected_refs.includes('source:review'), true);
     assert.equal(item.expected_refs.includes('runtime_event:review.receipt_recorded'), true);
     assert.equal(item.expected_refs.includes('metric:review/currentness'), true);
