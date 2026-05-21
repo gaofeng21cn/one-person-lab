@@ -171,7 +171,7 @@
     "surface_kind": "opl_agent_lab_executor_capability_aperture_read_model",
     "version": "opl-agent-lab.v1.executor-capability-aperture",
     "refs_only": true,
-    "semantic_boundary": "launch_audit_receipt_boundary_only_not_ai_reasoning_contract",
+    "semantic_boundary": "refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract",
     "default_executor_kind": "codex_cli",
     "codex_first": true,
     "input_groups": [
@@ -196,7 +196,20 @@
       "expected_receipt_boundary",
       "risk_lane"
     ],
-    "authority_boundary": "The aperture records what OPL needs to launch, audit, replay, fork, review, and project a stage executor attempt. It does not encode or constrain Codex CLI internal reasoning, does not replace AI judgment, and cannot authorize domain truth, quality verdicts, artifact mutation, memory writes, owner receipts, or default agent promotion."
+    "authority_boundary": {
+      "contract_role": "refs_only_planning_read_model_launch_audit_boundary",
+      "can_change_default_executor": false,
+      "can_execute_non_default_executor": false,
+      "can_claim_quality_equivalence": false,
+      "can_claim_tool_semantics_equivalence": false,
+      "can_claim_resume_equivalence": false,
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "can_mutate_artifact_body": false,
+      "can_write_domain_truth": false,
+      "can_constrain_executor_reasoning": false,
+      "can_replace_ai_judgment": false
+    }
   },
   "ahe_evidence_surface": {
     "surface_kind": "opl_agent_lab_ahe_evidence_read_model",
@@ -308,6 +321,7 @@
     "surface_kind": "opl_agent_lab_codex_attempt_trace_flywheel",
     "version": "opl-agent-lab.v1.codex-attempt-trace-flywheel",
     "refs_only": true,
+    "semantic_boundary": "refs_only_evidence_learning_loop_not_domain_quality_or_training_authority",
     "required_trace_ref_fields": [
       "command_refs",
       "file_refs",
@@ -327,7 +341,23 @@
       "next_run_falsification_refs",
       "promotion_eligibility"
     ],
-    "promotion_policy": "blocked evidence may fork multiple variant candidates for replay/eval, but every candidate remains refs-only and must pass the existing independent AI review, no-forbidden-write, promotion receipt, rollback, and canary gates before promotion; the flywheel cannot authorize domain readiness or default agent promotion."
+    "promotion_policy": "blocked evidence may fork multiple variant candidates for replay/eval, but every candidate remains refs-only and must pass the existing independent AI review, no-forbidden-write, promotion receipt, rollback, and canary gates before promotion; the flywheel is an evidence learning loop and cannot authorize domain readiness, quality verdicts, default agent promotion, model training or weight deployment, or artifact mutation.",
+    "promotion_eligibility": {
+      "flywheel_can_authorize_domain_ready": false,
+      "flywheel_can_authorize_quality_verdict": false,
+      "flywheel_can_promote_default_agent": false,
+      "flywheel_can_train_or_deploy_model_weights": false,
+      "flywheel_can_mutate_artifact_body": false
+    },
+    "authority_boundary": {
+      "contract_role": "refs_only_evidence_learning_loop_read_model",
+      "can_authorize_domain_ready": false,
+      "can_authorize_quality_verdict": false,
+      "can_promote_default_agent": false,
+      "can_train_or_deploy_model_weights": false,
+      "can_mutate_artifact_body": false,
+      "can_write_domain_truth": false
+    }
   },
   "independent_ai_review_assessment_surface": {
     "surface_kind": "opl_agent_lab_independent_ai_review_assessment",
@@ -519,6 +549,8 @@
       "review_trace_ledger",
       "log_driven_mechanism_candidates",
       "aris_maturity_controls",
+      "ahe_evidence",
+      "executor_capability_aperture",
       "stage_executor_policy",
       "codex_attempt_trace_flywheel",
       "promotion_gates",
@@ -1043,6 +1075,7 @@
       "pattern_refs",
       "log_driven_candidate_read_model",
       "ahe_evidence_read_model",
+      "executor_capability_aperture",
       "codex_attempt_trace_flywheel",
       "integration_contract_read_model",
       "review_trace_ledger",

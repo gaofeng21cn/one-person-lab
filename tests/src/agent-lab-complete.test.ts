@@ -128,6 +128,13 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(result.codex_attempt_trace_flywheel.summary.codex_cli_attempt_count, 3);
   assert.equal(result.codex_attempt_trace_flywheel.summary.fork_candidate_count, 0);
+  assert.equal(result.codex_attempt_trace_flywheel.semantic_boundary,
+    'refs_only_evidence_learning_loop_not_domain_quality_or_training_authority');
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_promote_default_agent, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_train_or_deploy_model_weights, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_mutate_artifact_body, false);
   assert.equal(result.optimizer_loop.integration_contract_read_model.read_model_id,
     result.integration_contracts.read_model_id);
   assert.equal(result.optimizer_loop.review_trace_ledger.ledger_ref, result.review_trace_ledger.ledger_ref);
@@ -161,6 +168,15 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.executor_capability_aperture.summary.codex_cli_task_count, 3);
   assert.equal(result.executor_capability_aperture.summary.non_default_executor_task_count, 0);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_constrain_executor_reasoning, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_change_default_executor, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_execute_non_default_executor, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_quality_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_tool_semantics_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_resume_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_mutate_artifact_body, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_write_domain_truth, false);
   assert.equal(result.optimizer_loop.mechanism_object.promotion_mode,
     'risk_tiered_auto_promotion_with_independent_ai_review');
   assert.equal(result.stage_executor_policy.surface_kind, 'opl_agent_lab_stage_executor_policy_read_model');
@@ -217,9 +233,21 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.executor_capability_aperture.surface_kind,
     'opl_agent_lab_executor_capability_aperture_read_model');
   assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_execute_non_default_executor, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_quality_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_tool_semantics_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_resume_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_mutate_artifact_body, false);
   assert.equal(result.codex_attempt_trace_flywheel.surface_kind,
     'opl_agent_lab_codex_attempt_trace_flywheel');
   assert.equal(result.codex_attempt_trace_flywheel.summary.trace_ready_count, 3);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_domain_ready, false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_quality_verdict,
+    false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_promote_default_agent, false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_train_or_deploy_model_weights,
+    false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_mutate_artifact_body, false);
   assert.equal(result.variant_comparison.surface_kind, 'opl_agent_lab_variant_comparison_read_model');
   assert.equal(result.variant_comparison.summary.variant_count, 3);
   assert.equal(result.variant_comparison.promotion_eligibility.unselected_variants_can_authorize_domain_ready, false);

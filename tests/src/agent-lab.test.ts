@@ -105,8 +105,19 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(result.codex_attempt_trace_flywheel.summary.typed_blocker_count, 0);
   assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_domain_ready,
     false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_authorize_quality_verdict,
+    false);
   assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_promote_default_agent,
     false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_train_or_deploy_model_weights,
+    false);
+  assert.equal(result.codex_attempt_trace_flywheel.promotion_eligibility.flywheel_can_mutate_artifact_body,
+    false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_promote_default_agent, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_train_or_deploy_model_weights, false);
+  assert.equal(result.codex_attempt_trace_flywheel.authority_boundary.can_mutate_artifact_body, false);
   assert.ok(result.refs.codex_attempt_trace_refs.length === 3);
   assert.ok(result.refs.codex_command_refs.includes('command-ref:codex/mas-paper-repair-smoke'));
   assert.ok(result.refs.codex_file_refs.includes('file-ref:mas/current-package-fixture'));
@@ -120,11 +131,20 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(result.executor_capability_aperture.surface_kind,
     'opl_agent_lab_executor_capability_aperture_read_model');
   assert.equal(result.executor_capability_aperture.semantic_boundary,
-    'launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
+    'refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
   assert.equal(result.executor_capability_aperture.default_executor_kind, 'codex_cli');
   assert.equal(result.executor_capability_aperture.summary.codex_cli_task_count, 3);
   assert.equal(result.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
   assert.equal(result.executor_capability_aperture.summary.low_risk_count, 3);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_change_default_executor, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_execute_non_default_executor, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_quality_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_tool_semantics_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_claim_resume_equivalence, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_authorize_domain_ready, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_mutate_artifact_body, false);
+  assert.equal(result.executor_capability_aperture.authority_boundary.can_write_domain_truth, false);
   assert.deepEqual(result.refs.executor_capability_aperture_refs,
     result.executor_capability_aperture.tasks.map((task: any) => task.aperture_ref));
   assert.equal(result.authority_boundary.can_authorize_domain_ready, false);
@@ -160,6 +180,8 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(masAperture.expected_receipt.expected_receipt_refs[0],
     'owner-receipt:mas/publication-eval-fixture');
   assert.equal(masAperture.audit_boundary.can_constrain_executor_reasoning, false);
+  assert.equal(masAperture.audit_boundary.can_execute_non_default_executor, false);
+  assert.equal(masAperture.audit_boundary.can_claim_resume_equivalence, false);
 });
 
 test('Agent Lab executor capability aperture accepts declared non-default executor metadata as audit boundary only', () => {
@@ -210,6 +232,15 @@ test('Agent Lab executor capability aperture accepts declared non-default execut
     'executor-receipt:claude-code/mas-review-smoke',
   ));
   assert.equal(aperture.audit_boundary.can_replace_ai_judgment, false);
+  assert.equal(aperture.audit_boundary.can_change_default_executor, false);
+  assert.equal(aperture.audit_boundary.can_execute_non_default_executor, false);
+  assert.equal(aperture.audit_boundary.can_claim_quality_equivalence, false);
+  assert.equal(aperture.audit_boundary.can_claim_tool_semantics_equivalence, false);
+  assert.equal(aperture.audit_boundary.can_claim_resume_equivalence, false);
+  assert.equal(aperture.audit_boundary.can_authorize_domain_ready, false);
+  assert.equal(aperture.audit_boundary.can_authorize_quality_verdict, false);
+  assert.equal(aperture.audit_boundary.can_mutate_artifact_body, false);
+  assert.equal(aperture.audit_boundary.can_write_domain_truth, false);
   assert.equal(result.executor_capability_aperture.authority_boundary.can_constrain_executor_reasoning, false);
 });
 
@@ -396,7 +427,11 @@ test('Agent Lab blocks failure-delta promotion attempts without safety refs', ()
     candidate.evidence_delta.domain_truth_delta_written === false
     && candidate.evidence_delta.memory_body_delta_written === false
     && candidate.evidence_delta.artifact_delta_written === false
-    && candidate.promotion_eligibility.can_promote_default_agent === false));
+    && candidate.promotion_eligibility.can_authorize_domain_ready === false
+    && candidate.promotion_eligibility.can_authorize_quality_verdict === false
+    && candidate.promotion_eligibility.can_promote_default_agent === false
+    && candidate.promotion_eligibility.can_train_or_deploy_model_weights === false
+    && candidate.promotion_eligibility.can_mutate_artifact_body === false));
 });
 
 test('Agent Lab allows medium-risk auto-promotion only with real failure delta and safety refs', () => {

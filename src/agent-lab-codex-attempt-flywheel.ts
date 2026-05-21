@@ -18,6 +18,17 @@ const CODEX_ATTEMPT_TRACE_REF_FIELDS = [
 
 type CodexAttemptTraceRefField = typeof CODEX_ATTEMPT_TRACE_REF_FIELDS[number];
 
+const CODEX_ATTEMPT_TRACE_FLYWHEEL_AUTHORITY_BOUNDARY = {
+  ...AGENT_LAB_AUTHORITY_BOUNDARY,
+  contract_role: 'refs_only_evidence_learning_loop_read_model',
+  can_authorize_domain_ready: false,
+  can_authorize_quality_verdict: false,
+  can_promote_default_agent: false,
+  can_train_or_deploy_model_weights: false,
+  can_mutate_artifact_body: false,
+  can_write_domain_truth: false,
+};
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -152,9 +163,12 @@ function forkCandidates(input: {
           'canary-observation-ref',
         ],
         can_authorize_domain_ready: false,
+        can_authorize_quality_verdict: false,
         can_promote_default_agent: false,
+        can_train_or_deploy_model_weights: false,
+        can_mutate_artifact_body: false,
       },
-      authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+      authority_boundary: CODEX_ATTEMPT_TRACE_FLYWHEEL_AUTHORITY_BOUNDARY,
     };
   });
 }
@@ -207,7 +221,13 @@ export function buildAgentLabCodexAttemptTraceFlywheel(input: {
       blocked_evidence_refs: blockedEvidenceRefs,
       fork_candidate_refs: variants.map((variant) => variant.candidate_ref),
       variant_candidates: variants,
-      authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+      evidence_learning_loop: {
+        loop_role: 'collect_blocked_evidence_refs_then_fork_variant_candidates_for_next_run_falsification',
+        refs_only: true,
+        can_apply_learning_to_domain_truth: false,
+        can_mutate_artifact_body: false,
+      },
+      authority_boundary: CODEX_ATTEMPT_TRACE_FLYWHEEL_AUTHORITY_BOUNDARY,
     };
   });
   const variantCandidates = attempts.flatMap((attempt) => attempt.variant_candidates);
@@ -222,6 +242,7 @@ export function buildAgentLabCodexAttemptTraceFlywheel(input: {
     ]),
     suite_id: input.suite.suite_id,
     refs_only: true,
+    semantic_boundary: 'refs_only_evidence_learning_loop_not_domain_quality_or_training_authority',
     required_trace_ref_fields: CODEX_ATTEMPT_TRACE_REF_FIELDS,
     attempts,
     variant_candidates: variantCandidates,
@@ -254,9 +275,12 @@ export function buildAgentLabCodexAttemptTraceFlywheel(input: {
     },
     promotion_eligibility: {
       flywheel_can_authorize_domain_ready: false,
+      flywheel_can_authorize_quality_verdict: false,
       flywheel_can_promote_default_agent: false,
+      flywheel_can_train_or_deploy_model_weights: false,
+      flywheel_can_mutate_artifact_body: false,
       variant_candidates_require_existing_promotion_gate: true,
     },
-    authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
+    authority_boundary: CODEX_ATTEMPT_TRACE_FLYWHEEL_AUTHORITY_BOUNDARY,
   };
 }

@@ -100,8 +100,36 @@ test('agent-lab complete exposes the complete eval, observability, and optimizer
   assert.equal(output.agent_lab_complete.executor_capability_aperture.surface_kind,
     'opl_agent_lab_executor_capability_aperture_read_model');
   assert.equal(output.agent_lab_complete.executor_capability_aperture.semantic_boundary,
-    'launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
+    'refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract');
   assert.equal(output.agent_lab_complete.executor_capability_aperture.summary.expected_receipt_ref_count, 3);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_change_default_executor, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_execute_non_default_executor, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_claim_quality_equivalence, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_claim_tool_semantics_equivalence, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_claim_resume_equivalence, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_authorize_domain_ready, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_mutate_artifact_body, false);
+  assert.equal(output.agent_lab_complete.executor_capability_aperture.authority_boundary
+    .can_write_domain_truth, false);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
+    .flywheel_can_authorize_domain_ready, false);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
+    .flywheel_can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
+    .flywheel_can_promote_default_agent, false);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
+    .flywheel_can_train_or_deploy_model_weights, false);
+  assert.equal(output.agent_lab_complete.codex_attempt_trace_flywheel.promotion_eligibility
+    .flywheel_can_mutate_artifact_body, false);
 });
 
 test('agent-lab workbench exposes the App-ready read model', () => {
@@ -129,7 +157,27 @@ test('agent-lab workbench exposes the App-ready read model', () => {
     output.agent_lab_workbench.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
   assert.equal(output.agent_lab_workbench.source_results.executor_capability_aperture_ref,
     output.agent_lab_workbench.executor_capability_aperture.read_model_id);
+  assert.equal(output.agent_lab_workbench.source_results.codex_attempt_trace_flywheel_ref,
+    output.agent_lab_workbench.codex_attempt_trace_flywheel.read_model_id);
   assert.equal(output.agent_lab_workbench.executor_capability_aperture.summary.codex_cli_task_count, 3);
+  assert.equal(output.agent_lab_workbench.executor_capability_aperture.authority_boundary
+    .can_execute_non_default_executor, false);
+  assert.equal(output.agent_lab_workbench.executor_capability_aperture.authority_boundary
+    .can_claim_quality_equivalence, false);
+  assert.equal(output.agent_lab_workbench.executor_capability_aperture.authority_boundary
+    .can_claim_tool_semantics_equivalence, false);
+  assert.equal(output.agent_lab_workbench.executor_capability_aperture.authority_boundary
+    .can_claim_resume_equivalence, false);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.authority_boundary
+    .can_authorize_domain_ready, false);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.authority_boundary
+    .can_authorize_quality_verdict, false);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.authority_boundary
+    .can_promote_default_agent, false);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.authority_boundary
+    .can_train_or_deploy_model_weights, false);
+  assert.equal(output.agent_lab_workbench.codex_attempt_trace_flywheel.authority_boundary
+    .can_mutate_artifact_body, false);
   assert.equal(output.agent_lab_workbench.promotion_gates.length, 6);
   assert.equal(output.agent_lab_workbench.online_learning_refs.transitions.length, 6);
   assert.equal(output.agent_lab_workbench.online_learning_refs.can_train_or_deploy_model_weights, false);

@@ -6,6 +6,22 @@ type JsonRecord = Record<string, unknown>;
 
 type ExecutorRiskLane = 'low_risk' | 'medium_risk' | 'high_risk';
 
+const EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY = {
+  ...AGENT_LAB_AUTHORITY_BOUNDARY,
+  contract_role: 'refs_only_planning_read_model_launch_audit_boundary',
+  can_change_default_executor: false,
+  can_execute_non_default_executor: false,
+  can_claim_quality_equivalence: false,
+  can_claim_tool_semantics_equivalence: false,
+  can_claim_resume_equivalence: false,
+  can_authorize_domain_ready: false,
+  can_authorize_quality_verdict: false,
+  can_mutate_artifact_body: false,
+  can_write_domain_truth: false,
+  can_constrain_executor_reasoning: false,
+  can_replace_ai_judgment: false,
+};
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -221,13 +237,7 @@ function apertureForTask(task: AgentLabTaskManifest) {
     },
     risk_lane: riskLane(task),
     audit_boundary: {
-      contract_role: 'launch_audit_receipt_boundary_only',
-      can_constrain_executor_reasoning: false,
-      can_replace_ai_judgment: false,
-      can_authorize_domain_ready: false,
-      can_authorize_quality_verdict: false,
-      can_write_domain_truth: false,
-      can_mutate_artifact_body: false,
+      ...EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY,
       can_write_owner_receipt: false,
     },
   };
@@ -253,7 +263,7 @@ export function buildAgentLabExecutorCapabilityApertureReadModel(input: {
     suite_id: input.suite.suite_id,
     refs_only: true,
     status: 'ready_for_executor_first_stage_launch_audit',
-    semantic_boundary: 'launch_audit_receipt_boundary_only_not_ai_reasoning_contract',
+    semantic_boundary: 'refs_only_planning_read_model_launch_audit_receipt_boundary_only_not_ai_reasoning_contract',
     default_executor_kind: 'codex_cli',
     codex_first: true,
     required_task_fields: [
@@ -286,11 +296,6 @@ export function buildAgentLabExecutorCapabilityApertureReadModel(input: {
       medium_risk_count: tasks.filter((task) => task.risk_lane === 'medium_risk').length,
       high_risk_count: tasks.filter((task) => task.risk_lane === 'high_risk').length,
     },
-    authority_boundary: {
-      ...AGENT_LAB_AUTHORITY_BOUNDARY,
-      can_constrain_executor_reasoning: false,
-      can_replace_ai_judgment: false,
-      contract_role: 'launch_audit_receipt_boundary_only',
-    },
+    authority_boundary: EXECUTOR_CAPABILITY_APERTURE_AUTHORITY_BOUNDARY,
   };
 }
