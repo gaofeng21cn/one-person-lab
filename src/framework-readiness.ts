@@ -504,7 +504,7 @@ export async function buildFrameworkReadinessSummary(
     rca: stageReadinessDiagnostics.rca.readiness,
   };
   const runtimeSnapshot = await buildRuntimeTraySnapshot(contracts, {
-    appOperatorDrilldownDetailLevel: 'summary',
+    appOperatorDrilldownDetailLevel: 'full',
     providerKind: 'temporal',
   });
   const appOperatorDrilldown = record(runtimeSnapshot.runtime_tray_snapshot.app_operator_drilldown);
@@ -513,6 +513,7 @@ export async function buildFrameworkReadinessSummary(
       familyDefaults: true,
       providerKind: 'temporal',
       executorKind: 'codex_cli',
+      runtimeSnapshot,
     })).family_runtime_evidence_worklist,
   );
 
@@ -867,6 +868,12 @@ export async function buildFrameworkReadinessSummary(
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         attention_count: domainDispatchAttentionCount,
         domain_count: numberValue(appSummary.domain_dispatch_attention_domain_count),
+        domain_dispatch_evidence_receipt_action_route_count:
+          numberValue(appSummary.domain_dispatch_evidence_receipt_action_route_count),
+        domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count:
+          numberValue(appSummary.domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count),
+        domain_dispatch_evidence_receipt_record_payload_template_count:
+          numberValue(appSummary.domain_dispatch_evidence_receipt_record_payload_template_count),
         owner_receipt_ref_count:
           numberValue(appSummary.domain_dispatch_attention_owner_receipt_ref_count),
         direct_typed_blocker_ref_count:

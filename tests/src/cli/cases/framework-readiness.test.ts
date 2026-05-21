@@ -221,6 +221,15 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
   );
   assert.equal(
+    readiness.domain_dispatch_attention
+      .domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count,
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+  );
+  assert.equal(
+    readiness.domain_dispatch_attention.domain_dispatch_evidence_receipt_action_route_count,
+    readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,
+  );
+  assert.equal(
     readiness.evidence_tails.stage_receipt_freshness_tail
       .domain_dispatch_evidence_workorder_packet_summary.workorder_count,
     readiness.evidence_worklist.domain_dispatch_evidence_workorder_packet_summary.workorder_count,

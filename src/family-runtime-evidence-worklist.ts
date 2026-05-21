@@ -23,6 +23,7 @@ type EvidenceWorklistInput = {
   providerKind: FamilyRuntimeProviderKind;
   executorKind: 'codex_cli';
   detailLevel?: 'summary' | 'full';
+  runtimeSnapshot?: Awaited<ReturnType<typeof buildRuntimeTraySnapshot>>;
 };
 
 const NOT_AUTHORIZED_CLAIMS = [
@@ -816,10 +817,11 @@ export async function runFamilyRuntimeEvidenceWorklist(
   contracts: FrameworkContracts,
   input: EvidenceWorklistInput,
 ) {
-  const snapshot = await buildRuntimeTraySnapshot(contracts, {
-    appOperatorDrilldownDetailLevel: 'full',
-    providerKind: input.providerKind,
-  });
+  const snapshot = input.runtimeSnapshot
+    ?? await buildRuntimeTraySnapshot(contracts, {
+      appOperatorDrilldownDetailLevel: 'full',
+      providerKind: input.providerKind,
+    });
   const drilldown = record(snapshot.runtime_tray_snapshot.app_operator_drilldown);
   const bridge = record(drilldown.app_execution_bridge);
   const operatorActionRouting = record(drilldown.operator_action_routing_refs);
