@@ -476,3 +476,161 @@ PY
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime requeues dead-lettered MAS exports when domain owner fingerprint changes', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-deadletter-owner-home-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-deadletter-owner-'));
+  const profilePath = path.join(fixtureRoot, 'dm-cvd.workspace.toml');
+  const uvPath = path.join(fixtureRoot, 'uv');
+  const uvArgvPath = path.join(fixtureRoot, 'uv.argv');
+  const uvCwdPath = path.join(fixtureRoot, 'uv.cwd');
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  const dispatchCountPath = path.join(fixtureRoot, 'dispatch.count');
+  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task.json');
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  fs.writeFileSync(profilePath, '[workspace]\nname = "dm-cvd"\n', 'utf8');
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
+: > ${shellSingleQuote(uvArgvPath)}
+for arg in "$@"; do
+  printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
+done
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "recommended_task_kind": "paper_autonomy/repair-recheck",
+      "priority": 60,
+      "source": "mas-runtime-owner-route",
+      "dedupe_key": "mas:dm002:repair-recheck:unit_harmonized_validation_uncertainty_and_grouped_calibration",
+      "dispatch_owner": "med-autoscience",
+      "owner_route_ref": "owner-route:mas/DM002/unit_harmonized_validation_uncertainty_and_grouped_calibration",
+      "source_fingerprint": "unit-harmonized-route",
+      "payload": {
+        "profile": "dm-cvd.workspace.toml",
+        "study_id": "002-dm-china-us-mortality-attribution",
+        "work_unit_id": "unit_harmonized_validation_uncertainty_and_grouped_calibration"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+task_path="$1"
+cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
+count=0
+if [ -f ${shellSingleQuote(dispatchCountPath)} ]; then
+  count="$(cat ${shellSingleQuote(dispatchCountPath)})"
+fi
+count=$((count + 1))
+printf '%s\\n' "$count" > ${shellSingleQuote(dispatchCountPath)}
+if [ "$count" -le 3 ]; then
+  echo "owner callable surface missing" >&2
+  exit 42
+fi
+cat <<'JSON'
+{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","receipt_ref":"receipt:dm002/repaired-owner"}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  const env = familyRuntimeEnv(path.join(homeRoot, 'opl-state'), {
+    HOME: homeRoot,
+    PATH: `${fixtureRoot}:${process.env.PATH ?? ''}`,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE: profilePath,
+    OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
+  });
+  try {
+    for (let index = 0; index < 3; index += 1) {
+      runCli([
+        'family-runtime',
+        'tick',
+        '--source',
+        `dm002-owner-v1-${index}`,
+        '--hydrate',
+        '--domain',
+        'medautoscience',
+        '--study',
+        '002-dm-china-us-mortality-attribution',
+      ], env);
+    }
+    const deadLetterQueue = runCli(['family-runtime', 'queue', 'list'], env);
+    const deadLetterTask = deadLetterQueue.family_runtime_queue.tasks[0];
+    assert.equal(deadLetterTask.status, 'dead_letter');
+    assert.equal(deadLetterTask.attempts, 3);
+    assert.match(deadLetterTask.last_error, /owner callable surface missing/);
+
+    const sameOwner = runCli([
+      'family-runtime',
+      'tick',
+      '--source',
+      'dm002-owner-v1-repeat',
+      '--hydrate',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+    ], env);
+    assert.equal(sameOwner.family_runtime_tick.hydration.enqueued_count, 0);
+    assert.equal(sameOwner.family_runtime_tick.hydration.idempotent_noop_count, 1);
+    assert.equal(sameOwner.family_runtime_tick.selected_count, 0);
+
+    const nextSha = masFixture.advance('owner-surface.txt', 'owner callable restored\n', 'Restore owner callable');
+    const updatedOwner = runCli([
+      'family-runtime',
+      'tick',
+      '--source',
+      'dm002-owner-v2',
+      '--hydrate',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '002-dm-china-us-mortality-attribution',
+    ], env);
+    const refreshed = runCli(['family-runtime', 'queue', 'inspect', deadLetterTask.task_id], env);
+    const task = refreshed.family_runtime_task.task;
+    const events = refreshed.family_runtime_task.events;
+    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+
+    assert.equal(updatedOwner.family_runtime_tick.hydration.enqueued_count, 1);
+    assert.equal(updatedOwner.family_runtime_tick.hydration.requeued_count, 1);
+    assert.equal(updatedOwner.family_runtime_tick.selected_count, 1);
+    assert.equal(updatedOwner.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.status, 'succeeded');
+    assert.equal(task.attempts, 1);
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
+    assert.match(task.payload.opl_domain_export_context.owner_fingerprint, new RegExp(nextSha));
+    assert.match(dispatchedTask.payload.opl_domain_export_context.owner_fingerprint, new RegExp(nextSha));
+    assert.equal(
+      events.some((event: { event_type: string; payload: { reason?: string } }) =>
+        event.event_type === 'task_requeued_from_dead_letter_after_domain_owner_update'
+        && event.payload.reason === 'domain_export_owner_changed_after_dead_letter'
+      ),
+      true,
+    );
+    assert.equal(fs.readFileSync(dispatchCountPath, 'utf8').trim(), '4');
+    assert.equal(
+      fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
+      fs.realpathSync(masFixture.sourceRoot),
+    );
+    assert.equal(fs.readFileSync(uvArgvPath, 'utf8').includes('sidecar\nexport'), true);
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

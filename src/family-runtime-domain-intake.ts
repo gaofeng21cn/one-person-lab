@@ -24,6 +24,7 @@ type DomainExportCommand = {
   argv: string[];
   cwd: string;
   source: 'env_override' | 'module_exec_profile' | 'workspace_binding';
+  owner_fingerprint: string;
 };
 
 type EnqueueTaskResult = {
@@ -56,6 +57,7 @@ function exportCommandForDomain(
       argv: override.split(/\s+/),
       cwd: process.cwd(),
       source: 'env_override',
+      owner_fingerprint: `env_override:${override}`,
     };
   }
   if (domainId === 'medautoscience') {
@@ -74,6 +76,13 @@ function exportCommandForDomain(
         argv: command.command_preview,
         cwd: command.working_directory,
         source: 'module_exec_profile',
+        owner_fingerprint: [
+          'module_exec_profile',
+          command.module_id,
+          command.module.install_origin,
+          command.module.git?.head_sha ?? 'unknown-head',
+          command.working_directory,
+        ].join(':'),
       };
     }
 
@@ -100,6 +109,11 @@ function exportCommandForDomain(
         ],
         cwd: binding.workspace_path,
         source: 'workspace_binding',
+        owner_fingerprint: [
+          'workspace_binding',
+          binding.workspace_path,
+          profileRef,
+        ].join(':'),
       };
     }
   }
@@ -220,6 +234,7 @@ function pendingTaskInputFrom(
   domainId: FamilyRuntimeDomainId,
   item: Record<string, unknown>,
   source: string,
+  exportContext: DomainExportCommand,
 ): { input?: EnqueueInput; blocked?: { reason: string; task: unknown } } {
   const declaredDomain = typeof item.domain_id === 'string' ? item.domain_id : domainId;
   const exportedDomain = canonicalFamilyRuntimeDomainId(declaredDomain);
@@ -250,6 +265,10 @@ function pendingTaskInputFrom(
         ...(typeof item.recommended_task_kind === 'string' ? { recommended_task_kind: item.recommended_task_kind } : {}),
         ...(typeof item.reason === 'string' ? { reason: item.reason } : {}),
         ...(typeof item.runtime_state_path === 'string' ? { runtime_state_path: item.runtime_state_path } : {}),
+        opl_domain_export_context: {
+          command_source: exportContext.source,
+          owner_fingerprint: exportContext.owner_fingerprint,
+        },
         ...handoffPayloadFrom(item),
       },
       dedupeKey: typeof item.dedupe_key === 'string' ? item.dedupe_key : undefined,
@@ -264,6 +283,7 @@ function toPendingTaskInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
   source: string,
+  exportContext: DomainExportCommand,
 ) {
   const tasks = Array.isArray(output.pending_family_tasks) ? output.pending_family_tasks : [];
   const inputs: EnqueueInput[] = [];
@@ -273,7 +293,7 @@ function toPendingTaskInputs(
       blocked.push({ reason: 'invalid_pending_task', task });
       continue;
     }
-    const result = pendingTaskInputFrom(domainId, task, source);
+    const result = pendingTaskInputFrom(domainId, task, source, exportContext);
     if (result.input) {
       inputs.push(result.input);
     } else if (result.blocked) {
@@ -376,9 +396,10 @@ function exportedTaskInputs(
   domainId: FamilyRuntimeDomainId,
   output: Record<string, unknown>,
   source: string,
+  exportContext: DomainExportCommand,
   taskScope?: FamilyRuntimeTaskScope,
 ) {
-  const pending = toPendingTaskInputs(domainId, output, source);
+  const pending = toPendingTaskInputs(domainId, output, source, exportContext);
   const transitions = transitionTaskInputsFromMatrix(domainId, output, source);
   const exportedInputs = [...pending.inputs, ...transitions.inputs];
   const inputs = exportedInputs.filter((taskInput) => inputMatchesTaskScope(taskInput, taskScope));
@@ -429,7 +450,7 @@ export function hydrateDomainTasks(
       continue;
     }
     const output = parseDispatchOutput(stdout);
-    const { inputs, blocked, filtered_count } = exportedTaskInputs(domainId, output, input.source, input.taskScope);
+    const { inputs, blocked, filtered_count } = exportedTaskInputs(domainId, output, input.source, command, input.taskScope);
     blockedCount += blocked.length;
     filteredCount += filtered_count;
     const acceptedTasks = [];
