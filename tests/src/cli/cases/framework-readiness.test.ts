@@ -146,6 +146,45 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(firstOwnerPayloadGroup.authority_boundary.can_close_domain_ready, false);
     assert.equal(firstOwnerPayloadGroup.authority_boundary.can_claim_production_ready, false);
   }
+  const nextSafeActions = readiness.attention_first_payload.next_safe_actions;
+  assert.equal(nextSafeActions.length > 0, true);
+  assert.equal(nextSafeActions.length <= 5, true);
+  if (readiness.attention_first_payload.blockers.length > 0) {
+    assert.deepEqual(
+      nextSafeActions.map((action: { action_id: string }) => action.action_id),
+      ['inspect_framework_kernel_blockers'],
+    );
+  } else if (readiness.attention_first_payload.warnings.length > 0) {
+    assert.equal(
+      nextSafeActions.some(
+        (action: { action_id: string }) => action.action_id === 'review_framework_attention_items',
+      ),
+      true,
+    );
+    const ownerPayloadAction = nextSafeActions.find(
+      (action: { action_kind?: string }) => action.action_kind === 'owner_payload_group_scaleout',
+    );
+    assert.equal(Boolean(ownerPayloadAction), Boolean(firstOwnerPayloadGroup));
+    if (firstOwnerPayloadGroup && ownerPayloadAction) {
+      assert.equal(ownerPayloadAction.action_id, 'review_owner_payload_group_scaleout');
+      assert.equal(ownerPayloadAction.owner, firstOwnerPayloadGroup.owner);
+      assert.equal(ownerPayloadAction.payload_kind, firstOwnerPayloadGroup.payload_kind);
+      assert.equal(ownerPayloadAction.attention_count, firstOwnerPayloadGroup.attention_count);
+      assert.deepEqual(ownerPayloadAction.required_refs_any_of, firstOwnerPayloadGroup.required_refs_any_of);
+      assert.equal(ownerPayloadAction.full_detail_section, 'evidence_envelope');
+      assert.equal(ownerPayloadAction.authority, 'operator_attention_only');
+      assert.equal(ownerPayloadAction.can_execute_domain_action, false);
+      assert.equal(ownerPayloadAction.can_write_domain_truth, false);
+      assert.equal(ownerPayloadAction.can_create_owner_receipt, false);
+      assert.equal(ownerPayloadAction.can_close_domain_ready, false);
+      assert.equal(ownerPayloadAction.can_claim_production_ready, false);
+    }
+  } else {
+    assert.deepEqual(
+      nextSafeActions.map((action: { action_id: string }) => action.action_id),
+      ['no_framework_readiness_action_required'],
+    );
+  }
   assert.equal(
     readiness.attention_first_payload.blockers.length > 0,
     readiness.summary.framework_kernel_hard_blocker_count > 0,
@@ -328,6 +367,42 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(firstDispatchWorkorderGroup.can_close_domain_ready, false);
     assert.equal(firstDispatchWorkorderGroup.can_claim_production_ready, false);
     assert.equal(firstDispatchWorkorderGroup.worklist_item_is_completion_claim, false);
+  }
+  if (readiness.attention_first_payload.blockers.length === 0) {
+    const dispatchGroupAction = nextSafeActions.find(
+      (action: { action_kind?: string }) =>
+        action.action_kind === 'domain_dispatch_evidence_group_workorder',
+    );
+    assert.equal(Boolean(dispatchGroupAction), Boolean(firstDispatchWorkorderGroup));
+    if (firstDispatchWorkorderGroup && dispatchGroupAction) {
+      assert.equal(dispatchGroupAction.action_id, 'review_domain_dispatch_group_workorder');
+      assert.equal(dispatchGroupAction.owner, firstDispatchWorkorderGroup.payload_owner);
+      assert.equal(
+        dispatchGroupAction.canonical_domain_id,
+        firstDispatchWorkorderGroup.canonical_domain_id,
+      );
+      assert.equal(dispatchGroupAction.stage_id, firstDispatchWorkorderGroup.stage_id);
+      assert.equal(dispatchGroupAction.workorder_count, firstDispatchWorkorderGroup.workorder_count);
+      assert.equal(
+        dispatchGroupAction.stage_attempt_count,
+        firstDispatchWorkorderGroup.stage_attempt_count,
+      );
+      assert.equal(dispatchGroupAction.sample_stage_attempt_ids.length <= 3, true);
+      assert.equal(dispatchGroupAction.sample_action_refs.length <= 3, true);
+      assert.equal(dispatchGroupAction.sample_required_evidence_refs.length <= 3, true);
+      assert.deepEqual(
+        dispatchGroupAction.required_operator_payload_refs,
+        firstDispatchWorkorderGroup.required_operator_payload_refs,
+      );
+      assert.equal(Object.hasOwn(dispatchGroupAction, 'required_evidence_refs'), false);
+      assert.equal(dispatchGroupAction.full_detail_section, 'domain_dispatch_evidence');
+      assert.equal(dispatchGroupAction.authority, 'operator_attention_only');
+      assert.equal(dispatchGroupAction.can_execute_domain_action, false);
+      assert.equal(dispatchGroupAction.can_write_domain_truth, false);
+      assert.equal(dispatchGroupAction.can_create_owner_receipt, false);
+      assert.equal(dispatchGroupAction.can_close_domain_ready, false);
+      assert.equal(dispatchGroupAction.can_claim_production_ready, false);
+    }
   }
   assert.equal(
     readiness.attention_first_payload.domain_dispatch_evidence_workorder_route_attention_fallback_policy,
