@@ -337,6 +337,11 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
           'blocked_suite_result_ref',
           'developer_patch_work_order_ref',
           'patch_traceability_matrix_ref',
+          'failure_evidence_refs',
+          'root_cause_refs',
+          'targeted_fix_refs',
+          'predicted_impact_refs',
+          'next_run_falsification_refs',
           'target_repo_verification_refs',
           'target_runtime_read_model_consumption_ref',
           'workspace_environment_proof_ref',
@@ -347,6 +352,23 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
           'agent_lab_re_evaluation_ref',
         ],
       );
+      assert.deepEqual(
+        fullDrilldown.oma_sections.patch_loop_closeout.ahe_patch_loop_ref_fields,
+        [
+          'failure_evidence_refs',
+          'root_cause_refs',
+          'targeted_fix_refs',
+          'predicted_impact_refs',
+          'next_run_falsification_refs',
+        ],
+      );
+      for (const target of fullDrilldown.oma_sections.patch_loop_closeout.targets) {
+        assert.equal(Array.isArray(target.refs.failure_evidence_refs), true);
+        assert.equal(Array.isArray(target.refs.root_cause_refs), true);
+        assert.equal(Array.isArray(target.refs.targeted_fix_refs), true);
+        assert.equal(Array.isArray(target.refs.predicted_impact_refs), true);
+        assert.equal(Array.isArray(target.refs.next_run_falsification_refs), true);
+      }
       assert.equal(
         fullDrilldown.oma_sections.patch_loop_closeout.authority_boundary.can_write_target_domain_truth,
         false,
