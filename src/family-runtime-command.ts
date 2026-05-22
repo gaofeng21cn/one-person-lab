@@ -106,6 +106,7 @@ export type FamilyRuntimeCommandInput =
   }
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
+  | { mode: 'queue_redrive'; taskId: string; reason: string; source?: string }
   | { mode: 'attempt_inspect'; stageAttemptId: string }
   | { mode: 'attempt_start'; stageAttemptId: string }
   | { mode: 'attempt_query'; stageAttemptId: string }

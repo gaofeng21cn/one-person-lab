@@ -60,6 +60,7 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 import { enqueueTask } from './family-runtime-enqueue.ts';
+import { redriveFamilyRuntimeTask } from './family-runtime-redrive.ts';
 import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.ts';
 import { blockTaskForStageAdmissionGate, buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
@@ -612,6 +613,20 @@ export async function runFamilyRuntime(args: string[]) {
         family_runtime_task: {
           surface_id: 'opl_family_runtime_task',
           ...inspectTask(db, parsed.taskId),
+        },
+      };
+    }
+    if (parsed.mode === 'queue_redrive') {
+      return {
+        version: 'g2',
+        family_runtime_redrive: {
+          surface_id: 'opl_family_runtime_redrive',
+          ...redriveFamilyRuntimeTask(db, {
+            taskId: parsed.taskId,
+            reason: parsed.reason,
+            source: parsed.source,
+          }),
+          queue: queueSummary(db),
         },
       };
     }

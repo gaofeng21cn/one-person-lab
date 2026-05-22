@@ -309,11 +309,15 @@ export function ensureProviderHostedStageAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
+  options: {
+    newAttempt?: boolean;
+    eventSource?: string;
+  } = {},
 ) {
   const existingAttempts = listStageAttemptsForTask(db, row.task_id);
   const providerKind = resolveFamilyRuntimeProviderKind();
   const expectedSourceFingerprint = sourceFingerprintForProviderHostedTask(row, payload);
-  if (existingAttempts.some((attempt) => (
+  if (!options.newAttempt && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind && attempt.source_fingerprint === expectedSourceFingerprint
   ))) {
     return null;
@@ -339,6 +343,7 @@ export function ensureProviderHostedStageAttempt(
     sourceFingerprint: expectedSourceFingerprint,
     executorKind: isMasDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_sidecar',
     taskId: row.task_id,
+    newAttempt: options.newAttempt,
     checkpointRefs: isMasDefaultExecutorDispatchTask(row, payload)
       ? uniqueStrings([optionalString(payload.dispatch_ref)])
       : undefined,
@@ -352,12 +357,13 @@ export function ensureProviderHostedStageAttempt(
       : admissionGate.status === 'blocked'
         ? 'stage_attempt_blocked_by_admission_gate'
       : 'stage_attempt_created_for_provider_hosted_task',
-    source: 'opl-family-runtime',
+    source: options.eventSource ?? 'opl-family-runtime',
     payload: {
       stage_attempt_id: result.attempt.stage_attempt_id,
       stage_id: stageId,
       provider_kind: result.attempt.provider_kind,
       task_kind: row.task_kind,
+      new_attempt: options.newAttempt === true,
       stage_launch_admission_gate: admissionGate,
     },
   });

@@ -73,6 +73,37 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
     }
     return { mode: 'queue_inspect', taskId };
   }
+  if (rest[0] === 'redrive') {
+    const taskId = rest[1];
+    let reason = '';
+    let source: string | undefined;
+    if (!taskId) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime queue redrive requires one task id.', {
+        usage: 'opl family-runtime queue redrive <task_id> --reason <operator_reason> [--source <source>]',
+      });
+    }
+    for (let index = 2; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--reason' && value) {
+        reason = value;
+        index += 1;
+      } else if (token === '--source' && value) {
+        source = value;
+        index += 1;
+      } else {
+        throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue redrive option: ${token}.`, {
+          option: token,
+        });
+      }
+    }
+    if (!reason.trim()) {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime queue redrive requires --reason.', {
+        usage: 'opl family-runtime queue redrive <task_id> --reason <operator_reason> [--source <source>]',
+      });
+    }
+    return { mode: 'queue_redrive', taskId, reason, source };
+  }
   return undefined;
 }
 
