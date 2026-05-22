@@ -45,6 +45,7 @@ import {
 import {
   buildCodexAppRuntimeRole,
 } from './runtime-tray-app-operator-drilldown-parts/codex-app-runtime-role.ts';
+import { appReleaseUserPathEvidenceSourceRef, buildAppReleaseUserPathEvidenceFromRuntime } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
 import {
   buildLegacyCleanupActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/legacy-cleanup-action-routes.ts';
@@ -1126,6 +1127,10 @@ export function buildAppOperatorDrilldown(input: {
       domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     },
   });
+  const appReleaseUserPathEvidence = buildAppReleaseUserPathEvidenceFromRuntime({
+    authorityBoundary: refsOnlyAuthorityBoundary(), appRuntimeRole, packageLifecycle,
+    productionEvidenceTailLedger, providerActionRefs, periodicRefs,
+  });
   const actionRefs = uniqueRefs([
     ...operatorActionRoutingRefs(input.stageAttemptWorkbench),
     ...buildStageProductionAttemptRoutes(record(stageProductionEvidence)),
@@ -1181,6 +1186,7 @@ export function buildAppOperatorDrilldown(input: {
       oplMetaAgentRegistry,
       standardAgentTemplateConsumption,
       evidenceEnvelope,
+      appReleaseUserPathEvidence,
     }),
     codex_app_runtime_role_status: appRuntimeRole.runtime_policy,
     codex_app_runtime_role_count: Array.isArray(appRuntimeRole.codex_app_roles)
@@ -1223,6 +1229,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/provider_continuous_proof', 'provider_continuous_proof'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/codex_app_runtime_role', 'codex_app_runtime_role'),
+    appReleaseUserPathEvidenceSourceRef(),
     sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
@@ -1278,6 +1285,7 @@ export function buildAppOperatorDrilldown(input: {
       refs: providerActionRefs,
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+    app_release_user_path_evidence: appReleaseUserPathEvidence,
     runtime_manager_route_support: runtimeManagerRouteSupport,
     route_transition_drilldown: routeTransitionDrilldownRefs,
     periodic_execution_refs: periodicRefs,

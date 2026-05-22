@@ -1,3 +1,7 @@
+import {
+  frameworkAppReleaseUserPathNextSafeAction,
+} from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -199,6 +203,7 @@ export function frameworkAttentionNextSafeActions(input: {
   warnings: JsonRecord[];
   ownerPayloadGroups: JsonRecord[];
   ownerHandoffPacket: JsonRecord;
+  appReleaseUserPathEvidence: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   itemLimit: number;
@@ -232,6 +237,13 @@ export function frameworkAttentionNextSafeActions(input: {
     ...(
       recordList(input.ownerHandoffPacket.owners).length > 0
         ? [frameworkOwnerHandoffNextSafeAction(input.ownerHandoffPacket)]
+        : []
+    ),
+    ...(
+      numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0
+        ? [
+            frameworkAppReleaseUserPathNextSafeAction(input.appReleaseUserPathEvidence),
+          ]
         : []
     ),
     ...(

@@ -312,6 +312,7 @@ function frameworkAttentionFirstPayload(input: {
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
   ownerHandoffPacket: JsonRecord;
+  appReleaseUserPathEvidence: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   domainDispatchEvidenceWorkorderAttentionItems: JsonRecord[];
@@ -389,6 +390,13 @@ function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/domain_dispatch_attention',
         }]
       : []),
+    ...(numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0
+      ? [{
+          warning_id: 'app_release_user_path_evidence',
+          count: numberValue(input.appReleaseUserPathEvidence.open_gate_count),
+          drilldown_ref: '/framework_readiness/app_release_user_path_evidence',
+        }]
+      : []),
     ...(numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count) > 0
       ? [{
           warning_id: 'oma_production_consumption_followthrough',
@@ -402,6 +410,7 @@ function frameworkAttentionFirstPayload(input: {
     warnings,
     ownerPayloadGroups: input.ownerPayloadGroups,
     ownerHandoffPacket: input.ownerHandoffPacket,
+    appReleaseUserPathEvidence: input.appReleaseUserPathEvidence,
     omaProductionConsumptionFollowthrough: input.omaProductionConsumptionFollowthrough,
     domainDispatchEvidenceWorkorderGroupAttentionItems:
       input.domainDispatchEvidenceWorkorderGroupAttentionItems,
@@ -439,6 +448,8 @@ function frameworkAttentionFirstPayload(input: {
     owner_payload_group_attention_omitted_count: input.ownerPayloadGroupAttentionOmittedCount,
     owner_payload_groups: input.ownerPayloadGroups,
     owner_handoff_packet: input.ownerHandoffPacket,
+    app_release_user_path_evidence:
+      input.appReleaseUserPathEvidence,
     oma_production_consumption_followthrough:
       input.omaProductionConsumptionFollowthrough,
     domain_dispatch_evidence_workorder_packet_summary:
@@ -519,6 +530,9 @@ export async function buildFrameworkReadinessSummary(
   const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
   const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
   const ownerHandoffPacket = record(appEvidenceAfterContract.owner_handoff_packet);
+  const appReleaseUserPathEvidence = record(
+    appEvidenceAfterContract.app_release_user_path_evidence,
+  );
   const omaProductionConsumptionFollowthrough = record(
     appEvidenceAfterContract.oma_production_consumption_followthrough,
   );
@@ -672,6 +686,7 @@ export async function buildFrameworkReadinessSummary(
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
         ownerHandoffPacket,
+        appReleaseUserPathEvidence,
         omaProductionConsumptionFollowthrough,
         domainDispatchEvidenceWorkorderGroupAttentionItems,
         domainDispatchEvidenceWorkorderAttentionItems,
@@ -915,6 +930,10 @@ export async function buildFrameworkReadinessSummary(
       owner_handoff_packet: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         ...ownerHandoffPacket,
+      },
+      app_release_user_path_evidence: {
+        source_command: SOURCE_COMMANDS.app_operator_drilldown,
+        ...appReleaseUserPathEvidence,
       },
       oma_production_consumption_followthrough: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

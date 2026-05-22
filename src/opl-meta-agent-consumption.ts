@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
+import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
@@ -263,6 +264,14 @@ function managedInstallUpdateLedgerRefs() {
     .map((receipt) => receipt.receipt_ref);
 }
 
+function omaAppLivePathLedgerRefs() {
+  return uniqueStringList(listOmaAppLivePathReceipts().flatMap((receipt) => [
+    receipt.receipt_ref,
+    ...receipt.app_live_path_refs,
+    ...receipt.operator_evidence_refs,
+  ]));
+}
+
 function productionConsumptionGate(input: {
   gateId: typeof PRODUCTION_CONSUMPTION_GATE_IDS[number];
   status: string;
@@ -355,6 +364,11 @@ function buildProductionConsumptionFollowthrough(payloads: {
     'live_rendering_refs',
     'live_user_path_refs',
   ]);
+  const appLivePathLedgerRefs = omaAppLivePathLedgerRefs();
+  const appLivePathObservedRefs = uniqueStringList([
+    ...appLivePathRefs,
+    ...appLivePathLedgerRefs,
+  ]);
   const ownerOrBlockerTargetCount = countTargetsWithOwnerReceiptOrBlocker(scaleoutTargets);
   const ownerOrBlockerRefs = uniqueStringList(scaleoutTargets.flatMap((target) => [
     ...stringList(target.target_agent_owner_receipt_refs),
@@ -391,7 +405,8 @@ function buildProductionConsumptionFollowthrough(payloads: {
     }),
     productionConsumptionGate({
       gateId: 'app_live_path_refs',
-      status: appLivePathRefs.length > 0 && liveRenderingStatus !== 'not_claimed_by_contract'
+      status: appLivePathObservedRefs.length > 0
+        && (liveRenderingStatus !== 'not_claimed_by_contract' || appLivePathLedgerRefs.length > 0)
         ? 'refs_observed'
         : 'missing_app_live_path_refs',
       requiredRefsAnyOf: [
@@ -399,8 +414,9 @@ function buildProductionConsumptionFollowthrough(payloads: {
         'app_workbench_live_consumption_refs',
         'live_rendering_refs',
         'live_user_path_refs',
+        'opl_oma_app_live_path_receipt',
       ],
-      observedRefs: appLivePathRefs,
+      observedRefs: appLivePathObservedRefs,
       currentContractStatus: liveRenderingStatus,
     }),
     productionConsumptionGate({
@@ -448,7 +464,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
       open_gate_count: openGates.length,
       open_gate_ids: openGates.map((gate) => gate.gate_id),
       managed_install_update_ref_count: managedInstallUpdateObservedRefs.length,
-      app_live_path_ref_count: appLivePathRefs.length,
+      app_live_path_ref_count: appLivePathObservedRefs.length,
       owner_receipt_or_typed_blocker_seed_target_count: ownerOrBlockerTargetCount,
       scaleout_target_count: scaleoutTargets.length,
       long_soak_ref_count: longSoakRefs.length,

@@ -14,6 +14,11 @@ import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.
 import { loadFrameworkContracts } from '../../../../src/contracts.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 import {
+  assertAppReleaseUserPathAttention,
+  assertAppReleaseUserPathNextStep,
+  assertAppReleaseUserPathSummary,
+} from './runtime-app-operator-drilldown-summary-app-release-assertions.ts';
+import {
   assertOmaProductionConsumptionAttention,
   assertOmaProductionConsumptionFullDetail,
   assertOmaProductionConsumptionNextStep,
@@ -193,6 +198,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       metaAgentBound ? 2 : 0,
     );
     assertOmaProductionConsumptionSummary(summaryDrilldown, metaAgentBound);
+    assertAppReleaseUserPathSummary(summaryDrilldown);
     if (metaAgentBound) assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
     assert.equal(summaryDrilldown.attention_first_payload.surface_kind, 'opl_app_drilldown_attention_first_payload');
     assert.deepEqual(summaryDrilldown.attention_first_payload.full_detail_args, ['--detail', 'full']);
@@ -355,6 +361,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     );
     assertOmaProductionConsumptionAttention(summaryDrilldown, metaAgentBound);
+    assertAppReleaseUserPathAttention(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups.length <= 5,
       true,
@@ -409,6 +416,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       false,
     );
     assertOmaProductionConsumptionNextStep(summaryDrilldown, metaAgentBound);
+    assertAppReleaseUserPathNextStep(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.some(
         (item: { step_kind: string }) => item.step_kind === 'evidence_envelope_scaleout',

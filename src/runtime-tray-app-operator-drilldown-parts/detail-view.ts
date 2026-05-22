@@ -9,6 +9,10 @@ import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
 import {
   buildOmaProductionConsumptionFollowthroughAttention,
 } from './oma-production-consumption.ts';
+import {
+  appReleaseUserPathEvidenceNextStep,
+  buildAppReleaseUserPathEvidence,
+} from './app-release-user-path.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -44,6 +48,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'standard_agent_template_consumption_refs',
   'opl_meta_agent_workbench_refs',
   'codex_app_runtime_role',
+  'app_release_user_path_evidence',
   'functional_privatization_audit_summary',
   'functional_privatization_audit_refs',
   'default_caller_deletion_evidence_refs',
@@ -453,6 +458,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(drilldown);
   const omaProductionConsumption =
     buildOmaProductionConsumptionFollowthroughAttention(drilldown);
+  const appReleaseUserPathEvidence = buildAppReleaseUserPathEvidence(drilldown);
   const evidenceEnvelopeAttentionCount = (
     numberValue(summary.evidence_envelope_open_count)
     + numberValue(summary.evidence_envelope_blocked_count)
@@ -460,9 +466,12 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const domainDispatchAttentionCount = numberValue(summary.domain_dispatch_attention_count);
   const omaProductionConsumptionAttentionCount =
     numberValue(omaProductionConsumption.open_gate_count);
+  const appReleaseUserPathAttentionCount =
+    numberValue(appReleaseUserPathEvidence.open_gate_count);
   const totalAttentionCount = evidenceEnvelopeAttentionCount
     + domainDispatchAttentionCount
-    + omaProductionConsumptionAttentionCount;
+    + omaProductionConsumptionAttentionCount
+    + appReleaseUserPathAttentionCount;
   const routeSupportTaskKindCount =
     numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
   const routeSupportAftercareCount =
@@ -491,6 +500,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_groups: ownerPayloadGroups.items,
     owner_handoff_packet: ownerHandoffPacket,
+    app_release_user_path_evidence: appReleaseUserPathEvidence,
+    app_release_user_path_evidence_open_gate_count:
+      appReleaseUserPathAttentionCount,
     oma_production_consumption_followthrough: omaProductionConsumption,
     oma_production_consumption_followthrough_open_gate_count:
       omaProductionConsumptionAttentionCount,
@@ -525,6 +537,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'stage_production_evidence',
       'runtime_manager_route_support',
       'opl_meta_agent_workbench_refs',
+      'app_release_user_path_evidence',
     ],
     authority_boundary: {
       ...authorityBoundary(drilldown),
@@ -665,6 +678,7 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   const ownerPayloadGroups = recordList(attention.owner_payload_groups);
   const missingEvidence = missingEvidenceItems(drilldown);
   const advisory = advisoryItems(drilldown);
+  const appReleaseUserPathEvidence = record(attention.app_release_user_path_evidence);
   const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
   const dispatchOwner = topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
     ?? 'domain_repository_or_app_live_operator';
@@ -674,6 +688,9 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     ownerPayloadGroups,
   );
   const steps: JsonRecord[] = [];
+  if (numberValue(appReleaseUserPathEvidence.open_gate_count) > 0) {
+    steps.push(appReleaseUserPathEvidenceNextStep(appReleaseUserPathEvidence));
+  }
   if (numberValue(omaProductionConsumption.open_gate_count) > 0) {
     steps.push({
       step_kind: 'oma_production_consumption_followthrough',

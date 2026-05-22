@@ -60,7 +60,9 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
       evidence_after_contract: Record<string, unknown>;
       evidence_next_steps: Record<string, unknown> & {
         items: Array<Record<string, unknown>>;
+        total_count: number;
       };
+      lazy_load_targets: Array<{ section: string; detail_args: string[] }>;
     };
   };
   const evidenceAfterContract = summaryDrilldown.attention_first_payload.evidence_after_contract;
@@ -82,13 +84,88 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     evidenceAfterContract.next_evidence_owner,
     'domain_repository_or_app_live_operator',
   );
+  const appUserPathEvidence = evidenceAfterContract.app_release_user_path_evidence as Record<string, unknown> & {
+    gate_items: Array<Record<string, unknown>>;
+    open_gate_ids: string[];
+    required_return_shapes: string[];
+    authority_boundary: Record<string, unknown>;
+  };
+  assert.equal(
+    appUserPathEvidence.surface_kind,
+    'opl_app_drilldown_app_release_user_path_evidence_attention',
+  );
+  assert.equal(appUserPathEvidence.status, 'app_release_user_path_evidence_open');
+  assert.equal(appUserPathEvidence.production_user_path_ready, false);
+  assert.equal(appUserPathEvidence.release_ready_claimed, false);
+  assert.equal(appUserPathEvidence.production_ready_claimed, false);
+  assert.equal(appUserPathEvidence.open_gate_count, 5);
+  assert.deepEqual(appUserPathEvidence.open_gate_ids, [
+    'release_package_refs',
+    'screenshot_refs',
+    'reload_prompt_user_path_refs',
+    'provider_state_linkage_refs',
+    'long_operator_evidence_refs',
+  ]);
+  assert.equal(appUserPathEvidence.gate_items.length, 5);
+  assert.equal(
+    appUserPathEvidence.required_return_shapes.includes('release_package_receipt_ref'),
+    true,
+  );
+  assert.equal(
+    appUserPathEvidence.required_return_shapes.includes('screenshot_evidence_ref'),
+    true,
+  );
+  assert.equal(
+    appUserPathEvidence.required_return_shapes.includes('reload_prompt_user_path_receipt_ref'),
+    true,
+  );
+  assert.equal(
+    appUserPathEvidence.required_return_shapes.includes('provider_state_linkage_ref'),
+    true,
+  );
+  assert.equal(
+    appUserPathEvidence.required_return_shapes.includes('long_operator_evidence_ref'),
+    true,
+  );
+  assert.equal(
+    appUserPathEvidence.required_return_shapes.includes('typed_blocker_ref'),
+    true,
+  );
+  assert.equal(appUserPathEvidence.authority_boundary.can_write_domain_truth, false);
+  assert.equal(appUserPathEvidence.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(appUserPathEvidence.authority_boundary.can_close_domain_ready, false);
+  assert.equal(appUserPathEvidence.authority_boundary.can_claim_production_ready, false);
+  assert.equal(appUserPathEvidence.authority_boundary.can_close_app_release_user_path, false);
+  assert.equal(
+    summaryDrilldown.attention_first_payload.lazy_load_targets.some(
+      (target: { section: string; detail_args: string[] }) =>
+        target.section === 'app_release_user_path_evidence'
+        && target.detail_args.join(' ') === '--detail full',
+    ),
+    true,
+  );
+  const sourceRefs = (summaryDrilldown as unknown as {
+    source_refs: Array<{ role: string; ref: string }>;
+  }).source_refs;
+  assert.equal(
+    sourceRefs.some((sourceRef) =>
+      sourceRef.role === 'app_release_user_path_evidence'
+      && sourceRef.ref === '/runtime_tray_snapshot/app_operator_drilldown/app_release_user_path_evidence'
+    ),
+    true,
+  );
   assert.equal(
     (evidenceAfterContract.authority_boundary as Record<string, unknown>).route_support_closes_domain_ready,
     false,
   );
   assert.equal(evidenceNextSteps.surface_kind, 'opl_app_drilldown_evidence_next_steps');
-  assert.equal(evidenceNextSteps.total_count, 1);
-  assert.equal(evidenceNextSteps.items[0].step_kind, 'oma_production_consumption_followthrough');
+  assert.equal(evidenceNextSteps.total_count >= 2, true);
+  assert.equal(evidenceNextSteps.items[0].step_kind, 'app_release_user_path_evidence');
+  assert.equal(evidenceNextSteps.items[0].can_close_app_release_user_path, false);
+  assert.equal(
+    (evidenceNextSteps.items[0].required_return_shapes as string[]).includes('typed_blocker_ref'),
+    true,
+  );
   assert.equal(evidenceNextSteps.next_owner, 'domain_repository_or_app_live_operator');
   assert.equal(evidenceNextSteps.can_execute_domain_action, false);
   assert.equal(evidenceNextSteps.can_create_owner_receipt, false);

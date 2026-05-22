@@ -1,4 +1,7 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  appReleaseUserPathEvidenceSummary,
+} from './app-release-user-path.ts';
 
 type AppOperatorDrilldownSummaryInput = {
   attempts: unknown[];
@@ -32,6 +35,7 @@ type AppOperatorDrilldownSummaryInput = {
   standardAgentTemplateConsumption: JsonRecord;
   evidenceEnvelope: JsonRecord;
   runtimeManagerRouteSupport: JsonRecord;
+  appReleaseUserPathEvidence: JsonRecord;
 };
 
 function record(value: unknown): JsonRecord {
@@ -81,6 +85,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   );
   const standardAgentTemplateSummary = record(input.standardAgentTemplateConsumption.summary);
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
+  const appReleaseUserPathSummary =
+    appReleaseUserPathEvidenceSummary(input.appReleaseUserPathEvidence);
   const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
   const supportedTaskKinds = stringList(routeSupport.supported_task_kinds);
   const routeSupportActionRefs = stringList(routeSupport.action_refs);
@@ -364,5 +370,14 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     opl_meta_agent_claims_domain_ready: oplMetaAgentSummary.claims_domain_ready === true,
     opl_meta_agent_claims_quality_verdict: oplMetaAgentSummary.claims_quality_verdict === true,
     opl_meta_agent_claims_default_promotion: oplMetaAgentSummary.claims_default_promotion === true,
+    app_release_user_path_evidence_gate_count: appReleaseUserPathSummary.gate_count,
+    app_release_user_path_evidence_open_gate_count:
+      appReleaseUserPathSummary.open_gate_count,
+    app_release_user_path_production_user_path_ready:
+      appReleaseUserPathSummary.production_user_path_ready,
+    app_release_user_path_release_ready_claimed:
+      appReleaseUserPathSummary.release_ready_claimed,
+    app_release_user_path_production_ready_claimed:
+      appReleaseUserPathSummary.production_ready_claimed,
   };
 }
