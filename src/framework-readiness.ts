@@ -257,8 +257,44 @@ function statusFrom(
   return 'framework_control_plane_available';
 }
 
+function semanticHygieneContractFloor(semanticHygiene: JsonRecord) {
+  const summary = record(semanticHygiene.summary);
+  const gates = recordList(semanticHygiene.gates);
+  const gateIds = gates
+    .map((gate) => stringValue(gate.gate_id))
+    .filter((gateId): gateId is string => Boolean(gateId))
+    .slice(0, 10);
+  const functionalPrivatizationGate = gates.find((gate) =>
+    stringValue(gate.gate_id) === 'functional_privatization_evidence_gate'
+  );
+  return {
+    surface_kind: 'opl_framework_readiness_semantic_hygiene_contract_floor',
+    source_command: SOURCE_COMMANDS.semantic_hygiene,
+    gate_count: numberValue(summary.gate_count),
+    guarded_gate_count: numberValue(summary.guarded_gate_count),
+    attention_required_gate_count: numberValue(summary.attention_required_gate_count),
+    gate_ids: gateIds,
+    gate_id_limit: 10,
+    omitted_gate_count: Math.max(gates.length - gateIds.length, 0),
+    functional_privatization_evidence_gate_status:
+      stringValue(record(functionalPrivatizationGate).status),
+    contract_floor_only: true,
+    default_payload_role:
+      'bounded_contract_floor_context_for_default_caller_not_operator_work_item',
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      can_claim_artifact_authority: false,
+      can_authorize_quality_or_export: false,
+      can_replace_ai_executor_planning: false,
+      can_replace_domain_owner: false,
+    },
+  };
+}
+
 function frameworkAttentionFirstPayload(input: {
   status: string;
+  semanticHygieneContractFloor: JsonRecord;
   hardBlockerCount: number;
   packCompilerBlockerCount: number;
   diagnosticFailureCount: number;
@@ -395,6 +431,7 @@ function frameworkAttentionFirstPayload(input: {
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
+    semantic_hygiene_contract_floor: input.semanticHygieneContractFloor,
     stage_evidence_workorder_attention_items: input.stageEvidenceWorkorderAttentionItems,
     owner_payload_group_attention_policy:
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
@@ -617,6 +654,7 @@ export async function buildFrameworkReadinessSummary(
       status: frameworkStatus,
       attention_first_payload: frameworkAttentionFirstPayload({
         status: frameworkStatus,
+        semanticHygieneContractFloor: semanticHygieneContractFloor(semanticHygiene),
         hardBlockerCount,
         packCompilerBlockerCount,
         diagnosticFailureCount,

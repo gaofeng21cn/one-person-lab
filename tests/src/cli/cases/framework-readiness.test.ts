@@ -380,6 +380,57 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.framework_kernel_hard_blocker_count > 0,
   );
   assert.equal(readiness.attention_first_payload.warnings.length > 0, true);
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.gate_count,
+    readiness.semantic_hygiene.summary.gate_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.guarded_gate_count,
+    readiness.semantic_hygiene.summary.guarded_gate_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.attention_required_gate_count,
+    readiness.semantic_hygiene.summary.attention_required_gate_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.gate_ids.includes(
+      'functional_privatization_evidence_gate',
+    ),
+    true,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.gate_ids.length <= 10,
+    true,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor
+      .functional_privatization_evidence_gate_status,
+    'guarded',
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.contract_floor_only,
+    true,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.authority_boundary
+      .can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.authority_boundary
+      .can_claim_production_ready,
+    false,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.authority_boundary
+      .can_authorize_quality_or_export,
+    false,
+  );
+  assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor.authority_boundary
+      .can_replace_ai_executor_planning,
+    false,
+  );
   assert.deepEqual(
     readiness.attention_first_payload.diagnostic_drilldown_refs,
     readiness.diagnostic_drilldowns.map((lens: { embedded_payload_ref: string }) => lens.embedded_payload_ref),
