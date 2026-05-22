@@ -71,6 +71,19 @@ PY
     assert.deepEqual(attempt.workspace_source_intake.checkpoint_refs, [dispatchRef]);
     assert.equal(attempt.control_loop_summary.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(attempt.completion_boundary.provider_completion_is_domain_ready, false);
+
+    const task = runCli(['family-runtime', 'queue', 'inspect', enqueue.family_runtime_enqueue.task.task_id], env)
+      .family_runtime_task;
+    const stageAttempt = task.stage_attempts[0];
+    assert.equal(task.task.status, 'succeeded');
+    assert.equal(stageAttempt.status, 'queued');
+    assert.equal(stageAttempt.closeout_receipt_status, null);
+    assert.deepEqual(stageAttempt.closeout_refs, []);
+    assert.deepEqual(stageAttempt.route_impact, {});
+    assert.equal(attempt.control_loop_summary.authority_boundary.can_write_domain_truth, false);
+    assert.equal(attempt.control_loop_summary.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(attempt.control_loop_summary.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(attempt.completion_boundary.provider_completion, 'not_completed');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
