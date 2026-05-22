@@ -1,5 +1,8 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { sourceRef } from '../runtime-tray-snapshot-utils.ts';
+import {
+  listAppReleaseUserPathEvidenceReceipts,
+} from '../app-release-user-path-evidence-ledger.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -71,6 +74,8 @@ function evidenceGate(input: {
 }
 
 export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
+  const ledgerReceipts = listAppReleaseUserPathEvidenceReceipts();
+  const typedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
   const gates = [
     evidenceGate({
       gateId: 'release_package_refs',
@@ -83,6 +88,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       observedRefs: refsFromRecords([
         record(drilldown.package_export_lifecycle_refs),
         record(drilldown.production_evidence_tail_ledger),
+        ...ledgerReceipts,
       ], [
         'release_package_refs',
         'release_bundle_refs',
@@ -101,6 +107,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       observedRefs: refsFromRecords([
         record(drilldown.production_evidence_tail_ledger),
         record(drilldown.codex_app_runtime_role),
+        ...ledgerReceipts,
       ], [
         'screenshot_refs',
         'app_screenshot_refs',
@@ -118,6 +125,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       observedRefs: refsFromRecords([
         record(drilldown.codex_app_runtime_role),
         record(drilldown.production_evidence_tail_ledger),
+        ...ledgerReceipts,
       ], [
         'reload_prompt_user_path_refs',
         'reload_prompt_receipt_refs',
@@ -136,6 +144,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         record(drilldown.provider_slo_operator_action_refs),
         record(drilldown.periodic_execution_refs),
         record(drilldown.codex_app_runtime_role),
+        ...ledgerReceipts,
       ], [
         'provider_state_linkage_refs',
         'provider_state_receipt_refs',
@@ -154,6 +163,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         record(drilldown.codex_app_runtime_role),
         record(drilldown.production_evidence_tail_ledger),
         record(drilldown.provider_slo_operator_action_refs),
+        ...ledgerReceipts,
       ], [
         'long_operator_evidence_refs',
         'operator_long_soak_refs',
@@ -178,6 +188,14 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     open_gate_count: openGateItems.length,
     open_gate_ids: openGateItems.map((gate) => gate.gate_id),
     attention_required: openGateItems.length > 0,
+    evidence_ledger_status: ledgerReceipts.length > 0
+      ? 'ledger_refs_observed'
+      : 'ledger_refs_missing',
+    typed_blocker_refs: typedBlockerRefs,
+    typed_blocker_ref_count: typedBlockerRefs.length,
+    blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
+    ledger_receipt_ref_count: ledgerReceipts.length,
+    ledger_receipt_refs: ledgerReceipts.map((receipt) => receipt.receipt_ref),
     gate_items: openGateItems,
     required_return_shapes: [
       'release_package_receipt_ref',
@@ -253,6 +271,10 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     required_return_shapes: stringList(evidence.required_return_shapes),
     payload_owner: stringValue(evidence.payload_owner)
       ?? 'app_live_operator_or_release_owner',
+    evidence_ledger_status: stringValue(evidence.evidence_ledger_status),
+    ledger_receipt_ref_count: numberValue(evidence.ledger_receipt_ref_count),
+    typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
+    blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
     full_detail_section: 'app_release_user_path_evidence',
     can_execute_domain_action: false,
     can_create_owner_receipt: false,
@@ -287,6 +309,10 @@ export function appReleaseUserPathEvidenceSummary(appReleaseUserPathEvidence: Js
     open_gate_count: typeof appReleaseUserPathEvidence.open_gate_count === 'number'
       ? appReleaseUserPathEvidence.open_gate_count
       : gateItems.length,
+    ledger_receipt_ref_count:
+      numberValue(appReleaseUserPathEvidence.ledger_receipt_ref_count),
+    typed_blocker_ref_count:
+      numberValue(appReleaseUserPathEvidence.typed_blocker_ref_count),
     production_user_path_ready:
       appReleaseUserPathEvidence.production_user_path_ready === true,
     release_ready_claimed:

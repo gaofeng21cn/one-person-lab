@@ -1230,6 +1230,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown', 'app_operator_drilldown'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/codex_app_runtime_role', 'codex_app_runtime_role'),
     appReleaseUserPathEvidenceSourceRef(),
+    sourceRef('/app-release-user-path-evidence-ledger', 'app_release_user_path_evidence_ledger'),
     sourceRef('/runtime_manager/family_runtime_queue/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),

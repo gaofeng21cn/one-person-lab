@@ -373,6 +373,10 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     app_release_user_path_evidence_gate_count: appReleaseUserPathSummary.gate_count,
     app_release_user_path_evidence_open_gate_count:
       appReleaseUserPathSummary.open_gate_count,
+    app_release_user_path_evidence_ledger_receipt_ref_count:
+      appReleaseUserPathSummary.ledger_receipt_ref_count,
+    app_release_user_path_evidence_typed_blocker_ref_count:
+      appReleaseUserPathSummary.typed_blocker_ref_count,
     app_release_user_path_production_user_path_ready:
       appReleaseUserPathSummary.production_user_path_ready,
     app_release_user_path_release_ready_claimed:
