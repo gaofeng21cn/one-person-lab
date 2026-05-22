@@ -13,6 +13,7 @@ import {
   type AgentExecutorKind,
   type StageAttemptExecutorPolicy,
 } from './agent-executor.ts';
+import { DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS } from './family-runtime-temporal-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -177,6 +178,16 @@ function executorKindFromAttemptPolicy(attempt: JsonRecord) {
   return normalizeAgentExecutorStageMode(optionalString(executorPolicyFromAttempt(attempt)?.executor_kind));
 }
 
+function codexProjectionRunnerModeFromAttempt(attempt: JsonRecord) {
+  const explicitMode = normalizeCodexStageRunnerMode(process.env.OPL_CODEX_STAGE_RUNNER_MODE);
+  if (process.env.OPL_CODEX_STAGE_RUNNER_MODE?.trim()) {
+    return explicitMode;
+  }
+  const executorKind = normalizeAgentExecutorStageMode(optionalString(attempt.executor_kind))
+    ?? executorKindFromAttemptPolicy(attempt);
+  return executorKind === 'codex_cli' ? 'codex_cli' : explicitMode;
+}
+
 function buildAgentStageRunnerReceipt(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
@@ -328,8 +339,8 @@ export async function runCodexStageRunner(input: {
   const runnerEvents: RunnerEventSummary[] = [];
   let processId: number | null = null;
   const timeoutMs = input.timeoutMs != null
-    ? normalizeTimeoutMs(input.timeoutMs, 600_000)
-    : normalizeTimeoutMs(process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS, 600_000);
+    ? normalizeTimeoutMs(input.timeoutMs, DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS)
+    : normalizeTimeoutMs(process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS, DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS);
   const result = await runCodexCommandStreaming(args, {
     timeoutMs,
     onProcessStarted(pid) {
@@ -480,7 +491,7 @@ export function buildCodexStageActivityInput(input: {
   const runnerReceipt = buildCodexStageRunnerReceipt({
     attempt: input.attempt,
     stagePacketRef,
-    runnerMode: process.env.OPL_CODEX_STAGE_RUNNER_MODE,
+    runnerMode: codexProjectionRunnerModeFromAttempt(input.attempt),
   });
   return {
     activity_kind: 'codex_stage_activity',

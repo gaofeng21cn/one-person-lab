@@ -7,6 +7,12 @@ import type {
   TemporalSchedulerTickWorkflowInput,
   TemporalSchedulerTickWorkflowState,
 } from './family-runtime-temporal.ts';
+import {
+  CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+} from './family-runtime-temporal-constants.ts';
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
@@ -20,9 +26,17 @@ export const humanGateSignal = defineSignal<[TemporalStageAttemptSignalPayload]>
 export const userInstructionSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('UserInstructionSignal');
 export const resumeSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('ResumeSignal');
 
-const { codexStageActivity, domainSidecarDispatchActivity, schedulerTickActivity } = proxyActivities<StageAttemptActivities>({
-  startToCloseTimeout: '10 minutes',
-  heartbeatTimeout: '10 minutes',
+const { codexStageActivity } = proxyActivities<Pick<StageAttemptActivities, 'codexStageActivity'>>({
+  startToCloseTimeout: CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  heartbeatTimeout: CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  retry: {
+    maximumAttempts: 1,
+  },
+});
+
+const { domainSidecarDispatchActivity, schedulerTickActivity } = proxyActivities<Omit<StageAttemptActivities, 'codexStageActivity'>>({
+  startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   retry: {
     maximumAttempts: 1,
   },

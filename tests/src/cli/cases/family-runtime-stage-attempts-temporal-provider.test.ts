@@ -134,7 +134,8 @@ test('family-runtime temporal workflow input carries checkpoint stage packet and
 
     assert.equal(input.stage_packet_ref, 'studies/002-dm/prompt.json');
     assert.deepEqual(input.checkpoint_refs, ['studies/002-dm/prompt.json']);
-    assert.deepEqual(input.codex_stage_runner, { runner_mode: 'codex_cli' });
+    assert.equal(input.codex_stage_runner?.runner_mode, 'codex_cli');
+    assert.equal(input.codex_stage_runner?.timeout_ms, 3_600_000);
     assert.equal(input.workspace_locator.workspace_root, '/tmp/dm-cvd');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

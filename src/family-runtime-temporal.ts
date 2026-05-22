@@ -1,5 +1,13 @@
 import { FrameworkContractError } from './contracts.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
+import {
+  CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+  SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+} from './family-runtime-temporal-constants.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
 export const SCHEDULER_TICK_WORKFLOW_NAME = 'SchedulerTickWorkflow';
@@ -124,6 +132,18 @@ export function buildTemporalStageAttemptWorkflowContract() {
         'canonical_artifact_write',
       ],
     },
+    activity_timeout_policy: {
+      codex_stage_activity: {
+        start_to_close_timeout: CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+        heartbeat_timeout: CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+        heartbeat_interval_ms: DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+        runner_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+      },
+      short_stage_activities: {
+        start_to_close_timeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+        heartbeat_timeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+      },
+    },
   };
 }
 
@@ -159,7 +179,10 @@ export function buildTemporalStageAttemptWorkflowInput(
     stage_packet_ref: stagePacketRef,
     checkpoint_refs: checkpointRefs,
     codex_stage_runner: executorKind === 'codex_cli'
-      ? { runner_mode: 'codex_cli' }
+      ? {
+          runner_mode: 'codex_cli',
+          timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+        }
       : undefined,
   };
 }
