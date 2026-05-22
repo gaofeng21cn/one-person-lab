@@ -3,6 +3,15 @@
   "owner": "one-person-lab",
   "scope": "family-level provider-backed stage attempt ledger and projection vocabulary for domain-owned runtime attempts",
   "provider_model": "provider_backed_stage_attempt_runtime",
+  "stage_route_scheduler_contract_ref": "contracts/opl-framework/stage-route-scheduler-contract.json",
+  "stage_route_boundary": {
+    "stage_is_opl_attempt_unit": true,
+    "route_is_domain_owner_semantic": true,
+    "route_is_small_stage": false,
+    "route_hydrated_into_stage_or_queue_by_opl": true,
+    "route_completion_is_stage_completion": false,
+    "provider_completion_is_owner_receipt": false
+  },
   "allowed_providers": [
     "local_sqlite",
     "temporal"
@@ -45,6 +54,9 @@
     "stage_id",
     "workspace_locator",
     "source_fingerprint",
+    "owner_route_refs",
+    "typed_blocker_refs",
+    "owner_receipt_refs",
     "executor_kind",
     "status",
     "checkpoint_refs",
@@ -74,14 +86,52 @@
     "owner_repo",
     "failure_reason",
     "reconciliation_status",
+    "route_hydration_status",
+    "stage_graph_ref",
     "last_observed_projection",
     "operator_visibility",
     "completion_boundary",
+    "owner_route_boundary",
     "control_loop_summary",
     "usage_projection",
     "resource_pressure",
     "observability_export"
   ],
+  "route_hydration_contract": {
+    "input_refs": [
+      "owner_route_ref",
+      "owner_route_refs",
+      "typed_blocker_refs",
+      "owner_receipt_refs",
+      "source_refs",
+      "source_fingerprint",
+      "recommended_task_kind",
+      "dispatch_ref"
+    ],
+    "output_records": [
+      "typed_queue_task",
+      "stage_attempt_request",
+      "stage_attempt_ledger_entry",
+      "conflict_or_blocker_envelope",
+      "operator_projection"
+    ],
+    "reconciliation_statuses": [
+      "hydrated_to_queue",
+      "hydrated_to_stage_attempt",
+      "blocked_by_stage_admission",
+      "blocked_by_identity_incomplete",
+      "waiting_for_domain_owner_receipt",
+      "route_back_projected",
+      "dead_lettered"
+    ],
+    "forbidden_semantics": [
+      "route_is_small_stage",
+      "route_executes_without_stage_attempt",
+      "queue_admission_equals_domain_work_done",
+      "provider_completion_equals_owner_receipt",
+      "route_hydration_writes_domain_truth"
+    ]
+  },
   "provider_lifecycle_contract": {
     "temporal": {
       "workflow_name": "StageAttemptWorkflow",

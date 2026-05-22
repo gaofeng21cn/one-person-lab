@@ -216,6 +216,12 @@ OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attem
 
 `Family Stage Control Plane` 是 `MAS` stage 化经验上升后的 family 级 shared descriptor / discovery surface。它把程序责任限制在阶段目标、skill / prompt / evaluation refs、输入输出、handoff、receipt、projection 与 authority boundary 上，把阶段内部的专家拆解、创作、审核、修订和诊断继续交给被选中的 Agent executor 与 domain-owned AI workflow。阶段的粒度应接近人类专家真实推进复杂工作的方式，而不是把开放式知识工作压成固定脚本节点。
 
+Stage / route 的顶层调度语义固定为 `stage graph + owner-route hydration + reconciliation + attempt ledger`。`Stage` 是 OPL 可启动、可恢复、可审计的 attempt 单元；它来自 admitted stage pack，并进入 OPL queue、provider、executor 与 attempt ledger。`Route` 是 domain owner 给出的下一步、route-back、typed blocker、safe action ref 或 owner receipt ref 语义；它不是小 stage，也不被 OPL 当作可执行单元。OPL 只把 route refs hydrate 成 typed queue task、stage attempt request、conflict/blocker envelope 或 operator read model，直到 domain owner receipt、typed blocker、human gate 或 route-back 关闭边界。
+
+这个模型以 MAS publication aftercare / default-executor-dispatch 流程作为复杂 domain agent 范本：MAS 输出 `owner_route_refs`、`typed_blocker_refs`、`owner_receipt_refs`、`source_refs`、`source_fingerprint`、`dispatch_ref` 与推荐 task/stage 语义；OPL 负责 idempotency、stage graph requires/ensures、Temporal/local provider attempt、retry/dead-letter、human gate、attempt ledger 与 App/operator projection。队列 admitted、provider completed 或 route hydrated 都不能写成 MAS owner receipt、publication quality ready、artifact ready 或 stage complete。
+
+调度表达可以借鉴成熟系统的四种模式，但不引入第二 runtime：Temporal 的 durable execution / event history 对应 OPL attempt ledger 与 provider history；LangGraph 的 checkpoint / conditional edge 对应 stage graph、checkpoint refs 与 route-back edge；Kubernetes controller 的 desired/current reconciliation 对应 owner-route refs 与 attempt ledger/status 的 reconcile loop；Dagster 的 asset graph / op boundary 对应 dependency graph 与 callable action 边界。OPL 吸收的是图、checkpoint、reconciliation、read-model 词汇；domain truth、quality verdict、artifact authority、memory body 和 owner receipt 继续留在 domain owner。
+
 这层必须保持 AI 原生专家判断优先和 contract-light。stage descriptor 可以声明目标、输入、约束、工具、知识、质量门、owner、receipt 与禁止写入边界，但不能把“如何推理、如何写作、如何评审、如何发现新路线”写成封闭流程。OPL 依靠 AI executor 的后续能力升级获得智能体进步，合同负责让这些升级在安全、可审计、可恢复的下限边界内运行。
 
 复杂知识交付步骤的默认建模单位是 stage，而不是函数。MAS 的 AI reviewer、publication quality review、RCA 的 visual review、MAG 的 proposal / fundability review 这类步骤需要有自己的 goal、inputs、prompt / skill refs、evaluation refs、outputs、handoff 与 receipt；authority function 只能签发最小领域 verdict、owner receipt、typed blocker 或 safe action refs，不能暗中承载完整审稿、质量评估或修订建议生成流程。

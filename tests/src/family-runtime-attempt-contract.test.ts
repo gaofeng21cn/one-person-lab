@@ -47,6 +47,9 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'stage_id',
     'workspace_locator',
     'source_fingerprint',
+    'owner_route_refs',
+    'typed_blocker_refs',
+    'owner_receipt_refs',
     'executor_kind',
     'status',
     'checkpoint_refs',
@@ -74,9 +77,12 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'owner_repo',
     'failure_reason',
     'reconciliation_status',
+    'route_hydration_status',
+    'stage_graph_ref',
     'last_observed_projection',
     'operator_visibility',
     'completion_boundary',
+    'owner_route_boundary',
     'control_loop_summary',
     'usage_projection',
     'resource_pressure',
@@ -130,6 +136,91 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   assert.equal(stabilityBoundary.can_auto_degrade, false);
   assert.equal(stabilityBoundary.can_write_domain_truth, false);
   assert.equal(stabilityBoundary.can_authorize_quality_verdict, false);
+});
+
+test('stage route scheduler contract freezes route hydration as OPL reconciliation, not nested stages', () => {
+  const contract = readJson('contracts/opl-framework/stage-route-scheduler-contract.json');
+
+  assert.equal(contract.model, 'stage_graph_reconciliation_with_owner_route_hydration');
+  const definitions = contract.canonical_definitions as Record<string, any>;
+  assert.equal(definitions.stage.owner, 'one-person-lab');
+  assert.equal(definitions.stage.meaning.includes('attempt unit'), true);
+  assert.equal(definitions.route.owner, 'domain-agent');
+  assert.equal(definitions.route.is_executable_stage, false);
+  assert.equal(definitions.route.is_small_stage, false);
+  assert.equal(definitions.route.can_complete_stage_attempt, false);
+  assert.equal(definitions.route_hydration.owner, 'one-person-lab');
+  assert.ok(definitions.route_hydration.machine_surfaces.includes('opl family-runtime tick --hydrate'));
+  assert.ok(definitions.attempt_ledger.machine_surfaces.includes('family-runtime-attempt-contract.json'));
+
+  const masReference = contract.mas_reference_flow as Record<string, string[]>;
+  assert.ok(masReference.domain_owner_outputs.includes('owner_route_refs'));
+  assert.ok(masReference.domain_owner_outputs.includes('typed_blocker_refs'));
+  assert.ok(masReference.opl_owned_hydration_outputs.includes('typed_queue_task'));
+  assert.ok(masReference.opl_owned_hydration_outputs.includes('stage_attempt_ledger_entry'));
+  assert.ok(masReference.forbidden_interpretations.includes('MAS route is a nested OPL stage'));
+
+  const layers = new Map((contract.scheduler_layers as Record<string, any>[]).map((entry) => [entry.layer, entry]));
+  assert.ok(layers.has('stage_graph'));
+  assert.ok(layers.has('owner_route_hydration'));
+  assert.ok(layers.has('reconciliation_loop'));
+  assert.ok(layers.has('attempt_ledger'));
+  assert.equal(layers.get('owner_route_hydration')?.authority_boundary, 'transport_and_projection_only');
+
+  for (const step of [
+    'discover_domain_owner_route_refs',
+    'hydrate_route_ref_into_typed_queue_or_stage_attempt_request',
+    'append_attempt_ledger_or_conflict_envelope',
+    'reconcile_actual_status_back_to_operator_read_model',
+  ]) {
+    assert.ok((contract.reconciliation_steps as string[]).includes(step));
+  }
+
+  const patterns = new Map((contract.external_patterns_absorbed as Record<string, any>[]).map((entry) => [entry.source, entry]));
+  assert.ok(patterns.get('Temporal durable execution')?.absorbed_as.includes('event_history'));
+  assert.ok(patterns.get('LangGraph checkpoint and conditional edges')?.absorbed_as.includes('checkpoint_refs'));
+  assert.ok(patterns.get('Kubernetes controller reconciliation and spec/status split')?.absorbed_as.includes('reconciliation_status'));
+  assert.ok(patterns.get('Dagster asset graph and op boundary')?.absorbed_as.includes('graph_projection_for_dependencies'));
+
+  for (const forbidden of [
+    'route_is_small_stage',
+    'queue_task_admitted_equals_domain_work_done',
+    'provider_completed_equals_owner_receipt',
+    'OPL_hydration_writes_domain_truth',
+  ]) {
+    assert.ok((contract.forbidden_semantics as string[]).includes(forbidden));
+  }
+  const boundary = contract.authority_boundary as Record<string, boolean>;
+  assert.equal(boundary.opl_can_hydrate_route_refs, true);
+  assert.equal(boundary.opl_can_schedule_stage_attempts, true);
+  assert.equal(boundary.opl_can_execute_route_as_stage, false);
+  assert.equal(boundary.opl_can_sign_domain_owner_receipt, false);
+  assert.equal(boundary.opl_can_authorize_quality_verdict, false);
+});
+
+test('family runtime attempt contract binds attempt ledger fields to the stage route scheduler boundary', () => {
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
+
+  assert.equal(contract.stage_route_scheduler_contract_ref, 'contracts/opl-framework/stage-route-scheduler-contract.json');
+  assert.deepEqual(contract.stage_route_boundary, {
+    stage_is_opl_attempt_unit: true,
+    route_is_domain_owner_semantic: true,
+    route_is_small_stage: false,
+    route_hydrated_into_stage_or_queue_by_opl: true,
+    route_completion_is_stage_completion: false,
+    provider_completion_is_owner_receipt: false,
+  });
+
+  const hydration = contract.route_hydration_contract as Record<string, any>;
+  assert.ok(hydration.input_refs.includes('owner_route_refs'));
+  assert.ok(hydration.input_refs.includes('typed_blocker_refs'));
+  assert.ok(hydration.output_records.includes('typed_queue_task'));
+  assert.ok(hydration.output_records.includes('stage_attempt_request'));
+  assert.ok(hydration.output_records.includes('conflict_or_blocker_envelope'));
+  assert.ok(hydration.reconciliation_statuses.includes('hydrated_to_stage_attempt'));
+  assert.ok(hydration.reconciliation_statuses.includes('route_back_projected'));
+  assert.ok(hydration.forbidden_semantics.includes('route_is_small_stage'));
+  assert.ok(hydration.forbidden_semantics.includes('provider_completion_equals_owner_receipt'));
 });
 
 test('family runtime attempt contract keeps OPL runtime manager observability-only', () => {
