@@ -1,6 +1,14 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import {
+  createFailingFakeCodexWorkOrderExecutor,
+  createFakeCodexWorkOrderExecutor,
+  createWorkOrderTargetRepo,
+  readJson,
+  writeExecutableWorkOrder,
+  writePassingAgentLabSuite,
+} from './agent-lab-work-order-fixtures.ts';
 
 test('agent-lab sample exposes a minimal framework read-model sample', () => {
   const output = runCli(['agent-lab', 'sample', '--json']);
@@ -63,6 +71,126 @@ test('agent-lab run accepts the MAG live owner acceptance suite as refs-only coo
   assert.equal(output.agent_lab_run.authority_boundary.can_write_domain_truth, false);
   assert.equal(output.agent_lab_run.authority_boundary.can_write_memory_body, false);
   assert.equal(output.agent_lab_run.authority_boundary.can_authorize_quality_verdict, false);
+});
+
+test('agent-lab execute-work-order runs Codex CLI in a target worktree then absorbs and cleans it', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-work-order-exec-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    const suitePath = path.join(fixtureRoot, 'suite.json');
+    createWorkOrderTargetRepo(targetRepo);
+    createFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+    writePassingAgentLabSuite(suitePath);
+
+    const output = runCli([
+      'agent-lab',
+      'execute-work-order',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--suite',
+      suitePath,
+      '--output-dir',
+      outputDir,
+      '--verification-command',
+      'test -f docs/efficiency.md',
+      '--codex-timeout-ms',
+      '10000',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.agent_lab_work_order_execution.status, 'executed_absorbed_and_cleaned');
+    assert.equal(output.agent_lab_work_order_execution.receipt.executor.executor_kind, 'codex_cli');
+    assert.equal(output.agent_lab_work_order_execution.receipt.absorption.absorbed, true);
+    assert.equal(output.agent_lab_work_order_execution.receipt.cleanup.worktree_removed, true);
+    assert.equal(output.agent_lab_work_order_execution.receipt.no_forbidden_write_proof.can_write_target_domain_truth,
+      false);
+    assert.equal(output.agent_lab_work_order_execution.receipt.target_owner_receipt_or_typed_blocker.status,
+      'typed_blocker_recorded');
+    assert.equal(output.agent_lab_work_order_execution.receipt.agent_lab_re_evaluation.suite_result.status, 'passed');
+    assert.equal(fs.existsSync(path.join(targetRepo, 'docs/efficiency.md')), true);
+
+    const receipt = readJson(output.agent_lab_work_order_execution.artifacts.execution_receipt_path);
+    assert.equal(receipt.surface_kind, 'opl_agent_lab_codex_work_order_execution_receipt');
+    assert.ok(receipt.verification.command_results.some((entry: Record<string, any>) =>
+      entry.command === 'test -f docs/efficiency.md' && entry.exit_code === 0
+    ));
+
+    const worktreeList = spawnSync('git', ['worktree', 'list', '--porcelain'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(worktreeList.status, 0, worktreeList.stderr);
+    assert.equal(worktreeList.stdout.includes('oma_developer_patch_work_order_test'), false);
+    const branchList = spawnSync('git', ['branch', '--list', 'codex/agent-lab-work-order-*'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(branchList.status, 0, branchList.stderr);
+    assert.equal(branchList.stdout.trim(), '');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab execute-work-order cleans target worktree and branch after Codex failure', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-work-order-fail-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    createFailingFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+
+    const failure = runCliFailure([
+      'agent-lab',
+      'execute-work-order',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--codex-timeout-ms',
+      '10000',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    assert.equal(failure.payload.error.code, 'codex_command_failed');
+    const cleanupReceiptPath = failure.payload.error.details.failure_cleanup_receipt_path;
+    assert.equal(typeof cleanupReceiptPath, 'string');
+    const cleanupReceipt = readJson(cleanupReceiptPath);
+    assert.equal(cleanupReceipt.surface_kind, 'opl_agent_lab_work_order_failure_cleanup_receipt');
+    assert.equal(cleanupReceipt.cleanup_all_passed, true);
+    assert.equal(fs.existsSync(path.join(targetRepo, 'docs/partial.md')), false);
+
+    const worktreeList = spawnSync('git', ['worktree', 'list', '--porcelain'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(worktreeList.status, 0, worktreeList.stderr);
+    assert.equal(worktreeList.stdout.includes('oma_developer_patch_work_order_test'), false);
+    const branchList = spawnSync('git', ['branch', '--list', 'codex/agent-lab-work-order-*'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(branchList.status, 0, branchList.stderr);
+    assert.equal(branchList.stdout.trim(), '');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('agent-lab complete exposes the complete eval, observability, and optimizer control plane', () => {

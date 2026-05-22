@@ -208,8 +208,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.provider_cadence_window_missing_receipt_count, 7);
     assert.equal(drilldown.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
     assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
-    assert.equal(drilldown.summary.operator_action_route_count, 25);
-    assert.equal(drilldown.summary.operator_executable_route_count, 15);
+    assert.equal(drilldown.summary.operator_action_route_count, 26);
+    assert.equal(drilldown.summary.operator_executable_route_count, 16);
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 2);
     assert.equal(
       drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,

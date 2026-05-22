@@ -1,6 +1,7 @@
 import {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
+  buildAgentLabExecuteWorkOrderPayload,
   buildAgentLabEfficiencyPayload,
   buildAgentLabEvolvePayload,
   buildAgentLabExportPayload,
@@ -133,6 +134,17 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       examples: ['opl agent-lab run/efficiency --suite ./agent-lab-suite.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabRunEfficiencyPayload(args, specs['agent-lab run/efficiency']),
+    },
+    'agent-lab execute-work-order': {
+      usage:
+        'opl agent-lab execute-work-order --work-order <developer-patch-work-order.json> [--target-agent-dir <dir>] [--suite <suite.json>] [--output-dir <dir>] [--verification-command <command>] [--codex-bin <path>] [--codex-timeout-ms <ms>]',
+      summary:
+        'Execute an OMA developer patch work order through Codex CLI in a target worktree, then verify, absorb, clean up, and emit refs-only closeout receipts.',
+      examples: [
+        'opl agent-lab execute-work-order --work-order ./developer-patch-work-order.json --target-agent-dir ../redcube-ai --suite ./agent-lab-suite.json --json',
+      ],
+      group: 'framework',
+      handler: (args) => buildAgentLabExecuteWorkOrderPayload(args, specs['agent-lab execute-work-order']),
     },
   };
 
