@@ -506,6 +506,14 @@ test('framework readiness summarizes default control-plane surfaces without auth
         dispatchGroupAction.required_operator_payload_refs,
         firstDispatchWorkorderGroup.required_operator_payload_refs,
       );
+      assert.equal(
+        dispatchGroupAction.payload_path_policy,
+        firstDispatchWorkorderGroup.payload_path_policy,
+      );
+      assert.equal(
+        dispatchGroupAction.accepted_payload_paths.typed_blocker_path.success_claimed,
+        false,
+      );
       assert.equal(Object.hasOwn(dispatchGroupAction, 'required_evidence_refs'), false);
       assert.equal(dispatchGroupAction.full_detail_section, 'domain_dispatch_evidence');
       assert.equal(dispatchGroupAction.authority, 'operator_attention_only');
@@ -571,6 +579,11 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
     assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
     assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
+    assert.equal(
+      dispatchWorkorder.payload_preflight_blocked_error_kind,
+      'domain_dispatch_evidence_payload_preflight_blocked',
+    );
+    assert.equal(dispatchWorkorder.empty_payload_template_is_success_evidence, false);
     assert.equal(dispatchWorkorder.worklist_item_is_completion_claim, false);
   }
   assert.equal(

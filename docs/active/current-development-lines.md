@@ -22,7 +22,7 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
    保持 provider-backed stage runtime、typed queue、attempt ledger、signal/query、retry/dead-letter、human gate、receipt/projection、shared lifecycle/index primitive、safe action shell 和 generated surface 基础。
 
 2. `production_evidence_scaleout`
-   保持 `runtime app-operator-drilldown`、`runtime action execute` 和 `family-runtime evidence-worklist` 的 refs-only worklist / typed blocker / workorder 能力，但当前重心转到真实 production evidence：App release/user path、domain owner-chain、memory/artifact/lifecycle receipt、direct/hosted parity 和 long-soak refs。OPL 只提供 transport、preflight、ledger 和 projection；domain/App/live refs 才能关闭生产可用性。`family-runtime production-closeout` 旧 alias 已退役，不再作为 active interface 或兼容面保留。
+   保持 `runtime app-operator-drilldown`、`runtime action execute` 和 `family-runtime evidence-worklist` 的 refs-only worklist / typed blocker / workorder 能力，但当前重心转到真实 production evidence：App release/user path、domain owner-chain、memory/artifact/lifecycle receipt、direct/hosted parity 和 long-soak refs。Domain-dispatch evidence workorder 已显式投影 success refs path 与 typed blocker path，并由 payload preflight 阻断空模板、占位 ref 和身份冲突；OPL 只提供 transport、preflight、ledger 和 projection；domain/App/live refs 才能关闭生产可用性。`family-runtime production-closeout` 旧 alias 已退役，不再作为 active interface 或兼容面保留。
 
 3. `generated_surface_production_consumption`
    让 OPL generated/hosted CLI、MCP、Skill/product-entry、sidecar、status、session、workbench 和 harness 成为 MAS/MAG/RCA 的生产默认 caller。Domain repo 手写 wrapper 退成 domain handler、refs-only adapter、diagnostic cleanup 或 tombstone。

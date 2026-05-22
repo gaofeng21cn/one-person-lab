@@ -41,6 +41,17 @@ function uniqueList(values: string[]) {
   return [...new Set(values)];
 }
 
+const SUCCESS_PAYLOAD_REF_FIELDS = [
+  'domain_receipt_refs',
+  'owner_chain_refs',
+  'no_regression_refs',
+  'evidence_refs',
+] as const;
+
+const TYPED_BLOCKER_PAYLOAD_REF_FIELDS = [
+  'typed_blocker_refs',
+] as const;
+
 function payloadSourceFingerprint(payload: JsonRecord) {
   return stringValue(payload.source_fingerprint)
     ?? stringValue(record(payload.repair_work_unit).source_fingerprint);
@@ -133,6 +144,11 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     || evidenceRefs.length > 0
   ) && typedBlockerRefs.length === 0;
   const typedBlockerPathReady = typedBlockerRefs.length > 0;
+  const selectedPayloadPath = typedBlockerPathReady
+    ? 'typed_blocker_path'
+    : successPathReady
+      ? 'success_refs_path'
+      : 'blocked';
   const identityBinding = identityBindingPreflight(route, payload);
   const identityConflicts = identityBinding.identity_conflicts;
   const canRecordRefsOnlyReceipt = allRefs.length > 0
@@ -152,6 +168,26 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       'no_regression_refs',
       'evidence_refs',
     ],
+    payload_path_policy:
+      'choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_never_counts_as_success',
+    selected_payload_path: selectedPayloadPath,
+    accepted_payload_paths: {
+      success_refs_path: {
+        status: successPathReady ? 'ready' : 'not_ready',
+        required_any_operator_payload_refs: [...SUCCESS_PAYLOAD_REF_FIELDS],
+        required_evidence_refs_covered: requiredEvidenceRefsCovered,
+        typed_blocker_refs_must_be_absent: true,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+      typed_blocker_path: {
+        status: typedBlockerPathReady ? 'ready' : 'not_ready',
+        required_operator_payload_refs: [...TYPED_BLOCKER_PAYLOAD_REF_FIELDS],
+        success_claimed: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+    },
     success_path_ready: successPathReady && forbiddenPlaceholderRefs.length === 0,
     typed_blocker_path_ready: typedBlockerPathReady && forbiddenPlaceholderRefs.length === 0,
     can_record_refs_only_receipt: canRecordRefsOnlyReceipt,

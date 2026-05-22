@@ -110,6 +110,46 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
         evidence_refs: [],
       }
     : null;
+  const payloadWorkorder = recordMode
+    ? {
+        surface_kind: 'opl_domain_dispatch_evidence_payload_workorder',
+        workorder_policy:
+          'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+        payload_owner: 'domain_repository_or_app_live_operator',
+        accepted_payload_paths: {
+          success_refs_path: {
+            required_any_operator_payload_refs: [
+              'domain_receipt_refs',
+              'owner_chain_refs',
+              'no_regression_refs',
+              'evidence_refs',
+            ],
+            typed_blocker_refs_must_be_absent: true,
+            closes_domain_ready: false,
+            closes_production_ready: false,
+          },
+          typed_blocker_path: {
+            required_operator_payload_refs: ['typed_blocker_refs'],
+            success_claimed: false,
+            closes_domain_ready: false,
+            closes_production_ready: false,
+          },
+        },
+        required_evidence_refs: [
+          `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
+        ],
+        empty_payload_template_is_success_evidence: false,
+        preflight_error_code: 'cli_usage_error',
+        preflight_blocked_error_kind: 'domain_dispatch_evidence_payload_preflight_blocked',
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_generate_domain_owner_receipt: false,
+          can_generate_typed_blocker: false,
+          can_close_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      }
+    : {};
   const args = [
     'agents',
     'evidence',
@@ -173,9 +213,17 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
           ],
         }
       : null,
+    payload_workorder: payloadWorkorder,
     payload_template_policy: recordMode
       ? 'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit'
       : 'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
+    payload_preflight_policy: recordMode
+      ? 'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight'
+      : null,
+    payload_preflight_error_code: recordMode ? 'cli_usage_error' : null,
+    payload_preflight_blocked_error_kind: recordMode
+      ? 'domain_dispatch_evidence_payload_preflight_blocked'
+      : null,
     empty_payload_template_is_success_evidence: false,
     copyable_runtime_action_execute_commands: recordMode
       ? {

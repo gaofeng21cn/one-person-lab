@@ -8,6 +8,10 @@ function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
@@ -92,6 +96,8 @@ function frameworkDomainDispatchGroupNextSafeAction(group: JsonRecord) {
     action_ref_omitted_count: numberValue(group.action_ref_omitted_count),
     required_operator_payload_ref_count: numberValue(group.required_operator_payload_ref_count),
     required_operator_payload_refs: stringList(group.required_operator_payload_refs),
+    payload_path_policy: stringValue(group.payload_path_policy),
+    accepted_payload_paths: record(group.accepted_payload_paths),
     required_evidence_ref_count: numberValue(group.required_evidence_ref_count),
     sample_required_evidence_refs: stringList(group.sample_required_evidence_refs),
     required_evidence_ref_omitted_count: numberValue(group.required_evidence_ref_omitted_count),

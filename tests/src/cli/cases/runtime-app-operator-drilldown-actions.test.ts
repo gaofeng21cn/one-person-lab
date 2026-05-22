@@ -153,6 +153,26 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(recordRoute.authority_boundary.creates_owner_receipt, false);
     assert.equal(recordRoute.authority_boundary.closes_domain_ready, false);
     assert.equal(recordRoute.authority_boundary.closes_production_ready, false);
+    assert.equal(
+      recordRoute.payload_preflight_policy,
+      'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+    );
+    assert.equal(recordRoute.payload_preflight_error_code, 'cli_usage_error');
+    assert.equal(
+      recordRoute.payload_preflight_blocked_error_kind,
+      'domain_dispatch_evidence_payload_preflight_blocked',
+    );
+    assert.equal(
+      recordRoute.payload_workorder.workorder_policy,
+      'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+    );
+    assert.deepEqual(
+      recordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.required_operator_payload_refs,
+      ['typed_blocker_refs'],
+    );
+    assert.equal(recordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+    assert.equal(recordRoute.payload_workorder.authority_boundary.can_generate_domain_owner_receipt, false);
+    assert.equal(recordRoute.payload_workorder.empty_payload_template_is_success_evidence, false);
     assert.deepEqual(recordRoute.payload_template, {
       domain_receipt_refs: [],
       typed_blocker_refs: [],
@@ -186,6 +206,12 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(openDispatchPacket.summary.workorder_count, 1);
     assert.equal(openDispatchPacket.summary.route_requires_domain_or_app_payload_count, 1);
     assert.equal(openDispatchPacket.summary.success_payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(openDispatchPacket.summary.payload_workorder_count, 1);
+    assert.equal(openDispatchPacket.summary.payload_preflight_policy_count, 1);
+    assert.equal(
+      openDispatchPacket.summary.accepted_payload_path_policy,
+      'success_refs_path_or_typed_blocker_path_empty_template_blocks',
+    );
     assert.equal(openWorklist.domain_dispatch_evidence_workorder_attention_items.length, 1);
     const openDispatchWorkorder = openDispatchPacket.workorders[0];
     assert.equal(openDispatchWorkorder.action_id, recordActionId);
@@ -204,6 +230,20 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(openDispatchWorkorder.owner_receipt_payload_path_available, true);
     assert.equal(openDispatchWorkorder.owner_chain_payload_path_available, true);
     assert.equal(openDispatchWorkorder.no_regression_payload_path_available, true);
+    assert.equal(
+      openDispatchWorkorder.payload_path_policy,
+      'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+    );
+    assert.equal(
+      openDispatchWorkorder.payload_preflight_policy,
+      'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+    );
+    assert.equal(openDispatchWorkorder.payload_preflight_error_code, 'cli_usage_error');
+    assert.equal(
+      openDispatchWorkorder.payload_preflight_blocked_error_kind,
+      'domain_dispatch_evidence_payload_preflight_blocked',
+    );
+    assert.equal(openDispatchWorkorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
     assert.equal(openDispatchPacket.authority_boundary.can_generate_domain_owner_receipt, false);
     assert.equal(openDispatchPacket.authority_boundary.can_execute_domain_action, false);
     assert.equal(openDispatchPacket.authority_boundary.closes_domain_ready, false);
@@ -227,6 +267,10 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       'domain_dispatch_evidence_payload_preflight_blocked',
     );
     assert.equal(blockedTemplateExecution.payload.error.details.preflight.status, 'blocked');
+    assert.equal(
+      blockedTemplateExecution.payload.error.details.preflight.selected_payload_path,
+      'blocked',
+    );
     assert.deepEqual(
       blockedTemplateExecution.payload.error.details.preflight.missing_payload_fields,
       ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs_or_evidence_refs'],
@@ -270,6 +314,10 @@ test('runtime action execute records and verifies domain dispatch evidence recei
 
     assert.equal(recordExecution.execution.execution_kind, 'opl_cli_external_evidence_apply');
     assert.equal(recordExecution.execution.result.domain_dispatch_evidence_payload_preflight.status, 'ready_to_record');
+    assert.equal(
+      recordExecution.execution.result.domain_dispatch_evidence_payload_preflight.selected_payload_path,
+      'success_refs_path',
+    );
     assert.equal(recordExecution.execution.result.external_evidence_apply.status, 'recorded');
     assert.equal(recordExecution.execution.result.external_evidence_apply.authority_boundary.opl_records_refs_only, true);
     assert.equal(recordExecution.authority_boundary.can_write_domain_truth, false);

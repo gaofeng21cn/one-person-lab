@@ -6,6 +6,10 @@ import {
   compactDomainDispatchEvidenceWorkorderAttentionItems,
 } from '../../src/domain-dispatch-evidence-workorder-packet.ts';
 
+function typedBlockerPath(value: unknown) {
+  return (value as { typed_blocker_path: { success_claimed: boolean } }).typed_blocker_path;
+}
+
 function domainDispatchRoute(domainId: string, stageAttemptId: string) {
   return {
     action_id: `domain_dispatch:${domainId}:${stageAttemptId}:record`,
@@ -36,6 +40,29 @@ function domainDispatchRoute(domainId: string, stageAttemptId: string) {
       domain_receipt_refs: [],
       typed_blocker_refs: [],
     },
+    payload_workorder: {
+      surface_kind: 'opl_domain_dispatch_evidence_payload_workorder',
+      workorder_policy:
+        'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+      accepted_payload_paths: {
+        success_refs_path: {
+          required_any_operator_payload_refs: [
+            'domain_receipt_refs',
+            'owner_chain_refs',
+            'no_regression_refs',
+            'evidence_refs',
+          ],
+        },
+        typed_blocker_path: {
+          required_operator_payload_refs: ['typed_blocker_refs'],
+          success_claimed: false,
+        },
+      },
+    },
+    payload_preflight_policy:
+      'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+    payload_preflight_error_code: 'cli_usage_error',
+    payload_preflight_blocked_error_kind: 'domain_dispatch_evidence_payload_preflight_blocked',
   };
 }
 
@@ -85,8 +112,34 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
   );
   assert.equal(packet.summary.domain_count, 3);
   assert.equal(packet.summary.workorder_count, 3);
+  assert.equal(packet.summary.payload_workorder_count, 3);
+  assert.equal(packet.summary.payload_preflight_policy_count, 3);
+  assert.equal(
+    packet.summary.accepted_payload_path_policy,
+    'success_refs_path_or_typed_blocker_path_empty_template_blocks',
+  );
   assert.equal(packet.authority_boundary.can_generate_domain_owner_receipt, false);
   assert.equal(packet.authority_boundary.can_execute_domain_action, false);
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      workorder.payload_path_policy
+        === 'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks'
+    ),
+    true,
+  );
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      workorder.payload_preflight_policy
+        === 'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight'
+    ),
+    true,
+  );
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      typedBlockerPath(workorder.accepted_payload_paths).success_claimed === false
+    ),
+    true,
+  );
 
   const attentionItems = compactDomainDispatchEvidenceWorkorderAttentionItems(packet);
   assert.deepEqual(
@@ -106,6 +159,17 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
       item.domain_id_policy
         === 'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics'
     ),
+    true,
+  );
+  assert.equal(
+    attentionItems.every((item) =>
+      item.payload_preflight_blocked_error_kind
+        === 'domain_dispatch_evidence_payload_preflight_blocked'
+    ),
+    true,
+  );
+  assert.equal(
+    attentionItems.every((item) => item.empty_payload_template_is_success_evidence === false),
     true,
   );
 });

@@ -27,6 +27,10 @@ test('domain dispatch evidence payload must cover every route-declared required 
 
   assert.equal(preflight.status, 'blocked');
   assert.equal(preflight.can_record_refs_only_receipt, false);
+  assert.equal(preflight.selected_payload_path, 'blocked');
+  assert.equal(preflight.payload_path_policy, 'choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_never_counts_as_success');
+  assert.equal(preflight.accepted_payload_paths.success_refs_path.status, 'not_ready');
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.status, 'not_ready');
   assert.deepEqual(preflight.required_evidence_refs, route.required_evidence_refs);
   assert.deepEqual(preflight.missing_required_evidence_refs, ['mas://dm003/ai-reviewer-currentness']);
   assert.equal(preflight.required_evidence_refs_covered, false);
@@ -41,7 +45,10 @@ test('typed blocker refs may close a route-declared required evidence gap withou
   );
 
   assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.selected_payload_path, 'typed_blocker_path');
   assert.equal(preflight.typed_blocker_path_ready, true);
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.status, 'ready');
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.success_claimed, false);
   assert.equal(preflight.success_path_ready, false);
   assert.deepEqual(preflight.missing_required_evidence_refs, route.required_evidence_refs);
 });
@@ -54,6 +61,9 @@ test('domain dispatch evidence payload records only when success refs cover all 
   });
 
   assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.selected_payload_path, 'success_refs_path');
+  assert.equal(preflight.accepted_payload_paths.success_refs_path.status, 'ready');
+  assert.equal(preflight.accepted_payload_paths.success_refs_path.typed_blocker_refs_must_be_absent, true);
   assert.equal(preflight.required_evidence_refs_covered, true);
   assert.deepEqual(preflight.missing_required_evidence_refs, []);
 });
