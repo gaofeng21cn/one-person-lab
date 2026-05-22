@@ -9,20 +9,21 @@ const EXPECTED_GATES = [
   'generated_surface_drift_owner_claim',
   'app_operator_drilldown_overprojection',
   'evidence_envelope_single_semantics',
+  'public_surface_budget_conformance',
   'app_release_evidence_not_contract_only',
   'family_runtime_parser_monolith',
   'stage_launch_guarantee_clarity',
   'legacy_vocabulary_active_leakage',
 ] as const;
 
-test('system semantic hygiene exposes eight machine gates without production or domain-ready claims', () => {
+test('system semantic hygiene exposes nine machine gates without production or domain-ready claims', () => {
   const output = runCli(['system', 'semantic-hygiene', '--json']);
   const audit = output.semantic_hygiene;
 
   assert.equal(output.version, 'g2');
   assert.equal(audit.surface_kind, 'opl_framework_semantic_hygiene_audit');
-  assert.equal(audit.summary.gate_count, 8);
-  assert.equal(audit.summary.guarded_gate_count, 8);
+  assert.equal(audit.summary.gate_count, 9);
+  assert.equal(audit.summary.guarded_gate_count, 9);
   assert.equal(audit.summary.attention_required_gate_count, 0);
   assert.equal(audit.summary.production_or_domain_ready, false);
   assert.equal(audit.summary.production_ready_claim_count, 0);
@@ -102,6 +103,72 @@ test('system semantic hygiene exposes eight machine gates without production or 
     true,
   );
   assert.match(String(envelopeGate.next_action), /refs-only projections/);
+
+  const surfaceBudgetGate = gates.get('public_surface_budget_conformance') as {
+    status?: unknown;
+    source_evidence?: { ref?: unknown }[];
+    next_action?: unknown;
+    surface_budget_conformance?: {
+      surface_count?: unknown;
+      default_surface_count?: unknown;
+      budgeted_surface_count?: unknown;
+      invalid_surface_budget_count?: unknown;
+      invalid_surface_ids?: unknown;
+      ai_first_policy?: unknown;
+      authority_boundary?: {
+        can_claim_domain_ready?: unknown;
+        can_claim_quality_verdict?: unknown;
+        can_claim_artifact_authority?: unknown;
+        can_claim_production_ready?: unknown;
+        can_replace_ai_executor_planning?: unknown;
+        can_replace_domain_owner?: unknown;
+      };
+    };
+  };
+  assert.equal(surfaceBudgetGate.status, 'guarded');
+  assert.equal(
+    surfaceBudgetGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'contracts/opl-framework/public-surface-index.json'
+    ),
+    true,
+  );
+  assert.equal(
+    surfaceBudgetGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'contracts/opl-framework/surface-budget-policy.json'
+    ),
+    true,
+  );
+  assert.equal(surfaceBudgetGate.surface_budget_conformance?.surface_count, 11);
+  assert.equal(surfaceBudgetGate.surface_budget_conformance?.default_surface_count, 11);
+  assert.equal(surfaceBudgetGate.surface_budget_conformance?.budgeted_surface_count, 11);
+  assert.equal(surfaceBudgetGate.surface_budget_conformance?.invalid_surface_budget_count, 0);
+  assert.deepEqual(surfaceBudgetGate.surface_budget_conformance?.invalid_surface_ids, []);
+  assert.match(String(surfaceBudgetGate.surface_budget_conformance?.ai_first_policy), /ai_executor_planning/);
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.authority_boundary?.can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.authority_boundary?.can_claim_quality_verdict,
+    false,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.authority_boundary?.can_claim_artifact_authority,
+    false,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.authority_boundary?.can_claim_production_ready,
+    false,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.authority_boundary?.can_replace_ai_executor_planning,
+    false,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.authority_boundary?.can_replace_domain_owner,
+    false,
+  );
+  assert.match(String(surfaceBudgetGate.next_action), /diagnostic\/reference state/);
 
   const appReleaseGate = gates.get('app_release_evidence_not_contract_only') as {
     status?: unknown;

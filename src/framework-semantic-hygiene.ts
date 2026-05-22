@@ -5,6 +5,7 @@ export type SemanticHygieneGateId =
   | 'generated_surface_drift_owner_claim'
   | 'app_operator_drilldown_overprojection'
   | 'evidence_envelope_single_semantics'
+  | 'public_surface_budget_conformance'
   | 'app_release_evidence_not_contract_only'
   | 'family_runtime_parser_monolith'
   | 'stage_launch_guarantee_clarity'
@@ -23,6 +24,7 @@ export type SemanticHygieneGate = {
   };
   required_boundary: string;
   next_action: string;
+  surface_budget_conformance?: SurfaceBudgetConformance;
 };
 
 const NO_READY_CLAIMS = {
@@ -38,7 +40,51 @@ function sourceEvidence(...refs: string[]) {
   }));
 }
 
-export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContracts) {
+type SurfaceBudgetConformance = ReturnType<typeof buildSurfaceBudgetConformance>;
+
+function buildSurfaceBudgetConformance(contracts: FrameworkContracts) {
+  const surfaces = contracts.publicSurfaceIndex.surfaces;
+  const activeDefaultSurfaces = surfaces.filter((surface) => surface.surface_budget.default_surface);
+  const invalidSurfaces = surfaces.filter((surface) => {
+    const budget = surface.surface_budget;
+    const promotionEvidenceRefs = Object.values(budget.promotion_evidence_refs)
+      .filter((ref): ref is string => typeof ref === 'string' && ref.trim().length > 0);
+    return (
+      budget.default_surface_allowed_reasons.length === 0
+      || promotionEvidenceRefs.length === 0
+      || new Set(budget.consumer_refs).size < 2
+      || budget.authority_boundary.can_claim_domain_ready !== false
+      || budget.authority_boundary.can_claim_quality_verdict !== false
+      || budget.authority_boundary.can_claim_artifact_authority !== false
+      || budget.authority_boundary.can_claim_production_ready !== false
+      || budget.authority_boundary.can_replace_ai_executor_planning !== false
+      || budget.authority_boundary.can_replace_domain_owner !== false
+    );
+  });
+
+  return {
+    surface_count: surfaces.length,
+    default_surface_count: activeDefaultSurfaces.length,
+    budgeted_surface_count: surfaces.length - invalidSurfaces.length,
+    invalid_surface_budget_count: invalidSurfaces.length,
+    invalid_surface_ids: invalidSurfaces.map((surface) => surface.surface_id),
+    default_surface_policy:
+      'default_surfaces_require_allowed_reason_promotion_evidence_multi_consumer_and_false_authority_flags',
+    ai_first_policy:
+      'surface_budget_limits_default_navigation_without_replacing_ai_executor_planning_or_domain_owner',
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
+      can_claim_artifact_authority: false,
+      can_claim_production_ready: false,
+      can_replace_ai_executor_planning: false,
+      can_replace_domain_owner: false,
+    },
+  };
+}
+
+export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContracts) {
+  const surfaceBudgetConformance = buildSurfaceBudgetConformance(contracts);
   const gates: SemanticHygieneGate[] = [
     {
       gate_id: 'provider_readiness_single_truth',
@@ -104,6 +150,25 @@ export function buildOplFrameworkSemanticHygieneAudit(_contracts: FrameworkContr
         'Stage evidence, external evidence, domain dispatch, and cleanup receipts must share the same owner/scope/payload_kind/claim_allowed/receipt_refs/typed_blocker_refs/next_route reading without becoming a second readiness source.',
       next_action:
         'Keep evidence envelopes as refs-only projections consumed by framework readiness and App drilldown; do not add domain-ready, artifact-ready, quality/export, or production-ready verdict fields.',
+    },
+    {
+      gate_id: 'public_surface_budget_conformance',
+      pollution_point: 'public surface budget conformance',
+      status: surfaceBudgetConformance.invalid_surface_budget_count === 0
+        ? 'guarded'
+        : 'attention_required',
+      owner: 'one-person-lab',
+      source_evidence: [
+        'contracts/opl-framework/public-surface-index.json',
+        'contracts/opl-framework/surface-budget-policy.json',
+        'src/contracts.ts',
+      ],
+      current_state_claims: NO_READY_CLAIMS,
+      required_boundary:
+        'Every active public surface must carry a surface_budget envelope with allowed default reason, promotion evidence, repeated consumers, and false authority flags; this prevents default navigation surfaces from becoming second truth sources or AI executor planning contracts.',
+      next_action:
+        'Keep public-surface-index entries budgeted and route new surfaces through diagnostic/reference state until they meet authority, evidence, replay, audit, route-back, or repeated App/runtime consumption gates.',
+      surface_budget_conformance: surfaceBudgetConformance,
     },
     {
       gate_id: 'app_release_evidence_not_contract_only',
