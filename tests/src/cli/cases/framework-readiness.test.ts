@@ -208,14 +208,13 @@ test('framework readiness summarizes default control-plane surfaces without auth
       omaProductionConsumption.status,
       'structural_consumption_ready_production_consumption_followthrough_required',
     );
-    assert.equal(omaProductionConsumption.open_gate_count, 4);
+    assert.equal(omaProductionConsumption.open_gate_count, 3);
     assert.deepEqual(omaProductionConsumption.open_gate_ids, [
       'managed_install_update_refs',
       'app_live_path_refs',
-      'owner_receipt_or_typed_blocker_scaleout_refs',
       'long_soak_refs',
     ]);
-    assert.equal(omaProductionConsumption.gate_items.length, 4);
+    assert.equal(omaProductionConsumption.gate_items.length, 3);
   }
   const firstOwnerHandoff = ownerHandoffPacket.owners[0];
   if (firstOwnerHandoff) {

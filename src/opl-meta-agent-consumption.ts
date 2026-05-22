@@ -309,7 +309,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
     productionConsumptionGate({
       gateId: 'owner_receipt_or_typed_blocker_scaleout_refs',
       status: scaleoutTargets.length > 0 && ownerOrBlockerTargetCount === scaleoutTargets.length
-        ? 'seed_refs_projected_scaleout_followthrough_required'
+        ? 'refs_observed'
         : 'missing_owner_receipt_or_typed_blocker_scaleout_refs',
       requiredRefsAnyOf: [
         'target_agent_owner_receipt_refs',
