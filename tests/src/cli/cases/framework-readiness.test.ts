@@ -11,6 +11,9 @@ import {
   assertFrameworkAppReleaseUserPathAction,
   assertFrameworkAppReleaseUserPathEvidence,
 } from './framework-readiness-app-release-user-path-assertions.ts';
+import {
+  assertFrameworkReadinessBlockerAttribution,
+} from './framework-readiness-blocker-attribution-assertions.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-state-'));
@@ -384,6 +387,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.attention_first_payload.blockers.length > 0,
     readiness.summary.framework_kernel_hard_blocker_count > 0,
   );
+  assertFrameworkReadinessBlockerAttribution(readiness);
   assert.equal(readiness.attention_first_payload.warnings.length > 0, true);
   assert.equal(
     readiness.attention_first_payload.semantic_hygiene_contract_floor.gate_count,

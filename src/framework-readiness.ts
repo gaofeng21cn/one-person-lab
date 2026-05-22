@@ -18,6 +18,7 @@ import {
   buildMasDomainRouteSupportProjection,
 } from './family-runtime-mas-domain-route.ts';
 import { frameworkAttentionNextSafeActions } from './framework-readiness-attention-actions.ts';
+import { frameworkReadinessBlockers } from './framework-readiness-blockers.ts';
 import {
   frameworkDiagnosticDrilldowns,
   frameworkKernelFloor,
@@ -294,6 +295,8 @@ function frameworkAttentionFirstPayload(input: {
   status: string;
   semanticHygieneContractFloor: JsonRecord;
   hardBlockerCount: number;
+  agentHardBlockerCount: number;
+  stageHardBlockerCount: number;
   packCompilerBlockerCount: number;
   diagnosticFailureCount: number;
   semanticAttentionGateCount: number;
@@ -327,29 +330,7 @@ function frameworkAttentionFirstPayload(input: {
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
   const totalOperatorAttentionTailCount =
     openTailCount + evidenceEnvelopeAttentionCount + input.domainDispatchAttentionCount;
-  const blockers = [
-    ...(input.packCompilerBlockerCount > 0
-      ? [{
-          blocker_id: 'pack_compiler_framework_kernel_blocker_present',
-          count: input.packCompilerBlockerCount,
-          route_ref: '/framework_readiness/pack_compiler',
-        }]
-      : []),
-    ...(input.diagnosticFailureCount > 0
-      ? [{
-          blocker_id: 'framework_diagnostic_unavailable',
-          count: input.diagnosticFailureCount,
-          route_ref: '/framework_readiness/diagnostic_failures',
-        }]
-      : []),
-    ...(input.hardBlockerCount > input.packCompilerBlockerCount + input.diagnosticFailureCount
-      ? [{
-          blocker_id: 'framework_kernel_hard_blocker_present',
-          count: input.hardBlockerCount - input.packCompilerBlockerCount - input.diagnosticFailureCount,
-          route_ref: '/framework_readiness/stages',
-        }]
-      : []),
-  ];
+  const blockers = frameworkReadinessBlockers(input);
   const warnings = [
     ...(input.semanticAttentionGateCount > 0
       ? [{
@@ -674,6 +655,8 @@ export async function buildFrameworkReadinessSummary(
         status: frameworkStatus,
         semanticHygieneContractFloor: semanticHygieneContractFloor(semanticHygiene),
         hardBlockerCount,
+        agentHardBlockerCount,
+        stageHardBlockerCount,
         packCompilerBlockerCount,
         diagnosticFailureCount,
         semanticAttentionGateCount,
@@ -796,6 +779,7 @@ export async function buildFrameworkReadinessSummary(
         source_command: SOURCE_COMMANDS.agents_readiness,
         status: agentReadiness.status,
         structural_conformance_status: agentSummary.structural_conformance_status ?? null,
+        conformance_blocked_count: agentHardBlockerCount,
         agent_readiness_production_evidence_tail_count:
           agentProductionEvidenceTailTotalCount,
         agent_readiness_production_evidence_tail_open_count:
