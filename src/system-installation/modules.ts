@@ -4,17 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
-import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
-import {
-  resolveFamilyWorkspaceRootFromRepoRoot,
-  syncFamilySkillPackFromRepoRoot,
-} from '../opl-skills.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../opl-skills.ts';
 import {
   type DomainModuleSpec,
   type OplModuleAction,
   type OplModuleId,
   type OplModuleInstallOrigin,
-  type GitRepoSnapshot,
   type ModuleExecResult,
   type ModuleInspection,
   assertGitSuccess,
@@ -24,53 +19,23 @@ import {
 } from './shared.ts';
 import { resolveModuleExecMaxBuffer } from './module-exec-buffer.ts';
 import {
+  buildSkippedWorkflow,
+  type DomainModuleRuntimeSpec,
+  type ModuleActionWorkflow,
+  runExternalModuleWorkflow,
+  runManagedModuleWorkflow,
+} from './module-action-workflow.ts';
+import {
   inspectGitRepo,
   isGitRepo,
   resolveRemoteGitRetryAttempts,
   runRemoteGitWithRetry,
 } from './module-git.ts';
-
-type DomainModuleRuntimeSpec = DomainModuleSpec & {
-  default_install: boolean;
-  bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
-  health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
-  exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
-  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
-};
-
-type ModuleActionStepResult = {
-  status: 'completed' | 'skipped' | 'blocked';
-  summary: string;
-  command_preview: string[] | null;
-  stdout: string;
-  stderr: string;
-  result: Record<string, unknown> | null;
-  domain_id?: string | null;
-};
-
-type ModuleActionWorkflow = {
-  bootstrap: ModuleActionStepResult;
-  skill_sync: ModuleActionStepResult;
-  health_check: ModuleActionStepResult;
-};
-
-const DEFAULT_MODULE_ACTION_STEP_TIMEOUT_MS = 10 * 60 * 1000;
-
-function resolveModuleActionStepTimeoutMs() {
-  const raw = process.env.OPL_MODULE_ACTION_STEP_TIMEOUT_MS?.trim();
-  if (!raw) {
-    return DEFAULT_MODULE_ACTION_STEP_TIMEOUT_MS;
-  }
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'OPL_MODULE_ACTION_STEP_TIMEOUT_MS must be a positive integer.',
-      { env: 'OPL_MODULE_ACTION_STEP_TIMEOUT_MS', value: raw },
-    );
-  }
-  return parsed;
-}
+import {
+  copyManagedModuleFromPackagedRuntime,
+  isPackagedModuleCheckout,
+  readPackagedModuleGitSnapshot,
+} from './module-packaged.ts';
 
 const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   {
@@ -249,48 +214,7 @@ function buildHealthCheckCommand(checkoutPath: string) {
     };
 }
 
-function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModuleSpec): GitRepoSnapshot | null {
-  const markerPath = path.join(repoPath, PACKAGED_MODULE_MARKER_FILE);
-  if (!fs.existsSync(markerPath) || !fs.statSync(markerPath).isFile()) {
-    return null;
-  }
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-
-  if (parsed.packaged_runtime !== true || parsed.module_id !== spec.module_id || parsed.repo_name !== spec.repo_name) {
-    return null;
-  }
-
-  const sourceGit =
-    typeof parsed.source_git === 'object' && parsed.source_git !== null
-      ? parsed.source_git as Record<string, unknown>
-      : {};
-  const headSha = normalizeOptionalString(typeof sourceGit.head_sha === 'string' ? sourceGit.head_sha : null);
-
-  return {
-    branch: null,
-    head_sha: headSha,
-    short_sha: headSha ? headSha.slice(0, 12) : null,
-    origin_url: spec.repo_url,
-    upstream_ref: null,
-    upstream_head_sha: null,
-    ahead_count: null,
-    behind_count: null,
-    sync_status: 'no_upstream',
-    dirty: false,
-  };
-}
-
-function isPackagedModuleCheckout(repoPath: string, spec: DomainModuleSpec) {
-  return Boolean(readPackagedModuleGitSnapshot(repoPath, spec));
-}
-
-function isModuleUpdateAvailable(git: GitRepoSnapshot) {
+function isModuleUpdateAvailable(git: NonNullable<ModuleInspection['git']>) {
   return !git.dirty && git.sync_status === 'behind';
 }
 
@@ -565,37 +489,6 @@ function installManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
   cloneManagedModule(spec, checkoutPath);
 }
 
-function copyManagedModuleFromPackagedRuntime(spec: DomainModuleSpec, sourcePath: string, checkoutPath: string) {
-  const packagedGit = readPackagedModuleGitSnapshot(sourcePath, spec);
-  if (!packagedGit) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'Packaged module source is not a valid OPL Full runtime module.',
-      {
-        module_id: spec.module_id,
-        source_path: sourcePath,
-        expected_marker: PACKAGED_MODULE_MARKER_FILE,
-      },
-      2,
-    );
-  }
-
-  fs.mkdirSync(path.dirname(checkoutPath), { recursive: true });
-  const tempTarget = `${checkoutPath}.tmp-${process.pid}`;
-  fs.rmSync(tempTarget, { recursive: true, force: true });
-  fs.cpSync(sourcePath, tempTarget, {
-    recursive: true,
-    dereference: false,
-    preserveTimestamps: true,
-  });
-  fs.rmSync(checkoutPath, { recursive: true, force: true });
-  fs.renameSync(tempTarget, checkoutPath);
-}
-
-function readHomeDir() {
-  return process.env.HOME?.trim() || resolveOplStatePaths().home_dir;
-}
-
 function maybeParseJsonRecord(raw: string) {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -614,221 +507,6 @@ function maybeParseJsonRecord(raw: string) {
   return null;
 }
 
-function runModuleStep(
-  spec: DomainModuleRuntimeSpec,
-  stepId: 'bootstrap' | 'health_check',
-  commandPreview: { command: string; args: string[] } | null,
-  checkoutPath: string,
-  skippedSummary: string,
-) {
-  if (!commandPreview) {
-    return {
-      status: 'skipped',
-      summary: skippedSummary,
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-    } satisfies ModuleActionStepResult;
-  }
-
-  const timeoutMs = resolveModuleActionStepTimeoutMs();
-  const result = runCommand(commandPreview.command, commandPreview.args, checkoutPath, {
-    timeoutMs,
-  });
-  if (result.timedOut) {
-    return {
-      status: 'blocked',
-      summary: `OPL module ${stepId} timed out before completion.`,
-      command_preview: [commandPreview.command, ...commandPreview.args],
-      stdout: result.stdout,
-      stderr: result.stderr,
-      result: {
-        blocker_kind: 'module_action_step_timeout',
-        step_id: stepId,
-        module_id: spec.module_id,
-        timeout_ms: timeoutMs,
-        signal: result.signal ?? null,
-        authority_boundary: {
-          opl: 'startup_maintenance_transport_and_blocker_projection_only',
-          domain: 'module_health_and_truth_owner',
-          can_claim_module_healthy: false,
-          can_claim_production_ready: false,
-        },
-      },
-    } satisfies ModuleActionStepResult;
-  }
-  if (result.exitCode !== 0) {
-    throw new FrameworkContractError(
-      'build_command_failed',
-      `Failed to run OPL module ${stepId}.`,
-      {
-        module_id: spec.module_id,
-        checkout_path: checkoutPath,
-        command: [commandPreview.command, ...commandPreview.args],
-        timeout_ms: timeoutMs,
-        stdout: result.stdout,
-        stderr: result.stderr,
-      },
-    );
-  }
-
-  return {
-    status: 'completed',
-    summary: stepId === 'bootstrap'
-      ? 'Completed repo bootstrap.'
-      : 'Completed repo health check.',
-    command_preview: [commandPreview.command, ...commandPreview.args],
-    stdout: result.stdout,
-    stderr: result.stderr,
-    result: maybeParseJsonRecord(result.stdout),
-  } satisfies ModuleActionStepResult;
-}
-
-function runModuleBootstrap(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  return runModuleStep(
-    spec,
-    'bootstrap',
-    spec.bootstrap_command?.(checkoutPath) ?? null,
-    checkoutPath,
-    'No repo-specific bootstrap installer is declared for this module.',
-  );
-}
-
-function runModuleSkillSync(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  if (!spec.skill_sync_domain) {
-    return {
-      status: 'skipped',
-      summary: 'No Codex skill pack is declared for this module.',
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-      domain_id: null,
-    } satisfies ModuleActionStepResult;
-  }
-
-  const syncResult = syncFamilySkillPackFromRepoRoot(
-    spec.skill_sync_domain,
-    checkoutPath,
-    { home: readHomeDir() },
-  );
-
-  return {
-    status: 'completed',
-    summary: 'Synced the matching Codex skill pack into the current home.',
-    command_preview: syncResult.command_preview,
-    stdout: syncResult.stdout,
-    stderr: syncResult.stderr,
-    result: {
-      domain_id: syncResult.domain_id,
-      repo_root: syncResult.repo_root,
-      sync_status: syncResult.sync_status,
-      installer_result: syncResult.installer_result,
-    },
-    domain_id: spec.skill_sync_domain,
-  } satisfies ModuleActionStepResult;
-}
-
-function runModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  return runModuleStep(
-    spec,
-    'health_check',
-    spec.health_check_command?.(checkoutPath) ?? null,
-    checkoutPath,
-    'No repo-specific health check is declared for this module.',
-  );
-}
-
-function runPackagedModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  const packagedGit = readPackagedModuleGitSnapshot(checkoutPath, spec);
-  return {
-    status: 'completed',
-    summary: 'Packaged Full runtime marker is present and matches this module.',
-    command_preview: null,
-    stdout: '',
-    stderr: '',
-    result: {
-      packaged_runtime: true,
-      module_id: spec.module_id,
-      repo_name: spec.repo_name,
-      source_git: packagedGit,
-    },
-  } satisfies ModuleActionStepResult;
-}
-
-function runManagedModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  const packagedModule = Boolean(readPackagedModuleGitSnapshot(checkoutPath, spec));
-  const bootstrap = packagedModule
-    ? {
-      status: 'skipped',
-      summary: 'Packaged Full runtime modules are already staged; bootstrap is not required.',
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-    } satisfies ModuleActionStepResult
-    : runModuleBootstrap(spec, checkoutPath);
-  const skill_sync = runModuleSkillSync(spec, checkoutPath);
-  const health_check = packagedModule
-    ? runPackagedModuleHealthCheck(spec, checkoutPath)
-    : runModuleHealthCheck(spec, checkoutPath);
-
-  return {
-    bootstrap,
-    skill_sync,
-    health_check,
-  } satisfies ModuleActionWorkflow;
-}
-
-function runExternalModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  const skill_sync = runModuleSkillSync(spec, checkoutPath);
-  const health_check = runModuleHealthCheck(spec, checkoutPath);
-
-  return {
-    bootstrap: {
-      status: 'skipped',
-      summary: 'External developer checkouts are not bootstrapped by OPL.',
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-    },
-    skill_sync,
-    health_check,
-  } satisfies ModuleActionWorkflow;
-}
-
-function buildSkippedWorkflow(summary: string): ModuleActionWorkflow {
-  return {
-    bootstrap: {
-      status: 'skipped',
-      summary,
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-    },
-    skill_sync: {
-      status: 'skipped',
-      summary,
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-      domain_id: null,
-    },
-    health_check: {
-      status: 'skipped',
-      summary,
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-    },
-  };
-}
-
 export function runOplModuleAction(
   action: OplModuleAction,
   moduleId: string,
@@ -844,7 +522,7 @@ export function runOplModuleAction(
       }
       const installed = inspectModule(spec);
       if (installed.install_origin === 'managed_root') {
-        workflow = runManagedModuleWorkflow(spec, installed.checkout_path);
+        workflow = runManagedModuleWorkflow(spec, installed.checkout_path, { readPackagedModuleGitSnapshot });
       } else if (installed.installed && installed.install_origin !== 'missing' && installed.install_origin !== 'invalid_checkout') {
         workflow = runExternalModuleWorkflow(spec, installed.checkout_path);
       }
@@ -868,7 +546,7 @@ export function runOplModuleAction(
       ) {
         replaceManagedModuleWithFreshClone(spec, current.checkout_path);
         const updated = inspectModule(spec);
-        workflow = runManagedModuleWorkflow(spec, updated.checkout_path);
+        workflow = runManagedModuleWorkflow(spec, updated.checkout_path, { readPackagedModuleGitSnapshot });
         break;
       }
       if (current.git?.dirty) {
@@ -890,7 +568,7 @@ export function runOplModuleAction(
       });
       const updated = inspectModule(spec);
       if (updated.install_origin === 'managed_root') {
-        workflow = runManagedModuleWorkflow(spec, updated.checkout_path);
+        workflow = runManagedModuleWorkflow(spec, updated.checkout_path, { readPackagedModuleGitSnapshot });
       } else {
         workflow = runExternalModuleWorkflow(spec, updated.checkout_path);
       }
@@ -911,7 +589,7 @@ export function runOplModuleAction(
       }
       fs.rmSync(current.managed_checkout_path, { recursive: true, force: true });
       installManagedModule(spec, current.managed_checkout_path);
-      workflow = runManagedModuleWorkflow(spec, current.managed_checkout_path);
+      workflow = runManagedModuleWorkflow(spec, current.managed_checkout_path, { readPackagedModuleGitSnapshot });
       break;
     }
     case 'remove': {
