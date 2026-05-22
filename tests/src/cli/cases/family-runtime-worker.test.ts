@@ -12,6 +12,7 @@ import {
 } from '../helpers.ts';
 import {
   inspectTemporalWorkerLifecycle,
+  resolveTemporalWorkerForegroundPaths,
   startTemporalWorkerLifecycle,
   stopTemporalWorkerLifecycle,
 } from '../../../../src/family-runtime-temporal-provider.ts';
@@ -460,6 +461,41 @@ test('standalone Temporal residency proof script defaults to user state root out
     );
     assert.equal(fs.existsSync(repoStateRoot), false);
   } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(cwdRoot, { recursive: true, force: true });
+  }
+});
+
+test('foreground Temporal worker entrypoint resolves user state root outside repo cwd', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-worker-home-'));
+  const cwdRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-worker-cwd-'));
+  const repoStateRoot = path.join(cwdRoot, '.opl-state');
+  const expectedStateRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state');
+  const previousHome = process.env.HOME;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousCwd = process.cwd();
+
+  try {
+    process.env.HOME = homeRoot;
+    process.env.OPL_STATE_DIR = '';
+    process.chdir(cwdRoot);
+
+    const paths = resolveTemporalWorkerForegroundPaths();
+
+    assert.equal(paths.root, path.join(expectedStateRoot, 'family-runtime'));
+    assert.equal(fs.existsSync(repoStateRoot), false);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(cwdRoot, { recursive: true, force: true });
   }

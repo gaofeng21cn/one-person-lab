@@ -8,6 +8,7 @@ import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/com
 import { NativeConnection, Worker } from '@temporalio/worker';
 
 import { FrameworkContractError } from './contracts.ts';
+import { familyRuntimePaths } from './family-runtime-store.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInput, requireTemporalStageAttemptWorkflowInputLaunchable,
@@ -997,11 +998,10 @@ export function buildTemporalStageAttemptWorkflowInputForTest(
   return input;
 }
 
+export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return familyRuntimePaths(); }
+
 if (process.argv[2] === '--temporal-worker-foreground') {
-  const paths = {
-    root: path.join(process.env.OPL_STATE_DIR?.trim() || path.join(process.cwd(), '.opl-state'), 'family-runtime'),
-  };
-  void runTemporalWorkerForeground(paths).catch((error) => {
+  void runTemporalWorkerForeground(resolveTemporalWorkerForegroundPaths()).catch((error) => {
     process.stderr.write(error instanceof Error ? `${error.message}\n` : 'Temporal worker failed.\n');
     process.exitCode = 1;
   });
