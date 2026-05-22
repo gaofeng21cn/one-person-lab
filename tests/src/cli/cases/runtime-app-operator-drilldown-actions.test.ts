@@ -11,7 +11,10 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
-import { insertProviderProof } from './runtime-app-operator-drilldown-helpers.ts';
+import {
+  assertMasLifecycleDrilldownProjection,
+  insertProviderProof,
+} from './runtime-app-operator-drilldown-helpers.ts';
 
 test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-mas-lifecycle-'));
@@ -202,117 +205,7 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
     });
     const drilldown = output.app_operator_drilldown;
 
-    assert.equal(drilldown.authority_boundary.can_write_domain_truth, false);
-    assert.equal(drilldown.authority_boundary.can_read_memory_body, false);
-    assert.equal(drilldown.authority_boundary.can_read_artifact_body, false);
-    assert.equal(drilldown.summary.owner_receipt_ref_count, 4);
-    assert.equal(drilldown.summary.typed_blocker_count, 3);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_domain_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_attempt_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
-    assert.equal(drilldown.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
-    assert.equal(drilldown.summary.lifecycle_index_ref_count, 2);
-    assert.equal(drilldown.summary.lifecycle_restore_proof_ref_count, 2);
-    assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_reconcile_extra_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_reconcile_stale_ref_count, 0);
-    assert.equal(drilldown.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
-    assert.equal(drilldown.summary.lifecycle_domain_physical_delete_can_execute, false);
-    assert.equal(drilldown.summary.lifecycle_opl_cleanup_apply_can_execute, true);
-    assert.equal(drilldown.summary.safe_action_ref_count >= 2, true);
-    assert.equal(drilldown.summary.freshness_signal_count >= 1, true);
-
-    assert.equal(
-      drilldown.owner_receipt_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'mas-owner-receipt:guarded-apply'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.owner_receipt_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'mas-owner-receipt:transition'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.typed_blocker_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'mas-blocker:publication-currentness'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
-        blocker.blocker_id === 'domain_owned_lifecycle_receipt_required'
-      ),
-      true,
-    );
-    assert.equal(drilldown.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
-    assert.equal(drilldown.domain_dispatch_evidence.summary.domain_count, 1);
-    assert.equal(drilldown.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
-    assert.equal(
-      drilldown.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
-      0,
-    );
-    assert.equal(
-      drilldown.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
-      false,
-    );
-    assert.deepEqual(
-      drilldown.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs,
-      ['mas-no-regression:package'],
-    );
-    assert.deepEqual(
-      drilldown.domain_dispatch_evidence.attempts[0].writeback_receipt_refs,
-      ['memory-writeback:receipt-1'],
-    );
-    assert.equal(
-      drilldown.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
-        ref.source_fingerprint === 'sha256:mas-drilldown-source'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'source:dataset'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'artifact:table'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'memory:route-policy'
-      ),
-      true,
-    );
-    assert.equal(
-      drilldown.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
-        ref.role === 'lifecycle_cleanup_receipt_ref'
-          && ref.ref.startsWith('opl://family-runtime/lifecycle-apply/medautoscience')
-      ),
-      true,
-    );
-    assert.deepEqual(drilldown.lifecycle_ledger_refs.restore_proof_refs, [
-      'restore-proof:mas-index',
-      'restore-proof:mas-package',
-    ]);
-    assert.equal(drilldown.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
-    assert.equal(
-      drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
-      false,
-    );
-    assert.equal(
-      drilldown.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
-      true,
-    );
-    assert.equal(drilldown.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
+    assertMasLifecycleDrilldownProjection(drilldown);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
