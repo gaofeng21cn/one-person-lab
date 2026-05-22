@@ -17,6 +17,19 @@ function domainDispatchRoute(domainId: string, stageAttemptId: string) {
     domain_id: domainId,
     stage_id: 'review',
     stage_attempt_id: stageAttemptId,
+    stage_attempt_source_fingerprint: `fp-${stageAttemptId}`,
+    target_identity: {
+      domain_id: domainId,
+      stage_id: 'review',
+      stage_attempt_id: stageAttemptId,
+      task_kind: 'review',
+      study_id: `study-${stageAttemptId}`,
+      source_fingerprint: `fp-${stageAttemptId}`,
+      profile: `/profiles/${stageAttemptId}.toml`,
+      profile_name: `profile-${stageAttemptId}`,
+    },
+    identity_binding_policy:
+      'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
     request_id: `domain_dispatch:${domainId}:${stageAttemptId}`,
     request_pack_id: `${domainId}.domain_dispatch_evidence`,
     payload_owner: 'domain_repository_or_app_live_operator',
@@ -140,6 +153,48 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
     ),
     true,
   );
+  assert.deepEqual(
+    packet.workorders.map((workorder) => workorder.target_identity),
+    [
+      {
+        domain_id: 'medautoscience',
+        stage_id: 'review',
+        stage_attempt_id: 'sat-mas',
+        task_kind: 'review',
+        study_id: 'study-sat-mas',
+        source_fingerprint: 'fp-sat-mas',
+        profile: '/profiles/sat-mas.toml',
+        profile_name: 'profile-sat-mas',
+      },
+      {
+        domain_id: 'medautogrant',
+        stage_id: 'review',
+        stage_attempt_id: 'sat-mag',
+        task_kind: 'review',
+        study_id: 'study-sat-mag',
+        source_fingerprint: 'fp-sat-mag',
+        profile: '/profiles/sat-mag.toml',
+        profile_name: 'profile-sat-mag',
+      },
+      {
+        domain_id: 'redcube',
+        stage_id: 'review',
+        stage_attempt_id: 'sat-rca',
+        task_kind: 'review',
+        study_id: 'study-sat-rca',
+        source_fingerprint: 'fp-sat-rca',
+        profile: '/profiles/sat-rca.toml',
+        profile_name: 'profile-sat-rca',
+      },
+    ],
+  );
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      workorder.identity_binding_policy
+        === 'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity'
+    ),
+    true,
+  );
 
   const attentionItems = compactDomainDispatchEvidenceWorkorderAttentionItems(packet);
   assert.deepEqual(
@@ -170,6 +225,17 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
   );
   assert.equal(
     attentionItems.every((item) => item.empty_payload_template_is_success_evidence === false),
+    true,
+  );
+  assert.deepEqual(
+    attentionItems.map((item) => item.target_identity),
+    packet.workorders.map((workorder) => workorder.target_identity),
+  );
+  assert.equal(
+    attentionItems.every((item) =>
+      item.identity_binding_policy
+        === 'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity'
+    ),
     true,
   );
 });
