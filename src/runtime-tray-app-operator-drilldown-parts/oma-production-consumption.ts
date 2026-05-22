@@ -55,6 +55,11 @@ export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: J
       observed_target_count: numberValue(gate.observed_target_count),
       target_count: numberValue(gate.target_count),
       current_contract_status: stringValue(gate.current_contract_status),
+      manual_required: gate.manual_required === true,
+      manual_required_reason: stringValue(gate.manual_required_reason),
+      manual_required_blockers: stringList(gate.manual_required_blockers),
+      managed_install_update_followthrough: record(gate.managed_install_update_followthrough),
+      next_safe_action: record(gate.next_safe_action),
       full_detail_section: stringValue(gate.full_detail_section)
         ?? 'opl_meta_agent_workbench_refs',
     })),

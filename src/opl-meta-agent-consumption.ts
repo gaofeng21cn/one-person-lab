@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
+import { buildOplModules } from './system-installation/modules.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
 const OMA_PROJECT = 'opl-meta-agent';
@@ -50,6 +51,8 @@ const PRODUCTION_CONSUMPTION_GATE_IDS = [
   'long_soak_refs',
 ] as const;
 
+type OplModuleInspection = ReturnType<typeof buildOplModules>['modules']['modules'][number];
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -82,6 +85,69 @@ function workspaceCandidates(seed: string) {
     current = path.dirname(current);
   }
   return candidates;
+}
+
+function inspectOmaModule(): OplModuleInspection | null {
+  return buildOplModules().modules.modules.find((module) =>
+    module.module_id === 'oplmetaagent'
+  ) ?? null;
+}
+
+function managedInstallUpdateBlockers(module: OplModuleInspection | null) {
+  const blockers: string[] = [];
+  if (!module) {
+    return ['module_inspection_unavailable'];
+  }
+  if (module.install_origin === 'sibling_workspace' || module.install_origin === 'env_override') {
+    blockers.push('developer_checkout_visible_not_app_managed');
+  }
+  if (module.install_origin === 'invalid_checkout' || module.health_status === 'invalid_checkout') {
+    blockers.push('invalid_checkout');
+  }
+  if (module.health_status === 'dirty' || module.git?.dirty) {
+    blockers.push('dirty_checkout');
+  }
+  const syncStatus = module.git?.sync_status;
+  if (syncStatus === 'ahead' || syncStatus === 'diverged' || syncStatus === 'no_upstream' || syncStatus === 'unknown') {
+    blockers.push(`${syncStatus}_checkout`);
+  }
+  return uniqueStringList(blockers);
+}
+
+function managedInstallUpdateFollowthrough(observedRefs: string[]) {
+  const module = inspectOmaModule();
+  const blockers = managedInstallUpdateBlockers(module);
+  const refsObserved = observedRefs.length > 0;
+  const manualRequired = !refsObserved && blockers.length > 0;
+  const status = refsObserved
+    ? 'refs_observed'
+    : manualRequired
+      ? 'manual_required'
+      : 'startup_maintenance_required';
+  const reason = refsObserved
+    ? 'managed_install_update_receipt_observed'
+    : blockers[0] ?? (module?.install_origin === 'missing' ? 'module_missing' : 'startup_health_and_skill_refresh');
+  return {
+    surface_kind: 'opl_meta_agent_managed_install_update_followthrough',
+    status,
+    reason,
+    blockers,
+    module,
+    next_safe_action: {
+      action_id: manualRequired
+        ? 'review_oplmetaagent_developer_checkout_before_startup_maintenance'
+        : 'run_opl_system_startup_maintenance',
+      command: manualRequired
+        ? 'opl modules'
+        : 'opl system startup-maintenance',
+      after_manual_resolution_command: 'opl system startup-maintenance',
+      route_owner: 'one-person-lab',
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_production_ready: false,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
 }
 
 function defaultOmaRepoDir() {
@@ -205,6 +271,7 @@ function productionConsumptionGate(input: {
   observedTargetCount?: number;
   targetCount?: number;
   currentContractStatus?: string | null;
+  followthrough?: JsonRecord;
 }) {
   return {
     gate_id: input.gateId,
@@ -215,6 +282,13 @@ function productionConsumptionGate(input: {
     observed_target_count: input.observedTargetCount ?? null,
     target_count: input.targetCount ?? null,
     current_contract_status: input.currentContractStatus ?? null,
+    ...(input.followthrough ? {
+      managed_install_update_followthrough: input.followthrough,
+      manual_required: input.followthrough.status === 'manual_required',
+      manual_required_reason: optionalString(input.followthrough.reason),
+      manual_required_blockers: stringList(input.followthrough.blockers),
+      next_safe_action: record(input.followthrough.next_safe_action),
+    } : {}),
     full_detail_section: 'opl_meta_agent_workbench_refs',
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -270,6 +344,8 @@ function buildProductionConsumptionFollowthrough(payloads: {
     ...managedInstallUpdateRefs,
     ...managedInstallUpdateLedgerReceiptRefs,
   ]);
+  const managedInstallFollowthrough =
+    managedInstallUpdateFollowthrough(managedInstallUpdateObservedRefs);
   const appLivePathRefs = refsFromRecords([
     appProjection,
     drilldownReceipt,
@@ -301,7 +377,9 @@ function buildProductionConsumptionFollowthrough(payloads: {
       gateId: 'managed_install_update_refs',
       status: managedInstallUpdateObservedRefs.length > 0
         ? 'refs_observed'
-        : 'missing_managed_install_update_refs',
+        : optionalString(managedInstallFollowthrough.status) === 'manual_required'
+          ? 'manual_required_before_managed_install_update_refs'
+          : 'missing_managed_install_update_refs',
       requiredRefsAnyOf: [
         'managed_install_update_refs',
         'module_install_update_receipt_refs',
@@ -309,6 +387,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
         'opl_managed_module_install_update_receipt',
       ],
       observedRefs: managedInstallUpdateObservedRefs,
+      followthrough: managedInstallFollowthrough,
     }),
     productionConsumptionGate({
       gateId: 'app_live_path_refs',

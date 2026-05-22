@@ -32,6 +32,14 @@ export function assertOmaProductionConsumptionAttention(summaryDrilldown: any, m
       'long_soak_refs',
     ]);
     assert.equal(omaProductionConsumption.gate_items.length, 3);
+    const managedGate = omaProductionConsumption.gate_items.find(
+      (item: { gate_id: string }) => item.gate_id === 'managed_install_update_refs',
+    );
+    assert.equal(typeof managedGate.status, 'string');
+    assert.equal(typeof managedGate.manual_required, 'boolean');
+    assert.equal(Array.isArray(managedGate.manual_required_blockers), true);
+    assert.equal(managedGate.next_safe_action.can_write_domain_truth, false);
+    assert.equal(managedGate.next_safe_action.can_claim_production_ready, false);
     assert.equal(
       omaProductionConsumption.gate_items.find(
         (item: { gate_id: string }) => item.gate_id === 'app_live_path_refs',
@@ -75,6 +83,12 @@ export function assertOmaProductionConsumptionNextStep(summaryDrilldown: any, me
     'app_live_path_refs',
     'long_soak_refs',
   ]);
+  const managedGateStep = omaProductionConsumptionStep.required_refs_by_gate.find(
+    (item: { gate_id: string }) => item.gate_id === 'managed_install_update_refs',
+  );
+  assert.equal(typeof managedGateStep.manual_required, 'boolean');
+  assert.equal(Array.isArray(managedGateStep.manual_required_blockers), true);
+  assert.equal(managedGateStep.next_safe_action.can_create_owner_receipt, false);
   assert.equal(
     omaProductionConsumptionStep.required_return_shapes.includes('long_soak_receipt_ref'),
     true,
@@ -104,6 +118,15 @@ export function assertOmaProductionConsumptionFullDetail(fullDrilldown: any) {
   const ownerScaleoutGate = gateItems.find(
     (item: { gate_id: string }) => item.gate_id === 'owner_receipt_or_typed_blocker_scaleout_refs',
   );
+  const managedGate = gateItems.find(
+    (item: { gate_id: string }) => item.gate_id === 'managed_install_update_refs',
+  );
+  assert.equal(
+    managedGate.managed_install_update_followthrough.surface_kind,
+    'opl_meta_agent_managed_install_update_followthrough',
+  );
+  assert.equal(managedGate.next_safe_action.can_write_domain_truth, false);
+  assert.equal(managedGate.next_safe_action.can_claim_production_ready, false);
   assert.equal(ownerScaleoutGate.status, 'refs_observed');
   assert.equal(ownerScaleoutGate.observed_target_count, 2);
   assert.equal(ownerScaleoutGate.target_count, 2);

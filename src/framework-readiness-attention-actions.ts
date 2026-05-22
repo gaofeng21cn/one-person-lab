@@ -172,6 +172,14 @@ function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonReco
     production_consumption_ready: followthrough.production_consumption_ready === true,
     open_gate_count: numberValue(followthrough.open_gate_count),
     open_gate_ids: stringList(followthrough.open_gate_ids),
+    manual_required_gates: recordList(followthrough.gate_items)
+      .filter((gate) => gate.manual_required === true)
+      .map((gate) => ({
+        gate_id: stringValue(gate.gate_id),
+        reason: stringValue(gate.manual_required_reason),
+        blockers: stringList(gate.manual_required_blockers),
+        next_safe_action: record(gate.next_safe_action),
+      })),
     required_return_shapes: stringList(followthrough.required_return_shapes),
     full_detail_section: 'attention_first_payload.evidence_after_contract.oma_production_consumption_followthrough',
     authority: 'operator_attention_only',
