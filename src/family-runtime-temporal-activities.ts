@@ -1,6 +1,10 @@
 import { heartbeat } from '@temporalio/activity';
 
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
+import {
+  DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+} from './family-runtime-temporal-constants.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import {
   normalizeTypedStageCloseoutPacket,
@@ -14,27 +18,39 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     stage_id: input.stage_id,
     checkpoint_refs: input.checkpoint_refs ?? [],
   });
-  return {
-    surface_kind: 'temporal_codex_stage_activity_receipt',
-    activity_kind: 'codex_stage_activity',
-    activity_status: 'completed',
-    stage_attempt_id: input.stage_attempt_id,
-    stage_id: input.stage_id,
-    executor_kind: input.executor_kind,
-    checkpoint_refs: input.checkpoint_refs ?? [],
-    stage_packet_ref: input.stage_packet_ref ?? null,
-    ...await runAgentStageRunner({
-      attempt: input as unknown as Record<string, unknown>,
-      stagePacketRef: input.stage_packet_ref,
-      runnerMode: input.codex_stage_runner?.runner_mode,
-      observedAt,
-      timeoutMs: input.codex_stage_runner?.timeout_ms,
-    }),
-    authority_boundary: {
-      opl: 'activity_packet_and_receipt_transport_only',
-      domain: 'truth_quality_artifact_gate_owner',
-    },
-  };
+  const heartbeatInterval = setInterval(() => {
+    heartbeat({
+      stage_attempt_id: input.stage_attempt_id,
+      stage_id: input.stage_id,
+      checkpoint_refs: input.checkpoint_refs ?? [],
+      heartbeat_kind: 'codex_stage_activity_live_process',
+    });
+  }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
+  try {
+    return {
+      surface_kind: 'temporal_codex_stage_activity_receipt',
+      activity_kind: 'codex_stage_activity',
+      activity_status: 'completed',
+      stage_attempt_id: input.stage_attempt_id,
+      stage_id: input.stage_id,
+      executor_kind: input.executor_kind,
+      checkpoint_refs: input.checkpoint_refs ?? [],
+      stage_packet_ref: input.stage_packet_ref ?? null,
+      ...await runAgentStageRunner({
+        attempt: input as unknown as Record<string, unknown>,
+        stagePacketRef: input.stage_packet_ref,
+        runnerMode: input.codex_stage_runner?.runner_mode,
+        observedAt,
+        timeoutMs: input.codex_stage_runner?.timeout_ms ?? DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+      }),
+      authority_boundary: {
+        opl: 'activity_packet_and_receipt_transport_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    };
+  } finally {
+    clearInterval(heartbeatInterval);
+  }
 }
 
 export async function domainSidecarDispatchActivity(input: TemporalStageAttemptWorkflowInput) {

@@ -61,6 +61,33 @@ test('Codex stage activity binds stage packet from checkpoint refs before provid
   assert.equal(activity.progress_summary.stage_packet_ref, 'packet:from-checkpoint');
 });
 
+test('Codex stage activity projection keeps Codex CLI attempts live by default', () => {
+  const previousMode = process.env.OPL_CODEX_STAGE_RUNNER_MODE;
+  try {
+    delete process.env.OPL_CODEX_STAGE_RUNNER_MODE;
+    const activity = buildCodexStageActivityInput({
+      attempt: {
+        stage_attempt_id: 'sat_codex_projection_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: '/tmp/mas',
+        },
+        checkpoint_refs: ['packet:from-checkpoint'],
+      },
+    });
+
+    assert.equal(activity.runner_status.runner_mode, 'codex_cli');
+    assert.equal(activity.runner_status.dry_run_transport, false);
+  } finally {
+    if (previousMode === undefined) {
+      delete process.env.OPL_CODEX_STAGE_RUNNER_MODE;
+    } else {
+      process.env.OPL_CODEX_STAGE_RUNNER_MODE = previousMode;
+    }
+  }
+});
+
 test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
   await assert.rejects(
     () => runCodexStageRunner({
@@ -340,7 +367,7 @@ exit 64
       runnerMode: 'codex_cli',
     });
 
-    assert.equal(receipt.runner_status.timeout_ms, 600_000);
+    assert.equal(receipt.runner_status.timeout_ms, 3_600_000);
     assert.equal(receipt.runner_status.exit_code, 0);
   } finally {
     if (previousCodexBin === undefined) {
