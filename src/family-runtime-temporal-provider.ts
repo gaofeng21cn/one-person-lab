@@ -517,7 +517,6 @@ function temporalProductionTypedCloseoutPacket() {
     consumed_refs: ['evidence:temporal-production-residency'],
     consumed_memory_refs: ['memory:publication-route-production-residency'],
     writeback_receipt_refs: ['memory-writeback:temporal-production-residency-receipt'],
-    rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
     next_owner: 'med-autoscience',
     domain_ready_verdict: 'domain_gate_pending',
     route_impact: {
@@ -995,11 +994,7 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   };
 }
 
-export function buildTemporalStageAttemptWorkflowInputForTest(
-  input: TemporalStageAttemptWorkflowInput,
-): TemporalStageAttemptWorkflowInput {
-  return input;
-}
+export function buildTemporalStageAttemptWorkflowInputForTest(input: TemporalStageAttemptWorkflowInput): TemporalStageAttemptWorkflowInput { return input; }
 
 export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return familyRuntimePaths(); }
 
