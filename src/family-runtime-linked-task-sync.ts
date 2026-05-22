@@ -168,6 +168,7 @@ export function blockLinkedMasDefaultExecutorTask(
   const task = linkedMasDefaultExecutorTask(db, input.row);
   if (
     !task
+    || hasLaterLinkedAttempt(db, input.row)
     || hasLaterAcceptedCloseoutAttempt(db, input.row)
     || (
       task.status !== 'succeeded'

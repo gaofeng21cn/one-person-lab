@@ -459,6 +459,59 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
   });
 });
 
+test('Older terminal blocker cannot overwrite newer live redrive attempt for the same MAS default executor task', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-newer-redrive-running',
+      status: 'succeeded',
+      createdAt,
+    });
+    const olderAttempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-newer-redrive-running',
+      sourceFingerprint: 'sha256:older-blocked-dispatch',
+    });
+    const newerAttempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'domain_owner/default-executor-dispatch',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/mas', attempt: 'newer-redrive' },
+      sourceFingerprint: 'sha256:newer-redrive-dispatch',
+      executorKind: 'codex_cli',
+      taskId: 'task-mas-default-newer-redrive-running',
+      checkpointRefs: ['dispatch:mas-default-writer-start'],
+    }).attempt;
+    db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+      newerAttempt.stage_attempt_id,
+    );
+
+    syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      blockedTemporalObservation({
+        stageAttemptId: olderAttempt.stage_attempt_id,
+        workflowId: olderAttempt.workflow_id,
+        createdAt,
+      }),
+    );
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-newer-redrive-running',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const olderSynced = inspectStageAttempt(db, olderAttempt.stage_attempt_id);
+    const blockerTaskEvents = db.prepare(
+      "SELECT COUNT(*) AS count FROM events WHERE task_id = ? AND event_type = 'stage_attempt_terminal_blocked_task'",
+    ).get('task-mas-default-newer-redrive-running') as { count: number };
+
+    assert.equal(olderSynced.status, 'blocked');
+    assert.equal(olderSynced.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(inspectStageAttempt(db, newerAttempt.stage_attempt_id).status, 'running');
+    assert.equal(task.status, 'succeeded');
+    assert.equal(task.last_error, null);
+    assert.equal(task.dead_letter_reason, null);
+    assert.equal(blockerTaskEvents.count, 0);
+  });
+});
+
 test('Temporal completed terminal observation ingests closeout refs into local attempt ledger', () => {
   withStageAttemptDb((db) => {
     const createdAt = new Date().toISOString();
