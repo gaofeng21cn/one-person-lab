@@ -902,6 +902,14 @@ export function buildPublicCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime app-release-evidence verify':
+      cloneCommandSpec(commandSpecs['runtime app-release-evidence verify'], {
+        usage: 'opl runtime app-release-evidence verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime app-release-evidence verify --receipt-ref opl://app-release-user-path-evidence/release%3Apkg',
+        ],
+        group: 'runtime',
+      }),
     'runtime app-release-evidence list':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence list'], {
         usage: 'opl runtime app-release-evidence list',

@@ -209,7 +209,7 @@ OPL Agent Lab 已把 ARIS 风格的日志驱动机制优化、独立 AI reviewer
 
 当前未闭合项按下面类别读取，具体数量和 drilldown 以 `opl framework readiness --family-defaults --json` 为入口：
 
-- App release / user path：默认 App/operator 与 framework readiness 现在暴露 `release_package_refs`、`screenshot_refs`、`reload_prompt_user_path_refs`、`provider_state_linkage_refs` 和 `long_operator_evidence_refs` 五类 refs-only evidence gate；发布包、截图、reload prompt 真实用户路径、provider state 联动和长时 operator evidence 仍必须由真实 release/App/live/operator payload 或 typed blocker ref 回填。
+- App release / user path：默认 App/operator 与 framework readiness 现在暴露 `release_package_refs`、`screenshot_refs`、`reload_prompt_user_path_refs`、`provider_state_linkage_refs` 和 `long_operator_evidence_refs` 五类 refs-only evidence gate，并把 App release/user-path evidence record/verify 纳入 `runtime action execute` safe action route；发布包、截图、reload prompt 真实用户路径、provider state 联动和长时 operator evidence 仍必须由真实 release/App/live/operator payload 或 typed blocker ref 回填，ledger verified 也不等于 App release ready 或 production ready。
 - Domain owner-chain 与 live evidence scaleout：MAS/MAG/RCA 在真实 workspace 中持续产出 owner receipt、typed blocker、no-regression evidence、expected receipt instance、monitor freshness、memory/artifact/lifecycle receipt、long-soak refs 和 no-forbidden-write proof；OPL worklist / workorder accounting 闭合不等于这些真实生产证据已经完成。
 - MAS physical thinning：retained runtime transport / SQLite / runner / workbench sidecar 只在 no-active-caller、OPL parity、domain receipt parity、focused tests 与 provenance/tombstone refs 同时成立后删除、archive 或 tombstone。
 - RCA naming hygiene tail：历史 `managed` / runtime / gateway / session / sidecar 命名继续降到 provenance、semantic-id 或 tombstone，不恢复 compatibility alias。

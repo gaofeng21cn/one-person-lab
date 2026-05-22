@@ -101,7 +101,6 @@ export function buildInternalCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
-    ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
     help: {
       usage: 'opl help [command]',
       summary: 'Show the top-level command surface or command-scoped runnable examples.',
@@ -335,6 +334,7 @@ export function buildInternalCommandSpecs(
         };
       },
     },
+    ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
     'runtime action execute': {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       summary:

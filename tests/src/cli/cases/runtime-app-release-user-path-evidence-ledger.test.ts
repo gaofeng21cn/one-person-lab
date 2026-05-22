@@ -10,11 +10,68 @@ import {
 test('runtime App release evidence CLI records refs-only user-path evidence without readiness claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-state-'));
   try {
-    const initial = runCli(['runtime', 'app-operator-drilldown'], {
+    const initial = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(initial.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(initial.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 0);
+    assert.equal(initial.summary.app_release_user_path_evidence_action_route_count, 1);
+    assert.equal(initial.summary.app_release_user_path_evidence_record_action_route_count, 1);
+    assert.equal(initial.summary.app_release_user_path_evidence_verify_action_route_count, 0);
+    const initialRecordRoute = initial.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+    );
+    assert.equal(initialRecordRoute.action_kind, 'app_release_user_path_evidence_receipt_record');
+    assert.equal(initialRecordRoute.owner, 'opl');
+    assert.equal(initialRecordRoute.route_target_kind, 'opl_cli');
+    assert.equal(initialRecordRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(initialRecordRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(initialRecordRoute.route_requires_domain_or_app_payload, true);
+    assert.equal(initialRecordRoute.can_close_without_domain_or_app_payload, false);
+    assert.equal(initialRecordRoute.payload_owner, 'app_live_operator_or_release_owner');
+    assert.deepEqual(initialRecordRoute.payload_template, {
+      release_package_refs: [],
+      screenshot_refs: [],
+      reload_prompt_user_path_refs: [],
+      provider_state_linkage_refs: [],
+      long_operator_evidence_refs: [],
+      typed_blocker_refs: [],
+    });
+    assert.equal(initialRecordRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(initialRecordRoute.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(initialRecordRoute.authority_boundary.can_claim_release_ready, false);
+    assert.equal(initialRecordRoute.authority_boundary.can_claim_production_ready, false);
+    assert.equal(initialRecordRoute.authority_boundary.can_close_app_release_user_path, false);
+    assert.equal(
+      initial.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === initialRecordRoute.action_id && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+
+    const dryRun = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+      '--dry-run',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).runtime_operator_action_execution;
+    assert.equal(dryRun.execution.execution_kind, 'opl_cli_app_release_user_path_evidence_apply');
+    assert.equal(dryRun.execution.execution_status, 'dry_run');
+    assert.equal(
+      dryRun.execution.result.app_release_user_path_evidence_payload_preflight.status,
+      'payload_required',
+    );
+    assert.equal(
+      dryRun.execution.result.app_release_user_path_evidence_payload_preflight
+        .empty_payload_template_is_success_evidence,
+      false,
+    );
 
     const payload = {
       release_package_refs: ['release:package/app-v0.1.0.dmg'],
@@ -23,16 +80,23 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       provider_state_linkage_refs: ['provider-state:temporal/cadence-linked'],
       long_operator_evidence_refs: ['long-operator:app/soak-4h'],
     };
-    const recordOutput = runCli([
+    const recordExecution = runCli([
       'runtime',
-      'app-release-evidence',
-      'record',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
       '--payload',
       JSON.stringify(payload),
     ], {
       OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    }).runtime_operator_action_execution;
 
+    assert.equal(recordExecution.execution.execution_kind, 'opl_cli_app_release_user_path_evidence_apply');
+    assert.equal(recordExecution.execution.execution_status, 'executed');
+    assert.equal(recordExecution.authority_boundary.can_write_domain_truth, false);
+    const recordOutput =
+      recordExecution.execution.result.app_release_user_path_evidence_ledger_record;
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.recorded_receipt_count, 1);
     assert.equal(recordOutput.receipt_refs.length, 1);
@@ -56,12 +120,15 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(listOutput.authority_boundary.refs_only, true);
     assert.equal(listOutput.authority_boundary.can_claim_production_ready, false);
 
-    const summary = runCli(['runtime', 'app-operator-drilldown'], {
+    const summary = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 0);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(summary.summary.app_release_user_path_evidence_action_route_count, 1);
+    assert.equal(summary.summary.app_release_user_path_evidence_record_action_route_count, 0);
+    assert.equal(summary.summary.app_release_user_path_evidence_verify_action_route_count, 1);
     assert.equal(summary.summary.app_release_user_path_production_user_path_ready, false);
     assert.equal(summary.summary.app_release_user_path_release_ready_claimed, false);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
@@ -74,6 +141,39 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(evidence.release_ready_claimed, false);
     assert.equal(evidence.production_ready_claimed, false);
     assert.equal(evidence.authority_boundary.can_close_app_release_user_path, false);
+    const verifyRoute = summary.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'app_release_user_path_evidence:one_person_lab_app_release_user_path:verify',
+    );
+    assert.equal(verifyRoute.action_kind, 'app_release_user_path_evidence_receipt_verify');
+    assert.equal(verifyRoute.route_requires_domain_or_app_payload, false);
+    assert.equal(verifyRoute.authority_boundary.can_claim_production_ready, false);
+
+    const verifyExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).runtime_operator_action_execution;
+    assert.equal(verifyExecution.execution.execution_kind, 'opl_cli_app_release_user_path_evidence_apply');
+    assert.equal(
+      verifyExecution.execution.result.app_release_user_path_evidence_ledger_verify.status,
+      'verified',
+    );
+    assert.equal(
+      verifyExecution.execution.result.app_release_user_path_evidence_ledger_verify
+        .receipt.authority_boundary.can_claim_release_ready,
+      false,
+    );
+
+    const verifiedSummary = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    assert.equal(verifiedSummary.summary.app_release_user_path_evidence_action_route_count, 0);
+    assert.equal(verifiedSummary.summary.app_release_user_path_production_ready_claimed, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

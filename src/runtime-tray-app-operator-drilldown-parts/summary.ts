@@ -253,6 +253,18 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       ref.action_kind === 'evidence_gate_receipt_record'
       || ref.action_kind === 'evidence_gate_receipt_verify'
     )),
+    app_release_user_path_evidence_action_route_count: countBy(input.actionRefs, (ref) => (
+      ref.action_kind === 'app_release_user_path_evidence_receipt_record'
+      || ref.action_kind === 'app_release_user_path_evidence_receipt_verify'
+    )),
+    app_release_user_path_evidence_record_action_route_count:
+      countBy(input.actionRefs, (ref) =>
+        ref.action_kind === 'app_release_user_path_evidence_receipt_record'
+      ),
+    app_release_user_path_evidence_verify_action_route_count:
+      countBy(input.actionRefs, (ref) =>
+        ref.action_kind === 'app_release_user_path_evidence_receipt_verify'
+      ),
     freshness_signal_count: input.freshness.length,
     source_ref_count: refFamilySummary.source_ref_count,
     artifact_ref_count: refFamilySummary.artifact_ref_count,

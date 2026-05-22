@@ -18,6 +18,11 @@ import {
   assertDomainDispatchEvidencePayloadReady,
   preflightDomainDispatchEvidencePayload,
 } from './domain-dispatch-evidence-payload-preflight.ts';
+import {
+  recordAppReleaseUserPathEvidenceReceipts,
+  verifyAppReleaseUserPathEvidenceReceipt,
+  type AppReleaseUserPathEvidenceReceiptInput,
+} from './app-release-user-path-evidence-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -126,6 +131,116 @@ function refsFromPayload(payload: JsonRecord, keys: string[]) {
     }
     return stringList(value);
   });
+}
+
+function appReleaseUserPathEvidencePayload(payload: JsonRecord): AppReleaseUserPathEvidenceReceiptInput {
+  return {
+    release_package_refs: refsFromPayload(payload, ['release_package_refs', 'release_package_ref']),
+    screenshot_refs: refsFromPayload(payload, ['screenshot_refs', 'screenshot_ref']),
+    reload_prompt_user_path_refs: refsFromPayload(payload, [
+      'reload_prompt_user_path_refs',
+      'reload_prompt_user_path_ref',
+    ]),
+    provider_state_linkage_refs: refsFromPayload(payload, [
+      'provider_state_linkage_refs',
+      'provider_state_linkage_ref',
+    ]),
+    long_operator_evidence_refs: refsFromPayload(payload, [
+      'long_operator_evidence_refs',
+      'long_operator_evidence_ref',
+    ]),
+    typed_blocker_refs: refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']),
+    receipt_ref: stringValue(payload.receipt_ref),
+  };
+}
+
+function appReleaseUserPathEvidenceRefCount(input: AppReleaseUserPathEvidenceReceiptInput) {
+  return [
+    ...(input.release_package_refs ?? []),
+    ...(input.screenshot_refs ?? []),
+    ...(input.reload_prompt_user_path_refs ?? []),
+    ...(input.provider_state_linkage_refs ?? []),
+    ...(input.long_operator_evidence_refs ?? []),
+    ...(input.typed_blocker_refs ?? []),
+  ].length;
+}
+
+function appReleaseUserPathEvidenceDryRunPreflight(input: AppReleaseUserPathEvidenceReceiptInput) {
+  return {
+    surface_kind: 'opl_app_release_user_path_evidence_payload_preflight',
+    status: appReleaseUserPathEvidenceRefCount(input) > 0
+      ? 'payload_refs_observed'
+      : 'payload_required',
+    required_any: [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+      'typed_blocker_refs',
+    ],
+    empty_payload_template_is_success_evidence: false,
+    payload_owner: 'app_live_operator_or_release_owner',
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_release_ready: false,
+      can_claim_production_ready: false,
+      can_close_app_release_user_path: false,
+    },
+  };
+}
+
+function appReleaseUserPathEvidenceExecution(
+  route: JsonRecord,
+  payload: JsonRecord,
+  options: { dryRun: boolean },
+) {
+  const actionKind = stringValue(route.action_kind);
+  if (actionKind === 'app_release_user_path_evidence_receipt_verify') {
+    const receiptRef = stringValue(route.receipt_ref) ?? stringValue(payload.receipt_ref);
+    return {
+      executionKind: 'opl_cli_app_release_user_path_evidence_apply',
+      runtimeArgs: [
+        'runtime',
+        'app-release-evidence',
+        'verify',
+        ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
+      ],
+      result: options.dryRun
+        ? null
+        : {
+            app_release_user_path_evidence_ledger_verify:
+              verifyAppReleaseUserPathEvidenceReceipt({ receipt_ref: receiptRef }),
+          },
+    };
+  }
+
+  const input = appReleaseUserPathEvidencePayload(payload);
+  if (!options.dryRun && appReleaseUserPathEvidenceRefCount(input) === 0) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'App release/user-path evidence record action requires refs-only payload evidence.',
+      {
+        action_id: stringValue(route.action_id),
+        required_any: appReleaseUserPathEvidenceDryRunPreflight(input).required_any,
+      },
+    );
+  }
+  return {
+    executionKind: 'opl_cli_app_release_user_path_evidence_apply',
+    runtimeArgs: ['runtime', 'app-release-evidence', 'record'],
+    result: options.dryRun
+      ? {
+          app_release_user_path_evidence_payload_preflight:
+            appReleaseUserPathEvidenceDryRunPreflight(input),
+        }
+      : {
+          app_release_user_path_evidence_ledger_record:
+            recordAppReleaseUserPathEvidenceReceipts([input]),
+        },
+  };
 }
 
 function stageAttemptCreateArgs(route: JsonRecord, commandOrSurfaceRef: string) {
@@ -362,7 +477,18 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'stage_production_evidence_receipt_verify'
     || actionKind === 'domain_dispatch_evidence_receipt_record'
     || actionKind === 'domain_dispatch_evidence_receipt_verify'
+    || actionKind === 'app_release_user_path_evidence_receipt_record'
+    || actionKind === 'app_release_user_path_evidence_receipt_verify'
   ) {
+    if (
+      actionKind === 'app_release_user_path_evidence_receipt_record'
+      || actionKind === 'app_release_user_path_evidence_receipt_verify'
+    ) {
+      return {
+        executionKind: 'opl_cli_app_release_user_path_evidence_apply',
+        runtimeArgs: stringList(route.opl_cli_args),
+      };
+    }
     return {
       executionKind: 'opl_cli_external_evidence_apply',
       runtimeArgs: externalEvidenceApplyArgs(route, {}, commandOrSurfaceRef, {
@@ -402,6 +528,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'stage_production_evidence_receipt_verify',
       'domain_dispatch_evidence_receipt_record',
       'domain_dispatch_evidence_receipt_verify',
+      'app_release_user_path_evidence_receipt_record',
+      'app_release_user_path_evidence_receipt_verify',
       'provider_scheduler_status',
       'provider_scheduler_install',
       'provider_scheduler_trigger',
@@ -468,6 +596,9 @@ async function executeRoute(
       || actionKind === 'stage_production_evidence_receipt_verify'
       || actionKind === 'domain_dispatch_evidence_receipt_record'
       || actionKind === 'domain_dispatch_evidence_receipt_verify';
+    const appReleaseUserPathEvidenceAction =
+      actionKind === 'app_release_user_path_evidence_receipt_record'
+      || actionKind === 'app_release_user_path_evidence_receipt_verify';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
     const stageEvidenceRecordAction = actionKind === 'stage_production_evidence_receipt_record';
@@ -483,7 +614,15 @@ async function executeRoute(
           dryRun: options.dryRun,
         })
       : null;
-    const { executionKind, runtimeArgs } = externalEvidenceAction
+    const appReleaseUserPathEvidence = appReleaseUserPathEvidenceAction
+      ? appReleaseUserPathEvidenceExecution(route, options.payload, { dryRun: options.dryRun })
+      : null;
+    const { executionKind, runtimeArgs } = appReleaseUserPathEvidence
+      ? {
+          executionKind: appReleaseUserPathEvidence.executionKind,
+          runtimeArgs: appReleaseUserPathEvidence.runtimeArgs,
+        }
+      : externalEvidenceAction
       ? {
           executionKind: 'opl_cli_external_evidence_apply',
           runtimeArgs: stageEvidenceRecord?.runtimeArgs
@@ -498,12 +637,16 @@ async function executeRoute(
       execution_kind: executionKind,
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
-      executed_runtime_command: externalEvidenceAction
+      executed_runtime_command: appReleaseUserPathEvidenceAction
+        ? `opl ${runtimeArgs.join(' ')}`
+        : externalEvidenceAction
         ? `opl ${runtimeArgs.join(' ')}`
         : legacyCleanupAction
           ? `opl ${runtimeArgs.join(' ')}`
           : `opl family-runtime ${runtimeArgs.join(' ')}`,
-      result: options.dryRun
+      result: appReleaseUserPathEvidence
+        ? appReleaseUserPathEvidence.result
+        : options.dryRun
         ? (stageEvidenceRecord
             ? {
                 stage_production_evidence_payload_preflight: stageEvidenceRecord.preflight,

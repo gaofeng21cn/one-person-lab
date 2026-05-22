@@ -45,7 +45,7 @@ import {
 import {
   buildCodexAppRuntimeRole,
 } from './runtime-tray-app-operator-drilldown-parts/codex-app-runtime-role.ts';
-import { appReleaseUserPathEvidenceSourceRef, buildAppReleaseUserPathEvidenceFromRuntime } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+import { appReleaseUserPathEvidenceSourceRef, buildAppReleaseUserPathEvidenceActionRoutes, buildAppReleaseUserPathEvidenceFromRuntime } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
 import {
   buildLegacyCleanupActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/legacy-cleanup-action-routes.ts';
@@ -1138,6 +1138,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildStageProductionEvidenceReceiptRoutes(record(stageProductionEvidence)),
     ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
+    ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),
   ]);

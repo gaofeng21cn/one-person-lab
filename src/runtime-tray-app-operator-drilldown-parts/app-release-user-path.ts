@@ -34,6 +34,31 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function routeAuthorityBoundary() {
+  return {
+    opl: 'app_release_user_path_evidence_ledger_refs_only',
+    payload_owner: 'app_live_operator_or_release_owner',
+    refs_only: true,
+    can_write_domain_truth: false,
+    can_write_memory_body: false,
+    can_read_memory_body: false,
+    can_read_artifact_body: false,
+    can_mutate_artifact_body: false,
+    can_authorize_quality_or_export: false,
+    can_create_owner_receipt: false,
+    can_close_domain_ready: false,
+    can_claim_release_ready: false,
+    can_claim_production_ready: false,
+    can_close_app_release_user_path: false,
+  };
+}
+
+function commandRef(args: string[]) {
+  return `opl ${args.map((arg) => (
+    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
+  )).join(' ')}`;
+}
+
 function refsFromRecord(value: JsonRecord, keys: string[]) {
   return uniqueStrings(keys.flatMap((key) => {
     const entry = value[key];
@@ -283,6 +308,141 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     can_authorize_quality_or_export: false,
     can_close_app_release_user_path: false,
   };
+}
+
+export function buildAppReleaseUserPathEvidenceActionRoutes(evidence: JsonRecord) {
+  const receipts = listAppReleaseUserPathEvidenceReceipts();
+  const recordedReceipt = receipts.find((receipt) => receipt.receipt_status === 'recorded');
+  const targetSurface = stringValue(evidence.target_surface)
+    ?? 'one_person_lab_app_release_user_path';
+  const baseRoute = {
+    role: 'operator_action_route',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    stage_attempt_id: null,
+    domain_id: null,
+    stage_id: null,
+    request_id: 'one_person_lab_app_release_user_path',
+    request_pack_id: 'one_person_lab_app.app_release_user_path_evidence',
+    evidence_route_kind: 'app_release_user_path_evidence',
+    evidence_source_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_release_user_path_evidence',
+    target_surface: targetSurface,
+    payload_owner: 'app_live_operator_or_release_owner',
+    creates_domain_action: false,
+    creates_owner_receipt: false,
+    owner_receipt_refs: [],
+    can_execute: false as const,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_close_domain_ready: false,
+    can_claim_release_ready: false,
+    can_claim_production_ready: false,
+    can_close_app_release_user_path: false,
+    authority_boundary: routeAuthorityBoundary(),
+  };
+
+  if (recordedReceipt) {
+    const args = [
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      recordedReceipt.receipt_ref,
+    ];
+    return [{
+      ...baseRoute,
+      ref: commandRef(args),
+      opl_cli_args: args,
+      action_id: `app_release_user_path_evidence:${targetSurface}:verify`,
+      action_kind: 'app_release_user_path_evidence_receipt_verify',
+      route_status: 'verify_route_available',
+      route_status_detail: 'recorded_app_release_user_path_evidence_receipt_waiting_for_verify',
+      route_requires_domain_or_app_payload: false,
+      can_close_without_domain_or_app_payload: true,
+      required_operator_payload_refs: [],
+      required_evidence_refs: [],
+      required_return_shapes: [],
+      required_receipt_shapes: ['app_release_user_path_evidence_verified_receipt_ref'],
+      receipt_ref: recordedReceipt.receipt_ref,
+      typed_blocker_refs: stringList(recordedReceipt.typed_blocker_refs),
+      open_reason: 'recorded_app_release_user_path_evidence_receipt_requires_verify',
+      payload_requirement: null,
+      payload_template: null,
+      payload_ref_hints: null,
+      payload_template_policy: null,
+    }];
+  }
+
+  if (numberValue(evidence.open_gate_count) <= 0) {
+    return [];
+  }
+
+  const args = ['runtime', 'app-release-evidence', 'record'];
+  return [{
+    ...baseRoute,
+    ref: commandRef(args),
+    opl_cli_args: args,
+    action_id: `app_release_user_path_evidence:${targetSurface}:record`,
+    action_kind: 'app_release_user_path_evidence_receipt_record',
+    route_status: 'record_route_available',
+    route_status_detail: 'app_release_user_path_evidence_waiting_for_app_live_or_release_refs_payload',
+    route_requires_domain_or_app_payload: true,
+    can_close_without_domain_or_app_payload: false,
+    required_operator_payload_refs: [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+      'typed_blocker_refs',
+    ],
+    required_evidence_refs: stringList(evidence.open_gate_ids),
+    required_return_shapes: stringList(evidence.required_return_shapes),
+    required_receipt_shapes: ['app_release_user_path_evidence_receipt_ref'],
+    typed_blocker_refs: stringList(evidence.typed_blocker_refs),
+    open_reason: 'app_release_user_path_evidence_refs_or_typed_blocker_refs_required',
+    payload_requirement:
+      'app_live_operator_or_release_owner_refs_payload_required_to_record_app_release_user_path_evidence_or_typed_blocker',
+    payload_template: {
+      release_package_refs: [],
+      screenshot_refs: [],
+      reload_prompt_user_path_refs: [],
+      provider_state_linkage_refs: [],
+      long_operator_evidence_refs: [],
+      typed_blocker_refs: [],
+    },
+    payload_ref_hints: {
+      release_package_refs_should_cover: [
+        'release_package_receipt_ref',
+        'release_bundle_ref',
+        'app_release_artifact_ref',
+      ],
+      screenshot_refs_should_cover: [
+        'screenshot_evidence_ref',
+        'first_run_screenshot_ref',
+        'operator_screenshot_ref',
+      ],
+      reload_prompt_user_path_refs_should_cover: [
+        'reload_prompt_user_path_receipt_ref',
+        'first_run_log_ref',
+      ],
+      provider_state_linkage_refs_should_cover: [
+        'provider_state_linkage_ref',
+        'provider_cadence_receipt_ref',
+      ],
+      long_operator_evidence_refs_should_cover: [
+        'long_operator_evidence_ref',
+        'operator_long_soak_ref',
+      ],
+      typed_blocker_refs_should_cover: [
+        'typed_blocker_ref',
+      ],
+    },
+    payload_template_policy:
+      'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',
+  }];
 }
 
 export function frameworkAppReleaseUserPathNextSafeAction(evidence: JsonRecord) {

@@ -1,6 +1,7 @@
 import {
   listAppReleaseUserPathEvidenceReceipts,
   recordAppReleaseUserPathEvidenceReceipts,
+  verifyAppReleaseUserPathEvidenceReceipt,
   type AppReleaseUserPathEvidenceReceiptInput,
 } from '../../app-release-user-path-evidence-ledger.ts';
 import { buildUsageError, assertNoArgs } from '../modules/support.ts';
@@ -85,6 +86,29 @@ function parseRuntimeAppReleaseEvidenceRecordArgs(
   return payload;
 }
 
+function parseRuntimeAppReleaseEvidenceVerifyArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let receiptRef: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--receipt-ref') {
+      throw buildUsageError(`Unknown option for runtime app-release-evidence verify: ${token}.`, spec, {
+        option: token,
+      });
+    }
+    const value = args[++index];
+    if (!value) {
+      throw buildUsageError('runtime app-release-evidence verify requires --receipt-ref value.', spec, {
+        option: '--receipt-ref',
+      });
+    }
+    receiptRef = value;
+  }
+  return { receipt_ref: receiptRef };
+}
+
 export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime app-release-evidence record': {
@@ -102,6 +126,23 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
               commandSpecs['runtime app-release-evidence record'],
             ),
           ]),
+      }),
+    },
+    'runtime app-release-evidence verify': {
+      usage: 'opl runtime app-release-evidence verify [--receipt-ref <ref>]',
+      summary:
+        'Verify an existing refs-only App release/user-path evidence receipt without claiming readiness.',
+      examples: [
+        'opl runtime app-release-evidence verify --receipt-ref opl://app-release-user-path-evidence/release%3Apkg',
+      ],
+      handler: (args) => ({
+        app_release_user_path_evidence_ledger_verify:
+          verifyAppReleaseUserPathEvidenceReceipt(
+            parseRuntimeAppReleaseEvidenceVerifyArgs(
+              args,
+              commandSpecs['runtime app-release-evidence verify'],
+            ),
+          ),
       }),
     },
     'runtime app-release-evidence list': {
