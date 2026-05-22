@@ -172,6 +172,12 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
       assert.equal(item.evidence_requirement.requirement_id, item.tail_id);
       assert.equal(item.evidence_requirement.status, 'domain_owned_typed_blocker');
       assert.equal(item.evidence_requirement.typed_blocker_ref, item.typed_blocker_ref);
+      assert.equal(item.evidence_requirement.requirement_is_completion_claim, false);
+      assert.equal(item.evidence_requirement.can_claim_domain_ready, false);
+      assert.equal(item.evidence_requirement.can_claim_production_ready, false);
+      assert.equal(item.evidence_requirement.can_claim_artifact_authority, false);
+      assert.equal(item.evidence_requirement.not_authorized_claims.includes('domain_ready'), true);
+      assert.equal(item.evidence_requirement.not_authorized_claims.includes('production_ready'), true);
       assert.equal(item.worklist_item_is_completion_claim, false);
       assert.equal(item.not_authorized_claims.includes('production_ready'), true);
     }

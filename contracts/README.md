@@ -25,6 +25,8 @@
 9. capacity、monitor、assumption、cohort-loop、replay 和 domain-owner review 信号只进入 `opl framework readiness --family-defaults --json` 的 attention / drilldown refs；需要 stage 级展开时再读 `opl stages readiness --domain <domain>`，不作为独立 launch-authority schema 或默认真相入口。
 10. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete；每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref。
 
+`evidence_requirement.v1` 是上述第 10 条的 canonical requirement payload：每条 requirement 都必须携带 `not_authorized_claims`、`requirement_is_completion_claim=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false` 与 `can_claim_artifact_authority=false`。下游即使只消费 requirement ledger，而不读取完整 worklist item，也不能把 open route、closed refs-only receipt、provider / cleanup receipt 或 domain-owned typed blocker 解释成 domain ready、artifact authority、production ready 或任务完成声明。
+
 ## Surface Budget
 
 当前新增 surface 的默认治理规则由 `contracts/opl-framework/surface-budget-policy.json` 冻结。它把 OPL 默认面限制在 `Minimal Trust Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`：普通 operator / App 默认看 `opl framework readiness --family-defaults --json`；`stages readiness`、`stages graph|proof-bundle|assumptions|cohort-loop|runtime-budget|registry|source-spec|replay-certification` 只作为显式 diagnostic drilldown。

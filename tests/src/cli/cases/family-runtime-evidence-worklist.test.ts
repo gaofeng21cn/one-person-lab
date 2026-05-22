@@ -173,6 +173,12 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(stageItem.evidence_requirement.domain_id, stageItem.domain_id ?? stageItem.owner);
     assert.equal(stageItem.evidence_requirement.status, 'open');
     assert.equal(stageItem.evidence_requirement.current_ref, stageItem.replay_ref);
+    assert.equal(stageItem.evidence_requirement.requirement_is_completion_claim, false);
+    assert.equal(stageItem.evidence_requirement.can_claim_domain_ready, false);
+    assert.equal(stageItem.evidence_requirement.can_claim_production_ready, false);
+    assert.equal(stageItem.evidence_requirement.can_claim_artifact_authority, false);
+    assert.equal(stageItem.evidence_requirement.not_authorized_claims.includes('domain_ready'), true);
+    assert.equal(stageItem.evidence_requirement.not_authorized_claims.includes('production_ready'), true);
     assert.equal(stageItem.not_authorized_claims.includes('domain_ready'), true);
     assert.equal(stageItem.not_authorized_claims.includes('quality_verdict'), true);
     assert.equal(fullWorklist.next_action_ledger.surface_kind, 'opl_family_runtime_evidence_worklist_next_action_ledger');
@@ -193,6 +199,9 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(stageNextAction.evidence_requirement.owner, stageItem.owner);
     assert.equal(stageNextAction.evidence_requirement.domain_id, stageItem.domain_id ?? stageItem.owner);
     assert.equal(stageNextAction.evidence_requirement.status, 'open');
+    assert.equal(stageNextAction.evidence_requirement.requirement_is_completion_claim, false);
+    assert.equal(stageNextAction.evidence_requirement.can_claim_domain_ready, false);
+    assert.equal(stageNextAction.evidence_requirement.can_claim_production_ready, false);
     assert.equal(stageNextAction.next_safe_action_route, stageItem.replay_ref);
     assert.equal(stageNextAction.authority_boundary.can_write_domain_truth, false);
     assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
@@ -209,6 +218,23 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.can_write_domain_truth, false);
     assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.can_read_memory_body, false);
     assert.equal(fullWorklist.evidence_requirement_ledger.authority_boundary.can_claim_production_ready, false);
+    assert.equal(
+      fullWorklist.evidence_requirement_ledger.requirements.every((requirement: {
+        requirement_is_completion_claim: boolean;
+        can_claim_domain_ready: boolean;
+        can_claim_production_ready: boolean;
+        can_claim_artifact_authority: boolean;
+        not_authorized_claims: string[];
+      }) =>
+        requirement.requirement_is_completion_claim === false
+        && requirement.can_claim_domain_ready === false
+        && requirement.can_claim_production_ready === false
+        && requirement.can_claim_artifact_authority === false
+        && requirement.not_authorized_claims.includes('domain_ready')
+        && requirement.not_authorized_claims.includes('production_ready')
+      ),
+      true,
+    );
     assert.equal(fullWorklist.evidence_envelope.surface_kind, 'opl_evidence_envelope_projection');
     assert.equal(fullWorklist.evidence_envelope.summary.envelope_count > 0, true);
     assert.equal(fullWorklist.evidence_envelope.summary.open_envelope_count > 0, true);
@@ -578,6 +604,27 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(
       providerItems.every((item: { receipt_ref: string | null }) =>
         item.receipt_ref === 'opl://family-runtime/provider-slo/cadence-window/current'
+      ),
+      true,
+    );
+    assert.equal(
+      providerItems.every((item: {
+        worklist_item_is_completion_claim: boolean;
+        evidence_requirement: {
+          status: string;
+          requirement_is_completion_claim: boolean;
+          can_claim_domain_ready: boolean;
+          can_claim_production_ready: boolean;
+          not_authorized_claims: string[];
+        };
+      }) =>
+        item.worklist_item_is_completion_claim === false
+        && item.evidence_requirement.status === 'closed'
+        && item.evidence_requirement.requirement_is_completion_claim === false
+        && item.evidence_requirement.can_claim_domain_ready === false
+        && item.evidence_requirement.can_claim_production_ready === false
+        && item.evidence_requirement.not_authorized_claims.includes('domain_ready')
+        && item.evidence_requirement.not_authorized_claims.includes('production_ready')
       ),
       true,
     );

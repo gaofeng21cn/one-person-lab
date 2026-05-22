@@ -30,6 +30,8 @@
 9. descriptor ready、read model 可读、generated-surface proof、provider proof 或 cleanup proof 都不等于 domain ready、artifact ready 或 production evidence complete。
 10. 每个阻断或未闭合边界都必须返回 typed blocker、human gate、receipt conflict 或 route-back ref，不用 fallback verdict 补语义。
 
+`evidence_requirement.v1` 是 family evidence worklist / tail ledger 的 canonical requirement payload。它不只记录当前 ref、receipt 或 typed blocker，也必须显式携带 `not_authorized_claims`、`requirement_is_completion_claim=false`、`can_claim_domain_ready=false`、`can_claim_production_ready=false` 与 `can_claim_artifact_authority=false`。因此 closed refs-only receipt、provider / cleanup receipt、domain-owned typed blocker 和 open safe-action route 都只能表示 requirement 状态，不能被下游 App、scheduler、report 或 automation 误读成 domain ready、artifact authority、production ready 或 closeout 成功。
+
 ## 归属边界
 
 `one-person-lab` 在这里负责：

@@ -24,6 +24,11 @@ export type EvidenceRequirement = {
   evidence_refs: string[];
   expected_refs: string[];
   next_verification_command: string | null;
+  not_authorized_claims: string[];
+  requirement_is_completion_claim: false;
+  can_claim_domain_ready: false;
+  can_claim_production_ready: false;
+  can_claim_artifact_authority: false;
 };
 
 export type EvidenceTailItem = EvidenceRequirement & {
@@ -182,6 +187,17 @@ export function evidenceRequirementFromTailItem(item: JsonRecord): EvidenceRequi
     expected_refs: expectedRefs,
     next_verification_command:
       firstString(nested.next_verification_command, item.next_verification_command),
+    not_authorized_claims: [
+      ...new Set([
+        ...stringList(nested.not_authorized_claims),
+        ...stringList(item.not_authorized_claims),
+        ...DEFAULT_EVIDENCE_NOT_AUTHORIZED_CLAIMS,
+      ]),
+    ],
+    requirement_is_completion_claim: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+    can_claim_artifact_authority: false,
   };
 }
 
@@ -237,6 +253,11 @@ export function evidenceTailItem(input: {
     evidence_refs: input.evidenceRefs ?? [],
     expected_refs: input.expectedRefs ?? [],
     next_verification_command: input.nextVerificationCommand ?? null,
+    not_authorized_claims: input.notAuthorizedClaims ?? [...DEFAULT_EVIDENCE_NOT_AUTHORIZED_CLAIMS],
+    requirement_is_completion_claim: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+    can_claim_artifact_authority: false,
   };
   return {
     ...requirement,
