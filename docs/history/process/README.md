@@ -31,3 +31,4 @@
 近期归档：
 
 - [2026-05-15 One Person Lab App 仓库拆分 Closeout](./plans/2026-05-15-one-person-lab-app-repo-split-closeout.md)：记录 Framework repo、clean App repo 与 upstream-backed GUI shell repo 的拆分 closeout；当前 App/workbench 边界回到 `docs/product/`、App 仓合同和真实 release artifact。
+- [2026-05-22 OPL Active Ledger Consolidation](./plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md)：记录 active proof ledger 与 private-platform line-count ledger 收敛；当前 gap matrix 和 inventory 只保留 owner、gap、分类和完成口径。

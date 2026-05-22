@@ -73,6 +73,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
 | `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、证据门与功能/结构当前 owner。 | 保持 active plan；不承载 dated proof 流水。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
+| `docs/active/standard-agent-private-platform-inventory.md` | `active_inventory` | 跨 MAS/MAG/RCA/OPL Meta Agent 的 private-platform surface 分类、owner subdomain、migration gate 和 forbidden claim 台账。 | 保持分类台账；逐日拆分、line-count closeout 和具体执行流水进 history/provenance。 |
 | `docs/public/*` | `public_support` | 公开 roadmap、task map、operating model 和 UHS 叙事。 | 保持 public 支撑；不作为实现 backlog。 |
 | `docs/product/README.md` 与 `docs/product/opl-public-surface-index.md` | `active_support` | App/workbench、operator/product entry、public surface 与 action routing 边界。 | 保持 product 支撑；App release truth 回 App 仓和 artifact。 |
 | `docs/runtime/opl-runtime-naming-and-boundary-contract.md` | `active_support` | Codex-default executor、Temporal provider、explicit executor adapter 与 retired runtime vocabulary 边界。 | 保持 runtime 支撑；机器 truth 回 contracts/source/CLI/runtime ledger。 |
@@ -130,6 +131,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 长清单治理单独按下面规则执行：
 
 - active 文档中的表格只保留当前 owner、当前状态、下一步 gate 和完成口径；不再逐轮追加 dated proof、closeout 命令、旧分支名或历史 batch。
+- active inventory 文档只保留分类维度、owner subdomain、迁移门和当前 high-risk surface group；逐文件 line-count 变化、拆分过程和某次 worktree closeout 进入 `docs/history/**`。
 - 同一文档内不能同时承担 target state、current truth、active plan、proof ledger 和 history narrative。发现混用时，目标态进 `docs/references/`，current truth 进核心五件套或 owner doc，执行计划进 `docs/active/`，过程流水进 `docs/history/**`。
 - 已闭合的 lane 只在 active 文档保留一行“当前守门面 / 后续回归口径”；完整来龙去脉进入 history/provenance。
 - 如果一张表超过“当前执行决策”需要的粒度，先合并成 capability / owner / evidence gate 三列，再把原始逐条记录归档。
