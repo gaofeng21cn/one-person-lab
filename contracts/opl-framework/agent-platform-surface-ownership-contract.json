@@ -4,6 +4,7 @@
   "owner": "one-person-lab",
   "scope": "Framework-owned classification of generic platform surfaces that standard domain agents must not own privately.",
   "command": "opl agents platform-surfaces [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]",
+  "default_caller_readiness_command": "opl agents default-callers [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]",
   "framework_owned_generic_subdomains": [
     "generated_cli_mcp_skill_product_shell",
     "generated_sidecar_dispatch_shell",
@@ -28,6 +29,10 @@
     "active_caller_cutover_required": true,
     "domain_owner_receipt_or_typed_blocker_required": true,
     "no_forbidden_write_proof_required": true,
+    "tombstone_or_provenance_ref_required": true,
+    "default_caller_readiness_surface": "opl_agent_generated_default_caller_readiness_report",
+    "default_caller_readiness_is_structural_replacement_evidence_only": true,
+    "default_caller_readiness_can_authorize_physical_delete": false,
     "descriptor_ready_is_not_production_ready": true
   },
   "authority_boundary": {

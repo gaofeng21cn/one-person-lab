@@ -3,7 +3,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { buildGeneratedAgentInterfaces } from './domain-pack-compiler.ts';
 import { FrameworkContractError } from './contracts.ts';
+import type { FrameworkContracts } from './types.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -86,6 +88,21 @@ const RETAINED_DOMAIN_AUTHORITY = [
   'typed_blocker_materialization',
   'domain_specific_policy_rubric_or_quality_gate',
 ] as const;
+
+const DEFAULT_CALLER_TARGET_KINDS = [
+  'opl_generated_surface',
+  'opl_hosted_surface',
+  'domain_handler_target',
+  'refs_only_domain_adapter_target',
+] as const;
+
+const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
+  product_entry: ['product_entry', 'product_entry_manifest'],
+  product_status: ['product_status', 'status_read_model'],
+  product_session: ['product_session', 'product_entry_manifest', 'status_read_model'],
+  sidecar: ['sidecar', 'sidecar_export_dispatch'],
+  workbench: ['workbench', 'workbench_drilldown'],
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -207,6 +224,7 @@ function defaultFamilyRepoInputs(): RepoInput[] {
 
 function parseRepoArgs(args: string[], commandName: string): RepoInput[] {
   const repos: RepoInput[] = [];
+  const usage = `${commandName} [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]`;
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token === '--repo-dir' && args[index + 1]) {
@@ -222,7 +240,7 @@ function parseRepoArgs(args: string[], commandName: string): RepoInput[] {
       const separator = value.indexOf('=');
       if (separator <= 0 || separator === value.length - 1) {
         throw new FrameworkContractError('cli_usage_error', `${commandName} --agent expects <agent_id>=<repo_dir>.`, {
-          usage: `${commandName} [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]`,
+          usage,
         });
       }
       repos.push({
@@ -235,15 +253,15 @@ function parseRepoArgs(args: string[], commandName: string): RepoInput[] {
     if (token === '--family-defaults') {
       continue;
     }
-    throw new FrameworkContractError('cli_usage_error', `Unknown platform surface option: ${token}.`, {
-      usage: `${commandName} [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]`,
+    throw new FrameworkContractError('cli_usage_error', `Unknown ${commandName} option: ${token}.`, {
+      usage,
     });
   }
 
   const selected = repos.length > 0 ? repos : defaultFamilyRepoInputs();
   if (selected.length === 0) {
     throw new FrameworkContractError('cli_usage_error', `${commandName} could not discover family agent repos.`, {
-      usage: `${commandName} [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]`,
+      usage,
       default_repo_directories: DEFAULT_FAMILY_REPOS.map((repo) => repo.directory),
       env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
     });
@@ -484,6 +502,232 @@ export function buildAgentPlatformSurfaceOwnershipForRepo(repoDir: string, reque
       domain_repos_keep_truth_verdict_artifact_memory_and_receipt_authority: true,
       report_can_claim_domain_ready: false,
       report_can_claim_production_ready: false,
+    },
+  };
+}
+
+function generatedInterfaceBundleForRepo(repoDir: string) {
+  const result = buildGeneratedAgentInterfaces({} as FrameworkContracts, ['--repo-dir', repoDir]);
+  return result.generated_agent_interfaces as JsonRecord;
+}
+
+function defaultCallerSurfaceGates(bundle: JsonRecord) {
+  const wrapperBundle = isRecord(bundle.generated_wrapper_bundle) ? bundle.generated_wrapper_bundle : {};
+  const targetProof = isRecord(bundle.active_caller_target_proof) ? bundle.active_caller_target_proof : {};
+  const targetBySurface = new Map(
+    recordList(targetProof.surface_targets).map((target) => [
+      optionalString(target.surface_id) ?? '',
+      target,
+    ]),
+  );
+  return recordList(wrapperBundle.descriptor_scope).map((scope) => {
+    const surfaceId = optionalString(scope.surface_id) ?? 'unknown_surface';
+    const canonicalTargetIds = DEFAULT_CALLER_CANONICAL_TARGET_IDS[surfaceId] ?? [surfaceId];
+    const target = canonicalTargetIds
+      .map((targetId) => targetBySurface.get(targetId))
+      .find((candidate) => isRecord(candidate));
+    const activeCallerProofStatus =
+      optionalString(scope.active_caller_proof_status)
+      ?? optionalString(target?.proof_status);
+    const activeCallerTargetKind =
+      optionalString(scope.active_caller_target_kind)
+      ?? optionalString(target?.target_kind);
+    const activeCallerModuleId =
+      optionalString(scope.active_caller_module_id)
+      ?? optionalString(target?.active_caller_module_id);
+    const blockers = stringList(scope.blockers);
+    const descriptorStatus = optionalString(scope.descriptor_status);
+    const ready = optionalString(scope.status) === 'ready'
+      && blockers.length === 0
+      && Boolean(activeCallerProofStatus)
+      && !activeCallerProofStatus?.startsWith('blocked')
+      && Boolean(activeCallerTargetKind)
+      && DEFAULT_CALLER_TARGET_KINDS.includes(activeCallerTargetKind as typeof DEFAULT_CALLER_TARGET_KINDS[number]);
+    return {
+      surface_id: surfaceId,
+      descriptor_kind: optionalString(scope.descriptor_kind),
+      owner: 'one-person-lab',
+      generated_surface_owner: optionalString(scope.generated_surface_owner) ?? 'one-person-lab',
+      status: ready ? 'ready_for_default_caller_cutover' : 'blocked',
+      descriptor_status: descriptorStatus,
+      active_caller_target_kind: activeCallerTargetKind,
+      active_caller_proof_status: activeCallerProofStatus,
+      active_caller_module_id: activeCallerModuleId,
+      canonical_target_surface_ids: canonicalTargetIds,
+      blockers,
+      domain_repo_role: optionalString(scope.domain_repo_role),
+      domain_repo_can_own_generated_surface: false,
+      default_caller_owner: 'one-person-lab',
+    };
+  });
+}
+
+export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, requestedAgentId?: string | null) {
+  const resolvedRepoDir = path.resolve(repoDir);
+  const domainId = normalizeDomainSelection(readDomainId(resolvedRepoDir, requestedAgentId ?? null));
+  const platformSurfaceOwnership = buildAgentPlatformSurfaceOwnershipForRepo(resolvedRepoDir, requestedAgentId);
+  try {
+    const bundle = generatedInterfaceBundleForRepo(resolvedRepoDir);
+    const cutoverProof = isRecord(bundle.active_caller_cutover_proof) ? bundle.active_caller_cutover_proof : {};
+    const targetProof = isRecord(bundle.active_caller_target_proof) ? bundle.active_caller_target_proof : {};
+    const wrapperBundle = isRecord(bundle.generated_wrapper_bundle) ? bundle.generated_wrapper_bundle : {};
+    const surfaceGates = defaultCallerSurfaceGates(bundle);
+    const surfaceBlockers = surfaceGates
+      .filter((gate) => gate.status !== 'ready_for_default_caller_cutover')
+      .map((gate) => `default_caller_surface_blocked:${gate.surface_id}`);
+    const blockers = [
+      optionalString(bundle.status) === 'ready'
+        ? null
+        : `generated_interfaces_status_not_ready:${optionalString(bundle.status) ?? 'missing'}`,
+      optionalString(bundle.generated_surface_owner) === 'one-person-lab'
+        ? null
+        : `generated_surface_owner_not_opl:${optionalString(bundle.generated_surface_owner) ?? 'missing'}`,
+      bundle.domain_repo_can_own_generated_surface === false
+        ? null
+        : 'domain_repo_can_own_generated_surface_must_be_false',
+      optionalString(wrapperBundle.status) === 'ready'
+        ? null
+        : `generated_wrapper_bundle_status_not_ready:${optionalString(wrapperBundle.status) ?? 'missing'}`,
+      optionalString(targetProof.status) === 'ready'
+        ? null
+        : `active_caller_target_proof_not_ready:${optionalString(targetProof.status) ?? 'missing'}`,
+      optionalString(cutoverProof.status) === 'cutover_to_opl_generated_or_domain_handler_targets'
+        ? null
+        : `active_caller_cutover_not_ready:${optionalString(cutoverProof.status) ?? 'missing'}`,
+      cutoverProof.claims_live_soak_complete === true
+        ? 'cutover_proof_must_not_claim_live_soak_complete'
+        : null,
+      cutoverProof.claims_domain_ready === true
+        ? 'cutover_proof_must_not_claim_domain_ready'
+        : null,
+      platformSurfaceOwnership.status === 'passed'
+        ? null
+        : 'platform_surface_ownership_blocked',
+      ...surfaceBlockers,
+    ].filter((entry): entry is string => Boolean(entry));
+    const replacementReady = blockers.length === 0;
+    return {
+      surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
+      version: 'v1',
+      owner: 'one-person-lab',
+      repo_dir: resolvedRepoDir,
+      requested_agent_id: requestedAgentId ?? null,
+      domain_id: domainId,
+      status: replacementReady ? 'ready_domain_evidence_required' : 'blocked',
+      summary: {
+        generated_default_caller_surface_count: surfaceGates.length,
+        ready_surface_count: surfaceGates.length - surfaceBlockers.length,
+        blocked_surface_count: surfaceBlockers.length,
+        blocker_count: blockers.length,
+      },
+      default_caller_owner: 'one-person-lab',
+      source_commands: {
+        generated_interfaces: `opl agents interfaces --repo-dir ${resolvedRepoDir} --json`,
+        platform_surfaces: `opl agents platform-surfaces --repo-dir ${resolvedRepoDir} --json`,
+      },
+      generated_interface_status: optionalString(bundle.status),
+      generated_wrapper_bundle_status: optionalString(wrapperBundle.status),
+      active_caller_target_proof_status: optionalString(targetProof.status),
+      active_caller_cutover_proof_status: optionalString(cutoverProof.status),
+      surface_gates: surfaceGates,
+      blockers,
+      deletion_gate: {
+        replacement_parity: replacementReady ? 'ready' : 'blocked',
+        active_caller_cutover: replacementReady ? 'ready' : 'blocked',
+        domain_owner_receipt_or_typed_blocker: 'required_from_domain_owner_before_physical_delete',
+        no_forbidden_write_proof: 'required_before_physical_delete',
+        tombstone_or_provenance_ref: 'required_before_physical_delete',
+        physical_delete_authorized: false,
+        physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
+      },
+      authority_boundary: {
+        projection_can_claim_domain_ready: false,
+        projection_can_claim_quality_verdict: false,
+        projection_can_claim_artifact_authority: false,
+        projection_can_claim_production_ready: false,
+        projection_can_authorize_domain_repo_physical_delete: false,
+        opl_default_caller_can_route_to_domain_handler_or_refs_adapter: true,
+        domain_truth_verdict_artifact_and_owner_receipt_stay_in_domain: true,
+      },
+    };
+  } catch (error) {
+    return {
+      surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
+      version: 'v1',
+      owner: 'one-person-lab',
+      repo_dir: resolvedRepoDir,
+      requested_agent_id: requestedAgentId ?? null,
+      domain_id: domainId,
+      status: 'blocked',
+      summary: {
+        generated_default_caller_surface_count: 0,
+        ready_surface_count: 0,
+        blocked_surface_count: 0,
+        blocker_count: 1,
+      },
+      blockers: [
+        `generated_default_caller_projection_error:${error instanceof FrameworkContractError ? error.code : 'unknown'}`,
+      ],
+      error: error instanceof Error ? error.message : String(error),
+      deletion_gate: {
+        replacement_parity: 'blocked',
+        active_caller_cutover: 'blocked',
+        domain_owner_receipt_or_typed_blocker: 'required_from_domain_owner_before_physical_delete',
+        no_forbidden_write_proof: 'required_before_physical_delete',
+        tombstone_or_provenance_ref: 'required_before_physical_delete',
+        physical_delete_authorized: false,
+        physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
+      },
+      authority_boundary: {
+        projection_can_claim_domain_ready: false,
+        projection_can_claim_quality_verdict: false,
+        projection_can_claim_artifact_authority: false,
+        projection_can_claim_production_ready: false,
+        projection_can_authorize_domain_repo_physical_delete: false,
+      },
+    };
+  }
+}
+
+export function buildAgentDefaultCallerReadinessReport(args: string[]) {
+  const repos = parseRepoArgs(args, 'opl agents default-callers');
+  const reports = repos.map((repo) => (
+    buildAgentDefaultCallerReadinessForRepo(repo.repo_dir, repo.requested_agent_id)
+  ));
+  const blockedCount = reports.filter((report) => report.status === 'blocked').length;
+  return {
+    version: 'g1',
+    agent_default_caller_readiness: {
+      surface_kind: 'opl_agent_generated_default_caller_readiness_report',
+      owner: 'one-person-lab',
+      status: blockedCount === 0 ? 'ready_domain_evidence_required' : 'blocked',
+      summary: {
+        total_repo_count: reports.length,
+        ready_domain_evidence_required_count: reports.length - blockedCount,
+        blocked_count: blockedCount,
+        generated_default_caller_surface_count: reports.reduce(
+          (total, report) => total + Number(report.summary.generated_default_caller_surface_count || 0),
+          0,
+        ),
+        blocked_surface_count: reports.reduce(
+          (total, report) => total + Number(report.summary.blocked_surface_count || 0),
+          0,
+        ),
+      },
+      migration_gate_policy: {
+        opl_generated_default_caller_readiness_is_structural_replacement_evidence: true,
+        domain_owner_receipt_or_typed_blocker_still_required: true,
+        no_forbidden_write_proof_still_required: true,
+        physical_delete_authorized_by_this_report: false,
+      },
+      reports,
+      authority_boundary: {
+        report_can_claim_domain_ready: false,
+        report_can_claim_quality_verdict: false,
+        report_can_claim_artifact_authority: false,
+        report_can_claim_production_ready: false,
+        report_can_authorize_domain_repo_physical_delete: false,
+      },
     },
   };
 }

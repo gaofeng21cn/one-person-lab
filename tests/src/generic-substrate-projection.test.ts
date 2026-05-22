@@ -83,11 +83,8 @@ function createSidecarExportFixture(payload: JsonRecord) {
   const exportPath = path.join(fixtureRoot, 'mas-sidecar-export');
   fs.writeFileSync(
     exportPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-cat <<'JSON'
-${JSON.stringify(payload)}
-JSON
+    `#!/usr/bin/env node
+process.stdout.write(${JSON.stringify(JSON.stringify(payload))});
 `,
     { mode: 0o755 },
   );

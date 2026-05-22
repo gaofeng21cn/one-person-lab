@@ -20,7 +20,10 @@ import {
   buildDomainPackCompilerInspect,
   buildDomainPackCompilerList,
 } from '../../domain-pack-compiler.ts';
-import { buildAgentPlatformSurfaceOwnershipReport } from '../../agent-platform-surface-ownership.ts';
+import {
+  buildAgentDefaultCallerReadinessReport,
+  buildAgentPlatformSurfaceOwnershipReport,
+} from '../../agent-platform-surface-ownership.ts';
 import { buildAgentReadinessSummary } from '../../agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../standard-domain-agent-conformance.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
@@ -583,6 +586,17 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildAgentPlatformSurfaceOwnershipReport(args),
+    },
+    'agents default-callers': {
+      usage: 'opl agents default-callers [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
+      summary:
+        'Project OPL generated and hosted default-caller readiness for standard agents without authorizing domain ready or physical deletion.',
+      examples: [
+        'opl agents default-callers --family-defaults',
+        'opl agents default-callers --agent mas=/path/to/med-autoscience',
+      ],
+      group: 'domain',
+      handler: (args) => buildAgentDefaultCallerReadinessReport(args),
     },
     'agents conformance': {
       usage: 'opl agents conformance [--repo-dir <path> ...] [--agent <id>=<path> ...] [--family-defaults]',
