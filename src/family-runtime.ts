@@ -31,6 +31,7 @@ import {
   runStageAttemptFixtureActivity,
   signalStageAttempt,
   stageAttemptSummary,
+  syncStageAttemptFromTemporalTerminalObservation,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
@@ -786,6 +787,9 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'attempt_inspect') {
+      const currentAttempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      const temporal_query = await queryTemporalStageAttemptReadModel(currentAttempt, { paths });
+      syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
       return {
         version: 'g2',
         family_runtime_stage_attempt: {
@@ -793,6 +797,7 @@ export async function runFamilyRuntime(args: string[]) {
           attempt: await inspectStageAttemptWithCurrentProviderReadiness(db, parsed.stageAttemptId, paths, {
             managedProviderProjection: readMasManagedProviderProjection(),
           }),
+          temporal_query,
         },
       };
     }
@@ -800,11 +805,13 @@ export async function runFamilyRuntime(args: string[]) {
       const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
       const attempt = localQuery.stage_attempt_query.attempt;
       const temporal_query = await queryTemporalStageAttemptReadModel(attempt, { paths });
+      const syncedAttempt = syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
+      const projectedQuery = syncedAttempt ? queryStageAttempt(db, parsed.stageAttemptId) : localQuery;
       return {
         version: 'g2',
         family_runtime_stage_attempt_query: {
           surface_id: 'opl_family_runtime_stage_attempt_query',
-          ...localQuery,
+          ...projectedQuery,
           temporal_query,
         },
       };

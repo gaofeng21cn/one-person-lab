@@ -45,6 +45,7 @@ import { stableId } from './family-runtime-ids.ts';
 import {
   buildTemporalStageAttemptWorkflowContract,
   buildTemporalStageAttemptWorkflowInput,
+  type TemporalStageAttemptWorkflowState,
 } from './family-runtime-temporal.ts';
 import { buildAttemptGenericProjections } from './runtime-tray-stage-attempt-generic-projections.ts';
 import { buildAttemptHumanReviewBurdenBudget } from './family-human-review-budget.ts';
@@ -174,6 +175,42 @@ function appendActivityEventToRow(row: StageAttemptRow, event: Record<string, un
     ),
     normalizeActivityEvent(event),
   ];
+}
+
+type TemporalStageAttemptTerminalObservation = {
+  surface_kind: 'temporal_stage_attempt_query_receipt';
+  provider_kind: 'temporal';
+  stage_attempt_id: string;
+  workflow_id: string;
+  workflow_status?: string;
+  query?: TemporalStageAttemptWorkflowState;
+};
+
+function isTemporalStageAttemptTerminalObservation(
+  observation: unknown,
+): observation is TemporalStageAttemptTerminalObservation {
+  return (
+    typeof observation === 'object'
+    && observation !== null
+    && !Array.isArray(observation)
+    && (observation as Record<string, unknown>).surface_kind === 'temporal_stage_attempt_query_receipt'
+    && (observation as Record<string, unknown>).provider_kind === 'temporal'
+    && typeof (observation as Record<string, unknown>).stage_attempt_id === 'string'
+    && typeof (observation as Record<string, unknown>).workflow_id === 'string'
+  );
+}
+
+function temporalTerminalFailureReason(observation: TemporalStageAttemptTerminalObservation) {
+  if (observation.workflow_status === 'FAILED') {
+    return 'temporal_workflow_failed';
+  }
+  if (observation.workflow_status === 'TIMED_OUT') {
+    return 'temporal_workflow_timed_out';
+  }
+  if (observation.query?.status === 'failed') {
+    return 'temporal_stage_attempt_query_failed';
+  }
+  return null;
 }
 
 export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
@@ -369,6 +406,68 @@ export function inspectStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     });
   }
   return attempt;
+}
+
+export function syncStageAttemptFromTemporalTerminalObservation(
+  db: DatabaseSync,
+  observation: unknown,
+) {
+  if (!isTemporalStageAttemptTerminalObservation(observation)) {
+    return null;
+  }
+  const failureReason = temporalTerminalFailureReason(observation);
+  if (!failureReason) {
+    return null;
+  }
+  const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    observation.stage_attempt_id,
+  ) as StageAttemptRow | undefined;
+  if (!row || row.provider_kind !== 'temporal' || row.workflow_id !== observation.workflow_id) {
+    return null;
+  }
+  if (row.status === 'completed' && row.closeout_receipt_status) {
+    return stageAttemptToPayload(row);
+  }
+  const observedAt = nowIso();
+  const providerRun = {
+    ...parseStageAttemptJsonObject(row.provider_run_json),
+    provider_kind: 'temporal',
+    workflow_id: observation.workflow_id,
+    provider_status: 'failed',
+    completed_at: observedAt,
+    last_heartbeat_at: observedAt,
+    terminal_observation: {
+      source: 'temporal_stage_attempt_query',
+      workflow_status: observation.workflow_status ?? null,
+      query_status: observation.query?.status ?? null,
+      reason: failureReason,
+    },
+  };
+  const activityEvents = appendActivityEventToRow(row, {
+    activity_kind: 'temporal_stage_attempt_terminal_observation',
+    activity_status: 'failed',
+    workflow_status: observation.workflow_status ?? null,
+    query_status: observation.query?.status ?? null,
+    reason: failureReason,
+    authority_boundary: {
+      opl: 'provider_transport_status_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      provider_completion_is_domain_ready: false,
+    },
+  });
+  db.prepare(`
+    UPDATE stage_attempts
+    SET status = 'failed', blocked_reason = ?, provider_run_json = ?, activity_events_json = ?,
+      closeout_receipt_status = NULL, updated_at = ?
+    WHERE stage_attempt_id = ?
+  `).run(
+    failureReason,
+    JSON.stringify(providerRun),
+    JSON.stringify(activityEvents),
+    observedAt,
+    observation.stage_attempt_id,
+  );
+  return inspectStageAttempt(db, observation.stage_attempt_id);
 }
 
 export async function inspectStageAttemptWithCurrentProviderReadiness(
