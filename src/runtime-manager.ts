@@ -168,7 +168,7 @@ const FAMILY_SCHEDULER_REPLACEMENT = {
       migration_priority: 'p2',
       legacy_scheduler_owner: null,
       replacement_role:
-        'RCA consumes OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable DAG scheduling inside domain execution.',
+        'RCA consumes OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable sequencing inside domain execution.',
       required_domain_refs: [
         'product_entry_manifest',
         'visual_owner_receipt_or_typed_blocker',

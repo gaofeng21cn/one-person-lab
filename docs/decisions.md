@@ -387,7 +387,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 首页和 domain-agent 入口继续只露出 `MAS`、`MAG`、`RCA`。
 - 若 MAS 未来继续学习 MDS / DeepScientist 能力，只能按 snapshot provenance、capability classification、owner boundary、parity proof 与 no-history contributor audit 进入 MAS-owned surface 或显式 oracle / intake / diagnostic 引用。
 
-### 决策：冻结 `OPL Runtime Manager` 为 Hermes 上的产品控制面，而不是自有完整 runtime sidecar
+### 决策：冻结 `OPL Runtime Manager` 为 provider-backed 产品控制面，而不是自有完整 runtime sidecar
 
 状态：Runtime Manager 作为产品控制面继续有效；“Hermes 上”这一目标 substrate 已被 2026-05-10 的 Temporal-backed provider 决策 supersede。后续按 provider-backed Runtime Manager 解释。
 
