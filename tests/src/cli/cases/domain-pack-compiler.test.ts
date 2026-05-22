@@ -651,6 +651,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
             'agent/mcp.ts',
             'agent/product-entry.ts',
           ],
+          current_surface_refs: ['cli', 'mcp', 'skill'],
           active_callers: [
             'OPL generated CLI',
             'OPL generated MCP',
@@ -680,6 +681,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           classification: 'declarative_pack_generated_surface',
           owner: 'SampleBriefAgent',
           code_paths: ['runtime/workbench.ts'],
+          current_surface_refs: ['product_status', 'status_read_model', 'workbench_drilldown'],
           active_callers: ['OPL hosted workbench'],
           active_caller_status: 'opl_hosted_workbench_surface_consumes_domain_projection_refs',
           migration_action: 'declare_workbench_projection_inputs_for_opl_app_generated_shell',
@@ -864,6 +866,16 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   );
   assert.equal(cliTarget.target_kind, 'opl_generated_surface');
   assert.equal(cliTarget.active_caller_module_id, 'sample_brief_generated_wrappers');
+  const skillTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'skill',
+  );
+  assert.equal(skillTarget.target_kind, 'opl_generated_surface');
+  assert.equal(skillTarget.active_caller_module_id, 'sample_brief_generated_wrappers');
+  const statusTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'status_read_model',
+  );
+  assert.equal(statusTarget.target_kind, 'opl_generated_surface');
+  assert.equal(statusTarget.active_caller_module_id, 'sample_brief_workbench_projection');
   const sidecarTarget = bundle.active_caller_target_proof.surface_targets.find(
     (target: { surface_id: string }) => target.surface_id === 'sidecar_export_dispatch',
   );

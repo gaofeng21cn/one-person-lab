@@ -290,6 +290,11 @@ function modulePathMatchScore(module: JsonRecord, currentPaths: string[]) {
   return score;
 }
 
+function moduleSurfaceRefMatches(module: JsonRecord, aliases: string[]) {
+  return stringList(module.current_surface_refs)
+    .some((surfaceRef) => matchesAlias(surfaceRef, aliases));
+}
+
 function proofModuleForSurface(descriptor: JsonRecord, surfaceId: string, surface: JsonRecord | null) {
   const audit = isRecord(descriptor.functional_privatization_audit)
     ? descriptor.functional_privatization_audit
@@ -297,6 +302,10 @@ function proofModuleForSurface(descriptor: JsonRecord, surfaceId: string, surfac
   const modules = recordList(audit?.modules);
   const aliases = generatedSurfaceAliases(surfaceId);
   const currentPaths = currentPathsFromHandoff(surface);
+  const explicitSurfaceRefModule = modules.find((module) => moduleSurfaceRefMatches(module, aliases));
+  if (explicitSurfaceRefModule) {
+    return explicitSurfaceRefModule;
+  }
   if (currentPaths.length > 0) {
     const scored = modules
       .map((module, index) => ({ module, index, score: modulePathMatchScore(module, currentPaths) }))
