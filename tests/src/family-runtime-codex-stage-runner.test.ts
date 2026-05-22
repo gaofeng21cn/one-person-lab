@@ -343,6 +343,67 @@ exit 64
   }
 });
 
+test('Codex stage runner captures terminal typed closeout from event_msg payload agent messages', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:codex-event-message-closeout'],
+    consumed_refs: ['paper:draft.md', 'paper/build/review_manuscript.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"timestamp":"2026-05-22T07:31:05.991Z","type":"session_meta","payload":{"id":"thread-event-message-closeout"}}\\n'
+  printf '{"timestamp":"2026-05-22T07:31:30.363Z","type":"event_msg","payload":{"type":"agent_message","message":"progress checkpoint","phase":"commentary"}}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    timestamp: '2026-05-22T07:41:18.326Z',
+    type: 'event_msg',
+    payload: {
+      type: 'agent_message',
+      message: JSON.stringify(closeout),
+      phase: 'final_answer',
+    },
+  })}'
+  printf '{"timestamp":"2026-05-22T07:41:18.380Z","type":"event_msg","payload":{"type":"task_complete","last_agent_message":%s}}\\n' '${JSON.stringify(JSON.stringify(closeout))}'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_event_message_closeout_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:event-message-closeout'],
+      },
+      stagePacketRef: 'packet:event-message-closeout',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-event-message-closeout']);
+    assert.deepEqual(receipt.closeout_packet?.consumed_refs, [
+      'paper:draft.md',
+      'paper/build/review_manuscript.md',
+    ]);
+    assert.equal(receipt.progress_summary.thread_id, 'thread-event-message-closeout');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner ignores non-terminal typed closeout-shaped progress text', async () => {
   const earlyCloseout = {
     surface_kind: 'stage_attempt_closeout_packet',

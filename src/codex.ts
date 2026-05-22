@@ -436,6 +436,26 @@ function parseCodexExecEventFromLine(
   }
 
   const eventType = normalizeInlineText(event.type);
+  if (eventType === 'session_meta') {
+    const payload = event.payload;
+    const payloadRecord = payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? payload as Record<string, unknown>
+      : null;
+    const sessionId = payloadRecord ? normalizeInlineText(payloadRecord.id) : null;
+    return {
+      type: 'thread.started',
+      threadId: sessionId,
+    };
+  }
+
+  if (eventType === 'event_msg') {
+    return parseCodexExecEventFromEventMessage(event, state);
+  }
+
+  if (eventType === 'response_item') {
+    return parseCodexExecEventFromResponseItem(event, state);
+  }
+
   if (eventType === 'thread.started') {
     return {
       type: 'thread.started',
@@ -506,6 +526,94 @@ function parseCodexExecEventFromLine(
   }
 
   return null;
+}
+
+function parseCodexExecEventFromEventMessage(
+  event: Record<string, unknown>,
+  state: CodexExecEventParserState,
+) {
+  const payload = event.payload;
+  const payloadRecord = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : null;
+  if (!payloadRecord) {
+    return null;
+  }
+
+  const payloadType = normalizeInlineText(payloadRecord.type);
+  if (payloadType === 'agent_message') {
+    const text = normalizeChunkText(payloadRecord.message);
+    if (!text) {
+      return null;
+    }
+    return {
+      type: 'agent_message',
+      messageId:
+        normalizeInlineText(payloadRecord.id) ??
+        normalizeInlineText(event.timestamp) ??
+        `codex-turn-${Math.max(state.turnIndex, 1)}-assistant`,
+      text,
+    } satisfies CodexExecEvent;
+  }
+
+  if (payloadType === 'task_complete') {
+    const text = normalizeChunkText(payloadRecord.last_agent_message);
+    if (!text) {
+      return null;
+    }
+    return {
+      type: 'agent_message',
+      messageId:
+        normalizeInlineText(payloadRecord.turn_id) ??
+        normalizeInlineText(event.timestamp) ??
+        `codex-turn-${Math.max(state.turnIndex, 1)}-assistant`,
+      text,
+    } satisfies CodexExecEvent;
+  }
+
+  if (payloadType === 'turn_started') {
+    state.turnIndex += 1;
+    state.activeCommandIds.clear();
+    return { type: 'turn.started' } satisfies CodexExecEvent;
+  }
+
+  if (payloadType === 'turn_completed') {
+    state.activeCommandIds.clear();
+    return { type: 'turn.completed' } satisfies CodexExecEvent;
+  }
+
+  return null;
+}
+
+function parseCodexExecEventFromResponseItem(
+  event: Record<string, unknown>,
+  state: CodexExecEventParserState,
+) {
+  const payload = event.payload;
+  const payloadRecord = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : null;
+  if (!payloadRecord) {
+    return null;
+  }
+
+  const payloadType = normalizeInlineText(payloadRecord.type);
+  if (payloadType !== 'message' || normalizeInlineText(payloadRecord.role) !== 'assistant') {
+    return null;
+  }
+
+  const text = extractAgentMessageText(payloadRecord);
+  if (!text) {
+    return null;
+  }
+  return {
+    type: 'agent_message',
+    messageId:
+      normalizeInlineText(payloadRecord.id) ??
+      normalizeInlineText(event.timestamp) ??
+      `codex-turn-${Math.max(state.turnIndex, 1)}-assistant`,
+    text,
+  } satisfies CodexExecEvent;
 }
 
 function extractAgentMessageText(itemRecord: Record<string, unknown>) {
