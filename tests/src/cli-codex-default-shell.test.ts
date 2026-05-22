@@ -484,6 +484,60 @@ exit 0
   }
 });
 
+test('installed opl launcher routes root help flags to OPL instead of Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-root-help-capture-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN CODEX"
+exit 0
+`);
+
+  try {
+    for (const helpFlag of ['--help', '-h']) {
+      fs.rmSync(capturePath, { force: true });
+      const result = runEntryPathRaw(binPath, [helpFlag], {
+        OPL_CODEX_BIN: codexPath,
+        OPL_SKIP_SKILL_SYNC: '1',
+      });
+
+      assert.match(result.stdout, /One Person Lab \(OPL\)/);
+      assert.match(result.stdout, /family-runtime/);
+      assert.doesNotMatch(result.stdout, /SHOULD NOT RUN CODEX/);
+      assert.equal(result.stderr, '');
+      assert.equal(fs.existsSync(capturePath), false);
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('installed opl launcher keeps exec help on raw Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-exec-help-capture-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\n' "$@" > ${JSON.stringify(capturePath)}
+echo "CODEX EXEC HELP"
+exit 0
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, ['exec', '--help'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+    });
+
+    assert.equal(result.stdout, 'CODEX EXEC HELP\n');
+    assert.equal(result.stderr, '');
+    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
+      'exec',
+      '--help',
+    ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
 test('installed opl launcher routes install to OPL instead of Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-install-capture-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
