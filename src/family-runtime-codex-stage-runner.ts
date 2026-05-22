@@ -340,7 +340,10 @@ export async function runAgentStageRunner(input: {
     ?? normalizeAgentExecutorStageMode(optionalString(input.attempt.executor_kind))
     ?? executorKindFromAttemptPolicy(input.attempt);
   if (!executorKind || executorKind === 'codex_cli') {
-    return await runCodexStageRunner(input);
+    return await runCodexStageRunner({
+      ...input,
+      runnerMode: input.runnerMode ?? (executorKind === 'codex_cli' ? 'codex_cli' : undefined),
+    });
   }
   const stageAttemptExecutorPolicy = executorPolicyFromAttempt(input.attempt);
   const receipt = runAgentExecutor({

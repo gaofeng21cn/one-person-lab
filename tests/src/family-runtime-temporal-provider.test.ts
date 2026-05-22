@@ -43,6 +43,9 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
     task_id: 'task-temporal-test',
     stage_packet_ref: 'packet:analysis',
     checkpoint_refs: ['checkpoint:seed'],
+    codex_stage_runner: {
+      runner_mode: 'dry_run',
+    },
     closeout_packet: {
       surface_kind: 'stage_memory_closeout_packet',
       closeout_refs: ['receipt:domain-closeout'],

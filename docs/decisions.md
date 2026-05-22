@@ -35,6 +35,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 2026-05-21 追加：`opl family-runtime intake|tick --hydrate --profile <profile>` 是 MAS profile 的显式 operator override，优先于 env profile 与 active workspace binding。它只选择 MAS sidecar export 的 profile，并继续通过 OPL module locator 调用 active MAS checkout；OPL 不因此获得 MAS study truth、publication verdict、artifact authority 或 owner receipt 权限。
 - 2026-05-22 追加：当 MAS sidecar export 暴露 `domain_owner/default-executor-dispatch` task 时，OPL family runtime 只负责把该 task 入队并建立 queued `codex_cli` stage attempt，workspace locator 保留 `dispatch_ref`、action type、dispatch authority、source refs 和 `authority_boundary=mas_default_executor_dispatch_request_only`。该 queue task 可标记为 admitted/succeeded，但这只表示 OPL 已接收 writer handoff；不得把它解释成 Codex writer attempt 已完成、MAS owner receipt 已产生、论文质量已关闭或 package/current manuscript 已刷新。
 - 2026-05-22 追加：`domain_owner/default-executor-dispatch` 不走 MAS sidecar dispatch activity，也不允许 OPL 写 domain truth、publication quality、artifact gate 或 current package。后续论文推进必须由 queued Codex stage attempt 读取 MAS dispatch request / prompt contract 后走 MAS owner path，并以 MAS owner receipt、AI reviewer-backed `publication_eval/latest.json`、publication gate 或 typed blocker 作为完成证据。
+- 2026-05-22 追加：queued `codex_cli` stage attempt 启动后默认必须进入真实 Codex CLI runner；只有显式 `codex_stage_runner.runner_mode=dry_run|live_dry_run` 的测试、诊断或 fixture 才允许 dry-run transport。`executor_kind=codex_cli` 不能静默降级成 dry-run，否则 MAS default executor handoff 只会留下 checkpoint/blocked 投影而不会启动 writer owner。
 
 ## 2026-05-20
 

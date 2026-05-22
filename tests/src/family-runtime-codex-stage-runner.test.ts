@@ -127,6 +127,49 @@ test('agent stage runner records a selected non-default executor receipt without
   }
 });
 
+test('agent stage runner treats selected Codex CLI executor as live Codex runner by default', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-default-codex-runner"}\\n'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runAgentStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_default_codex_runner_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:default-codex'],
+      },
+      stagePacketRef: 'packet:default-codex',
+      observedAt: '2026-05-22T00:00:00.000Z',
+    });
+
+    assert.equal(receipt.runner_status.runner_kind, 'codex_cli_stage_runner');
+    assert.equal(receipt.runner_status.runner_mode, 'codex_cli');
+    assert.equal(receipt.runner_status.live_process_started, true);
+    assert.equal(receipt.runner_status.dry_run_transport, false);
+    assert.equal(receipt.runner_status.exit_code, 0);
+    assert.equal(receipt.progress_summary.thread_id, 'thread-default-codex-runner');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('agent stage runner applies stage-level executor policy for Antigravity HTML routes', async () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-antigravity-stage-runner-'));
   const antigravityPath = path.join(fixtureRoot, 'antigravity');
