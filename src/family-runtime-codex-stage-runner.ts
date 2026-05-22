@@ -112,6 +112,10 @@ function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string |
     'Execute only within the domain-owned stage packet and skill boundary.',
     'Return progress through structured events when available.',
     'Do not claim provider completion without a typed closeout packet from the domain sidecar.',
+    'Final output contract: the last non-empty assistant message MUST be exactly one JSON object and nothing else.',
+    'That JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet, and at least one closeout ref.',
+    'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
+    'If the stage is blocked and no typed closeout packet exists, make the final assistant message a pure JSON typed blocker/closeout packet emitted by the domain-owned path, not free text.',
   ].join('\n');
 }
 

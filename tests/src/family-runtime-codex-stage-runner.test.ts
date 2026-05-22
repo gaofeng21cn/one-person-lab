@@ -89,6 +89,27 @@ test('Codex stage activity projection keeps Codex CLI attempts live by default',
   }
 });
 
+test('Codex stage activity command preview carries strict terminal closeout contract', () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_codex_prompt_contract_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      executor_kind: 'codex_cli',
+      workspace_locator: {
+        workspace_root: '/tmp/mas',
+      },
+      checkpoint_refs: ['packet:from-checkpoint'],
+    },
+  });
+
+  const commandPreview = activity.runner_status.command_preview.join('\n');
+  assert.match(commandPreview, /last non-empty assistant message MUST be exactly one JSON object and nothing else/);
+  assert.match(commandPreview, /Do not wrap the JSON in Markdown/);
+  assert.match(commandPreview, /Do not add prose, code fences, prefixes, suffixes/);
+  assert.equal(activity.expected_closeout.typed_packet_required_for_completion, true);
+  assert.equal(activity.expected_closeout.free_text_closeout_accepted, false);
+});
+
 test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
   await assert.rejects(
     () => runCodexStageRunner({
@@ -166,6 +187,65 @@ exit 64
     }
     assert.equal(processOutputSummary.exit_code, 0);
     assert.equal(processOutputSummary.final_message_chars > 0, true);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner rejects terminal prose-prefixed closeout JSON', async () => {
+  const closeout = {
+    surface_kind: 'domain_stage_closeout_packet',
+    closeout_refs: ['receipt:codex-prose-prefixed-closeout'],
+    consumed_refs: ['runtime:quality-repair'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_progress_delta_candidate',
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-prose-prefixed-closeout"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'agent_message',
+      id: 'msg-1',
+      text: `closeout follows:\n${JSON.stringify(closeout)}`,
+    },
+  })}'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_prose_prefixed_closeout_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:prose-prefixed-closeout'],
+      },
+      stagePacketRef: 'packet:prose-prefixed-closeout',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet, null);
+    assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
+    assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
+    const processOutputSummary = receipt.process_output_summary;
+    assert.ok(processOutputSummary, 'codex_cli runner receipt must include process_output_summary.');
+    assert.equal(processOutputSummary.final_message_chars > JSON.stringify(closeout).length, true);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
