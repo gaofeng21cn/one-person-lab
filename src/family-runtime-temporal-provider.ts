@@ -176,10 +176,13 @@ export async function startTemporalStageAttemptWorkflow(
       provider_kind: attempt.provider_kind,
     });
   }
+  const workflowInput = requireTemporalStageAttemptWorkflowInputLaunchable(
+    buildTemporalStageAttemptWorkflowInput(attempt),
+  );
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
   return withTemporalClient(async (client) => {
     const handle = await client.workflow.start('StageAttemptWorkflow', {
-      args: [requireTemporalStageAttemptWorkflowInputLaunchable(buildTemporalStageAttemptWorkflowInput(attempt))],
+      args: [workflowInput],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
