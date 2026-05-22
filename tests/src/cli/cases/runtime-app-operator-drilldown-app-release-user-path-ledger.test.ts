@@ -1,33 +1,35 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import {
-  recordAppReleaseUserPathEvidenceReceipts,
-} from '../../../../src/app-release-user-path-evidence-ledger.ts';
 
 function withTempState<T>(prefix: string, run: (stateRoot: string) => T) {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  const previousStateDir = process.env.OPL_STATE_DIR;
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
     return run(stateRoot);
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 }
 
+function recordAppReleaseUserPathEvidence(stateRoot: string, payload: Record<string, unknown>) {
+  return runCli([
+    'runtime',
+    'app-release-evidence',
+    'record',
+    '--payload',
+    JSON.stringify(payload),
+  ], {
+    OPL_STATE_DIR: stateRoot,
+  }).app_release_user_path_evidence_ledger_record;
+}
+
 test('runtime App drilldown consumes App release user-path evidence receipts', () => {
   withTempState('opl-app-release-user-path-ledger-state-', (stateRoot) => {
-    const record = recordAppReleaseUserPathEvidenceReceipts([{
+    const record = recordAppReleaseUserPathEvidence(stateRoot, {
       release_package_refs: ['release://opl-app/full/2026-05-22/dmg'],
       screenshot_refs: ['screenshot://opl-app/first-run/2026-05-22.png'],
       reload_prompt_user_path_refs: ['receipt://opl-app/reload-prompt/2026-05-22'],
       provider_state_linkage_refs: ['provider://temporal/cadence-window/2026-05-22'],
       long_operator_evidence_refs: ['soak://opl-app/operator/2026-05-22'],
-    }]);
+    });
     assert.equal(record.status, 'recorded');
     assert.equal(record.recorded_receipt_count, 1);
 
@@ -80,9 +82,9 @@ test('runtime App drilldown consumes App release user-path evidence receipts', (
 
 test('runtime App drilldown keeps typed blocker refs as operator attention', () => {
   withTempState('opl-app-release-user-path-blocker-state-', (stateRoot) => {
-    recordAppReleaseUserPathEvidenceReceipts([{
+    recordAppReleaseUserPathEvidence(stateRoot, {
       typed_blocker_refs: ['typed-blocker://opl-app/release-user-path/screenshot-missing'],
-    }]);
+    });
 
     const output = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,

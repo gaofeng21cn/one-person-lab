@@ -1,21 +1,24 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import {
-  recordAppReleaseUserPathEvidenceReceipts,
-  verifyAppReleaseUserPathEvidenceReceipt,
-} from '../../../../src/app-release-user-path-evidence-ledger.ts';
 
 test('framework readiness keeps recorded App release user-path receipts in verify follow-through', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-app-release-state-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
   try {
-    process.env.OPL_STATE_DIR = stateRoot;
-    const record = recordAppReleaseUserPathEvidenceReceipts([{
+    const payload = {
       release_package_refs: ['release://opl-app/full/2026-05-22/dmg'],
       screenshot_refs: ['screenshot://opl-app/first-run/2026-05-22.png'],
       reload_prompt_user_path_refs: ['receipt://opl-app/reload-prompt/2026-05-22'],
       provider_state_linkage_refs: ['provider://temporal/cadence-window/2026-05-22'],
       long_operator_evidence_refs: ['soak://opl-app/operator/2026-05-22'],
-    }]);
+    };
+    const record = runCli([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload',
+      JSON.stringify(payload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_release_user_path_evidence_ledger_record;
     assert.equal(record.status, 'recorded');
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
@@ -60,7 +63,15 @@ test('framework readiness keeps recorded App release user-path receipts in verif
       );
     }
 
-    verifyAppReleaseUserPathEvidenceReceipt({ receipt_ref: record.receipt_refs[0] });
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      record.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
     const verifiedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
     }).framework_readiness;
@@ -74,11 +85,6 @@ test('framework readiness keeps recorded App release user-path receipts in verif
       0,
     );
   } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

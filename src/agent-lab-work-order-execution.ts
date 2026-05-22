@@ -140,20 +140,6 @@ function gitRawOutput(args: string[], cwd: string): string {
   return result.stdout ?? '';
 }
 
-function assertTargetRepoClean(targetAgentDir: string): void {
-  const status = gitRawOutput(['status', '--porcelain'], targetAgentDir).trim();
-  if (status.length > 0) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Target agent checkout must be clean before Agent Lab opens a patch worktree.',
-      {
-        target_agent_dir: targetAgentDir,
-        dirty_status: status.split(/\r?\n/),
-      },
-    );
-  }
-}
-
 function assertWorktreeDirIgnored(targetAgentDir: string): void {
   const result = spawnSync('git', ['check-ignore', '-q', '.worktrees/agent-lab-ignore-probe'], {
     cwd: targetAgentDir,
@@ -178,9 +164,27 @@ function shortId(value: string): string {
 function changedFiles(cwd: string): string[] {
   return gitRawOutput(['status', '--porcelain'], cwd)
     .split(/\r?\n/)
-    .map((entry) => entry.trim())
     .map((entry) => entry.replace(/^[A-Z? ][A-Z? ]\s+/, ''))
+    .flatMap((entry) => entry.includes(' -> ') ? entry.split(' -> ') : [entry])
     .filter(Boolean);
+}
+
+function statusEntries(cwd: string): string[] {
+  return gitRawOutput(['status', '--porcelain'], cwd)
+    .split(/\r?\n/)
+    .filter(Boolean);
+}
+
+function dirtyFiles(cwd: string): string[] {
+  return statusEntries(cwd)
+    .map((entry) => entry.replace(/^[A-Z? ][A-Z? ]\s+/, ''))
+    .flatMap((entry) => entry.includes(' -> ') ? entry.split(' -> ') : [entry])
+    .filter(Boolean);
+}
+
+function intersection(left: string[], right: string[]): string[] {
+  const rightSet = new Set(right);
+  return [...new Set(left.filter((entry) => rightSet.has(entry)))].sort();
 }
 
 function commandInferredFromVerificationRef(ref: string): string | null {
@@ -363,8 +367,9 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
   }
   const outputDir = normalizeOutputDir(options.outputDir, workOrderId);
   fs.mkdirSync(outputDir, { recursive: true });
-  assertTargetRepoClean(targetAgentDir);
   assertWorktreeDirIgnored(targetAgentDir);
+  const targetDirtyStatusBeforeOpen = statusEntries(targetAgentDir);
+  const targetDirtyFilesBeforeOpen = dirtyFiles(targetAgentDir);
   const baseBranch = gitRawOutput(['branch', '--show-current'], targetAgentDir).trim() || 'HEAD';
   const baseHead = gitRawOutput(['rev-parse', 'HEAD'], targetAgentDir).trim();
   const branchName = `codex/agent-lab-work-order-${shortId(workOrderId)}`;
@@ -441,6 +446,34 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
         },
       );
     }
+    const targetDirtyOverlap = intersection(changed, targetDirtyFilesBeforeOpen);
+    if (targetDirtyOverlap.length > 0) {
+      const typedBlockerPath = path.join(outputDir, 'typed-blocker.json');
+      writeJson(typedBlockerPath, {
+        surface_kind: 'opl_agent_lab_work_order_typed_blocker',
+        version: 'opl-agent-lab.work-order-execution.typed-blocker.v1',
+        blocker_kind: 'target_dirty_checkout_overlap',
+        status: 'blocked_before_absorption',
+        work_order_id: workOrderId,
+        target_agent_dir: targetAgentDir,
+        patch_changed_files: changed,
+        target_dirty_files_before_open: targetDirtyFilesBeforeOpen,
+        overlapping_files: targetDirtyOverlap,
+        can_absorb_without_overwriting_external_changes: false,
+      });
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Agent Lab work order patch overlaps existing dirty target checkout files.',
+        {
+          work_order_id: workOrderId,
+          target_agent_dir: targetAgentDir,
+          target_dirty_status_before_open: targetDirtyStatusBeforeOpen,
+          patch_changed_files: changed,
+          overlapping_files: targetDirtyOverlap,
+          typed_blocker_path: typedBlockerPath,
+        },
+      );
+    }
 
     runCommand('git', ['add', '-A'], worktreePath);
     runCommand('git', ['commit', '-m', `agent-lab: execute ${workOrderId}`], worktreePath);
@@ -476,6 +509,7 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
         branch_name: branchName,
         base_branch: baseBranch,
         base_head: baseHead,
+        target_dirty_status_before_open: targetDirtyStatusBeforeOpen,
         patch_commit: patchCommit,
         open_receipt_ref: `target-worktree-open:${targetAgent.domain_id ?? 'target-agent'}/${workOrderId}`,
       },

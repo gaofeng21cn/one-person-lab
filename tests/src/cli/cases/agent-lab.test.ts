@@ -4,6 +4,7 @@ import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../
 import {
   createFailingFakeCodexWorkOrderExecutor,
   createFakeCodexWorkOrderExecutor,
+  createOverlappingFakeCodexWorkOrderExecutor,
   createWorkOrderTargetRepo,
   readJson,
   writeExecutableWorkOrder,
@@ -130,6 +131,94 @@ test('agent-lab execute-work-order runs Codex CLI in a target worktree then abso
     });
     assert.equal(worktreeList.status, 0, worktreeList.stderr);
     assert.equal(worktreeList.stdout.includes('oma_developer_patch_work_order_test'), false);
+    const branchList = spawnSync('git', ['branch', '--list', 'codex/agent-lab-work-order-*'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(branchList.status, 0, branchList.stderr);
+    assert.equal(branchList.stdout.trim(), '');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab execute-work-order preserves unrelated dirty target checkout files', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-work-order-dirty-ok-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    fs.mkdirSync(path.join(targetRepo, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(targetRepo, 'notes', 'external.md'), 'external local edit\n');
+    createFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+
+    const output = runCli([
+      'agent-lab',
+      'execute-work-order',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--verification-command',
+      'test -f docs/efficiency.md',
+      '--codex-timeout-ms',
+      '10000',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    assert.equal(output.agent_lab_work_order_execution.status, 'executed_absorbed_and_cleaned');
+    assert.equal(fs.readFileSync(path.join(targetRepo, 'notes', 'external.md'), 'utf8'), 'external local edit\n');
+    assert.deepEqual(
+      output.agent_lab_work_order_execution.receipt.target_worktree.target_dirty_status_before_open,
+      ['?? notes/'],
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab execute-work-order blocks absorption when patch overlaps dirty target checkout files', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-work-order-dirty-overlap-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    fs.appendFileSync(path.join(targetRepo, 'README.md'), '\nexternal local edit\n');
+    createOverlappingFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+
+    const failure = runCliFailure([
+      'agent-lab',
+      'execute-work-order',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--codex-timeout-ms',
+      '10000',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.deepEqual(failure.payload.error.details.overlapping_files, ['README.md']);
+    const typedBlocker = readJson(path.join(outputDir, 'typed-blocker.json'));
+    assert.equal(typedBlocker.blocker_kind, 'target_dirty_checkout_overlap');
+    assert.equal(typedBlocker.can_absorb_without_overwriting_external_changes, false);
+    assert.match(fs.readFileSync(path.join(targetRepo, 'README.md'), 'utf8'), /external local edit/);
+
     const branchList = spawnSync('git', ['branch', '--list', 'codex/agent-lab-work-order-*'], {
       cwd: targetRepo,
       encoding: 'utf8',

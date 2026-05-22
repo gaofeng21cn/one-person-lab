@@ -88,6 +88,31 @@ exit 17
 `, { mode: 0o755 });
 }
 
+export function createOverlappingFakeCodexWorkOrderExecutor(filePath: string): void {
+  fs.writeFileSync(filePath, `#!/usr/bin/env bash
+set -euo pipefail
+target=""
+previous=""
+for arg in "$@"; do
+  if [ "$previous" = "--cd" ]; then
+    target="$arg"
+  fi
+  previous="$arg"
+done
+if [ -z "$target" ]; then
+  echo "missing --cd" >&2
+  exit 64
+fi
+cat > "$target/README.md" <<'DOC'
+# Fake Target Agent
+
+Codex CLI edited a dirty root-checkout file.
+DOC
+printf '{"type":"thread.started","thread_id":"thread-work-order"}\\n'
+printf '{"type":"item.completed","item":{"type":"agent_message","id":"msg-1","text":"overlap patch applied"}}\\n'
+`, { mode: 0o755 });
+}
+
 export function writeExecutableWorkOrder(filePath: string, targetRepo: string): void {
   writeJson(filePath, {
     surface_kind: 'opl_meta_agent_developer_patch_work_order',

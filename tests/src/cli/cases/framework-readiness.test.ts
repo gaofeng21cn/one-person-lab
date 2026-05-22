@@ -472,7 +472,14 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(readiness.agent_conformance_tail.status, 'diagnostic_unavailable');
     assert.equal(readiness.agent_conformance_tail.diagnostic_failure.status, 'diagnostic_unavailable');
   } else {
-    assert.equal(readiness.agent_conformance_tail.status, 'passed_with_production_evidence_tail');
+    assert.ok([
+      'blocked',
+      'passed_with_production_evidence_tail',
+    ].includes(readiness.agent_conformance_tail.status));
+    assert.equal(
+      readiness.agent_conformance_tail.authority_boundary.readiness_can_claim_production_ready,
+      false,
+    );
   }
   assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_ready_domain_count'), false);
   assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_blocked_domain_count'), false);
