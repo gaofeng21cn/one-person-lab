@@ -1,0 +1,326 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+
+import {
+  createStageAttempt,
+  createStageAttemptTable,
+  inspectStageAttempt,
+  listStageAttemptCloseouts,
+  syncStageAttemptFromTemporalTerminalObservation,
+} from '../../src/family-runtime-stage-attempts.ts';
+
+function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    fn(db);
+  } finally {
+    db.close();
+  }
+}
+
+function createQueueTables(db: DatabaseSync) {
+  db.exec(`
+    CREATE TABLE tasks (
+      task_id TEXT PRIMARY KEY,
+      domain_id TEXT NOT NULL,
+      task_kind TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      dedupe_key TEXT UNIQUE,
+      priority INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL,
+      max_attempts INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      requires_approval INTEGER NOT NULL,
+      approved_at TEXT,
+      lease_owner TEXT,
+      lease_expires_at TEXT,
+      last_error TEXT,
+      dead_letter_reason TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE events (
+      event_id TEXT PRIMARY KEY,
+      task_id TEXT,
+      domain_id TEXT,
+      event_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE notifications (
+      notification_id TEXT PRIMARY KEY,
+      task_id TEXT,
+      severity TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      channel TEXT NOT NULL,
+      status TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+  `);
+}
+
+function insertMasDefaultExecutorTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    status: 'succeeded' | 'blocked';
+    createdAt: string;
+    lastError?: string | null;
+    deadLetterReason?: string | null;
+  },
+) {
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts,
+      max_attempts, source, requires_approval, approved_at, lease_owner, lease_expires_at,
+      last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    'medautoscience',
+    'domain_owner/default-executor-dispatch',
+    '{}',
+    null,
+    0,
+    input.status,
+    1,
+    3,
+    'test',
+    0,
+    null,
+    null,
+    null,
+    input.lastError ?? null,
+    input.deadLetterReason ?? null,
+    input.createdAt,
+    input.createdAt,
+  );
+}
+
+function blockedTemporalObservation(input: {
+  stageAttemptId: string;
+  workflowId: string;
+  createdAt: string;
+}) {
+  return {
+    surface_kind: 'temporal_stage_attempt_query_receipt',
+    provider_kind: 'temporal',
+    stage_attempt_id: input.stageAttemptId,
+    workflow_id: input.workflowId,
+    workflow_status: 'COMPLETED',
+    query: {
+      surface_kind: 'temporal_stage_attempt_query',
+      provider_kind: 'temporal',
+      stage_attempt_id: input.stageAttemptId,
+      workflow_id: input.workflowId,
+      domain_id: 'medautoscience',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      status: 'blocked',
+      started_at: input.createdAt,
+      updated_at: input.createdAt,
+      activity_events: [],
+      checkpoint_refs: ['checkpoint:mas-default-writer-start'],
+      closeout_refs: [],
+      consumed_refs: [],
+      consumed_memory_refs: [],
+      writeback_receipt_refs: [],
+      rejected_writes: [],
+      next_owner: 'med-autoscience',
+      route_impact: {},
+      human_gate_refs: [],
+      signals: [],
+      closeout_packet: { blocked_reason: 'typed_closeout_packet_required' },
+      completion_boundary: {
+        provider_completion: 'not_completed',
+        domain_ready_verdict: null,
+        provider_completion_is_domain_ready: false,
+      },
+      authority_boundary: {
+        opl: 'temporal_workflow_transport_and_control_metadata_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+    },
+  } as const;
+}
+
+function createMasDefaultExecutorAttempt(
+  db: DatabaseSync,
+  input: {
+    taskId?: string;
+    sourceFingerprint?: string;
+  } = {},
+) {
+  return createStageAttempt(db, {
+    domainId: 'medautoscience',
+    stageId: 'domain_owner/default-executor-dispatch',
+    providerKind: 'temporal',
+    workspaceLocator: { workspace_root: '/tmp/mas' },
+    sourceFingerprint: input.sourceFingerprint ?? 'sha256:mas-default-dispatch',
+    executorKind: 'codex_cli',
+    taskId: input.taskId,
+    checkpointRefs: ['dispatch:mas-default-writer-start'],
+  }).attempt;
+}
+
+test('Temporal blocked terminal observation blocks MAS default executor task without typed closeout', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-closeout-required',
+      status: 'succeeded',
+      createdAt,
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-closeout-required',
+    });
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      blockedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        createdAt,
+      }),
+    );
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-closeout-required',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const event = db.prepare('SELECT event_type, payload_json FROM events WHERE task_id = ?').get(
+      'task-mas-default-closeout-required',
+    ) as { event_type: string; payload_json: string };
+
+    assert.equal(synced?.status, 'blocked');
+    assert.equal(synced?.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(inspectStageAttempt(db, attempt.stage_attempt_id).provider_run.provider_status, 'blocked');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'typed_closeout_packet_required');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
+    assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
+    assert.equal(JSON.parse(event.payload_json).authority_boundary.provider_completion_is_domain_ready, false);
+  });
+});
+
+test('Temporal blocked terminal observation refreshes stale MAS default executor blocked reason', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    createQueueTables(db);
+    insertMasDefaultExecutorTask(db, {
+      taskId: 'task-mas-default-stale-blocked-reason',
+      status: 'blocked',
+      createdAt,
+      lastError: 'MAS default executor dispatch has no launchable Temporal Codex stage attempt.',
+      deadLetterReason: 'temporal_stage_attempt_start_failed',
+    });
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      taskId: 'task-mas-default-stale-blocked-reason',
+    });
+    const synced = syncStageAttemptFromTemporalTerminalObservation(
+      db,
+      blockedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        createdAt,
+      }),
+    );
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-stale-blocked-reason',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const event = db.prepare('SELECT event_type, payload_json FROM events WHERE task_id = ?').get(
+      'task-mas-default-stale-blocked-reason',
+    ) as { event_type: string; payload_json: string };
+
+    assert.equal(synced?.status, 'blocked');
+    assert.equal(synced?.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'typed_closeout_packet_required');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
+    assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
+    assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_not_completed');
+  });
+});
+
+test('Temporal completed terminal observation ingests closeout refs into local attempt ledger', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    const attempt = createMasDefaultExecutorAttempt(db, {
+      sourceFingerprint: 'sha256:mas-default-completed-dispatch',
+    });
+    const synced = syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: {
+        surface_kind: 'temporal_stage_attempt_query',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        status: 'completed',
+        started_at: createdAt,
+        updated_at: createdAt,
+        activity_events: [{
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          closeout_packet: {
+            surface_kind: 'domain_stage_closeout_packet',
+            closeout_refs: ['raw-codex-closeout-should-not-be-authoritative.json'],
+            consumed_refs: ['dispatch:mas-default-writer-start'],
+            writeback_receipt_refs: ['receipt:writer-handoff'],
+            next_owner: 'medautoscience',
+            domain_ready_verdict: 'domain_gate_pending',
+          },
+        }],
+        checkpoint_refs: ['dispatch:mas-default-writer-start'],
+        closeout_refs: [
+          'artifacts/supervision/reconcile/latest.json',
+          'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+        ],
+        consumed_refs: ['dispatch:mas-default-writer-start'],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: ['receipt:writer-handoff'],
+        rejected_writes: [],
+        next_owner: 'medautoscience',
+        route_impact: {},
+        human_gate_refs: [],
+        signals: [],
+        closeout_packet: {
+          surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
+          closeout_packet_surface_kind: 'domain_stage_closeout_packet',
+          closeout_refs: [
+            'artifacts/supervision/reconcile/latest.json',
+            'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+          ],
+        },
+        completion_boundary: {
+          provider_completion: 'completed',
+          domain_ready_verdict: 'domain_gate_pending',
+          provider_completion_is_domain_ready: false,
+        },
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+    });
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+
+    assert.equal(synced?.status, 'completed');
+    assert.equal(inspected.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.deepEqual(inspected.closeout_refs, [
+      'artifacts/supervision/reconcile/latest.json',
+      'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+    ]);
+    assert.equal(inspected.provider_run.provider_status, 'completed');
+    assert.equal(listStageAttemptCloseouts(db, attempt.stage_attempt_id).length, 1);
+  });
+});
