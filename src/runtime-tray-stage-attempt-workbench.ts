@@ -368,6 +368,7 @@ function attemptProjection(
   latestCloseout: JsonRecord | null,
   signals: JsonRecord[],
   providerReadiness: Awaited<ReturnType<typeof inspectFamilyRuntimeProviderWithLifecycle>> | null,
+  taskPayload: JsonRecord | null = null,
 ) {
   const providerRun = parseRecord(row.provider_run_json);
   const activityEvents = recordList(parseList(row.activity_events_json));
@@ -376,7 +377,7 @@ function attemptProjection(
     ? launchInvocationEvent.invocation as JsonRecord
     : null;
   const routeImpact = parseRecord(row.route_impact_json);
-  const workspaceLocator = parseRecord(row.workspace_locator_json);
+  const workspaceLocator = normalizedWorkspaceLocator(row, parseRecord(row.workspace_locator_json), taskPayload);
   const activity = latestActivity(activityEvents);
   const checkpointRefs = stringList(parseList(row.checkpoint_refs_json));
   const closeoutRefs = stringList(parseList(row.closeout_refs_json));
@@ -598,6 +599,37 @@ function attemptProjection(
     updated_at: row.updated_at,
     created_at: row.created_at,
   };
+}
+
+function normalizedWorkspaceLocator(
+  row: StageAttemptWorkbenchRow,
+  workspaceLocator: JsonRecord,
+  taskPayload: JsonRecord | null,
+) {
+  if (
+    row.domain_id !== 'medautoscience'
+    || row.stage_id !== 'domain_owner/default-executor-dispatch'
+    || optionalString(workspaceLocator.domain_source_fingerprint)
+  ) {
+    return workspaceLocator;
+  }
+  const domainSourceFingerprint = optionalString(taskPayload?.source_fingerprint);
+  return domainSourceFingerprint
+    ? { ...workspaceLocator, domain_source_fingerprint: domainSourceFingerprint }
+    : workspaceLocator;
+}
+
+function taskPayloadsById(db: DatabaseSync, taskIds: string[]) {
+  const uniqueTaskIds = [...new Set(taskIds.filter((taskId) => taskId.trim().length > 0))];
+  if (uniqueTaskIds.length === 0) {
+    return new Map<string, JsonRecord>();
+  }
+  const rows = db.prepare(`
+    SELECT task_id, payload_json
+    FROM tasks
+    WHERE task_id IN (${uniqueTaskIds.map(() => '?').join(',')})
+  `).all(...uniqueTaskIds) as Array<{ task_id: string; payload_json: string }>;
+  return new Map(rows.map((row) => [row.task_id, parseRecord(row.payload_json)]));
 }
 
 function countBy<T>(entries: T[], keyFor: (entry: T) => string) {
@@ -926,6 +958,10 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
     const allRows = listStageAttemptRows(db) as StageAttemptWorkbenchRow[];
     const rows = allRows.slice(0, 25);
     const attemptIds = allRows.map((row) => row.stage_attempt_id);
+    const taskPayloads = taskPayloadsById(
+      db,
+      allRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
+    );
     const latestCloseouts = latestStageAttemptCloseoutPacketsByAttempt(db, attemptIds);
     const signals = stageAttemptSignalsByAttempt(db, attemptIds);
     const providerReadiness = await currentProviderReadinessByKind(allRows, paths, options);
@@ -936,6 +972,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         latestCloseouts.get(row.stage_attempt_id) ?? null,
         signals.get(row.stage_attempt_id) ?? [],
         providerKind ? providerReadiness.get(providerKind) ?? null : null,
+        row.task_id ? taskPayloads.get(row.task_id) ?? null : null,
       );
     });
     const attempts = evidenceAttempts.slice(0, 25);

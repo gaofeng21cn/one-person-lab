@@ -89,3 +89,91 @@ test('missing route-required refs fail closed with structured preflight details'
     },
   );
 });
+
+test('domain dispatch evidence separates OPL attempt key from domain source freshness', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      domain_id: 'medautoscience',
+      task_kind: 'domain_owner/default-executor-dispatch',
+      study_id: '002-dm-china-us-mortality-attribution',
+      source_fingerprint: '4a0c28ae63dc5d68',
+      typed_blocker_refs: ['mas://typed-blockers/default-executor-pending'],
+    },
+    {
+      action_id: 'domain_dispatch:medautoscience:sat-default-executor:record',
+      target_identity: {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        study_id: '002-dm-china-us-mortality-attribution',
+        source_fingerprint: 'mas_default_executor_source_76b3786a207154317d53c958',
+        domain_source_fingerprint: '4a0c28ae63dc5d68',
+      },
+    },
+  );
+
+  assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.identity_binding.status, 'matched');
+  assert.deepEqual(preflight.identity_binding.conflict_fields, []);
+  assert.equal(
+    preflight.identity_binding.payload_identity.domain_source_fingerprint,
+    '4a0c28ae63dc5d68',
+  );
+  assert.equal(
+    preflight.identity_binding.target_identity.source_fingerprint,
+    'mas_default_executor_source_76b3786a207154317d53c958',
+  );
+  assert.equal(preflight.identity_binding.payload_identity.source_fingerprint, undefined);
+});
+
+test('domain source freshness mismatch still fails closed', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      domain_id: 'medautoscience',
+      task_kind: 'domain_owner/default-executor-dispatch',
+      study_id: '002-dm-china-us-mortality-attribution',
+      source_fingerprint: 'stale-domain-source',
+      typed_blocker_refs: ['mas://typed-blockers/default-executor-pending'],
+    },
+    {
+      target_identity: {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        study_id: '002-dm-china-us-mortality-attribution',
+        source_fingerprint: 'mas_default_executor_source_76b3786a207154317d53c958',
+        domain_source_fingerprint: '4a0c28ae63dc5d68',
+      },
+    },
+  );
+
+  assert.equal(preflight.status, 'blocked');
+  assert.equal(preflight.identity_binding.status, 'conflict');
+  assert.deepEqual(preflight.identity_binding.conflict_fields, ['domain_source_fingerprint']);
+  assert.equal(preflight.can_record_refs_only_receipt, false);
+});
+
+test('explicit OPL attempt key still conflicts independently from domain source freshness', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      domain_id: 'medautoscience',
+      task_kind: 'domain_owner/default-executor-dispatch',
+      study_id: '002-dm-china-us-mortality-attribution',
+      source_fingerprint: '4a0c28ae63dc5d68',
+      stage_attempt_source_fingerprint: 'wrong-provider-attempt-key',
+      typed_blocker_refs: ['mas://typed-blockers/default-executor-pending'],
+    },
+    {
+      target_identity: {
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        study_id: '002-dm-china-us-mortality-attribution',
+        source_fingerprint: 'mas_default_executor_source_76b3786a207154317d53c958',
+        domain_source_fingerprint: '4a0c28ae63dc5d68',
+      },
+    },
+  );
+
+  assert.equal(preflight.status, 'blocked');
+  assert.equal(preflight.identity_binding.status, 'conflict');
+  assert.deepEqual(preflight.identity_binding.conflict_fields, ['source_fingerprint']);
+  assert.equal(preflight.can_record_refs_only_receipt, false);
+});

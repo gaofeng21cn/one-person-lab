@@ -455,6 +455,10 @@ PY
     const afterTickTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempts = afterTickTask.family_runtime_task.stage_attempts;
     const sourceFingerprints = attempts.map((attempt: { source_fingerprint: string }) => attempt.source_fingerprint);
+    const snapshot = runCli(['runtime', 'snapshot'], env).runtime_tray_snapshot;
+    const workbenchAttempt = snapshot.stage_attempt_workbench.evidence_attempts.find(
+      (attempt: { task_id?: string }) => attempt.task_id === taskId,
+    );
 
     assert.equal(redrive.family_runtime_enqueue.requeued_from_terminal, true);
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
@@ -463,6 +467,7 @@ PY
     assert.equal(attempts.length, 2);
     assert.notEqual(sourceFingerprints[0], sourceFingerprints[1]);
     assert.equal(sourceFingerprints.every((fingerprint: string) => fingerprint.startsWith('mas_default_executor_source_')), true);
+    assert.equal(workbenchAttempt.workspace_locator.domain_source_fingerprint, 'source-after');
     assert.equal(
       afterTickTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
         event.event_type === 'task_requeued_from_blocked_after_domain_owner_update'

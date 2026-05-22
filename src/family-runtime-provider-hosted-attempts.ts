@@ -267,6 +267,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     locator.opl_writes_publication_quality = false;
     locator.opl_writes_artifact_gate = false;
     locator.opl_writes_current_package = false;
+    locator.domain_source_fingerprint = optionalString(payload.source_fingerprint);
   }
   return locator;
 }

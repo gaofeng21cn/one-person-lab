@@ -57,6 +57,7 @@ function targetIdentity(attempt: JsonRecord) {
     task_kind: stringValue(locator.task_kind) ?? stringValue(attempt.stage_id),
     study_id: stringValue(locator.study_id),
     source_fingerprint: stringValue(attempt.source_fingerprint),
+    domain_source_fingerprint: stringValue(locator.domain_source_fingerprint),
     profile: stringValue(locator.profile),
     profile_name: stringValue(locator.profile_name),
   };

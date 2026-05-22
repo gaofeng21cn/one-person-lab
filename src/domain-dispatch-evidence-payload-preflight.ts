@@ -59,6 +59,13 @@ function payloadSourceFingerprint(payload: JsonRecord) {
 
 function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
   const targetIdentity = record(route.target_identity);
+  const targetDomainSourceFingerprint = stringValue(targetIdentity.domain_source_fingerprint)
+    ?? stringValue(route.domain_source_fingerprint);
+  const payloadDomainSourceFingerprint = stringValue(payload.domain_source_fingerprint)
+    ?? payloadSourceFingerprint(payload);
+  const payloadAttemptSourceFingerprint = stringValue(payload.stage_attempt_source_fingerprint)
+    ?? stringValue(payload.provider_attempt_source_key)
+    ?? (targetDomainSourceFingerprint ? null : payloadSourceFingerprint(payload));
   const targetEntries = [
     ['domain_id', stringValue(targetIdentity.domain_id) ?? stringValue(route.domain_id)],
     ['stage_id', stringValue(targetIdentity.stage_id) ?? stringValue(route.stage_id)],
@@ -66,6 +73,7 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
     ['study_id', stringValue(targetIdentity.study_id)],
     ['source_fingerprint', stringValue(targetIdentity.source_fingerprint)
       ?? stringValue(route.stage_attempt_source_fingerprint)],
+    ['domain_source_fingerprint', targetDomainSourceFingerprint],
     ['profile', stringValue(targetIdentity.profile)],
     ['profile_name', stringValue(targetIdentity.profile_name)],
   ] as const;
@@ -74,7 +82,8 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
     ['stage_id', stringValue(payload.stage_id)],
     ['task_kind', stringValue(payload.task_kind) ?? stringValue(payload.recommended_task_kind)],
     ['study_id', stringValue(payload.study_id)],
-    ['source_fingerprint', payloadSourceFingerprint(payload)],
+    ['source_fingerprint', payloadAttemptSourceFingerprint],
+    ['domain_source_fingerprint', payloadDomainSourceFingerprint],
     ['profile', stringValue(payload.profile)],
     ['profile_name', stringValue(payload.profile_name)],
   ] as const;
