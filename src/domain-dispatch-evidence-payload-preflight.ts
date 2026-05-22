@@ -33,6 +33,14 @@ function looksLikePlaceholderRef(ref: string) {
   return ref.startsWith('<') && ref.endsWith('>');
 }
 
+function isSyntheticRequiredEvidenceRef(ref: string) {
+  return ref.startsWith('domain_dispatch:') && ref.endsWith(':owner_receipt_or_typed_blocker');
+}
+
+function uniqueList(values: string[]) {
+  return [...new Set(values)];
+}
+
 function payloadSourceFingerprint(payload: JsonRecord) {
   return stringValue(payload.source_fingerprint)
     ?? stringValue(record(payload.repair_work_unit).source_fingerprint);
@@ -110,8 +118,15 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     ...ownerChainRefs,
     ...evidenceRefs,
   ];
+  const requiredEvidenceRefs = uniqueList(stringList(route.required_evidence_refs));
+  const enforcedRequiredEvidenceRefs = requiredEvidenceRefs.filter(
+    (ref) => !looksLikePlaceholderRef(ref) && !isSyntheticRequiredEvidenceRef(ref),
+  );
+  const providedRefs = new Set(allRefs);
+  const missingRequiredEvidenceRefs = enforcedRequiredEvidenceRefs.filter((ref) => !providedRefs.has(ref));
+  const requiredEvidenceRefsCovered = missingRequiredEvidenceRefs.length === 0;
   const forbiddenPlaceholderRefs = allRefs.filter(looksLikePlaceholderRef);
-  const successPathReady = (
+  const successPathReady = requiredEvidenceRefsCovered && (
     domainReceiptRefs.length > 0
     || ownerChainRefs.length > 0
     || noRegressionRefs.length > 0
@@ -140,6 +155,10 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     success_path_ready: successPathReady && forbiddenPlaceholderRefs.length === 0,
     typed_blocker_path_ready: typedBlockerPathReady && forbiddenPlaceholderRefs.length === 0,
     can_record_refs_only_receipt: canRecordRefsOnlyReceipt,
+    required_evidence_refs: requiredEvidenceRefs,
+    enforced_required_evidence_refs: enforcedRequiredEvidenceRefs,
+    required_evidence_refs_covered: requiredEvidenceRefsCovered,
+    missing_required_evidence_refs: missingRequiredEvidenceRefs,
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
     missing_payload_fields: allRefs.length === 0
       ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs_or_evidence_refs']
@@ -173,6 +192,24 @@ export function assertDomainDispatchEvidencePayloadReady(route: JsonRecord, payl
   }
   if (preflight.can_record_refs_only_receipt) {
     return preflight;
+  }
+  if (
+    Array.isArray(preflight.missing_required_evidence_refs)
+    && preflight.missing_required_evidence_refs.length > 0
+    && preflight.typed_blocker_path_ready !== true
+  ) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'Domain dispatch evidence payload does not cover every route-declared required evidence ref.',
+      {
+        action_id: stringValue(route.action_id),
+        error_kind: 'domain_dispatch_evidence_required_refs_missing',
+        required_evidence_refs: preflight.required_evidence_refs,
+        missing_required_evidence_refs: preflight.missing_required_evidence_refs,
+        empty_payload_template_is_success_evidence: false,
+        preflight,
+      },
+    );
   }
   throw new FrameworkContractError(
     'cli_usage_error',
