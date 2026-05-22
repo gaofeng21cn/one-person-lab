@@ -1,14 +1,22 @@
 import {
   assert,
+  fs,
+  os,
+  path,
   runCli,
   runCliFailure,
   test,
 } from '../helpers.ts';
+import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
-  const readiness = runCli(['framework', 'readiness', '--family-defaults']).framework_readiness;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-state-'));
+  try {
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
 
-  assert.equal(readiness.surface_kind, 'opl_framework_readiness_summary');
+    assert.equal(readiness.surface_kind, 'opl_framework_readiness_summary');
   assert.equal(readiness.owner, 'one-person-lab');
   assert.equal(readiness.family_defaults, true);
   assert.equal(readiness.detail_level, 'summary');
@@ -863,7 +871,10 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.authority_boundary.can_write_domain_truth, false);
   assert.equal(readiness.authority_boundary.can_read_memory_body, false);
   assert.equal(readiness.authority_boundary.can_read_artifact_body, false);
-  assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
+    assert.equal(readiness.authority_boundary.safe_action_route_is_receipt_closure, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('framework readiness rejects non-default invocation to avoid a second truth surface', () => {
@@ -872,6 +883,56 @@ test('framework readiness rejects non-default invocation to avoid a second truth
   assert.equal(failure.payload.error.code, 'cli_usage_error');
   assert.match(failure.payload.error.message, /requires --family-defaults/);
   assert.deepEqual(failure.payload.error.details.required, ['--family-defaults']);
+});
+
+test('framework readiness consumes OPL-managed OMA install update receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-managed-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    recordManagedInstallUpdateReceipts([{
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      action: 'update',
+      reason: 'startup_health_and_skill_refresh',
+      install_origin_before: 'managed_root',
+      install_origin_after: 'managed_root',
+      checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      managed_checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      git_head_sha: 'oma-framework-ledger-sha',
+      git_sync_status: 'synced',
+      git_dirty: false,
+      skill_sync_domain: 'oplmetaagent',
+    }]);
+
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
+    const omaFollowthrough = readiness.attention_first_payload.oma_production_consumption_followthrough;
+    if (omaFollowthrough.structural_consumption_ready !== true) {
+      return;
+    }
+    assert.equal(omaFollowthrough.open_gate_count, 2);
+    assert.deepEqual(omaFollowthrough.open_gate_ids, [
+      'app_live_path_refs',
+      'long_soak_refs',
+    ]);
+    assert.equal(omaFollowthrough.production_consumption_ready, false);
+    assert.equal(
+      omaFollowthrough.gate_items.some(
+        (gate: { gate_id: string }) => gate.gate_id === 'managed_install_update_refs',
+      ),
+      false,
+    );
+    assert.equal(readiness.oma_production_consumption_followthrough.open_gate_count, 2);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('framework readiness appears in default and command-scoped help', () => {

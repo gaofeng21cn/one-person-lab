@@ -1,5 +1,6 @@
 import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { listManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
 
 function createDomainModuleRemote(input: {
   repoName: string;
@@ -127,6 +128,13 @@ test('system startup-maintenance installs clean managed modules and returns App 
               };
             };
           }>;
+          managed_install_update_receipts: {
+            surface_kind: string;
+            status: string;
+            recorded_receipt_count: number;
+            receipt_refs: string[];
+            ledger_file: string;
+          };
           plugin_cache_freshness: {
             status: string;
             source: string;
@@ -149,6 +157,25 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.system_action.details.summary.completed_targets_count, 4);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.surface_kind,
+      'opl_managed_module_install_update_ledger_record',
+    );
+    assert.equal(output.system_action.details.managed_install_update_receipts.status, 'recorded');
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.recorded_receipt_count,
+      4,
+    );
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.receipt_refs.some(
+        (ref) => ref.startsWith('opl://managed-install-update/oplmetaagent/install/'),
+      ),
+      true,
+    );
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.ledger_file,
+      path.join(homeRoot, 'opl-state', 'managed-install-update-ledger.json'),
+    );
     assert.deepEqual(
       output.system_action.details.module_targets.map((target) => [
         target.target_id,
@@ -192,6 +219,27 @@ test('system startup-maintenance installs clean managed modules and returns App 
     ]);
     for (const skillName of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
+    }
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
+    try {
+      const receipts = listManagedInstallUpdateReceipts({ module_id: 'oplmetaagent' });
+      assert.equal(receipts.length, 1);
+      assert.equal(receipts[0].surface_kind, 'opl_managed_module_install_update_receipt');
+      assert.equal(receipts[0].repo_name, 'opl-meta-agent');
+      assert.equal(receipts[0].action, 'install');
+      assert.equal(receipts[0].install_origin_after, 'managed_root');
+      assert.equal(receipts[0].skill_sync_status, 'completed');
+      assert.equal(receipts[0].skill_sync_domain, 'oplmetaagent');
+      assert.equal(receipts[0].health_check_status, 'completed');
+      assert.equal(receipts[0].authority_boundary.can_write_domain_truth, false);
+      assert.equal(receipts[0].authority_boundary.can_claim_production_ready, false);
+    } finally {
+      if (previousStateDir === undefined) {
+        delete process.env.OPL_STATE_DIR;
+      } else {
+        process.env.OPL_STATE_DIR = previousStateDir;
+      }
     }
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -281,6 +329,10 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
         status: string;
         details: {
           summary: { manual_required_targets_count: number };
+          managed_install_update_receipts: {
+            recorded_receipt_count: number;
+            receipt_refs: string[];
+          };
           module_targets: Array<{
             target_id: string;
             status: string;
@@ -298,6 +350,13 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
     assert.equal(secondTargets.get('medautogrant')?.action, null);
     assert.equal(secondTargets.get('redcube')?.status, 'completed');
     assert.equal(secondTargets.get('oplmetaagent')?.status, 'completed');
+    assert.equal(secondRun.system_action.details.managed_install_update_receipts.recorded_receipt_count, 2);
+    assert.equal(
+      secondRun.system_action.details.managed_install_update_receipts.receipt_refs.some(
+        (ref) => ref.startsWith('opl://managed-install-update/oplmetaagent/update/'),
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });

@@ -1,5 +1,6 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../system-preferences.ts';
 import type { FrameworkContracts } from '../types.ts';
+import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
 
 import { buildOplEnvironment } from './environment.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
@@ -143,6 +144,74 @@ function readSkillSyncDomain(target: StartupMaintenanceTarget) {
   return typeof domainId === 'string' ? domainId : null;
 }
 
+function readHealthCheckStatus(target: StartupMaintenanceTarget) {
+  const turnkey = readNestedRecord(target.result, 'turnkey');
+  const healthCheck = readNestedRecord(turnkey, 'health_check');
+  const status = readNestedRecord(healthCheck, 'status');
+  return typeof status === 'string' ? status : null;
+}
+
+function readString(value: unknown, key: string) {
+  const nested = readNestedRecord(value, key);
+  return typeof nested === 'string' && nested.trim().length > 0 ? nested.trim() : null;
+}
+
+function readBoolean(value: unknown, key: string) {
+  const nested = readNestedRecord(value, key);
+  return typeof nested === 'boolean' ? nested : null;
+}
+
+function repoNameForModuleId(moduleId: string) {
+  const repoNames: Record<string, string> = {
+    medautoscience: 'med-autoscience',
+    medautogrant: 'med-autogrant',
+    redcube: 'redcube-ai',
+    oplmetaagent: 'opl-meta-agent',
+  };
+  return repoNames[moduleId] ?? null;
+}
+
+function buildManagedReceiptInput(target: StartupMaintenanceTarget) {
+  if (
+    target.status !== 'completed'
+    || (target.action !== 'install' && target.action !== 'update')
+    || readString(target.result, 'status') !== 'completed'
+    || readSkillSyncStatus(target) !== 'completed'
+    || readHealthCheckStatus(target) !== 'completed'
+  ) {
+    return null;
+  }
+
+  const module = readNestedRecord(target.result, 'module');
+  if (readString(module, 'install_origin') !== 'managed_root') {
+    return null;
+  }
+
+  const git = readNestedRecord(module, 'git');
+  const moduleId = readString(module, 'module_id');
+  const repoName = moduleId ? repoNameForModuleId(moduleId) : null;
+  const checkoutPath = readString(module, 'checkout_path');
+  const managedCheckoutPath = readString(module, 'managed_checkout_path');
+  if (!moduleId || !repoName || !checkoutPath || !managedCheckoutPath) {
+    return null;
+  }
+
+  return {
+    module_id: moduleId,
+    repo_name: repoName,
+    action: target.action,
+    reason: target.reason,
+    install_origin_before: target.install_origin_before,
+    install_origin_after: 'managed_root' as const,
+    checkout_path: checkoutPath,
+    managed_checkout_path: managedCheckoutPath,
+    git_head_sha: readString(git, 'head_sha'),
+    git_sync_status: readString(git, 'sync_status'),
+    git_dirty: readBoolean(git, 'dirty'),
+    skill_sync_domain: readSkillSyncDomain(target),
+  };
+}
+
 function summarizeTargets(targets: StartupMaintenanceTarget[]) {
   return {
     total_targets_count: targets.length,
@@ -156,6 +225,11 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
   const initialModules = buildOplModules().modules.modules.filter((module) => module.default_install);
   const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
   const summary = summarizeTargets(moduleTargets);
+  const managedReceiptRecord = recordManagedInstallUpdateReceipts(
+    moduleTargets
+      .map(buildManagedReceiptInput)
+      .filter((receipt): receipt is NonNullable<typeof receipt> => Boolean(receipt)),
+  );
   const syncedDomains = moduleTargets
     .filter((target) => readSkillSyncStatus(target) === 'completed')
     .map((target) => readSkillSyncDomain(target))
@@ -174,6 +248,7 @@ export async function runOplStartupMaintenance(contracts: FrameworkContracts) {
         mode: 'clean_managed_environment_startup',
         summary,
         module_targets: moduleTargets,
+        managed_install_update_receipts: managedReceiptRecord,
         plugin_cache_freshness: {
           status: syncedDomains.length > 0
             ? 'freshened'

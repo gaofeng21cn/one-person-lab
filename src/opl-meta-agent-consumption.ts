@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
+import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
 const OMA_PROJECT = 'opl-meta-agent';
@@ -185,6 +186,17 @@ function refsFromRecords(records: JsonRecord[], keys: string[]) {
   ));
 }
 
+function managedInstallUpdateLedgerRefs() {
+  return listManagedInstallUpdateReceipts({ module_id: 'oplmetaagent', repo_name: OMA_PROJECT })
+    .filter((receipt) =>
+      receipt.install_origin_after === 'managed_root'
+      && receipt.module_action_status === 'completed'
+      && receipt.skill_sync_status === 'completed'
+      && receipt.health_check_status === 'completed'
+    )
+    .map((receipt) => receipt.receipt_ref);
+}
+
 function productionConsumptionGate(input: {
   gateId: typeof PRODUCTION_CONSUMPTION_GATE_IDS[number];
   status: string;
@@ -253,6 +265,11 @@ function buildProductionConsumptionFollowthrough(payloads: {
     'install_update_receipt_refs',
     'managed_module_update_receipt_refs',
   ]);
+  const managedInstallUpdateLedgerReceiptRefs = managedInstallUpdateLedgerRefs();
+  const managedInstallUpdateObservedRefs = uniqueStringList([
+    ...managedInstallUpdateRefs,
+    ...managedInstallUpdateLedgerReceiptRefs,
+  ]);
   const appLivePathRefs = refsFromRecords([
     appProjection,
     drilldownReceipt,
@@ -282,15 +299,16 @@ function buildProductionConsumptionFollowthrough(payloads: {
   const gates = [
     productionConsumptionGate({
       gateId: 'managed_install_update_refs',
-      status: managedInstallUpdateRefs.length > 0
+      status: managedInstallUpdateObservedRefs.length > 0
         ? 'refs_observed'
         : 'missing_managed_install_update_refs',
       requiredRefsAnyOf: [
         'managed_install_update_refs',
         'module_install_update_receipt_refs',
         'managed_module_update_receipt_refs',
+        'opl_managed_module_install_update_receipt',
       ],
-      observedRefs: managedInstallUpdateRefs,
+      observedRefs: managedInstallUpdateObservedRefs,
     }),
     productionConsumptionGate({
       gateId: 'app_live_path_refs',
@@ -350,7 +368,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
       gate_count: gates.length,
       open_gate_count: openGates.length,
       open_gate_ids: openGates.map((gate) => gate.gate_id),
-      managed_install_update_ref_count: managedInstallUpdateRefs.length,
+      managed_install_update_ref_count: managedInstallUpdateObservedRefs.length,
       app_live_path_ref_count: appLivePathRefs.length,
       owner_receipt_or_typed_blocker_seed_target_count: ownerOrBlockerTargetCount,
       scaleout_target_count: scaleoutTargets.length,

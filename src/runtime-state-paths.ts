@@ -13,6 +13,7 @@ export type OplStatePaths = {
   update_channel_file: string;
   developer_supervisor_config_file: string;
   external_evidence_ledger_file: string;
+  managed_install_update_ledger_file: string;
   domain_manifest_projection_cache_file: string;
   desktop_config_file: string;
   desktop_pilot_root: string;
@@ -40,6 +41,7 @@ export function resolveOplStatePaths(): OplStatePaths {
     update_channel_file: path.join(stateDir, 'update-channel.json'),
     developer_supervisor_config_file: path.join(stateDir, 'developer-supervisor.json'),
     external_evidence_ledger_file: path.join(stateDir, 'external-evidence-ledger.json'),
+    managed_install_update_ledger_file: path.join(stateDir, 'managed-install-update-ledger.json'),
     domain_manifest_projection_cache_file: path.join(stateDir, 'domain-manifest-projection-cache.json'),
     desktop_config_file: path.join(stateDir, 'desktop-pilot', 'config', 'desktop-config.json'),
     desktop_pilot_root: path.join(stateDir, 'desktop-pilot'),
