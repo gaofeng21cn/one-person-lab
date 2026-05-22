@@ -3,6 +3,7 @@ import {
   buildCodexCliPreview,
   buildCodexExecArgs,
   parseCodexExecOutput,
+  recoverCodexExecOutputFromSession,
   runCodexCommandStreaming,
   type CodexExecEvent,
 } from './codex.ts';
@@ -44,6 +45,8 @@ type CodexStageRunnerReceipt = ReturnType<typeof buildCodexStageRunnerReceipt> &
     exit_code: number;
     final_message_chars: number;
     stderr_tail: string[];
+    recovered_session_path?: string;
+    recovered_final_message_chars?: number;
   };
 };
 
@@ -380,7 +383,20 @@ export async function runCodexStageRunner(input: {
     },
   });
   const parsed = parseCodexExecOutput(result.stdout);
-  const closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages);
+  let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages);
+  let recoveredSessionPath: string | null = null;
+  let recoveredFinalMessageChars = 0;
+  if (!closeoutPacket) {
+    const recovered = recoverCodexExecOutputFromSession(parsed.threadId);
+    if (recovered) {
+      const recoveredParsed = parseCodexExecOutput(recovered.output);
+      closeoutPacket = parseCloseoutFromCodexMessages(recoveredParsed.messages);
+      if (closeoutPacket) {
+        recoveredSessionPath = recovered.sessionPath;
+        recoveredFinalMessageChars = recoveredParsed.finalMessage.length;
+      }
+    }
+  }
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
@@ -401,6 +417,12 @@ export async function runCodexStageRunner(input: {
       exit_code: result.exitCode,
       final_message_chars: parsed.finalMessage.length,
       stderr_tail: result.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
+      ...(recoveredSessionPath
+        ? {
+            recovered_session_path: recoveredSessionPath,
+            recovered_final_message_chars: recoveredFinalMessageChars,
+          }
+        : {}),
     },
   };
 }
