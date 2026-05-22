@@ -710,6 +710,134 @@ test('runtime action execute records and verifies domain dispatch evidence recei
   }
 });
 
+test('runtime action execute blocks domain dispatch evidence payloads bound to a different attempt identity', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-dispatch-conflict-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'publication_aftercare/reviewer-refresh',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify({
+        surface_kind: 'opl_provider_hosted_task_workspace_locator',
+        task_kind: 'publication_aftercare/reviewer-refresh',
+        study_id: '002-dm-china-us-mortality-attribution',
+        profile: '/tmp/dm-cvd/profile.toml',
+      }),
+      '--task',
+      'task-domain-dispatch-identity-conflict',
+      '--source-fingerprint',
+      '95d9b5310c9c7a8d',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:reviewer-refresh-closeout'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'bounded_repair',
+          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+        },
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const recordActionId = `domain_dispatch:medautoscience:${attemptId}:record`;
+    const blockedExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--payload',
+      JSON.stringify({
+        study_id: '001-lineage-pfs',
+        task_kind: 'publication_aftercare/reviewer-refresh',
+        source_fingerprint: 'a6ff1097861ed2ae',
+        typed_blocker_refs: ['mas://typed-blockers/nfpitnet-001/reviewer-refresh-pending'],
+        owner_chain_refs: ['mas://owner-chain/nfpitnet-001/reviewer-refresh.json'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    assert.equal(blockedExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      blockedExecution.payload.error.details.error_kind,
+      'domain_dispatch_evidence_receipt_conflict',
+    );
+    assert.equal(blockedExecution.payload.error.details.preflight.status, 'blocked');
+    assert.deepEqual(
+      blockedExecution.payload.error.details.preflight.identity_conflicts.map((
+        conflict: { field: string },
+      ) => conflict.field),
+      ['study_id', 'source_fingerprint'],
+    );
+
+    const afterBlockedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const attempt = afterBlockedDrilldown.domain_dispatch_evidence.attempts.find(
+      (entry: { stage_attempt_id: string }) => entry.stage_attempt_id === attemptId,
+    );
+    assert.equal(attempt.dispatch_evidence_receipt_status, 'missing');
+    assert.deepEqual(attempt.dispatch_evidence_receipt_refs, []);
+
+    const matchedExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--payload',
+      JSON.stringify({
+        study_id: '002-dm-china-us-mortality-attribution',
+        task_kind: 'publication_aftercare/reviewer-refresh',
+        source_fingerprint: '95d9b5310c9c7a8d',
+        typed_blocker_refs: ['mas://typed-blockers/dm-cvd/reviewer-refresh-pending'],
+        owner_chain_refs: ['mas://owner-chain/dm-cvd/reviewer-refresh.json'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(
+      matchedExecution.execution.result.domain_dispatch_evidence_payload_preflight.status,
+      'ready_to_record',
+    );
+    assert.equal(
+      matchedExecution.execution.result.domain_dispatch_evidence_payload_preflight.identity_binding.status,
+      'matched',
+    );
+    assert.equal(matchedExecution.execution.result.external_evidence_apply.status, 'recorded');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime action execute can execute OPL-owned attempt query routes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-query-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

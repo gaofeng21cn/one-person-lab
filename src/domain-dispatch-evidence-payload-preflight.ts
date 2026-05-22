@@ -11,6 +11,14 @@ function stringList(value: unknown) {
     : [];
 }
 
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function refsFromPayload(payload: JsonRecord, keys: string[]) {
   return keys.flatMap((key) => {
     const value = payload[key];
@@ -25,7 +33,65 @@ function looksLikePlaceholderRef(ref: string) {
   return ref.startsWith('<') && ref.endsWith('>');
 }
 
-export function preflightDomainDispatchEvidencePayload(payload: JsonRecord) {
+function payloadSourceFingerprint(payload: JsonRecord) {
+  return stringValue(payload.source_fingerprint)
+    ?? stringValue(record(payload.repair_work_unit).source_fingerprint);
+}
+
+function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
+  const targetIdentity = record(route.target_identity);
+  const targetEntries = [
+    ['domain_id', stringValue(targetIdentity.domain_id) ?? stringValue(route.domain_id)],
+    ['stage_id', stringValue(targetIdentity.stage_id) ?? stringValue(route.stage_id)],
+    ['task_kind', stringValue(targetIdentity.task_kind)],
+    ['study_id', stringValue(targetIdentity.study_id)],
+    ['source_fingerprint', stringValue(targetIdentity.source_fingerprint)
+      ?? stringValue(route.stage_attempt_source_fingerprint)],
+    ['profile', stringValue(targetIdentity.profile)],
+    ['profile_name', stringValue(targetIdentity.profile_name)],
+  ] as const;
+  const payloadEntries = [
+    ['domain_id', stringValue(payload.domain_id)],
+    ['stage_id', stringValue(payload.stage_id)],
+    ['task_kind', stringValue(payload.task_kind) ?? stringValue(payload.recommended_task_kind)],
+    ['study_id', stringValue(payload.study_id)],
+    ['source_fingerprint', payloadSourceFingerprint(payload)],
+    ['profile', stringValue(payload.profile)],
+    ['profile_name', stringValue(payload.profile_name)],
+  ] as const;
+  const payloadByField = new Map(payloadEntries);
+  const comparable = targetEntries
+    .map(([field, targetValue]) => ({
+      field,
+      target_value: targetValue,
+      payload_value: payloadByField.get(field) ?? null,
+    }))
+    .filter((entry): entry is {
+      field: string;
+      target_value: string;
+      payload_value: string;
+    } => Boolean(entry.target_value) && Boolean(entry.payload_value));
+  const identityConflicts = comparable.filter((entry) => entry.target_value !== entry.payload_value);
+  const targetIdentityPresent = targetEntries.some(([, value]) => Boolean(value));
+  return {
+    surface_kind: 'opl_domain_dispatch_evidence_identity_binding_preflight',
+    status: identityConflicts.length > 0
+      ? 'conflict'
+      : comparable.length > 0
+        ? 'matched'
+        : targetIdentityPresent
+          ? 'payload_identity_not_provided'
+          : 'target_identity_not_available',
+    comparable_fields: comparable.map((entry) => entry.field),
+    conflict_fields: identityConflicts.map((entry) => entry.field),
+    identity_conflicts: identityConflicts,
+    target_identity: Object.fromEntries(targetEntries.filter(([, value]) => Boolean(value))),
+    payload_identity: Object.fromEntries(payloadEntries.filter(([, value]) => Boolean(value))),
+    policy: 'record_fails_closed_when_payload_identity_conflicts_with_stage_attempt_identity',
+  };
+}
+
+export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, route: JsonRecord = {}) {
   const domainReceiptRefs = refsFromPayload(payload, [
     'domain_receipt_refs',
     'domain_receipt_ref',
@@ -51,13 +117,18 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord) {
     || evidenceRefs.length > 0
   ) && typedBlockerRefs.length === 0;
   const typedBlockerPathReady = typedBlockerRefs.length > 0;
+  const identityBinding = identityBindingPreflight(route, payload);
+  const identityConflicts = identityBinding.identity_conflicts;
   const canRecordRefsOnlyReceipt = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
-    && (successPathReady || typedBlockerPathReady);
+    && (successPathReady || typedBlockerPathReady)
+    && identityConflicts.length === 0;
   return {
     surface_kind: 'opl_domain_dispatch_evidence_payload_preflight',
     status: canRecordRefsOnlyReceipt ? 'ready_to_record' : 'blocked',
     route_requires_domain_or_app_payload: true,
+    identity_binding: identityBinding,
+    identity_conflicts: identityConflicts,
     required_any_operator_payload_refs: [
       'domain_receipt_refs',
       'typed_blocker_refs',
@@ -85,7 +156,20 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord) {
 }
 
 export function assertDomainDispatchEvidencePayloadReady(route: JsonRecord, payload: JsonRecord) {
-  const preflight = preflightDomainDispatchEvidencePayload(payload);
+  const preflight = preflightDomainDispatchEvidencePayload(payload, route);
+  if (Array.isArray(preflight.identity_conflicts) && preflight.identity_conflicts.length > 0) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'Domain dispatch evidence payload identity conflicts with the target stage attempt.',
+      {
+        action_id: stringValue(route.action_id),
+        error_kind: 'domain_dispatch_evidence_receipt_conflict',
+        preflight,
+        identity_conflicts: preflight.identity_conflicts,
+        receipt_recorded: false,
+      },
+    );
+  }
   if (preflight.can_record_refs_only_receipt) {
     return preflight;
   }

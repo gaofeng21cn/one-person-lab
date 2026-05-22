@@ -44,6 +44,24 @@ function routeImpact(attempt: JsonRecord) {
   return record(attempt.route_impact);
 }
 
+function attemptWorkspaceLocator(attempt: JsonRecord) {
+  return record(attempt.workspace_locator);
+}
+
+function targetIdentity(attempt: JsonRecord) {
+  const locator = attemptWorkspaceLocator(attempt);
+  return {
+    domain_id: stringValue(attempt.domain_id),
+    stage_id: stringValue(attempt.stage_id),
+    stage_attempt_id: stringValue(attempt.stage_attempt_id),
+    task_kind: stringValue(locator.task_kind) ?? stringValue(attempt.stage_id),
+    study_id: stringValue(locator.study_id),
+    source_fingerprint: stringValue(attempt.source_fingerprint),
+    profile: stringValue(locator.profile),
+    profile_name: stringValue(locator.profile_name),
+  };
+}
+
 function externalDispatchReceipts(attempt: JsonRecord) {
   const domainId = stringValue(attempt.domain_id);
   const stageAttemptId = stringValue(attempt.stage_attempt_id);
@@ -104,6 +122,7 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
   );
   const domainReadyVerdict = stringValue(attempt.domain_ready_verdict)
     ?? stringValue(impact.domain_ready_verdict);
+  const identity = targetIdentity(attempt);
   const ownerReceiptRefs = uniqueStrings([
     ...stringList(controlled.owner_receipt_refs),
     ...stringList(transition.owner_receipt_refs),
@@ -140,6 +159,11 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
     provider_kind: stringValue(attempt.provider_kind),
     local_status: stringValue(attempt.local_status),
     closeout_receipt_status: stringValue(attempt.closeout_receipt_status),
+    workspace_locator: attemptWorkspaceLocator(attempt),
+    source_fingerprint: stringValue(attempt.source_fingerprint),
+    target_identity: identity,
+    identity_binding_policy:
+      'domain_dispatch_receipt_payload_identity_must_not_conflict_with_stage_attempt_identity',
     dispatch_evidence_receipt_status: verifiedExternalReceipts.length > 0
       ? 'verified'
       : externalReceipts.length > 0

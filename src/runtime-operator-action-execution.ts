@@ -263,7 +263,7 @@ function domainDispatchEvidenceRecordArgs(
   options: { dryRun: boolean },
 ) {
   const preflight = options.dryRun
-    ? preflightDomainDispatchEvidencePayload(payload)
+    ? preflightDomainDispatchEvidencePayload(payload, route)
     : assertDomainDispatchEvidencePayloadReady(route, payload);
   return {
     runtimeArgs: externalEvidenceApplyArgs(route, payload, commandOrSurfaceRef, {

@@ -18,6 +18,10 @@ function stringList(value: unknown) {
     : [];
 }
 
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
   const seen = new Set<string>();
   return values.filter((value) => {
@@ -83,6 +87,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
   const requestPackId = `${domainId}.domain_dispatch_evidence`;
   const sourceRef = stringValue(attempt.ref)
     ?? `/stage_attempt_workbench/attempts/${stageAttemptId}/domain_dispatch_evidence`;
+  const targetIdentity = record(attempt.target_identity);
   const actionId = `${requestId}:${mode}`;
   const recordMode = mode === 'record';
   const recordedReceiptRef = stringList(attempt.dispatch_evidence_receipt_refs)[0] ?? null;
@@ -203,6 +208,10 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     stage_attempt_id: stageAttemptId,
     domain_id: domainId,
     stage_id: stageId,
+    stage_attempt_source_fingerprint: stringValue(attempt.source_fingerprint),
+    target_identity: targetIdentity,
+    identity_binding_policy:
+      'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
     request_id: requestId,
     request_pack_id: requestPackId,
     evidence_route_kind: 'domain_dispatch_evidence',
