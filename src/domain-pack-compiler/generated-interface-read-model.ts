@@ -299,7 +299,19 @@ function proofModuleForSurface(descriptor: JsonRecord, surfaceId: string, surfac
   const audit = isRecord(descriptor.functional_privatization_audit)
     ? descriptor.functional_privatization_audit
     : null;
-  const modules = recordList(audit?.modules);
+  const modules = [
+    ...recordList(audit?.modules),
+    ...recordList(
+      isRecord(audit?.functional_consumer_boundary)
+        ? audit.functional_consumer_boundary.functional_module_inventory
+        : null,
+    ),
+    ...recordList(
+      isRecord(audit?.privatized_functional_module_audit)
+        ? audit.privatized_functional_module_audit.modules
+        : null,
+    ),
+  ];
   const aliases = generatedSurfaceAliases(surfaceId);
   const currentPaths = currentPathsFromHandoff(surface);
   const explicitSurfaceRefModule = modules.find((module) => moduleSurfaceRefMatches(module, aliases));
