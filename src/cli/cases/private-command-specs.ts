@@ -26,6 +26,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
+import { buildRuntimeAppReleaseEvidenceCommandSpecs } from './runtime-app-release-evidence-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
@@ -100,6 +101,7 @@ export function buildInternalCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
+    ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
     help: {
       usage: 'opl help [command]',
       summary: 'Show the top-level command surface or command-scoped runnable examples.',

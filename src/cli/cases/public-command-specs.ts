@@ -894,6 +894,20 @@ export function buildPublicCommandSpecs(
       ],
       group: 'runtime',
     }),
+    'runtime app-release-evidence record':
+      cloneCommandSpec(commandSpecs['runtime app-release-evidence record'], {
+        usage: 'opl runtime app-release-evidence record --payload <json>',
+        examples: [
+          'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime app-release-evidence list':
+      cloneCommandSpec(commandSpecs['runtime app-release-evidence list'], {
+        usage: 'opl runtime app-release-evidence list',
+        examples: ['opl runtime app-release-evidence list --json'],
+        group: 'runtime',
+      }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       examples: [
