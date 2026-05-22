@@ -224,7 +224,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     ]) as { family_runtime_enqueue: { task: { task_id: string } } };
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
 
-    const tick = await worker.runUntil(async () => {
+    const result = await worker.runUntil(async () => {
       const result = await runFamilyRuntime(['tick', '--source', 'test']) as {
         family_runtime_tick: {
           dispatches: Array<{
@@ -236,32 +236,33 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
       };
       const startedAttempt = result.family_runtime_tick.dispatches[0].admitted_stage_attempt;
       await testEnv.sleep('2s');
-      await runFamilyRuntime(['attempt', 'query', startedAttempt.stage_attempt_id]);
-      return result;
-    });
-    const task = await runFamilyRuntime(['queue', 'inspect', taskId]) as unknown as {
-      family_runtime_task: {
-        task: {
-          status: string;
-          last_error: string | null;
-          dead_letter_reason: string | null;
+      assert.ok(startedAttempt.stage_attempt_id);
+      const task = await runFamilyRuntime(['queue', 'inspect', taskId]) as unknown as {
+        family_runtime_task: {
+          task: {
+            status: string;
+            last_error: string | null;
+            dead_letter_reason: string | null;
+          };
+          events: Array<{
+            event_type: string;
+            payload: Record<string, unknown>;
+          }>;
+          stage_attempts: Array<{
+            status: string;
+            blocked_reason: string | null;
+            provider_kind: string;
+            executor_kind: string;
+            stage_id: string;
+            provider_run: { provider_status: string };
+            closeout_receipt_status: string;
+            checkpoint_refs: string[];
+          }>;
         };
-        events: Array<{
-          event_type: string;
-          payload: Record<string, unknown>;
-        }>;
-        stage_attempts: Array<{
-          status: string;
-          blocked_reason: string | null;
-          provider_kind: string;
-          executor_kind: string;
-          stage_id: string;
-          provider_run: { provider_status: string };
-          closeout_receipt_status: string;
-          checkpoint_refs: string[];
-        }>;
       };
-    };
+      return { tick: result, task };
+    });
+    const { tick, task } = result;
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
@@ -284,6 +285,154 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     assert.equal(attempt.provider_run.provider_status, 'blocked');
     assert.equal(attempt.closeout_receipt_status, null);
     assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (typeof value === 'string') {
+        process.env[key] = value;
+      } else {
+        delete process.env[key];
+      }
+    }
+    await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime queue inspect syncs a completed MAS default executor Temporal closeout', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-default-completed-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-mas-default-completed-${Date.now()}`;
+  const previousEnv = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_FAMILY_RUNTIME_PROVIDER: process.env.OPL_FAMILY_RUNTIME_PROVIDER,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_NAMESPACE: process.env.OPL_TEMPORAL_NAMESPACE,
+    OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
+    OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
+    OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+  };
+
+  try {
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: process.pid,
+      address: testEnv.address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'temporal test server',
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: process.pid,
+      address: testEnv.address,
+      namespace: testEnv.namespace,
+      task_queue: taskQueue,
+      started_at: new Date().toISOString(),
+      status: 'ready',
+    }, null, 2)}\n`);
+    const closeoutRefs = [
+      'artifacts/supervision/reconcile/latest.json',
+      'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+    ];
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async () => ({
+          status: 'checkpointed',
+          checkpoint_refs: ['checkpoint:mas-default-writer-start'],
+          closeout_packet: {
+            surface_kind: 'domain_stage_closeout_packet',
+            closeout_refs: closeoutRefs,
+            consumed_refs: ['dispatch:mas-default-writer-start'],
+            writeback_receipt_refs: ['receipt:writer-handoff'],
+            next_owner: 'medautoscience',
+            domain_ready_verdict: 'domain_gate_pending',
+          },
+        }),
+      },
+    });
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
+    process.env.OPL_TEMPORAL_ADDRESS = '';
+    process.env.TEMPORAL_ADDRESS = '';
+    process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+    process.env.OPL_TEMPORAL_WORKER_STATUS = '';
+    process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+
+    const dispatchRef = 'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
+    const enqueue = await runFamilyRuntime([
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        profile: '/tmp/dm-cvd/ops/medautoscience/profiles/dm-cvd.local.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        quest_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'run_quality_repair_batch',
+        dispatch_authority: 'quality_repair_batch_writer_handoff',
+        next_executable_owner: 'write',
+        executor_kind: 'codex_cli_default',
+        dispatch_ref: dispatchRef,
+        authority_boundary: 'mas_default_executor_dispatch_request_only',
+      }),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:completed',
+    ]) as { family_runtime_enqueue: { task: { task_id: string } } };
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+
+    const result = await worker.runUntil(async () => {
+      const result = await runFamilyRuntime(['tick', '--source', 'test']) as {
+        family_runtime_tick: {
+          dispatches: Array<{
+            status: string;
+            temporal_start: { surface_kind: string };
+            admitted_stage_attempt: { stage_attempt_id: string };
+          }>;
+        };
+      };
+      await testEnv.sleep('2s');
+      const task = await runFamilyRuntime(['queue', 'inspect', taskId]) as unknown as {
+        family_runtime_task: {
+          task: {
+            status: string;
+            last_error: string | null;
+            dead_letter_reason: string | null;
+          };
+          stage_attempts: Array<{
+            status: string;
+            closeout_refs: string[];
+            closeout_receipt_status: string;
+            provider_run: { provider_status: string };
+            route_impact: { domain_ready_verdict?: string };
+          }>;
+        };
+      };
+      return { tick: result, task };
+    });
+    const { tick, task } = result;
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.family_runtime_task.task.status, 'succeeded');
+    assert.equal(task.family_runtime_task.task.last_error, null);
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(attempt.status, 'completed');
+    assert.deepEqual(attempt.closeout_refs, closeoutRefs);
+    assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.equal(attempt.provider_run.provider_status, 'completed');
+    assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
   } finally {
     for (const [key, value] of Object.entries(previousEnv)) {
       if (typeof value === 'string') {

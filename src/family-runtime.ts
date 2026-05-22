@@ -81,6 +81,18 @@ async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
 }
 
+async function syncTemporalStageAttemptsForTask(
+  db: DatabaseSync,
+  paths: ReturnType<typeof familyRuntimePaths>,
+  taskId: string,
+) {
+  const attempts = listStageAttemptsForTask(db, taskId).filter((attempt) => attempt.provider_kind === 'temporal');
+  for (const attempt of attempts) {
+    const temporalQuery = await queryTemporalStageAttemptReadModel(attempt, { paths });
+    syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
+  }
+}
+
 async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
   const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
   if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
@@ -608,6 +620,7 @@ export async function runFamilyRuntime(args: string[]) {
       };
     }
     if (parsed.mode === 'queue_inspect') {
+      await syncTemporalStageAttemptsForTask(db, paths, parsed.taskId);
       return {
         version: 'g2',
         family_runtime_task: {

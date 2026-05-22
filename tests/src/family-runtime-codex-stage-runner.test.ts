@@ -995,3 +995,93 @@ test('Temporal blocked terminal observation refreshes stale MAS default executor
     assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_not_completed');
   });
 });
+
+test('Temporal completed terminal observation ingests closeout refs into local attempt ledger', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    const created = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'domain_owner/default-executor-dispatch',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/mas' },
+      sourceFingerprint: 'sha256:mas-default-completed-dispatch',
+      executorKind: 'codex_cli',
+      checkpointRefs: ['dispatch:mas-default-writer-start'],
+    });
+    const attempt = created.attempt;
+    const synced = syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: {
+        surface_kind: 'temporal_stage_attempt_query',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        status: 'completed',
+        started_at: createdAt,
+        updated_at: createdAt,
+        activity_events: [
+          {
+            activity_kind: 'codex_stage_activity',
+            activity_status: 'completed',
+            closeout_packet: {
+              surface_kind: 'domain_stage_closeout_packet',
+              closeout_refs: [
+                'raw-codex-closeout-should-not-be-authoritative.json',
+              ],
+              consumed_refs: ['dispatch:mas-default-writer-start'],
+              writeback_receipt_refs: ['receipt:writer-handoff'],
+              next_owner: 'medautoscience',
+              domain_ready_verdict: 'domain_gate_pending',
+            },
+          },
+        ],
+        checkpoint_refs: ['dispatch:mas-default-writer-start'],
+        closeout_refs: [
+          'artifacts/supervision/reconcile/latest.json',
+          'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+        ],
+        consumed_refs: ['dispatch:mas-default-writer-start'],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: ['receipt:writer-handoff'],
+        rejected_writes: [],
+        next_owner: 'medautoscience',
+        route_impact: {},
+        human_gate_refs: [],
+        signals: [],
+        closeout_packet: {
+          surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
+          closeout_packet_surface_kind: 'domain_stage_closeout_packet',
+          closeout_refs: [
+            'artifacts/supervision/reconcile/latest.json',
+            'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+          ],
+        },
+        completion_boundary: {
+          provider_completion: 'completed',
+          domain_ready_verdict: 'domain_gate_pending',
+          provider_completion_is_domain_ready: false,
+        },
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+    });
+    const inspected = inspectStageAttempt(db, attempt.stage_attempt_id);
+
+    assert.equal(synced?.status, 'completed');
+    assert.equal(inspected.closeout_receipt_status, 'accepted_typed_closeout');
+    assert.deepEqual(inspected.closeout_refs, [
+      'artifacts/supervision/reconcile/latest.json',
+      'studies/002-dm/artifacts/controller/repair_execution_evidence/latest.json',
+    ]);
+    assert.equal(inspected.provider_run.provider_status, 'completed');
+    assert.equal(listStageAttemptCloseouts(db, attempt.stage_attempt_id).length, 1);
+  });
+});

@@ -187,6 +187,40 @@ function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalO
   return 'temporal_stage_attempt_not_completed';
 }
 
+function closeoutPacketFromTemporalCompletedObservation(
+  observation: TemporalStageAttemptTerminalObservation,
+) {
+  if (
+    observation.workflow_status !== 'COMPLETED'
+    || observation.query?.status !== 'completed'
+    || observation.query.completion_boundary.provider_completion !== 'completed'
+  ) {
+    return null;
+  }
+  const receipt = observation.query.closeout_packet;
+  const receiptRecord = typeof receipt === 'object' && receipt !== null && !Array.isArray(receipt)
+    ? receipt
+    : null;
+  const surfaceKind = typeof receiptRecord?.closeout_packet_surface_kind === 'string'
+    ? receiptRecord.closeout_packet_surface_kind
+    : 'domain_stage_closeout_packet';
+  return normalizeTypedStageCloseoutPacket({
+    surface_kind: surfaceKind,
+    closeout_refs: observation.query.closeout_refs,
+    consumed_refs: observation.query.consumed_refs,
+    consumed_memory_refs: observation.query.consumed_memory_refs,
+    writeback_receipt_refs: observation.query.writeback_receipt_refs,
+    rejected_writes: observation.query.rejected_writes,
+    next_owner: observation.query.next_owner,
+    domain_ready_verdict: observation.query.completion_boundary.domain_ready_verdict,
+    route_impact: observation.query.route_impact,
+    authority_boundary: {
+      opl: 'temporal_closeout_transport_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  });
+}
+
 function blockLinkedMasDefaultExecutorTask(
   db: DatabaseSync,
   input: {
@@ -472,9 +506,6 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   }
   const failureReason = temporalTerminalFailureReason(observation);
   const nonCompletionBlocker = temporalNonCompletionBlocker(observation);
-  if (!failureReason && !nonCompletionBlocker) {
-    return null;
-  }
   const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
     observation.stage_attempt_id,
   ) as StageAttemptRow | undefined;
@@ -483,6 +514,16 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   }
   if (row.status === 'completed' && row.closeout_receipt_status) {
     return stageAttemptToPayload(row);
+  }
+  const completedCloseoutPacket = closeoutPacketFromTemporalCompletedObservation(observation);
+  if (!failureReason && !nonCompletionBlocker && !completedCloseoutPacket) {
+    return null;
+  }
+  if (completedCloseoutPacket) {
+    return ingestStageAttemptCloseout(db, {
+      stageAttemptId: observation.stage_attempt_id,
+      packet: completedCloseoutPacket,
+    }).attempt;
   }
   const observedAt = nowIso();
   if (nonCompletionBlocker && row.status !== 'completed') {
