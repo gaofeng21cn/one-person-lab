@@ -36,6 +36,8 @@ function uniqueStrings(values: Array<string | null>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
 }
 
+export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+
 function recordStringRefs(value: Record<string, unknown> | null, singularKeys: string[], listKeys: string[]) {
   if (!value) {
     return [];
@@ -109,8 +111,22 @@ function familyTransitionResult(payload: Record<string, unknown>) {
   return optionalString(transition.transition_id) ? transition : null;
 }
 
+export function isMasDefaultExecutorDispatchTask(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  return row.domain_id === 'medautoscience'
+    && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    && optionalString(payload.dispatch_ref) !== null
+    && optionalString(payload.next_executable_owner) === 'write'
+    && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
+}
+
 function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
   if (isMasOwnerRouteTask(row.domain_id, row.task_kind)) {
+    return row.task_kind;
+  }
+  if (isMasDefaultExecutorDispatchTask(row, payload)) {
     return row.task_kind;
   }
   if (row.domain_id === 'medautoscience' && row.task_kind === 'paper_autonomy/guarded-apply') {
@@ -157,6 +173,11 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     'profile',
     'profile_name',
     'study_id',
+    'quest_id',
+    'action_type',
+    'dispatch_authority',
+    'dispatch_ref',
+    'next_executable_owner',
     'workspace_root',
     'runtime_root',
     'artifact_root',
@@ -217,6 +238,16 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
       (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0,
     );
   }
+  if (Array.isArray(payload.source_refs)) {
+    locator.source_refs = payload.source_refs.filter(isRecord);
+  }
+  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+    locator.domain_truth_owner = 'med-autoscience';
+    locator.opl_writes_domain_truth = false;
+    locator.opl_writes_publication_quality = false;
+    locator.opl_writes_artifact_gate = false;
+    locator.opl_writes_current_package = false;
+  }
   return locator;
 }
 
@@ -233,6 +264,7 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
     ]);
   }
   for (const value of [
+    isMasDefaultExecutorDispatchTask(row, payload) ? payload.dispatch_ref : null,
     payload.source_fingerprint,
     payload.idempotency_key,
     payload.provider_attempt_id,
@@ -277,8 +309,11 @@ export function ensureProviderHostedStageAttempt(
     providerKind,
     workspaceLocator: workspaceLocatorForProviderHostedTask(row, payload),
     sourceFingerprint: expectedSourceFingerprint,
-    executorKind: 'domain_sidecar',
+    executorKind: isMasDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_sidecar',
     taskId: row.task_id,
+    checkpointRefs: isMasDefaultExecutorDispatchTask(row, payload)
+      ? uniqueStrings([optionalString(payload.dispatch_ref)])
+      : undefined,
     blockedReason: admissionGate.blocked_reason ?? undefined,
   });
   insertEvent(db, {

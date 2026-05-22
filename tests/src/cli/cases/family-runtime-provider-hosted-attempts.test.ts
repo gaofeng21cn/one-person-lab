@@ -202,6 +202,100 @@ PY
   }
 });
 
+test('family-runtime admits MAS default executor dispatch as queued Codex writer attempt', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+assert task["task_kind"] == "domain_owner/default-executor-dispatch"
+payload = task["payload"]
+assert payload["study_id"] == "002-dm-china-us-mortality-attribution"
+assert payload["dispatch_ref"].endswith("default_executor_dispatches/run_quality_repair_batch.json")
+print(json.dumps({
+    "accepted": True,
+    "surface_kind": "mas_family_sidecar_dispatch_receipt",
+    "task_id": task["task_id"],
+    "task_kind": task["task_kind"],
+    "will_start_llm_worker": True,
+    "dispatch": {
+        "execution_policy": "opl_default_executor_stage_attempt_admission",
+        "result": {
+            "surface": "default_executor_dispatch_request_admission",
+            "status": "admitted",
+            "next_owner": "write",
+            "dispatch_ref": payload["dispatch_ref"]
+        }
+    }
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        profile: '/tmp/dm-cvd.profile.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        quest_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'run_quality_repair_batch',
+        dispatch_authority: 'quality_repair_batch_writer_handoff',
+        next_executable_owner: 'write',
+        executor_kind: 'codex_cli_default',
+        dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+        authority_boundary: 'mas_default_executor_dispatch_request_only',
+        source_refs: [
+          {
+            role: 'default_executor_dispatch_request',
+            ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+            exists: true,
+            body_included: false,
+          },
+        ],
+      }),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:writer',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.family_runtime_task.task.status, 'succeeded');
+    assert.equal(task.family_runtime_task.stage_attempts.length, 1);
+    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.domain_id, 'medautoscience');
+    assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
+    assert.equal(attempt.executor_kind, 'codex_cli');
+    assert.equal(attempt.task_id, taskId);
+    assert.equal(attempt.status, 'queued');
+    assert.equal(attempt.workspace_locator.dispatch_ref, 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json');
+    assert.equal(attempt.workspace_locator.next_executable_owner, 'write');
+    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.opl_writes_publication_quality, false);
+    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
+    assert.deepEqual(attempt.checkpoint_refs, [
+      'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+    ]);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime dispatches RCA provider-hosted no-regression tasks as sidecar action envelopes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-rca-no-regression-'));
   const dispatch = createDispatchFixture(`

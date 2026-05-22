@@ -34,6 +34,7 @@ import {
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
+import { isMasDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
 import { closeoutPacketFromSidecarOutput } from './family-runtime-sidecar-closeout.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
@@ -115,6 +116,41 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
   const providerHostedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
   if (providerHostedAttempt?.status === 'blocked' && providerHostedAttempt.blocked_reason?.startsWith('stage_admission_')) {
     return blockTaskForStageAdmissionGate(db, row, providerHostedAttempt);
+  }
+  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+    const completedAt = nowIso();
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL, last_error = NULL, updated_at = ?
+      WHERE task_id = ?
+    `).run(completedAt, row.task_id);
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_admitted_default_executor_stage_attempt',
+      source: 'opl-family-runtime',
+      payload: {
+        task_kind: row.task_kind,
+        dispatch_ref: payload.dispatch_ref,
+        stage_attempt_id: providerHostedAttempt?.stage_attempt_id ?? null,
+      },
+    });
+    insertNotification(db, {
+      taskId: row.task_id,
+      severity: 'info',
+      title: 'Family runtime default executor task admitted',
+      body: `${row.domain_id}:${row.task_kind}`,
+      payload: {
+        dispatch_ref: payload.dispatch_ref,
+        stage_attempt_id: providerHostedAttempt?.stage_attempt_id ?? null,
+      },
+    });
+    return {
+      task_id: row.task_id,
+      status: 'succeeded',
+      admitted_stage_attempt: providerHostedAttempt ?? null,
+      stage_attempts: listStageAttemptsForTask(db, row.task_id),
+    };
   }
   const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
     attempt.status === 'queued'
