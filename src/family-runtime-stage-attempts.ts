@@ -2,10 +2,6 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
 import {
-  insertEvent,
-  insertNotification,
-} from './family-runtime-store.ts';
-import {
   buildStageAttemptProviderReceipt,
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
@@ -40,6 +36,10 @@ import {
   stageAttemptToPayload,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { stableId } from './family-runtime-ids.ts';
+import {
+  blockLinkedMasDefaultExecutorTask,
+  markLinkedMasDefaultExecutorTaskCompleted,
+} from './family-runtime-linked-task-sync.ts';
 import {
   type TemporalStageAttemptWorkflowState,
 } from './family-runtime-temporal.ts';
@@ -86,8 +86,6 @@ type ProviderReadinessOptions = {
     managed_temporal_state_consistency?: Record<string, unknown> | null;
   } | null;
 };
-
-const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 
 function nowIso() {
   return new Date().toISOString();
@@ -217,87 +215,6 @@ function closeoutPacketFromTemporalCompletedObservation(
     authority_boundary: {
       opl: 'temporal_closeout_transport_projection_only',
       domain: 'truth_quality_artifact_gate_owner',
-    },
-  });
-}
-
-function blockLinkedMasDefaultExecutorTask(
-  db: DatabaseSync,
-  input: {
-    row: StageAttemptRow;
-    reason: string;
-    observedAt: string;
-    taskDeadLetterReason: 'temporal_stage_attempt_failed' | 'temporal_stage_attempt_not_completed';
-    eventType: string;
-  },
-) {
-  if (!input.row.task_id) {
-    return;
-  }
-  const task = db.prepare(`
-    SELECT task_id, domain_id, task_kind, status, last_error, dead_letter_reason
-    FROM tasks
-    WHERE task_id = ?
-  `).get(
-    input.row.task_id,
-  ) as {
-    task_id: string;
-    domain_id: string;
-    task_kind: string;
-    status: string;
-    last_error: string | null;
-    dead_letter_reason: string | null;
-  } | undefined;
-  if (
-    !task
-    || task.domain_id !== 'medautoscience'
-    || task.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    || (
-      task.status !== 'succeeded'
-      && !(task.status === 'blocked' && task.dead_letter_reason === 'temporal_stage_attempt_start_failed')
-    )
-  ) {
-    return;
-  }
-  if (
-    task.status === 'blocked'
-    && task.last_error === input.reason
-    && task.dead_letter_reason === input.taskDeadLetterReason
-  ) {
-    return;
-  }
-  db.prepare(`
-    UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
-    WHERE task_id = ?
-  `).run(input.reason, input.taskDeadLetterReason, input.observedAt, input.row.task_id);
-  insertEvent(db, {
-    taskId: input.row.task_id,
-    domainId: input.row.domain_id,
-    eventType: input.eventType,
-    source: 'opl-family-runtime',
-    payload: {
-      stage_attempt_id: input.row.stage_attempt_id,
-      workflow_id: input.row.workflow_id,
-      reason: input.reason,
-      task_dead_letter_reason: input.taskDeadLetterReason,
-      authority_boundary: {
-        opl: 'provider_attempt_status_projection_only',
-        domain: 'truth_quality_artifact_gate_owner',
-        provider_completion_is_domain_ready: false,
-      },
-    },
-  });
-  insertNotification(db, {
-    taskId: input.row.task_id,
-    severity: 'error',
-    title: 'Family runtime default executor attempt blocked',
-    body: input.reason,
-    payload: {
-      stage_attempt_id: input.row.stage_attempt_id,
-      reason: input.reason,
-      task_dead_letter_reason: input.taskDeadLetterReason,
     },
   });
 }
@@ -513,6 +430,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return null;
   }
   if (row.status === 'completed' && row.closeout_receipt_status) {
+    markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
     return stageAttemptToPayload(row);
   }
   const completedCloseoutPacket = closeoutPacketFromTemporalCompletedObservation(observation);
@@ -520,10 +438,12 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return null;
   }
   if (completedCloseoutPacket) {
-    return ingestStageAttemptCloseout(db, {
+    const synced = ingestStageAttemptCloseout(db, {
       stageAttemptId: observation.stage_attempt_id,
       packet: completedCloseoutPacket,
     }).attempt;
+    markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
+    return synced;
   }
   const observedAt = nowIso();
   if (nonCompletionBlocker && row.status !== 'completed') {
