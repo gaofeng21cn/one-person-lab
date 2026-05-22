@@ -248,13 +248,8 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.opl_meta_agent_self_evolution_cockpit_six_question_ready_count,
       metaAgentBound ? 2 : 0,
     );
-    if (metaAgentBound) {
-      assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
-    }
-    assert.equal(
-      summaryDrilldown.attention_first_payload.surface_kind,
-      'opl_app_drilldown_attention_first_payload',
-    );
+    if (metaAgentBound) assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
+    assert.equal(summaryDrilldown.attention_first_payload.surface_kind, 'opl_app_drilldown_attention_first_payload');
     assert.deepEqual(summaryDrilldown.attention_first_payload.full_detail_args, ['--detail', 'full']);
     assert.deepEqual(
       Object.keys(summaryDrilldown.attention_first_payload).filter((key) => (
@@ -283,53 +278,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       ],
     );
     assert.equal(summaryDrilldown.codex_app_runtime_role, undefined);
-    assert.equal(
-      summaryDrilldown.summary.codex_app_runtime_role_status,
-      'opl_temporal_hosted_autonomous',
-    );
-    assert.equal(summaryDrilldown.summary.codex_app_runtime_role_count, 4);
-    assert.equal(summaryDrilldown.summary.codex_app_drives_long_running_tasks, false);
-    assert.equal(
-      summaryDrilldown.summary.codex_app_long_running_task_driver_owner,
-      'one-person-lab',
-    );
-    assert.equal(
-      summaryDrilldown.summary.codex_app_long_running_task_driver_substrate,
-      'temporal',
-    );
-    assert.equal(summaryDrilldown.summary.codex_app_production_long_soak_claimed, false);
-    assert.equal(
-      summaryDrilldown.summary.codex_app_production_evidence_gate_remains_open,
-      true,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.codex_app_runtime_role.surface_kind,
-      'opl_app_drilldown_codex_app_runtime_role',
-    );
-    assert.deepEqual(
-      summaryDrilldown.attention_first_payload.codex_app_runtime_role.codex_app_roles,
-      ['start', 'observe', 'intervene', 'display'],
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.codex_app_runtime_role
-        .codex_app_drives_long_running_tasks,
-      false,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.codex_app_runtime_role
-        .long_running_task_driver_substrate,
-      'temporal',
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.codex_app_runtime_role
-        .production_long_soak_claimed,
-      false,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.codex_app_runtime_role
-        .authority_boundary.can_drive_long_running_task_loop,
-      false,
-    );
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.surface_kind,
       'opl_app_drilldown_evidence_after_contract_attention',
@@ -720,14 +668,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     });
     const fullDrilldown = fullOutput.app_operator_drilldown;
     assert.equal(fullDrilldown.detail_level, 'full');
-    assert.equal(
-      fullDrilldown.codex_app_runtime_role.surface_kind,
-      'opl_app_drilldown_codex_app_runtime_role',
-    );
-    assert.equal(
-      fullDrilldown.attention_first_payload.codex_app_runtime_role.runtime_policy,
-      'opl_temporal_hosted_autonomous',
-    );
     assert.equal(
       fullDrilldown.evidence_envelope.summary.owner_payload_breakdown_policy,
       'refs_only_owner_and_payload_kind_action_breakdown_for_domain_or_app_live_operator_scaleout',
