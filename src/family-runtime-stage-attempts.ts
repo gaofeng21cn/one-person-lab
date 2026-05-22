@@ -249,19 +249,35 @@ function blockLinkedMasDefaultExecutorTask(
   if (!input.row.task_id) {
     return;
   }
-  const task = db.prepare('SELECT task_id, domain_id, task_kind, status FROM tasks WHERE task_id = ?').get(
+  const task = db.prepare(`
+    SELECT task_id, domain_id, task_kind, status, last_error, dead_letter_reason
+    FROM tasks
+    WHERE task_id = ?
+  `).get(
     input.row.task_id,
   ) as {
     task_id: string;
     domain_id: string;
     task_kind: string;
     status: string;
+    last_error: string | null;
+    dead_letter_reason: string | null;
   } | undefined;
   if (
     !task
     || task.domain_id !== 'medautoscience'
     || task.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    || task.status !== 'succeeded'
+    || (
+      task.status !== 'succeeded'
+      && !(task.status === 'blocked' && task.dead_letter_reason === 'temporal_stage_attempt_start_failed')
+    )
+  ) {
+    return;
+  }
+  if (
+    task.status === 'blocked'
+    && task.last_error === input.reason
+    && task.dead_letter_reason === input.taskDeadLetterReason
   ) {
     return;
   }

@@ -283,8 +283,16 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
       isRecord(transition.receipt) ? transition.receipt : null,
     ]);
   }
+  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+    return stableId('mas_default_executor_source', [
+      row.domain_id,
+      row.task_kind,
+      optionalString(payload.dispatch_ref),
+      optionalString(payload.source_fingerprint),
+      row.dedupe_key,
+    ]);
+  }
   for (const value of [
-    isMasDefaultExecutorDispatchTask(row, payload) ? payload.dispatch_ref : null,
     payload.source_fingerprint,
     payload.idempotency_key,
     payload.provider_attempt_id,

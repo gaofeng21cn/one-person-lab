@@ -14,6 +14,40 @@ import {
   type FamilyRuntimeTaskStatus,
 } from './family-runtime-store.ts';
 
+const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+
+function sourceFingerprint(payload: Record<string, unknown>) {
+  const value = payload.source_fingerprint;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function masDefaultExecutorBlockedRedriveDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+) {
+  if (
+    existing.domain_id !== 'medautoscience'
+    || existing.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || existing.status !== 'blocked'
+    || !['temporal_stage_attempt_start_failed', 'temporal_stage_attempt_not_completed'].includes(
+      existing.dead_letter_reason ?? '',
+    )
+  ) {
+    return null;
+  }
+  const existingSourceFingerprint = sourceFingerprint(existingPayload);
+  const nextSourceFingerprint = sourceFingerprint(nextPayload);
+  if (!existingSourceFingerprint || !nextSourceFingerprint || existingSourceFingerprint === nextSourceFingerprint) {
+    return null;
+  }
+  return {
+    reason: 'mas_default_executor_source_fingerprint_changed_after_blocked',
+    previous_source_fingerprint: existingSourceFingerprint,
+    next_source_fingerprint: nextSourceFingerprint,
+  };
+}
+
 export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
@@ -81,6 +115,54 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         };
       }
       const deadLetterRedrive = deadLetterRedriveDecision(existingPayload, payload);
+      const blockedRedrive = masDefaultExecutorBlockedRedriveDecision(existing, existingPayload, payload);
+      if (exportedTaskChanged && blockedRedrive) {
+        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            attempts = 0, source = ?, requires_approval = ?, approved_at = NULL,
+            lease_owner = NULL, lease_expires_at = NULL, last_error = NULL,
+            dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          input.requiresApproval ? 1 : 0,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_blocked_after_domain_owner_update',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            ...blockedRedrive,
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued after domain owner update',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
       if (existing.status === 'dead_letter' && exportedTaskChanged && deadLetterRedrive) {
         const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
         db.prepare(`

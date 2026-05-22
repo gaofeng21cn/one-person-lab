@@ -898,3 +898,142 @@ test('Temporal blocked terminal observation blocks MAS default executor task wit
     assert.equal(JSON.parse(event.payload_json).authority_boundary.provider_completion_is_domain_ready, false);
   });
 });
+
+test('Temporal blocked terminal observation refreshes stale MAS default executor blocked reason', () => {
+  withStageAttemptDb((db) => {
+    const createdAt = new Date().toISOString();
+    db.exec(`
+      CREATE TABLE tasks (
+        task_id TEXT PRIMARY KEY,
+        domain_id TEXT NOT NULL,
+        task_kind TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        dedupe_key TEXT UNIQUE,
+        priority INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        attempts INTEGER NOT NULL,
+        max_attempts INTEGER NOT NULL,
+        source TEXT NOT NULL,
+        requires_approval INTEGER NOT NULL,
+        approved_at TEXT,
+        lease_owner TEXT,
+        lease_expires_at TEXT,
+        last_error TEXT,
+        dead_letter_reason TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE events (
+        event_id TEXT PRIMARY KEY,
+        task_id TEXT,
+        domain_id TEXT,
+        event_type TEXT NOT NULL,
+        source TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE notifications (
+        notification_id TEXT PRIMARY KEY,
+        task_id TEXT,
+        severity TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        channel TEXT NOT NULL,
+        status TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+    `);
+    db.prepare(`
+      INSERT INTO tasks(
+        task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts,
+        max_attempts, source, requires_approval, approved_at, lease_owner, lease_expires_at,
+        last_error, dead_letter_reason, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'task-mas-default-stale-blocked-reason',
+      'medautoscience',
+      'domain_owner/default-executor-dispatch',
+      '{}',
+      null,
+      0,
+      'blocked',
+      1,
+      3,
+      'test',
+      0,
+      null,
+      null,
+      null,
+      'MAS default executor dispatch has no launchable Temporal Codex stage attempt.',
+      'temporal_stage_attempt_start_failed',
+      createdAt,
+      createdAt,
+    );
+    const created = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'domain_owner/default-executor-dispatch',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/mas' },
+      sourceFingerprint: 'sha256:mas-default-dispatch',
+      executorKind: 'codex_cli',
+      taskId: 'task-mas-default-stale-blocked-reason',
+      checkpointRefs: ['dispatch:mas-default-writer-start'],
+    });
+    const attempt = created.attempt;
+    const synced = syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: {
+        surface_kind: 'temporal_stage_attempt_query',
+        provider_kind: 'temporal',
+        stage_attempt_id: attempt.stage_attempt_id,
+        workflow_id: attempt.workflow_id,
+        domain_id: 'medautoscience',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        status: 'blocked',
+        started_at: createdAt,
+        updated_at: createdAt,
+        activity_events: [],
+        checkpoint_refs: ['checkpoint:mas-default-writer-start'],
+        closeout_refs: [],
+        consumed_refs: [],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: [],
+        rejected_writes: [],
+        next_owner: 'med-autoscience',
+        route_impact: {},
+        human_gate_refs: [],
+        signals: [],
+        closeout_packet: { blocked_reason: 'typed_closeout_packet_required' },
+        completion_boundary: {
+          provider_completion: 'not_completed',
+          domain_ready_verdict: null,
+          provider_completion_is_domain_ready: false,
+        },
+        authority_boundary: {
+          opl: 'temporal_workflow_transport_and_control_metadata_only',
+          domain: 'truth_quality_artifact_gate_owner',
+        },
+      },
+    });
+    const task = db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-stale-blocked-reason',
+    ) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+    const event = db.prepare('SELECT event_type, payload_json FROM events WHERE task_id = ?').get(
+      'task-mas-default-stale-blocked-reason',
+    ) as { event_type: string; payload_json: string };
+
+    assert.equal(synced?.status, 'blocked');
+    assert.equal(synced?.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(task.status, 'blocked');
+    assert.equal(task.last_error, 'typed_closeout_packet_required');
+    assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
+    assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
+    assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_not_completed');
+  });
+});

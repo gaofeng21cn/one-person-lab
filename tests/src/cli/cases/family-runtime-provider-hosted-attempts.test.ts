@@ -360,6 +360,103 @@ PY
   }
 });
 
+test('family-runtime redrives MAS default executor dispatch with changed source fingerprint', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-redrive-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+print(json.dumps({
+  "accepted": True,
+  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "dispatch": {
+    "execution_policy": "opl_default_executor_stage_attempt_admission",
+    "result": {"status": "admitted"}
+  }
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const dispatchRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:redrive';
+    const basePayload = {
+      profile: '/tmp/dm-cvd.profile.toml',
+      study_id: '002-dm-china-us-mortality-attribution',
+      quest_id: '002-dm-china-us-mortality-attribution',
+      action_type: 'run_quality_repair_batch',
+      dispatch_authority: 'quality_repair_batch_writer_handoff',
+      next_executable_owner: 'write',
+      executor_kind: 'codex_cli_default',
+      dispatch_ref: dispatchRef,
+      authority_boundary: 'mas_default_executor_dispatch_request_only',
+      workspace_root: '/tmp/explicit-workspace-root',
+      source_fingerprint: 'source-before',
+    };
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify(basePayload),
+      '--dedupe-key',
+      dedupeKey,
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const blockedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const firstAttempt = blockedTask.family_runtime_task.stage_attempts[0];
+
+    assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
+    assert.equal(blockedTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(firstAttempt.status, 'blocked');
+
+    const redrive = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        ...basePayload,
+        source_fingerprint: 'source-after',
+      }),
+      '--dedupe-key',
+      dedupeKey,
+    ], env);
+    const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    runCli(['family-runtime', 'tick', '--source', 'test-redrive'], env);
+    const afterTickTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempts = afterTickTask.family_runtime_task.stage_attempts;
+    const sourceFingerprints = attempts.map((attempt: { source_fingerprint: string }) => attempt.source_fingerprint);
+
+    assert.equal(redrive.family_runtime_enqueue.requeued_from_terminal, true);
+    assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
+    assert.equal(afterTickTask.family_runtime_task.task.status, 'blocked');
+    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(attempts.length, 2);
+    assert.notEqual(sourceFingerprints[0], sourceFingerprints[1]);
+    assert.equal(sourceFingerprints.every((fingerprint: string) => fingerprint.startsWith('mas_default_executor_source_')), true);
+    assert.equal(
+      afterTickTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
+        event.event_type === 'task_requeued_from_blocked_after_domain_owner_update'
+        && event.payload.reason === 'mas_default_executor_source_fingerprint_changed_after_blocked'
+      )),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime dispatches RCA provider-hosted no-regression tasks as sidecar action envelopes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-rca-no-regression-'));
   const dispatch = createDispatchFixture(`
