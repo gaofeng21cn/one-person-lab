@@ -47,6 +47,8 @@ type CodexStageRunnerReceipt = ReturnType<typeof buildCodexStageRunnerReceipt> &
     stderr_tail: string[];
     recovered_session_path?: string;
     recovered_final_message_chars?: number;
+    session_recovery_status?: string;
+    session_recovery_attempts?: number;
   };
 };
 
@@ -165,16 +167,26 @@ function costSummaryFrom(output: string, runnerMode: CodexStageRunnerMode) {
 }
 
 function parseCloseoutFromCodexMessages(messages: string[]) {
-  const message = [...messages].reverse().find((entry) => entry.trim().length > 0);
-  if (!message) {
+  const terminalMessages = messages.filter((entry) => entry.trim().length > 0);
+  if (terminalMessages.length === 0) {
     return null;
   }
-  try {
-    const parsed = JSON.parse(message.trim()) as unknown;
-    return normalizeTypedStageCloseoutPacket(parsed);
-  } catch {
-    return null;
+  const maxSuffixMessages = 64;
+  const maxSuffixChars = 128 * 1024;
+  let suffix = '';
+  for (let index = terminalMessages.length - 1; index >= 0 && terminalMessages.length - index <= maxSuffixMessages; index -= 1) {
+    suffix = `${terminalMessages[index]}${suffix}`;
+    if (suffix.length > maxSuffixChars) {
+      break;
+    }
+    try {
+      const parsed = JSON.parse(suffix.trim()) as unknown;
+      return normalizeTypedStageCloseoutPacket(parsed);
+    } catch {
+      // Keep fail-closed: only an exact terminal JSON object is accepted.
+    }
   }
+  return null;
 }
 
 function normalizeTimeoutMs(value: unknown, fallback: number) {
@@ -184,6 +196,54 @@ function normalizeTimeoutMs(value: unknown, fallback: number) {
       ? Number.parseInt(value, 10)
       : Number.NaN;
   return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function recoverCloseoutFromCodexSessionWithRetry(input: {
+  threadId: string | null;
+  timeoutMs: number;
+  intervalMs: number;
+}) {
+  const timeoutMs = normalizeTimeoutMs(input.timeoutMs, 0);
+  const intervalMs = normalizeTimeoutMs(input.intervalMs, 100);
+  const startedAt = Date.now();
+  let attempts = 0;
+  let latestRecovered: ReturnType<typeof recoverCodexExecOutputFromSession> = null;
+  let latestParsed: ReturnType<typeof parseCodexExecOutput> | null = null;
+
+  while (true) {
+    attempts += 1;
+    latestRecovered = recoverCodexExecOutputFromSession(input.threadId);
+    if (latestRecovered) {
+      latestParsed = parseCodexExecOutput(latestRecovered.output);
+      const closeoutPacket = parseCloseoutFromCodexMessages(latestParsed.messages);
+      if (closeoutPacket) {
+        return {
+          closeoutPacket,
+          recovered: latestRecovered,
+          parsed: latestParsed,
+          attempts,
+          status: 'closeout_found',
+        };
+      }
+    }
+
+    const elapsedMs = Date.now() - startedAt;
+    if (elapsedMs >= timeoutMs) {
+      return {
+        closeoutPacket: null,
+        recovered: latestRecovered,
+        parsed: latestParsed,
+        attempts,
+        status: latestRecovered ? 'session_found_without_closeout' : 'session_not_found',
+      };
+    }
+
+    await sleep(Math.min(intervalMs, Math.max(0, timeoutMs - elapsedMs)));
+  }
 }
 
 function normalizeAgentExecutorStageMode(value?: string | null): AgentExecutorKind | null {
@@ -386,15 +446,20 @@ export async function runCodexStageRunner(input: {
   let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages);
   let recoveredSessionPath: string | null = null;
   let recoveredFinalMessageChars = 0;
+  let sessionRecoveryAttempts = 0;
+  let sessionRecoveryStatus: string | null = null;
   if (!closeoutPacket) {
-    const recovered = recoverCodexExecOutputFromSession(parsed.threadId);
-    if (recovered) {
-      const recoveredParsed = parseCodexExecOutput(recovered.output);
-      closeoutPacket = parseCloseoutFromCodexMessages(recoveredParsed.messages);
-      if (closeoutPacket) {
-        recoveredSessionPath = recovered.sessionPath;
-        recoveredFinalMessageChars = recoveredParsed.finalMessage.length;
-      }
+    const recovered = await recoverCloseoutFromCodexSessionWithRetry({
+      threadId: parsed.threadId,
+      timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS, 5_000),
+      intervalMs: normalizeTimeoutMs(process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS, 100),
+    });
+    sessionRecoveryAttempts = recovered.attempts;
+    sessionRecoveryStatus = recovered.status;
+    closeoutPacket = recovered.closeoutPacket;
+    if (recovered.recovered) {
+      recoveredSessionPath = recovered.recovered.sessionPath;
+      recoveredFinalMessageChars = recovered.parsed?.finalMessage.length ?? 0;
     }
   }
   return {
@@ -421,6 +486,12 @@ export async function runCodexStageRunner(input: {
         ? {
             recovered_session_path: recoveredSessionPath,
             recovered_final_message_chars: recoveredFinalMessageChars,
+          }
+        : {}),
+      ...(sessionRecoveryStatus
+        ? {
+            session_recovery_status: sessionRecoveryStatus,
+            session_recovery_attempts: sessionRecoveryAttempts,
           }
         : {}),
     },

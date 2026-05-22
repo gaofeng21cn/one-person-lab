@@ -403,6 +403,88 @@ exit 64
   }
 });
 
+test('Codex stage runner reconstructs a terminal closeout split across adjacent final event chunks', async () => {
+  const closeout = {
+    surface_kind: 'domain_stage_closeout_packet',
+    closeout_refs: ['receipt:codex-split-final-closeout'],
+    consumed_refs: ['paper/draft.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'typed_blocker',
+    route_impact: {
+      next_owner: 'ai_reviewer',
+    },
+  };
+  const closeoutText = JSON.stringify(closeout, null, 2);
+  const splitIndex = closeoutText.indexOf('"consumed_refs"');
+  const firstChunk = closeoutText.slice(0, splitIndex);
+  const secondChunk = closeoutText.slice(splitIndex);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"timestamp":"2026-05-22T08:03:50.000Z","type":"session_meta","payload":{"id":"thread-split-final-closeout"}}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    timestamp: '2026-05-22T08:03:51.000Z',
+    type: 'event_msg',
+    payload: {
+      type: 'agent_message',
+      message: 'progress checkpoint',
+      phase: 'commentary',
+    },
+  })}'
+  printf '%s\\n' '${JSON.stringify({
+    timestamp: '2026-05-22T08:03:52.000Z',
+    type: 'event_msg',
+    payload: {
+      type: 'agent_message',
+      message: firstChunk,
+      phase: 'final_answer',
+    },
+  })}'
+  printf '%s\\n' '${JSON.stringify({
+    timestamp: '2026-05-22T08:03:52.100Z',
+    type: 'event_msg',
+    payload: {
+      type: 'agent_message',
+      message: secondChunk,
+      phase: 'final_answer',
+    },
+  })}'
+  printf '{"timestamp":"2026-05-22T08:03:52.200Z","type":"event_msg","payload":{"type":"turn_completed"}}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_split_final_closeout_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:split-final-closeout'],
+      },
+      stagePacketRef: 'packet:split-final-closeout',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.closeout_packet?.surface_kind, 'domain_stage_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-split-final-closeout']);
+    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'typed_blocker');
+    assert.equal(receipt.process_output_summary?.final_message_chars, closeoutText.length + 19);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner recovers terminal typed closeout from matching Codex session JSONL', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -485,6 +567,94 @@ exit 64
     previousCodexHome === undefined
       ? delete process.env.CODEX_HOME
       : process.env.CODEX_HOME = previousCodexHome;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner waits briefly for delayed session JSONL closeout flush', async () => {
+  const closeout = {
+    surface_kind: 'domain_stage_closeout_packet',
+    closeout_refs: ['receipt:codex-delayed-session-closeout'],
+    consumed_refs: ['paper/draft.md', 'paper/build/review_manuscript.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'typed_blocker',
+  };
+  const threadId = 'thread-delayed-session-closeout';
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"timestamp":"2026-05-22T08:21:49.000Z","type":"session_meta","payload":{"id":"${threadId}"}}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCodexHome = process.env.CODEX_HOME;
+  const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
+  const previousRecoveryInterval = process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS;
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  const sessionDir = path.join(codexHome, 'sessions', '2026', '05', '22');
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const sessionPath = path.join(sessionDir, `rollout-2026-05-22T16-21-49-${threadId}.jsonl`);
+
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.CODEX_HOME = codexHome;
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1000';
+    process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '25';
+    const writeTimer = setTimeout(() => {
+      fs.writeFileSync(sessionPath, [
+        JSON.stringify({
+          timestamp: '2026-05-22T08:21:49.000Z',
+          type: 'session_meta',
+          payload: { id: threadId },
+        }),
+        JSON.stringify({
+          timestamp: '2026-05-22T08:21:49.391Z',
+          type: 'event_msg',
+          payload: {
+            type: 'task_complete',
+            last_agent_message: JSON.stringify(closeout),
+          },
+        }),
+        '',
+      ].join('\n'));
+    }, 750);
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_delayed_session_closeout_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:delayed-session-closeout'],
+      },
+      stagePacketRef: 'packet:delayed-session-closeout',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+    clearTimeout(writeTimer);
+
+    assert.equal(receipt.closeout_packet?.surface_kind, 'domain_stage_closeout_packet');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-delayed-session-closeout']);
+    assert.equal(receipt.process_output_summary?.recovered_session_path, sessionPath);
+    assert.equal(receipt.process_output_summary?.session_recovery_status, 'closeout_found');
+    assert.equal((receipt.process_output_summary?.session_recovery_attempts ?? 0) > 1, true);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    previousCodexHome === undefined
+      ? delete process.env.CODEX_HOME
+      : process.env.CODEX_HOME = previousCodexHome;
+    previousRecoveryTimeout === undefined
+      ? delete process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS
+      : process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = previousRecoveryTimeout;
+    previousRecoveryInterval === undefined
+      ? delete process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS
+      : process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = previousRecoveryInterval;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
