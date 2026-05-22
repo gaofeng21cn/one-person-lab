@@ -46,18 +46,24 @@ function runtimeOwnerForCurrentProvider(): RuntimeTrayItem['runtime_owner'] {
   return 'provider_backed_family_runtime';
 }
 
-function commandForMasStudy(profileRef: string | null, studyId: string, command: 'study-progress' | 'study-runtime-status') {
+function commandForMasStudy(
+  profileRef: string | null,
+  studyId: string,
+  command: 'progress' | 'progress-projection',
+) {
   if (!profileRef) {
     return null;
   }
   return [
     'uv run python -m med_autoscience.cli',
+    'study',
     command,
     '--profile',
     shellArgument(profileRef),
     '--study-id',
     shellArgument(studyId),
-    ...(command === 'study-progress' ? ['--format', 'json'] : []),
+    '--format',
+    'json',
   ].join(' ');
 }
 
@@ -132,8 +138,8 @@ function actionForMasPortalItem(study: JsonRecord, lane: RuntimeTrayLane) {
 }
 
 function recommendedCommandsForMasStudy(profileRef: string | null, studyId: string) {
-  const progressCommand = commandForMasStudy(profileRef, studyId, 'study-progress');
-  const runtimeStatusCommand = commandForMasStudy(profileRef, studyId, 'study-runtime-status');
+  const progressCommand = commandForMasStudy(profileRef, studyId, 'progress');
+  const progressProjectionCommand = commandForMasStudy(profileRef, studyId, 'progress-projection');
   return [
     progressCommand
       ? {
@@ -143,12 +149,12 @@ function recommendedCommandsForMasStudy(profileRef: string | null, studyId: stri
         command: progressCommand,
       }
       : null,
-    runtimeStatusCommand
+    progressProjectionCommand
       ? {
-        step_id: 'inspect_runtime_status',
-        title: '查看运行状态',
-        surface_kind: 'study_runtime_status',
-        command: runtimeStatusCommand,
+        step_id: 'inspect_progress_projection',
+        title: '查看运行投影',
+        surface_kind: 'study_progress_projection',
+        command: progressProjectionCommand,
       }
       : null,
   ].filter((entry): entry is RuntimeTrayCommand => Boolean(entry));

@@ -99,18 +99,24 @@ function normalizeSourceRef(
   };
 }
 
-function commandForMasStudy(profileRef: string | null, studyId: string, command: 'study-progress' | 'study-runtime-status') {
+function commandForMasStudy(
+  profileRef: string | null,
+  studyId: string,
+  command: 'progress' | 'progress-projection',
+) {
   if (!profileRef) {
     return null;
   }
   return [
     'uv run python -m med_autoscience.cli',
+    'study',
     command,
     '--profile',
     shellArgument(profileRef),
     '--study-id',
     shellArgument(studyId),
-    ...(command === 'study-progress' ? ['--format', 'json'] : []),
+    '--format',
+    'json',
   ].join(' ');
 }
 
@@ -555,8 +561,8 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     : publicationBlocked
       ? liveRouteStatusLabel(routeTarget)
       : humanizeStatusLabel(healthStatus ?? questStatus ?? 'running');
-  const progressCommand = commandForMasStudy(workspace.profile_ref, studyId, 'study-progress');
-  const runtimeStatusCommand = commandForMasStudy(workspace.profile_ref, studyId, 'study-runtime-status');
+  const progressCommand = commandForMasStudy(workspace.profile_ref, studyId, 'progress');
+  const progressProjectionCommand = commandForMasStudy(workspace.profile_ref, studyId, 'progress-projection');
   const recommendedCommands = [
     progressCommand
       ? {
@@ -566,12 +572,12 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
         command: progressCommand,
       }
       : null,
-    runtimeStatusCommand
+    progressProjectionCommand
       ? {
-        step_id: 'inspect_runtime_status',
-        title: '查看运行状态',
-        surface_kind: 'study_runtime_status',
-        command: runtimeStatusCommand,
+        step_id: 'inspect_progress_projection',
+        title: '查看运行投影',
+        surface_kind: 'study_progress_projection',
+        command: progressProjectionCommand,
       }
       : null,
   ].filter((entry): entry is RuntimeTrayCommand => Boolean(entry));

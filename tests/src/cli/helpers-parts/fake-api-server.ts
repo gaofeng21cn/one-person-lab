@@ -174,7 +174,7 @@ export async function startFakeOplApiServer() {
           ],
           configured_human_gates: [],
           recommended_commands: {
-            progress: 'medautosci study-progress --study 004',
+            progress: 'medautosci study progress --study 004',
             resume: 'medautosci launch-study --study 004',
             start: null,
           },

@@ -179,7 +179,7 @@ test('family action catalog is resolved from domain manifests and exported as de
     buildActionCatalog(
       'med-autoscience',
       'inspect_study_progress',
-      'uv run python -m med_autoscience.cli study-progress --profile <profile_ref> --study-id <study_id> --format json',
+      'uv run python -m med_autoscience.cli study progress --profile <profile_ref> --study-id <study_id> --format json',
       {
         owner: 'med-autoscience',
         title: 'Inspect MAS study progress',

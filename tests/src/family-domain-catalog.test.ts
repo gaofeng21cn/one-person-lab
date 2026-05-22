@@ -85,7 +85,7 @@ test('family domain catalog derives parity status from manifests and active bind
                 artifact_surface_ref: '/artifact_inventory',
                 restore_point_surface_ref: '/runtime_control/restore_point',
                 recommended_resume_command: 'medautoscience workspace-cockpit',
-                recommended_progress_command: 'medautoscience study-progress',
+                recommended_progress_command: 'medautoscience study progress',
                 recommended_artifact_command: 'medautoscience workspace-cockpit --artifacts',
               },
             },
@@ -97,7 +97,7 @@ test('family domain catalog derives parity status from manifests and active bind
       automation: { surface_kind: 'automation' },
       product_entry_readiness: { verdict: 'good_to_use_now' },
       product_entry_preflight: {
-        recommended_check_command: 'medautoscience study-runtime-status',
+        recommended_check_command: 'medautoscience study progress-projection',
       },
     }),
     createResolvedProject('med-autogrant', {
@@ -180,7 +180,7 @@ test('family domain catalog derives parity status from manifests and active bind
   assert.equal(alignedProject?.entry_parity_status, 'aligned');
   assert.equal(alignedProject?.direct_entry_locator_status, 'ready');
   assert.equal(alignedProject?.runtime_control_status, 'ready');
-  assert.equal(alignedProject?.recommended_check_command, 'medautoscience study-runtime-status');
+  assert.equal(alignedProject?.recommended_check_command, 'medautoscience study progress-projection');
   assert.equal(partialProject?.entry_parity_status, 'partial');
   assert.equal(partialProject?.runtime_control_status, 'ready');
   assert.match(partialProject?.gaps.join('\n') ?? '', /shared handoff surface/);
@@ -206,7 +206,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
         },
         operator_loop_actions: {
           progress: {
-            command: 'medautoscience study-progress',
+            command: 'medautoscience study progress',
           },
         },
         product_entry_start: {
@@ -216,14 +216,14 @@ test('family domain catalog derives recommended entry surfaces with active bindi
         },
         product_entry_overview: {
           summary: 'overview',
-          progress_surface: { command: 'medautoscience study-progress' },
-          resume_surface: { command: 'medautoscience study-runtime-status' },
+          progress_surface: { command: 'medautoscience study progress' },
+          resume_surface: { command: 'medautoscience study progress-projection' },
           human_gate_ids: ['human-review'],
         },
         product_entry_preflight: {
           summary: 'preflight',
           ready_to_try_now: true,
-          recommended_check_command: 'medautoscience study-runtime-status',
+          recommended_check_command: 'medautoscience study progress-projection',
           recommended_start_command: 'medautoscience product-start',
           blocking_check_ids: ['runtime-ready'],
           checks: [{ check_id: 'runtime-ready' }],
@@ -285,7 +285,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           status: 'running',
           task_kind: 'study',
           human_gate_ids: ['human-review'],
-          progress_surface: { command: 'medautoscience study-progress' },
+          progress_surface: { command: 'medautoscience study progress' },
           resume_surface: { surface_kind: 'study_runtime_status' },
         },
         runtime_control: {
@@ -297,7 +297,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           control_surfaces: {
             resume: {
               surface_kind: 'study_runtime_status',
-              command: 'medautoscience study-runtime-status',
+              command: 'medautoscience study progress-projection',
               summary: 'resume',
             },
             approval: {
@@ -348,8 +348,8 @@ test('family domain catalog derives recommended entry surfaces with active bindi
                   progress_surface_ref: '/progress_projection',
                   artifact_surface_ref: '/artifact_inventory',
                   restore_point_surface_ref: '/runtime_control/restore_point',
-                  recommended_resume_command: 'medautoscience study-runtime-status',
-                  recommended_progress_command: 'medautoscience study-progress',
+                  recommended_resume_command: 'medautoscience study progress-projection',
+                  recommended_progress_command: 'medautoscience study progress',
                   recommended_artifact_command: 'medautoscience workspace-cockpit --artifacts',
                 },
               },
@@ -417,7 +417,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.runtime_control?.surface_kind, 'runtime_control');
   assert.equal(recommended[0]?.runtime_control_status, 'ready');
   assert.equal(recommended[0]?.runtime_control_restore_point, 'phase_2_user_product_loop');
-  assert.equal(recommended[0]?.runtime_control_resume_command, 'medautoscience study-runtime-status');
+  assert.equal(recommended[0]?.runtime_control_resume_command, 'medautoscience study progress-projection');
   assert.equal(recommended[0]?.runtime_control_approval_command, 'medautoscience workspace-cockpit');
   assert.deepEqual(recommended[0]?.runtime_control_gate_ids, ['human-review']);
   assert.equal(recommended[0]?.skill_activation_status, 'ready');
@@ -441,8 +441,8 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.skill_runtime_continuity_progress_surface_ref, '/progress_projection');
   assert.equal(recommended[0]?.skill_runtime_continuity_artifact_surface_ref, '/artifact_inventory');
   assert.equal(recommended[0]?.skill_runtime_continuity_restore_point_surface_ref, '/runtime_control/restore_point');
-  assert.equal(recommended[0]?.skill_runtime_continuity_resume_command, 'medautoscience study-runtime-status');
-  assert.equal(recommended[0]?.skill_runtime_continuity_progress_command, 'medautoscience study-progress');
+  assert.equal(recommended[0]?.skill_runtime_continuity_resume_command, 'medautoscience study progress-projection');
+  assert.equal(recommended[0]?.skill_runtime_continuity_progress_command, 'medautoscience study progress');
   assert.equal(recommended[0]?.skill_runtime_continuity_artifact_command, 'medautoscience workspace-cockpit --artifacts');
   assert.deepEqual(recommended[0]?.family_human_gate_ids, ['human-review']);
 });

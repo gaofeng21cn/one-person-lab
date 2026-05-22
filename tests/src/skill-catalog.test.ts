@@ -29,7 +29,7 @@ test('skill catalog helpers normalize shared command and skill descriptors', () 
         artifact_surface_ref: '/artifact_inventory',
         restore_point_surface_ref: '/runtime_control/restore_point',
         recommended_resume_command: 'uv run python -m med_autoscience.cli workspace-cockpit --profile <profile>',
-        recommended_progress_command: 'uv run python -m med_autoscience.cli study-progress --profile <profile> --study-id <study_id>',
+        recommended_progress_command: 'uv run python -m med_autoscience.cli study progress --profile <profile> --study-id <study_id>',
         recommended_artifact_command: 'uv run python -m med_autoscience.cli workspace-cockpit --profile <profile> --artifacts',
       },
     },
