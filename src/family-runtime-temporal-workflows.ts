@@ -70,6 +70,11 @@ function closeoutRefsFrom(value: Record<string, unknown>) {
   ];
 }
 
+function closeoutPacketFromCodexResult(value: Record<string, unknown>) {
+  const closeout = asRecord(value.closeout_packet);
+  return Object.keys(closeout).length > 0 ? closeout : null;
+}
+
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
@@ -161,7 +166,11 @@ export async function StageAttemptWorkflow(
       ],
     };
 
-    const dispatchResult = await domainSidecarDispatchActivity(input);
+    const codexCloseoutPacket = closeoutPacketFromCodexResult(codexResult);
+    const dispatchResult = await domainSidecarDispatchActivity({
+      ...input,
+      closeout_packet: codexCloseoutPacket ?? input.closeout_packet ?? null,
+    });
     const closeoutRefs = closeoutRefsFrom(dispatchResult);
     const routeImpact = asRecord(dispatchResult.route_impact);
     const dispatchBlockedReason = typeof dispatchResult.blocked_reason === 'string'

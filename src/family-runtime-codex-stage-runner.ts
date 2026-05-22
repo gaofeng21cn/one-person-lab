@@ -38,6 +38,15 @@ type RunnerEventSummary = {
   value: string | null;
 };
 
+type CodexStageRunnerReceipt = ReturnType<typeof buildCodexStageRunnerReceipt> & {
+  closeout_packet: TypedStageCloseoutPacket | null;
+  process_output_summary?: {
+    exit_code: number;
+    final_message_chars: number;
+    stderr_tail: string[];
+  };
+};
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -146,6 +155,19 @@ function costSummaryFrom(output: string, runnerMode: CodexStageRunnerMode) {
     },
     billing_boundary: 'codex_cli_activity_runner_reports_only_observed_or_declared_usage',
   };
+}
+
+function parseCloseoutFromCodexMessages(messages: string[]) {
+  const message = [...messages].reverse().find((entry) => entry.trim().length > 0);
+  if (!message) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(message.trim()) as unknown;
+    return normalizeTypedStageCloseoutPacket(parsed);
+  } catch {
+    return null;
+  }
 }
 
 function normalizeTimeoutMs(value: unknown, fallback: number) {
@@ -300,12 +322,15 @@ export async function runCodexStageRunner(input: {
   runnerMode?: string | null;
   observedAt?: string | null;
   timeoutMs?: number | null;
-}) {
+}): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
   const workspaceRoot = workspaceRootFromAttempt(input.attempt);
   if (runnerMode !== 'codex_cli') {
-    return buildCodexStageRunnerReceipt({ ...input, stagePacketRef });
+    return {
+      ...buildCodexStageRunnerReceipt({ ...input, stagePacketRef }),
+      closeout_packet: null,
+    };
   }
   if (!stagePacketRef || stagePacketRef === 'unavailable') {
     throw new FrameworkContractError(
@@ -351,6 +376,7 @@ export async function runCodexStageRunner(input: {
     },
   });
   const parsed = parseCodexExecOutput(result.stdout);
+  const closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages);
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
@@ -366,6 +392,7 @@ export async function runCodexStageRunner(input: {
       timeoutMs,
     }),
     cost_summary: costSummaryFrom(result.stdout, runnerMode),
+    closeout_packet: closeoutPacket,
     process_output_summary: {
       exit_code: result.exitCode,
       final_message_chars: parsed.finalMessage.length,

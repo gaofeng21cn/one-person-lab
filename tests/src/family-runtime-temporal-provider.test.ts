@@ -264,3 +264,55 @@ test('Temporal StageAttemptWorkflow blocks provider completion when typed closeo
     await testEnv.teardown();
   }
 });
+
+test('Temporal StageAttemptWorkflow consumes Codex activity typed closeout for provider completion', async () => {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-codex-closeout-test-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_codex_stage_activity_receipt',
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          closeout_packet: {
+            surface_kind: 'stage_attempt_closeout_packet',
+            closeout_refs: ['receipt:codex-closeout'],
+            consumed_refs: ['paper:draft.md'],
+            next_owner: 'med-autoscience',
+            domain_ready_verdict: 'domain_gate_pending',
+          },
+        }),
+      },
+    });
+
+    const result = await worker.runUntil(async () => {
+      const input = workflowInput();
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          ...input,
+          closeout_packet: null,
+        }],
+        taskQueue,
+        workflowId: `wf-temporal-codex-closeout-test-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+
+    assert.equal(result.status, 'completed');
+    assert.equal(result.completion_boundary.provider_completion, 'completed');
+    assert.equal(result.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
+    assert.deepEqual(result.closeout_refs, ['receipt:codex-closeout']);
+    assert.deepEqual(result.consumed_refs, ['paper:draft.md']);
+  } finally {
+    await testEnv.teardown();
+  }
+});
