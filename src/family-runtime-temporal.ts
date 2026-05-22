@@ -140,6 +140,10 @@ export function buildTemporalStageAttemptWorkflowInput(
     checkpoint_refs?: unknown[];
   },
 ): TemporalStageAttemptWorkflowInput {
+  const checkpointRefs = Array.isArray(attempt.checkpoint_refs)
+    ? attempt.checkpoint_refs.filter((entry: unknown): entry is string => typeof entry === 'string')
+    : [];
+  const executorKind = attempt.executor_kind;
   return {
     stage_attempt_id: attempt.stage_attempt_id,
     workflow_id: attempt.workflow_id,
@@ -147,12 +151,14 @@ export function buildTemporalStageAttemptWorkflowInput(
     stage_id: attempt.stage_id,
     workspace_locator: attempt.workspace_locator,
     source_fingerprint: attempt.source_fingerprint,
-    executor_kind: attempt.executor_kind,
+    executor_kind: executorKind,
     retry_budget: attempt.retry_budget,
     task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
-    checkpoint_refs: Array.isArray(attempt.checkpoint_refs)
-      ? attempt.checkpoint_refs.filter((entry: unknown): entry is string => typeof entry === 'string')
-      : [],
+    stage_packet_ref: checkpointRefs[0] ?? null,
+    checkpoint_refs: checkpointRefs,
+    codex_stage_runner: executorKind === 'codex_cli'
+      ? { runner_mode: 'codex_cli' }
+      : undefined,
   };
 }
 

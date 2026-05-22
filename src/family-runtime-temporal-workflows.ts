@@ -22,9 +22,9 @@ export const resumeSignal = defineSignal<[TemporalStageAttemptSignalPayload]>('R
 
 const { codexStageActivity, domainSidecarDispatchActivity, schedulerTickActivity } = proxyActivities<StageAttemptActivities>({
   startToCloseTimeout: '10 minutes',
-  heartbeatTimeout: '30 seconds',
+  heartbeatTimeout: '10 minutes',
   retry: {
-    maximumAttempts: 3,
+    maximumAttempts: 1,
   },
 });
 

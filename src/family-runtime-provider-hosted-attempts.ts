@@ -38,6 +38,15 @@ function uniqueStrings(values: Array<string | null>) {
 
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 
+function workspaceRootFromProfile(profile: string | null) {
+  if (!profile) {
+    return null;
+  }
+  const marker = '/ops/medautoscience/profiles/';
+  const index = profile.indexOf(marker);
+  return index >= 0 ? profile.slice(0, index) : null;
+}
+
 function recordStringRefs(value: Record<string, unknown> | null, singularKeys: string[], listKeys: string[]) {
   if (!value) {
     return [];
@@ -168,6 +177,17 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     locator.opl_writes_publication_quality = false;
     locator.opl_writes_artifact_gate = false;
     locator.opl_writes_current_package = false;
+  }
+  if (isMasDefaultExecutorDispatchTask(row, payload)) {
+    locator.domain_truth_owner = 'med-autoscience';
+    locator.opl_writes_domain_truth = false;
+    locator.opl_writes_publication_quality = false;
+    locator.opl_writes_artifact_gate = false;
+    locator.opl_writes_current_package = false;
+    const profileWorkspaceRoot = workspaceRootFromProfile(optionalString(payload.profile));
+    if (profileWorkspaceRoot) {
+      locator.workspace_root = profileWorkspaceRoot;
+    }
   }
   for (const key of [
     'profile',

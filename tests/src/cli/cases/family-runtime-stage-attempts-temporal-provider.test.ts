@@ -12,6 +12,7 @@ import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
 } from '../../../../src/family-runtime-temporal.ts';
+import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/family-runtime-temporal.ts';
 import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
@@ -76,6 +77,37 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
     assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
     assert.equal(attempts.family_runtime_stage_attempts.summary.total, 1);
     assert.equal(attempts.family_runtime_stage_attempts.attempts[0].provider_kind, 'temporal');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal workflow input carries checkpoint stage packet and live Codex runner mode', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-input-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/dm-cvd"}',
+      '--executor-kind',
+      'codex_cli',
+      '--checkpoint-ref',
+      'studies/002-dm/prompt.json',
+    ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
+    const input = buildTemporalStageAttemptWorkflowInput(created.family_runtime_stage_attempt.attempt);
+
+    assert.equal(input.stage_packet_ref, 'studies/002-dm/prompt.json');
+    assert.deepEqual(input.checkpoint_refs, ['studies/002-dm/prompt.json']);
+    assert.deepEqual(input.codex_stage_runner, { runner_mode: 'codex_cli' });
+    assert.equal(input.workspace_locator.workspace_root, '/tmp/dm-cvd');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
