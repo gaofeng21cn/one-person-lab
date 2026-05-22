@@ -36,6 +36,18 @@ test('runtime App drilldown consumes App release user-path evidence receipts', (
     }).app_operator_drilldown;
     assert.equal(output.summary.app_release_user_path_evidence_open_gate_count, 0);
     assert.equal(output.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(
+      output.summary.app_release_user_path_evidence_recorded_ledger_receipt_ref_count,
+      1,
+    );
+    assert.equal(
+      output.summary.app_release_user_path_evidence_verified_ledger_receipt_ref_count,
+      0,
+    );
+    assert.equal(
+      output.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count,
+      1,
+    );
     assert.equal(output.summary.app_release_user_path_evidence_typed_blocker_ref_count, 0);
     assert.equal(output.summary.app_release_user_path_production_user_path_ready, false);
     assert.equal(output.summary.app_release_user_path_release_ready_claimed, false);
@@ -43,8 +55,10 @@ test('runtime App drilldown consumes App release user-path evidence receipts', (
 
     const evidence = output.attention_first_payload.evidence_after_contract
       .app_release_user_path_evidence;
-    assert.equal(evidence.status, 'app_release_user_path_evidence_refs_observed');
+    assert.equal(evidence.status, 'app_release_user_path_evidence_verify_pending');
     assert.equal(evidence.refs_observed_for_all_gates, true);
+    assert.equal(evidence.evidence_ledger_status, 'ledger_refs_recorded_verify_pending');
+    assert.equal(evidence.pending_verify_receipt_ref_count, 1);
     assert.equal(evidence.production_user_path_ready, false);
     assert.equal(evidence.release_ready_claimed, false);
     assert.equal(evidence.production_ready_claimed, false);
@@ -53,6 +67,14 @@ test('runtime App drilldown consumes App release user-path evidence receipts', (
     assert.equal(evidence.gate_items.length, 0);
     assert.equal(evidence.ledger_receipt_ref_count, 1);
     assert.equal(evidence.authority_boundary.can_close_app_release_user_path, false);
+    const nextStep = output.attention_first_payload.evidence_next_steps.items.find(
+      (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
+    );
+    assert.equal(Boolean(nextStep), true);
+    assert.equal(nextStep.receipt_verification_required, true);
+    assert.equal(nextStep.pending_verify_receipt_ref_count, 1);
+    assert.equal(nextStep.can_close_without_domain_or_app_payload, true);
+    assert.equal(nextStep.can_close_app_release_user_path, false);
   });
 });
 
@@ -67,6 +89,7 @@ test('runtime App drilldown keeps typed blocker refs as operator attention', () 
     }).app_operator_drilldown;
     assert.equal(output.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(output.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(output.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(output.summary.app_release_user_path_evidence_typed_blocker_ref_count, 1);
 
     const evidence = output.attention_first_payload.evidence_after_contract

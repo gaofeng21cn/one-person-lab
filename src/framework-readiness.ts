@@ -17,9 +17,7 @@ import {
 import {
   buildMasDomainRouteSupportProjection,
 } from './family-runtime-mas-domain-route.ts';
-import {
-  frameworkAttentionNextSafeActions,
-} from './framework-readiness-attention-actions.ts';
+import { frameworkAttentionNextSafeActions } from './framework-readiness-attention-actions.ts';
 import {
   frameworkDiagnosticDrilldowns,
   frameworkKernelFloor,
@@ -390,10 +388,16 @@ function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/domain_dispatch_attention',
         }]
       : []),
-    ...(numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0
+    ...(
+      numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0
+        || numberValue(input.appReleaseUserPathEvidence.pending_verify_receipt_ref_count) > 0
       ? [{
           warning_id: 'app_release_user_path_evidence',
-          count: numberValue(input.appReleaseUserPathEvidence.open_gate_count),
+          count: numberValue(input.appReleaseUserPathEvidence.open_gate_count)
+            + numberValue(input.appReleaseUserPathEvidence.pending_verify_receipt_ref_count),
+          open_gate_count: numberValue(input.appReleaseUserPathEvidence.open_gate_count),
+          pending_verify_receipt_ref_count:
+            numberValue(input.appReleaseUserPathEvidence.pending_verify_receipt_ref_count),
           drilldown_ref: '/framework_readiness/app_release_user_path_evidence',
         }]
       : []),

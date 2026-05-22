@@ -15,6 +15,10 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     }).app_operator_drilldown;
     assert.equal(initial.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(initial.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 0);
+    assert.equal(
+      initial.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count,
+      0,
+    );
     assert.equal(initial.summary.app_release_user_path_evidence_action_route_count, 1);
     assert.equal(initial.summary.app_release_user_path_evidence_record_action_route_count, 1);
     assert.equal(initial.summary.app_release_user_path_evidence_verify_action_route_count, 0);
@@ -126,6 +130,18 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(summary.summary.app_release_user_path_evidence_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 0);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(
+      summary.summary.app_release_user_path_evidence_recorded_ledger_receipt_ref_count,
+      1,
+    );
+    assert.equal(
+      summary.summary.app_release_user_path_evidence_verified_ledger_receipt_ref_count,
+      0,
+    );
+    assert.equal(
+      summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count,
+      1,
+    );
     assert.equal(summary.summary.app_release_user_path_evidence_action_route_count, 1);
     assert.equal(summary.summary.app_release_user_path_evidence_record_action_route_count, 0);
     assert.equal(summary.summary.app_release_user_path_evidence_verify_action_route_count, 1);
@@ -135,8 +151,11 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
 
     const evidence = summary.attention_first_payload.evidence_after_contract
       .app_release_user_path_evidence;
-    assert.equal(evidence.status, 'app_release_user_path_evidence_refs_observed');
+    assert.equal(evidence.status, 'app_release_user_path_evidence_verify_pending');
     assert.equal(evidence.refs_observed_for_all_gates, true);
+    assert.equal(evidence.evidence_ledger_status, 'ledger_refs_recorded_verify_pending');
+    assert.equal(evidence.pending_verify_receipt_ref_count, 1);
+    assert.deepEqual(evidence.pending_verify_receipt_refs, recordOutput.receipt_refs);
     assert.equal(evidence.production_user_path_ready, false);
     assert.equal(evidence.release_ready_claimed, false);
     assert.equal(evidence.production_ready_claimed, false);
@@ -148,6 +167,19 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(verifyRoute.action_kind, 'app_release_user_path_evidence_receipt_verify');
     assert.equal(verifyRoute.route_requires_domain_or_app_payload, false);
     assert.equal(verifyRoute.authority_boundary.can_claim_production_ready, false);
+    const nextStep = summary.attention_first_payload.evidence_next_steps.items.find(
+      (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
+    );
+    assert.equal(Boolean(nextStep), true);
+    assert.equal(nextStep.status, 'app_release_user_path_evidence_verify_pending');
+    assert.equal(nextStep.receipt_verification_required, true);
+    assert.equal(nextStep.pending_verify_receipt_ref_count, 1);
+    assert.equal(
+      nextStep.verification_action_id,
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:verify',
+    );
+    assert.equal(nextStep.can_close_without_domain_or_app_payload, true);
+    assert.equal(nextStep.can_close_app_release_user_path, false);
 
     const verifyExecution = runCli([
       'runtime',
@@ -173,6 +205,30 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(verifiedSummary.summary.app_release_user_path_evidence_action_route_count, 0);
+    assert.equal(
+      verifiedSummary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count,
+      0,
+    );
+    assert.equal(
+      verifiedSummary.summary.app_release_user_path_evidence_verified_ledger_receipt_ref_count,
+      1,
+    );
+    assert.equal(
+      verifiedSummary.attention_first_payload.evidence_after_contract
+        .app_release_user_path_evidence.status,
+      'app_release_user_path_evidence_refs_observed',
+    );
+    assert.equal(
+      verifiedSummary.attention_first_payload.evidence_after_contract
+        .app_release_user_path_evidence.evidence_ledger_status,
+      'ledger_refs_verified',
+    );
+    assert.equal(
+      verifiedSummary.attention_first_payload.evidence_next_steps.items.some(
+        (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
+      ),
+      false,
+    );
     assert.equal(verifiedSummary.summary.app_release_user_path_production_ready_claimed, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -200,11 +256,13 @@ test('runtime App release evidence CLI keeps typed blockers as open operator att
     }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
+    assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_evidence_typed_blocker_ref_count, 1);
 
     const evidence = summary.attention_first_payload.evidence_after_contract
       .app_release_user_path_evidence;
     assert.equal(evidence.status, 'app_release_user_path_evidence_open');
+    assert.equal(evidence.evidence_ledger_status, 'ledger_refs_recorded_verify_pending');
     assert.equal(evidence.blocked_by_typed_blocker_refs, true);
     assert.equal(evidence.refs_observed_for_all_gates, false);
     assert.equal(evidence.production_user_path_ready, false);

@@ -241,6 +241,7 @@ export function frameworkAttentionNextSafeActions(input: {
     ),
     ...(
       numberValue(input.appReleaseUserPathEvidence.open_gate_count) > 0
+        || numberValue(input.appReleaseUserPathEvidence.pending_verify_receipt_ref_count) > 0
         ? [
             frameworkAppReleaseUserPathNextSafeAction(input.appReleaseUserPathEvidence),
           ]

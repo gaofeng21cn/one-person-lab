@@ -100,6 +100,12 @@ function evidenceGate(input: {
 
 export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
   const ledgerReceipts = listAppReleaseUserPathEvidenceReceipts();
+  const recordedLedgerReceipts = ledgerReceipts.filter((receipt) =>
+    receipt.receipt_status === 'recorded'
+  );
+  const verifiedLedgerReceipts = ledgerReceipts.filter((receipt) =>
+    receipt.receipt_status === 'verified'
+  );
   const typedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
   const gates = [
     evidenceGate({
@@ -204,6 +210,8 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     target_surface: 'one_person_lab_app_release_user_path',
     status: openGateItems.length > 0
       ? 'app_release_user_path_evidence_open'
+      : recordedLedgerReceipts.length > 0
+        ? 'app_release_user_path_evidence_verify_pending'
       : 'app_release_user_path_evidence_refs_observed',
     production_user_path_ready: false,
     refs_observed_for_all_gates: openGateItems.length === 0,
@@ -213,14 +221,22 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     open_gate_count: openGateItems.length,
     open_gate_ids: openGateItems.map((gate) => gate.gate_id),
     attention_required: openGateItems.length > 0,
-    evidence_ledger_status: ledgerReceipts.length > 0
-      ? 'ledger_refs_observed'
-      : 'ledger_refs_missing',
+    evidence_ledger_status: recordedLedgerReceipts.length > 0
+      ? 'ledger_refs_recorded_verify_pending'
+      : verifiedLedgerReceipts.length > 0
+        ? 'ledger_refs_verified'
+        : 'ledger_refs_missing',
     typed_blocker_refs: typedBlockerRefs,
     typed_blocker_ref_count: typedBlockerRefs.length,
     blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
     ledger_receipt_ref_count: ledgerReceipts.length,
     ledger_receipt_refs: ledgerReceipts.map((receipt) => receipt.receipt_ref),
+    recorded_ledger_receipt_ref_count: recordedLedgerReceipts.length,
+    recorded_ledger_receipt_refs: recordedLedgerReceipts.map((receipt) => receipt.receipt_ref),
+    verified_ledger_receipt_ref_count: verifiedLedgerReceipts.length,
+    verified_ledger_receipt_refs: verifiedLedgerReceipts.map((receipt) => receipt.receipt_ref),
+    pending_verify_receipt_ref_count: recordedLedgerReceipts.length,
+    pending_verify_receipt_refs: recordedLedgerReceipts.map((receipt) => receipt.receipt_ref),
     gate_items: openGateItems,
     required_return_shapes: [
       'release_package_receipt_ref',
@@ -274,11 +290,13 @@ export function appReleaseUserPathEvidenceSourceRef() {
 }
 
 export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
+  const targetSurface = stringValue(evidence.target_surface)
+    ?? 'one_person_lab_app_release_user_path';
+  const pendingVerifyReceiptRefs = stringList(evidence.pending_verify_receipt_refs);
   return {
     step_kind: 'app_release_user_path_evidence',
     owner: stringValue(evidence.owner) ?? 'one-person-lab',
-    target_surface: stringValue(evidence.target_surface)
-      ?? 'one_person_lab_app_release_user_path',
+    target_surface: targetSurface,
     status: stringValue(evidence.status),
     production_user_path_ready: evidence.production_user_path_ready === true,
     refs_observed_for_all_gates: evidence.refs_observed_for_all_gates === true,
@@ -298,6 +316,18 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
       ?? 'app_live_operator_or_release_owner',
     evidence_ledger_status: stringValue(evidence.evidence_ledger_status),
     ledger_receipt_ref_count: numberValue(evidence.ledger_receipt_ref_count),
+    recorded_ledger_receipt_ref_count:
+      numberValue(evidence.recorded_ledger_receipt_ref_count),
+    verified_ledger_receipt_ref_count:
+      numberValue(evidence.verified_ledger_receipt_ref_count),
+    pending_verify_receipt_ref_count:
+      numberValue(evidence.pending_verify_receipt_ref_count),
+    pending_verify_receipt_refs: pendingVerifyReceiptRefs,
+    receipt_verification_required: pendingVerifyReceiptRefs.length > 0,
+    verification_action_id: pendingVerifyReceiptRefs.length > 0
+      ? `app_release_user_path_evidence:${targetSurface}:verify`
+      : null,
+    can_close_without_domain_or_app_payload: pendingVerifyReceiptRefs.length > 0,
     typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
     blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
     full_detail_section: 'app_release_user_path_evidence',
@@ -473,6 +503,12 @@ export function appReleaseUserPathEvidenceSummary(appReleaseUserPathEvidence: Js
       numberValue(appReleaseUserPathEvidence.ledger_receipt_ref_count),
     typed_blocker_ref_count:
       numberValue(appReleaseUserPathEvidence.typed_blocker_ref_count),
+    recorded_ledger_receipt_ref_count:
+      numberValue(appReleaseUserPathEvidence.recorded_ledger_receipt_ref_count),
+    verified_ledger_receipt_ref_count:
+      numberValue(appReleaseUserPathEvidence.verified_ledger_receipt_ref_count),
+    pending_verify_receipt_ref_count:
+      numberValue(appReleaseUserPathEvidence.pending_verify_receipt_ref_count),
     production_user_path_ready:
       appReleaseUserPathEvidence.production_user_path_ready === true,
     release_ready_claimed:

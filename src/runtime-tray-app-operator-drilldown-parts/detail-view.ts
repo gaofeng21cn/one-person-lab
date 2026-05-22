@@ -466,8 +466,12 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const domainDispatchAttentionCount = numberValue(summary.domain_dispatch_attention_count);
   const omaProductionConsumptionAttentionCount =
     numberValue(omaProductionConsumption.open_gate_count);
-  const appReleaseUserPathAttentionCount =
+  const appReleaseUserPathOpenGateCount =
     numberValue(appReleaseUserPathEvidence.open_gate_count);
+  const appReleaseUserPathPendingVerifyCount =
+    numberValue(appReleaseUserPathEvidence.pending_verify_receipt_ref_count);
+  const appReleaseUserPathAttentionCount = appReleaseUserPathOpenGateCount
+    + appReleaseUserPathPendingVerifyCount;
   const totalAttentionCount = evidenceEnvelopeAttentionCount
     + domainDispatchAttentionCount
     + omaProductionConsumptionAttentionCount
@@ -502,7 +506,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     owner_handoff_packet: ownerHandoffPacket,
     app_release_user_path_evidence: appReleaseUserPathEvidence,
     app_release_user_path_evidence_open_gate_count:
-      appReleaseUserPathAttentionCount,
+      appReleaseUserPathOpenGateCount,
+    app_release_user_path_evidence_pending_verify_receipt_ref_count:
+      appReleaseUserPathPendingVerifyCount,
     oma_production_consumption_followthrough: omaProductionConsumption,
     oma_production_consumption_followthrough_open_gate_count:
       omaProductionConsumptionAttentionCount,
@@ -688,7 +694,10 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     ownerPayloadGroups,
   );
   const steps: JsonRecord[] = [];
-  if (numberValue(appReleaseUserPathEvidence.open_gate_count) > 0) {
+  if (
+    numberValue(appReleaseUserPathEvidence.open_gate_count) > 0
+    || numberValue(appReleaseUserPathEvidence.pending_verify_receipt_ref_count) > 0
+  ) {
     steps.push(appReleaseUserPathEvidenceNextStep(appReleaseUserPathEvidence));
   }
   if (numberValue(omaProductionConsumption.open_gate_count) > 0) {
