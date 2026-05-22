@@ -250,6 +250,143 @@ test('system startup-maintenance installs clean managed modules and returns App 
   }
 });
 
+test('system startup-maintenance installs OMA managed root when only a sibling checkout is visible', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-oma-sibling-home-'));
+  const workspaceRoot = path.join(homeRoot, 'workspace');
+  const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
+  const siblingCheckout = path.join(workspaceRoot, 'opl-meta-agent');
+  const stateRoot = path.join(homeRoot, 'opl-state');
+  const modulesRoot = path.join(stateRoot, 'modules');
+  const logPath = path.join(homeRoot, 'startup-maintenance-oma.log');
+  const omaHealthcheckLogPath = path.join(homeRoot, 'oma-healthcheck.log');
+  const masRemote = createDomainModuleRemote({
+    repoName: 'med-autoscience',
+    pluginName: 'mas',
+    installerKind: 'bash',
+    logPath,
+  });
+  const magRemote = createDomainModuleRemote({
+    repoName: 'med-autogrant',
+    pluginName: 'mag',
+    installerKind: 'bash',
+    logPath,
+  });
+  const rcaRemote = createDomainModuleRemote({
+    repoName: 'redcube-ai',
+    pluginName: 'rca',
+    installerKind: 'node',
+    logPath,
+  });
+  const metaRemote = createGitModuleRemoteFixture('opl-meta-agent', {
+    extraFiles: {
+      'plugins/opl-meta-agent/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'opl-meta-agent',
+        skills: './skills/',
+      }, null, 2),
+      'plugins/opl-meta-agent/skills/opl-meta-agent/SKILL.md': [
+        '---',
+        'name: opl-meta-agent',
+        'description: Use OPL Meta Agent through its OPL-managed product entry.',
+        '---',
+        '',
+        '# OPL Meta Agent Skill',
+        '',
+      ].join('\n'),
+      'scripts/install-codex-plugin.mjs': [
+        `import fs from 'node:fs';`,
+        `fs.appendFileSync(${JSON.stringify(logPath)}, 'opl-meta-agent-skill-sync\\n');`,
+        `console.log(JSON.stringify({ plugin: 'opl-meta-agent', sync: 'ok' }));`,
+        '',
+      ].join('\n'),
+      'scripts/opl-module-bootstrap.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf 'opl-meta-agent-bootstrap\\n' >> ${JSON.stringify(logPath)}`,
+        '',
+      ].join('\n'),
+      'scripts/verify.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$1" > ${JSON.stringify(omaHealthcheckLogPath)}`,
+        'test "$1" = "smoke"',
+        '',
+      ].join('\n'),
+    },
+    executableFiles: [
+      'scripts/opl-module-bootstrap.sh',
+      'scripts/verify.sh',
+    ],
+  });
+
+  try {
+    fs.mkdirSync(onePersonLabRoot, { recursive: true });
+    runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckout]);
+    fs.writeFileSync(path.join(siblingCheckout, 'LOCAL_EDIT.txt'), 'dirty sibling\n', 'utf8');
+
+    const output = runCli(['system', 'startup-maintenance'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: masRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_STATE_DIR: stateRoot,
+      OPL_GIT_RETRY_ATTEMPTS: '1',
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    }) as {
+      system_action: {
+        details: {
+          managed_install_update_receipts: {
+            receipt_refs: string[];
+          };
+          module_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+            action: string | null;
+            install_origin_before: string;
+            result: {
+              module: {
+                install_origin: string;
+                checkout_path: string;
+                managed_checkout_path: string;
+              };
+            } | null;
+          }>;
+        };
+      };
+    };
+
+    const metaTarget = output.system_action.details.module_targets.find((target) => (
+      target.target_id === 'oplmetaagent'
+    ));
+    const managedCheckout = path.join(modulesRoot, 'opl-meta-agent');
+    assert.equal(metaTarget?.status, 'completed');
+    assert.equal(metaTarget?.reason, 'module_missing');
+    assert.equal(metaTarget?.action, 'install');
+    assert.equal(metaTarget?.install_origin_before, 'sibling_workspace');
+    assert.equal(metaTarget?.result?.module.install_origin, 'managed_root');
+    assert.equal(metaTarget?.result?.module.checkout_path, managedCheckout);
+    assert.equal(metaTarget?.result?.module.managed_checkout_path, managedCheckout);
+    assert.equal(fs.existsSync(path.join(managedCheckout, 'README.md')), true);
+    assert.equal(fs.existsSync(path.join(siblingCheckout, 'LOCAL_EDIT.txt')), true);
+    assert.equal(fs.readFileSync(omaHealthcheckLogPath, 'utf8').trim(), 'smoke');
+    assert.equal(
+      output.system_action.details.managed_install_update_receipts.receipt_refs.some(
+        (ref) => ref.startsWith('opl://managed-install-update/oplmetaagent/install/'),
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('system startup-maintenance does not block all modules on a timed-out module health check', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-timeout-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');

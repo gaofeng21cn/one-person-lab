@@ -1,4 +1,15 @@
-import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import {
+  assert,
+  createGitModuleRemoteFixture,
+  fs,
+  os,
+  path,
+  runCli,
+  runCliFailure,
+  runCliInCwd,
+  test,
+} from '../helpers.ts';
+import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
@@ -204,6 +215,108 @@ EOF
     assert.equal(fs.existsSync(remove.module_action.module.checkout_path), false);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('module install creates an OPL-managed root even when a sibling checkout is visible', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-sibling-install-home-'));
+  const workspaceRoot = path.join(homeRoot, 'workspace');
+  const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
+  const siblingCheckout = path.join(workspaceRoot, 'opl-meta-agent');
+  const modulesRoot = path.join(homeRoot, 'opl-state', 'modules');
+  const healthcheckLogPath = path.join(homeRoot, 'oma-healthcheck.log');
+  const metaRemote = createGitModuleRemoteFixture('opl-meta-agent', {
+    extraFiles: {
+      'plugins/opl-meta-agent/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'opl-meta-agent',
+        skills: './skills/',
+      }, null, 2),
+      'plugins/opl-meta-agent/skills/oplmetaagent/SKILL.md': [
+        '---',
+        'name: oplmetaagent',
+        'description: Use this fixture for OPL Meta Agent managed install tests.',
+        '---',
+        '',
+        '# OPL Meta Agent Skill',
+        '',
+      ].join('\n'),
+      'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+      'scripts/verify.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$1" > ${JSON.stringify(healthcheckLogPath)}`,
+        'test "$1" = "smoke"',
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/verify.sh'],
+  });
+
+  try {
+    fs.mkdirSync(onePersonLabRoot, { recursive: true });
+    runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckout]);
+    fs.writeFileSync(path.join(siblingCheckout, 'LOCAL_EDIT.txt'), 'dirty sibling\n', 'utf8');
+
+    const env = {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    };
+
+    const beforeInstall = runCliInCwd(['modules'], onePersonLabRoot, env) as {
+      modules: {
+        items: Array<{
+          module_id: string;
+          install_origin: string;
+          checkout_path: string;
+          health_status: string;
+        }>;
+      };
+    };
+    const beforeMeta = beforeInstall.modules.items.find((entry) => entry.module_id === 'oplmetaagent');
+    assert.equal(beforeMeta?.install_origin, 'sibling_workspace');
+    assert.equal(beforeMeta?.checkout_path, siblingCheckout);
+    assert.equal(beforeMeta?.health_status, 'dirty');
+
+    const install = runCliInCwd(
+      ['module', 'install', '--module', 'oplmetaagent'],
+      onePersonLabRoot,
+      env,
+    ) as {
+      module_action: {
+        action: string;
+        module: {
+          module_id: string;
+          install_origin: string;
+          checkout_path: string;
+          managed_checkout_path: string;
+          git: { dirty: boolean };
+        };
+        turnkey: {
+          skill_sync: { status: string; domain_id: string | null };
+          health_check: { status: string };
+        };
+      };
+    };
+
+    const managedCheckout = path.join(modulesRoot, 'opl-meta-agent');
+    assert.equal(install.module_action.action, 'install');
+    assert.equal(install.module_action.module.module_id, 'oplmetaagent');
+    assert.equal(install.module_action.module.install_origin, 'managed_root');
+    assert.equal(install.module_action.module.checkout_path, managedCheckout);
+    assert.equal(install.module_action.module.managed_checkout_path, managedCheckout);
+    assert.equal(install.module_action.module.git.dirty, false);
+    assert.equal(install.module_action.turnkey.skill_sync.status, 'completed');
+    assert.equal(install.module_action.turnkey.skill_sync.domain_id, 'oplmetaagent');
+    assert.equal(install.module_action.turnkey.health_check.status, 'completed');
+    assert.equal(fs.readFileSync(healthcheckLogPath, 'utf8').trim(), 'smoke');
+    assert.equal(fs.existsSync(path.join(managedCheckout, 'README.md')), true);
+    assert.equal(fs.existsSync(path.join(siblingCheckout, 'LOCAL_EDIT.txt')), true);
+  } finally {
+    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

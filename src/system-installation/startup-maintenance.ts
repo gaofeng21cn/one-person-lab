@@ -65,6 +65,12 @@ function shouldAutoMaintain(module: ModuleStatus) {
   if (!module.installed || module.install_origin === 'missing') {
     return { action: 'install', reason: 'module_missing' } as const;
   }
+  if (
+    module.install_origin === 'sibling_workspace'
+    && module.checkout_path !== module.managed_checkout_path
+  ) {
+    return { action: 'install', reason: 'module_missing' } as const;
+  }
   if (module.install_origin !== 'managed_root') {
     return { action: null, reason: buildManualReason(module) } as const;
   }

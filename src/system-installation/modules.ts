@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
-import { resolveFamilyWorkspaceRootFromRepoRoot } from '../opl-skills.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 import {
   type DomainModuleSpec,
   type OplModuleAction,
@@ -121,7 +121,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? { command: 'npm', args: ['install'] }
     ),
-    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath, 'smoke'),
     exec_command: (_checkoutPath, args) => ({
       command: 'npm',
       args: ['test', '--', ...args],
@@ -153,7 +153,7 @@ function resolveRepoRoot() {
 }
 
 function resolveSiblingWorkspaceRoot() {
-  return resolveFamilyWorkspaceRootFromRepoRoot(resolveRepoRoot());
+  return resolveDefaultFamilyWorkspaceRoot({ repoRootHint: resolveRepoRoot() });
 }
 
 function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: string) {
@@ -201,7 +201,7 @@ function buildPythonEditableBootstrapCommand(checkoutPath: string, pythonVersion
   };
 }
 
-function buildHealthCheckCommand(checkoutPath: string) {
+function buildHealthCheckCommand(checkoutPath: string, verifyLane = 'fast') {
   const verifyScript = path.join('scripts', 'verify.sh');
   return resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
     ?? {
@@ -209,7 +209,7 @@ function buildHealthCheckCommand(checkoutPath: string) {
       args: ['-lc', [
         'set -euo pipefail',
         buildPythonCommandShim(),
-        ['bash', verifyScript, 'fast'].map(shellQuote).join(' '),
+        ['bash', verifyScript, verifyLane].map(shellQuote).join(' '),
       ].join('\n')],
     };
 }
@@ -489,6 +489,12 @@ function installManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
   cloneManagedModule(spec, checkoutPath);
 }
 
+function runManagedInstallWorkflow(spec: DomainModuleRuntimeSpec) {
+  const checkoutPath = resolveManagedModulePath(spec);
+  installManagedModule(spec, checkoutPath);
+  return runManagedModuleWorkflow(spec, checkoutPath, { readPackagedModuleGitSnapshot });
+}
+
 function maybeParseJsonRecord(raw: string) {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -517,8 +523,9 @@ export function runOplModuleAction(
 
   switch (action) {
     case 'install': {
-      if (!current.installed) {
-        installManagedModule(spec, current.managed_checkout_path);
+      if (current.install_origin !== 'managed_root') {
+        workflow = runManagedInstallWorkflow(spec);
+        break;
       }
       const installed = inspectModule(spec);
       if (installed.install_origin === 'managed_root') {

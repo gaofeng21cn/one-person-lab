@@ -294,6 +294,8 @@ function frameworkAttentionFirstPayload(input: {
   status: string;
   semanticHygieneContractFloor: JsonRecord;
   hardBlockerCount: number;
+  agentHardBlockerCount: number;
+  stageHardBlockerCount: number;
   packCompilerBlockerCount: number;
   diagnosticFailureCount: number;
   semanticAttentionGateCount: number;
@@ -328,11 +330,28 @@ function frameworkAttentionFirstPayload(input: {
   const totalOperatorAttentionTailCount =
     openTailCount + evidenceEnvelopeAttentionCount + input.domainDispatchAttentionCount;
   const blockers = [
+    ...(input.agentHardBlockerCount > 0
+      ? [{
+          blocker_id: 'agent_conformance_framework_kernel_blocker_present',
+          count: input.agentHardBlockerCount,
+          route_ref: '/framework_readiness/agent_conformance_tail',
+          source_command: SOURCE_COMMANDS.agents_readiness,
+        }]
+      : []),
+    ...(input.stageHardBlockerCount > 0
+      ? [{
+          blocker_id: 'stage_readiness_framework_kernel_blocker_present',
+          count: input.stageHardBlockerCount,
+          route_ref: '/framework_readiness/stages',
+          source_command: SOURCE_COMMANDS.stages_readiness_mas,
+        }]
+      : []),
     ...(input.packCompilerBlockerCount > 0
       ? [{
           blocker_id: 'pack_compiler_framework_kernel_blocker_present',
           count: input.packCompilerBlockerCount,
           route_ref: '/framework_readiness/pack_compiler',
+          source_command: SOURCE_COMMANDS.pack_compiler,
         }]
       : []),
     ...(input.diagnosticFailureCount > 0
@@ -340,13 +359,7 @@ function frameworkAttentionFirstPayload(input: {
           blocker_id: 'framework_diagnostic_unavailable',
           count: input.diagnosticFailureCount,
           route_ref: '/framework_readiness/diagnostic_failures',
-        }]
-      : []),
-    ...(input.hardBlockerCount > input.packCompilerBlockerCount + input.diagnosticFailureCount
-      ? [{
-          blocker_id: 'framework_kernel_hard_blocker_present',
-          count: input.hardBlockerCount - input.packCompilerBlockerCount - input.diagnosticFailureCount,
-          route_ref: '/framework_readiness/stages',
+          source_command: 'see_diagnostic_failure_items',
         }]
       : []),
   ];
@@ -426,6 +439,10 @@ function frameworkAttentionFirstPayload(input: {
     status: input.status,
     summary: {
       hard_blocker_count: input.hardBlockerCount,
+      agent_conformance_hard_blocker_count: input.agentHardBlockerCount,
+      stage_readiness_hard_blocker_count: input.stageHardBlockerCount,
+      pack_compiler_hard_blocker_count: input.packCompilerBlockerCount,
+      diagnostic_hard_blocker_count: input.diagnosticFailureCount,
       warning_count: warnings.length,
       recommendation_count: warnings.length,
       open_tail_count: openTailCount,
@@ -674,6 +691,8 @@ export async function buildFrameworkReadinessSummary(
         status: frameworkStatus,
         semanticHygieneContractFloor: semanticHygieneContractFloor(semanticHygiene),
         hardBlockerCount,
+        agentHardBlockerCount,
+        stageHardBlockerCount,
         packCompilerBlockerCount,
         diagnosticFailureCount,
         semanticAttentionGateCount,
@@ -712,6 +731,9 @@ export async function buildFrameworkReadinessSummary(
       summary: {
         control_plane_available: true,
         framework_kernel_hard_blocker_count: hardBlockerCount,
+        agent_conformance_hard_blocker_count: agentHardBlockerCount,
+        stage_readiness_hard_blocker_count: stageHardBlockerCount,
+        pack_compiler_hard_blocker_count: packCompilerBlockerCount,
         framework_diagnostic_failure_count: diagnosticFailureCount,
         semantic_hygiene_attention_required_gate_count: semanticAttentionGateCount,
         agent_structural_evidence_tail_open_count: agentStructuralEvidenceTailCount,

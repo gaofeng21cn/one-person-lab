@@ -4,13 +4,13 @@ Owner: `One Person Lab`
 Purpose: `cross_repo_private_platform_inventory`
 State: `active_inventory`
 Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 OPL `contracts/`、CLI/API 行为、provider receipt、domain-owned contracts、sidecar/manifest projection、真实 workspace receipt 与各 domain agent owner receipt。
-更新时间：`2026-05-22`
+更新时间：`2026-05-23`
 
 ## 文档职责
 
 本文只维护 MAS/MAG/RCA/OPL Meta Agent 中仍可能被误读成 repo-local generic platform 的当前 surface 分类、owner 边界和迁移门。它不再保存逐日拆文件流水账、line-count closeout、commit 过程或长 follow-up 清单。
 
-本轮瘦身前的逐文件拆分过程已归入 [2026-05-22 OPL active ledger consolidation](../history/process/plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md)。以后新增 private-platform 清理证据时，active 层只更新本文件的分类结论；过程证据进入 `docs/history/**` 或对应 repo 的 status / gap plan。
+逐文件拆分过程已归入 [2026-05-22 OPL active ledger consolidation](../history/process/plans/2026-05-22-opl-doc-lifecycle-active-ledger-consolidation.md)。新增 private-platform 清理证据时，active 层只更新本文件的分类结论；过程证据进入 `docs/history/**` 或对应 repo 的 status / gap plan。
 
 ## 当前 Clean Truth
 
@@ -20,7 +20,7 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 - `MAS`、`MAG`、`RCA` 是 active Foundry Agents，分别持有医学研究、基金申请、视觉交付的 domain truth、quality/export verdict、artifact authority、memory accept/reject、owner receipt、typed blocker 和 direct app skill path。
 - `opl-meta-agent` 是 OPL-compatible Foundry Agent / builder agent。它持有 agent-building semantics、candidate package/work-order/proposal materialization refs；OPL Framework 仍持有 registry、Agent Lab、generated interfaces、promotion gate、runtime、queue 和 App shell。
 
-Fresh code scan 显示，OPL 当前已有对应的 generic platform classifier 和 scaffold/conformance surface：`opl agents platform-surfaces --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl agents legacy-cleanup apply ...`、`standard-domain-agent-conformance*`、`agent-platform-surface-ownership.ts`、`runtime-tray-app-operator-drilldown*` 和 `family-runtime-command-parts/*`。这些是 OPL 的 owner surface；它们只输出 classification、migration gate、read model、cleanup ledger 或 refs-only route，不生成 domain ready、quality verdict、artifact authority 或 production ready。
+当前代码扫描显示，OPL 已有对应的 generic platform classifier 和 scaffold/conformance surface：`opl agents platform-surfaces --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl agents legacy-cleanup apply ...`、`standard-domain-agent-conformance*`、`agent-platform-surface-ownership.ts`、`runtime-tray-app-operator-drilldown*` 和 `family-runtime-command-parts/*`。这些是 OPL 的 owner surface；它们只输出 classification、migration gate、read model、cleanup ledger 或 refs-only route，不生成 domain ready、quality verdict、artifact authority 或 production ready。
 
 `opl agents default-callers --family-defaults --json` 是当前 generated/hosted default-caller readiness primitive。它读取 `agents interfaces` 的 active-caller target / cutover proof 和 `agents platform-surfaces` 的 private-owner guard，输出每个标准 agent 的 generated CLI/MCP/Skill/product-entry/status/session/sidecar/workbench surface 是否已具备 OPL replacement / active-caller cutover 结构证据。该 report 只关闭 deletion gate 中的 structural replacement evidence；domain owner receipt 或 stable typed blocker、no-forbidden-write proof、tombstone/provenance refs 和实际物理删除授权仍必须由对应 domain repo owner 提供。当前 report 还为每个 surface 输出 `opl_default_caller_surface_deletion_evidence_worklist`，把 replacement parity、active caller cutover、domain owner receipt / typed blocker、no-forbidden-write proof 与 tombstone/provenance ref 拆成可消费的 per-surface gate；这些 worklist 是 OPL-owned 退役执行读面，不签 domain owner receipt，也不授权 domain repo 物理删除。
 

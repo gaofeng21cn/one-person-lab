@@ -37,6 +37,22 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.summary.framework_kernel_hard_blocker_count,
   );
   assert.equal(
+    readiness.attention_first_payload.summary.agent_conformance_hard_blocker_count,
+    readiness.summary.agent_conformance_hard_blocker_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.stage_readiness_hard_blocker_count,
+    readiness.summary.stage_readiness_hard_blocker_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.pack_compiler_hard_blocker_count,
+    readiness.summary.pack_compiler_hard_blocker_count,
+  );
+  assert.equal(
+    readiness.attention_first_payload.summary.diagnostic_hard_blocker_count,
+    readiness.summary.framework_diagnostic_failure_count,
+  );
+  assert.equal(
     readiness.attention_first_payload.summary.open_tail_count,
     readiness.summary.agent_structural_evidence_tail_open_count
       + readiness.summary.app_live_evidence_tail_open_count
@@ -478,6 +494,30 @@ test('framework readiness summarizes default control-plane surfaces without auth
     ].includes(readiness.agent_conformance_tail.status));
     assert.equal(
       readiness.agent_conformance_tail.authority_boundary.readiness_can_claim_production_ready,
+      false,
+    );
+  }
+  const stageHardBlockerCount = Object.values(readiness.stages.readiness_by_domain)
+    .reduce((total: number, stageSummary: any) => (
+      total + (stageSummary.hard_blocker_count ?? 0)
+    ), 0);
+  assert.equal(readiness.summary.stage_readiness_hard_blocker_count, stageHardBlockerCount);
+  if (
+    readiness.agent_conformance_tail.structural_conformance_status === 'blocked'
+    && stageHardBlockerCount === 0
+  ) {
+    assert.equal(readiness.summary.agent_conformance_hard_blocker_count > 0, true);
+    assert.equal(
+      readiness.attention_first_payload.blockers.some((blocker: { blocker_id: string; route_ref: string }) => (
+        blocker.blocker_id === 'agent_conformance_framework_kernel_blocker_present'
+        && blocker.route_ref === '/framework_readiness/agent_conformance_tail'
+      )),
+      true,
+    );
+    assert.equal(
+      readiness.attention_first_payload.blockers.some((blocker: { route_ref: string }) => (
+        blocker.route_ref === '/framework_readiness/stages'
+      )),
       false,
     );
   }
