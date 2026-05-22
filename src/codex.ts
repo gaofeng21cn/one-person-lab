@@ -465,7 +465,10 @@ function parseCodexExecEventFromLine(
     return null;
   }
 
-  if (itemType === 'agent_message') {
+  if (
+    itemType === 'agent_message'
+    || (itemType === 'message' && normalizeInlineText(itemRecord.role) === 'assistant')
+  ) {
     const text = extractAgentMessageText(itemRecord);
     if (!text) {
       return null;
