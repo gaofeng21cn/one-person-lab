@@ -10,20 +10,21 @@ const EXPECTED_GATES = [
   'app_operator_drilldown_overprojection',
   'evidence_envelope_single_semantics',
   'public_surface_budget_conformance',
+  'functional_privatization_evidence_gate',
   'app_release_evidence_not_contract_only',
   'family_runtime_parser_monolith',
   'stage_launch_guarantee_clarity',
   'legacy_vocabulary_active_leakage',
 ] as const;
 
-test('system semantic hygiene exposes nine machine gates without production or domain-ready claims', () => {
+test('system semantic hygiene exposes ten machine gates without production or domain-ready claims', () => {
   const output = runCli(['system', 'semantic-hygiene', '--json']);
   const audit = output.semantic_hygiene;
 
   assert.equal(output.version, 'g2');
   assert.equal(audit.surface_kind, 'opl_framework_semantic_hygiene_audit');
-  assert.equal(audit.summary.gate_count, 9);
-  assert.equal(audit.summary.guarded_gate_count, 9);
+  assert.equal(audit.summary.gate_count, 10);
+  assert.equal(audit.summary.guarded_gate_count, 10);
   assert.equal(audit.summary.attention_required_gate_count, 0);
   assert.equal(audit.summary.production_or_domain_ready, false);
   assert.equal(audit.summary.production_ready_claim_count, 0);
@@ -169,6 +170,81 @@ test('system semantic hygiene exposes nine machine gates without production or d
     false,
   );
   assert.match(String(surfaceBudgetGate.next_action), /diagnostic\/reference state/);
+
+  const functionalGate = gates.get('functional_privatization_evidence_gate') as {
+    status?: unknown;
+    source_evidence?: { ref?: unknown }[];
+    next_action?: unknown;
+    functional_privatization_evidence_gate?: {
+      semantic_equivalence_requires_evidence_when_active_private?: unknown;
+      can_close_without_evidence?: unknown;
+      mechanical_completion_can_close?: unknown;
+      evidence_required_when_any?: unknown;
+      required_evidence_policy?: unknown;
+      authority_boundary?: {
+        can_claim_domain_ready?: unknown;
+        can_claim_private_residue_deleted?: unknown;
+        can_authorize_quality_or_export?: unknown;
+        can_replace_domain_owner?: unknown;
+      };
+    };
+  };
+  assert.equal(functionalGate.status, 'guarded');
+  assert.equal(
+    functionalGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'src/functional-privatization-envelope.ts'
+    ),
+    true,
+  );
+  assert.equal(
+    functionalGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'contracts/opl-framework/functional-privatization-audit-envelope-contract.json'
+    ),
+    true,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate
+      ?.semantic_equivalence_requires_evidence_when_active_private,
+    true,
+  );
+  assert.deepEqual(
+    functionalGate.functional_privatization_evidence_gate?.evidence_required_when_any,
+    [
+      'semantic_equivalence_review_count > 0',
+      'active_private_generic_residue_count > 0',
+    ],
+  );
+  assert.match(
+    String(functionalGate.functional_privatization_evidence_gate?.required_evidence_policy),
+    /owner receipt before private residue closure/,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate?.can_close_without_evidence,
+    false,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate?.mechanical_completion_can_close,
+    false,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate?.authority_boundary?.can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate?.authority_boundary
+      ?.can_claim_private_residue_deleted,
+    false,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate?.authority_boundary
+      ?.can_authorize_quality_or_export,
+    false,
+  );
+  assert.equal(
+    functionalGate.functional_privatization_evidence_gate?.authority_boundary?.can_replace_domain_owner,
+    false,
+  );
+  assert.match(String(functionalGate.next_action), /semantic-equivalence evidence gate/);
 
   const appReleaseGate = gates.get('app_release_evidence_not_contract_only') as {
     status?: unknown;

@@ -1,4 +1,5 @@
 import type { FrameworkContracts } from './types.ts';
+import { FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT } from './functional-privatization-envelope.ts';
 
 export type SemanticHygieneGateId =
   | 'provider_readiness_single_truth'
@@ -6,6 +7,7 @@ export type SemanticHygieneGateId =
   | 'app_operator_drilldown_overprojection'
   | 'evidence_envelope_single_semantics'
   | 'public_surface_budget_conformance'
+  | 'functional_privatization_evidence_gate'
   | 'app_release_evidence_not_contract_only'
   | 'family_runtime_parser_monolith'
   | 'stage_launch_guarantee_clarity'
@@ -25,6 +27,7 @@ export type SemanticHygieneGate = {
   required_boundary: string;
   next_action: string;
   surface_budget_conformance?: SurfaceBudgetConformance;
+  functional_privatization_evidence_gate?: FunctionalPrivatizationEvidenceGateConformance;
 };
 
 const NO_READY_CLAIMS = {
@@ -41,6 +44,8 @@ function sourceEvidence(...refs: string[]) {
 }
 
 type SurfaceBudgetConformance = ReturnType<typeof buildSurfaceBudgetConformance>;
+type FunctionalPrivatizationEvidenceGateConformance =
+  ReturnType<typeof buildFunctionalPrivatizationEvidenceGateConformance>;
 
 function buildSurfaceBudgetConformance(contracts: FrameworkContracts) {
   const surfaces = contracts.publicSurfaceIndex.surfaces;
@@ -83,8 +88,31 @@ function buildSurfaceBudgetConformance(contracts: FrameworkContracts) {
   };
 }
 
+function buildFunctionalPrivatizationEvidenceGateConformance() {
+  const gate = FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.semantic_equivalence_evidence_gate;
+  return {
+    semantic_equivalence_requires_evidence_when_active_private:
+      FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.ai_first_contract_light_policy
+        .semantic_equivalence_requires_evidence_when_active_private,
+    evidence_required_when_any: [...gate.evidence_required_when_any],
+    required_evidence_policy: gate.required_evidence_policy,
+    can_close_without_evidence: gate.can_close_without_evidence,
+    mechanical_completion_can_close: gate.mechanical_completion_can_close,
+    closure_policy:
+      'private residue or semantic equivalence review closure requires domain/App/live evidence refs, typed blocker, or owner receipt',
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_private_residue_deleted: false,
+      can_authorize_quality_or_export: false,
+      can_replace_domain_owner: false,
+    },
+  };
+}
+
 export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContracts) {
   const surfaceBudgetConformance = buildSurfaceBudgetConformance(contracts);
+  const functionalPrivatizationEvidenceGate =
+    buildFunctionalPrivatizationEvidenceGateConformance();
   const gates: SemanticHygieneGate[] = [
     {
       gate_id: 'provider_readiness_single_truth',
@@ -169,6 +197,24 @@ export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContra
       next_action:
         'Keep public-surface-index entries budgeted and route new surfaces through diagnostic/reference state until they meet authority, evidence, replay, audit, route-back, or repeated App/runtime consumption gates.',
       surface_budget_conformance: surfaceBudgetConformance,
+    },
+    {
+      gate_id: 'functional_privatization_evidence_gate',
+      pollution_point: 'functional privatization contract-only closure',
+      status: 'guarded',
+      owner: 'one-person-lab',
+      source_evidence: [
+        'src/functional-privatization-envelope.ts',
+        'src/functional-privatization-audit.ts',
+        'contracts/opl-framework/functional-privatization-audit-envelope-contract.json',
+        'tests/src/functional-privatization-audit-envelope.test.ts',
+      ],
+      current_state_claims: NO_READY_CLAIMS,
+      required_boundary:
+        'Functional privatization classification, zero default watchlist, or compact read-model state cannot close semantic-equivalence review or active private residue without domain/App/live evidence refs, typed blocker, or owner receipt.',
+      next_action:
+        'Keep semantic-equivalence evidence gate visible in system semantic hygiene and reject private residue closure claims that lack domain/App/live evidence refs, typed blocker, or owner receipt.',
+      functional_privatization_evidence_gate: functionalPrivatizationEvidenceGate,
     },
     {
       gate_id: 'app_release_evidence_not_contract_only',
