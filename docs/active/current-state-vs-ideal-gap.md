@@ -131,7 +131,7 @@ MAS 的 physical morphology cleanup 必须继续把 `supervisor`、`supervision_
 
 MAS 当前剩余测试/证据差距包括：
 
-- 多条真实 paper line 的 provider-hosted guarded apply、progress delta、AI reviewer update、artifact delta、human gate、stop-loss 或 stable typed blocker；当前已验证一条 DM-CVD guarded-apply workorder 的 owner receipt / stable blocker / no-forbidden-write refs 可被 OPL record/verify 消费，但仍需跨 study、跨 stage 和长窗口持续 scaleout。
+- 多条真实 paper line 的 provider-hosted guarded apply、progress delta、AI reviewer update、artifact delta、human gate、stop-loss 或 stable typed blocker；当前已验证一条 DM-CVD guarded-apply workorder 的 owner receipt / stable blocker / no-forbidden-write refs 可被 OPL record/verify 消费，也已用真实 MAS sidecar export 把 5 条 `domain_route/reconcile-apply` typed-blocker payload 继续记录/验证到 OPL refs-only ledger，使 MAS `domain_route/reconcile-apply` workorder group 降到 17。它们仍只是 owner-route accounting 和 typed blocker observed，不是 runtime redrive、owner receipt success、paper closure、artifact/memory/human gate receipt 或 long-soak。
 - transition matrix route 的真实 owner-chain closeout：`study_state_matrix` + OPL generic matrix runner 只证明状态转移 spec/cases 可物化和执行；真实完成仍要在 paper-line canary 中看到 owner receipt、typed blocker、progress delta、gate replay、human gate 或 stop-loss。
 - Temporal/provider 长窗口下 MAS owner-chain dispatch、provider capability SLO 持续 satisfied 和 no-forbidden-write proof；restart re-query / signal history 现在已有 OPL capability projection，但仍需在真实 MAS owner-chain 长窗口中持续成立。
 - MAS memory / artifact / lifecycle 在真实 workspace 中形成 accepted/rejected writeback、cleanup/restore/retention 和 artifact mutation receipt。
