@@ -104,6 +104,14 @@ const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
   workbench: ['workbench', 'workbench_drilldown'],
 };
 
+const DELETION_EVIDENCE_REQUIREMENTS = [
+  'replacement_parity',
+  'active_caller_cutover',
+  'domain_owner_receipt_or_typed_blocker',
+  'no_forbidden_write_proof',
+  'tombstone_or_provenance_ref',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -127,6 +135,20 @@ function recordList(value: unknown) {
 
 function unique(values: string[]) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function readRefsFromFields(source: JsonRecord | null | undefined, fields: string[]) {
+  if (!isRecord(source)) {
+    return [];
+  }
+  return unique(fields.flatMap((field) => {
+    const value = source[field];
+    if (Array.isArray(value)) {
+      return stringList(value);
+    }
+    const single = optionalString(value);
+    return single ? [single] : [];
+  }));
 }
 
 function readJsonFile(repoDir: string, relativePath: string) {
@@ -543,6 +565,76 @@ function defaultCallerSurfaceGates(bundle: JsonRecord) {
       && !activeCallerProofStatus?.startsWith('blocked')
       && Boolean(activeCallerTargetKind)
       && DEFAULT_CALLER_TARGET_KINDS.includes(activeCallerTargetKind as typeof DEFAULT_CALLER_TARGET_KINDS[number]);
+    const bridgeExitGate = isRecord(target?.bridge_exit_gate) ? target.bridge_exit_gate : null;
+    const observedTombstoneOrProvenanceRefs = unique([
+      ...readRefsFromFields(bridgeExitGate, [
+        'tombstone_refs',
+        'provenance_refs',
+        'history_refs',
+        'source_refs',
+      ]),
+      ...stringList(target?.current_surface_refs),
+    ]);
+    const observedDomainReceiptOrBlockerRefs = readRefsFromFields(bridgeExitGate, [
+      'owner_receipt_refs',
+      'owner_receipt_ref',
+      'domain_owner_receipt_refs',
+      'domain_owner_receipt_ref',
+      'typed_blocker_refs',
+      'typed_blocker_ref',
+    ]);
+    const observedNoForbiddenWriteRefs = readRefsFromFields(bridgeExitGate, [
+      'no_forbidden_write_refs',
+      'no_forbidden_write_ref',
+      'no_forbidden_write_evidence_refs',
+      'no_forbidden_write_evidence_ref',
+    ]);
+    const deletionEvidenceWorklist = {
+      surface_kind: 'opl_default_caller_surface_deletion_evidence_worklist',
+      surface_id: surfaceId,
+      status: ready ? 'domain_evidence_required' : 'blocked_until_replacement_ready',
+      requirement_ids: DELETION_EVIDENCE_REQUIREMENTS,
+      replacement_parity: {
+        status: ready ? 'observed' : 'blocked',
+        source_refs: [
+          `generated_wrapper_bundle.descriptor_scope.${surfaceId}`,
+          ...canonicalTargetIds.map((targetId) => `active_caller_target_proof.surface_targets.${targetId}`),
+        ],
+      },
+      active_caller_cutover: {
+        status: ready ? 'observed' : 'blocked',
+        proof_status: activeCallerProofStatus,
+        target_kind: activeCallerTargetKind,
+        active_caller_module_id: activeCallerModuleId,
+      },
+      domain_owner_receipt_or_typed_blocker: {
+        status: observedDomainReceiptOrBlockerRefs.length > 0 ? 'observed' : 'required_from_domain_owner',
+        evidence_refs: observedDomainReceiptOrBlockerRefs,
+      },
+      no_forbidden_write_proof: {
+        status: observedNoForbiddenWriteRefs.length > 0 ? 'observed' : 'required_before_physical_delete',
+        evidence_refs: observedNoForbiddenWriteRefs,
+      },
+      tombstone_or_provenance_ref: {
+        status: observedTombstoneOrProvenanceRefs.length > 0 ? 'observed' : 'required_before_physical_delete',
+        evidence_refs: observedTombstoneOrProvenanceRefs,
+      },
+      bridge_exit_gate: bridgeExitGate,
+      retention_reason: optionalString(target?.retention_reason),
+      cannot_absorb_reason: optionalString(target?.cannot_absorb_reason),
+      audit_visibility: optionalString(target?.audit_visibility),
+      audit_reason: optionalString(target?.audit_reason),
+      semantic_equivalence_status: optionalString(target?.semantic_equivalence_status),
+      semantic_equivalence_reason: optionalString(target?.semantic_equivalence_reason),
+      physical_delete_authorized: false,
+      authority_boundary: {
+        worklist_can_write_domain_truth: false,
+        worklist_can_sign_domain_owner_receipt: false,
+        worklist_can_authorize_quality_or_export: false,
+        worklist_can_mutate_domain_artifacts: false,
+        worklist_can_authorize_domain_repo_physical_delete: false,
+      },
+    };
     return {
       surface_id: surfaceId,
       descriptor_kind: optionalString(scope.descriptor_kind),
@@ -558,6 +650,7 @@ function defaultCallerSurfaceGates(bundle: JsonRecord) {
       domain_repo_role: optionalString(scope.domain_repo_role),
       domain_repo_can_own_generated_surface: false,
       default_caller_owner: 'one-person-lab',
+      deletion_evidence_worklist: deletionEvidenceWorklist,
     };
   });
 }
@@ -606,6 +699,19 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       ...surfaceBlockers,
     ].filter((entry): entry is string => Boolean(entry));
     const replacementReady = blockers.length === 0;
+    const deletionEvidenceWorklists = surfaceGates.map((gate) => gate.deletion_evidence_worklist);
+    const missingDomainEvidenceCount = deletionEvidenceWorklists.filter((worklist) => (
+      isRecord(worklist.domain_owner_receipt_or_typed_blocker)
+      && optionalString(worklist.domain_owner_receipt_or_typed_blocker.status) !== 'observed'
+    )).length;
+    const missingNoForbiddenWriteCount = deletionEvidenceWorklists.filter((worklist) => (
+      isRecord(worklist.no_forbidden_write_proof)
+      && optionalString(worklist.no_forbidden_write_proof.status) !== 'observed'
+    )).length;
+    const missingTombstoneOrProvenanceCount = deletionEvidenceWorklists.filter((worklist) => (
+      isRecord(worklist.tombstone_or_provenance_ref)
+      && optionalString(worklist.tombstone_or_provenance_ref.status) !== 'observed'
+    )).length;
     return {
       surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
       version: 'v1',
@@ -619,6 +725,10 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         ready_surface_count: surfaceGates.length - surfaceBlockers.length,
         blocked_surface_count: surfaceBlockers.length,
         blocker_count: blockers.length,
+        deletion_evidence_worklist_count: deletionEvidenceWorklists.length,
+        missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
+        missing_no_forbidden_write_proof_count: missingNoForbiddenWriteCount,
+        missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceCount,
       },
       default_caller_owner: 'one-person-lab',
       source_commands: {
@@ -630,6 +740,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       active_caller_target_proof_status: optionalString(targetProof.status),
       active_caller_cutover_proof_status: optionalString(cutoverProof.status),
       surface_gates: surfaceGates,
+      deletion_evidence_worklists: deletionEvidenceWorklists,
       blockers,
       deletion_gate: {
         replacement_parity: replacementReady ? 'ready' : 'blocked',
@@ -639,6 +750,10 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         tombstone_or_provenance_ref: 'required_before_physical_delete',
         physical_delete_authorized: false,
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
+        evidence_worklist_count: deletionEvidenceWorklists.length,
+        missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
+        missing_no_forbidden_write_proof_count: missingNoForbiddenWriteCount,
+        missing_tombstone_or_provenance_ref_count: missingTombstoneOrProvenanceCount,
       },
       authority_boundary: {
         projection_can_claim_domain_ready: false,
@@ -711,6 +826,24 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         ),
         blocked_surface_count: reports.reduce(
           (total, report) => total + Number(report.summary.blocked_surface_count || 0),
+          0,
+        ),
+        deletion_evidence_worklist_count: reports.reduce(
+          (total, report) => total + Number(report.summary.deletion_evidence_worklist_count || 0),
+          0,
+        ),
+        missing_domain_owner_receipt_or_typed_blocker_count: reports.reduce(
+          (total, report) => (
+            total + Number(report.summary.missing_domain_owner_receipt_or_typed_blocker_count || 0)
+          ),
+          0,
+        ),
+        missing_no_forbidden_write_proof_count: reports.reduce(
+          (total, report) => total + Number(report.summary.missing_no_forbidden_write_proof_count || 0),
+          0,
+        ),
+        missing_tombstone_or_provenance_ref_count: reports.reduce(
+          (total, report) => total + Number(report.summary.missing_tombstone_or_provenance_ref_count || 0),
           0,
         ),
       },

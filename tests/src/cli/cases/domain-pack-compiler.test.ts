@@ -329,6 +329,14 @@ test('generated interfaces domain mode consumes generated handoff from active re
         { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
       ],
+      handoff_surfaces: [
+        {
+          surface_id: 'cli',
+          current_paths: ['runtime/authority_functions/verdict.ts'],
+          current_role: 'domain_authority_active',
+          target_role: 'domain_handler_target',
+        },
+      ],
     })}\n`,
   );
 
@@ -349,6 +357,19 @@ test('generated interfaces domain mode consumes generated handoff from active re
   assert.equal(bundle.active_caller_target_proof.blocked_target_count, 0);
   assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
   assert.equal(bundle.generated_wrapper_bundle.status, 'ready');
+  const cliTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'cli',
+  );
+  assert.equal(cliTarget.audit_visibility, 'hidden_by_default');
+  assert.equal(cliTarget.semantic_equivalence_status, 'cleared_by_boundary');
+  assert.equal(
+    cliTarget.migration_action,
+    'retain_as_minimal_authority_function',
+  );
+  assert.deepEqual(cliTarget.expected_opl_primitives, []);
+  assert.deepEqual(cliTarget.current_surface_refs, []);
+  assert.equal(cliTarget.cannot_absorb_reason, 'OPL cannot authorize domain quality, export, or truth verdicts.');
+  assert.equal(cliTarget.bridge_exit_gate, null);
 });
 
 test('generated interfaces keep active caller cutover blocked while repo-local migration bridges remain', () => {

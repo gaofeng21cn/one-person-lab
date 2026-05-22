@@ -420,6 +420,48 @@ function generatedSurfaceProofStatus(surface: JsonRecord | null, module: JsonRec
   return module ? 'blocked_active_caller_target_not_proven' : 'ready_descriptor_source_available';
 }
 
+function moduleSemanticEquivalenceStatus(module: JsonRecord | null) {
+  const explicit = optionalString(module?.semantic_equivalence_status);
+  if (explicit) {
+    return explicit;
+  }
+  const text = [
+    optionalString(module?.active_caller_status),
+    optionalString(module?.migration_action),
+    optionalString(module?.module_id),
+  ]
+    .filter((entry): entry is string => Boolean(entry))
+    .join(' ')
+    .toLowerCase();
+  if (
+    text.includes('active_private')
+    || text.includes('mixed_generic')
+    || text.includes('pending')
+    || text.includes('should_move')
+    || text.includes('should_derive')
+    || text.includes('handoff_required')
+    || text.includes('until_opl')
+    || text.includes('lifecycle_candidate')
+  ) {
+    return 'review_required';
+  }
+  return module ? 'cleared_by_boundary' : null;
+}
+
+function moduleAuditVisibility(module: JsonRecord | null, proofStatus: string) {
+  const explicit = optionalString(module?.audit_visibility);
+  if (explicit) {
+    return explicit;
+  }
+  if (!module) {
+    return null;
+  }
+  if (proofStatus.startsWith('blocked') || moduleSemanticEquivalenceStatus(module) === 'review_required') {
+    return 'attention_required';
+  }
+  return 'hidden_by_default';
+}
+
 function buildActiveCallerTargetProof(descriptor: JsonRecord) {
   const surfaceIds = unique([
     ...GENERATED_SURFACES.map((surface) => surface.surface_id),
@@ -430,9 +472,10 @@ function buildActiveCallerTargetProof(descriptor: JsonRecord) {
   const surfaceTargets = surfaceIds.map((surfaceId) => {
     const surface = handoffSurfaceFor(descriptor, surfaceId);
     const module = proofModuleForSurface(descriptor, surfaceId, surface);
+    const proofStatus = generatedSurfaceProofStatus(surface, module);
     return {
       surface_id: surfaceId,
-      proof_status: generatedSurfaceProofStatus(surface, module),
+      proof_status: proofStatus,
       target_kind: generatedSurfaceTargetKind(surface, module),
       generated_surface_owner:
         optionalString(surface?.owner)
@@ -446,7 +489,16 @@ function buildActiveCallerTargetProof(descriptor: JsonRecord) {
       active_callers: stringList(module?.active_callers),
       active_caller_status: optionalString(module?.active_caller_status),
       migration_action: optionalString(module?.migration_action),
+      current_surface_refs: stringList(module?.current_surface_refs),
+      expected_opl_primitives: stringList(module?.expected_opl_primitives),
       retained_domain_authority: stringList(module?.retained_domain_authority),
+      retention_reason: optionalString(module?.retention_reason),
+      cannot_absorb_reason: optionalString(module?.cannot_absorb_reason),
+      audit_visibility: moduleAuditVisibility(module, proofStatus),
+      audit_reason: optionalString(module?.audit_reason),
+      semantic_equivalence_status: moduleSemanticEquivalenceStatus(module),
+      semantic_equivalence_reason: optionalString(module?.semantic_equivalence_reason),
+      bridge_exit_gate: isRecord(module?.bridge_exit_gate) ? module.bridge_exit_gate : null,
     };
   });
   const isBlockedTarget = (target: JsonRecord) => (

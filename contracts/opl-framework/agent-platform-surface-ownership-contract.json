@@ -31,7 +31,9 @@
     "no_forbidden_write_proof_required": true,
     "tombstone_or_provenance_ref_required": true,
     "default_caller_readiness_surface": "opl_agent_generated_default_caller_readiness_report",
+    "default_caller_deletion_evidence_worklist_surface": "opl_default_caller_surface_deletion_evidence_worklist",
     "default_caller_readiness_is_structural_replacement_evidence_only": true,
+    "per_surface_deletion_evidence_worklist_required": true,
     "default_caller_readiness_can_authorize_physical_delete": false,
     "descriptor_ready_is_not_production_ready": true
   },
