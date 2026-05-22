@@ -75,6 +75,11 @@ test('runtime App drilldown consumes App release user-path evidence receipts', (
     assert.equal(Boolean(nextStep), true);
     assert.equal(nextStep.receipt_verification_required, true);
     assert.equal(nextStep.pending_verify_receipt_ref_count, 1);
+    assert.equal(
+      nextStep.verification_command_ref,
+      `opl runtime app-release-evidence verify --receipt-ref ${record.receipt_refs[0]}`,
+    );
+    assert.equal(nextStep.can_submit_verify_to_safe_action_shell, true);
     assert.equal(nextStep.can_close_without_domain_or_app_payload, true);
     assert.equal(nextStep.can_close_app_release_user_path, false);
   });
@@ -106,6 +111,11 @@ test('runtime App drilldown keeps typed blocker refs as operator attention', () 
       (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
     );
     assert.equal(Boolean(nextStep), true);
+    assert.equal(
+      nextStep.record_action_id,
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+    );
+    assert.equal(nextStep.can_submit_record_to_safe_action_shell, true);
     assert.equal(nextStep.blocked_by_typed_blocker_refs, true);
     assert.equal(nextStep.typed_blocker_ref_count, 1);
     assert.equal(nextStep.can_close_app_release_user_path, false);
