@@ -27,12 +27,13 @@ Date: `2026-05-22`
 
 OPL 当前已经具备生产级智能体框架的主要控制面骨架：Temporal-backed provider、typed queue、stage attempt ledger、retry/dead-letter、human gate transport、safe runtime action shell、external evidence refs-only ledger、stage evidence accounting、App/operator drilldown、generated surface read model、private functional audit、standard conformance、Agent Lab 与 lifecycle/source/artifact/memory refs-only primitives。
 
-当前仍不能写成全量 production ready。闭环尾项集中在四类：
+当前仍不能写成全量 production ready。闭环尾项集中在五类：
 
 1. App release / real user path evidence。
 2. MAS/MAG/RCA 的 domain owner-chain receipts、typed blockers、memory/artifact/lifecycle receipts 与 long-soak scaleout。
 3. MAS physical thinning：仍需按 no-active-caller、OPL replacement parity、domain receipt parity、focused tests 与 tombstone/delete gate 清理 active-path generic residue。
 4. RCA naming hygiene tail 与 production evidence tail。
+5. New Agent / OPL Meta Agent 的真实 production consumption：fresh scaffold cohort 与 OMA structural consumption 已通过，但 managed install/update、App live path、owner receipt scaleout 与 long-soak 仍未闭合。
 
 OPL readiness、provider proof、generated surface proof、legacy cleanup ledger、conformance pass、stage evidence workorder accounting 或 refs-only typed blocker roundtrip，都只能定位控制面和证据缺口。它们不能授权 MAS paper closure、MAG grant readiness、RCA visual ready、App release ready、artifact authority、memory writeback 或 production-ready verdict。
 
@@ -53,7 +54,7 @@ OPL readiness、provider proof、generated surface proof、legacy cleanup ledger
 | `MAG controlled soak` | MAG transition oracle、owner receipt contract、refs-only handoff 与 grant authority boundary 已清晰。 | 真实 OPL-hosted grant-stage attempt、持续 owner receipt / typed blocker / no-regression evidence 和 long soak 未闭合。 | MAG 返回 grant-owned receipt、typed blocker 或 no-regression evidence；fundability/export authority 仍归 MAG。 |
 | `RCA controlled soak_and_naming` | RCA generated/hosted shell、legacy cleanup 和 visual authority boundary 已清晰。 | 真实 artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout、long visual-stage no-regression evidence 与 naming hygiene tail 未闭合。 | RCA 返回 visual-owned receipt、typed blocker、artifact-producing receipt 或 no-regression evidence；旧 `managed` 命名只留 provenance/tombstone。 |
 | `memory_artifact_lifecycle_apply` | OPL 已持 locator/index/retention/restore refs-only primitives，domain repos 暴露 descriptor、proposal 或 receipt refs。 | 真实 memory body retrieval/writeback、accepted/rejected receipt、artifact mutation receipt 和 cleanup/restore/retention 对账仍需 scaleout。 | Domain-owned surface 产生真实 memory/artifact/lifecycle receipts；OPL 不保存 body、不判定 verdict。 |
-| `new_domain_admission` | Standard agent skeleton、pack compiler、conformance/readiness 和 template consumption cohort 已有基础。 | 真实 OPL-compatible new Agent repo 或 OPL Meta Agent managed install/update/App 路径仍需生产消费证据。 | 新 Agent 通过 scaffold validation、pack compiler、conformance/readiness、private surface policy 和 focused tests；production closure 只按 owner receipt / typed blocker 报告。 |
+| `new_domain_admission` | Standard agent skeleton、pack compiler、conformance/readiness 和 template consumption cohort 已有基础；fresh scaffold consumption 三样本 cohort 已通过，`opl-meta-agent` 真实仓已通过 scaffold validation、generated interface、conformance 和 readiness structural consumption。 | OPL Meta Agent managed install/update、App live path、owner receipt scaleout、production caller consumption 和 long-soak 仍需生产证据。 | 新 Agent 通过 scaffold validation、pack compiler、conformance/readiness、private surface policy 和 focused tests；production closure 只按 owner receipt / typed blocker / App live evidence 报告。 |
 
 ## 统一口径
 

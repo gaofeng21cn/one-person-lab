@@ -63,3 +63,9 @@ Machine boundary: 本文是人读过程归档，不是 current truth、active pl
 - compatibility interface；
 - 旧 CLI alias / facade / wrapper 的保留理由；
 - domain ready、quality ready、export ready 或 production soak success claim。
+
+## 2026-05-22 new-agent template consumption tranche
+
+本轮 fresh proof 选择新 Agent 模板消费作为 production evidence tail 的推进 lane。`opl agents scaffold --consumption-evidence` 对 `award-foundry`、`thesis-foundry`、`review-foundry` 三个临时样本执行 generate -> validate -> cleanup，三样本均 `passed`；每个样本写入 30 个模板文件、消费 5 个 pack path、观察 1 个默认 `codex_cli` executor binding、解析 1 个 quality gate ref，且临时目录已删除。另用真实 OPL-compatible `opl-meta-agent` 仓执行 `opl agents scaffold --validate /Users/gaofeng/workspace/opl-meta-agent`、`opl agents interfaces --repo-dir /Users/gaofeng/workspace/opl-meta-agent --json`、`opl agents conformance --repo-dir /Users/gaofeng/workspace/opl-meta-agent --json` 和 `opl agents readiness --repo-dir /Users/gaofeng/workspace/opl-meta-agent --json`；结果分别显示 scaffold / conformance `passed`、generated interface bundle `ready`、readiness `passed_with_production_evidence_tail`。
+
+该 tranche 关闭的是 structural / refs-only consumption 证据：OPL scaffold、pack compiler、generated interfaces、conformance 和 readiness 能重复消费临时新 Agent 样本和真实 OMA repo。它不声明 OMA managed install/update、App live rendering、owner receipt scaleout、domain ready、artifact authority、production ready 或 long-soak 完成。
