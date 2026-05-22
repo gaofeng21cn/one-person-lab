@@ -74,6 +74,9 @@ import {
   functionalPrivatizationAuditRefs,
   functionalPrivatizationSummary,
 } from './runtime-tray-app-operator-drilldown-parts/functional-privatization-audit-refs.ts';
+import {
+  buildDefaultCallerDeletionEvidenceRefs,
+} from './runtime-tray-app-operator-drilldown-parts/default-caller-deletion-evidence-refs.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -1101,6 +1104,8 @@ export function buildAppOperatorDrilldown(input: {
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
   const functionalAuditRefs = functionalPrivatizationAuditRefs(input.domainManifestProjects);
+  const defaultCallerDeletionEvidenceRefs =
+    buildDefaultCallerDeletionEvidenceRefs(input.domainManifestProjects);
   const evidenceRequests = buildDomainEvidenceRequestRefs(
     input.domainManifestProjects,
     replacementCoverage,
@@ -1196,6 +1201,15 @@ export function buildAppOperatorDrilldown(input: {
       record(routeTransitionDrilldownRefs.summary).human_gate_ref_count,
     route_transition_drilldown_dead_letter_ref_count:
       record(routeTransitionDrilldownRefs.summary).dead_letter_ref_count,
+    default_caller_deletion_evidence_open_requirement_count:
+      record(defaultCallerDeletionEvidenceRefs.summary).open_deletion_evidence_requirement_count,
+    default_caller_deletion_missing_domain_owner_receipt_or_typed_blocker_count:
+      record(defaultCallerDeletionEvidenceRefs.summary)
+        .missing_domain_owner_receipt_or_typed_blocker_count,
+    default_caller_deletion_missing_no_forbidden_write_proof_count:
+      record(defaultCallerDeletionEvidenceRefs.summary).missing_no_forbidden_write_proof_count,
+    default_caller_deletion_missing_tombstone_or_provenance_ref_count:
+      record(defaultCallerDeletionEvidenceRefs.summary).missing_tombstone_or_provenance_ref_count,
     domain_legacy_cleanup_opl_cleanup_ledger_ready_count:
       record(legacyCleanupPlans.summary).legacy_cleanup_opl_cleanup_ledger_ready_count,
     domain_legacy_cleanup_domain_physical_delete_requires_owner_receipt_count:
@@ -1216,6 +1230,7 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/production_evidence_tail_ledger', 'production_evidence_tail_ledger'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs', 'domain_evidence_request_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/domain_legacy_cleanup_plan_refs', 'domain_legacy_cleanup_plan_refs'),
+    sourceRef('/runtime_tray_snapshot/app_operator_drilldown/default_caller_deletion_evidence_refs', 'default_caller_deletion_evidence_refs'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope', 'evidence_envelope'),
     sourceRef(
       '/runtime_tray_snapshot/app_operator_drilldown/standard_agent_template_consumption_refs',
@@ -1311,6 +1326,7 @@ export function buildAppOperatorDrilldown(input: {
     oma_sections: record(oplMetaAgentRegistry.oma_sections),
     functional_privatization_audit_summary: functionalSummary,
     functional_privatization_audit_refs: functionalAuditRefs,
+    default_caller_deletion_evidence_refs: defaultCallerDeletionEvidenceRefs,
     authority_boundary: refsOnlyAuthorityBoundary(),
     source_refs: sourceRefs,
     non_goals: [

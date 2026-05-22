@@ -16,6 +16,9 @@ import {
   compactDomainDispatchEvidenceWorkorderAttentionItems,
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from './domain-dispatch-evidence-workorder-packet.ts';
+import {
+  defaultCallerDeletionEvidenceRoutes,
+} from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -37,6 +40,8 @@ const NOT_AUTHORIZED_CLAIMS = [
   'memory_body_access',
   'production_ready',
   'submission_or_export_readiness_verdict',
+  'domain_repo_physical_delete_authorization',
+  'default_caller_delete_ready',
 ];
 
 const CLOSEOUT_ACTION_KINDS = new Set([
@@ -138,6 +143,9 @@ function readOnlyClaimScope(route: JsonRecord) {
   }
   if (actionKind.startsWith('legacy_cleanup')) {
     return 'legacy_cleanup_ledger';
+  }
+  if (actionKind.startsWith('default_caller_deletion_')) {
+    return 'default_caller_deletion_evidence';
   }
   if (actionKind.startsWith('provider_scheduler')) {
     return 'provider_scheduler_cadence';
@@ -595,6 +603,24 @@ function worklistCounts(
     legacy_cleanup_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'legacy_cleanup_ledger'
     ).length,
+    default_caller_deletion_evidence_item_count: worklistItems.filter((item) =>
+      item.claim_scope === 'default_caller_deletion_evidence'
+    ).length,
+    default_caller_deletion_domain_owner_receipt_or_typed_blocker_missing_count:
+      worklistItems.filter((item) =>
+        item.claim_scope === 'default_caller_deletion_evidence'
+        && item.action_kind === 'default_caller_deletion_domain_owner_receipt_or_typed_blocker_request'
+      ).length,
+    default_caller_deletion_no_forbidden_write_missing_count:
+      worklistItems.filter((item) =>
+        item.claim_scope === 'default_caller_deletion_evidence'
+        && item.action_kind === 'default_caller_deletion_no_forbidden_write_proof_request'
+      ).length,
+    default_caller_deletion_tombstone_or_provenance_missing_count:
+      worklistItems.filter((item) =>
+        item.claim_scope === 'default_caller_deletion_evidence'
+        && item.action_kind === 'default_caller_deletion_tombstone_or_provenance_ref_request'
+      ).length,
     domain_ready_authorized: false,
     production_ready_authorized: false,
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
@@ -834,6 +860,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
     ...routes.map((route, index) => readOnlyWorklistItem(route, index, drilldown)),
     ...externalEvidenceReceiptWorklistItems(drilldown),
     ...domainDispatchReceiptWorklistItems(drilldown),
+    ...defaultCallerDeletionEvidenceRoutes(drilldown, NOT_AUTHORIZED_CLAIMS)
+      .map((route, index) => readOnlyWorklistItem(route, routes.length + index, drilldown)),
   ];
   const openItems = worklistItems.filter((item) =>
     item.status === 'open_safe_action_request_route_available'

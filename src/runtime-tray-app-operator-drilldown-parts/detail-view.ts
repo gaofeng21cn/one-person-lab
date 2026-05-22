@@ -46,6 +46,7 @@ const SUMMARY_DRILLDOWN_KEYS = [
   'codex_app_runtime_role',
   'functional_privatization_audit_summary',
   'functional_privatization_audit_refs',
+  'default_caller_deletion_evidence_refs',
 ] as const;
 
 const LAZY_LOAD_TARGETS = SUMMARY_DRILLDOWN_KEYS.map((section) => ({

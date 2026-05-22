@@ -533,7 +533,7 @@ function generatedInterfaceBundleForRepo(repoDir: string) {
   return result.generated_agent_interfaces as JsonRecord;
 }
 
-function defaultCallerSurfaceGates(bundle: JsonRecord) {
+export function defaultCallerSurfaceGates(bundle: JsonRecord) {
   const wrapperBundle = isRecord(bundle.generated_wrapper_bundle) ? bundle.generated_wrapper_bundle : {};
   const targetProof = isRecord(bundle.active_caller_target_proof) ? bundle.active_caller_target_proof : {};
   const targetBySurface = new Map(

@@ -161,6 +161,7 @@ export function withEvidenceWorklistSurfaces(
     externalEvidenceRequestCount?: number;
     evidenceGateCount?: number;
     cleanupReady?: boolean;
+    defaultCallerDeletionEvidence?: boolean;
   } = {},
 ): Record<string, unknown> {
   if (manifest.product_entry_manifest && typeof manifest.product_entry_manifest === 'object') {
@@ -177,8 +178,141 @@ export function withEvidenceWorklistSurfaces(
   const owner = targetDomainId;
   const externalEvidenceRequestCount = options.externalEvidenceRequestCount ?? 0;
   const evidenceGateCount = options.evidenceGateCount ?? 0;
+  const defaultCallerDeletionEvidence = options.defaultCallerDeletionEvidence === true;
+  const familyActionCatalog = defaultCallerDeletionEvidence
+    ? {
+        surface_kind: 'family_action_catalog',
+        version: 'family-action-catalog.v1',
+        catalog_id: `${targetDomainId}_default_caller_fixture_catalog`,
+        target_domain_id: targetDomainId,
+        owner,
+        authority_boundary: {
+          opl_role: 'generated_interface_projection_only',
+          can_write_domain_truth: false,
+          can_authorize_quality_verdict: false,
+        },
+        actions: [
+          {
+            action_id: 'default_caller_fixture_action',
+            title: 'Default caller fixture action',
+            summary: 'Fixture action used to exercise generated/hosted default caller descriptors.',
+            owner,
+            effect: 'read_only',
+            source_command: {
+              command: `${targetDomainId} fixture status --workspace-root <workspace_root>`,
+              surface_kind: 'domain_cli',
+            },
+            input_schema_ref: 'contracts/default-caller-fixture.input.schema.json',
+            output_schema_ref: 'contracts/default-caller-fixture.output.schema.json',
+            workspace_locator_fields: ['workspace_root'],
+            human_gate_ids: [],
+            supported_surfaces: {
+              cli: {
+                command: `${targetDomainId} fixture status --workspace-root <workspace_root>`,
+                surface_kind: 'domain_cli',
+              },
+              mcp: {
+                tool_name: `${targetDomainId.replace(/-/g, '_')}_fixture_status`,
+                surface_kind: 'domain_mcp_descriptor',
+                descriptor_only: true,
+              },
+              skill: {
+                command_contract_id: `${targetDomainId}.fixture_status`,
+                surface_kind: 'domain_skill_contract',
+              },
+              product_entry: {
+                action_key: 'default_caller_fixture_action',
+                command: `${targetDomainId} product fixture-status --workspace-root <workspace_root>`,
+                surface_kind: 'domain_product_entry',
+              },
+              openai: {
+                tool_name: `${targetDomainId.replace(/-/g, '_')}_fixture_status`,
+              },
+              ai_sdk: {
+                tool_name: `${targetDomainId.replace(/-/g, '_')}_fixture_status`,
+              },
+            },
+            authority_boundary: {
+              opl_can_write_domain_truth: false,
+            },
+          },
+        ],
+        notes: [],
+      }
+    : null;
+  const generatedSurfaceHandoff = defaultCallerDeletionEvidence
+    ? {
+        surface_kind: 'opl_generated_surface_handoff',
+        schema_version: 1,
+        domain_id: targetDomainId,
+        generated_surface_owner: 'one-person-lab',
+        domain_repo_can_own_generated_surface: false,
+        generated_surfaces: [
+          { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'sidecar_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
+          { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        ],
+        handoff_surfaces: [
+          {
+            surface_id: 'cli',
+            current_paths: ['agent/cli.ts'],
+            current_role: 'domain_handler_target',
+            target_role: 'opl_generated_command_surface',
+          },
+          {
+            surface_id: 'mcp',
+            current_paths: ['agent/mcp.ts'],
+            current_role: 'domain_handler_target',
+            target_role: 'opl_generated_mcp_descriptor_surface',
+          },
+          {
+            surface_id: 'skill',
+            current_paths: ['agent/skills/domain_execution.md'],
+            current_role: 'domain_handler_target',
+            target_role: 'opl_generated_skill_descriptor_surface',
+          },
+          {
+            surface_id: 'product_entry_manifest',
+            current_paths: ['agent/product-entry.ts'],
+            current_role: 'domain_handler_target',
+            target_role: 'opl_generated_product_entry_surface',
+          },
+          {
+            surface_id: 'status_read_model',
+            current_paths: ['agent/status.ts'],
+            current_role: 'domain_projection_refs',
+            target_role: 'opl_generated_status_read_model_surface',
+          },
+          {
+            surface_id: 'sidecar_export_dispatch',
+            current_paths: ['runtime/sidecar.ts'],
+            current_role: 'sidecar_adapter',
+            target_role: 'opl_generated_sidecar_handoff_surface',
+          },
+          {
+            surface_id: 'workbench_drilldown',
+            current_paths: ['runtime/workbench.ts'],
+            current_role: 'projection_refs',
+            target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
+          },
+          {
+            surface_id: 'functional_harness_cases',
+            current_paths: ['runtime/harness.ts'],
+            current_role: 'oracle_fixture_refs',
+            target_role: 'opl_generated_functional_harness_cases',
+          },
+        ],
+      }
+    : null;
   return {
     ...manifest,
+    ...(generatedSurfaceHandoff ? { generated_surface_handoff: generatedSurfaceHandoff } : {}),
+    ...(familyActionCatalog ? { family_action_catalog: familyActionCatalog } : {}),
     family_stage_control_plane: {
       surface_kind: 'family_stage_control_plane',
       version: 'family-stage-control-plane.v1',
@@ -196,7 +330,55 @@ export function withEvidenceWorklistSurfaces(
           module_id: `${targetDomainId}:safe-action-boundary`,
           migration_class: 'refs_only_domain_adapter',
           owner,
+          code_paths: ['agent/cli.ts', 'agent/mcp.ts', 'agent/product-entry.ts', 'agent/status.ts'],
+          active_callers: [
+            'OPL generated CLI',
+            'OPL generated MCP',
+            'OPL generated product-entry',
+          ],
+          active_caller_status: defaultCallerDeletionEvidence
+            ? 'domain_handlers_active_opl_generated_wrapper_metadata_consumed'
+            : undefined,
+          migration_action: defaultCallerDeletionEvidence
+            ? 'derive_wrapper_metadata_from_declarative_pack_and_opl_generated_surfaces'
+            : undefined,
+          retained_domain_authority: ['domain_action_handler', 'owner_receipt'],
         },
+        ...(defaultCallerDeletionEvidence
+          ? [
+              {
+                module_id: `${targetDomainId}:sidecar-adapter`,
+                migration_class: 'refs_only_domain_adapter',
+                owner,
+                code_paths: ['runtime/sidecar.ts'],
+                active_callers: ['OPL generated sidecar dispatch'],
+                active_caller_status: 'opl_generated_sidecar_surface_targets_domain_handler',
+                migration_action: 'declare_sidecar_descriptor_for_opl_generated_dispatch_surface',
+                retained_domain_authority: ['owner_receipt'],
+              },
+              {
+                module_id: `${targetDomainId}:workbench-projection`,
+                migration_class: 'refs_only_domain_adapter',
+                owner,
+                code_paths: ['runtime/workbench.ts'],
+                active_callers: ['OPL hosted workbench'],
+                active_caller_status: 'opl_hosted_workbench_surface_consumes_domain_projection_refs',
+                migration_action: 'declare_workbench_projection_inputs_for_opl_app_generated_shell',
+                retained_domain_authority: ['status_projection_refs'],
+              },
+              {
+                module_id: `${targetDomainId}:functional-harness`,
+                migration_class: 'refs_only_domain_adapter',
+                owner,
+                code_paths: ['runtime/harness.ts'],
+                active_callers: ['OPL functional harness'],
+                active_caller_status: 'opl_generated_functional_harness_cases_target_domain_handler',
+                migration_action:
+                  'derive_harness_cases_from_declarative_pack_and_opl_functional_runtime_harness',
+                retained_domain_authority: ['fixture_oracle_refs'],
+              },
+            ]
+          : []),
       ],
       external_evidence_request_pack: {
         request_pack_id: `${targetDomainId}.external_evidence_request_pack.fixture`,
