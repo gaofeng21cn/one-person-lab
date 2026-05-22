@@ -1,8 +1,6 @@
-export function buildAppDrilldownRefsOnlyAuthorityBoundary() {
+export function buildAppDrilldownRefsOnlyAuthorityBoundaryCore() {
   return {
-    opl: 'app_operator_drilldown_refs_only',
     domain: 'truth_memory_artifact_quality_export_owner',
-    provider: 'runtime_slo_receipt_owner',
     can_write_domain_truth: false,
     can_write_memory_body: false,
     can_read_memory_body: false,
@@ -14,6 +12,14 @@ export function buildAppDrilldownRefsOnlyAuthorityBoundary() {
     can_execute_domain_action: false,
     can_execute_provider_signal: false,
     provider_completion_is_domain_ready: false,
+  };
+}
+
+export function buildAppDrilldownRefsOnlyAuthorityBoundary() {
+  return {
+    opl: 'app_operator_drilldown_refs_only',
+    provider: 'runtime_slo_receipt_owner',
+    ...buildAppDrilldownRefsOnlyAuthorityBoundaryCore(),
   };
 }
 

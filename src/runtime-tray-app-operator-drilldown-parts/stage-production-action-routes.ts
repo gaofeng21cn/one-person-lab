@@ -5,6 +5,9 @@ import {
   stageProductionEvidenceRequestPackId,
 } from './stage-production-evidence-route-common.ts';
 import {
+  buildAppDrilldownRefsOnlyAuthorityBoundary,
+} from './authority-boundary.ts';
+import {
   buildStageProductionEvidencePayloadWorkorder,
   STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS,
   STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS,
@@ -55,22 +58,7 @@ function routeAuthorityBoundary() {
 }
 
 function refsOnlyAuthorityBoundary() {
-  return {
-    opl: 'app_operator_drilldown_refs_only',
-    domain: 'truth_memory_artifact_quality_export_owner',
-    provider: 'runtime_slo_receipt_owner',
-    can_write_domain_truth: false,
-    can_write_memory_body: false,
-    can_read_memory_body: false,
-    can_read_artifact_body: false,
-    can_mutate_artifact: false,
-    can_authorize_quality_verdict: false,
-    can_authorize_submission_readiness: false,
-    can_authorize_export_verdict: false,
-    can_execute_domain_action: false,
-    can_execute_provider_signal: false,
-    provider_completion_is_domain_ready: false,
-  };
+  return buildAppDrilldownRefsOnlyAuthorityBoundary();
 }
 
 function attemptIdFromRef(ref: string | null) {

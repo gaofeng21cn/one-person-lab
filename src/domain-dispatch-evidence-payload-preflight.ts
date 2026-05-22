@@ -59,6 +59,7 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
     ['profile', stringValue(payload.profile)],
     ['profile_name', stringValue(payload.profile_name)],
   ] as const;
+  type IdentityField = (typeof targetEntries)[number][0];
   const payloadByField = new Map(payloadEntries);
   const comparable = targetEntries
     .map(([field, targetValue]) => ({
@@ -67,7 +68,7 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
       payload_value: payloadByField.get(field) ?? null,
     }))
     .filter((entry): entry is {
-      field: string;
+      field: IdentityField;
       target_value: string;
       payload_value: string;
     } => Boolean(entry.target_value) && Boolean(entry.payload_value));

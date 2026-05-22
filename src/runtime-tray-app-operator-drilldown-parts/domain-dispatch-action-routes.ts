@@ -1,4 +1,7 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
+} from './authority-boundary.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -60,19 +63,8 @@ function runtimeActionExecuteCommand(input: {
 function refsOnlyAuthorityBoundary() {
   return {
     opl: 'app_operator_drilldown_refs_only',
-    domain: 'truth_memory_artifact_quality_export_owner',
     provider: 'runtime_completion_owner_not_domain_ready_owner',
-    can_write_domain_truth: false,
-    can_write_memory_body: false,
-    can_read_memory_body: false,
-    can_read_artifact_body: false,
-    can_mutate_artifact: false,
-    can_authorize_quality_verdict: false,
-    can_authorize_submission_readiness: false,
-    can_authorize_export_verdict: false,
-    can_execute_domain_action: false,
-    can_execute_provider_signal: false,
-    provider_completion_is_domain_ready: false,
+    ...buildAppDrilldownRefsOnlyAuthorityBoundaryCore(),
   };
 }
 
