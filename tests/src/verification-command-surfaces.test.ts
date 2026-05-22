@@ -48,6 +48,40 @@ test('repo hygiene blocks generated tmp artifacts from git', () => {
   assert.match(hygieneScript, /git ls-files --others --exclude-standard/);
   assert.match(hygieneScript, /Route the producer to OPL_REPO_TEMP_ROOT/);
   assert.match(hygieneScript, /scripts\/repo-hygiene\.sh \[--fix\]/);
+  assert.match(hygieneScript, /\.opl-state/);
+});
+
+test('repo hygiene blocks checkout-local OPL runtime state drift', () => {
+  const workRoot = fs.mkdtempSync(path.join(process.env.OPL_REPO_TEMP_ROOT || '/tmp', 'opl-hygiene-'));
+
+  try {
+    const init = spawnSync('git', ['init'], {
+      cwd: workRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(init.status, 0, init.stderr);
+    fs.mkdirSync(path.join(workRoot, 'scripts'), { recursive: true });
+    fs.copyFileSync(
+      path.join(repoRoot, 'scripts', 'repo-hygiene.sh'),
+      path.join(workRoot, 'scripts', 'repo-hygiene.sh'),
+    );
+    fs.mkdirSync(path.join(workRoot, '.opl-state', 'family-runtime'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workRoot, '.opl-state', 'family-runtime', 'temporal-worker.json'),
+      '{}\n',
+    );
+
+    const hygiene = spawnSync('bash', ['scripts/repo-hygiene.sh'], {
+      cwd: workRoot,
+      encoding: 'utf8',
+    });
+
+    assert.equal(hygiene.status, 1);
+    assert.match(hygiene.stderr, /repo hygiene: generated paths are not ignored/);
+    assert.match(hygiene.stderr, /\.opl-state\/family-runtime\/temporal-worker\.json/);
+  } finally {
+    fs.rmSync(workRoot, { recursive: true, force: true });
+  }
 });
 
 test('repo temp env wrapper routes tool caches outside the checkout', () => {

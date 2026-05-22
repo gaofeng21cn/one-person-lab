@@ -426,6 +426,45 @@ test('family-runtime residency proof --production requires external Temporal rea
   }
 });
 
+test('standalone Temporal residency proof script defaults to user state root outside repo cwd', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-residency-script-home-'));
+  const cwdRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-residency-script-cwd-'));
+  const repoStateRoot = path.join(cwdRoot, '.opl-state');
+  const expectedStateRoot = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'state');
+
+  try {
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'scripts', 'temporal-residency-proof.mjs'),
+      '--production',
+    ], {
+      cwd: cwdRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HOME: homeRoot,
+        NODE_NO_WARNINGS: '1',
+        OPL_STATE_DIR: '',
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+      },
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    const proof = JSON.parse(result.stdout);
+    assert.equal(proof.surface_kind, 'opl_temporal_external_production_residency_proof');
+    assert.equal(proof.closeout_status, 'production_residency_blocked');
+    assert.equal(
+      proof.runtime_snapshot.managed_worker_state_path,
+      path.join(expectedStateRoot, 'family-runtime', 'temporal-worker.json'),
+    );
+    assert.equal(fs.existsSync(repoStateRoot), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(cwdRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime residency proof --production reads managed local Temporal service state', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-production-service-proof-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');

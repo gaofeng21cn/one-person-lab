@@ -37,6 +37,7 @@ tracked="$(
     ':(glob)**/.DS_Store' \
     ':(glob)**/.codex/**' \
     ':(glob)**/.omx/**' \
+    ':(glob)**/.opl-state/**' \
     ':(glob)**/.runtime-program/**' \
     ':(glob)**/runtime-state/**' \
     .agent-contract-baseline.json
@@ -61,6 +62,7 @@ unignored_generated="$(
     ':(glob)**/.DS_Store' \
     ':(glob)**/.codex/**' \
     ':(glob)**/.omx/**' \
+    ':(glob)**/.opl-state/**' \
     ':(glob)**/.runtime-program/**' \
     ':(glob)**/runtime-state/**' \
     .agent-contract-baseline.json
