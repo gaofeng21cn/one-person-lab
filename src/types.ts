@@ -116,6 +116,25 @@ export interface PublicSurfaceRef {
   language?: string;
 }
 
+export interface PublicSurfaceBudget {
+  default_surface: boolean;
+  default_surface_allowed_reasons: string[];
+  promotion_evidence_refs: {
+    replaced_or_folded_surface_ref?: string;
+    retired_surface_ref?: string;
+    folded_into_attention_entry_ref?: string;
+  };
+  consumer_refs: string[];
+  authority_boundary: {
+    can_claim_domain_ready: false;
+    can_claim_quality_verdict: false;
+    can_claim_artifact_authority: false;
+    can_claim_production_ready: false;
+    can_replace_ai_executor_planning: false;
+    can_replace_domain_owner: false;
+  };
+}
+
 export interface PublicSurfaceContractEntry {
   surface_id: string;
   category_id: string;
@@ -128,6 +147,7 @@ export interface PublicSurfaceContractEntry {
   refs: PublicSurfaceRef[];
   routes_to: string[];
   notes: string[];
+  surface_budget: PublicSurfaceBudget;
 }
 
 export interface PublicSurfaceIndexContract {

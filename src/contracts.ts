@@ -13,6 +13,7 @@ import type {
 } from './types.ts';
 import {
   FrameworkContractError,
+  expectBoolean,
   expectString,
   expectStringArray,
   isRecord,
@@ -318,6 +319,50 @@ function validateTaskTopology(
   };
 }
 
+function expectFalseBoolean(value: unknown, field: string, filePath: string) {
+  if (value !== false) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be false.`, { file: filePath, field });
+  }
+  return false as const;
+}
+
+function optionalStringField(value: Record<string, unknown>, field: string) {
+  return typeof value[field] === 'string' ? { [field]: value[field] as string } : {};
+}
+
+function validateSurfaceBudget(filePath: string, value: unknown, index: number) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Each public surface must declare a surface_budget object.', {
+      file: filePath, index, field: 'surface_budget',
+    });
+  }
+  const promotionEvidence = value.promotion_evidence_refs;
+  const authority = value.authority_boundary;
+  if (!isRecord(promotionEvidence) || !isRecord(authority)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'surface_budget must declare promotion_evidence_refs and authority_boundary objects.', {
+      file: filePath, index, field: 'surface_budget',
+    });
+  }
+  return {
+    default_surface: expectBoolean(value.default_surface, 'surface_budget.default_surface', filePath),
+    default_surface_allowed_reasons: expectStringArray(value.default_surface_allowed_reasons, 'surface_budget.default_surface_allowed_reasons', filePath),
+    promotion_evidence_refs: {
+      ...optionalStringField(promotionEvidence, 'replaced_or_folded_surface_ref'),
+      ...optionalStringField(promotionEvidence, 'retired_surface_ref'),
+      ...optionalStringField(promotionEvidence, 'folded_into_attention_entry_ref'),
+    },
+    consumer_refs: expectStringArray(value.consumer_refs, 'surface_budget.consumer_refs', filePath),
+    authority_boundary: {
+      can_claim_domain_ready: expectFalseBoolean(authority.can_claim_domain_ready, 'can_claim_domain_ready', filePath),
+      can_claim_quality_verdict: expectFalseBoolean(authority.can_claim_quality_verdict, 'can_claim_quality_verdict', filePath),
+      can_claim_artifact_authority: expectFalseBoolean(authority.can_claim_artifact_authority, 'can_claim_artifact_authority', filePath),
+      can_claim_production_ready: expectFalseBoolean(authority.can_claim_production_ready, 'can_claim_production_ready', filePath),
+      can_replace_ai_executor_planning: expectFalseBoolean(authority.can_replace_ai_executor_planning, 'can_replace_ai_executor_planning', filePath),
+      can_replace_domain_owner: expectFalseBoolean(authority.can_replace_domain_owner, 'can_replace_domain_owner', filePath),
+    },
+  };
+}
+
 function validatePublicSurfaceIndex(
   filePath: string,
   value: unknown,
@@ -433,6 +478,7 @@ function validatePublicSurfaceIndex(
         }),
         routes_to: expectStringArray(entry.routes_to, 'routes_to', filePath),
         notes: expectStringArray(entry.notes, 'notes', filePath),
+        surface_budget: validateSurfaceBudget(filePath, entry.surface_budget, index),
       };
     }),
   };

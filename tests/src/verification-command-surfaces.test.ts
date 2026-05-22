@@ -15,6 +15,10 @@ function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
 function listJsonFiles(relativeDir: string): string[] {
   const absoluteDir = path.join(repoRoot, relativeDir);
   return fs.readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
@@ -195,8 +199,67 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
+test('public surface index binds every surface to the surface budget policy', () => {
+  const policy = readJson<{
+    default_surface_allowed_reasons: string[];
+    promotion_gate: {
+      new_default_surface_requires_any_ref_from: string[];
+      default_surface_requires_any_reason_from: string[];
+      repeated_app_runtime_consumption_requires: {
+        minimum_distinct_consumers: number;
+        allowed_consumers: string[];
+      };
+    };
+    authority_boundary: Record<string, false>;
+  }>('contracts/opl-framework/surface-budget-policy.json');
+  const publicSurfaceIndex = readJson<{
+    surfaces: Array<{
+      surface_id: string;
+      surface_budget: {
+        default_surface: boolean;
+        default_surface_allowed_reasons: string[];
+        promotion_evidence_refs: Record<string, string>;
+        consumer_refs: string[];
+        authority_boundary: Record<string, boolean>;
+      };
+    }>;
+  }>('contracts/opl-framework/public-surface-index.json');
+
+  for (const surface of publicSurfaceIndex.surfaces) {
+    const budget = surface.surface_budget;
+    assert.equal(budget.default_surface, true, `${surface.surface_id} must explicitly declare its default-surface state`);
+    assert.equal(
+      budget.default_surface_allowed_reasons.some((reason) =>
+        policy.default_surface_allowed_reasons.includes(reason)
+      ),
+      true,
+      `${surface.surface_id} must cite an allowed surface-budget reason`,
+    );
+    assert.equal(
+      policy.promotion_gate.new_default_surface_requires_any_ref_from.some((field) =>
+        typeof budget.promotion_evidence_refs[field] === 'string'
+      ),
+      true,
+      `${surface.surface_id} must cite a surface-budget promotion evidence ref`,
+    );
+    if (budget.default_surface_allowed_reasons.includes('repeated_app_runtime_consumption')) {
+      const allowedConsumers = budget.consumer_refs.filter((consumer) =>
+        policy.promotion_gate.repeated_app_runtime_consumption_requires.allowed_consumers.includes(consumer)
+      );
+      assert.ok(
+        new Set(allowedConsumers).size >=
+          policy.promotion_gate.repeated_app_runtime_consumption_requires.minimum_distinct_consumers,
+        `${surface.surface_id} must cite enough repeated App/runtime consumers`,
+      );
+    }
+    for (const claim of Object.keys(policy.authority_boundary)) {
+      assert.equal(budget.authority_boundary[claim], false, `${surface.surface_id} must not authorize ${claim}`);
+    }
+  }
+});
+
 test('surface budget policy keeps diagnostic lenses out of default stage entrypoints', () => {
-  const policy = JSON.parse(read('contracts/opl-framework/surface-budget-policy.json')) as {
+  const policy = readJson<{
     contract_kind: string;
     default_surface_allowed_reasons: string[];
     default_doc_entry_budget: {
@@ -217,7 +280,7 @@ test('surface budget policy keeps diagnostic lenses out of default stage entrypo
       };
     };
     authority_boundary: Record<string, boolean>;
-  };
+  }>('contracts/opl-framework/surface-budget-policy.json');
 
   assert.equal(policy.contract_kind, 'opl_surface_budget_policy.v1');
   assert.deepEqual(policy.default_surface_allowed_reasons, [
