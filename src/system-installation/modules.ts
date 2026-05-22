@@ -39,7 +39,7 @@ type DomainModuleRuntimeSpec = DomainModuleSpec & {
 };
 
 type ModuleActionStepResult = {
-  status: 'completed' | 'skipped';
+  status: 'completed' | 'skipped' | 'blocked';
   summary: string;
   command_preview: string[] | null;
   stdout: string;
@@ -53,6 +53,24 @@ type ModuleActionWorkflow = {
   skill_sync: ModuleActionStepResult;
   health_check: ModuleActionStepResult;
 };
+
+const DEFAULT_MODULE_ACTION_STEP_TIMEOUT_MS = 10 * 60 * 1000;
+
+function resolveModuleActionStepTimeoutMs() {
+  const raw = process.env.OPL_MODULE_ACTION_STEP_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return DEFAULT_MODULE_ACTION_STEP_TIMEOUT_MS;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'OPL_MODULE_ACTION_STEP_TIMEOUT_MS must be a positive integer.',
+      { env: 'OPL_MODULE_ACTION_STEP_TIMEOUT_MS', value: raw },
+    );
+  }
+  return parsed;
+}
 
 const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   {
@@ -614,7 +632,32 @@ function runModuleStep(
     } satisfies ModuleActionStepResult;
   }
 
-  const result = runCommand(commandPreview.command, commandPreview.args, checkoutPath);
+  const timeoutMs = resolveModuleActionStepTimeoutMs();
+  const result = runCommand(commandPreview.command, commandPreview.args, checkoutPath, {
+    timeoutMs,
+  });
+  if (result.timedOut) {
+    return {
+      status: 'blocked',
+      summary: `OPL module ${stepId} timed out before completion.`,
+      command_preview: [commandPreview.command, ...commandPreview.args],
+      stdout: result.stdout,
+      stderr: result.stderr,
+      result: {
+        blocker_kind: 'module_action_step_timeout',
+        step_id: stepId,
+        module_id: spec.module_id,
+        timeout_ms: timeoutMs,
+        signal: result.signal ?? null,
+        authority_boundary: {
+          opl: 'startup_maintenance_transport_and_blocker_projection_only',
+          domain: 'module_health_and_truth_owner',
+          can_claim_module_healthy: false,
+          can_claim_production_ready: false,
+        },
+      },
+    } satisfies ModuleActionStepResult;
+  }
   if (result.exitCode !== 0) {
     throw new FrameworkContractError(
       'build_command_failed',
@@ -623,6 +666,7 @@ function runModuleStep(
         module_id: spec.module_id,
         checkout_path: checkoutPath,
         command: [commandPreview.command, ...commandPreview.args],
+        timeout_ms: timeoutMs,
         stdout: result.stdout,
         stderr: result.stderr,
       },

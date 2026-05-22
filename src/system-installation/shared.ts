@@ -57,10 +57,13 @@ export type CommandResult = {
   exitCode: number;
   stdout: string;
   stderr: string;
+  timedOut?: boolean;
+  signal?: NodeJS.Signals | null;
 };
 
 export type RunCommandOptions = {
   maxBuffer?: number;
+  timeoutMs?: number;
 };
 
 export type OplShellActionSpec = {
@@ -198,9 +201,20 @@ export function runCommand(
     encoding: 'utf8',
     env: process.env,
     ...(options.maxBuffer ? { maxBuffer: options.maxBuffer } : {}),
+    ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
   });
 
   if (result.error) {
+    const errorCode = 'code' in result.error ? result.error.code : null;
+    if (errorCode === 'ETIMEDOUT') {
+      return {
+        exitCode: 124,
+        stdout: result.stdout ?? '',
+        stderr: result.stderr ?? '',
+        timedOut: true,
+        signal: result.signal,
+      };
+    }
     throw new FrameworkContractError(
       'build_command_failed',
       `Failed to launch command: ${command} ${args.join(' ')}`,
@@ -217,6 +231,8 @@ export function runCommand(
     exitCode: result.status ?? 1,
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
+    timedOut: false,
+    signal: result.signal,
   };
 }
 

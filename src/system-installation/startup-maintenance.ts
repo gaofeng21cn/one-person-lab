@@ -92,6 +92,17 @@ function normalizeError(error: unknown) {
   };
 }
 
+function readBlockedWorkflowStep(target: StartupMaintenanceTarget) {
+  const turnkey = readNestedRecord(target.result, 'turnkey');
+  for (const stepId of ['bootstrap', 'skill_sync', 'health_check'] as const) {
+    const step = readNestedRecord(turnkey, stepId);
+    if (readNestedRecord(step, 'status') === 'blocked') {
+      return { stepId, step };
+    }
+  }
+  return null;
+}
+
 function runModuleStartupMaintenance(module: ModuleStatus): StartupMaintenanceTarget {
   const plan = shouldAutoMaintain(module);
   if (!plan.action) {
@@ -106,13 +117,22 @@ function runModuleStartupMaintenance(module: ModuleStatus): StartupMaintenanceTa
 
   try {
     const result = runOplModuleAction(plan.action, module.module_id);
-    return buildTarget(module, {
+    const target = buildTarget(module, {
       status: 'completed',
       reason: plan.reason,
       action: plan.action,
       result: result.module_action as Record<string, unknown>,
       error: null,
     });
+    const blockedStep = readBlockedWorkflowStep(target);
+    if (blockedStep) {
+      return {
+        ...target,
+        status: 'manual_required',
+        reason: `module_${blockedStep.stepId}_blocked`,
+      };
+    }
+    return target;
   } catch (error) {
     return buildTarget(module, {
       status: 'manual_required',
