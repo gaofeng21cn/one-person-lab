@@ -16,3 +16,5 @@ export function buildAppDrilldownRefsOnlyAuthorityBoundary() {
     provider_completion_is_domain_ready: false,
   };
 }
+
+export const refsOnlyAuthorityBoundary = buildAppDrilldownRefsOnlyAuthorityBoundary;
