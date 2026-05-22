@@ -2,6 +2,9 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
+import {
+  buildDomainDispatchEvidenceIdentityGuidance,
+} from '../domain-dispatch-evidence-identity-guidance.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -80,8 +83,17 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
   const sourceRef = stringValue(attempt.ref)
     ?? `/stage_attempt_workbench/attempts/${stageAttemptId}/domain_dispatch_evidence`;
   const targetIdentity = record(attempt.target_identity);
+  const stageAttemptSourceFingerprint = stringValue(attempt.source_fingerprint);
   const actionId = `${requestId}:${mode}`;
   const recordMode = mode === 'record';
+  const identityBindingGuidance = recordMode
+    ? buildDomainDispatchEvidenceIdentityGuidance({
+        routeDomainId: domainId,
+        stageId,
+        targetIdentity,
+        stageAttemptSourceFingerprint,
+      })
+    : null;
   const recordedReceiptRef = stringList(attempt.dispatch_evidence_receipt_refs)[0] ?? null;
   const payloadTemplate = recordMode
     ? {
@@ -248,10 +260,11 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     stage_attempt_id: stageAttemptId,
     domain_id: domainId,
     stage_id: stageId,
-    stage_attempt_source_fingerprint: stringValue(attempt.source_fingerprint),
+    stage_attempt_source_fingerprint: stageAttemptSourceFingerprint,
     target_identity: targetIdentity,
     identity_binding_policy:
       'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
+    identity_binding_guidance: identityBindingGuidance,
     request_id: requestId,
     request_pack_id: requestPackId,
     evidence_route_kind: 'domain_dispatch_evidence',

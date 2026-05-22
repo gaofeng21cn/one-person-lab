@@ -1,4 +1,7 @@
 import { canonicalOwnerId } from './evidence-envelope.ts';
+import {
+  domainDispatchEvidenceIdentityGuidanceFromRoute,
+} from './domain-dispatch-evidence-identity-guidance.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -60,6 +63,10 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
     stage_attempt_source_fingerprint: stringValue(route.stage_attempt_source_fingerprint),
     target_identity: record(route.target_identity),
     identity_binding_policy: stringValue(route.identity_binding_policy),
+    identity_binding_guidance:
+      Object.keys(record(route.identity_binding_guidance)).length > 0
+        ? record(route.identity_binding_guidance)
+        : domainDispatchEvidenceIdentityGuidanceFromRoute(route),
     evidence_source_ref: stringValue(route.evidence_source_ref),
     payload_template: record(route.payload_template),
     payload_ref_hints: record(route.payload_ref_hints),
@@ -142,6 +149,11 @@ function domainStageWorkorderGroups(
       const payloadPreflightBlockedErrorKinds = uniqueStringList(
         groupItems.map((item) => item.payload_preflight_blocked_error_kind),
       );
+      const sourceFingerprintBindings = uniqueStringList(groupItems.map((item) =>
+        stringValue(record(item.identity_binding_guidance).payload_source_fingerprint_binding)
+          ?? stringValue(record(record(item.identity_binding_guidance).payload_source_fingerprint_binding)
+            .source_fingerprint_binds_to)
+      ));
       return {
         group_id: `domain-dispatch-evidence-workorder-group:${key}`,
         canonical_domain_id: canonicalDomainId,
@@ -166,6 +178,11 @@ function domainStageWorkorderGroups(
         payload_preflight_policy_count: payloadPreflightPolicies.length,
         payload_preflight_error_code: payloadPreflightErrorCodes[0] ?? null,
         payload_preflight_blocked_error_kind: payloadPreflightBlockedErrorKinds[0] ?? null,
+        identity_binding_policy:
+          groupItems.find((item) => item.identity_binding_policy)?.identity_binding_policy ?? null,
+        identity_binding_guidance_count:
+          groupItems.filter((item) => Object.keys(item.identity_binding_guidance).length > 0).length,
+        identity_source_fingerprint_binding_modes: sourceFingerprintBindings,
         required_evidence_ref_count: numberSum(
           groupItems.map((item) => item.required_evidence_refs.length),
         ),
@@ -261,6 +278,8 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
         items.filter((item) => Object.keys(item.payload_workorder).length > 0).length,
       payload_preflight_policy_count:
         items.filter((item) => Boolean(item.payload_preflight_policy)).length,
+      identity_binding_guidance_count:
+        items.filter((item) => Object.keys(item.identity_binding_guidance).length > 0).length,
       required_operator_payload_ref_count:
         items.reduce((total, item) => total + item.required_operator_payload_refs.length, 0),
       required_evidence_ref_count:
@@ -325,6 +344,7 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     stage_attempt_source_fingerprint: item.stage_attempt_source_fingerprint,
     target_identity: item.target_identity,
     identity_binding_policy: item.identity_binding_policy,
+    identity_binding_guidance: item.identity_binding_guidance,
     required_operator_payload_ref_count: item.required_operator_payload_refs.length,
     required_operator_payload_refs: item.required_operator_payload_refs,
     payload_path_policy: item.payload_path_policy,
@@ -371,6 +391,9 @@ export function compactDomainDispatchEvidenceWorkorderGroupAttentionItems(
     payload_preflight_policy_count: group.payload_preflight_policy_count,
     payload_preflight_error_code: group.payload_preflight_error_code,
     payload_preflight_blocked_error_kind: group.payload_preflight_blocked_error_kind,
+    identity_binding_policy: group.identity_binding_policy,
+    identity_binding_guidance_count: group.identity_binding_guidance_count,
+    identity_source_fingerprint_binding_modes: group.identity_source_fingerprint_binding_modes,
     required_evidence_ref_count: group.required_evidence_ref_count,
     sample_required_evidence_refs: group.required_evidence_refs.slice(0, refLimit),
     required_evidence_ref_omitted_count:

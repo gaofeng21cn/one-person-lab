@@ -75,8 +75,10 @@ PY
     const task = runCli(['family-runtime', 'queue', 'inspect', enqueue.family_runtime_enqueue.task.task_id], env)
       .family_runtime_task;
     const stageAttempt = task.stage_attempts[0];
-    assert.equal(task.task.status, 'succeeded');
-    assert.equal(stageAttempt.status, 'queued');
+    assert.equal(task.task.status, 'blocked');
+    assert.equal(task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(stageAttempt.status, 'blocked');
+    assert.match(stageAttempt.blocked_reason, /OPL_TEMPORAL_ADDRESS/);
     assert.equal(stageAttempt.closeout_receipt_status, null);
     assert.deepEqual(stageAttempt.closeout_refs, []);
     assert.deepEqual(stageAttempt.route_impact, {});
@@ -84,6 +86,7 @@ PY
     assert.equal(attempt.control_loop_summary.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(attempt.control_loop_summary.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(attempt.completion_boundary.provider_completion, 'not_completed');
+    assert.equal(attempt.control_loop_summary.state.blocker_status, 'blocked_by_attention');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

@@ -4,13 +4,30 @@ import test from 'node:test';
 import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
+  compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from '../../src/domain-dispatch-evidence-workorder-packet.ts';
 
 function typedBlockerPath(value: unknown) {
   return (value as { typed_blocker_path: { success_claimed: boolean } }).typed_blocker_path;
 }
 
-function domainDispatchRoute(domainId: string, stageAttemptId: string) {
+function fingerprintBindingMode(value: unknown) {
+  return (value as {
+    payload_source_fingerprint_binding: { source_fingerprint_binds_to: string };
+  }).payload_source_fingerprint_binding.source_fingerprint_binds_to;
+}
+
+function providerAttemptSourceKeyFields(value: unknown) {
+  return (value as {
+    payload_source_fingerprint_binding: { provider_attempt_source_key_fields: string[] };
+  }).payload_source_fingerprint_binding.provider_attempt_source_key_fields;
+}
+
+function domainDispatchRoute(
+  domainId: string,
+  stageAttemptId: string,
+  identityOverrides: Record<string, unknown> = {},
+) {
   return {
     action_id: `domain_dispatch:${domainId}:${stageAttemptId}:record`,
     action_kind: 'domain_dispatch_evidence_receipt_record',
@@ -27,6 +44,7 @@ function domainDispatchRoute(domainId: string, stageAttemptId: string) {
       source_fingerprint: `fp-${stageAttemptId}`,
       profile: `/profiles/${stageAttemptId}.toml`,
       profile_name: `profile-${stageAttemptId}`,
+      ...identityOverrides,
     },
     identity_binding_policy:
       'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
@@ -195,6 +213,31 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
     ),
     true,
   );
+  assert.equal(packet.summary.identity_binding_guidance_count, 3);
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      workorder.identity_binding_guidance.policy
+        === 'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity'
+    ),
+    true,
+  );
+  assert.deepEqual(
+    packet.workorders.map((workorder) =>
+      fingerprintBindingMode(workorder.identity_binding_guidance)
+    ),
+    [
+      'stage_attempt_source_fingerprint',
+      'stage_attempt_source_fingerprint',
+      'stage_attempt_source_fingerprint',
+    ],
+  );
+  assert.equal(
+    packet.workorders.every((workorder) =>
+      workorder.identity_binding_guidance.matching_policy
+        === 'study_task_profile_match_is_not_sufficient_payload_identity_must_match_all_comparable_target_fields'
+    ),
+    true,
+  );
 
   const attentionItems = compactDomainDispatchEvidenceWorkorderAttentionItems(packet);
   assert.deepEqual(
@@ -238,4 +281,60 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
     ),
     true,
   );
+  assert.deepEqual(
+    attentionItems.map((item) =>
+      fingerprintBindingMode(item.identity_binding_guidance)
+    ),
+    [
+      'stage_attempt_source_fingerprint',
+      'stage_attempt_source_fingerprint',
+      'stage_attempt_source_fingerprint',
+    ],
+  );
+});
+
+test('domain dispatch workorder packet exposes domain-source fingerprint binding guidance', () => {
+  const packet = buildDomainDispatchEvidenceWorkorderPacket([
+    domainDispatchRoute('medautoscience', 'sat-domain-source', {
+      domain_source_fingerprint: 'domain-source-1',
+    }),
+  ]);
+
+  const [workorder] = packet.workorders;
+  assert.equal(
+    fingerprintBindingMode(workorder.identity_binding_guidance),
+    'domain_source_fingerprint',
+  );
+  assert.deepEqual(
+    providerAttemptSourceKeyFields(workorder.identity_binding_guidance),
+    ['stage_attempt_source_fingerprint', 'provider_attempt_source_key'],
+  );
+  assert.equal(
+    workorder.identity_binding_guidance.stale_payload_policy,
+    'do_not_record_stale_or_drifted_domain_payload_generate_new_owner_payload_or_typed_blocker_ref',
+  );
+  assert.equal(
+    packet.domain_stage_group_summary.groups[0].identity_binding_guidance_count,
+    1,
+  );
+  assert.deepEqual(
+    packet.domain_stage_group_summary.groups[0].identity_source_fingerprint_binding_modes,
+    ['domain_source_fingerprint'],
+  );
+
+  const [attentionItem] = compactDomainDispatchEvidenceWorkorderAttentionItems(packet);
+  assert.equal(
+    fingerprintBindingMode(attentionItem.identity_binding_guidance),
+    'domain_source_fingerprint',
+  );
+
+  const [groupItem] = compactDomainDispatchEvidenceWorkorderGroupAttentionItems(packet);
+  assert.equal(
+    groupItem.identity_binding_policy,
+    'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
+  );
+  assert.equal(groupItem.identity_binding_guidance_count, 1);
+  assert.deepEqual(groupItem.identity_source_fingerprint_binding_modes, [
+    'domain_source_fingerprint',
+  ]);
 });

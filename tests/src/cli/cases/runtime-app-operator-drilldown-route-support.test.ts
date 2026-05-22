@@ -58,7 +58,9 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   }) as unknown as {
     attention_first_payload: {
       evidence_after_contract: Record<string, unknown>;
-      evidence_next_steps: Record<string, unknown>;
+      evidence_next_steps: Record<string, unknown> & {
+        items: Array<Record<string, unknown>>;
+      };
     };
   };
   const evidenceAfterContract = summaryDrilldown.attention_first_payload.evidence_after_contract;
@@ -67,7 +69,7 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     evidenceAfterContract.surface_kind,
     'opl_app_drilldown_evidence_after_contract_attention',
   );
-  assert.equal(evidenceAfterContract.status, 'clear');
+  assert.equal(evidenceAfterContract.status, 'attention_required');
   assert.equal(
     evidenceAfterContract.route_support_status,
     'catalog_available_refs_only',
@@ -78,15 +80,16 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   );
   assert.equal(
     evidenceAfterContract.next_evidence_owner,
-    null,
+    'domain_repository_or_app_live_operator',
   );
   assert.equal(
     (evidenceAfterContract.authority_boundary as Record<string, unknown>).route_support_closes_domain_ready,
     false,
   );
   assert.equal(evidenceNextSteps.surface_kind, 'opl_app_drilldown_evidence_next_steps');
-  assert.equal(evidenceNextSteps.total_count, 0);
-  assert.equal(evidenceNextSteps.next_owner, null);
+  assert.equal(evidenceNextSteps.total_count, 1);
+  assert.equal(evidenceNextSteps.items[0].step_kind, 'oma_production_consumption_followthrough');
+  assert.equal(evidenceNextSteps.next_owner, 'domain_repository_or_app_live_operator');
   assert.equal(evidenceNextSteps.can_execute_domain_action, false);
   assert.equal(evidenceNextSteps.can_create_owner_receipt, false);
 });
