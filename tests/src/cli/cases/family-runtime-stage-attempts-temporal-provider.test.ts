@@ -142,6 +142,150 @@ test('family-runtime temporal workflow input carries checkpoint stage packet and
   }
 });
 
+test('family-runtime tick starts MAS default executor dispatch as Temporal Codex writer workflow', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-default-start-'));
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-mas-default-${Date.now()}`;
+  const previousEnv = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_FAMILY_RUNTIME_PROVIDER: process.env.OPL_FAMILY_RUNTIME_PROVIDER,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_NAMESPACE: process.env.OPL_TEMPORAL_NAMESPACE,
+    OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
+    OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
+    OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+  };
+
+  try {
+    fs.mkdirSync(runtimeRoot, { recursive: true });
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-service.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      service_kind: 'custom_command',
+      pid: process.pid,
+      address: testEnv.address,
+      started_at: new Date().toISOString(),
+      status: 'running',
+      command: 'temporal test server',
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(runtimeRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: process.pid,
+      address: testEnv.address,
+      namespace: testEnv.namespace,
+      task_queue: taskQueue,
+      started_at: new Date().toISOString(),
+      status: 'ready',
+    }, null, 2)}\n`);
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'family-runtime-temporal-workflows.ts'),
+      activities: {
+        ...activities,
+        codexStageActivity: async () => ({
+          status: 'checkpointed',
+          closeout_packet: {
+            surface_kind: 'stage_attempt_closeout_packet',
+            closeout_refs: ['receipt:mas-default-writer-start'],
+            consumed_refs: ['dispatch:mas-default-writer-start'],
+            consumed_memory_refs: [],
+            writeback_receipt_refs: [],
+            rejected_writes: [],
+            next_owner: 'med-autoscience',
+            domain_ready_verdict: 'domain_gate_pending',
+            route_impact: { decision: 'mas_default_writer_started' },
+          },
+        }),
+      },
+    });
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
+    process.env.OPL_TEMPORAL_ADDRESS = '';
+    process.env.TEMPORAL_ADDRESS = '';
+    process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+    process.env.OPL_TEMPORAL_WORKER_STATUS = '';
+    process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+
+    const dispatchRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
+    const enqueue = await runFamilyRuntime([
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        profile: '/tmp/dm-cvd/ops/medautoscience/profiles/dm-cvd.local.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        quest_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'run_quality_repair_batch',
+        dispatch_authority: 'quality_repair_batch_writer_handoff',
+        next_executable_owner: 'write',
+        executor_kind: 'codex_cli_default',
+        dispatch_ref: dispatchRef,
+        authority_boundary: 'mas_default_executor_dispatch_request_only',
+      }),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:temporal-start',
+    ]) as { family_runtime_enqueue: { task: { task_id: string } } };
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+
+    const tick = await worker.runUntil(async () => {
+      const result = await runFamilyRuntime(['tick', '--source', 'test']) as {
+        family_runtime_tick: {
+          dispatches: Array<{
+            status: string;
+            temporal_start: { surface_kind: string };
+            admitted_stage_attempt: { workflow_id: string };
+          }>;
+        };
+      };
+      const startedAttempt = result.family_runtime_tick.dispatches[0].admitted_stage_attempt;
+      const handle = testEnv.client.workflow.getHandle(startedAttempt.workflow_id);
+      await handle.result();
+      return result;
+    });
+    const task = await runFamilyRuntime(['queue', 'inspect', taskId]) as unknown as {
+      family_runtime_task: {
+        task: { status: string };
+        stage_attempts: Array<{
+          provider_kind: string;
+          executor_kind: string;
+          stage_id: string;
+          provider_run: { provider_status: string };
+          closeout_receipt_status: string;
+          checkpoint_refs: string[];
+        }>;
+      };
+    };
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].temporal_start.surface_kind, 'temporal_stage_attempt_start_receipt');
+    assert.equal(task.family_runtime_task.task.status, 'succeeded');
+    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.executor_kind, 'codex_cli');
+    assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
+    assert.equal(attempt.provider_run.provider_status, 'running');
+    assert.equal(attempt.closeout_receipt_status, null);
+    assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (typeof value === 'string') {
+        process.env[key] = value;
+      } else {
+        delete process.env[key];
+      }
+    }
+    await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime temporal attempt start blocks live Codex without stage packet', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-missing-packet-'));
   try {

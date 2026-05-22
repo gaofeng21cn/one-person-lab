@@ -129,7 +129,7 @@ export async function runSchedulerTick(
     limit: number,
     hydrate: boolean,
     taskScope?: FamilyRuntimeTaskScope,
-  ) => SchedulerQueueTickResult,
+  ) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>,
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
@@ -142,7 +142,7 @@ export async function runSchedulerTick(
   const providerSlo = await runTemporalProviderSloTick(db, paths, {
     force: input.force ?? false,
   });
-  const queueTick = runQueueTick(source, input.limit ?? 10, input.hydrate ?? true, input.taskScope);
+  const queueTick = await runQueueTick(source, input.limit ?? 10, input.hydrate ?? true, input.taskScope);
   insertEvent(db, {
     eventType: 'opl_scheduler_tick_completed',
     source,

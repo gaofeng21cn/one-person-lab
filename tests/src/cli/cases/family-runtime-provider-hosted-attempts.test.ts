@@ -202,7 +202,7 @@ PY
   }
 });
 
-test('family-runtime admits MAS default executor dispatch as queued Codex writer attempt', () => {
+test('family-runtime blocks MAS default executor dispatch when Temporal cannot start Codex writer attempt', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-'));
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
@@ -274,15 +274,18 @@ PY
     const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempt = task.family_runtime_task.stage_attempts[0];
 
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
-    assert.equal(task.family_runtime_task.task.status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(tick.family_runtime_tick.dispatches[0].reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
     assert.equal(task.family_runtime_task.stage_attempts.length, 1);
     assert.equal(attempt.provider_kind, 'temporal');
     assert.equal(attempt.domain_id, 'medautoscience');
     assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
     assert.equal(attempt.executor_kind, 'codex_cli');
     assert.equal(attempt.task_id, taskId);
-    assert.equal(attempt.status, 'queued');
+    assert.equal(attempt.status, 'blocked');
+    assert.match(attempt.blocked_reason, /OPL_TEMPORAL_ADDRESS/);
     assert.equal(attempt.workspace_locator.workspace_root, '/tmp/explicit-workspace-root');
     assert.equal(attempt.workspace_locator.dispatch_ref, 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json');
     assert.equal(attempt.workspace_locator.next_executable_owner, 'write');

@@ -74,12 +74,13 @@ import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } f
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 import { runFamilyRuntimeQueueTick } from './family-runtime-tick.ts';
+import { startMasDefaultExecutorDispatchAttempt } from './family-runtime-mas-default-executor-start.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
 }
 
-function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
+async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
   const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
   if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
     const updatedAt = nowIso();
@@ -119,39 +120,12 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     return blockTaskForStageAdmissionGate(db, row, providerHostedAttempt);
   }
   if (isMasDefaultExecutorDispatchTask(row, payload)) {
-    const completedAt = nowIso();
-    db.prepare(`
-      UPDATE tasks
-      SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL, last_error = NULL, updated_at = ?
-      WHERE task_id = ?
-    `).run(completedAt, row.task_id);
-    insertEvent(db, {
-      taskId: row.task_id,
-      domainId: row.domain_id,
-      eventType: 'task_admitted_default_executor_stage_attempt',
-      source: 'opl-family-runtime',
-      payload: {
-        task_kind: row.task_kind,
-        dispatch_ref: payload.dispatch_ref,
-        stage_attempt_id: providerHostedAttempt?.stage_attempt_id ?? null,
-      },
+    return startMasDefaultExecutorDispatchAttempt(db, paths, {
+      row,
+      payload,
+      providerHostedAttempt,
+      temporalProviderModule,
     });
-    insertNotification(db, {
-      taskId: row.task_id,
-      severity: 'info',
-      title: 'Family runtime default executor task admitted',
-      body: `${row.domain_id}:${row.task_kind}`,
-      payload: {
-        dispatch_ref: payload.dispatch_ref,
-        stage_attempt_id: providerHostedAttempt?.stage_attempt_id ?? null,
-      },
-    });
-    return {
-      task_id: row.task_id,
-      status: 'succeeded',
-      admitted_stage_attempt: providerHostedAttempt ?? null,
-      stage_attempts: listStageAttemptsForTask(db, row.task_id),
-    };
   }
   const activeStageAttempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
     attempt.status === 'queued'
@@ -299,7 +273,7 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
   };
 }
 
-function runTick(
+async function runTick(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
   source: string,
@@ -589,7 +563,7 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_tick: {
           surface_id: 'opl_family_runtime_tick',
-          ...runTick(
+          ...await runTick(
             db,
             paths,
             parsed.source ?? 'manual',

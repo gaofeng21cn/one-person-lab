@@ -19,7 +19,7 @@ type EnqueueTaskResult = {
 
 type EnqueueTask = (db: DatabaseSync, input: EnqueueInput) => EnqueueTaskResult;
 
-export function runFamilyRuntimeQueueTick(
+export async function runFamilyRuntimeQueueTick(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
   input: {
@@ -35,7 +35,7 @@ export function runFamilyRuntimeQueueTick(
       db: DatabaseSync,
       paths: ReturnType<typeof familyRuntimePaths>,
       row: FamilyRuntimeTaskRow,
-    ) => unknown;
+    ) => unknown | Promise<unknown>;
   },
 ) {
   const hydration = input.hydrate
@@ -72,7 +72,7 @@ export function runFamilyRuntimeQueueTick(
       task_scope: input.taskScope ?? null,
     },
   });
-  const dispatches = rows.map((row) => handlers.dispatchTask(db, paths, row));
+  const dispatches = await Promise.all(rows.map((row) => handlers.dispatchTask(db, paths, row)));
   insertEvent(db, {
     eventType: 'tick_completed',
     source: input.source,
