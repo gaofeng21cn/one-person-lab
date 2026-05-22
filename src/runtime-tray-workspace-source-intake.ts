@@ -19,6 +19,28 @@ function stringList(value: unknown) {
     : [];
 }
 
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function refStrings(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(refStrings);
+  }
+  if (isRecord(value)) {
+    return [
+      optionalString(value.ref),
+      optionalString(value.ref_id),
+      optionalString(value.path),
+      optionalString(value.uri),
+    ].filter((entry): entry is string => Boolean(entry));
+  }
+  return [];
+}
+
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
@@ -35,8 +57,8 @@ function locatorString(locator: JsonRecord, ...fields: string[]) {
 
 function intakeRefs(locator: JsonRecord, pluralField: string, singularFields: string[]) {
   return uniqueStrings([
-    ...stringList(locator[pluralField]),
-    ...singularFields.map((field) => optionalString(locator[field])).filter((entry): entry is string => Boolean(entry)),
+    ...refStrings(locator[pluralField]),
+    ...singularFields.flatMap((field) => refStrings(locator[field])),
   ]);
 }
 

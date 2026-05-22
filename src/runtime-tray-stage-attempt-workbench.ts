@@ -96,6 +96,45 @@ function stringListFrom(value: unknown) {
   return Array.isArray(value) ? stringList(value) : [];
 }
 
+function stringRefsFromUnknown(value: unknown) {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => {
+      if (typeof entry === 'string' && entry.trim()) {
+        return [entry.trim()];
+      }
+      if (isRecord(entry)) {
+        return [
+          optionalString(entry.ref),
+          optionalString(entry.ref_id),
+          optionalString(entry.path),
+          optionalString(entry.uri),
+        ].filter((ref): ref is string => Boolean(ref));
+      }
+      return [];
+    });
+  }
+  if (isRecord(value)) {
+    return [
+      optionalString(value.ref),
+      optionalString(value.ref_id),
+      optionalString(value.path),
+      optionalString(value.uri),
+    ].filter((ref): ref is string => Boolean(ref));
+  }
+  return [];
+}
+
+function packetLikeRef(value: string) {
+  return value.startsWith('packet:')
+    || value.includes('/default_executor_dispatches/')
+    || value.includes('/stage_packets/')
+    || value.endsWith('.stage-packet.json')
+    || value.endsWith('/stage-packet.json');
+}
+
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
@@ -126,6 +165,20 @@ function stagePacketRefs(activityEvents: JsonRecord[]) {
   return uniqueStrings(activityEvents
     .map((event) => optionalString(event.stage_packet_ref))
     .filter((ref): ref is string => Boolean(ref)));
+}
+
+function stagePacketRefsForAttempt(input: {
+  activityEvents: JsonRecord[];
+  checkpointRefs: string[];
+  workspaceLocator: JsonRecord;
+}) {
+  return uniqueStrings([
+    ...stagePacketRefs(input.activityEvents),
+    ...input.checkpointRefs.filter(packetLikeRef),
+    ...stringRefsFromUnknown(input.workspaceLocator.stage_packet_ref),
+    ...stringRefsFromUnknown(input.workspaceLocator.stage_packet_refs),
+    ...stringRefsFromUnknown(input.workspaceLocator.dispatch_ref),
+  ]);
 }
 
 function signalRefs(signals: JsonRecord[]) {
@@ -179,6 +232,8 @@ function buildAttemptControlLoopSummary(input: {
   routeImpact: JsonRecord;
   latestCloseout: JsonRecord | null;
   activityEvents: JsonRecord[];
+  checkpointRefs: string[];
+  workspaceLocator: JsonRecord;
   signals: JsonRecord[];
   nextOwner: string;
   closeoutRefs: string[];
@@ -227,7 +282,11 @@ function buildAttemptControlLoopSummary(input: {
     stage_id: input.row.stage_id,
     trigger: {
       source_fingerprint: input.row.source_fingerprint,
-      stage_packet_refs: stagePacketRefs(input.activityEvents),
+      stage_packet_refs: stagePacketRefsForAttempt({
+        activityEvents: input.activityEvents,
+        checkpointRefs: input.checkpointRefs,
+        workspaceLocator: input.workspaceLocator,
+      }),
       source_signal_refs: sourceSignalRefs,
       source_signal_count: sourceSignalRefs.length,
     },
@@ -444,6 +503,8 @@ function attemptProjection(
     routeImpact,
     latestCloseout,
     activityEvents,
+    checkpointRefs,
+    workspaceLocator,
     signals,
     nextOwner,
     closeoutRefs,
@@ -465,6 +526,7 @@ function attemptProjection(
     domain_id: row.domain_id,
     stage_id: row.stage_id,
     workflow_id: row.workflow_id,
+    task_id: row.task_id,
     workspace_locator: workspaceLocator,
     source_fingerprint: row.source_fingerprint,
     workflow_status: optionalString(providerRun.provider_status) ?? row.status,

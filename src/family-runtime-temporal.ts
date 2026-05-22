@@ -1,3 +1,4 @@
+import { FrameworkContractError } from './contracts.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
@@ -144,6 +145,7 @@ export function buildTemporalStageAttemptWorkflowInput(
     ? attempt.checkpoint_refs.filter((entry: unknown): entry is string => typeof entry === 'string')
     : [];
   const executorKind = attempt.executor_kind;
+  const stagePacketRef = checkpointRefs[0] ?? null;
   return {
     stage_attempt_id: attempt.stage_attempt_id,
     workflow_id: attempt.workflow_id,
@@ -154,12 +156,47 @@ export function buildTemporalStageAttemptWorkflowInput(
     executor_kind: executorKind,
     retry_budget: attempt.retry_budget,
     task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
-    stage_packet_ref: checkpointRefs[0] ?? null,
+    stage_packet_ref: stagePacketRef,
     checkpoint_refs: checkpointRefs,
     codex_stage_runner: executorKind === 'codex_cli'
       ? { runner_mode: 'codex_cli' }
       : undefined,
   };
+}
+
+export function requireTemporalStageAttemptWorkflowInputLaunchable(input: TemporalStageAttemptWorkflowInput) {
+  if (input.executor_kind === 'codex_cli' && (!input.stage_packet_ref || input.stage_packet_ref === 'unavailable')) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal codex_cli workflow input requires a real stage packet ref.',
+      {
+        stage_attempt_id: input.stage_attempt_id,
+        workflow_id: input.workflow_id,
+        executor_kind: input.executor_kind,
+        blocked_reason: 'codex_cli_stage_packet_ref_missing',
+        required: ['checkpoint_refs[0]'],
+      },
+    );
+  }
+  const workspaceRoot = typeof input.workspace_locator.workspace_root === 'string' && input.workspace_locator.workspace_root.trim()
+    ? input.workspace_locator.workspace_root.trim()
+    : typeof input.workspace_locator.repo_root === 'string' && input.workspace_locator.repo_root.trim()
+      ? input.workspace_locator.repo_root.trim()
+      : null;
+  if (input.executor_kind === 'codex_cli' && !workspaceRoot) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal codex_cli workflow input requires a domain workspace root.',
+      {
+        stage_attempt_id: input.stage_attempt_id,
+        workflow_id: input.workflow_id,
+        executor_kind: input.executor_kind,
+        blocked_reason: 'codex_cli_workspace_root_missing',
+        required: ['workspace_locator.workspace_root or workspace_locator.repo_root'],
+      },
+    );
+  }
+  return input;
 }
 
 export function resolveTemporalAddress() {

@@ -10,7 +10,7 @@ import { NativeConnection, Worker } from '@temporalio/worker';
 import { FrameworkContractError } from './contracts.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
-  buildTemporalStageAttemptWorkflowInput,
+  buildTemporalStageAttemptWorkflowInput, requireTemporalStageAttemptWorkflowInputLaunchable,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
   SCHEDULER_TICK_WORKFLOW_NAME,
@@ -175,10 +175,10 @@ export async function startTemporalStageAttemptWorkflow(
       provider_kind: attempt.provider_kind,
     });
   }
+  if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
   return withTemporalClient(async (client) => {
-    const input = buildTemporalStageAttemptWorkflowInput(attempt);
     const handle = await client.workflow.start('StageAttemptWorkflow', {
-      args: [input],
+      args: [requireTemporalStageAttemptWorkflowInputLaunchable(buildTemporalStageAttemptWorkflowInput(attempt))],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,

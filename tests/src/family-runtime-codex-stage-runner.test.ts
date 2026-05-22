@@ -6,7 +6,11 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
-import { runAgentStageRunner, runCodexStageRunner } from '../../src/family-runtime-codex-stage-runner.ts';
+import {
+  buildCodexStageActivityInput,
+  runAgentStageRunner,
+  runCodexStageRunner,
+} from '../../src/family-runtime-codex-stage-runner.ts';
 import type { AgentExecutionReceipt } from '../../src/agent-executor.ts';
 import { FrameworkContractError } from '../../src/contracts.ts';
 import {
@@ -37,6 +41,58 @@ function requireCloseoutRefs(receipt: AgentExecutionReceipt) {
   assert.ok(Array.isArray(closeoutRefs), 'agent execution receipt must include closeout refs.');
   return closeoutRefs;
 }
+
+test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
+  const activity = buildCodexStageActivityInput({
+    attempt: {
+      stage_attempt_id: 'sat_stage_packet_binding_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: '/tmp/mas',
+      },
+      checkpoint_refs: ['packet:from-checkpoint'],
+    },
+  });
+
+  assert.equal(activity.stage_packet_ref, 'packet:from-checkpoint');
+  assert.equal(activity.stage_packet_binding.binding_status, 'bound');
+  assert.equal(activity.stage_packet_binding.workspace_root, '/tmp/mas');
+  assert.equal(activity.stage_packet_binding.can_claim_domain_ready, false);
+  assert.equal(activity.progress_summary.stage_packet_ref, 'packet:from-checkpoint');
+});
+
+test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
+  await assert.rejects(
+    () => runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_missing_packet_binding_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: '/tmp/mas',
+        },
+      },
+      runnerMode: 'codex_cli',
+    }),
+    (error) => error instanceof FrameworkContractError
+      && error.code === 'contract_shape_invalid'
+      && error.details?.blocked_reason === 'codex_cli_stage_packet_ref_missing',
+  );
+
+  await assert.rejects(
+    () => runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_missing_workspace_binding_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {},
+        checkpoint_refs: ['packet:from-checkpoint'],
+      },
+      runnerMode: 'codex_cli',
+    }),
+    (error) => error instanceof FrameworkContractError
+      && error.code === 'contract_shape_invalid'
+      && error.details?.blocked_reason === 'codex_cli_workspace_root_missing',
+  );
+});
 
 test('Codex stage runner supervises a live Codex CLI process without accepting free-text completion', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`

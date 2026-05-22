@@ -69,6 +69,14 @@ function checkpointRefsFromAttempt(attempt: JsonRecord) {
   return readStringList(attempt.checkpoint_refs);
 }
 
+function stagePacketRefFromAttempt(attempt: JsonRecord) {
+  return checkpointRefsFromAttempt(attempt)[0] ?? null;
+}
+
+function resolvedStagePacketRef(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
+  return optionalString(input.stagePacketRef) ?? stagePacketRefFromAttempt(input.attempt);
+}
+
 export function normalizeCodexStageRunnerMode(value?: string | null): CodexStageRunnerMode {
   const normalized = value?.trim().replace(/-/g, '_');
   if (normalized === 'codex_cli') {
@@ -85,7 +93,7 @@ function workspaceRootFromAttempt(attempt: JsonRecord) {
 function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
-  const stagePacketRef = input.stagePacketRef ?? null;
+  const stagePacketRef = resolvedStagePacketRef(input);
   return [
     'You are running an OPL provider-backed stage attempt.',
     `Stage attempt id: ${attemptId}`,
@@ -236,7 +244,7 @@ export function buildCodexStageRunnerReceipt(input: {
 }) {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
-  const stagePacketRef = input.stagePacketRef ?? null;
+  const stagePacketRef = resolvedStagePacketRef(input);
   const observedAt = input.observedAt ?? null;
   const args = buildCodexExecArgs(runnerPromptFor({ attempt: input.attempt, stagePacketRef }), {
     cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
@@ -283,12 +291,38 @@ export async function runCodexStageRunner(input: {
   timeoutMs?: number | null;
 }) {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
+  const stagePacketRef = resolvedStagePacketRef(input);
+  const workspaceRoot = workspaceRootFromAttempt(input.attempt);
   if (runnerMode !== 'codex_cli') {
-    return buildCodexStageRunnerReceipt(input);
+    return buildCodexStageRunnerReceipt({ ...input, stagePacketRef });
+  }
+  if (!stagePacketRef || stagePacketRef === 'unavailable') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Live codex_cli stage runner requires a real stage packet ref.',
+      {
+        stage_attempt_id: optionalString(input.attempt.stage_attempt_id),
+        executor_kind: optionalString(input.attempt.executor_kind) ?? 'codex_cli',
+        blocked_reason: 'codex_cli_stage_packet_ref_missing',
+        required: ['stage_packet_ref via checkpoint_refs[0] or explicit stagePacketRef'],
+      },
+    );
+  }
+  if (!workspaceRoot) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Live codex_cli stage runner requires a domain workspace root.',
+      {
+        stage_attempt_id: optionalString(input.attempt.stage_attempt_id),
+        executor_kind: optionalString(input.attempt.executor_kind) ?? 'codex_cli',
+        blocked_reason: 'codex_cli_workspace_root_missing',
+        required: ['workspace_locator.workspace_root or workspace_locator.repo_root'],
+      },
+    );
   }
 
   const args = buildCodexExecArgs(runnerPromptFor(input), {
-    cwd: workspaceRootFromAttempt(input.attempt) ?? undefined,
+    cwd: workspaceRoot,
     json: true,
   });
   const runnerEvents: RunnerEventSummary[] = [];
@@ -309,6 +343,7 @@ export async function runCodexStageRunner(input: {
   return {
     ...buildCodexStageRunnerReceipt({
       ...input,
+      stagePacketRef,
       runnerMode,
       liveProcessStarted: true,
       processId,
@@ -440,16 +475,29 @@ export function buildCodexStageActivityInput(input: {
   attempt: JsonRecord;
   stagePacketRef?: string | null;
 }) {
+  const stagePacketRef = resolvedStagePacketRef(input);
+  const workspaceRoot = workspaceRootFromAttempt(input.attempt) ?? null;
   const runnerReceipt = buildCodexStageRunnerReceipt({
     attempt: input.attempt,
-    stagePacketRef: input.stagePacketRef,
+    stagePacketRef,
     runnerMode: process.env.OPL_CODEX_STAGE_RUNNER_MODE,
   });
   return {
     activity_kind: 'codex_stage_activity',
     executor: 'codex_cli',
     attempt: input.attempt,
-    stage_packet_ref: input.stagePacketRef ?? null,
+    stage_packet_ref: stagePacketRef,
+    stage_packet_binding: {
+      binding_status: stagePacketRef && stagePacketRef !== 'unavailable' && workspaceRoot
+        ? 'bound'
+        : 'missing_required_ref',
+      stage_packet_ref: stagePacketRef,
+      workspace_root: workspaceRoot,
+      binding_source: stagePacketRef ? 'stage_attempt_checkpoint_refs' : null,
+      can_claim_stage_complete: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
     ...runnerReceipt,
     expected_closeout: {
       typed_packet_required_for_completion: true,

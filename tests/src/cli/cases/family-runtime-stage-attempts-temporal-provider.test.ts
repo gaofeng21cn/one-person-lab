@@ -57,6 +57,8 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
       'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
+      '--checkpoint-ref',
+      'packet:scout',
       '--start',
     ], {
       cwd: repoRoot,
@@ -108,6 +110,53 @@ test('family-runtime temporal workflow input carries checkpoint stage packet and
     assert.deepEqual(input.checkpoint_refs, ['studies/002-dm/prompt.json']);
     assert.deepEqual(input.codex_stage_runner, { runner_mode: 'codex_cli' });
     assert.equal(input.workspace_locator.workspace_root, '/tmp/dm-cvd');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt start blocks live Codex without stage packet', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-missing-packet-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/dm-cvd"}',
+      '--executor-kind',
+      'codex_cli',
+    ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
+    const failure = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'attempt',
+      'start',
+      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...familyRuntimeEnv(stateRoot),
+        OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+        TEMPORAL_ADDRESS: '',
+      },
+    });
+    const output = JSON.parse(failure.stdout || failure.stderr);
+
+    assert.notEqual(failure.status, 0);
+    assert.equal(output.error.code, 'contract_shape_invalid');
+    assert.equal(output.error.details.blocked_reason, 'codex_cli_stage_packet_ref_missing');
+    assert.match(output.error.message, /stage packet ref/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
