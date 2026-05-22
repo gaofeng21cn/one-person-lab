@@ -127,6 +127,18 @@ function domainStageWorkorderGroups(
       const requiredEvidenceRefs = uniqueStringList(
         groupItems.flatMap((item) => item.required_evidence_refs),
       );
+      const requiredReturnShapes = uniqueStringList(
+        groupItems.flatMap((item) => item.required_return_shapes),
+      );
+      const payloadPreflightPolicies = uniqueStringList(
+        groupItems.map((item) => item.payload_preflight_policy),
+      );
+      const payloadPreflightErrorCodes = uniqueStringList(
+        groupItems.map((item) => item.payload_preflight_error_code),
+      );
+      const payloadPreflightBlockedErrorKinds = uniqueStringList(
+        groupItems.map((item) => item.payload_preflight_blocked_error_kind),
+      );
       return {
         group_id: `domain-dispatch-evidence-workorder-group:${key}`,
         canonical_domain_id: canonicalDomainId,
@@ -147,10 +159,15 @@ function domainStageWorkorderGroups(
         accepted_payload_paths:
           record(groupItems.find((item) => Object.keys(item.accepted_payload_paths).length > 0)
             ?.accepted_payload_paths),
+        payload_preflight_policy: payloadPreflightPolicies[0] ?? null,
+        payload_preflight_policy_count: payloadPreflightPolicies.length,
+        payload_preflight_error_code: payloadPreflightErrorCodes[0] ?? null,
+        payload_preflight_blocked_error_kind: payloadPreflightBlockedErrorKinds[0] ?? null,
         required_evidence_ref_count: numberSum(
           groupItems.map((item) => item.required_evidence_refs.length),
         ),
         required_evidence_refs: requiredEvidenceRefs,
+        required_return_shapes: requiredReturnShapes,
         typed_blocker_payload_path_available_count:
           groupItems.filter((item) => item.typed_blocker_payload_path_available).length,
         owner_receipt_payload_path_available_count:
@@ -344,10 +361,15 @@ export function compactDomainDispatchEvidenceWorkorderGroupAttentionItems(
     required_operator_payload_refs: group.required_operator_payload_refs,
     payload_path_policy: group.payload_path_policy,
     accepted_payload_paths: group.accepted_payload_paths,
+    payload_preflight_policy: group.payload_preflight_policy,
+    payload_preflight_policy_count: group.payload_preflight_policy_count,
+    payload_preflight_error_code: group.payload_preflight_error_code,
+    payload_preflight_blocked_error_kind: group.payload_preflight_blocked_error_kind,
     required_evidence_ref_count: group.required_evidence_ref_count,
     sample_required_evidence_refs: group.required_evidence_refs.slice(0, refLimit),
     required_evidence_ref_omitted_count:
       Math.max(group.required_evidence_refs.length - refLimit, 0),
+    required_return_shapes: group.required_return_shapes,
     payload_owner: group.payload_owner,
     route_requires_domain_or_app_payload: group.route_requires_domain_or_app_payload,
     can_execute_domain_action: false,

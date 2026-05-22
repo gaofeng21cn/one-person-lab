@@ -396,6 +396,18 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
         dispatchGroup.accepted_payload_paths.typed_blocker_path.success_claimed,
         false,
       );
+      assert.equal(
+        dispatchGroup.payload_preflight_policy,
+        'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+      );
+      assert.equal(
+        dispatchGroup.payload_preflight_blocked_error_kind,
+        'domain_dispatch_evidence_payload_preflight_blocked',
+      );
+      assert.equal(
+        dispatchGroup.required_return_shapes.includes('domain_owner_receipt_ref'),
+        true,
+      );
       assert.equal(dispatchGroup.worklist_item_is_completion_claim, false);
       assert.equal(dispatchGroup.authority_boundary.can_generate_domain_owner_receipt, false);
       assert.equal(dispatchGroup.authority_boundary.can_execute_domain_action, false);
@@ -419,6 +431,18 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       assert.equal(
         dispatchGroupAttentionItem.accepted_payload_paths.typed_blocker_path.success_claimed,
         false,
+      );
+      assert.equal(
+        dispatchGroupAttentionItem.payload_preflight_policy,
+        'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+      );
+      assert.equal(
+        dispatchGroupAttentionItem.payload_preflight_blocked_error_kind,
+        'domain_dispatch_evidence_payload_preflight_blocked',
+      );
+      assert.equal(
+        dispatchGroupAttentionItem.required_return_shapes.includes('domain_owner_receipt_ref'),
+        true,
       );
       assert.equal(dispatchGroupAttentionItem.can_close_domain_ready, false);
       assert.equal(dispatchGroupAttentionItem.can_claim_production_ready, false);

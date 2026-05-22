@@ -184,6 +184,33 @@ test('runtime App drilldown projects bounded owner handoff packet without author
     );
     assert.equal(ownerHandoff.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(ownerHandoff.required_refs_any_of.length > 0, true);
+    if (ownerHandoff.domain_dispatch_group_count > 0) {
+      assert.equal(
+        ownerHandoff.required_return_shapes.includes('domain_owner_receipt_ref'),
+        true,
+      );
+      assert.equal(
+        ownerHandoff.payload_path_policy,
+        'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+      );
+      assert.equal(
+        ownerHandoff.accepted_payload_paths.success_refs_path
+          .typed_blocker_refs_must_be_absent,
+        true,
+      );
+      assert.equal(
+        ownerHandoff.accepted_payload_paths.typed_blocker_path.success_claimed,
+        false,
+      );
+      assert.equal(
+        ownerHandoff.payload_preflight_policy,
+        'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+      );
+      assert.equal(
+        ownerHandoff.payload_preflight_blocked_error_kind,
+        'domain_dispatch_evidence_payload_preflight_blocked',
+      );
+    }
     assert.equal(ownerHandoff.full_detail_sections.length > 0, true);
     assert.equal(ownerHandoff.can_execute_domain_action, false);
     assert.equal(ownerHandoff.can_write_domain_truth, false);

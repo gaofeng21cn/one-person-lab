@@ -268,6 +268,26 @@ test('framework readiness summarizes default control-plane surfaces without auth
         ownerHandoffAction.required_refs_any_of,
         firstOwnerHandoff.required_refs_any_of,
       );
+      assert.deepEqual(
+        ownerHandoffAction.required_return_shapes,
+        firstOwnerHandoff.required_return_shapes,
+      );
+      assert.equal(
+        ownerHandoffAction.payload_path_policy,
+        firstOwnerHandoff.payload_path_policy,
+      );
+      assert.deepEqual(
+        ownerHandoffAction.accepted_payload_paths,
+        firstOwnerHandoff.accepted_payload_paths,
+      );
+      assert.equal(
+        ownerHandoffAction.payload_preflight_policy,
+        firstOwnerHandoff.payload_preflight_policy,
+      );
+      assert.equal(
+        ownerHandoffAction.payload_preflight_blocked_error_kind,
+        firstOwnerHandoff.payload_preflight_blocked_error_kind,
+      );
       assert.equal(ownerHandoffAction.authority, 'operator_attention_only');
       assert.equal(ownerHandoffAction.can_execute_domain_action, false);
       assert.equal(ownerHandoffAction.can_write_domain_truth, false);
@@ -513,6 +533,18 @@ test('framework readiness summarizes default control-plane surfaces without auth
       assert.equal(
         dispatchGroupAction.accepted_payload_paths.typed_blocker_path.success_claimed,
         false,
+      );
+      assert.equal(
+        dispatchGroupAction.payload_preflight_policy,
+        firstDispatchWorkorderGroup.payload_preflight_policy,
+      );
+      assert.equal(
+        dispatchGroupAction.payload_preflight_blocked_error_kind,
+        'domain_dispatch_evidence_payload_preflight_blocked',
+      );
+      assert.deepEqual(
+        dispatchGroupAction.required_return_shapes,
+        firstDispatchWorkorderGroup.required_return_shapes,
       );
       assert.equal(Object.hasOwn(dispatchGroupAction, 'required_evidence_refs'), false);
       assert.equal(dispatchGroupAction.full_detail_section, 'domain_dispatch_evidence');

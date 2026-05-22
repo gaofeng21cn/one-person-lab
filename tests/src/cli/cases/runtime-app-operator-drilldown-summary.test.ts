@@ -466,6 +466,31 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         dispatchWorkorderGroupStep.required_operator_payload_refs.includes('typed_blocker_refs'),
         true,
       );
+      assert.equal(
+        dispatchWorkorderGroupStep.payload_path_policy,
+        'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
+      );
+      assert.equal(
+        dispatchWorkorderGroupStep.accepted_payload_paths.success_refs_path
+          .typed_blocker_refs_must_be_absent,
+        true,
+      );
+      assert.equal(
+        dispatchWorkorderGroupStep.accepted_payload_paths.typed_blocker_path.success_claimed,
+        false,
+      );
+      assert.equal(
+        dispatchWorkorderGroupStep.payload_preflight_policy,
+        'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+      );
+      assert.equal(
+        dispatchWorkorderGroupStep.payload_preflight_blocked_error_kind,
+        'domain_dispatch_evidence_payload_preflight_blocked',
+      );
+      assert.equal(
+        dispatchWorkorderGroupStep.required_return_shapes.includes('domain_owner_receipt_ref'),
+        true,
+      );
     }
     if (dispatchWorkorderStep) {
       assert.equal(dispatchWorkorderStep.route_domain_id, dispatchWorkorderStep.domain_id);
@@ -483,6 +508,18 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       assert.equal(dispatchWorkorderStep.can_claim_production_ready, false);
       assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('domain_receipt_refs'), true);
       assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+      assert.equal(
+        dispatchWorkorderStep.accepted_payload_paths.typed_blocker_path.success_claimed,
+        false,
+      );
+      assert.equal(
+        dispatchWorkorderStep.payload_preflight_blocked_error_kind,
+        'domain_dispatch_evidence_payload_preflight_blocked',
+      );
+      assert.equal(
+        dispatchWorkorderStep.required_return_shapes.includes('domain_owner_receipt_ref'),
+        true,
+      );
       assert.equal(dispatchWorkorderStep.full_detail_section, 'domain_dispatch_evidence');
     }
     const stageMissingStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(

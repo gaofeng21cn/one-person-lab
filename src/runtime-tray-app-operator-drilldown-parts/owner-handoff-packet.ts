@@ -1,5 +1,13 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function record(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
@@ -16,6 +24,16 @@ function numberValue(value: unknown) {
 
 function uniqueSortedStrings(values: unknown[]) {
   return [...new Set(values.flatMap((value) => stringList(value)))].sort();
+}
+
+function firstStringValue(values: unknown[]) {
+  for (const value of values) {
+    const text = stringValue(value);
+    if (text) {
+      return text;
+    }
+  }
+  return null;
 }
 
 function requiredRefsForOwnerEntry(payloadGroups: JsonRecord[], dispatchGroups: JsonRecord[]) {
@@ -80,6 +98,14 @@ export function buildOwnerHandoffPacket(input: {
       0,
     );
     const attentionCount = ownerPayloadAttentionCount + dispatchAttentionCount;
+    const acceptedPayloadPaths = record(
+      groups.dispatchGroups.find((group) =>
+        Object.keys(record(group.accepted_payload_paths)).length > 0
+      )?.accepted_payload_paths,
+    );
+    const payloadPreflightPolicies = uniqueSortedStrings(
+      groups.dispatchGroups.map((group) => [group.payload_preflight_policy]),
+    );
     const fullDetailSections = uniqueSortedStrings([
       groups.ownerPayloadGroups.length > 0 ? ['evidence_envelope'] : [],
       groups.dispatchGroups.length > 0 ? ['domain_dispatch_evidence'] : [],
@@ -103,6 +129,18 @@ export function buildOwnerHandoffPacket(input: {
       required_refs_any_of: requiredRefsForOwnerEntry(
         groups.ownerPayloadGroups,
         groups.dispatchGroups,
+      ),
+      required_return_shapes: uniqueSortedStrings(
+        groups.dispatchGroups.map((group) => group.required_return_shapes),
+      ),
+      payload_path_policy: firstStringValue(
+        groups.dispatchGroups.map((group) => group.payload_path_policy),
+      ),
+      accepted_payload_paths: acceptedPayloadPaths,
+      payload_preflight_policy: payloadPreflightPolicies[0] ?? null,
+      payload_preflight_policy_count: payloadPreflightPolicies.length,
+      payload_preflight_blocked_error_kind: firstStringValue(
+        groups.dispatchGroups.map((group) => group.payload_preflight_blocked_error_kind),
       ),
       full_detail_sections: fullDetailSections,
       payload_owner: 'domain_repository_or_app_live_operator',
