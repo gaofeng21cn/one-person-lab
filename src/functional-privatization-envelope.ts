@@ -83,6 +83,22 @@ export type FunctionalPrivatizationAuditEnvelope = {
     evidence_gate_status: string;
     blockers: string[];
   };
+  semantic_equivalence_evidence_gate: {
+    status: 'not_required' | 'evidence_required';
+    review_required_count: number;
+    active_private_generic_residue_count: number;
+    open_external_evidence_request_count: number;
+    evidence_gate_status: string;
+    required_evidence_policy: string;
+    can_close_without_evidence: false;
+    mechanical_completion_can_close: false;
+    authority_boundary: {
+      can_claim_domain_ready: false;
+      can_claim_private_residue_deleted: false;
+      can_authorize_quality_or_export: false;
+      can_replace_domain_owner: false;
+    };
+  };
   authority_boundary: {
     opl_can_write_domain_truth: false;
     opl_can_write_memory_body: false;
@@ -104,6 +120,31 @@ function compactSummary(summary: FunctionalPrivatizationAuditEnvelopeSummaryInpu
     active_private_generic_residue_count: summary.active_private_generic_residue_count,
     blocker_count: summary.blocker_count,
   };
+}
+
+function semanticEquivalenceEvidenceGate(input: FunctionalPrivatizationEnvelopeInput) {
+  const openExternalEvidenceRequestCount =
+    input.externalEvidenceRequestPack?.summary.open_request_count ?? 0;
+  const evidenceRequired =
+    input.summary.semantic_equivalence_review_count > 0
+    || input.summary.active_private_generic_residue_count > 0;
+  return {
+    status: evidenceRequired ? 'evidence_required' : 'not_required',
+    review_required_count: input.summary.semantic_equivalence_review_count,
+    active_private_generic_residue_count: input.summary.active_private_generic_residue_count,
+    open_external_evidence_request_count: openExternalEvidenceRequestCount,
+    evidence_gate_status: input.evidenceGateProjection.status,
+    required_evidence_policy:
+      'active_private_or_semantic_equivalence_review_requires_domain_or_app_live_evidence_refs_typed_blocker_or_owner_receipt_before_private_residue_closure',
+    can_close_without_evidence: false,
+    mechanical_completion_can_close: false,
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_private_residue_deleted: false,
+      can_authorize_quality_or_export: false,
+      can_replace_domain_owner: false,
+    },
+  } as const;
 }
 
 export const FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT = {
@@ -148,6 +189,20 @@ export const FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT = {
     mechanical_completion_can_close_domain_quality: false,
     semantic_equivalence_requires_evidence_when_active_private: true,
   },
+  semantic_equivalence_evidence_gate: {
+    status_values: [
+      'not_required',
+      'evidence_required',
+    ],
+    evidence_required_when_any: [
+      'semantic_equivalence_review_count > 0',
+      'active_private_generic_residue_count > 0',
+    ],
+    required_evidence_policy:
+      'active private residue or semantic equivalence review requires domain or App live evidence refs, typed blocker, or owner receipt before private residue closure',
+    can_close_without_evidence: false,
+    mechanical_completion_can_close: false,
+  },
   authority_boundary: {
     opl_can_write_domain_truth: false,
     opl_can_write_memory_body: false,
@@ -190,6 +245,7 @@ export function buildFunctionalPrivatizationAuditEnvelope(
       evidence_gate_status: input.evidenceGateProjection.status,
       blockers: [...input.blockers],
     },
+    semantic_equivalence_evidence_gate: semanticEquivalenceEvidenceGate(input),
     authority_boundary: {
       ...FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT.authority_boundary,
     },
@@ -250,6 +306,7 @@ export function compactFunctionalPrivatizationAuditEnvelope(value: unknown) {
     default_attention_policy: envelope.default_attention_policy ?? null,
     ai_first_contract_light_policy: envelope.ai_first_contract_light_policy ?? null,
     status_policy: envelope.status_policy ?? null,
+    semantic_equivalence_evidence_gate: envelope.semantic_equivalence_evidence_gate ?? null,
     authority_boundary: envelope.authority_boundary ?? null,
   };
 }

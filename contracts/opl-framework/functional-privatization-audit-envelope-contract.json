@@ -39,6 +39,19 @@
     "mechanical_completion_can_close_domain_quality": false,
     "semantic_equivalence_requires_evidence_when_active_private": true
   },
+  "semantic_equivalence_evidence_gate": {
+    "status_values": [
+      "not_required",
+      "evidence_required"
+    ],
+    "evidence_required_when_any": [
+      "semantic_equivalence_review_count > 0",
+      "active_private_generic_residue_count > 0"
+    ],
+    "required_evidence_policy": "active private residue or semantic equivalence review requires domain or App live evidence refs, typed blocker, or owner receipt before private residue closure",
+    "can_close_without_evidence": false,
+    "mechanical_completion_can_close": false
+  },
   "authority_boundary": {
     "opl_can_write_domain_truth": false,
     "opl_can_write_memory_body": false,

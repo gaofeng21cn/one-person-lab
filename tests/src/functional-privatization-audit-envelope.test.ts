@@ -51,6 +51,14 @@ test('functional privatization audit envelope normalizes MAS functional consumer
   assert.equal(audit.envelope.summary.authority_function_inventory_count, 1);
   assert.equal(audit.envelope.summary.private_platform_residue_inventory_count, 1);
   assert.equal(audit.envelope.summary.default_watchlist_count, 0);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.status, 'not_required');
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.review_required_count, 0);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.active_private_generic_residue_count, 0);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.can_close_without_evidence, false);
+  assert.equal(
+    audit.envelope.semantic_equivalence_evidence_gate.authority_boundary.can_claim_private_residue_deleted,
+    false,
+  );
   assert.equal(audit.envelope.ai_first_contract_light_policy.contract_floor_only, true);
   assert.equal(audit.envelope.ai_first_contract_light_policy.expert_executor_strategy_contract, false);
   assert.equal(audit.envelope.authority_boundary.envelope_can_claim_domain_ready, false);
@@ -93,6 +101,33 @@ test('functional privatization audit envelope reports MAG evidence requests with
   assert.equal(audit.envelope.summary.external_evidence_open_request_count, 1);
   assert.equal(audit.envelope.summary.replacement_expectation_count, 1);
   assert.equal(audit.envelope.summary.semantic_equivalence_review_count, 1);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.status, 'evidence_required');
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.review_required_count, 1);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.active_private_generic_residue_count, 0);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.open_external_evidence_request_count, 1);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.evidence_gate_status, 'empty');
+  assert.match(
+    audit.envelope.semantic_equivalence_evidence_gate.required_evidence_policy,
+    /domain_or_app_live_evidence_refs/,
+  );
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.can_close_without_evidence, false);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.mechanical_completion_can_close, false);
+  assert.equal(
+    audit.envelope.semantic_equivalence_evidence_gate.authority_boundary.can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    audit.envelope.semantic_equivalence_evidence_gate.authority_boundary.can_claim_private_residue_deleted,
+    false,
+  );
+  assert.equal(
+    audit.envelope.semantic_equivalence_evidence_gate.authority_boundary.can_authorize_quality_or_export,
+    false,
+  );
+  assert.equal(
+    audit.envelope.semantic_equivalence_evidence_gate.authority_boundary.can_replace_domain_owner,
+    false,
+  );
   assert.equal(audit.envelope.status_policy.evidence_gate_status, 'empty');
   assert.equal(audit.envelope.authority_boundary.opl_can_authorize_quality_or_export, false);
 });
@@ -103,6 +138,16 @@ test('functional privatization audit envelope contract is tracked and contract-l
   assert.deepEqual(contract, FUNCTIONAL_PRIVATIZATION_AUDIT_ENVELOPE_CONTRACT);
   assert.equal(contract.ai_first_contract_light_policy.contract_floor_only, true);
   assert.equal(contract.ai_first_contract_light_policy.mechanical_completion_can_close_domain_quality, false);
+  assert.deepEqual(contract.semantic_equivalence_evidence_gate.status_values, [
+    'not_required',
+    'evidence_required',
+  ]);
+  assert.equal(contract.semantic_equivalence_evidence_gate.can_close_without_evidence, false);
+  assert.equal(contract.semantic_equivalence_evidence_gate.mechanical_completion_can_close, false);
+  assert.match(
+    contract.semantic_equivalence_evidence_gate.required_evidence_policy,
+    /owner receipt before private residue closure/,
+  );
   assert.equal(contract.authority_boundary.envelope_can_claim_private_residue_deleted, false);
   assert.ok(contract.accepted_source_shapes.includes('runtime_framework.rca_thin_surface_policy.privatized_functional_module_audit'));
 });
