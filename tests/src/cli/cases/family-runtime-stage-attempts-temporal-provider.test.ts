@@ -187,17 +187,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
         ...activities,
         codexStageActivity: async () => ({
           status: 'checkpointed',
-          closeout_packet: {
-            surface_kind: 'stage_attempt_closeout_packet',
-            closeout_refs: ['receipt:mas-default-writer-start'],
-            consumed_refs: ['dispatch:mas-default-writer-start'],
-            consumed_memory_refs: [],
-            writeback_receipt_refs: [],
-            rejected_writes: [],
-            next_owner: 'med-autoscience',
-            domain_ready_verdict: 'domain_gate_pending',
-            route_impact: { decision: 'mas_default_writer_started' },
-          },
+          checkpoint_refs: ['checkpoint:mas-default-writer-start'],
         }),
       },
     });
@@ -240,19 +230,29 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
           dispatches: Array<{
             status: string;
             temporal_start: { surface_kind: string };
-            admitted_stage_attempt: { workflow_id: string };
+            admitted_stage_attempt: { workflow_id: string; stage_attempt_id: string };
           }>;
         };
       };
       const startedAttempt = result.family_runtime_tick.dispatches[0].admitted_stage_attempt;
-      const handle = testEnv.client.workflow.getHandle(startedAttempt.workflow_id);
-      await handle.result();
+      await testEnv.sleep('2s');
+      await runFamilyRuntime(['attempt', 'query', startedAttempt.stage_attempt_id]);
       return result;
     });
     const task = await runFamilyRuntime(['queue', 'inspect', taskId]) as unknown as {
       family_runtime_task: {
-        task: { status: string };
+        task: {
+          status: string;
+          last_error: string | null;
+          dead_letter_reason: string | null;
+        };
+        events: Array<{
+          event_type: string;
+          payload: Record<string, unknown>;
+        }>;
         stage_attempts: Array<{
+          status: string;
+          blocked_reason: string | null;
           provider_kind: string;
           executor_kind: string;
           stage_id: string;
@@ -266,11 +266,22 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.equal(tick.family_runtime_tick.dispatches[0].temporal_start.surface_kind, 'temporal_stage_attempt_start_receipt');
-    assert.equal(task.family_runtime_task.task.status, 'succeeded');
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.last_error, 'typed_closeout_packet_required');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
+    assert.equal(
+      task.family_runtime_task.events.some((event) => (
+        event.event_type === 'stage_attempt_terminal_blocked_task'
+        && event.payload.reason === 'typed_closeout_packet_required'
+      )),
+      true,
+    );
+    assert.equal(attempt.status, 'blocked');
+    assert.equal(attempt.blocked_reason, 'typed_closeout_packet_required');
     assert.equal(attempt.provider_kind, 'temporal');
     assert.equal(attempt.executor_kind, 'codex_cli');
     assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
-    assert.equal(attempt.provider_run.provider_status, 'running');
+    assert.equal(attempt.provider_run.provider_status, 'blocked');
     assert.equal(attempt.closeout_receipt_status, null);
     assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
   } finally {

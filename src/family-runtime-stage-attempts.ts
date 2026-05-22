@@ -2,6 +2,10 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from './contracts.ts';
 import {
+  insertEvent,
+  insertNotification,
+} from './family-runtime-store.ts';
+import {
   buildStageAttemptProviderReceipt,
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
@@ -91,6 +95,8 @@ type ProviderReadinessOptions = {
     managed_temporal_state_consistency?: Record<string, unknown> | null;
   } | null;
 };
+
+const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 
 function nowIso() {
   return new Date().toISOString();
@@ -211,6 +217,88 @@ function temporalTerminalFailureReason(observation: TemporalStageAttemptTerminal
     return 'temporal_stage_attempt_query_failed';
   }
   return null;
+}
+
+function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalObservation) {
+  if (observation.query?.status !== 'blocked') {
+    return null;
+  }
+  const closeoutPacket = observation.query.closeout_packet;
+  if (
+    closeoutPacket
+    && typeof closeoutPacket === 'object'
+    && !Array.isArray(closeoutPacket)
+    && typeof closeoutPacket.blocked_reason === 'string'
+    && closeoutPacket.blocked_reason.trim()
+  ) {
+    return closeoutPacket.blocked_reason.trim();
+  }
+  return 'temporal_stage_attempt_not_completed';
+}
+
+function blockLinkedMasDefaultExecutorTask(
+  db: DatabaseSync,
+  input: {
+    row: StageAttemptRow;
+    reason: string;
+    observedAt: string;
+    taskDeadLetterReason: 'temporal_stage_attempt_failed' | 'temporal_stage_attempt_not_completed';
+    eventType: string;
+  },
+) {
+  if (!input.row.task_id) {
+    return;
+  }
+  const task = db.prepare('SELECT task_id, domain_id, task_kind, status FROM tasks WHERE task_id = ?').get(
+    input.row.task_id,
+  ) as {
+    task_id: string;
+    domain_id: string;
+    task_kind: string;
+    status: string;
+  } | undefined;
+  if (
+    !task
+    || task.domain_id !== 'medautoscience'
+    || task.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || task.status !== 'succeeded'
+  ) {
+    return;
+  }
+  db.prepare(`
+    UPDATE tasks
+    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
+      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    WHERE task_id = ?
+  `).run(input.reason, input.taskDeadLetterReason, input.observedAt, input.row.task_id);
+  insertEvent(db, {
+    taskId: input.row.task_id,
+    domainId: input.row.domain_id,
+    eventType: input.eventType,
+    source: 'opl-family-runtime',
+    payload: {
+      stage_attempt_id: input.row.stage_attempt_id,
+      workflow_id: input.row.workflow_id,
+      reason: input.reason,
+      task_dead_letter_reason: input.taskDeadLetterReason,
+      authority_boundary: {
+        opl: 'provider_attempt_status_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
+  insertNotification(db, {
+    taskId: input.row.task_id,
+    severity: 'error',
+    title: 'Family runtime default executor attempt blocked',
+    body: input.reason,
+    payload: {
+      stage_attempt_id: input.row.stage_attempt_id,
+      reason: input.reason,
+      task_dead_letter_reason: input.taskDeadLetterReason,
+    },
+  });
 }
 
 export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
@@ -416,7 +504,8 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return null;
   }
   const failureReason = temporalTerminalFailureReason(observation);
-  if (!failureReason) {
+  const nonCompletionBlocker = temporalNonCompletionBlocker(observation);
+  if (!failureReason && !nonCompletionBlocker) {
     return null;
   }
   const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
@@ -429,6 +518,57 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return stageAttemptToPayload(row);
   }
   const observedAt = nowIso();
+  if (nonCompletionBlocker && row.status !== 'completed') {
+    const providerRun = {
+      ...parseStageAttemptJsonObject(row.provider_run_json),
+      provider_kind: 'temporal',
+      workflow_id: observation.workflow_id,
+      provider_status: 'blocked',
+      completed_at: observedAt,
+      last_heartbeat_at: observedAt,
+      terminal_observation: {
+        source: 'temporal_stage_attempt_query',
+        workflow_status: observation.workflow_status ?? null,
+        query_status: observation.query?.status ?? null,
+        reason: nonCompletionBlocker,
+      },
+    };
+    const activityEvents = appendActivityEventToRow(row, {
+      activity_kind: 'temporal_stage_attempt_terminal_observation',
+      activity_status: 'blocked',
+      workflow_status: observation.workflow_status ?? null,
+      query_status: observation.query?.status ?? null,
+      reason: nonCompletionBlocker,
+      authority_boundary: {
+        opl: 'provider_transport_status_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    });
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'blocked', blocked_reason = ?, provider_run_json = ?, activity_events_json = ?,
+        closeout_receipt_status = NULL, updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(
+      nonCompletionBlocker,
+      JSON.stringify(providerRun),
+      JSON.stringify(activityEvents),
+      observedAt,
+      observation.stage_attempt_id,
+    );
+    blockLinkedMasDefaultExecutorTask(db, {
+      row,
+      reason: nonCompletionBlocker,
+      observedAt,
+      taskDeadLetterReason: 'temporal_stage_attempt_not_completed',
+      eventType: 'stage_attempt_terminal_blocked_task',
+    });
+    return inspectStageAttempt(db, observation.stage_attempt_id);
+  }
+  if (!failureReason) {
+    return null;
+  }
   const providerRun = {
     ...parseStageAttemptJsonObject(row.provider_run_json),
     provider_kind: 'temporal',
@@ -467,6 +607,13 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     observedAt,
     observation.stage_attempt_id,
   );
+  blockLinkedMasDefaultExecutorTask(db, {
+    row,
+    reason: failureReason,
+    observedAt,
+    taskDeadLetterReason: 'temporal_stage_attempt_failed',
+    eventType: 'stage_attempt_terminal_failed_task',
+  });
   return inspectStageAttempt(db, observation.stage_attempt_id);
 }
 
