@@ -158,11 +158,40 @@ function frameworkOwnerHandoffNextSafeAction(packet: JsonRecord) {
   };
 }
 
+function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonRecord) {
+  return {
+    action_id: 'review_oma_production_consumption_followthrough',
+    action_kind: 'oma_production_consumption_followthrough_review',
+    step_kind: 'oma_production_consumption_followthrough',
+    evidence_closure_gate: 'oma_managed_install_app_live_owner_receipt_long_soak_gate',
+    owner: stringValue(followthrough.owner) ?? 'one-person-lab',
+    target_agent: stringValue(followthrough.target_agent) ?? 'opl-meta-agent',
+    target_repo: stringValue(followthrough.target_repo) ?? 'opl-meta-agent',
+    status: stringValue(followthrough.status),
+    structural_consumption_ready: followthrough.structural_consumption_ready === true,
+    production_consumption_ready: followthrough.production_consumption_ready === true,
+    open_gate_count: numberValue(followthrough.open_gate_count),
+    open_gate_ids: stringList(followthrough.open_gate_ids),
+    required_return_shapes: stringList(followthrough.required_return_shapes),
+    full_detail_section: 'attention_first_payload.evidence_after_contract.oma_production_consumption_followthrough',
+    authority: 'operator_attention_only',
+    can_execute_domain_action: false,
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_close_domain_ready: false,
+    can_claim_production_ready: false,
+    can_authorize_quality_or_export: false,
+    can_promote_default_agent_without_gate: false,
+  };
+}
+
 export function frameworkAttentionNextSafeActions(input: {
   blockers: JsonRecord[];
   warnings: JsonRecord[];
   ownerPayloadGroups: JsonRecord[];
   ownerHandoffPacket: JsonRecord;
+  omaProductionConsumptionFollowthrough: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   itemLimit: number;
 }) {
@@ -195,6 +224,15 @@ export function frameworkAttentionNextSafeActions(input: {
     ...(
       recordList(input.ownerHandoffPacket.owners).length > 0
         ? [frameworkOwnerHandoffNextSafeAction(input.ownerHandoffPacket)]
+        : []
+    ),
+    ...(
+      numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count) > 0
+        ? [
+            frameworkOmaProductionConsumptionNextSafeAction(
+              input.omaProductionConsumptionFollowthrough,
+            ),
+          ]
         : []
     ),
     ...input.domainDispatchEvidenceWorkorderGroupAttentionItems

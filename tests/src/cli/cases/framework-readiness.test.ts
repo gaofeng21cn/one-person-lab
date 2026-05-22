@@ -180,6 +180,43 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(ownerHandoffPacket.authority_boundary.can_close_owner_chain, false);
   assert.equal(ownerHandoffPacket.authority_boundary.can_close_domain_ready, false);
   assert.equal(ownerHandoffPacket.authority_boundary.can_claim_production_ready, false);
+  const omaProductionConsumption =
+    readiness.attention_first_payload.oma_production_consumption_followthrough;
+  assert.equal(
+    readiness.oma_production_consumption_followthrough.surface_kind,
+    omaProductionConsumption.surface_kind,
+  );
+  assert.equal(
+    readiness.oma_production_consumption_followthrough.open_gate_count,
+    omaProductionConsumption.open_gate_count,
+  );
+  assert.equal(
+    omaProductionConsumption.surface_kind,
+    'opl_app_drilldown_oma_production_consumption_followthrough_attention',
+  );
+  assert.equal(omaProductionConsumption.target_agent, 'opl-meta-agent');
+  assert.equal(omaProductionConsumption.production_consumption_ready, false);
+  assert.equal(omaProductionConsumption.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(omaProductionConsumption.authority_boundary.can_claim_production_ready, false);
+  assert.equal(
+    omaProductionConsumption.authority_boundary.can_promote_default_agent_without_gate,
+    false,
+  );
+  const metaAgentBound = omaProductionConsumption.structural_consumption_ready === true;
+  if (metaAgentBound) {
+    assert.equal(
+      omaProductionConsumption.status,
+      'structural_consumption_ready_production_consumption_followthrough_required',
+    );
+    assert.equal(omaProductionConsumption.open_gate_count, 4);
+    assert.deepEqual(omaProductionConsumption.open_gate_ids, [
+      'managed_install_update_refs',
+      'app_live_path_refs',
+      'owner_receipt_or_typed_blocker_scaleout_refs',
+      'long_soak_refs',
+    ]);
+    assert.equal(omaProductionConsumption.gate_items.length, 4);
+  }
   const firstOwnerHandoff = ownerHandoffPacket.owners[0];
   if (firstOwnerHandoff) {
     assert.equal(typeof firstOwnerHandoff.owner, 'string');
@@ -297,6 +334,31 @@ test('framework readiness summarizes default control-plane surfaces without auth
       assert.equal(ownerHandoffAction.can_close_domain_ready, false);
       assert.equal(ownerHandoffAction.can_claim_production_ready, false);
       assert.equal(ownerHandoffAction.can_authorize_quality_or_export, false);
+    }
+    const omaProductionConsumptionAction = nextSafeActions.find(
+      (action: { action_kind?: string }) =>
+        action.action_kind === 'oma_production_consumption_followthrough_review',
+    );
+    assert.equal(
+      Boolean(omaProductionConsumptionAction),
+      metaAgentBound && omaProductionConsumption.open_gate_count > 0,
+    );
+    if (omaProductionConsumptionAction) {
+      assert.equal(
+        omaProductionConsumptionAction.action_id,
+        'review_oma_production_consumption_followthrough',
+      );
+      assert.equal(
+        omaProductionConsumptionAction.evidence_closure_gate,
+        'oma_managed_install_app_live_owner_receipt_long_soak_gate',
+      );
+      assert.deepEqual(
+        omaProductionConsumptionAction.open_gate_ids,
+        omaProductionConsumption.open_gate_ids,
+      );
+      assert.equal(omaProductionConsumptionAction.can_create_owner_receipt, false);
+      assert.equal(omaProductionConsumptionAction.can_claim_production_ready, false);
+      assert.equal(omaProductionConsumptionAction.can_promote_default_agent_without_gate, false);
     }
   } else {
     assert.deepEqual(
@@ -735,6 +797,13 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.domain_dispatch_attention.attention_count > 0,
   );
   assert.equal(
+    readiness.attention_first_payload.warnings.some(
+      (warning: { warning_id: string }) =>
+        warning.warning_id === 'oma_production_consumption_followthrough',
+    ),
+    readiness.oma_production_consumption_followthrough.open_gate_count > 0,
+  );
+  assert.equal(
     readiness.domain_dispatch_attention.attention_count,
     readiness.summary.domain_dispatch_attention_count,
   );
@@ -746,6 +815,14 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(
     readiness.domain_dispatch_attention.attention_policy,
     'typed_blocker_stage_or_uncovered_missing_owner_chain_attention_only_no_domain_ready_claim',
+  );
+  assert.equal(
+    readiness.diagnostic_drilldowns.some(
+      (lens: { lens_id: string; embedded_payload_ref: string }) =>
+        lens.lens_id === 'oma_production_consumption_followthrough'
+        && lens.embedded_payload_ref === '/framework_readiness/oma_production_consumption_followthrough',
+    ),
+    true,
   );
   assert.equal(
     readiness.runtime_manager_route_support.task_kind_count,

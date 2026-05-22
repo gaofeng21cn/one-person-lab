@@ -13,6 +13,12 @@ import { buildOplAionRuntimeConsumptionContract } from '../../../../src/aionui-a
 import { buildRuntimeTraySnapshot } from '../../../../src/runtime-tray-snapshot.ts';
 import { loadFrameworkContracts } from '../../../../src/contracts.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
+import {
+  assertOmaProductionConsumptionAttention,
+  assertOmaProductionConsumptionFullDetail,
+  assertOmaProductionConsumptionNextStep,
+  assertOmaProductionConsumptionSummary,
+} from './runtime-app-operator-drilldown-summary-oma-assertions.ts';
 
 test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
@@ -186,6 +192,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.opl_meta_agent_self_evolution_cockpit_six_question_ready_count,
       metaAgentBound ? 2 : 0,
     );
+    assertOmaProductionConsumptionSummary(summaryDrilldown, metaAgentBound);
     if (metaAgentBound) assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
     assert.equal(summaryDrilldown.attention_first_payload.surface_kind, 'opl_app_drilldown_attention_first_payload');
     assert.deepEqual(summaryDrilldown.attention_first_payload.full_detail_args, ['--detail', 'full']);
@@ -347,6 +354,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_group_attention_policy,
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     );
+    assertOmaProductionConsumptionAttention(summaryDrilldown, metaAgentBound);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups.length <= 5,
       true,
@@ -400,6 +408,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.evidence_next_steps.can_create_owner_receipt,
       false,
     );
+    assertOmaProductionConsumptionNextStep(summaryDrilldown, metaAgentBound);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.some(
         (item: { step_kind: string }) => item.step_kind === 'evidence_envelope_scaleout',
@@ -738,6 +747,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         fullDrilldown.opl_meta_agent_workbench_refs.summary.evidence_after_contract_status,
         'target_owner_receipt_or_typed_blocker_refs_projected',
       );
+      assertOmaProductionConsumptionFullDetail(fullDrilldown);
       assert.equal(
         fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_owner_receipt_or_typed_blocker_target_count,
         2,

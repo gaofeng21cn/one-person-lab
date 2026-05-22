@@ -42,6 +42,13 @@ const SELF_EVOLUTION_OPERATOR_QUESTIONS = [
   'owner_receipt_or_typed_blocker',
 ] as const;
 
+const PRODUCTION_CONSUMPTION_GATE_IDS = [
+  'managed_install_update_refs',
+  'app_live_path_refs',
+  'owner_receipt_or_typed_blocker_scaleout_refs',
+  'long_soak_refs',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -166,6 +173,195 @@ function countTargetsWithOwnerReceiptOrBlocker(targets: JsonRecord[]) {
 
 function countBooleanClaims(targets: JsonRecord[], field: string) {
   return targets.filter((target) => target[field] === true).length;
+}
+
+function uniqueStringList(values: string[]) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function refsFromRecords(records: JsonRecord[], keys: string[]) {
+  return uniqueStringList(records.flatMap((entry) =>
+    keys.flatMap((key) => stringList(entry[key]))
+  ));
+}
+
+function productionConsumptionGate(input: {
+  gateId: typeof PRODUCTION_CONSUMPTION_GATE_IDS[number];
+  status: string;
+  requiredRefsAnyOf: string[];
+  observedRefs?: string[];
+  observedTargetCount?: number;
+  targetCount?: number;
+  currentContractStatus?: string | null;
+}) {
+  return {
+    gate_id: input.gateId,
+    status: input.status,
+    required_refs_any_of: input.requiredRefsAnyOf,
+    observed_ref_count: input.observedRefs?.length ?? 0,
+    observed_refs: input.observedRefs ?? [],
+    observed_target_count: input.observedTargetCount ?? null,
+    target_count: input.targetCount ?? null,
+    current_contract_status: input.currentContractStatus ?? null,
+    full_detail_section: 'opl_meta_agent_workbench_refs',
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function buildProductionConsumptionFollowthrough(payloads: {
+  status: string;
+  registration: JsonRecord;
+  appProjection: JsonRecord;
+  scaleoutEvidence: JsonRecord;
+}) {
+  if (payloads.status !== 'resolved') {
+    return {
+      surface_kind: 'opl_meta_agent_production_consumption_followthrough',
+      status: 'oma_contracts_not_bound_production_followthrough_unavailable',
+      owner: 'one-person-lab',
+      target_agent: OMA_DOMAIN_ID,
+      required_gate_ids: [...PRODUCTION_CONSUMPTION_GATE_IDS],
+      gate_items: [],
+      summary: {
+        structural_consumption_ready: false,
+        gate_count: PRODUCTION_CONSUMPTION_GATE_IDS.length,
+        open_gate_count: 0,
+        production_consumption_ready: false,
+        domain_ready_claim_count: 0,
+        quality_verdict_claim_count: 0,
+        default_promotion_claim_count: 0,
+      },
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    };
+  }
+
+  const registration = payloads.registration;
+  const appProjection = payloads.appProjection;
+  const scaleoutEvidence = payloads.scaleoutEvidence;
+  const drilldownReceipt = record(appProjection.drilldown_readiness_receipt);
+  const scaleoutCloseout = record(scaleoutEvidence.multi_target_scaleout_closeout);
+  const scaleoutTargets = recordList(scaleoutCloseout.target_agents);
+  const managedInstallUpdateRefs = refsFromRecords([
+    registration,
+    record(registration.discovery_receipt),
+    appProjection,
+    drilldownReceipt,
+    scaleoutEvidence,
+  ], [
+    'managed_install_update_refs',
+    'module_install_update_refs',
+    'install_update_receipt_refs',
+    'managed_module_update_receipt_refs',
+  ]);
+  const appLivePathRefs = refsFromRecords([
+    appProjection,
+    drilldownReceipt,
+  ], [
+    'app_live_path_refs',
+    'app_workbench_live_consumption_refs',
+    'live_rendering_refs',
+    'live_user_path_refs',
+  ]);
+  const ownerOrBlockerTargetCount = countTargetsWithOwnerReceiptOrBlocker(scaleoutTargets);
+  const ownerOrBlockerRefs = uniqueStringList(scaleoutTargets.flatMap((target) => [
+    ...stringList(target.target_agent_owner_receipt_refs),
+    ...stringList(target.typed_blocker_refs),
+  ]));
+  const longSoakRefs = refsFromRecords([
+    scaleoutEvidence,
+    scaleoutCloseout,
+    ...scaleoutTargets,
+  ], [
+    'long_soak_refs',
+    'operator_long_soak_refs',
+    'production_soak_refs',
+    'app_live_soak_refs',
+    'agent_lab_rerun_long_soak_refs',
+  ]);
+  const liveRenderingStatus = optionalString(drilldownReceipt.live_rendering_status);
+  const gates = [
+    productionConsumptionGate({
+      gateId: 'managed_install_update_refs',
+      status: managedInstallUpdateRefs.length > 0
+        ? 'refs_observed'
+        : 'missing_managed_install_update_refs',
+      requiredRefsAnyOf: [
+        'managed_install_update_refs',
+        'module_install_update_receipt_refs',
+        'managed_module_update_receipt_refs',
+      ],
+      observedRefs: managedInstallUpdateRefs,
+    }),
+    productionConsumptionGate({
+      gateId: 'app_live_path_refs',
+      status: appLivePathRefs.length > 0 && liveRenderingStatus !== 'not_claimed_by_contract'
+        ? 'refs_observed'
+        : 'missing_app_live_path_refs',
+      requiredRefsAnyOf: [
+        'app_live_path_refs',
+        'app_workbench_live_consumption_refs',
+        'live_rendering_refs',
+        'live_user_path_refs',
+      ],
+      observedRefs: appLivePathRefs,
+      currentContractStatus: liveRenderingStatus,
+    }),
+    productionConsumptionGate({
+      gateId: 'owner_receipt_or_typed_blocker_scaleout_refs',
+      status: scaleoutTargets.length > 0 && ownerOrBlockerTargetCount === scaleoutTargets.length
+        ? 'seed_refs_projected_scaleout_followthrough_required'
+        : 'missing_owner_receipt_or_typed_blocker_scaleout_refs',
+      requiredRefsAnyOf: [
+        'target_agent_owner_receipt_refs',
+        'typed_blocker_refs',
+        'target_patch_rerun_receipt_refs',
+        'agent_lab_re_evaluation_refs',
+      ],
+      observedRefs: ownerOrBlockerRefs,
+      observedTargetCount: ownerOrBlockerTargetCount,
+      targetCount: scaleoutTargets.length,
+    }),
+    productionConsumptionGate({
+      gateId: 'long_soak_refs',
+      status: longSoakRefs.length > 0 ? 'refs_observed' : 'missing_long_soak_refs',
+      requiredRefsAnyOf: [
+        'long_soak_refs',
+        'operator_long_soak_refs',
+        'production_soak_refs',
+        'agent_lab_rerun_long_soak_refs',
+      ],
+      observedRefs: longSoakRefs,
+    }),
+  ];
+  const openGates = gates.filter((gate) => gate.status !== 'refs_observed');
+
+  return {
+    surface_kind: 'opl_meta_agent_production_consumption_followthrough',
+    status: openGates.length > 0
+      ? 'structural_consumption_ready_production_consumption_followthrough_required'
+      : 'production_consumption_refs_projected',
+    owner: 'one-person-lab',
+    target_agent: OMA_DOMAIN_ID,
+    target_repo: OMA_PROJECT,
+    required_gate_ids: [...PRODUCTION_CONSUMPTION_GATE_IDS],
+    gate_items: gates,
+    summary: {
+      structural_consumption_ready: true,
+      gate_count: gates.length,
+      open_gate_count: openGates.length,
+      open_gate_ids: openGates.map((gate) => gate.gate_id),
+      managed_install_update_ref_count: managedInstallUpdateRefs.length,
+      app_live_path_ref_count: appLivePathRefs.length,
+      owner_receipt_or_typed_blocker_seed_target_count: ownerOrBlockerTargetCount,
+      scaleout_target_count: scaleoutTargets.length,
+      long_soak_ref_count: longSoakRefs.length,
+      production_consumption_ready: openGates.length === 0,
+      domain_ready_claim_count: 0,
+      quality_verdict_claim_count: 0,
+      default_promotion_claim_count: 0,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
 }
 
 function evidenceAfterContractStatus(targets: JsonRecord[]) {
@@ -492,10 +688,18 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
         self_evolution_cockpit_six_question_ready_count: 0,
         discovery_receipt_status: null,
         app_drilldown_receipt_status: null,
+        production_consumption_followthrough_open_gate_count: 0,
+        production_consumption_ready: false,
         claims_domain_ready: false,
         claims_quality_verdict: false,
         claims_default_promotion: false,
       },
+      production_consumption_followthrough: buildProductionConsumptionFollowthrough({
+        status: 'not_bound',
+        registration: {},
+        appProjection: {},
+        scaleoutEvidence: {},
+      }),
       authority_boundary: refsOnlyAuthorityBoundary(),
       source_refs: [],
     };
@@ -517,6 +721,13 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
   const patchLoopTargets = recordList(patchLoopCloseout.targets);
   const selfEvolutionCockpit = record(omaSections.self_evolution_cockpit);
   const selfEvolutionCockpitSummary = record(selfEvolutionCockpit.summary);
+  const productionConsumptionFollowthrough = buildProductionConsumptionFollowthrough({
+    status,
+    registration,
+    appProjection,
+    scaleoutEvidence,
+  });
+  const productionConsumptionSummary = record(productionConsumptionFollowthrough.summary);
 
   return {
     surface_kind: 'opl_meta_agent_registry_extension',
@@ -529,6 +740,7 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
     app_workbench_projection: status === 'resolved' ? appProjection : null,
     real_target_agent_scaleout_evidence: status === 'resolved' ? scaleoutEvidence : null,
     oma_sections: omaSections,
+    production_consumption_followthrough: productionConsumptionFollowthrough,
     summary: {
       consumed_contract_count: files.length,
       resolved_contract_count: resolvedCount,
@@ -565,6 +777,12 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
           ).length,
       discovery_receipt_status: optionalString(record(registration.discovery_receipt).status),
       app_drilldown_receipt_status: optionalString(record(appProjection.drilldown_readiness_receipt).status),
+      production_consumption_followthrough_open_gate_count:
+        typeof productionConsumptionSummary.open_gate_count === 'number'
+          ? productionConsumptionSummary.open_gate_count
+          : 0,
+      production_consumption_ready:
+        productionConsumptionSummary.production_consumption_ready === true,
       claims_domain_ready: false,
       claims_quality_verdict: false,
       claims_default_promotion: false,

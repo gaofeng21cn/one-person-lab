@@ -6,6 +6,9 @@ import {
 } from '../domain-dispatch-evidence-workorder-packet.ts';
 import { canonicalOwnerId } from '../evidence-envelope.ts';
 import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
+import {
+  buildOmaProductionConsumptionFollowthroughAttention,
+} from './oma-production-consumption.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -447,12 +450,18 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   const summary = record(drilldown.summary);
   const ownerPayloadGroups = ownerPayloadAttentionGroups(drilldown);
   const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(drilldown);
+  const omaProductionConsumption =
+    buildOmaProductionConsumptionFollowthroughAttention(drilldown);
   const evidenceEnvelopeAttentionCount = (
     numberValue(summary.evidence_envelope_open_count)
     + numberValue(summary.evidence_envelope_blocked_count)
   );
   const domainDispatchAttentionCount = numberValue(summary.domain_dispatch_attention_count);
-  const totalAttentionCount = evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
+  const omaProductionConsumptionAttentionCount =
+    numberValue(omaProductionConsumption.open_gate_count);
+  const totalAttentionCount = evidenceEnvelopeAttentionCount
+    + domainDispatchAttentionCount
+    + omaProductionConsumptionAttentionCount;
   const routeSupportTaskKindCount =
     numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
   const routeSupportAftercareCount =
@@ -481,6 +490,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_groups: ownerPayloadGroups.items,
     owner_handoff_packet: ownerHandoffPacket,
+    oma_production_consumption_followthrough: omaProductionConsumption,
+    oma_production_consumption_followthrough_open_gate_count:
+      omaProductionConsumptionAttentionCount,
     domain_dispatch_attention_count: domainDispatchAttentionCount,
     domain_dispatch_typed_blocker_stage_count:
       numberValue(summary.domain_dispatch_attention_typed_blocker_stage_count),
@@ -511,6 +523,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'domain_dispatch_evidence',
       'stage_production_evidence',
       'runtime_manager_route_support',
+      'opl_meta_agent_workbench_refs',
     ],
     authority_boundary: {
       ...authorityBoundary(drilldown),
@@ -651,6 +664,7 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   const ownerPayloadGroups = recordList(attention.owner_payload_groups);
   const missingEvidence = missingEvidenceItems(drilldown);
   const advisory = advisoryItems(drilldown);
+  const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
   const dispatchOwner = topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
     ?? 'domain_repository_or_app_live_operator';
   const nextOwner = topCanonicalEvidenceOwner(
@@ -659,7 +673,39 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     ownerPayloadGroups,
   );
   const steps: JsonRecord[] = [];
-  if (numberValue(attention.domain_dispatch_attention_count) > 0) {
+  if (numberValue(omaProductionConsumption.open_gate_count) > 0) {
+    steps.push({
+      step_kind: 'oma_production_consumption_followthrough',
+      owner: stringValue(omaProductionConsumption.owner) ?? 'one-person-lab',
+      target_agent: stringValue(omaProductionConsumption.target_agent) ?? 'opl-meta-agent',
+      target_repo: stringValue(omaProductionConsumption.target_repo) ?? 'opl-meta-agent',
+      status: stringValue(omaProductionConsumption.status),
+      structural_consumption_ready:
+        omaProductionConsumption.structural_consumption_ready === true,
+      production_consumption_ready:
+        omaProductionConsumption.production_consumption_ready === true,
+      open_gate_count: numberValue(omaProductionConsumption.open_gate_count),
+      open_gate_ids: stringList(omaProductionConsumption.open_gate_ids),
+      required_refs_by_gate: recordList(omaProductionConsumption.gate_items).map((gate) => ({
+        gate_id: stringValue(gate.gate_id),
+        status: stringValue(gate.status),
+        required_refs_any_of: stringList(gate.required_refs_any_of),
+      })),
+      required_return_shapes: stringList(omaProductionConsumption.required_return_shapes),
+      full_detail_section: 'opl_meta_agent_workbench_refs',
+      can_execute_domain_action: false,
+      can_create_owner_receipt: false,
+      can_close_domain_ready: false,
+      can_claim_production_ready: false,
+      can_authorize_quality_or_export: false,
+      can_promote_default_agent_without_gate: false,
+    });
+  }
+  if (
+    numberValue(attention.domain_dispatch_attention_count) > 0
+    && domainDispatchGroups.length === 0
+    && domainDispatchWorkorders.length === 0
+  ) {
     steps.push({
       step_kind: 'domain_dispatch_owner_chain_scaleout',
       owner: dispatchOwner,

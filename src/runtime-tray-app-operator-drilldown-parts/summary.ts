@@ -76,6 +76,9 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
   const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
+  const oplMetaAgentProductionConsumptionSummary = record(
+    record(input.oplMetaAgentRegistry.production_consumption_followthrough).summary,
+  );
   const standardAgentTemplateSummary = record(input.standardAgentTemplateConsumption.summary);
   const evidenceEnvelopeSummary = record(input.evidenceEnvelope.summary);
   const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
@@ -352,6 +355,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       numberValue(oplMetaAgentSummary.self_evolution_cockpit_target_count),
     opl_meta_agent_self_evolution_cockpit_six_question_ready_count:
       numberValue(oplMetaAgentSummary.self_evolution_cockpit_six_question_ready_count),
+    opl_meta_agent_production_consumption_followthrough_open_gate_count:
+      numberValue(oplMetaAgentSummary.production_consumption_followthrough_open_gate_count),
+    opl_meta_agent_production_consumption_gate_count:
+      numberValue(oplMetaAgentProductionConsumptionSummary.gate_count),
+    opl_meta_agent_production_consumption_ready:
+      oplMetaAgentSummary.production_consumption_ready === true,
     opl_meta_agent_claims_domain_ready: oplMetaAgentSummary.claims_domain_ready === true,
     opl_meta_agent_claims_quality_verdict: oplMetaAgentSummary.claims_quality_verdict === true,
     opl_meta_agent_claims_default_promotion: oplMetaAgentSummary.claims_default_promotion === true,
