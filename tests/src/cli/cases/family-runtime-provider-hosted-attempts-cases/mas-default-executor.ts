@@ -9,6 +9,186 @@ import {
   runCliFailure,
   test,
 } from './helpers.ts';
+import { DatabaseSync } from 'node:sqlite';
+
+import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
+
+function createQueueTables(db: DatabaseSync) {
+  db.exec(`
+    CREATE TABLE tasks (
+      task_id TEXT PRIMARY KEY,
+      domain_id TEXT NOT NULL,
+      task_kind TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      dedupe_key TEXT UNIQUE,
+      priority INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL,
+      max_attempts INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      requires_approval INTEGER NOT NULL,
+      approved_at TEXT,
+      lease_owner TEXT,
+      lease_expires_at TEXT,
+      last_error TEXT,
+      dead_letter_reason TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE events (
+      event_id TEXT PRIMARY KEY,
+      task_id TEXT,
+      domain_id TEXT,
+      event_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE notifications (
+      notification_id TEXT PRIMARY KEY,
+      task_id TEXT,
+      severity TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      channel TEXT NOT NULL,
+      status TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+  `);
+}
+
+function insertSucceededTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    domainId: string;
+    taskKind: string;
+    payload: Record<string, unknown>;
+    dedupeKey: string;
+  },
+) {
+  const createdAt = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+      attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+      lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    input.domainId,
+    input.taskKind,
+    JSON.stringify(input.payload),
+    input.dedupeKey,
+    0,
+    'succeeded',
+    0,
+    3,
+    'test',
+    0,
+    null,
+    null,
+    null,
+    null,
+    null,
+    createdAt,
+    createdAt,
+  );
+}
+
+function defaultExecutorPayload(sourceFingerprint: string) {
+  return {
+    profile: '/tmp/dm-cvd.profile.toml',
+    study_id: '002-dm-china-us-mortality-attribution',
+    quest_id: '002-dm-china-us-mortality-attribution',
+    action_type: 'run_quality_repair_batch',
+    dispatch_authority: 'quality_repair_batch_writer_handoff',
+    next_executable_owner: 'write',
+    executor_kind: 'codex_cli_default',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+    authority_boundary: 'mas_default_executor_dispatch_request_only',
+    workspace_root: '/tmp/explicit-workspace-root',
+    source_fingerprint: sourceFingerprint,
+  };
+}
+
+test('family-runtime does not auto-requeue succeeded MAS default executor dispatch from domain export updates', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:auto-requeue-guard';
+    const basePayload = defaultExecutorPayload('source-before');
+    insertSucceededTask(db, {
+      taskId: 'task-mas-default-succeeded-provider-admission',
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: basePayload,
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
+        ...basePayload,
+        source_fingerprint: 'source-after',
+        owner_route_work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_manuscript',
+      },
+      dedupeKey,
+      source: 'test-domain-export',
+    });
+    const task = db.prepare('SELECT status, payload_json FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-succeeded-provider-admission',
+    ) as { status: string; payload_json: string };
+    const requeueEvents = db.prepare(
+      "SELECT COUNT(*) AS count FROM events WHERE task_id = ? AND event_type = 'task_requeued_from_domain_export_update'",
+    ).get('task-mas-default-succeeded-provider-admission') as { count: number };
+
+    assert.equal(result.accepted, false);
+    assert.equal(result.idempotent_noop, true);
+    assert.equal(result.task.status, 'succeeded');
+    assert.equal(task.status, 'succeeded');
+    assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'source-before');
+    assert.equal(requeueEvents.count, 0);
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime still requeues generic succeeded tasks when domain export changes', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const dedupeKey = 'mag:generic:succeeded:export-update';
+    insertSucceededTask(db, {
+      taskId: 'task-generic-succeeded-export-update',
+      domainId: 'medautogrant',
+      taskKind: 'user-loop/wakeup',
+      payload: { workspace_root: '/tmp/mag', source_fingerprint: 'source-before' },
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautogrant',
+      taskKind: 'user-loop/wakeup',
+      payload: { workspace_root: '/tmp/mag', source_fingerprint: 'source-after' },
+      dedupeKey,
+      source: 'test-domain-export',
+    });
+    const task = db.prepare('SELECT status, payload_json FROM tasks WHERE task_id = ?').get(
+      'task-generic-succeeded-export-update',
+    ) as { status: string; payload_json: string };
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(task.status, 'queued');
+    assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'source-after');
+  } finally {
+    db.close();
+  }
+});
 
 test('family-runtime blocks MAS default executor dispatch when Temporal cannot start Codex writer attempt', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-'));

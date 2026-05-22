@@ -16,9 +16,31 @@ import {
 
 const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 
-function sourceFingerprint(payload: Record<string, unknown>) {
-  const value = payload.source_fingerprint;
+function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function sourceFingerprint(payload: Record<string, unknown>) {
+  return optionalString(payload.source_fingerprint);
+}
+
+function isMasDefaultExecutorDispatch(
+  row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
+  payload: Record<string, unknown>,
+) {
+  return row.domain_id === 'medautoscience'
+    && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    && optionalString(payload.dispatch_ref) !== null
+    && optionalString(payload.next_executable_owner) === 'write'
+    && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
+}
+
+function isMasDefaultExecutorDispatchInput(
+  domainId: FamilyRuntimeTaskRow['domain_id'],
+  taskKind: string,
+  payload: Record<string, unknown>,
+) {
+  return isMasDefaultExecutorDispatch({ domain_id: domainId, task_kind: taskKind }, payload);
 }
 
 function masDefaultExecutorBlockedRedriveDecision(
@@ -68,7 +90,11 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         || existing.task_kind !== taskKind
         || existing.domain_id !== input.domainId;
       const existingPayload = JSON.parse(existing.payload_json) as Record<string, unknown>;
-      if (existing.status === 'succeeded' && exportedTaskChanged) {
+      const masDefaultExecutorSucceededAdmissionRefresh = existing.status === 'succeeded'
+        && exportedTaskChanged
+        && isMasDefaultExecutorDispatch(existing, existingPayload)
+        && isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
+      if (existing.status === 'succeeded' && exportedTaskChanged && !masDefaultExecutorSucceededAdmissionRefresh) {
         const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
         db.prepare(`
           UPDATE tasks
