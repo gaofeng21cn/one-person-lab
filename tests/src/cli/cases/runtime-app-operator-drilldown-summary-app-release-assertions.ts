@@ -119,6 +119,56 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
   assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_create_owner_receipt, false);
   assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_generate_typed_blocker, false);
   assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_claim_release_ready, false);
+  assert.deepEqual(
+    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.start,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'start',
+      '--cohort',
+      '<version>',
+      '--minimum-duration-minutes',
+      '<n>',
+      '--evidence-dir',
+      '<path>',
+    ],
+  );
+  assert.deepEqual(
+    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.finish,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'finish',
+      '--workorder-file',
+      '<path>',
+    ],
+  );
+  assert.deepEqual(
+    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.record_payload,
+    [
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload-file',
+      '<payload.json>',
+    ],
+  );
+  assert.deepEqual(
+    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.verify_receipt,
+    [
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      '<receipt-ref>',
+    ],
+  );
+  assert.equal(
+    nextSafeAction.payload_workorder.long_operator_observation_workorder_policy,
+    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+  );
   assert.equal(
     nextSafeAction.payload_workorder.authority_boundary.can_close_app_release_user_path,
     false,
@@ -178,6 +228,25 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
   assert.equal(
     appUserPathStep.payload_workorder.authority_boundary.can_claim_production_ready,
     false,
+  );
+  assert.deepEqual(
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.start,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'start',
+      '--cohort',
+      '<version>',
+      '--minimum-duration-minutes',
+      '<n>',
+      '--evidence-dir',
+      '<path>',
+    ],
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_policy,
+    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
   );
   assert.equal(
     appUserPathStep.payload_template_policy,

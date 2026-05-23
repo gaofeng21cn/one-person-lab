@@ -90,6 +90,35 @@ export function assertFrameworkAppReleaseUserPathAction(
     appUserPathAction.payload_workorder.authority_boundary.can_claim_release_ready,
     false,
   );
+  assert.deepEqual(
+    appUserPathAction.payload_workorder.long_operator_observation_workorder_commands.start,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'start',
+      '--cohort',
+      '<version>',
+      '--minimum-duration-minutes',
+      '<n>',
+      '--evidence-dir',
+      '<path>',
+    ],
+  );
+  assert.deepEqual(
+    appUserPathAction.payload_workorder.long_operator_observation_workorder_commands.record_payload,
+    [
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload-file',
+      '<payload.json>',
+    ],
+  );
+  assert.equal(
+    appUserPathAction.payload_workorder.long_operator_observation_workorder_policy,
+    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+  );
   assert.equal(appUserPathAction.can_write_domain_truth, false);
   assert.equal(appUserPathAction.can_create_owner_receipt, false);
   assert.equal(appUserPathAction.can_claim_production_ready, false);
