@@ -209,7 +209,8 @@ Objective:
 
 Write scope:
 
-- `one-person-lab` 的 App release / user path evidence、Developer Mode non-owner fork/PR acceptance、framework readiness / App drilldown refs-only evidence surfaces。
+- `one-person-lab` 的 App release / user path evidence、OMA production-consumption follow-through、Developer Mode non-owner fork/PR acceptance、framework readiness / App drilldown refs-only evidence surfaces。
+- 当前优先从 fresh `framework readiness` open gate 倒推：App release / user path 若只剩 `long_operator_evidence_refs`，先推进同 cohort long-operator observation 的 start / event / finish / record / verify 闭环；OMA production-consumption 若只剩 `long_soak_refs`，先推进 OMA long-soak observation 的 start / event / finish / record / verify 闭环。verified typed blocker、operator evidence ref、event-only log、observation workorder 或 selected cohort 不能替代真实 verified evidence refs。
 - MAS/MAG/RCA 各自 repo-owned active truth plan 中声明的 production caller、owner receipt、typed blocker、physical thinning、naming hygiene 和 long-soak evidence tail。
 - 必要时同步 `docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`contracts/**` 与相关 tests。
 
@@ -224,6 +225,7 @@ Live truth inputs:
 - `TASTE.md`、`AGENTS.md`、核心五件套、本文、`docs/active/production-framework-closure-gap-matrix.md`、`docs/docs_portfolio_consolidation.md`。
 - 各 repo 的 active truth owner 与本轮 OPL Doc Governance 刷新后的 committed state：MAS/MAG/RCA/OMA/OPL Doc Governance skill 仓的 main checkout 与 owner docs。
 - `opl framework readiness --family-defaults --json`、`opl runtime app-operator-drilldown --json`、`opl runtime app-operator-drilldown --detail full --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`。
+- `opl runtime app-release-evidence list --json` 与 `opl runtime oma-production-consumption list --json`，用于区分 verified success refs、verified typed blocker、pending verify receipt 和 operator-only evidence，避免把 ledger roundtrip 写成 release / production closure。
 - MAS/MAG/RCA/OMA repo-owned active truth plans、contracts、tests 与 owner receipt / typed blocker refs。
 
 Verification commands:

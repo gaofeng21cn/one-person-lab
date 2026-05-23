@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `ai_first_executor_first_long_horizon_research_prompt_and_audit_entry`
 State: `support_reference`
 Machine boundary: 本文是人读调研提示词、长期优化目标和审计入口。机器真相继续归 `contracts/`、源码、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、真实 workspace / App evidence 与各 domain owner receipt。
-Date: `2026-05-21`
+Date: `2026-05-24`
 
 ## 当前结论
 
@@ -22,7 +22,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 2. 保持 framework surface 节制：新增 surface 默认先作为 reference、diagnostic lens、advisory ref 或 App detail drilldown；只有服务 launch safety、authority boundary、evidence / audit / replay / route-back，或被 App/runtime 反复消费时，才进入默认入口。
 3. 统一 stage pack conformance：每个标准 OPL Agent stage 都应同构暴露 prompt/tools/knowledge/evaluation、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy 和 route-back receipt。
 4. 统一 privatization audit envelope：MAS/RCA/MAG/OMA 的私有功能审计最终应投影到同一组 bucket：`standard_pack_inventory`、`authority_function_inventory`、`private_platform_residue_inventory`、`bridge_exit_gate`、`evidence_gap`；repo 可以有扩展字段，但 OPL/App 默认读法必须稳定。
-5. 推进真实 evidence，而不是继续堆合同：MAG/RCA/OMA 的主缺口是 live owner-chain、App/default caller、target patch / rerun / owner receipt 样本和 long soak；MAS 的主缺口是 physical thinning tail、真实 paper-line receipt parity 与 no-active-caller / tombstone proof。
+5. 推进真实 evidence，而不是继续堆合同：App release 当前优先尾项是同 cohort verified `long_operator_evidence_refs`；OMA 当前优先尾项是 verified 真实 `long_soak_refs`，已验证的 typed blocker 只能说明 long-soak 仍被阻塞，不能关闭 gate；MAG/RCA 的主缺口是 live owner-chain、App/default caller、workspace / artifact / memory receipt scaleout 和 controlled soak；MAS 的主缺口是 physical thinning tail、真实 paper-line receipt parity 与 no-active-caller / tombstone proof。
 
 ## 调研提示词
 
@@ -73,9 +73,11 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 | MAS | ownership 方向正确，但仍是最大 residual 风险源 | 继续写成 `physical thinning tail`：runtime transport、sidecar、SQLite/lifecycle 等只可作为 domain bridge、receipt/typed-blocker、refs-only adapter 或 diagnostic；验收必须是 no-active-caller、OPL parity、domain receipt parity、tests 和 tombstone refs |
 | MAG | 结构边界较干净 | 主要缺口归测试/证据差距：live OPL-hosted grant-stage receipt、App/production caller receipt、long soak、workspace receipt scaleout |
 | RCA | 旧 managed runtime 退役较彻底 | 防止 artifact-heavy helper、product sidecar、native helper、artifact lifecycle 被复制成通用 runtime scaffold；RCA 只提供 visual pack、authority function 和 refs-only adapter |
-| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs 已能进入 OPL registry / App drilldown，默认 summary 和 full detail 都可审计 owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters | 继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter 都不能授权目标 domain ready 或默认 promotion |
+| OMA | 语义深度已够，不再是空壳；MAS/MAG real-target scaleout refs 已能进入 OPL registry / App drilldown，默认 summary 和 full detail 都可审计 owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters；production-consumption follow-through 已收敛到 managed install/update、App live path、owner receipt / typed blocker scaleout 和 long-soak 四类 gate，当前只剩真实 `long_soak_refs` 未观察。 | 优先补 OMA long-soak verified evidence；typed blocker / operator evidence refs 只能作为阻塞或审计信号。继续增加真实 target patch/rerun/owner receipt 样本；防止 scripts 增长成 meta-runtime 或默认 promotion authority；任何 OMA counter 都不能授权目标 domain ready、production ready 或默认 promotion。 |
 
 ## 下一轮可执行方向
+
+当前优先级先从 live gate 倒推，而不是继续增加相似 conformance surface：`opl framework readiness --family-defaults --json` 若仍显示 App release open gate 为 `long_operator_evidence_refs`、OMA open gate 为 `long_soak_refs`，下一轮应先推进这两个 evidence-after-contract 尾项；只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
 
 1. `standard_stage_pack_v2_conformance`
    统一 `stage_control_plane` 的必备字段和读法：prompt refs、tool/skill refs、knowledge refs、evaluation / quality gate refs、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy、route-back receipt。
@@ -87,7 +89,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
    统一 MAS/RCA/MAG/OMA 的 functional privatization audit 顶层 envelope，减少 App/operator drilldown 的 repo-specific adapter。
 
 4. `evidence_after_contract`
-   在 conformance 收敛后，优先投入真实 evidence：MAS paper-line parity 和 physical thinning，MAG/RCA controlled hosted stage soak，OMA real target patch/rerun/owner receipt scaleout，App release / default caller / long operator evidence。OMA 已把 real-target scaleout 的 refs-only owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 投到 App 默认 summary 和 full detail；后续缺口是更多真实 target patch/rerun 样本和 live operator evidence。
+   在 conformance 收敛后，优先投入真实 evidence：App release 同 cohort long-operator observation、OMA production-consumption long-soak observation、MAS paper-line parity 和 physical thinning、MAG/RCA controlled hosted stage soak，以及 MAG/RCA/OMA owner receipt / typed blocker scaleout。OMA 已把 real-target scaleout 的 refs-only owner receipt / typed blocker、Agent Lab result、no-forbidden-write 与 cleanup counters 投到 App 默认 summary 和 full detail；当前 OPL 已能 verified 消费 OMA production-consumption typed blocker，但 verified typed blocker 只保持 `long_soak_refs` gate open，不替代真实 long-soak evidence。
 
 ## 不能写成
 
