@@ -45,6 +45,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
 const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   ['front', 'door'].join(''),
   ['front', 'desk'].join(''),
+  'agent-lab',
   'ask',
   'chat',
   'framework',
@@ -53,6 +54,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'session',
   'shell',
   'web',
+  'work-order',
 ]);
 
 function cloneCommandSpec(

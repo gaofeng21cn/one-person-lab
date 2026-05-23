@@ -1,7 +1,4 @@
-import {
-  executeAgentLabDeveloperWorkOrder,
-  executeOplDeveloperWorkOrder,
-} from '../../agent-lab-work-order-execution.ts';
+import { executeOplDeveloperWorkOrder } from '../../agent-lab-work-order-execution.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
 
@@ -110,15 +107,6 @@ async function buildWorkOrderExecutePayload(args: string[], spec: CommandSpec) {
   return await executeOplDeveloperWorkOrder(parseWorkOrderExecuteArgs(args, spec, 'work-order execute'));
 }
 
-async function buildAgentLabExecuteWorkOrderPayload(args: string[], spec: CommandSpec) {
-  return await executeAgentLabDeveloperWorkOrder(parseWorkOrderExecuteArgs(
-    args,
-    spec,
-    'agent-lab execute-work-order',
-  ));
-}
-
 export {
-  buildAgentLabExecuteWorkOrderPayload,
   buildWorkOrderExecutePayload,
 };

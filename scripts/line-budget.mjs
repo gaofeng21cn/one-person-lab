@@ -14,7 +14,6 @@ const BASELINE = new Map([
   ['src/family-stage-control-plane.ts', 1018],
   ['src/runtime-tray-app-operator-drilldown.ts', 1352],
   ['tests/src/agent-lab.test.ts', 1135],
-  ['tests/src/cli/cases/agent-lab.test.ts', 1064],
 ]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);

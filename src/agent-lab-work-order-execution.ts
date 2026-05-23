@@ -31,12 +31,11 @@ export type AgentLabWorkOrderExecutionOptions = {
 };
 
 type WorkOrderExecutionPresentation = {
-  envelopeKey: 'work_order_execution' | 'agent_lab_work_order_execution';
+  envelopeKey: 'work_order_execution';
   resultSurfaceId: string;
   receiptSurfaceKind: string;
   receiptVersion: string;
-  commandSurface: 'work-order execute' | 'agent-lab execute-work-order';
-  agentLabAlias: boolean;
+  commandSurface: 'work-order execute';
 };
 
 type CommandResult = {
@@ -59,15 +58,6 @@ const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   receiptSurfaceKind: 'opl_work_order_codex_execution_receipt',
   receiptVersion: 'opl.work-order-execution.v1',
   commandSurface: 'work-order execute',
-  agentLabAlias: false,
-};
-const AGENT_LAB_WORK_ORDER_ALIAS_PRESENTATION: WorkOrderExecutionPresentation = {
-  envelopeKey: 'agent_lab_work_order_execution',
-  resultSurfaceId: 'opl_agent_lab_work_order_execution_alias',
-  receiptSurfaceKind: 'opl_agent_lab_codex_work_order_execution_receipt',
-  receiptVersion: 'opl-agent-lab.work-order-execution.v1',
-  commandSurface: 'agent-lab execute-work-order',
-  agentLabAlias: true,
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -436,8 +426,8 @@ function runTargetOwnerCloseoutHook(input: {
     input: `${JSON.stringify(input.receiptDraft, null, 2)}\n`,
     env: {
       ...process.env,
-      OPL_AGENT_LAB_OWNER_CLOSEOUT: '1',
-      OPL_AGENT_LAB_WORK_ORDER_ID: input.workOrderId,
+      OPL_WORK_ORDER_OWNER_CLOSEOUT: '1',
+      OPL_WORK_ORDER_ID: input.workOrderId,
     },
   });
   const commandResult = buildCommandResult(command.join(' '), input.targetAgentDir, result);
@@ -493,7 +483,7 @@ function normalizeOutputDir(outputDir: string | null | undefined, workOrderId: s
   if (outputDir) {
     return path.resolve(outputDir);
   }
-  return fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', `opl-agent-lab-work-order-${shortId(workOrderId)}-`));
+  return fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', `opl-work-order-${shortId(workOrderId)}-`));
 }
 
 function cleanupTargetWorktree(input: {
@@ -521,10 +511,10 @@ function throwWithFailureCleanup(
   cleanupResults: CommandResult[],
   outputDir: string,
 ): never {
-  const cleanupReceiptPath = path.join(outputDir, 'agent-lab-work-order-failure-cleanup.json');
+  const cleanupReceiptPath = path.join(outputDir, 'work-order-failure-cleanup.json');
   writeJson(cleanupReceiptPath, {
-    surface_kind: 'opl_agent_lab_work_order_failure_cleanup_receipt',
-    version: 'opl-agent-lab.work-order-execution.failure-cleanup.v1',
+    surface_kind: 'opl_work_order_failure_cleanup_receipt',
+    version: 'opl.work-order-execution.failure-cleanup.v1',
     cleanup_results: cleanupResults,
     cleanup_all_passed: cleanupResults.every((result) => result.exit_code === 0),
   });
@@ -569,8 +559,8 @@ async function executeDeveloperWorkOrder(
   const targetDirtyFilesBeforeOpen = dirtyFiles(targetAgentDir);
   const baseBranch = gitRawOutput(['branch', '--show-current'], targetAgentDir).trim() || 'HEAD';
   const baseHead = gitRawOutput(['rev-parse', 'HEAD'], targetAgentDir).trim();
-  const branchName = `codex/agent-lab-work-order-${shortId(workOrderId)}`;
-  const worktreePath = path.join(targetAgentDir, '.worktrees', `agent-lab-work-order-${shortId(workOrderId)}`);
+  const branchName = `codex/work-order-${shortId(workOrderId)}`;
+  const worktreePath = path.join(targetAgentDir, '.worktrees', `work-order-${shortId(workOrderId)}`);
   if (fs.existsSync(worktreePath)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -647,8 +637,8 @@ async function executeDeveloperWorkOrder(
     if (targetDirtyOverlap.length > 0) {
       const typedBlockerPath = path.join(outputDir, 'typed-blocker.json');
       writeJson(typedBlockerPath, {
-        surface_kind: 'opl_agent_lab_work_order_typed_blocker',
-        version: 'opl-agent-lab.work-order-execution.typed-blocker.v1',
+        surface_kind: 'opl_work_order_typed_blocker',
+        version: 'opl.work-order-execution.typed-blocker.v1',
         blocker_kind: 'target_dirty_checkout_overlap',
         status: 'blocked_before_absorption',
         work_order_id: workOrderId,
@@ -673,7 +663,7 @@ async function executeDeveloperWorkOrder(
     }
 
     runCommand('git', ['add', '-A'], worktreePath);
-    runCommand('git', ['commit', '-m', `agent-lab: execute ${workOrderId}`], worktreePath);
+    runCommand('git', ['commit', '-m', `work-order: execute ${workOrderId}`], worktreePath);
     const patchCommit = gitRawOutput(['rev-parse', 'HEAD'], worktreePath).trim();
     runCommand('git', ['merge', '--ff-only', branchName], targetAgentDir);
     const absorbedHead = gitRawOutput(['rev-parse', 'HEAD'], targetAgentDir).trim();
@@ -689,11 +679,10 @@ async function executeDeveloperWorkOrder(
       status: 'executed_absorbed_and_cleaned',
       primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
       command_surface: presentation.commandSurface,
-      agent_lab_command_alias: presentation.agentLabAlias,
       work_order_id: workOrderId,
       target_agent: targetAgent,
       source_work_order_path: workOrderPath,
-      agent_lab_stage_execution_bundle_ref: `agent-lab-stage-execution-bundle:${targetAgent.domain_id ?? 'target-agent'}/${workOrderId}`,
+      work_order_stage_execution_bundle_ref: `work-order-stage-execution-bundle:${targetAgent.domain_id ?? 'target-agent'}/${workOrderId}`,
       executor: {
         executor_kind: 'codex_cli',
         executor_lease_ref: optionalString(workOrder.executor_lease_ref),
@@ -769,7 +758,7 @@ async function executeDeveloperWorkOrder(
         can_mutate_domain_artifact: false,
       },
     };
-    const receiptPath = path.join(outputDir, 'agent-lab-work-order-execution-receipt.json');
+    const receiptPath = path.join(outputDir, 'work-order-execution-receipt.json');
     const ownerCloseout = runTargetOwnerCloseoutHook({
       workOrder,
       targetAgent,
@@ -790,7 +779,6 @@ async function executeDeveloperWorkOrder(
       surface_id: presentation.resultSurfaceId,
       primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
       command_surface: presentation.commandSurface,
-      agent_lab_alias: presentation.agentLabAlias,
       status: 'executed_absorbed_and_cleaned',
       work_order_path: workOrderPath,
       artifacts: {
@@ -819,8 +807,4 @@ async function executeDeveloperWorkOrder(
 
 export async function executeOplDeveloperWorkOrder(options: AgentLabWorkOrderExecutionOptions) {
   return executeDeveloperWorkOrder(options, WORK_ORDER_EXECUTION_PRESENTATION);
-}
-
-export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrderExecutionOptions) {
-  return executeDeveloperWorkOrder(options, AGENT_LAB_WORK_ORDER_ALIAS_PRESENTATION);
 }

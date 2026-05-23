@@ -1,7 +1,6 @@
 import {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
-  buildAgentLabExecuteWorkOrderPayload,
   buildAgentLabEfficiencyPayload,
   buildAgentLabEvolvePayload,
   buildAgentLabExportPayload,
@@ -134,18 +133,6 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       examples: ['opl agent-lab run/efficiency --suite ./agent-lab-suite.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabRunEfficiencyPayload(args, specs['agent-lab run/efficiency']),
-    },
-    'agent-lab execute-work-order': {
-      usage:
-        'opl agent-lab execute-work-order --work-order <developer-patch-work-order.json> [--target-agent-dir <dir>] [--suite <suite.json>] [--output-dir <dir>] [--verification-command <command>] [--codex-bin <path>] [--codex-timeout-ms <ms>]',
-      summary:
-        'Compatibility alias for the OPL work-order execute primitive, scoped to Agent Lab self-evolution suites and refs-only re-evaluation.',
-      examples: [
-        'opl agent-lab execute-work-order --work-order ./developer-patch-work-order.json --target-agent-dir ../redcube-ai --suite ./agent-lab-suite.json --json',
-        'opl work-order execute --work-order ./developer-patch-work-order.json --target-agent-dir ../redcube-ai --json',
-      ],
-      group: 'framework',
-      handler: (args) => buildAgentLabExecuteWorkOrderPayload(args, specs['agent-lab execute-work-order']),
     },
   };
 

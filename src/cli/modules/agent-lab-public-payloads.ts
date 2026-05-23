@@ -23,7 +23,6 @@ import { buildLonglineAgentLabResult } from '../../agent-lab-longline.ts';
 import { FrameworkContractError } from '../../contracts.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
-import { buildAgentLabExecuteWorkOrderPayload } from './work-order-public-payloads.ts';
 
 function buildAgentLabSamplePayload() {
   const sampleResult = buildSampleAgentLabResult();
@@ -309,7 +308,6 @@ function buildAgentLabCostEstimatePayload(args: string[], spec: CommandSpec) {
 export {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
-  buildAgentLabExecuteWorkOrderPayload,
   buildAgentLabEvolvePayload,
   buildAgentLabEfficiencyPayload,
   buildAgentLabExportPayload,
