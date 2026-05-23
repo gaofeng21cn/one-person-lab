@@ -290,6 +290,17 @@ test('framework readiness summarizes default control-plane surfaces without auth
     const frameworkReviewAction = nextSafeActions.find(
       (action: { action_id: string }) => action.action_id === 'review_framework_attention_items',
     );
+    const appReleaseUserPathIndex = nextSafeActions.findIndex(
+      (action: { action_kind?: string }) =>
+        action.action_kind === 'app_release_user_path_evidence_review',
+    );
+    const ownerPayloadIndex = nextSafeActions.findIndex(
+      (action: { action_kind?: string }) => action.action_kind === 'owner_payload_group_scaleout',
+    );
+    assert.equal(appReleaseUserPathIndex >= 0, true);
+    if (ownerPayloadIndex >= 0) {
+      assert.equal(appReleaseUserPathIndex < ownerPayloadIndex, true);
+    }
     assert.equal(frameworkReviewAction.step_kind, 'framework_attention_review');
     assert.equal(frameworkReviewAction.evidence_closure_gate, 'operator_attention_triage_gate');
     const ownerPayloadAction = nextSafeActions.find(

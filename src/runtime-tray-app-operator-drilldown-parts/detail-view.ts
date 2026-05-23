@@ -199,32 +199,39 @@ function safeActionRoutes(drilldown: JsonRecord) {
 
 function actionPriority(action: JsonRecord) {
   const actionKind = stringValue(action.action_kind);
-  if (actionKind === 'stage_production_attempt_request') {
+  if (actionKind === 'app_release_user_path_evidence_receipt_verify') {
     return 0;
   }
-  if (actionKind === 'stage_production_evidence_receipt_record') {
+  if (actionKind === 'app_release_user_path_evidence_receipt_record'
+    || actionKind === 'oma_production_consumption_receipt_record') {
     return 1;
   }
-  if (actionKind === 'stage_production_evidence_receipt_verify') {
+  if (actionKind === 'stage_production_attempt_request') {
     return 2;
+  }
+  if (actionKind === 'stage_production_evidence_receipt_record') {
+    return 3;
+  }
+  if (actionKind === 'stage_production_evidence_receipt_verify') {
+    return 4;
   }
   if (actionKind === 'external_evidence_receipt_record'
     || actionKind === 'evidence_gate_receipt_record') {
-    return 3;
+    return 5;
   }
   if (actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_verify') {
-    return 4;
+    return 6;
   }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
-    return 5;
+    return 7;
   }
   if (actionKind === 'legacy_cleanup_apply'
     || actionKind === 'legacy_cleanup_verify') {
-    return 6;
+    return 8;
   }
-  return 7;
+  return 9;
 }
 
 function summarizeSafeAction(action: JsonRecord | null) {
