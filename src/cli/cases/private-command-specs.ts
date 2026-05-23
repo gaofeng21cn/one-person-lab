@@ -342,7 +342,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),
     'runtime action execute': {
-      usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
+      usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',
       summary:
         'Execute an App/operator action route through the OPL-owned safe action shell without taking domain truth authority.',
       examples: [

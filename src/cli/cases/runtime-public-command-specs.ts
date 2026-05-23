@@ -37,9 +37,10 @@ export function buildPublicRuntimeCommandSpecs(
     }),
     'runtime app-release-evidence record':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence record'], {
-        usage: 'opl runtime app-release-evidence record --payload <json>',
+        usage: 'opl runtime app-release-evidence record (--payload <json>|--payload-file <path>)',
         examples: [
           'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"]}\'',
+          'opl runtime app-release-evidence record --payload-file payload.json',
         ],
         group: 'runtime',
       }),
@@ -60,9 +61,10 @@ export function buildPublicRuntimeCommandSpecs(
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {
-        usage: 'opl runtime oma-app-live-path record --payload <json>',
+        usage: 'opl runtime oma-app-live-path record (--payload <json>|--payload-file <path>)',
         examples: [
           'opl runtime oma-app-live-path record --payload \'{"app_live_path_refs":["app:oma-live"],"operator_evidence_refs":["screenshot:oma-live"]}\'',
+          'opl runtime oma-app-live-path record --payload-file payload.json',
         ],
         group: 'runtime',
       }),
@@ -74,9 +76,10 @@ export function buildPublicRuntimeCommandSpecs(
       }),
     'runtime oma-production-consumption record':
       cloneCommandSpec(commandSpecs['runtime oma-production-consumption record'], {
-        usage: 'opl runtime oma-production-consumption record --payload <json>',
+        usage: 'opl runtime oma-production-consumption record (--payload <json>|--payload-file <path>)',
         examples: [
           'opl runtime oma-production-consumption record --payload \'{"long_soak_refs":["long-soak:oma"],"operator_evidence_refs":["monitor:oma"]}\'',
+          'opl runtime oma-production-consumption record --payload-file payload.json',
         ],
         group: 'runtime',
       }),
@@ -95,7 +98,7 @@ export function buildPublicRuntimeCommandSpecs(
         group: 'runtime',
       }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
-      usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
+      usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',
       examples: [
         'opl runtime action execute --action action:sat_demo:attempt-query',
         'opl runtime action execute --action action:sat_demo:domain-repair-command:0 --dry-run',

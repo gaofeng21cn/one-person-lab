@@ -315,3 +315,45 @@ test('runtime App release evidence CLI accepts singular ref fields for operator 
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime App release evidence CLI records refs-only payload files', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-file-state-'));
+  try {
+    const payloadFile = path.join(stateRoot, 'app-release-evidence-payload.json');
+    fs.writeFileSync(
+      payloadFile,
+      `${JSON.stringify({
+        release_package_refs: ['release:package/app-v0.1.0.dmg'],
+        screenshot_refs: ['screenshot:app/first-run.png'],
+        reload_prompt_user_path_refs: ['user-path:reload-prompt/first-run'],
+        provider_state_linkage_refs: ['provider-state:temporal/cadence-linked'],
+        long_operator_evidence_refs: ['long-operator:app/soak-4h'],
+      })}\n`,
+    );
+
+    const recordOutput = runCli([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload-file',
+      payloadFile,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_release_user_path_evidence_ledger_record;
+
+    assert.equal(recordOutput.status, 'recorded');
+    assert.equal(recordOutput.recorded_receipt_count, 1);
+    assert.equal(recordOutput.receipts[0].authority_boundary.refs_only, true);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_release_ready, false);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_close_app_release_user_path, false);
+
+    const summary = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
+    assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

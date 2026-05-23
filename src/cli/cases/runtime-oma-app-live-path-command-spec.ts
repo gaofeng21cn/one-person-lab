@@ -3,7 +3,12 @@ import {
   recordOmaAppLivePathReceipts,
   type OmaAppLivePathReceiptInput,
 } from '../../oma-app-live-path-ledger.ts';
-import { assertNoArgs, buildUsageError } from '../modules/support.ts';
+import {
+  assertNoArgs,
+  assertSinglePayloadSource,
+  buildUsageError,
+  readPayloadFileText,
+} from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -59,10 +64,22 @@ function parseRuntimeOmaAppLivePathRecordArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError('runtime oma-app-live-path record requires --payload.', spec, {
-          required: ['--payload'],
+          required_any: ['--payload', '--payload-file'],
         });
       }
+      assertSinglePayloadSource(Boolean(payload), spec);
       payload = parseRuntimeOmaAppLivePathPayload(value, spec);
+      continue;
+    }
+    if (token === '--payload-file') {
+      const value = args[++index];
+      if (!value) {
+        throw buildUsageError('runtime oma-app-live-path record requires --payload-file.', spec, {
+          required_any: ['--payload', '--payload-file'],
+        });
+      }
+      assertSinglePayloadSource(Boolean(payload), spec);
+      payload = parseRuntimeOmaAppLivePathPayload(readPayloadFileText(value, spec), spec);
       continue;
     }
     throw buildUsageError(`Unknown option for runtime oma-app-live-path record: ${token}.`, spec, {
@@ -70,8 +87,8 @@ function parseRuntimeOmaAppLivePathRecordArgs(
     });
   }
   if (!payload) {
-    throw buildUsageError('runtime oma-app-live-path record requires --payload.', spec, {
-      required: ['--payload'],
+    throw buildUsageError('runtime oma-app-live-path record requires --payload or --payload-file.', spec, {
+      required_any: ['--payload', '--payload-file'],
     });
   }
   return payload;
@@ -80,11 +97,12 @@ function parseRuntimeOmaAppLivePathRecordArgs(
 export function buildRuntimeOmaAppLivePathCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime oma-app-live-path record': {
-      usage: 'opl runtime oma-app-live-path record --payload <json>',
+      usage: 'opl runtime oma-app-live-path record (--payload <json>|--payload-file <path>)',
       summary:
         'Record refs-only OMA App live-path evidence refs without claiming production readiness.',
       examples: [
         'opl runtime oma-app-live-path record --payload \'{"app_live_path_refs":["app:oma-live"],"operator_evidence_refs":["screenshot:oma-live"]}\'',
+        'opl runtime oma-app-live-path record --payload-file payload.json',
       ],
       handler: (args) => ({
         oma_app_live_path_ledger_record: recordOmaAppLivePathReceipts([

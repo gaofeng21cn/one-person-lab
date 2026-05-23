@@ -4,7 +4,12 @@ import {
   verifyOmaProductionConsumptionReceipt,
   type OmaProductionConsumptionReceiptInput,
 } from '../../oma-production-consumption-ledger.ts';
-import { assertNoArgs, buildUsageError } from '../modules/support.ts';
+import {
+  assertNoArgs,
+  assertSinglePayloadSource,
+  buildUsageError,
+  readPayloadFileText,
+} from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -67,10 +72,22 @@ function parseRuntimeOmaProductionConsumptionRecordArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError('runtime oma-production-consumption record requires --payload.', spec, {
-          required: ['--payload'],
+          required_any: ['--payload', '--payload-file'],
         });
       }
+      assertSinglePayloadSource(Boolean(payload), spec);
       payload = parseRuntimeOmaProductionConsumptionPayload(value, spec);
+      continue;
+    }
+    if (token === '--payload-file') {
+      const value = args[++index];
+      if (!value) {
+        throw buildUsageError('runtime oma-production-consumption record requires --payload-file.', spec, {
+          required_any: ['--payload', '--payload-file'],
+        });
+      }
+      assertSinglePayloadSource(Boolean(payload), spec);
+      payload = parseRuntimeOmaProductionConsumptionPayload(readPayloadFileText(value, spec), spec);
       continue;
     }
     throw buildUsageError(`Unknown option for runtime oma-production-consumption record: ${token}.`, spec, {
@@ -78,8 +95,8 @@ function parseRuntimeOmaProductionConsumptionRecordArgs(
     });
   }
   if (!payload) {
-    throw buildUsageError('runtime oma-production-consumption record requires --payload.', spec, {
-      required: ['--payload'],
+    throw buildUsageError('runtime oma-production-consumption record requires --payload or --payload-file.', spec, {
+      required_any: ['--payload', '--payload-file'],
     });
   }
   return payload;
@@ -129,11 +146,12 @@ function omaProductionConsumptionAuthorityBoundary() {
 export function buildRuntimeOmaProductionConsumptionCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime oma-production-consumption record': {
-      usage: 'opl runtime oma-production-consumption record --payload <json>',
+      usage: 'opl runtime oma-production-consumption record (--payload <json>|--payload-file <path>)',
       summary:
         'Record refs-only OMA production-consumption long-soak or typed blocker refs without claiming production readiness.',
       examples: [
         'opl runtime oma-production-consumption record --payload \'{"long_soak_refs":["long-soak:oma"],"operator_evidence_refs":["monitor:oma"]}\'',
+        'opl runtime oma-production-consumption record --payload-file payload.json',
       ],
       handler: (args) => ({
         oma_production_consumption_ledger_record: recordOmaProductionConsumptionReceipts([

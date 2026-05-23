@@ -4,7 +4,12 @@ import {
   verifyAppReleaseUserPathEvidenceReceipt,
   type AppReleaseUserPathEvidenceReceiptInput,
 } from '../../app-release-user-path-evidence-ledger.ts';
-import { buildUsageError, assertNoArgs } from '../modules/support.ts';
+import {
+  assertNoArgs,
+  assertSinglePayloadSource,
+  buildUsageError,
+  readPayloadFileText,
+} from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -68,10 +73,22 @@ function parseRuntimeAppReleaseEvidenceRecordArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError('runtime app-release-evidence record requires --payload.', spec, {
-          required: ['--payload'],
+          required_any: ['--payload', '--payload-file'],
         });
       }
+      assertSinglePayloadSource(Boolean(payload), spec);
       payload = parseRuntimeAppReleaseEvidencePayload(value, spec);
+      continue;
+    }
+    if (token === '--payload-file') {
+      const value = args[++index];
+      if (!value) {
+        throw buildUsageError('runtime app-release-evidence record requires --payload-file.', spec, {
+          required_any: ['--payload', '--payload-file'],
+        });
+      }
+      assertSinglePayloadSource(Boolean(payload), spec);
+      payload = parseRuntimeAppReleaseEvidencePayload(readPayloadFileText(value, spec), spec);
       continue;
     }
     throw buildUsageError(`Unknown option for runtime app-release-evidence record: ${token}.`, spec, {
@@ -79,8 +96,8 @@ function parseRuntimeAppReleaseEvidenceRecordArgs(
     });
   }
   if (!payload) {
-    throw buildUsageError('runtime app-release-evidence record requires --payload.', spec, {
-      required: ['--payload'],
+    throw buildUsageError('runtime app-release-evidence record requires --payload or --payload-file.', spec, {
+      required_any: ['--payload', '--payload-file'],
     });
   }
   return payload;
@@ -112,11 +129,12 @@ function parseRuntimeAppReleaseEvidenceVerifyArgs(
 export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime app-release-evidence record': {
-      usage: 'opl runtime app-release-evidence record --payload <json>',
+      usage: 'opl runtime app-release-evidence record (--payload <json>|--payload-file <path>)',
       summary:
         'Record refs-only App release/user-path evidence refs without claiming App release or production readiness.',
       examples: [
         'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"]}\'',
+        'opl runtime app-release-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({
         app_release_user_path_evidence_ledger_record:
