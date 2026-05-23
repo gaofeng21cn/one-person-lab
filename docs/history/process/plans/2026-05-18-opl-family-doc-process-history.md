@@ -79,3 +79,11 @@ Machine boundary: 本文是人读过程归档，不是 current truth、active pl
 - RCA：controlled visual-stage typed blocker payload 可被 OPL safe-action shell 消费；它只表示 controlled-soak 仍等待 provider restart、re-query、retry/dead-letter、owner receipt 或 no-regression success evidence，不声明 visual ready、exportable、handoffable、artifact-producing owner receipt 或 App release/user path。
 
 本轮过程暴露的 attempt id、receipt ref、worklist 数字和具体命令输出只作为 OPL external evidence ledger 与提交历史中的可追溯证据读取，不再复制到 `docs/status.md` 或 `docs/active/current-state-vs-ideal-gap.md`。当前 active 文档只保留结论：refs-only transport、identity preflight 和 ledger accounting 可用；MAS/MAG/RCA 的 owner-chain success、memory/artifact/lifecycle receipt scaleout、App release/user path 和 long-soak evidence 仍是 open production evidence gate。
+
+## 2026-05-23 Developer Mode direct-fix closeout tranche
+
+本轮选择 Developer Mode live direct-fix 作为 evidence tail 推进 lane。真实修复提交为 `38ccb4bb4320e0429d43dd46faf755c03d45f95e`，内容是给 `family-runtime intake|tick|scheduler tick` 增加 top-level `--task-kind` hydrate / dispatch scope，并同步 focused test 与 current docs。该提交已推送到 `gaofeng21cn/one-person-lab` 的 `main`，远端 `refs/heads/main` 指向同一 SHA，GitHub REST 可读到该提交的 owner-visible URL。
+
+本轮使用 `opl runtime developer-mode-closeout record|verify` 记录并验证 direct-fix refs-only receipt：`opl://developer-mode-closeout/one-person-lab/patrol-observation-ref%3Aone-person-lab%2Ffamily-runtime-task-kind-scope%2F2026-05-23`。payload 包含 route eligibility、patrol observation ref、diff ref、focused / full verification refs、no-forbidden-write ref、commit ref 和 `external-owner-ref:github:gaofeng21cn/one-person-lab:main@38ccb4bb4320e0429d43dd46faf755c03d45f95e`。Agent Lab 当前读面为 `verified_direct_fix_closeout_refs_observed`，`live_ledger_closeout_ready_count=1`，且 `verified_fork_pr_ledger_receipt_ref_count=0`。
+
+该 tranche 关闭的是一个真实 direct-fix closeout refs intake 与 Agent Lab consumption 证据。它不生成 owner receipt、不写 domain truth、不修改 managed runtime、不声明 Developer Mode global closeout、不关闭 non-owner fork/PR owner acceptance，也不证明 App release/user path、domain owner-chain、memory/artifact/lifecycle receipt scaleout、OMA long-soak 或 family production ready。
