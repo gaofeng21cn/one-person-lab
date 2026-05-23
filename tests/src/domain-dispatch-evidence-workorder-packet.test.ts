@@ -57,6 +57,14 @@ function domainDispatchRoute(
     creates_domain_action: false,
     creates_owner_receipt: false,
     ref: `opl agents evidence apply --domain ${domainId}`,
+    copyable_runtime_action_execute_commands: {
+      dry_run_with_empty_template_blocks:
+        `opl runtime action execute --action domain_dispatch:${domainId}:${stageAttemptId}:record --dry-run --payload '{"domain_receipt_refs":[],"typed_blocker_refs":[],"owner_chain_refs":[],"no_regression_refs":[],"evidence_refs":[]}'`,
+      record_success_path:
+        `opl runtime action execute --action domain_dispatch:${domainId}:${stageAttemptId}:record --payload '{"domain_receipt_refs":["<${domainId}-owner-receipt-ref>"],"typed_blocker_refs":[],"owner_chain_refs":["<${domainId}-owner-chain-ref>"],"no_regression_refs":["<${domainId}-no-regression-ref>"],"evidence_refs":[]}'`,
+      record_typed_blocker_path:
+        `opl runtime action execute --action domain_dispatch:${domainId}:${stageAttemptId}:record --payload '{"domain_receipt_refs":[],"typed_blocker_refs":["<${domainId}-typed-blocker-ref>"],"owner_chain_refs":[],"no_regression_refs":[],"evidence_refs":[]}'`,
+    },
     required_operator_payload_refs: [
       'domain_receipt_refs',
       'typed_blocker_refs',
@@ -70,7 +78,22 @@ function domainDispatchRoute(
     payload_template: {
       domain_receipt_refs: [],
       typed_blocker_refs: [],
+      owner_chain_refs: [],
+      no_regression_refs: [],
+      evidence_refs: [],
     },
+    payload_ref_hints: {
+      required_any_payload_refs: [
+        'domain_receipt_refs',
+        'typed_blocker_refs',
+        'owner_chain_refs',
+        'no_regression_refs',
+        'evidence_refs',
+      ],
+      typed_blocker_refs_may_close_instead_of_success: true,
+    },
+    payload_template_policy:
+      'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',
     payload_workorder: {
       surface_kind: 'opl_domain_dispatch_evidence_payload_workorder',
       workorder_policy:
@@ -291,6 +314,40 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
       'stage_attempt_source_fingerprint',
     ],
   );
+
+  const groupItems = compactDomainDispatchEvidenceWorkorderGroupAttentionItems(packet);
+  assert.equal(groupItems[0].sample_record_action_ids.length <= 3, true);
+  assert.equal(
+    groupItems[0].sample_record_action_ids[0],
+    'domain_dispatch:medautogrant:sat-mag:record',
+  );
+  assert.equal(groupItems[0].sample_record_command_refs.length <= 3, true);
+  assert.equal(
+    groupItems[0].sample_record_command_refs[0],
+    'opl runtime action execute --action domain_dispatch:medautogrant:sat-mag:record --payload \'{"domain_receipt_refs":["<medautogrant-owner-receipt-ref>"],"typed_blocker_refs":[],"owner_chain_refs":["<medautogrant-owner-chain-ref>"],"no_regression_refs":["<medautogrant-no-regression-ref>"],"evidence_refs":[]}\'',
+  );
+  assert.equal(groupItems[0].record_action_id_omitted_count, 0);
+  assert.equal(groupItems[0].record_command_ref_omitted_count, 0);
+  assert.equal(groupItems[0].can_submit_record_to_safe_action_shell, true);
+  assert.deepEqual(groupItems[0].payload_template, {
+    domain_receipt_refs: [],
+    typed_blocker_refs: [],
+    owner_chain_refs: [],
+    no_regression_refs: [],
+    evidence_refs: [],
+  });
+  assert.equal(
+    groupItems[0].payload_template_policy,
+    'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',
+  );
+  assert.equal(groupItems[0].empty_payload_template_is_success_evidence, false);
+  assert.deepEqual(groupItems[0].payload_ref_hints.required_any_payload_refs, [
+    'domain_receipt_refs',
+    'typed_blocker_refs',
+    'owner_chain_refs',
+    'no_regression_refs',
+    'evidence_refs',
+  ]);
 });
 
 test('domain dispatch workorder packet exposes domain-source fingerprint binding guidance', () => {

@@ -14,6 +14,10 @@ import {
 import {
   assertFrameworkReadinessBlockerAttribution,
 } from './framework-readiness-blocker-attribution-assertions.ts';
+import {
+  assertDomainDispatchGroupExecutorHints,
+  assertSameDomainDispatchGroupExecutorHints,
+} from './domain-dispatch-group-executor-hints-assertions.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-state-'));
@@ -614,6 +618,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.equal(firstDispatchWorkorderGroup.stage_attempt_count > 0, true);
     assert.equal(firstDispatchWorkorderGroup.sample_stage_attempt_ids.length <= 3, true);
     assert.equal(firstDispatchWorkorderGroup.sample_action_refs.length <= 3, true);
+    assertDomainDispatchGroupExecutorHints(firstDispatchWorkorderGroup);
     assert.equal(firstDispatchWorkorderGroup.sample_required_evidence_refs.length <= 3, true);
     assert.equal(firstDispatchWorkorderGroup.stage_attempt_id_omitted_count >= 0, true);
     assert.equal(firstDispatchWorkorderGroup.action_ref_omitted_count >= 0, true);
@@ -657,6 +662,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
       );
       assert.equal(dispatchGroupAction.sample_stage_attempt_ids.length <= 3, true);
       assert.equal(dispatchGroupAction.sample_action_refs.length <= 3, true);
+      assertSameDomainDispatchGroupExecutorHints(dispatchGroupAction, firstDispatchWorkorderGroup);
       assert.equal(dispatchGroupAction.sample_required_evidence_refs.length <= 3, true);
       assert.deepEqual(
         dispatchGroupAction.required_operator_payload_refs,

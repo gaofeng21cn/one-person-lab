@@ -759,11 +759,8 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   for (const group of domainDispatchGroups) {
     steps.push({
       step_kind: 'domain_dispatch_evidence_group_workorder',
-      owner: firstString(
-        group.owner,
-        group.canonical_domain_id,
-        group.payload_owner,
-      ) ?? 'domain_repository_or_app_live_operator',
+      owner: firstString(group.owner, group.canonical_domain_id, group.payload_owner)
+        ?? 'domain_repository_or_app_live_operator',
       status: 'needs_domain_or_app_live_refs_payload_by_owner_stage_group',
       canonical_domain_id: stringValue(group.canonical_domain_id),
       payload_owner: stringValue(group.payload_owner),
@@ -776,8 +773,17 @@ function evidenceNextSteps(drilldown: JsonRecord) {
       stage_attempt_id_omitted_count: numberValue(group.stage_attempt_id_omitted_count),
       sample_action_refs: stringList(group.sample_action_refs),
       action_ref_omitted_count: numberValue(group.action_ref_omitted_count),
+      sample_record_action_ids: stringList(group.sample_record_action_ids),
+      record_action_id_omitted_count: numberValue(group.record_action_id_omitted_count),
+      sample_record_command_refs: stringList(group.sample_record_command_refs),
+      record_command_ref_omitted_count: numberValue(group.record_command_ref_omitted_count),
+      can_submit_record_to_safe_action_shell: group.can_submit_record_to_safe_action_shell === true,
       required_operator_payload_ref_count: numberValue(group.required_operator_payload_ref_count),
       required_operator_payload_refs: stringList(group.required_operator_payload_refs),
+      payload_template: record(group.payload_template),
+      payload_ref_hints: record(group.payload_ref_hints),
+      payload_template_policy: stringValue(group.payload_template_policy),
+      empty_payload_template_is_success_evidence: group.empty_payload_template_is_success_evidence === true,
       payload_path_policy: stringValue(group.payload_path_policy),
       accepted_payload_paths: record(group.accepted_payload_paths),
       payload_preflight_policy: stringValue(group.payload_preflight_policy),
@@ -786,8 +792,7 @@ function evidenceNextSteps(drilldown: JsonRecord) {
       payload_preflight_blocked_error_kind: stringValue(group.payload_preflight_blocked_error_kind),
       required_evidence_ref_count: numberValue(group.required_evidence_ref_count),
       sample_required_evidence_refs: stringList(group.sample_required_evidence_refs),
-      required_evidence_ref_omitted_count:
-        numberValue(group.required_evidence_ref_omitted_count),
+      required_evidence_ref_omitted_count: numberValue(group.required_evidence_ref_omitted_count),
       required_return_shapes: stringList(group.required_return_shapes),
       can_execute_domain_action: false,
       can_create_owner_receipt: false,
@@ -800,11 +805,8 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     for (const workorder of domainDispatchWorkorders) {
       steps.push({
         step_kind: 'domain_dispatch_evidence_workorder',
-        owner: firstString(
-          workorder.owner,
-          workorder.canonical_domain_id,
-          workorder.payload_owner,
-        ) ?? 'domain_repository_or_app_live_operator',
+        owner: firstString(workorder.owner, workorder.canonical_domain_id, workorder.payload_owner)
+          ?? 'domain_repository_or_app_live_operator',
         status: 'needs_domain_or_app_live_refs_payload',
         domain_id: stringValue(workorder.domain_id),
         route_domain_id: stringValue(workorder.route_domain_id) ?? stringValue(workorder.domain_id),

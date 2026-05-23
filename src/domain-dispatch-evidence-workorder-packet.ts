@@ -31,6 +31,10 @@ function numberSum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
 }
 
+function firstNonEmptyRecord(values: JsonRecord[]) {
+  return values.find((value) => Object.keys(value).length > 0) ?? {};
+}
+
 function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
   const actionId = stringValue(route.action_id);
   const routeDomainId = stringValue(route.domain_id);
@@ -131,6 +135,10 @@ function domainStageWorkorderGroups(
       const stageId = groupItems.find((item) => item.stage_id)?.stage_id ?? null;
       const stageAttemptIds = uniqueStringList(groupItems.map((item) => item.stage_attempt_id));
       const routeDomainIds = uniqueStringList(groupItems.map((item) => item.route_domain_id));
+      const recordActionIds = uniqueStringList(groupItems.map((item) => item.action_id));
+      const recordCommandRefs = uniqueStringList(groupItems.map((item) =>
+        stringValue(record(item.copyable_runtime_action_execute_commands).record_success_path)
+      ));
       const requiredOperatorPayloadRefs = uniqueStringList(
         groupItems.flatMap((item) => item.required_operator_payload_refs),
       );
@@ -165,10 +173,18 @@ function domainStageWorkorderGroups(
         stage_attempt_count: stageAttemptIds.length,
         stage_attempt_ids: stageAttemptIds,
         action_refs: uniqueStringList(groupItems.map((item) => item.action_ref)),
+        record_action_ids: recordActionIds,
+        record_command_refs: recordCommandRefs,
         required_operator_payload_ref_count: numberSum(
           groupItems.map((item) => item.required_operator_payload_refs.length),
         ),
         required_operator_payload_refs: requiredOperatorPayloadRefs,
+        payload_template: firstNonEmptyRecord(groupItems.map((item) => item.payload_template)),
+        payload_ref_hints: firstNonEmptyRecord(groupItems.map((item) => item.payload_ref_hints)),
+        payload_template_policy:
+          groupItems.find((item) => item.payload_template_policy)?.payload_template_policy ?? null,
+        empty_payload_template_is_success_evidence:
+          groupItems.some((item) => item.empty_payload_template_is_success_evidence),
         payload_path_policy:
           groupItems.find((item) => item.payload_path_policy)?.payload_path_policy ?? null,
         accepted_payload_paths:
@@ -383,8 +399,17 @@ export function compactDomainDispatchEvidenceWorkorderGroupAttentionItems(
     stage_attempt_id_omitted_count: Math.max(group.stage_attempt_ids.length - refLimit, 0),
     sample_action_refs: group.action_refs.slice(0, refLimit),
     action_ref_omitted_count: Math.max(group.action_refs.length - refLimit, 0),
+    sample_record_action_ids: group.record_action_ids.slice(0, refLimit),
+    record_action_id_omitted_count: Math.max(group.record_action_ids.length - refLimit, 0),
+    sample_record_command_refs: group.record_command_refs.slice(0, refLimit),
+    record_command_ref_omitted_count: Math.max(group.record_command_refs.length - refLimit, 0),
+    can_submit_record_to_safe_action_shell: group.record_command_refs.length > 0,
     required_operator_payload_ref_count: group.required_operator_payload_ref_count,
     required_operator_payload_refs: group.required_operator_payload_refs,
+    payload_template: group.payload_template,
+    payload_ref_hints: group.payload_ref_hints,
+    payload_template_policy: group.payload_template_policy,
+    empty_payload_template_is_success_evidence: group.empty_payload_template_is_success_evidence,
     payload_path_policy: group.payload_path_policy,
     accepted_payload_paths: group.accepted_payload_paths,
     payload_preflight_policy: group.payload_preflight_policy,
