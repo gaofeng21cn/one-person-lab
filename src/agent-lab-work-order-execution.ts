@@ -38,6 +38,11 @@ type CommandResult = {
   stderr_tail: string[];
 };
 
+type OwnerCloseoutResult = {
+  closeout: JsonRecord;
+  responsePath: string | null;
+};
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -111,6 +116,18 @@ function runShellVerification(command: string, cwd: string): CommandResult {
   return {
     ...runCommand('/bin/bash', ['-lc', command], cwd, { allowFailure: true }),
     command,
+  };
+}
+
+function buildCommandResult(command: string, cwd: string, result: ReturnType<typeof spawnSync>): CommandResult {
+  const stdout = typeof result.stdout === 'string' ? result.stdout : result.stdout?.toString('utf8') ?? '';
+  const stderr = typeof result.stderr === 'string' ? result.stderr : result.stderr?.toString('utf8') ?? '';
+  return {
+    command,
+    cwd,
+    exit_code: result.status ?? 1,
+    stdout_tail: stdout.split(/\r?\n/).filter(Boolean).slice(-20),
+    stderr_tail: stderr.split(/\r?\n/).filter(Boolean).slice(-20),
   };
 }
 
@@ -292,6 +309,156 @@ function readSuiteResult(suitePath: string | null | undefined) {
     suite_result: suiteResult,
     efficiency_read_model: readModel,
     ref_summary: agentLabRefSummary(suiteResult),
+  };
+}
+
+function normalizeOwnerCloseoutCommand(hook: JsonRecord): string[] {
+  return Array.isArray(hook.command)
+    ? hook.command.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function ownerCloseoutTypedBlocker(input: {
+  workOrder: JsonRecord;
+  targetAgent: JsonRecord;
+  workOrderId: string;
+  reason: string;
+  commandResult?: CommandResult;
+  hook?: JsonRecord | null;
+}): JsonRecord {
+  return {
+    status: 'typed_blocker_recorded',
+    blocker_ref: isRecord(input.workOrder.machine_closeout_refs)
+      ? input.workOrder.machine_closeout_refs.target_owner_receipt_or_typed_blocker_ref
+      : null,
+    reason: input.reason,
+    owner_route_refs: stringList(input.workOrder.owner_route_refs),
+    owner: input.hook ? optionalString(input.hook.owner) ?? 'target-domain' : 'target-domain',
+    can_write_owner_receipt: false,
+    command_result: input.commandResult ?? null,
+    hook_action_ref: input.hook ? optionalString(input.hook.action_ref) : null,
+    target_domain_id: optionalString(input.targetAgent.domain_id),
+  };
+}
+
+function assertOwnerCloseoutResponseAllowed(response: JsonRecord): void {
+  const writesForbiddenBody = response.writes_visual_truth !== false
+    || response.writes_artifact_body !== false
+    || response.writes_memory_body !== false
+    || response.authorizes_quality_or_export !== false;
+  const returnShape = optionalString(response.return_shape);
+  if (
+    response.refs_only !== true
+    || writesForbiddenBody
+    || !['domain_receipt', 'typed_blocker', 'no_regression_evidence'].includes(returnShape ?? '')
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Target owner closeout response must be refs-only and match allowed owner receipt return shapes.',
+      {
+        return_shape: returnShape,
+        refs_only: response.refs_only,
+        writes_visual_truth: response.writes_visual_truth,
+        writes_artifact_body: response.writes_artifact_body,
+        writes_memory_body: response.writes_memory_body,
+        authorizes_quality_or_export: response.authorizes_quality_or_export,
+      },
+    );
+  }
+}
+
+function runTargetOwnerCloseoutHook(input: {
+  workOrder: JsonRecord;
+  targetAgent: JsonRecord;
+  workOrderId: string;
+  targetAgentDir: string;
+  outputDir: string;
+  receiptDraft: JsonRecord;
+}): OwnerCloseoutResult {
+  const hook = isRecord(input.workOrder.target_owner_closeout_hook)
+    ? input.workOrder.target_owner_closeout_hook
+    : null;
+  if (!hook) {
+    return {
+      responsePath: null,
+      closeout: ownerCloseoutTypedBlocker({
+        workOrder: input.workOrder,
+        targetAgent: input.targetAgent,
+        workOrderId: input.workOrderId,
+        reason: 'Agent Lab executed source patch and verification, but target owner receipt remains target-domain owned.',
+      }),
+    };
+  }
+  const command = normalizeOwnerCloseoutCommand(hook);
+  if (command.length === 0) {
+    return {
+      responsePath: null,
+      closeout: ownerCloseoutTypedBlocker({
+        workOrder: input.workOrder,
+        targetAgent: input.targetAgent,
+        workOrderId: input.workOrderId,
+        reason: 'Target owner closeout hook was declared without an executable command.',
+        hook,
+      }),
+    };
+  }
+  const result = spawnSync(command[0], command.slice(1), {
+    cwd: input.targetAgentDir,
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+    input: `${JSON.stringify(input.receiptDraft, null, 2)}\n`,
+    env: {
+      ...process.env,
+      OPL_AGENT_LAB_OWNER_CLOSEOUT: '1',
+      OPL_AGENT_LAB_WORK_ORDER_ID: input.workOrderId,
+    },
+  });
+  const commandResult = buildCommandResult(command.join(' '), input.targetAgentDir, result);
+  if (commandResult.exit_code !== 0) {
+    return {
+      responsePath: null,
+      closeout: ownerCloseoutTypedBlocker({
+        workOrder: input.workOrder,
+        targetAgent: input.targetAgent,
+        workOrderId: input.workOrderId,
+        reason: 'Target owner closeout hook failed.',
+        commandResult,
+        hook,
+      }),
+    };
+  }
+  let response: JsonRecord;
+  try {
+    response = JSON.parse(result.stdout ?? '{}') as JsonRecord;
+    assertOwnerCloseoutResponseAllowed(response);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      responsePath: null,
+      closeout: ownerCloseoutTypedBlocker({
+        workOrder: input.workOrder,
+        targetAgent: input.targetAgent,
+        workOrderId: input.workOrderId,
+        reason: `Target owner closeout hook returned invalid refs-only JSON: ${errorMessage}`,
+        commandResult,
+        hook,
+      }),
+    };
+  }
+  const responsePath = path.join(input.outputDir, 'target-owner-closeout-response.json');
+  writeJson(responsePath, response);
+  return {
+    responsePath,
+    closeout: {
+      status: optionalString(response.status) ?? optionalString(response.return_shape) ?? 'owner_closeout_recorded',
+      owner: optionalString(hook.owner) ?? optionalString(response.owner) ?? 'target-domain',
+      owner_route_refs: stringList(input.workOrder.owner_route_refs),
+      hook_action_ref: optionalString(hook.action_ref),
+      response_path: responsePath,
+      command_result: commandResult,
+      hook_result: response,
+      can_write_owner_receipt: false,
+    },
   };
 }
 
@@ -486,7 +653,7 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
     targetWorktreeClosed = true;
     const reEvaluation = readSuiteResult(options.suitePath);
     const parsedCodex = parseCodexExecOutput(codexResult.stdout);
-    const receipt = {
+    const receiptDraft = {
       surface_kind: 'opl_agent_lab_codex_work_order_execution_receipt',
       version: 'opl-agent-lab.work-order-execution.v1',
       status: 'executed_absorbed_and_cleaned',
@@ -570,6 +737,21 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
       },
     };
     const receiptPath = path.join(outputDir, 'agent-lab-work-order-execution-receipt.json');
+    const ownerCloseout = runTargetOwnerCloseoutHook({
+      workOrder,
+      targetAgent,
+      workOrderId,
+      targetAgentDir,
+      outputDir,
+      receiptDraft: {
+        ...receiptDraft,
+        source_execution_receipt_ref: receiptPath,
+      },
+    });
+    const receipt = {
+      ...receiptDraft,
+      target_owner_receipt_or_typed_blocker: ownerCloseout.closeout,
+    };
     writeJson(receiptPath, receipt);
     return {
       version: 'g2',

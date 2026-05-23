@@ -113,6 +113,39 @@ printf '{"type":"item.completed","item":{"type":"agent_message","id":"msg-1","te
 `, { mode: 0o755 });
 }
 
+export function createFakeOwnerCloseoutAction(targetRepo: string): string {
+  const scriptPath = path.join(targetRepo, 'scripts', 'owner-closeout.js');
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(scriptPath, `#!/usr/bin/env node
+const chunks = [];
+process.stdin.on('data', (chunk) => chunks.push(chunk));
+process.stdin.on('end', () => {
+  const receipt = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  const response = {
+    surface_kind: 'target_domain_owner_work_order_closeout',
+    version: 'fake-agent.owner-closeout.v1',
+    owner: 'fake-agent',
+    status: 'no_regression_evidence_recorded',
+    return_shape: 'no_regression_evidence',
+    work_order_id: receipt.work_order_id,
+    absorbed_head: receipt.absorption.absorbed_head,
+    source_execution_receipt_ref: receipt.source_execution_receipt_ref,
+    owner_receipt_ref: 'fake-owner-closeout:oma_developer_patch_work_order_test',
+    no_regression_evidence_ref: 'fake-no-regression:oma_developer_patch_work_order_test',
+    refs_only: true,
+    writes_visual_truth: false,
+    writes_artifact_body: false,
+    writes_memory_body: false,
+    authorizes_quality_or_export: false,
+    can_write_owner_receipt: true,
+    verification_ref_count: receipt.verification.command_results.length,
+  };
+  process.stdout.write(JSON.stringify(response));
+});
+`, { mode: 0o755 });
+  return path.relative(targetRepo, scriptPath);
+}
+
 export function writeExecutableWorkOrder(filePath: string, targetRepo: string): void {
   writeJson(filePath, {
     surface_kind: 'opl_meta_agent_developer_patch_work_order',
@@ -191,6 +224,21 @@ export function writeExecutableWorkOrder(filePath: string, targetRepo: string): 
       can_authorize_target_domain_quality_or_export: false,
     },
   });
+}
+
+export function writeExecutableWorkOrderWithOwnerCloseoutHook(filePath: string, targetRepo: string, command: string[]): void {
+  writeExecutableWorkOrder(filePath, targetRepo);
+  const payload = readJson(filePath);
+  payload.target_owner_closeout_hook = {
+    hook_kind: 'command',
+    owner: 'target-domain',
+    action_ref: 'target-owner-closeout:fake-agent/work-order-source-patch',
+    command,
+    stdin_contract: 'opl_agent_lab_codex_work_order_execution_receipt_draft',
+    response_contract: 'domain_owner_receipt_contract.allowed_return_shapes',
+    optional: true,
+  };
+  writeJson(filePath, payload);
 }
 
 export function writePassingAgentLabSuite(filePath: string): void {

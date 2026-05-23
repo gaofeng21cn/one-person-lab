@@ -4,10 +4,12 @@ import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../
 import {
   createFailingFakeCodexWorkOrderExecutor,
   createFakeCodexWorkOrderExecutor,
+  createFakeOwnerCloseoutAction,
   createOverlappingFakeCodexWorkOrderExecutor,
   createWorkOrderTargetRepo,
   readJson,
   writeExecutableWorkOrder,
+  writeExecutableWorkOrderWithOwnerCloseoutHook,
   writePassingAgentLabSuite,
 } from './agent-lab-work-order-fixtures.ts';
 
@@ -137,6 +139,55 @@ test('agent-lab execute-work-order runs Codex CLI in a target worktree then abso
     });
     assert.equal(branchList.status, 0, branchList.stderr);
     assert.equal(branchList.stdout.trim(), '');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab execute-work-order calls target owner closeout hook after absorption when declared', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-owner-closeout-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    const ownerCloseoutScript = createFakeOwnerCloseoutAction(targetRepo);
+    createFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrderWithOwnerCloseoutHook(workOrderPath, targetRepo, ['node', ownerCloseoutScript]);
+
+    const output = runCli([
+      'agent-lab',
+      'execute-work-order',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--verification-command',
+      'test -f docs/efficiency.md',
+      '--codex-timeout-ms',
+      '10000',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    const closeout = output.agent_lab_work_order_execution.receipt.target_owner_receipt_or_typed_blocker;
+    assert.equal(closeout.status, 'no_regression_evidence_recorded');
+    assert.equal(closeout.owner, 'target-domain');
+    assert.equal(closeout.can_write_owner_receipt, false);
+    assert.equal(closeout.hook_result.return_shape, 'no_regression_evidence');
+    assert.equal(closeout.hook_result.refs_only, true);
+    assert.equal(closeout.hook_result.writes_visual_truth, false);
+    assert.equal(closeout.hook_result.writes_artifact_body, false);
+    assert.equal(closeout.hook_result.writes_memory_body, false);
+    assert.equal(closeout.hook_result.authorizes_quality_or_export, false);
+    assert.equal(closeout.hook_result.absorbed_head,
+      output.agent_lab_work_order_execution.receipt.absorption.absorbed_head);
+    assert.equal(closeout.command_result.exit_code, 0);
+    assert.equal(fs.existsSync(path.join(outputDir, 'target-owner-closeout-response.json')), true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
