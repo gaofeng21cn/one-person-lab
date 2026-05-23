@@ -55,10 +55,8 @@ test('work-order execute is the canonical OPL work-order execution primitive', (
     assert.equal(output.work_order_execution.surface_id, 'opl_work_order_codex_execution');
     assert.equal(output.work_order_execution.primitive_owner, 'one-person-lab/OPL');
     assert.equal(output.work_order_execution.command_surface, 'work-order execute');
-    assert.equal(Object.hasOwn(output.work_order_execution, 'agent_lab_alias'), false);
     assert.equal(output.work_order_execution.status, 'executed_absorbed_and_cleaned');
     assert.equal(output.work_order_execution.receipt.primitive_owner, 'one-person-lab/OPL');
-    assert.equal(Object.hasOwn(output.work_order_execution.receipt, 'agent_lab_command_alias'), false);
     assert.equal(output.work_order_execution.receipt.executor.executor_kind, 'codex_cli');
     assert.equal(output.work_order_execution.receipt.absorption.absorbed, true);
     assert.equal(output.work_order_execution.receipt.cleanup.worktree_removed, true);

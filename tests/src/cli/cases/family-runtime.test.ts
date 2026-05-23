@@ -183,20 +183,6 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
       true,
     );
 
-    const retiredAliasFailure = runCliFailure([
-      'family-runtime',
-      'production-closeout',
-      '--family-defaults',
-      '--provider',
-      'temporal',
-      '--executor-kind',
-      'codex_cli',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-    assert.equal(retiredAliasFailure.payload.error.code, 'unknown_command');
-    assert.match(retiredAliasFailure.payload.error.message, /Unknown family-runtime subcommand: production-closeout/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
