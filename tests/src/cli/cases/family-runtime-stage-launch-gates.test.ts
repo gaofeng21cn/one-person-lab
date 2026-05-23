@@ -206,6 +206,97 @@ test('family-runtime attempt create projects launch invocation and gates non-def
   }
 });
 
+test('family-runtime attempt create blocks undeclared stage launches without legacy attempt fallback', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-undeclared-stage-gate-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const masManifest = {
+    ...fixtures.medautoscience,
+    family_stage_control_plane: {
+      surface_kind: 'family_stage_control_plane',
+      version: 'family-stage-control-plane.v1',
+      plane_id: 'med_autoscience_stage_control_plane',
+      target_domain_id: 'med-autoscience',
+      owner: 'med-autoscience',
+      authority_boundary: { opl_role: 'projection_consumer_only' },
+      stages: [
+        {
+          stage_id: 'scout',
+          stage_kind: 'planning',
+          title: 'Scout',
+          summary: 'Declared planning stage.',
+          goal: 'Keep one valid declared stage in the control plane.',
+          owner: 'med-autoscience',
+          domain_stage_refs: ['scout'],
+          inputs: [],
+          knowledge_refs: [],
+          skills: [],
+          prompt_refs: [],
+          allowed_action_refs: [],
+          outputs: [],
+          evaluation: [],
+          handoff: null,
+          source_refs: [],
+          freshness: null,
+          action_parity: null,
+          stage_contract: {
+            requires: ['sources_ready'],
+            ensures: ['plan_ready'],
+            boundary_assumptions: ['domain_truth_remains_domain_owned'],
+            properties: [],
+            runtime_assumptions: [],
+            monitor_refs: [],
+            source_scope_refs: [{ ref_kind: 'json_pointer', ref: '/source_scope/scout', role: 'launch_source_scope' }],
+            artifact_scope_refs: [],
+            workspace_scope_refs: [],
+          },
+          trust_boundary: {
+            lane: 'domain_agent',
+            static_check_eligible: true,
+            effect_boundary: false,
+            records_runtime_events: false,
+          },
+          authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
+        },
+      ],
+      notes: [],
+    },
+  };
+  const env = familyRuntimeEnv(stateRoot, {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  });
+  try {
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
+
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'old_unregistered_stage',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--source-fingerprint',
+      'sha256:undeclared-stage',
+    ], env);
+    const gate = created.family_runtime_stage_attempt.stage_launch_admission_gate;
+
+    assert.equal(created.family_runtime_stage_attempt.attempt.status, 'blocked');
+    assert.equal(created.family_runtime_stage_attempt.attempt.blocked_reason, 'stage_not_in_declared_control_plane');
+    assert.equal(gate.status, 'not_in_declared_control_plane');
+    assert.equal(gate.gate_action, 'block_stage_launch');
+    assert.equal(gate.block_reason, 'stage_not_in_declared_control_plane');
+    assert.equal(gate.blocker_findings[0].severity, 'blocker');
+    assert.equal(gate.warning_findings.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime required admission warns without blocking when cohort loop refs are open', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-cohort-loop-gate-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
