@@ -107,7 +107,7 @@ export interface FamilyStageLaunchAdmissionGate {
   plane_id: string | null;
   target_domain_id: string | null;
   status: 'admitted' | 'needs_contracts' | 'blocked' | 'not_in_declared_control_plane' | 'missing_control_plane';
-  gate_action: 'allow_stage_launch' | 'block_stage_launch' | 'allow_legacy_unregistered_stage_attempt';
+  gate_action: 'allow_stage_launch' | 'block_stage_launch';
   block_reason: string | null;
   inspected_stage: FamilyStageAdmissionStageResult | null;
   blocker_findings: FamilyStageAdmissionReview['findings'];
@@ -584,16 +584,16 @@ export function buildFamilyStageLaunchAdmissionGate(
       plane_id: plane?.plane_id ?? null,
       target_domain_id: plane?.target_domain_id ?? null,
       status: 'missing_control_plane',
-      gate_action: 'allow_legacy_unregistered_stage_attempt',
-      block_reason: null,
+      gate_action: 'block_stage_launch',
+      block_reason: 'family_stage_control_plane_missing',
       inspected_stage: null,
-      blocker_findings: [],
-      warning_findings: [{
-        severity: 'warning',
+      blocker_findings: [{
+        severity: 'blocker',
         code: 'family_stage_control_plane_missing',
-        message: 'Domain does not expose a family_stage_control_plane; attempt is recorded only as legacy/diagnostic metadata, not standard OPL Agent production launch evidence.',
+        message: 'Domain does not expose a family_stage_control_plane; OPL blocks stage launch instead of recording a legacy unregistered attempt.',
         stage_id: input.stageId,
       }],
+      warning_findings: [],
       allowed_stage_ids: allowedStageIds,
       authority_boundary: authorityBoundary,
     };
@@ -610,16 +610,16 @@ export function buildFamilyStageLaunchAdmissionGate(
       plane_id: plane.plane_id,
       target_domain_id: plane.target_domain_id,
       status: 'not_in_declared_control_plane',
-      gate_action: 'allow_legacy_unregistered_stage_attempt',
-      block_reason: null,
+      gate_action: 'block_stage_launch',
+      block_reason: 'stage_not_in_declared_control_plane',
       inspected_stage: null,
-      blocker_findings: [],
-      warning_findings: [{
-        severity: 'warning',
+      blocker_findings: [{
+        severity: 'blocker',
         code: 'stage_not_in_declared_control_plane',
-        message: 'Stage attempt is not part of the declared family stage pack; it is allowed only as legacy/diagnostic attempt metadata, not as standard OPL Agent production launch evidence.',
+        message: 'Stage attempt is not part of the declared family stage pack; OPL blocks launch until the stage is declared in the control plane.',
         stage_id: input.stageId,
       }],
+      warning_findings: [],
       allowed_stage_ids: allowedStageIds,
       authority_boundary: authorityBoundary,
     };
