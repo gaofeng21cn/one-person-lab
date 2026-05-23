@@ -14,6 +14,7 @@ import {
   appReleaseUserPathEvidenceNextStep,
   buildAppReleaseUserPathEvidence,
 } from './app-release-user-path.ts';
+import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -687,6 +688,7 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   const advisory = advisoryItems(drilldown);
   const appReleaseUserPathEvidence = record(attention.app_release_user_path_evidence);
   const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
+  const functionalPrivatizationSteps = functionalPrivatizationNextSteps(drilldown);
   const dispatchOwner = topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
     ?? 'domain_repository_or_app_live_operator';
   const nextOwner = topCanonicalEvidenceOwner(
@@ -707,6 +709,7 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   ) {
     steps.push(omaProductionConsumptionNextStep(omaProductionConsumption));
   }
+  steps.push(...functionalPrivatizationSteps);
   if (
     numberValue(attention.domain_dispatch_attention_count) > 0
     && domainDispatchGroups.length === 0

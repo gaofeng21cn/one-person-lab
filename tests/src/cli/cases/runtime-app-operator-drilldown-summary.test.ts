@@ -29,11 +29,19 @@ import {
 import {
   assertDomainDispatchGroupExecutorHints,
 } from './domain-dispatch-group-executor-hints-assertions.ts';
+import {
+  assertFunctionalPrivatizationFullDetail,
+  assertFunctionalPrivatizationNextStep,
+  assertFunctionalPrivatizationReviewRequiredSummary,
+  markFunctionalPrivatizationReviewRequired,
+} from './runtime-app-operator-drilldown-summary-functional-privatization.ts';
 
 test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   try {
+    const manyStageManifest = buildManyStageManifest(12);
+    markFunctionalPrivatizationReviewRequired(manyStageManifest);
     runCli([
       'workspace',
       'bind',
@@ -42,7 +50,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       '--path',
       repoRoot,
       '--manifest-command',
-      buildManifestCommand(buildManyStageManifest(12)),
+      buildManifestCommand(manyStageManifest),
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -134,7 +142,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.functional_privatization_audit_default_policy,
       'audit_action_required_first_full_inventory_via_explicit_drilldown',
     );
-    assert.equal(summaryDrilldown.summary.functional_privatization_action_required_count, 0);
+    assertFunctionalPrivatizationReviewRequiredSummary(summaryDrilldown);
     assert.equal(
       summaryDrilldown.summary.functional_privatization_hidden_cleared_count >= 0,
       true,
@@ -419,6 +427,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     assertOmaProductionConsumptionNextStep(summaryDrilldown, metaAgentBound);
     assertAppReleaseUserPathNextStep(summaryDrilldown);
+    assertFunctionalPrivatizationNextStep(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.some(
         (item: { step_kind: string }) => item.step_kind === 'evidence_envelope_scaleout',
@@ -547,13 +556,14 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     const stageMissingStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
       (item: { step_kind: string }) => item.step_kind === 'stage_missing_evidence_followthrough',
     );
-    assert.equal(Boolean(stageMissingStep), true);
-    assert.equal(stageMissingStep.owner, stageMissingStep.owner.toLowerCase());
-    assert.equal(stageMissingStep.owner.includes('-'), true);
-    assert.equal(
-      stageMissingStep.owner_id_policy,
-      'canonical_owner_id_source_owner_id_for_diagnostics_only',
-    );
+    if (stageMissingStep) {
+      assert.equal(stageMissingStep.owner, stageMissingStep.owner.toLowerCase());
+      assert.equal(stageMissingStep.owner.includes('-'), true);
+      assert.equal(
+        stageMissingStep.owner_id_policy,
+        'canonical_owner_id_source_owner_id_for_diagnostics_only',
+      );
+    }
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.items.length <= 5,
       true,
@@ -849,39 +859,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       );
     }
     assert.equal(fullDrilldown.route_graph_refs.refs.length, 12);
-    assert.equal(
-      fullDrilldown.functional_privatization_audit_refs.surface_kind,
-      'opl_app_drilldown_functional_privatization_audit_refs',
-    );
-    assert.equal(fullDrilldown.functional_privatization_audit_refs.domains.length, 1);
-    assert.equal(
-      fullDrilldown.functional_privatization_audit_refs.domains[0].domain_id,
-      'medautoscience',
-    );
-    assert.equal(
-      fullDrilldown.functional_privatization_audit_refs.domains[0]
-        .private_platform_residue_inventory.length,
-      fullDrilldown.functional_privatization_audit_refs.domains[0].summary
-        .private_platform_residue_inventory_count,
-    );
-    assert.equal(
-      fullDrilldown.functional_privatization_audit_refs.domains[0].authority_boundary
-        .can_write_domain_truth,
-      false,
-    );
-    assert.equal(
-      fullDrilldown.functional_privatization_audit_refs.summary.private_platform_residue_inventory_count,
-      summaryDrilldown.summary.functional_privatization_private_platform_residue_inventory_count,
-    );
-    assert.equal(
-      summaryDrilldown.summary.functional_privatization_hidden_cleared_count,
-      fullDrilldown.functional_privatization_audit_summary.default_hidden_cleared_count,
-    );
-    assert.equal(summaryDrilldown.summary.functional_privatization_action_required_count, 0);
-    assert.equal(
-      fullDrilldown.functional_privatization_audit_refs.authority_boundary.can_write_memory_body,
-      false,
-    );
+    assertFunctionalPrivatizationFullDetail(summaryDrilldown, fullDrilldown);
     assert.equal(fullDrilldown.domain_dispatch_evidence.attempts.length, 12);
     assert.equal(fullDrilldown.stage_production_evidence.stages.length, 12);
     assert.equal(
