@@ -1,0 +1,45 @@
+import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+
+test('framework readiness separates operator-actionable and domain-blocked attention tails', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-attention-semantics-'));
+  try {
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
+    const summary = readiness.summary;
+    const attentionSummary = readiness.attention_first_payload.summary;
+
+    assert.equal(
+      attentionSummary.operator_actionable_attention_tail_count,
+      summary.operator_actionable_attention_tail_count,
+    );
+    assert.equal(
+      attentionSummary.domain_blocked_attention_tail_count,
+      summary.domain_blocked_attention_tail_count,
+    );
+    assert.equal(
+      summary.total_operator_attention_tail_count,
+      summary.operator_actionable_attention_tail_count
+        + summary.domain_blocked_attention_tail_count,
+    );
+    assert.equal(
+      summary.operator_actionable_attention_tail_count,
+      summary.open_tail_count
+        + summary.evidence_envelope_open_count
+        + summary.stage_source_scope_missing_workorder_count
+        + summary.stage_runtime_event_missing_workorder_count,
+    );
+    assert.equal(
+      summary.domain_blocked_attention_tail_count,
+      summary.evidence_envelope_blocked_count
+        + summary.domain_dispatch_attention_count,
+    );
+    assert.equal(
+      attentionSummary.attention_tail_semantics,
+      'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim',
+    );
+    assert.equal(summary.attention_tail_semantics, attentionSummary.attention_tail_semantics);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

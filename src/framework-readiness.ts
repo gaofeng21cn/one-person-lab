@@ -23,6 +23,12 @@ import {
   frameworkDiagnosticDrilldowns,
   frameworkKernelFloor,
 } from './framework-readiness-static-surfaces.ts';
+import {
+  splitOperatorAttentionCounts,
+} from './framework-readiness-attention-counts.ts';
+import {
+  semanticHygieneContractFloor,
+} from './framework-readiness-semantic-hygiene.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -256,41 +262,6 @@ function statusFrom(
   return 'framework_control_plane_available';
 }
 
-function semanticHygieneContractFloor(semanticHygiene: JsonRecord) {
-  const summary = record(semanticHygiene.summary);
-  const gates = recordList(semanticHygiene.gates);
-  const gateIds = gates
-    .map((gate) => stringValue(gate.gate_id))
-    .filter((gateId): gateId is string => Boolean(gateId))
-    .slice(0, 10);
-  const functionalPrivatizationGate = gates.find((gate) =>
-    stringValue(gate.gate_id) === 'functional_privatization_evidence_gate'
-  );
-  return {
-    surface_kind: 'opl_framework_readiness_semantic_hygiene_contract_floor',
-    source_command: SOURCE_COMMANDS.semantic_hygiene,
-    gate_count: numberValue(summary.gate_count),
-    guarded_gate_count: numberValue(summary.guarded_gate_count),
-    attention_required_gate_count: numberValue(summary.attention_required_gate_count),
-    gate_ids: gateIds,
-    gate_id_limit: 10,
-    omitted_gate_count: Math.max(gates.length - gateIds.length, 0),
-    functional_privatization_evidence_gate_status:
-      stringValue(record(functionalPrivatizationGate).status),
-    contract_floor_only: true,
-    default_payload_role:
-      'bounded_contract_floor_context_for_default_caller_not_operator_work_item',
-    authority_boundary: {
-      can_claim_domain_ready: false,
-      can_claim_production_ready: false,
-      can_claim_artifact_authority: false,
-      can_authorize_quality_or_export: false,
-      can_replace_ai_executor_planning: false,
-      can_replace_domain_owner: false,
-    },
-  };
-}
-
 function frameworkAttentionFirstPayload(input: {
   status: string;
   semanticHygieneContractFloor: JsonRecord;
@@ -328,8 +299,14 @@ function frameworkAttentionFirstPayload(input: {
     + input.appLiveEvidenceTailCount
     + input.stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
-  const totalOperatorAttentionTailCount =
-    openTailCount + evidenceEnvelopeAttentionCount + input.domainDispatchAttentionCount;
+  const attentionCounts = splitOperatorAttentionCounts({
+    openTailCount,
+    evidenceEnvelopeOpenCount: input.evidenceEnvelopeOpenCount,
+    evidenceEnvelopeBlockedCount: input.evidenceEnvelopeBlockedCount,
+    domainDispatchAttentionCount: input.domainDispatchAttentionCount,
+    stageSourceScopeMissingWorkorderCount: input.stageSourceScopeMissingWorkorderCount,
+    stageRuntimeEventMissingWorkorderCount: input.stageRuntimeEventMissingWorkorderCount,
+  });
   const omaOpenGateCount = numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count);
   const omaPendingVerifyLongSoakCount =
     numberValue(input.omaProductionConsumptionFollowthrough.pending_verify_long_soak_receipt_ref_count);
@@ -430,7 +407,10 @@ function frameworkAttentionFirstPayload(input: {
       evidence_envelope_blocked_count: input.evidenceEnvelopeBlockedCount,
       evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
       domain_dispatch_attention_count: input.domainDispatchAttentionCount,
-      total_operator_attention_tail_count: totalOperatorAttentionTailCount,
+      operator_actionable_attention_tail_count: attentionCounts.operatorActionableAttentionCount,
+      domain_blocked_attention_tail_count: attentionCounts.domainBlockedAttentionCount,
+      total_operator_attention_tail_count: attentionCounts.totalAttentionCount,
+      attention_tail_semantics: attentionCounts.semantics,
       provider_slo_cadence_window_status: input.providerSloCadenceWindowStatus ?? null,
       provider_slo_capability_status: input.providerSloCapabilityStatus ?? null,
     },
@@ -630,8 +610,14 @@ export async function buildFrameworkReadinessSummary(
   const openTailCount =
     agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
-  const totalOperatorAttentionTailCount =
-    openTailCount + evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
+  const attentionCounts = splitOperatorAttentionCounts({
+    openTailCount,
+    evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
+    evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
+    domainDispatchAttentionCount,
+    stageSourceScopeMissingWorkorderCount,
+    stageRuntimeEventMissingWorkorderCount,
+  });
   const operatorAttentionCount = evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
@@ -662,7 +648,10 @@ export async function buildFrameworkReadinessSummary(
       status: frameworkStatus,
       attention_first_payload: frameworkAttentionFirstPayload({
         status: frameworkStatus,
-        semanticHygieneContractFloor: semanticHygieneContractFloor(semanticHygiene),
+        semanticHygieneContractFloor: semanticHygieneContractFloor(
+          semanticHygiene,
+          SOURCE_COMMANDS.semantic_hygiene,
+        ),
         hardBlockerCount,
         agentHardBlockerCount,
         stageHardBlockerCount,
@@ -720,10 +709,13 @@ export async function buildFrameworkReadinessSummary(
         evidence_envelope_blocked_count: readinessEvidenceEnvelopeBlockedCount,
         evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
         domain_dispatch_attention_count: domainDispatchAttentionCount,
+        operator_actionable_attention_tail_count: attentionCounts.operatorActionableAttentionCount,
+        domain_blocked_attention_tail_count: attentionCounts.domainBlockedAttentionCount,
         runtime_manager_mas_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
         runtime_manager_mas_aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
         runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
-        total_operator_attention_tail_count: totalOperatorAttentionTailCount,
+        total_operator_attention_tail_count: attentionCounts.totalAttentionCount,
+        attention_tail_semantics: attentionCounts.semantics,
         open_tail_count: openTailCount,
         provider_slo_cadence_window_status: appSummary.provider_slo_cadence_window_status ?? null,
         provider_slo_capability_status: appSummary.provider_slo_capability_status ?? null,

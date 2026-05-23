@@ -15,6 +15,7 @@ import {
   buildAppReleaseUserPathEvidence,
 } from './app-release-user-path.ts';
 import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
+import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
 
@@ -474,10 +475,13 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     numberValue(appReleaseUserPathEvidence.pending_verify_receipt_ref_count);
   const appReleaseUserPathAttentionCount = appReleaseUserPathOpenGateCount
     + appReleaseUserPathPendingVerifyCount;
-  const totalAttentionCount = evidenceEnvelopeAttentionCount
-    + domainDispatchAttentionCount
-    + omaProductionConsumptionAttentionCount
-    + appReleaseUserPathAttentionCount;
+  const attentionCounts = splitOperatorAttentionCounts({
+    evidenceEnvelopeOpenCount: numberValue(summary.evidence_envelope_open_count),
+    evidenceEnvelopeBlockedCount: numberValue(summary.evidence_envelope_blocked_count),
+    domainDispatchAttentionCount,
+    appReleaseUserPathAttentionCount,
+    omaProductionConsumptionAttentionCount,
+  });
   const routeSupportTaskKindCount =
     numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
   const routeSupportAftercareCount =
@@ -491,7 +495,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   });
   return {
     surface_kind: 'opl_app_drilldown_evidence_after_contract_attention',
-    status: totalAttentionCount > 0 ? 'attention_required' : 'clear',
+    status: attentionCounts.totalAttentionCount > 0 ? 'attention_required' : 'clear',
     attention_policy:
       'summary_counts_only_full_refs_via_explicit_drilldown_no_domain_ready_claim',
     evidence_envelope_attention_count: evidenceEnvelopeAttentionCount,
@@ -500,6 +504,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     evidence_envelope_receipt_ref_count: numberValue(summary.evidence_envelope_receipt_ref_count),
     evidence_envelope_typed_blocker_ref_count:
       numberValue(summary.evidence_envelope_typed_blocker_ref_count),
+    operator_actionable_attention_count: attentionCounts.operatorActionableAttentionCount,
+    domain_blocked_attention_count: attentionCounts.domainBlockedAttentionCount,
+    attention_count_semantics: attentionCounts.semantics,
     owner_payload_group_attention_count: ownerPayloadGroups.total_count,
     owner_payload_group_attention_omitted_count: ownerPayloadGroups.omitted_count,
     owner_payload_group_attention_policy:
@@ -536,7 +543,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     route_support_status: routeSupportTaskKindCount > 0
       ? 'catalog_available_refs_only'
       : 'catalog_missing',
-    next_evidence_owner: totalAttentionCount > 0
+    next_evidence_owner: attentionCounts.totalAttentionCount > 0
       ? 'domain_repository_or_app_live_operator'
       : null,
     full_detail_sections: [

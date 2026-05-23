@@ -367,6 +367,29 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         + summaryDrilldown.summary.evidence_envelope_blocked_count,
     );
     assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract
+        .operator_actionable_attention_count,
+      summaryDrilldown.summary.evidence_envelope_open_count
+        + summaryDrilldown.attention_first_payload.evidence_after_contract
+          .app_release_user_path_evidence_open_gate_count
+        + summaryDrilldown.attention_first_payload.evidence_after_contract
+          .app_release_user_path_evidence_pending_verify_receipt_ref_count
+        + summaryDrilldown.attention_first_payload.evidence_after_contract
+          .oma_production_consumption_followthrough_open_gate_count,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract
+        .domain_blocked_attention_count,
+      summaryDrilldown.summary.evidence_envelope_blocked_count
+        + summaryDrilldown.attention_first_payload.evidence_after_contract
+          .domain_dispatch_attention_count,
+    );
+    assert.equal(
+      summaryDrilldown.attention_first_payload.evidence_after_contract
+        .attention_count_semantics,
+      'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim',
+    );
+    assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_group_attention_policy,
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     );
