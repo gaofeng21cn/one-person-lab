@@ -277,11 +277,14 @@ function omaAppLivePathLedgerRefs() {
 function omaProductionConsumptionLedgerRefs() {
   const receipts = listOmaProductionConsumptionReceipts();
   const verifiedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'verified');
+  const verifiedLongSoakReceipts = verifiedReceipts.filter((receipt) =>
+    receipt.long_soak_refs.length > 0
+  );
   const recordedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'recorded');
   return {
     receiptRefs: uniqueStringList(receipts.map((receipt) => receipt.receipt_ref)),
     verifiedReceiptRefs: uniqueStringList(verifiedReceipts.map((receipt) => receipt.receipt_ref)),
-    longSoakRefs: uniqueStringList(verifiedReceipts.flatMap((receipt) => [
+    longSoakRefs: uniqueStringList(verifiedLongSoakReceipts.flatMap((receipt) => [
       receipt.receipt_ref,
       ...receipt.long_soak_refs,
       ...receipt.operator_evidence_refs,

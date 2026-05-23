@@ -135,7 +135,7 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
       operator_evidence_refs: ['screenshot://opl-app/oma-production-blocker-live-path.png'],
     }]);
 
-    runCli([
+    const recordOutput = runCli([
       'runtime',
       'oma-production-consumption',
       'record',
@@ -145,7 +145,17 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
           'typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending',
         ],
       }),
-    ], { OPL_STATE_DIR: stateRoot });
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_record;
+    assert.equal(recordOutput.status, 'recorded');
+
+    const verifyOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      recordOutput.receipt_refs[0],
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_verify;
+    assert.equal(verifyOutput.status, 'verified');
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
@@ -197,7 +207,7 @@ test('runtime oma-production-consumption operator evidence refs do not close lon
       operator_evidence_refs: ['screenshot://opl-app/oma-production-operator-live-path.png'],
     }]);
 
-    runCli([
+    const recordOutput = runCli([
       'runtime',
       'oma-production-consumption',
       'record',
@@ -207,7 +217,17 @@ test('runtime oma-production-consumption operator evidence refs do not close lon
           'operator_evidence_ref://opl-meta-agent/production-consumption/monitor-only',
         ],
       }),
-    ], { OPL_STATE_DIR: stateRoot });
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_record;
+    assert.equal(recordOutput.status, 'recorded');
+
+    const verifyOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      recordOutput.receipt_refs[0],
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_verify;
+    assert.equal(verifyOutput.status, 'verified');
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
