@@ -93,6 +93,56 @@ function actionRoutesFromSnapshot(snapshot: JsonRecord) {
   return refs.filter(isRecord);
 }
 
+function domainDispatchActionRouteClosedDetails(snapshot: JsonRecord, actionId: string) {
+  const match = actionId.match(/^domain_dispatch:([^:]+):([^:]+):(record|verify)$/);
+  if (!match) {
+    return null;
+  }
+  const [, domainId, stageAttemptId, requestedMode] = match;
+  const drilldown = isRecord(snapshot.app_operator_drilldown) ? snapshot.app_operator_drilldown : {};
+  const domainDispatchEvidence = isRecord(drilldown.domain_dispatch_evidence)
+    ? drilldown.domain_dispatch_evidence
+    : {};
+  const attempts = Array.isArray(domainDispatchEvidence.attempts)
+    ? domainDispatchEvidence.attempts.filter(isRecord)
+    : [];
+  const attempt = attempts.find((candidate) =>
+    stringValue(candidate.domain_id) === domainId
+    && stringValue(candidate.stage_attempt_id) === stageAttemptId
+  );
+  if (!attempt) {
+    return null;
+  }
+  const receiptStatus = stringValue(attempt.dispatch_evidence_receipt_status);
+  if (receiptStatus !== 'recorded' && receiptStatus !== 'verified') {
+    return null;
+  }
+  const verifiedReceiptRefs = stringList(attempt.verified_dispatch_evidence_receipt_refs);
+  const receiptRefs = stringList(attempt.dispatch_evidence_receipt_refs);
+  return {
+    error_kind: 'domain_dispatch_evidence_action_route_closed',
+    action_id: actionId,
+    requested_mode: requestedMode,
+    domain_id: domainId,
+    stage_attempt_id: stageAttemptId,
+    stage_id: stringValue(attempt.stage_id),
+    dispatch_evidence_receipt_status: receiptStatus,
+    current_receipt_ref: verifiedReceiptRefs[0] ?? receiptRefs[0] ?? null,
+    current_receipt_refs: receiptStatus === 'verified' && verifiedReceiptRefs.length > 0
+      ? verifiedReceiptRefs
+      : receiptRefs,
+    route_status: 'closed_or_superseded_by_current_domain_dispatch_evidence_receipt',
+    route_status_detail:
+      'Current App/operator drilldown no longer exposes this action because the domain dispatch evidence receipt is already recorded or verified.',
+    next_safe_action: receiptStatus === 'recorded'
+      ? `domain_dispatch:${domainId}:${stageAttemptId}:verify`
+      : null,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+    authority_boundary: executionBoundary(),
+  };
+}
+
 function providerSignalKind(actionKind: string) {
   if (actionKind === 'provider_signal:resume') {
     return 'resume';
@@ -771,6 +821,17 @@ export async function runRuntimeOperatorActionExecute(
     stringValue(candidate.action_id) === options.actionId
   ));
   if (!route) {
+    const closedDomainDispatchDetails = domainDispatchActionRouteClosedDetails(
+      snapshot,
+      options.actionId,
+    );
+    if (closedDomainDispatchDetails) {
+      throw new FrameworkContractError(
+        'cli_usage_error',
+        'Domain dispatch evidence action route is already closed in the current runtime snapshot.',
+        closedDomainDispatchDetails,
+      );
+    }
     throw new FrameworkContractError('cli_usage_error', 'Operator action route not found in current runtime snapshot.', {
       action_id: options.actionId,
     });

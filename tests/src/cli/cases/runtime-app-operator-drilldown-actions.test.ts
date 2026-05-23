@@ -445,6 +445,35 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       ),
       false,
     );
+
+    const staleRecordRouteExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--payload',
+      JSON.stringify({
+        domain_receipt_refs: ['mas://receipts/domain-dispatch-owner.json'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    assert.equal(staleRecordRouteExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      staleRecordRouteExecution.payload.error.details.error_kind,
+      'domain_dispatch_evidence_action_route_closed',
+    );
+    assert.equal(staleRecordRouteExecution.payload.error.details.action_id, recordActionId);
+    assert.equal(staleRecordRouteExecution.payload.error.details.stage_attempt_id, attemptId);
+    assert.equal(staleRecordRouteExecution.payload.error.details.dispatch_evidence_receipt_status, 'verified');
+    assert.equal(
+      staleRecordRouteExecution.payload.error.details.current_receipt_ref,
+      `opl://external-evidence/medautoscience/domain_dispatch:medautoscience:${attemptId}`,
+    );
+    assert.equal(staleRecordRouteExecution.payload.error.details.can_claim_domain_ready, false);
+    assert.equal(staleRecordRouteExecution.payload.error.details.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
