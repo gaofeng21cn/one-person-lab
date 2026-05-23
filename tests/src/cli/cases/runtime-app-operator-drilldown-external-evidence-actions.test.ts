@@ -142,3 +142,99 @@ test('runtime action execute records and verifies external evidence request rout
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime action execute records functional semantic equivalence refs through payload file only', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-functional-semantic-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const rcaManifest = structuredClone(loadFamilyManifestFixtures().redcube);
+  rcaManifest.privatized_functional_module_audit = {
+    surface_kind: 'rca_privatized_functional_module_audit',
+    target_domain_id: 'redcube_ai',
+    modules: [
+      {
+        module_id: 'codex_executor_adapter',
+        migration_class: 'refs_only_domain_adapter',
+        classification: 'refs_only_adapter',
+        owner: 'redcube_ai',
+        active_caller_status: 'route_run_record_adapter_split_landed_opl_attempt_shell_pending',
+        active_callers: ['deliverable route runner'],
+        current_surface_refs: ['/domain_entry_contract/executor'],
+        expected_opl_primitives: ['agent_executor_adapter'],
+        semantic_equivalence_status: 'review_required',
+        semantic_equivalence_reason:
+          'active_caller_wording_requires_opl_semantic_equivalence_proof',
+      },
+    ],
+  };
+  const payloadPath = path.join(stateRoot, 'functional-semantic-payload.json');
+  fs.writeFileSync(payloadPath, JSON.stringify({
+    semantic_equivalence_proof_refs: ['rca://proof/codex-executor-adapter/semantic-equivalence'],
+    opl_generated_or_hosted_surface_consumption_refs: ['opl://executors/codex-cli/default'],
+    domain_owner_receipt_refs: ['rca://owner-receipts/codex-executor-adapter'],
+    typed_blocker_refs: [],
+    no_regression_evidence_refs: ['rca://proof/no-regression/codex-executor-adapter'],
+  }));
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(rcaManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const actionId =
+      'functional_privatization_semantic_equivalence:redcube:codex_executor_adapter:record';
+    const route = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) => ref.action_id === actionId,
+    );
+    assert.equal(route.action_kind, 'functional_privatization_semantic_equivalence_receipt_record');
+    assert.equal(route.route_requires_domain_or_app_payload, true);
+    assert.equal(route.creates_owner_receipt, false);
+    assert.equal(route.authority_boundary.can_write_domain_truth, false);
+
+    const execution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      actionId,
+      '--payload-file',
+      payloadPath,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(execution.execution.execution_kind, 'opl_cli_external_evidence_apply');
+    assert.equal(execution.execution.execution_status, 'executed');
+    assert.equal(execution.execution.result.external_evidence_apply.status, 'recorded');
+    assert.equal(
+      execution.execution.result.external_evidence_apply.receipt.evidence_refs.includes(
+        'rca://proof/codex-executor-adapter/semantic-equivalence',
+      ),
+      true,
+    );
+    assert.equal(
+      execution.execution.result.external_evidence_apply.receipt.direct_hosted_parity_refs.includes(
+        'opl://executors/codex-cli/default',
+      ),
+      true,
+    );
+    assert.equal(execution.authority_boundary.can_write_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

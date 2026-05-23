@@ -1,4 +1,7 @@
 import type { FrameworkContracts } from './types.ts';
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { FrameworkContractError } from './contracts.ts';
 import { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
@@ -50,6 +53,7 @@ function parseJsonObject(value: string, context: string): JsonRecord {
 function parseRuntimeActionExecuteArgs(args: string[]): RuntimeActionExecuteOptions {
   let actionId = '';
   let payload: JsonRecord = {};
+  let payloadSet = false;
   let dryRun = false;
   let approveDomainAction = false;
   for (let index = 0; index < args.length; index += 1) {
@@ -59,7 +63,22 @@ function parseRuntimeActionExecuteArgs(args: string[]): RuntimeActionExecuteOpti
       actionId = value;
       index += 1;
     } else if (token === '--payload' && value) {
+      if (payloadSet) {
+        throw new FrameworkContractError('cli_usage_error', 'Use either --payload or --payload-file, not both.', {
+          options: ['--payload', '--payload-file'],
+        });
+      }
       payload = parseJsonObject(value, '--payload');
+      payloadSet = true;
+      index += 1;
+    } else if (token === '--payload-file' && value) {
+      if (payloadSet) {
+        throw new FrameworkContractError('cli_usage_error', 'Use either --payload or --payload-file, not both.', {
+          options: ['--payload', '--payload-file'],
+        });
+      }
+      payload = parseJsonObject(fs.readFileSync(path.resolve(value), 'utf8'), '--payload-file');
+      payloadSet = true;
       index += 1;
     } else if (token === '--dry-run') {
       dryRun = true;
@@ -68,7 +87,7 @@ function parseRuntimeActionExecuteArgs(args: string[]): RuntimeActionExecuteOpti
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown runtime action execute option: ${token}.`, {
         option: token,
-        usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
+        usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',
       });
     }
   }
@@ -433,10 +452,19 @@ function externalEvidenceApplyArgs(
   ) {
     return args;
   }
-  const evidenceRefs = refsFromPayload(payload, ['evidence_refs', 'evidence_ref']);
+  const functionalSemanticRecord =
+    actionKind === 'functional_privatization_semantic_equivalence_receipt_record';
+  const evidenceRefs = refsFromPayload(payload, [
+    'evidence_refs',
+    'evidence_ref',
+    ...(functionalSemanticRecord
+      ? ['semantic_equivalence_proof_refs', 'semantic_equivalence_proof_ref']
+      : []),
+  ]);
   const domainReceiptRefs = refsFromPayload(payload, [
     'domain_receipt_refs',
     'domain_receipt_ref',
+    ...(functionalSemanticRecord ? ['domain_owner_receipt_refs', 'domain_owner_receipt_ref'] : []),
     'receipt_refs',
     'receipt_ref',
   ]);
@@ -446,6 +474,12 @@ function externalEvidenceApplyArgs(
   const directHostedParityRefs = refsFromPayload(payload, [
     'direct_hosted_parity_refs',
     'direct_hosted_parity_ref',
+    ...(functionalSemanticRecord
+      ? [
+          'opl_generated_or_hosted_surface_consumption_refs',
+          'opl_generated_or_hosted_surface_consumption_ref',
+        ]
+      : []),
   ]);
   const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
   const sourceScopeRefs = refsFromPayload(payload, ['source_scope_refs', 'source_scope_ref']);
@@ -604,6 +638,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_record'
     || actionKind === 'evidence_gate_receipt_verify'
+    || actionKind === 'functional_privatization_semantic_equivalence_receipt_record'
     || actionKind === 'stage_production_evidence_receipt_record'
     || actionKind === 'stage_production_evidence_receipt_verify'
     || actionKind === 'domain_dispatch_evidence_receipt_record'
@@ -659,6 +694,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'external_evidence_receipt_verify',
       'evidence_gate_receipt_record',
       'evidence_gate_receipt_verify',
+      'functional_privatization_semantic_equivalence_receipt_record',
       'stage_production_evidence_receipt_record',
       'stage_production_evidence_receipt_verify',
       'domain_dispatch_evidence_receipt_record',
@@ -728,6 +764,7 @@ async function executeRoute(
       || actionKind === 'external_evidence_receipt_verify'
       || actionKind === 'evidence_gate_receipt_record'
       || actionKind === 'evidence_gate_receipt_verify'
+      || actionKind === 'functional_privatization_semantic_equivalence_receipt_record'
       || actionKind === 'stage_production_evidence_receipt_record'
       || actionKind === 'stage_production_evidence_receipt_verify'
       || actionKind === 'domain_dispatch_evidence_receipt_record'

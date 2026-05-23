@@ -88,10 +88,47 @@ export function assertFunctionalPrivatizationNextStep(summaryDrilldown: any) {
   assert.equal(step.semantic_equivalence_status, 'review_required');
   assert.equal(step.required_refs_any_of.includes('semantic_equivalence_proof_ref'), true);
   assert.equal(step.required_refs_any_of.includes('domain_owned_typed_blocker_ref'), true);
+  assert.deepEqual(step.payload_template, {
+    semantic_equivalence_proof_refs: [],
+    opl_generated_or_hosted_surface_consumption_refs: [],
+    domain_owner_receipt_refs: [],
+    typed_blocker_refs: [],
+    no_regression_evidence_refs: [],
+  });
+  assert.deepEqual(
+    step.copyable_runtime_action_execute_commands.record_with_payload,
+    [
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'functional_privatization_semantic_equivalence:medautoscience:codex_executor_adapter:record',
+      '--payload-file',
+      '<payload.json>',
+    ],
+  );
+  assert.equal(step.route_requires_domain_or_app_payload, true);
+  assert.equal(step.can_submit_record_to_safe_action_shell, true);
   assert.equal(step.can_write_domain_truth, false);
   assert.equal(step.can_create_owner_receipt, false);
   assert.equal(step.can_claim_private_residue_deleted, false);
   assert.equal(step.full_detail_section, 'functional_privatization_audit_refs');
+}
+
+export function assertFunctionalPrivatizationActionRoute(fullDrilldown: any) {
+  const route = fullDrilldown.operator_action_routing_refs.refs.find(
+    (item: { action_id: string }) =>
+      item.action_id
+        === 'functional_privatization_semantic_equivalence:medautoscience:codex_executor_adapter:record',
+  );
+  assert.equal(Boolean(route), true);
+  assert.equal(route.action_kind, 'functional_privatization_semantic_equivalence_receipt_record');
+  assert.equal(route.execution_surface, 'opl runtime action execute');
+  assert.equal(route.route_requires_domain_or_app_payload, true);
+  assert.equal(route.creates_domain_action, false);
+  assert.equal(route.creates_owner_receipt, false);
+  assert.equal(route.closes_private_residue, false);
+  assert.equal(route.authority_boundary.can_write_domain_truth, false);
 }
 
 export function assertFunctionalPrivatizationFullDetail(summaryDrilldown: any, fullDrilldown: any) {
@@ -125,4 +162,5 @@ export function assertFunctionalPrivatizationFullDetail(summaryDrilldown: any, f
     fullDrilldown.functional_privatization_audit_refs.authority_boundary.can_write_memory_body,
     false,
   );
+  assertFunctionalPrivatizationActionRoute(fullDrilldown);
 }

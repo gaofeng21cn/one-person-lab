@@ -79,6 +79,9 @@ import {
   functionalPrivatizationSummary,
 } from './runtime-tray-app-operator-drilldown-parts/functional-privatization-audit-refs.ts';
 import {
+  buildFunctionalPrivatizationSemanticEquivalenceActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/functional-privatization-action-routes.ts';
+import {
   buildDefaultCallerDeletionEvidenceRefs,
 } from './runtime-tray-app-operator-drilldown-parts/default-caller-deletion-evidence-refs.ts';
 import {
@@ -1096,6 +1099,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildStageProductionEvidenceReceiptRoutes(record(stageProductionEvidence)),
     ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
+    ...buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(record(functionalAuditRefs)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
