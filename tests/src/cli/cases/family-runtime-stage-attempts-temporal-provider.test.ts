@@ -14,7 +14,21 @@ import type {
 } from '../../../../src/family-runtime-temporal.ts';
 import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/family-runtime-temporal.ts';
 import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
-import { assert, createFakeCodexFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  assert,
+  buildManifestCommand,
+  createFamilyContractsFixtureRoot,
+  fs,
+  os,
+  path,
+  repoRoot,
+  runCli,
+  test,
+} from '../helpers.ts';
+import {
+  buildTemporalStartManifest,
+  createTemporalCloseoutCodexFixture,
+} from './family-runtime-stage-attempts-temporal-provider-fixtures.ts';
 
 type TemporalStageAttemptCreateOutput = {
   family_runtime_stage_attempt: {
@@ -66,34 +80,24 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-function createTemporalCloseoutCodexFixture(closeoutRefs: string[]) {
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: closeoutRefs,
-    consumed_refs: ['evidence:temporal-fixture'],
-    consumed_memory_refs: [],
-    writeback_receipt_refs: [],
-    rejected_writes: [],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-    route_impact: { decision: 'temporal_fixture' },
-  };
-  return createFakeCodexFixture(`
-if [ "$1" = "exec" ]; then
-  printf '{"type":"thread.started","thread_id":"thread-temporal-fixture"}\\n'
-  printf '{"type":"turn.started"}\\n'
-  printf '%s\\n' '${JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', id: 'msg-closeout', text: JSON.stringify(closeout) } })}'
-  printf '{"type":"turn.completed"}\\n'
-  exit 0
-fi
-echo "unexpected fake codex args: $*" >&2
-exit 64
-`);
-}
-
 test('family-runtime temporal attempt start fails closed when Temporal address is not configured', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-start-missing-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stageId = 'direction_and_route_selection';
   try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(buildTemporalStartManifest(stageId)),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
     const result = spawnSync(process.execPath, [
       '--experimental-strip-types',
       path.join(repoRoot, 'src', 'cli.ts'),
@@ -103,13 +107,13 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
       '--domain',
       'medautoscience',
       '--stage',
-      'scout',
+      stageId,
       '--provider',
       'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
       '--checkpoint-ref',
-      'packet:scout',
+      'packet:direction-and-route-selection',
       '--start',
     ], {
       cwd: repoRoot,
@@ -118,19 +122,26 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
         ...process.env,
         NODE_NO_WARNINGS: '1',
         OPL_STATE_DIR: stateRoot,
+        OPL_CONTRACTS_DIR: fixtureContractsRoot,
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
       },
     });
     const output = JSON.parse(result.stdout || result.stderr);
-    const attempts = runCli(['family-runtime', 'attempt', 'list'], familyRuntimeEnv(stateRoot));
+    const attempts = runCli(
+      ['family-runtime', 'attempt', 'list'],
+      familyRuntimeEnv(stateRoot, { OPL_CONTRACTS_DIR: fixtureContractsRoot }),
+    );
 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');
     assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
     assert.equal(attempts.family_runtime_stage_attempts.summary.total, 1);
     assert.equal(attempts.family_runtime_stage_attempts.attempts[0].provider_kind, 'temporal');
+    assert.equal(attempts.family_runtime_stage_attempts.attempts[0].status, 'queued');
+    assert.equal(attempts.family_runtime_stage_attempts.attempts[0].blocked_reason, null);
   } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });

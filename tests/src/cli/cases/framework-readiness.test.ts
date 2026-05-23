@@ -17,6 +17,12 @@ import {
   assertDomainDispatchGroupExecutorHints,
   assertSameDomainDispatchGroupExecutorHints,
 } from './domain-dispatch-group-executor-hints-assertions.ts';
+import {
+  assertFrameworkOwnerHandoffAction,
+  assertFrameworkOwnerHandoffPacket,
+  assertFrameworkOwnerPayloadAction,
+  assertFrameworkOwnerPayloadAttention,
+} from './owner-payload-workorder-assertions.ts';
 
 test('framework readiness summarizes default control-plane surfaces without authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-state-'));
@@ -151,68 +157,8 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.attention_first_payload.summary.domain_dispatch_attention_count,
     readiness.summary.domain_dispatch_attention_count,
   );
-  assert.equal(
-    readiness.attention_first_payload.owner_payload_group_attention_policy,
-    'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
-  );
-  assert.equal(
-    readiness.attention_first_payload.owner_payload_groups.length <= 5,
-    true,
-  );
-  assert.equal(
-    readiness.attention_first_payload.owner_payload_group_attention_count,
-    readiness.attention_first_payload.owner_payload_groups.length
-      + readiness.attention_first_payload.owner_payload_group_attention_omitted_count,
-  );
-  const firstOwnerPayloadGroup = readiness.attention_first_payload.owner_payload_groups[0];
-  if (firstOwnerPayloadGroup) {
-    assert.equal(typeof firstOwnerPayloadGroup.owner, 'string');
-    assert.equal(firstOwnerPayloadGroup.owner.includes('-'), true);
-    assert.equal(typeof firstOwnerPayloadGroup.payload_kind, 'string');
-    assert.equal(firstOwnerPayloadGroup.attention_count > 0, true);
-    assert.equal(firstOwnerPayloadGroup.full_detail_section, 'evidence_envelope');
-    assert.equal(firstOwnerPayloadGroup.required_refs_any_of.includes('domain_owner_receipt_refs'), true);
-    assert.equal(firstOwnerPayloadGroup.required_refs_any_of.includes('typed_blocker_refs'), true);
-    assert.equal(firstOwnerPayloadGroup.authority_boundary.refs_only, true);
-    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_write_domain_truth, false);
-    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_create_owner_receipt, false);
-    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_close_domain_ready, false);
-    assert.equal(firstOwnerPayloadGroup.authority_boundary.can_claim_production_ready, false);
-  }
-  const ownerHandoffPacket = readiness.attention_first_payload.owner_handoff_packet;
-  assert.equal(
-    readiness.owner_handoff_packet.source_command,
-    'opl runtime app-operator-drilldown --json',
-  );
-  assert.equal(readiness.owner_handoff_packet.surface_kind, ownerHandoffPacket.surface_kind);
-  assert.equal(readiness.owner_handoff_packet.owner_count, ownerHandoffPacket.owner_count);
-  assert.deepEqual(readiness.owner_handoff_packet.owners, ownerHandoffPacket.owners);
-  assert.equal(ownerHandoffPacket.surface_kind, 'opl_app_operator_owner_handoff_packet');
-  assert.equal(
-    ownerHandoffPacket.projection_policy,
-    'bounded_owner_handoff_refs_only_no_domain_action_execution_or_receipt_creation',
-  );
-  assert.equal(ownerHandoffPacket.owner_count >= ownerHandoffPacket.owners.length, true);
-  assert.equal(ownerHandoffPacket.owners.length <= 5, true);
-  assert.equal(
-    ownerHandoffPacket.owner_count,
-    ownerHandoffPacket.owners.length + ownerHandoffPacket.owner_omitted_count,
-  );
-  assert.equal(
-    ownerHandoffPacket.evidence_envelope_attention_count,
-    readiness.attention_first_payload.summary.evidence_envelope_attention_count,
-  );
-  assert.equal(
-    ownerHandoffPacket.domain_dispatch_attention_count,
-    readiness.attention_first_payload.summary.domain_dispatch_attention_count,
-  );
-  assert.equal(ownerHandoffPacket.authority_boundary.can_execute_domain_action, false);
-  assert.equal(ownerHandoffPacket.authority_boundary.can_write_domain_truth, false);
-  assert.equal(ownerHandoffPacket.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(ownerHandoffPacket.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(ownerHandoffPacket.authority_boundary.can_close_owner_chain, false);
-  assert.equal(ownerHandoffPacket.authority_boundary.can_close_domain_ready, false);
-  assert.equal(ownerHandoffPacket.authority_boundary.can_claim_production_ready, false);
+  const firstOwnerPayloadGroup = assertFrameworkOwnerPayloadAttention(readiness);
+  const { ownerHandoffPacket, firstOwnerHandoff } = assertFrameworkOwnerHandoffPacket(readiness);
   const omaProductionConsumption =
     readiness.attention_first_payload.oma_production_consumption_followthrough;
   const appUserPathEvidence = assertFrameworkAppReleaseUserPathEvidence(readiness);
@@ -250,26 +196,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
     ]);
     assert.equal(omaProductionConsumption.gate_items.length, 3);
   }
-  const firstOwnerHandoff = ownerHandoffPacket.owners[0];
-  if (firstOwnerHandoff) {
-    assert.equal(typeof firstOwnerHandoff.owner, 'string');
-    assert.equal(firstOwnerHandoff.status, 'handoff_required');
-    assert.equal(firstOwnerHandoff.attention_count > 0, true);
-    assert.equal(
-      firstOwnerHandoff.owner_payload_group_count
-        + firstOwnerHandoff.domain_dispatch_group_count > 0,
-      true,
-    );
-    assert.equal(firstOwnerHandoff.payload_owner, 'domain_repository_or_app_live_operator');
-    assert.equal(firstOwnerHandoff.required_refs_any_of.length > 0, true);
-    assert.equal(firstOwnerHandoff.full_detail_sections.length > 0, true);
-    assert.equal(firstOwnerHandoff.can_execute_domain_action, false);
-    assert.equal(firstOwnerHandoff.can_write_domain_truth, false);
-    assert.equal(firstOwnerHandoff.can_create_owner_receipt, false);
-    assert.equal(firstOwnerHandoff.can_close_owner_chain, false);
-    assert.equal(firstOwnerHandoff.can_close_domain_ready, false);
-    assert.equal(firstOwnerHandoff.can_claim_production_ready, false);
-  }
   const nextSafeActions = readiness.attention_first_payload.next_safe_actions;
   assert.equal(nextSafeActions.length > 0, true);
   assert.equal(nextSafeActions.length <= 5, true);
@@ -292,82 +218,8 @@ test('framework readiness summarizes default control-plane surfaces without auth
     );
     assert.equal(frameworkReviewAction.step_kind, 'framework_attention_review');
     assert.equal(frameworkReviewAction.evidence_closure_gate, 'operator_attention_triage_gate');
-    const ownerPayloadAction = nextSafeActions.find(
-      (action: { action_kind?: string }) => action.action_kind === 'owner_payload_group_scaleout',
-    );
-    assert.equal(Boolean(ownerPayloadAction), Boolean(firstOwnerPayloadGroup));
-    if (firstOwnerPayloadGroup && ownerPayloadAction) {
-      assert.equal(ownerPayloadAction.action_id, 'review_owner_payload_group_scaleout');
-      assert.equal(ownerPayloadAction.step_kind, 'owner_payload_group_scaleout');
-      assert.equal(ownerPayloadAction.owner, firstOwnerPayloadGroup.owner);
-      assert.equal(ownerPayloadAction.payload_kind, firstOwnerPayloadGroup.payload_kind);
-      assert.equal(
-        ownerPayloadAction.evidence_closure_gate,
-        firstOwnerPayloadGroup.payload_kind === 'domain_owner_receipt_or_typed_blocker_refs'
-          ? 'domain_owner_chain_receipt_or_typed_blocker_gate'
-          : 'domain_app_live_evidence_payload_gate',
-      );
-      assert.equal(ownerPayloadAction.attention_count, firstOwnerPayloadGroup.attention_count);
-      assert.deepEqual(ownerPayloadAction.required_refs_any_of, firstOwnerPayloadGroup.required_refs_any_of);
-      assert.equal(ownerPayloadAction.full_detail_section, 'evidence_envelope');
-      assert.equal(ownerPayloadAction.authority, 'operator_attention_only');
-      assert.equal(ownerPayloadAction.can_execute_domain_action, false);
-      assert.equal(ownerPayloadAction.can_write_domain_truth, false);
-      assert.equal(ownerPayloadAction.can_create_owner_receipt, false);
-      assert.equal(ownerPayloadAction.can_close_domain_ready, false);
-      assert.equal(ownerPayloadAction.can_claim_production_ready, false);
-    }
-    const ownerHandoffAction = nextSafeActions.find(
-      (action: { action_kind?: string }) => action.action_kind === 'owner_handoff_packet_review',
-    );
-    assert.equal(Boolean(ownerHandoffAction), Boolean(firstOwnerHandoff));
-    if (firstOwnerHandoff && ownerHandoffAction) {
-      assert.equal(ownerHandoffAction.action_id, 'review_owner_handoff_packet');
-      assert.equal(ownerHandoffAction.step_kind, 'owner_handoff_packet_review');
-      assert.equal(
-        ownerHandoffAction.evidence_closure_gate,
-        'domain_or_app_live_owner_handoff_gate',
-      );
-      assert.equal(ownerHandoffAction.owner, firstOwnerHandoff.owner);
-      assert.equal(ownerHandoffAction.owner_count, ownerHandoffPacket.owner_count);
-      assert.equal(
-        ownerHandoffAction.top_owner_attention_count,
-        firstOwnerHandoff.attention_count,
-      );
-      assert.deepEqual(
-        ownerHandoffAction.required_refs_any_of,
-        firstOwnerHandoff.required_refs_any_of,
-      );
-      assert.deepEqual(
-        ownerHandoffAction.required_return_shapes,
-        firstOwnerHandoff.required_return_shapes,
-      );
-      assert.equal(
-        ownerHandoffAction.payload_path_policy,
-        firstOwnerHandoff.payload_path_policy,
-      );
-      assert.deepEqual(
-        ownerHandoffAction.accepted_payload_paths,
-        firstOwnerHandoff.accepted_payload_paths,
-      );
-      assert.equal(
-        ownerHandoffAction.payload_preflight_policy,
-        firstOwnerHandoff.payload_preflight_policy,
-      );
-      assert.equal(
-        ownerHandoffAction.payload_preflight_blocked_error_kind,
-        firstOwnerHandoff.payload_preflight_blocked_error_kind,
-      );
-      assert.equal(ownerHandoffAction.authority, 'operator_attention_only');
-      assert.equal(ownerHandoffAction.can_execute_domain_action, false);
-      assert.equal(ownerHandoffAction.can_write_domain_truth, false);
-      assert.equal(ownerHandoffAction.can_create_owner_receipt, false);
-      assert.equal(ownerHandoffAction.can_create_typed_blocker, false);
-      assert.equal(ownerHandoffAction.can_close_owner_chain, false);
-      assert.equal(ownerHandoffAction.can_close_domain_ready, false);
-      assert.equal(ownerHandoffAction.can_claim_production_ready, false);
-      assert.equal(ownerHandoffAction.can_authorize_quality_or_export, false);
-    }
+    assertFrameworkOwnerPayloadAction(nextSafeActions, firstOwnerPayloadGroup);
+    assertFrameworkOwnerHandoffAction(nextSafeActions, ownerHandoffPacket, firstOwnerHandoff);
     assertFrameworkAppReleaseUserPathAction(nextSafeActions, appUserPathEvidence);
     const omaProductionConsumptionAction = nextSafeActions.find(
       (action: { action_kind?: string }) =>

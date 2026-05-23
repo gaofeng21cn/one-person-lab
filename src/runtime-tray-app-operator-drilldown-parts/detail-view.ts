@@ -16,6 +16,7 @@ import {
 } from './app-release-user-path.ts';
 import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
 import { summarizeSelectedSafeAction } from './selected-safe-action.ts';
+import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
 
 export type AppOperatorDrilldownDetailLevel = 'summary' | 'full';
@@ -586,6 +587,13 @@ function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
       const payloadKind = stringValue(group.payload_kind);
       const openCount = numberValue(group.open_envelope_count);
       const blockedCount = numberValue(group.blocked_envelope_count);
+      const requiredRefsAnyOf = ownerPayloadRequiredRefs(payloadKind);
+      const payloadWorkorder = buildOwnerPayloadWorkorder({
+        owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
+        payloadKinds: payloadKind ? [payloadKind] : [],
+        requiredRefsAnyOf,
+        fullDetailSections: ['evidence_envelope'],
+      });
       return {
         owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
         payload_kind: payloadKind,
@@ -600,7 +608,12 @@ function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
         receipt_ref_count: numberValue(group.receipt_ref_count),
         typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
         evidence_ref_count: numberValue(group.evidence_ref_count),
-        required_refs_any_of: ownerPayloadRequiredRefs(payloadKind),
+        required_refs_any_of: requiredRefsAnyOf,
+        required_return_shapes: stringList(payloadWorkorder.required_return_shapes),
+        payload_path_policy: stringValue(payloadWorkorder.payload_path_policy),
+        accepted_payload_paths: record(payloadWorkorder.accepted_payload_paths),
+        owner_payload_workorder: payloadWorkorder,
+        empty_payload_template_is_success_evidence: false,
         full_detail_section: 'evidence_envelope',
         authority_boundary: {
           can_write_domain_truth: false,
@@ -811,6 +824,12 @@ function evidenceNextSteps(drilldown: JsonRecord) {
       typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
       evidence_ref_count: numberValue(group.evidence_ref_count),
       required_refs_any_of: stringList(group.required_refs_any_of),
+      required_return_shapes: stringList(group.required_return_shapes),
+      payload_path_policy: stringValue(group.payload_path_policy),
+      accepted_payload_paths: record(group.accepted_payload_paths),
+      owner_payload_workorder: record(group.owner_payload_workorder),
+      empty_payload_template_is_success_evidence:
+        group.empty_payload_template_is_success_evidence === true,
       full_detail_section: 'evidence_envelope',
       can_execute_domain_action: false,
       can_create_owner_receipt: false,

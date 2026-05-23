@@ -1,4 +1,5 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -110,6 +111,25 @@ export function buildOwnerHandoffPacket(input: {
       groups.ownerPayloadGroups.length > 0 ? ['evidence_envelope'] : [],
       groups.dispatchGroups.length > 0 ? ['domain_dispatch_evidence'] : [],
     ]);
+    const payloadKinds = uniqueSortedStrings(
+      groups.ownerPayloadGroups.map((group) => [group.payload_kind]),
+    );
+    const requiredRefsAnyOf = requiredRefsForOwnerEntry(
+      groups.ownerPayloadGroups,
+      groups.dispatchGroups,
+    );
+    const requiredReturnShapes = uniqueSortedStrings(
+      groups.dispatchGroups.map((group) => group.required_return_shapes),
+    );
+    const ownerPayloadWorkorder = buildOwnerPayloadWorkorder({
+      owner,
+      payloadKinds,
+      requiredRefsAnyOf,
+      requiredReturnShapes,
+      fullDetailSections,
+    });
+    const workorderAcceptedPayloadPaths = record(ownerPayloadWorkorder.accepted_payload_paths);
+    const workorderPayloadPathPolicy = stringValue(ownerPayloadWorkorder.payload_path_policy);
     return {
       owner,
       status: attentionCount > 0 ? 'handoff_required' : 'clear',
@@ -120,23 +140,20 @@ export function buildOwnerHandoffPacket(input: {
       domain_dispatch_group_count: groups.dispatchGroups.length,
       top_payload_kind: stringValue(groups.ownerPayloadGroups[0]?.payload_kind),
       top_stage_id: stringValue(groups.dispatchGroups[0]?.stage_id),
-      payload_kinds: uniqueSortedStrings(
-        groups.ownerPayloadGroups.map((group) => [group.payload_kind]),
-      ),
+      payload_kinds: payloadKinds,
       stage_ids: uniqueSortedStrings(
         groups.dispatchGroups.map((group) => [group.stage_id]),
       ),
-      required_refs_any_of: requiredRefsForOwnerEntry(
-        groups.ownerPayloadGroups,
-        groups.dispatchGroups,
-      ),
-      required_return_shapes: uniqueSortedStrings(
-        groups.dispatchGroups.map((group) => group.required_return_shapes),
-      ),
+      required_refs_any_of: requiredRefsAnyOf,
+      required_return_shapes: requiredReturnShapes,
       payload_path_policy: firstStringValue(
         groups.dispatchGroups.map((group) => group.payload_path_policy),
-      ),
-      accepted_payload_paths: acceptedPayloadPaths,
+      ) ?? workorderPayloadPathPolicy,
+      accepted_payload_paths: Object.keys(acceptedPayloadPaths).length > 0
+        ? acceptedPayloadPaths
+        : workorderAcceptedPayloadPaths,
+      owner_payload_workorder: ownerPayloadWorkorder,
+      empty_payload_template_is_success_evidence: false,
       payload_preflight_policy: payloadPreflightPolicies[0] ?? null,
       payload_preflight_policy_count: payloadPreflightPolicies.length,
       payload_preflight_blocked_error_kind: firstStringValue(

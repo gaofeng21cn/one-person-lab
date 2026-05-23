@@ -10,6 +10,9 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import {
+  assertOwnerPayloadWorkorderProjection,
+} from './owner-payload-workorder-assertions.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -184,6 +187,7 @@ test('runtime App drilldown projects bounded owner handoff packet without author
     );
     assert.equal(ownerHandoff.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(ownerHandoff.required_refs_any_of.length > 0, true);
+    assertOwnerPayloadWorkorderProjection(ownerHandoff);
     if (ownerHandoff.domain_dispatch_group_count > 0) {
       assert.equal(
         ownerHandoff.required_return_shapes.includes('domain_owner_receipt_ref'),

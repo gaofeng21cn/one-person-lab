@@ -66,6 +66,12 @@ function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
     typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
     evidence_ref_count: numberValue(group.evidence_ref_count),
     required_refs_any_of: stringList(group.required_refs_any_of),
+    required_return_shapes: stringList(group.required_return_shapes),
+    payload_path_policy: stringValue(group.payload_path_policy),
+    accepted_payload_paths: record(group.accepted_payload_paths),
+    owner_payload_workorder: record(group.owner_payload_workorder),
+    empty_payload_template_is_success_evidence:
+      group.empty_payload_template_is_success_evidence === true,
     full_detail_section: 'evidence_envelope',
     authority: 'operator_attention_only',
     can_execute_domain_action: false,
@@ -153,6 +159,9 @@ function frameworkOwnerHandoffNextSafeAction(packet: JsonRecord) {
     required_return_shapes: stringList(firstOwner.required_return_shapes),
     payload_path_policy: stringValue(firstOwner.payload_path_policy),
     accepted_payload_paths: record(firstOwner.accepted_payload_paths),
+    owner_payload_workorder: record(firstOwner.owner_payload_workorder),
+    empty_payload_template_is_success_evidence:
+      firstOwner.empty_payload_template_is_success_evidence === true,
     payload_preflight_policy: stringValue(firstOwner.payload_preflight_policy),
     payload_preflight_policy_count: numberValue(firstOwner.payload_preflight_policy_count),
     payload_preflight_blocked_error_kind:

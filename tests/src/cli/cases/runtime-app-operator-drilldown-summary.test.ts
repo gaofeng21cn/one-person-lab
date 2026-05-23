@@ -37,6 +37,9 @@ import {
   assertFunctionalPrivatizationReviewRequiredSummary,
   markFunctionalPrivatizationReviewRequired,
 } from './runtime-app-operator-drilldown-summary-functional-privatization.ts';
+import {
+  assertOwnerPayloadWorkorderProjection,
+} from './owner-payload-workorder-assertions.ts';
 
 test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
@@ -389,6 +392,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups[0];
     assert.equal(firstOwnerPayloadGroup.full_detail_section, 'evidence_envelope');
     assert.equal(firstOwnerPayloadGroup.attention_count > 0, true);
+    assertOwnerPayloadWorkorderProjection(firstOwnerPayloadGroup);
     assert.equal(firstOwnerPayloadGroup.authority_boundary.can_create_owner_receipt, false);
     assert.equal(firstOwnerPayloadGroup.authority_boundary.can_claim_production_ready, false);
     assert.equal(
@@ -448,6 +452,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     assert.equal(typeof ownerPayloadStep.owner, 'string');
     assert.equal(ownerPayloadStep.full_detail_section, 'evidence_envelope');
+    assertOwnerPayloadWorkorderProjection(ownerPayloadStep);
     assert.equal(ownerPayloadStep.can_create_owner_receipt, false);
     assert.equal(ownerPayloadStep.can_close_domain_ready, false);
     const dispatchStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
@@ -712,6 +717,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       fullDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups[0]
         .full_detail_section,
       'evidence_envelope',
+    );
+    assertOwnerPayloadWorkorderProjection(
+      fullDrilldown.attention_first_payload.evidence_after_contract.owner_payload_groups[0],
     );
     assert.equal(
       fullDrilldown.attention_first_payload.evidence_after_contract.authority_boundary.attention_count_is_hard_blocker,
