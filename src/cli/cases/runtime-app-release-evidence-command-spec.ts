@@ -331,7 +331,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       summary:
         'Materialize a long-operator evidence ref and record payload only after the observation workorder passes preflight.',
       examples: [
-        'opl runtime app-release-evidence long-operator finish --workorder-file /tmp/opl-app-long-operator/long-operator-workorder.json',
+        'opl runtime app-release-evidence long-operator finish --workorder-file /tmp/opl-app-long-operator/app-release-long-operator-workorder.json',
       ],
       handler: (args) => ({
         app_release_long_operator_observation_finish:

@@ -72,7 +72,7 @@ export function buildPublicRuntimeCommandSpecs(
         usage:
           'opl runtime app-release-evidence long-operator finish --workorder-file <path> [--finished-at <iso>]',
         examples: [
-          'opl runtime app-release-evidence long-operator finish --workorder-file /tmp/opl-app-long-operator/long-operator-workorder.json',
+          'opl runtime app-release-evidence long-operator finish --workorder-file /tmp/opl-app-long-operator/app-release-long-operator-workorder.json',
         ],
         group: 'runtime',
       }),
