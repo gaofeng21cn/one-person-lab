@@ -99,14 +99,30 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
   );
   assert.equal(
     nextSafeAction.payload_workorder.surface_kind,
-    'opl_selected_safe_action_payload_workorder',
+    'opl_app_release_user_path_evidence_payload_workorder',
   );
   assert.equal(
     nextSafeAction.payload_workorder.accepted_payload_path_policy,
-    'real_refs_or_typed_blocker_path_empty_template_blocks',
+    'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+  );
+  assert.equal(
+    nextSafeAction.payload_workorder.accepted_payload_paths
+      .app_release_user_path_refs_path.closes_app_release_user_path,
+    false,
+  );
+  assert.equal(
+    nextSafeAction.payload_workorder.accepted_payload_paths
+      .typed_blocker_path.success_claimed,
+    false,
   );
   assert.equal(nextSafeAction.payload_workorder.empty_payload_template_is_success_evidence, false);
   assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_generate_typed_blocker, false);
+  assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_claim_release_ready, false);
+  assert.equal(
+    nextSafeAction.payload_workorder.authority_boundary.can_close_app_release_user_path,
+    false,
+  );
 }
 
 export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
@@ -145,6 +161,24 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
   assert.equal(appUserPathStep.route_requires_domain_or_app_payload, true);
   assert.equal(appUserPathStep.payload_template.release_package_refs.length, 0);
   assert.equal(appUserPathStep.payload_ref_hints.typed_blocker_refs_should_cover[0], 'typed_blocker_ref');
+  assert.equal(
+    appUserPathStep.payload_workorder.surface_kind,
+    'opl_app_release_user_path_evidence_payload_workorder',
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.accepted_payload_paths
+      .app_release_user_path_refs_path.typed_blocker_refs_must_be_absent,
+    true,
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.accepted_payload_paths
+      .typed_blocker_path.closes_release_ready,
+    false,
+  );
+  assert.equal(
+    appUserPathStep.payload_workorder.authority_boundary.can_claim_production_ready,
+    false,
+  );
   assert.equal(
     appUserPathStep.payload_template_policy,
     'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',

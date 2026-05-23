@@ -5,6 +5,10 @@ import {
   type AppReleaseUserPathEvidenceReceiptInput,
 } from '../../app-release-user-path-evidence-ledger.ts';
 import {
+  finishAppReleaseLongOperatorObservation,
+  startAppReleaseLongOperatorObservation,
+} from '../../app-release-long-operator-observation.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -126,6 +130,116 @@ function parseRuntimeAppReleaseEvidenceVerifyArgs(
   return { receipt_ref: receiptRef };
 }
 
+function parsePositiveInteger(
+  value: string | undefined,
+  option: string,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (!value) {
+    throw buildUsageError(`runtime app-release-evidence long-operator start requires ${option}.`, spec, {
+      option,
+    });
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw buildUsageError(`${option} must be a positive integer.`, spec, {
+      option,
+      value,
+    });
+  }
+  return parsed;
+}
+
+function parseRuntimeAppReleaseLongOperatorStartArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let cohort = '';
+  let evidenceDir: string | null = null;
+  let minimumDurationMinutes: number | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--cohort' && value) {
+      cohort = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--evidence-dir' && value) {
+      evidenceDir = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--minimum-duration-minutes') {
+      minimumDurationMinutes = parsePositiveInteger(value, token, spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime app-release-evidence long-operator start: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!cohort) {
+    throw buildUsageError('runtime app-release-evidence long-operator start requires --cohort.', spec, {
+      required: ['--cohort'],
+    });
+  }
+  if (!minimumDurationMinutes) {
+    throw buildUsageError(
+      'runtime app-release-evidence long-operator start requires --minimum-duration-minutes.',
+      spec,
+      { required: ['--minimum-duration-minutes'] },
+    );
+  }
+  if (!evidenceDir) {
+    throw buildUsageError(
+      'runtime app-release-evidence long-operator start requires --evidence-dir.',
+      spec,
+      { required: ['--evidence-dir'] },
+    );
+  }
+  return {
+    cohort,
+    evidenceDir,
+    minimumDurationMinutes,
+  };
+}
+
+function parseRuntimeAppReleaseLongOperatorFinishArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let workorderFile = '';
+  let finishedAt: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--workorder-file' && value) {
+      workorderFile = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--finished-at' && value) {
+      finishedAt = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime app-release-evidence long-operator finish: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!workorderFile) {
+    throw buildUsageError(
+      'runtime app-release-evidence long-operator finish requires --workorder-file.',
+      spec,
+      {
+        required: ['--workorder-file'],
+      },
+    );
+  }
+  return { workorderFile, finishedAt };
+}
+
 export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime app-release-evidence record': {
@@ -192,6 +306,42 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
           },
         };
       },
+    },
+    'runtime app-release-evidence long-operator start': {
+      usage:
+        'opl runtime app-release-evidence long-operator start --cohort <version> --minimum-duration-minutes <n> --evidence-dir <path>',
+      summary:
+        'Prepare a body-local App long-operator observation workorder without recording release/user-path evidence.',
+      examples: [
+        'opl runtime app-release-evidence long-operator start --cohort 26.5.19 --minimum-duration-minutes 240 --evidence-dir /tmp/opl-app-long-operator',
+      ],
+      handler: (args) => ({
+        app_release_long_operator_observation_start:
+          startAppReleaseLongOperatorObservation(
+            parseRuntimeAppReleaseLongOperatorStartArgs(
+              args,
+              commandSpecs['runtime app-release-evidence long-operator start'],
+            ),
+          ),
+      }),
+    },
+    'runtime app-release-evidence long-operator finish': {
+      usage:
+        'opl runtime app-release-evidence long-operator finish --workorder-file <path> [--finished-at <iso>]',
+      summary:
+        'Materialize a long-operator evidence ref and record payload only after the observation workorder passes preflight.',
+      examples: [
+        'opl runtime app-release-evidence long-operator finish --workorder-file /tmp/opl-app-long-operator/long-operator-workorder.json',
+      ],
+      handler: (args) => ({
+        app_release_long_operator_observation_finish:
+          finishAppReleaseLongOperatorObservation(
+            parseRuntimeAppReleaseLongOperatorFinishArgs(
+              args,
+              commandSpecs['runtime app-release-evidence long-operator finish'],
+            ),
+          ),
+      }),
     },
   };
   return commandSpecs;

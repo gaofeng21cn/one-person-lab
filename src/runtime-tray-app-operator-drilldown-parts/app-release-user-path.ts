@@ -440,21 +440,18 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     can_submit_record_to_safe_action_shell: canRecord,
     route_requires_domain_or_app_payload: canRecord,
     payload_template: canRecord
-      ? {
-          release_package_refs: [],
-          screenshot_refs: [],
-          reload_prompt_user_path_refs: [],
-          provider_state_linkage_refs: [],
-          long_operator_evidence_refs: [],
-          typed_blocker_refs: [],
-        }
+      ? appReleaseUserPathPayloadTemplate()
       : null,
     payload_ref_hints: canRecord
       ? appReleaseUserPathPayloadRefHints()
       : null,
+    payload_workorder: canRecord
+      ? appReleaseUserPathPayloadWorkorder(stringList(evidence.required_return_shapes))
+      : null,
     payload_template_policy: canRecord
       ? 'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit'
       : null,
+    empty_payload_template_is_success_evidence: false,
     typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
     blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
     full_detail_section: 'app_release_user_path_evidence',
@@ -494,6 +491,83 @@ function appReleaseUserPathPayloadRefHints() {
     typed_blocker_refs_should_cover: [
       'typed_blocker_ref',
     ],
+  };
+}
+
+function appReleaseUserPathPayloadTemplate() {
+  return {
+    release_package_refs: [],
+    screenshot_refs: [],
+    reload_prompt_user_path_refs: [],
+    provider_state_linkage_refs: [],
+    long_operator_evidence_refs: [],
+    typed_blocker_refs: [],
+  };
+}
+
+function appReleaseUserPathPayloadWorkorder(requiredReturnShapes?: string[]) {
+  const requiredOperatorPayloadRefs = [
+    'release_package_refs',
+    'screenshot_refs',
+    'reload_prompt_user_path_refs',
+    'provider_state_linkage_refs',
+    'long_operator_evidence_refs',
+    'typed_blocker_refs',
+  ];
+  return {
+    surface_kind: 'opl_app_release_user_path_evidence_payload_workorder',
+    workorder_policy:
+      'operator_must_choose_real_app_release_user_path_refs_path_or_release_owner_typed_blocker_path_empty_template_blocks',
+    payload_owner: 'app_live_operator_or_release_owner',
+    accepted_payload_path_policy:
+      'real_app_release_user_path_refs_or_typed_blocker_path_empty_template_blocks',
+    accepted_payload_paths: {
+      app_release_user_path_refs_path: {
+        required_any_operator_payload_refs: requiredOperatorPayloadRefs.filter((ref) =>
+          ref !== 'typed_blocker_refs'
+        ),
+        typed_blocker_refs_must_be_absent: true,
+        closes_app_release_user_path: false,
+        closes_release_ready: false,
+        closes_production_ready: false,
+      },
+      typed_blocker_path: {
+        required_operator_payload_refs: ['typed_blocker_refs'],
+        success_claimed: false,
+        closes_app_release_user_path: false,
+        closes_release_ready: false,
+        closes_production_ready: false,
+      },
+    },
+    required_operator_payload_refs: requiredOperatorPayloadRefs,
+    required_return_shapes: requiredReturnShapes && requiredReturnShapes.length > 0
+      ? requiredReturnShapes
+      : [
+          'release_package_receipt_ref',
+          'screenshot_evidence_ref',
+          'reload_prompt_user_path_receipt_ref',
+          'provider_state_linkage_ref',
+          'long_operator_evidence_ref',
+          'typed_blocker_ref',
+        ],
+    payload_template: appReleaseUserPathPayloadTemplate(),
+    payload_ref_hints: appReleaseUserPathPayloadRefHints(),
+    empty_payload_template_is_success_evidence: false,
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_read_memory_body: false,
+      can_read_artifact_body: false,
+      can_mutate_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_create_owner_receipt: false,
+      can_generate_typed_blocker: false,
+      can_close_domain_ready: false,
+      can_claim_release_ready: false,
+      can_claim_production_ready: false,
+      can_close_app_release_user_path: false,
+    },
   };
 }
 
@@ -592,17 +666,19 @@ export function buildAppReleaseUserPathEvidenceActionRoutes(evidence: JsonRecord
     open_reason: 'app_release_user_path_evidence_refs_or_typed_blocker_refs_required',
     payload_requirement:
       'app_live_operator_or_release_owner_refs_payload_required_to_record_app_release_user_path_evidence_or_typed_blocker',
-    payload_template: {
-      release_package_refs: [],
-      screenshot_refs: [],
-      reload_prompt_user_path_refs: [],
-      provider_state_linkage_refs: [],
-      long_operator_evidence_refs: [],
-      typed_blocker_refs: [],
-    },
+    payload_template: appReleaseUserPathPayloadTemplate(),
     payload_ref_hints: appReleaseUserPathPayloadRefHints(),
+    payload_workorder: appReleaseUserPathPayloadWorkorder(
+      stringList(evidence.required_return_shapes),
+    ),
     payload_template_policy:
       'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',
+    empty_payload_template_is_success_evidence: false,
+    copyable_runtime_action_execute_commands: {
+      record_with_payload: runtimeActionExecuteCommand(
+        `app_release_user_path_evidence:${targetSurface}:record`,
+      ),
+    },
   }];
 }
 

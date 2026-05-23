@@ -58,6 +58,24 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime app-release-evidence list --json'],
         group: 'runtime',
       }),
+    'runtime app-release-evidence long-operator start':
+      cloneCommandSpec(commandSpecs['runtime app-release-evidence long-operator start'], {
+        usage:
+          'opl runtime app-release-evidence long-operator start --cohort <version> --minimum-duration-minutes <n> --evidence-dir <path>',
+        examples: [
+          'opl runtime app-release-evidence long-operator start --cohort 26.5.19 --minimum-duration-minutes 240 --evidence-dir /tmp/opl-app-long-operator',
+        ],
+        group: 'runtime',
+      }),
+    'runtime app-release-evidence long-operator finish':
+      cloneCommandSpec(commandSpecs['runtime app-release-evidence long-operator finish'], {
+        usage:
+          'opl runtime app-release-evidence long-operator finish --workorder-file <path> [--finished-at <iso>]',
+        examples: [
+          'opl runtime app-release-evidence long-operator finish --workorder-file /tmp/opl-app-long-operator/long-operator-workorder.json',
+        ],
+        group: 'runtime',
+      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {
