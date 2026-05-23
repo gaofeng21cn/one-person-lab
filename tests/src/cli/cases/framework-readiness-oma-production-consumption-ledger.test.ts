@@ -314,27 +314,33 @@ test('runtime oma-production-consumption long-soak finish materializes a record 
         earliest_finish_at: '2026-05-24T01:00:00.000Z',
       }, null, 2)}\n`,
     );
-    fs.writeFileSync(
-      startOutput.operator_log_file,
-      [
-        {
-          event_kind: 'managed_install_update_state_checked',
-          observed_at: '2026-05-24T00:05:00.000Z',
-        },
-        {
-          event_kind: 'app_live_path_reexercised_or_confirmed_live',
-          observed_at: '2026-05-24T00:15:00.000Z',
-        },
-        {
-          event_kind: 'owner_receipt_or_typed_blocker_scaleout_checked',
-          observed_at: '2026-05-24T00:30:00.000Z',
-        },
-        {
-          event_kind: 'operator_continuity_window_observed',
-          observed_at: '2026-05-24T01:05:00.000Z',
-        },
-      ].map((entry) => JSON.stringify(entry)).join('\n') + '\n',
-    );
+    const eventKinds = [
+      ['managed_install_update_state_checked', '2026-05-24T00:05:00.000Z'],
+      ['app_live_path_reexercised_or_confirmed_live', '2026-05-24T00:15:00.000Z'],
+      ['owner_receipt_or_typed_blocker_scaleout_checked', '2026-05-24T00:30:00.000Z'],
+      ['operator_continuity_window_observed', '2026-05-24T01:05:00.000Z'],
+    ];
+    for (const [eventKind, observedAt] of eventKinds) {
+      const eventOutput = runCli([
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        eventKind,
+        '--observed-at',
+        observedAt,
+        '--evidence-ref',
+        `evidence:${eventKind}`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      }).oma_long_soak_observation_event;
+      assert.equal(eventOutput.long_soak_refs.length, 0);
+      assert.equal(eventOutput.record_payload_file, null);
+      assert.equal(eventOutput.authority_boundary.can_claim_production_ready, false);
+    }
 
     const finishOutput = runCli([
       'runtime',
@@ -397,6 +403,116 @@ test('runtime oma-production-consumption long-soak finish materializes a record 
   }
 });
 
+test('runtime oma-production-consumption long-soak event records constrained operator events', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-long-soak-event-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const evidenceDir = path.join(stateRoot, 'oma-long-soak-event');
+    const startOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '60',
+      '--evidence-dir',
+      evidenceDir,
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_long_soak_observation_start;
+
+    const eventKinds = [
+      'managed_install_update_state_checked',
+      'app_live_path_reexercised_or_confirmed_live',
+      'owner_receipt_or_typed_blocker_scaleout_checked',
+      'operator_continuity_window_observed',
+    ];
+    for (const [index, eventKind] of eventKinds.entries()) {
+      const eventOutput = runCli([
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        eventKind,
+        '--observed-at',
+        `2026-05-24T00:${String((index + 1) * 10).padStart(2, '0')}:00.000Z`,
+        '--evidence-ref',
+        `operator-evidence:oma/${eventKind}`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      }).oma_long_soak_observation_event;
+      assert.equal(eventOutput.status, 'recorded');
+      assert.equal(eventOutput.event.event_kind, eventKind);
+      assert.equal(eventOutput.event.authority_boundary.can_claim_production_ready, false);
+      assert.deepEqual(eventOutput.long_soak_refs, []);
+      assert.equal(eventOutput.record_payload_file, null);
+    }
+
+    const operatorLog = fs.readFileSync(startOutput.operator_log_file, 'utf8')
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(operatorLog.map((event) => event.event_kind), eventKinds);
+    assert.deepEqual(operatorLog.map((event) => event.evidence_ref), eventKinds.map(
+      (eventKind) => `operator-evidence:oma/${eventKind}`,
+    ));
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime oma-production-consumption long-soak event rejects unknown event kinds', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-long-soak-event-invalid-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const startOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '60',
+      '--evidence-dir',
+      path.join(stateRoot, 'oma-long-soak-event-invalid'),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_long_soak_observation_start;
+
+    assert.throws(
+      () => runCli([
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        'freeform_operator_note',
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      }),
+      /event_kind must be one of:/,
+    );
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime oma-production-consumption long-soak finish blocks before minimum duration', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-long-soak-blocked-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -415,15 +531,25 @@ test('runtime oma-production-consumption long-soak finish blocks before minimum 
     ], {
       OPL_STATE_DIR: stateRoot,
     }).oma_long_soak_observation_start;
-    fs.writeFileSync(
-      startOutput.operator_log_file,
-      [
-        { event_kind: 'managed_install_update_state_checked' },
-        { event_kind: 'app_live_path_reexercised_or_confirmed_live' },
-        { event_kind: 'owner_receipt_or_typed_blocker_scaleout_checked' },
-        { event_kind: 'operator_continuity_window_observed' },
-      ].map((entry) => JSON.stringify(entry)).join('\n') + '\n',
-    );
+    for (const eventKind of [
+      'managed_install_update_state_checked',
+      'app_live_path_reexercised_or_confirmed_live',
+      'owner_receipt_or_typed_blocker_scaleout_checked',
+      'operator_continuity_window_observed',
+    ]) {
+      runCli([
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        startOutput.workorder_file,
+        '--event-kind',
+        eventKind,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+      });
+    }
 
     const finishOutput = runCli([
       'runtime',

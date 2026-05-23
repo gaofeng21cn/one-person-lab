@@ -132,7 +132,7 @@ export function assertFrameworkAppReleaseUserPathAction(
   );
   assert.equal(
     appUserPathAction.payload_workorder.long_operator_observation_workorder_policy,
-    'start_event_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+    'start_event_finish_materializes_local_manifest_event_log_and_payload_only_record_verify_remain_required',
   );
   assert.equal(appUserPathAction.can_write_domain_truth, false);
   assert.equal(appUserPathAction.can_create_owner_receipt, false);

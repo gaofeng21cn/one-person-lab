@@ -6,6 +6,7 @@ import {
 } from '../../oma-production-consumption-ledger.ts';
 import {
   finishOmaLongSoakObservation,
+  recordOmaLongSoakObservationEvent,
   startOmaLongSoakObservation,
 } from '../../oma-long-soak-observation.ts';
 import {
@@ -227,6 +228,58 @@ function parseRuntimeOmaLongSoakFinishArgs(
   return { workorderFile, finishedAt };
 }
 
+function parseRuntimeOmaLongSoakEventArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let workorderFile = '';
+  let eventKind = '';
+  let observedAt: string | null = null;
+  let evidenceRef: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--workorder-file' && value) {
+      workorderFile = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--event-kind' && value) {
+      eventKind = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--observed-at' && value) {
+      observedAt = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--evidence-ref' && value) {
+      evidenceRef = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime oma-production-consumption long-soak event: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!workorderFile) {
+    throw buildUsageError(
+      'runtime oma-production-consumption long-soak event requires --workorder-file.',
+      spec,
+      { required: ['--workorder-file'] },
+    );
+  }
+  if (!eventKind) {
+    throw buildUsageError(
+      'runtime oma-production-consumption long-soak event requires --event-kind.',
+      spec,
+      { required: ['--event-kind'] },
+    );
+  }
+  return { workorderFile, eventKind, observedAt, evidenceRef };
+}
+
 function omaProductionConsumptionAuthorityBoundary() {
   return {
     refs_only: true,
@@ -310,6 +363,24 @@ export function buildRuntimeOmaProductionConsumptionCommandSpecs(): Record<strin
             parseRuntimeOmaLongSoakStartArgs(
               args,
               commandSpecs['runtime oma-production-consumption long-soak start'],
+            ),
+          ),
+      }),
+    },
+    'runtime oma-production-consumption long-soak event': {
+      usage:
+        'opl runtime oma-production-consumption long-soak event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
+      summary:
+        'Append a constrained OMA long-soak observation event to the body-local workorder log without recording production-consumption evidence.',
+      examples: [
+        'opl runtime oma-production-consumption long-soak event --workorder-file /tmp/opl-oma-long-soak/oma-long-soak-workorder.json --event-kind app_live_path_reexercised_or_confirmed_live --evidence-ref app:oma/live',
+      ],
+      handler: (args) => ({
+        oma_long_soak_observation_event:
+          recordOmaLongSoakObservationEvent(
+            parseRuntimeOmaLongSoakEventArgs(
+              args,
+              commandSpecs['runtime oma-production-consumption long-soak event'],
             ),
           ),
       }),

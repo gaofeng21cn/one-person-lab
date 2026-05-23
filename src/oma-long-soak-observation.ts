@@ -12,6 +12,13 @@ type FinishInput = {
   finishedAt?: string | null;
 };
 
+type EventInput = {
+  workorderFile: string;
+  eventKind: string;
+  observedAt?: string | null;
+  evidenceRef?: string | null;
+};
+
 const REQUIRED_EVENT_KINDS = [
   'managed_install_update_state_checked',
   'app_live_path_reexercised_or_confirmed_live',
@@ -94,6 +101,24 @@ function sha256File(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function assertRequiredEventKind(eventKind: string) {
+  if (!REQUIRED_EVENT_KINDS.includes(eventKind as (typeof REQUIRED_EVENT_KINDS)[number])) {
+    throw new Error(
+      `event_kind must be one of: ${REQUIRED_EVENT_KINDS.join(', ')}.`,
+    );
+  }
+}
+
+function listObservedEventKinds(events: Record<string, unknown>[]) {
+  return [...new Set(events.map((event) => stringValue(event.event_kind)).filter(
+    (eventKind): eventKind is string => Boolean(eventKind),
+  ))].sort();
+}
+
+function listMissingEventKinds(observedKinds: string[]) {
+  return REQUIRED_EVENT_KINDS.filter((eventKind) => !observedKinds.includes(eventKind));
+}
+
 export function startOmaLongSoakObservation(input: StartInput) {
   const startedAt = nowIso();
   const earliestFinishAt = new Date(
@@ -138,6 +163,43 @@ export function startOmaLongSoakObservation(input: StartInput) {
   };
 }
 
+export function recordOmaLongSoakObservationEvent(input: EventInput) {
+  const workorder = readJson(input.workorderFile);
+  assertRequiredEventKind(input.eventKind);
+  const observedAt = input.observedAt ?? nowIso();
+  parseIso(observedAt, 'observed_at');
+  const operatorLogFile = stringValue(workorder.operator_log_file)
+    ?? path.join(path.dirname(input.workorderFile), 'operator-observation-events.jsonl');
+  fs.mkdirSync(path.dirname(operatorLogFile), { recursive: true });
+  const event = {
+    surface_kind: 'opl_oma_long_soak_observation_event',
+    target_agent: stringValue(workorder.target_agent) ?? 'opl-meta-agent',
+    target_repo: stringValue(workorder.target_repo) ?? 'opl-meta-agent',
+    event_kind: input.eventKind,
+    observed_at: observedAt,
+    evidence_ref: input.evidenceRef ?? null,
+    authority_boundary: authorityBoundary(),
+  };
+  fs.appendFileSync(operatorLogFile, `${JSON.stringify(event)}\n`);
+  const events = readOperatorEvents(operatorLogFile);
+  const observedEventKinds = listObservedEventKinds(events);
+  const missingEventKinds = listMissingEventKinds(observedEventKinds);
+  return {
+    surface_kind: 'opl_oma_long_soak_observation_event_record',
+    status: 'recorded',
+    target_agent: stringValue(workorder.target_agent) ?? 'opl-meta-agent',
+    target_repo: stringValue(workorder.target_repo) ?? 'opl-meta-agent',
+    operator_log_file: operatorLogFile,
+    event,
+    observed_event_kinds: observedEventKinds,
+    missing_event_kinds: missingEventKinds,
+    required_event_kinds_observed: missingEventKinds.length === 0,
+    long_soak_refs: [],
+    record_payload_file: null,
+    authority_boundary: authorityBoundary(),
+  };
+}
+
 export function finishOmaLongSoakObservation(input: FinishInput) {
   const workorder = readJson(input.workorderFile);
   const startedAt = stringValue(workorder.started_at) ?? nowIso();
@@ -149,12 +211,8 @@ export function finishOmaLongSoakObservation(input: FinishInput) {
   const operatorLogFile = stringValue(workorder.operator_log_file)
     ?? path.join(path.dirname(input.workorderFile), 'operator-observation-events.jsonl');
   const events = readOperatorEvents(operatorLogFile);
-  const observedEventKinds = [...new Set(events.map((event) => stringValue(event.event_kind)).filter(
-    (eventKind): eventKind is string => Boolean(eventKind),
-  ))].sort();
-  const missingEventKinds = REQUIRED_EVENT_KINDS.filter((eventKind) =>
-    !observedEventKinds.includes(eventKind)
-  );
+  const observedEventKinds = listObservedEventKinds(events);
+  const missingEventKinds = listMissingEventKinds(observedEventKinds);
   const durationSatisfied = elapsedMinutes >= minimumDurationMinutes;
   const requiredEventKindsObserved = missingEventKinds.length === 0;
 

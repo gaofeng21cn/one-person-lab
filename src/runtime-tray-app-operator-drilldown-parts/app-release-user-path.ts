@@ -601,7 +601,7 @@ function appReleaseUserPathPayloadWorkorder(requiredReturnShapes?: string[]) {
       ],
     },
     long_operator_observation_workorder_policy:
-      'start_event_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+      'start_event_finish_materializes_local_manifest_event_log_and_payload_only_record_verify_remain_required',
     empty_payload_template_is_success_evidence: false,
     authority_boundary: {
       refs_only: true,

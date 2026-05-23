@@ -133,6 +133,15 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime oma-production-consumption long-soak event':
+      cloneCommandSpec(commandSpecs['runtime oma-production-consumption long-soak event'], {
+        usage:
+          'opl runtime oma-production-consumption long-soak event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
+        examples: [
+          'opl runtime oma-production-consumption long-soak event --workorder-file /tmp/opl-oma-long-soak/oma-long-soak-workorder.json --event-kind app_live_path_reexercised_or_confirmed_live --evidence-ref app:oma/live',
+        ],
+        group: 'runtime',
+      }),
     'runtime oma-production-consumption long-soak finish':
       cloneCommandSpec(commandSpecs['runtime oma-production-consumption long-soak finish'], {
         usage:

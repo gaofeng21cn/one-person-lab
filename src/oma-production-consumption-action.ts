@@ -73,6 +73,18 @@ export function omaProductionConsumptionPayloadWorkorder() {
         '--evidence-dir',
         '<path>',
       ],
+      event: [
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        '<path>',
+        '--event-kind',
+        '<kind>',
+        '--evidence-ref',
+        '<ref>',
+      ],
       finish: [
         'runtime',
         'oma-production-consumption',
@@ -97,7 +109,7 @@ export function omaProductionConsumptionPayloadWorkorder() {
       ],
     },
     long_soak_observation_workorder_policy:
-      'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+      'start_event_finish_materializes_local_manifest_event_log_and_payload_only_record_verify_remain_required',
     empty_payload_template_is_success_evidence: false,
     authority_boundary: {
       can_write_domain_truth: false,
