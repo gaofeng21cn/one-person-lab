@@ -39,6 +39,23 @@ const reviewRequiredModule = {
   },
 };
 
+const clearedActiveAdapterModule = {
+  module_id: 'lifecycle_adapter',
+  migration_class: 'refs_only_domain_adapter',
+  standardization_layer: 'private_platform_residue_inventory',
+  current_owner: 'med-autogrant',
+  active_caller_status: 'active_refs_only_adapter_no_generic_lifecycle_owner',
+  active_callers: [
+    'product status shell',
+  ],
+  current_surface_refs: [
+    '/mag_consumer_thinning_contract/lifecycle_adapter',
+  ],
+  expected_opl_primitives: [
+    'opl_lifecycle_index',
+  ],
+};
+
 export function markFunctionalPrivatizationReviewRequired(manifest: ManyStageManifest) {
   manifest.functional_privatization_audit = {
     surface_kind: 'functional_privatization_audit',
@@ -48,6 +65,7 @@ export function markFunctionalPrivatizationReviewRequired(manifest: ManyStageMan
   const audit = manifest.functional_privatization_audit as {
     modules: JsonRecord[];
   };
+  audit.modules.push(clearedActiveAdapterModule);
   audit.modules.push(reviewRequiredModule);
 }
 

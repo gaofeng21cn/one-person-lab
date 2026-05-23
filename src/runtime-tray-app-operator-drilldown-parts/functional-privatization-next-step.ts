@@ -36,6 +36,15 @@ function firstString(...values: unknown[]) {
   return null;
 }
 
+function requiresFunctionalPrivatizationFollowthrough(domain: JsonRecord, module: JsonRecord) {
+  if (stringValue(module.semantic_equivalence_status) === 'review_required') {
+    return true;
+  }
+  const domainSummary = record(domain.summary);
+  return numberValue(domainSummary.active_private_generic_residue_count) > 0
+    && stringValue(module.active_caller_status)?.includes('active_private') === true;
+}
+
 function requiredRefs() {
   return [
     'semantic_equivalence_proof_ref',
@@ -59,10 +68,7 @@ export function functionalPrivatizationNextSteps(drilldown: JsonRecord) {
       const domainEnvelope = record(record(domain.envelope).semantic_equivalence_evidence_gate);
       const domainSummary = record(domain.summary);
       return recordList(domain.private_platform_residue_inventory)
-        .filter((module) => (
-          stringValue(module.semantic_equivalence_status) === 'review_required'
-          || stringValue(module.active_caller_status)?.includes('active') === true
-        ))
+        .filter((module) => requiresFunctionalPrivatizationFollowthrough(domain, module))
         .map((module) => ({
           step_kind: 'functional_privatization_semantic_equivalence_followthrough',
           owner: firstString(domain.target_domain_id, domain.domain_id)
