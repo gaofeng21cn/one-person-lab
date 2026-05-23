@@ -74,9 +74,39 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
   );
   assert.equal(nextSafeAction.submit_via, 'opl runtime action execute');
   assert.deepEqual(
-    nextSafeAction.submit_args.slice(0, 4),
-    ['runtime', 'action', 'execute', '--action'],
+    nextSafeAction.submit_args,
+    [
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+      '--payload-file',
+      '<payload.json>',
+    ],
   );
+  assert.deepEqual(
+    nextSafeAction.copyable_runtime_action_execute_commands.record_with_payload,
+    [
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+      '--payload-file',
+      '<payload.json>',
+    ],
+  );
+  assert.equal(
+    nextSafeAction.payload_workorder.surface_kind,
+    'opl_selected_safe_action_payload_workorder',
+  );
+  assert.equal(
+    nextSafeAction.payload_workorder.accepted_payload_path_policy,
+    'real_refs_or_typed_blocker_path_empty_template_blocks',
+  );
+  assert.equal(nextSafeAction.payload_workorder.empty_payload_template_is_success_evidence, false);
+  assert.equal(nextSafeAction.payload_workorder.authority_boundary.can_create_owner_receipt, false);
 }
 
 export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
