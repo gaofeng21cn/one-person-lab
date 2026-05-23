@@ -78,6 +78,21 @@ import {
 import {
   buildDefaultCallerDeletionEvidenceRefs,
 } from './runtime-tray-app-operator-drilldown-parts/default-caller-deletion-evidence-refs.ts';
+import {
+  booleanValue,
+  cleanupCommandDomainId,
+  nestedRef,
+  numberValue,
+  record,
+  recordList,
+  refsFromRecord,
+  stringList,
+  stringValue,
+  uniqueBlockers,
+  uniqueRefs,
+  uniqueRefsByValue,
+  uniqueStrings,
+} from './runtime-tray-app-operator-drilldown-parts/value-utils.ts';
 
 type DrilldownRef = {
   ref: string;
@@ -87,104 +102,6 @@ type DrilldownRef = {
   stage_id?: string | null;
   stage_attempt_id?: string | null;
 };
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function record(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function recordList(value: unknown) {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function stringValue(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function stringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map(stringValue).filter((entry): entry is string => Boolean(entry))
-    : [];
-}
-
-function numberValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function booleanValue(value: unknown) {
-  return typeof value === 'boolean' ? value : null;
-}
-
-function uniqueStrings(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
-function uniqueRefsByValue<T extends { ref: string }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    if (seen.has(value.ref)) {
-      return false;
-    }
-    seen.add(value.ref);
-    return true;
-  });
-}
-
-function cleanupCommandDomainId(project: DomainManifestCatalogEntry, fallbackDomainId: string) {
-  return stringValue(project.project_id)
-    ?? stringValue(project.project)
-    ?? fallbackDomainId;
-}
-
-function nestedRef(value: unknown) {
-  return isRecord(value) && typeof value.ref === 'string' && value.ref.trim().length > 0
-    ? value.ref.trim()
-    : null;
-}
-
-function typedBlockerId(value: JsonRecord) {
-  return stringValue(value.blocker_id)
-    ?? stringValue(value.blocker_kind)
-    ?? stringValue(value.reason)
-    ?? JSON.stringify(value);
-}
-
-function uniqueBlockers(values: JsonRecord[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = typedBlockerId(value);
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
-function refsFromRecord(value: JsonRecord, keys: string[]) {
-  return uniqueStrings(keys.flatMap((key) => {
-    const entry = value[key];
-    if (typeof entry === 'string') {
-      return [entry];
-    }
-    return stringList(entry);
-  }));
-}
 
 function routeGraphRefs(attempts: JsonRecord[]): DrilldownRef[] {
   return attempts
