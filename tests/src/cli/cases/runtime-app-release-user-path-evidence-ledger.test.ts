@@ -128,7 +128,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_gate_count, 5);
-    assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 0);
+    assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
     assert.equal(
       summary.summary.app_release_user_path_evidence_recorded_ledger_receipt_ref_count,
@@ -151,11 +151,18 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
 
     const evidence = summary.attention_first_payload.evidence_after_contract
       .app_release_user_path_evidence;
-    assert.equal(evidence.status, 'app_release_user_path_evidence_verify_pending');
-    assert.equal(evidence.refs_observed_for_all_gates, true);
+    assert.equal(evidence.status, 'app_release_user_path_evidence_open');
+    assert.equal(evidence.refs_observed_for_all_gates, false);
     assert.equal(evidence.evidence_ledger_status, 'ledger_refs_recorded_verify_pending');
     assert.equal(evidence.pending_verify_receipt_ref_count, 1);
     assert.deepEqual(evidence.pending_verify_receipt_refs, recordOutput.receipt_refs);
+    assert.deepEqual(evidence.open_gate_ids, [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+    ]);
     assert.equal(evidence.production_user_path_ready, false);
     assert.equal(evidence.release_ready_claimed, false);
     assert.equal(evidence.production_ready_claimed, false);
@@ -171,7 +178,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
     );
     assert.equal(Boolean(nextStep), true);
-    assert.equal(nextStep.status, 'app_release_user_path_evidence_verify_pending');
+    assert.equal(nextStep.status, 'app_release_user_path_evidence_open');
     assert.equal(nextStep.receipt_verification_required, true);
     assert.equal(nextStep.pending_verify_receipt_ref_count, 1);
     assert.equal(
@@ -301,7 +308,8 @@ test('runtime App release evidence CLI accepts singular ref fields for operator 
     const summary = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
-    assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 0);
+    assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
+    assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

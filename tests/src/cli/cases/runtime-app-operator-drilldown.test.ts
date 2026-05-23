@@ -208,8 +208,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(drilldown.summary.provider_cadence_window_missing_receipt_count, 7);
     assert.equal(drilldown.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
     assert.equal(drilldown.summary.periodic_execution_ref_count, 5);
-    assert.equal(drilldown.summary.operator_action_route_count, 26);
-    assert.equal(drilldown.summary.operator_executable_route_count, 16);
+    assert.equal(drilldown.summary.operator_action_route_count, 27);
+    assert.equal(drilldown.summary.operator_executable_route_count, 17);
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 2);
     assert.equal(
       drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
@@ -225,6 +225,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       1,
     );
     assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_record_payload_template_count, 1);
+    assert.equal(drilldown.summary.oma_production_consumption_action_route_count, 1);
     assert.equal(drilldown.summary.domain_owned_action_route_count, 2);
     assert.equal(drilldown.summary.functional_privatization_default_watchlist_count, 0);
     assert.equal(drilldown.summary.functional_privatization_semantic_equivalence_review_count, 0);
@@ -665,6 +666,28 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.creates_owner_receipt, false);
     assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.closes_domain_ready, false);
     assert.equal(domainDispatchEvidenceRecordRoute.authority_boundary.closes_production_ready, false);
+
+    const omaProductionConsumptionRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'oma_production_consumption:opl-meta-agent:record',
+    );
+    assert.equal(
+      omaProductionConsumptionRoute.action_kind,
+      'oma_production_consumption_receipt_record',
+    );
+    assert.equal(omaProductionConsumptionRoute.owner, 'opl');
+    assert.equal(omaProductionConsumptionRoute.route_target_kind, 'opl_cli');
+    assert.equal(omaProductionConsumptionRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(omaProductionConsumptionRoute.route_requires_domain_or_app_payload, true);
+    assert.equal(omaProductionConsumptionRoute.can_close_without_domain_or_app_payload, false);
+    assert.deepEqual(omaProductionConsumptionRoute.payload_template, {
+      long_soak_refs: [],
+      typed_blocker_refs: [],
+      operator_evidence_refs: [],
+    });
+    assert.equal(omaProductionConsumptionRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(omaProductionConsumptionRoute.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(omaProductionConsumptionRoute.authority_boundary.can_claim_production_ready, false);
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
       (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',

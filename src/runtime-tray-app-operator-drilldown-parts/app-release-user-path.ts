@@ -181,7 +181,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     record(drilldown.codex_app_runtime_role),
     record(drilldown.provider_slo_operator_action_refs),
     record(drilldown.periodic_execution_refs),
-    ...ledgerReceipts,
+    ...verifiedLedgerReceipts,
   ];
   const cohortGuard = buildCohortGuard(candidateEvidenceRecords);
   const scopedEvidenceRecords = recordsForCohortGuard(

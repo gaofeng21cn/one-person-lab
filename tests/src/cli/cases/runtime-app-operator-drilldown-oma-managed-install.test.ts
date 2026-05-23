@@ -319,7 +319,7 @@ test('runtime OMA App live path CLI records refs-only operator evidence without 
   }
 });
 
-test('runtime OMA production-consumption CLI records long-soak refs and closes the followthrough gate', () => {
+test('runtime OMA production-consumption CLI records refs-only operator evidence but requires verification before closing the followthrough gate', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-production-consumption-cli-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
@@ -476,6 +476,7 @@ test('runtime OMA production-consumption CLI records long-soak refs and closes t
     }).oma_production_consumption_ledger;
     assert.equal(listOutput.receipt_count, 1);
     assert.equal(listOutput.receipts[0].receipt_ref, recordOutput.receipt_refs[0]);
+    assert.equal(listOutput.receipts[0].receipt_status, 'recorded');
     assert.equal(listOutput.authority_boundary.can_write_domain_truth, false);
 
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
@@ -487,19 +488,57 @@ test('runtime OMA production-consumption CLI records long-soak refs and closes t
     const longSoakGate = followthrough.gate_items.find(
       (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
     );
-    assert.equal(longSoakGate.status, 'refs_observed');
-    assert.deepEqual(longSoakGate.observed_refs, [
-      'long-soak://opl-meta-agent/controlled-operator-soak/26.5.19',
-    ]);
-    assert.equal(followthrough.summary.long_soak_ref_count, 1);
-    assert.equal(followthrough.summary.production_consumption_ledger_receipt_ref_count, 1);
-    assert.equal(followthrough.summary.production_consumption_operator_evidence_ref_count, 1);
-    assert.equal(followthrough.summary.open_gate_count, 0);
-    assert.deepEqual(followthrough.summary.open_gate_ids, []);
-    assert.equal(followthrough.summary.production_consumption_ready, true);
+    assert.equal(longSoakGate.status, 'missing_long_soak_refs');
+    assert.deepEqual(longSoakGate.observed_refs, []);
+    assert.equal(followthrough.summary.long_soak_ref_count, 0);
+    assert.equal(followthrough.summary.pending_verify_long_soak_receipt_ref_count, 1);
+    assert.deepEqual(
+      followthrough.summary.pending_verify_long_soak_receipt_refs,
+      recordOutput.receipt_refs,
+    );
+    assert.equal(followthrough.summary.open_gate_count, 1);
+    assert.deepEqual(followthrough.summary.open_gate_ids, ['long_soak_refs']);
+    assert.equal(followthrough.summary.production_consumption_ready, false);
     assert.equal(followthrough.summary.domain_ready_claim_count, 0);
     assert.equal(followthrough.summary.quality_verdict_claim_count, 0);
     assert.equal(followthrough.summary.default_promotion_claim_count, 0);
+
+    const verifyOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      recordOutput.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_production_consumption_ledger_verify;
+    assert.equal(verifyOutput.status, 'verified');
+    assert.equal(verifyOutput.receipt.receipt_status, 'verified');
+    assert.equal(verifyOutput.authority_boundary.can_claim_production_ready, false);
+
+    const verifiedOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const verifiedFollowthrough =
+      verifiedOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
+        .production_consumption_followthrough;
+    const verifiedLongSoakGate = verifiedFollowthrough.gate_items.find(
+      (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
+    );
+    assert.equal(verifiedLongSoakGate.status, 'refs_observed');
+    assert.deepEqual(verifiedLongSoakGate.observed_refs, [
+      'opl://oma-production-consumption/long-soak%3A%2F%2Fopl-meta-agent%2Fcontrolled-operator-soak%2F26.5.19',
+      'long-soak://opl-meta-agent/controlled-operator-soak/26.5.19',
+      'receipt://operator/oma-controlled-soak-26.5.19',
+    ]);
+    assert.equal(verifiedFollowthrough.summary.long_soak_ref_count, 3);
+    assert.equal(verifiedFollowthrough.summary.pending_verify_long_soak_receipt_ref_count, 0);
+    assert.equal(verifiedFollowthrough.summary.open_gate_count, 0);
+    assert.deepEqual(verifiedFollowthrough.summary.open_gate_ids, []);
+    assert.equal(verifiedFollowthrough.summary.production_consumption_ready, true);
+    assert.equal(verifiedFollowthrough.summary.domain_ready_claim_count, 0);
+    assert.equal(verifiedFollowthrough.summary.quality_verdict_claim_count, 0);
+    assert.equal(verifiedFollowthrough.summary.default_promotion_claim_count, 0);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;

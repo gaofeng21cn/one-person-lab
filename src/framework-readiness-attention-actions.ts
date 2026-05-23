@@ -187,6 +187,10 @@ function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonReco
     production_consumption_ready: followthrough.production_consumption_ready === true,
     open_gate_count: numberValue(followthrough.open_gate_count),
     open_gate_ids: stringList(followthrough.open_gate_ids),
+    pending_verify_long_soak_receipt_ref_count:
+      numberValue(followthrough.pending_verify_long_soak_receipt_ref_count),
+    pending_verify_long_soak_receipt_refs:
+      stringList(followthrough.pending_verify_long_soak_receipt_refs),
     manual_required_gates: recordList(followthrough.gate_items)
       .filter((gate) => gate.manual_required === true)
       .map((gate) => ({
@@ -260,6 +264,10 @@ export function frameworkAttentionNextSafeActions(input: {
     ),
     ...(
       numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count) > 0
+        || numberValue(
+          input.omaProductionConsumptionFollowthrough
+            .pending_verify_long_soak_receipt_ref_count,
+        ) > 0
         ? [
             frameworkOmaProductionConsumptionNextSafeAction(
               input.omaProductionConsumptionFollowthrough,

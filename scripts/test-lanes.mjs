@@ -143,6 +143,7 @@ const lanes = {
       'tests/src/cli/cases/runtime-app-operator-drilldown-external-evidence-actions.test.ts',
       'tests/src/cli/cases/runtime-app-operator-stage-evidence-closeout.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
+      'tests/src/cli/cases/runtime-app-release-user-path-evidence-ledger.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-oma-managed-install.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-oma-manual-required.test.ts',
       'tests/src/cli/cases/runtime-app-operator-drilldown-owner-handoff.test.ts',

@@ -86,6 +86,14 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime oma-production-consumption list --json'],
         group: 'runtime',
       }),
+    'runtime oma-production-consumption verify':
+      cloneCommandSpec(commandSpecs['runtime oma-production-consumption verify'], {
+        usage: 'opl runtime oma-production-consumption verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime oma-production-consumption verify --receipt-ref opl://oma-production-consumption/long-soak%3Aoma',
+        ],
+        group: 'runtime',
+      }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       examples: [

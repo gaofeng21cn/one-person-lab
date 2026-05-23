@@ -2,7 +2,7 @@ import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
 import { recordOmaAppLivePathReceipts } from '../../../../src/oma-app-live-path-ledger.ts';
 
-test('runtime oma-production-consumption records long-soak refs consumed by framework readiness', () => {
+test('runtime oma-production-consumption verifies long-soak refs before framework readiness consumes them', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   try {
@@ -49,13 +49,47 @@ test('runtime oma-production-consumption records long-soak refs consumed by fram
     assert.deepEqual(listOutput.receipts[0].long_soak_refs, [
       'long_soak_ref://opl-meta-agent/production-consumption/2026-05-23',
     ]);
+    assert.equal(listOutput.receipts[0].receipt_status, 'recorded');
     assert.equal(listOutput.authority_boundary.can_claim_production_ready, false);
     assert.equal(listOutput.authority_boundary.can_create_domain_owner_receipt, false);
+
+    const recordedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
+    const recordedFollowthrough =
+      recordedReadiness.attention_first_payload.oma_production_consumption_followthrough;
+    if (recordedFollowthrough.structural_consumption_ready !== true) {
+      return;
+    }
+    assert.equal(recordedFollowthrough.open_gate_count, 1);
+    assert.deepEqual(recordedFollowthrough.open_gate_ids, ['long_soak_refs']);
+    assert.equal(recordedFollowthrough.production_consumption_ready, false);
+    assert.equal(recordedFollowthrough.pending_verify_long_soak_receipt_ref_count, 1);
+    assert.deepEqual(
+      recordedFollowthrough.pending_verify_long_soak_receipt_refs,
+      recordOutput.receipt_refs,
+    );
+    assert.equal(recordedReadiness.oma_production_consumption_followthrough.open_gate_count, 1);
+    assert.equal(
+      recordedReadiness.oma_production_consumption_followthrough.production_consumption_ready,
+      false,
+    );
+
+    const verifyOutput = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      recordOutput.receipt_refs[0],
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_verify;
+    assert.equal(verifyOutput.status, 'verified');
+    assert.equal(verifyOutput.receipt.receipt_status, 'verified');
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,
     }).framework_readiness;
-    const omaFollowthrough = readiness.attention_first_payload.oma_production_consumption_followthrough;
+    const omaFollowthrough =
+      readiness.attention_first_payload.oma_production_consumption_followthrough;
     if (omaFollowthrough.structural_consumption_ready !== true) {
       return;
     }

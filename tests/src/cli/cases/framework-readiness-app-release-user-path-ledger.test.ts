@@ -25,8 +25,15 @@ test('framework readiness keeps recorded App release user-path receipts in verif
       OPL_STATE_DIR: stateRoot,
     }).framework_readiness;
     const evidence = readiness.attention_first_payload.app_release_user_path_evidence;
-    assert.equal(evidence.status, 'app_release_user_path_evidence_verify_pending');
-    assert.equal(evidence.open_gate_count, 0);
+    assert.equal(evidence.status, 'app_release_user_path_evidence_open');
+    assert.equal(evidence.open_gate_count, 5);
+    assert.deepEqual(evidence.open_gate_ids, [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+    ]);
     assert.equal(evidence.pending_verify_receipt_ref_count, 1);
     assert.equal(evidence.evidence_ledger_status, 'ledger_refs_recorded_verify_pending');
     assert.equal(evidence.production_user_path_ready, false);
@@ -36,9 +43,9 @@ test('framework readiness keeps recorded App release user-path receipts in verif
       (item: { warning_id?: string }) => item.warning_id === 'app_release_user_path_evidence',
     );
     assert.equal(Boolean(warning), true);
-    assert.equal(warning.open_gate_count, 0);
+    assert.equal(warning.open_gate_count, 5);
     assert.equal(warning.pending_verify_receipt_ref_count, 1);
-    assert.equal(warning.count, 1);
+    assert.equal(warning.count, 6);
 
     const action = readiness.attention_first_payload.next_safe_actions.find(
       (item: { action_kind?: string }) =>
@@ -46,7 +53,7 @@ test('framework readiness keeps recorded App release user-path receipts in verif
     );
     if (readiness.attention_first_payload.blockers.length === 0) {
       assert.equal(Boolean(action), true);
-      assert.equal(action.status, 'app_release_user_path_evidence_verify_pending');
+      assert.equal(action.status, 'app_release_user_path_evidence_open');
       assert.equal(action.pending_verify_receipt_ref_count, 1);
       assert.equal(action.receipt_verification_required, true);
       assert.equal(

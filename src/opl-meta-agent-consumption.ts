@@ -276,11 +276,19 @@ function omaAppLivePathLedgerRefs() {
 
 function omaProductionConsumptionLedgerRefs() {
   const receipts = listOmaProductionConsumptionReceipts();
+  const verifiedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'verified');
+  const recordedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'recorded');
   return {
     receiptRefs: uniqueStringList(receipts.map((receipt) => receipt.receipt_ref)),
-    longSoakRefs: uniqueStringList(receipts.flatMap((receipt) => receipt.long_soak_refs)),
+    verifiedReceiptRefs: uniqueStringList(verifiedReceipts.map((receipt) => receipt.receipt_ref)),
+    longSoakRefs: uniqueStringList(verifiedReceipts.flatMap((receipt) => [
+      receipt.receipt_ref,
+      ...receipt.long_soak_refs,
+      ...receipt.operator_evidence_refs,
+    ])),
     operatorEvidenceRefs: uniqueStringList(receipts.flatMap((receipt) => receipt.operator_evidence_refs)),
     typedBlockerRefs: uniqueStringList(receipts.flatMap((receipt) => receipt.typed_blocker_refs)),
+    pendingVerifyReceiptRefs: uniqueStringList(recordedReceipts.map((receipt) => receipt.receipt_ref)),
   };
 }
 
@@ -408,6 +416,8 @@ function buildProductionConsumptionFollowthrough(payloads: {
     ...productionConsumptionLedgerRefs.longSoakRefs,
   ]);
   const typedBlockerRefs = productionConsumptionLedgerRefs.typedBlockerRefs;
+  const pendingVerifyLongSoakReceiptRefs =
+    productionConsumptionLedgerRefs.pendingVerifyReceiptRefs;
   const liveRenderingStatus = optionalString(drilldownReceipt.live_rendering_status);
   const gates = [
     productionConsumptionGate({
@@ -494,10 +504,14 @@ function buildProductionConsumptionFollowthrough(payloads: {
       long_soak_ref_count: longSoakObservedRefs.length,
       production_consumption_ledger_receipt_ref_count:
         productionConsumptionLedgerRefs.receiptRefs.length,
+      production_consumption_verified_receipt_ref_count:
+        productionConsumptionLedgerRefs.verifiedReceiptRefs.length,
       production_consumption_operator_evidence_ref_count:
         productionConsumptionLedgerRefs.operatorEvidenceRefs.length,
       typed_blocker_ref_count: typedBlockerRefs.length,
       blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
+      pending_verify_long_soak_receipt_ref_count: pendingVerifyLongSoakReceiptRefs.length,
+      pending_verify_long_soak_receipt_refs: pendingVerifyLongSoakReceiptRefs,
       production_consumption_ready: openGates.length === 0,
       domain_ready_claim_count: 0,
       quality_verdict_claim_count: 0,

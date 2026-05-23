@@ -330,6 +330,9 @@ function frameworkAttentionFirstPayload(input: {
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
   const totalOperatorAttentionTailCount =
     openTailCount + evidenceEnvelopeAttentionCount + input.domainDispatchAttentionCount;
+  const omaOpenGateCount = numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count);
+  const omaPendingVerifyLongSoakCount =
+    numberValue(input.omaProductionConsumptionFollowthrough.pending_verify_long_soak_receipt_ref_count);
   const blockers = frameworkReadinessBlockers(input);
   const warnings = [
     ...(input.semanticAttentionGateCount > 0
@@ -382,10 +385,12 @@ function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/app_release_user_path_evidence',
         }]
       : []),
-    ...(numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count) > 0
+    ...(omaOpenGateCount + omaPendingVerifyLongSoakCount > 0
       ? [{
           warning_id: 'oma_production_consumption_followthrough',
-          count: numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count),
+          count: omaOpenGateCount + omaPendingVerifyLongSoakCount,
+          open_gate_count: omaOpenGateCount,
+          pending_verify_long_soak_receipt_ref_count: omaPendingVerifyLongSoakCount,
           drilldown_ref: '/framework_readiness/oma_production_consumption_followthrough',
         }]
       : []),

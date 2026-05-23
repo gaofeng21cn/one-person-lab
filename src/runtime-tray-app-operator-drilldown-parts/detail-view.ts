@@ -701,7 +701,10 @@ function evidenceNextSteps(drilldown: JsonRecord) {
   ) {
     steps.push(appReleaseUserPathEvidenceNextStep(appReleaseUserPathEvidence));
   }
-  if (numberValue(omaProductionConsumption.open_gate_count) > 0) {
+  if (
+    numberValue(omaProductionConsumption.open_gate_count) > 0
+    || numberValue(omaProductionConsumption.pending_verify_long_soak_receipt_ref_count) > 0
+  ) {
     steps.push(omaProductionConsumptionNextStep(omaProductionConsumption));
   }
   if (

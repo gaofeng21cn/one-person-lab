@@ -3,6 +3,7 @@ import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-inst
 import { recordOmaAppLivePathReceipts } from '../../../../src/oma-app-live-path-ledger.ts';
 import {
   recordOmaProductionConsumptionReceipts,
+  verifyOmaProductionConsumptionReceipt,
 } from '../../../../src/oma-production-consumption-ledger.ts';
 
 test('framework readiness consumes OMA App live path receipts without closing long soak', () => {
@@ -85,7 +86,7 @@ test('framework readiness consumes OMA App live path receipts without closing lo
   }
 });
 
-test('framework readiness consumes OMA production-consumption long-soak refs without domain authority claims', () => {
+test('framework readiness consumes verified OMA production-consumption long-soak refs without domain authority claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-consumption-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   try {
@@ -114,6 +115,26 @@ test('framework readiness consumes OMA production-consumption long-soak refs wit
       operator_evidence_refs: ['receipt://operator/framework-controlled-soak'],
     }]);
     assert.equal(longSoakRecord.status, 'recorded');
+    const recordedReadiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
+    const recordedFollowthrough = recordedReadiness.oma_production_consumption_followthrough;
+    if (recordedFollowthrough.structural_consumption_ready !== true) {
+      return;
+    }
+    assert.equal(recordedFollowthrough.open_gate_count, 1);
+    assert.deepEqual(recordedFollowthrough.open_gate_ids, ['long_soak_refs']);
+    assert.equal(recordedFollowthrough.production_consumption_ready, false);
+    assert.equal(recordedFollowthrough.pending_verify_long_soak_receipt_ref_count, 1);
+    assert.deepEqual(
+      recordedFollowthrough.pending_verify_long_soak_receipt_refs,
+      longSoakRecord.receipt_refs,
+    );
+
+    const verifyResult = verifyOmaProductionConsumptionReceipt({
+      receipt_ref: longSoakRecord.receipt_refs[0],
+    });
+    assert.equal(verifyResult.status, 'verified');
 
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       OPL_STATE_DIR: stateRoot,

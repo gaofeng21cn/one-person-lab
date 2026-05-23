@@ -58,6 +58,10 @@ export function omaProductionConsumptionNextStep(followthrough: JsonRecord) {
     production_consumption_ready: followthrough.production_consumption_ready === true,
     open_gate_count: openGateCount,
     open_gate_ids: openGateIds,
+    pending_verify_long_soak_receipt_ref_count:
+      numberValue(followthrough.pending_verify_long_soak_receipt_ref_count),
+    pending_verify_long_soak_receipt_refs:
+      stringList(followthrough.pending_verify_long_soak_receipt_refs),
     required_refs_by_gate: recordList(followthrough.gate_items).map((gate) => ({
       gate_id: stringValue(gate.gate_id),
       status: stringValue(gate.status),
@@ -200,7 +204,13 @@ export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: J
     production_consumption_ready: summary.production_consumption_ready === true,
     open_gate_count: numberValue(summary.open_gate_count),
     open_gate_ids: openGateIds,
-    attention_required: numberValue(summary.open_gate_count) > 0,
+    pending_verify_long_soak_receipt_ref_count:
+      numberValue(summary.pending_verify_long_soak_receipt_ref_count),
+    pending_verify_long_soak_receipt_refs:
+      stringList(summary.pending_verify_long_soak_receipt_refs),
+    attention_required:
+      numberValue(summary.open_gate_count) > 0
+      || numberValue(summary.pending_verify_long_soak_receipt_ref_count) > 0,
     typed_blocker_refs: typedBlockerRefs,
     typed_blocker_ref_count: typedBlockerRefs.length,
     blocked_by_typed_blocker_refs: followthrough.blocked_by_typed_blocker_refs === true,
