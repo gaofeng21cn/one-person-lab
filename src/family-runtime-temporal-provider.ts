@@ -176,10 +176,13 @@ export async function startTemporalStageAttemptWorkflow(
       provider_kind: attempt.provider_kind,
     });
   }
+  const workflowInput = requireTemporalStageAttemptWorkflowInputLaunchable(
+    buildTemporalStageAttemptWorkflowInput(attempt),
+  );
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
   return withTemporalClient(async (client) => {
     const handle = await client.workflow.start('StageAttemptWorkflow', {
-      args: [requireTemporalStageAttemptWorkflowInputLaunchable(buildTemporalStageAttemptWorkflowInput(attempt))],
+      args: [workflowInput],
       taskQueue: resolveTemporalTaskQueue(),
       workflowId: attempt.workflow_id,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
@@ -514,7 +517,6 @@ function temporalProductionTypedCloseoutPacket() {
     consumed_refs: ['evidence:temporal-production-residency'],
     consumed_memory_refs: ['memory:publication-route-production-residency'],
     writeback_receipt_refs: ['memory-writeback:temporal-production-residency-receipt'],
-    rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
     next_owner: 'med-autoscience',
     domain_ready_verdict: 'domain_gate_pending',
     route_impact: {
@@ -992,11 +994,7 @@ export async function stopTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
   };
 }
 
-export function buildTemporalStageAttemptWorkflowInputForTest(
-  input: TemporalStageAttemptWorkflowInput,
-): TemporalStageAttemptWorkflowInput {
-  return input;
-}
+export function buildTemporalStageAttemptWorkflowInputForTest(input: TemporalStageAttemptWorkflowInput): TemporalStageAttemptWorkflowInput { return input; }
 
 export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return familyRuntimePaths(); }
 

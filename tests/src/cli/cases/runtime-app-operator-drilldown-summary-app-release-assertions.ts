@@ -47,4 +47,20 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
   assert.equal(appUserPathStep.production_ready_claimed, false);
   assert.equal(appUserPathStep.can_close_app_release_user_path, false);
   assert.equal(appUserPathStep.required_return_shapes.includes('typed_blocker_ref'), true);
+  assert.equal(
+    appUserPathStep.record_action_id,
+    'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+  );
+  assert.equal(
+    appUserPathStep.record_command_ref,
+    'opl runtime app-release-evidence record',
+  );
+  assert.equal(appUserPathStep.can_submit_record_to_safe_action_shell, true);
+  assert.equal(appUserPathStep.route_requires_domain_or_app_payload, true);
+  assert.equal(appUserPathStep.payload_template.release_package_refs.length, 0);
+  assert.equal(appUserPathStep.payload_ref_hints.typed_blocker_refs_should_cover[0], 'typed_blocker_ref');
+  assert.equal(
+    appUserPathStep.payload_template_policy,
+    'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',
+  );
 }

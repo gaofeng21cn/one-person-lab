@@ -37,6 +37,7 @@ function uniqueStrings(values: Array<string | null>) {
 }
 
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 
 function workspaceRootFromProfile(profile: string | null) {
   if (!profile) {
@@ -124,10 +125,12 @@ export function isMasDefaultExecutorDispatchTask(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
+  const nextOwner = optionalString(payload.next_executable_owner);
   return row.domain_id === 'medautoscience'
     && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && optionalString(payload.dispatch_ref) !== null
-    && optionalString(payload.next_executable_owner) === 'write'
+    && nextOwner !== null
+    && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 

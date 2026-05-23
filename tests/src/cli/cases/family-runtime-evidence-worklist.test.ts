@@ -15,6 +15,9 @@ import {
   insertProviderCapabilityReceipts,
   withEvidenceWorklistSurfaces,
 } from './family-runtime-evidence-worklist-helpers.ts';
+import {
+  assertDomainDispatchGroupExecutorHints,
+} from './domain-dispatch-group-executor-hints-assertions.ts';
 
 test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure without domain authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-state-'));
@@ -418,6 +421,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       assert.equal(dispatchGroupAttentionItem.workorder_count, dispatchGroup.workorder_count);
       assert.equal(dispatchGroupAttentionItem.sample_stage_attempt_ids.length <= 3, true);
       assert.equal(dispatchGroupAttentionItem.sample_action_refs.length <= 3, true);
+      assertDomainDispatchGroupExecutorHints(dispatchGroupAttentionItem);
       assert.equal(dispatchGroupAttentionItem.sample_required_evidence_refs.length <= 3, true);
       assert.equal(dispatchGroupAttentionItem.stage_attempt_id_omitted_count >= 0, true);
       assert.equal(dispatchGroupAttentionItem.action_ref_omitted_count >= 0, true);

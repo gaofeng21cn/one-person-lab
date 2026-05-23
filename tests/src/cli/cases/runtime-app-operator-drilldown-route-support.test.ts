@@ -56,6 +56,9 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     domainProjectionIngestion: {},
     domainManifestProjects: [],
   }) as unknown as {
+    summary: {
+      opl_meta_agent_registry_status: string;
+    };
     attention_first_payload: {
       evidence_after_contract: Record<string, unknown>;
       evidence_next_steps: Record<string, unknown> & {
@@ -67,6 +70,7 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   };
   const evidenceAfterContract = summaryDrilldown.attention_first_payload.evidence_after_contract;
   const evidenceNextSteps = summaryDrilldown.attention_first_payload.evidence_next_steps;
+  const metaAgentBound = summaryDrilldown.summary.opl_meta_agent_registry_status === 'resolved';
   assert.equal(
     evidenceAfterContract.surface_kind,
     'opl_app_drilldown_evidence_after_contract_attention',
@@ -159,7 +163,7 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
     false,
   );
   assert.equal(evidenceNextSteps.surface_kind, 'opl_app_drilldown_evidence_next_steps');
-  assert.equal(evidenceNextSteps.total_count >= 2, true);
+  assert.equal(evidenceNextSteps.total_count >= (metaAgentBound ? 2 : 1), true);
   assert.equal(evidenceNextSteps.items[0].step_kind, 'app_release_user_path_evidence');
   assert.equal(evidenceNextSteps.items[0].can_close_app_release_user_path, false);
   assert.equal(

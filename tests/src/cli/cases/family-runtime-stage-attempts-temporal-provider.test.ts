@@ -14,7 +14,7 @@ import type {
 } from '../../../../src/family-runtime-temporal.ts';
 import { buildTemporalStageAttemptWorkflowInput } from '../../../../src/family-runtime-temporal.ts';
 import { runFamilyRuntime } from '../../../../src/family-runtime.ts';
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createFakeCodexFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 type TemporalStageAttemptCreateOutput = {
   family_runtime_stage_attempt: {
@@ -64,6 +64,31 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
     OPL_STATE_DIR: stateRoot,
     ...extra,
   };
+}
+
+function createTemporalCloseoutCodexFixture(closeoutRefs: string[]) {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: closeoutRefs,
+    consumed_refs: ['evidence:temporal-fixture'],
+    consumed_memory_refs: [],
+    writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: { decision: 'temporal_fixture' },
+  };
+  return createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-temporal-fixture"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '%s\\n' '${JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', id: 'msg-closeout', text: JSON.stringify(closeout) } })}'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
 }
 
 test('family-runtime temporal attempt start fails closed when Temporal address is not configured', () => {
@@ -623,6 +648,9 @@ test('family-runtime temporal attempt query reads managed local service state wh
   const runtimeRoot = path.join(stateRoot, 'family-runtime');
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-query-managed-${Date.now()}`;
+  const { fixtureRoot: codexFixtureRoot, codexPath } = createTemporalCloseoutCodexFixture(
+    ['receipt:managed-query'],
+  );
   const previousEnv = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
@@ -631,6 +659,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+    OPL_CODEX_BIN: process.env.OPL_CODEX_BIN,
   };
 
   try {
@@ -668,6 +697,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+    process.env.OPL_CODEX_BIN = codexPath;
 
     const created = await runFamilyRuntime([
       'attempt',
@@ -731,6 +761,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     }
     await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
   }
 });
 

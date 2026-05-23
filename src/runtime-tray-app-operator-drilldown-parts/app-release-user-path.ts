@@ -293,6 +293,13 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
   const targetSurface = stringValue(evidence.target_surface)
     ?? 'one_person_lab_app_release_user_path';
   const pendingVerifyReceiptRefs = stringList(evidence.pending_verify_receipt_refs);
+  const recordArgs = ['runtime', 'app-release-evidence', 'record'];
+  const firstPendingVerifyReceiptRef = pendingVerifyReceiptRefs[0] ?? null;
+  const verifyArgs = firstPendingVerifyReceiptRef
+    ? ['runtime', 'app-release-evidence', 'verify', '--receipt-ref', firstPendingVerifyReceiptRef]
+    : null;
+  const recordRequired = numberValue(evidence.open_gate_count) > 0;
+  const canRecord = recordRequired || evidence.blocked_by_typed_blocker_refs === true;
   return {
     step_kind: 'app_release_user_path_evidence',
     owner: stringValue(evidence.owner) ?? 'one-person-lab',
@@ -327,7 +334,31 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     verification_action_id: pendingVerifyReceiptRefs.length > 0
       ? `app_release_user_path_evidence:${targetSurface}:verify`
       : null,
+    verification_command_ref: verifyArgs ? commandRef(verifyArgs) : null,
+    can_submit_verify_to_safe_action_shell: verifyArgs !== null,
     can_close_without_domain_or_app_payload: pendingVerifyReceiptRefs.length > 0,
+    record_action_id: canRecord
+      ? `app_release_user_path_evidence:${targetSurface}:record`
+      : null,
+    record_command_ref: canRecord ? commandRef(recordArgs) : null,
+    can_submit_record_to_safe_action_shell: canRecord,
+    route_requires_domain_or_app_payload: canRecord,
+    payload_template: canRecord
+      ? {
+          release_package_refs: [],
+          screenshot_refs: [],
+          reload_prompt_user_path_refs: [],
+          provider_state_linkage_refs: [],
+          long_operator_evidence_refs: [],
+          typed_blocker_refs: [],
+        }
+      : null,
+    payload_ref_hints: canRecord
+      ? appReleaseUserPathPayloadRefHints()
+      : null,
+    payload_template_policy: canRecord
+      ? 'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit'
+      : null,
     typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
     blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
     full_detail_section: 'app_release_user_path_evidence',
@@ -337,6 +368,36 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     can_claim_production_ready: false,
     can_authorize_quality_or_export: false,
     can_close_app_release_user_path: false,
+  };
+}
+
+function appReleaseUserPathPayloadRefHints() {
+  return {
+    release_package_refs_should_cover: [
+      'release_package_receipt_ref',
+      'release_bundle_ref',
+      'app_release_artifact_ref',
+    ],
+    screenshot_refs_should_cover: [
+      'screenshot_evidence_ref',
+      'first_run_screenshot_ref',
+      'operator_screenshot_ref',
+    ],
+    reload_prompt_user_path_refs_should_cover: [
+      'reload_prompt_user_path_receipt_ref',
+      'first_run_log_ref',
+    ],
+    provider_state_linkage_refs_should_cover: [
+      'provider_state_linkage_ref',
+      'provider_cadence_receipt_ref',
+    ],
+    long_operator_evidence_refs_should_cover: [
+      'long_operator_evidence_ref',
+      'operator_long_soak_ref',
+    ],
+    typed_blocker_refs_should_cover: [
+      'typed_blocker_ref',
+    ],
   };
 }
 
@@ -443,33 +504,7 @@ export function buildAppReleaseUserPathEvidenceActionRoutes(evidence: JsonRecord
       long_operator_evidence_refs: [],
       typed_blocker_refs: [],
     },
-    payload_ref_hints: {
-      release_package_refs_should_cover: [
-        'release_package_receipt_ref',
-        'release_bundle_ref',
-        'app_release_artifact_ref',
-      ],
-      screenshot_refs_should_cover: [
-        'screenshot_evidence_ref',
-        'first_run_screenshot_ref',
-        'operator_screenshot_ref',
-      ],
-      reload_prompt_user_path_refs_should_cover: [
-        'reload_prompt_user_path_receipt_ref',
-        'first_run_log_ref',
-      ],
-      provider_state_linkage_refs_should_cover: [
-        'provider_state_linkage_ref',
-        'provider_cadence_receipt_ref',
-      ],
-      long_operator_evidence_refs_should_cover: [
-        'long_operator_evidence_ref',
-        'operator_long_soak_ref',
-      ],
-      typed_blocker_refs_should_cover: [
-        'typed_blocker_ref',
-      ],
-    },
+    payload_ref_hints: appReleaseUserPathPayloadRefHints(),
     payload_template_policy:
       'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',
   }];

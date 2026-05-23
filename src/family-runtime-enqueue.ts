@@ -15,6 +15,7 @@ import {
 } from './family-runtime-store.ts';
 
 const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 
 function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -28,10 +29,12 @@ function isMasDefaultExecutorDispatch(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
 ) {
+  const nextOwner = optionalString(payload.next_executable_owner);
   return row.domain_id === 'medautoscience'
     && row.task_kind === MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && optionalString(payload.dispatch_ref) !== null
-    && optionalString(payload.next_executable_owner) === 'write'
+    && nextOwner !== null
+    && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 

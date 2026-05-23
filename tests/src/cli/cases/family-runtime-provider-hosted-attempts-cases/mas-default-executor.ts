@@ -114,6 +114,101 @@ function defaultExecutorPayload(sourceFingerprint: string) {
   };
 }
 
+test('family-runtime admits MAS AI reviewer default executor dispatch without domain truth authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-ai-reviewer-'));
+  const dispatch = createDispatchFixture(`
+python3 - "$TASK_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task = json.loads(Path(sys.argv[1]).read_text())
+payload = task["payload"]
+assert task["task_kind"] == "domain_owner/default-executor-dispatch"
+assert payload["action_type"] == "return_to_ai_reviewer_workflow"
+assert payload["next_executable_owner"] == "ai_reviewer"
+print(json.dumps({
+    "accepted": True,
+    "surface_kind": "mas_family_sidecar_dispatch_receipt",
+    "task_id": task["task_id"],
+    "task_kind": task["task_kind"],
+    "will_start_llm_worker": True,
+    "dispatch": {
+        "execution_policy": "opl_default_executor_stage_attempt_admission",
+        "result": {
+            "surface": "default_executor_dispatch_request_admission",
+            "status": "admitted",
+            "next_owner": "ai_reviewer",
+            "dispatch_ref": payload["dispatch_ref"]
+        }
+    }
+}))
+PY
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    });
+    const dispatchRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/return_to_ai_reviewer_workflow.json';
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'domain_owner/default-executor-dispatch',
+      '--payload',
+      JSON.stringify({
+        profile: '/tmp/dm-cvd.profile.toml',
+        study_id: '002-dm-china-us-mortality-attribution',
+        quest_id: '002-dm-china-us-mortality-attribution',
+        action_type: 'return_to_ai_reviewer_workflow',
+        dispatch_authority: 'ai_reviewer_record_production_handoff',
+        next_executable_owner: 'ai_reviewer',
+        executor_kind: 'codex_cli_default',
+        dispatch_ref: dispatchRef,
+        authority_boundary: 'mas_default_executor_dispatch_request_only',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_current_manuscript',
+        domain_owner: 'ai_reviewer',
+        source_fingerprint: 'truth-snapshot::085b4164f248a2f4c92bf66b',
+        workspace_root: '/tmp/explicit-workspace-root',
+      }),
+      '--dedupe-key',
+      'mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:ai-reviewer',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const attempt = task.family_runtime_task.stage_attempts[0];
+
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');
+    assert.equal(tick.family_runtime_tick.dispatches[0].reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(task.family_runtime_task.task.status, 'blocked');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
+    assert.equal(task.family_runtime_task.stage_attempts.length, 1);
+    assert.equal(attempt.provider_kind, 'temporal');
+    assert.equal(attempt.domain_id, 'medautoscience');
+    assert.equal(attempt.stage_id, 'domain_owner/default-executor-dispatch');
+    assert.equal(attempt.executor_kind, 'codex_cli');
+    assert.equal(attempt.workspace_locator.workspace_root, '/tmp/explicit-workspace-root');
+    assert.equal(attempt.workspace_locator.action_type, 'return_to_ai_reviewer_workflow');
+    assert.equal(attempt.workspace_locator.dispatch_authority, 'ai_reviewer_record_production_handoff');
+    assert.equal(attempt.workspace_locator.dispatch_ref, dispatchRef);
+    assert.equal(attempt.workspace_locator.next_executable_owner, 'ai_reviewer');
+    assert.equal(attempt.workspace_locator.domain_truth_owner, 'med-autoscience');
+    assert.equal(attempt.workspace_locator.opl_writes_domain_truth, false);
+    assert.equal(attempt.workspace_locator.opl_writes_publication_quality, false);
+    assert.equal(attempt.workspace_locator.opl_writes_artifact_gate, false);
+    assert.equal(attempt.workspace_locator.opl_writes_current_package, false);
+    assert.equal(attempt.workspace_locator.domain_source_fingerprint, 'truth-snapshot::085b4164f248a2f4c92bf66b');
+    assert.deepEqual(attempt.checkpoint_refs, [dispatchRef]);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime does not auto-requeue succeeded MAS default executor dispatch from domain export updates', () => {
   const db = new DatabaseSync(':memory:');
   try {

@@ -24,6 +24,9 @@ import {
   assertOmaProductionConsumptionNextStep,
   assertOmaProductionConsumptionSummary,
 } from './runtime-app-operator-drilldown-summary-oma-assertions.ts';
+import {
+  assertDomainDispatchGroupExecutorHints,
+} from './domain-dispatch-group-executor-hints-assertions.ts';
 
 test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
@@ -466,6 +469,9 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       assert.equal(dispatchWorkorderGroupStep.stage_attempt_id_omitted_count >= 0, true);
       assert.equal(dispatchWorkorderGroupStep.sample_action_refs.length <= 3, true);
       assert.equal(dispatchWorkorderGroupStep.action_ref_omitted_count >= 0, true);
+      assert.equal(dispatchWorkorderGroupStep.record_action_id_omitted_count >= 0, true);
+      assert.equal(dispatchWorkorderGroupStep.record_command_ref_omitted_count >= 0, true);
+      assertDomainDispatchGroupExecutorHints(dispatchWorkorderGroupStep);
       assert.equal(dispatchWorkorderGroupStep.sample_required_evidence_refs.length <= 3, true);
       assert.equal(dispatchWorkorderGroupStep.required_evidence_ref_omitted_count >= 0, true);
       assert.equal(

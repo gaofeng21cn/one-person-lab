@@ -3,7 +3,7 @@ import { assert } from '../helpers.ts';
 export function assertOmaProductionConsumptionSummary(summaryDrilldown: any, metaAgentBound: boolean) {
   assert.equal(
     summaryDrilldown.summary.opl_meta_agent_production_consumption_gate_count,
-    metaAgentBound ? 4 : 0,
+    4,
   );
   assert.equal(
     summaryDrilldown.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,

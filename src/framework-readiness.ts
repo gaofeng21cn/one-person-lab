@@ -18,6 +18,7 @@ import {
   buildMasDomainRouteSupportProjection,
 } from './family-runtime-mas-domain-route.ts';
 import { frameworkAttentionNextSafeActions } from './framework-readiness-attention-actions.ts';
+import { frameworkReadinessBlockers } from './framework-readiness-blockers.ts';
 import {
   frameworkDiagnosticDrilldowns,
   frameworkKernelFloor,
@@ -329,40 +330,7 @@ function frameworkAttentionFirstPayload(input: {
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
   const totalOperatorAttentionTailCount =
     openTailCount + evidenceEnvelopeAttentionCount + input.domainDispatchAttentionCount;
-  const blockers = [
-    ...(input.agentHardBlockerCount > 0
-      ? [{
-          blocker_id: 'agent_conformance_framework_kernel_blocker_present',
-          count: input.agentHardBlockerCount,
-          route_ref: '/framework_readiness/agent_conformance_tail',
-          source_command: SOURCE_COMMANDS.agents_readiness,
-        }]
-      : []),
-    ...(input.stageHardBlockerCount > 0
-      ? [{
-          blocker_id: 'stage_readiness_framework_kernel_blocker_present',
-          count: input.stageHardBlockerCount,
-          route_ref: '/framework_readiness/stages',
-          source_command: SOURCE_COMMANDS.stages_readiness_mas,
-        }]
-      : []),
-    ...(input.packCompilerBlockerCount > 0
-      ? [{
-          blocker_id: 'pack_compiler_framework_kernel_blocker_present',
-          count: input.packCompilerBlockerCount,
-          route_ref: '/framework_readiness/pack_compiler',
-          source_command: SOURCE_COMMANDS.pack_compiler,
-        }]
-      : []),
-    ...(input.diagnosticFailureCount > 0
-      ? [{
-          blocker_id: 'framework_diagnostic_unavailable',
-          count: input.diagnosticFailureCount,
-          route_ref: '/framework_readiness/diagnostic_failures',
-          source_command: 'see_diagnostic_failure_items',
-        }]
-      : []),
-  ];
+  const blockers = frameworkReadinessBlockers(input);
   const warnings = [
     ...(input.semanticAttentionGateCount > 0
       ? [{
@@ -818,6 +786,7 @@ export async function buildFrameworkReadinessSummary(
         source_command: SOURCE_COMMANDS.agents_readiness,
         status: agentReadiness.status,
         structural_conformance_status: agentSummary.structural_conformance_status ?? null,
+        conformance_blocked_count: agentHardBlockerCount,
         agent_readiness_production_evidence_tail_count:
           agentProductionEvidenceTailTotalCount,
         agent_readiness_production_evidence_tail_open_count:
