@@ -28,6 +28,8 @@ OPL 已具备 framework 主干：domain descriptor / stage / action / memory dis
 
 `functional_privatization_audit` 现在把 semantic equivalence、private residue、owner receipt / typed blocker 和 cannot-absorb reason 放进同一 refs-only evidence gate。它只作为 App/operator 的 current drilldown，不授权 OPL 写 domain truth、memory body、artifact body 或 owner receipt，也不把机械 completion、watchlist 清零或读模型自身写成 private residue 已删除、domain ready、quality/export ready。
 
+`functional_privatization_audit` 的 semantic-equivalence 判断现在优先消费 domain-owned explicit fields：`semantic_equivalence_status`、`semantic_equivalence_evidence_refs`、`semantic_equivalence_typed_blocker_refs` 与 `semantic_equivalence_no_regression_refs`。只有 domain 未给出显式状态时，OPL 才按 active caller / migration text 推导 review-required。该规则让 RCA 这类 refs-only executor adapter 能用 domain-owned boundary proof 关闭语义等价歧义，同时保留 bridge-exit、typed blocker、no-regression 和物理删除尾项；它不声明 private residue 已删除、RCA visual ready、domain ready 或 production ready。
+
 Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only control plane。OPL 只消费 refs，不写入 body、truth、artifact、owner receipt 或 quality verdict；domain truth、quality/export verdict、artifact authority、memory body 和 owner receipt 仍归 MAS/MAG/RCA。
 
 `family-runtime intake|tick --hydrate` 的 MAS profile 路径已收口到 OPL module locator：即使 operator 只提供 `OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE`，OPL 也会先解析 active MAS module checkout，再通过该 checkout 的 sidecar export hydrate pending family tasks，避免 PATH 上旧 `medautosci` 工具污染 live route。该路径仍只写 OPL queue / stage attempt / dispatch evidence；论文质量、owner receipt、typed blocker 和 artifact authority 继续由 MAS owner surface 给出。

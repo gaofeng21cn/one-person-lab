@@ -130,6 +130,9 @@ function compactFunctionalPrivatizationModule(module: JsonRecord) {
   const activeCallers = stringList(module.active_callers);
   const expectedOplPrimitives = stringList(module.expected_opl_primitives);
   const retainedDomainAuthority = stringList(module.retained_domain_authority);
+  const semanticEquivalenceEvidenceRefs = stringList(module.semantic_equivalence_evidence_refs);
+  const semanticEquivalenceTypedBlockerRefs = stringList(module.semantic_equivalence_typed_blocker_refs);
+  const semanticEquivalenceNoRegressionRefs = stringList(module.semantic_equivalence_no_regression_refs);
   const bridgeExitGate = record(module.bridge_exit_gate);
   return {
     ref: moduleId
@@ -176,6 +179,9 @@ function compactFunctionalPrivatizationModule(module: JsonRecord) {
     audit_reason: stringValue(module.audit_reason),
     semantic_equivalence_status: stringValue(module.semantic_equivalence_status),
     semantic_equivalence_reason: stringValue(module.semantic_equivalence_reason),
+    semantic_equivalence_evidence_refs: semanticEquivalenceEvidenceRefs,
+    semantic_equivalence_typed_blocker_refs: semanticEquivalenceTypedBlockerRefs,
+    semantic_equivalence_no_regression_refs: semanticEquivalenceNoRegressionRefs,
   };
 }
 

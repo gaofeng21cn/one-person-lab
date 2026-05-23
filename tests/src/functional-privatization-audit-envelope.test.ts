@@ -132,6 +132,51 @@ test('functional privatization audit envelope reports MAG evidence requests with
   assert.equal(audit.envelope.authority_boundary.opl_can_authorize_quality_or_export, false);
 });
 
+test('functional privatization audit accepts explicit semantic equivalence evidence refs', () => {
+  const audit = buildFunctionalPrivatizationAudit({
+    target_domain_id: 'redcube',
+    functional_privatization_audit: {
+      surface_kind: 'functional_privatization_audit',
+      target_domain_id: 'redcube',
+      modules: [
+        {
+          module_id: 'codex_executor_adapter',
+          migration_class: 'refs_only_adapter',
+          active_caller_status: 'route_run_record_adapter_split_landed_opl_attempt_shell_pending',
+          semantic_equivalence_status: 'cleared_by_boundary',
+          semantic_equivalence_reason:
+            'domain-owned refs-only boundary proof recorded; OPL attempt shell parity is still a bridge-exit blocker, not semantic ambiguity',
+          semantic_equivalence_evidence_refs: [
+            'semantic-equivalence:rca/codex-executor-adapter/refs-only-boundary',
+          ],
+          semantic_equivalence_typed_blocker_refs: [
+            'typed-blocker:rca/default-caller-deletion/codex_executor_adapter/physical-delete-requires-explicit-owner-receipt',
+          ],
+          semantic_equivalence_no_regression_refs: [
+            'no-forbidden-write:rca/default-caller-deletion/codex_executor_adapter/refs-only-boundary',
+          ],
+        },
+      ],
+    },
+  });
+
+  const module = audit.modules[0];
+  assert.equal(module.semantic_equivalence_status, 'cleared_by_boundary');
+  assert.match(module.semantic_equivalence_reason, /refs-only boundary proof/);
+  assert.deepEqual(module.semantic_equivalence_evidence_refs, [
+    'semantic-equivalence:rca/codex-executor-adapter/refs-only-boundary',
+  ]);
+  assert.deepEqual(module.semantic_equivalence_typed_blocker_refs, [
+    'typed-blocker:rca/default-caller-deletion/codex_executor_adapter/physical-delete-requires-explicit-owner-receipt',
+  ]);
+  assert.deepEqual(module.semantic_equivalence_no_regression_refs, [
+    'no-forbidden-write:rca/default-caller-deletion/codex_executor_adapter/refs-only-boundary',
+  ]);
+  assert.equal(audit.summary.semantic_equivalence_review_count, 0);
+  assert.equal(audit.envelope.semantic_equivalence_evidence_gate.status, 'not_required');
+  assert.equal(audit.envelope.authority_boundary.envelope_can_claim_private_residue_deleted, false);
+});
+
 test('functional privatization audit envelope contract is tracked and contract-light', () => {
   const contract = readJson('contracts/opl-framework/functional-privatization-audit-envelope-contract.json');
 

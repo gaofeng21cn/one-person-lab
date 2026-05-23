@@ -51,6 +51,9 @@ export type FunctionalPrivatizationAuditItem = {
   standardization_layer_reason: string;
   semantic_equivalence_status: 'cleared_by_boundary' | 'review_required';
   semantic_equivalence_reason: string;
+  semantic_equivalence_evidence_refs: string[];
+  semantic_equivalence_typed_blocker_refs: string[];
+  semantic_equivalence_no_regression_refs: string[];
   bridge_exit_gate: JsonRecord | null;
   forbidden_generic_owner_flags: JsonRecord;
 };
@@ -523,7 +526,10 @@ type FunctionalPrivatizationAuditItemDraft = Omit<
   | 'standardization_layer_reason'
   | 'semantic_equivalence_status'
   | 'semantic_equivalence_reason'
->;
+> & {
+  semantic_equivalence_status?: string | null;
+  semantic_equivalence_reason?: string | null;
+};
 
 function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
   if (item.blocker) {
@@ -549,7 +555,16 @@ function attentionReason(item: FunctionalPrivatizationAuditItemDraft) {
 
 function withAuditVisibility(item: FunctionalPrivatizationAuditItemDraft): FunctionalPrivatizationAuditItem {
   const reason = attentionReason(item);
+  const explicitSemanticEquivalenceStatus = stringValue(item.semantic_equivalence_status);
+  const explicitSemanticEquivalenceReason = stringValue(item.semantic_equivalence_reason);
   const semanticEquivalenceReason = semanticEquivalenceReviewReason(item);
+  const semanticEquivalenceStatus =
+    explicitSemanticEquivalenceStatus === 'cleared_by_boundary'
+    || explicitSemanticEquivalenceStatus === 'review_required'
+      ? explicitSemanticEquivalenceStatus
+      : semanticEquivalenceReason
+        ? 'review_required'
+        : 'cleared_by_boundary';
   const standardization = standardizationLayer(item);
   return {
     ...item,
@@ -557,8 +572,11 @@ function withAuditVisibility(item: FunctionalPrivatizationAuditItemDraft): Funct
     audit_reason: reason ?? 'cleared_or_stable_boundary',
     standardization_layer: standardization.layer,
     standardization_layer_reason: standardization.reason,
-    semantic_equivalence_status: semanticEquivalenceReason ? 'review_required' : 'cleared_by_boundary',
-    semantic_equivalence_reason: semanticEquivalenceReason ?? 'cleared_by_current_owner_boundary',
+    semantic_equivalence_status: semanticEquivalenceStatus,
+    semantic_equivalence_reason:
+      explicitSemanticEquivalenceReason
+      ?? semanticEquivalenceReason
+      ?? 'cleared_by_current_owner_boundary',
   };
 }
 
@@ -702,6 +720,22 @@ function itemFromRecord(
       || itemClass === 'retire_tombstone'
       || itemClass === 'provenance_or_fixture',
     blocker,
+    semantic_equivalence_status: stringValue(record.semantic_equivalence_status),
+    semantic_equivalence_reason: stringValue(record.semantic_equivalence_reason),
+    semantic_equivalence_evidence_refs: unique([
+      ...stringList(record.semantic_equivalence_evidence_refs),
+      ...stringList(record.semantic_equivalence_proof_refs),
+    ]),
+    semantic_equivalence_typed_blocker_refs: unique([
+      ...stringList(record.semantic_equivalence_typed_blocker_refs),
+      ...stringList(record.typed_blocker_refs),
+    ]),
+    semantic_equivalence_no_regression_refs: unique([
+      ...stringList(record.semantic_equivalence_no_regression_refs),
+      ...stringList(record.no_regression_evidence_refs),
+      ...stringList(record.no_forbidden_write_refs),
+      ...stringList(record.no_forbidden_write_evidence_refs),
+    ]),
     bridge_exit_gate: isRecord(record.bridge_exit_gate) ? record.bridge_exit_gate : null,
     forbidden_generic_owner_flags: isRecord(record.forbidden_generic_owner_flags)
       ? record.forbidden_generic_owner_flags

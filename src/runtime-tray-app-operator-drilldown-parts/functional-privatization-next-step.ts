@@ -80,6 +80,11 @@ export function functionalPrivatizationNextSteps(drilldown: JsonRecord) {
           module_id: stringValue(module.module_id),
           semantic_equivalence_status: stringValue(module.semantic_equivalence_status),
           semantic_equivalence_reason: stringValue(module.semantic_equivalence_reason),
+          semantic_equivalence_evidence_refs: stringList(module.semantic_equivalence_evidence_refs),
+          semantic_equivalence_typed_blocker_refs:
+            stringList(module.semantic_equivalence_typed_blocker_refs),
+          semantic_equivalence_no_regression_refs:
+            stringList(module.semantic_equivalence_no_regression_refs),
           active_caller_status: stringValue(module.active_caller_status),
           active_callers: stringList(module.active_callers),
           current_surface_refs: stringList(module.current_surface_refs),
