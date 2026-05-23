@@ -121,6 +121,18 @@ function commandRef(args: string[]) {
   )).join(' ')}`;
 }
 
+function runtimeActionExecuteCommand(actionId: string) {
+  return [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    actionId,
+    '--payload-file',
+    '<payload.json>',
+  ];
+}
+
 function refsFromRecord(value: JsonRecord, keys: string[]) {
   return uniqueStrings(keys.flatMap((key) => {
     const entry = value[key];
@@ -375,6 +387,9 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     : null;
   const recordRequired = numberValue(evidence.open_gate_count) > 0;
   const canRecord = recordRequired || evidence.blocked_by_typed_blocker_refs === true;
+  const recordActionId = canRecord
+    ? `app_release_user_path_evidence:${targetSurface}:record`
+    : null;
   return {
     step_kind: 'app_release_user_path_evidence',
     owner: stringValue(evidence.owner) ?? 'one-person-lab',
@@ -415,10 +430,13 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     verification_command_ref: verifyArgs ? commandRef(verifyArgs) : null,
     can_submit_verify_to_safe_action_shell: verifyArgs !== null,
     can_close_without_domain_or_app_payload: pendingVerifyReceiptRefs.length > 0,
-    record_action_id: canRecord
-      ? `app_release_user_path_evidence:${targetSurface}:record`
-      : null,
+    record_action_id: recordActionId,
     record_command_ref: canRecord ? commandRef(recordArgs) : null,
+    copyable_runtime_action_execute_commands: recordActionId
+      ? {
+          record_with_payload: runtimeActionExecuteCommand(recordActionId),
+        }
+      : null,
     can_submit_record_to_safe_action_shell: canRecord,
     route_requires_domain_or_app_payload: canRecord,
     payload_template: canRecord

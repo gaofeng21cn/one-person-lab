@@ -38,6 +38,18 @@ function commandRef(args: string[]) {
   )).join(' ')}`;
 }
 
+function runtimeActionExecuteCommand(actionId: string) {
+  return [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    actionId,
+    '--payload-file',
+    '<payload.json>',
+  ];
+}
+
 export function omaProductionConsumptionNextStep(followthrough: JsonRecord) {
   const recordArgs = ['runtime', 'oma-production-consumption', 'record'];
   const summary = record(followthrough.summary);
@@ -78,6 +90,11 @@ export function omaProductionConsumptionNextStep(followthrough: JsonRecord) {
       ? OMA_PRODUCTION_CONSUMPTION_ACTION_ID
       : null,
     record_command_ref: canRecord ? commandRef(recordArgs) : null,
+    copyable_runtime_action_execute_commands: canRecord
+      ? {
+          record_with_payload: runtimeActionExecuteCommand(OMA_PRODUCTION_CONSUMPTION_ACTION_ID),
+        }
+      : null,
     can_submit_record_to_safe_action_shell: canRecord,
     route_requires_domain_or_app_payload: canRecord,
     can_close_without_domain_or_app_payload: false,

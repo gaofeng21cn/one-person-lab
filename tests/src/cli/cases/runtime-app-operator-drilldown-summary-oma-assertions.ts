@@ -117,6 +117,18 @@ export function assertOmaProductionConsumptionNextStep(summaryDrilldown: any, me
     omaProductionConsumptionStep.required_return_shapes.includes('long_soak_receipt_ref'),
     true,
   );
+  assert.deepEqual(
+    omaProductionConsumptionStep.copyable_runtime_action_execute_commands.record_with_payload,
+    [
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'oma_production_consumption:opl-meta-agent:record',
+      '--payload-file',
+      '<payload.json>',
+    ],
+  );
   assert.equal(omaProductionConsumptionStep.can_create_owner_receipt, false);
   assert.equal(omaProductionConsumptionStep.can_claim_production_ready, false);
   assert.equal(omaProductionConsumptionStep.can_promote_default_agent_without_gate, false);

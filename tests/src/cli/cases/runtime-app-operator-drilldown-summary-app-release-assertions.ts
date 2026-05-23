@@ -55,6 +55,18 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
     appUserPathStep.record_command_ref,
     'opl runtime app-release-evidence record',
   );
+  assert.deepEqual(
+    appUserPathStep.copyable_runtime_action_execute_commands.record_with_payload,
+    [
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
+      '--payload-file',
+      '<payload.json>',
+    ],
+  );
   assert.equal(appUserPathStep.can_submit_record_to_safe_action_shell, true);
   assert.equal(appUserPathStep.route_requires_domain_or_app_payload, true);
   assert.equal(appUserPathStep.payload_template.release_package_refs.length, 0);
