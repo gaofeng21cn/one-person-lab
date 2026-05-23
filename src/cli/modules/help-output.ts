@@ -30,6 +30,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   status: '读取 family、workspace、runtime 和 dashboard 状态。',
   system: '查看与维护 OPL 的系统状态、初始化和更新通道。',
   engine: '安装、更新与维护执行引擎。',
+  'work-order': '执行 owner-gated developer work order 的 OPL 原语。',
   module: '安装、更新与维护领域模块。',
   package: '查看 OPL release / Packages 的机器消费 manifest。',
   quality: '生成 Sentrux Free 旁路质量诊断，帮助 Agent 定位函数、文件、依赖、测试缺口和 rules 细节。',

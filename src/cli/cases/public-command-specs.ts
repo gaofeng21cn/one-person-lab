@@ -63,6 +63,7 @@ import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { buildPublicSystemCommandSpecs } from './system-public-command-specs.ts';
 import { buildPublicAgentLabCommandSpecs } from './agent-lab-public-command-specs.ts';
+import { buildPublicWorkOrderCommandSpecs } from './work-order-public-command-specs.ts';
 import {
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
@@ -149,6 +150,7 @@ export function buildPublicCommandSpecs(
 
   const systemCommandSpecs = buildPublicSystemCommandSpecs(getContracts);
   const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
+  const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
 
   const modulesSpec = buildNoArgSpec(
     {
@@ -256,6 +258,7 @@ export function buildPublicCommandSpecs(
       },
     },
     install: installSpec,
+    ...workOrderCommandSpecs,
     'framework locate': {
       usage: 'opl framework locate',
       summary: 'Locate the OPL Framework runtime dependency for an OPL-compatible agent.',

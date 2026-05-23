@@ -30,6 +30,15 @@ export type AgentLabWorkOrderExecutionOptions = {
   codexTimeoutMs?: number | null;
 };
 
+type WorkOrderExecutionPresentation = {
+  envelopeKey: 'work_order_execution' | 'agent_lab_work_order_execution';
+  resultSurfaceId: string;
+  receiptSurfaceKind: string;
+  receiptVersion: string;
+  commandSurface: 'work-order execute' | 'agent-lab execute-work-order';
+  agentLabAlias: boolean;
+};
+
 type CommandResult = {
   command: string;
   cwd: string;
@@ -41,6 +50,24 @@ type CommandResult = {
 type OwnerCloseoutResult = {
   closeout: JsonRecord;
   responsePath: string | null;
+};
+
+const OPL_WORK_ORDER_PRIMITIVE_OWNER = 'one-person-lab/OPL';
+const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
+  envelopeKey: 'work_order_execution',
+  resultSurfaceId: 'opl_work_order_codex_execution',
+  receiptSurfaceKind: 'opl_work_order_codex_execution_receipt',
+  receiptVersion: 'opl.work-order-execution.v1',
+  commandSurface: 'work-order execute',
+  agentLabAlias: false,
+};
+const AGENT_LAB_WORK_ORDER_ALIAS_PRESENTATION: WorkOrderExecutionPresentation = {
+  envelopeKey: 'agent_lab_work_order_execution',
+  resultSurfaceId: 'opl_agent_lab_work_order_execution_alias',
+  receiptSurfaceKind: 'opl_agent_lab_codex_work_order_execution_receipt',
+  receiptVersion: 'opl-agent-lab.work-order-execution.v1',
+  commandSurface: 'agent-lab execute-work-order',
+  agentLabAlias: true,
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -232,11 +259,11 @@ function buildCodexPrompt(input: {
   outputDir: string;
 }): string {
   return [
-    'You are Codex CLI executing an OPL Agent Lab developer patch work order.',
+    'You are Codex CLI executing an OPL work-order developer patch primitive.',
     `Developer work order JSON: ${input.workOrderPath}`,
     `Target worktree: ${input.worktreePath}`,
     `Target source repo: ${input.targetAgentDir}`,
-    `Agent Lab output directory: ${input.outputDir}`,
+    `OPL work-order output directory: ${input.outputDir}`,
     `Work order id: ${optionalString(input.workOrder.work_order_id) ?? 'unknown'}`,
     `Allowed editable surfaces: ${JSON.stringify(stringList(input.workOrder.allowed_editable_surfaces))}`,
     `Target repo file hints: ${JSON.stringify(stringList(input.workOrder.target_repo_file_hints))}`,
@@ -259,7 +286,7 @@ function assertExecutableWorkOrder(workOrder: JsonRecord): void {
   if (optionalString(workOrder.status) !== 'ready_for_target_agent_source_patch') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Agent Lab execute-work-order requires a source patch work order.',
+      'OPL work-order execute requires a source patch work order.',
       {
         work_order_id: optionalString(workOrder.work_order_id),
         status: optionalString(workOrder.status),
@@ -269,7 +296,7 @@ function assertExecutableWorkOrder(workOrder: JsonRecord): void {
   if (optionalString(workOrder.executor_lease_ref)?.startsWith('executor-lease:codex-cli/') !== true) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Agent Lab execute-work-order requires a Codex CLI executor lease ref.',
+      'OPL work-order execute requires a Codex CLI executor lease ref.',
       {
         work_order_id: optionalString(workOrder.work_order_id),
         executor_lease_ref: optionalString(workOrder.executor_lease_ref),
@@ -280,7 +307,7 @@ function assertExecutableWorkOrder(workOrder: JsonRecord): void {
   if (boundary.can_write_target_domain_truth !== false || boundary.can_authorize_target_domain_quality_or_export !== false) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Agent Lab execute-work-order refuses work orders that can write target truth or quality/export verdicts.',
+      'OPL work-order execute refuses work orders that can write target truth or quality/export verdicts.',
       {
         work_order_id: optionalString(workOrder.work_order_id),
         authority_boundary: boundary,
@@ -511,7 +538,10 @@ function throwWithFailureCleanup(
   throw error;
 }
 
-export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrderExecutionOptions) {
+async function executeDeveloperWorkOrder(
+  options: AgentLabWorkOrderExecutionOptions,
+  presentation: WorkOrderExecutionPresentation,
+) {
   const workOrderPath = path.resolve(options.workOrderPath);
   const workOrder = readJson(workOrderPath);
   assertExecutableWorkOrder(workOrder);
@@ -525,7 +555,7 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
   if (!targetAgentDir || !fs.existsSync(targetAgentDir)) {
     throw new FrameworkContractError(
       'surface_not_found',
-      'Target agent repo directory is required for Agent Lab execute-work-order.',
+      'Target agent repo directory is required for OPL work-order execute.',
       {
         work_order_id: workOrderId,
         target_agent_dir: targetAgentDir,
@@ -581,7 +611,7 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
     if (codexResult.exitCode !== 0) {
       throw new FrameworkContractError(
         'codex_command_failed',
-        'Codex CLI failed while executing Agent Lab developer work order.',
+        'Codex CLI failed while executing OPL developer work order.',
         {
           work_order_id: workOrderId,
           exit_code: codexResult.exitCode,
@@ -606,7 +636,7 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
     if (failedVerification.length > 0) {
       throw new FrameworkContractError(
         'build_command_failed',
-        'Agent Lab work order target verification failed.',
+        'OPL work-order target verification failed.',
         {
           work_order_id: workOrderId,
           failed_verification: failedVerification,
@@ -654,9 +684,12 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
     const reEvaluation = readSuiteResult(options.suitePath);
     const parsedCodex = parseCodexExecOutput(codexResult.stdout);
     const receiptDraft = {
-      surface_kind: 'opl_agent_lab_codex_work_order_execution_receipt',
-      version: 'opl-agent-lab.work-order-execution.v1',
+      surface_kind: presentation.receiptSurfaceKind,
+      version: presentation.receiptVersion,
       status: 'executed_absorbed_and_cleaned',
+      primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
+      command_surface: presentation.commandSurface,
+      agent_lab_command_alias: presentation.agentLabAlias,
       work_order_id: workOrderId,
       target_agent: targetAgent,
       source_work_order_path: workOrderPath,
@@ -753,18 +786,22 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
       target_owner_receipt_or_typed_blocker: ownerCloseout.closeout,
     };
     writeJson(receiptPath, receipt);
+    const resultPayload = {
+      surface_id: presentation.resultSurfaceId,
+      primitive_owner: OPL_WORK_ORDER_PRIMITIVE_OWNER,
+      command_surface: presentation.commandSurface,
+      agent_lab_alias: presentation.agentLabAlias,
+      status: 'executed_absorbed_and_cleaned',
+      work_order_path: workOrderPath,
+      artifacts: {
+        execution_receipt_path: receiptPath,
+      },
+      receipt,
+      authority_boundary: receipt.authority_boundary,
+    };
     return {
       version: 'g2',
-      agent_lab_work_order_execution: {
-        surface_id: 'opl_agent_lab_codex_work_order_execution',
-        status: 'executed_absorbed_and_cleaned',
-        work_order_path: workOrderPath,
-        artifacts: {
-          execution_receipt_path: receiptPath,
-        },
-        receipt,
-      authority_boundary: receipt.authority_boundary,
-      },
+      [presentation.envelopeKey]: resultPayload,
     };
   } catch (error) {
     const cleanupResults = targetWorktreeClosed
@@ -778,4 +815,12 @@ export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrd
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
   }
+}
+
+export async function executeOplDeveloperWorkOrder(options: AgentLabWorkOrderExecutionOptions) {
+  return executeDeveloperWorkOrder(options, WORK_ORDER_EXECUTION_PRESENTATION);
+}
+
+export async function executeAgentLabDeveloperWorkOrder(options: AgentLabWorkOrderExecutionOptions) {
+  return executeDeveloperWorkOrder(options, AGENT_LAB_WORK_ORDER_ALIAS_PRESENTATION);
 }
