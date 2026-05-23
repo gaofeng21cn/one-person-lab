@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `current_execution_map`
 State: `active_support`
 Machine boundary: 本文是人读执行地图。机器真相继续归 `contracts/`、source code、CLI/API behavior、runtime ledgers、provider receipts、domain-owned manifests 和真实 workspace / App evidence。
-Date: `2026-05-22`
+Date: `2026-05-23`
 
 ## 当前结论
 
@@ -25,6 +25,8 @@ dated proof、receipt 事件、具体命令输出和阶段 closeout 摘要归档
    保持 `runtime app-operator-drilldown`、`runtime action execute` 和 `family-runtime evidence-worklist` 的 refs-only worklist / typed blocker / workorder 能力，但当前重心转到真实 production evidence：App release/user path、domain owner-chain、memory/artifact/lifecycle receipt、direct/hosted parity 和 long-soak refs。Domain-dispatch evidence workorder 已显式投影 success refs path 与 typed blocker path，并由 payload preflight 阻断空模板、占位 ref 和身份冲突；这些 payload path、preflight gate 与 required return shapes 也已进入 App `evidence_next_steps`、`owner_handoff_packet` 和 `framework readiness.next_safe_actions` 默认接力面，且 group-level `domain_dispatch_evidence_group_workorder` 会给出 bounded record action ids、`opl runtime action execute` record command refs、空 payload template、payload hints 和 empty-template policy，便于 Codex/default caller 先判定回填路径并拿到最小可执行命令，再按需读取 full detail。App release/user path 也已有专门 `app_release_user_path_evidence` 接力面、refs-only evidence ledger 和 `runtime action execute` record/verify safe action route，按 release package、screenshot、reload prompt user path、provider state linkage 和 long operator evidence 五类 required refs 暴露 open gate，并能消费 App/live/release owner 回填的真实 refs 或 typed blocker ref；该面不生成 release artifact、不截屏、不声明 App release ready。OPL 只提供 transport、preflight、ledger 和 projection；domain/App/live refs 才能关闭生产可用性。`family-runtime production-closeout` 旧 alias 已退役，不再作为 active interface 或兼容面保留。
 
    当前 App release/user-path ledger 的 operator CLI intake 是 `opl runtime app-release-evidence record --payload <json>`，本地只读检查是 `opl runtime app-release-evidence list`。这两条命令只记录或读取 release package、screenshot、reload prompt user path、provider state linkage、long operator evidence 或 typed blocker refs；recorded 但未 verify 的 receipt 会继续投影为 verify follow-through，不会被默认读成闭环完成。它们不生成 App artifact、不执行截图、不证明用户走通 reload prompt，也不关闭 release-ready / production-ready verdict。
+
+   2026-05-23 的直接下一步继续是 owner/stage group scaleout：最新 MAS NF-PitNET `paper_autonomy/guarded-apply` tranche 已用 MAS targeted guarded-apply proof 产出的 `mas_owner_apply_receipt_missing:obesity` stable typed blocker 关闭 `sat_4a7d040921498e17f5b74dc2` 的 OPL refs-only accounting，fresh worklist 为 `open_worklist_item_count=94`、`closed_refs_only_item_count=77`，该 group 仍有 `44` 条 open workorder。后续按同一模式优先消费真实 MAS/MAG/RCA/App/live owner payload 或 typed blocker；OPL 不从 workorder 模板自造 owner receipt、typed blocker、owner-chain、no-regression 或 production-ready 证据。
 
 3. `generated_surface_production_consumption`
    让 OPL generated/hosted CLI、MCP、Skill/product-entry、sidecar、status、session、workbench 和 harness 成为 MAS/MAG/RCA 的生产默认 caller。Domain repo 手写 wrapper 退成 domain handler、refs-only adapter、diagnostic cleanup 或 tombstone。
