@@ -322,7 +322,7 @@ test('system reconcile-modules installs missing modules updates clean modules an
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
-  const buildModuleFiles = (skill: 'mas' | 'mag' | 'rca' | null) => {
+  const buildModuleFiles = (skill: 'mas' | 'mag' | 'rca' | 'oma' | null) => {
     const files: Record<string, string> = {
       'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
 set -euo pipefail
@@ -336,6 +336,22 @@ cat <<'EOF'
 EOF
 `,
     };
+    if (skill === 'oma') {
+      delete files['scripts/opl-module-healthcheck.sh'];
+      files['scripts/verify.sh'] = `#!/usr/bin/env bash
+set -euo pipefail
+lane="\${1:-}"
+if [[ "$lane" != "smoke" ]]; then
+  echo "Unknown lane: $lane" >&2
+  echo "Usage: scripts/verify.sh [smoke|typecheck|full]" >&2
+  exit 3
+fi
+printf 'health:%s:%s\\n' "$(basename "$(pwd)")" "$lane" >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"status":"ok","lane":"smoke"}
+EOF
+`;
+    }
     if (skill === 'mas' || skill === 'mag') {
       files[`plugins/${skill}/.codex-plugin/plugin.json`] = JSON.stringify({ name: skill, skills: './skills/' }, null, 2);
       files[`plugins/${skill}/skills/${skill}/SKILL.md`] = [
@@ -379,7 +395,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     medautoscience: createGitModuleRemoteFixture('med-autoscience', { extraFiles: buildModuleFiles('mas') }),
     medautogrant: createGitModuleRemoteFixture('med-autogrant', { extraFiles: buildModuleFiles('mag') }),
     redcube: createGitModuleRemoteFixture('redcube-ai', { extraFiles: buildModuleFiles('rca') }),
-    oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent', { extraFiles: buildModuleFiles(null) }),
+    oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent', { extraFiles: buildModuleFiles('oma') }),
   };
   const redcubeExternalCheckout = path.join(homeRoot, 'external-redcube-ai');
   const cloneResult = spawnSync('git', ['clone', '--branch', 'main', remotes.redcube.remoteRoot, redcubeExternalCheckout], {
@@ -458,7 +474,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.match(turnkeyLog, /skill:external-redcube-ai/);
     assert.match(turnkeyLog, /health:external-redcube-ai/);
     assert.match(turnkeyLog, /bootstrap:opl-meta-agent/);
-    assert.match(turnkeyLog, /health:opl-meta-agent/);
+    assert.match(turnkeyLog, /health:opl-meta-agent:smoke/);
 
     const modules = runCli(['modules'], env) as {
       modules: {
