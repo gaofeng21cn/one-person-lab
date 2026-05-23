@@ -1,7 +1,9 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { recordManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
 import { recordOmaAppLivePathReceipts } from '../../../../src/oma-app-live-path-ledger.ts';
-import { recordOmaLongSoakReceipts } from '../../../../src/oma-long-soak-ledger.ts';
+import {
+  recordOmaProductionConsumptionReceipts,
+} from '../../../../src/oma-production-consumption-ledger.ts';
 
 test('framework readiness consumes OMA App live path receipts without closing long soak', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-live-state-'));
@@ -59,8 +61,8 @@ test('framework readiness consumes OMA App live path receipts without closing lo
   }
 });
 
-test('framework readiness consumes OMA long-soak receipts without domain authority claims', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-long-soak-state-'));
+test('framework readiness consumes OMA production-consumption long-soak refs without domain authority claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-consumption-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
@@ -83,7 +85,7 @@ test('framework readiness consumes OMA long-soak receipts without domain authori
       app_surface_ref: 'app://one-person-lab/framework/readiness',
       operator_evidence_refs: ['screenshot://opl-app/framework-oma-live-path.png'],
     }]);
-    const longSoakRecord = recordOmaLongSoakReceipts([{
+    const longSoakRecord = recordOmaProductionConsumptionReceipts([{
       long_soak_refs: ['long-soak://opl-meta-agent/framework-controlled-soak'],
       operator_evidence_refs: ['receipt://operator/framework-controlled-soak'],
     }]);

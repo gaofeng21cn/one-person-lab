@@ -319,8 +319,8 @@ test('runtime OMA App live path CLI records refs-only operator evidence without 
   }
 });
 
-test('runtime OMA long-soak CLI records refs-only operator evidence and closes the followthrough gate', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-long-soak-cli-state-'));
+test('runtime OMA production-consumption CLI records long-soak refs and closes the followthrough gate', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-production-consumption-cli-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
@@ -354,16 +354,16 @@ test('runtime OMA long-soak CLI records refs-only operator evidence and closes t
         .production_consumption_followthrough;
     assert.deepEqual(initialFollowthrough.summary.open_gate_ids, ['long_soak_refs']);
 
-    const initialList = runCli(['runtime', 'oma-long-soak', 'list'], {
+    const initialList = runCli(['runtime', 'oma-production-consumption', 'list'], {
       OPL_STATE_DIR: stateRoot,
-    }).oma_long_soak_ledger;
+    }).oma_production_consumption_ledger;
     assert.equal(initialList.receipt_count, 0);
     assert.equal(initialList.authority_boundary.refs_only, true);
     assert.equal(initialList.authority_boundary.can_claim_production_ready, false);
 
     const recordOutput = runCli([
       'runtime',
-      'oma-long-soak',
+      'oma-production-consumption',
       'record',
       '--payload',
       JSON.stringify({
@@ -372,21 +372,21 @@ test('runtime OMA long-soak CLI records refs-only operator evidence and closes t
       }),
     ], {
       OPL_STATE_DIR: stateRoot,
-    }).oma_long_soak_ledger_record;
+    }).oma_production_consumption_ledger_record;
 
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.recorded_receipt_count, 1);
     assert.deepEqual(recordOutput.receipt_refs, [
-      'opl://oma-long-soak/long-soak%3A%2F%2Fopl-meta-agent%2Fcontrolled-operator-soak%2F26.5.19',
+      'opl://oma-production-consumption/long-soak%3A%2F%2Fopl-meta-agent%2Fcontrolled-operator-soak%2F26.5.19',
     ]);
-    assert.equal(recordOutput.ledger_file, path.join(stateRoot, 'oma-long-soak-ledger.json'));
+    assert.equal(recordOutput.ledger_file, path.join(stateRoot, 'oma-production-consumption-ledger.json'));
     assert.equal(recordOutput.receipts[0].authority_boundary.refs_only, true);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_create_domain_owner_receipt, false);
 
-    const listOutput = runCli(['runtime', 'oma-long-soak', 'list'], {
+    const listOutput = runCli(['runtime', 'oma-production-consumption', 'list'], {
       OPL_STATE_DIR: stateRoot,
-    }).oma_long_soak_ledger;
+    }).oma_production_consumption_ledger;
     assert.equal(listOutput.receipt_count, 1);
     assert.equal(listOutput.receipts[0].receipt_ref, recordOutput.receipt_refs[0]);
     assert.equal(listOutput.authority_boundary.can_write_domain_truth, false);
@@ -402,11 +402,11 @@ test('runtime OMA long-soak CLI records refs-only operator evidence and closes t
     );
     assert.equal(longSoakGate.status, 'refs_observed');
     assert.deepEqual(longSoakGate.observed_refs, [
-      'opl://oma-long-soak/long-soak%3A%2F%2Fopl-meta-agent%2Fcontrolled-operator-soak%2F26.5.19',
       'long-soak://opl-meta-agent/controlled-operator-soak/26.5.19',
-      'receipt://operator/oma-controlled-soak-26.5.19',
     ]);
-    assert.equal(followthrough.summary.long_soak_ref_count, 3);
+    assert.equal(followthrough.summary.long_soak_ref_count, 1);
+    assert.equal(followthrough.summary.production_consumption_ledger_receipt_ref_count, 1);
+    assert.equal(followthrough.summary.production_consumption_operator_evidence_ref_count, 1);
     assert.equal(followthrough.summary.open_gate_count, 0);
     assert.deepEqual(followthrough.summary.open_gate_ids, []);
     assert.equal(followthrough.summary.production_consumption_ready, true);

@@ -34,6 +34,7 @@ export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: J
   const gateItems = recordList(followthrough.gate_items);
   const openGateItems = gateItems.filter((gate) => stringValue(gate.status) !== 'refs_observed');
   const openGateIds = stringList(summary.open_gate_ids);
+  const typedBlockerRefs = stringList(followthrough.typed_blocker_refs);
   const status = stringValue(followthrough.status)
     ?? 'oma_contracts_not_bound_production_followthrough_unavailable';
   return {
@@ -47,6 +48,9 @@ export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: J
     open_gate_count: numberValue(summary.open_gate_count),
     open_gate_ids: openGateIds,
     attention_required: numberValue(summary.open_gate_count) > 0,
+    typed_blocker_refs: typedBlockerRefs,
+    typed_blocker_ref_count: typedBlockerRefs.length,
+    blocked_by_typed_blocker_refs: followthrough.blocked_by_typed_blocker_refs === true,
     gate_items: openGateItems.map((gate) => ({
       gate_id: stringValue(gate.gate_id),
       status: stringValue(gate.status),

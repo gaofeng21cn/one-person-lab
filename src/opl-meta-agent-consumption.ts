@@ -6,7 +6,7 @@ import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
-import { listOmaLongSoakReceipts } from './oma-long-soak-ledger.ts';
+import { listOmaProductionConsumptionReceipts } from './oma-production-consumption-ledger.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
@@ -273,12 +273,14 @@ function omaAppLivePathLedgerRefs() {
   ]));
 }
 
-function omaLongSoakLedgerRefs() {
-  return uniqueStringList(listOmaLongSoakReceipts().flatMap((receipt) => [
-    receipt.receipt_ref,
-    ...receipt.long_soak_refs,
-    ...receipt.operator_evidence_refs,
-  ]));
+function omaProductionConsumptionLedgerRefs() {
+  const receipts = listOmaProductionConsumptionReceipts();
+  return {
+    receiptRefs: uniqueStringList(receipts.map((receipt) => receipt.receipt_ref)),
+    longSoakRefs: uniqueStringList(receipts.flatMap((receipt) => receipt.long_soak_refs)),
+    operatorEvidenceRefs: uniqueStringList(receipts.flatMap((receipt) => receipt.operator_evidence_refs)),
+    typedBlockerRefs: uniqueStringList(receipts.flatMap((receipt) => receipt.typed_blocker_refs)),
+  };
 }
 
 function productionConsumptionGate(input: {
@@ -394,11 +396,12 @@ function buildProductionConsumptionFollowthrough(payloads: {
     'app_live_soak_refs',
     'agent_lab_rerun_long_soak_refs',
   ]);
-  const longSoakLedgerRefs = omaLongSoakLedgerRefs();
+  const productionConsumptionLedgerRefs = omaProductionConsumptionLedgerRefs();
   const longSoakObservedRefs = uniqueStringList([
     ...longSoakRefs,
-    ...longSoakLedgerRefs,
+    ...productionConsumptionLedgerRefs.longSoakRefs,
   ]);
+  const typedBlockerRefs = productionConsumptionLedgerRefs.typedBlockerRefs;
   const liveRenderingStatus = optionalString(drilldownReceipt.live_rendering_status);
   const gates = [
     productionConsumptionGate({
@@ -456,7 +459,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
         'operator_long_soak_refs',
         'production_soak_refs',
         'agent_lab_rerun_long_soak_refs',
-        'opl_oma_long_soak_receipt',
+        'opl_oma_production_consumption_receipt',
       ],
       observedRefs: longSoakObservedRefs,
     }),
@@ -483,11 +486,19 @@ function buildProductionConsumptionFollowthrough(payloads: {
       owner_receipt_or_typed_blocker_seed_target_count: ownerOrBlockerTargetCount,
       scaleout_target_count: scaleoutTargets.length,
       long_soak_ref_count: longSoakObservedRefs.length,
+      production_consumption_ledger_receipt_ref_count:
+        productionConsumptionLedgerRefs.receiptRefs.length,
+      production_consumption_operator_evidence_ref_count:
+        productionConsumptionLedgerRefs.operatorEvidenceRefs.length,
+      typed_blocker_ref_count: typedBlockerRefs.length,
+      blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
       production_consumption_ready: openGates.length === 0,
       domain_ready_claim_count: 0,
       quality_verdict_claim_count: 0,
       default_promotion_claim_count: 0,
     },
+    typed_blocker_refs: typedBlockerRefs,
+    blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }

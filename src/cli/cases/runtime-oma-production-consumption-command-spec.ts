@@ -1,8 +1,8 @@
 import {
-  listOmaLongSoakReceipts,
-  recordOmaLongSoakReceipts,
-  type OmaLongSoakReceiptInput,
-} from '../../oma-long-soak-ledger.ts';
+  listOmaProductionConsumptionReceipts,
+  recordOmaProductionConsumptionReceipts,
+  type OmaProductionConsumptionReceiptInput,
+} from '../../oma-production-consumption-ledger.ts';
 import { assertNoArgs, buildUsageError } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
@@ -24,20 +24,20 @@ function stringList(value: unknown) {
     : [];
 }
 
-function parseRuntimeOmaLongSoakPayload(
+function parseRuntimeOmaProductionConsumptionPayload(
   value: string,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): OmaLongSoakReceiptInput {
+): OmaProductionConsumptionReceiptInput {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
   } catch (error) {
-    throw buildUsageError('runtime oma-long-soak record payload must be valid JSON.', spec, {
+    throw buildUsageError('runtime oma-production-consumption record payload must be valid JSON.', spec, {
       parse_error: error instanceof Error ? error.message : String(error),
     });
   }
   if (!isRecord(parsed)) {
-    throw buildUsageError('runtime oma-long-soak record payload must be a JSON object.', spec);
+    throw buildUsageError('runtime oma-production-consumption record payload must be a JSON object.', spec);
   }
   return {
     long_soak_refs: [
@@ -48,70 +48,71 @@ function parseRuntimeOmaLongSoakPayload(
         parsed.agent_lab_rerun_long_soak_refs ?? parsed.agent_lab_rerun_long_soak_ref,
       ),
     ],
+    typed_blocker_refs: stringList(parsed.typed_blocker_refs ?? parsed.typed_blocker_ref),
     operator_evidence_refs: stringList(
       parsed.operator_evidence_refs ?? parsed.operator_evidence_ref,
     ),
   };
 }
 
-function parseRuntimeOmaLongSoakRecordArgs(
+function parseRuntimeOmaProductionConsumptionRecordArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: OmaLongSoakReceiptInput | null = null;
+  let payload: OmaProductionConsumptionReceiptInput | null = null;
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
     if (token === '--payload') {
       const value = args[++index];
       if (!value) {
-        throw buildUsageError('runtime oma-long-soak record requires --payload.', spec, {
+        throw buildUsageError('runtime oma-production-consumption record requires --payload.', spec, {
           required: ['--payload'],
         });
       }
-      payload = parseRuntimeOmaLongSoakPayload(value, spec);
+      payload = parseRuntimeOmaProductionConsumptionPayload(value, spec);
       continue;
     }
-    throw buildUsageError(`Unknown option for runtime oma-long-soak record: ${token}.`, spec, {
+    throw buildUsageError(`Unknown option for runtime oma-production-consumption record: ${token}.`, spec, {
       option: token,
     });
   }
   if (!payload) {
-    throw buildUsageError('runtime oma-long-soak record requires --payload.', spec, {
+    throw buildUsageError('runtime oma-production-consumption record requires --payload.', spec, {
       required: ['--payload'],
     });
   }
   return payload;
 }
 
-export function buildRuntimeOmaLongSoakCommandSpecs(): Record<string, CommandSpec> {
+export function buildRuntimeOmaProductionConsumptionCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
-    'runtime oma-long-soak record': {
-      usage: 'opl runtime oma-long-soak record --payload <json>',
+    'runtime oma-production-consumption record': {
+      usage: 'opl runtime oma-production-consumption record --payload <json>',
       summary:
-        'Record refs-only OMA long-soak evidence refs without claiming production readiness.',
+        'Record refs-only OMA production-consumption long-soak or typed blocker refs without claiming production readiness.',
       examples: [
-        'opl runtime oma-long-soak record --payload \'{"long_soak_refs":["long-soak:oma"],"operator_evidence_refs":["receipt:oma-soak"]}\'',
+        'opl runtime oma-production-consumption record --payload \'{"long_soak_refs":["long-soak:oma"],"operator_evidence_refs":["monitor:oma"]}\'',
       ],
       handler: (args) => ({
-        oma_long_soak_ledger_record: recordOmaLongSoakReceipts([
-          parseRuntimeOmaLongSoakRecordArgs(
+        oma_production_consumption_ledger_record: recordOmaProductionConsumptionReceipts([
+          parseRuntimeOmaProductionConsumptionRecordArgs(
             args,
-            commandSpecs['runtime oma-long-soak record'],
+            commandSpecs['runtime oma-production-consumption record'],
           ),
         ]),
       }),
     },
-    'runtime oma-long-soak list': {
-      usage: 'opl runtime oma-long-soak list',
+    'runtime oma-production-consumption list': {
+      usage: 'opl runtime oma-production-consumption list',
       summary:
-        'List refs-only OMA long-soak receipts recorded in the local OPL state ledger.',
-      examples: ['opl runtime oma-long-soak list --json'],
+        'List refs-only OMA production-consumption receipts recorded in the local OPL state ledger.',
+      examples: ['opl runtime oma-production-consumption list --json'],
       handler: (args) => {
-        assertNoArgs(args, commandSpecs['runtime oma-long-soak list']);
-        const receipts = listOmaLongSoakReceipts();
+        assertNoArgs(args, commandSpecs['runtime oma-production-consumption list']);
+        const receipts = listOmaProductionConsumptionReceipts();
         return {
-          oma_long_soak_ledger: {
-            surface_kind: 'opl_oma_long_soak_ledger_projection',
+          oma_production_consumption_ledger: {
+            surface_kind: 'opl_oma_production_consumption_ledger_projection',
             receipt_count: receipts.length,
             receipts,
             authority_boundary: {
@@ -125,6 +126,7 @@ export function buildRuntimeOmaLongSoakCommandSpecs(): Record<string, CommandSpe
               can_claim_domain_ready: false,
               can_claim_production_ready: false,
               can_authorize_quality_or_export: false,
+              can_promote_default_agent_without_gate: false,
             },
           },
         };
