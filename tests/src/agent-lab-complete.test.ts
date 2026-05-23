@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test, { after } from 'node:test';
 
 import {
   buildAgentLabExportEnvelope,
@@ -14,6 +17,19 @@ import {
   buildDeveloperModeAgentLabRepairRouteReadModel,
 } from '../../src/agent-lab-complete.ts';
 import { buildSampleAgentLabSuite } from '../../src/agent-lab.ts';
+
+const agentLabStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-complete-state-'));
+const previousOplStateDir = process.env.OPL_STATE_DIR;
+process.env.OPL_STATE_DIR = agentLabStateRoot;
+
+after(() => {
+  if (previousOplStateDir === undefined) {
+    delete process.env.OPL_STATE_DIR;
+  } else {
+    process.env.OPL_STATE_DIR = previousOplStateDir;
+  }
+  fs.rmSync(agentLabStateRoot, { recursive: true, force: true });
+});
 
 function realIndependentAiReviewReceipt(candidateRef: string, riskTier = 'low_risk') {
   return {

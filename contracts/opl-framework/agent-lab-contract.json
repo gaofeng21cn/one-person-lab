@@ -687,8 +687,24 @@
     "live_closeout_evidence": {
       "surface_kind": "opl_agent_lab_developer_mode_live_closeout_evidence_read_model",
       "status": "closeout_refs_incomplete",
+      "ledger_evidence_statuses": [
+        "no_live_ledger_closeout_refs_observed",
+        "ledger_refs_recorded_verify_pending",
+        "verified_direct_fix_closeout_refs_observed",
+        "verified_fork_pr_closeout_refs_observed",
+        "verified_direct_fix_and_fork_pr_closeout_refs_observed"
+      ],
       "refs_only": true,
-      "evidence_scope": "developer_mode_agent_lab_repair_closeout_drills",
+      "evidence_scope": "developer_mode_agent_lab_repair_closeout_drills_and_verified_live_ledger_receipts",
+      "ledger_intake": {
+        "record_cli": "opl runtime developer-mode-closeout record --payload <json>",
+        "verify_cli": "opl runtime developer-mode-closeout verify [--receipt-ref <ref>]",
+        "list_cli": "opl runtime developer-mode-closeout list",
+        "recorded_receipts_require_verify_before_closeout": true,
+        "verified_receipts_can_project_live_route_closeout_refs": true,
+        "requires_verified_direct_fix_and_fork_pr_receipts_for_full_live_closeout": true,
+        "authority_boundary": "The ledger stores body-free Developer Mode closeout refs only. It cannot write owner receipts, domain truth, managed runtime truth, memory bodies, artifact bodies, quality verdicts, release readiness, production readiness, or App release user-path closure."
+      },
       "required_closeout_ref_groups": [
         "route_eligibility",
         "patrol_observation_ref",
@@ -703,7 +719,7 @@
         "non-owner fork/PR drill must include route eligibility, patrol observation, diff, focused verification refs, no-forbidden-write ref, fork repo ref, PR review ref, and external owner acceptance ref; without external PR authority, repo-contract fixture refs may express the drill but leave owner acceptance open"
       ],
       "owner_acceptance_policy": "external_owner_ref_only_repo_contract_fixture_is_unclosed_non_owner_drill_no_opl_owner_receipt_write",
-      "authority_boundary": "Developer Mode live closeout evidence is a refs-only read model for route eligibility, patrol observation, diff, verification, no-forbidden-write, commit or fork/PR, external owner acceptance refs, or explicitly non-owner repo-contract fixture refs. It can prove route closeout evidence or drill coverage is present; fixture refs do not close owner acceptance. It cannot fabricate owner receipt, write managed runtime truth, write domain truth, write memory body, mutate artifact body, or issue quality verdicts."
+      "authority_boundary": "Developer Mode live closeout evidence is a refs-only read model for route eligibility, patrol observation, diff, verification, no-forbidden-write, commit or fork/PR, external owner acceptance refs, explicitly non-owner repo-contract fixture refs, and verified OPL ledger receipts. It can prove route closeout evidence or drill coverage is present; fixture refs and recorded-but-unverified ledger receipts do not close owner acceptance. It cannot fabricate owner receipt, write managed runtime truth, write domain truth, write memory body, mutate artifact body, claim release or production readiness, or issue quality verdicts."
     },
     "non_authority_outputs": {
       "writes_domain_truth": false,
@@ -1186,6 +1202,7 @@
     "OPL can expose an App/workbench-ready read model with eval adapter, observability export, optimizer candidate, promotion gate, and online learning refs",
     "OPL can expose Developer Mode patrol repair routes as refs-only issue, blocker, owner route, candidate fix, worktree, branch, PR, acceptance evidence, and follow-up queue item projections",
     "OPL can expose Developer Mode live closeout evidence drills for repo direct-fix and non-owner fork/PR routes using route eligibility, patrol observation, diff, verification, no-forbidden-write, commit or fork/PR, and external owner acceptance refs; when external PR authority is unavailable, it may expose repo-contract fixture refs only as non-owner drills, not owner receipts or owner acceptance closeout",
+    "OPL can record, verify, list, and consume body-free Developer Mode closeout ledger receipts so Agent Lab can project verified direct-fix or fork/PR closeout refs while keeping recorded receipts in verify-pending state",
     "OPL can expose integration contracts with activation predicate, canonical entry, artifact verifier, failure policy, typed blocker, owner route, retry/dead-letter, and rollback refs",
     "OPL can record independent AI reviewer, web research, and mechanism patch trace refs with request, response, evidence, diff, contract, test result, reviewer agent, and no-shared-context refs",
     "OPL can mine usage logs, failure modes, user interrupts, convergence iterations, tool failures, and blockers into refs-only prompt, skill, rubric, and workflow-default mechanism candidate refs",

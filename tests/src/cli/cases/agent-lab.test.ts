@@ -1,6 +1,19 @@
 import { spawnSync } from 'node:child_process';
+import { after } from 'node:test';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+
+const agentLabCliStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-cli-state-'));
+const previousOplStateDir = process.env.OPL_STATE_DIR;
+process.env.OPL_STATE_DIR = agentLabCliStateRoot;
+after(() => {
+  if (previousOplStateDir === undefined) {
+    delete process.env.OPL_STATE_DIR;
+  } else {
+    process.env.OPL_STATE_DIR = previousOplStateDir;
+  }
+  fs.rmSync(agentLabCliStateRoot, { recursive: true, force: true });
+});
 
 test('agent-lab sample exposes a minimal framework read-model sample', () => {
   const output = runCli(['agent-lab', 'sample', '--json']);

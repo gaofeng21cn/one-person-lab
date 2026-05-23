@@ -63,6 +63,7 @@ import { runProductEntryResume } from '../../product-entry-runtime.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { buildPublicSystemCommandSpecs } from './system-public-command-specs.ts';
 import { buildPublicAgentLabCommandSpecs } from './agent-lab-public-command-specs.ts';
+import { buildPublicRuntimeDeveloperModeCloseoutCommandSpecs } from './runtime-developer-mode-closeout-public-command-specs.ts';
 import { buildPublicWorkOrderCommandSpecs } from './work-order-public-command-specs.ts';
 import {
   buildPublicEngineActionPayload,
@@ -150,6 +151,8 @@ export function buildPublicCommandSpecs(
 
   const systemCommandSpecs = buildPublicSystemCommandSpecs(getContracts);
   const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
+  const runtimeDeveloperModeCloseoutCommandSpecs =
+    buildPublicRuntimeDeveloperModeCloseoutCommandSpecs(commandSpecs);
   const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
 
   const modulesSpec = buildNoArgSpec(
@@ -919,6 +922,7 @@ export function buildPublicCommandSpecs(
         examples: ['opl runtime app-release-evidence list --json'],
         group: 'runtime',
       }),
+    ...runtimeDeveloperModeCloseoutCommandSpecs,
     'runtime oma-app-live-path record':
       cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {
         usage: 'opl runtime oma-app-live-path record --payload <json>',

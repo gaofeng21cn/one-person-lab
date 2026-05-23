@@ -1,0 +1,156 @@
+import {
+  assert,
+  fs,
+  os,
+  path,
+  runCli,
+} from '../helpers.ts';
+import test from 'node:test';
+
+const completePayload = {
+  target_repo_id: 'med-autoscience',
+  route_decision: 'direct-fix',
+  route_eligibility: 'eligible_direct_fix',
+  patrol_observation_ref: 'patrol-observation-ref:mas/live-direct-fix',
+  diff_ref: 'diff-ref:mas/live-direct-fix',
+  verification_refs: ['test-result-ref:mas/live-direct-fix'],
+  no_forbidden_write_ref: 'no-forbidden-write-ref:mas/live-direct-fix',
+  commit_ref: 'git-commit-ref:mas/live-direct-fix',
+  owner_acceptance_ref: 'external-owner-ref:mas/live-direct-fix-accepted',
+};
+
+test('runtime Developer Mode closeout CLI records and verifies refs-only live closeout evidence', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-state-'));
+  try {
+    const recorded = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify(completePayload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+
+    assert.equal(recorded.status, 'recorded');
+    assert.equal(recorded.recorded_receipt_count, 1);
+    assert.equal(recorded.receipts[0].receipt_status, 'recorded');
+    assert.equal(recorded.receipts[0].target_repo_id, 'med-autoscience');
+    assert.equal(recorded.receipts[0].route_decision, 'direct-fix');
+    assert.equal(recorded.receipts[0].authority_boundary.refs_only, true);
+    assert.equal(recorded.receipts[0].authority_boundary.can_write_domain_truth, false);
+    assert.equal(recorded.receipts[0].authority_boundary.can_create_owner_receipt, false);
+    assert.equal(recorded.receipts[0].authority_boundary.can_modify_managed_runtime, false);
+    assert.equal(
+      recorded.ledger_file,
+      path.join(stateRoot, 'developer-mode-closeout-ledger.json'),
+    );
+
+    const recordedReadModel = runCli(['agent-lab', 'complete', '--json'], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
+    assert.equal(recordedReadModel.summary.ledger_receipt_ref_count, 1);
+    assert.equal(recordedReadModel.summary.ledger_verified_receipt_ref_count, 0);
+    assert.equal(recordedReadModel.summary.pending_verify_receipt_ref_count, 1);
+    assert.equal(recordedReadModel.summary.live_ledger_closeout_ready_count, 0);
+    assert.equal(recordedReadModel.status, 'closeout_refs_incomplete');
+    assert.equal(recordedReadModel.ledger_evidence_status, 'ledger_refs_recorded_verify_pending');
+
+    const verified = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'verify',
+      '--receipt-ref',
+      recorded.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_verify;
+
+    assert.equal(verified.status, 'verified');
+    assert.equal(verified.verified_receipt_count, 1);
+    assert.equal(verified.receipt.receipt_status, 'verified');
+    assert.equal(verified.receipt.authority_boundary.can_write_owner_receipt, false);
+
+    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger;
+    assert.equal(listed.receipt_count, 1);
+    assert.equal(listed.verified_receipt_ref_count, 1);
+    assert.equal(listed.authority_boundary.can_write_domain_truth, false);
+
+    const readModel = runCli(['agent-lab', 'complete', '--json'], {
+      OPL_STATE_DIR: stateRoot,
+    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
+    assert.equal(readModel.summary.ledger_receipt_ref_count, 1);
+    assert.equal(readModel.summary.ledger_verified_receipt_ref_count, 1);
+    assert.equal(readModel.summary.pending_verify_receipt_ref_count, 0);
+    assert.equal(readModel.summary.live_ledger_closeout_ready_count, 1);
+    assert.equal(readModel.summary.external_owner_closeout_refs_ready_count, 2);
+    assert.equal(readModel.summary.fixture_drill_owner_acceptance_open_count, 1);
+    assert.equal(readModel.status, 'closeout_refs_incomplete');
+    assert.equal(
+      readModel.evidence_scope,
+      'developer_mode_agent_lab_repair_closeout_drills_and_verified_live_ledger_receipts',
+    );
+    assert.equal(readModel.ledger_evidence_status, 'verified_direct_fix_closeout_refs_observed');
+    assert.equal(readModel.verified_ledger_receipt_refs[0], recorded.receipt_refs[0]);
+    const liveLedgerRoute = readModel.drills.find(
+      (drill: { evidence_source: string }) => drill.evidence_source === 'developer_mode_closeout_ledger',
+    );
+    assert.ok(liveLedgerRoute);
+    assert.equal(liveLedgerRoute.route_status, 'closeout_refs_ready');
+    assert.equal(liveLedgerRoute.closeout_claim_status, 'external_owner_closeout_refs_ready');
+    assert.equal(liveLedgerRoute.closeout_refs.owner_acceptance_is_owner_receipt, false);
+    assert.equal(liveLedgerRoute.authority_boundary.writes_owner_receipt, false);
+    assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
+    assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime Developer Mode closeout CLI blocks owner receipt or incomplete closeout payloads', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-blocked-state-'));
+  try {
+    const invalidOwner = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        ...completePayload,
+        owner_acceptance_ref: 'owner-receipt-ref:mas/forbidden',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+    assert.equal(invalidOwner.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(invalidOwner.blocked_receipts[0].blocker.blocker_id, 'developer_mode_owner_acceptance_ref_not_external');
+
+    const incomplete = runCli([
+      'runtime',
+      'developer-mode-closeout',
+      'record',
+      '--payload',
+      JSON.stringify({
+        target_repo_id: 'med-autoscience',
+        route_decision: 'direct-fix',
+        route_eligibility: 'eligible_direct_fix',
+        patrol_observation_ref: 'patrol-observation-ref:mas/incomplete',
+        owner_acceptance_ref: 'external-owner-ref:mas/incomplete',
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger_record;
+    assert.equal(incomplete.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.ok(incomplete.blocked_receipts[0].missing_closeout_refs.includes('diff_ref'));
+    assert.ok(incomplete.blocked_receipts[0].missing_closeout_refs.includes('verification_refs'));
+
+    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).developer_mode_closeout_ledger;
+    assert.equal(listed.receipt_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

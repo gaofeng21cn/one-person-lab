@@ -16,6 +16,7 @@ export type OplStatePaths = {
   managed_install_update_ledger_file: string;
   oma_app_live_path_ledger_file: string;
   app_release_user_path_evidence_ledger_file: string;
+  developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
   desktop_config_file: string;
   desktop_pilot_root: string;
@@ -49,6 +50,7 @@ export function resolveOplStatePaths(): OplStatePaths {
       stateDir,
       'app-release-user-path-evidence-ledger.json',
     ),
+    developer_mode_closeout_ledger_file: path.join(stateDir, 'developer-mode-closeout-ledger.json'),
     domain_manifest_projection_cache_file: path.join(stateDir, 'domain-manifest-projection-cache.json'),
     desktop_config_file: path.join(stateDir, 'desktop-pilot', 'config', 'desktop-config.json'),
     desktop_pilot_root: path.join(stateDir, 'desktop-pilot'),

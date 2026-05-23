@@ -1,4 +1,8 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import {
+  listDeveloperModeCloseoutReceipts,
+  type DeveloperModeCloseoutReceipt,
+} from './developer-mode-closeout-ledger.ts';
 import { stableId } from './family-runtime-ids.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -46,6 +50,13 @@ type PatrolObservationRefsInput = string[] | {
   fork_repo_ref?: unknown;
   pr_review_ref?: unknown;
   owner_acceptance_ref?: unknown;
+};
+
+type DeveloperModeLiveCloseoutRoute = ReturnType<typeof buildDeveloperModeAgentLabRepairRoute> & {
+  evidence_source?: string;
+  ledger_receipt_ref?: string;
+  ledger_receipt_status?: string;
+  ledger_target_repo_id?: string;
 };
 
 export type DeveloperModeAgentLabRepairRouteInput = {
@@ -340,6 +351,49 @@ function closeoutClaimStatus(
   return 'external_owner_closeout_refs_ready';
 }
 
+function routeForLedgerReceipt(receipt: DeveloperModeCloseoutReceipt): DeveloperModeLiveCloseoutRoute {
+  const allowedRoute = receipt.route_decision === 'direct-fix'
+    ? 'direct_repo_fix'
+    : receipt.route_decision === 'fork-PR'
+      ? 'fork_pull_request'
+      : 'observe_only';
+  return {
+    ...buildDeveloperModeAgentLabRepairRoute({
+      developer_mode_projection: {
+        surface_id: 'opl_developer_mode',
+        status: 'ready',
+        effective_state: receipt.route_decision === 'observe-only'
+          ? 'observe_only'
+          : receipt.route_decision === 'direct-fix'
+            ? 'active_direct'
+            : 'active_pr_only',
+        allowed_route: allowedRoute,
+        mode: 'developer_apply_safe',
+      },
+      repo_permission: {
+        target_id: receipt.target_repo_id,
+        status: receipt.route_decision === 'direct-fix' ? 'ready' : 'limited',
+        direct_write_allowed: receipt.route_decision === 'direct-fix',
+        allowed_route: allowedRoute,
+      },
+      patrol_observation_refs: {
+        patrol_observation_ref: receipt.patrol_observation_ref,
+        diff_ref: receipt.diff_ref,
+        verification_refs: receipt.verification_refs,
+        no_forbidden_write_ref: receipt.no_forbidden_write_ref,
+        commit_ref: receipt.commit_ref,
+        fork_repo_ref: receipt.fork_repo_ref,
+        pr_review_ref: receipt.pr_review_ref,
+        owner_acceptance_ref: receipt.owner_acceptance_ref,
+      },
+    }),
+    evidence_source: 'developer_mode_closeout_ledger',
+    ledger_receipt_ref: receipt.receipt_ref,
+    ledger_receipt_status: receipt.receipt_status,
+    ledger_target_repo_id: receipt.target_repo_id,
+  };
+}
+
 export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentLabRepairRouteInput) {
   const refs = observationRefs(input.patrol_observation_refs);
   const initial = routeEligibility(input.developer_mode_projection, input.repo_permission);
@@ -459,7 +513,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
     },
   ];
-  const liveCloseoutEvidenceDrills = [
+  const staticCloseoutDrills: DeveloperModeLiveCloseoutRoute[] = [
     buildDeveloperModeAgentLabRepairRoute({
       developer_mode_projection: {
         surface_id: 'opl_developer_mode',
@@ -524,14 +578,43 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
       },
     }),
   ];
+  const ledgerReceipts = listDeveloperModeCloseoutReceipts();
+  const verifiedLedgerReceipts = ledgerReceipts.filter((receipt) =>
+    receipt.receipt_status === 'verified');
+  const recordedLedgerReceipts = ledgerReceipts.filter((receipt) =>
+    receipt.receipt_status === 'recorded');
+  const liveCloseoutEvidenceDrills = [
+    ...staticCloseoutDrills,
+    ...verifiedLedgerReceipts.map(routeForLedgerReceipt),
+  ];
+  const verifiedDirectFixReceiptCount = verifiedLedgerReceipts.filter((receipt) =>
+    receipt.route_decision === 'direct-fix').length;
+  const verifiedForkPrReceiptCount = verifiedLedgerReceipts.filter((receipt) =>
+    receipt.route_decision === 'fork-PR').length;
+  const liveLedgerCloseoutReady =
+    verifiedDirectFixReceiptCount > 0
+    && verifiedForkPrReceiptCount > 0
+    && recordedLedgerReceipts.length === 0;
   const liveCloseoutEvidence = {
     surface_kind: 'opl_agent_lab_developer_mode_live_closeout_evidence_read_model',
     version: 'opl-agent-lab.v1.developer-mode-live-closeout-evidence',
-    status: liveCloseoutEvidenceDrills.every((drill) => drill.route_status === 'closeout_refs_ready')
+    status: liveLedgerCloseoutReady
       ? 'closeout_refs_ready'
       : 'closeout_refs_incomplete',
+    ledger_evidence_status: recordedLedgerReceipts.length > 0
+      ? 'ledger_refs_recorded_verify_pending'
+      : verifiedDirectFixReceiptCount > 0 && verifiedForkPrReceiptCount > 0
+        ? 'verified_direct_fix_and_fork_pr_closeout_refs_observed'
+        : verifiedDirectFixReceiptCount > 0
+          ? 'verified_direct_fix_closeout_refs_observed'
+          : verifiedForkPrReceiptCount > 0
+            ? 'verified_fork_pr_closeout_refs_observed'
+            : 'no_live_ledger_closeout_refs_observed',
     refs_only: true,
-    evidence_scope: 'developer_mode_agent_lab_repair_closeout_drills',
+    evidence_scope: 'developer_mode_agent_lab_repair_closeout_drills_and_verified_live_ledger_receipts',
+    ledger_receipt_refs: ledgerReceipts.map((receipt) => receipt.receipt_ref),
+    verified_ledger_receipt_refs: verifiedLedgerReceipts.map((receipt) => receipt.receipt_ref),
+    pending_verify_receipt_refs: recordedLedgerReceipts.map((receipt) => receipt.receipt_ref),
     required_closeout_ref_groups: [
       'route_eligibility',
       'patrol_observation_ref',
@@ -552,6 +635,15 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
         drill.route_status === 'closeout_refs_ready').length,
       live_external_owner_acceptance_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.owner_acceptance_ref_kind === 'live_external_owner_ref').length,
+      live_ledger_closeout_ready_count: liveCloseoutEvidenceDrills.filter((drill) =>
+        drill.evidence_source === 'developer_mode_closeout_ledger'
+        && drill.route_status === 'closeout_refs_ready').length,
+      ledger_receipt_ref_count: ledgerReceipts.length,
+      ledger_recorded_receipt_ref_count: recordedLedgerReceipts.length,
+      ledger_verified_receipt_ref_count: verifiedLedgerReceipts.length,
+      pending_verify_receipt_ref_count: recordedLedgerReceipts.length,
+      verified_direct_fix_ledger_receipt_ref_count: verifiedDirectFixReceiptCount,
+      verified_fork_pr_ledger_receipt_ref_count: verifiedForkPrReceiptCount,
       repo_contract_fixture_drill_count: liveCloseoutEvidenceDrills.filter((drill) =>
         drill.closeout_refs.evidence_source === 'repo_contract_test_fixture').length,
       external_owner_acceptance_missing_count: liveCloseoutEvidenceDrills.filter((drill) =>
