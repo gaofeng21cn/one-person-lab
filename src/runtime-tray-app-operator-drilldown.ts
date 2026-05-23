@@ -45,6 +45,9 @@ import {
 import {
   buildCodexAppRuntimeRole,
 } from './runtime-tray-app-operator-drilldown-parts/codex-app-runtime-role.ts';
+import {
+  buildOmaProductionConsumptionActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/oma-production-consumption.ts';
 import { appReleaseUserPathEvidenceSourceRef, buildAppReleaseUserPathEvidenceActionRoutes, buildAppReleaseUserPathEvidenceFromRuntime } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
 import {
   buildLegacyCleanupActionRoutes,
@@ -1068,6 +1071,10 @@ export function buildAppOperatorDrilldown(input: {
   );
   const oplMetaAgentRegistry = buildOplMetaAgentRegistryExtension();
   const standardAgentTemplateConsumption = buildStandardDomainAgentTemplateConsumptionReadModel();
+  const oplMetaAgentProjection = record(oplMetaAgentRegistry as JsonRecord);
+  const oplMetaAgentProductionConsumption = record(
+    oplMetaAgentProjection.production_consumption_followthrough,
+  );
   const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
     providerContinuousProof: input.providerContinuousProof,
     stageAttempts: attempts,
@@ -1090,6 +1097,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildDomainDispatchEvidenceReceiptRoutes(record(domainDispatchEvidence)),
     ...buildExternalEvidenceActionRoutes(record(evidenceRequests)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
+    ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),
   ]);

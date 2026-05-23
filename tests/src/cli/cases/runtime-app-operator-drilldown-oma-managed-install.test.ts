@@ -353,6 +353,63 @@ test('runtime OMA production-consumption CLI records long-soak refs and closes t
       initialFullOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
         .production_consumption_followthrough;
     assert.deepEqual(initialFollowthrough.summary.open_gate_ids, ['long_soak_refs']);
+    assert.equal(
+      initialFullOutput.app_operator_drilldown.summary.oma_production_consumption_action_route_count,
+      1,
+    );
+    const recordRoute = initialFullOutput.app_operator_drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) =>
+        ref.action_id === 'oma_production_consumption:opl-meta-agent:record',
+    );
+    assert.equal(recordRoute.action_kind, 'oma_production_consumption_receipt_record');
+    assert.equal(recordRoute.owner, 'opl');
+    assert.equal(recordRoute.route_target_kind, 'opl_cli');
+    assert.equal(recordRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(recordRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(recordRoute.route_requires_domain_or_app_payload, true);
+    assert.equal(recordRoute.can_close_without_domain_or_app_payload, false);
+    assert.equal(recordRoute.payload_owner, 'app_live_operator_or_oma_owner');
+    assert.deepEqual(recordRoute.payload_template, {
+      long_soak_refs: [],
+      typed_blocker_refs: [],
+      operator_evidence_refs: [],
+    });
+    assert.equal(recordRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(recordRoute.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(recordRoute.authority_boundary.can_claim_production_ready, false);
+    assert.equal(recordRoute.authority_boundary.can_promote_default_agent_without_gate, false);
+    assert.equal(
+      initialFullOutput.app_operator_drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === recordRoute.action_id && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+    const initialAttention =
+      initialFullOutput.app_operator_drilldown.attention_first_payload.evidence_after_contract
+        .oma_production_consumption_followthrough;
+    const initialLongSoakGate = initialAttention.gate_items.find(
+      (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
+    );
+    assert.equal(
+      initialLongSoakGate.next_safe_action.action_id,
+      'oma_production_consumption:opl-meta-agent:record',
+    );
+    assert.equal(initialLongSoakGate.next_safe_action.can_claim_production_ready, false);
+    const nextStep =
+      initialFullOutput.app_operator_drilldown.attention_first_payload.evidence_next_steps
+        .items.find(
+          (item: { step_kind: string }) =>
+            item.step_kind === 'oma_production_consumption_followthrough',
+        );
+    assert.equal(nextStep.record_action_id, 'oma_production_consumption:opl-meta-agent:record');
+    assert.equal(nextStep.can_submit_record_to_safe_action_shell, true);
+    assert.deepEqual(nextStep.payload_template, {
+      long_soak_refs: [],
+      typed_blocker_refs: [],
+      operator_evidence_refs: [],
+    });
+    assert.equal(nextStep.can_claim_production_ready, false);
 
     const initialList = runCli(['runtime', 'oma-production-consumption', 'list'], {
       OPL_STATE_DIR: stateRoot,
@@ -361,10 +418,34 @@ test('runtime OMA production-consumption CLI records long-soak refs and closes t
     assert.equal(initialList.authority_boundary.refs_only, true);
     assert.equal(initialList.authority_boundary.can_claim_production_ready, false);
 
-    const recordOutput = runCli([
+    const dryRun = runCli([
       'runtime',
-      'oma-production-consumption',
-      'record',
+      'action',
+      'execute',
+      '--action',
+      'oma_production_consumption:opl-meta-agent:record',
+      '--dry-run',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).runtime_operator_action_execution;
+    assert.equal(dryRun.execution.execution_kind, 'opl_cli_oma_production_consumption_apply');
+    assert.equal(dryRun.execution.execution_status, 'dry_run');
+    assert.equal(
+      dryRun.execution.result.oma_production_consumption_payload_preflight.status,
+      'payload_required',
+    );
+    assert.equal(
+      dryRun.execution.result.oma_production_consumption_payload_preflight
+        .empty_payload_template_is_success_evidence,
+      false,
+    );
+
+    const recordExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'oma_production_consumption:opl-meta-agent:record',
       '--payload',
       JSON.stringify({
         long_soak_refs: ['long-soak://opl-meta-agent/controlled-operator-soak/26.5.19'],
@@ -372,7 +453,13 @@ test('runtime OMA production-consumption CLI records long-soak refs and closes t
       }),
     ], {
       OPL_STATE_DIR: stateRoot,
-    }).oma_production_consumption_ledger_record;
+    }).runtime_operator_action_execution;
+    assert.equal(
+      recordExecution.execution.execution_kind,
+      'opl_cli_oma_production_consumption_apply',
+    );
+    assert.equal(recordExecution.execution.execution_status, 'executed');
+    const recordOutput = recordExecution.execution.result.oma_production_consumption_ledger_record;
 
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.recorded_receipt_count, 1);

@@ -265,6 +265,9 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       countBy(input.actionRefs, (ref) =>
         ref.action_kind === 'app_release_user_path_evidence_receipt_verify'
       ),
+    oma_production_consumption_action_route_count: countBy(input.actionRefs, (ref) => (
+      ref.action_kind === 'oma_production_consumption_receipt_record'
+    )),
     freshness_signal_count: input.freshness.length,
     source_ref_count: refFamilySummary.source_ref_count,
     artifact_ref_count: refFamilySummary.artifact_ref_count,

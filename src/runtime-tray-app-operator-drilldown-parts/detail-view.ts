@@ -8,6 +8,7 @@ import { canonicalOwnerId } from '../evidence-envelope.ts';
 import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
 import {
   buildOmaProductionConsumptionFollowthroughAttention,
+  omaProductionConsumptionNextStep,
 } from './oma-production-consumption.ts';
 import {
   appReleaseUserPathEvidenceNextStep,
@@ -701,36 +702,7 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     steps.push(appReleaseUserPathEvidenceNextStep(appReleaseUserPathEvidence));
   }
   if (numberValue(omaProductionConsumption.open_gate_count) > 0) {
-    steps.push({
-      step_kind: 'oma_production_consumption_followthrough',
-      owner: stringValue(omaProductionConsumption.owner) ?? 'one-person-lab',
-      target_agent: stringValue(omaProductionConsumption.target_agent) ?? 'opl-meta-agent',
-      target_repo: stringValue(omaProductionConsumption.target_repo) ?? 'opl-meta-agent',
-      status: stringValue(omaProductionConsumption.status),
-      structural_consumption_ready:
-        omaProductionConsumption.structural_consumption_ready === true,
-      production_consumption_ready:
-        omaProductionConsumption.production_consumption_ready === true,
-      open_gate_count: numberValue(omaProductionConsumption.open_gate_count),
-      open_gate_ids: stringList(omaProductionConsumption.open_gate_ids),
-      required_refs_by_gate: recordList(omaProductionConsumption.gate_items).map((gate) => ({
-        gate_id: stringValue(gate.gate_id),
-        status: stringValue(gate.status),
-        required_refs_any_of: stringList(gate.required_refs_any_of),
-        manual_required: gate.manual_required === true,
-        manual_required_reason: stringValue(gate.manual_required_reason),
-        manual_required_blockers: stringList(gate.manual_required_blockers),
-        next_safe_action: record(gate.next_safe_action),
-      })),
-      required_return_shapes: stringList(omaProductionConsumption.required_return_shapes),
-      full_detail_section: 'opl_meta_agent_workbench_refs',
-      can_execute_domain_action: false,
-      can_create_owner_receipt: false,
-      can_close_domain_ready: false,
-      can_claim_production_ready: false,
-      can_authorize_quality_or_export: false,
-      can_promote_default_agent_without_gate: false,
-    });
+    steps.push(omaProductionConsumptionNextStep(omaProductionConsumption));
   }
   if (
     numberValue(attention.domain_dispatch_attention_count) > 0

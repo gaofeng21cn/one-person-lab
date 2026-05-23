@@ -23,6 +23,10 @@ import {
   verifyAppReleaseUserPathEvidenceReceipt,
   type AppReleaseUserPathEvidenceReceiptInput,
 } from './app-release-user-path-evidence-ledger.ts';
+import {
+  recordOmaProductionConsumptionReceipts,
+  type OmaProductionConsumptionReceiptInput,
+} from './oma-production-consumption-ledger.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -239,6 +243,83 @@ function appReleaseUserPathEvidenceDryRunPreflight(input: AppReleaseUserPathEvid
       can_claim_production_ready: false,
       can_close_app_release_user_path: false,
     },
+  };
+}
+
+function omaProductionConsumptionPayload(payload: JsonRecord): OmaProductionConsumptionReceiptInput {
+  return {
+    long_soak_refs: [
+      ...refsFromPayload(payload, ['long_soak_refs', 'long_soak_ref']),
+      ...refsFromPayload(payload, ['operator_long_soak_refs', 'operator_long_soak_ref']),
+      ...refsFromPayload(payload, ['production_soak_refs', 'production_soak_ref']),
+      ...refsFromPayload(payload, [
+        'agent_lab_rerun_long_soak_refs',
+        'agent_lab_rerun_long_soak_ref',
+      ]),
+    ],
+    typed_blocker_refs: refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']),
+    operator_evidence_refs: refsFromPayload(payload, [
+      'operator_evidence_refs',
+      'operator_evidence_ref',
+    ]),
+  };
+}
+
+function omaProductionConsumptionRefCount(input: OmaProductionConsumptionReceiptInput) {
+  return [
+    ...(input.long_soak_refs ?? []),
+    ...(input.typed_blocker_refs ?? []),
+    ...(input.operator_evidence_refs ?? []),
+  ].length;
+}
+
+function omaProductionConsumptionDryRunPreflight(input: OmaProductionConsumptionReceiptInput) {
+  return {
+    surface_kind: 'opl_oma_production_consumption_payload_preflight',
+    status: omaProductionConsumptionRefCount(input) > 0
+      ? 'payload_refs_observed'
+      : 'payload_required',
+    required_any: [
+      'long_soak_refs',
+      'typed_blocker_refs',
+      'operator_evidence_refs',
+    ],
+    empty_payload_template_is_success_evidence: false,
+    payload_owner: 'app_live_operator_or_oma_owner',
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      can_promote_default_agent_without_gate: false,
+    },
+  };
+}
+
+function omaProductionConsumptionExecution(payload: JsonRecord, options: { dryRun: boolean }) {
+  const input = omaProductionConsumptionPayload(payload);
+  if (!options.dryRun && omaProductionConsumptionRefCount(input) === 0) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'OMA production-consumption record action requires refs-only payload evidence.',
+      {
+        required_any: omaProductionConsumptionDryRunPreflight(input).required_any,
+      },
+    );
+  }
+  return {
+    executionKind: 'opl_cli_oma_production_consumption_apply',
+    runtimeArgs: ['runtime', 'oma-production-consumption', 'record'],
+    result: options.dryRun
+      ? {
+          oma_production_consumption_payload_preflight:
+            omaProductionConsumptionDryRunPreflight(input),
+        }
+      : {
+          oma_production_consumption_ledger_record:
+            recordOmaProductionConsumptionReceipts([input]),
+        },
   };
 }
 
@@ -529,13 +610,17 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'domain_dispatch_evidence_receipt_verify'
     || actionKind === 'app_release_user_path_evidence_receipt_record'
     || actionKind === 'app_release_user_path_evidence_receipt_verify'
+    || actionKind === 'oma_production_consumption_receipt_record'
   ) {
     if (
       actionKind === 'app_release_user_path_evidence_receipt_record'
       || actionKind === 'app_release_user_path_evidence_receipt_verify'
+      || actionKind === 'oma_production_consumption_receipt_record'
     ) {
       return {
-        executionKind: 'opl_cli_app_release_user_path_evidence_apply',
+        executionKind: actionKind === 'oma_production_consumption_receipt_record'
+          ? 'opl_cli_oma_production_consumption_apply'
+          : 'opl_cli_app_release_user_path_evidence_apply',
         runtimeArgs: stringList(route.opl_cli_args),
       };
     }
@@ -580,6 +665,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'domain_dispatch_evidence_receipt_verify',
       'app_release_user_path_evidence_receipt_record',
       'app_release_user_path_evidence_receipt_verify',
+      'oma_production_consumption_receipt_record',
       'provider_scheduler_status',
       'provider_scheduler_install',
       'provider_scheduler_trigger',
@@ -649,6 +735,8 @@ async function executeRoute(
     const appReleaseUserPathEvidenceAction =
       actionKind === 'app_release_user_path_evidence_receipt_record'
       || actionKind === 'app_release_user_path_evidence_receipt_verify';
+    const omaProductionConsumptionAction =
+      actionKind === 'oma_production_consumption_receipt_record';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
     const stageEvidenceRecordAction = actionKind === 'stage_production_evidence_receipt_record';
@@ -667,10 +755,18 @@ async function executeRoute(
     const appReleaseUserPathEvidence = appReleaseUserPathEvidenceAction
       ? appReleaseUserPathEvidenceExecution(route, options.payload, { dryRun: options.dryRun })
       : null;
+    const omaProductionConsumption = omaProductionConsumptionAction
+      ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun })
+      : null;
     const { executionKind, runtimeArgs } = appReleaseUserPathEvidence
       ? {
           executionKind: appReleaseUserPathEvidence.executionKind,
           runtimeArgs: appReleaseUserPathEvidence.runtimeArgs,
+        }
+      : omaProductionConsumption
+      ? {
+          executionKind: omaProductionConsumption.executionKind,
+          runtimeArgs: omaProductionConsumption.runtimeArgs,
         }
       : externalEvidenceAction
       ? {
@@ -687,7 +783,7 @@ async function executeRoute(
       execution_kind: executionKind,
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
-      executed_runtime_command: appReleaseUserPathEvidenceAction
+      executed_runtime_command: appReleaseUserPathEvidenceAction || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
         : externalEvidenceAction
         ? `opl ${runtimeArgs.join(' ')}`
@@ -696,6 +792,8 @@ async function executeRoute(
           : `opl family-runtime ${runtimeArgs.join(' ')}`,
       result: appReleaseUserPathEvidence
         ? appReleaseUserPathEvidence.result
+        : omaProductionConsumption
+          ? omaProductionConsumption.result
         : options.dryRun
         ? (stageEvidenceRecord
             ? {

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
+import { omaProductionConsumptionRecordAction } from './oma-production-consumption-action.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
 import { listOmaProductionConsumptionReceipts } from './oma-production-consumption-ledger.ts';
 import { buildOplModules } from './system-installation/modules.ts';
@@ -308,6 +309,11 @@ function productionConsumptionGate(input: {
       manual_required_reason: optionalString(input.followthrough.reason),
       manual_required_blockers: stringList(input.followthrough.blockers),
       next_safe_action: record(input.followthrough.next_safe_action),
+    } : input.gateId === 'long_soak_refs' && input.status !== 'refs_observed' ? {
+      manual_required: false,
+      manual_required_reason: null,
+      manual_required_blockers: [],
+      next_safe_action: omaProductionConsumptionRecordAction(),
     } : {}),
     full_detail_section: 'opl_meta_agent_workbench_refs',
     authority_boundary: refsOnlyAuthorityBoundary(),
