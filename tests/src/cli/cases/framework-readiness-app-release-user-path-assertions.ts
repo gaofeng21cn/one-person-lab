@@ -34,10 +34,18 @@ export function assertFrameworkAppReleaseUserPathAction(
   nextSafeActions: any[],
   appUserPathEvidence: any,
 ) {
-  const appUserPathAction = nextSafeActions.find(
+  const appReleaseUserPathIndex = nextSafeActions.findIndex(
     (action: { action_kind?: string }) =>
       action.action_kind === 'app_release_user_path_evidence_review',
   );
+  const ownerPayloadIndex = nextSafeActions.findIndex(
+    (action: { action_kind?: string }) => action.action_kind === 'owner_payload_group_scaleout',
+  );
+  assert.equal(appReleaseUserPathIndex >= 0, true);
+  if (ownerPayloadIndex >= 0) {
+    assert.equal(appReleaseUserPathIndex < ownerPayloadIndex, true);
+  }
+  const appUserPathAction = nextSafeActions[appReleaseUserPathIndex];
   assert.equal(Boolean(appUserPathAction), true);
   assert.equal(appUserPathAction.action_id, 'review_app_release_user_path_evidence');
   assert.equal(

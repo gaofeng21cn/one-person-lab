@@ -15,6 +15,8 @@ import { loadFrameworkContracts } from '../../../../src/contracts.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 import {
   assertAppReleaseUserPathAttention,
+  assertAppReleaseUserPathAttentionCounts,
+  assertAppReleaseUserPathDefaultSafeAction,
   assertAppReleaseUserPathNextStep,
   assertAppReleaseUserPathSummary,
 } from './runtime-app-operator-drilldown-summary-app-release-assertions.ts';
@@ -366,29 +368,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.evidence_envelope_open_count
         + summaryDrilldown.summary.evidence_envelope_blocked_count,
     );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_after_contract
-        .operator_actionable_attention_count,
-      summaryDrilldown.summary.evidence_envelope_open_count
-        + summaryDrilldown.attention_first_payload.evidence_after_contract
-          .app_release_user_path_evidence_open_gate_count
-        + summaryDrilldown.attention_first_payload.evidence_after_contract
-          .app_release_user_path_evidence_pending_verify_receipt_ref_count
-        + summaryDrilldown.attention_first_payload.evidence_after_contract
-          .oma_production_consumption_followthrough_open_gate_count,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_after_contract
-        .domain_blocked_attention_count,
-      summaryDrilldown.summary.evidence_envelope_blocked_count
-        + summaryDrilldown.attention_first_payload.evidence_after_contract
-          .domain_dispatch_attention_count,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_after_contract
-        .attention_count_semantics,
-      'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim',
-    );
+    assertAppReleaseUserPathAttentionCounts(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_group_attention_policy,
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
@@ -630,44 +610,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       firstMissingEvidence.payload_workorder.typed_blocker_path.accepted,
       true,
     );
-    assert.equal(typeof summaryDrilldown.attention_first_payload.next_safe_action.action_id, 'string');
-    assert.equal(summaryDrilldown.attention_first_payload.next_safe_action.action_id.length > 0, true);
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.action_id,
-      'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.route_requires_domain_or_app_payload,
-      true,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.action_kind,
-      'app_release_user_path_evidence_receipt_record',
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.payload_owner,
-      'app_live_operator_or_release_owner',
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.can_close_without_domain_or_app_payload,
-      false,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.empty_payload_template_is_success_evidence,
-      false,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.payload_template_policy,
-      'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit',
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.next_safe_action.submit_via,
-      'opl runtime action execute',
-    );
-    assert.deepEqual(
-      summaryDrilldown.attention_first_payload.next_safe_action.submit_args.slice(0, 4),
-      ['runtime', 'action', 'execute', '--action'],
-    );
+    assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.provider_health.health_status,
       'attention_required',
