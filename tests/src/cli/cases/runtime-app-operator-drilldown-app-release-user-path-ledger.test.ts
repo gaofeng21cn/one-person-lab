@@ -121,3 +121,57 @@ test('runtime App drilldown keeps typed blocker refs as operator attention', () 
     assert.equal(nextStep.can_close_app_release_user_path, false);
   });
 });
+
+test('runtime App drilldown does not combine App release user-path refs across release cohorts', () => {
+  withTempState('opl-app-release-user-path-cohort-state-', (stateRoot) => {
+    const packageRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
+      provider_state_linkage_refs: ['provider://temporal/cadence-window/26.5.19'],
+    });
+    const firstRunRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      receipt_ref: 'opl://app-release-user-path-evidence/26.5.18-first-run',
+      screenshot_refs: ['screenshot://opl-app/first-run/26.5.18.png'],
+      reload_prompt_user_path_refs: ['receipt://opl-app/reload-prompt/26.5.18'],
+      long_operator_evidence_refs: ['soak://opl-app/operator/26.5.18'],
+    });
+    assert.equal(packageRecord.status, 'recorded');
+    assert.equal(firstRunRecord.status, 'recorded');
+
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = output.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+
+    assert.equal(evidence.status, 'app_release_user_path_evidence_open');
+    assert.equal(evidence.refs_observed_for_all_gates, false);
+    assert.equal(evidence.open_gate_count, 5);
+    assert.deepEqual(evidence.open_gate_ids, [
+      'release_package_refs',
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'provider_state_linkage_refs',
+      'long_operator_evidence_refs',
+    ]);
+    assert.equal(evidence.ledger_receipt_ref_count, 2);
+    assert.equal(evidence.cohort_guard.status, 'cohort_ambiguous');
+    assert.deepEqual(evidence.cohort_guard.candidate_cohort_ids, [
+      'app-release-cohort:26.5.18',
+      'app-release-cohort:26.5.19',
+    ]);
+    assert.equal(evidence.gate_items[0].cohort_guard_status, 'cohort_ambiguous');
+    assert.equal(output.summary.app_release_user_path_evidence_open_gate_count, 5);
+    assert.equal(output.summary.app_release_user_path_production_ready_claimed, false);
+
+    const nextStep = output.attention_first_payload.evidence_next_steps.items.find(
+      (item: { step_kind: string }) => item.step_kind === 'app_release_user_path_evidence',
+    );
+    assert.equal(Boolean(nextStep), true);
+    assert.equal(nextStep.cohort_guard_status, 'cohort_ambiguous');
+    assert.deepEqual(nextStep.candidate_cohort_ids, [
+      'app-release-cohort:26.5.18',
+      'app-release-cohort:26.5.19',
+    ]);
+    assert.equal(nextStep.can_close_app_release_user_path, false);
+  });
+});

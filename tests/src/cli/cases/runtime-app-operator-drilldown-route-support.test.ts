@@ -1,5 +1,8 @@
 import {
   assert,
+  fs,
+  os,
+  path,
   test,
 } from '../helpers.ts';
 import {
@@ -9,7 +12,22 @@ import {
   buildAppOperatorDrilldown,
 } from '../../../../src/runtime-tray-app-operator-drilldown.ts';
 
-test('runtime App drilldown exposes MAS route support as refs-only runtime-manager projection', () => {
+function useTempState(t: { after: (fn: () => void) => void }, prefix: string) {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  t.after(() => {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  });
+}
+
+test('runtime App drilldown exposes MAS route support as refs-only runtime-manager projection', (t) => {
+  useTempState(t, 'opl-app-drilldown-route-support-');
   const supportProjection = buildMasDomainRouteSupportProjection();
   assert.deepEqual(supportProjection.supported_task_kinds, [
     'domain_route/reconcile-apply',

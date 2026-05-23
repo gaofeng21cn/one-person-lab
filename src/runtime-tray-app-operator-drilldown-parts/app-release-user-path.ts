@@ -34,6 +34,68 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function versionCohortFromRef(value: string) {
+  const match = value.match(/(?:^|[^0-9])v?(\d+\.\d+\.\d+)(?:[^0-9]|$)/);
+  return match ? `app-release-cohort:${match[1]}` : null;
+}
+
+function cohortIdsFromRecord(value: JsonRecord) {
+  return uniqueStrings([
+    ...refsFromRecord(value, ['app_release_cohort_id', 'release_cohort_id', 'cohort_id']),
+    ...refsFromRecord(value, [
+      'release_package_refs',
+      'release_bundle_refs',
+      'app_release_artifact_refs',
+      'dmg_refs',
+      'sidecar_refs',
+      'screenshot_refs',
+      'app_screenshot_refs',
+      'first_run_screenshot_refs',
+      'operator_screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'reload_prompt_receipt_refs',
+      'first_run_log_refs',
+      'startup_maintenance_reload_prompt_refs',
+      'provider_state_linkage_refs',
+      'provider_state_receipt_refs',
+      'provider_cadence_receipt_refs',
+      'provider_slo_receipt_refs',
+      'long_operator_evidence_refs',
+      'operator_long_soak_refs',
+      'app_user_path_long_soak_refs',
+      'production_long_soak_refs',
+    ]).map(versionCohortFromRef).filter((entry): entry is string => Boolean(entry)),
+  ]);
+}
+
+function buildCohortGuard(records: JsonRecord[]) {
+  const candidateCohortIds = uniqueStrings(records.flatMap(cohortIdsFromRecord)).sort();
+  const selectedCohortId = candidateCohortIds.length === 1 ? candidateCohortIds[0] : null;
+  return {
+    status: candidateCohortIds.length === 0
+      ? 'cohort_unscoped'
+      : selectedCohortId
+        ? 'cohort_selected'
+        : 'cohort_ambiguous',
+    selected_cohort_id: selectedCohortId,
+    candidate_cohort_ids: candidateCohortIds,
+    requires_single_release_user_path_cohort: true,
+  };
+}
+
+function recordsForCohortGuard(
+  records: JsonRecord[],
+  cohortGuard: ReturnType<typeof buildCohortGuard>,
+) {
+  if (cohortGuard.status === 'cohort_unscoped') {
+    return records;
+  }
+  if (!cohortGuard.selected_cohort_id) {
+    return [];
+  }
+  return records.filter((entry) => cohortIdsFromRecord(entry).includes(cohortGuard.selected_cohort_id!));
+}
+
 function routeAuthorityBoundary() {
   return {
     opl: 'app_release_user_path_evidence_ledger_refs_only',
@@ -77,6 +139,9 @@ function evidenceGate(input: {
   gateId: string;
   requiredRefsAnyOf: string[];
   observedRefs: string[];
+  cohortGuardStatus: string;
+  selectedCohortId: string | null;
+  candidateCohortIds: string[];
 }) {
   return {
     gate_id: input.gateId,
@@ -84,6 +149,9 @@ function evidenceGate(input: {
     required_refs_any_of: input.requiredRefsAnyOf,
     observed_refs: input.observedRefs,
     observed_ref_count: input.observedRefs.length,
+    cohort_guard_status: input.cohortGuardStatus,
+    selected_cohort_id: input.selectedCohortId,
+    candidate_cohort_ids: input.candidateCohortIds,
     current_contract_status: 'not_claimed_by_contract',
     full_detail_section: 'app_release_user_path_evidence',
     authority_boundary: {
@@ -107,6 +175,19 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     receipt.receipt_status === 'verified'
   );
   const typedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
+  const candidateEvidenceRecords = [
+    record(drilldown.package_export_lifecycle_refs),
+    record(drilldown.production_evidence_tail_ledger),
+    record(drilldown.codex_app_runtime_role),
+    record(drilldown.provider_slo_operator_action_refs),
+    record(drilldown.periodic_execution_refs),
+    ...ledgerReceipts,
+  ];
+  const cohortGuard = buildCohortGuard(candidateEvidenceRecords);
+  const scopedEvidenceRecords = recordsForCohortGuard(
+    candidateEvidenceRecords,
+    cohortGuard,
+  );
   const gates = [
     evidenceGate({
       gateId: 'release_package_refs',
@@ -116,17 +197,16 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         'app_release_artifact_ref',
         'release_sidecar_ref',
       ],
-      observedRefs: refsFromRecords([
-        record(drilldown.package_export_lifecycle_refs),
-        record(drilldown.production_evidence_tail_ledger),
-        ...ledgerReceipts,
-      ], [
+      observedRefs: refsFromRecords(scopedEvidenceRecords, [
         'release_package_refs',
         'release_bundle_refs',
         'app_release_artifact_refs',
         'dmg_refs',
         'sidecar_refs',
       ]),
+      cohortGuardStatus: cohortGuard.status,
+      selectedCohortId: cohortGuard.selected_cohort_id,
+      candidateCohortIds: cohortGuard.candidate_cohort_ids,
     }),
     evidenceGate({
       gateId: 'screenshot_refs',
@@ -135,16 +215,15 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         'first_run_screenshot_ref',
         'operator_screenshot_ref',
       ],
-      observedRefs: refsFromRecords([
-        record(drilldown.production_evidence_tail_ledger),
-        record(drilldown.codex_app_runtime_role),
-        ...ledgerReceipts,
-      ], [
+      observedRefs: refsFromRecords(scopedEvidenceRecords, [
         'screenshot_refs',
         'app_screenshot_refs',
         'first_run_screenshot_refs',
         'operator_screenshot_refs',
       ]),
+      cohortGuardStatus: cohortGuard.status,
+      selectedCohortId: cohortGuard.selected_cohort_id,
+      candidateCohortIds: cohortGuard.candidate_cohort_ids,
     }),
     evidenceGate({
       gateId: 'reload_prompt_user_path_refs',
@@ -153,16 +232,15 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         'startup_maintenance_reload_prompt_ref',
         'first_run_log_ref',
       ],
-      observedRefs: refsFromRecords([
-        record(drilldown.codex_app_runtime_role),
-        record(drilldown.production_evidence_tail_ledger),
-        ...ledgerReceipts,
-      ], [
+      observedRefs: refsFromRecords(scopedEvidenceRecords, [
         'reload_prompt_user_path_refs',
         'reload_prompt_receipt_refs',
         'first_run_log_refs',
         'startup_maintenance_reload_prompt_refs',
       ]),
+      cohortGuardStatus: cohortGuard.status,
+      selectedCohortId: cohortGuard.selected_cohort_id,
+      candidateCohortIds: cohortGuard.candidate_cohort_ids,
     }),
     evidenceGate({
       gateId: 'provider_state_linkage_refs',
@@ -171,17 +249,15 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         'provider_cadence_receipt_ref',
         'provider_slo_receipt_ref',
       ],
-      observedRefs: refsFromRecords([
-        record(drilldown.provider_slo_operator_action_refs),
-        record(drilldown.periodic_execution_refs),
-        record(drilldown.codex_app_runtime_role),
-        ...ledgerReceipts,
-      ], [
+      observedRefs: refsFromRecords(scopedEvidenceRecords, [
         'provider_state_linkage_refs',
         'provider_state_receipt_refs',
         'provider_cadence_receipt_refs',
         'provider_slo_receipt_refs',
       ]),
+      cohortGuardStatus: cohortGuard.status,
+      selectedCohortId: cohortGuard.selected_cohort_id,
+      candidateCohortIds: cohortGuard.candidate_cohort_ids,
     }),
     evidenceGate({
       gateId: 'long_operator_evidence_refs',
@@ -190,17 +266,15 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
         'operator_long_soak_ref',
         'app_user_path_long_soak_ref',
       ],
-      observedRefs: refsFromRecords([
-        record(drilldown.codex_app_runtime_role),
-        record(drilldown.production_evidence_tail_ledger),
-        record(drilldown.provider_slo_operator_action_refs),
-        ...ledgerReceipts,
-      ], [
+      observedRefs: refsFromRecords(scopedEvidenceRecords, [
         'long_operator_evidence_refs',
         'operator_long_soak_refs',
         'app_user_path_long_soak_refs',
         'production_long_soak_refs',
       ]),
+      cohortGuardStatus: cohortGuard.status,
+      selectedCohortId: cohortGuard.selected_cohort_id,
+      candidateCohortIds: cohortGuard.candidate_cohort_ids,
     }),
   ];
   const openGateItems = gates.filter((gate) => gate.status !== 'refs_observed');
@@ -229,6 +303,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     typed_blocker_refs: typedBlockerRefs,
     typed_blocker_ref_count: typedBlockerRefs.length,
     blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
+    cohort_guard: cohortGuard,
     ledger_receipt_ref_count: ledgerReceipts.length,
     ledger_receipt_refs: ledgerReceipts.map((receipt) => receipt.receipt_ref),
     recorded_ledger_receipt_ref_count: recordedLedgerReceipts.length,
@@ -330,6 +405,9 @@ export function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
     pending_verify_receipt_ref_count:
       numberValue(evidence.pending_verify_receipt_ref_count),
     pending_verify_receipt_refs: pendingVerifyReceiptRefs,
+    cohort_guard_status: stringValue(record(evidence.cohort_guard).status),
+    selected_cohort_id: stringValue(record(evidence.cohort_guard).selected_cohort_id),
+    candidate_cohort_ids: stringList(record(evidence.cohort_guard).candidate_cohort_ids),
     receipt_verification_required: pendingVerifyReceiptRefs.length > 0,
     verification_action_id: pendingVerifyReceiptRefs.length > 0
       ? `app_release_user_path_evidence:${targetSurface}:verify`
