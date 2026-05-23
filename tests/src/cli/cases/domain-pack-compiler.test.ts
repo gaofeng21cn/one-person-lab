@@ -520,6 +520,89 @@ test('generated interfaces fail closed when active caller target kind is not pro
   assert.equal(statusTarget.target_kind, 'descriptor_declared_target');
 });
 
+test('generated interfaces reject retired wrapper names as implicit canonical surface aliases', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-no-wrapper-alias-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const fixtures = loadFamilyManifestFixtures();
+  const wrapperOnlyMas = attachManifestSurface(
+    attachManifestSurface(
+      withPackCompilerReadySurfaces(fixtures.medautoscience, {
+        agentId: 'mas',
+        targetDomainId: 'med-autoscience',
+        owner: 'MedAutoScience',
+        actionId: 'study_packet',
+        stageId: 'study_stage',
+        memoryRefId: 'mas_publication_route_memory',
+      }),
+      'functional_privatization_audit',
+      {
+        surface_kind: 'functional_privatization_audit',
+        target_domain_id: 'med-autoscience',
+        modules: [
+          {
+            module_id: 'legacy_wrapper_status_projection',
+            classification: 'refs_only_adapter',
+            owner: 'med-autoscience',
+            code_paths: ['src/med_autoscience/product_status.py'],
+            current_surface_refs: ['product_status', 'workbench'],
+            active_callers: ['wrapper-only status/workbench read model'],
+            active_caller_status: 'refs_only_domain_adapter_target',
+            migration_action: 'domain projection consumed by historical wrapper names only',
+          },
+        ],
+      },
+    ),
+    'generated_surface_handoff',
+    {
+      surface_kind: 'opl_generated_surface_handoff',
+      schema_version: 1,
+      domain_id: 'med-autoscience',
+      generated_surface_owner: 'one-person-lab',
+      domain_repo_can_own_generated_surface: false,
+      generated_surfaces: [
+        { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'product_status', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'workbench', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
+      ],
+    },
+  );
+
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    'medautoscience',
+    '--path',
+    repoRoot,
+    '--manifest-command',
+    buildManifestCommand(wrapperOnlyMas),
+  ], env);
+
+  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  assert.equal(bundle.active_caller_target_proof.status, 'blocked');
+  assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
+  assert.equal(
+    bundle.active_caller_cutover_proof.blocked_surface_ids.includes('status_read_model'),
+    true,
+  );
+  assert.equal(
+    bundle.active_caller_cutover_proof.blocked_surface_ids.includes('workbench_drilldown'),
+    true,
+  );
+  const statusTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'status_read_model',
+  );
+  const workbenchTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'workbench_drilldown',
+  );
+  assert.equal(statusTarget.proof_status, 'blocked_missing_handoff_and_active_caller_proof');
+  assert.equal(workbenchTarget.proof_status, 'blocked_missing_handoff_and_active_caller_proof');
+});
+
 test('generated interfaces can compile a standard agent repo contract pack without private wrappers', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interface-repo-'));
   fs.mkdirSync(path.join(targetDir, 'contracts'), { recursive: true });
