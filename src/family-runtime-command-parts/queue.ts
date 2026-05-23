@@ -23,6 +23,10 @@ export function parseTaskScopeOption(
     ];
     return true;
   }
+  if (token === '--task-kind' && value) {
+    scope.taskKind = value;
+    return true;
+  }
   if (token === '--payload-match' && value) {
     const separatorIndex = value.indexOf('=');
     const path = value.slice(0, separatorIndex).trim();
@@ -43,7 +47,7 @@ export function parseTaskScopeOption(
 }
 
 function normalizedTaskScope(scope: FamilyRuntimeTaskScope) {
-  return scope.domainId || (scope.payloadMatches?.length ?? 0) > 0 ? scope : undefined;
+  return scope.domainId || scope.taskKind || (scope.payloadMatches?.length ?? 0) > 0 ? scope : undefined;
 }
 
 function setDomainProfile(

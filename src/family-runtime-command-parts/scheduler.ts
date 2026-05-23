@@ -28,7 +28,7 @@ export function parseSchedulerTickArgs(rest: string[]): FamilyRuntimeCommandInpu
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime scheduler tick option: ${token}.`, {
         option: token,
-        usage: 'opl family-runtime scheduler tick --provider temporal [--force] [--limit <n>] [--no-hydrate] [--domain <domain>] [--study <study_id>] [--payload-match <path=value>]',
+        usage: 'opl family-runtime scheduler tick --provider temporal [--force] [--limit <n>] [--no-hydrate] [--domain <domain>] [--study <study_id>] [--task-kind <kind>] [--payload-match <path=value>]',
       });
     }
   }
@@ -43,7 +43,7 @@ export function parseSchedulerTickArgs(rest: string[]): FamilyRuntimeCommandInpu
     force,
     limit,
     hydrate,
-    taskScope: taskScope.domainId || (taskScope.payloadMatches?.length ?? 0) > 0 ? taskScope : undefined,
+    taskScope: taskScope.domainId || taskScope.taskKind || (taskScope.payloadMatches?.length ?? 0) > 0 ? taskScope : undefined,
   };
 }
 

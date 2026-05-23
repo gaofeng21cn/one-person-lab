@@ -148,6 +148,67 @@ PY
   }
 });
 
+test('family-runtime intake can scope hydration by top-level task kind', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-task-kind-scope-'));
+  const exportFixture = createExportFixture(`
+cat <<'JSON'
+{
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "domain_route/reconcile-apply",
+      "dedupe_key": "mas:test:DM002:route",
+      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
+    },
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "publication_aftercare/reviewer-refresh",
+      "dedupe_key": "mas:test:DM002:reviewer-refresh",
+      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
+    },
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "publication_aftercare/reviewer-refresh",
+      "dedupe_key": "mas:test:DM003:reviewer-refresh",
+      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM003"}
+    }
+  ]
+}
+JSON
+`);
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportFixture.exportPath,
+    });
+    const intake = runCli([
+      'family-runtime',
+      'intake',
+      '--domain',
+      'medautoscience',
+      '--study',
+      'DM002',
+      '--task-kind',
+      'publication_aftercare/reviewer-refresh',
+      '--source',
+      'test',
+    ], env);
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+
+    assert.equal(intake.family_runtime_intake.enqueued_count, 1);
+    assert.equal(intake.family_runtime_intake.filtered_count, 2);
+    assert.deepEqual(intake.family_runtime_intake.task_scope, {
+      taskKind: 'publication_aftercare/reviewer-refresh',
+      payloadMatches: [{ path: 'study_id', value: 'DM002' }],
+    });
+    assert.equal(queue.family_runtime_queue.tasks.length, 1);
+    assert.equal(queue.family_runtime_queue.tasks[0].task_kind, 'publication_aftercare/reviewer-refresh');
+    assert.equal(queue.family_runtime_queue.tasks[0].payload.study_id, 'DM002');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(exportFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime tick scope filtered count excludes limit overflow', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-study-scope-limit-'));
   const dispatch = createDispatchFixture(`

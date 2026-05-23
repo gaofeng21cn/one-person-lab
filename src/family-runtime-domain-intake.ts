@@ -184,6 +184,9 @@ function inputMatchesTaskScope(input: EnqueueInput, taskScope?: FamilyRuntimeTas
   if (taskScope.domainId && input.domainId !== taskScope.domainId) {
     return false;
   }
+  if (taskScope.taskKind && input.taskKind !== taskScope.taskKind) {
+    return false;
+  }
   return payloadMatchesTaskScope(input.payload, taskScope);
 }
 

@@ -30,6 +30,9 @@ export function taskRowMatchesScope(row: FamilyRuntimeTaskRow, taskScope?: Famil
   if (taskScope.domainId && row.domain_id !== taskScope.domainId) {
     return false;
   }
+  if (taskScope.taskKind && row.task_kind !== taskScope.taskKind) {
+    return false;
+  }
   if (!taskScope.payloadMatches?.length) {
     return true;
   }

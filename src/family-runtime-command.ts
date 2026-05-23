@@ -26,6 +26,7 @@ export type EnqueueInput = {
 
 export type FamilyRuntimeTaskScope = {
   domainId?: FamilyRuntimeDomainId;
+  taskKind?: string;
   payloadMatches?: Array<{ path: string; value: string }>;
 };
 
