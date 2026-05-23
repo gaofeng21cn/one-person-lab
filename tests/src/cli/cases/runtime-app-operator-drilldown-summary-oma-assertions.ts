@@ -129,6 +129,26 @@ export function assertOmaProductionConsumptionNextStep(summaryDrilldown: any, me
       '<payload.json>',
     ],
   );
+  assert.equal(
+    omaProductionConsumptionStep.payload_workorder.surface_kind,
+    'opl_oma_production_consumption_payload_workorder',
+  );
+  assert.equal(
+    omaProductionConsumptionStep.payload_workorder.accepted_payload_path_policy,
+    'real_long_soak_refs_or_typed_blocker_path_empty_template_blocks',
+  );
+  assert.deepEqual(
+    omaProductionConsumptionStep.payload_workorder.required_operator_payload_refs,
+    [
+      'long_soak_refs',
+      'typed_blocker_refs',
+      'operator_evidence_refs',
+    ],
+  );
+  assert.equal(
+    omaProductionConsumptionStep.payload_workorder.authority_boundary.can_claim_production_ready,
+    false,
+  );
   assert.equal(omaProductionConsumptionStep.can_create_owner_receipt, false);
   assert.equal(omaProductionConsumptionStep.can_claim_production_ready, false);
   assert.equal(omaProductionConsumptionStep.can_promote_default_agent_without_gate, false);

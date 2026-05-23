@@ -2,8 +2,10 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   OMA_PRODUCTION_CONSUMPTION_ACTION_ID,
   OMA_PRODUCTION_CONSUMPTION_ACTION_KIND,
+  omaProductionConsumptionPayloadWorkorder,
   omaProductionConsumptionPayloadRefHints,
   omaProductionConsumptionPayloadTemplate,
+  omaProductionConsumptionRuntimeActionExecuteCommand,
 } from '../oma-production-consumption-action.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -36,18 +38,6 @@ function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
     arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
   )).join(' ')}`;
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
 }
 
 export function omaProductionConsumptionNextStep(followthrough: JsonRecord) {
@@ -92,7 +82,7 @@ export function omaProductionConsumptionNextStep(followthrough: JsonRecord) {
     record_command_ref: canRecord ? commandRef(recordArgs) : null,
     copyable_runtime_action_execute_commands: canRecord
       ? {
-          record_with_payload: runtimeActionExecuteCommand(OMA_PRODUCTION_CONSUMPTION_ACTION_ID),
+          record_with_payload: omaProductionConsumptionRuntimeActionExecuteCommand(),
         }
       : null,
     can_submit_record_to_safe_action_shell: canRecord,
@@ -102,6 +92,7 @@ export function omaProductionConsumptionNextStep(followthrough: JsonRecord) {
       ? omaProductionConsumptionPayloadTemplate()
       : null,
     payload_ref_hints: canRecord ? omaProductionConsumptionPayloadRefHints() : null,
+    payload_workorder: canRecord ? omaProductionConsumptionPayloadWorkorder() : null,
     payload_template_policy: canRecord
       ? 'template_is_empty_by_design_replace_with_real_oma_long_soak_or_typed_blocker_refs_before_submit'
       : null,
@@ -173,9 +164,13 @@ export function buildOmaProductionConsumptionActionRoutes(followthrough: JsonRec
       'app_live_operator_or_oma_owner_refs_payload_required_to_record_oma_long_soak_or_typed_blocker',
     payload_template: omaProductionConsumptionPayloadTemplate(),
     payload_ref_hints: omaProductionConsumptionPayloadRefHints(),
+    payload_workorder: omaProductionConsumptionPayloadWorkorder(),
     payload_template_policy:
       'template_is_empty_by_design_replace_with_real_oma_long_soak_or_typed_blocker_refs_before_submit',
     empty_payload_template_is_success_evidence: false,
+    copyable_runtime_action_execute_commands: {
+      record_with_payload: omaProductionConsumptionRuntimeActionExecuteCommand(),
+    },
     can_write_domain_truth: false,
     can_create_owner_receipt: false,
     can_close_domain_ready: false,

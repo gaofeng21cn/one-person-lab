@@ -685,6 +685,26 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       typed_blocker_refs: [],
       operator_evidence_refs: [],
     });
+    assert.deepEqual(
+      omaProductionConsumptionRoute.copyable_runtime_action_execute_commands.record_with_payload,
+      [
+        'runtime',
+        'action',
+        'execute',
+        '--action',
+        'oma_production_consumption:opl-meta-agent:record',
+        '--payload-file',
+        '<payload.json>',
+      ],
+    );
+    assert.equal(
+      omaProductionConsumptionRoute.payload_workorder.surface_kind,
+      'opl_oma_production_consumption_payload_workorder',
+    );
+    assert.equal(
+      omaProductionConsumptionRoute.payload_workorder.empty_payload_template_is_success_evidence,
+      false,
+    );
     assert.equal(omaProductionConsumptionRoute.authority_boundary.can_write_domain_truth, false);
     assert.equal(omaProductionConsumptionRoute.authority_boundary.can_create_owner_receipt, false);
     assert.equal(omaProductionConsumptionRoute.authority_boundary.can_claim_production_ready, false);

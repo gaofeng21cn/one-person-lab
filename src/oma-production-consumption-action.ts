@@ -31,6 +31,49 @@ export function omaProductionConsumptionPayloadRefHints() {
   };
 }
 
+export function omaProductionConsumptionRuntimeActionExecuteCommand() {
+  return [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    OMA_PRODUCTION_CONSUMPTION_ACTION_ID,
+    '--payload-file',
+    '<payload.json>',
+  ];
+}
+
+export function omaProductionConsumptionPayloadWorkorder() {
+  return {
+    surface_kind: 'opl_oma_production_consumption_payload_workorder',
+    workorder_policy:
+      'operator_must_replace_empty_template_with_real_oma_long_soak_or_typed_blocker_refs_before_submit',
+    payload_owner: 'app_live_operator_or_oma_owner',
+    accepted_payload_path_policy: 'real_long_soak_refs_or_typed_blocker_path_empty_template_blocks',
+    required_operator_payload_refs: [
+      'long_soak_refs',
+      'typed_blocker_refs',
+      'operator_evidence_refs',
+    ],
+    required_return_shapes: [
+      'long_soak_receipt_ref',
+      'typed_blocker_ref',
+      'operator_evidence_ref',
+    ],
+    payload_template: omaProductionConsumptionPayloadTemplate(),
+    payload_ref_hints: omaProductionConsumptionPayloadRefHints(),
+    empty_payload_template_is_success_evidence: false,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_close_domain_ready: false,
+      can_claim_production_ready: false,
+      can_promote_default_agent_without_gate: false,
+      refs_only: true,
+    },
+  };
+}
+
 export function omaProductionConsumptionRecordAction() {
   return {
     action_id: OMA_PRODUCTION_CONSUMPTION_ACTION_ID,
@@ -38,11 +81,7 @@ export function omaProductionConsumptionRecordAction() {
     command: 'opl runtime oma-production-consumption record',
     submit_via: 'opl runtime action execute',
     submit_args: [
-      'runtime',
-      'action',
-      'execute',
-      '--action',
-      OMA_PRODUCTION_CONSUMPTION_ACTION_ID,
+      ...omaProductionConsumptionRuntimeActionExecuteCommand(),
     ],
     route_owner: 'one-person-lab',
     payload_owner: 'app_live_operator_or_oma_owner',
@@ -56,9 +95,13 @@ export function omaProductionConsumptionRecordAction() {
     ],
     payload_template: omaProductionConsumptionPayloadTemplate(),
     payload_ref_hints: omaProductionConsumptionPayloadRefHints(),
+    payload_workorder: omaProductionConsumptionPayloadWorkorder(),
     payload_template_policy:
       'template_is_empty_by_design_replace_with_real_oma_long_soak_or_typed_blocker_refs_before_submit',
     empty_payload_template_is_success_evidence: false,
+    copyable_runtime_action_execute_commands: {
+      record_with_payload: omaProductionConsumptionRuntimeActionExecuteCommand(),
+    },
     can_write_domain_truth: false,
     can_create_owner_receipt: false,
     can_claim_domain_ready: false,

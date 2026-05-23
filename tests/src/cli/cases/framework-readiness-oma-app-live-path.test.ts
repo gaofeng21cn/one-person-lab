@@ -48,6 +48,23 @@ test('framework readiness consumes OMA App live path receipts without closing lo
       longSoakGate.next_safe_action.action_id,
       'oma_production_consumption:opl-meta-agent:record',
     );
+    assert.deepEqual(longSoakGate.next_safe_action.submit_args, [
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      'oma_production_consumption:opl-meta-agent:record',
+      '--payload-file',
+      '<payload.json>',
+    ]);
+    assert.equal(
+      longSoakGate.next_safe_action.payload_workorder.surface_kind,
+      'opl_oma_production_consumption_payload_workorder',
+    );
+    assert.equal(
+      longSoakGate.next_safe_action.payload_workorder.accepted_payload_path_policy,
+      'real_long_soak_refs_or_typed_blocker_path_empty_template_blocks',
+    );
     assert.equal(longSoakGate.next_safe_action.route_requires_domain_or_app_payload, true);
     assert.equal(longSoakGate.next_safe_action.can_create_owner_receipt, false);
     assert.equal(longSoakGate.next_safe_action.can_claim_production_ready, false);
@@ -75,6 +92,22 @@ test('framework readiness consumes OMA App live path receipts without closing lo
       typed_blocker_refs: [],
       operator_evidence_refs: [],
     });
+    assert.deepEqual(
+      requiredGate.next_safe_action.copyable_runtime_action_execute_commands.record_with_payload,
+      [
+        'runtime',
+        'action',
+        'execute',
+        '--action',
+        'oma_production_consumption:opl-meta-agent:record',
+        '--payload-file',
+        '<payload.json>',
+      ],
+    );
+    assert.equal(
+      requiredGate.next_safe_action.payload_workorder.authority_boundary.can_create_owner_receipt,
+      false,
+    );
     assert.equal(requiredGate.next_safe_action.can_claim_production_ready, false);
   } finally {
     if (previousStateDir === undefined) {
