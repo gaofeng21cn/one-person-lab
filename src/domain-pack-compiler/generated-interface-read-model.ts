@@ -219,15 +219,15 @@ function buildSidecarDescriptors(catalog: FamilyActionCatalog | null) {
 
 function generatedSurfaceAliases(surfaceId: string) {
   const aliases: Record<string, string[]> = {
-    cli: ['cli', 'command'],
+    cli: ['cli'],
     mcp: ['mcp'],
     skill: ['skill'],
-    product_entry_manifest: ['product_entry_manifest', 'product_entry', 'product'],
-    sidecar_export_dispatch: ['sidecar_export_dispatch', 'sidecar_export', 'sidecar_dispatch', 'sidecar'],
-    status_read_model: ['status_read_model', 'product_status', 'status', 'study_progress'],
-    workbench_drilldown: ['workbench_drilldown', 'workbench', 'portal', 'cockpit'],
+    product_entry_manifest: ['product_entry_manifest'],
+    sidecar_export_dispatch: ['sidecar_export_dispatch'],
+    status_read_model: ['status_read_model'],
+    workbench_drilldown: ['workbench_drilldown'],
     functional_harness_cases: ['functional_harness_cases', 'test_lane_harness', 'harness'],
-    product_session: ['product_session', 'session_continuity', 'session'],
+    product_session: ['product_session'],
   };
   return aliases[surfaceId] ?? [surfaceId];
 }
