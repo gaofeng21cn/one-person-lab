@@ -85,6 +85,13 @@ PY
     assert.equal(attempt.control_loop_summary.authority_boundary.can_write_domain_truth, false);
     assert.equal(attempt.control_loop_summary.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(attempt.control_loop_summary.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(attempt.current_control_state.surface_kind, 'opl_current_control_state');
+    assert.equal(attempt.current_control_state.reconciliation_status, 'blocked');
+    assert.equal(attempt.current_control_state.authority_boundary.reads_domain_latest_or_dispatch_latest, false);
+    assert.equal(attempt.current_control_state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(attempt.current_control_state, 'domain_ready'), false);
+    assert.equal(Object.hasOwn(attempt.current_control_state, 'publication_ready'), false);
+    assert.equal(Object.hasOwn(attempt.current_control_state, 'artifact_ready'), false);
     assert.equal(attempt.completion_boundary.provider_completion, 'not_completed');
     assert.equal(attempt.control_loop_summary.state.blocker_status, 'blocked_by_attention');
   } finally {

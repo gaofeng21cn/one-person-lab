@@ -7,6 +7,7 @@ import { FrameworkContractError } from './contracts.ts';
 import { stableId } from './family-runtime-ids.ts';
 import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
+import { deriveCurrentControlStateForTask } from './family-runtime-current-control-state.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -297,7 +298,10 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
     SELECT * FROM notifications WHERE task_id = ? ORDER BY created_at ASC
   `).all(taskId) as FamilyRuntimeNotificationRow[]).map(notificationToPayload);
   return {
-    task: taskToPayload(task),
+    task: {
+      ...taskToPayload(task),
+      current_control_state: deriveCurrentControlStateForTask(db, taskId),
+    },
     stage_attempts: listStageAttemptsForTask(db, taskId),
     events,
     notifications,

@@ -86,6 +86,7 @@
     "owner_repo",
     "failure_reason",
     "reconciliation_status",
+    "current_control_state",
     "route_hydration_status",
     "stage_graph_ref",
     "last_observed_projection",
@@ -201,6 +202,37 @@
     "human_gate_refs",
     "dead_letter"
   ],
+  "current_control_state_projection": {
+    "surface_kind": "opl_current_control_state",
+    "projection_policy": "opl_reconciled_queue_attempt_provider_closeout_projection_only",
+    "required_derivation_sources": [
+      "family_runtime_queue_task",
+      "stage_attempt_ledger",
+      "provider_run_projection",
+      "typed_stage_closeout_ledger"
+    ],
+    "forbidden_derivation_sources": [
+      "mas_latest",
+      "mas_dispatch_latest",
+      "domain_publication_ready_verdict",
+      "domain_artifact_ready_verdict"
+    ],
+    "fail_closed_reasons": [
+      "missing_identity",
+      "stale_route_epoch",
+      "stale_source_fingerprint",
+      "stale_truth_epoch",
+      "provider_completed_without_typed_closeout"
+    ],
+    "temporal_ordering_policy": "newest_queue_or_stage_attempt_wins_over_older_terminal_attempt",
+    "authority_boundary": {
+      "can_claim_domain_ready": false,
+      "can_claim_publication_ready": false,
+      "can_claim_artifact_ready": false,
+      "can_sign_domain_owner_receipt": false,
+      "provider_completion_is_domain_ready": false
+    }
+  },
   "stability_projection_fields": [
     "control_loop_summary",
     "usage_projection",

@@ -212,6 +212,8 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
     assert.equal(drilldown.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
     assert.equal(drilldown.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
     assert.equal(drilldown.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
+    assert.equal(drilldown.summary.current_control_state_count, 1);
+    assert.equal(drilldown.summary.current_control_state_blocked_count, 1);
     assert.equal(drilldown.summary.lifecycle_index_ref_count, 2);
     assert.equal(drilldown.summary.lifecycle_restore_proof_ref_count, 2);
     assert.equal(drilldown.summary.lifecycle_reconcile_missing_ref_count, 0);
@@ -258,6 +260,14 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
       drilldown.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
       false,
     );
+    assert.equal(drilldown.current_control_state.surface_kind, 'opl_app_drilldown_current_control_state_projection');
+    assert.equal(drilldown.current_control_state.summary.current_control_state_count, 1);
+    assert.equal(drilldown.current_control_state.states[0].reconciliation_status, 'blocked_missing_identity');
+    assert.equal(drilldown.current_control_state.authority_boundary.reads_domain_latest_or_dispatch_latest, false);
+    assert.equal(drilldown.current_control_state.authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(Object.hasOwn(drilldown.current_control_state.states[0], 'domain_ready'), false);
+    assert.equal(Object.hasOwn(drilldown.current_control_state.states[0], 'publication_ready'), false);
+    assert.equal(Object.hasOwn(drilldown.current_control_state.states[0], 'artifact_ready'), false);
     assert.deepEqual(
       drilldown.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs,
       ['mas-no-regression:package'],

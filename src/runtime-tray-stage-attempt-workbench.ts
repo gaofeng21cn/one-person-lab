@@ -17,6 +17,10 @@ import {
 } from './family-runtime-providers.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 import {
+  deriveCurrentControlStateForAttempt,
+  deriveCurrentControlStateForTask,
+} from './family-runtime-current-control-state.ts';
+import {
   latestStageAttemptCloseoutPacketsByAttempt,
   listStageAttemptRows,
   stageAttemptSignalsByAttempt,
@@ -621,6 +625,11 @@ function taskPayloadsById(db: DatabaseSync, taskIds: string[]) {
   return new Map(rows.map((row) => [row.task_id, parseRecord(row.payload_json)]));
 }
 
+function currentControlStatesByTaskId(db: DatabaseSync, taskIds: string[]) {
+  const uniqueTaskIds = [...new Set(taskIds.filter((taskId) => taskId.trim().length > 0))];
+  return new Map(uniqueTaskIds.map((taskId) => [taskId, deriveCurrentControlStateForTask(db, taskId)]));
+}
+
 export async function buildStageAttemptWorkbench(options: ProviderReadinessOptions = {}) {
   const paths = familyRuntimePaths();
   const queueDb = paths.queue_db;
@@ -661,6 +670,10 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       db,
       allRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
     );
+    const currentControlStates = currentControlStatesByTaskId(
+      db,
+      allRows.map((row) => row.task_id).filter((taskId): taskId is string => Boolean(taskId)),
+    );
     const latestCloseouts = latestStageAttemptCloseoutPacketsByAttempt(db, attemptIds);
     const signals = stageAttemptSignalsByAttempt(db, attemptIds);
     const providerReadiness = await currentProviderReadinessByKind(allRows, paths, options);
@@ -674,7 +687,13 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         row.task_id ? taskPayloads.get(row.task_id) ?? null : null,
       );
     });
-    const attempts = evidenceAttempts.slice(0, 25);
+    const evidenceAttemptsWithControlState = evidenceAttempts.map((attempt) => ({
+      ...attempt,
+      current_control_state: attempt.task_id
+        ? currentControlStates.get(attempt.task_id) ?? null
+        : deriveCurrentControlStateForAttempt(db, attempt.stage_attempt_id),
+    }));
+    const attempts = evidenceAttemptsWithControlState.slice(0, 25);
     const metadata = buildWorkbenchMetadata(attempts);
     return {
       surface_kind: 'opl_stage_attempt_workbench',
@@ -695,8 +714,8 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       control_loop_summary: metadata.summary.control_loop_summary,
       human_review_burden_budget: metadata.human_review_burden_budget,
       attempts,
-      evidence_attempts: evidenceAttempts,
-      evidence_attempt_count: evidenceAttempts.length,
+      evidence_attempts: evidenceAttemptsWithControlState,
+      evidence_attempt_count: evidenceAttemptsWithControlState.length,
       attempt_list_limit: 25,
       source_refs: sourceRefs(queueDb),
       authority_boundary: {

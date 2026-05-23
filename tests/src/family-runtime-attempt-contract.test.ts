@@ -77,6 +77,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'owner_repo',
     'failure_reason',
     'reconciliation_status',
+    'current_control_state',
     'route_hydration_status',
     'stage_graph_ref',
     'last_observed_projection',
@@ -136,6 +137,30 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   assert.equal(stabilityBoundary.can_auto_degrade, false);
   assert.equal(stabilityBoundary.can_write_domain_truth, false);
   assert.equal(stabilityBoundary.can_authorize_quality_verdict, false);
+});
+
+test('family runtime attempt contract defines current control state as OPL-only reconciled projection', () => {
+  const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
+  const projection = contract.current_control_state_projection as Record<string, any>;
+
+  assert.equal(projection.surface_kind, 'opl_current_control_state');
+  assert.deepEqual(projection.required_derivation_sources, [
+    'family_runtime_queue_task',
+    'stage_attempt_ledger',
+    'provider_run_projection',
+    'typed_stage_closeout_ledger',
+  ]);
+  assert.ok(projection.fail_closed_reasons.includes('missing_identity'));
+  assert.ok(projection.fail_closed_reasons.includes('stale_route_epoch'));
+  assert.ok(projection.fail_closed_reasons.includes('stale_source_fingerprint'));
+  assert.ok(projection.fail_closed_reasons.includes('stale_truth_epoch'));
+  assert.ok(projection.fail_closed_reasons.includes('provider_completed_without_typed_closeout'));
+  assert.equal(projection.temporal_ordering_policy, 'newest_queue_or_stage_attempt_wins_over_older_terminal_attempt');
+  assert.equal(projection.forbidden_derivation_sources.includes('mas_latest'), true);
+  assert.equal(projection.forbidden_derivation_sources.includes('mas_dispatch_latest'), true);
+  assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(projection.authority_boundary.can_claim_publication_ready, false);
+  assert.equal(projection.authority_boundary.can_claim_artifact_ready, false);
 });
 
 test('stage route scheduler contract freezes route hydration as OPL reconciliation, not nested stages', () => {

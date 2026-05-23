@@ -564,6 +564,39 @@ function refFamilyRefs(workbench: JsonRecord) {
   };
 }
 
+function currentControlStateProjection(attempts: JsonRecord[]) {
+  const states = attempts
+    .map((attempt) => record(attempt.current_control_state))
+    .filter((state) => Object.keys(state).length > 0);
+  const blockedStates = states.filter((state) => {
+    const status = stringValue(state.reconciliation_status);
+    return status?.startsWith('blocked_') || stringValue(state.current_attempt_state) === 'blocked';
+  });
+  return {
+    surface_kind: 'opl_app_drilldown_current_control_state_projection',
+    projection_policy: 'opl_reconciled_projection_only_no_domain_ready_publication_ready_or_artifact_ready',
+    states,
+    summary: {
+      current_control_state_count: states.length,
+      blocked_control_state_count: blockedStates.length,
+      accepted_typed_closeout_count: states.filter((state) =>
+        stringValue(state.reconciliation_status) === 'accepted_typed_closeout'
+      ).length,
+      running_control_state_count: states.filter((state) =>
+        stringValue(state.reconciliation_status) === 'running'
+      ).length,
+    },
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      reads_domain_latest_or_dispatch_latest: false,
+      provider_completion_is_domain_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_publication_ready: false,
+      can_claim_artifact_ready: false,
+    },
+  };
+}
+
 function lifecycleLedgerRefs() {
   const index = readFamilyRuntimeLifecycleRefs();
   const reconcile = reconcileFamilyRuntimeLifecycleRefs();
@@ -1103,6 +1136,7 @@ export function buildAppOperatorDrilldown(input: {
   });
   const freshness = freshnessRefs(attempts, input.domainProjectionIngestion);
   const refFamilies = refFamilyRefs(input.stageAttemptWorkbench);
+  const currentControlState = currentControlStateProjection(operatorEvidenceAttempts);
   const functionalSummary = functionalPrivatizationSummary(input.domainManifestProjects);
   const functionalAuditRefs = functionalPrivatizationAuditRefs(input.domainManifestProjects);
   const defaultCallerDeletionEvidenceRefs =
@@ -1223,6 +1257,10 @@ export function buildAppOperatorDrilldown(input: {
       record(legacyCleanupPlans.summary)
         .legacy_cleanup_domain_physical_delete_requires_owner_receipt_count,
     domain_legacy_cleanup_delete_ready_count: undefined,
+    current_control_state_count: record(currentControlState.summary).current_control_state_count,
+    current_control_state_blocked_count: record(currentControlState.summary).blocked_control_state_count,
+    current_control_state_accepted_typed_closeout_count:
+      record(currentControlState.summary).accepted_typed_closeout_count,
   };
   const sourceRefs: RuntimeTraySourceRef[] = uniqueByRef([
     sourceRef('/runtime_tray_snapshot/stage_attempt_workbench', 'stage_attempt_workbench'),
@@ -1315,6 +1353,7 @@ export function buildAppOperatorDrilldown(input: {
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
     ref_family_refs: refFamilies,
+    current_control_state: currentControlState,
     safe_action_refs: {
       surface_kind: 'opl_app_drilldown_safe_action_refs',
       refs: safeActions,
