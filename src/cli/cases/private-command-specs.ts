@@ -27,6 +27,7 @@ import { explainDomainBoundary, selectDomainAgentEntry } from '../../resolver.ts
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { FrameworkContracts } from '../../types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from './runtime-app-release-evidence-command-spec.ts';
+import { buildRuntimeOmaAppLivePathCommandSpecs } from './runtime-oma-app-live-path-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
@@ -335,6 +336,7 @@ export function buildInternalCommandSpecs(
       },
     },
     ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
+    ...buildRuntimeOmaAppLivePathCommandSpecs(),
     'runtime action execute': {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       summary:

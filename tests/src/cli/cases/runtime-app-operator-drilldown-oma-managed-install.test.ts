@@ -164,3 +164,84 @@ test('runtime app-operator-drilldown consumes OMA App live path receipts', () =>
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime OMA App live path CLI records refs-only operator evidence without production claims', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-app-live-path-cli-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    recordManagedInstallUpdateReceipts([{
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      action: 'update',
+      reason: 'startup_health_and_skill_refresh',
+      install_origin_before: 'managed_root',
+      install_origin_after: 'managed_root',
+      checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      managed_checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      git_head_sha: 'oma-managed-live-cli-sha',
+      git_sync_status: 'synced',
+      git_dirty: false,
+      skill_sync_domain: 'oplmetaagent',
+    }]);
+
+    const initialList = runCli(['runtime', 'oma-app-live-path', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_app_live_path_ledger;
+    assert.equal(initialList.receipt_count, 0);
+    assert.equal(initialList.authority_boundary.refs_only, true);
+    assert.equal(initialList.authority_boundary.can_claim_production_ready, false);
+
+    const recordOutput = runCli([
+      'runtime',
+      'oma-app-live-path',
+      'record',
+      '--payload',
+      JSON.stringify({
+        app_live_path_refs: ['app://one-person-lab/opl-meta-agent/workbench/live'],
+        app_surface_ref: 'app://one-person-lab/runtime/operator-drilldown',
+        operator_evidence_refs: ['screenshot://opl-app/oma-workbench-live.png'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_app_live_path_ledger_record;
+
+    assert.equal(recordOutput.status, 'recorded');
+    assert.equal(recordOutput.recorded_receipt_count, 1);
+    assert.deepEqual(recordOutput.receipt_refs, [
+      'opl://oma-app-live-path/app%3A%2F%2Fone-person-lab%2Fopl-meta-agent%2Fworkbench%2Flive',
+    ]);
+    assert.equal(recordOutput.ledger_file, path.join(stateRoot, 'oma-app-live-path-ledger.json'));
+    assert.equal(recordOutput.receipts[0].authority_boundary.refs_only, true);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_create_domain_owner_receipt, false);
+
+    const listOutput = runCli(['runtime', 'oma-app-live-path', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_app_live_path_ledger;
+    assert.equal(listOutput.receipt_count, 1);
+    assert.equal(listOutput.receipts[0].receipt_ref, recordOutput.receipt_refs[0]);
+    assert.equal(listOutput.authority_boundary.can_write_domain_truth, false);
+
+    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const followthrough =
+      fullOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
+        .production_consumption_followthrough;
+    const appLiveGate = followthrough.gate_items.find(
+      (gate: { gate_id: string }) => gate.gate_id === 'app_live_path_refs',
+    );
+    assert.equal(appLiveGate.status, 'refs_observed');
+    assert.equal(followthrough.summary.open_gate_count, 1);
+    assert.deepEqual(followthrough.summary.open_gate_ids, ['long_soak_refs']);
+    assert.equal(followthrough.summary.production_consumption_ready, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

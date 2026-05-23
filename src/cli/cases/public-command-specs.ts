@@ -916,6 +916,20 @@ export function buildPublicCommandSpecs(
         examples: ['opl runtime app-release-evidence list --json'],
         group: 'runtime',
       }),
+    'runtime oma-app-live-path record':
+      cloneCommandSpec(commandSpecs['runtime oma-app-live-path record'], {
+        usage: 'opl runtime oma-app-live-path record --payload <json>',
+        examples: [
+          'opl runtime oma-app-live-path record --payload \'{"app_live_path_refs":["app:oma-live"],"operator_evidence_refs":["screenshot:oma-live"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime oma-app-live-path list':
+      cloneCommandSpec(commandSpecs['runtime oma-app-live-path list'], {
+        usage: 'opl runtime oma-app-live-path list',
+        examples: ['opl runtime oma-app-live-path list --json'],
+        group: 'runtime',
+      }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       examples: [
