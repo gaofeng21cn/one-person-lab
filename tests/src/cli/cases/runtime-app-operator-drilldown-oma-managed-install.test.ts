@@ -318,3 +318,112 @@ test('runtime OMA App live path CLI records refs-only operator evidence without 
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime OMA long-soak CLI records refs-only operator evidence and closes the followthrough gate', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-long-soak-cli-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
+  try {
+    process.env.OPL_META_AGENT_REPO_DIR = createOmaContractFixture(stateRoot);
+    process.env.OPL_STATE_DIR = stateRoot;
+    recordManagedInstallUpdateReceipts([{
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      action: 'update',
+      reason: 'startup_health_and_skill_refresh',
+      install_origin_before: 'managed_root',
+      install_origin_after: 'managed_root',
+      checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      managed_checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      git_head_sha: 'oma-managed-long-soak-cli-sha',
+      git_sync_status: 'synced',
+      git_dirty: false,
+      skill_sync_domain: 'oplmetaagent',
+    }]);
+    recordOmaAppLivePathReceipts([{
+      app_live_path_refs: ['app://one-person-lab/opl-meta-agent/workbench/live'],
+      app_surface_ref: 'app://one-person-lab/runtime/operator-drilldown',
+      operator_evidence_refs: ['screenshot://opl-app/oma-workbench-live.png'],
+    }]);
+
+    const initialFullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const initialFollowthrough =
+      initialFullOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
+        .production_consumption_followthrough;
+    assert.deepEqual(initialFollowthrough.summary.open_gate_ids, ['long_soak_refs']);
+
+    const initialList = runCli(['runtime', 'oma-long-soak', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_long_soak_ledger;
+    assert.equal(initialList.receipt_count, 0);
+    assert.equal(initialList.authority_boundary.refs_only, true);
+    assert.equal(initialList.authority_boundary.can_claim_production_ready, false);
+
+    const recordOutput = runCli([
+      'runtime',
+      'oma-long-soak',
+      'record',
+      '--payload',
+      JSON.stringify({
+        long_soak_refs: ['long-soak://opl-meta-agent/controlled-operator-soak/26.5.19'],
+        operator_evidence_refs: ['receipt://operator/oma-controlled-soak-26.5.19'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_long_soak_ledger_record;
+
+    assert.equal(recordOutput.status, 'recorded');
+    assert.equal(recordOutput.recorded_receipt_count, 1);
+    assert.deepEqual(recordOutput.receipt_refs, [
+      'opl://oma-long-soak/long-soak%3A%2F%2Fopl-meta-agent%2Fcontrolled-operator-soak%2F26.5.19',
+    ]);
+    assert.equal(recordOutput.ledger_file, path.join(stateRoot, 'oma-long-soak-ledger.json'));
+    assert.equal(recordOutput.receipts[0].authority_boundary.refs_only, true);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
+    assert.equal(recordOutput.receipts[0].authority_boundary.can_create_domain_owner_receipt, false);
+
+    const listOutput = runCli(['runtime', 'oma-long-soak', 'list'], {
+      OPL_STATE_DIR: stateRoot,
+    }).oma_long_soak_ledger;
+    assert.equal(listOutput.receipt_count, 1);
+    assert.equal(listOutput.receipts[0].receipt_ref, recordOutput.receipt_refs[0]);
+    assert.equal(listOutput.authority_boundary.can_write_domain_truth, false);
+
+    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+    });
+    const followthrough =
+      fullOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
+        .production_consumption_followthrough;
+    const longSoakGate = followthrough.gate_items.find(
+      (gate: { gate_id: string }) => gate.gate_id === 'long_soak_refs',
+    );
+    assert.equal(longSoakGate.status, 'refs_observed');
+    assert.deepEqual(longSoakGate.observed_refs, [
+      'opl://oma-long-soak/long-soak%3A%2F%2Fopl-meta-agent%2Fcontrolled-operator-soak%2F26.5.19',
+      'long-soak://opl-meta-agent/controlled-operator-soak/26.5.19',
+      'receipt://operator/oma-controlled-soak-26.5.19',
+    ]);
+    assert.equal(followthrough.summary.long_soak_ref_count, 3);
+    assert.equal(followthrough.summary.open_gate_count, 0);
+    assert.deepEqual(followthrough.summary.open_gate_ids, []);
+    assert.equal(followthrough.summary.production_consumption_ready, true);
+    assert.equal(followthrough.summary.domain_ready_claim_count, 0);
+    assert.equal(followthrough.summary.quality_verdict_claim_count, 0);
+    assert.equal(followthrough.summary.default_promotion_claim_count, 0);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousOmaRepoDir === undefined) {
+      delete process.env.OPL_META_AGENT_REPO_DIR;
+    } else {
+      process.env.OPL_META_AGENT_REPO_DIR = previousOmaRepoDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

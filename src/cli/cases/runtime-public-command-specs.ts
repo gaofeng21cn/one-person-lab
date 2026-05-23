@@ -72,6 +72,20 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime oma-app-live-path list --json'],
         group: 'runtime',
       }),
+    'runtime oma-long-soak record':
+      cloneCommandSpec(commandSpecs['runtime oma-long-soak record'], {
+        usage: 'opl runtime oma-long-soak record --payload <json>',
+        examples: [
+          'opl runtime oma-long-soak record --payload \'{"long_soak_refs":["long-soak:oma"],"operator_evidence_refs":["receipt:oma-soak"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime oma-long-soak list':
+      cloneCommandSpec(commandSpecs['runtime oma-long-soak list'], {
+        usage: 'opl runtime oma-long-soak list',
+        examples: ['opl runtime oma-long-soak list --json'],
+        group: 'runtime',
+      }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       examples: [

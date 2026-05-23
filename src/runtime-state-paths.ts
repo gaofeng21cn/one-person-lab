@@ -15,6 +15,7 @@ export type OplStatePaths = {
   external_evidence_ledger_file: string;
   managed_install_update_ledger_file: string;
   oma_app_live_path_ledger_file: string;
+  oma_long_soak_ledger_file: string;
   app_release_user_path_evidence_ledger_file: string;
   developer_mode_closeout_ledger_file: string;
   domain_manifest_projection_cache_file: string;
@@ -46,6 +47,7 @@ export function resolveOplStatePaths(): OplStatePaths {
     external_evidence_ledger_file: path.join(stateDir, 'external-evidence-ledger.json'),
     managed_install_update_ledger_file: path.join(stateDir, 'managed-install-update-ledger.json'),
     oma_app_live_path_ledger_file: path.join(stateDir, 'oma-app-live-path-ledger.json'),
+    oma_long_soak_ledger_file: path.join(stateDir, 'oma-long-soak-ledger.json'),
     app_release_user_path_evidence_ledger_file: path.join(
       stateDir,
       'app-release-user-path-evidence-ledger.json',

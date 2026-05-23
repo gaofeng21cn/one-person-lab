@@ -6,6 +6,7 @@ import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
+import { listOmaLongSoakReceipts } from './oma-long-soak-ledger.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 
 const OMA_DOMAIN_ID = 'opl-meta-agent';
@@ -272,6 +273,14 @@ function omaAppLivePathLedgerRefs() {
   ]));
 }
 
+function omaLongSoakLedgerRefs() {
+  return uniqueStringList(listOmaLongSoakReceipts().flatMap((receipt) => [
+    receipt.receipt_ref,
+    ...receipt.long_soak_refs,
+    ...receipt.operator_evidence_refs,
+  ]));
+}
+
 function productionConsumptionGate(input: {
   gateId: typeof PRODUCTION_CONSUMPTION_GATE_IDS[number];
   status: string;
@@ -385,6 +394,11 @@ function buildProductionConsumptionFollowthrough(payloads: {
     'app_live_soak_refs',
     'agent_lab_rerun_long_soak_refs',
   ]);
+  const longSoakLedgerRefs = omaLongSoakLedgerRefs();
+  const longSoakObservedRefs = uniqueStringList([
+    ...longSoakRefs,
+    ...longSoakLedgerRefs,
+  ]);
   const liveRenderingStatus = optionalString(drilldownReceipt.live_rendering_status);
   const gates = [
     productionConsumptionGate({
@@ -436,14 +450,15 @@ function buildProductionConsumptionFollowthrough(payloads: {
     }),
     productionConsumptionGate({
       gateId: 'long_soak_refs',
-      status: longSoakRefs.length > 0 ? 'refs_observed' : 'missing_long_soak_refs',
+      status: longSoakObservedRefs.length > 0 ? 'refs_observed' : 'missing_long_soak_refs',
       requiredRefsAnyOf: [
         'long_soak_refs',
         'operator_long_soak_refs',
         'production_soak_refs',
         'agent_lab_rerun_long_soak_refs',
+        'opl_oma_long_soak_receipt',
       ],
-      observedRefs: longSoakRefs,
+      observedRefs: longSoakObservedRefs,
     }),
   ];
   const openGates = gates.filter((gate) => gate.status !== 'refs_observed');
@@ -467,7 +482,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
       app_live_path_ref_count: appLivePathObservedRefs.length,
       owner_receipt_or_typed_blocker_seed_target_count: ownerOrBlockerTargetCount,
       scaleout_target_count: scaleoutTargets.length,
-      long_soak_ref_count: longSoakRefs.length,
+      long_soak_ref_count: longSoakObservedRefs.length,
       production_consumption_ready: openGates.length === 0,
       domain_ready_claim_count: 0,
       quality_verdict_claim_count: 0,

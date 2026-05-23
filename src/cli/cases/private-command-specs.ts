@@ -29,6 +29,7 @@ import type { FrameworkContracts } from '../../types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from './runtime-app-release-evidence-command-spec.ts';
 import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from './runtime-developer-mode-closeout-command-spec.ts';
 import { buildRuntimeOmaAppLivePathCommandSpecs } from './runtime-oma-app-live-path-command-spec.ts';
+import { buildRuntimeOmaLongSoakCommandSpecs } from './runtime-oma-long-soak-command-spec.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseDashboardArgs, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
@@ -339,6 +340,7 @@ export function buildInternalCommandSpecs(
     ...buildRuntimeAppReleaseEvidenceCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
+    ...buildRuntimeOmaLongSoakCommandSpecs(),
     'runtime action execute': {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>] [--dry-run] [--approve-domain-action]',
       summary:
