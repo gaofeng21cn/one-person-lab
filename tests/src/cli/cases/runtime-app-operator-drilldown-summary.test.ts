@@ -19,10 +19,12 @@ import {
   assertAppReleaseUserPathSummary,
 } from './runtime-app-operator-drilldown-summary-app-release-assertions.ts';
 import {
+  assertOmaAppWorkbenchSectionSummary,
   assertOmaProductionConsumptionAttention,
   assertOmaProductionConsumptionFullDetail,
   assertOmaProductionConsumptionNextStep,
   assertOmaProductionConsumptionSummary,
+  assertOmaTrajectoryLearningFullDetail,
 } from './runtime-app-operator-drilldown-summary-oma-assertions.ts';
 import {
   assertDomainDispatchGroupExecutorHints,
@@ -158,10 +160,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       true,
     );
     const metaAgentBound = summaryDrilldown.summary.opl_meta_agent_registry_status === 'resolved';
-    assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_app_workbench_section_count,
-      metaAgentBound ? 6 : 0,
-    );
+    assertOmaAppWorkbenchSectionSummary(summaryDrilldown, metaAgentBound);
     assert.equal(
       summaryDrilldown.summary.opl_meta_agent_scaleout_target_count,
       metaAgentBound ? 2 : 0,
@@ -775,6 +774,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_domain_ready_claim_count, 0);
       assert.equal(fullDrilldown.opl_meta_agent_workbench_refs.summary.scaleout_default_promotion_claim_count, 0);
       assert.equal(fullDrilldown.oma_sections.mechanism_proposal.refs.length > 0, true);
+      assertOmaTrajectoryLearningFullDetail(fullDrilldown);
       assert.equal(fullDrilldown.oma_sections.patch_loop_closeout.refs.length >= 11, true);
       assert.deepEqual(
         fullDrilldown.oma_sections.patch_loop_closeout.required_ref_fields,

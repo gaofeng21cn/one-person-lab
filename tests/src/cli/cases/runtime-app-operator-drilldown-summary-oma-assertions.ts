@@ -12,6 +12,30 @@ export function assertOmaProductionConsumptionSummary(summaryDrilldown: any, met
   assert.equal(summaryDrilldown.summary.opl_meta_agent_production_consumption_ready, false);
 }
 
+export function assertOmaAppWorkbenchSectionSummary(summaryDrilldown: any, metaAgentBound: boolean) {
+  const appWorkbenchSectionIds = metaAgentBound
+    ? Object.keys(summaryDrilldown.oma_sections).filter((sectionId) =>
+        !['patch_loop_closeout', 'self_evolution_cockpit'].includes(sectionId)
+      )
+    : [];
+  assert.equal(
+    summaryDrilldown.summary.opl_meta_agent_app_workbench_section_count,
+    appWorkbenchSectionIds.length,
+  );
+  if (!metaAgentBound) {
+    return;
+  }
+  assert.equal(
+    summaryDrilldown.oma_sections.trajectory_learning.surface_kind,
+    'opl_meta_agent_trajectory_learning_app_workbench_section',
+  );
+  assert.equal(
+    summaryDrilldown.oma_sections.trajectory_learning.authority_boundary
+      .can_promote_default_agent_without_gate,
+    false,
+  );
+}
+
 export function assertOmaProductionConsumptionAttention(summaryDrilldown: any, metaAgentBound: boolean) {
   const omaProductionConsumption =
     summaryDrilldown.attention_first_payload.evidence_after_contract
@@ -133,6 +157,15 @@ export function assertOmaProductionConsumptionFullDetail(fullDrilldown: any) {
   assert.equal(
     fullDrilldown.opl_meta_agent_workbench_refs.production_consumption_followthrough
       .summary.production_consumption_ready,
+    false,
+  );
+}
+
+export function assertOmaTrajectoryLearningFullDetail(fullDrilldown: any) {
+  assert.equal(fullDrilldown.oma_sections.trajectory_learning.refs.length >= 11, true);
+  assert.equal(
+    fullDrilldown.oma_sections.trajectory_learning.authority_boundary
+      .can_authorize_target_domain_quality_or_export,
     false,
   );
 }

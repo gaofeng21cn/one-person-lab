@@ -736,6 +736,25 @@ function buildOmaSections(payloads: {
         ...scaleoutTargetRefs(scaleoutEvidence),
       ],
     },
+    trajectory_learning: {
+      surface_kind: 'opl_meta_agent_trajectory_learning_app_workbench_section',
+      status: 'refs_only_proposal_projection_ready',
+      refs: [
+        ...appSectionRefs(sectionById(appProjection, 'trajectory_learning')),
+        {
+          contract_ref: optionalString(record(appProjection.source_refs).trajectory_learning_contract_ref)
+            ?? 'contracts/trajectory_learning_contract.json',
+          status: 'owner_review_required_before_apply',
+          receipt_ref: stringList(drilldownReceipt.receipt_ref_fields).find((field) =>
+            field === 'trajectory_atomization_receipt_ref'
+          ) ?? null,
+          blocker_ref: stringList(drilldownReceipt.blocker_ref_fields).find((field) =>
+            field === 'owner_review_receipt_or_typed_blocker_ref'
+          ) ?? null,
+        },
+      ],
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
     patch_loop_closeout: {
       surface_kind: 'opl_meta_agent_patch_loop_closeout_read_model',
       status: patchLoopTargets.length > 0 ? 'refs_only_patch_loop_refs_projected' : 'not_observed',
