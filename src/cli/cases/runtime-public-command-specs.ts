@@ -67,6 +67,15 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime app-release-evidence long-operator event':
+      cloneCommandSpec(commandSpecs['runtime app-release-evidence long-operator event'], {
+        usage:
+          'opl runtime app-release-evidence long-operator event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
+        examples: [
+          'opl runtime app-release-evidence long-operator event --workorder-file /tmp/opl-app-long-operator/app-release-long-operator-workorder.json --event-kind app_window_reopened_or_kept_live --evidence-ref screenshot:app/live',
+        ],
+        group: 'runtime',
+      }),
     'runtime app-release-evidence long-operator finish':
       cloneCommandSpec(commandSpecs['runtime app-release-evidence long-operator finish'], {
         usage:

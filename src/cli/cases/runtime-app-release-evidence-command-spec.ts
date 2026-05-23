@@ -6,6 +6,7 @@ import {
 } from '../../app-release-user-path-evidence-ledger.ts';
 import {
   finishAppReleaseLongOperatorObservation,
+  recordAppReleaseLongOperatorObservationEvent,
   startAppReleaseLongOperatorObservation,
 } from '../../app-release-long-operator-observation.ts';
 import {
@@ -240,6 +241,58 @@ function parseRuntimeAppReleaseLongOperatorFinishArgs(
   return { workorderFile, finishedAt };
 }
 
+function parseRuntimeAppReleaseLongOperatorEventArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let workorderFile = '';
+  let eventKind = '';
+  let observedAt: string | null = null;
+  let evidenceRef: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--workorder-file' && value) {
+      workorderFile = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--event-kind' && value) {
+      eventKind = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--observed-at' && value) {
+      observedAt = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--evidence-ref' && value) {
+      evidenceRef = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime app-release-evidence long-operator event: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!workorderFile) {
+    throw buildUsageError(
+      'runtime app-release-evidence long-operator event requires --workorder-file.',
+      spec,
+      { required: ['--workorder-file'] },
+    );
+  }
+  if (!eventKind) {
+    throw buildUsageError(
+      'runtime app-release-evidence long-operator event requires --event-kind.',
+      spec,
+      { required: ['--event-kind'] },
+    );
+  }
+  return { workorderFile, eventKind, observedAt, evidenceRef };
+}
+
 export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime app-release-evidence record': {
@@ -321,6 +374,24 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
             parseRuntimeAppReleaseLongOperatorStartArgs(
               args,
               commandSpecs['runtime app-release-evidence long-operator start'],
+            ),
+          ),
+      }),
+    },
+    'runtime app-release-evidence long-operator event': {
+      usage:
+        'opl runtime app-release-evidence long-operator event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
+      summary:
+        'Append a constrained App long-operator observation event to the body-local workorder log without recording release/user-path evidence.',
+      examples: [
+        'opl runtime app-release-evidence long-operator event --workorder-file /tmp/opl-app-long-operator/app-release-long-operator-workorder.json --event-kind app_window_reopened_or_kept_live --evidence-ref screenshot:app/live',
+      ],
+      handler: (args) => ({
+        app_release_long_operator_observation_event_record:
+          recordAppReleaseLongOperatorObservationEvent(
+            parseRuntimeAppReleaseLongOperatorEventArgs(
+              args,
+              commandSpecs['runtime app-release-evidence long-operator event'],
             ),
           ),
       }),

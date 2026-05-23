@@ -13,6 +13,13 @@ type FinishInput = {
   finishedAt?: string | null;
 };
 
+type EventInput = {
+  workorderFile: string;
+  eventKind: string;
+  observedAt?: string | null;
+  evidenceRef?: string | null;
+};
+
 const REQUIRED_EVENT_KINDS = [
   'app_window_reopened_or_kept_live',
   'reload_prompt_path_exercised_or_confirmed_not_required',
@@ -110,6 +117,14 @@ function sha256File(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function assertRequiredEventKind(eventKind: string) {
+  if (!REQUIRED_EVENT_KINDS.includes(eventKind as (typeof REQUIRED_EVENT_KINDS)[number])) {
+    throw new Error(
+      `event_kind must be one of: ${REQUIRED_EVENT_KINDS.join(', ')}.`,
+    );
+  }
+}
+
 export function startAppReleaseLongOperatorObservation(input: StartInput) {
   const release = releaseVersion(input.cohort);
   const selectedCohortId = cohortId(input.cohort);
@@ -152,6 +167,49 @@ export function startAppReleaseLongOperatorObservation(input: StartInput) {
     record_payload_file: null,
     long_operator_evidence_refs: [],
     required_event_kinds: [...REQUIRED_EVENT_KINDS],
+    authority_boundary: authorityBoundary(),
+  };
+}
+
+export function recordAppReleaseLongOperatorObservationEvent(input: EventInput) {
+  const workorder = readJson(input.workorderFile);
+  assertRequiredEventKind(input.eventKind);
+  const observedAt = input.observedAt ?? nowIso();
+  parseIso(observedAt, 'observed_at');
+  const release = stringValue(workorder.release_version) ?? 'unknown';
+  const selectedCohortId = stringValue(workorder.cohort_id) ?? cohortId(release);
+  const operatorLogFile = stringValue(workorder.operator_log_file)
+    ?? path.join(path.dirname(input.workorderFile), 'operator-observation-events.jsonl');
+  fs.mkdirSync(path.dirname(operatorLogFile), { recursive: true });
+  const event = {
+    surface_kind: 'opl_app_release_long_operator_observation_event',
+    cohort_id: selectedCohortId,
+    release_version: release,
+    event_kind: input.eventKind,
+    observed_at: observedAt,
+    evidence_ref: input.evidenceRef ?? null,
+    authority_boundary: authorityBoundary(),
+  };
+  fs.appendFileSync(operatorLogFile, `${JSON.stringify(event)}\n`);
+  const events = readOperatorEvents(operatorLogFile);
+  const observedEventKinds = [...new Set(events.map((entry) => stringValue(entry.event_kind)).filter(
+    (eventKind): eventKind is string => Boolean(eventKind),
+  ))].sort();
+  const missingEventKinds = REQUIRED_EVENT_KINDS.filter((eventKind) =>
+    !observedEventKinds.includes(eventKind)
+  );
+  return {
+    surface_kind: 'opl_app_release_long_operator_observation_event_record',
+    status: 'recorded',
+    cohort_id: selectedCohortId,
+    release_version: release,
+    operator_log_file: operatorLogFile,
+    event,
+    observed_event_kinds: observedEventKinds,
+    missing_event_kinds: missingEventKinds,
+    required_event_kinds_observed: missingEventKinds.length === 0,
+    long_operator_evidence_refs: [],
+    record_payload_file: null,
     authority_boundary: authorityBoundary(),
   };
 }

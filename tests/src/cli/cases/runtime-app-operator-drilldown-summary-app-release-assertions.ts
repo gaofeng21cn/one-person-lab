@@ -146,6 +146,21 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
     ],
   );
   assert.deepEqual(
+    nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.event,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'event',
+      '--workorder-file',
+      '<path>',
+      '--event-kind',
+      '<kind>',
+      '--evidence-ref',
+      '<ref>',
+    ],
+  );
+  assert.deepEqual(
     nextSafeAction.payload_workorder.long_operator_observation_workorder_commands.record_payload,
     [
       'runtime',
@@ -167,7 +182,7 @@ export function assertAppReleaseUserPathDefaultSafeAction(summaryDrilldown: any)
   );
   assert.equal(
     nextSafeAction.payload_workorder.long_operator_observation_workorder_policy,
-    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+    'start_event_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
   );
   assert.equal(
     nextSafeAction.payload_workorder.authority_boundary.can_close_app_release_user_path,
@@ -244,9 +259,24 @@ export function assertAppReleaseUserPathNextStep(summaryDrilldown: any) {
       '<path>',
     ],
   );
+  assert.deepEqual(
+    appUserPathStep.payload_workorder.long_operator_observation_workorder_commands.event,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'event',
+      '--workorder-file',
+      '<path>',
+      '--event-kind',
+      '<kind>',
+      '--evidence-ref',
+      '<ref>',
+    ],
+  );
   assert.equal(
     appUserPathStep.payload_workorder.long_operator_observation_workorder_policy,
-    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+    'start_event_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
   );
   assert.equal(
     appUserPathStep.payload_template_policy,

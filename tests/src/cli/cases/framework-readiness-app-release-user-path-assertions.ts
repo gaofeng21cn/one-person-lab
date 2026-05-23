@@ -115,9 +115,24 @@ export function assertFrameworkAppReleaseUserPathAction(
       '<payload.json>',
     ],
   );
+  assert.deepEqual(
+    appUserPathAction.payload_workorder.long_operator_observation_workorder_commands.event,
+    [
+      'runtime',
+      'app-release-evidence',
+      'long-operator',
+      'event',
+      '--workorder-file',
+      '<path>',
+      '--event-kind',
+      '<kind>',
+      '--evidence-ref',
+      '<ref>',
+    ],
+  );
   assert.equal(
     appUserPathAction.payload_workorder.long_operator_observation_workorder_policy,
-    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+    'start_event_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
   );
   assert.equal(appUserPathAction.can_write_domain_truth, false);
   assert.equal(appUserPathAction.can_create_owner_receipt, false);
