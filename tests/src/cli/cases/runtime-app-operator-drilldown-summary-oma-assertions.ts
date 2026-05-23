@@ -149,6 +149,23 @@ export function assertOmaProductionConsumptionNextStep(summaryDrilldown: any, me
     omaProductionConsumptionStep.payload_workorder.authority_boundary.can_claim_production_ready,
     false,
   );
+  assert.deepEqual(
+    omaProductionConsumptionStep.payload_workorder.long_soak_observation_workorder_commands.start,
+    [
+      'runtime',
+      'oma-production-consumption',
+      'long-soak',
+      'start',
+      '--minimum-duration-minutes',
+      '<n>',
+      '--evidence-dir',
+      '<path>',
+    ],
+  );
+  assert.equal(
+    omaProductionConsumptionStep.payload_workorder.long_soak_observation_workorder_policy,
+    'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
+  );
   assert.equal(omaProductionConsumptionStep.can_create_owner_receipt, false);
   assert.equal(omaProductionConsumptionStep.can_claim_production_ready, false);
   assert.equal(omaProductionConsumptionStep.can_promote_default_agent_without_gate, false);

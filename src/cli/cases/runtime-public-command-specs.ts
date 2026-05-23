@@ -115,6 +115,24 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
+    'runtime oma-production-consumption long-soak start':
+      cloneCommandSpec(commandSpecs['runtime oma-production-consumption long-soak start'], {
+        usage:
+          'opl runtime oma-production-consumption long-soak start --minimum-duration-minutes <n> --evidence-dir <path>',
+        examples: [
+          'opl runtime oma-production-consumption long-soak start --minimum-duration-minutes 240 --evidence-dir /tmp/opl-oma-long-soak',
+        ],
+        group: 'runtime',
+      }),
+    'runtime oma-production-consumption long-soak finish':
+      cloneCommandSpec(commandSpecs['runtime oma-production-consumption long-soak finish'], {
+        usage:
+          'opl runtime oma-production-consumption long-soak finish --workorder-file <path> [--finished-at <iso>]',
+        examples: [
+          'opl runtime oma-production-consumption long-soak finish --workorder-file /tmp/opl-oma-long-soak/oma-long-soak-workorder.json',
+        ],
+        group: 'runtime',
+      }),
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',
       examples: [

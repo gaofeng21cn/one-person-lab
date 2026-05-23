@@ -5,6 +5,10 @@ import {
   type OmaProductionConsumptionReceiptInput,
 } from '../../oma-production-consumption-ledger.ts';
 import {
+  finishOmaLongSoakObservation,
+  startOmaLongSoakObservation,
+} from '../../oma-long-soak-observation.ts';
+import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
@@ -127,6 +131,102 @@ function parseRuntimeOmaProductionConsumptionVerifyArgs(
   return { receipt_ref: receiptRef };
 }
 
+function parsePositiveInteger(
+  value: string | undefined,
+  option: string,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (!value) {
+    throw buildUsageError(`runtime oma-production-consumption long-soak start requires ${option}.`, spec, {
+      option,
+    });
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw buildUsageError(`${option} must be a positive integer.`, spec, {
+      option,
+      value,
+    });
+  }
+  return parsed;
+}
+
+function parseRuntimeOmaLongSoakStartArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let evidenceDir: string | null = null;
+  let minimumDurationMinutes: number | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--evidence-dir' && value) {
+      evidenceDir = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--minimum-duration-minutes') {
+      minimumDurationMinutes = parsePositiveInteger(value, token, spec);
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime oma-production-consumption long-soak start: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!minimumDurationMinutes) {
+    throw buildUsageError(
+      'runtime oma-production-consumption long-soak start requires --minimum-duration-minutes.',
+      spec,
+      { required: ['--minimum-duration-minutes'] },
+    );
+  }
+  if (!evidenceDir) {
+    throw buildUsageError(
+      'runtime oma-production-consumption long-soak start requires --evidence-dir.',
+      spec,
+      { required: ['--evidence-dir'] },
+    );
+  }
+  return {
+    evidenceDir,
+    minimumDurationMinutes,
+  };
+}
+
+function parseRuntimeOmaLongSoakFinishArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  let workorderFile = '';
+  let finishedAt: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--workorder-file' && value) {
+      workorderFile = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--finished-at' && value) {
+      finishedAt = value;
+      index += 1;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for runtime oma-production-consumption long-soak finish: ${token}.`, spec, {
+      option: token,
+    });
+  }
+  if (!workorderFile) {
+    throw buildUsageError(
+      'runtime oma-production-consumption long-soak finish requires --workorder-file.',
+      spec,
+      { required: ['--workorder-file'] },
+    );
+  }
+  return { workorderFile, finishedAt };
+}
+
 function omaProductionConsumptionAuthorityBoundary() {
   return {
     refs_only: true,
@@ -195,6 +295,42 @@ export function buildRuntimeOmaProductionConsumptionCommandSpecs(): Record<strin
           },
         };
       },
+    },
+    'runtime oma-production-consumption long-soak start': {
+      usage:
+        'opl runtime oma-production-consumption long-soak start --minimum-duration-minutes <n> --evidence-dir <path>',
+      summary:
+        'Prepare a body-local OMA long-soak observation workorder without recording production-consumption evidence.',
+      examples: [
+        'opl runtime oma-production-consumption long-soak start --minimum-duration-minutes 240 --evidence-dir /tmp/opl-oma-long-soak',
+      ],
+      handler: (args) => ({
+        oma_long_soak_observation_start:
+          startOmaLongSoakObservation(
+            parseRuntimeOmaLongSoakStartArgs(
+              args,
+              commandSpecs['runtime oma-production-consumption long-soak start'],
+            ),
+          ),
+      }),
+    },
+    'runtime oma-production-consumption long-soak finish': {
+      usage:
+        'opl runtime oma-production-consumption long-soak finish --workorder-file <path> [--finished-at <iso>]',
+      summary:
+        'Materialize an OMA long-soak evidence ref and record payload only after the observation workorder passes preflight.',
+      examples: [
+        'opl runtime oma-production-consumption long-soak finish --workorder-file /tmp/opl-oma-long-soak/oma-long-soak-workorder.json',
+      ],
+      handler: (args) => ({
+        oma_long_soak_observation_finish:
+          finishOmaLongSoakObservation(
+            parseRuntimeOmaLongSoakFinishArgs(
+              args,
+              commandSpecs['runtime oma-production-consumption long-soak finish'],
+            ),
+          ),
+      }),
     },
   };
   return commandSpecs;

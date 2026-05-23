@@ -62,6 +62,42 @@ export function omaProductionConsumptionPayloadWorkorder() {
     ],
     payload_template: omaProductionConsumptionPayloadTemplate(),
     payload_ref_hints: omaProductionConsumptionPayloadRefHints(),
+    long_soak_observation_workorder_commands: {
+      start: [
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'start',
+        '--minimum-duration-minutes',
+        '<n>',
+        '--evidence-dir',
+        '<path>',
+      ],
+      finish: [
+        'runtime',
+        'oma-production-consumption',
+        'long-soak',
+        'finish',
+        '--workorder-file',
+        '<path>',
+      ],
+      record_payload: [
+        'runtime',
+        'oma-production-consumption',
+        'record',
+        '--payload-file',
+        '<payload.json>',
+      ],
+      verify_receipt: [
+        'runtime',
+        'oma-production-consumption',
+        'verify',
+        '--receipt-ref',
+        '<receipt-ref>',
+      ],
+    },
+    long_soak_observation_workorder_policy:
+      'start_finish_materializes_local_manifest_and_payload_only_record_verify_remain_required',
     empty_payload_template_is_success_evidence: false,
     authority_boundary: {
       can_write_domain_truth: false,
