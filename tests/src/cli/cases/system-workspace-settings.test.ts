@@ -362,3 +362,82 @@ test('system developer-supervisor fail-closes Developer Mode when gh identity is
     fs.rmSync(emptyPath, { recursive: true, force: true });
   }
 });
+
+test('system developer-supervisor tolerates normal gh API latency without misclassifying repo authority', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-gh-latency-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gh-latency-bin-'));
+  const ghPath = path.join(fakeBin, 'gh');
+
+  fs.writeFileSync(
+    ghPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1" != "api" ]]; then
+  echo "unexpected gh command" >&2
+  exit 2
+fi
+case "$2" in
+  user)
+    printf '{"login":"gaofeng21cn"}\\n'
+    ;;
+  repos/*/collaborators/*/permission)
+    if [[ "$2" == "repos/gaofeng21cn/one-person-lab/collaborators/gaofeng21cn/permission" ]]; then
+      sleep 1.6
+    fi
+    printf '{"permission":"admin"}\\n'
+    ;;
+  *)
+    echo "unexpected gh api path: $2" >&2
+    exit 2
+    ;;
+esac
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(
+      [
+        'system',
+        'developer-supervisor',
+        '--enabled',
+        'on',
+        '--mode',
+        'developer_apply_safe',
+        '--github-login',
+        'gaofeng21cn',
+      ],
+      {
+        HOME: homeRoot,
+        OPL_STATE_DIR: stateDir,
+        OPL_DEVELOPER_MODE_GH_BINARY: ghPath,
+        OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'gaofeng21cn',
+        OPL_DEVELOPER_MODE_GH_TIMEOUT_MS: '',
+      },
+    ) as {
+      system_action: {
+        developer_mode: {
+          status: string;
+          effective_state: string;
+          allowed_route: string;
+          repo_authority: {
+            status: string;
+            direct_write_repo_count: number;
+            blocked_repo_count: number;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_action.developer_mode.status, 'ready');
+    assert.equal(output.system_action.developer_mode.effective_state, 'active_direct');
+    assert.equal(output.system_action.developer_mode.allowed_route, 'direct_repo_fix');
+    assert.equal(output.system_action.developer_mode.repo_authority.status, 'ready');
+    assert.equal(output.system_action.developer_mode.repo_authority.direct_write_repo_count, 5);
+    assert.equal(output.system_action.developer_mode.repo_authority.blocked_repo_count, 0);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(fakeBin, { recursive: true, force: true });
+  }
+});

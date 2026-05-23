@@ -192,7 +192,7 @@ function readGhTimeoutMs() {
   if (Number.isFinite(parsed) && parsed > 0) {
     return Math.min(parsed, 10_000);
   }
-  return 1_500;
+  return 5_000;
 }
 
 function runGhApi(args: string[]) {
