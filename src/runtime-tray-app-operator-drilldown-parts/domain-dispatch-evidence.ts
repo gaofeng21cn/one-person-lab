@@ -167,8 +167,7 @@ function compareAttemptRecency(left: DomainDispatchAttemptEvidence, right: Domai
 }
 
 function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[]) {
-  const candidatesByIdentity = attempts
-    .filter(hasDefaultActionableEvidenceGap)
+  const attemptsByIdentity = attempts
     .reduce<Record<string, DomainDispatchAttemptEvidence[]>>((groups, attempt) => {
       const key = stringValue(attempt.dispatch_identity_key);
       if (!key) {
@@ -178,21 +177,21 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
       return groups;
     }, {});
   const currentByIdentity = new Map<string, DomainDispatchAttemptEvidence>();
-  for (const [key, group] of Object.entries(candidatesByIdentity)) {
+  for (const [key, group] of Object.entries(attemptsByIdentity)) {
     currentByIdentity.set(key, [...group].sort(compareAttemptRecency)[0]);
   }
   return attempts.map((attempt) => {
-    if (!hasDefaultActionableEvidenceGap(attempt)) {
-      return {
-        ...attempt,
-        default_actionability_status: 'not_actionable_evidence_refs_observed',
-        default_actionable: false,
-        superseded_by_stage_attempt_id: null,
-        superseded_reason: null,
-      };
-    }
     const key = stringValue(attempt.dispatch_identity_key);
     if (!key) {
+      if (!hasDefaultActionableEvidenceGap(attempt)) {
+        return {
+          ...attempt,
+          default_actionability_status: 'not_actionable_evidence_refs_observed',
+          default_actionable: false,
+          superseded_by_stage_attempt_id: null,
+          superseded_reason: null,
+        };
+      }
       return {
         ...attempt,
         default_actionability_status: 'current_without_dispatch_identity',
@@ -209,6 +208,15 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
         default_actionable: false,
         superseded_by_stage_attempt_id: currentAttemptId,
         superseded_reason: 'newer_stage_attempt_with_same_domain_dispatch_identity',
+      };
+    }
+    if (!hasDefaultActionableEvidenceGap(attempt)) {
+      return {
+        ...attempt,
+        default_actionability_status: 'not_actionable_evidence_refs_observed',
+        default_actionable: false,
+        superseded_by_stage_attempt_id: null,
+        superseded_reason: null,
       };
     }
     return {

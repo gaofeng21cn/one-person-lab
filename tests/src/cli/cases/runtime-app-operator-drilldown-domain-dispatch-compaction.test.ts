@@ -194,6 +194,83 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
     );
     assert.equal(worklist.evidence_envelope.summary.open_envelope_count, 1);
     assert.equal(worklist.evidence_envelope.summary.superseded_envelope_count, 1);
+
+    const recordExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      `domain_dispatch:medautoscience:${latest.stage_attempt_id}:record`,
+      '--payload',
+      JSON.stringify({
+        domain_id: 'medautoscience',
+        task_kind: 'domain_owner/default-executor-dispatch',
+        study_id: '002-dm-china-us-mortality-attribution',
+        source_fingerprint: 'truth-snapshot::second',
+        typed_blocker_refs: ['mas://typed-blockers/dm002/default-executor-owner-receipt-pending'],
+        no_regression_refs: ['mas://no-regression/dm002/default-executor-owner-receipt-pending'],
+      }),
+    ], env).runtime_operator_action_execution;
+    assert.equal(
+      recordExecution.execution.result.domain_dispatch_evidence_payload_preflight.identity_binding.status,
+      'matched',
+    );
+    assert.equal(recordExecution.execution.result.external_evidence_apply.status, 'recorded');
+
+    const verifyExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      `domain_dispatch:medautoscience:${latest.stage_attempt_id}:verify`,
+    ], env).runtime_operator_action_execution;
+    assert.equal(verifyExecution.execution.execution_status, 'executed');
+
+    const verifiedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+      .app_operator_drilldown;
+    const verifiedAttempts = verifiedDrilldown.domain_dispatch_evidence.attempts.filter(
+      (attempt: { stage_id: string; workspace_locator: { dispatch_ref?: string } }) =>
+        attempt.stage_id === 'domain_owner/default-executor-dispatch'
+        && attempt.workspace_locator.dispatch_ref === workspaceLocator.dispatch_ref,
+    );
+    const verifiedLatest = verifiedAttempts.find(
+      (attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === latest.stage_attempt_id,
+    );
+    const verifiedSuperseded = verifiedAttempts.find(
+      (attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === superseded.stage_attempt_id,
+    );
+    assert.equal(verifiedLatest.dispatch_evidence_receipt_status, 'verified');
+    assert.equal(verifiedLatest.evidence_status, 'typed_blocker_observed');
+    assert.equal(verifiedLatest.default_actionable, false);
+    assert.equal(
+      verifiedLatest.default_actionability_status,
+      'not_actionable_evidence_refs_observed',
+    );
+    assert.equal(verifiedSuperseded.default_actionable, false);
+    assert.equal(verifiedSuperseded.default_actionability_status, 'superseded');
+    assert.equal(verifiedSuperseded.superseded_by_stage_attempt_id, latest.stage_attempt_id);
+    assert.equal(
+      verifiedDrilldown.summary.domain_dispatch_evidence_receipt_action_route_count,
+      0,
+    );
+    assert.equal(verifiedDrilldown.summary.evidence_envelope_open_count, 0);
+    assert.equal(verifiedDrilldown.summary.evidence_envelope_superseded_count, 1);
+
+    const verifiedWorklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], env).family_runtime_evidence_worklist;
+    assert.equal(verifiedWorklist.summary.domain_dispatch_evidence_workorder_count, 0);
+    assert.equal(verifiedWorklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count, 0);
+    assert.equal(verifiedWorklist.evidence_envelope.summary.open_envelope_count, 0);
+    assert.equal(verifiedWorklist.evidence_envelope.summary.superseded_envelope_count, 1);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
