@@ -592,6 +592,10 @@ test('family-runtime evidence-worklist carries default-caller deletion evidence 
     assert.equal(refs.summary.blocked_until_replacement_ready_count, 0);
     assert.equal(refs.summary.open_deletion_evidence_requirement_count, 24);
     assert.equal(refs.summary.physical_delete_authorized, false);
+    assert.equal(refs.summary.default_caller_delete_ready, false);
+    assert.equal(refs.summary.deletion_evidence_requirements_are_completion_claims, false);
+    assert.equal(refs.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
+    assert.equal(refs.summary.not_authorized_claims.includes('domain_repo_physical_delete_authorization'), true);
     assert.equal(refs.authority_boundary.projection_can_sign_domain_owner_receipt, false);
     assert.equal(refs.authority_boundary.projection_can_authorize_domain_repo_physical_delete, false);
 

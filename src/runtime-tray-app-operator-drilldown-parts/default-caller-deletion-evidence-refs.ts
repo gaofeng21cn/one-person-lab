@@ -36,6 +36,15 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((entry) => entry.trim().length > 0))];
 }
 
+const DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS = [
+  'domain_repo_physical_delete_authorization',
+  'default_caller_delete_ready',
+  'domain_ready',
+  'production_ready',
+  'quality_verdict',
+  'artifact_authority',
+] as const;
+
 function refsOnlyAuthorityBoundary() {
   return {
     ...buildAppDrilldownRefsOnlyAuthorityBoundary(),
@@ -142,6 +151,10 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
     audit_visibility: stringValue(worklist.audit_visibility),
     semantic_equivalence_status: stringValue(worklist.semantic_equivalence_status),
     physical_delete_authorized: false,
+    default_caller_delete_ready: false,
+    worklist_item_is_completion_claim: false,
+    physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -202,6 +215,9 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
       missing_tombstone_or_provenance_ref_count:
         countMissing('tombstone_or_provenance_ref'),
       physical_delete_authorized: false,
+      default_caller_delete_ready: false,
+      deletion_evidence_requirements_are_completion_claims: false,
+      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -235,6 +251,9 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
       missing_tombstone_or_provenance_ref_count:
         sum('missing_tombstone_or_provenance_ref_count'),
       physical_delete_authorized: false,
+      default_caller_delete_ready: false,
+      deletion_evidence_requirements_are_completion_claims: false,
+      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
   };

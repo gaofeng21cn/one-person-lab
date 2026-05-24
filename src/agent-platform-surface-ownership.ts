@@ -116,6 +116,15 @@ const DELETION_EVIDENCE_REQUIREMENTS = [
   'tombstone_or_provenance_ref',
 ] as const;
 
+const DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS = [
+  'domain_repo_physical_delete_authorization',
+  'default_caller_delete_ready',
+  'domain_ready',
+  'production_ready',
+  'quality_verdict',
+  'artifact_authority',
+] as const;
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -631,6 +640,10 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       semantic_equivalence_status: optionalString(target?.semantic_equivalence_status),
       semantic_equivalence_reason: optionalString(target?.semantic_equivalence_reason),
       physical_delete_authorized: false,
+      default_caller_delete_ready: false,
+      worklist_item_is_completion_claim: false,
+      physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
       authority_boundary: {
         worklist_can_write_domain_truth: false,
         worklist_can_sign_domain_owner_receipt: false,
@@ -716,6 +729,10 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       isRecord(worklist.tombstone_or_provenance_ref)
       && optionalString(worklist.tombstone_or_provenance_ref.status) !== 'observed'
     )).length;
+    const allDeletionEvidenceRequirementsObserved = deletionEvidenceWorklists.length > 0
+      && missingDomainEvidenceCount === 0
+      && missingNoForbiddenWriteCount === 0
+      && missingTombstoneOrProvenanceCount === 0;
     return {
       surface_kind: 'opl_agent_generated_default_caller_readiness_projection',
       version: 'v1',
@@ -753,6 +770,11 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         no_forbidden_write_proof: 'required_before_physical_delete',
         tombstone_or_provenance_ref: 'required_before_physical_delete',
         physical_delete_authorized: false,
+        all_deletion_evidence_requirements_observed: allDeletionEvidenceRequirementsObserved,
+        default_caller_delete_ready: false,
+        physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        deletion_evidence_requirements_are_completion_claims: false,
+        not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
         evidence_worklist_count: deletionEvidenceWorklists.length,
         missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
@@ -795,6 +817,11 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         no_forbidden_write_proof: 'required_before_physical_delete',
         tombstone_or_provenance_ref: 'required_before_physical_delete',
         physical_delete_authorized: false,
+        all_deletion_evidence_requirements_observed: false,
+        default_caller_delete_ready: false,
+        physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        deletion_evidence_requirements_are_completion_claims: false,
+        not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
       },
       authority_boundary: {
@@ -855,6 +882,8 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         opl_generated_default_caller_readiness_is_structural_replacement_evidence: true,
         domain_owner_receipt_or_typed_blocker_still_required: true,
         no_forbidden_write_proof_still_required: true,
+        zero_missing_deletion_evidence_is_not_delete_ready: true,
+        observed_deletion_evidence_refs_are_refs_only_inputs: true,
         physical_delete_authorized_by_this_report: false,
       },
       reports,
