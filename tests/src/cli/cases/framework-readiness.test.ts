@@ -149,10 +149,30 @@ test('framework readiness summarizes default control-plane surfaces without auth
       + readiness.summary.operator_payload_free_attention_tail_count,
   );
   assert.equal(
-    readiness.summary.operator_payload_required_attention_tail_count,
-    readiness.summary.evidence_envelope_open_count
-      + readiness.summary.stage_source_scope_missing_workorder_count
-      + readiness.summary.stage_runtime_event_missing_workorder_count,
+    readiness.evidence_worklist.open_safe_action_payload_required_item_count
+      + readiness.evidence_worklist.open_safe_action_payload_free_item_count,
+    readiness.evidence_worklist.open_safe_action_item_count,
+  );
+  if (
+    readiness.evidence_worklist.open_safe_action_item_count
+      === readiness.summary.operator_actionable_attention_tail_count
+  ) {
+    assert.equal(
+      readiness.summary.operator_payload_required_attention_tail_count,
+      readiness.evidence_worklist.open_safe_action_payload_required_item_count,
+    );
+    assert.equal(
+      readiness.summary.operator_payload_free_attention_tail_count,
+      readiness.evidence_worklist.open_safe_action_payload_free_item_count,
+    );
+  }
+  assert.equal(
+    readiness.evidence_worklist.open_safe_action_payload_requirement_semantics,
+    'open_safe_action_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
+  );
+  assert.equal(
+    readiness.summary.attention_payload_requirement_semantics,
+    'operator_actionable_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
   );
   if (
     readiness.summary.framework_kernel_hard_blocker_count === 0

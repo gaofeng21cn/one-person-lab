@@ -1,6 +1,7 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import {
   frameworkStatusFromAttentionCounts,
+  splitOperatorAttentionCounts,
 } from '../../../../src/framework-readiness-attention-counts.ts';
 
 test('framework readiness status treats blocked refs-only attention separately from operator-actionable work', () => {
@@ -36,6 +37,27 @@ test('framework readiness status treats blocked refs-only attention separately f
   );
 });
 
+test('framework readiness attention counts preserve payload-free safe actions within the same operator attention set', () => {
+  const counts = splitOperatorAttentionCounts({
+    openTailCount: 0,
+    evidenceEnvelopeOpenCount: 2,
+    evidenceEnvelopeBlockedCount: 5,
+    domainDispatchAttentionCount: 11,
+    stageSourceScopeMissingWorkorderCount: 0,
+    stageRuntimeEventMissingWorkorderCount: 0,
+    operatorPayloadRequiredAttentionCount: 1,
+  });
+
+  assert.equal(counts.operatorActionableAttentionCount, 2);
+  assert.equal(counts.operatorPayloadRequiredAttentionCount, 1);
+  assert.equal(counts.operatorPayloadFreeAttentionCount, 1);
+  assert.equal(counts.domainBlockedAttentionCount, 16);
+  assert.equal(
+    counts.payloadRequirementSemantics,
+    'operator_actionable_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
+  );
+});
+
 test('framework readiness separates operator-actionable and domain-blocked attention tails', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-attention-semantics-'));
   try {
@@ -67,6 +89,24 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       summary.operator_payload_free_attention_tail_count,
     );
     assert.equal(
+      readiness.evidence_worklist.open_safe_action_payload_required_item_count
+        + readiness.evidence_worklist.open_safe_action_payload_free_item_count,
+      readiness.evidence_worklist.open_safe_action_item_count,
+    );
+    if (
+      readiness.evidence_worklist.open_safe_action_item_count
+        === summary.operator_actionable_attention_tail_count
+    ) {
+      assert.equal(
+        summary.operator_payload_required_attention_tail_count,
+        readiness.evidence_worklist.open_safe_action_payload_required_item_count,
+      );
+      assert.equal(
+        summary.operator_payload_free_attention_tail_count,
+        readiness.evidence_worklist.open_safe_action_payload_free_item_count,
+      );
+    }
+    assert.equal(
       summary.operator_actionable_attention_tail_count,
       summary.operator_payload_required_attention_tail_count
         + summary.operator_payload_free_attention_tail_count,
@@ -75,12 +115,6 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       summary.operator_actionable_attention_tail_count,
       summary.open_tail_count
         + summary.evidence_envelope_open_count
-        + summary.stage_source_scope_missing_workorder_count
-        + summary.stage_runtime_event_missing_workorder_count,
-    );
-    assert.equal(
-      summary.operator_payload_required_attention_tail_count,
-      summary.evidence_envelope_open_count
         + summary.stage_source_scope_missing_workorder_count
         + summary.stage_runtime_event_missing_workorder_count,
     );

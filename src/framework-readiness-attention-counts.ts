@@ -1,5 +1,7 @@
 export const ATTENTION_COUNT_SEMANTICS =
   'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim';
+export const OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS =
+  'open_safe_action_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure';
 
 function numberValue(value: number | undefined) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -49,6 +51,56 @@ export function splitOperatorAttentionCounts(input: {
     semantics: ATTENTION_COUNT_SEMANTICS,
     payloadRequirementSemantics:
       'operator_actionable_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
+  };
+}
+
+export function splitOperatorAttentionCountsWithSafeActionPayload(input: {
+  openTailCount?: number;
+  evidenceEnvelopeOpenCount?: number;
+  evidenceEnvelopeBlockedCount?: number;
+  domainDispatchAttentionCount?: number;
+  stageSourceScopeMissingWorkorderCount?: number;
+  stageRuntimeEventMissingWorkorderCount?: number;
+  openSafeActionPayloadRequiredCount?: number;
+  openSafeActionPayloadFreeCount?: number;
+}) {
+  const baseInput = {
+    openTailCount: input.openTailCount,
+    evidenceEnvelopeOpenCount: input.evidenceEnvelopeOpenCount,
+    evidenceEnvelopeBlockedCount: input.evidenceEnvelopeBlockedCount,
+    domainDispatchAttentionCount: input.domainDispatchAttentionCount,
+    stageSourceScopeMissingWorkorderCount: input.stageSourceScopeMissingWorkorderCount,
+    stageRuntimeEventMissingWorkorderCount: input.stageRuntimeEventMissingWorkorderCount,
+  };
+  const defaultAttentionCounts = splitOperatorAttentionCounts(baseInput);
+  const openSafeActionPayloadSplitCount =
+    numberValue(input.openSafeActionPayloadRequiredCount)
+    + numberValue(input.openSafeActionPayloadFreeCount);
+  if (openSafeActionPayloadSplitCount !== defaultAttentionCounts.operatorActionableAttentionCount) {
+    return defaultAttentionCounts;
+  }
+  return splitOperatorAttentionCounts({
+    ...baseInput,
+    operatorPayloadRequiredAttentionCount:
+      numberValue(input.openSafeActionPayloadRequiredCount),
+  });
+}
+
+export function openSafeActionPayloadCounts(input: {
+  openSafeActionItemCount?: number;
+  openSafeActionPayloadRequiredCount?: number;
+  openSafeActionPayloadFreeCount?: number;
+  openSafeActionPayloadRequirementSemantics?: string | null;
+}) {
+  return {
+    openSafeActionItemCount: numberValue(input.openSafeActionItemCount),
+    openSafeActionPayloadRequiredCount:
+      numberValue(input.openSafeActionPayloadRequiredCount),
+    openSafeActionPayloadFreeCount:
+      numberValue(input.openSafeActionPayloadFreeCount),
+    openSafeActionPayloadRequirementSemantics:
+      input.openSafeActionPayloadRequirementSemantics
+      ?? OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
   };
 }
 

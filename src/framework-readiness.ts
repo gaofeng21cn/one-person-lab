@@ -25,29 +25,18 @@ import {
 } from './framework-readiness-static-surfaces.ts';
 import {
   frameworkStatusFromAttentionCounts,
-  splitOperatorAttentionCounts,
+  openSafeActionPayloadCounts,
+  splitOperatorAttentionCountsWithSafeActionPayload,
 } from './framework-readiness-attention-counts.ts';
 import {
   semanticHygieneContractFloor,
 } from './framework-readiness-semantic-hygiene.ts';
+import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 
 type JsonRecord = Record<string, unknown>;
 
 type FrameworkReadinessInput = {
   familyDefaults: boolean;
-};
-
-const SOURCE_COMMANDS = {
-  semantic_hygiene: 'opl system semantic-hygiene --json',
-  agents_readiness: 'opl agents readiness --family-defaults --json',
-  pack_compiler: 'opl agents pack-compiler --json',
-  stages_list: 'opl stages list --json',
-  stages_readiness_mas: 'opl stages readiness --domain mas --json',
-  stages_readiness_mag: 'opl stages readiness --domain mag --json',
-  stages_readiness_rca: 'opl stages readiness --domain rca --json',
-  app_operator_drilldown: 'opl runtime app-operator-drilldown --json',
-  family_runtime_evidence_worklist:
-    'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -276,6 +265,8 @@ function frameworkAttentionFirstPayload(input: {
   evidenceEnvelopeOpenCount: number;
   evidenceEnvelopeBlockedCount: number;
   domainDispatchAttentionCount: number;
+  openSafeActionPayloadRequiredCount?: number;
+  openSafeActionPayloadFreeCount?: number;
   providerSloCadenceWindowStatus: unknown;
   providerSloCapabilityStatus: unknown;
 }) {
@@ -283,13 +274,15 @@ function frameworkAttentionFirstPayload(input: {
     + input.appLiveEvidenceTailCount
     + input.stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = input.evidenceEnvelopeOpenCount + input.evidenceEnvelopeBlockedCount;
-  const attentionCounts = splitOperatorAttentionCounts({
+  const attentionCounts = splitOperatorAttentionCountsWithSafeActionPayload({
     openTailCount,
     evidenceEnvelopeOpenCount: input.evidenceEnvelopeOpenCount,
     evidenceEnvelopeBlockedCount: input.evidenceEnvelopeBlockedCount,
     domainDispatchAttentionCount: input.domainDispatchAttentionCount,
     stageSourceScopeMissingWorkorderCount: input.stageSourceScopeMissingWorkorderCount,
     stageRuntimeEventMissingWorkorderCount: input.stageRuntimeEventMissingWorkorderCount,
+    openSafeActionPayloadRequiredCount: input.openSafeActionPayloadRequiredCount,
+    openSafeActionPayloadFreeCount: input.openSafeActionPayloadFreeCount,
   });
   const omaOpenGateCount = numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count);
   const omaPendingVerifyLongSoakCount =
@@ -540,6 +533,15 @@ export async function buildFrameworkReadinessSummary(
   const appOpenTailCount = numberValue(appSummary.app_operator_production_evidence_tail_open_item_count);
   const stageProductionCallerTailCount = numberValue(appSummary.stage_production_evidence_missing_caller_stage_count);
   const evidenceWorklistOpenCount = countValue(worklistSummary.open_worklist_item_count);
+  const openSafeActionPayload = openSafeActionPayloadCounts({
+    openSafeActionItemCount: countValue(worklistSummary.open_safe_action_item_count),
+    openSafeActionPayloadRequiredCount:
+      countValue(worklistSummary.open_safe_action_payload_required_item_count),
+    openSafeActionPayloadFreeCount:
+      countValue(worklistSummary.open_safe_action_payload_free_item_count),
+    openSafeActionPayloadRequirementSemantics:
+      stringValue(worklistSummary.open_safe_action_payload_requirement_semantics),
+  });
   const stageReceiptFreshnessOpenWorkorderCount =
     countValue(worklistSummary.stage_receipt_freshness_open_workorder_count);
   const stageSourceScopeMissingWorkorderCount =
@@ -603,13 +605,15 @@ export async function buildFrameworkReadinessSummary(
   const openTailCount =
     agentStructuralEvidenceTailCount + appLiveEvidenceTailCount + stageReceiptFreshnessTailCount;
   const evidenceEnvelopeAttentionCount = readinessEvidenceEnvelopeOpenCount + readinessEvidenceEnvelopeBlockedCount;
-  const attentionCounts = splitOperatorAttentionCounts({
+  const attentionCounts = splitOperatorAttentionCountsWithSafeActionPayload({
     openTailCount,
     evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
     evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
     domainDispatchAttentionCount,
     stageSourceScopeMissingWorkorderCount,
     stageRuntimeEventMissingWorkorderCount,
+    openSafeActionPayloadRequiredCount: openSafeActionPayload.openSafeActionPayloadRequiredCount,
+    openSafeActionPayloadFreeCount: openSafeActionPayload.openSafeActionPayloadFreeCount,
   });
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
@@ -673,6 +677,10 @@ export async function buildFrameworkReadinessSummary(
         evidenceEnvelopeOpenCount: readinessEvidenceEnvelopeOpenCount,
         evidenceEnvelopeBlockedCount: readinessEvidenceEnvelopeBlockedCount,
         domainDispatchAttentionCount,
+        openSafeActionPayloadRequiredCount:
+          openSafeActionPayload.openSafeActionPayloadRequiredCount,
+        openSafeActionPayloadFreeCount:
+          openSafeActionPayload.openSafeActionPayloadFreeCount,
         providerSloCadenceWindowStatus: appSummary.provider_slo_cadence_window_status,
         providerSloCapabilityStatus: appSummary.provider_slo_capability_status,
       }),
@@ -852,6 +860,13 @@ export async function buildFrameworkReadinessSummary(
         closed_worklist_item_count: numberValue(worklistSummary.closed_worklist_item_count),
         open_worklist_item_count: evidenceWorklistOpenCount,
         closed_refs_only_item_count: countValue(worklistSummary.closed_refs_only_item_count),
+        open_safe_action_item_count: openSafeActionPayload.openSafeActionItemCount,
+        open_safe_action_payload_required_item_count:
+          openSafeActionPayload.openSafeActionPayloadRequiredCount,
+        open_safe_action_payload_free_item_count:
+          openSafeActionPayload.openSafeActionPayloadFreeCount,
+        open_safe_action_payload_requirement_semantics:
+          openSafeActionPayload.openSafeActionPayloadRequirementSemantics,
         stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
         stage_source_scope_missing_workorder_count: stageSourceScopeMissingWorkorderCount,
         stage_runtime_event_missing_workorder_count: stageRuntimeEventMissingWorkorderCount,
