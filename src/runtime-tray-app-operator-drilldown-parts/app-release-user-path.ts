@@ -147,6 +147,39 @@ function refsFromRecords(values: JsonRecord[], keys: string[]) {
   return uniqueStrings(values.flatMap((value) => refsFromRecord(value, keys)));
 }
 
+function typedBlockerGateIdFromRef(value: string) {
+  try {
+    const parsed = new URL(value);
+    const gateId = parsed.searchParams.get('gate');
+    if (gateId && gateId.trim().length > 0) {
+      return gateId.trim();
+    }
+  } catch {
+    // Fall through to the regex path for non-URL refs.
+  }
+  const match = value.match(/[?&]gate=([^&]+)/);
+  return match ? decodeURIComponent(match[1]).trim() : null;
+}
+
+function currentTypedBlockerRefs(input: {
+  typedBlockerRefs: string[];
+  openGateIds: Set<string>;
+  selectedCohortId: string | null;
+}) {
+  return input.typedBlockerRefs.filter((ref) => {
+    const blockerCohortId = versionCohortFromRef(ref);
+    if (
+      input.selectedCohortId
+      && blockerCohortId
+      && blockerCohortId !== input.selectedCohortId
+    ) {
+      return false;
+    }
+    const gateId = typedBlockerGateIdFromRef(ref);
+    return !gateId || input.openGateIds.has(gateId);
+  });
+}
+
 function evidenceGate(input: {
   gateId: string;
   requiredRefsAnyOf: string[];
@@ -186,7 +219,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
   const verifiedLedgerReceipts = ledgerReceipts.filter((receipt) =>
     receipt.receipt_status === 'verified'
   );
-  const typedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
+  const rawTypedBlockerRefs = refsFromRecords(ledgerReceipts, ['typed_blocker_refs']);
   const candidateEvidenceRecords = [
     record(drilldown.package_export_lifecycle_refs),
     record(drilldown.production_evidence_tail_ledger),
@@ -290,11 +323,16 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     }),
   ];
   const openGateItems = gates.filter((gate) => gate.status !== 'refs_observed');
+  const typedBlockerRefs = currentTypedBlockerRefs({
+    typedBlockerRefs: rawTypedBlockerRefs,
+    openGateIds: new Set(openGateItems.map((gate) => gate.gate_id)),
+    selectedCohortId: cohortGuard.selected_cohort_id,
+  });
   return {
     surface_kind: 'opl_app_drilldown_app_release_user_path_evidence_attention',
     owner: 'one-person-lab',
     target_surface: 'one_person_lab_app_release_user_path',
-    status: openGateItems.length > 0
+    status: openGateItems.length > 0 || typedBlockerRefs.length > 0
       ? 'app_release_user_path_evidence_open'
       : recordedLedgerReceipts.length > 0
         ? 'app_release_user_path_evidence_verify_pending'
@@ -306,7 +344,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     gate_count: gates.length,
     open_gate_count: openGateItems.length,
     open_gate_ids: openGateItems.map((gate) => gate.gate_id),
-    attention_required: openGateItems.length > 0,
+    attention_required: openGateItems.length > 0 || typedBlockerRefs.length > 0,
     evidence_ledger_status: recordedLedgerReceipts.length > 0
       ? 'ledger_refs_recorded_verify_pending'
       : verifiedLedgerReceipts.length > 0
