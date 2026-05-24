@@ -10,6 +10,9 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import {
+  applyAppOperatorDrilldownDetail,
+} from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 
 test('runtime action execute can run provider scheduler routes from App drilldown', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-scheduler-'));
@@ -67,6 +70,52 @@ test('runtime action execute can run provider scheduler routes from App drilldow
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('runtime App drilldown selects provider scheduler install before manual trigger', () => {
+  const route = (action: string, actionKind: string) => ({
+    action_id: `provider-scheduler:temporal:${action}`,
+    action_kind: actionKind,
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
+  });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        route('trigger', 'provider_scheduler_trigger'),
+        route('tick', 'provider_scheduler_tick'),
+        route('status', 'provider_scheduler_status'),
+        route('install', 'provider_scheduler_install'),
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(
+    drilldown.attention_first_payload.next_safe_action.action_id,
+    'provider-scheduler:temporal:install',
+  );
+  assert.equal(
+    drilldown.attention_first_payload.next_safe_action.action_kind,
+    'provider_scheduler_install',
+  );
+  assert.deepEqual(drilldown.attention_first_payload.next_safe_action.submit_args, [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    'provider-scheduler:temporal:install',
+  ]);
 });
 
 test('runtime action execute can apply and verify legacy cleanup plans from App drilldown', () => {

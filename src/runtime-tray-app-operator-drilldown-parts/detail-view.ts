@@ -225,15 +225,21 @@ function actionPriority(action: JsonRecord) {
     || actionKind === 'evidence_gate_receipt_verify') {
     return 6;
   }
+  if (actionKind === 'provider_scheduler_install') {
+    return 7;
+  }
+  if (actionKind === 'provider_scheduler_status') {
+    return 8;
+  }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
-    return 7;
+    return 9;
   }
   if (actionKind === 'legacy_cleanup_apply'
     || actionKind === 'legacy_cleanup_verify') {
-    return 8;
+    return 10;
   }
-  return 9;
+  return 11;
 }
 
 function findSafeActionForStage(actions: JsonRecord[], stage: JsonRecord) {

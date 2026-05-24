@@ -22,7 +22,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 2. 保持 framework surface 节制：新增 surface 默认先作为 reference、diagnostic lens、advisory ref 或 App detail drilldown；只有服务 launch safety、authority boundary、evidence / audit / replay / route-back，或被 App/runtime 反复消费时，才进入默认入口。
 3. 统一 stage pack conformance：每个标准 OPL Agent stage 都应同构暴露 prompt/tools/knowledge/evaluation、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy 和 route-back receipt。
 4. 统一 privatization audit envelope：MAS/RCA/MAG/OMA 的私有功能审计最终应投影到同一组 bucket：`standard_pack_inventory`、`authority_function_inventory`、`private_platform_residue_inventory`、`bridge_exit_gate`、`evidence_gap`；repo 可以有扩展字段，但 OPL/App 默认读法必须稳定。
-5. 推进真实 evidence，而不是继续堆合同：App release `26.5.19` 当前已有同 cohort verified `long_operator_evidence_refs`，`framework readiness` 读为 App user-path evidence ready，但这仍不能外推为 App release ready 或 production ready；OMA 当前已有 verified 真实 `long_soak_refs`，`framework readiness` 读为 OMA production-consumption ready，但这只关闭 OMA production-consumption follow-through，不授权 MAS/MAG/RCA/domain production ready；当前 framework hard blocker 转到 MAS active forbidden-name residue；MAG/RCA 的主缺口是 live owner-chain、App/default caller、workspace / artifact / memory receipt scaleout 和 controlled soak；MAS 的主缺口是 forbidden-name residue cleanup、physical thinning tail、真实 paper-line receipt parity 与 no-active-caller / tombstone proof。
+5. 推进真实 evidence，而不是继续堆合同：App release `26.5.19` 当前已有同 cohort verified `long_operator_evidence_refs`，`framework readiness` 读为 App user-path evidence ready，但这仍不能外推为 App release ready 或 production ready；OMA 当前已有 verified 真实 `long_soak_refs`，`framework readiness` 读为 OMA production-consumption ready，但这只关闭 OMA production-consumption follow-through，不授权 MAS/MAG/RCA/domain production ready；当前 `opl agents conformance --family-defaults --json` 读为四仓 structural conformance passed、blocked_count=0，production evidence tail 单独读取；MAG/RCA 的主缺口是 live owner-chain、App/default caller、workspace / artifact / memory receipt scaleout 和 controlled soak；MAS 的主缺口是 physical thinning tail、真实 paper-line receipt parity 与 no-active-caller / tombstone proof。
 
 ## 调研提示词
 
@@ -77,7 +77,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 
 ## 下一轮可执行方向
 
-当前优先级继续从 live gate 倒推，而不是继续增加相似 conformance surface：App user-path evidence 与 OMA production-consumption 这轮已经各自观察到 verified long evidence refs，下一轮应转向仍能被 fresh read-model 证明的 MAS active forbidden-name residue / paper-line parity / physical thinning、MAG/RCA owner-chain 与 controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance、以及 App release-ready owner boundary；只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
+当前优先级继续从 live gate 倒推，而不是继续增加相似 conformance surface：App user-path evidence 与 OMA production-consumption 这轮已经各自观察到 verified long evidence refs，下一轮应转向仍能被 fresh read-model 证明的 MAS paper-line parity / physical thinning、MAG/RCA owner-chain 与 controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance、以及 App release-ready owner boundary；只有当新 surface 能防止 authority 污染、App/default caller 漏读或 refs-only evidence 误关 gate 时，才进入前 3 类结构优化。
 
 1. `standard_stage_pack_v2_conformance`
    统一 `stage_control_plane` 的必备字段和读法：prompt refs、tool/skill refs、knowledge refs、evaluation / quality gate refs、selected executor、executor binding ref、expected receipt refs、requires/ensures、independent gate policy、route-back receipt。
@@ -89,7 +89,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
    统一 MAS/RCA/MAG/OMA 的 functional privatization audit 顶层 envelope，减少 App/operator drilldown 的 repo-specific adapter。
 
 4. `evidence_after_contract`
-   在 conformance 收敛后，优先投入真实 evidence：MAS forbidden-name residue cleanup、MAS paper-line parity 和 physical thinning、MAG/RCA controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance，以及 MAG/RCA/OMA owner receipt / typed blocker scaleout。App release `26.5.19` 已有 verified long-operator evidence ref 且 App user-path evidence ready；OMA 已把 real-target scaleout 的 refs-only owner receipt / typed blocker、Agent Lab result、no-forbidden-write、cleanup counters 和 verified long-soak ref 投到 App / readiness 读面；这些进展关闭对应 refs-only gate，但不替代 MAS/MAG/RCA 的 domain ready、artifact authority、family production ready、App release ready 或默认 promotion evidence。
+   在 conformance 收敛后，优先投入真实 evidence：MAS paper-line parity 和 physical thinning、MAG/RCA controlled hosted stage soak、Developer Mode non-owner fork/PR owner acceptance，以及 MAG/RCA/OMA owner receipt / typed blocker scaleout。App release `26.5.19` 已有 verified long-operator evidence ref 且 App user-path evidence ready；OMA 已把 real-target scaleout 的 refs-only owner receipt / typed blocker、Agent Lab result、no-forbidden-write、cleanup counters 和 verified long-soak ref 投到 App / readiness 读面；这些进展关闭对应 refs-only gate，但不替代 MAS/MAG/RCA 的 domain ready、artifact authority、family production ready、App release ready 或默认 promotion evidence。
 
 ## 不能写成
 
