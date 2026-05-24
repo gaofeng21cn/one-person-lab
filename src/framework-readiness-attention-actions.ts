@@ -262,6 +262,8 @@ function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonReco
 export function frameworkAttentionNextSafeActions(input: {
   blockers: JsonRecord[];
   warnings: JsonRecord[];
+  operatorActionableAttentionCount?: number;
+  domainBlockedAttentionCount?: number;
   ownerPayloadGroups: JsonRecord[];
   ownerHandoffPacket: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
@@ -284,6 +286,27 @@ export function frameworkAttentionNextSafeActions(input: {
       step_kind: 'no_framework_readiness_action_required',
       evidence_closure_gate: 'none',
       authority: 'no_op',
+    }];
+  }
+  if (
+    numberValue(input.operatorActionableAttentionCount) === 0
+    && numberValue(input.domainBlockedAttentionCount) > 0
+  ) {
+    return [{
+      action_id: 'review_blocked_refs_only_attention',
+      action_kind: 'blocked_refs_only_attention_review',
+      step_kind: 'blocked_refs_only_attention_review',
+      evidence_closure_gate: 'domain_blocked_refs_only_review_gate',
+      command: 'opl framework readiness --family-defaults --json',
+      authority: 'refs_only_review',
+      can_submit_record_to_safe_action_shell: false,
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_close_domain_ready: false,
+      can_claim_production_ready: false,
+      can_authorize_quality_or_export: false,
     }];
   }
   return [

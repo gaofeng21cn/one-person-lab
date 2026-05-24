@@ -1,4 +1,40 @@
 import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import {
+  frameworkStatusFromAttentionCounts,
+} from '../../../../src/framework-readiness-attention-counts.ts';
+
+test('framework readiness status treats blocked refs-only attention separately from operator-actionable work', () => {
+  assert.equal(
+    frameworkStatusFromAttentionCounts({
+      hardBlockerCount: 0,
+      openTailCount: 0,
+      operatorActionableAttentionCount: 0,
+      domainBlockedAttentionCount: 7,
+      semanticAttentionGateCount: 0,
+    }),
+    'framework_control_plane_available_with_blocked_refs_only_attention',
+  );
+  assert.equal(
+    frameworkStatusFromAttentionCounts({
+      hardBlockerCount: 0,
+      openTailCount: 0,
+      operatorActionableAttentionCount: 3,
+      domainBlockedAttentionCount: 7,
+      semanticAttentionGateCount: 0,
+    }),
+    'framework_control_plane_available_with_operator_attention',
+  );
+  assert.equal(
+    frameworkStatusFromAttentionCounts({
+      hardBlockerCount: 0,
+      openTailCount: 0,
+      operatorActionableAttentionCount: 0,
+      domainBlockedAttentionCount: 0,
+      semanticAttentionGateCount: 0,
+    }),
+    'framework_control_plane_available',
+  );
+});
 
 test('framework readiness separates operator-actionable and domain-blocked attention tails', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-attention-semantics-'));
@@ -66,6 +102,22 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       summary.attention_payload_requirement_semantics,
       attentionSummary.attention_payload_requirement_semantics,
     );
+    if (
+      summary.framework_kernel_hard_blocker_count === 0
+      && summary.open_tail_count === 0
+      && summary.operator_actionable_attention_tail_count === 0
+      && summary.domain_blocked_attention_tail_count > 0
+    ) {
+      assert.equal(
+        readiness.status,
+        'framework_control_plane_available_with_blocked_refs_only_attention',
+      );
+      assert.equal(
+        readiness.attention_first_payload.status,
+        'framework_control_plane_available_with_blocked_refs_only_attention',
+      );
+      assert.notEqual(readiness.status, 'framework_control_plane_available_with_operator_attention');
+    }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

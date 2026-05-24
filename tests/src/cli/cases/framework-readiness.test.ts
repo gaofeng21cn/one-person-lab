@@ -157,7 +157,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
   if (
     readiness.summary.framework_kernel_hard_blocker_count === 0
     && readiness.summary.open_tail_count === 0
-    && readiness.summary.total_operator_attention_tail_count > 0
+    && readiness.summary.operator_actionable_attention_tail_count > 0
   ) {
     assert.equal(
       readiness.status,
@@ -166,6 +166,21 @@ test('framework readiness summarizes default control-plane surfaces without auth
     assert.notEqual(
       readiness.status,
       'framework_control_plane_available_with_open_production_tail',
+    );
+  }
+  if (
+    readiness.summary.framework_kernel_hard_blocker_count === 0
+    && readiness.summary.open_tail_count === 0
+    && readiness.summary.operator_actionable_attention_tail_count === 0
+    && readiness.summary.domain_blocked_attention_tail_count > 0
+  ) {
+    assert.equal(
+      readiness.status,
+      'framework_control_plane_available_with_blocked_refs_only_attention',
+    );
+    assert.notEqual(
+      readiness.status,
+      'framework_control_plane_available_with_operator_attention',
     );
   }
   assert.equal(

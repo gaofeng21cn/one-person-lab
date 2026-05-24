@@ -24,6 +24,7 @@ import {
   frameworkKernelFloor,
 } from './framework-readiness-static-surfaces.ts';
 import {
+  frameworkStatusFromAttentionCounts,
   splitOperatorAttentionCounts,
 } from './framework-readiness-attention-counts.ts';
 import {
@@ -244,24 +245,6 @@ function authorityBoundary() {
   };
 }
 
-function statusFrom(
-  openTailCount: number,
-  operatorAttentionCount: number,
-  semanticAttentionGateCount: number,
-  hardBlockerCount: number,
-) {
-  if (hardBlockerCount > 0) {
-    return 'framework_control_plane_available_with_hard_blockers';
-  }
-  if (openTailCount > 0) {
-    return 'framework_control_plane_available_with_open_production_tail';
-  }
-  if (operatorAttentionCount > 0 || semanticAttentionGateCount > 0) {
-    return 'framework_control_plane_available_with_operator_attention';
-  }
-  return 'framework_control_plane_available';
-}
-
 function frameworkAttentionFirstPayload(input: {
   status: string;
   semanticHygieneContractFloor: JsonRecord;
@@ -376,6 +359,8 @@ function frameworkAttentionFirstPayload(input: {
   const nextSafeActions = frameworkAttentionNextSafeActions({
     blockers,
     warnings,
+    operatorActionableAttentionCount: attentionCounts.operatorActionableAttentionCount,
+    domainBlockedAttentionCount: attentionCounts.domainBlockedAttentionCount,
     ownerPayloadGroups: input.ownerPayloadGroups,
     ownerHandoffPacket: input.ownerHandoffPacket,
     appReleaseUserPathEvidence: input.appReleaseUserPathEvidence,
@@ -626,16 +611,16 @@ export async function buildFrameworkReadinessSummary(
     stageSourceScopeMissingWorkorderCount,
     stageRuntimeEventMissingWorkorderCount,
   });
-  const operatorAttentionCount = evidenceEnvelopeAttentionCount + domainDispatchAttentionCount;
   const agentHardBlockerCount = numberValue(agentSummary.conformance_blocked_count);
   const hardBlockerCount =
     agentHardBlockerCount + stageHardBlockerCount + packCompilerBlockerCount + diagnosticFailureCount;
-  const frameworkStatus = statusFrom(
+  const frameworkStatus = frameworkStatusFromAttentionCounts({
     openTailCount,
-    operatorAttentionCount,
+    operatorActionableAttentionCount: attentionCounts.operatorActionableAttentionCount,
+    domainBlockedAttentionCount: attentionCounts.domainBlockedAttentionCount,
     semanticAttentionGateCount,
     hardBlockerCount,
-  );
+  });
 
   return {
     version: 'g1',
