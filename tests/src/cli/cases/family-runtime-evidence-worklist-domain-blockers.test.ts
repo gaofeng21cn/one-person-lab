@@ -156,6 +156,11 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
     })).family_runtime_evidence_worklist;
 
     assert.equal(after.summary.open_safe_action_item_count, 43);
+    assert.equal(
+      after.summary.open_safe_action_payload_required_item_count
+        + after.summary.open_safe_action_payload_free_item_count,
+      after.summary.open_safe_action_item_count,
+    );
     assert.equal(after.summary.open_worklist_item_count, 43);
     assert.equal(after.summary.closed_worklist_item_count, 6);
     assert.equal(after.summary.closed_refs_only_item_count, 6);

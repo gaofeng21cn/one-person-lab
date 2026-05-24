@@ -49,6 +49,9 @@ const NOT_AUTHORIZED_CLAIMS = [
   'default_caller_delete_ready',
 ];
 
+const OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS =
+  'open_safe_action_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure';
+
 const CLOSEOUT_ACTION_KINDS = new Set([
   'provider_scheduler_status',
   'provider_scheduler_install',
@@ -580,6 +583,9 @@ function worklistCounts(
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
     item.claim_scope === 'stage_production_evidence_receipt'
   ).length;
+  const openSafeActionPayloadRequiredItemCount = openItems.filter((item) =>
+    item.route_requires_domain_or_app_payload === true
+  ).length;
   return {
     open_worklist_item_count: openItems.length,
     closed_refs_only_item_count: closedItems.length,
@@ -587,6 +593,11 @@ function worklistCounts(
     worklist_item_count: worklistItems.length,
     closed_worklist_item_count: closedItems.length,
     open_safe_action_item_count: openItems.length,
+    open_safe_action_payload_required_item_count: openSafeActionPayloadRequiredItemCount,
+    open_safe_action_payload_free_item_count:
+      openItems.length - openSafeActionPayloadRequiredItemCount,
+    open_safe_action_payload_requirement_semantics:
+      OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
     next_action_item_count: nextActionLedger.summary.next_action_item_count,
     next_action_group_count: nextActionLedger.summary.next_action_group_count,
     provider_scheduler_item_count: worklistItems.filter((item) =>
@@ -920,6 +931,12 @@ export async function runFamilyRuntimeEvidenceWorklist(
     summary: counts,
     open_worklist_item_count: openItems.length,
     closed_refs_only_item_count: closedItems.length,
+    open_safe_action_payload_required_item_count:
+      counts.open_safe_action_payload_required_item_count,
+    open_safe_action_payload_free_item_count:
+      counts.open_safe_action_payload_free_item_count,
+    open_safe_action_payload_requirement_semantics:
+      counts.open_safe_action_payload_requirement_semantics,
     stage_receipt_freshness_open_workorder_count: stageReceiptFreshnessOpenWorkorderCount,
     stage_evidence_workorder_packet_summary: stageEvidenceWorkorderPacket.summary,
     stage_evidence_workorder_attention_items: stageEvidenceWorkorderAttentionItems,
