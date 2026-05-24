@@ -69,11 +69,21 @@ Declarative Domain Pack
 | RCA visual soak | RCA transition/evidence fixture、refs-only projection 和 visual authority boundary 清晰。 | 真实 artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout 和 repeated no-regression evidence。 |
 | Cross-family regression | MAS/MAG/RCA/OMA structural conformance 与 generated/readiness consumer boundary 可读。 | direct/hosted parity、generated default consumption、legacy no-active-caller、no-forbidden-write 和 release/dist consumption 反复通过。 |
 
-## 下一轮 baton
+## 下一轮 Agent prompt
 
 Objective:
 
 - 推进 OPL family production-evidence tranche。每轮先读 fresh machine truth，再只修改仍 open 的功能/结构差距或证据差距；完成后把 durable current truth 折回本文、核心五件套或对应 repo-owned active plan。
+
+Write scope:
+
+- `one-person-lab` 的 active truth owner、核心五件套、contracts/source/tests、runtime read model 与 App/operator projection；必要时同步 MAS/MAG/RCA/OMA repo-owned active plan 中对应的 current truth。
+
+Live truth inputs:
+
+- `TASTE.md`、核心五件套、本文、`docs/docs_portfolio_consolidation.md`、`docs/active/opl-family-development-reference.md`。
+- `opl framework readiness --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`。
+- MAS/MAG/RCA/OMA repo-owned contracts、generated handoff、production acceptance、owner receipt / typed blocker refs 和 focused verification。
 
 优先顺序：
 
@@ -88,6 +98,20 @@ Non-goals:
 - 不把 provider proof、generated surface proof、conformance pass、refs-only ledger verified、doctor clean 或 workorder accounting closed 写成 domain ready、App release ready 或 production ready。
 - 不恢复 gateway/frontdoor/Hermes-first、compatibility alias、facade、wrapper 或旧默认入口。
 - 不把 MAS/MAG/RCA 的 domain truth、quality/export verdict、artifact body、memory body 或 owner receipt authority 上收到 OPL。
+
+Verification commands:
+
+- Docs-only：`rtk git diff --check`、`rtk rg -n "<<<<<<<|>>>>>>>|=======" docs`。
+- 触及 source/contracts/runtime/App 时追加：`rtk ./scripts/verify.sh`、`rtk npm run test:fast`、`rtk npm run test:meta`、`rtk npm run test:artifact`、`rtk opl framework readiness --family-defaults --json`、`rtk opl runtime app-operator-drilldown --json`。
+
+Completion gate:
+
+- 本轮关闭的 gap 已从本文重写为当前完成进度或移出 active path；仍 open 的 production evidence tail 保持在功能/结构差距或证据差距中。
+- 所有 worktree lane 已吸收回 `main` 或明确标记为近期写入/有未提交改动而保留；最终在 `main` checkout 上完成最小充分验证。
+
+Foldback target:
+
+- Durable current truth 折回本文、核心五件套或对应 repo-owned active plan；过程 proof、receipt id、命令流水、worktree/branch 细节进入 `docs/history/**`、runtime ledger、提交历史或 automation memory。
 
 ## 验证入口
 
