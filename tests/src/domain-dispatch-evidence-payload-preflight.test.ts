@@ -28,12 +28,44 @@ test('domain dispatch evidence payload must cover every route-declared required 
   assert.equal(preflight.status, 'blocked');
   assert.equal(preflight.can_record_refs_only_receipt, false);
   assert.equal(preflight.selected_payload_path, 'blocked');
-  assert.equal(preflight.payload_path_policy, 'choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_never_counts_as_success');
+  assert.equal(
+    preflight.payload_path_policy,
+    'choose_success_closeout_refs_path_or_domain_owned_typed_blocker_path_evidence_refs_are_supplemental',
+  );
   assert.equal(preflight.accepted_payload_paths.success_refs_path.status, 'not_ready');
   assert.equal(preflight.accepted_payload_paths.typed_blocker_path.status, 'not_ready');
   assert.deepEqual(preflight.required_evidence_refs, route.required_evidence_refs);
   assert.deepEqual(preflight.missing_required_evidence_refs, ['mas://dm003/ai-reviewer-currentness']);
   assert.equal(preflight.required_evidence_refs_covered, false);
+});
+
+test('generic evidence refs are supplemental and cannot close domain dispatch on their own', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
+    },
+    {
+      action_id: 'domain_dispatch:medautoscience:sat-dm003:record',
+      required_evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
+    },
+  );
+
+  assert.equal(preflight.status, 'blocked');
+  assert.equal(preflight.can_record_refs_only_receipt, false);
+  assert.equal(preflight.selected_payload_path, 'blocked');
+  assert.equal(preflight.required_evidence_refs_covered, true);
+  assert.equal(preflight.accepted_payload_paths.success_refs_path.status, 'not_ready');
+  assert.deepEqual(preflight.required_any_operator_payload_refs, [
+    'domain_receipt_refs',
+    'typed_blocker_refs',
+    'owner_chain_refs',
+    'no_regression_refs',
+  ]);
+  assert.deepEqual(preflight.supplemental_operator_payload_refs, ['evidence_refs']);
+  assert.deepEqual(preflight.missing_payload_fields, [
+    'domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs',
+  ]);
+  assert.equal(preflight.accepted_ref_counts.evidence_refs, 1);
 });
 
 test('typed blocker refs may close a route-declared required evidence gap without claiming success', () => {

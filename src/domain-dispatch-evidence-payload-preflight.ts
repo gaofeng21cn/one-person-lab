@@ -45,6 +45,9 @@ const SUCCESS_PAYLOAD_REF_FIELDS = [
   'domain_receipt_refs',
   'owner_chain_refs',
   'no_regression_refs',
+] as const;
+
+const SUPPLEMENTAL_PAYLOAD_REF_FIELDS = [
   'evidence_refs',
 ] as const;
 
@@ -146,11 +149,12 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
   const missingRequiredEvidenceRefs = enforcedRequiredEvidenceRefs.filter((ref) => !providedRefs.has(ref));
   const requiredEvidenceRefsCovered = missingRequiredEvidenceRefs.length === 0;
   const forbiddenPlaceholderRefs = allRefs.filter(looksLikePlaceholderRef);
+  const successCloseoutRefCount =
+    domainReceiptRefs.length + ownerChainRefs.length + noRegressionRefs.length;
   const successPathReady = requiredEvidenceRefsCovered && (
     domainReceiptRefs.length > 0
     || ownerChainRefs.length > 0
     || noRegressionRefs.length > 0
-    || evidenceRefs.length > 0
   ) && typedBlockerRefs.length === 0;
   const typedBlockerPathReady = typedBlockerRefs.length > 0;
   const selectedPayloadPath = typedBlockerPathReady
@@ -175,15 +179,16 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       'typed_blocker_refs',
       'owner_chain_refs',
       'no_regression_refs',
-      'evidence_refs',
     ],
+    supplemental_operator_payload_refs: [...SUPPLEMENTAL_PAYLOAD_REF_FIELDS],
     payload_path_policy:
-      'choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_never_counts_as_success',
+      'choose_success_closeout_refs_path_or_domain_owned_typed_blocker_path_evidence_refs_are_supplemental',
     selected_payload_path: selectedPayloadPath,
     accepted_payload_paths: {
       success_refs_path: {
         status: successPathReady ? 'ready' : 'not_ready',
         required_any_operator_payload_refs: [...SUCCESS_PAYLOAD_REF_FIELDS],
+        supplemental_operator_payload_refs: [...SUPPLEMENTAL_PAYLOAD_REF_FIELDS],
         required_evidence_refs_covered: requiredEvidenceRefsCovered,
         typed_blocker_refs_must_be_absent: true,
         can_claim_domain_ready: false,
@@ -206,7 +211,9 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     missing_required_evidence_refs: missingRequiredEvidenceRefs,
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
     missing_payload_fields: allRefs.length === 0
-      ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs_or_evidence_refs']
+      ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs']
+      : successCloseoutRefCount === 0 && typedBlockerRefs.length === 0
+        ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs']
       : [],
     accepted_ref_counts: {
       domain_receipt_refs: domainReceiptRefs.length,
@@ -216,7 +223,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       evidence_refs: evidenceRefs.length,
     },
     policy:
-      'record_requires_real_domain_app_or_live_owner_receipt_typed_blocker_owner_chain_no_regression_or_evidence_refs',
+      'record_requires_real_domain_app_or_live_owner_receipt_typed_blocker_owner_chain_or_no_regression_refs_evidence_refs_are_supplemental',
   };
 }
 

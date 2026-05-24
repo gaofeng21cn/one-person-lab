@@ -286,7 +286,7 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     );
     assert.deepEqual(
       blockedTemplateExecution.payload.error.details.preflight.missing_payload_fields,
-      ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs_or_evidence_refs'],
+      ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs'],
     );
 
     const placeholderExecution = runCliFailure([
@@ -306,6 +306,35 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.deepEqual(
       placeholderExecution.payload.error.details.preflight.forbidden_placeholder_refs,
       ['<medautoscience-owner-receipt-ref>'],
+    );
+
+    const evidenceOnlyExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--payload',
+      JSON.stringify({
+        evidence_refs: ['mas://evidence/domain-dispatch-supporting-context.json'],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    assert.equal(evidenceOnlyExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      evidenceOnlyExecution.payload.error.details.error_kind,
+      'domain_dispatch_evidence_payload_preflight_blocked',
+    );
+    assert.equal(evidenceOnlyExecution.payload.error.details.preflight.selected_payload_path, 'blocked');
+    assert.equal(
+      evidenceOnlyExecution.payload.error.details.preflight.accepted_ref_counts.evidence_refs,
+      1,
+    );
+    assert.deepEqual(
+      evidenceOnlyExecution.payload.error.details.preflight.missing_payload_fields,
+      ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs'],
     );
 
     const recordExecution = runCli([
