@@ -71,7 +71,7 @@ OPL 系列项目开发主参考是 [OPL 系列项目开发主参考](./active/op
 | `docs/invariants.md` | `active_truth` | 硬约束、不可破坏边界和 fail-closed 规则。 | 核心五件套；长期规则优先上提到这里。 |
 | `docs/decisions.md` | `active_truth_with_history_notes` | 仍有效决策和被 supersede 决策的当前读法。 | 核心五件套；旧决策必须标明 superseded。 |
 | `docs/active/opl-family-development-reference.md` | `active_support` | OPL 系列项目开发主参考、owner 分层、上收判断和 direct-retirement 规则。 | 保持主参考；不替代单仓 truth。 |
-| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | 对照理想态的 family-level 当前差距、执行顺序和验收顺序。 | 保持 active plan；只写当前状态和差距，过程证据进 history。 |
+| `docs/active/current-state-vs-ideal-gap.md` | `active_plan` | OPL family 当前目标、完成进度、功能/结构差距、测试/证据差距和下一轮 baton 的唯一 active owner。 | 保持 compact active plan；只写当前结论、完成口径和动态机器入口，过程证据、dated closeout 和历史长清单进 history。 |
 | `docs/active/current-development-lines.md` | `active_plan` | 当前 framework-first 开发线路图。 | 保持 active plan；旧路线只作输入。 |
 | `docs/active/production-framework-closure-gap-matrix.md` | `active_plan` | production closure 差距矩阵、证据门与功能/结构当前 owner。 | 保持 active plan；不承载 dated proof 流水。 |
 | `docs/active/development-document-portfolio.md` | `active_docs_support` | 开发文档组合整理和旧计划吸收/归档规则。 | 保持 active support；只管开发文档组合，不重复全仓治理。 |
