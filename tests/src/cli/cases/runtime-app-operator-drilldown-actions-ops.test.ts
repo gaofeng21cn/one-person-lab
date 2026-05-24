@@ -14,6 +14,12 @@ import {
   applyAppOperatorDrilldownDetail,
 } from '../../../../src/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
 
+function record(value: unknown): Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
 test('runtime action execute can run provider scheduler routes from App drilldown', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-scheduler-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -118,6 +124,99 @@ test('runtime App drilldown selects provider scheduler install before manual tri
     '--action',
     'provider-scheduler:temporal:install',
   ]);
+});
+
+test('runtime App drilldown prefers safe-action bridge routes for duplicate action ids', () => {
+  const domainDispatchRecordRoute = {
+    action_id: 'domain_dispatch:medautoscience:attempt-1:record',
+    action_kind: 'domain_dispatch_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    route_requires_domain_or_app_payload: true,
+    can_close_without_domain_or_app_payload: false,
+    can_submit_to_safe_action_shell: false,
+    payload_owner: 'domain_repository_or_app_live_operator',
+    payload_template: {
+      domain_receipt_refs: [],
+      typed_blocker_refs: [],
+      owner_chain_refs: [],
+      no_regression_refs: [],
+      evidence_refs: [],
+    },
+    required_operator_payload_refs: [
+      'domain_receipt_refs',
+      'typed_blocker_refs',
+      'owner_chain_refs',
+      'no_regression_refs',
+      'evidence_refs',
+    ],
+    payload_workorder: {
+      authority_boundary: {
+        can_generate_domain_owner_receipt: false,
+        can_execute_domain_action: false,
+        closes_domain_ready: false,
+        closes_production_ready: false,
+      },
+    },
+  };
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          action_id: 'provider-scheduler:temporal:install',
+          action_kind: 'provider_scheduler_install',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_surface: 'opl runtime action execute',
+          submit_via: 'opl runtime action execute',
+          can_submit_to_safe_action_shell: true,
+        },
+        domainDispatchRecordRoute,
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [
+        {
+          ...domainDispatchRecordRoute,
+          action_ref: 'opl://runtime-actions/domain-dispatch/attempt-1/record',
+          submit_via: 'opl runtime action execute',
+          dry_run_supported: true,
+          can_submit_to_safe_action_shell: true,
+        },
+      ],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+
+  assert.equal(
+    nextSafeAction.action_id,
+    'domain_dispatch:medautoscience:attempt-1:record',
+  );
+  assert.equal(
+    nextSafeAction.action_kind,
+    'domain_dispatch_evidence_receipt_record',
+  );
+  assert.equal(nextSafeAction.can_submit_to_safe_action_shell, true);
+  assert.equal(nextSafeAction.route_requires_domain_or_app_payload, true);
+  assert.equal(nextSafeAction.can_close_without_domain_or_app_payload, false);
+  assert.deepEqual(nextSafeAction.submit_args, [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    'domain_dispatch:medautoscience:attempt-1:record',
+    '--payload-file',
+    '<payload.json>',
+  ]);
+  const payloadWorkorder = record(nextSafeAction.payload_workorder);
+  const authorityBoundary = record(payloadWorkorder.authority_boundary);
+  assert.equal(authorityBoundary.can_generate_domain_owner_receipt, false);
 });
 
 test('runtime action execute can apply and verify legacy cleanup plans from App drilldown', () => {

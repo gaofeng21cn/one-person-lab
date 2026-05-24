@@ -185,18 +185,35 @@ function safeActionRoutes(drilldown: JsonRecord) {
     ...recordList(record(drilldown.operator_action_routing_refs).refs),
     ...recordList(record(drilldown.app_execution_bridge).safe_action_routes),
   ];
-  const seen = new Set<string>();
-  return routes.filter((route) => {
+  const selected = new Map<string, JsonRecord>();
+  const unkeyedRoutes: JsonRecord[] = [];
+  for (const route of routes) {
     const key = firstString(route.action_id, route.ref, route.action_ref);
     if (!key) {
-      return true;
+      unkeyedRoutes.push(route);
+      continue;
     }
-    if (seen.has(key)) {
-      return false;
+    const existing = selected.get(key);
+    if (!existing || (
+      route.can_submit_to_safe_action_shell === true
+      && existing.can_submit_to_safe_action_shell !== true
+    )) {
+      selected.set(key, existing
+        ? {
+            ...route,
+            ...existing,
+            action_ref: firstString(route.action_ref, existing.action_ref),
+            submit_via: firstString(route.submit_via, existing.submit_via),
+            can_submit_to_safe_action_shell: true,
+            dry_run_supported: route.dry_run_supported === true || existing.dry_run_supported === true,
+            approve_domain_action_supported:
+              route.approve_domain_action_supported === true
+              || existing.approve_domain_action_supported === true,
+          }
+        : route);
     }
-    seen.add(key);
-    return true;
-  });
+  }
+  return [...selected.values(), ...unkeyedRoutes];
 }
 
 function actionPriority(action: JsonRecord) {
@@ -217,29 +234,35 @@ function actionPriority(action: JsonRecord) {
   if (actionKind === 'stage_production_evidence_receipt_verify') {
     return 4;
   }
+  if (actionKind === 'domain_dispatch_evidence_receipt_verify') {
+    return 5;
+  }
+  if (actionKind === 'domain_dispatch_evidence_receipt_record') {
+    return 6;
+  }
   if (actionKind === 'external_evidence_receipt_record'
     || actionKind === 'evidence_gate_receipt_record') {
-    return 5;
+    return 7;
   }
   if (actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_verify') {
-    return 6;
+    return 8;
   }
   if (actionKind === 'provider_scheduler_install') {
-    return 7;
+    return 9;
   }
   if (actionKind === 'provider_scheduler_status') {
-    return 8;
+    return 10;
   }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
-    return 9;
+    return 11;
   }
   if (actionKind === 'legacy_cleanup_apply'
     || actionKind === 'legacy_cleanup_verify') {
-    return 10;
+    return 12;
   }
-  return 11;
+  return 13;
 }
 
 function findSafeActionForStage(actions: JsonRecord[], stage: JsonRecord) {
