@@ -259,6 +259,7 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
   const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
   const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
   try {
     assert.equal(typeof child.pid, 'number');
     fs.mkdirSync(workerRoot, { recursive: true });
@@ -270,11 +271,13 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
       task_queue: 'opl-worker-requery',
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:worker-requery-current',
     }, null, 2)}\n`);
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-requery-test';
     process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-requery';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:worker-requery-current';
     delete process.env.OPL_TEMPORAL_WORKER_STATUS;
 
     const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
@@ -309,6 +312,101 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
       delete process.env.OPL_TEMPORAL_WORKER_STATUS;
     } else {
       process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker lifecycle rejects stale managed worker source version', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-stale-source-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    assert.equal(typeof child.pid, 'number');
+    fs.mkdirSync(workerRoot, { recursive: true });
+    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: child.pid,
+      address,
+      namespace: 'opl-worker-stale-source-test',
+      task_queue: 'opl-worker-stale-source',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: 'git:old-worker-source',
+    }, null, 2)}\n`);
+
+    process.env.OPL_TEMPORAL_ADDRESS = address;
+    process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-stale-source-test';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'opl-worker-stale-source';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:new-worker-source';
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+
+    const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(requery.lifecycle_status, 'worker_source_stale');
+    assert.equal(requery.worker_ready, false);
+    assert.equal(requery.managed_worker_pid, null);
+    assert.equal(requery.stale_worker_pid, child.pid);
+    assert.equal(requery.managed_worker_source_version, 'git:old-worker-source');
+    assert.equal(requery.expected_worker_source_version, 'git:new-worker-source');
+    assert.equal(requery.managed_worker_source_current, false);
+    assert.deepEqual(requery.blockers, ['temporal_worker_source_stale']);
+    assert.equal(requery.repair_action.action_id, 'restart_temporal_worker');
+
+    const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
+    assert.equal(stop.stop_status, 'stopped');
+    assert.equal(stop.stopped_pid, child.pid);
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    try {
+      process.kill(child.pid!, 'SIGTERM');
+    } catch {
+      // The lifecycle under test may already have removed the fixture process.
     }
     await new Promise<void>((resolve) => server.close(() => resolve()));
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -567,6 +665,7 @@ test('family-runtime residency proof --production reads managed local Temporal s
       task_queue: 'opl-stage-attempts',
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:production-proof-current',
     }, null, 2)}\n`);
 
     const output = runCli(
@@ -574,6 +673,7 @@ test('family-runtime residency proof --production reads managed local Temporal s
       familyRuntimeEnv(stateRoot, {
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
+        OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:production-proof-current',
       }),
     );
     const production = output.family_runtime_residency_proof.production_residency_proof;
@@ -632,6 +732,7 @@ test('family-runtime temporal provider status uses managed service and worker li
       task_queue: 'opl-stage-attempts',
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:managed-status-current',
     }, null, 2)}\n`);
 
     const output = runCli(
@@ -641,6 +742,7 @@ test('family-runtime temporal provider status uses managed service and worker li
         TEMPORAL_ADDRESS: '',
         OPL_TEMPORAL_WORKER_STATUS: '',
         OPL_TEMPORAL_WORKER_ENABLED: '',
+        OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:managed-status-current',
       }),
     );
     const provider = output.family_runtime.provider_runtime.providers.temporal;

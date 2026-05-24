@@ -192,6 +192,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
   };
 
   try {
@@ -213,6 +214,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:mas-default-start-current',
     }, null, 2)}\n`);
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
@@ -235,6 +237,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-start-current';
 
     const dispatchRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
     const enqueue = await runFamilyRuntime([
@@ -348,6 +351,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
   };
 
   try {
@@ -369,6 +373,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:mas-default-completed-current',
     }, null, 2)}\n`);
     const closeoutRefs = [
       'artifacts/supervision/reconcile/latest.json',
@@ -403,6 +408,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:mas-default-completed-current';
 
     const dispatchRef = 'studies/002-dm/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
     const enqueue = await runFamilyRuntime([
@@ -567,6 +573,7 @@ test('family-runtime attempt inspect projects current provider readiness separat
       task_queue: 'opl-stage-attempts',
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:attempt-current-provider',
     }, null, 2)}\n`);
 
     const env = familyRuntimeEnv(stateRoot, {
@@ -574,6 +581,7 @@ test('family-runtime attempt inspect projects current provider readiness separat
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
       OPL_TEMPORAL_WORKER_ENABLED: '',
+      OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:attempt-current-provider',
     });
     const created = runCli([
       'family-runtime',
@@ -671,6 +679,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
     OPL_CODEX_BIN: process.env.OPL_CODEX_BIN,
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
   };
 
   try {
@@ -692,6 +701,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:query-managed-current',
     }, null, 2)}\n`);
 
     const worker = await Worker.create({
@@ -708,6 +718,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:query-managed-current';
     process.env.OPL_CODEX_BIN = codexPath;
 
     const created = await runFamilyRuntime([
@@ -789,6 +800,7 @@ test('family-runtime temporal terminal failure is projected into local attempt q
     OPL_TEMPORAL_TASK_QUEUE: process.env.OPL_TEMPORAL_TASK_QUEUE,
     OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
     OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION,
   };
 
   try {
@@ -810,6 +822,7 @@ test('family-runtime temporal terminal failure is projected into local attempt q
       task_queue: taskQueue,
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:query-failed-current',
     }, null, 2)}\n`);
 
     const worker = await Worker.create({
@@ -831,6 +844,7 @@ test('family-runtime temporal terminal failure is projected into local attempt q
     process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
     process.env.OPL_TEMPORAL_WORKER_STATUS = '';
     process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:query-failed-current';
 
     const created = await runFamilyRuntime([
       'attempt',

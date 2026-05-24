@@ -8,6 +8,7 @@ import {
 export type TemporalWorkerReadinessStatus =
   | 'not_configured'
   | 'server_unreachable'
+  | 'worker_source_stale'
   | 'worker_not_ready'
   | 'ready';
 
@@ -23,6 +24,10 @@ type TemporalWorkerReadinessInput = {
   unreachableReason?: string | null;
   managedWorkerPid?: number | null;
   managedWorkerStatePath?: string | null;
+  managedWorkerSourceVersion?: string | null;
+  expectedWorkerSourceVersion?: string | null;
+  managedWorkerSourceCurrent?: boolean | null;
+  staleWorkerPid?: number | null;
   temporalServiceLifecycle?: Record<string, unknown> | null;
 };
 
@@ -57,12 +62,15 @@ function buildTemporalWorkerRepairAction(input: {
   const actionByStatus: Record<TemporalWorkerReadinessStatus, string> = {
     not_configured: 'configure_temporal_service',
     server_unreachable: 'repair_temporal_service',
+    worker_source_stale: 'restart_temporal_worker',
     worker_not_ready: 'start_temporal_worker',
     ready: 'none',
   };
   const nextCommandByStatus: Record<TemporalWorkerReadinessStatus, string | null> = {
     not_configured: repairCommands.start_local_temporal_service,
     server_unreachable: repairCommands.start_local_temporal_service,
+    worker_source_stale:
+      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
     worker_not_ready: repairCommands.start_managed_worker,
     ready: repairCommands.rerun_production_proof,
   };
@@ -88,9 +96,11 @@ function resolveTemporalWorkerReady(input: {
   serverReachable: boolean | null;
   workerEnabled: string | null;
   workerStatus: string | null;
+  workerSourceStale?: boolean | null;
 }) {
   return Boolean(input.address)
     && input.serverReachable !== false
+    && input.workerSourceStale !== true
     && (envFlagReady(input.workerEnabled) || envFlagReady(input.workerStatus));
 }
 
@@ -98,6 +108,7 @@ function buildTemporalWorkerBlockers(input: {
   address: string | null;
   serverReachable: boolean | null;
   workerReady: boolean;
+  workerSourceStale?: boolean | null;
 }) {
   const blockers: string[] = [];
   if (!input.address) {
@@ -105,6 +116,10 @@ function buildTemporalWorkerBlockers(input: {
   }
   if (input.address && input.serverReachable === false) {
     blockers.push('temporal_server_unreachable');
+  }
+  if (input.address && input.serverReachable !== false && input.workerSourceStale === true) {
+    blockers.push('temporal_worker_source_stale');
+    return blockers;
   }
   if (input.address && input.serverReachable !== false && !input.workerReady) {
     blockers.push('temporal_worker_not_ready');
@@ -122,16 +137,19 @@ function resolveTemporalWorkerReadinessInput(
   const workerEnabled = input.workerEnabled ?? process.env.OPL_TEMPORAL_WORKER_ENABLED ?? null;
   const workerStatus = input.workerStatus ?? process.env.OPL_TEMPORAL_WORKER_STATUS ?? null;
   const serverReachable = input.serverReachable ?? null;
+  const workerSourceStale = input.managedWorkerSourceCurrent === false;
   const workerReady = resolveTemporalWorkerReady({
     address,
     serverReachable,
     workerEnabled,
     workerStatus,
+    workerSourceStale,
   });
   const readinessStatus = resolveTemporalWorkerReadinessStatus({
     address,
     serverReachable,
     workerReady,
+    workerSourceStale,
   });
 
   return {
@@ -149,12 +167,16 @@ export function resolveTemporalWorkerReadinessStatus(input: {
   address?: string | null;
   serverReachable?: boolean | null;
   workerReady?: boolean | null;
+  workerSourceStale?: boolean | null;
 }): TemporalWorkerReadinessStatus {
   if (!input.address) {
     return 'not_configured';
   }
   if (input.serverReachable === false) {
     return 'server_unreachable';
+  }
+  if (input.workerSourceStale === true) {
+    return 'worker_source_stale';
   }
   if (!input.workerReady) {
     return 'worker_not_ready';
@@ -186,7 +208,10 @@ export function buildTemporalWorkerLifecycleContract() {
 
 export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput = {}) {
   const readiness = resolveTemporalWorkerReadinessInput(input);
-  const blockers = buildTemporalWorkerBlockers(readiness);
+  const blockers = buildTemporalWorkerBlockers({
+    ...readiness,
+    workerSourceStale: input.managedWorkerSourceCurrent === false,
+  });
   const repairAction = buildTemporalWorkerRepairAction({
     readinessStatus: readiness.readinessStatus,
     address: readiness.address,
@@ -208,6 +233,10 @@ export function buildTemporalWorkerReadiness(input: TemporalWorkerReadinessInput
     unreachable_reason: input.unreachableReason ?? null,
     managed_worker_pid: input.managedWorkerPid ?? null,
     managed_worker_state_path: input.managedWorkerStatePath ?? null,
+    managed_worker_source_version: input.managedWorkerSourceVersion ?? null,
+    expected_worker_source_version: input.expectedWorkerSourceVersion ?? null,
+    managed_worker_source_current: input.managedWorkerSourceCurrent ?? null,
+    stale_worker_pid: input.staleWorkerPid ?? null,
     temporal_service_lifecycle: input.temporalServiceLifecycle ?? null,
     blockers,
     repair_action: repairAction,

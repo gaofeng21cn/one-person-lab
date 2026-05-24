@@ -148,6 +148,7 @@ test('runtime snapshot workbench shows current managed Temporal readiness withou
       task_queue: 'opl-stage-attempts',
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:runtime-tray-provider-proof-current',
     }, null, 2)}\n`);
     const env = {
       OPL_STATE_DIR: stateRoot,
@@ -157,6 +158,7 @@ test('runtime snapshot workbench shows current managed Temporal readiness withou
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
       OPL_TEMPORAL_WORKER_ENABLED: '',
+      OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:runtime-tray-provider-proof-current',
     };
     const created = runCli([
       'family-runtime',

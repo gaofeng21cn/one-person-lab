@@ -62,6 +62,7 @@ type TemporalWorkerState = {
   task_queue: string;
   started_at: string;
   status: 'starting' | 'ready';
+  source_version?: string;
 };
 
 type TemporalSchedulerInfoProjection = {
@@ -76,6 +77,62 @@ function workflowModulePath() {
 
 function temporalWorkerStatePath(paths: TemporalWorkerPaths) {
   return path.join(paths.root, 'temporal-worker.json');
+}
+
+function repoRootFromModulePath() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+}
+
+function gitDirForRepo(repoRoot: string) {
+  const gitPath = path.join(repoRoot, '.git');
+  try {
+    const stat = fs.statSync(gitPath);
+    if (stat.isDirectory()) {
+      return gitPath;
+    }
+    const content = fs.readFileSync(gitPath, 'utf8').trim();
+    const match = /^gitdir:\s*(.+)$/i.exec(content);
+    if (!match) {
+      return null;
+    }
+    return path.resolve(repoRoot, match[1]);
+  } catch {
+    return null;
+  }
+}
+
+function gitHeadVersion(repoRoot: string) {
+  const gitDir = gitDirForRepo(repoRoot);
+  if (!gitDir) {
+    return null;
+  }
+  try {
+    const head = fs.readFileSync(path.join(gitDir, 'HEAD'), 'utf8').trim();
+    if (head.startsWith('ref:')) {
+      const ref = head.slice('ref:'.length).trim();
+      const refValue = fs.readFileSync(path.join(gitDir, ref), 'utf8').trim();
+      return `git:${repoRoot}:${ref}:${refValue}`;
+    }
+    return `git:${repoRoot}:detached:${head}`;
+  } catch {
+    return null;
+  }
+}
+
+function currentWorkerSourceVersion() {
+  if (process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION?.trim()) {
+    return process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION.trim();
+  }
+  const repoVersion = gitHeadVersion(repoRootFromModulePath());
+  if (repoVersion) {
+    return repoVersion;
+  }
+  try {
+    const stat = fs.statSync(fileURLToPath(import.meta.url));
+    return `worker-module:${fileURLToPath(import.meta.url)}:${stat.mtimeMs}:${stat.size}`;
+  } catch {
+    return `worker-module:${fileURLToPath(import.meta.url)}`;
+  }
 }
 
 function readTemporalWorkerState(paths: TemporalWorkerPaths) {
@@ -129,7 +186,13 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     state?.address === address
     && state.namespace === namespace
     && state.task_queue === taskQueue;
-  const pidAlive = stateMatchesConfig && state ? processIsAlive(state.pid) : false;
+  const expectedWorkerSourceVersion = currentWorkerSourceVersion();
+  const stateSourceCurrent = stateMatchesConfig && state
+    ? state.source_version === expectedWorkerSourceVersion
+    : false;
+  const stateProcessAlive = state ? processIsAlive(state.pid) : false;
+  const statePidAlive = stateMatchesConfig && stateProcessAlive;
+  const pidAlive = statePidAlive && stateSourceCurrent;
   const envWorkerReady = process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const serverReachable = address ? await probeTemporalServer(address) : false;
@@ -144,9 +207,13 @@ export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths)
     serverReachable,
     managedWorkerPid: pidAlive && state ? state.pid : null,
     managedWorkerStatePath: temporalWorkerStatePath(paths),
+    managedWorkerSourceVersion: state?.source_version ?? null,
+    expectedWorkerSourceVersion,
+    managedWorkerSourceCurrent: stateMatchesConfig && state ? stateSourceCurrent : null,
+    staleWorkerPid: statePidAlive && !stateSourceCurrent && state ? state.pid : null,
     temporalServiceLifecycle: service,
   });
-  if (state && !pidAlive && state.status === 'ready') {
+  if (state && !stateProcessAlive && state.status === 'ready') {
     removeTemporalWorkerState(paths);
   }
   return {
@@ -966,6 +1033,7 @@ export async function startTemporalWorkerLifecycle(paths: TemporalWorkerPaths, i
     task_queue: status.task_queue,
     started_at: new Date().toISOString(),
     status: 'ready',
+    source_version: currentWorkerSourceVersion(),
   });
   return {
     surface_kind: 'temporal_worker_lifecycle_start',

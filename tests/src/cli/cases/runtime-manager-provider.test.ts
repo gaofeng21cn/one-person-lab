@@ -290,6 +290,7 @@ esac
       task_queue: 'opl-stage-attempts',
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: 'git:runtime-manager-provider-current',
     }, null, 2)}\n`);
 
     const env = {
@@ -300,6 +301,7 @@ esac
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
       OPL_TEMPORAL_WORKER_ENABLED: '',
+      OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:runtime-manager-provider-current',
     };
     const runtimeStatus = runCli(['status', 'runtime'], env).runtime_status;
     const familyRuntime = runCli(['family-runtime', 'status', '--provider', 'temporal'], env).family_runtime;
