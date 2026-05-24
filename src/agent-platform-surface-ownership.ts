@@ -32,9 +32,13 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
     domain_allowed_role: 'domain_handler_target_or_refs_only_adapter',
   },
   {
-    subdomain_id: 'generated_sidecar_dispatch_shell',
-    opl_primitive: 'opl_generated_sidecar_descriptor',
-    surface_aliases: ['sidecar', 'sidecar_export_dispatch', 'typed_queue_dispatch'],
+    subdomain_id: 'generated_domain_action_adapter_dispatch_shell',
+    opl_primitive: 'opl_generated_domain_action_adapter_descriptor',
+    surface_aliases: [
+      'domain_action_adapter',
+      'domain_action_adapter_export_dispatch',
+      'typed_queue_dispatch',
+    ],
     domain_allowed_role: 'domain_handler_target_or_refs_only_adapter',
   },
   {
@@ -100,7 +104,7 @@ const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
   product_entry: ['product_entry', 'product_entry_manifest'],
   product_status: ['product_status', 'status_read_model'],
   product_session: ['product_session', 'product_entry_manifest', 'status_read_model'],
-  sidecar: ['sidecar', 'sidecar_export_dispatch'],
+  domain_action_adapter: ['domain_action_adapter', 'domain_action_adapter_export_dispatch'],
   workbench: ['workbench', 'workbench_drilldown'],
 };
 

@@ -19,7 +19,7 @@ export const GENERATED_INTERFACE_SOURCE_REFS = [
   'functional_privatization_audit',
   'generated_surface_handoff',
   'product_entry_manifest_descriptor',
-  'sidecar_descriptor',
+  'domain_action_adapter_descriptor',
 ] as const;
 
 export const GENERATED_SURFACES = [
@@ -40,7 +40,7 @@ export const GENERATED_SURFACES = [
     required_descriptor_surfaces: ['entry', 'family_action_catalog', 'family_stage_control_plane'],
   },
   {
-    surface_id: 'sidecar_export_dispatch',
+    surface_id: 'domain_action_adapter_export_dispatch',
     required_descriptor_surfaces: ['family_action_catalog', 'functional_privatization_audit'],
   },
   {
@@ -95,10 +95,10 @@ const GENERATED_WRAPPER_DESCRIPTOR_SCOPE = [
     descriptor_kind: 'opl_generated_product_session_descriptor',
   },
   {
-    surface_id: 'sidecar',
-    block_key: 'sidecar',
-    target_surface_id: 'sidecar',
-    descriptor_kind: 'opl_generated_sidecar_descriptor',
+    surface_id: 'domain_action_adapter',
+    block_key: 'domain_action_adapter',
+    target_surface_id: 'domain_action_adapter',
+    descriptor_kind: 'opl_generated_domain_action_adapter_descriptor',
   },
   {
     surface_id: 'workbench',
@@ -223,7 +223,7 @@ function generatedSurfaceAliases(surfaceId: string) {
     mcp: ['mcp'],
     skill: ['skill'],
     product_entry_manifest: ['product_entry_manifest'],
-    sidecar_export_dispatch: ['sidecar_export_dispatch'],
+    domain_action_adapter_export_dispatch: ['domain_action_adapter_export_dispatch'],
     status_read_model: ['status_read_model'],
     workbench_drilldown: ['workbench_drilldown'],
     functional_harness_cases: ['functional_harness_cases', 'test_lane_harness', 'harness'],
@@ -588,25 +588,25 @@ function buildProductSessionDescriptorFromDescriptor(
   };
 }
 
-function buildSidecarDescriptorBlock(catalog: FamilyActionCatalog | null, descriptor: JsonRecord) {
+function buildDomainActionAdapterDescriptorBlock(catalog: FamilyActionCatalog | null, descriptor: JsonRecord) {
   const descriptors = buildSidecarDescriptors(catalog);
-  const handoff = handoffSurfaceFor(descriptor, 'sidecar_export_dispatch');
+  const handoff = handoffSurfaceFor(descriptor, 'domain_action_adapter_export_dispatch');
   return {
-    surface_kind: 'opl_generated_sidecar_descriptor',
+    surface_kind: 'opl_generated_domain_action_adapter_descriptor',
     owner: 'one-person-lab',
     status:
       descriptors.length > 0 || handoff
         ? 'ready'
         : catalog
-          ? 'ready_no_sidecar_actions_declared'
+          ? 'ready_no_domain_action_adapter_actions_declared'
           : 'blocked_missing_family_action_catalog',
     descriptor_source_surfaces: ['family_action_catalog', 'generated_surface_handoff'],
     descriptors,
     handoff_surface: handoff,
     authority_boundary: {
-      sidecar_descriptor_can_write_domain_truth: false,
-      sidecar_descriptor_can_mutate_artifacts: false,
-      sidecar_dispatch_returns_domain_owner_receipt_or_typed_blocker: true,
+      domain_action_adapter_descriptor_can_write_domain_truth: false,
+      domain_action_adapter_descriptor_can_mutate_artifacts: false,
+      domain_action_adapter_dispatch_returns_domain_owner_receipt_or_typed_blocker: true,
     },
   };
 }
@@ -823,13 +823,13 @@ export function buildGeneratedInterfaceBundle(
     },
   };
   const productSession = buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane);
-  const sidecar = buildSidecarDescriptorBlock(catalog, descriptor);
+  const domainActionAdapter = buildDomainActionAdapterDescriptorBlock(catalog, descriptor);
   const workbench = buildWorkbenchDescriptorBlock(stageControlPlane, descriptor);
   const wrapperBlocks = {
     ...blocks,
     product_status: productStatus,
     product_session: productSession,
-    sidecar,
+    domain_action_adapter: domainActionAdapter,
     workbench,
   };
 
@@ -856,7 +856,7 @@ export function buildGeneratedInterfaceBundle(
     generated_wrapper_bundle: buildGeneratedWrapperBundle(wrapperBlocks, generatedBlocksReady, activeCallerTargetProof),
     product_status: productStatus,
     product_session: productSession,
-    sidecar,
+    domain_action_adapter: domainActionAdapter,
     workbench,
     active_caller_target_proof: activeCallerTargetProof,
     stage_routes: include('product-entry') || selectedFormat === 'all'
@@ -906,7 +906,7 @@ export function selectGeneratedInterfaceBundleFormat(
     [selectedKey]: selectedBlock,
     product_status: bundle.product_status,
     product_session: bundle.product_session,
-    sidecar: bundle.sidecar,
+    domain_action_adapter: bundle.domain_action_adapter,
     workbench: bundle.workbench,
     generated_wrapper_bundle: bundle.generated_wrapper_bundle,
     active_caller_cutover_proof: bundle.active_caller_cutover_proof,

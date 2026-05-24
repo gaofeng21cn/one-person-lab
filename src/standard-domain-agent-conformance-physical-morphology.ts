@@ -43,7 +43,7 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
   'product_entry',
   'status',
   'user_loop',
-  'sidecar',
+  'domain_action_adapter',
   'runtime_registration',
   'control_plane',
   'lifecycle',
@@ -55,9 +55,9 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
 
 const REQUIRED_RCA_PHYSICAL_SURFACES = [
   'mcp_product_entry_domain_entry',
-  'product_entry_session_snapshot_refs_adapter',
+  'product_entry_continuity_refs_adapter',
   'runtime_watch_projection',
-  'product_sidecar_guarded_actions',
+  'domain_action_adapter_guarded_actions',
   'operator_evidence_stability_projection',
   'visual_authority_functions',
 ];
@@ -301,7 +301,7 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
     status: blockers.length === 0 ? 'declared' : 'blocked',
     policy_sources: ['contracts/physical_source_morphology_policy.json'],
     required_parity_gates: [
-      'mcp_product_entry_session_snapshot_refs_adapter_runtime_watch_sidecar_operator_evidence_classified',
+      'mcp_product_entry_continuity_refs_adapter_runtime_watch_domain_action_operator_evidence_classified',
       'visual_authority_functions_not_generic_runtime',
       'legacy_managed_runtime_gateway_names_tombstoned',
     ],
@@ -311,7 +311,7 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
       'docs/history/',
       'contracts/functional_privatization_audit.json',
       'contracts/runtime-program/',
-      'packages/redcube-gateway/src/actions/product-sidecar-guarded-actions.ts',
+      'packages/redcube-domain-entry/src/actions/guarded-domain-actions.ts',
       'tests/',
       'contracts/physical_source_morphology_policy.json',
     ],

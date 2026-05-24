@@ -284,7 +284,7 @@ function buildGeneratedArtifactSourceInputs(descriptor: JsonRecord) {
       generated_surface_handoff: descriptor.generated_surface_handoff_contract,
       pack_compiler_input: descriptor.pack_compiler_input_contract,
       product_entry_manifest_descriptor: descriptor.product_entry_manifest_descriptor,
-      sidecar_descriptor: descriptor.sidecar_descriptor,
+      domain_action_adapter_descriptor: descriptor.domain_action_adapter_descriptor,
       session_continuity: descriptor.session_continuity_contract,
       source_contract_consumption: descriptor.source_contract_consumption,
     },
@@ -337,7 +337,7 @@ function buildGeneratedArtifactDriftManifest(
       'family_agent_descriptor.functional_privatization_audit',
       'family_agent_descriptor.generated_surface_handoff_contract',
       'family_agent_descriptor.product_entry_manifest_descriptor',
-      'family_agent_descriptor.sidecar_descriptor',
+      'family_agent_descriptor.domain_action_adapter_descriptor',
     ],
     observed_manifest_refs: observed.refs,
     observed_domain_pack_source_inputs_fingerprint: observedSourceFingerprint,
@@ -518,7 +518,7 @@ function buildRepoContractDescriptor(repoDirInput: string) {
             status: actionCatalog ? 'resolved_from_family_action_catalog' : 'missing',
           },
           {
-            contract_id: 'sidecar_descriptor',
+            contract_id: 'domain_action_adapter_descriptor',
             path: 'contracts/generated_surface_handoff.json',
             status: generatedSurfaceHandoff ? 'resolved_from_generated_surface_handoff' : 'missing',
           },
@@ -554,7 +554,7 @@ function buildRepoContractDescriptor(repoDirInput: string) {
         ],
         product_entry_manifest_contract_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
       },
-      sidecar_descriptor: {
+      domain_action_adapter_descriptor: {
         status: generatedSurfaceHandoff ? 'resolved_from_generated_surface_handoff' : 'missing_generated_surface_handoff',
         source_refs: [
           'contracts/generated_surface_handoff.json',

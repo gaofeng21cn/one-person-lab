@@ -38,7 +38,7 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(
     platformSurfaces.reports[0].generic_subdomains
       .some((surface: { subdomain_id: string; owner: string }) => (
-        surface.subdomain_id === 'generated_sidecar_dispatch_shell'
+        surface.subdomain_id === 'generated_domain_action_adapter_dispatch_shell'
         && surface.owner === 'one-person-lab'
       )),
     true,
@@ -194,10 +194,10 @@ test('agents platform-surfaces projects RCA guarded action catalog as action met
   const guardedActionCatalogPath = path.join(
     repoDir,
     'packages',
-    'redcube-gateway',
+    'redcube-domain-entry',
     'src',
     'actions',
-    'product-sidecar-parts',
+    'domain-action-adapter-parts',
     'guarded-action-catalog.ts',
   );
   fs.mkdirSync(path.dirname(guardedActionCatalogPath), { recursive: true });
@@ -230,7 +230,7 @@ test('agents platform-surfaces projects RCA guarded action catalog as action met
   assert.equal(actionMetadataSurface.owner, 'one-person-lab');
   assert.equal(
     actionMetadataSurface.observed_source_refs.includes(
-      'packages/redcube-gateway/src/actions/product-sidecar-parts/guarded-action-catalog.ts',
+      'packages/redcube-domain-entry/src/actions/domain-action-adapter-parts/guarded-action-catalog.ts',
     ),
     true,
   );
@@ -770,7 +770,7 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
     'product_entry',
     'status',
     'user_loop',
-    'sidecar',
+    'domain_action_adapter',
     'runtime_registration',
     'control_plane',
     'lifecycle',

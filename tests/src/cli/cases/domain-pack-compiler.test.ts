@@ -51,7 +51,7 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
     'functional_privatization_audit',
     'generated_surface_handoff',
     'product_entry_manifest_descriptor',
-    'sidecar_descriptor',
+    'domain_action_adapter_descriptor',
   ]);
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.mcp.descriptors[0].name, 'study_packet');
@@ -84,7 +84,7 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(
     mas.domain_pack_compiler.generated_surface_handoff.generated_surfaces.some(
       (surface: { surface_id: string; status: string }) =>
-        surface.surface_id === 'sidecar_export_dispatch' && surface.status === 'ready_from_descriptor',
+        surface.surface_id === 'domain_action_adapter_export_dispatch' && surface.status === 'ready_from_descriptor',
     ),
     true,
   );
@@ -324,7 +324,7 @@ test('generated interfaces domain mode consumes generated handoff from active re
         { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'sidecar_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'domain_action_adapter_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
@@ -750,13 +750,13 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           ],
         },
         {
-          module_id: 'sample_brief_sidecar_adapter',
+          module_id: 'sample_brief_domain_action_adapter',
           classification: 'declarative_pack_generated_surface',
           owner: 'SampleBriefAgent',
           code_paths: ['runtime/sidecar.ts'],
-          active_callers: ['OPL generated sidecar dispatch'],
+          active_callers: ['OPL generated domain action adapter dispatch'],
           active_caller_status: 'opl_generated_sidecar_surface_targets_domain_handler',
-          migration_action: 'declare_sidecar_descriptor_for_opl_generated_dispatch_surface',
+          migration_action: 'declare_domain_action_adapter_descriptor_for_opl_generated_dispatch_surface',
           retained_domain_authority: ['owner_receipt'],
         },
         {
@@ -802,7 +802,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
         { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'sidecar_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
+        { surface_id: 'domain_action_adapter_export_dispatch', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
@@ -839,10 +839,10 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           target_role: 'opl_generated_status_read_model_surface',
         },
         {
-          surface_id: 'sidecar_export_dispatch',
+          surface_id: 'domain_action_adapter_export_dispatch',
           current_paths: ['runtime/sidecar.ts'],
-          current_role: 'sidecar_adapter',
-          target_role: 'opl_generated_sidecar_handoff_surface',
+          current_role: 'domain_action_adapter',
+          target_role: 'opl_generated_domain_action_adapter_handoff_surface',
         },
         {
           surface_id: 'workbench_drilldown',
@@ -908,13 +908,13 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   );
   assert.equal(
     bundle.source_contract_consumption.consumed_contracts.find(
-      (contract: { contract_id: string }) => contract.contract_id === 'sidecar_descriptor',
+      (contract: { contract_id: string }) => contract.contract_id === 'domain_action_adapter_descriptor',
     ).status,
     'resolved_from_generated_surface_handoff',
   );
   assert.equal(bundle.product_status.status, 'ready_from_family_action_catalog');
   assert.equal(bundle.product_session.status, 'ready_from_session_continuity_or_stage_control_plane');
-  assert.equal(bundle.sidecar.status, 'ready');
+  assert.equal(bundle.domain_action_adapter.status, 'ready');
   assert.equal(bundle.workbench.status, 'ready_from_stage_control_plane');
   assert.equal(bundle.generated_wrapper_bundle.surface_kind, 'opl_generated_hosted_wrapper_bundle_descriptor');
   assert.equal(bundle.generated_wrapper_bundle.owner, 'one-person-lab');
@@ -930,7 +930,7 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     'product_entry',
     'product_status',
     'product_session',
-    'sidecar',
+    'domain_action_adapter',
     'workbench',
   ]);
   assert.equal(
@@ -959,11 +959,11 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   );
   assert.equal(statusTarget.target_kind, 'opl_generated_surface');
   assert.equal(statusTarget.active_caller_module_id, 'sample_brief_workbench_projection');
-  const sidecarTarget = bundle.active_caller_target_proof.surface_targets.find(
-    (target: { surface_id: string }) => target.surface_id === 'sidecar_export_dispatch',
+  const domainActionAdapterTarget = bundle.active_caller_target_proof.surface_targets.find(
+    (target: { surface_id: string }) => target.surface_id === 'domain_action_adapter_export_dispatch',
   );
-  assert.equal(sidecarTarget.target_kind, 'opl_generated_surface');
-  assert.equal(sidecarTarget.active_caller_module_id, 'sample_brief_sidecar_adapter');
+  assert.equal(domainActionAdapterTarget.target_kind, 'opl_generated_surface');
+  assert.equal(domainActionAdapterTarget.active_caller_module_id, 'sample_brief_domain_action_adapter');
   const workbenchTarget = bundle.active_caller_target_proof.surface_targets.find(
     (target: { surface_id: string }) => target.surface_id === 'workbench_drilldown',
   );
