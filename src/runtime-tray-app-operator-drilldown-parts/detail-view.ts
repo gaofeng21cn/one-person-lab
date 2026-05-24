@@ -427,6 +427,10 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     domainDispatchAttentionCount,
     appReleaseUserPathAttentionCount,
     omaProductionConsumptionAttentionCount,
+    operatorPayloadRequiredAttentionCount:
+      numberValue(summary.evidence_envelope_open_count)
+      + appReleaseUserPathAttentionCount
+      + omaProductionConsumptionAttentionCount,
   });
   const routeSupportTaskKindCount =
     numberValue(summary.runtime_manager_mas_route_support_task_kind_count);
@@ -451,8 +455,14 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     evidence_envelope_typed_blocker_ref_count:
       numberValue(summary.evidence_envelope_typed_blocker_ref_count),
     operator_actionable_attention_count: attentionCounts.operatorActionableAttentionCount,
+    operator_payload_required_attention_count:
+      attentionCounts.operatorPayloadRequiredAttentionCount,
+    operator_payload_free_attention_count:
+      attentionCounts.operatorPayloadFreeAttentionCount,
     domain_blocked_attention_count: attentionCounts.domainBlockedAttentionCount,
     attention_count_semantics: attentionCounts.semantics,
+    attention_payload_requirement_semantics:
+      attentionCounts.payloadRequirementSemantics,
     owner_payload_group_attention_count: ownerPayloadGroups.total_count,
     owner_payload_group_attention_omitted_count: ownerPayloadGroups.omitted_count,
     owner_payload_group_attention_policy:

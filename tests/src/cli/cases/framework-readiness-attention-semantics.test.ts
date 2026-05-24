@@ -23,9 +23,28 @@ test('framework readiness separates operator-actionable and domain-blocked atten
         + summary.domain_blocked_attention_tail_count,
     );
     assert.equal(
+      attentionSummary.operator_payload_required_attention_tail_count,
+      summary.operator_payload_required_attention_tail_count,
+    );
+    assert.equal(
+      attentionSummary.operator_payload_free_attention_tail_count,
+      summary.operator_payload_free_attention_tail_count,
+    );
+    assert.equal(
+      summary.operator_actionable_attention_tail_count,
+      summary.operator_payload_required_attention_tail_count
+        + summary.operator_payload_free_attention_tail_count,
+    );
+    assert.equal(
       summary.operator_actionable_attention_tail_count,
       summary.open_tail_count
         + summary.evidence_envelope_open_count
+        + summary.stage_source_scope_missing_workorder_count
+        + summary.stage_runtime_event_missing_workorder_count,
+    );
+    assert.equal(
+      summary.operator_payload_required_attention_tail_count,
+      summary.evidence_envelope_open_count
         + summary.stage_source_scope_missing_workorder_count
         + summary.stage_runtime_event_missing_workorder_count,
     );
@@ -39,6 +58,14 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim',
     );
     assert.equal(summary.attention_tail_semantics, attentionSummary.attention_tail_semantics);
+    assert.equal(
+      attentionSummary.attention_payload_requirement_semantics,
+      'operator_actionable_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
+    );
+    assert.equal(
+      summary.attention_payload_requirement_semantics,
+      attentionSummary.attention_payload_requirement_semantics,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

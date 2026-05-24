@@ -45,6 +45,11 @@ export function assertAppReleaseUserPathAttentionCounts(summaryDrilldown: any) {
       + evidenceAfterContract.oma_production_consumption_followthrough_open_gate_count,
   );
   assert.equal(
+    evidenceAfterContract.operator_payload_required_attention_count,
+    evidenceAfterContract.operator_actionable_attention_count,
+  );
+  assert.equal(evidenceAfterContract.operator_payload_free_attention_count, 0);
+  assert.equal(
     evidenceAfterContract.domain_blocked_attention_count,
     summaryDrilldown.summary.evidence_envelope_blocked_count
       + evidenceAfterContract.domain_dispatch_attention_count,
@@ -52,6 +57,10 @@ export function assertAppReleaseUserPathAttentionCounts(summaryDrilldown: any) {
   assert.equal(
     evidenceAfterContract.attention_count_semantics,
     'operator_actionable_plus_domain_blocked_refs_only_no_ready_claim',
+  );
+  assert.equal(
+    evidenceAfterContract.attention_payload_requirement_semantics,
+    'operator_actionable_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
   );
 }
 

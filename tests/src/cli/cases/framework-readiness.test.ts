@@ -139,6 +139,21 @@ test('framework readiness summarizes default control-plane surfaces without auth
       + readiness.summary.evidence_envelope_attention_count
       + readiness.summary.domain_dispatch_attention_count,
   );
+  assert.equal(
+    readiness.attention_first_payload.summary.operator_payload_required_attention_tail_count,
+    readiness.summary.operator_payload_required_attention_tail_count,
+  );
+  assert.equal(
+    readiness.summary.operator_actionable_attention_tail_count,
+    readiness.summary.operator_payload_required_attention_tail_count
+      + readiness.summary.operator_payload_free_attention_tail_count,
+  );
+  assert.equal(
+    readiness.summary.operator_payload_required_attention_tail_count,
+    readiness.summary.evidence_envelope_open_count
+      + readiness.summary.stage_source_scope_missing_workorder_count
+      + readiness.summary.stage_runtime_event_missing_workorder_count,
+  );
   if (
     readiness.summary.framework_kernel_hard_blocker_count === 0
     && readiness.summary.open_tail_count === 0
