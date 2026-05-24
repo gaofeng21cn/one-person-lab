@@ -4,7 +4,7 @@ Owner: `One Person Lab`
 Purpose: `cross_repo_private_platform_inventory`
 State: `active_inventory`
 Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 OPL `contracts/`、CLI/API 行为、provider receipt、domain-owned contracts、sidecar/manifest projection、真实 workspace receipt 与各 domain agent owner receipt。
-更新时间：`2026-05-23`
+更新时间：`2026-05-24`
 
 ## 文档职责
 
@@ -29,6 +29,8 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 同期新增的 `family-runtime intake|tick --hydrate`、domain-dispatch / external-evidence receipt 和 App/operator drilldown 也只属于 refs-only queue、projection 与 evidence accounting 面。它们关闭的是 owner-route handoff、workorder accounting 或读模型入口，不把 MAS/MAG/RCA 的真实 verdict、artifact authority、memory body 或 production soak 迁到 OPL。
 
 当前没有发现应把 MAS/MAG/RCA 的 domain truth 或 quality verdict 迁入 OPL 的 surface。风险集中在仍有 active caller 的大型 repo-local handler / projection / sidecar / script 面容易被误读成私有平台。治理动作是先分类，再按 OPL replacement parity、active caller cutover、domain receipt parity、focused tests、no-forbidden-write proof 和 tombstone/provenance gate 迁移、删除或保留为最小 authority function。
+
+2026-05-24 fresh repo audit 结论：MAS/MAG/RCA/OPL Meta Agent 当前均未发现正向 repo-owned generic control plane。持续、全自动运行的默认 owner 继续是 OPL/Temporal、OPL attempt ledger、typed queue、retry/dead-letter、wakeup/resume 与 App/operator read model；domain repo 只保留 domain authority、refs-only adapter、typed blocker、owner receipt、native helper、developer work-order materializer 或 tombstone/provenance。剩余风险按 bridge / deletion gate / evidence tail 读取，不写成 domain repo 仍持有私有控制面，也不能写成 production ready。
 
 ## 分类词表
 
@@ -56,7 +58,7 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 
 | agent | 当前保留 authority | 主要 migration candidates | 当前处置 |
 | --- | --- | --- | --- |
-| `MAS` | Study truth、publication quality、source readiness、artifact/package authority、AI reviewer judgment、owner receipt、typed blocker。 | CLI/MCP/product wrapper、runtime watch shell、outer-loop generic runner pieces、workspace/source intake shell、status/read-model assembly、runtime transport、lifecycle store、progress portal/workbench、sidecar adapter。 | 继续按 MAS ideal/gap plan 做 physical thinning。Active-path generic residue 必须在 no-active-caller、OPL parity 和 MAS receipt parity 后 delete/archive/tombstone。 |
+| `MAS` | Study truth、publication quality、source readiness、artifact/package authority、AI reviewer judgment、owner receipt、typed blocker。 | CLI/MCP/product wrapper、workspace/source intake shell、status/read-model assembly、progress portal/workbench、owner-route handoff、sidecar domain-ref adapter。旧 `runtime_transport/`、`mas_runtime_core*`、turn runner、worker lease 和 lifecycle refs SQLite writer 已 no-alias retired，只作为 tombstone/provenance 或 no-resurrection guard 读取。 | 不再按 MAS 私有 runtime control plane 读取；当前动作是守住 no-resurrection，并在 no-active-caller、OPL parity 和 MAS receipt parity 后 delete/archive/tombstone 仍有 caller 的 domain-ref projection shell。 |
 | `MAG` | Fundability / authoring quality / export verdict、grant strategy memory body / accept-reject、package authority、transition oracle、owner receipt、typed blocker。 | Product-entry/status/sidecar/grouped CLI shell、product user-loop route-command shell、runtime report locator shell、runtime registration、lifecycle/package/memory projection envelope、autonomy loop shell、source-layout/scaffold scan/read-model shell。 | Main 已有 autonomy controller split；后续只迁移 generic shell，不迁 grant verdict、package authority 或 route truth。 |
 | `RCA` | Source readiness、visual direction、review/export verdict、artifact authority、visual memory accept/reject、native helper implementation、owner receipt、typed blocker。 | Product-entry/session/status/sidecar/MCP wrapper、guarded action metadata wrapper、runtimeWatch/operator evidence/stability read model、workspace/run envelope、native-helper generic envelope、review/repair transport、artifact gallery/handoff shell。 | Legacy physical cleanup 已闭合；继续做 naming hygiene 与 production evidence tail，旧 `managed` 命名只留 history/tombstone。 |
 | `OPL Meta Agent` | Agent-building semantics、candidate package/work-order/proposal materialization refs、target-agent typed blocker refs。 | Script-level materializers、bootstrap contract pack writer、external suite work-order/blocker output assembly。 | 保持为 target-agent generic materializer；Agent Lab runner、registry、promotion gate、App/workbench 与 target-domain owner authority 均留在 OPL 或目标 repo。 |
@@ -65,7 +67,7 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 
 | group | examples | class | migration gate |
 | --- | --- | --- | --- |
-| MAS runtime / watch / outer loop | `study_outer_loop*`、`runtime_transport/*`、runtime watch / SLO projection | `opl_framework_migration_candidate` / `already_thin_adapter` | OPL provider/queue parity、real paper-line receipt parity、no-forbidden-write proof；MAS 只保 owner receipt / typed blocker bridge。 |
+| MAS runtime / watch / outer loop | retired `runtime_transport/*`、retired turn runner / worker lease / lifecycle refs SQLite writer、current owner-route / progress / workbench projection | retired surfaces: `history_tombstone_provenance_only` / no-resurrection guard；current projections: `already_thin_adapter` with deletion gate | 旧 runtime 控制面不复活；current projections 只保 MAS owner receipt / typed blocker / domain refs，并在 OPL provider/default-caller parity、real paper-line receipt parity、no-forbidden-write proof 和 no-active-caller 成立后删除或 tombstone。 |
 | MAS status / portal / workbench | `study_progress*`、`progress_portal_parts/*`、`product_entry_parts/manifest*` | `opl_framework_migration_candidate` | OPL App/status/workbench default caller parity；不读取 review body，不生成 publication/source/artifact verdict。 |
 | MAS workspace/source intake | `workspace_init*` | `opl_framework_migration_candidate` | OPL workspace/source/lifecycle primitive parity；MAS 保留 source readiness 与 workspace policy authority。 |
 | MAG product / user-loop / status shell | `product_entry_parts/*`、`loop_contracts*`、`consumer_thinning*` | `already_thin_adapter` with migration gate | OPL generated/default caller parity、owner receipt / typed blocker roundtrip、no-forbidden-write proof；grant route truth 和 quality/export authority 不迁。 |
