@@ -126,6 +126,150 @@ test('runtime App drilldown selects provider scheduler install before manual tri
   ]);
 });
 
+test('runtime App drilldown does not select closed provider SLO routes as next action', () => {
+  const route = (action: string, actionKind: string) => ({
+    action_id: `provider-scheduler:temporal:${action}`,
+    action_kind: actionKind,
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
+  });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    summary: {
+      provider_slo_cadence_window_status: 'window_cadence_satisfied',
+      provider_slo_capability_status: 'capability_slo_satisfied',
+      provider_slo_cadence_window_observed_receipt_count: 3,
+      provider_slo_cadence_window_missing_receipt_count: 0,
+      provider_slo_cadence_window_blocked_repair_receipt_count: 0,
+    },
+    operator_action_routing_refs: {
+      refs: [
+        route('trigger', 'provider_scheduler_trigger'),
+        route('tick', 'provider_scheduler_tick'),
+        route('status', 'provider_scheduler_status'),
+        route('install', 'provider_scheduler_install'),
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
+test('runtime App drilldown does not select legacy cleanup routes already closed by lifecycle receipt aliases', () => {
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          ref: 'opl agents legacy-cleanup apply --domain medautogrant --mode apply --source-ref opl://agents/med-autogrant/legacy-cleanup-plan',
+          action_id: 'legacy-cleanup:medautogrant:apply',
+          action_kind: 'legacy_cleanup_apply',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_policy: 'opl_safe_action_shell',
+          execution_surface: 'opl runtime action execute',
+          domain_id: 'medautogrant',
+          target_domain_id: 'med-autogrant',
+          source_ref: 'opl://agents/med-autogrant/legacy-cleanup-plan',
+          action_count: 3,
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    lifecycle_ledger_refs: {
+      refs: [
+        {
+          source_ref: 'opl://agents/medautogrant/legacy-cleanup-plan',
+          domain_id: 'med-autogrant',
+          receipt_ref: 'opl://family-runtime/lifecycle-apply/medautogrant/legacy-cleanup-1/ref',
+        },
+      ],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
+test('runtime App drilldown does not select no-op legacy cleanup routes as next action', () => {
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          ref: 'opl agents legacy-cleanup apply --domain redcube --mode apply --source-ref opl://agents/redcube_ai/legacy-cleanup-plan',
+          action_id: 'legacy-cleanup:redcube:apply',
+          action_kind: 'legacy_cleanup_apply',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_policy: 'opl_safe_action_shell',
+          execution_surface: 'opl runtime action execute',
+          domain_id: 'redcube',
+          target_domain_id: 'redcube_ai',
+          source_ref: 'opl://agents/redcube_ai/legacy-cleanup-plan',
+          action_count: 0,
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
+test('runtime App drilldown keeps diagnostic query routes out of selected next action', () => {
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        {
+          ref: 'opl family-runtime attempt query --attempt-id sat_demo',
+          action_id: 'action:sat_demo:attempt-query',
+          action_kind: 'stage_attempt_query',
+          owner: 'opl',
+          route_target_kind: 'opl_cli',
+          execution_policy: 'opl_safe_action_shell',
+          execution_surface: 'opl runtime action execute',
+          domain_id: 'medautoscience',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          stage_attempt_id: 'sat_demo',
+        },
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
 test('runtime App drilldown prefers safe-action bridge routes for duplicate action ids', () => {
   const domainDispatchRecordRoute = {
     action_id: 'domain_dispatch:medautoscience:attempt-1:record',

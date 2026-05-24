@@ -17,6 +17,10 @@ import {
 import { buildMemoryArtifactLifecycleEvidence } from './memory-artifact-lifecycle-evidence.ts';
 import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
 import { summarizeSelectedSafeAction } from './selected-safe-action.ts';
+import {
+  compareDefaultSelectedSafeActions,
+  defaultSelectedSafeActionCandidates,
+} from './selected-safe-action-candidates.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
 import { splitOperatorAttentionCounts } from '../framework-readiness-attention-counts.ts';
 
@@ -215,55 +219,6 @@ function safeActionRoutes(drilldown: JsonRecord) {
     }
   }
   return [...selected.values(), ...unkeyedRoutes];
-}
-
-function actionPriority(action: JsonRecord) {
-  const actionKind = stringValue(action.action_kind);
-  if (actionKind === 'app_release_user_path_evidence_receipt_verify') {
-    return 0;
-  }
-  if (actionKind === 'app_release_user_path_evidence_receipt_record'
-    || actionKind === 'oma_production_consumption_receipt_record') {
-    return 1;
-  }
-  if (actionKind === 'stage_production_attempt_request') {
-    return 2;
-  }
-  if (actionKind === 'stage_production_evidence_receipt_record') {
-    return 3;
-  }
-  if (actionKind === 'stage_production_evidence_receipt_verify') {
-    return 4;
-  }
-  if (actionKind === 'domain_dispatch_evidence_receipt_verify') {
-    return 5;
-  }
-  if (actionKind === 'domain_dispatch_evidence_receipt_record') {
-    return 6;
-  }
-  if (actionKind === 'external_evidence_receipt_record'
-    || actionKind === 'evidence_gate_receipt_record') {
-    return 7;
-  }
-  if (actionKind === 'external_evidence_receipt_verify'
-    || actionKind === 'evidence_gate_receipt_verify') {
-    return 8;
-  }
-  if (actionKind === 'provider_scheduler_install') {
-    return 9;
-  }
-  if (actionKind === 'provider_scheduler_status') {
-    return 10;
-  }
-  if (actionKind === 'provider_scheduler_tick'
-    || actionKind === 'provider_scheduler_trigger') {
-    return 11;
-  }
-  if (actionKind === 'legacy_cleanup_apply'
-    || actionKind === 'legacy_cleanup_verify') {
-    return 12;
-  }
-  return 13;
 }
 
 function findSafeActionForStage(actions: JsonRecord[], stage: JsonRecord) {
@@ -913,9 +868,10 @@ function evidenceNextSteps(drilldown: JsonRecord) {
 }
 
 function buildAttentionFirstPayload(drilldown: JsonRecord) {
-  const actions = [...safeActionRoutes(drilldown)].sort((left, right) => (
-    actionPriority(left) - actionPriority(right)
-  ));
+  const actions = defaultSelectedSafeActionCandidates(
+    safeActionRoutes(drilldown),
+    drilldown,
+  ).sort(compareDefaultSelectedSafeActions);
   const nextAction = actions[0] ?? null;
   return {
     surface_kind: 'opl_app_drilldown_attention_first_payload',
