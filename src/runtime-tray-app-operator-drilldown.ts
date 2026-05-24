@@ -656,6 +656,14 @@ function appExecutionBridge(
       request_scope: 'request_scope' in ref ? ref.request_scope : null,
       route_closure_policy: 'route_closure_policy' in ref ? ref.route_closure_policy : null,
       open_reason: 'open_reason' in ref ? ref.open_reason : null,
+      provider_repair_action_id:
+        'provider_repair_action_id' in ref ? ref.provider_repair_action_id : null,
+      provider_repair_command:
+        'provider_repair_command' in ref ? ref.provider_repair_command : null,
+      provider_required_next_action:
+        'provider_required_next_action' in ref ? ref.provider_required_next_action : null,
+      provider_slo_dispatch_status:
+        'provider_slo_dispatch_status' in ref ? ref.provider_slo_dispatch_status : null,
       payload_requirement: 'payload_requirement' in ref ? ref.payload_requirement : null,
       payload_owner: 'payload_owner' in ref ? ref.payload_owner : null,
       payload_template: 'payload_template' in ref ? ref.payload_template : null,

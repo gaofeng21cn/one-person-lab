@@ -43,6 +43,17 @@ function schedulerAction(role: string | null) {
   return null;
 }
 
+function providerSloAction(role: string | null) {
+  if (role === 'provider_slo:provider_slo_cadence_execution') {
+    return {
+      action: 'production-proof',
+      actionKind: 'provider_slo_cadence_execution',
+      args: ['residency', 'proof', '--provider', 'temporal', '--production'],
+    };
+  }
+  return null;
+}
+
 function refsOnlyAuthorityBoundary() {
   return {
     opl: 'provider_scheduler_safe_action_shell',
@@ -53,7 +64,43 @@ function refsOnlyAuthorityBoundary() {
 }
 
 export function buildProviderSchedulerActionRoutes(periodicExecutionRefs: JsonRecord) {
-  return uniqueRefs(recordList(periodicExecutionRefs.refs)
+  const routes = recordList(periodicExecutionRefs.refs).flatMap((ref) => {
+    const role = stringValue(ref.role);
+    const providerKind = stringValue(ref.provider_kind) ?? 'temporal';
+    if (providerKind !== 'temporal') {
+      return [];
+    }
+    const sloAction = providerSloAction(role);
+    if (sloAction) {
+      return [{
+        ref: `opl family-runtime ${sloAction.args.join(' ')}`,
+        opl_cli_args: sloAction.args,
+        role: 'operator_action_route',
+        action_id: `provider-slo:${providerKind}:${sloAction.action}`,
+        action_kind: sloAction.actionKind,
+        owner: 'opl',
+        route_target_kind: 'opl_cli',
+        execution_policy: 'opl_safe_action_shell',
+        execution_surface: 'opl runtime action execute',
+        stage_attempt_id: null,
+        domain_id: null,
+        stage_id: null,
+        provider_kind: providerKind,
+        schedule_id: stringValue(ref.schedule_id),
+        provider_slo_dispatch_status: stringValue(ref.dispatch_status),
+        provider_repair_action_id: stringValue(ref.repair_action_id),
+        provider_repair_command: stringValue(ref.repair_command),
+        provider_required_next_action: stringValue(ref.required_next_action),
+        expected_surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+        can_execute: false as const,
+        authority_boundary: refsOnlyAuthorityBoundary(),
+      }];
+    }
+    return [];
+  });
+  return uniqueRefs([
+    ...routes,
+    ...recordList(periodicExecutionRefs.refs)
     .map((ref) => {
       const role = stringValue(ref.role);
       const action = schedulerAction(role);
@@ -82,5 +129,6 @@ export function buildProviderSchedulerActionRoutes(periodicExecutionRefs: JsonRe
         authority_boundary: refsOnlyAuthorityBoundary(),
       };
     })
-    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)));
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+  ]);
 }

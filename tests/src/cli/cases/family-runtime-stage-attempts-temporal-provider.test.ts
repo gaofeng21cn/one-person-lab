@@ -5,9 +5,7 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
-import {
-  buildTemporalStageAttemptWorkflowInputForTest,
-} from '../../../../src/family-runtime-temporal-provider.ts';
+import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/family-runtime-temporal-provider.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,

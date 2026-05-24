@@ -10,9 +10,7 @@ import {
   parseExternalEvidenceApplyArgs,
   runExternalEvidenceApply,
 } from './external-evidence-ledger.ts';
-import {
-  runFamilyAgentLegacyCleanupApply,
-} from './family-domain-agent-skeleton.ts';
+import { runFamilyAgentLegacyCleanupApply } from './family-domain-agent-skeleton.ts';
 import {
   assertStageProductionEvidencePayloadReady,
   preflightStageProductionEvidencePayload,
@@ -30,6 +28,7 @@ import {
   recordOmaProductionConsumptionReceipts,
   type OmaProductionConsumptionReceiptInput,
 } from './oma-production-consumption-ledger.ts';
+import { providerSloArgs } from './runtime-operator-action-execution-parts/provider-slo-action.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -667,6 +666,14 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     };
   }
   if (
+    actionKind === 'provider_slo_cadence_execution'
+  ) {
+    return {
+      executionKind: 'opl_cli_provider_slo',
+      runtimeArgs: providerSloArgs(route, commandOrSurfaceRef),
+    };
+  }
+  if (
     actionKind === 'provider_scheduler_status'
     || actionKind === 'provider_scheduler_install'
     || actionKind === 'provider_scheduler_trigger'
@@ -702,6 +709,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'app_release_user_path_evidence_receipt_record',
       'app_release_user_path_evidence_receipt_verify',
       'oma_production_consumption_receipt_record',
+      'provider_slo_cadence_execution',
       'provider_scheduler_status',
       'provider_scheduler_install',
       'provider_scheduler_trigger',

@@ -35,10 +35,23 @@ function refsOnlyAuthorityBoundary() {
   return buildAppDrilldownRefsOnlyAuthorityBoundary();
 }
 
+type ProviderSloRef = {
+  ref: string;
+  role: string;
+  provider_kind: string | null;
+  execution_owner: string | null;
+  execution_policy: string | null;
+  dispatch_status: string | null;
+  required_next_action: string | null;
+  repair_command: string | null;
+  can_execute: false;
+};
+
 export function providerSloRefs(providerContinuousProof: JsonRecord) {
   const loop = record(providerContinuousProof.operator_slo_repair_loop);
   const cadenceAction = record(loop.operator_cadence_action);
   const cadenceCommand = stringValue(cadenceAction.command);
+  const providerRequiredNextAction = stringValue(loop.required_next_action);
   const cadenceRef = cadenceCommand
     ? {
         ref: cadenceCommand,
@@ -47,10 +60,12 @@ export function providerSloRefs(providerContinuousProof: JsonRecord) {
         execution_owner: stringValue(cadenceAction.execution_owner),
         execution_policy: stringValue(cadenceAction.execution_policy),
         dispatch_status: stringValue(cadenceAction.dispatch_status),
-        can_execute: false,
+        required_next_action: providerRequiredNextAction,
+        repair_command: cadenceCommand,
+        can_execute: false as const,
       }
     : null;
-  const commandRefs = cadenceRef ? [cadenceRef] : recordList(loop.operator_commands)
+  const commandRefs: ProviderSloRef[] = cadenceRef ? [cadenceRef] : recordList(loop.operator_commands)
     .map((command) => ({
       ref: stringValue(command.command),
       role: stringValue(command.command_role) ?? 'provider_slo_operator_command',
@@ -58,7 +73,9 @@ export function providerSloRefs(providerContinuousProof: JsonRecord) {
       execution_owner: stringValue(command.execution_owner),
       execution_policy: stringValue(command.execution_policy),
       dispatch_status: null,
-      can_execute: false,
+      required_next_action: providerRequiredNextAction,
+      repair_command: stringValue(command.command),
+      can_execute: false as const,
     }))
     .filter((entry): entry is {
       ref: string;
@@ -67,6 +84,8 @@ export function providerSloRefs(providerContinuousProof: JsonRecord) {
       execution_owner: string | null;
       execution_policy: string | null;
       dispatch_status: null;
+      required_next_action: string | null;
+      repair_command: string | null;
       can_execute: false;
     } => Boolean(entry.ref));
 
