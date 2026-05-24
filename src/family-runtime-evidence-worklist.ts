@@ -852,6 +852,7 @@ export async function runFamilyRuntimeEvidenceWorklist(
       open_tail_item_count: openItems.length,
       typed_blocker_tail_item_count:
         worklistItems.filter((item) => item.status === 'closed_by_domain_owned_typed_blocker').length,
+      blocking_tail_item_count: 0,
       closed_tail_item_count: closedItems.length,
     },
     tailItems: worklistItems,

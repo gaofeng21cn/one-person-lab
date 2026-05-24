@@ -1,6 +1,6 @@
 export type JsonRecord = Record<string, unknown>;
 
-export type EvidenceTailStatus = 'open' | 'closed' | 'domain_owned_typed_blocker';
+export type EvidenceTailStatus = 'open' | 'closed' | 'blocked' | 'domain_owned_typed_blocker';
 
 export type EvidenceRequirement = {
   requirement_id: string;
@@ -99,6 +99,9 @@ export function normalizeEvidenceTailStatus(status: string | null): EvidenceTail
   }
   if (status === 'domain_owned_typed_blocker' || status === 'closed_by_domain_owned_typed_blocker') {
     return 'domain_owned_typed_blocker';
+  }
+  if (status === 'blocked' || status === 'blocked_by_route_back_ref') {
+    return 'blocked';
   }
   return 'open';
 }

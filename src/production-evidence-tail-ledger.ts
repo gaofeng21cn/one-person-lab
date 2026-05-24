@@ -66,7 +66,8 @@ function summarizeTailItems(tailItems: JsonRecord[]) {
     closed_tail_item_count: tailItems.filter((item) => stringValue(item.status) === 'closed').length,
     typed_blocker_tail_item_count:
       tailItems.filter((item) => stringValue(item.status) === 'domain_owned_typed_blocker').length,
-    blocking_tail_item_count: 0,
+    blocking_tail_item_count:
+      tailItems.filter((item) => stringValue(item.status) === 'blocked').length,
     owner_group_count: ownerGroups.size,
     blocking_policy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
   };
@@ -209,6 +210,7 @@ export function buildProductionTailNextActionLedger(input: {
       tail_item_count: numberValue(input.sourceTailSummary.tail_item_count),
       open_tail_item_count: numberValue(input.sourceTailSummary.open_tail_item_count),
       typed_blocker_tail_item_count: numberValue(input.sourceTailSummary.typed_blocker_tail_item_count),
+      blocking_tail_item_count: numberValue(input.sourceTailSummary.blocking_tail_item_count),
       closed_tail_item_count: numberValue(input.sourceTailSummary.closed_tail_item_count),
       next_action_item_count: nextActionItems.length,
       next_action_group_count: groups.length,
@@ -228,7 +230,7 @@ export function buildProductionTailNextActionLedger(input: {
 export function buildCanonicalEvidenceTailItem(input: {
   tailId: string;
   tailItem: string;
-  status: 'open' | 'closed' | 'domain_owned_typed_blocker';
+  status: 'open' | 'closed' | 'blocked' | 'domain_owned_typed_blocker';
   ownerGroup: string;
   claimScope: string;
   domainId?: string | null;
@@ -246,6 +248,7 @@ export function buildCanonicalEvidenceTailItem(input: {
   freshnessRefs?: string[];
   evidenceRefs?: string[];
   expectedRefs?: string[];
+  blockedReasons?: string[];
   nextVerificationCommand?: string | null;
 }) {
   return evidenceTailItem({
@@ -273,6 +276,9 @@ export function buildCanonicalEvidenceTailItem(input: {
     blockingPolicy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
     authorityBoundary: {
       receipt_or_blocker_is_domain_owned_claim_only: true,
+    },
+    extra: {
+      blocked_reasons: input.blockedReasons ?? [],
     },
   });
 }
@@ -472,6 +478,7 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
     const domain = stringValue(item.domain_id) ?? 'domain_repo';
     const receiptRefs = stringList(item.receipt_refs);
     const typedBlockerRefs = stringList(item.typed_blocker_refs);
+    const blockedReasons = stringList(item.blocked_reasons);
     return buildCanonicalEvidenceTailItem({
       tailId: `legacy:${domain}:${stringValue(item.action_id) ?? index + 1}`,
       tailItem: 'legacy_cleanup_ledger',
@@ -479,7 +486,9 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
         ? 'domain_owned_typed_blocker'
         : receiptRefs.length > 0 || stringValue(item.plan_status) === 'ready'
           ? 'closed'
-          : 'open',
+          : blockedReasons.length > 0
+            ? 'blocked'
+            : 'open',
       ownerGroup: domain,
       domainId: domain,
       requestId: stringValue(item.action_id) ?? `${index + 1}`,
@@ -499,8 +508,10 @@ export function buildAppDrilldownProductionEvidenceTailLedger(input: {
       evidenceRefs: [
         ...receiptRefs,
         ...typedBlockerRefs,
+        ...blockedReasons,
         ...stringList(item.restore_proof_refs),
       ],
+      blockedReasons,
       nextVerificationCommand: 'opl agents legacy-cleanup apply --mode verify',
     });
   });

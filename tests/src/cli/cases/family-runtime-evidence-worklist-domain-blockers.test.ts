@@ -189,6 +189,98 @@ test('family-runtime evidence-worklist classifies verified external blockers wit
   }
 });
 
+test('family-runtime evidence-worklist classifies blocked cleanup plans as route-back blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-cleanup-blocker-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const baseManifests = loadFamilyManifestFixtures();
+  const manifest = withEvidenceWorklistSurfaces(
+    baseManifests.medautoscience,
+    ['direction_and_route_selection'],
+    { cleanupReady: true },
+  );
+  manifest.physical_skeleton_follow_through = {
+    ...(manifest.physical_skeleton_follow_through as Record<string, unknown>),
+    direct_skill_parity_refs: [],
+    opl_hosted_parity_refs: [],
+    replacement_parity_refs: [],
+    provenance_refs: [],
+  };
+  manifest.legacy_retirement_tombstone_proof = {
+    status: 'active_default_caller_evidence_missing',
+    active_default_callers: ['legacy-mas-runner'],
+    tombstone_refs: [],
+    source_refs: [],
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+
+    const drilldown = runCli([
+      'runtime',
+      'app-operator-drilldown',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).app_operator_drilldown;
+    const cleanupPlan = drilldown.domain_legacy_cleanup_plan_refs.refs.find(
+      (plan: { command_domain_id: string }) => plan.command_domain_id === 'medautoscience',
+    );
+    assert.equal(cleanupPlan.plan_status, 'blocked');
+    assert.equal(cleanupPlan.opl_cleanup_ledger_ready, false);
+    assert.deepEqual(cleanupPlan.blocked_reasons, ['missing_replacement_parity_evidence']);
+
+    const cleanupEnvelope = drilldown.evidence_envelope.envelopes.find(
+      (envelope: { envelope_id: string }) =>
+        envelope.envelope_id === 'legacy_cleanup:med-autoscience:opl://agents/med-autoscience/legacy-cleanup-plan',
+    );
+    assert.equal(cleanupEnvelope.status, 'blocked');
+    assert.equal(cleanupEnvelope.claim_allowed.typed_blocker_observed, false);
+    assert.equal(cleanupEnvelope.claim_allowed.owner_receipt_observed, false);
+    assert.deepEqual(cleanupEnvelope.typed_blocker_refs, []);
+    assert.deepEqual(cleanupEnvelope.blocked_reasons, cleanupPlan.blocked_reasons);
+    assert.equal(drilldown.summary.evidence_envelope_blocked_count >= 1, true);
+    const cleanupTailItem = drilldown.production_evidence_tail_ledger.tail_items.find(
+      (item: { tail_id: string }) =>
+        item.tail_id === 'legacy:med-autoscience:1',
+    );
+    assert.equal(cleanupTailItem.status, 'blocked');
+    assert.deepEqual(cleanupTailItem.blocked_reasons, cleanupPlan.blocked_reasons);
+    assert.equal(drilldown.summary.app_operator_production_evidence_tail_blocking_item_count >= 1, true);
+
+    const worklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).family_runtime_evidence_worklist;
+    assert.equal(worklist.evidence_envelope.summary.blocked_envelope_count >= 1, true);
+    const cleanupBreakdown = worklist.evidence_envelope.summary.owner_payload_breakdown.find(
+      (entry: { payload_kind: string }) => entry.payload_kind === 'opl_cleanup_ledger_refs',
+    );
+    assert.equal(cleanupBreakdown.open_envelope_count, 0);
+    assert.equal(cleanupBreakdown.blocked_envelope_count, 1);
+    assert.equal(cleanupBreakdown.typed_blocker_ref_count, 0);
+    assert.equal(cleanupBreakdown.blocked_reason_count, 1);
+    assert.equal(worklist.evidence_requirement_ledger.summary.typed_blocker_requirement_count, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime evidence-worklist rejects retired production-closeout alias', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-retired-alias-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

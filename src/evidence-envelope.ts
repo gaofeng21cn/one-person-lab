@@ -98,8 +98,12 @@ function statusFrom(input: {
   receiptRefs: string[];
   typedBlockerRefs: string[];
   open: boolean;
+  blocked?: boolean;
 }): EvidenceEnvelopeStatus {
   if (input.typedBlockerRefs.length > 0) {
+    return 'blocked';
+  }
+  if (input.blocked === true) {
     return 'blocked';
   }
   if (!input.open || input.receiptRefs.length > 0) {
@@ -108,10 +112,14 @@ function statusFrom(input: {
   return 'open';
 }
 
-function claimAllowed(status: EvidenceEnvelopeStatus) {
+function claimAllowed(input: {
+  status: EvidenceEnvelopeStatus;
+  receiptRefs: string[];
+  typedBlockerRefs: string[];
+}) {
   return {
-    owner_receipt_observed: status === 'closed',
-    typed_blocker_observed: status === 'blocked',
+    owner_receipt_observed: input.receiptRefs.length > 0,
+    typed_blocker_observed: input.typedBlockerRefs.length > 0,
     domain_ready: false,
     production_ready: false,
     artifact_authority: false,
@@ -144,6 +152,7 @@ function envelope(input: {
   status: EvidenceEnvelopeStatus;
   receiptRefs?: string[];
   typedBlockerRefs?: string[];
+  blockedReasons?: string[];
   evidenceRefs?: string[];
   monitorRefs?: string[];
   sourceRefs?: string[];
@@ -160,9 +169,14 @@ function envelope(input: {
     scope: input.scope,
     payload_kind: input.payloadKind,
     status: input.status,
-    claim_allowed: claimAllowed(input.status),
+    claim_allowed: claimAllowed({
+      status: input.status,
+      receiptRefs: input.receiptRefs ?? [],
+      typedBlockerRefs: input.typedBlockerRefs ?? [],
+    }),
     receipt_refs: uniqueStrings(input.receiptRefs ?? []),
     typed_blocker_refs: uniqueStrings(input.typedBlockerRefs ?? []),
+    blocked_reasons: uniqueStrings(input.blockedReasons ?? []),
     evidence_refs: uniqueStrings(input.evidenceRefs ?? []),
     monitor_refs: uniqueStrings(input.monitorRefs ?? []),
     source_refs: uniqueStrings(input.sourceRefs ?? []),
@@ -424,6 +438,7 @@ function legacyCleanupEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
       ...stringList(plan.restore_proof_refs),
       ...stringList(plan.replacement_parity_refs),
     ]);
+    const blockedReasons = stringList(plan.blocked_reasons);
     const open = stringValue(plan.plan_status) !== 'ready'
       || plan.opl_cleanup_ledger_ready !== true;
     return envelope({
@@ -438,8 +453,10 @@ function legacyCleanupEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
         receiptRefs,
         typedBlockerRefs: [],
         open,
+        blocked: open && blockedReasons.length > 0,
       }),
       receiptRefs,
+      blockedReasons,
       evidenceRefs: uniqueStrings(recordList(plan.action_refs).flatMap((action) => [
         ...stringList(action.replacement_parity_refs),
         ...stringList(action.no_active_caller_refs),
@@ -471,6 +488,7 @@ function summarize(items: ReturnType<typeof envelope>[]) {
             matchingItems.filter((item) => item.status === 'superseded').length,
           receipt_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.receipt_refs)).length,
           typed_blocker_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.typed_blocker_refs)).length,
+          blocked_reason_count: uniqueStrings(matchingItems.flatMap((item) => item.blocked_reasons)).length,
           evidence_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.evidence_refs)).length,
         };
       })
@@ -492,6 +510,7 @@ function summarize(items: ReturnType<typeof envelope>[]) {
       'refs_only_owner_and_payload_kind_action_breakdown_for_domain_or_app_live_operator_scaleout',
     receipt_ref_count: uniqueStrings(items.flatMap((item) => item.receipt_refs)).length,
     typed_blocker_ref_count: uniqueStrings(items.flatMap((item) => item.typed_blocker_refs)).length,
+    blocked_reason_count: uniqueStrings(items.flatMap((item) => item.blocked_reasons)).length,
     evidence_ref_count: uniqueStrings(items.flatMap((item) => item.evidence_refs)).length,
     domain_ready_claim_count: items.filter((item) => item.claim_allowed.domain_ready).length,
     production_ready_claim_count: items.filter((item) => item.claim_allowed.production_ready).length,

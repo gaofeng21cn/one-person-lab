@@ -141,6 +141,7 @@ rtk git status --short
 - Structural conformance 通过等于 production evidence tail 关闭。
 - App selected cohort、verified package/provider refs、typed blocker refs、partial observed gates 或 user-path evidence ready 等于 App release ready / production ready。
 - Workorder accounting、stage evidence route、domain-dispatch refs-only receipt 或 legacy cleanup ledger 等于真实 owner-chain、expected receipt instance、monitor freshness、artifact mutation 或 long-soak evidence。
+- Blocked cleanup plan / route-back blocker 等于 production evidence complete，或等于 domain typed blocker。
 - Private functional audit 分类完成等于 domain repo 物理代码路径清零。
 - Descriptor ready、read model ready、generated bundle ready、provider completion 或 cleanup proof 等于 domain ready、artifact ready、quality/export/fundability/visual verdict。
 - 为兼容保留旧模块、旧接口、旧测试、旧 CLI alias、facade 或 wrapper；active caller 迁走后直接删除或进入 history/tombstone。

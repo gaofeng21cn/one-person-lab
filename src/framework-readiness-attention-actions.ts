@@ -93,6 +93,7 @@ function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
     blocked_envelope_count: numberValue(group.blocked_envelope_count),
     receipt_ref_count: numberValue(group.receipt_ref_count),
     typed_blocker_ref_count: numberValue(group.typed_blocker_ref_count),
+    blocked_reason_count: numberValue(group.blocked_reason_count),
     evidence_ref_count: numberValue(group.evidence_ref_count),
     required_refs_any_of: stringList(group.required_refs_any_of),
     required_return_shapes: stringList(group.required_return_shapes),
