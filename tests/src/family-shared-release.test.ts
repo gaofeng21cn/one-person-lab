@@ -124,7 +124,7 @@ test('inspectCurrentRepoFamilySharedAlignment resolves the owner repo from the c
           repo_dir: 'redcube-ai',
           verify_command: 'scripts/verify.sh family',
           targets: [
-            { file: 'packages/redcube-gateway/package.json', kind: 'js_dependency' },
+            { file: 'packages/redcube-domain-entry/package.json', kind: 'js_dependency' },
             { file: 'package-lock.json', kind: 'js_lock' },
           ],
         },
@@ -132,12 +132,12 @@ test('inspectCurrentRepoFamilySharedAlignment resolves the owner repo from the c
     }),
   );
   write(
-    path.join(repoRoot, 'packages/redcube-gateway/package.json'),
+    path.join(repoRoot, 'packages/redcube-domain-entry/package.json'),
     `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}\n`,
   );
   write(
     path.join(repoRoot, 'package-lock.json'),
-    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}}}\n`,
+    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}}}\n`,
   );
 
   const inspection = inspectCurrentRepoFamilySharedAlignment({

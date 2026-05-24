@@ -188,12 +188,12 @@ test('family shared release CLI can sync explicit repo overrides and report alig
     `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
   );
   write(
-    path.join(redcubeRepo, 'packages/redcube-gateway/package.json'),
+    path.join(redcubeRepo, 'packages/redcube-domain-entry/package.json'),
     `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
   );
   write(
     path.join(redcubeRepo, 'package-lock.json'),
-    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
   );
 
   const result = runFamilySharedReleaseCli([
@@ -303,7 +303,7 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
           repo_dir: 'redcube-ai',
           verify_command: 'scripts/verify.sh family',
           targets: [
-            { file: 'packages/redcube-gateway/package.json', kind: 'js_dependency' },
+            { file: 'packages/redcube-domain-entry/package.json', kind: 'js_dependency' },
             { file: 'package-lock.json', kind: 'js_lock' },
           ],
         },
@@ -327,12 +327,12 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
     `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
   );
   write(
-    path.join(redcubeRepo, 'packages/redcube-gateway/package.json'),
+    path.join(redcubeRepo, 'packages/redcube-domain-entry/package.json'),
     `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
   );
   write(
     path.join(redcubeRepo, 'package-lock.json'),
-    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
   );
 
   const result = runFamilySharedReleaseCli([
@@ -414,7 +414,7 @@ test('family shared release refuses unpublished owner commits before rewriting c
           repo_dir: 'redcube-ai',
           verify_command: 'scripts/verify.sh family',
           targets: [
-            { file: 'packages/redcube-gateway/package.json', kind: 'js_dependency' },
+            { file: 'packages/redcube-domain-entry/package.json', kind: 'js_dependency' },
             { file: 'package-lock.json', kind: 'js_lock' },
           ],
         },
@@ -438,12 +438,12 @@ test('family shared release refuses unpublished owner commits before rewriting c
     `source = { git = "${publishedRemote.remoteUrl}?subdirectory=python%2Fopl-harness-shared&rev=${publishedRemote.publishedCommit}#${publishedRemote.publishedCommit}" }\n`,
   );
   write(
-    path.join(redcubeRepo, 'packages/redcube-gateway/package.json'),
+    path.join(redcubeRepo, 'packages/redcube-domain-entry/package.json'),
     `{"dependencies":{"opl-framework-shared":"git+${publishedRemote.remoteUrl}#${publishedRemote.publishedCommit}"}}\n`,
   );
   write(
     path.join(redcubeRepo, 'package-lock.json'),
-    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-framework-shared":"git+${publishedRemote.remoteUrl}#${publishedRemote.publishedCommit}"}}}}\n`,
+    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+${publishedRemote.remoteUrl}#${publishedRemote.publishedCommit}"}}}}\n`,
   );
 
   const collectRemotes = collectSharedOwnerReleaseRemotes as (input: {

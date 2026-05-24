@@ -716,9 +716,9 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       adapter_id: 'rca.domain-agent.skeleton.adapter.v1',
       repo_source_boundary: {
         allowed_roots: [
-          { boundary_id: 'agent', repo_refs: ['packages/redcube-gateway/src/actions/family-action-catalog.ts'] },
+          { boundary_id: 'agent', repo_refs: ['packages/redcube-domain-entry/src/actions/family-action-catalog.ts'] },
           { boundary_id: 'contracts', repo_refs: ['contracts/runtime-program/current-program.json'] },
-          { boundary_id: 'runtime', repo_refs: ['packages/redcube-gateway/src/actions/product-sidecar.ts'] },
+          { boundary_id: 'runtime', repo_refs: ['packages/redcube-domain-entry/src/actions/domain-action-adapter.ts'] },
           { boundary_id: 'docs', repo_refs: ['docs/status.md'] },
         ],
         repo_tracks_runtime_artifact_blobs: false,
@@ -738,7 +738,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       physical_roots: [
         { boundary_id: 'agent', anchor_ref: 'agent/README.md', status: 'present_with_repo_source_entrypoint' },
         { boundary_id: 'contracts', anchor_ref: 'contracts/runtime-program/current-program.json', status: 'present_with_runtime_program_contracts' },
-        { boundary_id: 'runtime', anchor_ref: 'packages/redcube-gateway/src/actions/product-sidecar.ts', status: 'present_with_repo_source_entrypoint' },
+        { boundary_id: 'runtime', anchor_ref: 'packages/redcube-domain-entry/src/actions/domain-action-adapter.ts', status: 'present_with_repo_source_entrypoint' },
         { boundary_id: 'docs', anchor_ref: 'docs/status.md', status: 'present_with_owner_docs' },
       ],
       forbidden_moves: [
@@ -859,7 +859,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
     assert.deepEqual(rca.family_agent.physical_skeleton_layout_audit.evidence_refs, [
       'agent/README.md',
       'contracts/runtime-program/current-program.json',
-      'packages/redcube-gateway/src/actions/product-sidecar.ts',
+      'packages/redcube-domain-entry/src/actions/domain-action-adapter.ts',
       'docs/status.md',
     ]);
     assert.equal(rca.family_agent.artifact_boundary.artifact_roots_are_locators, true);

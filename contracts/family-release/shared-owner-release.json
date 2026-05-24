@@ -49,7 +49,7 @@
       "verify_command": "scripts/verify.sh family",
       "targets": [
         {
-          "file": "packages/redcube-gateway/package.json",
+          "file": "packages/redcube-domain-entry/package.json",
           "kind": "js_dependency"
         },
         {
