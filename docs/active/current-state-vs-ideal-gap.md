@@ -38,9 +38,9 @@ Declarative Domain Pack
 | Area | 当前进度 | 当前读法 |
 | --- | --- | --- |
 | OPL framework control plane | `landed_with_evidence_tail` | Temporal provider path、typed queue、stage attempt ledger、safe action shell、refs-only evidence ledger、App/operator drilldown、Agent Lab、pack compiler 和 conformance/readiness 读面已经是 framework 主干；不能写成 production ready。 |
-| Standard agent structural conformance | `structurally_passed` | Fresh `opl agents conformance --family-defaults --json` 显示已收录 repos 的 structural conformance 通过，并把 production evidence tail 分开报告；结构通过不等于 production caller / long soak 通过。 |
-| App/user path evidence | `partial` | App release/user-path ledger 能记录/验证 release package、screenshot、reload prompt、provider linkage、long operator evidence 或 typed blocker refs；当前重点仍是同 cohort long operator evidence。 |
-| OMA/new agent consumption | `partial` | New-agent scaffold/structural consumption、managed install/update、App live path、owner receipt/typed blocker scaleout 已进入读面；production-consumption tail 仍是 verified long-soak refs。 |
+| Standard agent structural conformance | `blocked` | Fresh `opl agents conformance --family-defaults --json` 显示 3 个 repo 通过、1 个 repo blocked；当前 blocker 是 MAS `paper_work_unit_outbox.py` 的 active forbidden-name residue。结构通过或 blocker 清零都不等于 production caller / long soak 通过。 |
+| App/user path evidence | `user_path_evidence_ready` | App release/user-path ledger 已验证同 cohort release package、screenshot、reload prompt、provider linkage 与 long operator evidence；`framework readiness` 读为 App user-path evidence ready，但 `release_ready_claimed=false`、`production_ready_claimed=false`，不等于 App release ready。 |
+| OMA/new agent consumption | `production_consumption_ready` | New-agent scaffold/structural consumption、managed install/update、App live path、owner receipt/typed blocker scaleout 和 verified long-soak 已进入读面；OMA production-consumption ready 不授权 MAS/MAG/RCA 或 family production ready。 |
 | Domain production evidence | `partial` | MAS/MAG/RCA 的 owner receipt refs、typed blocker refs、no-regression refs 可进入 OPL refs-only ledger；真实 paper/grant/visual owner-chain、memory/artifact/lifecycle receipt 和 repeated no-regression 仍需扩面。 |
 | Docs lifecycle | `current_doc_compacted` | 本文只保留当前真相、当前 gap 和下一步；已闭合 lane、历史 proof 和细节长清单不再作为 active plan 展开。 |
 
@@ -53,8 +53,8 @@ Declarative Domain Pack
 | `MAS_physical_thinning` | MAS 默认 runtime owner 已回到 OPL provider-backed stage runtime；旧 runtime transport、runner、worker lease、SQLite lifecycle writer 只按 retired/no-resurrection 读取。 | product/status/workbench、owner-route handoff、progress/domain-ref projection 等仍有 caller 的 residue 在 no-active-caller、OPL replacement parity、MAS receipt parity、no-forbidden-write 和 focused tests 成立后删除、archive 或 tombstone。 |
 | `MAG_wrapper_shell_retirement` | MAG repo-side handler/ref-only/authority boundary 已闭合；product-entry、status/user-loop、sidecar、domain_runtime、lifecycle/projection shell 仍是 active direct path 或 migration input。 | OPL generated/default caller 与 App/default consumption 有真实证据后，MAG 只保留 grant authority functions、domain handler target、refs-only adapter 或 tombstone。 |
 | `RCA_naming_and_adapter_hygiene` | RCA generated/hosted shell、legacy cleanup 和 visual authority boundary 已清晰；旧 session/store/managed/runtime/gateway 命名已降到 retired/provenance/tombstone 语境。 | active source 命名继续收敛为 visual authority implementation、native helper、domain handler target 或 refs-only adapter；不恢复 compatibility alias。 |
-| `App_workbench_user_path` | App/operator drilldown、safe action route、payload workorder、App release/user-path evidence ledger 已可用。 | App release artifact、截图、reload prompt、provider state linkage 与真实用户路径在同一 cohort 下可重复证明；App 不生成 release-ready 或 production-ready verdict。 |
-| `OMA_production_consumption` | OMA structural consumption 和 App live-path evidence 已进入读面；production-consumption record/verify 与 long-soak observation workorder 已可用。 | verified real long-soak refs 进入 ledger；event-only log、observation workorder、operator evidence 或 typed blocker 不能替代 long-soak success。 |
+| `App_workbench_user_path` | App/operator drilldown、safe action route、payload workorder、App release/user-path evidence ledger 已可用，且 `26.5.19` 同 cohort 五类 evidence 已 verified。 | 保持同 cohort evidence 可重复证明；App 不生成 release-ready 或 production-ready verdict，App release owner boundary 仍需单独关闭。 |
+| `OMA_production_consumption` | OMA structural consumption、App live-path evidence、owner receipt / typed blocker scaleout 和 verified long-soak 已进入读面。 | 继续用真实 target patch/rerun/owner receipt 样本验证 OMA consumption；OMA ready 不授权目标 domain ready、family production ready 或默认 promotion。 |
 | `memory_artifact_lifecycle_apply` | OPL 只持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 | MAS/MAG/RCA 在真实 workspace 形成 accepted/rejected memory writeback、artifact mutation、cleanup/restore/retention 和 lifecycle receipts。 |
 
 ## 证据差距
@@ -62,8 +62,8 @@ Declarative Domain Pack
 | evidence gate | 当前读法 | 完成口径 |
 | --- | --- | --- |
 | Provider long SLO | Temporal provider cadence/capability SLO 已有机器读面；读数以 `framework readiness` 和 App drilldown 为准。 | 持续窗口 satisfied，并在真实 domain owner-chain dispatch 中保持 restart re-query、signal history、typed closeout、retry/dead-letter 和 no-forbidden-write proof。 |
-| App long operator evidence | App release/user-path ledger 可记录/验证同 cohort refs 或 typed blocker。 | 同一 release/user-path cohort 的 long operator evidence verified；typed blocker 只说明显式阻塞，不说明完成。 |
-| OMA long soak | OMA production-consumption ledger 与 local observation workorder 可物化 long-soak payload。 | verified real long-soak ref observed；recorded-but-unverified receipt 不关闭 gate。 |
+| App long operator evidence | `26.5.19` 同 cohort long operator evidence 已 verified，并使 App user-path evidence ready。 | 后续只需守住同 cohort 规则和 release-owner boundary；不把 user-path evidence ready 写成 App release ready。 |
+| OMA long soak | OMA production-consumption ledger 已观察 verified real long-soak ref。 | 后续只需守住 refs-only intake 和 target-owner authority boundary；不把 OMA ready 写成 family/domain production ready。 |
 | MAS real paper chain | MAS guarded-apply、owner-route、aftercare、default-executor typed blocker payload 可被 OPL record/verify 消费。 | 多条真实 paper line 产生 progress delta、AI reviewer update、artifact delta、human gate、stop-loss、owner receipt 或 stable typed blocker。 |
 | MAG grant soak | MAG transition oracle、owner receipt contract、refs-only handoff 边界清晰。 | 真实 OPL-hosted grant-stage attempt 持续返回 grant-owned receipt、typed blocker 或 no-regression evidence。 |
 | RCA visual soak | RCA transition/evidence fixture、refs-only projection 和 visual authority boundary 清晰。 | 真实 artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout 和 repeated no-regression evidence。 |
@@ -78,9 +78,9 @@ Objective:
 优先顺序：
 
 1. 读取 `opl framework readiness --family-defaults --json`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`，确认当前 open gate。
-2. 若 App release/user path 仍只缺 `long_operator_evidence_refs`，推进同 cohort long-operator `start -> event -> finish -> record -> verify`。
-3. 若 OMA production-consumption 仍只缺 `long_soak_refs`，推进 OMA long-soak `start -> event -> finish -> record -> verify`。
-4. 推进 MAS/MAG/RCA repo-owned production caller、owner receipt、typed blocker、memory/artifact/lifecycle receipt、no-regression 和 live long-soak evidence。
+2. 优先处理 fresh conformance blocker：MAS active forbidden-name residue（当前 `paper_work_unit_outbox.py` 中 `runtime_supervisor` / `supervision_scheduler` / `mas_supervision_scheduler` 命名）。
+3. 推进 MAS/MAG/RCA repo-owned production caller、owner receipt、typed blocker、memory/artifact/lifecycle receipt、no-regression 和 live long-soak evidence。
+4. 推进 Developer Mode non-owner fork/PR owner acceptance 与 App release-ready owner boundary；App user-path evidence ready 不等于 App release ready。
 5. 在 default caller / no-active-caller / replacement parity / owner receipt parity 成立后，删除、archive 或 tombstone repo-local generic residue，不新增兼容面。
 
 Non-goals:
@@ -115,7 +115,7 @@ rtk git status --short
 - OPL 已全量 production ready。
 - Temporal provider proof 等于 MAS paper closure、MAG grant readiness 或 RCA visual ready。
 - Structural conformance 通过等于 production evidence tail 关闭。
-- App selected cohort、verified package/provider refs、typed blocker refs 或 partial observed gates 等于 App release/user path 已闭合。
+- App selected cohort、verified package/provider refs、typed blocker refs、partial observed gates 或 user-path evidence ready 等于 App release ready / production ready。
 - Workorder accounting、stage evidence route、domain-dispatch refs-only receipt 或 legacy cleanup ledger 等于真实 owner-chain、expected receipt instance、monitor freshness、artifact mutation 或 long-soak evidence。
 - Private functional audit 分类完成等于 domain repo 物理代码路径清零。
 - Descriptor ready、read model ready、generated bundle ready、provider completion 或 cleanup proof 等于 domain ready、artifact ready、quality/export/fundability/visual verdict。
