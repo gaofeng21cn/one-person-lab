@@ -17,13 +17,12 @@ import {
   compactDomainDispatchEvidenceWorkorderAttentionItems,
   compactDomainDispatchEvidenceWorkorderGroupAttentionItems,
 } from './domain-dispatch-evidence-workorder-packet.ts';
+import { defaultCallerDeletionEvidenceRoutes } from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
+import { attentionQueueItem, nextSafeActions } from './family-runtime-evidence-worklist-parts/attention-actions.ts';
 import {
-  defaultCallerDeletionEvidenceRoutes,
-} from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
-import {
-  attentionQueueItem,
-  nextSafeActions,
-} from './family-runtime-evidence-worklist-parts/attention-actions.ts';
+  buildZeroOpenCompletionGuard,
+  zeroOpenCompletionGuardSummaryFields,
+} from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -883,8 +882,14 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const domainDispatchEvidenceWorkorderAttentionItems =
     compactDomainDispatchEvidenceWorkorderAttentionItems(domainDispatchEvidenceWorkorderPacket);
   const evidenceEnvelope = record(drilldown.evidence_envelope);
+  const compactEvidenceEnvelope = compactEvidenceEnvelopeProjection(evidenceEnvelope);
+  const zeroOpenWorklistGuard = buildZeroOpenCompletionGuard({
+    openWorklistItemCount: openItems.length,
+    evidenceEnvelopeSummary: record(compactEvidenceEnvelope.summary),
+  });
   const counts = {
     ...worklistCounts(worklistItems, openItems, closedItems, nextActionLedger),
+    ...zeroOpenCompletionGuardSummaryFields(zeroOpenWorklistGuard),
     stage_source_scope_missing_workorder_count:
       countValue(stageEvidenceWorkorderSummary.source_scope_missing_workorder_count),
     stage_runtime_event_missing_workorder_count:
@@ -953,7 +958,8 @@ export async function runFamilyRuntimeEvidenceWorklist(
       app_execution_bridge_ref: '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
       evidence_envelope_ref: '/runtime_tray_snapshot/app_operator_drilldown/evidence_envelope',
     },
-    evidence_envelope: compactEvidenceEnvelopeProjection(evidenceEnvelope),
+    evidence_envelope: compactEvidenceEnvelope,
+    zero_open_worklist_guard: zeroOpenWorklistGuard,
     authority_boundary: authorityBoundary(),
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
