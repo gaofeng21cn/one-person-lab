@@ -293,6 +293,9 @@ export function frameworkAttentionNextSafeActions(input: {
       command: 'opl framework readiness --family-defaults --json',
       authority: 'operator_attention_only',
     },
+    ...input.domainDispatchEvidenceWorkorderGroupAttentionItems
+      .slice(0, 1)
+      .map(frameworkDomainDispatchGroupNextSafeAction),
     ...input.ownerPayloadGroups.slice(0, 1).map(frameworkOwnerPayloadGroupNextSafeAction),
     ...(
       recordList(input.ownerHandoffPacket.owners).length > 0
@@ -320,8 +323,5 @@ export function frameworkAttentionNextSafeActions(input: {
           ]
         : []
     ),
-    ...input.domainDispatchEvidenceWorkorderGroupAttentionItems
-      .slice(0, 1)
-      .map(frameworkDomainDispatchGroupNextSafeAction),
   ].slice(0, input.itemLimit);
 }

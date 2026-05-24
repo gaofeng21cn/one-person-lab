@@ -216,6 +216,7 @@ test('framework readiness summarizes default control-plane surfaces without auth
     const frameworkReviewAction = nextSafeActions.find(
       (action: { action_id: string }) => action.action_id === 'review_framework_attention_items',
     );
+    assert.equal(nextSafeActions[0].action_id, 'review_framework_attention_items');
     assert.equal(frameworkReviewAction.step_kind, 'framework_attention_review');
     assert.equal(frameworkReviewAction.evidence_closure_gate, 'operator_attention_triage_gate');
     assertFrameworkOwnerPayloadAction(nextSafeActions, firstOwnerPayloadGroup);
@@ -529,6 +530,17 @@ test('framework readiness summarizes default control-plane surfaces without auth
     );
     assert.equal(Boolean(dispatchGroupAction), Boolean(firstDispatchWorkorderGroup));
     if (firstDispatchWorkorderGroup && dispatchGroupAction) {
+      const actionKinds = nextSafeActions.map((action: { action_kind?: string }) => action.action_kind);
+      const dispatchIndex = actionKinds.indexOf('domain_dispatch_evidence_group_workorder');
+      const ownerPayloadIndex = actionKinds.indexOf('owner_payload_group_scaleout');
+      const ownerHandoffIndex = actionKinds.indexOf('owner_handoff_packet_review');
+      assert.equal(dispatchIndex > 0, true);
+      if (ownerPayloadIndex >= 0) {
+        assert.equal(dispatchIndex < ownerPayloadIndex, true);
+      }
+      if (ownerHandoffIndex >= 0) {
+        assert.equal(dispatchIndex < ownerHandoffIndex, true);
+      }
       assert.equal(dispatchGroupAction.action_id, 'review_domain_dispatch_group_workorder');
       assert.equal(dispatchGroupAction.step_kind, 'domain_dispatch_evidence_group_workorder');
       assert.equal(
