@@ -53,6 +53,10 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
   'legacy_runtime_residue',
 ];
 
+const MAG_PHYSICAL_SURFACE_ALIASES: Record<string, readonly string[]> = {
+  domain_action_adapter: ['sidecar'],
+};
+
 const REQUIRED_RCA_PHYSICAL_SURFACES = [
   'mcp_product_entry_domain_entry',
   'product_entry_continuity_refs_adapter',
@@ -61,6 +65,11 @@ const REQUIRED_RCA_PHYSICAL_SURFACES = [
   'operator_evidence_stability_projection',
   'visual_authority_functions',
 ];
+
+const RCA_PHYSICAL_SURFACE_ALIASES: Record<string, readonly string[]> = {
+  product_entry_continuity_refs_adapter: ['product_entry_session_snapshot_refs_adapter'],
+  domain_action_adapter_guarded_actions: ['product_sidecar_guarded_actions'],
+};
 
 const REQUIRED_RCA_FORBIDDEN_LEGACY_SURFACE_IDS = [
   'legacy_managed_runtime_gateway_names',
@@ -222,10 +231,10 @@ function magPhysicalMorphologyPolicyChecks(repoDir: string) {
     policyFile.status === 'resolved' ? null : `mag_private_surface_policy_${policyFile.status}`,
     policy ? null : 'mag_physical_source_morphology_policy_missing',
     ...REQUIRED_MAG_PHYSICAL_SURFACES
-      .filter((surfaceId) => !requiredSurfaceIds.includes(surfaceId))
+      .filter((surfaceId) => !hasPhysicalSurface(requiredSurfaceIds, surfaceId, MAG_PHYSICAL_SURFACE_ALIASES))
       .map((surfaceId) => `mag_physical_surface_missing:${surfaceId}`),
     ...REQUIRED_MAG_PHYSICAL_SURFACES
-      .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
+      .filter((surfaceId) => !hasPhysicalSurface(classifiedSurfaceIds, surfaceId, MAG_PHYSICAL_SURFACE_ALIASES))
       .map((surfaceId) => `mag_physical_surface_unclassified:${surfaceId}`),
     ...MAG_REQUIRED_FORBIDDEN_RESIDUE_CLASSES
       .filter((token) => !forbiddenClasses.includes(token))
@@ -289,7 +298,7 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
       ? null
       : 'rca_physical_source_morphology_policy_status_not_landed',
     ...REQUIRED_RCA_PHYSICAL_SURFACES
-      .filter((surfaceId) => !classifiedSurfaceIds.includes(surfaceId))
+      .filter((surfaceId) => !hasPhysicalSurface(classifiedSurfaceIds, surfaceId, RCA_PHYSICAL_SURFACE_ALIASES))
       .map((surfaceId) => `rca_physical_surface_unclassified:${surfaceId}`),
     ...REQUIRED_RCA_FORBIDDEN_LEGACY_SURFACE_IDS
       .filter((surfaceId) => !forbiddenActiveSurfaceIds.includes(surfaceId))
@@ -317,6 +326,15 @@ function rcaPhysicalMorphologyPolicyChecks(repoDir: string) {
     ],
     blockers,
   };
+}
+
+function hasPhysicalSurface(
+  surfaceIds: readonly string[],
+  canonicalSurfaceId: string,
+  aliasesByCanonicalSurfaceId: Record<string, readonly string[]>,
+) {
+  return [canonicalSurfaceId, ...(aliasesByCanonicalSurfaceId[canonicalSurfaceId] ?? [])]
+    .some((surfaceId) => surfaceIds.includes(surfaceId));
 }
 
 function metaAgentPhysicalMorphologyPolicyChecks(repoDir: string) {

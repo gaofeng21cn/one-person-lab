@@ -27,7 +27,7 @@ test('generated interfaces expose RCA wrapper descriptor scope from real repo co
     'product_entry',
     'product_status',
     'product_session',
-    'sidecar',
+    'domain_action_adapter',
     'workbench',
   ]);
   assert.equal(

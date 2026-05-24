@@ -812,6 +812,60 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
   assert.deepEqual(report.reports[0].physical_morphology_checks.forbidden_name_residue, []);
 });
 
+test('agents conformance accepts current domain semantic aliases for physical morphology surfaces', () => {
+  const magRepoDir = buildReadyAgentRepo();
+  retargetReadyRepoToMag(magRepoDir);
+  configureReadyMagMorphology(magRepoDir);
+  const magPrivateSurfacePolicyPath = path.join(magRepoDir, 'contracts', 'private_functional_surface_policy.json');
+  const magPrivateSurfacePolicy = JSON.parse(fs.readFileSync(magPrivateSurfacePolicyPath, 'utf8'));
+  magPrivateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = (
+    magPrivateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surfaceId: string) => (
+      surfaceId === 'domain_action_adapter' ? 'sidecar' : surfaceId
+    ))
+  );
+  magPrivateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
+    magPrivateSurfacePolicy.physical_source_morphology_policy.surface_classifications.map((
+      entry: { surface_id: string },
+    ) => ({
+      ...entry,
+      surface_id: entry.surface_id === 'domain_action_adapter' ? 'sidecar' : entry.surface_id,
+    }))
+  );
+  writeJson(magPrivateSurfacePolicyPath, magPrivateSurfacePolicy);
+
+  const rcaRepoDir = buildReadyAgentRepo();
+  retargetReadyRepo(rcaRepoDir, 'redcube_ai', 'RedCube AI');
+  configureReadyRcaMorphology(rcaRepoDir);
+  const rcaPolicyPath = path.join(rcaRepoDir, 'contracts', 'physical_source_morphology_policy.json');
+  const rcaPolicy = JSON.parse(fs.readFileSync(rcaPolicyPath, 'utf8'));
+  rcaPolicy.active_surface_classifications = rcaPolicy.active_surface_classifications.map((
+    entry: { surface_id: string },
+  ) => ({
+    ...entry,
+    surface_id: entry.surface_id === 'product_entry_continuity_refs_adapter'
+      ? 'product_entry_session_snapshot_refs_adapter'
+      : entry.surface_id === 'domain_action_adapter_guarded_actions'
+        ? 'product_sidecar_guarded_actions'
+        : entry.surface_id,
+  }));
+  writeJson(rcaPolicyPath, rcaPolicy);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `mag=${magRepoDir}`,
+    '--agent',
+    `rca=${rcaRepoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(report.summary.passed_count, 2);
+  assert.equal(report.summary.blocked_count, 0);
+  assert.equal(report.reports[0].physical_morphology_checks.status, 'passed');
+  assert.equal(report.reports[1].physical_morphology_checks.status, 'passed');
+});
+
 test('agents conformance allows MAS legacy active path tombstone contract markers', () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'med-autoscience', 'Med Auto Science');
