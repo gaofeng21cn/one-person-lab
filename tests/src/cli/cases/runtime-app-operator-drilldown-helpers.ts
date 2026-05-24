@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import {
   assert,
+  fs,
   loadFamilyManifestFixtures,
   path,
   repoRoot,
@@ -41,6 +42,58 @@ db.close();`,
     },
   });
   assert.equal(result.status, 0, result.stderr);
+}
+
+function writeJson(file: string, payload: unknown) {
+  fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+export function createOmaContractFixture(fixtureRoot: string) {
+  const repoDir = path.join(fixtureRoot, 'opl-meta-agent');
+  const contractsDir = path.join(repoDir, 'contracts');
+  fs.mkdirSync(contractsDir, { recursive: true });
+  writeJson(path.join(contractsDir, 'opl_domain_manifest_registration.json'), {
+    surface_kind: 'opl_domain_manifest_registration',
+    domain_id: 'opl-meta-agent',
+    discovery_receipt: {
+      status: 'ready_for_opl_registry_consumption',
+      receipt_ref: 'discovery-receipt:opl-meta-agent/test-fixture',
+    },
+  });
+  writeJson(path.join(contractsDir, 'app_workbench_projection.json'), {
+    surface_kind: 'opl_app_workbench_projection_contract',
+    domain_id: 'opl-meta-agent',
+    workbench_sections: [],
+    drilldown_readiness_receipt: {
+      status: 'ready_for_app_consumption_refs_only',
+      live_rendering_status: 'not_claimed_by_contract',
+    },
+  });
+  writeJson(path.join(contractsDir, 'real_target_agent_scaleout_evidence.json'), {
+    surface_kind: 'real_target_agent_scaleout_evidence_contract',
+    domain_id: 'opl-meta-agent',
+    evidence_status: 'multi_target_scaleout_closed_by_refs_only_receipts',
+    multi_target_scaleout_closeout: {
+      status: 'closed_by_two_real_target_refs_only_receipts',
+      target_agents: [
+        {
+          domain_id: 'med-autoscience',
+          target_agent_owner_receipt_refs: [
+            'owner-receipt:oma-fixture/med-autoscience',
+          ],
+          typed_blocker_refs: [],
+        },
+        {
+          domain_id: 'med-autogrant',
+          target_agent_owner_receipt_refs: [],
+          typed_blocker_refs: [
+            'typed-blocker:oma-fixture/med-autogrant',
+          ],
+        },
+      ],
+    },
+  });
+  return repoDir;
 }
 
 export function assertMasLifecycleDrilldownProjection(drilldown: any) {

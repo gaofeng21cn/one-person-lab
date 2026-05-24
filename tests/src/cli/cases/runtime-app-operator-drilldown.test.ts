@@ -12,12 +12,19 @@ import {
 import {
   assertEvidenceTailAndDomainRefs,
   buildMasAppOperatorDrilldownFixtureManifest,
+  createOmaContractFixture,
   insertProviderProof,
 } from './runtime-app-operator-drilldown-helpers.ts';
 
 test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const omaRepoDir = createOmaContractFixture(fixtureRoot);
+  const testEnv = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_META_AGENT_REPO_DIR: omaRepoDir,
+  };
   const masManifest = buildMasAppOperatorDrilldownFixtureManifest();
   try {
     runCli([
@@ -29,14 +36,8 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       repoRoot,
       '--manifest-command',
       buildManifestCommand(masManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-    runCli(['family-runtime', 'events', 'export'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
+    runCli(['family-runtime', 'events', 'export'], testEnv);
     insertProviderProof(stateRoot);
     runCli([
       'agents',
@@ -54,10 +55,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'mas://blockers/package-lifecycle-currentness.json',
       '--no-regression-ref',
       'mas://proof/no-regression/package-lifecycle.json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
     runCli([
       'agents',
       'evidence',
@@ -68,10 +66,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'app_workbench_package_ref_consumption',
       '--mode',
       'verify',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
     runCli([
       'agents',
       'evidence',
@@ -88,10 +83,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'mas://receipts/package-lifecycle/latest.json',
       '--no-regression-ref',
       'mas://proof/no-regression/package-lifecycle.json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
     runCli([
       'agents',
       'evidence',
@@ -102,10 +94,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'real_package_lifecycle_receipt',
       '--mode',
       'verify',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
 
     const attempt = runCli([
       'family-runtime',
@@ -125,10 +114,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'checkpoint:write-start',
       '--source-fingerprint',
       'sha256:app-drilldown-source',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
     const attemptId = attempt.family_runtime_stage_attempt.attempt.stage_attempt_id;
     runCli([
       'family-runtime',
@@ -137,15 +123,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       attemptId,
       '--closeout-packet',
       '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"consumed_refs":["artifact:table"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:write-currentness","breached_slo_ids":["review_currentness"],"repair_command":"medautosci sidecar dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    ], testEnv);
 
-    const output = runCli(['runtime', 'snapshot'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    const output = runCli(['runtime', 'snapshot'], testEnv);
     const snapshot = output.runtime_tray_snapshot;
     const snapshotDrilldown = snapshot.app_operator_drilldown;
     assert.equal(snapshotDrilldown.detail_level, 'summary');
@@ -164,10 +144,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       false,
     );
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], testEnv);
     const drilldown = fullOutput.app_operator_drilldown;
 
     assert.equal(drilldown.surface_kind, 'opl_app_operator_drilldown_read_model');
