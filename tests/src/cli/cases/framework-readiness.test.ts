@@ -159,6 +159,31 @@ test('framework readiness summarizes default control-plane surfaces without auth
   );
   const firstOwnerPayloadGroup = assertFrameworkOwnerPayloadAttention(readiness);
   const { ownerHandoffPacket, firstOwnerHandoff } = assertFrameworkOwnerHandoffPacket(readiness);
+  const memoryArtifactLifecycleEvidence =
+    readiness.attention_first_payload.memory_artifact_lifecycle_evidence;
+  assert.equal(
+    memoryArtifactLifecycleEvidence.surface_kind,
+    'opl_app_drilldown_memory_artifact_lifecycle_evidence',
+  );
+  assert.equal(
+    memoryArtifactLifecycleEvidence.observed_ref_count,
+    memoryArtifactLifecycleEvidence.memory_ref_count
+      + memoryArtifactLifecycleEvidence.memory_writeback_ref_count
+      + memoryArtifactLifecycleEvidence.domain_dispatch_memory_writeback_ref_count
+      + memoryArtifactLifecycleEvidence.package_ref_count
+      + memoryArtifactLifecycleEvidence.export_ref_count
+      + memoryArtifactLifecycleEvidence.artifact_ref_count
+      + memoryArtifactLifecycleEvidence.lifecycle_index_ref_count
+      + memoryArtifactLifecycleEvidence.restore_proof_ref_count
+      + memoryArtifactLifecycleEvidence.domain_artifact_mutation_receipt_ref_count,
+  );
+  assert.equal(memoryArtifactLifecycleEvidence.observed_ref_count >= 0, true);
+  assert.equal(memoryArtifactLifecycleEvidence.authority_boundary.can_read_memory_body, false);
+  assert.equal(
+    memoryArtifactLifecycleEvidence.authority_boundary.can_accept_or_reject_memory_writeback,
+    false,
+  );
+  assert.equal(memoryArtifactLifecycleEvidence.authority_boundary.can_mutate_artifact_body, false);
   const omaProductionConsumption =
     readiness.attention_first_payload.oma_production_consumption_followthrough;
   const appUserPathEvidence = assertFrameworkAppReleaseUserPathEvidence(readiness);

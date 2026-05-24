@@ -284,6 +284,7 @@ function frameworkAttentionFirstPayload(input: {
   ownerPayloadGroupAttentionOmittedCount: number;
   ownerPayloadGroups: JsonRecord[];
   ownerHandoffPacket: JsonRecord;
+  memoryArtifactLifecycleEvidence: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
   omaProductionConsumptionFollowthrough: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
@@ -422,6 +423,7 @@ function frameworkAttentionFirstPayload(input: {
     owner_payload_group_attention_omitted_count: input.ownerPayloadGroupAttentionOmittedCount,
     owner_payload_groups: input.ownerPayloadGroups,
     owner_handoff_packet: input.ownerHandoffPacket,
+    memory_artifact_lifecycle_evidence: input.memoryArtifactLifecycleEvidence,
     app_release_user_path_evidence:
       input.appReleaseUserPathEvidence,
     oma_production_consumption_followthrough:
@@ -504,6 +506,9 @@ export async function buildFrameworkReadinessSummary(
   const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
   const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
   const ownerHandoffPacket = record(appEvidenceAfterContract.owner_handoff_packet);
+  const memoryArtifactLifecycleEvidence = record(
+    appEvidenceAfterContract.memory_artifact_lifecycle_evidence,
+  );
   const appReleaseUserPathEvidence = record(
     appEvidenceAfterContract.app_release_user_path_evidence,
   );
@@ -671,6 +676,7 @@ export async function buildFrameworkReadinessSummary(
         ownerPayloadGroupAttentionOmittedCount,
         ownerPayloadGroups,
         ownerHandoffPacket,
+        memoryArtifactLifecycleEvidence,
         appReleaseUserPathEvidence,
         omaProductionConsumptionFollowthrough,
         domainDispatchEvidenceWorkorderGroupAttentionItems,

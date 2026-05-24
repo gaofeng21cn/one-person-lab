@@ -40,6 +40,9 @@ import {
 import {
   assertOwnerPayloadWorkorderProjection,
 } from './owner-payload-workorder-assertions.ts';
+import {
+  assertMemoryArtifactLifecycleEvidence,
+} from './runtime-app-operator-drilldown-summary-memory-lifecycle.ts';
 
 test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
@@ -140,6 +143,10 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.production_evidence_tail_ledger, undefined);
     assert.equal(summaryDrilldown.domain_dispatch_evidence, undefined);
     assert.equal(summaryDrilldown.stage_production_evidence, undefined);
+    assert.equal(summaryDrilldown.memory_writeback_refs, undefined);
+    assert.equal(summaryDrilldown.artifact_gallery_refs, undefined);
+    assert.equal(summaryDrilldown.package_export_lifecycle_refs, undefined);
+    assert.equal(summaryDrilldown.lifecycle_ledger_refs, undefined);
     assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
     assert.equal(summaryDrilldown.standard_agent_template_consumption_refs, undefined);
     assert.equal(summaryDrilldown.functional_privatization_audit_refs, undefined);
@@ -372,6 +379,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
         + summaryDrilldown.summary.evidence_envelope_blocked_count,
     );
     assertAppReleaseUserPathAttentionCounts(summaryDrilldown);
+    assertMemoryArtifactLifecycleEvidence(summaryDrilldown);
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.owner_payload_group_attention_policy,
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',

@@ -14,6 +14,7 @@ import {
   appReleaseUserPathEvidenceNextStep,
   buildAppReleaseUserPathEvidence,
 } from './app-release-user-path.ts';
+import { buildMemoryArtifactLifecycleEvidence } from './memory-artifact-lifecycle-evidence.ts';
 import { functionalPrivatizationNextSteps } from './functional-privatization-next-step.ts';
 import { summarizeSelectedSafeAction } from './selected-safe-action.ts';
 import { buildOwnerPayloadWorkorder } from './owner-payload-workorder.ts';
@@ -503,9 +504,9 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'top_owner_payload_groups_by_open_then_blocked_counts_refs_only',
     owner_payload_groups: ownerPayloadGroups.items,
     owner_handoff_packet: ownerHandoffPacket,
+    memory_artifact_lifecycle_evidence: buildMemoryArtifactLifecycleEvidence(drilldown),
     app_release_user_path_evidence: appReleaseUserPathEvidence,
-    app_release_user_path_evidence_open_gate_count:
-      appReleaseUserPathOpenGateCount,
+    app_release_user_path_evidence_open_gate_count: appReleaseUserPathOpenGateCount,
     app_release_user_path_evidence_pending_verify_receipt_ref_count:
       appReleaseUserPathPendingVerifyCount,
     oma_production_consumption_followthrough: omaProductionConsumption,
