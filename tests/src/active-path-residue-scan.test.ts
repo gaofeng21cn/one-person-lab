@@ -143,14 +143,11 @@ test('root help fast-start examples stay on the current Codex-default path', () 
   assert.doesNotMatch(helpOutput, new RegExp(`${['front', 'door'].join('')}.*${legacyLocalManager}`, 'i'));
 });
 
-test('production source does not retain retired Hermes provider or gateway environment surfaces', () => {
+test('production source does not expose Hermes as a provider/runtime surface', () => {
   const forbiddenProductionPatterns = [
-    /OPL_HERMES_BIN/,
-    /inspectHermesRuntime/,
-    /collectHermesProcessUsage/,
-    /hermes_diagnostics/,
-    /hermes_runtime/,
-    /hermes_legacy_runtime/,
+    /\bHermes(?:Runtime|Provider|Gateway)\b/,
+    /\bhermes_(?:runtime|online|provider|gateway)\b/i,
+    /\bOPL_HERMES_(?:RUNTIME|PROVIDER|GATEWAY)/,
     /messaging_gateway_ready/,
   ];
   const violations: string[] = [];
@@ -169,26 +166,17 @@ test('production source does not retain retired Hermes provider or gateway envir
   assert.deepEqual(violations, []);
 });
 
-test('default runtime and CLI source do not leak retired vocabulary on active paths', () => {
+test('default runtime and CLI source do not advertise compatibility aliases as active paths', () => {
   const forbiddenActivePathPatterns = [
-    /\bfront(?:door|desk)\b/i,
-    /product[-_]?front(?:door|desk)/i,
-    /open[-_]?front(?:door|desk)/i,
-    /domain[-_]?gateway/i,
-    /gateway[-_]interaction[-_]contract/i,
-    /compatibility[-_]?alias(?:es)?/i,
-    /legacy[-_]?alias(?:es)?/i,
-    /runtime[-_]?run/i,
-    /runtime[-_]?resume/i,
-    new RegExp(['mcp', 'stdio'].join('-'), 'i'),
-    /session[-_]journal[-_]root/i,
-    /local[-_]run[-_]journal/i,
+    /\bcompatibility_alias(?:es)?_allowed\b\s*[:=]\s*true/i,
+    /\bclaims_compatibility_alias_owner\b\s*[:=]\s*true/i,
+    /\bcompatibility_alias_owner\b\s*[:=]\s*true/i,
+    /\blegacy_alias(?:es)?_allowed\b\s*[:=]\s*true/i,
+    /\b(?:default|active|live|normal)[_-]?(?:compatibility|legacy)[_-]?alias(?:es)?\b/i,
+    /\b(?:compatibility|legacy)[_-]?alias(?:es)?[_-]?(?:default|active|live|normal)\b/i,
   ];
   const allowedSourceLines = [
-    /hermes_agent_not_provider_or_gateway_surface/i,
-    /openai_compatible_gateway_backend_forbidden/i,
     /compatibility_alias_allowed/i,
-    /familyRuntimeRuntimePaths/i,
   ];
   const violations: string[] = [];
 

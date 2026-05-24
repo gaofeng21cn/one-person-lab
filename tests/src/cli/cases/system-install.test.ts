@@ -439,7 +439,7 @@ test('recommended system companion skills exclude MAS/MDS project-local stage sk
   }
 });
 
-test('recommended system companion skills sync family skills from packaged Full runtime', () => {
+test('recommended system companion skills keep family domain skills plugin-only when packaged Full runtime is present', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-packaged-family-skills-home-'));
   const packagedSkillsRoot = path.join(homeRoot, 'runtime', 'current', 'skills');
 
@@ -468,7 +468,11 @@ test('recommended system companion skills sync family skills from packaged Full 
     };
 
     const syncedById = new Map(output.install.companion_skill_sync.items.map((item) => [item.skill_id, item.status]));
-    for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent', 'mineru-document-extractor']) {
+    for (const skillId of ['mas', 'mag', 'rca']) {
+      assert.equal(syncedById.has(skillId), false);
+      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), false);
+    }
+    for (const skillId of ['opl-meta-agent', 'mineru-document-extractor']) {
       assert.equal(syncedById.get(skillId), 'synced');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), true);
     }

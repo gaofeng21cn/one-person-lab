@@ -3,6 +3,13 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { FrameworkContractError } from './contracts.ts';
+import {
+  buildGeneratedInterfaceBundle,
+  selectGeneratedInterfaceBundleFormat,
+} from './domain-pack-compiler/generated-interface-read-model.ts';
+import { normalizeFamilyActionCatalog } from './family-action-catalog-contract.ts';
+import { normalizeFamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
+import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
 import { registerOplFamilyCodexPlugins } from './system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from './system-installation/shared.ts';
@@ -16,6 +23,7 @@ export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRo
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
 
 type SkillPackInstallerKind = 'bash' | 'node';
+type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_skill_surface';
 
 type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent';
@@ -24,6 +32,7 @@ type SkillPackSpec = {
   label: string;
   plugin_name: string;
   canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent';
+  source_kind: SkillPackSourceKind;
   installer_kind: SkillPackInstallerKind;
   installer_relative_paths: string[];
 };
@@ -44,6 +53,9 @@ type InspectFamilySkillPack = {
   skill_entry_errors: string[];
   installer_path: string;
   installer_found: boolean;
+  source_kind: SkillPackSourceKind;
+  generated_skill_surface_ready: boolean;
+  generated_skill_surface_status: string | null;
   ready_to_sync: boolean;
   installer_kind: SkillPackInstallerKind;
   command_preview: string[];
@@ -74,6 +86,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     label: 'Med Auto Science',
     plugin_name: 'med-autoscience',
     canonical_plugin_name: 'mas',
+    source_kind: 'repo_plugin_installer',
     installer_kind: 'bash',
     installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
   },
@@ -84,6 +97,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     label: 'Med Auto Grant',
     plugin_name: 'med-autogrant',
     canonical_plugin_name: 'mag',
+    source_kind: 'repo_plugin_installer',
     installer_kind: 'bash',
     installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
   },
@@ -94,6 +108,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     label: 'RedCube AI',
     plugin_name: 'redcube-ai',
     canonical_plugin_name: 'rca',
+    source_kind: 'repo_plugin_installer',
     installer_kind: 'node',
     installer_relative_paths: [
       path.join('scripts', 'install-codex-plugin.ts'),
@@ -107,8 +122,9 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     label: 'OPL Meta Agent',
     plugin_name: 'opl-meta-agent',
     canonical_plugin_name: 'opl-meta-agent',
+    source_kind: 'opl_generated_skill_surface',
     installer_kind: 'node',
-    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.mjs')],
+    installer_relative_paths: [],
   },
 ];
 
@@ -219,6 +235,9 @@ function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
 }
 
 function buildInstallerPath(spec: SkillPackSpec, repoRoot: string) {
+  if (spec.installer_relative_paths.length === 0) {
+    return '';
+  }
   return resolveFirstExistingPath(spec.installer_relative_paths.map((relativePath) => path.join(repoRoot, relativePath)));
 }
 
@@ -235,6 +254,10 @@ function buildInstallerCommandPreview(
   const sharedArgs = ['--repo-root', repoRoot];
   if (home) {
     sharedArgs.push('--home', home);
+  }
+
+  if (spec.source_kind === 'opl_generated_skill_surface') {
+    return ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill'];
   }
 
   if (spec.installer_kind === 'bash') {
@@ -262,6 +285,118 @@ function maybeParseJsonRecord(raw: string) {
   }
 
   return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function recordList(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function readRepoJson(repoRoot: string, relativePath: string) {
+  const filePath = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+}
+
+function buildRepoGeneratedSkillBundle(repoRoot: string) {
+  const domainDescriptor = readRepoJson(repoRoot, path.join('contracts', 'domain_descriptor.json'));
+  const actionCatalog = normalizeFamilyActionCatalog(
+    readRepoJson(repoRoot, path.join('contracts', 'action_catalog.json')),
+  );
+  const stageControlPlane = normalizeFamilyStageControlPlane(
+    readRepoJson(repoRoot, path.join('contracts', 'stage_control_plane.json')),
+  );
+  const functionalAuditRaw = readRepoJson(repoRoot, path.join('contracts', 'functional_privatization_audit.json'));
+  const generatedSurfaceHandoff = readRepoJson(repoRoot, path.join('contracts', 'generated_surface_handoff.json'));
+  const functionalAudit = buildFunctionalPrivatizationAudit({
+    target_domain_id:
+      actionCatalog?.target_domain_id
+      ?? stageControlPlane?.target_domain_id
+      ?? (isRecord(domainDescriptor) ? normalizeOptionalString(String(domainDescriptor.domain_id ?? '')) : null)
+      ?? path.basename(repoRoot),
+    functional_privatization_audit: isRecord(functionalAuditRaw) ? functionalAuditRaw : undefined,
+  });
+  const blockerReasons = [
+    actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
+    stageControlPlane ? null : 'missing_or_invalid_contract:contracts/stage_control_plane.json',
+    functionalAudit.summary.opl_owned_replacement_count > 0
+      || functionalAudit.summary.temporary_migration_bridge_count > 0
+      || functionalAudit.summary.retire_tombstone_count > 0
+      || functionalAudit.summary.active_private_generic_residue_count > 0
+      || functionalAudit.summary.blocker_count > 0
+      ? 'functional_privatization_audit_has_generic_residue_or_blocker'
+      : null,
+  ].filter((reason): reason is string => Boolean(reason));
+  const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
+  const targetDomainId =
+    actionCatalog?.target_domain_id
+    ?? stageControlPlane?.target_domain_id
+    ?? (isRecord(domainDescriptor) ? normalizeOptionalString(String(domainDescriptor.domain_id ?? '')) : null)
+    ?? path.basename(repoRoot);
+  const descriptor = {
+    project_id: targetDomainId,
+    project: isRecord(domainDescriptor)
+      ? normalizeOptionalString(String(domainDescriptor.domain_label ?? '')) ?? targetDomainId
+      : targetDomainId,
+    target_domain_id: targetDomainId,
+    agent_id: isRecord(domainDescriptor)
+      ? normalizeOptionalString(String(domainDescriptor.domain_id ?? '')) ?? targetDomainId
+      : targetDomainId,
+    family_action_catalog: {
+      status: actionCatalog ? 'resolved' : 'missing',
+      raw_descriptor: actionCatalog,
+    },
+    family_stage_control_plane: {
+      status: stageControlPlane ? 'resolved' : 'missing',
+      raw_descriptor: stageControlPlane,
+    },
+    generated_surface_handoff_contract: generatedSurfaceHandoff,
+    functional_privatization_audit: {
+      status: functionalAudit.status,
+      summary: functionalAudit.summary,
+      modules: functionalAudit.modules,
+    },
+  };
+  const bundle = selectGeneratedInterfaceBundleFormat(
+    buildGeneratedInterfaceBundle(descriptor, status, 'skill') as Record<string, unknown>,
+    'skill',
+  );
+  return {
+    bundle,
+    status,
+    blocker_reasons: blockerReasons,
+  };
+}
+
+function inspectGeneratedSkillSurface(spec: SkillPackSpec, repoRoot: string) {
+  if (spec.source_kind !== 'opl_generated_skill_surface') {
+    return {
+      ready: false,
+      status: null,
+    };
+  }
+  try {
+    const generated = buildRepoGeneratedSkillBundle(repoRoot);
+    const skillBlock = isRecord(generated.bundle.skill) ? generated.bundle.skill : null;
+    return {
+      ready:
+        generated.status === 'ready'
+        && generated.bundle.status === 'ready'
+        && skillBlock?.status === 'ready'
+        && recordList(skillBlock.descriptors).length > 0,
+      status: typeof skillBlock?.status === 'string' ? skillBlock.status : generated.status,
+    };
+  } catch {
+    return {
+      ready: false,
+      status: 'blocked_invalid_generated_skill_contracts',
+    };
+  }
 }
 
 function normalizeFrontmatterScalar(value: string | undefined) {
@@ -346,6 +481,71 @@ function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) 
   };
 }
 
+function writeOplGeneratedSkillSurface(inspected: InspectFamilySkillPack, home?: string) {
+  if (inspected.source_kind !== 'opl_generated_skill_surface' || !inspected.generated_skill_surface_ready) {
+    return null;
+  }
+
+  const resolvedHome = home ? path.resolve(home) : (process.env.HOME ?? null);
+  if (!resolvedHome) {
+    return null;
+  }
+
+  const generated = buildRepoGeneratedSkillBundle(inspected.repo_root);
+  const skillBlock = isRecord(generated.bundle.skill) ? generated.bundle.skill : null;
+  const descriptors = recordList(skillBlock?.descriptors);
+  const codexSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.canonical_plugin_name);
+  fs.rmSync(codexSkillDir, { recursive: true, force: true });
+  fs.mkdirSync(path.join(codexSkillDir, 'agents'), { recursive: true });
+  const workflowLines = descriptors.map((descriptor) => [
+    `- \`${String(descriptor.action_id ?? descriptor.command_contract_id ?? 'unknown_action')}\`: ${String(descriptor.summary ?? '').trim()}`,
+    `  Command contract: \`${String(descriptor.command_contract_id ?? 'unknown_contract')}\``,
+  ].join('\n')).join('\n');
+  fs.writeFileSync(
+    path.join(codexSkillDir, 'SKILL.md'),
+    [
+      '---',
+      `name: ${inspected.canonical_plugin_name}`,
+      'description: Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
+      '---',
+      '',
+      '# OPL Meta Agent',
+      '',
+      'Use this skill for OPL Meta Agent foundry workflows. This surface is generated by OPL Framework from the OMA contract pack; the OMA repo does not own a repo-local Codex plugin wrapper.',
+      '',
+      '## Generated Action Contracts',
+      '',
+      workflowLines || '- No generated action contracts were exposed.',
+      '',
+      '## Authority Boundary',
+      '',
+      '- OPL owns the generated Skill surface.',
+      '- OPL Meta Agent owns agent-building semantics and refs-only work-order materialization.',
+      '- Do not treat generated interface readiness as target domain ready, production ready, artifact ready, or quality verdict.',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(codexSkillDir, 'agents', 'openai.yaml'),
+    [
+      'interface:',
+      '  display_name: "OPL Meta Agent"',
+      '  short_description: "Foundry Agent for OPL-compatible knowledge-work agents"',
+      `  default_prompt: "Use $${inspected.canonical_plugin_name} to build, test, or improve an OPL-compatible Foundry Agent."`,
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  return {
+    skill_root: codexSkillDir,
+    skill_entry_path: path.join(codexSkillDir, 'SKILL.md'),
+    descriptor_count: descriptors.length,
+    source: 'opl_generated_agent_interface_bundle',
+  };
+}
+
 function inspectFamilySkillPack(spec: SkillPackSpec): InspectFamilySkillPack {
   return inspectFamilySkillPackAtRepoRoot(spec, resolveRepoRoot(spec));
 }
@@ -362,6 +562,9 @@ function inspectFamilySkillPackAtRepoRoot(
   const skillEntryFound = fs.existsSync(skillEntryPath) && fs.statSync(skillEntryPath).isFile();
   const skillEntryValidation = validateSkillEntry(spec, skillEntryPath, skillEntryFound);
   const installerFound = fs.existsSync(installerPath) && fs.statSync(installerPath).isFile();
+  const generatedSkillSurface = inspectGeneratedSkillSurface(spec, repoRoot);
+  const repoPluginReady =
+    repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid && installerFound;
 
   return {
     domain_id: spec.domain_id,
@@ -379,7 +582,10 @@ function inspectFamilySkillPackAtRepoRoot(
     skill_entry_errors: skillEntryValidation.errors,
     installer_path: installerPath,
     installer_found: installerFound,
-    ready_to_sync: repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid && installerFound,
+    source_kind: spec.source_kind,
+    generated_skill_surface_ready: generatedSkillSurface.ready,
+    generated_skill_surface_status: generatedSkillSurface.status,
+    ready_to_sync: repoPluginReady || (repoFound && generatedSkillSurface.ready),
     installer_kind: spec.installer_kind,
     command_preview: buildInstallerCommandPreview(spec, repoRoot),
   };
@@ -394,6 +600,20 @@ function runInstaller(
       ...inspected,
       sync_status: 'skipped',
       installer_result: null,
+      stdout: '',
+      stderr: '',
+    };
+  }
+
+  if (inspected.source_kind === 'opl_generated_skill_surface') {
+    const codexSkillMirror = writeOplGeneratedSkillSurface(inspected, home);
+    return {
+      ...inspected,
+      sync_status: 'synced',
+      installer_result: {
+        generated_surface: 'opl_generated_skill_descriptor',
+        generated_skill_mirror: codexSkillMirror,
+      },
       stdout: '',
       stderr: '',
     };

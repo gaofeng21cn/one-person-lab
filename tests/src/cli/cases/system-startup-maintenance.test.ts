@@ -1,6 +1,7 @@
 import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { listManagedInstallUpdateReceipts } from '../../../../src/managed-install-update-ledger.ts';
+import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 function createDomainModuleRemote(input: {
   repoName: string;
@@ -60,6 +61,40 @@ function createDomainModuleRemote(input: {
   });
 }
 
+function createOmaGeneratedSurfaceRemote(input: {
+  logPath: string;
+  healthcheckLogPath?: string;
+}) {
+  const remote = createGitModuleRemoteFixture('opl-meta-agent', {
+    extraFiles: {
+      'scripts/opl-module-bootstrap.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf 'opl-meta-agent-bootstrap\\n' >> ${JSON.stringify(input.logPath)}`,
+        '',
+      ].join('\n'),
+      'scripts/verify.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        input.healthcheckLogPath
+          ? `printf '%s\\n' "$1" > ${JSON.stringify(input.healthcheckLogPath)}`
+          : `printf 'opl-meta-agent-health\\n' >> ${JSON.stringify(input.logPath)}`,
+        'test "${1:-}" = "smoke"',
+        '',
+      ].join('\n'),
+    },
+    executableFiles: [
+      'scripts/opl-module-bootstrap.sh',
+      'scripts/verify.sh',
+    ],
+  });
+  writeFakeOmaGeneratedSurfacePack(remote.sourceRoot);
+  runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts', 'runtime']);
+  runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add OMA generated surface contract pack']);
+  runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
+  return remote;
+}
+
 test('system startup-maintenance installs clean managed modules and returns App reload guidance', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
@@ -82,10 +117,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     installerKind: 'node',
     logPath,
   });
-  const metaRemote = createDomainModuleRemote({
-    repoName: 'opl-meta-agent',
-    pluginName: 'opl-meta-agent',
-    installerKind: 'node',
+  const metaRemote = createOmaGeneratedSurfaceRemote({
     logPath,
   });
 
@@ -214,7 +246,6 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'rca-skill-sync',
       'rca-health',
       'opl-meta-agent-bootstrap',
-      'opl-meta-agent-skill-sync',
       'opl-meta-agent-health',
     ]);
     for (const skillName of ['mas', 'mag', 'rca']) {
@@ -278,45 +309,9 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
     installerKind: 'node',
     logPath,
   });
-  const metaRemote = createGitModuleRemoteFixture('opl-meta-agent', {
-    extraFiles: {
-      'plugins/opl-meta-agent/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'opl-meta-agent',
-        skills: './skills/',
-      }, null, 2),
-      'plugins/opl-meta-agent/skills/opl-meta-agent/SKILL.md': [
-        '---',
-        'name: opl-meta-agent',
-        'description: Use OPL Meta Agent through its OPL-managed product entry.',
-        '---',
-        '',
-        '# OPL Meta Agent Skill',
-        '',
-      ].join('\n'),
-      'scripts/install-codex-plugin.mjs': [
-        `import fs from 'node:fs';`,
-        `fs.appendFileSync(${JSON.stringify(logPath)}, 'opl-meta-agent-skill-sync\\n');`,
-        `console.log(JSON.stringify({ plugin: 'opl-meta-agent', sync: 'ok' }));`,
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': [
-        '#!/usr/bin/env bash',
-        'set -euo pipefail',
-        `printf 'opl-meta-agent-bootstrap\\n' >> ${JSON.stringify(logPath)}`,
-        '',
-      ].join('\n'),
-      'scripts/verify.sh': [
-        '#!/usr/bin/env bash',
-        'set -euo pipefail',
-        `printf '%s\\n' "$1" > ${JSON.stringify(omaHealthcheckLogPath)}`,
-        'test "$1" = "smoke"',
-        '',
-      ].join('\n'),
-    },
-    executableFiles: [
-      'scripts/opl-module-bootstrap.sh',
-      'scripts/verify.sh',
-    ],
+  const metaRemote = createOmaGeneratedSurfaceRemote({
+    logPath,
+    healthcheckLogPath: omaHealthcheckLogPath,
   });
 
   try {
@@ -410,10 +405,7 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     installerKind: 'node',
     logPath,
   });
-  const metaRemote = createDomainModuleRemote({
-    repoName: 'opl-meta-agent',
-    pluginName: 'opl-meta-agent',
-    installerKind: 'node',
+  const metaRemote = createOmaGeneratedSurfaceRemote({
     logPath,
   });
 
@@ -548,10 +540,7 @@ test('system startup-maintenance reports developer and dirty checkouts for manua
     installerKind: 'node',
     logPath,
   });
-  const metaRemote = createDomainModuleRemote({
-    repoName: 'opl-meta-agent',
-    pluginName: 'opl-meta-agent',
-    installerKind: 'node',
+  const metaRemote = createOmaGeneratedSurfaceRemote({
     logPath,
   });
   const masDeveloperCheckout = path.join(homeRoot, 'developer-med-autoscience');

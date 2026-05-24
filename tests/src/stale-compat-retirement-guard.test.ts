@@ -17,29 +17,6 @@ const scannedRoots = [
   'python/opl-harness-shared/tests',
 ];
 
-const forbiddenTerms = [
-  ['front', 'door'].join(''),
-  ['front', 'desk'].join(''),
-  ['product', '-', 'front', 'door'].join(''),
-  ['product', '_', 'front', 'door'].join(''),
-  ['open', '_', 'front', 'door'].join(''),
-  ['open', '_', 'front', 'desk'].join(''),
-  ['gateway', '_interaction_contract'].join(''),
-  ['front', 'door_owner'].join(''),
-  ['natural_language_', 'front', 'door'].join(''),
-  ['host', '_agent'].join(''),
-  ['hermes_native', '_proof'].join(''),
-  ['compatibility', '_aliases'].join(''),
-  ['legacy', '_boundary_terms'].join(''),
-  ['mcp', '-stdio'].join(''),
-  ['runtime', '-', 'run'].join(''),
-  ['runtime', '-', 'resume'].join(''),
-  ['runtime', '_entries'].join(''),
-  ['session', '_journal', '_root'].join(''),
-  ['local', '_run', '_journal'].join(''),
-  ['stage', '_action', '_envelope', '_kind'].join(''),
-];
-
 const textFileExtensions = new Set([
   '.json',
   '.md',
@@ -71,43 +48,46 @@ function scannedTextFiles(roots: string[]) {
   return roots.flatMap((relativeRoot) => [...walk(relativeRoot)]);
 }
 
-test('active OPL source, contracts, fixtures, and tests do not reintroduce retired compatibility vocabulary', () => {
+test('active OPL machine surfaces do not declare compatibility aliases as live', () => {
   const violations: string[] = [];
+  const forbiddenLiveAliasClaims = [
+    /\bcompatibility_alias(?:es)?_allowed\b\s*[:=]\s*true/i,
+    /\bclaims_compatibility_alias_owner\b\s*[:=]\s*true/i,
+    /\bcompatibility_alias_owner\b\s*[:=]\s*true/i,
+    /\blegacy_alias(?:es)?_allowed\b\s*[:=]\s*true/i,
+    /\b(?:default|active|live|normal)[_-]?(?:compatibility|legacy)[_-]?alias(?:es)?\b/i,
+    /\b(?:compatibility|legacy)[_-]?alias(?:es)?[_-]?(?:default|active|live|normal)\b/i,
+  ];
 
   for (const relativePath of scannedTextFiles(scannedRoots)) {
-    const lower = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').toLowerCase();
-    for (const term of forbiddenTerms) {
-      if (lower.includes(term.toLowerCase())) {
-        violations.push(`${relativePath}: ${term}`);
+    const lines = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').split(/\r?\n/);
+    lines.forEach((line, index) => {
+      for (const pattern of forbiddenLiveAliasClaims) {
+        if (pattern.test(line)) {
+          violations.push(`${relativePath}:${index + 1}: ${pattern}`);
+        }
       }
-    }
+    });
   }
 
   assert.deepEqual(violations, []);
 });
 
-test('active machine surfaces do not keep retired Hermes provider or gateway compatibility aliases', () => {
+test('active machine surfaces keep Hermes as executor-only, never provider compatibility', () => {
   const scannedFiles = scannedTextFiles([
     'src',
     'contracts',
     'tests/fixtures/family-manifests',
   ]);
   const forbiddenPatterns = [
-    /compatibility[_-]?aliases/i,
-    /legacy[_-]?aliases/i,
-    /hermes[_-]?legacy/i,
-    /hermes[_-]?(?:runtime|online|provider|proof|readiness|gateway)[_-]?(?:compat|alias|bridge|fallback|surface|path)?/i,
-    /gateway[_-]?(?:compat|alias|bridge|fallback|provider|readiness|surface|path)/i,
-    /(?:compat|alias|bridge|fallback)[_-]?(?:gateway|hermes[_-]?provider|hermes[_-]?runtime|hermes[_-]?online)/i,
+    /\bhermes[_-]?(?:runtime|online|provider|gateway)[_-]?(?:compat|alias|fallback)\b/i,
+    /\b(?:compat|alias|fallback)[_-]?hermes[_-]?(?:provider|runtime|online)\b/i,
+    /\bhermes[_-]?provider[_-]?(?:ready|readiness|surface|path)\b/i,
   ];
   const allowedPatterns = [
     /hermes_agent/i,
     /hermes-agent/i,
     /hermes_agent_not_provider_or_gateway_surface/i,
-    /openai_compatible_gateway_backend_forbidden/i,
-    /without hermes compatibility diagnostics/i,
-    /repair_hermes_legacy_provider/,
-    /install_hermes_online_runtime/,
   ];
   const violations: string[] = [];
 

@@ -10,6 +10,7 @@ import {
   test,
 } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
@@ -224,32 +225,24 @@ test('module install creates an OPL-managed root even when a sibling checkout is
   const siblingCheckout = path.join(workspaceRoot, 'opl-meta-agent');
   const modulesRoot = path.join(homeRoot, 'opl-state', 'modules');
   const healthcheckLogPath = path.join(homeRoot, 'oma-healthcheck.log');
+  const omaExtraFiles: Record<string, string> = {
+    'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+    'scripts/verify.sh': [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `printf '%s\\n' "$1" > ${JSON.stringify(healthcheckLogPath)}`,
+      'test "$1" = "smoke"',
+      '',
+    ].join('\n'),
+  };
   const metaRemote = createGitModuleRemoteFixture('opl-meta-agent', {
-    extraFiles: {
-      'plugins/opl-meta-agent/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'opl-meta-agent',
-        skills: './skills/',
-      }, null, 2),
-      'plugins/opl-meta-agent/skills/oplmetaagent/SKILL.md': [
-        '---',
-        'name: oplmetaagent',
-        'description: Use this fixture for OPL Meta Agent managed install tests.',
-        '---',
-        '',
-        '# OPL Meta Agent Skill',
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
-      'scripts/verify.sh': [
-        '#!/usr/bin/env bash',
-        'set -euo pipefail',
-        `printf '%s\\n' "$1" > ${JSON.stringify(healthcheckLogPath)}`,
-        'test "$1" = "smoke"',
-        '',
-      ].join('\n'),
-    },
+    extraFiles: omaExtraFiles,
     executableFiles: ['scripts/verify.sh'],
   });
+  writeFakeOmaGeneratedSurfacePack(metaRemote.sourceRoot);
+  runGitFixtureCommand(metaRemote.sourceRoot, ['add', 'agent', 'contracts', 'runtime']);
+  runGitFixtureCommand(metaRemote.sourceRoot, ['commit', '-m', 'Add OMA generated surface contract pack']);
+  runGitFixtureCommand(metaRemote.sourceRoot, ['push', 'origin', 'main']);
 
   try {
     fs.mkdirSync(onePersonLabRoot, { recursive: true });

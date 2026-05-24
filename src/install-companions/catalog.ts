@@ -28,42 +28,6 @@ export function buildOplRecommendedSkillSpecs(options: {
       supports: ['planning', 'debugging', 'verification', 'branch_finish', 'skill_methodology'],
     },
     {
-      skill_id: 'mas',
-      label: 'Med Auto Science skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'mas', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mas', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the MAS skill so Codex can operate the Med Auto Science domain app directly.',
-      supports: ['mas', 'medical_research', 'paper_drafting', 'study_runtime'],
-    },
-    {
-      skill_id: 'mag',
-      label: 'Med Auto Grant skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'mag', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'mag', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the MAG skill so Codex can operate the Med Auto Grant domain app directly.',
-      supports: ['mag', 'grant_writing', 'proposal_revision'],
-    },
-    {
-      skill_id: 'rca',
-      label: 'RedCube AI skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [
-        path.join(skillsManagerHome, 'skills', 'rca', 'SKILL.md'),
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, 'rca', 'SKILL.md')] : []),
-      ],
-      install_hint: 'Install the RCA skill so Codex can operate RedCube AI visual deliverable workflows directly.',
-      supports: ['rca', 'presentations', 'visual_deliverables'],
-    },
-    {
       skill_id: 'opl-meta-agent',
       label: 'OPL Meta Agent skill',
       required: false,
