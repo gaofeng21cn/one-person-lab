@@ -116,6 +116,27 @@ function createTaskAttempt(
   return attempt;
 }
 
+test('current control state binds MAS default executor task freshness to domain source fingerprint', () => {
+  withDb((db) => {
+    const task = enqueueDefaultTask(db, {
+      source_fingerprint: 'mas-domain-source:fresh',
+    });
+    createTaskAttempt(db, task, {
+      sourceFingerprint: 'opl-stage-source:derived',
+      workspaceEpochs: {
+        domain_source_fingerprint: 'mas-domain-source:fresh',
+      },
+      start: true,
+    });
+
+    const state = deriveCurrentControlStateForTask(db, task.task_id);
+
+    assert.equal(state.reconciliation_status, 'running');
+    assert.deepEqual(state.stale_epoch_kinds, []);
+    assert.equal(state.source_fingerprint, 'opl-stage-source:derived');
+  });
+});
+
 test('current control state fails closed when task or attempt identity is incomplete', () => {
   withDb((db) => {
     const task = enqueueDefaultTask(db);

@@ -123,11 +123,12 @@ function requiredIdentityMissing(task: FamilyRuntimeTaskRow | undefined, attempt
 
 function staleEpochKinds(taskPayload: Record<string, unknown>, attempt: ControlAttemptRow) {
   const workspaceLocator = parseRecord(attempt.workspace_locator_json);
+  const attemptDomainSourceFingerprint = stringValue(workspaceLocator.domain_source_fingerprint);
   const checks = [
     {
       kind: 'source_fingerprint',
       taskValue: stringValue(taskPayload.source_fingerprint),
-      attemptValue: attempt.source_fingerprint,
+      attemptValue: attemptDomainSourceFingerprint ?? attempt.source_fingerprint,
     },
     {
       kind: 'route_epoch',
