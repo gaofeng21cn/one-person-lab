@@ -170,6 +170,16 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       recordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.required_operator_payload_refs,
       ['typed_blocker_refs'],
     );
+    assert.equal(
+      recordRoute.payload_workorder.accepted_payload_paths.success_refs_path
+        .required_any_operator_payload_refs.includes('evidence_refs'),
+      false,
+    );
+    assert.deepEqual(
+      recordRoute.payload_workorder.accepted_payload_paths.success_refs_path
+        .supplemental_operator_payload_refs,
+      ['evidence_refs'],
+    );
     assert.equal(recordRoute.payload_workorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
     assert.equal(recordRoute.payload_workorder.authority_boundary.can_generate_domain_owner_receipt, false);
     assert.equal(recordRoute.payload_workorder.empty_payload_template_is_success_evidence, false);
@@ -227,10 +237,16 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
     assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
     assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
+    assert.equal(openDispatchWorkorder.required_operator_payload_refs.includes('evidence_refs'), false);
+    assert.deepEqual(openDispatchWorkorder.supplemental_operator_payload_refs, ['evidence_refs']);
+    assert.equal(openDispatchWorkorder.payload_ref_hints.required_any_payload_refs.includes('evidence_refs'), false);
+    assert.deepEqual(openDispatchWorkorder.payload_ref_hints.supplemental_payload_refs, ['evidence_refs']);
     assert.equal(openDispatchWorkorder.typed_blocker_payload_path_available, true);
     assert.equal(openDispatchWorkorder.owner_receipt_payload_path_available, true);
     assert.equal(openDispatchWorkorder.owner_chain_payload_path_available, true);
     assert.equal(openDispatchWorkorder.no_regression_payload_path_available, true);
+    assert.equal(openDispatchWorkorder.evidence_payload_path_available, false);
+    assert.equal(openDispatchWorkorder.supplemental_evidence_payload_available, true);
     assert.equal(
       openDispatchWorkorder.payload_path_policy,
       'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',

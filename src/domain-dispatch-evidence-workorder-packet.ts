@@ -39,6 +39,7 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
   const actionId = stringValue(route.action_id);
   const routeDomainId = stringValue(route.domain_id);
   const requiredOperatorPayloadRefs = stringList(route.required_operator_payload_refs);
+  const supplementalOperatorPayloadRefs = stringList(route.supplemental_operator_payload_refs);
   return {
     item_id: `domain-dispatch-evidence-workorder:${actionId ?? 'unknown'}`,
     action_id: actionId,
@@ -84,6 +85,7 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
     empty_payload_template_is_success_evidence: route.empty_payload_template_is_success_evidence === true,
     copyable_runtime_action_execute_commands: record(route.copyable_runtime_action_execute_commands),
     required_operator_payload_refs: requiredOperatorPayloadRefs,
+    supplemental_operator_payload_refs: supplementalOperatorPayloadRefs,
     optional_operator_payload_refs: stringList(route.optional_operator_payload_refs),
     required_evidence_refs: stringList(route.required_evidence_refs),
     required_return_shapes: stringList(route.required_return_shapes),
@@ -92,6 +94,7 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
     owner_chain_payload_path_available: requiredOperatorPayloadRefs.includes('owner_chain_refs'),
     no_regression_payload_path_available: requiredOperatorPayloadRefs.includes('no_regression_refs'),
     evidence_payload_path_available: requiredOperatorPayloadRefs.includes('evidence_refs'),
+    supplemental_evidence_payload_available: supplementalOperatorPayloadRefs.includes('evidence_refs'),
     payload_path_policy:
       stringValue(record(route.payload_workorder).workorder_policy)
         ?? 'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
@@ -144,6 +147,9 @@ function domainStageWorkorderGroups(
       const requiredOperatorPayloadRefs = uniqueStringList(
         groupItems.flatMap((item) => item.required_operator_payload_refs),
       );
+      const supplementalOperatorPayloadRefs = uniqueStringList(
+        groupItems.flatMap((item) => item.supplemental_operator_payload_refs),
+      );
       const requiredEvidenceRefs = uniqueStringList(
         groupItems.flatMap((item) => item.required_evidence_refs),
       );
@@ -181,6 +187,10 @@ function domainStageWorkorderGroups(
           groupItems.map((item) => item.required_operator_payload_refs.length),
         ),
         required_operator_payload_refs: requiredOperatorPayloadRefs,
+        supplemental_operator_payload_ref_count: numberSum(
+          groupItems.map((item) => item.supplemental_operator_payload_refs.length),
+        ),
+        supplemental_operator_payload_refs: supplementalOperatorPayloadRefs,
         payload_template: firstNonEmptyRecord(groupItems.map((item) => item.payload_template)),
         payload_ref_hints: firstNonEmptyRecord(groupItems.map((item) => item.payload_ref_hints)),
         payload_template_policy:
@@ -214,6 +224,8 @@ function domainStageWorkorderGroups(
           groupItems.filter((item) => item.owner_chain_payload_path_available).length,
         no_regression_payload_path_available_count:
           groupItems.filter((item) => item.no_regression_payload_path_available).length,
+        supplemental_evidence_payload_available_count:
+          groupItems.filter((item) => item.supplemental_evidence_payload_available).length,
         payload_owner: 'domain_repository_or_app_live_operator',
         route_requires_domain_or_app_payload: true,
         worklist_item_is_completion_claim: false,
@@ -300,6 +312,8 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
         items.filter((item) => Object.keys(item.identity_binding_guidance).length > 0).length,
       required_operator_payload_ref_count:
         items.reduce((total, item) => total + item.required_operator_payload_refs.length, 0),
+      supplemental_operator_payload_ref_count:
+        items.reduce((total, item) => total + item.supplemental_operator_payload_refs.length, 0),
       required_evidence_ref_count:
         items.reduce((total, item) => total + item.required_evidence_refs.length, 0),
       typed_blocker_payload_path_available_count:
@@ -310,6 +324,8 @@ export function buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes: JsonR
         items.filter((item) => item.owner_chain_payload_path_available).length,
       no_regression_payload_path_available_count:
         items.filter((item) => item.no_regression_payload_path_available).length,
+      supplemental_evidence_payload_available_count:
+        items.filter((item) => item.supplemental_evidence_payload_available).length,
       success_payload_owner: 'domain_repository_or_app_live_operator',
       accepted_payload_path_policy:
         'success_refs_path_or_typed_blocker_path_empty_template_blocks',
@@ -367,6 +383,9 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     identity_binding_guidance: item.identity_binding_guidance,
     required_operator_payload_ref_count: item.required_operator_payload_refs.length,
     required_operator_payload_refs: item.required_operator_payload_refs,
+    supplemental_operator_payload_ref_count: item.supplemental_operator_payload_refs.length,
+    supplemental_operator_payload_refs: item.supplemental_operator_payload_refs,
+    payload_ref_hints: item.payload_ref_hints,
     payload_path_policy: item.payload_path_policy,
     accepted_payload_paths: item.accepted_payload_paths,
     payload_preflight_policy: item.payload_preflight_policy,
@@ -379,6 +398,8 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     owner_receipt_payload_path_available: item.owner_receipt_payload_path_available,
     owner_chain_payload_path_available: item.owner_chain_payload_path_available,
     no_regression_payload_path_available: item.no_regression_payload_path_available,
+    evidence_payload_path_available: item.evidence_payload_path_available,
+    supplemental_evidence_payload_available: item.supplemental_evidence_payload_available,
     open_reason: item.open_reason,
     payload_requirement: item.payload_requirement,
     worklist_item_is_completion_claim: false,
@@ -410,6 +431,8 @@ export function compactDomainDispatchEvidenceWorkorderGroupAttentionItems(
     can_submit_record_to_safe_action_shell: group.record_command_refs.length > 0,
     required_operator_payload_ref_count: group.required_operator_payload_ref_count,
     required_operator_payload_refs: group.required_operator_payload_refs,
+    supplemental_operator_payload_ref_count: group.supplemental_operator_payload_ref_count,
+    supplemental_operator_payload_refs: group.supplemental_operator_payload_refs,
     payload_template: group.payload_template,
     payload_ref_hints: group.payload_ref_hints,
     payload_template_policy: group.payload_template_policy,

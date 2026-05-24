@@ -26,6 +26,16 @@ export function assertDomainDispatchGroupExecutorHints(group: any) {
     evidence_refs: [],
   });
   assert.equal(group.payload_ref_hints.required_any_payload_refs.includes('domain_receipt_refs'), true);
+  assert.equal(group.payload_ref_hints.required_any_payload_refs.includes('evidence_refs'), false);
+  assert.deepEqual(group.payload_ref_hints.supplemental_payload_refs, ['evidence_refs']);
+  assert.equal(
+    group.accepted_payload_paths.success_refs_path.required_any_operator_payload_refs.includes('evidence_refs'),
+    false,
+  );
+  assert.deepEqual(
+    group.accepted_payload_paths.success_refs_path.supplemental_operator_payload_refs,
+    ['evidence_refs'],
+  );
   assert.equal(
     group.payload_template_policy,
     'template_is_empty_by_design_replace_with_real_domain_app_or_live_refs_before_submit',

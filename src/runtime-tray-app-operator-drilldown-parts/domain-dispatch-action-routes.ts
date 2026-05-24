@@ -63,6 +63,25 @@ function runtimeActionExecuteCommand(input: {
   ].join(' ');
 }
 
+const DOMAIN_DISPATCH_SUCCESS_CLOSEOUT_PAYLOAD_REFS = [
+  'domain_receipt_refs',
+  'owner_chain_refs',
+  'no_regression_refs',
+];
+
+const DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS = [
+  'typed_blocker_refs',
+];
+
+const DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS = [
+  'evidence_refs',
+];
+
+const DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS = [
+  ...DOMAIN_DISPATCH_SUCCESS_CLOSEOUT_PAYLOAD_REFS,
+  ...DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS,
+];
+
 function refsOnlyAuthorityBoundary() {
   return {
     opl: 'app_operator_drilldown_refs_only',
@@ -130,18 +149,14 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
         payload_owner: 'domain_repository_or_app_live_operator',
         accepted_payload_paths: {
           success_refs_path: {
-            required_any_operator_payload_refs: [
-              'domain_receipt_refs',
-              'owner_chain_refs',
-              'no_regression_refs',
-              'evidence_refs',
-            ],
+            required_any_operator_payload_refs: DOMAIN_DISPATCH_SUCCESS_CLOSEOUT_PAYLOAD_REFS,
+            supplemental_operator_payload_refs: DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
             typed_blocker_refs_must_be_absent: true,
             closes_domain_ready: false,
             closes_production_ready: false,
           },
           typed_blocker_path: {
-            required_operator_payload_refs: ['typed_blocker_refs'],
+            required_operator_payload_refs: DOMAIN_DISPATCH_TYPED_BLOCKER_PAYLOAD_REFS,
             success_claimed: false,
             closes_domain_ready: false,
             closes_production_ready: false,
@@ -216,13 +231,9 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
           typed_blocker_refs_may_close_instead_of_success: true,
           owner_chain_refs_recommended: true,
           no_regression_refs_recommended: true,
-          required_any_payload_refs: [
-            'domain_receipt_refs',
-            'typed_blocker_refs',
-            'owner_chain_refs',
-            'no_regression_refs',
-            'evidence_refs',
-          ],
+          required_any_payload_refs: DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS,
+          supplemental_payload_refs: DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
+          evidence_refs_are_supplemental_context_only: true,
         }
       : null,
     payload_workorder: payloadWorkorder,
@@ -277,13 +288,10 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     evidence_source_ref: sourceRef,
     required_operator_payload_refs: mode === 'verify'
       ? []
-      : [
-          'domain_receipt_refs',
-          'typed_blocker_refs',
-          'owner_chain_refs',
-          'no_regression_refs',
-          'evidence_refs',
-        ],
+      : DOMAIN_DISPATCH_RECORD_REQUIRED_PAYLOAD_REFS,
+    supplemental_operator_payload_refs: mode === 'verify'
+      ? []
+      : DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
     optional_operator_payload_refs: [],
     required_evidence_refs: [
       `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
