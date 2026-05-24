@@ -71,6 +71,12 @@ function buildSurfaceBudgetConformance(contracts: FrameworkContracts) {
     surface_count: surfaces.length,
     default_surface_count: activeDefaultSurfaces.length,
     budgeted_surface_count: surfaces.length - invalidSurfaces.length,
+    default_surface_budgeted_count:
+      activeDefaultSurfaces.length - invalidSurfaces.filter((surface) =>
+        surface.surface_budget.default_surface
+      ).length,
+    all_default_surfaces_budgeted:
+      activeDefaultSurfaces.every((surface) => !invalidSurfaces.includes(surface)),
     invalid_surface_budget_count: invalidSurfaces.length,
     invalid_surface_ids: invalidSurfaces.map((surface) => surface.surface_id),
     default_surface_policy:

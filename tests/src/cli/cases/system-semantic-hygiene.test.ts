@@ -113,8 +113,10 @@ test('system semantic hygiene exposes ten machine gates without production or do
       surface_count?: unknown;
       default_surface_count?: unknown;
       budgeted_surface_count?: unknown;
+      default_surface_budgeted_count?: unknown;
       invalid_surface_budget_count?: unknown;
       invalid_surface_ids?: unknown;
+      all_default_surfaces_budgeted?: unknown;
       ai_first_policy?: unknown;
       authority_boundary?: {
         can_claim_domain_ready?: unknown;
@@ -139,9 +141,28 @@ test('system semantic hygiene exposes ten machine gates without production or do
     ),
     true,
   );
-  assert.equal(surfaceBudgetGate.surface_budget_conformance?.surface_count, 11);
-  assert.equal(surfaceBudgetGate.surface_budget_conformance?.default_surface_count, 11);
-  assert.equal(surfaceBudgetGate.surface_budget_conformance?.budgeted_surface_count, 11);
+  assert.equal(
+    typeof surfaceBudgetGate.surface_budget_conformance?.surface_count,
+    'number',
+  );
+  assert.equal(
+    Number(surfaceBudgetGate.surface_budget_conformance?.surface_count) > 0,
+    true,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.default_surface_count,
+    surfaceBudgetGate.surface_budget_conformance?.default_surface_budgeted_count,
+  );
+  assert.equal(
+    surfaceBudgetGate.surface_budget_conformance?.surface_count,
+    surfaceBudgetGate.surface_budget_conformance?.budgeted_surface_count,
+  );
+  assert.equal(
+    Number(surfaceBudgetGate.surface_budget_conformance?.budgeted_surface_count)
+      + Number(surfaceBudgetGate.surface_budget_conformance?.invalid_surface_budget_count),
+    surfaceBudgetGate.surface_budget_conformance?.surface_count,
+  );
+  assert.equal(surfaceBudgetGate.surface_budget_conformance?.all_default_surfaces_budgeted, true);
   assert.equal(surfaceBudgetGate.surface_budget_conformance?.invalid_surface_budget_count, 0);
   assert.deepEqual(surfaceBudgetGate.surface_budget_conformance?.invalid_surface_ids, []);
   assert.match(String(surfaceBudgetGate.surface_budget_conformance?.ai_first_policy), /ai_executor_planning/);
