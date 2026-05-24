@@ -22,6 +22,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function exportOwnerFingerprint(payload: Record<string, unknown>) {
+  const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
+  return optionalString(context?.owner_fingerprint);
+}
+
 function recordList(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
@@ -293,6 +298,7 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
       row.task_kind,
       optionalString(payload.dispatch_ref),
       optionalString(payload.source_fingerprint),
+      exportOwnerFingerprint(payload),
       row.dedupe_key,
     ]);
   }

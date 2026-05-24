@@ -25,6 +25,11 @@ function sourceFingerprint(payload: Record<string, unknown>) {
   return optionalString(payload.source_fingerprint);
 }
 
+function exportOwnerFingerprint(payload: Record<string, unknown>) {
+  const context = recordValue(payload.opl_domain_export_context);
+  return optionalString(context?.owner_fingerprint);
+}
+
 function isMasDefaultExecutorDispatch(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
@@ -97,6 +102,40 @@ function masDefaultExecutorBlockedRedriveDecision(
   };
 }
 
+function masDefaultExecutorSucceededOwnerRedriveDecision(
+  existing: FamilyRuntimeTaskRow,
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+) {
+  if (
+    existing.domain_id !== 'medautoscience'
+    || existing.task_kind !== MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || existing.status !== 'succeeded'
+  ) {
+    return null;
+  }
+  const nextOwnerFingerprint = exportOwnerFingerprint(nextPayload);
+  if (!nextOwnerFingerprint) {
+    return null;
+  }
+  const existingOwnerFingerprint = exportOwnerFingerprint(existingPayload);
+  if (!existingOwnerFingerprint) {
+    return {
+      reason: 'domain_export_context_added_after_succeeded',
+      previous_export_owner_fingerprint: null,
+      next_export_owner_fingerprint: nextOwnerFingerprint,
+    };
+  }
+  if (existingOwnerFingerprint !== nextOwnerFingerprint) {
+    return {
+      reason: 'domain_export_owner_changed_after_succeeded',
+      previous_export_owner_fingerprint: existingOwnerFingerprint,
+      next_export_owner_fingerprint: nextOwnerFingerprint,
+    };
+  }
+  return null;
+}
+
 export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
   const createdAt = nowIso();
   const dedupeKey = input.dedupeKey?.trim() || null;
@@ -121,6 +160,63 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && exportedTaskChanged
         && isMasDefaultExecutorDispatch(existing, existingPayload)
         && isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
+      const succeededOwnerRedrive = masDefaultExecutorSucceededAdmissionRefresh
+        ? masDefaultExecutorSucceededOwnerRedriveDecision(existing, existingPayload, payload)
+        : null;
+      if (succeededOwnerRedrive) {
+        const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
+        db.prepare(`
+          UPDATE tasks
+          SET domain_id = ?, task_kind = ?, payload_json = ?, priority = ?, status = ?,
+            source = ?, requires_approval = ?, approved_at = NULL, lease_owner = NULL,
+            lease_expires_at = NULL, last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          input.domainId,
+          taskKind,
+          exportedPayloadJson,
+          input.priority ?? 0,
+          nextStatus,
+          input.source ?? 'opl-cli',
+          input.requiresApproval ? 1 : 0,
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_requeued_from_succeeded_after_domain_owner_update',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            next_status: nextStatus,
+            ...succeededOwnerRedrive,
+            authority_boundary: {
+              opl: 'queue_redrive_after_domain_owner_update_only',
+              domain: 'truth_quality_artifact_gate_owner',
+              domain_truth_mutation: false,
+              publication_quality_mutation: false,
+              artifact_gate_mutation: false,
+              current_package_mutation: false,
+            },
+          },
+        });
+        insertNotification(db, {
+          taskId: refreshed.task_id,
+          severity: 'info',
+          title: 'Family runtime task requeued after domain owner update',
+          body: `${input.domainId}:${taskKind}`,
+          payload: { status: nextStatus, dedupe_key: dedupeKey },
+        });
+        return {
+          accepted: true,
+          requeued_from_terminal: true,
+          idempotent_noop: false,
+          task: taskToPayload(refreshed),
+        };
+      }
       const masDefaultExecutorMetadataRefresh = masDefaultExecutorSucceededAdmissionRefresh
         ? masDefaultExecutorEvidencePayloadRefresh(existingPayload, payload)
         : null;

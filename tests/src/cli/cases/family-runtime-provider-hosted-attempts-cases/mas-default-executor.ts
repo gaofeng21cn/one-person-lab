@@ -252,6 +252,65 @@ test('family-runtime does not auto-requeue succeeded MAS default executor dispat
   }
 });
 
+test('family-runtime requeues succeeded MAS default executor dispatch when domain owner fingerprint changes', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createQueueTables(db);
+    const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:succeeded-owner-fingerprint-redrive';
+    const basePayload = defaultExecutorPayload('source-current');
+    insertSucceededTask(db, {
+      taskId: 'task-mas-default-succeeded-owner-fingerprint-redrive',
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
+        ...basePayload,
+        opl_domain_export_context: {
+          command_source: 'module_exec_profile',
+          owner_fingerprint: 'module_exec_profile:/tmp/profile.toml:medautoscience:managed_root:head-before:/tmp/modules/med-autoscience',
+        },
+      },
+      dedupeKey,
+    });
+
+    const result = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
+        ...basePayload,
+        opl_domain_export_context: {
+          command_source: 'module_exec_profile',
+          owner_fingerprint: 'module_exec_profile:/tmp/profile.toml:medautoscience:managed_root:head-after:/tmp/modules/med-autoscience',
+        },
+      },
+      dedupeKey,
+      source: 'test-domain-export',
+    });
+    const task = db.prepare('SELECT status, payload_json FROM tasks WHERE task_id = ?').get(
+      'task-mas-default-succeeded-owner-fingerprint-redrive',
+    ) as { status: string; payload_json: string };
+    const payload = JSON.parse(task.payload_json);
+    const requeueEvent = db.prepare(`
+      SELECT payload_json
+      FROM events
+      WHERE task_id = ? AND event_type = 'task_requeued_from_succeeded_after_domain_owner_update'
+      LIMIT 1
+    `).get('task-mas-default-succeeded-owner-fingerprint-redrive') as { payload_json: string } | undefined;
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.requeued_from_terminal, true);
+    assert.equal(result.idempotent_noop, false);
+    assert.equal(task.status, 'queued');
+    assert.equal(
+      payload.opl_domain_export_context.owner_fingerprint,
+      'module_exec_profile:/tmp/profile.toml:medautoscience:managed_root:head-after:/tmp/modules/med-autoscience',
+    );
+    assert.ok(requeueEvent);
+    assert.equal(JSON.parse(requeueEvent.payload_json).reason, 'domain_export_owner_changed_after_succeeded');
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime refreshes refs-only evidence payloads on succeeded MAS default executor dispatches', () => {
   const db = new DatabaseSync(':memory:');
   try {
