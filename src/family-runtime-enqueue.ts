@@ -46,6 +46,30 @@ function isMasDefaultExecutorDispatchInput(
   return isMasDefaultExecutorDispatch({ domain_id: domainId, task_kind: taskKind }, payload);
 }
 
+function recordValue(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function masDefaultExecutorEvidencePayloadRefresh(
+  existingPayload: Record<string, unknown>,
+  nextPayload: Record<string, unknown>,
+) {
+  const evidencePayload = recordValue(nextPayload.domain_dispatch_evidence_record_payload);
+  if (!evidencePayload) {
+    return null;
+  }
+  const currentEvidencePayload = recordValue(existingPayload.domain_dispatch_evidence_record_payload);
+  if (JSON.stringify(currentEvidencePayload) === JSON.stringify(evidencePayload)) {
+    return null;
+  }
+  return {
+    ...existingPayload,
+    domain_dispatch_evidence_record_payload: evidencePayload,
+  };
+}
+
 function masDefaultExecutorBlockedRedriveDecision(
   existing: FamilyRuntimeTaskRow,
   existingPayload: Record<string, unknown>,
@@ -97,6 +121,39 @@ export function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
         && exportedTaskChanged
         && isMasDefaultExecutorDispatch(existing, existingPayload)
         && isMasDefaultExecutorDispatchInput(input.domainId, taskKind, payload);
+      const masDefaultExecutorMetadataRefresh = masDefaultExecutorSucceededAdmissionRefresh
+        ? masDefaultExecutorEvidencePayloadRefresh(existingPayload, payload)
+        : null;
+      if (masDefaultExecutorMetadataRefresh) {
+        db.prepare(`
+          UPDATE tasks
+          SET payload_json = ?, source = ?, updated_at = ?
+          WHERE task_id = ?
+        `).run(
+          JSON.stringify(masDefaultExecutorMetadataRefresh),
+          input.source ?? 'opl-cli',
+          createdAt,
+          existing.task_id,
+        );
+        const refreshed = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(existing.task_id) as FamilyRuntimeTaskRow;
+        insertEvent(db, {
+          taskId: refreshed.task_id,
+          domainId: refreshed.domain_id,
+          eventType: 'task_metadata_refreshed_from_domain_export',
+          source: input.source ?? 'opl-cli',
+          payload: {
+            dedupe_key: dedupeKey,
+            previous_status: existing.status,
+            retained_status: refreshed.status,
+            refreshed_fields: ['domain_dispatch_evidence_record_payload'],
+          },
+        });
+        return {
+          accepted: false,
+          idempotent_noop: true,
+          task: taskToPayload(refreshed),
+        };
+      }
       if (existing.status === 'succeeded' && exportedTaskChanged && !masDefaultExecutorSucceededAdmissionRefresh) {
         const nextStatus: FamilyRuntimeTaskStatus = input.requiresApproval ? 'waiting_approval' : 'queued';
         db.prepare(`
