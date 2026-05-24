@@ -12,6 +12,43 @@ import {
 import { DatabaseSync } from 'node:sqlite';
 
 import { enqueueTask } from '../../../../../src/family-runtime-enqueue.ts';
+import { startMasDefaultExecutorDispatchAttempt } from '../../../../../src/family-runtime-mas-default-executor-start.ts';
+import { ensureProviderHostedStageAttempt } from '../../../../../src/family-runtime-provider-hosted-attempts.ts';
+import { familyRuntimePaths } from '../../../../../src/family-runtime-store.ts';
+import {
+  createStageAttemptTable,
+  listStageAttemptsForTask,
+} from '../../../../../src/family-runtime-stage-attempts.ts';
+
+function withIsolatedFamilyRuntimeEnv<T>(fn: () => T) {
+  const previous = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_FAMILY_RUNTIME_PROVIDER: process.env.OPL_FAMILY_RUNTIME_PROVIDER,
+    OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_WORKER_ENABLED: process.env.OPL_TEMPORAL_WORKER_ENABLED,
+    OPL_TEMPORAL_WORKER_STATUS: process.env.OPL_TEMPORAL_WORKER_STATUS,
+  };
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-direct-test-'));
+  process.env.OPL_STATE_DIR = stateRoot;
+  process.env.OPL_FAMILY_RUNTIME_PROVIDER = 'temporal';
+  process.env.OPL_TEMPORAL_ADDRESS = '';
+  process.env.TEMPORAL_ADDRESS = '';
+  process.env.OPL_TEMPORAL_WORKER_ENABLED = '';
+  process.env.OPL_TEMPORAL_WORKER_STATUS = '';
+  try {
+    return fn();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+}
 
 function createQueueTables(db: DatabaseSync) {
   db.exec(`
@@ -56,6 +93,7 @@ function createQueueTables(db: DatabaseSync) {
       created_at TEXT NOT NULL
     );
   `);
+  createStageAttemptTable(db);
 }
 
 function insertSucceededTask(
@@ -306,6 +344,162 @@ test('family-runtime requeues succeeded MAS default executor dispatch when domai
     );
     assert.ok(requeueEvent);
     assert.equal(JSON.parse(requeueEvent.payload_json).reason, 'domain_export_owner_changed_after_succeeded');
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime keeps MAS default executor admission single-flight while a live attempt exists', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    withIsolatedFamilyRuntimeEnv(() => {
+      createQueueTables(db);
+      const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:single-flight';
+      const taskId = 'task-mas-default-single-flight';
+      const basePayload = defaultExecutorPayload('source-before');
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: basePayload,
+        dedupeKey,
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof ensureProviderHostedStageAttempt
+      >[1];
+      const firstAttempt = ensureProviderHostedStageAttempt(db, row, basePayload);
+      assert.ok(firstAttempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        firstAttempt.stage_attempt_id,
+      );
+
+      const secondAttempt = ensureProviderHostedStageAttempt(db, row, {
+        ...basePayload,
+        source_fingerprint: 'source-after',
+      });
+      const attempts = listStageAttemptsForTask(db, taskId);
+      const createdEvents = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM events
+        WHERE task_id = ? AND event_type = 'stage_attempt_created_for_provider_hosted_task'
+      `).get(taskId) as { count: number };
+
+      assert.equal(secondAttempt, null);
+      assert.equal(attempts.length, 1);
+      assert.equal(attempts[0].status, 'running');
+      assert.equal(createdEvents.count, 1);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime does not start MAS default executor Temporal workflow from a stale unclaimed task row', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:stale-claim';
+      const taskId = 'task-mas-default-stale-claim';
+      const basePayload = defaultExecutorPayload('source-before');
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: basePayload,
+        dedupeKey,
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const staleQueuedRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof startMasDefaultExecutorDispatchAttempt
+      >[2]['row'];
+      const providerHostedAttempt = ensureProviderHostedStageAttempt(db, staleQueuedRow, basePayload);
+      db.prepare("UPDATE tasks SET status = 'running', lease_owner = 'other-worker' WHERE task_id = ?").run(taskId);
+      let temporalStartCount = 0;
+
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row: staleQueuedRow,
+        payload: basePayload,
+        providerHostedAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const task = db.prepare('SELECT status, lease_owner FROM tasks WHERE task_id = ?').get(taskId) as {
+        status: string;
+        lease_owner: string | null;
+      };
+      const admittedEvents = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_admitted_default_executor_stage_attempt'
+      `).get(taskId) as { count: number };
+
+      assert.equal(result.status, 'skipped');
+      assert.equal(result.reason, 'task_already_claimed');
+      assert.equal(temporalStartCount, 0);
+      assert.equal(task.status, 'running');
+      assert.equal(task.lease_owner, 'other-worker');
+      assert.equal(admittedEvents.count, 0);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime does not block MAS default executor task when a live attempt is already running', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:live-skip';
+      const taskId = 'task-mas-default-live-skip';
+      const basePayload = defaultExecutorPayload('source-before');
+      insertSucceededTask(db, {
+        taskId,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: basePayload,
+        dedupeKey,
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
+        typeof startMasDefaultExecutorDispatchAttempt
+      >[2]['row'];
+      const firstAttempt = ensureProviderHostedStageAttempt(db, row, basePayload);
+      assert.ok(firstAttempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        firstAttempt.stage_attempt_id,
+      );
+      let temporalStartCount = 0;
+
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row,
+        payload: basePayload,
+        providerHostedAttempt: null,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const task = db.prepare('SELECT status, dead_letter_reason FROM tasks WHERE task_id = ?').get(taskId) as {
+        status: string;
+        dead_letter_reason: string | null;
+      };
+
+      assert.equal(result.status, 'skipped');
+      assert.equal(result.reason, 'live_stage_attempt_exists');
+      assert.equal(temporalStartCount, 0);
+      assert.equal(task.status, 'queued');
+      assert.equal(task.dead_letter_reason, null);
+      assert.equal(listStageAttemptsForTask(db, taskId).length, 1);
+    });
   } finally {
     db.close();
   }

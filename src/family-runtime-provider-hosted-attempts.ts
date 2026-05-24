@@ -43,6 +43,7 @@ function uniqueStrings(values: Array<string | null>) {
 
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
+const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 
 function workspaceRootFromProfile(profile: string | null) {
   if (!profile) {
@@ -327,6 +328,11 @@ export function ensureProviderHostedStageAttempt(
   const existingAttempts = listStageAttemptsForTask(db, row.task_id);
   const providerKind = resolveFamilyRuntimeProviderKind();
   const expectedSourceFingerprint = sourceFingerprintForProviderHostedTask(row, payload);
+  if (!options.newAttempt && isMasDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
+    attempt.provider_kind === providerKind && MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+  ))) {
+    return null;
+  }
   if (!options.newAttempt && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind && attempt.source_fingerprint === expectedSourceFingerprint
   ))) {

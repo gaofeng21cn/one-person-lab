@@ -22,6 +22,8 @@ type TemporalProviderModule = () => Promise<{
   ) => Promise<Record<string, unknown>>;
 }>;
 
+const LIVE_STAGE_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+
 function contractErrorMessage(error: unknown) {
   if (error instanceof FrameworkContractError) {
     return error.message;
@@ -83,6 +85,40 @@ function blockTaskForTemporalStartFailure(
   });
 }
 
+function claimMasDefaultExecutorTask(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+) {
+  const leaseOwner = `opl-family-runtime:${process.pid}`;
+  const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const attempt = row.attempts + 1;
+  const claimedAt = nowIso();
+  const result = db.prepare(`
+    UPDATE tasks
+    SET status = 'running', attempts = ?, lease_owner = ?, lease_expires_at = ?, updated_at = ?
+    WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
+  `).run(attempt, leaseOwner, leaseExpiresAt, claimedAt, row.task_id);
+  if (result.changes === 0) {
+    return null;
+  }
+  insertEvent(db, {
+    taskId: row.task_id,
+    domainId: row.domain_id,
+    eventType: 'task_default_executor_claimed',
+    source: 'opl-family-runtime',
+    payload: {
+      attempt,
+      lease_owner: leaseOwner,
+      lease_expires_at: leaseExpiresAt,
+    },
+  });
+  return {
+    attempt,
+    lease_owner: leaseOwner,
+    lease_expires_at: leaseExpiresAt,
+  };
+}
+
 export async function startMasDefaultExecutorDispatchAttempt(
   db: DatabaseSync,
   paths: FamilyRuntimePaths,
@@ -95,6 +131,49 @@ export async function startMasDefaultExecutorDispatchAttempt(
 ) {
   const { row, payload, providerHostedAttempt, temporalProviderModule } = input;
   let temporalStart: Record<string, unknown> | null = null;
+  const liveAttempt = listStageAttemptsForTask(db, row.task_id).find((attempt) => (
+    attempt.provider_kind === 'temporal'
+    && attempt.executor_kind === 'codex_cli'
+    && LIVE_STAGE_ATTEMPT_STATUSES.has(attempt.status)
+  )) ?? null;
+  if (liveAttempt) {
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_default_executor_live_attempt_skip',
+      source: 'opl-family-runtime',
+      payload: {
+        reason: 'live_stage_attempt_exists',
+        stage_attempt_id: liveAttempt.stage_attempt_id,
+      },
+    });
+    return {
+      task_id: row.task_id,
+      status: 'skipped',
+      reason: 'live_stage_attempt_exists',
+      admitted_stage_attempt: liveAttempt,
+      stage_attempts: listStageAttemptsForTask(db, row.task_id),
+    };
+  }
+  const taskClaim = claimMasDefaultExecutorTask(db, row);
+  if (!taskClaim) {
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_default_executor_claim_skipped',
+      source: 'opl-family-runtime',
+      payload: {
+        reason: 'task_already_claimed',
+        stale_status: row.status,
+      },
+    });
+    return {
+      task_id: row.task_id,
+      status: 'skipped',
+      reason: 'task_already_claimed',
+      stage_attempts: listStageAttemptsForTask(db, row.task_id),
+    };
+  }
   const launchableAttempt = providerHostedAttempt ?? listStageAttemptsForTask(db, row.task_id).find((attempt) => (
     attempt.provider_kind === 'temporal'
     && attempt.executor_kind === 'codex_cli'
