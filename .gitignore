@@ -1,6 +1,7 @@
 .DS_Store
 # legacy OMX local state (kept ignored after offboarding)
 .omx/
+.codegraph/
 .worktrees/
 tmp/
 dist/
