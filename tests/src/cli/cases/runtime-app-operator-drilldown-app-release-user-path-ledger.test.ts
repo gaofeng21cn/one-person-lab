@@ -199,14 +199,69 @@ test('runtime App drilldown retires gate-scoped typed blocker after same-cohort 
     assert.deepEqual(evidence.open_gate_ids, []);
     assert.equal(evidence.typed_blocker_ref_count, 0);
     assert.equal(evidence.blocked_by_typed_blocker_refs, false);
-    assert.equal(evidence.production_user_path_ready, false);
+    assert.deepEqual(evidence.historical_typed_blocker_refs, [
+      'typed_blocker_ref://one-person-lab-app/26.5.19/long-operator-evidence-pending?gate=long_operator_evidence_refs',
+    ]);
+    assert.equal(evidence.historical_typed_blocker_ref_count, 1);
+    assert.equal(evidence.production_user_path_ready, true);
     assert.equal(evidence.release_ready_claimed, false);
     assert.equal(evidence.production_ready_claimed, false);
     assert.equal(evidence.authority_boundary.can_close_app_release_user_path, false);
     assert.equal(output.summary.app_release_user_path_evidence_typed_blocker_ref_count, 0);
-    assert.equal(output.summary.app_release_user_path_production_user_path_ready, false);
+    assert.equal(output.summary.app_release_user_path_production_user_path_ready, true);
     assert.equal(output.summary.app_release_user_path_release_ready_claimed, false);
     assert.equal(output.summary.app_release_user_path_production_ready_claimed, false);
+  });
+});
+
+test('runtime App drilldown ignores typed blocker refs from a different release cohort', () => {
+  withTempState('opl-app-release-user-path-cross-cohort-blocker-state-', (stateRoot) => {
+    const blockerRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      typed_blocker_refs: [
+        'typed_blocker_ref://one-person-lab-app/26.5.18/long-operator-evidence-pending?gate=long_operator_evidence_refs',
+      ],
+    });
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      blockerRecord.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const packageRecord = recordAppReleaseUserPathEvidence(stateRoot, {
+      release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
+      provider_state_linkage_refs: ['provider://temporal/cadence-window/26.5.19'],
+    });
+    runCli([
+      'runtime',
+      'app-release-evidence',
+      'verify',
+      '--receipt-ref',
+      packageRecord.receipt_refs[0],
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli(['runtime', 'app-operator-drilldown'], {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
+    const evidence = output.attention_first_payload.evidence_after_contract
+      .app_release_user_path_evidence;
+
+    assert.equal(evidence.status, 'app_release_user_path_evidence_open');
+    assert.deepEqual(evidence.open_gate_ids, [
+      'screenshot_refs',
+      'reload_prompt_user_path_refs',
+      'long_operator_evidence_refs',
+    ]);
+    assert.equal(evidence.typed_blocker_ref_count, 0);
+    assert.equal(evidence.blocked_by_typed_blocker_refs, false);
+    assert.equal(evidence.historical_typed_blocker_ref_count, 1);
+    assert.equal(evidence.production_user_path_ready, false);
+    assert.equal(output.summary.app_release_user_path_evidence_typed_blocker_ref_count, 0);
   });
 });
 

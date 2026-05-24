@@ -226,6 +226,9 @@ export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: J
     typed_blocker_refs: typedBlockerRefs,
     typed_blocker_ref_count: typedBlockerRefs.length,
     blocked_by_typed_blocker_refs: followthrough.blocked_by_typed_blocker_refs === true,
+    historical_typed_blocker_refs: stringList(followthrough.historical_typed_blocker_refs),
+    historical_typed_blocker_ref_count:
+      numberValue(followthrough.historical_typed_blocker_ref_count),
     gate_items: openGateItems.map((gate) => ({
       gate_id: stringValue(gate.gate_id),
       status: stringValue(gate.status),
