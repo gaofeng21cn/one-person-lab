@@ -217,9 +217,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'opl-meta-agent-skill-sync',
       'opl-meta-agent-health',
     ]);
-    for (const skillName of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
-      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
+    for (const skillName of ['mas', 'mag', 'rca']) {
+      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), false);
     }
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-meta-agent', 'SKILL.md')), true);
     const previousStateDir = process.env.OPL_STATE_DIR;
     process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
     try {

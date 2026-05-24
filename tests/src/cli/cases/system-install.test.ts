@@ -228,11 +228,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
             skill_sync: {
               status: string;
               result: {
-                installer_result: {
-                  codex_skill_mirror: {
-                    skill_root: string;
-                  };
-                };
+                installer_result: Record<string, unknown>;
               };
             };
           };
@@ -273,11 +269,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.module_actions[0].module.module_id, 'medautoscience');
     assert.equal(output.install.module_actions[0].module.installed, true);
     assert.equal(output.install.module_actions[0].turnkey.skill_sync.status, 'completed');
-    assert.equal(
-      output.install.module_actions[0].turnkey.skill_sync.result.installer_result.codex_skill_mirror.skill_root,
-      path.join(homeRoot, 'codex-home', 'skills', 'mas'),
-    );
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas', 'SKILL.md')), true);
+    assert.equal('codex_skill_mirror' in output.install.module_actions[0].turnkey.skill_sync.result.installer_result, false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas', 'SKILL.md')), false);
     assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md')), false);
     assert.equal(output.install.gui_open_action, null);
     assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');

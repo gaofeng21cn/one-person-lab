@@ -134,8 +134,7 @@ EOF
       ['bootstrap', 'skill-sync', 'health'],
     );
     const globalMasSkillPath = path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md');
-    assert.equal(fs.existsSync(globalMasSkillPath), true);
-    assert.match(fs.readFileSync(globalMasSkillPath, 'utf8'), /canonical MAS family app skill entry/);
+    assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const readMasModule = () => (
       runCli(['modules'], env) as {
@@ -193,8 +192,7 @@ EOF
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
       ['bootstrap', 'skill-sync', 'health', 'bootstrap', 'skill-sync', 'health'],
     );
-    assert.match(fs.readFileSync(globalMasSkillPath, 'utf8'), /updated global skill mirror/);
-    assert.doesNotMatch(fs.readFileSync(globalMasSkillPath, 'utf8'), /canonical MAS family app skill entry/);
+    assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const remove = runCli(
       ['module', 'remove', '--module', 'medautoscience'],
@@ -415,7 +413,7 @@ git ls-files >/dev/null
     assert.equal(install.module_action.turnkey.health_check.status, 'completed');
     assert.equal(install.module_action.turnkey.health_check.result.packaged_runtime, true);
     assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['skill-sync']);
-    assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'rca', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'rca', 'SKILL.md')), false);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'opl-runtime-module.json')), true);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md')), true);
   } finally {

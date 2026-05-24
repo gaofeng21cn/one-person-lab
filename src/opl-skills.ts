@@ -331,6 +331,12 @@ function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) 
   }
 
   const codexSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.canonical_plugin_name);
+
+  if (['mas', 'mag', 'rca'].includes(inspected.canonical_plugin_name)) {
+    fs.rmSync(codexSkillDir, { recursive: true, force: true });
+    return null;
+  }
+
   fs.rmSync(codexSkillDir, { recursive: true, force: true });
   fs.cpSync(path.dirname(inspected.skill_entry_path), codexSkillDir, { recursive: true });
 

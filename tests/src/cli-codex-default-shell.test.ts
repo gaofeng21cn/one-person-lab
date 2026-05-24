@@ -426,7 +426,7 @@ test('opl skill list discovers the family plugin packs through the configured si
     });
 
     assert.equal(output.skill_catalog.summary.total, 4);
-    assert.equal(output.skill_catalog.summary.ready_to_sync, 4);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 3);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
       ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent'],
@@ -439,7 +439,7 @@ test('opl skill list discovers the family plugin packs through the configured si
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-      [true, true, true, true],
+      [true, true, true, false],
     );
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
@@ -624,14 +624,18 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
-    for (const skillName of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
+    for (const skillName of ['mas', 'mag', 'rca']) {
+      assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
+    }
+    {
+      const skillName = 'opl-meta-agent';
       const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
       const metadataPath = path.join(homeDir, '.codex', 'skills', skillName, 'agents', 'openai.yaml');
       const content = fs.readFileSync(skillPath, 'utf8');
       const metadata = fs.readFileSync(metadataPath, 'utf8');
       assert.match(content, /^---\nname: /);
       assert.doesNotMatch(content, /test skill/i);
-      assert.match(metadata, /display_name: "(Med Auto Science|Med Auto Grant|RedCube AI|OPL Meta Agent)"/);
+      assert.match(metadata, /display_name: "OPL Meta Agent"/);
       assert.match(metadata, new RegExp(`default_prompt: "Use \\$${skillName}\\b`));
     }
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
