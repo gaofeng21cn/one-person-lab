@@ -484,6 +484,7 @@ function buildProductionConsumptionFollowthrough(payloads: {
     }),
   ];
   const openGates = gates.filter((gate) => gate.status !== 'refs_observed');
+  const activeTypedBlockerRefs = openGates.length > 0 ? typedBlockerRefs : [];
 
   return {
     surface_kind: 'opl_meta_agent_production_consumption_followthrough',
@@ -511,8 +512,9 @@ function buildProductionConsumptionFollowthrough(payloads: {
         productionConsumptionLedgerRefs.verifiedReceiptRefs.length,
       production_consumption_operator_evidence_ref_count:
         productionConsumptionLedgerRefs.operatorEvidenceRefs.length,
-      typed_blocker_ref_count: typedBlockerRefs.length,
-      blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
+      typed_blocker_ref_count: activeTypedBlockerRefs.length,
+      blocked_by_typed_blocker_refs: activeTypedBlockerRefs.length > 0,
+      historical_typed_blocker_ref_count: typedBlockerRefs.length,
       pending_verify_long_soak_receipt_ref_count: pendingVerifyLongSoakReceiptRefs.length,
       pending_verify_long_soak_receipt_refs: pendingVerifyLongSoakReceiptRefs,
       production_consumption_ready: openGates.length === 0,
@@ -520,8 +522,10 @@ function buildProductionConsumptionFollowthrough(payloads: {
       quality_verdict_claim_count: 0,
       default_promotion_claim_count: 0,
     },
-    typed_blocker_refs: typedBlockerRefs,
-    blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
+    typed_blocker_refs: activeTypedBlockerRefs,
+    historical_typed_blocker_refs: typedBlockerRefs,
+    historical_typed_blocker_ref_count: typedBlockerRefs.length,
+    blocked_by_typed_blocker_refs: activeTypedBlockerRefs.length > 0,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }

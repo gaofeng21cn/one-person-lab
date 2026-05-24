@@ -182,6 +182,94 @@ test('runtime oma-production-consumption typed blocker refs do not close long-so
   }
 });
 
+test('runtime oma-production-consumption retires stale typed blocker refs after verified long-soak evidence', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-blocker-retired-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    recordManagedInstallUpdateReceipts([{
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      action: 'update',
+      reason: 'startup_health_and_skill_refresh',
+      install_origin_before: 'managed_root',
+      install_origin_after: 'managed_root',
+      checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      managed_checkout_path: '/tmp/opl-managed-modules/opl-meta-agent',
+      git_head_sha: 'oma-framework-production-blocker-retired-ledger-sha',
+      git_sync_status: 'synced',
+      git_dirty: false,
+      skill_sync_domain: 'oplmetaagent',
+    }]);
+    recordOmaAppLivePathReceipts([{
+      app_live_path_refs: ['app://one-person-lab/opl-meta-agent/production-blocker-retired-live-path'],
+      app_surface_ref: 'app://one-person-lab/oma/production-consumption',
+      operator_evidence_refs: ['screenshot://opl-app/oma-production-blocker-retired-live-path.png'],
+    }]);
+
+    const blockerRecord = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'record',
+      '--payload',
+      JSON.stringify({
+        typed_blocker_refs: [
+          'typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending',
+        ],
+      }),
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_record;
+    runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      blockerRecord.receipt_refs[0],
+    ], { OPL_STATE_DIR: stateRoot });
+
+    const longSoakRecord = runCli([
+      'runtime',
+      'oma-production-consumption',
+      'record',
+      '--payload',
+      JSON.stringify({
+        long_soak_refs: ['long_soak_ref://opl-meta-agent/production-consumption/operator-window/hash'],
+        operator_evidence_refs: ['operator_evidence_ref://opl-meta-agent/long-soak-monitor/hash'],
+      }),
+    ], { OPL_STATE_DIR: stateRoot }).oma_production_consumption_ledger_record;
+    runCli([
+      'runtime',
+      'oma-production-consumption',
+      'verify',
+      '--receipt-ref',
+      longSoakRecord.receipt_refs[0],
+    ], { OPL_STATE_DIR: stateRoot });
+
+    const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
+      OPL_STATE_DIR: stateRoot,
+    }).framework_readiness;
+    const omaFollowthrough =
+      readiness.attention_first_payload.oma_production_consumption_followthrough;
+    if (omaFollowthrough.structural_consumption_ready !== true) {
+      return;
+    }
+    assert.equal(omaFollowthrough.open_gate_count, 0);
+    assert.deepEqual(omaFollowthrough.open_gate_ids, []);
+    assert.equal(omaFollowthrough.production_consumption_ready, true);
+    assert.deepEqual(omaFollowthrough.typed_blocker_refs, []);
+    assert.equal(omaFollowthrough.typed_blocker_ref_count, 0);
+    assert.equal(omaFollowthrough.blocked_by_typed_blocker_refs, false);
+    assert.equal(omaFollowthrough.historical_typed_blocker_ref_count, 1);
+    assert.equal(omaFollowthrough.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime oma-production-consumption operator evidence refs do not close long-soak gate alone', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-oma-production-operator-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;

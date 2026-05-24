@@ -147,6 +147,39 @@ function refsFromRecords(values: JsonRecord[], keys: string[]) {
   return uniqueStrings(values.flatMap((value) => refsFromRecord(value, keys)));
 }
 
+function typedBlockerGateIdFromRef(value: string) {
+  try {
+    const parsed = new URL(value);
+    const gateId = parsed.searchParams.get('gate');
+    if (gateId && gateId.trim().length > 0) {
+      return gateId.trim();
+    }
+  } catch {
+    // Non-URL blocker refs can still carry query-shaped gate metadata.
+  }
+  const match = value.match(/[?&]gate=([^&]+)/);
+  return match ? decodeURIComponent(match[1]).trim() : null;
+}
+
+function currentTypedBlockerRefs(input: {
+  typedBlockerRefs: string[];
+  openGateIds: Set<string>;
+  selectedCohortId: string | null;
+}) {
+  return input.typedBlockerRefs.filter((ref) => {
+    const blockerCohortId = versionCohortFromRef(ref);
+    if (
+      input.selectedCohortId
+      && blockerCohortId
+      && blockerCohortId !== input.selectedCohortId
+    ) {
+      return false;
+    }
+    const gateId = typedBlockerGateIdFromRef(ref);
+    return !gateId || input.openGateIds.has(gateId);
+  });
+}
+
 function evidenceGate(input: {
   gateId: string;
   requiredRefsAnyOf: string[];
@@ -290,31 +323,42 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     }),
   ];
   const openGateItems = gates.filter((gate) => gate.status !== 'refs_observed');
+  const activeTypedBlockerRefs = currentTypedBlockerRefs({
+    typedBlockerRefs,
+    openGateIds: new Set(openGateItems.map((gate) => gate.gate_id)),
+    selectedCohortId: cohortGuard.selected_cohort_id,
+  });
+  const productionUserPathReady =
+    openGateItems.length === 0
+    && recordedLedgerReceipts.length === 0
+    && activeTypedBlockerRefs.length === 0;
   return {
     surface_kind: 'opl_app_drilldown_app_release_user_path_evidence_attention',
     owner: 'one-person-lab',
     target_surface: 'one_person_lab_app_release_user_path',
-    status: openGateItems.length > 0
+    status: openGateItems.length > 0 || activeTypedBlockerRefs.length > 0
       ? 'app_release_user_path_evidence_open'
       : recordedLedgerReceipts.length > 0
         ? 'app_release_user_path_evidence_verify_pending'
       : 'app_release_user_path_evidence_refs_observed',
-    production_user_path_ready: false,
+    production_user_path_ready: productionUserPathReady,
     refs_observed_for_all_gates: openGateItems.length === 0,
     release_ready_claimed: false,
     production_ready_claimed: false,
     gate_count: gates.length,
     open_gate_count: openGateItems.length,
     open_gate_ids: openGateItems.map((gate) => gate.gate_id),
-    attention_required: openGateItems.length > 0,
+    attention_required: openGateItems.length > 0 || activeTypedBlockerRefs.length > 0,
     evidence_ledger_status: recordedLedgerReceipts.length > 0
       ? 'ledger_refs_recorded_verify_pending'
       : verifiedLedgerReceipts.length > 0
         ? 'ledger_refs_verified'
         : 'ledger_refs_missing',
-    typed_blocker_refs: typedBlockerRefs,
-    typed_blocker_ref_count: typedBlockerRefs.length,
-    blocked_by_typed_blocker_refs: typedBlockerRefs.length > 0,
+    typed_blocker_refs: activeTypedBlockerRefs,
+    typed_blocker_ref_count: activeTypedBlockerRefs.length,
+    blocked_by_typed_blocker_refs: activeTypedBlockerRefs.length > 0,
+    historical_typed_blocker_refs: typedBlockerRefs,
+    historical_typed_blocker_ref_count: typedBlockerRefs.length,
     cohort_guard: cohortGuard,
     ledger_receipt_ref_count: ledgerReceipts.length,
     ledger_receipt_refs: ledgerReceipts.map((receipt) => receipt.receipt_ref),
