@@ -237,6 +237,12 @@ function handoffPayloadFrom(item: Record<string, unknown>) {
   };
 }
 
+function domainDispatchEvidencePayloadFrom(item: Record<string, unknown>) {
+  return isRecord(item.domain_dispatch_evidence_record_payload)
+    ? { domain_dispatch_evidence_record_payload: item.domain_dispatch_evidence_record_payload }
+    : {};
+}
+
 function pendingTaskInputFrom(
   domainId: FamilyRuntimeDomainId,
   item: Record<string, unknown>,
@@ -272,6 +278,7 @@ function pendingTaskInputFrom(
         ...(typeof item.recommended_task_kind === 'string' ? { recommended_task_kind: item.recommended_task_kind } : {}),
         ...(typeof item.reason === 'string' ? { reason: item.reason } : {}),
         ...(typeof item.runtime_state_path === 'string' ? { runtime_state_path: item.runtime_state_path } : {}),
+        ...domainDispatchEvidencePayloadFrom(item),
         opl_domain_export_context: {
           command_source: exportContext.source,
           owner_fingerprint: exportContext.owner_fingerprint,
