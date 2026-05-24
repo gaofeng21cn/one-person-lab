@@ -4,6 +4,7 @@ import {
   CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
   SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -28,6 +29,11 @@ export const TEMPORAL_STAGE_ATTEMPT_QUERIES = [
 
 export type { TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
 
+export {
+  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+};
+
 export type TemporalStageAttemptSignalPayload = {
   signal_kind: TemporalStageAttemptSignalKind;
   payload: Record<string, unknown>;
@@ -51,6 +57,7 @@ export type TemporalStageAttemptWorkflowInput = {
   codex_stage_runner?: {
     runner_mode?: 'dry_run' | 'live_dry_run' | 'codex_cli';
     timeout_ms?: number;
+    no_output_timeout_ms?: number;
   };
 };
 
@@ -138,6 +145,7 @@ export function buildTemporalStageAttemptWorkflowContract() {
         heartbeat_timeout: CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
         heartbeat_interval_ms: DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
         runner_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+        runner_no_output_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
       },
       short_stage_activities: {
         start_to_close_timeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
@@ -182,6 +190,7 @@ export function buildTemporalStageAttemptWorkflowInput(
       ? {
           runner_mode: 'codex_cli',
           timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+          no_output_timeout_ms: DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
         }
       : undefined,
   };

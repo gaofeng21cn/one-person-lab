@@ -3,6 +3,7 @@ import { heartbeat } from '@temporalio/activity';
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
   DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
 } from './family-runtime-temporal-constants.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
@@ -23,7 +24,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
       stage_attempt_id: input.stage_attempt_id,
       stage_id: input.stage_id,
       checkpoint_refs: input.checkpoint_refs ?? [],
-      heartbeat_kind: 'codex_stage_activity_live_process',
+      heartbeat_kind: 'codex_stage_activity_supervision',
     });
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   try {
@@ -42,6 +43,17 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
         runnerMode: input.codex_stage_runner?.runner_mode,
         observedAt,
         timeoutMs: input.codex_stage_runner?.timeout_ms ?? DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+        noOutputTimeoutMs: input.codex_stage_runner?.no_output_timeout_ms
+          ?? DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+        onRunnerProgress(event) {
+          heartbeat({
+            stage_attempt_id: input.stage_attempt_id,
+            stage_id: input.stage_id,
+            checkpoint_refs: input.checkpoint_refs ?? [],
+            heartbeat_kind: 'codex_stage_activity_runner_progress',
+            runner_event_kind: event.event_kind,
+          });
+        },
       }),
       authority_boundary: {
         opl: 'activity_packet_and_receipt_transport_only',

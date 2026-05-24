@@ -8,9 +8,14 @@ import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../src/family-runtime-temporal-activities.ts';
 import {
+  buildTemporalStageAttemptWorkflowContract,
   type TemporalStageAttemptWorkflowInput,
   type TemporalStageAttemptWorkflowState,
 } from '../../src/family-runtime-temporal.ts';
+import {
+  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+} from '../../src/family-runtime-temporal-constants.ts';
 import {
   humanGateSignal,
   stageAttemptQuery,
@@ -59,6 +64,18 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
     },
   };
 }
+
+test('Temporal stage attempt contract exposes Codex runner total and no-output budgets', () => {
+  const contract = buildTemporalStageAttemptWorkflowContract();
+  assert.equal(
+    contract.activity_timeout_policy.codex_stage_activity.runner_timeout_ms,
+    DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+  );
+  assert.equal(
+    contract.activity_timeout_policy.codex_stage_activity.runner_no_output_timeout_ms,
+    DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+  );
+});
 
 test('Temporal StageAttemptWorkflow exposes activity state, signals, and completion boundary', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();

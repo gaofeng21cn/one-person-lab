@@ -927,10 +927,17 @@ function omitSummaryDrilldownKeys<T extends JsonRecord>(drilldown: T) {
   return compact as T;
 }
 
+type AppOperatorDrilldownDetailResult<T extends JsonRecord> = T & {
+  detail_level: AppOperatorDrilldownDetailLevel;
+  projection_detail_policy: string;
+  full_detail_args?: string[];
+  attention_first_payload: ReturnType<typeof buildAttentionFirstPayload>;
+};
+
 export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
   drilldown: T,
   detailLevel: AppOperatorDrilldownDetailLevel,
-): T {
+): AppOperatorDrilldownDetailResult<T> {
   if (detailLevel === 'full') {
     const fullDrilldown = {
       ...drilldown,
@@ -956,7 +963,7 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
         markFullRefsObject(record(fullDrilldown.domain_dispatch_evidence), 'attempts'),
       stage_production_evidence:
         markFullRefsObject(record(fullDrilldown.stage_production_evidence), 'stages'),
-    };
+    } as AppOperatorDrilldownDetailResult<T>;
   }
 
   return {
@@ -965,5 +972,5 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
     projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
     full_detail_args: ['--detail', 'full'],
     attention_first_payload: buildAttentionFirstPayload(drilldown),
-  };
+  } as AppOperatorDrilldownDetailResult<T>;
 }

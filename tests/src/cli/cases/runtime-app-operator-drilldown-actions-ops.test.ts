@@ -100,16 +100,18 @@ test('runtime App drilldown selects provider scheduler install before manual tri
       can_claim_production_ready: false,
     },
   }, 'summary');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
 
   assert.equal(
-    drilldown.attention_first_payload.next_safe_action.action_id,
+    nextSafeAction.action_id,
     'provider-scheduler:temporal:install',
   );
   assert.equal(
-    drilldown.attention_first_payload.next_safe_action.action_kind,
+    nextSafeAction.action_kind,
     'provider_scheduler_install',
   );
-  assert.deepEqual(drilldown.attention_first_payload.next_safe_action.submit_args, [
+  assert.deepEqual(nextSafeAction.submit_args, [
     'runtime',
     'action',
     'execute',

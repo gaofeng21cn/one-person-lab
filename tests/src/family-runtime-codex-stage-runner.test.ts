@@ -796,6 +796,64 @@ exit 64
   }
 });
 
+test('Codex stage runner fails closed when live process stops producing output', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-no-output"}\\n'
+  sleep 2
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousNoOutputTimeout = process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = '100';
+    const receipt = await runCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_live_runner_no_output_budget_test',
+        stage_id: 'analysis-campaign',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:no-output-seed'],
+      },
+      stagePacketRef: 'packet:analysis',
+      runnerMode: 'codex_cli',
+      observedAt: '2026-05-11T00:00:00.000Z',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.runner_status.live_process_started, true);
+    assert.equal(receipt.runner_status.exit_code, 124);
+    assert.equal(receipt.runner_status.no_output_timeout_ms, 100);
+    assert.equal(receipt.runner_status.timeout_ms, 10_000);
+    assert.equal(receipt.heartbeat_summary.checkpoint_refs[0], 'checkpoint:no-output-seed');
+    const processOutputSummary = receipt.process_output_summary;
+    if (!processOutputSummary) {
+      throw new Error('codex_cli no-output timeout receipt must include process_output_summary.');
+    }
+    assert.equal(processOutputSummary.exit_code, 124);
+    assert.equal(processOutputSummary.timeout_reason, 'no_output_timeout');
+    assert.equal(processOutputSummary.no_output_timeout_ms, 100);
+    assert.ok(processOutputSummary.stderr_tail.includes('Codex command produced no output before the progress watchdog expired.'));
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    if (previousNoOutputTimeout === undefined) {
+      delete process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS;
+    } else {
+      process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS = previousNoOutputTimeout;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(':memory:');
   try {

@@ -14,7 +14,10 @@ import {
   type AgentExecutorKind,
   type StageAttemptExecutorPolicy,
 } from './agent-executor.ts';
-import { DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS } from './family-runtime-temporal-constants.ts';
+import {
+  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+} from './family-runtime-temporal-constants.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -39,17 +42,66 @@ type RunnerEventSummary = {
   value: string | null;
 };
 
-type CodexStageRunnerReceipt = ReturnType<typeof buildCodexStageRunnerReceipt> & {
-  closeout_packet: TypedStageCloseoutPacket | null;
-  process_output_summary?: {
-    exit_code: number;
-    final_message_chars: number;
-    stderr_tail: string[];
-    recovered_session_path?: string;
-    recovered_final_message_chars?: number;
-    session_recovery_status?: string;
-    session_recovery_attempts?: number;
+type CodexStageRunnerStatus = {
+  runner_kind: 'codex_cli_stage_runner';
+  runner_mode: CodexStageRunnerMode;
+  live_process_started: boolean;
+  dry_run_transport: boolean;
+  process_id: number | null;
+  exit_code: number | null;
+  stdout_bytes: number;
+  stderr_bytes: number;
+  timeout_ms: number | null;
+  no_output_timeout_ms: number | null;
+  command_preview: string[];
+  typed_closeout_required_for_completion: true;
+  free_text_closeout_accepted: false;
+};
+
+type CodexStageRunnerBaseReceipt = {
+  runner_status: CodexStageRunnerStatus;
+  heartbeat_summary: {
+    heartbeat_status: 'recorded';
+    last_heartbeat_at: string | null;
+    checkpoint_count: number;
+    checkpoint_refs: string[];
   };
+  progress_summary: {
+    progress_status: 'checkpointed' | 'running';
+    stage_id: string;
+    stage_packet_ref: string | null;
+    completed_requires_typed_closeout: true;
+    thread_id: string | null;
+    runner_events: RunnerEventSummary[];
+  };
+  cost_summary: ReturnType<typeof costSummaryFrom>;
+};
+
+type CodexStageRunnerProcessOutputSummary = {
+  exit_code: number;
+  final_message_chars: number;
+  stderr_tail: string[];
+  timeout_reason?: 'total_timeout' | 'no_output_timeout';
+  no_output_timeout_ms?: number | null;
+  recovered_session_path?: string;
+  recovered_final_message_chars?: number;
+  session_recovery_status?: string;
+  session_recovery_attempts?: number;
+};
+
+type CodexStageRunnerInput = {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  runnerMode?: string | null;
+  observedAt?: string | null;
+  timeoutMs?: number | null;
+  noOutputTimeoutMs?: number | null;
+  onRunnerProgress?: (event: RunnerEventSummary) => void;
+};
+
+type CodexStageRunnerReceipt = CodexStageRunnerBaseReceipt & {
+  closeout_packet: TypedStageCloseoutPacket | null;
+  process_output_summary?: CodexStageRunnerProcessOutputSummary;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -341,7 +393,8 @@ export function buildCodexStageRunnerReceipt(input: {
   runnerEvents?: RunnerEventSummary[];
   threadId?: string | null;
   timeoutMs?: number | null;
-}) {
+  noOutputTimeoutMs?: number | null;
+}): CodexStageRunnerBaseReceipt {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const checkpointRefs = checkpointRefsFromAttempt(input.attempt);
   const stagePacketRef = resolvedStagePacketRef(input);
@@ -361,6 +414,7 @@ export function buildCodexStageRunnerReceipt(input: {
       stdout_bytes: input.stdoutBytes ?? 0,
       stderr_bytes: input.stderrBytes ?? 0,
       timeout_ms: input.timeoutMs ?? null,
+      no_output_timeout_ms: input.noOutputTimeoutMs ?? null,
       command_preview: buildCodexCliPreview(args),
       typed_closeout_required_for_completion: true,
       free_text_closeout_accepted: false,
@@ -383,13 +437,7 @@ export function buildCodexStageRunnerReceipt(input: {
   };
 }
 
-export async function runCodexStageRunner(input: {
-  attempt: JsonRecord;
-  stagePacketRef?: string | null;
-  runnerMode?: string | null;
-  observedAt?: string | null;
-  timeoutMs?: number | null;
-}): Promise<CodexStageRunnerReceipt> {
+export async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
   const workspaceRoot = workspaceRootFromAttempt(input.attempt);
@@ -433,13 +481,20 @@ export async function runCodexStageRunner(input: {
   const timeoutMs = input.timeoutMs != null
     ? normalizeTimeoutMs(input.timeoutMs, DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS)
     : normalizeTimeoutMs(process.env.OPL_CODEX_STAGE_RUNNER_TIMEOUT_MS, DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS);
+  const noOutputTimeoutMs = normalizeTimeoutMs(
+    input.noOutputTimeoutMs ?? process.env.OPL_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+    DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+  );
   const result = await runCodexCommandStreaming(args, {
     timeoutMs,
+    noOutputTimeoutMs,
     onProcessStarted(pid) {
       processId = pid;
     },
     onStdoutEvent(event) {
-      runnerEvents.push(eventSummary(event));
+      const summary = eventSummary(event);
+      runnerEvents.push(summary);
+      input.onRunnerProgress?.(summary);
     },
   });
   const parsed = parseCodexExecOutput(result.stdout);
@@ -475,6 +530,7 @@ export async function runCodexStageRunner(input: {
       runnerEvents,
       threadId: parsed.threadId,
       timeoutMs,
+      noOutputTimeoutMs,
     }),
     cost_summary: costSummaryFrom(result.stdout, runnerMode),
     closeout_packet: closeoutPacket,
@@ -482,6 +538,8 @@ export async function runCodexStageRunner(input: {
       exit_code: result.exitCode,
       final_message_chars: parsed.finalMessage.length,
       stderr_tail: result.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
+      ...(result.timeoutReason ? { timeout_reason: result.timeoutReason } : {}),
+      no_output_timeout_ms: result.noOutputTimeoutMs ?? noOutputTimeoutMs,
       ...(recoveredSessionPath
         ? {
             recovered_session_path: recoveredSessionPath,
@@ -504,6 +562,8 @@ export async function runAgentStageRunner(input: {
   runnerMode?: string | null;
   observedAt?: string | null;
   timeoutMs?: number | null;
+  noOutputTimeoutMs?: number | null;
+  onRunnerProgress?: (event: RunnerEventSummary) => void;
   env?: Record<string, string | undefined>;
 }) {
   const executorKind = normalizeAgentExecutorStageMode(input.runnerMode)

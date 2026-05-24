@@ -16,6 +16,8 @@ export interface CodexCommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
+  timeoutReason?: 'total_timeout' | 'no_output_timeout';
+  noOutputTimeoutMs?: number | null;
 }
 
 export interface CodexPassthroughResult {
@@ -32,6 +34,7 @@ export interface CodexStreamingCommandOptions {
   onStdoutEvent?: (event: CodexExecEvent) => void;
   onProcessStarted?: (pid: number | null) => void;
   timeoutMs?: number;
+  noOutputTimeoutMs?: number;
 }
 
 export interface CodexExecOptions {
@@ -236,13 +239,16 @@ export async function runCodexCommandStreaming(
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+    let timeoutReason: CodexCommandResult['timeoutReason'];
     let completed = false;
     let timeout: NodeJS.Timeout | null = null;
+    let noOutputTimeout: NodeJS.Timeout | null = null;
 
     options.onProcessStarted?.(typeof child.pid === 'number' ? child.pid : null);
     if (options.timeoutMs && options.timeoutMs > 0) {
       timeout = setTimeout(() => {
         timedOut = true;
+        timeoutReason = 'total_timeout';
         child.kill('SIGTERM');
       }, options.timeoutMs);
     }
@@ -253,9 +259,27 @@ export async function runCodexCommandStreaming(
         timeout = null;
       }
     };
+    const clearNoOutputTimeout = () => {
+      if (noOutputTimeout) {
+        clearTimeout(noOutputTimeout);
+        noOutputTimeout = null;
+      }
+    };
+    const resetNoOutputTimeout = () => {
+      clearNoOutputTimeout();
+      if (options.noOutputTimeoutMs && options.noOutputTimeoutMs > 0) {
+        noOutputTimeout = setTimeout(() => {
+          timedOut = true;
+          timeoutReason = 'no_output_timeout';
+          child.kill('SIGTERM');
+        }, options.noOutputTimeoutMs);
+      }
+    };
+    resetNoOutputTimeout();
 
     const flushStdout = attachLineBuffer(child.stdout, (line) => {
       stdout += `${line}\n`;
+      resetNoOutputTimeout();
       options.onStdoutLine?.(line);
       const event = parseCodexExecEventFromLine(line, stdoutEventParserState);
       if (event) {
@@ -264,6 +288,7 @@ export async function runCodexCommandStreaming(
     });
     const flushStderr = attachLineBuffer(child.stderr, (line) => {
       stderr += `${line}\n`;
+      resetNoOutputTimeout();
       options.onStderrLine?.(line);
     });
 
@@ -273,6 +298,7 @@ export async function runCodexCommandStreaming(
       }
       completed = true;
       clearProcessTimeout();
+      clearNoOutputTimeout();
       reject(
         new FrameworkContractError(
           'codex_command_failed',
@@ -292,14 +318,20 @@ export async function runCodexCommandStreaming(
       }
       completed = true;
       clearProcessTimeout();
+      clearNoOutputTimeout();
       flushStdout();
       flushStderr();
+      const timeoutMessage = timeoutReason === 'no_output_timeout'
+        ? 'Codex command produced no output before the progress watchdog expired.'
+        : 'Codex command timed out.';
       resolve({
         exitCode: timedOut ? 124 : code ?? 1,
         stdout,
         stderr: timedOut
-          ? `${stderr}${stderr.endsWith('\n') || stderr.length === 0 ? '' : '\n'}Codex command timed out.\n`
+          ? `${stderr}${stderr.endsWith('\n') || stderr.length === 0 ? '' : '\n'}${timeoutMessage}\n`
           : stderr,
+        ...(timeoutReason ? { timeoutReason } : {}),
+        noOutputTimeoutMs: options.noOutputTimeoutMs ?? null,
       });
     });
 
