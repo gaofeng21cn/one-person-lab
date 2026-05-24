@@ -235,10 +235,16 @@ test('family-runtime evidence-worklist keeps stage record workorder open when ve
     assert.equal(item.expected_refs.includes('source:review'), true);
     assert.equal(item.expected_refs.includes('runtime_event:review.receipt_recorded'), true);
     assert.equal(item.expected_refs.includes('metric:review/currentness'), true);
+    const attentionItem = worklist.attention_queue.find(
+      (entry: { item_id: string }) => entry.item_id === item.item_id,
+    );
+    assert.ok(attentionItem);
+    assert.equal(attentionItem.missing_or_expected_refs.includes('source:review'), true);
     assert.equal(
-      worklist.attention_queue.some((entry: { item_id: string }) => entry.item_id === item.item_id),
+      attentionItem.missing_or_expected_refs.includes('runtime_event:review.receipt_recorded'),
       true,
     );
+    assert.equal(attentionItem.missing_or_expected_refs.includes('metric:review/currentness'), true);
     assert.equal(worklist.next_action_ledger.summary.next_action_item_count > 0, true);
     const nextAction = worklist.next_action_ledger.next_action_items.find(
       (entry: { source_tail_item_id: string }) => entry.source_tail_item_id === item.item_id,

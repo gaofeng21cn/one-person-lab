@@ -216,6 +216,7 @@ test('runtime action execute records and verifies domain dispatch evidence recei
     const openDispatchWorkorder = openDispatchPacket.workorders[0];
     assert.equal(openDispatchWorkorder.action_id, recordActionId);
     assert.equal(openDispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
+    assert.equal(openDispatchWorkorder.canonical_domain_id, 'med-autoscience');
     assert.equal(openDispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
     assert.equal(openDispatchWorkorder.route_requires_domain_or_app_payload, true);
     assert.equal(openDispatchWorkorder.can_close_without_domain_or_app_payload, false);
@@ -244,6 +245,18 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       'domain_dispatch_evidence_payload_preflight_blocked',
     );
     assert.equal(openDispatchWorkorder.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+    const openDispatchAttentionItem = openWorklist.attention_queue.find(
+      (item: { item_id: string }) => item.item_id === `evidence-worklist:${recordActionId}`,
+    );
+    assert.ok(openDispatchAttentionItem);
+    assert.equal(openDispatchAttentionItem.owner, 'med-autoscience');
+    assert.equal(openDispatchAttentionItem.domain_id, 'medautoscience');
+    assert.equal(openDispatchAttentionItem.payload_owner, 'domain_repository_or_app_live_operator');
+    assert.equal(openDispatchAttentionItem.route_requires_domain_or_app_payload, true);
+    assert.equal(openDispatchAttentionItem.authority, 'operator_attention_only');
+    assert.equal(openDispatchAttentionItem.can_write_domain_truth, false);
+    assert.equal(openDispatchAttentionItem.can_create_owner_receipt, false);
+    assert.equal(openDispatchAttentionItem.can_claim_production_ready, false);
     assert.equal(openDispatchPacket.authority_boundary.can_generate_domain_owner_receipt, false);
     assert.equal(openDispatchPacket.authority_boundary.can_execute_domain_action, false);
     assert.equal(openDispatchPacket.authority_boundary.closes_domain_ready, false);

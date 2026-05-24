@@ -10,6 +10,7 @@ import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecy
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
 import {
   compactEvidenceEnvelopeProjection,
+  canonicalOwnerId,
 } from './evidence-envelope.ts';
 import {
   buildDomainDispatchEvidenceWorkorderPacket,
@@ -19,6 +20,10 @@ import {
 import {
   defaultCallerDeletionEvidenceRoutes,
 } from './family-runtime-evidence-worklist-parts/default-caller-deletion-evidence-routes.ts';
+import {
+  attentionQueueItem,
+  nextSafeActions,
+} from './family-runtime-evidence-worklist-parts/attention-actions.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -293,6 +298,12 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
 function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonRecord) {
   const actionId = stringValue(route.action_id) ?? `route:${index + 1}`;
   const actionKind = stringValue(route.action_kind) ?? 'operator_action';
+  const claimScope = readOnlyClaimScope(route);
+  const routeOwner = stringValue(route.owner) ?? stringValue(route.action_owner) ?? 'opl';
+  const routeDomainId = stringValue(route.domain_id) ?? stringValue(route.target_domain_id);
+  const evidenceOwner = claimScope === 'domain_dispatch_evidence_receipt' && routeDomainId
+    ? canonicalOwnerId(routeDomainId)
+    : routeOwner;
   const typedBlockerRefs = stringList(route.typed_blocker_refs);
   const freshnessRefs = [
     ...stringList(route.freshness_refs),
@@ -315,9 +326,11 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     tail_item: actionKind,
     action_id: actionId,
     action_kind: actionKind,
-    claim_scope: readOnlyClaimScope(route),
-    owner: stringValue(route.owner) ?? stringValue(route.action_owner) ?? 'opl',
-    domain_id: stringValue(route.domain_id) ?? stringValue(route.target_domain_id),
+    claim_scope: claimScope,
+    owner: evidenceOwner,
+    route_owner: routeOwner,
+    safe_action_owner: routeOwner,
+    domain_id: routeDomainId,
     stage_id: stringValue(route.stage_id),
     mode: actionKind.endsWith('_verify') || actionKind === 'provider_scheduler_status'
       ? 'verify'
@@ -399,6 +412,8 @@ function externalEvidenceReceiptWorklistItems(drilldown: JsonRecord) {
         : `${role}_verified`,
       claim_scope: claimScope,
       owner: 'opl',
+      route_owner: 'opl',
+      safe_action_owner: 'opl',
       domain_id: domainId,
       stage_id: null,
       mode: 'verify',
@@ -467,6 +482,8 @@ function domainDispatchReceiptWorklistItems(drilldown: JsonRecord) {
         : 'domain_dispatch_evidence_receipt_verified',
       claim_scope: 'domain_dispatch_evidence_receipt',
       owner: 'opl',
+      route_owner: 'opl',
+      safe_action_owner: 'opl',
       domain_id: domainId,
       stage_id: stringValue(attempt.stage_id),
       mode: 'verify',
@@ -625,47 +642,6 @@ function worklistCounts(
     production_ready_authorized: false,
     not_authorized_claims: [...NOT_AUTHORIZED_CLAIMS],
   };
-}
-
-function attentionQueueItem(item: ReturnType<typeof readOnlyWorklistItem>) {
-  return {
-    item_id: item.item_id,
-    owner: item.owner,
-    domain_id: item.domain_id,
-    stage_id: item.stage_id,
-    claim_scope: item.claim_scope,
-    next_safe_action_ref: item.replay_ref,
-    missing_or_expected_refs: item.expected_refs,
-    open_reason: item.open_reason,
-    payload_requirement: item.payload_requirement,
-    payload_owner: item.payload_owner,
-    route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload,
-  };
-}
-
-function nextSafeActions(
-  openItems: ReturnType<typeof readOnlyWorklistItem>[],
-  limit = 5,
-) {
-  return openItems.slice(0, limit).map((item) => ({
-    item_id: item.item_id,
-    action_id: item.action_id,
-    action_kind: item.action_kind,
-    owner: item.owner,
-    domain_id: item.domain_id ?? null,
-    stage_id: item.stage_id ?? null,
-    claim_scope: item.claim_scope,
-    route_status: item.route_status,
-    route_status_detail: item.route_status_detail,
-    next_safe_action_ref: item.replay_ref,
-    expected_ref_count: item.expected_refs.length,
-    typed_blocker_ref: item.typed_blocker_ref,
-    open_reason: item.open_reason,
-    payload_requirement: item.payload_requirement,
-    payload_owner: item.payload_owner,
-    route_requires_domain_or_app_payload: item.route_requires_domain_or_app_payload,
-    worklist_item_is_completion_claim: false,
-  }));
 }
 
 function stageEvidenceWorkorderItem(route: JsonRecord) {
