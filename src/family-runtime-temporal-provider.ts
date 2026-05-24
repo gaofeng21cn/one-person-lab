@@ -938,6 +938,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
       },
     );
   }
+  const sourceVersion = currentWorkerSourceVersion();
   writeTemporalWorkerState(paths, {
     provider_kind: 'temporal',
     pid: process.pid,
@@ -946,6 +947,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
     task_queue: resolveTemporalTaskQueue(),
     started_at: new Date().toISOString(),
     status: 'starting',
+    source_version: sourceVersion,
   });
   const nativeConnection = await NativeConnection.connect({ address });
   try {
@@ -964,6 +966,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
       task_queue: resolveTemporalTaskQueue(),
       started_at: new Date().toISOString(),
       status: 'ready',
+      source_version: sourceVersion,
     });
     await worker.run();
   } finally {

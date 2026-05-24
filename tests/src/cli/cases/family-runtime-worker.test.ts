@@ -1,6 +1,8 @@
 import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
+import { TestWorkflowEnvironment } from '@temporalio/testing';
+
 import {
   assert,
   createFakeCodexFixture,
@@ -409,6 +411,80 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
       // The lifecycle under test may already have removed the fixture process.
     }
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal detached worker keeps source version after foreground state rewrite', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-detached-source-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-worker-detached-source-${Date.now()}`;
+  const previousAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
+  const previousWorkerEnabled = process.env.OPL_TEMPORAL_WORKER_ENABLED;
+  const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  try {
+    fs.mkdirSync(workerRoot, { recursive: true });
+    process.env.OPL_TEMPORAL_ADDRESS = testEnv.address;
+    process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
+    process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+    process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = 'git:detached-worker-current';
+    delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    delete process.env.OPL_TEMPORAL_WORKER_ENABLED;
+
+    const start = await startTemporalWorkerLifecycle({ root: workerRoot });
+    const statePath = path.join(workerRoot, 'temporal-worker.json');
+    const deadline = Date.now() + 5_000;
+    let workerState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    while (Date.now() < deadline && workerState.source_version !== 'git:detached-worker-current') {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      workerState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    }
+    const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
+    const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
+
+    assert.equal(start.start_status, 'started');
+    assert.equal(workerState.source_version, 'git:detached-worker-current');
+    assert.equal(workerState.status, 'ready');
+    assert.equal(requery.lifecycle_status, 'ready');
+    assert.equal(requery.managed_worker_source_current, true);
+    assert.equal(requery.managed_worker_source_version, 'git:detached-worker-current');
+    assert.equal(stop.stop_status, 'stopped');
+  } finally {
+    if (previousAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousAddress;
+    }
+    if (previousNamespace === undefined) {
+      delete process.env.OPL_TEMPORAL_NAMESPACE;
+    } else {
+      process.env.OPL_TEMPORAL_NAMESPACE = previousNamespace;
+    }
+    if (previousTaskQueue === undefined) {
+      delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    } else {
+      process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    }
+    if (previousWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousWorkerStatus;
+    }
+    if (previousWorkerEnabled === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_ENABLED;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_ENABLED = previousWorkerEnabled;
+    }
+    if (previousSourceVersion === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
+    }
+    await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
