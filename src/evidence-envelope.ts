@@ -1,6 +1,6 @@
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 
-type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked';
+type EvidenceEnvelopeStatus = 'open' | 'closed' | 'blocked' | 'superseded';
 
 const CANONICAL_OWNER_ALIASES = new Map([
   ['mas', 'med-autoscience'],
@@ -148,6 +148,8 @@ function envelope(input: {
   monitorRefs?: string[];
   sourceRefs?: string[];
   nextRoute?: string | null;
+  supersededByStageAttemptId?: string | null;
+  supersededReason?: string | null;
 }) {
   const owner = canonicalOwnerId(input.owner);
   const ownerAlias = sourceAlias(owner, input.owner);
@@ -165,6 +167,12 @@ function envelope(input: {
     monitor_refs: uniqueStrings(input.monitorRefs ?? []),
     source_refs: uniqueStrings(input.sourceRefs ?? []),
     next_route: input.nextRoute ?? null,
+    ...(input.status === 'superseded'
+      ? {
+          superseded_by_stage_attempt_id: input.supersededByStageAttemptId ?? null,
+          superseded_reason: input.supersededReason ?? null,
+        }
+      : {}),
     authority_boundary: authorityBoundary(),
   };
 }
@@ -278,6 +286,7 @@ function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
     ]);
     const typedBlockerRefs = stringList(attempt.typed_blocker_refs);
     const evidenceRefs = stringList(attempt.no_regression_evidence_refs);
+    const superseded = stringValue(attempt.default_actionability_status) === 'superseded';
     return envelope({
       envelopeId: `domain_dispatch:${domainId}:${attemptId}`,
       owner: domainId,
@@ -287,16 +296,20 @@ function domainDispatchEnvelopes(drilldown: JsonRecord, routes: JsonRecord[]) {
         stage_attempt_id: stringValue(attempt.stage_attempt_id),
       }),
       payloadKind: 'domain_owner_receipt_or_typed_blocker_refs',
-      status: statusFrom({
-        receiptRefs,
-        typedBlockerRefs,
-        open: receiptRefs.length === 0 && typedBlockerRefs.length === 0,
-      }),
+      status: superseded
+        ? 'superseded'
+        : statusFrom({
+            receiptRefs,
+            typedBlockerRefs,
+            open: receiptRefs.length === 0 && typedBlockerRefs.length === 0,
+          }),
       receiptRefs,
       typedBlockerRefs,
       evidenceRefs,
       sourceRefs: sourceRefs(stringValue(attempt.ref)),
       nextRoute: routeRef(route),
+      supersededByStageAttemptId: stringValue(attempt.superseded_by_stage_attempt_id),
+      supersededReason: stringValue(attempt.superseded_reason),
     });
   });
 }
@@ -454,6 +467,8 @@ function summarize(items: ReturnType<typeof envelope>[]) {
           open_envelope_count: matchingItems.filter((item) => item.status === 'open').length,
           closed_envelope_count: matchingItems.filter((item) => item.status === 'closed').length,
           blocked_envelope_count: matchingItems.filter((item) => item.status === 'blocked').length,
+          superseded_envelope_count:
+            matchingItems.filter((item) => item.status === 'superseded').length,
           receipt_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.receipt_refs)).length,
           typed_blocker_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.typed_blocker_refs)).length,
           evidence_ref_count: uniqueStrings(matchingItems.flatMap((item) => item.evidence_refs)).length,
@@ -466,6 +481,7 @@ function summarize(items: ReturnType<typeof envelope>[]) {
     open_envelope_count: items.filter((item) => item.status === 'open').length,
     closed_envelope_count: items.filter((item) => item.status === 'closed').length,
     blocked_envelope_count: items.filter((item) => item.status === 'blocked').length,
+    superseded_envelope_count: items.filter((item) => item.status === 'superseded').length,
     owner_count: ownerIds.length,
     payload_kind_count: payloadKinds.length,
     owner_ids: ownerIds,

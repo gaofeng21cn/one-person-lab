@@ -262,6 +262,12 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     stage_id: stageId,
     stage_attempt_source_fingerprint: stageAttemptSourceFingerprint,
     target_identity: targetIdentity,
+    dispatch_identity_key: stringValue(attempt.dispatch_identity_key),
+    dispatch_identity_fields: record(attempt.dispatch_identity_fields),
+    default_actionability_status: stringValue(attempt.default_actionability_status),
+    default_actionable: attempt.default_actionable === true,
+    superseded_by_stage_attempt_id: stringValue(attempt.superseded_by_stage_attempt_id),
+    superseded_reason: stringValue(attempt.superseded_reason),
     identity_binding_policy:
       'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
     identity_binding_guidance: identityBindingGuidance,
@@ -306,6 +312,7 @@ export function buildDomainDispatchEvidenceReceiptRoutes(domainDispatchEvidence:
     .filter((attempt) => (
       stringList(attempt.owner_receipt_refs).length === 0
       && stringList(attempt.typed_blocker_refs).length === 0
+      && attempt.default_actionable !== false
     ))
     .map((attempt) => {
       const hasRecordedButUnverifiedReceipt =

@@ -675,6 +675,15 @@ function appExecutionBridge(
       request_pack_id: 'request_pack_id' in ref ? ref.request_pack_id : null,
       evidence_route_kind: 'evidence_route_kind' in ref ? ref.evidence_route_kind : null,
       evidence_source_ref: 'evidence_source_ref' in ref ? ref.evidence_source_ref : null,
+      dispatch_identity_key: 'dispatch_identity_key' in ref ? ref.dispatch_identity_key : null,
+      dispatch_identity_fields:
+        'dispatch_identity_fields' in ref ? ref.dispatch_identity_fields : {},
+      default_actionability_status:
+        'default_actionability_status' in ref ? ref.default_actionability_status : null,
+      default_actionable: 'default_actionable' in ref ? ref.default_actionable : null,
+      superseded_by_stage_attempt_id:
+        'superseded_by_stage_attempt_id' in ref ? ref.superseded_by_stage_attempt_id : null,
+      superseded_reason: 'superseded_reason' in ref ? ref.superseded_reason : null,
       required_evidence_refs:
         'required_evidence_refs' in ref ? ref.required_evidence_refs : [],
       required_operator_payload_refs:

@@ -66,6 +66,8 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
     action_ref: stringValue(route.ref) ?? stringValue(route.action_ref),
     stage_attempt_source_fingerprint: stringValue(route.stage_attempt_source_fingerprint),
     target_identity: record(route.target_identity),
+    dispatch_identity_key: stringValue(route.dispatch_identity_key),
+    dispatch_identity_fields: record(route.dispatch_identity_fields),
     identity_binding_policy: stringValue(route.identity_binding_policy),
     identity_binding_guidance:
       Object.keys(record(route.identity_binding_guidance)).length > 0
@@ -359,6 +361,8 @@ export function compactDomainDispatchEvidenceWorkorderAttentionItems(
     next_safe_action_ref: item.action_ref,
     stage_attempt_source_fingerprint: item.stage_attempt_source_fingerprint,
     target_identity: item.target_identity,
+    dispatch_identity_key: item.dispatch_identity_key,
+    dispatch_identity_fields: item.dispatch_identity_fields,
     identity_binding_policy: item.identity_binding_policy,
     identity_binding_guidance: item.identity_binding_guidance,
     required_operator_payload_ref_count: item.required_operator_payload_refs.length,

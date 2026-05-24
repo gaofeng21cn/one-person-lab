@@ -176,6 +176,12 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     typed_blocker_count: typedBlockers.length,
     domain_dispatch_evidence_domain_count: numberValue(domainDispatchSummary.domain_count),
     domain_dispatch_evidence_attempt_count: numberValue(domainDispatchSummary.attempt_count),
+    domain_dispatch_evidence_dispatch_identity_group_count:
+      numberValue(domainDispatchSummary.dispatch_identity_group_count),
+    domain_dispatch_evidence_current_default_actionable_attempt_count:
+      numberValue(domainDispatchSummary.current_default_actionable_attempt_count),
+    domain_dispatch_evidence_superseded_attempt_count:
+      numberValue(domainDispatchSummary.superseded_attempt_count),
     domain_dispatch_evidence_owner_receipt_ref_count: domainDispatchOwnerReceiptRefCount,
     domain_dispatch_evidence_typed_blocker_ref_count: domainDispatchTypedBlockerRefCount,
     domain_dispatch_evidence_typed_blocker_count: domainDispatchTypedBlockerCount,
@@ -331,6 +337,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     evidence_envelope_open_count: numberValue(evidenceEnvelopeSummary.open_envelope_count),
     evidence_envelope_closed_count: numberValue(evidenceEnvelopeSummary.closed_envelope_count),
     evidence_envelope_blocked_count: numberValue(evidenceEnvelopeSummary.blocked_envelope_count),
+    evidence_envelope_superseded_count:
+      numberValue(evidenceEnvelopeSummary.superseded_envelope_count),
     evidence_envelope_receipt_ref_count: numberValue(evidenceEnvelopeSummary.receipt_ref_count),
     evidence_envelope_typed_blocker_ref_count: numberValue(evidenceEnvelopeSummary.typed_blocker_ref_count),
     evidence_envelope_domain_ready_claim_count: numberValue(evidenceEnvelopeSummary.domain_ready_claim_count),

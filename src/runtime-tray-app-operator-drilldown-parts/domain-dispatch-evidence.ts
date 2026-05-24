@@ -2,6 +2,7 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   listExternalEvidenceReceipts,
 } from '../external-evidence-ledger.ts';
+import { canonicalOwnerId } from '../evidence-envelope.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -25,6 +26,10 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }
 
+function identityPart(value: string | null) {
+  return (value ?? '').replaceAll('\\', '\\\\').replaceAll('|', '\\|');
+}
+
 function refsFromRecord(value: JsonRecord, keys: string[]) {
   return uniqueStrings(keys.flatMap((key) => {
     const entry = value[key];
@@ -46,6 +51,48 @@ function routeImpact(attempt: JsonRecord) {
 
 function attemptWorkspaceLocator(attempt: JsonRecord) {
   return record(attempt.workspace_locator);
+}
+
+function domainDispatchIdentity(attempt: JsonRecord) {
+  const locator = attemptWorkspaceLocator(attempt);
+  const domainId = stringValue(attempt.domain_id);
+  const canonicalDomainId = domainId ? canonicalOwnerId(domainId) : null;
+  const stageId = stringValue(attempt.stage_id);
+  const dispatchRef = stringValue(locator.dispatch_ref);
+  const profile = stringValue(locator.profile)
+    ?? stringValue(locator.profile_ref)
+    ?? stringValue(locator.profile_name);
+  const fields = {
+    canonical_domain_id: canonicalDomainId,
+    stage_id: stageId,
+    workspace_root: stringValue(locator.workspace_root),
+    profile,
+    study_id: stringValue(locator.study_id),
+    action_type: stringValue(locator.action_type) ?? stringValue(locator.task_kind),
+    dispatch_authority: stringValue(locator.dispatch_authority),
+    dispatch_ref: dispatchRef,
+  };
+  if (!canonicalDomainId || !stageId || !dispatchRef) {
+    return {
+      key: null,
+      key_status: 'unbound_no_dispatch_ref',
+      fields,
+    };
+  }
+  return {
+    key: [
+      canonicalDomainId,
+      stageId,
+      fields.workspace_root,
+      profile,
+      fields.study_id,
+      fields.action_type,
+      fields.dispatch_authority,
+      dispatchRef,
+    ].map(identityPart).join('|'),
+    key_status: 'bound',
+    fields,
+  };
 }
 
 function targetIdentity(attempt: JsonRecord) {
@@ -95,6 +142,83 @@ function domainReadyClaimed(verdict: string | null) {
     || normalized === 'domain_ready_claimed'
     || normalized.endsWith('_ready')
     || normalized.endsWith('_ready_claimed');
+}
+
+type DomainDispatchAttemptEvidence = ReturnType<typeof attemptDispatchEvidence>;
+
+function hasDefaultActionableEvidenceGap(attempt: DomainDispatchAttemptEvidence) {
+  return attempt.owner_receipt_refs.length === 0
+    && attempt.typed_blocker_refs.length === 0;
+}
+
+function timestampMs(value: unknown) {
+  const text = stringValue(value);
+  if (!text) {
+    return 0;
+  }
+  const parsed = Date.parse(text);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function compareAttemptRecency(left: DomainDispatchAttemptEvidence, right: DomainDispatchAttemptEvidence) {
+  return timestampMs(right.updated_at) - timestampMs(left.updated_at)
+    || timestampMs(right.created_at) - timestampMs(left.created_at)
+    || String(right.stage_attempt_id ?? '').localeCompare(String(left.stage_attempt_id ?? ''));
+}
+
+function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[]) {
+  const candidatesByIdentity = attempts
+    .filter(hasDefaultActionableEvidenceGap)
+    .reduce<Record<string, DomainDispatchAttemptEvidence[]>>((groups, attempt) => {
+      const key = stringValue(attempt.dispatch_identity_key);
+      if (!key) {
+        return groups;
+      }
+      groups[key] = [...(groups[key] ?? []), attempt];
+      return groups;
+    }, {});
+  const currentByIdentity = new Map<string, DomainDispatchAttemptEvidence>();
+  for (const [key, group] of Object.entries(candidatesByIdentity)) {
+    currentByIdentity.set(key, [...group].sort(compareAttemptRecency)[0]);
+  }
+  return attempts.map((attempt) => {
+    if (!hasDefaultActionableEvidenceGap(attempt)) {
+      return {
+        ...attempt,
+        default_actionability_status: 'not_actionable_evidence_refs_observed',
+        default_actionable: false,
+        superseded_by_stage_attempt_id: null,
+        superseded_reason: null,
+      };
+    }
+    const key = stringValue(attempt.dispatch_identity_key);
+    if (!key) {
+      return {
+        ...attempt,
+        default_actionability_status: 'current_without_dispatch_identity',
+        default_actionable: true,
+        superseded_by_stage_attempt_id: null,
+        superseded_reason: null,
+      };
+    }
+    const currentAttemptId = currentByIdentity.get(key)?.stage_attempt_id ?? null;
+    if (currentAttemptId && currentAttemptId !== attempt.stage_attempt_id) {
+      return {
+        ...attempt,
+        default_actionability_status: 'superseded',
+        default_actionable: false,
+        superseded_by_stage_attempt_id: currentAttemptId,
+        superseded_reason: 'newer_stage_attempt_with_same_domain_dispatch_identity',
+      };
+    }
+    return {
+      ...attempt,
+      default_actionability_status: 'current',
+      default_actionable: true,
+      superseded_by_stage_attempt_id: null,
+      superseded_reason: null,
+    };
+  });
 }
 
 function authorityBoundary() {
@@ -152,6 +276,7 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
   const typedBlockerCount = Number(record(transition).typed_blocker_count ?? 0)
     + (Array.isArray(impact.typed_blockers) ? impact.typed_blockers.length : 0)
     + (Array.isArray(controlled.typed_blockers) ? controlled.typed_blockers.length : 0);
+  const dispatchIdentity = domainDispatchIdentity(attempt);
   return {
     ref: `/stage_attempt_workbench/attempts/${stringValue(attempt.stage_attempt_id) ?? 'unknown'}/domain_dispatch_evidence`,
     domain_id: stringValue(attempt.domain_id) ?? 'unknown',
@@ -162,7 +287,12 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
     closeout_receipt_status: stringValue(attempt.closeout_receipt_status),
     workspace_locator: attemptWorkspaceLocator(attempt),
     source_fingerprint: stringValue(attempt.source_fingerprint),
+    created_at: stringValue(attempt.created_at),
+    updated_at: stringValue(attempt.updated_at),
     target_identity: identity,
+    dispatch_identity_key: dispatchIdentity.key,
+    dispatch_identity_key_status: dispatchIdentity.key_status,
+    dispatch_identity_fields: dispatchIdentity.fields,
     identity_binding_policy:
       'domain_dispatch_receipt_payload_identity_must_not_conflict_with_stage_attempt_identity',
     dispatch_evidence_receipt_status: verifiedExternalReceipts.length > 0
@@ -205,6 +335,9 @@ function emptyDomainGroup(domainId: string) {
     no_regression_evidence_ref_count: 0,
     writeback_receipt_ref_count: 0,
     domain_ready_claim_count: 0,
+    current_default_actionable_attempt_count: 0,
+    superseded_attempt_count: 0,
+    dispatch_identity_keys: [] as string[],
     attempt_refs: [] as string[],
     owner_receipt_refs: [] as string[],
     typed_blocker_refs: [] as string[],
@@ -214,12 +347,18 @@ function emptyDomainGroup(domainId: string) {
 }
 
 export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
-  const attemptEvidence = attempts.map(attemptDispatchEvidence);
+  const attemptEvidence = annotateDefaultActionability(attempts.map(attemptDispatchEvidence));
   const byDomain = attemptEvidence.reduce<Record<string, ReturnType<typeof emptyDomainGroup>>>((groups, attempt) => {
     const domainId = attempt.domain_id;
     const group = groups[domainId] ?? emptyDomainGroup(domainId);
     group.attempt_count += 1;
     group.attempt_refs = uniqueStrings([...group.attempt_refs, attempt.ref]);
+    group.dispatch_identity_keys = uniqueStrings([
+      ...group.dispatch_identity_keys,
+      ...(attempt.dispatch_identity_key ? [attempt.dispatch_identity_key] : []),
+    ]);
+    group.current_default_actionable_attempt_count += attempt.default_actionable ? 1 : 0;
+    group.superseded_attempt_count += attempt.default_actionability_status === 'superseded' ? 1 : 0;
     group.owner_receipt_refs = uniqueStrings([...group.owner_receipt_refs, ...attempt.owner_receipt_refs]);
     group.typed_blocker_refs = uniqueStrings([...group.typed_blocker_refs, ...attempt.typed_blocker_refs]);
     group.typed_blocker_count += attempt.typed_blocker_count;
@@ -240,12 +379,24 @@ export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
     return groups;
   }, {});
   const domainGroups = Object.values(byDomain);
+  const dispatchIdentityKeys = uniqueStrings(attemptEvidence
+    .map((attempt) => attempt.dispatch_identity_key)
+    .filter((key): key is string => Boolean(key)));
+  const supersededAttempts = attemptEvidence.filter((attempt) =>
+    attempt.default_actionability_status === 'superseded'
+  );
   return {
     surface_kind: 'opl_app_drilldown_domain_dispatch_evidence',
     projection_policy: 'refs_only_owner_chain_dispatch_evidence_no_domain_verdict_authority',
+    default_actionability_policy:
+      'only_latest_attempt_per_bound_dispatch_identity_is_default_actionable_superseded_attempts_remain_full_detail_provenance',
     summary: {
       domain_count: domainGroups.length,
       attempt_count: attemptEvidence.length,
+      dispatch_identity_group_count: dispatchIdentityKeys.length,
+      current_default_actionable_attempt_count:
+        attemptEvidence.filter((attempt) => attempt.default_actionable).length,
+      superseded_attempt_count: supersededAttempts.length,
       owner_receipt_ref_count: uniqueStrings(domainGroups.flatMap((group) => group.owner_receipt_refs)).length,
       typed_blocker_ref_count: uniqueStrings(domainGroups.flatMap((group) => group.typed_blocker_refs)).length,
       typed_blocker_count: domainGroups.reduce((count, group) => count + group.typed_blocker_count, 0),
