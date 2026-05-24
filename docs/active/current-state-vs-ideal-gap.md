@@ -38,7 +38,7 @@ Declarative Domain Pack
 | Area | 当前进度 | 当前读法 |
 | --- | --- | --- |
 | OPL framework control plane | `landed_with_evidence_tail` | Temporal provider path、typed queue、stage attempt ledger、safe action shell、refs-only evidence ledger、App/operator drilldown、Agent Lab、pack compiler 和 conformance/readiness 读面已经是 framework 主干；不能写成 production ready。 |
-| Standard agent structural conformance | `blocked` | Fresh `opl agents conformance --family-defaults --json` 显示 3 个 repo 通过、1 个 repo blocked；当前 blocker 是 MAS `paper_work_unit_outbox.py` 的 active forbidden-name residue。结构通过或 blocker 清零都不等于 production caller / long soak 通过。 |
+| Standard agent structural conformance | `passed_with_production_evidence_tail` | Fresh `opl agents conformance --family-defaults --json` 显示 4 个 repo 通过、0 个 repo blocked，active forbidden-name residue 清零；结构通过不等于 production caller / long soak 通过。 |
 | App/user path evidence | `user_path_evidence_ready` | App release/user-path ledger 已验证同 cohort release package、screenshot、reload prompt、provider linkage 与 long operator evidence；`framework readiness` 读为 App user-path evidence ready，但 `release_ready_claimed=false`、`production_ready_claimed=false`，不等于 App release ready。 |
 | OMA/new agent consumption | `production_consumption_ready` | New-agent scaffold/structural consumption、managed install/update、App live path、owner receipt/typed blocker scaleout 和 verified long-soak 已进入读面；OMA production-consumption ready 不授权 MAS/MAG/RCA 或 family production ready。 |
 | Domain production evidence | `partial` | MAS/MAG/RCA 的 owner receipt refs、typed blocker refs、no-regression refs 可进入 OPL refs-only ledger；真实 paper/grant/visual owner-chain、memory/artifact/lifecycle receipt 和 repeated no-regression 仍需扩面。 |
@@ -67,7 +67,7 @@ Declarative Domain Pack
 | MAS real paper chain | MAS guarded-apply、owner-route、aftercare、default-executor typed blocker payload 可被 OPL record/verify 消费。 | 多条真实 paper line 产生 progress delta、AI reviewer update、artifact delta、human gate、stop-loss、owner receipt 或 stable typed blocker。 |
 | MAG grant soak | MAG transition oracle、owner receipt contract、refs-only handoff 边界清晰。 | 真实 OPL-hosted grant-stage attempt 持续返回 grant-owned receipt、typed blocker 或 no-regression evidence。 |
 | RCA visual soak | RCA transition/evidence fixture、refs-only projection 和 visual authority boundary 清晰。 | 真实 artifact-producing owner receipt、visual memory reuse、workspace receipt scaleout 和 repeated no-regression evidence。 |
-| Cross-family regression | 三仓 structural conformance 与 generated/readiness consumer boundary 可读。 | direct/hosted parity、generated default consumption、legacy no-active-caller、no-forbidden-write 和 release/dist consumption 反复通过。 |
+| Cross-family regression | MAS/MAG/RCA/OMA structural conformance 与 generated/readiness consumer boundary 可读。 | direct/hosted parity、generated default consumption、legacy no-active-caller、no-forbidden-write 和 release/dist consumption 反复通过。 |
 
 ## 下一轮 baton
 
@@ -78,7 +78,7 @@ Objective:
 优先顺序：
 
 1. 读取 `opl framework readiness --family-defaults --json`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`，确认当前 open gate。
-2. 优先处理 fresh conformance blocker：MAS active forbidden-name residue（当前 `paper_work_unit_outbox.py` 中 `runtime_supervisor` / `supervision_scheduler` / `mas_supervision_scheduler` 命名）。
+2. 继续把 `opl agents conformance --family-defaults --json` 作为结构回归守门；若 fresh conformance hard blocker 重新出现，先处理 blocker，再推进证据尾项。
 3. 推进 MAS/MAG/RCA repo-owned production caller、owner receipt、typed blocker、memory/artifact/lifecycle receipt、no-regression 和 live long-soak evidence。
 4. 推进 Developer Mode non-owner fork/PR owner acceptance 与 App release-ready owner boundary；App user-path evidence ready 不等于 App release ready。
 5. 在 default caller / no-active-caller / replacement parity / owner receipt parity 成立后，删除、archive 或 tombstone repo-local generic residue，不新增兼容面。

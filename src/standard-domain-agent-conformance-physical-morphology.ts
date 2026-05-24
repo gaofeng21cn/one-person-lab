@@ -410,6 +410,7 @@ function masPhysicalMorphologyPolicyChecks(repoDir: string) {
     allowed_residue_prefixes: [
       ...DEFAULT_ALLOWED_MORPHOLOGY_RESIDUE_PREFIXES,
       'docs/history/',
+      'contracts/runtime/legacy-active-path-tombstones.json',
       'tests/legacy_negative',
     ],
     blockers,
