@@ -36,6 +36,10 @@ export function assertDomainDispatchGroupExecutorHints(group: any) {
 export function assertSameDomainDispatchGroupExecutorHints(actual: any, expected: any) {
   assert.deepEqual(actual.sample_record_action_ids, expected.sample_record_action_ids);
   assert.deepEqual(actual.sample_record_command_refs, expected.sample_record_command_refs);
+  assert.equal(
+    actual.copyable_runtime_action_execute_commands.record_with_payload_file,
+    `opl runtime action execute --action ${expected.sample_record_action_ids[0]} --payload-file <payload.json>`,
+  );
   assert.equal(actual.can_submit_record_to_safe_action_shell, true);
   assert.deepEqual(actual.payload_template, expected.payload_template);
   assert.deepEqual(actual.payload_ref_hints, expected.payload_ref_hints);

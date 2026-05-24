@@ -143,6 +143,10 @@ export function assertFrameworkOwnerPayloadAction(
   assert.deepEqual(ownerPayloadAction.required_refs_any_of, firstOwnerPayloadGroup.required_refs_any_of);
   assert.deepEqual(ownerPayloadAction.owner_payload_workorder, firstOwnerPayloadGroup.owner_payload_workorder);
   assertOwnerPayloadWorkorderProjection(ownerPayloadAction);
+  assert.equal(
+    ownerPayloadAction.copyable_runtime_action_execute_commands.record_with_payload_file,
+    `opl runtime action execute --action owner_payload:${firstOwnerPayloadGroup.owner}:${firstOwnerPayloadGroup.payload_kind}:record --payload-file <payload.json>`,
+  );
   assert.equal(ownerPayloadAction.full_detail_section, 'evidence_envelope');
   assert.equal(ownerPayloadAction.authority, 'operator_attention_only');
   assert.equal(ownerPayloadAction.can_execute_domain_action, false);

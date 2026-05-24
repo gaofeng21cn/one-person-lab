@@ -49,14 +49,43 @@ function ownerPayloadEvidenceClosureGate(payloadKind: string | null) {
   return 'domain_app_live_evidence_payload_gate';
 }
 
+function ownerPayloadGroupCommand(owner: string | null, payloadKind: string | null) {
+  const ownerArg = owner ?? '<owner>';
+  const payloadKindArg = payloadKind ?? '<payload-kind>';
+  return [
+    'opl',
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    `owner_payload:${ownerArg}:${payloadKindArg}:record`,
+    '--payload-file',
+    '<payload.json>',
+  ].join(' ');
+}
+
+function domainDispatchRecordWithPayloadFileCommand(actionId: string | null) {
+  return [
+    'opl',
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    actionId ?? '<domain-dispatch-record-action-id>',
+    '--payload-file',
+    '<payload.json>',
+  ].join(' ');
+}
+
 function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
   const payloadKind = stringValue(group.payload_kind);
+  const owner = stringValue(group.owner) ?? 'domain_repository_or_app_live_operator';
   return {
     action_id: 'review_owner_payload_group_scaleout',
     action_kind: 'owner_payload_group_scaleout',
     step_kind: 'owner_payload_group_scaleout',
     evidence_closure_gate: ownerPayloadEvidenceClosureGate(payloadKind),
-    owner: stringValue(group.owner) ?? 'domain_repository_or_app_live_operator',
+    owner,
     payload_kind: payloadKind,
     status: stringValue(group.status) ?? 'needs_owner_payload_refs',
     attention_count: numberValue(group.attention_count),
@@ -70,6 +99,9 @@ function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
     payload_path_policy: stringValue(group.payload_path_policy),
     accepted_payload_paths: record(group.accepted_payload_paths),
     owner_payload_workorder: record(group.owner_payload_workorder),
+    copyable_runtime_action_execute_commands: {
+      record_with_payload_file: ownerPayloadGroupCommand(owner, payloadKind),
+    },
     empty_payload_template_is_success_evidence:
       group.empty_payload_template_is_success_evidence === true,
     full_detail_section: 'evidence_envelope',
@@ -83,6 +115,7 @@ function frameworkOwnerPayloadGroupNextSafeAction(group: JsonRecord) {
 }
 
 function frameworkDomainDispatchGroupNextSafeAction(group: JsonRecord) {
+  const firstRecordActionId = stringList(group.sample_record_action_ids)[0] ?? null;
   return {
     action_id: 'review_domain_dispatch_group_workorder',
     action_kind: 'domain_dispatch_evidence_group_workorder',
@@ -108,6 +141,9 @@ function frameworkDomainDispatchGroupNextSafeAction(group: JsonRecord) {
     record_action_id_omitted_count: numberValue(group.record_action_id_omitted_count),
     sample_record_command_refs: stringList(group.sample_record_command_refs),
     record_command_ref_omitted_count: numberValue(group.record_command_ref_omitted_count),
+    copyable_runtime_action_execute_commands: {
+      record_with_payload_file: domainDispatchRecordWithPayloadFileCommand(firstRecordActionId),
+    },
     can_submit_record_to_safe_action_shell:
       group.can_submit_record_to_safe_action_shell === true,
     required_operator_payload_ref_count: numberValue(group.required_operator_payload_ref_count),
