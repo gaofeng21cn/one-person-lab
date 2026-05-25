@@ -6,6 +6,7 @@ import {
   EVIDENCE_REQUIREMENT_MODEL_VERSION,
   evidenceRequirementFromTailItem,
 } from './evidence-requirement.ts';
+import type { EvidenceRequirement } from './evidence-requirement.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
 import { compactEvidenceEnvelopeProjection, canonicalOwnerId } from './evidence-envelope.ts';
@@ -20,6 +21,12 @@ import {
   buildZeroOpenCompletionGuard,
   zeroOpenCompletionGuardSummaryFields,
 } from './family-runtime-evidence-worklist-parts/zero-open-completion-guard.ts';
+import {
+  operatorRoutesByActionId,
+  payloadHandoffProjection,
+  routeWithOperatorHandoff,
+} from './family-runtime-evidence-worklist-parts/operator-route-handoff.ts';
+import { readOnlyRouteMatchesDefaults } from './family-runtime-evidence-worklist-parts/route-defaults.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -362,6 +369,7 @@ function readOnlyWorklistItem(route: JsonRecord, index: number, drilldown: JsonR
     open_reason: stringValue(route.open_reason),
     payload_requirement: stringValue(route.payload_requirement),
     payload_owner: stringValue(route.payload_owner),
+    ...payloadHandoffProjection(route, actionKind),
     route_requires_domain_or_app_payload: route.route_requires_domain_or_app_payload === true,
     can_close_without_domain_or_app_payload: route.can_close_without_domain_or_app_payload !== false,
     opl_generated_receipt_policy: stringValue(route.opl_generated_receipt_policy),
@@ -525,34 +533,6 @@ function domainDispatchReceiptWorklistItems(drilldown: JsonRecord) {
   });
 }
 
-function readOnlyRouteMatchesDefaults(route: JsonRecord, input: EvidenceWorklistInput) {
-  const actionKind = stringValue(route.action_kind) ?? '';
-  const args = stringList(route.opl_cli_args);
-  const worklistKind = actionKind.startsWith('provider_scheduler_')
-    || actionKind === 'stage_production_attempt_request'
-    || actionKind.startsWith('stage_production_evidence_')
-    || actionKind.startsWith('domain_dispatch_evidence_')
-    || actionKind.startsWith('external_evidence_')
-    || actionKind.startsWith('evidence_gate_')
-    || actionKind.startsWith('legacy_cleanup_');
-  if (!worklistKind || stringValue(route.owner) !== 'opl') {
-    return false;
-  }
-  if (actionKind.startsWith('provider_scheduler_')) {
-    const providerIndex = args.indexOf('--provider');
-    return (stringValue(route.provider_kind) ?? args[providerIndex + 1]) === input.providerKind;
-  }
-  if (actionKind === 'stage_production_attempt_request') {
-    const providerIndex = args.indexOf('--provider');
-    const executorIndex = args.indexOf('--executor-kind');
-    return providerIndex >= 0
-      && args[providerIndex + 1] === input.providerKind
-      && executorIndex >= 0
-      && args[executorIndex + 1] === input.executorKind;
-  }
-  return true;
-}
-
 function authorityBoundary() {
   return {
     opl: 'evidence_worklist_derived_attention_lens_for_refs_only_safe_action_routes',
@@ -571,9 +551,9 @@ function authorityBoundary() {
 }
 
 function worklistCounts(
-  worklistItems: ReturnType<typeof readOnlyWorklistItem>[],
-  openItems: ReturnType<typeof readOnlyWorklistItem>[],
-  closedItems: ReturnType<typeof readOnlyWorklistItem>[],
+  worklistItems: JsonRecord[],
+  openItems: JsonRecord[],
+  closedItems: JsonRecord[],
   nextActionLedger: ReturnType<typeof buildProductionTailNextActionLedger>,
 ) {
   const stageReceiptFreshnessOpenWorkorderCount = openItems.filter((item) =>
@@ -786,8 +766,8 @@ function compactStageEvidenceWorkorderAttentionItems(
   }));
 }
 
-function buildEvidenceRequirementLedger(worklistItems: ReturnType<typeof readOnlyWorklistItem>[]) {
-  const requirements = worklistItems.map((item) => item.evidence_requirement);
+function buildEvidenceRequirementLedger(worklistItems: JsonRecord[]) {
+  const requirements = worklistItems.map((item) => item.evidence_requirement as EvidenceRequirement);
   const domainIds = uniqueStringList(requirements.map((requirement) => requirement.domain_id));
   const ownerIds = uniqueStringList(requirements.map((requirement) => requirement.owner));
   const stageKeys = uniqueStringList(requirements.map((requirement) =>
@@ -840,11 +820,14 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const bridge = record(drilldown.app_execution_bridge);
   const operatorActionRouting = record(drilldown.operator_action_routing_refs);
   const operatorRoutes = recordList(operatorActionRouting.refs);
+  const operatorRouteByActionId = operatorRoutesByActionId(operatorRoutes);
   const routes = recordList(bridge.safe_action_routes).filter((route) =>
     readOnlyRouteMatchesDefaults(route, input)
   );
   const worklistItems = [
-    ...routes.map((route, index) => readOnlyWorklistItem(route, index, drilldown)),
+    ...routes.map((route, index) =>
+      readOnlyWorklistItem(routeWithOperatorHandoff(route, operatorRouteByActionId), index, drilldown)
+    ),
     ...externalEvidenceReceiptWorklistItems(drilldown),
     ...domainDispatchReceiptWorklistItems(drilldown),
     ...defaultCallerDeletionEvidenceRoutes(drilldown, NOT_AUTHORIZED_CLAIMS)
