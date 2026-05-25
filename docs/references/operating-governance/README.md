@@ -7,9 +7,11 @@ Status: `support_reference_index`
 Owner: `One Person Lab`
 Machine boundary: 仅人读索引；机器可读 governance 行为必须使用 contracts、schemas、source、CLI/API 行为、生成产物或语义化 `human_doc:*` id。
 
-本目录收纳 governance、quality projection、incident learning、operator projection、domain memory、目录治理和 surface review 参考。
+本目录收纳 governance、quality projection、incident learning、operator projection、domain memory、目录治理和结构 advisory 参考。
 
-当前 OPL topology 不是 gateway-first。本目录中部分文件仍保留 legacy-derived 的 `gateway` 或 `domain_gateway` wording，是因为已归档的 compatibility corpus 和示例记录仍用这些标签做 provenance 与 reviewability。请只把这些标签理解为历史词汇；它们不是 active compatibility interface，当前机器可读行为必须来自核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger 或 domain-owned manifest。
+当前 OPL topology 不是 gateway-first。旧 gateway-derived operating matrices 已迁入 [Gateway-Derived Operating Governance 归档](../../history/compatibility/gateway-federation/operating-governance/README.md)，只保留 provenance 与 reviewability。请只把这些标签理解为历史词汇；它们不是 active compatibility interface，当前机器可读行为必须来自核心五件套、当前 contracts、source、CLI/API 行为、runtime ledger 或 domain-owned manifest。
+
+2026-05-26 live read-model 校准：`framework readiness` 仍读为 `framework_control_plane_available_with_blocked_refs_only_attention`，hard blocker 为 0，但 domain-blocked attention 与 refs-only evidence envelope 仍存在；`agents conformance` 只证明 4 个 repo structural conformance passed；`app-operator-drilldown` 是 refs-only operator projection，App 只承担 start / observe / intervene / display，长任务 driver 仍是 OPL / Temporal，默认 stage executor 是 `codex_cli`。因此，本目录所有 governance reference 都只能作为 owner split、projection、incident、memory、quality 和 structure advisory 支撑，不授权 domain ready、production ready、App release ready、artifact authority、quality/export verdict、owner receipt closeout 或 memory body/writeback apply。
 
 ## 当前 Owner Surfaces
 
@@ -20,12 +22,17 @@ Machine boundary: 仅人读索引；机器可读 governance 行为必须使用 c
 | `family-product-operator-projection.md` | `support_reference` | Operator projection 支撑；不是 action authority。 |
 | `family-incident-learning-loop.md` | `support_reference` | Incident learning 支撑；domain truth 仍由 domain 持有。 |
 | `opl-family-directory-governance.md` | `support_reference` | Family repo layout 的目录治理支撑。 |
-| `opl-governance-audit-operating-surface*` | `support_reference_legacy_derived` | Audit/reference surface。Gateway wording 是 legacy-derived，不定义当前 topology。 |
-| `opl-publish-promotion-operating-surface*` | `support_reference_legacy_derived` | Publish/promotion 参考 surface。不授予 publication authority。 |
-| `opl-surface-authority-matrix*` | `support_reference_legacy_derived` | 覆盖历史/当前 surface id 的 derived authority matrix。它不是 authorization engine。 |
-| `opl-surface-lifecycle-map*` | `support_reference_legacy_derived` | 覆盖历史/当前 surface id 的 derived lifecycle graph。它不是 workflow engine。 |
-| `opl-surface-review-matrix*` | `support_reference_legacy_derived` | Derived reviewability matrix。它不是 approval 或 release engine。 |
 | `family-structure-advisory-report.md` | `dated_snapshot` | 只读 advisory snapshot。复用精确状态前必须刷新。 |
+
+## 已归档的 Gateway-Derived Surface
+
+| 历史文件组 | 当前位置 | 当前读法 |
+| --- | --- | --- |
+| `opl-governance-audit-operating-surface.md` | `docs/history/compatibility/gateway-federation/operating-governance/` | Audit/reference surface 的历史 provenance，不定义当前 topology。 |
+| `opl-publish-promotion-operating-surface.md` | `docs/history/compatibility/gateway-federation/operating-governance/` | Publish/promotion 参考历史。不授予 publication authority。 |
+| `opl-surface-authority-matrix.md` | `docs/history/compatibility/gateway-federation/operating-governance/` | 旧 derived authority matrix；不是 authorization engine。 |
+| `opl-surface-lifecycle-map.md` | `docs/history/compatibility/gateway-federation/operating-governance/` | 旧 derived lifecycle graph；不是 workflow engine。 |
+| `opl-surface-review-matrix.md` | `docs/history/compatibility/gateway-federation/operating-governance/` | 旧 derived reviewability matrix；不是 approval 或 release engine。 |
 
 ## 阅读规则
 

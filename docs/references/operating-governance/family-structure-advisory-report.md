@@ -2,13 +2,15 @@
 
 Owner: `One Person Lab`
 Purpose: `references_operating_governance_family_structure_advisory_report`
-State: `support_reference`
+State: `dated_snapshot`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
 owner: OPL shared governance  
 purpose: advisory structure scan across OPL-family tracked files  
-state: current advisory report, not a fail-closed gate  
+state: dated advisory report, not a fail-closed gate
 machine boundary: generated from `npm run --silent family:structure-advisory -- --format=markdown`
+
+2026-05-26 02:38 CST 读法：本文是 tracked advisory snapshot，不是结构阻断门。复用精确文件清单、line count、needs-design-pass 或 public-surface-risk 前必须重跑 `npm run --silent family:structure-advisory -- --format=json|markdown`。本轮 fresh scan 仍显示 advisory-only；它覆盖 `one-person-lab`、`med-autogrant`、`med-deepscientist` 和 `one-person-lab-app`，不扫描 MAS、RCA、OMA，也不再把 `opl-aion-shell` 当作当前 OPL series scan 对象。任何条目都只能进入 design-pass 或 contract-surface review queue，不能直接变成 fail-closed backlog 或机械拆分任务。
 
 ## Scope
 
@@ -17,9 +19,9 @@ This report covers tracked files in:
 - `one-person-lab`
 - `med-autogrant`
 - `med-deepscientist`
-- `opl-aion-shell`
+- `one-person-lab-app`
 
-It intentionally does not scan MAS or RCA. The guard is advisory: it identifies structural pressure, mechanical split residue, nested parts, large shared buckets, public machine-readable surfaces, and near-1000-line part files. It does not force semantic holdouts through mechanical splitting.
+It intentionally does not scan MAS, RCA, or OMA. The guard is advisory: it identifies structural pressure, mechanical split residue, nested parts, large shared buckets, public machine-readable surfaces, and near-1000-line part files. It does not force semantic holdouts through mechanical splitting.
 
 ## Current Readout
 
@@ -35,19 +37,17 @@ needs_design_pass:
 
 - Current advisory scan flags these OPL-owned files over the 1000-line source threshold:
   - `src/runtime-tray-app-operator-drilldown.ts`
-  - `src/family-runtime-lifecycle-index.ts`
-  - `tests/src/cli/cases/agents-conformance.test.ts`
-  - `src/family-domain-agent-skeleton.ts`
-  - `tests/src/cli/cases/runtime-app-operator-drilldown-actions.test.ts`
-  - `tests/src/cli/cases/runtime-app-operator-drilldown.test.ts`
+  - `tests/src/agent-lab.test.ts`
   - `src/family-stage-control-plane.ts`
-  - `src/family-runtime-temporal-provider.ts`
+  - `src/agent-lab-complete.ts`
+  - `src/runtime-tray-app-operator-drilldown-parts/detail-view.ts`
 
 These are design-pass inputs only. Do not mechanically split them unless a real owner boundary, generated/source separation, or reusable OPL primitive falls out of the code path.
 
 resolved_since_last_readout:
 
 - `src/standard-domain-agent-conformance.ts` was thinned below the blocking line budget by extracting physical morphology policy and active residue scanning into `src/standard-domain-agent-conformance-physical-morphology.ts` and shared helpers into `src/standard-domain-agent-conformance-utils.ts`. This is a semantic owner-boundary extraction, not a numeric split: conformance remains the thin read-only report aggregator, while physical morphology remains a scoped structural guard.
+- Earlier large runtime lifecycle / conformance test files are no longer in the current OPL needs-design-pass top signal; keep them out of active backlog unless a fresh scan reintroduces them.
 
 mechanical_residue:
 
@@ -65,23 +65,29 @@ These are the current large machine-readable public surfaces in the advisory sca
 
 safe_to_keep:
 
-- Most `product_entry_parts`, `hermes_runtime_parts`, `cli_parts`, and focused `*_parts.py` files remain semantic and below the advisory part budget.
-- Examples include `product_entry_parts/loop_contracts.py`, `hermes_runtime_parts/io.py`, `product_entry_parts/runtime_surfaces.py`, and `hermes_runtime_parts/substrate.py`.
+- Most `product_entry_parts`, `domain_runtime_parts`, `cli_parts`, and focused `*_parts.py` files remain semantic and below the advisory part budget.
+- Examples include `product_entry_parts/loop_contracts.py`, `domain_runtime_parts/io.py`, `product_entry_parts/runtime_surfaces.py`, and `domain_runtime_parts/substrate.py`.
 
 needs_design_pass:
 
-- `src/med_autogrant/product_entry_parts/manifest_builder.py`
-- `src/med_autogrant/grant_autonomy_parts.py`
+- `src/med_autogrant/product_entry_parts/consumer_thinning_audit.py`
 
-Both are near the 1000-line part-file boundary. The correct next action is a design pass around natural ownership, not a numeric split.
+This is near the 1000-line part-file boundary. The correct next action is a design pass around natural ownership, not a numeric split.
 
 mechanical_residue:
 
-- none from tracked `chunk_*`, `part_*`, `split_*`, or nested `parts` directory patterns.
+- `src/med_autogrant/product_entry_parts/manifest_builder_parts/shell_assembly.py`
+- `src/med_autogrant/product_entry_parts/manifest_builder_parts/runtime_task_shell.py`
+- `src/med_autogrant/product_entry_parts/manifest_builder_parts/__init__.py`
+
+These nested `parts` paths are advisory residue candidates only. Do not flatten or delete them until reading the manifest-builder code path and confirming the split is mechanical rather than a real owner boundary.
 
 public_surface_risk:
 
 - `schemas/v1/product-entry-manifest.schema.json`
+- `contracts/functional_privatization_audit.json`
+- `contracts/stage_control_plane.json`
+- `contracts/runtime-program/opl-family-contract-adoption.json`
 - `schemas/v1/common.schema.json`
 
 These are large schema surfaces. Treat growth here as public contract risk.
@@ -116,24 +122,19 @@ public_surface_risk:
 
 - none from the current advisory scan.
 
-### opl-aion-shell
+### one-person-lab-app
 
 safe_to_keep:
 
-- Generated declaration files such as `src/renderer/services/i18n/i18n-keys.d.ts` are not design-debt targets.
+- none from the current advisory scan.
 
 needs_design_pass:
 
-- Large repo-owned implementation files include:
-  - `src/process/agent/acp/index.ts`
-  - `src/process/services/database/index.ts`
-  - `src/process/bridge/fsBridge.ts`
-  - `src/renderer/components/chat/sendbox.tsx`
-  - `src/process/task/AcpAgentManager.ts`
-  - `src/common/adapter/ipcBridge.ts`
-  - `src/process/bridge/modelBridge.ts`
+- Current App advisory scan flags:
+  - `tests/release/app-release-boundary.test.ts`
+  - `scripts/build-full-first-install-package.ts`
 
-This repo has no `scripts/verify.sh`, so this lane only records read-only advisory findings for it.
+This repo currently has no `scripts/verify.sh`, so this lane records read-only advisory findings only. App release-ready / production-ready remains owned by App release lanes, not this OPL reference document.
 
 mechanical_residue:
 

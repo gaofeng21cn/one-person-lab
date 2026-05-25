@@ -24,7 +24,7 @@ OPL family incident 至少覆盖：
 - `missing_projection`：domain repo 缺少 OPL 可读 source refs。
 - `quality_reopen`：已完成 work 被 domain quality gate 重新打开。
 - `install_sync_drift`：module install、skill sync、shared release pin 或 package source 漂移。
-- `runtime_owner_mismatch`：OPL、Hermes-Agent、Codex CLI 或 domain repo 的 owner 表述冲突。
+- `runtime_owner_mismatch`：OPL provider/runtime owner、Codex CLI 默认 executor、`hermes_agent` 显式非默认 executor adapter、或 domain repo owner split 的表述冲突。`hermes_agent` 不是 provider、默认 runtime owner 或 compatibility fallback。
 - `artifact_proof_missing`：交付物缺少 domain-owned proof / eval / export pointer。
 - `human_gate_blocked`：人工 gate 阻塞且缺少明确 next surface。
 
@@ -63,4 +63,3 @@ incident record 至少包含：
 ## Product Projection
 
 OPL 可以把 incident 聚合到 operator view，但必须保留 domain source refs、freshness、owner split 和 next gate。投影的目标是可监督、可接手、可追溯，不是替代 domain runtime 或 quality authority。
-

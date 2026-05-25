@@ -1650,6 +1650,57 @@ Next tranche write scope:
 - Or continue OPL full docs coverage in `docs/references/operating-governance/**` / `docs/references/convergence-governance/**`.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 02:58 CST`
+Tranche: `opl-operating-governance-reference-currentness-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/references/operating-governance/**` 的 governance、operator projection、domain memory、incident learning、quality projection、directory governance 与 structure advisory 支撑文档。目标是把 operating-governance reference 校准到当前 `AI-first / executor-first / Codex-first`、refs-only operator projection、domain-owned memory/quality/artifact authority 与 dated advisory snapshot 边界，避免旧 Gateway / compatibility / Hermes provider / dated proof / advisory scan / zero-open worklist 被误读成 active topology、domain ready、production ready、App release ready、memory apply、quality/export verdict 或 fail-closed structure backlog。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`contracts/README.md`。
+- Operating-governance docs: `docs/references/operating-governance/README.md`, `family-product-operator-projection.md`, `family-domain-memory-governance.md`, `family-domain-quality-projection-contract.md`, `family-incident-learning-loop.md`, `family-structure-advisory-report.md`, `opl-family-directory-governance.md`。
+- Machine-readable / test refs: `contracts/opl-framework/family-product-operator-projection.json`, `contracts/opl-framework/family-domain-quality-projection-contract.json`, `contracts/opl-framework/family-incident-learning-loop.json`, `tests/src/active-path-residue-scan.test.ts`, `tests/src/stale-compat-retirement-guard.test.ts`, `tests/src/family-structure-advisory.test.ts`。
+- CLI/read-model surfaces: `opl framework readiness --family-defaults --json`, `opl agents conformance --family-defaults --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`, `opl runtime app-operator-drilldown --json`, `opl domain-memory list --json`, `npm run --silent family:structure-advisory -- --format=json|markdown`。
+
+Fresh read-model result:
+
+- `opl framework readiness --family-defaults --json` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=228`, `evidence_envelope_blocked_count=215`, and authority boundary still forbids domain ready, production ready, quality/export verdict and artifact mutation authority claims.
+- `opl agents conformance --family-defaults --json` read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, and `production_evidence_tail_count=4`; this is structural conformance only.
+- `opl family-runtime evidence-worklist ... --detail full --json` read `open_worklist_item_count=0`, `closed_refs_only_item_count=246`, `zero_open_worklist_blocked_refs_only_envelope_count=214`, `domain_ready_authorized=false`, and `production_ready_authorized=false`; worklist snapshot and framework readiness snapshot were taken at different times, so their blocked-envelope counts are recorded separately.
+- `opl runtime app-operator-drilldown --json` read `availability=available`, `stage_attempt_count=25`, `quality_ref_count=0`, `memory_ref_count=0`, `memory_writeback_ref_count=2`, provider cadence/capability SLO satisfied, `evidence_envelope_blocked_count=214`, `app_release_user_path_release_ready_claimed=false`, `app_release_user_path_production_ready_claimed=false`, `codex_app_runtime_role_status=opl_temporal_hosted_autonomous`, and `codex_app_drives_long_running_tasks=false`.
+- `opl domain-memory list --json` read `resolved_memory_descriptor_count=3`, `missing_memory_descriptor_count=0`, `total_projects_count=3`.
+- Fresh structure advisory one-person-lab scan remained advisory-only, with `mechanical_residue=[]`; public-surface-risk still includes `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`, `contracts/family-orchestration/family-stage-proof-bundle.schema.json`, and `contracts/opl-framework/agent-lab-contract.json`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/references/operating-governance/README.md` index and topology guard; `family-product-operator-projection.md` purpose/runtime semantics/fail-closed/observability export; `family-domain-memory-governance.md` current landing, dated proof, completion and next steps; `family-domain-quality-projection-contract.md` owner split and forbidden authority; `family-incident-learning-loop.md` incident taxonomy and runtime-owner mismatch wording; `family-structure-advisory-report.md` state and snapshot reading rule; `opl-family-directory-governance.md` directory standardization state and repo-source/runtime-artifact boundary. | `docs/references/operating-governance/README.md`; `docs/references/operating-governance/family-product-operator-projection.md`; `docs/references/operating-governance/family-domain-memory-governance.md`; `docs/references/operating-governance/family-incident-learning-loop.md`; `docs/references/operating-governance/family-structure-advisory-report.md`; `docs/references/operating-governance/opl-family-directory-governance.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. All operating-governance files remain active support or dated snapshot support. This tranche corrected currentness and authority wording instead of moving files.
+
+Unreviewed docs:
+
+- OPL reference body coverage remains open outside this operating-governance tranche, especially `docs/references/convergence-governance/**`, `docs/references/governance/**`, `docs/references/domain-admission/**` and other long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history, Portal/projection/App-workbench and inspection-package blocks.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Operating-governance docs now have explicit refs-only / dated-snapshot guards, but future edits must rerun CLI/read-model before quoting exact counts because framework readiness, evidence worklist and app drilldown snapshots can legitimately differ.
+- OPL remaining convergence/governance/domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in `docs/references/convergence-governance/**`, `docs/references/governance/**` or `docs/references/domain-admission/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
