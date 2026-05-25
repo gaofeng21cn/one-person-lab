@@ -61,6 +61,7 @@ function isSameMasDefaultExecutorDispatch(
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
+const MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
 
 function workspaceRootFromProfile(profile: string | null) {
   if (!profile) {
@@ -177,7 +178,7 @@ export function findLiveMasDefaultExecutorDispatchAttempt(
     && attempt.executor_kind === 'codex_cli'
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
-    && MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+    && MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_ATTEMPT_STATUSES.has(attempt.status)
     && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
   )) ?? null;
 }
