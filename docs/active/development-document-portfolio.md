@@ -693,6 +693,59 @@ Next tranche write scope:
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close or an explicit owner decision makes their current state safe to govern.
 
 ## 验证
+Date: `2026-05-25 18:13 CST`
+Tranche: `mag-final-whole-doc-reconciliation`
+State: `tranche_verified_mag_scope_closed`
+
+本轮对 `med-autogrant` 执行 final whole-doc reconciliation：把当前 `README*`、`agent/README.md`、`contracts/README.md`、`runtime/README.md` 与全部 `docs/**/*.md` 对照既有 MAG coverage ledger、live contracts、active truth owner 和 stale-risk scan 复核。目标是确认 MAG 当前文档范围是否还有未覆盖直接入口、缺少 lifecycle 四信号的长期文档，或把旧 Hermes/Gateway/local-runtime/docs/plans wording 当作当前 owner truth 的残留。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`、`TASTE.md`
+- MAG `README.md`、`README.zh-CN.md`、`docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`、`docs/references/med-auto-grant-ideal-state.md`
+- MAG `docs/history/README.md`、`docs/history/specs/README.md`、`docs/specs/specs_lifecycle_map.md`
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/production_acceptance/mag-production-acceptance.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+- MAG OPL Doc Governance doctor and lifecycle/stale-risk scans on the tranche worktree and absorbed main
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
+- `mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
+- `standard_agent_source_shape_status=landed` and `claims_opl_replacement_exists=true` remain structural replacement signals only.
+- `claims_domain_repo_physical_delete_authorized=false` and `claims_production_long_run_soak_complete=false` remain current; the final docs reconciliation does not authorize physical deletion or production readiness.
+- Production acceptance authority boundary still says OPL/provider/structural conformance cannot authorize grant/domain/fundability/review/submission readiness.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | Current git inventory for `README*`, `agent/README.md`, `contracts/README.md`, `runtime/README.md` and all `docs/**/*.md` (113 Markdown files in this scoped inventory). Reconciliation covered prior ledger entries, all first-screen lifecycle signals, old `docs/plans` path mentions, stale Hermes/Gateway/local-runtime/default-owner wording, compatibility/facade wording, current/support/history owner boundaries, and no-current-truth-owner leakage from references/history. | `docs/history/plan-completion-audit-2026-05-01.md`, `docs/history/specs/2026-04-13-hermes-native-critique-proof-tombstone.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The two MAG edited files remain useful history/tombstone provenance; the governance action was first-screen lifecycle clarification, not physical archive/delete.
+
+Unreviewed docs:
+
+- `med-autogrant`: none remaining in the current `README*` / `agent/README.md` / `contracts/README.md` / `runtime/README.md` / `docs/**/*.md` inventory. MAG README/docs coverage can be treated as closed for the global ledger, subject to future repo changes creating new docs.
+- Other repos remain under previous ledger scopes except OMA full coverage.
+- App docs remain excluded while active release/GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG still has evidence / cleanup tails (`physical_delete_authorized=false`, `claims_production_long_run_soak_complete=false`, submission-ready human gate and sustained real consumption/long-soak evidence), but these are runtime/evidence/physical-cleanup tails, not MAG README/docs coverage gaps.
+- Old `docs/plans`, Hermes/Gateway/local-runtime/default-owner and compatibility wording still appears inside history/provenance or explicit no-resurrection guard contexts; no final reconciliation hit required promotion, deletion, or current-doc rewrite.
+- Cross-repo README/docs coverage remains open for OPL/MAS/RCA/App.
+
+Next tranche write scope:
+
+- Move to another repo's full README/docs paragraph coverage, preferably OPL, RCA, or MAS depending on clean worktree availability.
+- Keep App delayed until active release/GUI worktrees close or an explicit owner decision makes their current state safe to govern.
+
 
 Docs-only 整理：
 
