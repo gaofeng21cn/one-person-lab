@@ -57,11 +57,11 @@ test('workspace registry commands bind activate and archive project workspaces w
     );
     assert.equal(
       catalogOutput.workspace_catalog.projects[3].binding_contract.derived_entry_command_template,
-      'redcube product status --workspace-root <workspace_root>',
+      'node -e <redcube_generated_product_status_materializer>',
     );
     assert.equal(
       catalogOutput.workspace_catalog.projects[3].binding_contract.derived_manifest_command_template,
-      'redcube product manifest --workspace-root <workspace_root>',
+      'node -e <redcube_generated_product_entry_manifest_materializer>',
     );
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
@@ -149,7 +149,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(['resolved', 'not_bound'].includes(metaAgentRegistry.status), true);
     assert.equal(
       metaAgentRegistry.summary.app_workbench_section_count,
-      metaAgentRegistry.status === 'resolved' ? 6 : 0,
+      metaAgentRegistry.status === 'resolved' ? 7 : 0,
     );
     assert.equal(
       metaAgentRegistry.summary.claims_domain_ready,

@@ -24,6 +24,23 @@ test('workspace-bind derives family direct-entry locators from structured projec
   fs.mkdirSync(redcubeWorkspacePath, { recursive: true });
   fs.writeFileSync(masProfilePath, '[workspace]\nname = "fixture"\n', 'utf8');
   fs.writeFileSync(magInputPath, '{}\n', 'utf8');
+  const redcubeDomainEntryDist = path.join(
+    redcubeWorkspacePath,
+    'packages',
+    'redcube-domain-entry',
+    'dist',
+  );
+  fs.mkdirSync(redcubeDomainEntryDist, { recursive: true });
+  fs.writeFileSync(
+    path.join(redcubeDomainEntryDist, 'index.js'),
+    [
+      `const manifest = ${JSON.stringify(fixtures.redcube)};`,
+      'export async function getProductEntryManifest() { return manifest; }',
+      'export async function getProductStatus() { return { ok: true, surface_kind: "product_status", target_domain_id: manifest.target_domain_id, product_entry_manifest: manifest }; }',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
 
   const env = {
     OPL_STATE_DIR: stateRoot,
@@ -72,6 +89,40 @@ test('workspace-bind derives family direct-entry locators from structured projec
           `from med_autogrant.product_entry import MedAutoGrantProductEntry; import json; print(json.dumps(MedAutoGrantProductEntry().build_product_entry_manifest(input_path=${JSON.stringify(path.resolve(magInputPath))}), ensure_ascii=False))`,
         )
       }`;
+    const expectedMasEntryCommand =
+      `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${
+        shellSingleQuote(
+          `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_status(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
+        )
+      }`;
+    const expectedMasManifestCommand =
+      `uv run --directory ${shellSingleQuote(path.resolve(masWorkspacePath))} python -c ${
+        shellSingleQuote(
+          `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_manifest(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
+        )
+      }`;
+    const redcubeModuleUrl = new URL(
+      path.join(
+        path.resolve(redcubeWorkspacePath),
+        'packages',
+        'redcube-domain-entry',
+        'dist',
+        'index.js',
+      ),
+      'file://',
+    ).href;
+    const expectedRedcubeEntryCommand =
+      `node -e ${
+        shellSingleQuote(
+          `import(${JSON.stringify(redcubeModuleUrl)}).then(async (module) => { const payload = await module.getProductStatus({ workspace_root: ${JSON.stringify(path.resolve(redcubeWorkspacePath))} }); console.log(JSON.stringify(payload)); }).catch((error) => { console.error(error && error.stack ? error.stack : String(error)); process.exit(1); })`,
+        )
+      }`;
+    const expectedRedcubeManifestCommand =
+      `node -e ${
+        shellSingleQuote(
+          `import(${JSON.stringify(redcubeModuleUrl)}).then(async (module) => { const payload = await module.getProductEntryManifest({ workspace_root: ${JSON.stringify(path.resolve(redcubeWorkspacePath))} }); console.log(JSON.stringify(payload)); }).catch((error) => { console.error(error && error.stack ? error.stack : String(error)); process.exit(1); })`,
+        )
+      }`;
 
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.command,
@@ -90,11 +141,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autoscience.cli product status --profile ${path.resolve(masProfilePath)}`,
+      expectedMasEntryCommand,
     );
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.manifest_command,
-      `uv run python -m med_autoscience.cli product manifest --profile ${path.resolve(masProfilePath)} --format json`,
+      expectedMasManifestCommand,
     );
     assert.deepEqual(masBind.workspace_catalog.binding.direct_entry.workspace_locator, {
       surface_kind: 'med_autoscience_workspace_profile',
@@ -105,11 +156,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       redcubeBind.workspace_catalog.binding.direct_entry.command,
-      `redcube product status --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+      expectedRedcubeEntryCommand,
     );
     assert.equal(
       redcubeBind.workspace_catalog.binding.direct_entry.manifest_command,
-      `redcube product manifest --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+      expectedRedcubeManifestCommand,
     );
     assert.deepEqual(redcubeBind.workspace_catalog.binding.direct_entry.workspace_locator, {
       surface_kind: 'redcube_workspace',
@@ -150,13 +201,21 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       masProject.binding_contract.derived_entry_command_template,
-      'uv run python -m med_autoscience.cli product status --profile <profile_ref>',
+      'uv run --directory <workspace_path> python -c <mas_generated_product_status_materializer>',
     );
     assert.equal(
       masProject.binding_contract.derived_manifest_command_template,
-      'uv run python -m med_autoscience.cli product manifest --profile <profile_ref> --format json',
+      'uv run --directory <workspace_path> python -c <mas_generated_product_entry_manifest_materializer>',
     );
     assert.deepEqual(redcubeProject.binding_contract.optional_locator_fields, ['workspace_root']);
+    assert.equal(
+      redcubeProject.binding_contract.derived_entry_command_template,
+      'node -e <redcube_generated_product_status_materializer>',
+    );
+    assert.equal(
+      redcubeProject.binding_contract.derived_manifest_command_template,
+      'node -e <redcube_generated_product_entry_manifest_materializer>',
+    );
     assert.equal(
       redcubeProject.binding_contract.quick_bind_hint,
       '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
@@ -170,11 +229,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience')?.manifest_command,
-      `uv run python -m med_autoscience.cli product manifest --profile ${path.resolve(masProfilePath)} --format json`,
+      expectedMasManifestCommand,
     );
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube')?.manifest_command,
-      `redcube product manifest --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+      expectedRedcubeManifestCommand,
     );
 
     const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);

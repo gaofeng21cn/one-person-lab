@@ -119,8 +119,14 @@ export function shouldUseManagedShellScratchCwd(command: string | null | undefin
 
 function isReadOnlyProductEntryCommand(command: string) {
   const normalized = command.replace(/\s+/g, ' ');
-  return Boolean(normalized.match(
+  if (normalized.match(
     /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+(?:(?:python|python3)\s+-m\s+[\w.-]+\s+|[\w.-]+\s+)product\s+(?:manifest|status)\b/,
+  )) {
+    return true;
+  }
+
+  return Boolean(normalized.match(
+    /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*(?:med_autoscience\.controllers\.product_entry|med_autogrant\.product_entry)/,
   ));
 }
 

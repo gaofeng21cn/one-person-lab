@@ -69,6 +69,12 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
     );
     assert.equal(
       shouldUseManagedShellScratchCwd(
+        "uv run --directory '/tmp/mas' python -c 'from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest; import json; profile_ref = \"/tmp/profile.toml\"; print(json.dumps(build_product_entry_manifest(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))'",
+      ),
+      false,
+    );
+    assert.equal(
+      shouldUseManagedShellScratchCwd(
         "source '/tmp/manifest-shell-guard.sh' && uv run python -m med_autoscience.cli product manifest --profile /tmp/profile.toml --format json",
       ),
       false,
@@ -76,6 +82,12 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
     assert.equal(
       shouldUseManagedShellScratchCwd(
         'uv run python -m med_autogrant product status --input /tmp/workspace.json --format json',
+      ),
+      false,
+    );
+    assert.equal(
+      shouldUseManagedShellScratchCwd(
+        "uv run --directory '/tmp/mag' python -c 'from med_autogrant.product_entry import MedAutoGrantProductEntry; import json; print(json.dumps(MedAutoGrantProductEntry().build_product_entry_manifest(input_path=\"/tmp/workspace.json\"), ensure_ascii=False))'",
       ),
       false,
     );

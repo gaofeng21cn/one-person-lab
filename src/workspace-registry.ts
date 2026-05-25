@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -253,6 +254,29 @@ function shellSingleQuote(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+function buildMasGeneratedProductEntryMaterializer(
+  workspaceRoot: string,
+  profileRef: string,
+  methodName: 'build_product_entry_status' | 'build_product_entry_manifest',
+) {
+  const python = [
+    'from med_autoscience.profiles import load_profile',
+    'from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status',
+    'import json',
+    `profile_ref = ${JSON.stringify(profileRef)}`,
+    `print(json.dumps(${methodName}(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
+  ].join('; ');
+  return [
+    'uv',
+    'run',
+    '--directory',
+    shellSingleQuote(workspaceRoot),
+    'python',
+    '-c',
+    shellSingleQuote(python),
+  ].join(' ');
+}
+
 function buildMagGeneratedProductEntryMaterializer(
   workspaceRoot: string,
   inputPath: string,
@@ -271,6 +295,25 @@ function buildMagGeneratedProductEntryMaterializer(
     'python',
     '-c',
     shellSingleQuote(python),
+  ].join(' ');
+}
+
+function buildRedcubeGeneratedProductEntryMaterializer(
+  workspaceRoot: string,
+  methodName: 'getProductStatus' | 'getProductEntryManifest',
+) {
+  const moduleUrl = pathToFileURL(
+    path.join(workspaceRoot, 'packages', 'redcube-domain-entry', 'dist', 'index.js'),
+  ).href;
+  const javascript = [
+    `import(${JSON.stringify(moduleUrl)})`,
+    `.then(async (module) => { const payload = await module.${methodName}({ workspace_root: ${JSON.stringify(workspaceRoot)} }); console.log(JSON.stringify(payload)); })`,
+    '.catch((error) => { console.error(error && error.stack ? error.stack : String(error)); process.exit(1); })',
+  ].join('');
+  return [
+    'node',
+    '-e',
+    shellSingleQuote(javascript),
   ].join(' ');
 }
 
@@ -377,9 +420,16 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
 
   if (workspaceLocator.surface_kind === 'med_autoscience_workspace_profile' && workspaceLocator.profile_ref) {
     return {
-      command: `uv run python -m med_autoscience.cli product status --profile ${workspaceLocator.profile_ref}`,
-      manifest_command:
-        `uv run python -m med_autoscience.cli product manifest --profile ${workspaceLocator.profile_ref} --format json`,
+      command: buildMasGeneratedProductEntryMaterializer(
+        workspaceLocator.workspace_root ?? '',
+        workspaceLocator.profile_ref,
+        'build_product_entry_status',
+      ),
+      manifest_command: buildMasGeneratedProductEntryMaterializer(
+        workspaceLocator.workspace_root ?? '',
+        workspaceLocator.profile_ref,
+        'build_product_entry_manifest',
+      ),
     };
   }
 
@@ -400,8 +450,14 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
 
   if (workspaceLocator.surface_kind === 'redcube_workspace' && workspaceLocator.workspace_root) {
     return {
-      command: `redcube product status --workspace-root ${workspaceLocator.workspace_root}`,
-      manifest_command: `redcube product manifest --workspace-root ${workspaceLocator.workspace_root}`,
+      command: buildRedcubeGeneratedProductEntryMaterializer(
+        workspaceLocator.workspace_root,
+        'getProductStatus',
+      ),
+      manifest_command: buildRedcubeGeneratedProductEntryMaterializer(
+        workspaceLocator.workspace_root,
+        'getProductEntryManifest',
+      ),
     };
   }
 
@@ -446,9 +502,9 @@ function buildProjectBindingContract(
       required_locator_fields: ['profile_ref'],
       optional_locator_fields: [],
       derived_entry_command_template:
-        'uv run python -m med_autoscience.cli product status --profile <profile_ref>',
+        'uv run --directory <workspace_path> python -c <mas_generated_product_status_materializer>',
       derived_manifest_command_template:
-        'uv run python -m med_autoscience.cli product manifest --profile <profile_ref> --format json',
+        'uv run --directory <workspace_path> python -c <mas_generated_product_entry_manifest_materializer>',
       quick_bind_hint: '绑定现有 MAS workspace_path 后，再给 profile_ref，OPL 就能稳定派生 direct entry 与 manifest surface。',
     };
   }
@@ -477,8 +533,8 @@ function buildProjectBindingContract(
       workspace_locator_surface_kind: 'redcube_workspace',
       required_locator_fields: [],
       optional_locator_fields: ['workspace_root'],
-      derived_entry_command_template: 'redcube product status --workspace-root <workspace_root>',
-      derived_manifest_command_template: 'redcube product manifest --workspace-root <workspace_root>',
+      derived_entry_command_template: 'node -e <redcube_generated_product_status_materializer>',
+      derived_manifest_command_template: 'node -e <redcube_generated_product_entry_manifest_materializer>',
       quick_bind_hint: '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
     };
   }
