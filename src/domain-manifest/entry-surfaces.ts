@@ -236,9 +236,10 @@ function normalizeProgramSurface(value: unknown, field: string) {
   if (!command && !ref) {
     throw new Error(`${field} must declare command or ref.`);
   }
+  const fallbackSurfaceKind = field.split('.').at(-1) ?? 'program_surface';
 
   return {
-    surface_kind: requireString(value.surface_kind, `${field}.surface_kind`),
+    surface_kind: optionalString(value.surface_kind) ?? fallbackSurfaceKind,
     ...(command ? { command } : {}),
     ...(ref ? { ref } : {}),
   };

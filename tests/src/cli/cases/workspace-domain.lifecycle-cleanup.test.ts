@@ -9,6 +9,7 @@ import {
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
+  loadFamilyManifestFixtures,
   os,
   path,
   repoRoot,
@@ -186,6 +187,127 @@ function manifestWithBlockedCleanupResidue() {
   return manifest;
 }
 
+function manifestWithMasCurrentStandardAgentEvidence() {
+  return {
+    target_domain_id: 'med-autoscience',
+    standard_domain_agent_skeleton: {
+      surface_kind: 'standard_domain_agent_skeleton',
+      version: 'standard-domain-agent-skeleton.v1',
+      agent_id: 'mas',
+      repo_source_boundary: {
+        required_dirs: ['agent', 'contracts', 'runtime', 'docs'],
+        forbidden_dirs: ['artifacts'],
+      },
+      artifact_boundary: {
+        repo_contains_real_artifacts: false,
+        artifact_roots_are_locators: true,
+        workspace_artifact_locator_refs: ['workspace:/artifacts'],
+        runtime_artifact_locator_refs: ['runtime:/receipts'],
+      },
+      physical_skeleton_layout_audit: {
+        surface_kind: 'standard_domain_agent_physical_skeleton_layout_audit',
+        status: 'repo_source_physical_anchors_landed',
+        slots: [
+          { slot_id: 'agent/stages', repo_paths: ['agent/stages/stage_route_contract.yaml'] },
+          { slot_id: 'contracts/runtime/sidecar', repo_paths: ['contracts/runtime/sidecar'] },
+          { slot_id: 'runtime/artifact_locator', repo_paths: ['runtime/artifact_locator'] },
+          { slot_id: 'docs', repo_paths: ['docs/status.md'] },
+        ],
+      },
+      artifact_locator_contract: {
+        surface_kind: 'artifact_locator_contract',
+        locator_model: 'workspace_runtime_artifact_root',
+      },
+    },
+    functional_consumer_boundary: {
+      surface_kind: 'mas_functional_consumer_boundary',
+      proof_surfaces: [
+        'product_entry_manifest.functional_consumer_boundary',
+        'sidecar_export.functional_consumer_boundary',
+      ],
+      standard_agent_purity: {
+        surface_kind: 'mas_standard_opl_agent_purity',
+        status: 'pure_standard_agent_active',
+        default_runtime_owner: 'one-person-lab',
+        generated_surface_owner: 'one-person-lab',
+        domain_owner: 'med-autoscience',
+        active_private_generic_residue_count: 0,
+        default_caller_count: 0,
+        runtime_package_residue_count: 0,
+        active_compatibility_aliases: [],
+        history_detail_in_default_read_model: false,
+      },
+      standard_agent_purity_guard: {
+        status: 'standard_agent_purity_guard',
+        default_caller_count: 0,
+        proof_items: [
+          'standard_agent_purity.active_private_generic_residue_count=0',
+          'standard_agent_purity.default_caller_count=0',
+          'standard_agent_purity.domain_projection_policy=refs_receipts_blockers_only_no_body_verdict_or_blob',
+        ],
+      },
+      generated_surface_handoff: {
+        surface_kind: 'mas_generated_surface_handoff',
+        generated_surface_owner: 'one-person-lab',
+      },
+      generated_default_caller_boundary: {
+        surface_kind: 'mas_generated_default_caller_boundary',
+        status: 'opl_generated_hosted_shell_is_default_caller',
+        default_caller_owner: 'one-person-lab',
+        mas_handwritten_shell_default_caller_allowed: false,
+        all_default_surfaces_generated: true,
+        physical_delete_is_not_implied: true,
+        default_caller_surfaces: [
+          'cli',
+          'mcp',
+          'skill',
+          'product_entry',
+          'product_status',
+          'product_session',
+          'domain_action_adapter',
+          'workbench',
+        ],
+        proof_refs: [
+          'functional_consumer_boundary.generated_surface_handoff',
+          'family_action_catalog',
+          'family_stage_control_plane_descriptor',
+        ],
+        opl_default_caller_readiness_evidence: {
+          surface_kind: 'mas_opl_default_caller_readiness_evidence',
+          source_command: 'opl agents default-callers --agent mas=/Users/gaofeng/workspace/med-autoscience --json',
+          source_surface_kind: 'opl_agent_generated_default_caller_readiness_report',
+          structural_replacement_evidence_ready: true,
+          replacement_parity: 'ready',
+          default_surface_cutover: 'ready',
+          physical_delete_authorized: false,
+        },
+      },
+    },
+    source_provenance: {
+      surface_kind: 'source_provenance',
+      source_provenance_ref: {
+        ref: 'docs/references/med-deepscientist/source_provenance.json',
+      },
+      historical_fixture_ref: {
+        ref: 'fixtures/med-deepscientist/parity/',
+      },
+      explicit_archive_import_ref: {
+        command: 'uv run python -m med_autoscience.cli backend-audit --mode archive-import',
+      },
+      parity_oracle_ref: {
+        ref: 'program:med_deepscientist_retained_capability_parity',
+      },
+    },
+  } as JsonRecord;
+}
+
+function fullMasManifestWithCurrentStandardAgentEvidence() {
+  return {
+    ...loadFamilyManifestFixtures().medautoscience,
+    ...manifestWithMasCurrentStandardAgentEvidence(),
+  };
+}
+
 test('legacy cleanup gate emits executable OPL lifecycle apply plan without domain repo delete authority', () => {
   const domainManifests: NonNullable<Parameters<typeof buildFamilyAgentsList>[1]>['domainManifests'] = {
     summary: {
@@ -250,6 +372,97 @@ test('legacy cleanup gate emits executable OPL lifecycle apply plan without doma
   assert.deepEqual(plan.actions[1].domain_owner_handoff_receipt_refs, [
     'mag://receipt/gateway-retired',
   ]);
+});
+
+test('MAS current standard-agent evidence closes cleanup ledger without resurrecting legacy fields', () => {
+  const domainManifests: NonNullable<Parameters<typeof buildFamilyAgentsList>[1]>['domainManifests'] = {
+    summary: {
+      total_projects_count: 1,
+      active_bindings_count: 1,
+      manifest_configured_count: 1,
+      resolved_count: 1,
+      failed_count: 0,
+      projection_cache_used_count: 0,
+      live_failed_project_ids: [],
+    },
+    projects: [
+      {
+        project_id: 'medautoscience',
+        project: 'med-autoscience',
+        binding_id: 'fixture-mas',
+        workspace_path: '/tmp/mas',
+        manifest_command: 'fixture',
+        status: 'resolved',
+        manifest: manifestWithMasCurrentStandardAgentEvidence() as unknown as DomainManifestCatalogEntry['manifest'],
+        error: null,
+      },
+    ],
+    notes: [],
+  };
+
+  const list = buildFamilyAgentsList(contracts, { domainManifests });
+  const mas = list.family_agents.agents[0];
+  const gate = mas.physical_skeleton_follow_through_gate;
+  const plan = gate.executable_cleanup_plan;
+
+  assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
+  assert.equal(gate.checklist.no_active_caller.source_surface, 'functional_consumer_boundary.standard_agent_purity');
+  assert.equal(gate.checklist.no_active_caller.status, 'observed');
+  assert.equal(gate.checklist.replacement_parity.status, 'observed');
+  assert.equal(gate.checklist.history_or_tombstone.status, 'observed');
+  assert.equal(plan.plan_status, 'ready');
+  assert.deepEqual(plan.actions, []);
+  assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
+  assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
+  assert.equal(plan.authority_boundary.opl_can_move_or_delete_domain_repo_files, false);
+  assert.equal(plan.authority_boundary.domain_repo_delete_requires_owner_receipt, true);
+  assert.equal(
+    gate.evidence_refs.includes('/product_entry_manifest/functional_consumer_boundary/standard_agent_purity'),
+    true,
+  );
+  assert.equal(
+    gate.evidence_refs.includes('/product_entry_manifest/functional_consumer_boundary/generated_default_caller_boundary'),
+    true,
+  );
+  assert.equal(
+    gate.evidence_refs.includes('docs/references/med-deepscientist/source_provenance.json'),
+    true,
+  );
+});
+
+test('MAS current standard-agent evidence survives manifest normalization for public cleanup routes', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-mas-cleanup-normalized-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(fullMasManifestWithCurrentStandardAgentEvidence()),
+    ], env);
+
+    const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
+    const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
+      .physical_skeleton_follow_through_gate;
+    const plan = gate.executable_cleanup_plan;
+
+    assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
+    assert.equal(gate.checklist.no_active_caller.source_surface, 'functional_consumer_boundary.standard_agent_purity');
+    assert.equal(gate.checklist.replacement_parity.status, 'observed');
+    assert.equal(gate.checklist.history_or_tombstone.status, 'observed');
+    assert.equal(plan.plan_status, 'ready');
+    assert.deepEqual(plan.actions, []);
+    assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
+    assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('agents legacy-cleanup apply records controlled cleanup receipts from the skeleton gate', () => {

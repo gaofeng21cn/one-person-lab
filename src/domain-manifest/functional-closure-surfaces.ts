@@ -10,6 +10,9 @@ type JsonRecord = Record<string, unknown>;
 
 export function normalizeFunctionalClosureSurfaces(manifest: JsonRecord) {
   return {
+    functional_consumer_boundary: isRecord(manifest.functional_consumer_boundary)
+      ? manifest.functional_consumer_boundary
+      : null,
     owner_receipt_contract: isRecord(manifest.owner_receipt_contract)
       ? manifest.owner_receipt_contract
       : null,
