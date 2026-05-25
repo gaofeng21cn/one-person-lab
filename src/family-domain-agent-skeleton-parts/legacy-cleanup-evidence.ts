@@ -140,14 +140,19 @@ function masStandardAgentNoActiveCallerObserved(boundary: JsonRecord | null) {
   const retiredAliasResidueRefs = Array.isArray(purity.retired_alias_residue_refs)
     ? purity.retired_alias_residue_refs
     : null;
-  return optionalString(purity.status) === 'pure_standard_agent_active'
-    && optionalNumber(purity.default_caller_count) === 0
+  const noDefaultCallerObserved = optionalNumber(purity.default_caller_count) === 0
     && optionalNumber(purity.active_private_generic_residue_count) === 0
     && retiredAliasResidueRefs?.length === 0
-    && optionalString(guard.status) === 'standard_agent_purity_guard'
     && optionalNumber(guard.default_caller_count) === 0
     && optionalString(generated.status) === 'opl_generated_hosted_shell_is_default_caller'
     && generated.mas_handwritten_shell_default_caller_allowed === false;
+  const pureStandardAgentActive = optionalString(purity.status) === 'pure_standard_agent_active'
+    && optionalString(guard.status) === 'standard_agent_purity_guard';
+  const cutoverPendingNoActiveCaller = optionalString(purity.status) === 'standard_agent_purity_cutover_pending'
+    && optionalString(guard.status) === 'standard_agent_purity_cutover_guard'
+    && optionalString(purity.default_caller_readiness_status) === 'opl_generated_default_caller_ready'
+    && optionalString(purity.source_purity_cutover_status) === 'physical_wrapper_retirement_pending';
+  return noDefaultCallerObserved && (pureStandardAgentActive || cutoverPendingNoActiveCaller);
 }
 
 function masStandardAgentNoActiveCallerRefs(boundary: JsonRecord | null) {

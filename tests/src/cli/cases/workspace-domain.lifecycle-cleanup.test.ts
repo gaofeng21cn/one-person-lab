@@ -301,10 +301,45 @@ function manifestWithMasCurrentStandardAgentEvidence() {
   } as JsonRecord;
 }
 
+function manifestWithMasCutoverPendingStandardAgentEvidence() {
+  const manifest = manifestWithMasCurrentStandardAgentEvidence();
+  const boundary = manifest.functional_consumer_boundary as JsonRecord;
+  const purity = boundary.standard_agent_purity as JsonRecord;
+  const guard = boundary.standard_agent_purity_guard as JsonRecord;
+
+  purity.status = 'standard_agent_purity_cutover_pending';
+  purity.default_caller_readiness_status = 'opl_generated_default_caller_ready';
+  purity.source_purity_cutover_status = 'physical_wrapper_retirement_pending';
+  purity.repo_local_wrapper_tail_count = 3;
+  purity.repo_local_wrapper_tail_module_ids = [
+    'generic_cli_mcp_product_wrappers',
+    'owner_route_reconcile_materialize_dispatch_shell',
+    'workbench_portal_generic_shell',
+  ];
+  guard.status = 'standard_agent_purity_cutover_guard';
+  guard.proof_items = [
+    'standard_agent_purity.active_private_generic_residue_count=0',
+    'standard_agent_purity.default_caller_count=0',
+    'standard_agent_purity.retired_alias_residue_refs=[]',
+    'standard_agent_purity.default_caller_readiness_status=opl_generated_default_caller_ready',
+    'standard_agent_purity.source_purity_cutover_status=physical_wrapper_retirement_pending',
+    'standard_agent_purity.domain_projection_policy=refs_receipts_blockers_only_no_body_verdict_or_blob',
+  ];
+
+  return manifest;
+}
+
 function fullMasManifestWithCurrentStandardAgentEvidence() {
   return {
     ...loadFamilyManifestFixtures().medautoscience,
     ...manifestWithMasCurrentStandardAgentEvidence(),
+  };
+}
+
+function fullMasManifestWithCutoverPendingStandardAgentEvidence() {
+  return {
+    ...loadFamilyManifestFixtures().medautoscience,
+    ...manifestWithMasCutoverPendingStandardAgentEvidence(),
   };
 }
 
@@ -460,6 +495,54 @@ test('MAS current standard-agent evidence survives manifest normalization for pu
     assert.deepEqual(plan.actions, []);
     assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
     assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('MAS cutover-pending standard-agent evidence closes cleanup ledger without authorizing physical delete', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-mas-cutover-cleanup-'));
+  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(fullMasManifestWithCutoverPendingStandardAgentEvidence()),
+    ], env);
+
+    const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
+    const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
+      .physical_skeleton_follow_through_gate;
+    const plan = gate.executable_cleanup_plan;
+
+    assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
+    assert.equal(gate.checklist.no_active_caller.source_surface, 'functional_consumer_boundary.standard_agent_purity');
+    assert.equal(gate.checklist.no_active_caller.status, 'observed');
+    assert.equal(gate.checklist.replacement_parity.status, 'observed');
+    assert.equal(gate.checklist.history_or_tombstone.status, 'observed');
+    assert.equal(plan.plan_status, 'ready');
+    assert.deepEqual(plan.actions, []);
+    assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
+    assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
+    assert.equal(
+      gate.evidence_refs.includes(
+        '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity.default_caller_readiness_status=opl_generated_default_caller_ready',
+      ),
+      true,
+    );
+    assert.equal(
+      gate.evidence_refs.includes(
+        '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity.source_purity_cutover_status=physical_wrapper_retirement_pending',
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
