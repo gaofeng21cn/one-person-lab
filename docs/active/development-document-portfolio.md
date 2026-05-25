@@ -1807,6 +1807,58 @@ Next tranche write scope:
 - Continue OPL full docs coverage in `docs/references/domain-admission/**`, or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 03:31 CST`
+Tranche: `opl-domain-admission-reference-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/references/domain-admission/**` 当前唯一文件 `opl-candidate-domain-backlog.md`。目标是把 candidate backlog 的机器边界校准到当前 `task-topology.json` / `workstreams.json` / domain-onboarding 合同事实：`IP Ops`、`Award Ops`、`Thesis Ops` 和 `Review Ops` 仍只是 `under_definition` / `candidate_domain_agent_pending` workstream signal，未进入 registered workstream、admitted stage、discovery target、routing target、domain handoff 或 readiness surface。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/specs/opl-domain-onboarding-contract.md`、`docs/references/README.md`。
+- `docs/references/domain-admission/opl-candidate-domain-backlog.md` full text。
+- Machine-readable refs: `contracts/opl-framework/task-topology.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/domains.json`, `contracts/opl-framework/README.md`。
+- CLI/read-model surfaces: `opl framework readiness --family-defaults --json`, `opl agents descriptors --json`, `opl agents conformance --family-defaults --json`, `opl stages list --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`。
+
+Fresh read-model result:
+
+- `task-topology.json` lists `research_ops`, `grant_ops`, and `presentation_ops` as frozen / registered / `domain_agent_entry_ready`; it lists `thesis_ops`, `review_ops`, `ip_ops`, and `award_ops` as `under_definition`, `not_registered`, `candidate_domain_agent_pending`, with no `current_domain_id` or `entry_surface`, and `formal_domain_required=true`.
+- `workstreams.json` lists only active `grant_ops`, `research_ops`, and `presentation_ops`; it does not register the four candidate workstreams.
+- `opl stages list --json` read `resolved_planes_count=3`, `stages_count=18`, `admitted_stages_count=18`, `blocked_stages_count=0`; this proves admitted stage plane discovery only, not candidate admission or domain readiness.
+- `opl agents descriptors --json` read `total_projects_count=3`, `resolved_manifest_count=3`, `descriptor_surfaces_resolved_count=3`, `blocked_count=0`; descriptors remain refs/readiness/locator/parity/authority boundaries only.
+- `opl agents conformance --family-defaults --json` read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; this is structural conformance only.
+- `opl framework readiness --family-defaults --json` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=229`, `evidence_envelope_blocked_count=216`, provider cadence/capability SLO satisfied, and authority boundary still forbids domain ready, production ready, artifact authority and quality/export verdict claims.
+- `opl family-runtime evidence-worklist ... --detail full --json` read `open_worklist_item_count=0`, `closed_refs_only_item_count=246`, `zero_open_worklist_blocked_refs_only_envelope_count=216`, `domain_ready_authorized=false`, `production_ready_authorized=false`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`, and not-authorized claims include `domain_repo_physical_delete_authorization` and `default_caller_delete_ready`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/references/domain-admission/opl-candidate-domain-backlog.md` purpose, Task Topology / Domain Onboarding relationship, machine boundary, non-goals, each candidate entry, reading rules, upstream evidence and completion definition; supporting owner references listed above. | `docs/references/domain-admission/opl-candidate-domain-backlog.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. `opl-candidate-domain-backlog.md` remains active support; this tranche corrected stale machine-boundary and old Gateway authority wording in place.
+
+Unreviewed docs:
+
+- OPL `docs/references/domain-admission/**` is covered for this tranche.
+- OPL `docs/references/**` current inventory is covered by the recorded current-support, runtime-substrate, operating-governance, convergence-governance, governance and domain-admission reference tranches.
+- OPL full README/docs coverage still remains open outside the covered OPL chunks named in earlier ledger entries; exact remaining non-reference scope should be selected from the latest inventory before the next OPL tranche.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history, Portal/projection/App-workbench, inspection-package and runtime-binding blocks.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Any current wording that treats `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` as registered/admitted/discoverable/routable domain agents is stale until a real onboarding package updates contracts and live read-models.
+- Any use of historical `Gateway`, routed-action or federation acceptance specs as current admission authority, machine-readable contract surface, readiness gate or current handoff rule is stale.
+- Candidate backlog prose must keep `task-topology.json` candidate visibility separate from `workstreams.json` active registration and `opl stages list` admitted-stage discovery.
+
+Next tranche write scope:
+
+- Switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell, or choose the next exact OPL non-reference uncovered body from the fresh coverage ledger and inventory.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
