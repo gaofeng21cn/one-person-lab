@@ -2431,7 +2431,7 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
-Date: `2026-05-26 06:42 CST`
+Date: `2026-05-26 06:10 CST`
 Tranche: `mas-medical-display-delivery-authority-coverage`
 State: `tranche_verified`
 
