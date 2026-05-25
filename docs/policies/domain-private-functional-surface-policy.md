@@ -23,6 +23,18 @@ AI-first quality gate 也不能由执行 attempt 自己闭环。标准 OPL Agent
 
 审计还要区分语义等价。`default_watchlist=0` 只说明没有结构性 blocker 或长期 generic owner claim；若 `semantic_equivalence_review_count>0`，说明 active caller 仍需要证明已消费 OPL primitive、OPL generated/hosted surface，或已退成 no-active-caller cleanup/provenance。语义等价未清零前，不能写成“所有功能都已经物理依赖 OPL 实现”。
 
+## 保留、迁移与删除边界
+
+当前严格边界按职责判断，不按目录是否 local 判断：
+
+- 长期保留：`agent/` domain pack、machine-readable contracts、standard authority function、domain handler target、domain-specific implementation、必要 native helper，以及只输出 owner receipt / typed blocker / no-forbidden-write / opaque refs 的领域权威函数。
+- 迁移输入：repo-local default caller、CLI/MCP/Skill/product/status/session/workbench wrapper、sidecar shell、session / queue / attempt / lifecycle / observability shell、script materializer、diagnostic cleanup path、compat facade、re-export wrapper、compatibility-only test。
+- 删除尾项：迁移输入在 OPL generated/hosted parity、active caller cutover、domain owner receipt 或 stable typed blocker、no-forbidden-write proof、tombstone/provenance ref 和 no-active-caller proof 成立后，必须删除 active source，或降为上面的长期保留形态。
+
+`refs_only_domain_adapter` 的允许边界很窄：它可以是 domain handler 的返回形态或合同/receipt 投影，不能是一个继续承载默认 caller、workbench、transport、scheduler、session、lifecycle 或 generated surface ownership 的 repo-local shell。`tombstone/provenance` 只能留在 `docs/history/**`、提交历史、外部 receipt 或 deterministic fixture；active code path 里的 tombstone/provenance wrapper 仍按迁移输入处理。
+
+因此，功能不降级的做法不是保留旧 wrapper，而是先让 OPL generated/hosted surface 调到同一个 domain handler / authority output；domain repo 保留真实领域能力和 owner refs，删除通用外围。若删除会丢失 direct path 功能，说明 active caller cutover 或 parity 还没完成，不能把该 wrapper 写成长期标准组成。
+
 ## 成熟系统参考
 
 外部成熟系统给出的共同模式是平台持有通用运行基座，应用只提交 spec、policy、handler 或 authority output：
@@ -60,10 +72,10 @@ Authority function 的标准 ABI 固定为：
 | 类别 | 长期允许 | 接口形态 | 必要性 |
 | --- | --- | --- | --- |
 | `minimal_authority_function` | 是，但属于 `authority_function_inventory` 而非私有 platform residue | `runtime/authority_functions/<function>` + receipt schema + OPL 标准 ABI | 领域裁决无法可靠声明化，例如 publication quality、fundability/export verdict、visual review/export verdict、artifact mutation authorization、memory accept/reject、source readiness、owner receipt signing 或 domain-native helper implementation。 |
-| `refs_only_domain_adapter` | 是 | contract / projection 只返回 opaque refs、owner receipt、typed blocker、no-regression refs | OPL generic shell 需要 locator 或 receipt refs，但 memory body、artifact body、quality/export verdict 仍归 domain。 |
+| `refs_only_domain_adapter` | 仅限 domain handler / contract output，不允许作为长期 repo-local shell | contract / projection 只返回 opaque refs、owner receipt、typed blocker、no-regression refs | OPL generic shell 需要 locator 或 receipt refs，但 memory body、artifact body、quality/export verdict 仍归 domain；若它还拥有 default caller、transport、workbench、lifecycle 或 generated surface，则必须迁移或删除。 |
 | `temporary_migration_bridge` | 否 | `generated_surface_handoff` + active caller inventory + replacement target | OPL generated/replacement surface 正在同一 program 内替换旧手写 shell；必须有迁移动作和退役门。 |
 | `diagnostic_cleanup_path` | 否 | 显式 opt-in status/remove/inspect；不得 install、trigger、schedule 或成为 default caller | 仅用于检查、证明或移除旧 runtime 状态，例如 MAS legacy local LaunchAgent cleanup；repo-local `legacy_cleanup_physical_retired` 也归一化到这一类，并在无 active caller 时默认折叠。 |
-| `provenance_or_fixture` | 是 | history/tombstone ref 或 deterministic fixture | 只用于回归、parity 或 source provenance；不得声明 runtime owner。 |
+| `provenance_or_fixture` | 是，但只能在非 active wrapper 形态保留 | history/tombstone ref 或 deterministic fixture | 只用于回归、parity 或 source provenance；不得声明 runtime owner，不能保留 active tombstone wrapper。 |
 
 ## 禁止的私有功能面
 

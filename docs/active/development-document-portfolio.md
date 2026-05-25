@@ -395,6 +395,55 @@ Next tranche write scope:
 - Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-07 authoring-flow provenance and 2026-04-11/2026-04-12 Hermes / hosted-caller specs because direct-file stale provider wording risk is higher there.
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
 
+Date: `2026-05-25 17:21 CST`
+Tranche: `strict-agent-boundary-refresh`
+State: `tranche_verified_refreshed`
+
+本轮按当前确定边界刷新 OPL active docs，并重新排查 MAS/MAG/RCA/OMA 是否仍有不干净智能体面。结论是：四仓 structural conformance 通过不等于四仓都 source-purity 完成；MAS 当前合同明确重新打开 2 个 strict source-purity functional follow-through gate，MAG/RCA/OMA 当前 structural source shape 为 landed / gap 0 但 physical delete 仍未授权或仍有 evidence / hygiene tail。
+
+Fresh live truth inputs:
+
+- OPL `opl agents conformance --family-defaults --json`
+- OPL `opl agents default-callers --family-defaults --json`
+- OPL `opl runtime app-operator-drilldown --json`
+- OPL `opl framework readiness --family-defaults --json`
+- OPL `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`
+- MAS/MAG/RCA/OMA `contracts/functional_privatization_audit.json` and adjacent source-purity / production acceptance contracts
+
+Fresh read-model result:
+
+- `opl agents conformance` 读为 `status=passed`、`passed_count=4`、`blocked_count=0`，只证明 descriptor / skeleton / policy 可读。
+- `opl agents default-callers` 读为 generated default-caller surface count `32`、blocked surface count `0`、missing domain-owner / no-forbidden-write / tombstone-provenance counts `0`，但 `physical_delete_authorized_by_this_report=false`。
+- `runtime app-operator-drilldown` 读为 `functional_privatization_action_required_count=0`、`functional_privatization_active_private_generic_residue_count=0`、`default_caller_deletion_evidence_open_requirement_count=0`、`domain_legacy_cleanup_blocked_plan_count=0`、`lifecycle_domain_physical_delete_can_execute=false`。
+- `framework readiness` 读为 `hard_blocker_count=0`、`agent_conformance_hard_blocker_count=0`、`operator_actionable_attention_tail_count=0`、`domain_blocked_attention_tail_count=194`、`evidence_envelope_blocked_count=181`；provider SLO cadence / capability satisfied，当前没有 OPL 侧 operator-actionable safe-action tail。
+- `family-runtime evidence-worklist` 读为 `open_worklist_item_count=0`、`open_safe_action_payload_required_item_count=0`、`open_safe_action_payload_free_item_count=0`、`zero_open_worklist_blocked_refs_only_envelope_count=181`、`domain_ready_authorized=false`、`production_ready_authorized=false`。
+
+Per-agent audit:
+
+| Repo | Fresh contract result | Boundary conclusion |
+| --- | --- | --- |
+| `med-autoscience` | `functional_structure_gap_count=2`、`repo_local_wrapper_tail_count=3`、`source_purity_cutover_status=physical_wrapper_retirement_pending`；open gates are `standard_agent_purity_guard` and `domain_ref_consumer_physical_thinning`. | 不干净。不是正向私有 runtime owner 回流，但 MAS 仍有标准智能体 active source gap：`generic_cli_mcp_product_wrappers`、`owner_route_reconcile_materialize_dispatch_shell`、`workbench_portal_generic_shell` 必须迁到 OPL generated/hosted surface 或 domain handler target 后删除。 |
+| `med-autogrant` | `mag_functional_structure_gap_count=0`、`standard_agent_source_shape_status=landed`、`claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`。 | 结构干净但物理删除未授权。MAG wrapper / lifecycle / product shell 只能作为 deletion / evidence tail，不是长期组成。 |
+| `redcube-ai` | `functional_structure_gap_count=0`、`unclassified_private_generic_residue_count=0`、allowed remaining module classes are domain handler / refs-only adapter / declarative pack / minimal authority / native helper / provenance；bridge gates read `physical_delete_authorized=false`。 | 结构干净但物理删除未授权。RCA generic wrapper、executor adapter、operator projection、stability read model 等继续按 deletion / hygiene tail 读取。 |
+| `opl-meta-agent` | `source_shape=landed`、`functional_structure_gap_count=0`、`domain_repo_retained_generic_surface_count=0`，remaining tails are `opl_generated_default_caller_consumption_tail`、`domain_refs_only_adapter_thinning`、`script_to_pack_hygiene`、`evidence_tail`。 | 当前没有 active generic runtime owner；scripts 只允许 authority implementation、smoke helper、fixture/proof helper 或 work-order materializer，不能扩成 Agent Lab runner / promotion gate / queue / attempt ledger / target truth writer。 |
+
+Edited docs this tranche:
+
+| Repo | Edited docs |
+| --- | --- |
+| `one-person-lab` | `docs/policies/domain-private-functional-surface-policy.md`, `docs/active/standard-agent-private-platform-inventory.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/status.md`, `docs/active/development-document-portfolio.md` |
+
+Remaining stale / retire candidates:
+
+- MAS source-purity tail is now the highest-priority unclean agent work: prove active caller cutover and no-forbidden-write / owner receipt or stable typed blocker, then delete active wrapper/projection/workbench shell.
+- MAG/RCA/OMA should not be marked dirty at structural-conformance level, but their retained repo-local generic-looking shells/materializers are not long-term standard surfaces; keep them under deletion / evidence / hygiene tail until physical delete is authorized by owner refs and no-active-caller proof.
+- OPL read-model zero missing deletion requirements is only structural replacement evidence; it does not authorize domain repo physical delete, domain ready, artifact authority, quality/export verdict, App release ready or production ready.
+
+Next tranche write scope:
+
+- Start with MAS `standard_agent_purity_guard` and `domain_ref_consumer_physical_thinning`; do not dilute it into general evidence tail.
+- Then continue MAG/RCA/OMA deletion / hygiene tails only after fresh no-active-caller and owner-boundary proof.
+
 Date: `2026-05-25 16:58 CST`
 Tranche: `mag-20260407-authoring-flow-history-coverage`
 State: `tranche_verified_scope_pending`
@@ -443,7 +492,6 @@ Next tranche write scope:
 
 - Continue MAG `docs/history/specs/*.md` in date/topic batches, prioritizing 2026-04-11 Hermes/reset/local-runtime closeout and 2026-04-12 hosted-caller / OPL alignment / lightweight handoff specs.
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
-
 
 Date: `2026-05-25 17:26 CST`
 Tranche: `mag-hermes-hosted-history-specs-coverage`
@@ -543,56 +591,6 @@ Remaining stale / retire candidates:
 Next tranche write scope:
 
 - Continue MAG `docs/history/specs/*.md` body coverage with 2026-04-08 P5 / R-series future/runtime-productization records or 2026-04-09 / 2026-04-10 post-R5A fail-closed hardening records.
-- Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
-
-Date: `2026-05-25 17:37 CST`
-Tranche: `mag-20260408-p5-rseries-history-coverage`
-State: `tranche_verified_scope_pending`
-
-本轮覆盖 `med-autogrant` 的 2026-04-08 P5 future activation、R-series runtime-productization 与 runtime-first boundary map history specs。目标是补齐这批直接文件入口的文件级 `Owner`、`Purpose`、`State`、`Machine boundary`，明确旧 P5 federation / second-family、local runtime、journal、attempt ledger、host-agent、Gateway 与 hostedization wording 只保留为 provenance；当前 admitted-domain、runtime owner、OPL/Temporal provider、executor boundary、artifact/package lifecycle shell、quality/export authority 与机器行为回到核心五件套、active plan、active specs index、specs lifecycle map、contracts、schemas、source、CLI/API 行为和 `contracts/runtime-program/current-program.json`。
-
-Fresh live truth inputs:
-
-- MAG `AGENTS.md`、`TASTE.md`
-- MAG `docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`、`docs/history/specs/README.md`、`docs/specs/specs_lifecycle_map.md`
-- MAG `contracts/runtime-program/current-program.json`
-- MAG `contracts/functional_privatization_audit.json`
-- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
-
-Fresh contract result:
-
-- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
-- `mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
-- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current.
-- `standard_agent_source_shape_status=landed` remains structural classification only, not strict source-purity physical completion.
-- External evidence still keeps `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`; the live evidence tail remains `temporal_provider_long_soak_window_evidence`.
-
-Reviewed documents:
-
-| Repo | Reviewed docs / sections | Edited docs this tranche |
-| --- | --- | --- |
-| `med-autogrant` | `docs/history/specs/2026-04-08-p5a-second-grant-family-onboarding-activation-package.md`, `docs/history/specs/2026-04-08-p5b-federation-contract-freeze-activation-package.md`, `docs/history/specs/2026-04-08-r1a-local-main-loop-entry-and-stop-reason-activation-package.md`, `docs/history/specs/2026-04-08-r1b-stage-action-executor-envelope-activation-package.md`, `docs/history/specs/2026-04-08-r2a-artifact-bundle-production-surface-activation-package.md`, `docs/history/specs/2026-04-08-r3a-critique-revision-executor-surface-activation-package.md`, `docs/history/specs/2026-04-08-runtime-first-productization-program.md`, `docs/history/specs/2026-04-08-runtime-first-r1-to-r5-boundary-map.md`; sections reviewed include title/lifecycle note, activation status, goal/purpose, hard boundary docs, object boundaries, canonical durable/CLI surfaces, program ladder, honest-stop guard and old P5/Gateway/local-runtime wording. | same eight files |
-| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
-
-Archived / tombstoned / deleted docs:
-
-- none. These files remain useful future activation and runtime-productization provenance; this tranche clarified first-screen lifecycle and direct-reader guards.
-
-Unreviewed docs:
-
-- `med-autogrant`: history specs outside the covered 2026-04-06, 2026-04-07, 2026-04-08 P3/P4, 2026-04-08 P5/R-series, 2026-04-11 and 2026-04-12 batches still need paragraph-governance, especially 2026-04-09 / 2026-04-10 post-R5A fail-closed hardening records.
-- `med-autogrant`: `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md` still need separate body-level coverage unless covered by earlier ledger entries.
-- Other repos remain under previous ledger scopes except OMA full coverage and MAG current/support specs / thin indexes / covered history batches.
-- App docs remain excluded while active release/GUI worktrees own local changes.
-
-Remaining stale / retire candidates:
-
-- MAG 2026-04-09 / 2026-04-10 post-R5A hardening specs still contain dense dated local-runtime, hosted contract bundle, final-package, rollback and fail-closed wording; cover them in smaller date/topic batches without promoting old local runtime, Gateway, federation, hosted or compatibility bridge text.
-- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source.
-
-Next tranche write scope:
-
-- Continue MAG `docs/history/specs/*.md` body coverage with 2026-04-09 / 2026-04-10 post-R5A fail-closed hardening records.
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
 
 ## 验证
