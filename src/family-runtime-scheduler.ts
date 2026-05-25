@@ -102,7 +102,7 @@ export async function runTemporalSchedulerCadenceCommand(
     replaces_domain_daemon_surface: {
       medautoscience: 'local LaunchAgent / supervision tick is cleanup-only legacy residue',
       medautogrant: 'repo-local runtime journal cadence is not a production scheduler',
-      redcube: 'repo-local sidecar/session supervision is handler diagnostic only',
+      redcube: 'repo-local session supervision is handler diagnostic only',
     },
     authority_boundary: {
       can_install_domain_daemon: false,

@@ -34,13 +34,13 @@ test('family-runtime tick hydrates MAS domain route pending tasks before dispatc
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
       "task_kind": "domain_route/reconcile-apply",
       "priority": 50,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:test:DM002:autonomy-continuation:slo_breach",
       "payload": {
         "profile": "/tmp/profile.toml",
@@ -60,7 +60,7 @@ JSON
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","will_start_llm_worker":true}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","will_start_llm_worker":true}
 JSON
 `,
     { mode: 0o755 },
@@ -96,7 +96,7 @@ test('family-runtime projects active MAS domain route refs without legacy aliasi
   const dispatch = createDispatchFixture(`
 cp "$TASK_PATH" ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","will_start_llm_worker":true}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","will_start_llm_worker":true}
 JSON
 `);
   try {
@@ -166,7 +166,7 @@ test('family-runtime hydrates MAS runtime owner-route handoff export shape', () 
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "med-autoscience",
@@ -212,7 +212,7 @@ JSON
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","closeout_refs":["mas-receipt:DM002/owner-route-handoff-observed"]}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","closeout_refs":["mas-receipt:DM002/owner-route-handoff-observed"]}
 JSON
 `,
     { mode: 0o755 },
@@ -308,7 +308,7 @@ test('family-runtime hydrates MAS publication aftercare owner route refs without
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
@@ -345,7 +345,7 @@ printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
 {
   "accepted": true,
-  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
   "closeout_packet": {
     "surface_kind": "stage_attempt_closeout_packet",
     "closeout_refs": ["mas-receipt:DM002/aftercare-analysis-queued"],
@@ -422,7 +422,7 @@ test('family-runtime hydrates MAS publication aftercare reviewer refresh refs wi
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
@@ -460,7 +460,7 @@ printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
 {
   "accepted": true,
-  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
   "closeout_packet": {
     "surface_kind": "stage_attempt_closeout_packet",
     "closeout_refs": ["mas-receipt:DM002/aftercare-reviewer-refresh-queued"],
@@ -535,13 +535,13 @@ test('family-runtime preserves MAS paper autonomy task projection through hydrat
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/repair-recheck",
       "priority": 80,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "reviewer_refinement_loop:unit-1:sha256:abc",
       "dispatch_owner": "med-autoscience",
       "profile_name": "dm-cvd",
@@ -571,7 +571,7 @@ JSON
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","paper_autonomy_receipt":true}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","paper_autonomy_receipt":true}
 JSON
 `,
     { mode: 0o755 },
@@ -591,7 +591,7 @@ JSON
     assert.equal(task.paper_autonomy.study_id, 'DM002');
     assert.equal(task.paper_autonomy.next_owner, 'quality_repair_batch');
     assert.equal(task.paper_autonomy.callable_surface, 'run_quality_repair_batch');
-    assert.equal(task.paper_autonomy.repair_command, 'medautosci sidecar dispatch --task <task.json> --format json');
+    assert.equal(task.paper_autonomy.repair_command, 'medautosci domain-handler dispatch --task <task.json> --format json');
     assert.equal(task.paper_autonomy.authority_boundary.writes_mas_truth, false);
     assert.deepEqual(task.payload.source_refs, ['studies/DM002/artifacts/publication_eval/latest.json']);
     assert.equal(dispatchedTask.paper_autonomy.next_owner, 'quality_repair_batch');

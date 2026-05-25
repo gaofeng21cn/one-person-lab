@@ -162,7 +162,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       'fixture-run',
       attemptId,
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"consumed_refs":["artifact:table"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:write-currentness","breached_slo_ids":["review_currentness"],"repair_command":"medautosci sidecar dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"consumed_refs":["artifact:table"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:write-currentness","breached_slo_ids":["review_currentness"],"repair_command":"medautosci domain-handler dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
     ], testEnv);
 
     const output = runCli(['runtime', 'snapshot'], testEnv);
@@ -779,7 +779,7 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(omaProductionConsumptionRoute.authority_boundary.can_claim_production_ready, false);
 
     const domainRoute = drilldown.operator_action_routing_refs.refs.find(
-      (ref: { action_kind: string }) => ref.action_kind === 'domain_sidecar_repair_command',
+      (ref: { action_kind: string }) => ref.action_kind === 'domain_handler_repair_command',
     );
     assert.equal(domainRoute.owner, 'domain');
     assert.equal(domainRoute.execution_policy, 'opl_safe_action_shell');

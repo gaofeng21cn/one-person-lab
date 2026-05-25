@@ -13,7 +13,7 @@ python3 - "$1" <<'PY'
 import json
 print(json.dumps({
   "accepted": True,
-  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
   "dispatch": {
     "execution_policy": "opl_default_executor_stage_attempt_admission",
     "result": {"surface": "default_executor_dispatch_request_admission", "status": "admitted", "next_owner": "write"}

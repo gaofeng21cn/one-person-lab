@@ -14,7 +14,7 @@ export function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: stri
 
   if (domainId === 'medautoscience') {
     return resolveOplModuleExecCommand('medautoscience', [
-      'sidecar',
+      'domain-handler',
       'dispatch',
       '--task',
       taskPath,

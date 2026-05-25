@@ -36,7 +36,7 @@ import {
 } from './family-runtime-stage-attempts.ts';
 import { ensureProviderHostedStageAttempt } from './family-runtime-provider-hosted-attempts.ts';
 import { isMasDefaultExecutorDispatchTask } from './family-runtime-provider-hosted-attempts.ts';
-import { closeoutPacketFromSidecarOutput } from './family-runtime-sidecar-closeout.ts';
+import { closeoutPacketFromDomainHandlerOutput } from './family-runtime-domain-handler-closeout.ts';
 import { residencyProofReceipt } from './family-runtime-residency-proof-events.ts';
 import {
   persistTemporalProductionProof,
@@ -67,9 +67,9 @@ import { readMasManagedProviderProjection } from './family-runtime-mas-managed-p
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import { commandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
 import {
-  runFamilyRuntimeSidecarCommand,
-  sidecarResultErrorMessage,
-} from './family-runtime-sidecar-process.ts';
+  runFamilyRuntimeDomainHandlerCommand,
+  domainHandlerResultErrorMessage,
+} from './family-runtime-domain-handler-process.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildFamilyStageLaunchAdmissionGate } from './family-stage-control-plane.ts';
@@ -172,14 +172,14 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
     status: 'running',
     incrementAttempt: true,
     activityEvent: {
-      activity_kind: 'domain_sidecar_dispatch_activity',
+      activity_kind: 'domain_handler_dispatch_activity',
       activity_status: 'running',
     },
   });
 
   const dispatchPath = writeFamilyRuntimeDispatchTask(paths, { ...row, attempts: attempt });
   const command = commandForDomain(row.domain_id, dispatchPath);
-  const result = runFamilyRuntimeSidecarCommand(command, {
+  const result = runFamilyRuntimeDomainHandlerCommand(command, {
     cwd: process.cwd(),
     env: process.env,
   });
@@ -214,14 +214,14 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
     const closeoutRefs = Array.isArray(output.closeout_refs)
       ? output.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
       : undefined;
-    const typedCloseoutPacket = closeoutPacketFromSidecarOutput(output);
+    const typedCloseoutPacket = closeoutPacketFromDomainHandlerOutput(output);
     const checkpointedStageAttempts = updateStageAttemptsForTask(db, {
       taskId: row.task_id,
       stageAttemptIds: activeStageAttemptIds,
       status: 'completed',
       closeoutRefs,
       activityEvent: {
-        activity_kind: 'domain_sidecar_dispatch_activity',
+        activity_kind: 'domain_handler_dispatch_activity',
         activity_status: typedCloseoutPacket ? 'typed_closeout_received' : 'checkpointed',
         closeout_refs: closeoutRefs ?? [],
       },
@@ -237,7 +237,7 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
     return { task_id: row.task_id, status: 'succeeded', command_preview: command, output, stage_attempts: stageAttempts };
   }
 
-  const errorMessage = sidecarResultErrorMessage(result, 'Domain dispatch');
+  const errorMessage = domainHandlerResultErrorMessage(result, 'Domain dispatch');
   const nextStatus: FamilyRuntimeTaskStatus = attempt >= row.max_attempts ? 'dead_letter' : 'retry_waiting';
   const failedAt = nowIso();
   db.prepare(`
@@ -271,7 +271,7 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
     status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
     blockedReason: nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : errorMessage,
     activityEvent: {
-      activity_kind: 'domain_sidecar_dispatch_activity',
+      activity_kind: 'domain_handler_dispatch_activity',
       activity_status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
       error: errorMessage,
     },

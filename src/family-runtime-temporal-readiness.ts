@@ -197,7 +197,7 @@ export function buildTemporalWorkerLifecycleContract() {
     required_env: ['OPL_TEMPORAL_ADDRESS'],
     activities: [
       'codexStageActivity',
-      'domainSidecarDispatchActivity',
+      'domainHandlerDispatchActivity',
     ],
     authority_boundary: {
       opl: 'worker_lifecycle_and_activity_transport_only',

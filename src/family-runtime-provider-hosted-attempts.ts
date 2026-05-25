@@ -536,7 +536,7 @@ export function ensureProviderHostedStageAttempt(
     providerKind,
     workspaceLocator,
     sourceFingerprint: expectedSourceFingerprint,
-    executorKind: isMasDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_sidecar',
+    executorKind: isMasDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_handler',
     taskId: row.task_id,
     newAttempt: options.newAttempt,
     checkpointRefs: isMasDefaultExecutorDispatchTask(row, payload)

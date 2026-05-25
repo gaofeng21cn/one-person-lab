@@ -30,7 +30,7 @@ print(json.dumps({
     "accepted": True,
     "closeout_packet": {
         "surface_kind": "stage_attempt_closeout_packet",
-        "closeout_refs": ["mas-sidecar-dispatch:DM002:guarded-apply"],
+        "closeout_refs": ["mas-domain-handler-dispatch:DM002:guarded-apply"],
         "consumed_refs": ["mas:paper-autonomy:DM002:guarded-apply"],
         "writeback_receipt_refs": ["mas:owner-receipt:DM002:guarded-apply"],
         "rejected_writes": [{"target": "publication_eval/latest.json", "reason": "opl_forbidden_write"}],
@@ -75,7 +75,7 @@ PY
     assert.equal(attempt.status, 'completed');
     assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(attempts.family_runtime_stage_attempts.summary.total, 1);
-    assert.deepEqual(attempt.closeout_refs, ['mas-sidecar-dispatch:DM002:guarded-apply']);
+    assert.deepEqual(attempt.closeout_refs, ['mas-domain-handler-dispatch:DM002:guarded-apply']);
     assert.equal(attempt.route_impact.decision, 'provider_hosted_guarded_apply_receipt');
     assert.equal(attempt.route_impact.next_owner, 'med-autoscience');
     assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
@@ -86,7 +86,7 @@ PY
   }
 });
 
-test('family-runtime maps MAS guarded apply sidecar receipts into typed closeout ledger', () => {
+test('family-runtime maps MAS guarded apply domain-handler receipts into typed closeout ledger', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-guarded-receipt-'));
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
@@ -99,10 +99,10 @@ payload = task["payload"]
 assert task["task_kind"] == "paper_autonomy/guarded-apply"
 print(json.dumps({
     "accepted": True,
-    "surface_kind": "mas_family_sidecar_dispatch_receipt",
+    "surface_kind": "mas_family_domain_handler_dispatch_receipt",
     "task_id": task["task_id"],
     "task_kind": task["task_kind"],
-    "receipt_ref": "artifacts/runtime/opl_family_sidecar/dispatch_receipts/receipt.json",
+    "receipt_ref": "artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt.json",
     "dispatch": {
         "action_type": "paper_autonomy_guarded_apply",
         "study_id": payload["study_id"],
@@ -178,8 +178,8 @@ PY
     assert.equal(attempt.status, 'completed');
     assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
     assert.deepEqual(attempt.closeout_refs, [
-      'artifacts/runtime/opl_family_sidecar/dispatch_receipts/receipt.json',
-      `mas-sidecar-dispatch:${taskId}`,
+      'artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt.json',
+      `mas-domain-handler-dispatch:${taskId}`,
     ]);
     assert.equal(attempt.route_impact.decision, 'typed_blocker');
     assert.equal(attempt.route_impact.guarded_apply_status, 'blocked_no_mas_owner_apply_receipt');
@@ -194,7 +194,7 @@ PY
   }
 });
 
-test('family-runtime dispatches RCA provider-hosted no-regression tasks as sidecar action envelopes', () => {
+test('family-runtime dispatches RCA provider-hosted no-regression tasks as domain-handler action envelopes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-rca-no-regression-'));
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
@@ -210,7 +210,7 @@ assert task["evidence_id"] == "unit-no-regression"
 assert task["payload"]["workspace_root"] == "/tmp/rca-workspace"
 print(json.dumps({
     "ok": True,
-    "surface_kind": "product_sidecar_dispatch",
+    "surface_kind": "product_domain_handler_dispatch",
     "domain_id": "redcube_ai",
     "action": task["action"],
     "task_id": task["task_id"],
@@ -283,7 +283,7 @@ PY
   }
 });
 
-test('family-runtime maps MAG product sidecar receipts into task-bound controlled attempts', () => {
+test('family-runtime maps MAG product domain-handler receipts into task-bound controlled attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mag-controlled-'));
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
@@ -298,21 +298,21 @@ assert task["input_path"] == "/tmp/mag/input.json"
 assert task["output_dir"] == "/tmp/mag/runtime"
 print(json.dumps({
     "ok": True,
-    "command": "product-sidecar-dispatch",
-    "sidecar_dispatch": {
-        "surface_kind": "mag_product_sidecar_dispatch",
+    "command": "domain-handler-dispatch",
+    "domain_handler_dispatch": {
+        "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
         "action": task["action"],
         "status": "accepted",
         "target_domain_id": "medautogrant",
         "result": {
-            "surface_kind": "sidecar_autonomy_controller_guarded_action",
+            "surface_kind": "domain_handler_autonomy_controller_guarded_action",
             "mode": "guarded_run",
             "command": "medautogrant execute-grant-autonomy-controller --input /tmp/mag/input.json --output-dir /tmp/mag/runtime",
             "execution_policy": "caller_must_execute_mag_guarded_command"
         },
         "receipt_refs": {
-            "dispatch_receipt_ref": "mag-sidecar-receipt:guarded-run",
+            "dispatch_receipt_ref": "mag-domain-handler-receipt:guarded-run",
             "stage_attempt_receipt_ref": "mag-stage-attempt:review_and_rebuttal",
             "opl_consumes_receipt_ref_only": True
         }
@@ -348,9 +348,9 @@ PY
     assert.equal(attempt.stage_id, 'review_and_rebuttal');
     assert.equal(attempt.status, 'completed');
     assert.equal(attempt.closeout_receipt_status, 'accepted_typed_closeout');
-    assert.equal(attempt.closeout_refs.includes('mag-sidecar-receipt:guarded-run'), true);
+    assert.equal(attempt.closeout_refs.includes('mag-domain-handler-receipt:guarded-run'), true);
     assert.equal(attempt.closeout_refs.includes('mag-stage-attempt:review_and_rebuttal'), true);
-    assert.equal(attempt.route_impact.decision, 'sidecar_autonomy_controller_guarded_action');
+    assert.equal(attempt.route_impact.decision, 'domain_handler_autonomy_controller_guarded_action');
     assert.equal(attempt.route_impact.next_owner, 'med-autogrant');
     assert.equal(attempt.route_impact.domain_ready_verdict, 'domain_gate_pending');
     assert.equal(attempt.route_impact.writes_performed, false);
@@ -360,7 +360,7 @@ PY
   }
 });
 
-test('family-runtime maps MAG no-regression sidecar receipts into controlled apply evidence', () => {
+test('family-runtime maps MAG no-regression domain-handler receipts into controlled apply evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mag-no-regression-'));
   const dispatch = createDispatchFixture(`
 python3 - "$TASK_PATH" <<'PY'
@@ -373,15 +373,15 @@ assert task["task_kind"] == "stage-attempt/closeout"
 receipt_ref = task["controlled_stage_attempt"]["owner_receipt_refs"][0]
 print(json.dumps({
     "ok": True,
-    "command": "product-sidecar-dispatch",
-    "sidecar_dispatch": {
-        "surface_kind": "mag_product_sidecar_dispatch",
+    "command": "domain-handler-dispatch",
+    "domain_handler_dispatch": {
+        "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
         "action": task["action"],
         "status": "completed",
         "target_domain_id": "medautogrant",
         "result": {
-            "surface_kind": "sidecar_stage_attempt_closeout_result",
+            "surface_kind": "domain_handler_stage_attempt_closeout_result",
             "return_shape": "no_regression_evidence",
             "receipt_ref": receipt_ref,
             "receipt_refs": {
@@ -460,15 +460,15 @@ assert task["task_kind"] == "lifecycle/receipt"
 assert task["action"] == "lifecycle/receipt"
 print(json.dumps({
     "ok": True,
-    "command": "product-sidecar-dispatch",
-    "sidecar_dispatch": {
-        "surface_kind": "mag_product_sidecar_dispatch",
+    "command": "domain-handler-dispatch",
+    "domain_handler_dispatch": {
+        "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
         "action": task["action"],
         "status": "completed",
         "target_domain_id": "medautogrant",
         "result": {
-            "surface_kind": "sidecar_lifecycle_receipt_result",
+            "surface_kind": "domain_handler_lifecycle_receipt_result",
             "return_shape": "typed_blocker",
             "receipt_ref": "mag-runtime-receipts/lifecycle/cleanup-blocker-1.json",
             "receipt_refs": {
@@ -495,7 +495,7 @@ print(json.dumps({
             "write_policy": "runtime_receipt_instance_only_no_repo_write"
         },
         "receipt_refs": {
-            "dispatch_receipt_ref": "mag-sidecar-receipt:lifecycle-cleanup",
+            "dispatch_receipt_ref": "mag-domain-handler-receipt:lifecycle-cleanup",
             "opl_consumes_receipt_ref_only": True
         }
     }
@@ -553,15 +553,15 @@ task = json.loads(Path(sys.argv[1]).read_text())
 assert task["task_kind"] == "stage-attempt/closeout"
 print(json.dumps({
     "ok": True,
-    "command": "product-sidecar-dispatch",
-    "sidecar_dispatch": {
-        "surface_kind": "mag_product_sidecar_dispatch",
+    "command": "domain-handler-dispatch",
+    "domain_handler_dispatch": {
+        "surface_kind": "mag_product_domain_handler_dispatch",
         "task_id": task["task_id"],
         "action": task["action"],
         "status": "completed",
         "target_domain_id": "medautogrant",
         "result": {
-            "surface_kind": "sidecar_stage_attempt_closeout_result",
+            "surface_kind": "domain_handler_stage_attempt_closeout_result",
             "return_shape": "domain_owner_receipt",
             "receipt_ref": task["controlled_stage_attempt"]["owner_receipt_refs"][0],
             "receipt_refs": {
@@ -583,7 +583,7 @@ print(json.dumps({
             "write_policy": "runtime_receipt_instance_only_no_repo_write"
         },
         "receipt_refs": {
-            "dispatch_receipt_ref": "mag-sidecar-receipt:stage-closeout",
+            "dispatch_receipt_ref": "mag-domain-handler-receipt:stage-closeout",
             "opl_consumes_receipt_ref_only": True
         }
     }
@@ -650,14 +650,14 @@ PY
     assert.deepEqual(locator.controlled_stage_attempt.owner_receipt_refs, [ownerReceiptRef]);
     assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_refs.includes(ownerReceiptRef), true);
     assert.equal(
-      inspected.family_runtime_stage_attempt.attempt.closeout_refs.includes('mag-sidecar-receipt:stage-closeout'),
+      inspected.family_runtime_stage_attempt.attempt.closeout_refs.includes('mag-domain-handler-receipt:stage-closeout'),
       true,
     );
     assert.deepEqual(inspected.family_runtime_stage_attempt.attempt.route_impact, {
       decision: 'domain_owner_receipt',
       action: 'stage-attempt/closeout',
       status: 'completed',
-      result_surface_kind: 'sidecar_stage_attempt_closeout_result',
+      result_surface_kind: 'domain_handler_stage_attempt_closeout_result',
       receipt_status: null,
       owner_receipt_ref: ownerReceiptRef,
       lifecycle_receipt_ref: null,

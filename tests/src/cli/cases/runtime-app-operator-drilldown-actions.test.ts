@@ -43,7 +43,7 @@ test('runtime action execute routes domain actions through the OPL typed queue i
       'fixture-run',
       attemptId,
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"repair_command":"medautosci sidecar dispatch --task <task.json> --format json"}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:write-closeout"],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"repair_command":"medautosci domain-handler dispatch --task <task.json> --format json"}}',
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -72,7 +72,7 @@ test('runtime action execute routes domain actions through the OPL typed queue i
     assert.equal(execution.execution.result.family_runtime_enqueue.task.status, 'waiting_approval');
     assert.equal(
       execution.execution.result.family_runtime_enqueue.task.payload.command_or_surface_ref,
-      'medautosci sidecar dispatch --task <task.json> --format json',
+      'medautosci domain-handler dispatch --task <task.json> --format json',
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -118,7 +118,7 @@ test('runtime action execute records and verifies domain dispatch evidence recei
         domain_ready_verdict: 'domain_gate_pending',
         route_impact: {
           decision: 'bounded_repair',
-          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+          repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
         },
       }),
     ], {
@@ -656,7 +656,7 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
         domain_ready_verdict: 'domain_gate_pending',
         route_impact: {
           decision: 'bounded_repair',
-          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+          repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
         },
       }),
     ], {

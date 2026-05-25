@@ -861,7 +861,7 @@ export function updateStageAttemptsForTask(
       ? appendActivityEventToRow(row, input.activityEvent)
       : parseStageAttemptJsonList(row.activity_events_json);
     const closeoutReceiptStatus = input.status === 'completed' && closeoutRefs.length > 0
-      ? 'domain_sidecar_receipt_ref_only'
+      ? 'domain_handler_receipt_ref_only'
       : null;
     db.prepare(`
       UPDATE stage_attempts

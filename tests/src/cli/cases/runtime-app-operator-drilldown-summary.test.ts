@@ -110,7 +110,7 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
             typed_blocker_refs: [],
             quality_refs: [`publication_eval/${index}.json`],
             readiness_refs: [`controller_decisions/${index}.json`],
-            repair_command: `medautosci sidecar dispatch --task task-${index}.json --format json`,
+            repair_command: `medautosci domain-handler dispatch --task task-${index}.json --format json`,
             package_refs: [`package:submission-${index}`],
             export_refs: [`export:current-package-${index}`],
           },

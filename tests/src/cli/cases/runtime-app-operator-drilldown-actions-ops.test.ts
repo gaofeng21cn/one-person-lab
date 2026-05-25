@@ -829,7 +829,7 @@ test('runtime action execute records MAS paper-line owner-chain results as refs-
         domain_ready_verdict: 'domain_gate_pending',
         route_impact: {
           decision: 'bounded_repair',
-          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+          repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
         },
       }),
     ], {

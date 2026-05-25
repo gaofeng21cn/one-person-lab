@@ -641,10 +641,10 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       skeleton: {
         'agent/stages': ['agent/stages/stage_route_contract.yaml'],
         'agent/prompts': ['MAS app skill command contracts'],
-        'agent/skills': ['medautosci sidecar export --format json'],
+        'agent/skills': ['medautosci domain-handler export --format json'],
         'agent/knowledge': ['stage_knowledge_packet'],
         'agent/quality_gates': ['publication_eval/latest.json'],
-        'contracts/runtime/sidecar': ['mas_family_sidecar_export'],
+        'contracts/runtime/sidecar': ['mas_family_domain_handler_export'],
         'contracts/runtime/projection_builders': ['product-entry manifest provider-ready contract'],
         'contracts/runtime/lifecycle_adapters': ['workspace_runtime_artifact_root_locator'],
       },
@@ -654,7 +654,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       repo_root_tracks_real_artifacts: false,
       locators: {
         study_artifact_root: 'studies/<study_id>/artifacts',
-        dispatch_receipts: 'artifacts/runtime/opl_family_sidecar/dispatch_receipts',
+        dispatch_receipts: 'artifacts/runtime/opl_family_domain_handler/dispatch_receipts',
       },
     },
   };

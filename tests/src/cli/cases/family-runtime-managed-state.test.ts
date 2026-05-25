@@ -122,22 +122,22 @@ test('family-runtime status consumes MAS manifest managed Temporal projection wi
   }
 });
 
-test('family-runtime status consumes MAS sidecar managed Temporal projection', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-sidecar-managed-state-'));
+test('family-runtime status consumes MAS domain-handler managed Temporal projection', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-domain-handler-managed-state-'));
   const exportFixture = createExportFixture(`
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "managed_temporal_state_consistency": {
     "surface_kind": "managed_temporal_state_consistency",
     "projection_status": "ready",
     "provider_kind": "temporal",
     "service_ready": true,
     "managed_worker_ready": true,
-    "address": "sidecar-managed-temporal.example.test:7233",
+    "address": "domain-handler-managed-temporal.example.test:7233",
     "namespace": "default",
     "task_queue": "opl-stage-attempts",
-    "source_refs": ["mas://sidecar/managed_temporal_state_consistency/latest.json"],
+    "source_refs": ["mas://domain-handler/managed_temporal_state_consistency/latest.json"],
     "authority_boundary": {
       "opl_role": "projection_consumer_only",
       "paper_closure_authority": "mas_only"
@@ -161,9 +161,9 @@ JSON
     const managedProjection = provider.details.managed_temporal_state_consistency;
 
     assert.equal(output.family_runtime.readiness.provider_ready, true);
-    assert.equal(provider.details.address, 'sidecar-managed-temporal.example.test:7233');
+    assert.equal(provider.details.address, 'domain-handler-managed-temporal.example.test:7233');
     assert.equal(provider.details.address_source, 'mas_managed_temporal_state_consistency_projection');
-    assert.equal(managedProjection.source_manifest.surface_kind, 'mas_family_sidecar_export_projection_ref');
+    assert.equal(managedProjection.source_manifest.surface_kind, 'mas_family_domain_handler_export_projection_ref');
     assert.equal(provider.details.managed_domain_projection_summary.managed_temporal_state_consistency_declared, true);
     assert.equal(provider.details.managed_domain_projection_summary.family_stage_control_plane_declared, false);
     assert.equal(provider.details.managed_domain_projection_summary.domain_memory_descriptor_declared, false);

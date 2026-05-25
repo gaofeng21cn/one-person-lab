@@ -660,7 +660,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         && blockedState.completion_boundary.provider_completion === 'not_completed',
       retry_or_dead_letter_boundary_observed:
         blockedState.activity_events.some(
-          (event: Record<string, unknown>) => event.activity_kind === 'domain_sidecar_dispatch_activity'
+          (event: Record<string, unknown>) => event.activity_kind === 'domain_handler_dispatch_activity'
             && event.blocked_reason === 'typed_closeout_packet_required',
         ),
       domain_truth_boundary_preserved:
@@ -720,7 +720,7 @@ export async function runTemporalProductionResidencyProof(paths: TemporalWorkerP
         closeout_refs: blockedState.closeout_refs,
         blocked_reason:
           blockedState.activity_events.find(
-            (event: Record<string, unknown>) => event.activity_kind === 'domain_sidecar_dispatch_activity',
+            (event: Record<string, unknown>) => event.activity_kind === 'domain_handler_dispatch_activity',
           )?.blocked_reason ?? null,
       },
       proof_receipt: {

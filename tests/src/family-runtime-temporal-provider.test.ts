@@ -135,7 +135,7 @@ test('Temporal StageAttemptWorkflow exposes activity state, signals, and complet
     assert.equal(codexCompletion?.heartbeat_summary.checkpoint_count, 1);
     assert.equal(codexCompletion?.progress_summary.progress_status, 'checkpointed');
     assert.equal(codexCompletion?.cost_summary.estimated_cost_usd, 0);
-    assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_sidecar_dispatch_activity'));
+    assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_handler_dispatch_activity'));
     assert.equal(result.queriedState.signals.length, 2);
     assert.deepEqual(result.queriedState.human_gate_refs, ['gate:operator-review']);
     assert.equal(result.queriedState.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
@@ -273,7 +273,7 @@ test('Temporal StageAttemptWorkflow blocks provider completion when typed closeo
     assert.equal(result.completion_boundary.domain_ready_verdict, null);
     assert.deepEqual(result.closeout_refs, []);
     const dispatchEvent = result.activity_events.find(
-      (event) => event.activity_kind === 'domain_sidecar_dispatch_activity',
+      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
     );
     assert.equal(dispatchEvent?.activity_status, 'blocked');
     assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_packet_required');

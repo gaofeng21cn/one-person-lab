@@ -58,7 +58,7 @@ export function buildMasDomainRouteSupportProjection() {
     supported_task_kinds: [...MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS],
     action_refs: [...MAS_DOMAIN_ROUTE_ACTION_REFS],
     state_projection: [...MAS_DOMAIN_ROUTE_STATE_PROJECTION_FIELDS],
-    repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+    repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
     accepted_runtime_responsibilities: [...MAS_DOMAIN_ROUTE_ACCEPTED_RUNTIME_RESPONSIBILITIES],
     authority_boundary: MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY,
   };

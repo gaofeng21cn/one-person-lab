@@ -3,28 +3,28 @@ import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
     OPL_STATE_DIR: stateRoot,
-    OPL_FAMILY_RUNTIME_SIDECAR_TIMEOUT_MS: '100',
+    OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS: '100',
     ...extra,
   };
 }
 
-function hangingSidecarFixture(name: string) {
+function hangingDomainHandlerFixture(name: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-family-runtime-${name}-timeout-`));
-  const sidecarPath = path.join(fixtureRoot, name);
+  const domainHandlerPath = path.join(fixtureRoot, name);
   fs.writeFileSync(
-    sidecarPath,
+    domainHandlerPath,
     `#!/usr/bin/env bash
 set -euo pipefail
 sleep 30
 `,
     { mode: 0o755 },
   );
-  return { fixtureRoot, sidecarPath };
+  return { fixtureRoot, domainHandlerPath };
 }
 
-test('family-runtime intake fails closed when a domain export sidecar times out', () => {
+test('family-runtime intake fails closed when a domain export handler times out', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-export-timeout-state-'));
-  const exportSidecar = hangingSidecarFixture('export');
+  const exportDomainHandler = hangingDomainHandlerFixture('export');
   try {
     const intake = runCli([
       'family-runtime',
@@ -34,7 +34,7 @@ test('family-runtime intake fails closed when a domain export sidecar times out'
       '--source',
       'timeout-test',
     ], familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportSidecar.sidecarPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportDomainHandler.domainHandlerPath,
     }));
     const exportResult = intake.family_runtime_intake.exports[0];
 
@@ -44,16 +44,16 @@ test('family-runtime intake fails closed when a domain export sidecar times out'
     assert.match(exportResult.error, /Domain export timed out after 100ms/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(exportSidecar.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(exportDomainHandler.fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('family-runtime dispatch fails closed when a domain dispatch sidecar times out', () => {
+test('family-runtime dispatch fails closed when a domain dispatch handler times out', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-dispatch-timeout-state-'));
-  const dispatchSidecar = hangingSidecarFixture('dispatch');
+  const dispatchDomainHandler = hangingDomainHandlerFixture('dispatch');
   try {
     const env = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchSidecar.sidecarPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchDomainHandler.domainHandlerPath,
     });
     const enqueue = runCli([
       'family-runtime',
@@ -76,6 +76,6 @@ test('family-runtime dispatch fails closed when a domain dispatch sidecar times 
     assert.match(task.last_error, /Domain dispatch timed out after 100ms/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatchSidecar.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(dispatchDomainHandler.fixtureRoot, { recursive: true, force: true });
   }
 });

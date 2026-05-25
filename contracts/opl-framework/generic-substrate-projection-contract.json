@@ -10,7 +10,7 @@
     "domain_manifest.artifact_inventory",
     "domain_manifest.domain_memory_descriptor",
     "domain_manifest.generic_substrate_refs",
-    "domain_sidecar_export.opl_substrate_adapter"
+    "domain_handler_export.opl_substrate_adapter"
   ],
   "projection_surface": {
     "surface_kind": "opl_generic_substrate_projection",
@@ -31,7 +31,7 @@
       "summary",
       "groups.by_domain",
       "groups.by_projection_status",
-      "groups.by_sidecar_status",
+      "groups.by_domain_handler_status",
       "groups.by_ref_family",
       "authority_boundary",
       "non_authority_flags"
@@ -39,7 +39,7 @@
     "allowed_grouping_axes": [
       "domain",
       "projection_status",
-      "sidecar_status",
+      "domain_handler_status",
       "ref_family"
     ]
   },

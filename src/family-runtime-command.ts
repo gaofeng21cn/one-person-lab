@@ -158,17 +158,17 @@ export const DOMAIN_ADAPTERS: Record<FamilyRuntimeDomainId, {
   medautoscience: {
     repo_id: 'med-autoscience',
     truth_owner: 'med-autoscience',
-    dispatch_command: ['medautosci', 'sidecar', 'dispatch'],
+    dispatch_command: ['medautosci', 'domain-handler', 'dispatch'],
   },
   medautogrant: {
     repo_id: 'med-autogrant',
     truth_owner: 'med-autogrant',
-    dispatch_command: ['medautogrant', 'product', 'sidecar', 'dispatch'],
+    dispatch_command: ['medautogrant', 'domain-handler', 'dispatch'],
   },
   redcube: {
     repo_id: 'redcube-ai',
     truth_owner: 'redcube-ai',
-    dispatch_command: ['redcube', 'product', 'sidecar', 'dispatch'],
+    dispatch_command: ['redcube', 'domain-handler', 'dispatch'],
   },
 };
 

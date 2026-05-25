@@ -16,13 +16,13 @@ export function writeFamilyRuntimeDispatchTask(
   const action = isRecord(payload) && typeof payload.action === 'string' && payload.action.trim()
     ? payload.action.trim()
     : row.task_kind;
-  const sidecarTask = isRecord(payload) ? payload : {};
+  const domainHandlerTask = isRecord(payload) ? payload : {};
   const taskPayload = taskToPayload(row);
   const dispatchPath = path.join(paths.dispatch_dir, `${row.task_id}.json`);
   fs.writeFileSync(
     dispatchPath,
     JSON.stringify({
-      ...sidecarTask,
+      ...domainHandlerTask,
       task_id: row.task_id,
       id: row.task_id,
       domain_id: row.domain_id,

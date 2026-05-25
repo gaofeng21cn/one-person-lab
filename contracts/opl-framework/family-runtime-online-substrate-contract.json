@@ -43,7 +43,7 @@
       "production_required": true,
       "workflow_mapping": {
         "workflow": "stage_attempt",
-        "activity": "codex_cli_stage_execution_or_domain_sidecar_dispatch",
+        "activity": "codex_cli_stage_execution_or_domain_handler_dispatch",
         "signal": "human_gate_user_modification_intake_or_resume",
         "query": "operator_progress_projection",
         "history": "durable_replay_and_audit"

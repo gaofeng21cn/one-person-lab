@@ -22,7 +22,7 @@ fingerprint="$(cat ${shellSingleQuote(path.join(fixtureRoot, 'fingerprint'))})"
 context_version="$(cat ${shellSingleQuote(path.join(fixtureRoot, 'context-version'))})"
 cat <<JSON
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
@@ -65,7 +65,7 @@ if [ "$count" -le 3 ]; then
   exit 42
 fi
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","receipt_ref":"receipt:dm002/nested-repair-redrive"}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm002/nested-repair-redrive"}
 JSON
 `,
     { mode: 0o755 },

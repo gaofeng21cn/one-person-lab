@@ -228,7 +228,7 @@ export async function runTemporalResidencyProof() {
         closeout_refs: blockedState.closeout_refs,
         blocked_reason:
           blockedState.activity_events.find(
-            (event) => event.activity_kind === 'domain_sidecar_dispatch_activity',
+            (event) => event.activity_kind === 'domain_handler_dispatch_activity',
           )?.blocked_reason ?? null,
       },
       authority_boundary: {

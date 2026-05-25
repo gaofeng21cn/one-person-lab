@@ -730,7 +730,7 @@ JSON
     assert.deepEqual(inspected.family_runtime_stage_attempt.attempt.closeout_refs, [
       'studies/DM002/stage_closeout/latest.json',
     ]);
-    assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_receipt_status, 'domain_sidecar_receipt_ref_only');
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.closeout_receipt_status, 'domain_handler_receipt_ref_only');
     assert.equal(inspected.family_runtime_stage_attempt.attempt.provider_run.provider_status, 'checkpointed');
     assert.equal(
       inspected.family_runtime_stage_attempt.attempt.activity_events.at(-1).activity_status,

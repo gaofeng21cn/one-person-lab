@@ -38,7 +38,7 @@ test('agents conformance reports structural readiness separately from production
   assert.equal(
     platformSurfaces.reports[0].generic_subdomains
       .some((surface: { subdomain_id: string; owner: string }) => (
-        surface.subdomain_id === 'generated_domain_action_adapter_dispatch_shell'
+        surface.subdomain_id === 'generated_domain_handler_dispatch_shell'
         && surface.owner === 'one-person-lab'
       )),
     true,
@@ -770,7 +770,7 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
     'product_entry',
     'status',
     'user_loop',
-    'domain_action_adapter',
+    'domain_handler',
     'runtime_registration',
     'control_plane',
     'lifecycle',
@@ -812,7 +812,7 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
   assert.deepEqual(report.reports[0].physical_morphology_checks.forbidden_name_residue, []);
 });
 
-test('agents conformance accepts current domain semantic aliases for physical morphology surfaces', () => {
+test('agents conformance blocks legacy sidecar aliases as active physical morphology surfaces', () => {
   const magRepoDir = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepoDir);
   configureReadyMagMorphology(magRepoDir);
@@ -820,7 +820,7 @@ test('agents conformance accepts current domain semantic aliases for physical mo
   const magPrivateSurfacePolicy = JSON.parse(fs.readFileSync(magPrivateSurfacePolicyPath, 'utf8'));
   magPrivateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = (
     magPrivateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surfaceId: string) => (
-      surfaceId === 'domain_action_adapter' ? 'sidecar' : surfaceId
+      surfaceId === 'domain_handler' ? 'sidecar' : surfaceId
     ))
   );
   magPrivateSurfacePolicy.physical_source_morphology_policy.surface_classifications = (
@@ -828,7 +828,7 @@ test('agents conformance accepts current domain semantic aliases for physical mo
       entry: { surface_id: string },
     ) => ({
       ...entry,
-      surface_id: entry.surface_id === 'domain_action_adapter' ? 'sidecar' : entry.surface_id,
+      surface_id: entry.surface_id === 'domain_handler' ? 'sidecar' : entry.surface_id,
     }))
   );
   writeJson(magPrivateSurfacePolicyPath, magPrivateSurfacePolicy);
@@ -859,11 +859,29 @@ test('agents conformance accepts current domain semantic aliases for physical mo
     `rca=${rcaRepoDir}`,
   ]).standard_domain_agent_conformance;
 
-  assert.equal(report.status, 'passed');
-  assert.equal(report.summary.passed_count, 2);
-  assert.equal(report.summary.blocked_count, 0);
-  assert.equal(report.reports[0].physical_morphology_checks.status, 'passed');
-  assert.equal(report.reports[1].physical_morphology_checks.status, 'passed');
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.summary.passed_count, 0);
+  assert.equal(report.summary.blocked_count, 2);
+  assert.equal(report.reports[0].physical_morphology_checks.status, 'blocked');
+  assert.equal(
+    report.reports[0].physical_morphology_checks.blockers.includes(
+      'mag_physical_surface_missing:domain_handler',
+    ),
+    true,
+  );
+  assert.equal(
+    report.reports[0].physical_morphology_checks.blockers.includes(
+      'mag_physical_surface_unclassified:domain_handler',
+    ),
+    true,
+  );
+  assert.equal(report.reports[1].physical_morphology_checks.status, 'blocked');
+  assert.equal(
+    report.reports[1].physical_morphology_checks.blockers.includes(
+      'rca_physical_surface_unclassified:domain_action_adapter_guarded_actions',
+    ),
+    true,
+  );
 });
 
 test('agents conformance allows MAS legacy active path tombstone contract markers', () => {

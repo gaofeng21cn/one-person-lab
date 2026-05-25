@@ -120,7 +120,7 @@ function withStandardSkeleton(payload: JsonRecord, overrides: JsonRecord = {}) {
     },
     contracts: {
       descriptor_refs: ['contracts/domain-agent.json'],
-      sidecar_refs: ['runtime/sidecar.py'],
+      domain_handler_refs: ['runtime/domain_handler.py'],
       quality_gate_refs: ['contracts/quality-gates.json'],
     },
     artifact_boundary: {
@@ -372,7 +372,7 @@ test('framework production-closeout reports functional blockers without taking d
           export_refs: ['export:mag:submission-ready'],
           gap_report_refs: ['gap:mag:readiness'],
           handoff_refs: ['handoff:mag:owner-review'],
-          repair_command: 'medautogrant sidecar dispatch --task <task.json> --format json',
+          repair_command: 'medautogrant domain-handler dispatch --task <task.json> --format json',
           direct_skill_ref: 'skill:medautogrant',
           direct_skill_command: 'medautogrant product-entry status --format json',
         },
@@ -615,8 +615,8 @@ test('framework production-closeout reports functional blockers without taking d
       true,
     );
     assert.equal(
-      mag.stage_attempt_evidence.operator_domain_sidecar_route_refs.includes(
-        'medautogrant sidecar dispatch --task <task.json> --format json',
+      mag.stage_attempt_evidence.operator_domain_handler_route_refs.includes(
+        'medautogrant domain-handler dispatch --task <task.json> --format json',
       ),
       true,
     );

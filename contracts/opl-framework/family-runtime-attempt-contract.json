@@ -138,7 +138,7 @@
       "workflow_name": "StageAttemptWorkflow",
       "activity_names": [
         "CodexStageActivity",
-        "DomainSidecarDispatchActivity"
+        "DomainHandlerDispatchActivity"
       ],
       "signals": [
         "HumanGateSignal",

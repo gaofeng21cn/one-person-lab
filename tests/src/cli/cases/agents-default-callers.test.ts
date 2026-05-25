@@ -57,7 +57,7 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
       };
     }
     if (
-      module.module_id === 'sample_brief_domain_action_adapter'
+      module.module_id === 'sample_brief_domain_handler'
       || module.module_id === 'sample_brief_workbench_projection'
     ) {
       return {

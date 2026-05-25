@@ -13,7 +13,7 @@ import {
 export const STAGE_ATTEMPT_WORKFLOW_NAME = 'StageAttemptWorkflow';
 export const SCHEDULER_TICK_WORKFLOW_NAME = 'SchedulerTickWorkflow';
 export const CODEX_STAGE_ACTIVITY_NAME = 'CodexStageActivity';
-export const DOMAIN_SIDECAR_DISPATCH_ACTIVITY_NAME = 'DomainSidecarDispatchActivity';
+export const DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME = 'DomainHandlerDispatchActivity';
 export const SCHEDULER_TICK_ACTIVITY_NAME = 'SchedulerTickActivity';
 export const DEFAULT_TEMPORAL_TASK_QUEUE = 'opl-stage-attempts';
 
@@ -124,7 +124,7 @@ export function buildTemporalStageAttemptWorkflowContract() {
     scheduler_tick_workflow_name: SCHEDULER_TICK_WORKFLOW_NAME,
     activity_names: {
       codex_stage_activity: CODEX_STAGE_ACTIVITY_NAME,
-      domain_sidecar_dispatch_activity: DOMAIN_SIDECAR_DISPATCH_ACTIVITY_NAME,
+      domain_handler_dispatch_activity: DOMAIN_HANDLER_DISPATCH_ACTIVITY_NAME,
       scheduler_tick_activity: SCHEDULER_TICK_ACTIVITY_NAME,
     },
     signals: [...TEMPORAL_STAGE_ATTEMPT_SIGNALS],

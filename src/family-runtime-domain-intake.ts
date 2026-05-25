@@ -15,9 +15,9 @@ import {
   type taskToPayload,
 } from './family-runtime-store.ts';
 import {
-  runFamilyRuntimeSidecarCommand,
-  sidecarResultErrorMessage,
-} from './family-runtime-sidecar-process.ts';
+  runFamilyRuntimeDomainHandlerCommand,
+  domainHandlerResultErrorMessage,
+} from './family-runtime-domain-handler-process.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 import { payloadMatchesTaskScope } from './family-runtime-task-scope.ts';
 
@@ -67,7 +67,7 @@ function exportCommandForDomain(
       || process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
     if (profile) {
       const command = resolveOplModuleExecCommand('medautoscience', [
-        'sidecar',
+        'domain-handler',
         'export',
         '--profile',
         profile,
@@ -103,7 +103,7 @@ function exportCommandForDomain(
           'python',
           '-m',
           'med_autoscience.cli',
-          'sidecar',
+          'domain-handler',
           'export',
           '--profile',
           profileRef,
@@ -449,7 +449,7 @@ export function hydrateDomainTasks(
       exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
       continue;
     }
-    const result = runFamilyRuntimeSidecarCommand(command.argv, {
+    const result = runFamilyRuntimeDomainHandlerCommand(command.argv, {
       cwd: command.cwd,
       env: process.env,
     });
@@ -464,7 +464,7 @@ export function hydrateDomainTasks(
         command_preview: command.argv,
         command_cwd: command.cwd,
         command_source: command.source,
-        error: sidecarResultErrorMessage(result, 'Domain export'),
+        error: domainHandlerResultErrorMessage(result, 'Domain export'),
       });
       continue;
     }

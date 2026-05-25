@@ -46,7 +46,7 @@ test('family-runtime runs cross-repo notification approval retry and dead-letter
       "task_kind": "paper_autonomy/gate-replay",
       "dedupe_key": "mas:e2e:gate-replay",
       "priority": 90,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "payload": {"profile": "/tmp/profile.toml", "study_id": "DM002"}
     }
   ]
@@ -61,7 +61,7 @@ JSON
       "task_kind": "user-loop/wakeup",
       "dedupe_key": "mag:e2e:user-loop",
       "priority": 80,
-      "source": "mag-sidecar-export",
+      "source": "mag-domain-handler-export",
       "requires_approval": true,
       "payload": {"input_path": "/tmp/mag/input.json", "task_intent": "continue grant user loop"}
     }
@@ -77,7 +77,7 @@ JSON
       "task_kind": "runtime_watch",
       "dedupe_key": "rca:e2e:runtime-watch",
       "priority": 70,
-      "source": "rca-sidecar-export",
+      "source": "rca-domain-handler-export",
       "payload": {"workspace_root": "/tmp/rca"}
     }
   ]

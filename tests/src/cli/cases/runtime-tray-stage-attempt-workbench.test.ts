@@ -38,7 +38,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       '--checkpoint-ref',
       'checkpoint:analysis-midpoint',
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:analysis-currentness","breached_slo_ids":["ai_reviewer_currentness"],"repair_command":"medautosci sidecar dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"],"external_submission_status_ref":"portal:manual-boundary"}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-1"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","quality_refs":["publication_eval/latest.json"],"readiness_refs":["controller_decisions/latest.json"],"slo_ref":"slo:analysis-currentness","breached_slo_ids":["ai_reviewer_currentness"],"repair_command":"medautosci domain-handler dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"],"external_submission_status_ref":"portal:manual-boundary"}}',
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -154,7 +154,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.action_routing.routing_scope, 'stage_attempt_workbench');
     assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.attempt_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.action_count, 13);
-    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.domain_sidecar_route_count, 2);
+    assert.equal(snapshot.stage_attempt_workbench.action_routing.summary.domain_handler_route_count, 2);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(snapshot.stage_attempt_workbench.action_routing.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.stage_attempt_workbench.summary.operator_conflict_count, 2);
@@ -236,7 +236,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.projection_scope, 'stage_attempt');
     assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].observability_slo.slo_refs, ['slo:analysis-currentness']);
     assert.deepEqual(snapshot.stage_attempt_workbench.attempts[0].observability_slo.breached_slo_ids, ['ai_reviewer_currentness']);
-    assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.repair_commands[0].command, 'medautosci sidecar dispatch --task <task.json> --format json');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.repair_commands[0].command, 'medautosci domain-handler dispatch --task <task.json> --format json');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].observability_slo.authority_boundary.can_execute_repair_command, false);
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.projection_scope, 'stage_attempt');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].workspace_source_intake.source_fingerprint, 'sha256:analysis-source');
@@ -272,8 +272,8 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     );
     assert.equal(
       snapshot.stage_attempt_workbench.attempts[0].action_routing.actions.some((action: { route_target_kind: string; command_or_surface_ref: string }) =>
-        action.route_target_kind === 'domain_sidecar' &&
-        action.command_or_surface_ref === 'medautosci sidecar dispatch --task <task.json> --format json'
+        action.route_target_kind === 'domain_handler' &&
+        action.command_or_surface_ref === 'medautosci domain-handler dispatch --task <task.json> --format json'
       ),
       true,
     );
@@ -359,12 +359,12 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(attemptItem.package_export_lifecycle.shell_role, 'generic_package_export_lifecycle_shell');
     assert.equal(attemptItem.package_export_lifecycle.authority_boundary.can_authorize_package_readiness, false);
     assert.equal(attemptItem.action_routing.routing_scope, 'stage_attempt');
-    assert.equal(attemptItem.action_routing.summary.domain_sidecar_route_count, 2);
+    assert.equal(attemptItem.action_routing.summary.domain_handler_route_count, 2);
     assert.equal(attemptItem.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(attemptItem.control_loop_summary.receipts.receipt_refs[0], 'receipt:analysis-closeout');
     assert.equal(
       attemptItem.control_loop_summary.action_route.route_refs.includes(
-        'medautosci sidecar dispatch --task <task.json> --format json',
+        'medautosci domain-handler dispatch --task <task.json> --format json',
       ),
       true,
     );
@@ -946,7 +946,7 @@ db.close();`,
     assert.equal(workbench.action_routing.summary.opl_cli_route_count, 3);
     assert.equal(workbench.action_routing.summary.app_surface_route_count, 30);
     assert.equal(workbench.action_routing.summary.provider_signal_route_count, 2);
-    assert.equal(workbench.action_routing.summary.domain_sidecar_route_count, 3);
+    assert.equal(workbench.action_routing.summary.domain_handler_route_count, 3);
     assert.equal(workbench.action_routing.summary.execution_policy, 'opl_safe_action_shell');
     assert.equal(workbench.action_routing.authority_boundary.can_execute_domain_action, false);
     assert.equal(workbench.action_routing.authority_boundary.can_execute_direct_skill, false);

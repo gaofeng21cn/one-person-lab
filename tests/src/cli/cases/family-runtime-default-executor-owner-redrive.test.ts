@@ -27,16 +27,16 @@ printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
 for arg in "$@"; do
   printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
 done
-if [[ " $* " == *" sidecar export "* ]]; then
+if [[ " $* " == *" domain-handler export "* ]]; then
   cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
       "task_kind": "domain_owner/default-executor-dispatch",
       "priority": 70,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:dm-cvd:002:default-executor:return_to_ai_reviewer_workflow:owner-update",
       "dispatch_owner": "one-person-lab",
       "profile_name": "dm-cvd",
@@ -61,9 +61,9 @@ if [[ " $* " == *" sidecar export "* ]]; then
 JSON
   exit 0
 fi
-if [[ " $* " == *" sidecar dispatch "* ]]; then
+if [[ " $* " == *" domain-handler dispatch "* ]]; then
   cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","receipt_ref":"receipt:dm002/ai-reviewer-owner"}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm002/ai-reviewer-owner"}
 JSON
   exit 0
 fi

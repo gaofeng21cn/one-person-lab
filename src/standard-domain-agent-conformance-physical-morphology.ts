@@ -43,7 +43,7 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
   'product_entry',
   'status',
   'user_loop',
-  'domain_action_adapter',
+  'domain_handler',
   'runtime_registration',
   'control_plane',
   'lifecycle',
@@ -53,9 +53,7 @@ const REQUIRED_MAG_PHYSICAL_SURFACES = [
   'legacy_runtime_residue',
 ];
 
-const MAG_PHYSICAL_SURFACE_ALIASES: Record<string, readonly string[]> = {
-  domain_action_adapter: ['sidecar'],
-};
+const NO_PHYSICAL_SURFACE_ALIASES: Record<string, readonly string[]> = {};
 
 const REQUIRED_RCA_PHYSICAL_SURFACES = [
   'mcp_product_entry_domain_entry',
@@ -68,7 +66,6 @@ const REQUIRED_RCA_PHYSICAL_SURFACES = [
 
 const RCA_PHYSICAL_SURFACE_ALIASES: Record<string, readonly string[]> = {
   product_entry_continuity_refs_adapter: ['product_entry_session_snapshot_refs_adapter'],
-  domain_action_adapter_guarded_actions: ['product_sidecar_guarded_actions'],
 };
 
 const REQUIRED_RCA_FORBIDDEN_LEGACY_SURFACE_IDS = [
@@ -231,10 +228,10 @@ function magPhysicalMorphologyPolicyChecks(repoDir: string) {
     policyFile.status === 'resolved' ? null : `mag_private_surface_policy_${policyFile.status}`,
     policy ? null : 'mag_physical_source_morphology_policy_missing',
     ...REQUIRED_MAG_PHYSICAL_SURFACES
-      .filter((surfaceId) => !hasPhysicalSurface(requiredSurfaceIds, surfaceId, MAG_PHYSICAL_SURFACE_ALIASES))
+      .filter((surfaceId) => !hasPhysicalSurface(requiredSurfaceIds, surfaceId, NO_PHYSICAL_SURFACE_ALIASES))
       .map((surfaceId) => `mag_physical_surface_missing:${surfaceId}`),
     ...REQUIRED_MAG_PHYSICAL_SURFACES
-      .filter((surfaceId) => !hasPhysicalSurface(classifiedSurfaceIds, surfaceId, MAG_PHYSICAL_SURFACE_ALIASES))
+      .filter((surfaceId) => !hasPhysicalSurface(classifiedSurfaceIds, surfaceId, NO_PHYSICAL_SURFACE_ALIASES))
       .map((surfaceId) => `mag_physical_surface_unclassified:${surfaceId}`),
     ...MAG_REQUIRED_FORBIDDEN_RESIDUE_CLASSES
       .filter((token) => !forbiddenClasses.includes(token))

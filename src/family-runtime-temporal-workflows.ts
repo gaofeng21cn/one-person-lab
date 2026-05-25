@@ -16,7 +16,7 @@ import {
 
 type StageAttemptActivities = {
   codexStageActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
-  domainSidecarDispatchActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
+  domainHandlerDispatchActivity(input: TemporalStageAttemptWorkflowInput): Promise<Record<string, unknown>>;
   schedulerTickActivity(input: TemporalSchedulerTickWorkflowInput): Promise<Record<string, unknown>>;
 };
 
@@ -34,7 +34,7 @@ const { codexStageActivity } = proxyActivities<Pick<StageAttemptActivities, 'cod
   },
 });
 
-const { domainSidecarDispatchActivity, schedulerTickActivity } = proxyActivities<Omit<StageAttemptActivities, 'codexStageActivity'>>({
+const { domainHandlerDispatchActivity, schedulerTickActivity } = proxyActivities<Omit<StageAttemptActivities, 'codexStageActivity'>>({
   startToCloseTimeout: SHORT_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   heartbeatTimeout: SHORT_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
   retry: {
@@ -167,7 +167,7 @@ export async function StageAttemptWorkflow(
     };
 
     const codexCloseoutPacket = closeoutPacketFromCodexResult(codexResult);
-    const dispatchResult = await domainSidecarDispatchActivity({
+    const dispatchResult = await domainHandlerDispatchActivity({
       ...input,
       closeout_packet: codexCloseoutPacket ?? input.closeout_packet ?? null,
     });
@@ -192,7 +192,7 @@ export async function StageAttemptWorkflow(
       activity_events: [
         ...state.activity_events,
         {
-          activity_kind: 'domain_sidecar_dispatch_activity',
+          activity_kind: 'domain_handler_dispatch_activity',
           activity_status: 'completed',
           ...dispatchResult,
         },

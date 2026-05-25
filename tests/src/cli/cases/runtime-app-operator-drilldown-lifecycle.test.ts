@@ -183,7 +183,7 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
           ],
           quality_refs: ['publication_eval/latest.json'],
           readiness_refs: ['controller_decisions/latest.json'],
-          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+          repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
           direct_skill_ref: 'skill:mas/review',
           package_refs: ['package:submission-minimal'],
           export_refs: ['export:current-package'],

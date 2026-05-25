@@ -65,15 +65,15 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
   }
 }
 
-export async function domainSidecarDispatchActivity(input: TemporalStageAttemptWorkflowInput) {
+export async function domainHandlerDispatchActivity(input: TemporalStageAttemptWorkflowInput) {
   heartbeat({
     stage_attempt_id: input.stage_attempt_id,
     stage_id: input.stage_id,
   });
   if (!input.closeout_packet) {
     return {
-      surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
-      activity_kind: 'domain_sidecar_dispatch_activity',
+      surface_kind: 'temporal_domain_handler_dispatch_receipt',
+      activity_kind: 'domain_handler_dispatch_activity',
       activity_status: 'blocked',
       stage_attempt_id: input.stage_attempt_id,
       domain_id: input.domain_id,
@@ -88,15 +88,15 @@ export async function domainSidecarDispatchActivity(input: TemporalStageAttemptW
       blocked_reason: 'typed_closeout_packet_required',
       closeout_packet_surface_kind: null,
       authority_boundary: {
-        opl: 'sidecar_transport_only',
-        domain: 'sidecar_dispatch_and_receipt_owner',
+        opl: 'domain_handler_transport_only',
+        domain: 'domain_handler_dispatch_and_receipt_owner',
       },
     };
   }
   const closeout = normalizeTypedStageCloseoutPacket(input.closeout_packet);
   return {
-    surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
-    activity_kind: 'domain_sidecar_dispatch_activity',
+    surface_kind: 'temporal_domain_handler_dispatch_receipt',
+    activity_kind: 'domain_handler_dispatch_activity',
     activity_status: 'completed',
     stage_attempt_id: input.stage_attempt_id,
     domain_id: input.domain_id,
@@ -110,8 +110,8 @@ export async function domainSidecarDispatchActivity(input: TemporalStageAttemptW
     route_impact: closeout.route_impact ?? {},
     closeout_packet_surface_kind: closeout.surface_kind,
     authority_boundary: {
-      opl: 'sidecar_transport_only',
-      domain: 'sidecar_dispatch_and_receipt_owner',
+      opl: 'domain_handler_transport_only',
+      domain: 'domain_handler_dispatch_and_receipt_owner',
     },
   };
 }

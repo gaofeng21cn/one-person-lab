@@ -147,7 +147,7 @@ test('family-runtime hydrate derives transition bridge tasks from domain transit
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mag_family_sidecar_export",
+  "surface_kind": "mag_family_domain_handler_export",
   "family_transition_matrix_result": {
     "surface_kind": "family_transition_matrix_result",
     "status": "matrix_evaluated",

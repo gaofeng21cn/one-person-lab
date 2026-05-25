@@ -30,20 +30,20 @@ function firstRecord(...values: unknown[]) {
   return values.find(isRecord) as JsonRecord | undefined;
 }
 
-export function closeoutPacketFromSidecarOutput(output: Record<string, unknown>) {
+export function closeoutPacketFromDomainHandlerOutput(output: Record<string, unknown>) {
   const explicitPacket = firstRecord(output.closeout_packet);
   if (explicitPacket) {
     return explicitPacket;
   }
-  const rcaPacket = rcaCloseoutPacketFromSidecarOutput(output);
+  const rcaPacket = rcaCloseoutPacketFromDomainHandlerOutput(output);
   if (rcaPacket) {
     return rcaPacket;
   }
-  const magPacket = magCloseoutPacketFromSidecarOutput(output);
+  const magPacket = magCloseoutPacketFromDomainHandlerOutput(output);
   if (magPacket) {
     return magPacket;
   }
-  if (output.surface_kind !== 'mas_family_sidecar_dispatch_receipt') {
+  if (output.surface_kind !== 'mas_family_domain_handler_dispatch_receipt') {
     return null;
   }
   const dispatch = firstRecord(output.dispatch);
@@ -55,7 +55,7 @@ export function closeoutPacketFromSidecarOutput(output: Record<string, unknown>)
   const taskId = optionalString(output.task_id);
   const closeoutRefs = [
     receiptRef,
-    taskId ? `mas-sidecar-dispatch:${taskId}` : null,
+    taskId ? `mas-domain-handler-dispatch:${taskId}` : null,
   ].filter((entry): entry is string => Boolean(entry));
   if (closeoutRefs.length === 0) {
     return null;
@@ -83,7 +83,7 @@ export function closeoutPacketFromSidecarOutput(output: Record<string, unknown>)
       ? 'domain_gate_pending'
       : 'domain_owner_receipt_observed',
     route_impact: {
-      decision: optionalString(result.status) ?? 'sidecar_dispatch_receipt',
+      decision: optionalString(result.status) ?? 'domain_handler_dispatch_receipt',
       guarded_apply_status: optionalString(result.guarded_apply_status),
       provider_attempt_state: optionalString(firstRecord(result.provider_attempt)?.attempt_state),
       receipt_ref: receiptRef,
@@ -100,8 +100,8 @@ export function closeoutPacketFromSidecarOutput(output: Record<string, unknown>)
   };
 }
 
-function rcaCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
-  if (output.surface_kind !== 'product_sidecar_dispatch') {
+function rcaCloseoutPacketFromDomainHandlerOutput(output: Record<string, unknown>) {
+  if (output.surface_kind !== 'product_domain_handler_dispatch') {
     return null;
   }
   const result = firstRecord(output.result_surface);
@@ -117,7 +117,7 @@ function rcaCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
     evidenceRef,
     runtimeLocatorRef,
     evidenceFile,
-    taskId ? `redcube-sidecar-dispatch:${taskId}` : null,
+    taskId ? `redcube-domain-handler-dispatch:${taskId}` : null,
   ].filter((entry): entry is string => Boolean(entry));
   if (closeoutRefs.length === 0) {
     return null;
@@ -136,7 +136,7 @@ function rcaCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
     next_owner: 'redcube-ai',
     domain_ready_verdict: 'domain_gate_pending',
     route_impact: {
-      decision: returnShape ?? optionalString(result.surface_kind) ?? action ?? 'product_sidecar_dispatch',
+      decision: returnShape ?? optionalString(result.surface_kind) ?? action ?? 'product_domain_handler_dispatch',
       action,
       result_surface_kind: optionalString(result.surface_kind),
       no_regression_evidence_observed: returnShape === 'no_regression_evidence' && Boolean(evidenceRef),
@@ -155,9 +155,12 @@ function rcaCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
   };
 }
 
-function magCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
-  const dispatch = firstRecord(output.sidecar_dispatch);
-  if (!dispatch || dispatch.surface_kind !== 'mag_product_sidecar_dispatch') {
+function magCloseoutPacketFromDomainHandlerOutput(output: Record<string, unknown>) {
+  const dispatch = firstRecord(output.domain_handler_dispatch);
+  if (
+    !dispatch
+    || dispatch.surface_kind !== 'mag_product_domain_handler_dispatch'
+  ) {
     return null;
   }
   const result = firstRecord(dispatch.result);
@@ -175,7 +178,7 @@ function magCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
     ...stringValues(dispatch.receipt_refs),
     ...stringValues(resultReceiptRefs),
     optionalString(result?.receipt_ref),
-    taskId && action ? `mag-sidecar-dispatch:${action}:${taskId}` : null,
+    taskId && action ? `mag-domain-handler-dispatch:${action}:${taskId}` : null,
   ].filter((entry): entry is string => Boolean(entry));
   if (receiptRefs.length === 0) {
     return null;
@@ -189,7 +192,7 @@ function magCloseoutPacketFromSidecarOutput(output: Record<string, unknown>) {
     ?? optionalString(result?.surface_kind)
     ?? status
     ?? action
-    ?? 'mag_product_sidecar_dispatch';
+    ?? 'mag_product_domain_handler_dispatch';
   const writesPerformed = firstRecord(result?.summary)?.writes_performed === true;
   return {
     surface_kind: 'domain_stage_closeout_packet',

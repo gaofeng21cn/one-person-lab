@@ -7,7 +7,7 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-test('family-runtime intake derives MAS sidecar export from active workspace binding', () => {
+test('family-runtime intake derives MAS domain-handler export from active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-export-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-binding-export-'));
   const masWorkspacePath = path.join(fixtureRoot, 'med-autoscience');
@@ -28,7 +28,7 @@ printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
 printf '%s\\n' "$@" > ${shellSingleQuote(uvArgvPath)}
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "provider_guarded_soak": {
     "status": "available",
     "provider_attempt_available": true
@@ -38,7 +38,7 @@ cat <<'JSON'
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/guarded-apply",
       "priority": 95,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
       "dispatch_owner": "med-autoscience",
       "payload": {
@@ -90,7 +90,7 @@ JSON
       'python',
       '-m',
       'med_autoscience.cli',
-      'sidecar',
+      'domain-handler',
       'export',
       '--profile',
       path.resolve(profilePath),
@@ -134,7 +134,7 @@ for arg in "$@"; do
 done
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "med-autoscience",
@@ -198,7 +198,7 @@ exit 44
       '--extra',
       'analysis',
       'medautosci',
-      'sidecar',
+      'domain-handler',
       'export',
       '--profile',
       profilePath,
@@ -246,7 +246,7 @@ for arg in "$@"; do
 done
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
@@ -311,7 +311,7 @@ JSON
       '--extra',
       'analysis',
       'medautosci',
-      'sidecar',
+      'domain-handler',
       'export',
       '--profile',
       explicitProfilePath,
@@ -362,10 +362,10 @@ printf '%s\\n' "$PWD" > ${shellSingleQuote(uvCwdPath)}
 for arg in "$@"; do
   printf '%s\\n' "$arg" >> ${shellSingleQuote(uvArgvPath)}
 done
-if [[ " $* " == *" sidecar export "* ]]; then
+if [[ " $* " == *" domain-handler export "* ]]; then
   cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
@@ -388,7 +388,7 @@ if [[ " $* " == *" sidecar export "* ]]; then
 JSON
   exit 0
 fi
-if [[ " $* " == *" sidecar dispatch "* ]]; then
+if [[ " $* " == *" domain-handler dispatch "* ]]; then
   task_path=""
   previous=""
   for arg in "$@"; do
@@ -401,7 +401,7 @@ if [[ " $* " == *" sidecar dispatch "* ]]; then
   test -n "$task_path"
   cp "$task_path" ${shellSingleQuote(dispatchedTaskPath)}
   cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","receipt_ref":"receipt:dm003/module-dispatch"}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm003/module-dispatch"}
 JSON
   exit 0
 fi
@@ -452,7 +452,7 @@ exit 44
       '--extra',
       'analysis',
       'medautosci',
-      'sidecar',
+      'domain-handler',
       'dispatch',
       '--task',
       tick.family_runtime_tick.dispatches[0].command_preview[10],
@@ -486,7 +486,7 @@ cat <<'JSON'
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/guarded-apply",
       "priority": 30,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
       "source_fingerprint": "fingerprint-dm002",
       "dispatch_owner": "med-autoscience",
@@ -507,7 +507,7 @@ cat <<'JSON'
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/guarded-apply",
       "priority": 30,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:nfpitnet:DM003:provider-hosted-guarded-apply:opl-temporal",
       "source_fingerprint": "fingerprint-dm003",
       "dispatch_owner": "med-autoscience",
@@ -528,7 +528,7 @@ cat <<'JSON'
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/guarded-apply",
       "priority": 30,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:nfpitnet:Obesity:provider-hosted-guarded-apply:opl-temporal",
       "source_fingerprint": "fingerprint-obesity",
       "dispatch_owner": "med-autoscience",
@@ -608,7 +608,7 @@ cat <<JSON
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/guarded-apply",
       "priority": 30,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:nfpitnet:DM002:provider-hosted-guarded-apply:opl-temporal",
       "source_fingerprint": "$fingerprint",
       "dispatch_owner": "med-autoscience",
@@ -652,10 +652,10 @@ task = json.loads(Path(sys.argv[1]).read_text())
 count = sys.argv[2]
 print(json.dumps({
     "accepted": True,
-    "surface_kind": "mas_family_sidecar_dispatch_receipt",
+    "surface_kind": "mas_family_domain_handler_dispatch_receipt",
     "task_id": task["task_id"],
     "task_kind": task["task_kind"],
-    "receipt_ref": f"artifacts/runtime/opl_family_sidecar/dispatch_receipts/receipt-{count}.json",
+    "receipt_ref": f"artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt-{count}.json",
     "dispatch": {
         "action_type": "paper_autonomy_guarded_apply",
         "study_id": task["payload"]["study_id"],
@@ -718,7 +718,7 @@ PY
     assert.equal(attempts.length, 2);
     assert.equal(attempts[0].provider_kind, 'temporal');
     assert.equal(attempts[0].source_fingerprint, 'proof-fingerprint-v2');
-    assert.equal(attempts[0].route_impact.receipt_ref, 'artifacts/runtime/opl_family_sidecar/dispatch_receipts/receipt-2.json');
+    assert.equal(attempts[0].route_impact.receipt_ref, 'artifacts/runtime/opl_family_domain_handler/dispatch_receipts/receipt-2.json');
     assert.equal(attempts[1].source_fingerprint, 'proof-fingerprint-v1');
     assert.equal(fs.readFileSync(dispatchCountPath, 'utf8').trim(), '2');
   } finally {
@@ -750,7 +750,7 @@ for arg in "$@"; do
 done
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
@@ -790,7 +790,7 @@ if [ "$count" -le 3 ]; then
   exit 42
 fi
 cat <<'JSON'
-{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","receipt_ref":"receipt:dm002/repaired-owner"}
+{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","receipt_ref":"receipt:dm002/repaired-owner"}
 JSON
 `,
     { mode: 0o755 },
@@ -877,7 +877,7 @@ JSON
       fs.realpathSync(fs.readFileSync(uvCwdPath, 'utf8').trim()),
       fs.realpathSync(masFixture.sourceRoot),
     );
-    assert.equal(fs.readFileSync(uvArgvPath, 'utf8').includes('sidecar\nexport'), true);
+    assert.equal(fs.readFileSync(uvArgvPath, 'utf8').includes('domain-handler\nexport'), true);
   } finally {
     fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });

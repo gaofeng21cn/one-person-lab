@@ -19,7 +19,7 @@ export const GENERATED_INTERFACE_SOURCE_REFS = [
   'functional_privatization_audit',
   'generated_surface_handoff',
   'product_entry_manifest_descriptor',
-  'domain_action_adapter_descriptor',
+  'domain_handler_descriptor',
 ] as const;
 
 export const GENERATED_SURFACES = [
@@ -40,7 +40,7 @@ export const GENERATED_SURFACES = [
     required_descriptor_surfaces: ['entry', 'family_action_catalog', 'family_stage_control_plane'],
   },
   {
-    surface_id: 'domain_action_adapter_export_dispatch',
+    surface_id: 'domain_handler',
     required_descriptor_surfaces: ['family_action_catalog', 'functional_privatization_audit'],
   },
   {
@@ -95,10 +95,10 @@ const GENERATED_WRAPPER_DESCRIPTOR_SCOPE = [
     descriptor_kind: 'opl_generated_product_session_descriptor',
   },
   {
-    surface_id: 'domain_action_adapter',
-    block_key: 'domain_action_adapter',
-    target_surface_id: 'domain_action_adapter',
-    descriptor_kind: 'opl_generated_domain_action_adapter_descriptor',
+    surface_id: 'domain_handler',
+    block_key: 'domain_handler',
+    target_surface_id: 'domain_action_adapter_export_dispatch',
+    descriptor_kind: 'opl_generated_domain_action_adapter_dispatch_descriptor',
   },
   {
     surface_id: 'workbench',
@@ -193,7 +193,7 @@ function buildProductStatusDescriptors(catalog: FamilyActionCatalog | null) {
     }));
 }
 
-function buildSidecarDescriptors(catalog: FamilyActionCatalog | null) {
+function buildDomainHandlerDescriptors(catalog: FamilyActionCatalog | null) {
   if (!catalog) {
     return [];
   }
@@ -205,7 +205,7 @@ function buildSidecarDescriptors(catalog: FamilyActionCatalog | null) {
         action.supported_surfaces.mcp?.surface_kind,
         action.supported_surfaces.skill?.surface_kind,
       ].filter((entry): entry is string => Boolean(entry));
-      return surfaceKinds.some((surfaceKind) => surfaceKind.includes('sidecar'));
+      return surfaceKinds.some((surfaceKind) => surfaceKind.includes('domain_handler'));
     })
     .map((action) => ({
       action_id: action.action_id,
@@ -223,24 +223,7 @@ function generatedSurfaceAliases(surfaceId: string) {
     mcp: ['mcp'],
     skill: ['skill'],
     product_entry_manifest: ['product_entry_manifest'],
-    domain_action_adapter_export_dispatch: [
-      'domain_action_adapter_export_dispatch',
-      'domain_action_adapter',
-      'sidecar_export_dispatch',
-      'sidecar',
-    ],
-    domain_action_adapter: [
-      'domain_action_adapter',
-      'domain_action_adapter_export_dispatch',
-      'sidecar_export_dispatch',
-      'sidecar',
-    ],
-    sidecar_export_dispatch: [
-      'sidecar_export_dispatch',
-      'domain_action_adapter',
-      'domain_action_adapter_export_dispatch',
-      'sidecar',
-    ],
+    domain_handler: ['domain_handler'],
     status_read_model: ['status_read_model'],
     workbench_drilldown: ['workbench_drilldown'],
     functional_harness_cases: ['functional_harness_cases', 'test_lane_harness', 'harness'],
@@ -543,7 +526,22 @@ function buildActiveCallerTargetProof(descriptor: JsonRecord) {
     (optionalString(target.proof_status)?.startsWith('blocked') ?? false)
     || !generatedSurfaceTargetAllowed(optionalString(target.target_kind) ?? '')
   );
-  const blocked = surfaceTargets.filter(isBlockedTarget);
+  const readySurfaceIds = new Set(surfaceTargets
+    .filter((target) => !isBlockedTarget(target))
+    .map((target) => target.surface_id));
+  const blocked = surfaceTargets.filter((target) => {
+    const surfaceId = optionalString(target.surface_id);
+    if (
+      surfaceId === 'domain_handler'
+      && (
+        readySurfaceIds.has('domain_action_adapter_export_dispatch')
+        || readySurfaceIds.has('domain_action_adapter')
+      )
+    ) {
+      return false;
+    }
+    return isBlockedTarget(target);
+  });
   return {
     surface_kind: 'opl_generated_surface_active_caller_target_proof',
     status: blocked.length === 0 ? 'ready' : 'blocked',
@@ -605,25 +603,25 @@ function buildProductSessionDescriptorFromDescriptor(
   };
 }
 
-function buildDomainActionAdapterDescriptorBlock(catalog: FamilyActionCatalog | null, descriptor: JsonRecord) {
-  const descriptors = buildSidecarDescriptors(catalog);
-  const handoff = handoffSurfaceFor(descriptor, 'domain_action_adapter_export_dispatch');
+function buildDomainHandlerDescriptorBlock(catalog: FamilyActionCatalog | null, descriptor: JsonRecord) {
+  const descriptors = buildDomainHandlerDescriptors(catalog);
+  const handoff = handoffSurfaceFor(descriptor, 'domain_handler');
   return {
-    surface_kind: 'opl_generated_domain_action_adapter_descriptor',
+    surface_kind: 'opl_generated_domain_handler_descriptor',
     owner: 'one-person-lab',
     status:
       descriptors.length > 0 || handoff
         ? 'ready'
         : catalog
-          ? 'ready_no_domain_action_adapter_actions_declared'
+          ? 'ready_no_domain_handler_actions_declared'
           : 'blocked_missing_family_action_catalog',
     descriptor_source_surfaces: ['family_action_catalog', 'generated_surface_handoff'],
     descriptors,
     handoff_surface: handoff,
     authority_boundary: {
-      domain_action_adapter_descriptor_can_write_domain_truth: false,
-      domain_action_adapter_descriptor_can_mutate_artifacts: false,
-      domain_action_adapter_dispatch_returns_domain_owner_receipt_or_typed_blocker: true,
+      domain_handler_descriptor_can_write_domain_truth: false,
+      domain_handler_descriptor_can_mutate_artifacts: false,
+      domain_handler_dispatch_returns_domain_owner_receipt_or_typed_blocker: true,
     },
   };
 }
@@ -840,13 +838,13 @@ export function buildGeneratedInterfaceBundle(
     },
   };
   const productSession = buildProductSessionDescriptorFromDescriptor(descriptor, stageControlPlane);
-  const domainActionAdapter = buildDomainActionAdapterDescriptorBlock(catalog, descriptor);
+  const domainHandler = buildDomainHandlerDescriptorBlock(catalog, descriptor);
   const workbench = buildWorkbenchDescriptorBlock(stageControlPlane, descriptor);
   const wrapperBlocks = {
     ...blocks,
     product_status: productStatus,
     product_session: productSession,
-    domain_action_adapter: domainActionAdapter,
+    domain_handler: domainHandler,
     workbench,
   };
 
@@ -873,7 +871,7 @@ export function buildGeneratedInterfaceBundle(
     generated_wrapper_bundle: buildGeneratedWrapperBundle(wrapperBlocks, generatedBlocksReady, activeCallerTargetProof),
     product_status: productStatus,
     product_session: productSession,
-    domain_action_adapter: domainActionAdapter,
+    domain_handler: domainHandler,
     workbench,
     active_caller_target_proof: activeCallerTargetProof,
     stage_routes: include('product-entry') || selectedFormat === 'all'
@@ -923,7 +921,7 @@ export function selectGeneratedInterfaceBundleFormat(
     [selectedKey]: selectedBlock,
     product_status: bundle.product_status,
     product_session: bundle.product_session,
-    domain_action_adapter: bundle.domain_action_adapter,
+    domain_handler: bundle.domain_handler,
     workbench: bundle.workbench,
     generated_wrapper_bundle: bundle.generated_wrapper_bundle,
     active_caller_cutover_proof: bundle.active_caller_cutover_proof,

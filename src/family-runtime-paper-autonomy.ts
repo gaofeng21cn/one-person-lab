@@ -48,11 +48,11 @@ export function paperAutonomyProjection(
         ? repairWorkUnit.owner
         : null,
     callable_surface: guardedApply
-      ? 'medautosci sidecar dispatch'
+      ? 'medautosci domain-handler dispatch'
       : typeof repairWorkUnit.callable_surface === 'string'
         ? repairWorkUnit.callable_surface
         : null,
-    repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+    repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
     source_refs: sourceRefs,
     source_fingerprint: sourceFingerprint,
     idempotency_key: task.dedupe_key,

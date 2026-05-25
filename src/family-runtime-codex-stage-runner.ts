@@ -168,7 +168,7 @@ function runnerPromptFor(input: { attempt: JsonRecord; stagePacketRef?: string |
     stagePacketRef ? `Stage packet ref: ${stagePacketRef}` : 'Stage packet ref: unavailable',
     'Execute only within the domain-owned stage packet and skill boundary.',
     'Return progress through structured events when available.',
-    'Do not claim provider completion without a typed closeout packet from the domain sidecar.',
+    'Do not claim provider completion without a typed closeout packet from the domain handler.',
     'Final output contract: the last non-empty assistant message MUST be exactly one JSON object and nothing else.',
     'That JSON object MUST have surface_kind stage_attempt_closeout_packet, stage_memory_closeout_packet, or domain_stage_closeout_packet, and at least one closeout ref.',
     'Do not wrap the JSON in Markdown. Do not add prose, code fences, prefixes, suffixes, explanations, or status text before or after the JSON.',
@@ -706,17 +706,17 @@ export function buildCodexStageActivityInput(input: {
   };
 }
 
-export function buildDomainSidecarDispatchActivityInput(input: {
+export function buildDomainHandlerDispatchActivityInput(input: {
   domainId: string;
   dispatchRef: string;
 }) {
   return {
-    activity_kind: 'domain_sidecar_dispatch_activity',
+    activity_kind: 'domain_handler_dispatch_activity',
     domain_id: input.domainId,
     dispatch_ref: input.dispatchRef,
     authority_boundary: {
-      opl: 'sidecar_transport_only',
-      domain: 'sidecar_dispatch_and_receipt_owner',
+      opl: 'domain_handler_transport_only',
+      domain: 'domain_handler_dispatch_and_receipt_owner',
     },
   };
 }

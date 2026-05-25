@@ -328,7 +328,7 @@ function withFunctionalConsumerBoundary(payload: JsonRecord) {
         classification: 'refs_only_adapter',
         owner: 'med-autoscience',
         code_paths: ['src/med_autoscience/runtime_protocol/runtime_lifecycle_store.py'],
-        active_callers: ['medautosci sidecar export'],
+        active_callers: ['medautosci domain-handler export'],
         active_caller_status: 'refs_only_adapter_active',
         migration_action: 'consume_opl_lifecycle_index_and_keep_domain_receipt_refs_only',
         retention_reason: 'MAS may index paper-owner receipts without owning a generic persistence engine.',
@@ -443,7 +443,7 @@ function withPrivatizedFunctionalModuleAudit(payload: JsonRecord) {
           owner: 'med-autogrant',
           mag_role: 'safe_action_refs_only_adapter',
           code_paths: ['src/med_autogrant/product_entry_parts/consumer_thinning.py'],
-          active_callers: ['product-entry manifest', 'sidecar export'],
+          active_callers: ['product-entry manifest', 'domain-handler export'],
           active_caller_status: 'refs_only_adapter_active',
           migration_action: 'consume_opl_attention_queue_and_keep_grant_safe_action_refs',
           current_surface_refs: ['/product_entry_manifest/session_continuity'],
@@ -495,7 +495,7 @@ function withRcaFunctionalAudit(payload: JsonRecord) {
         classification: 'opl_hosted_surface',
         owner: 'redcube_ai',
         codePaths: ['packages/redcube-runtime-protocol/src/python-native-helper.ts'],
-        activeCallers: ['RCA product sidecar guarded actions'],
+        activeCallers: ['RCA product domain handler guarded actions'],
         activeCallerStatus: 'generic_envelope_should_be_opl_owned_helper_impl_retained_in_rca',
         migrationAction: 'move generic helper envelope to OPL and retain visual helper implementation in RCA',
         surface_ref: '/native_ppt_operator_ux',
@@ -929,7 +929,7 @@ test('unified domain-agent descriptors aggregate entry, stage, action, memory, s
       rca.family_agent_descriptor.functional_privatization_audit.modules
         .find((module: { module_id: string }) => module.module_id === 'native_helper_envelope_wrapper')
         .active_callers,
-      ['RCA product sidecar guarded actions'],
+      ['RCA product domain handler guarded actions'],
     );
     assert.equal(
       rca.family_agent_descriptor.functional_privatization_audit.modules

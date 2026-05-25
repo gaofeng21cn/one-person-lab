@@ -96,7 +96,7 @@ export async function buildFamilyRuntimeStatusPayload(
         replaces_domain_daemon_surface: {
           medautoscience: 'MAS LaunchAgent / local supervision tick must remain absent, tombstone, or explicit cleanup diagnostic only.',
           medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
-          redcube: 'RCA repo-local sidecar/session supervision is handler diagnostic only.',
+          redcube: 'RCA repo-local session supervision is handler diagnostic only.',
         },
         blocker: temporalSelected && !provider.ready
           ? {

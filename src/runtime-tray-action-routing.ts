@@ -15,7 +15,7 @@ type OperatorActionRoute = {
   action_id: string;
   action_kind: string;
   action_owner: 'opl' | 'provider' | 'domain' | 'user';
-  route_target_kind: 'opl_cli' | 'app_surface' | 'provider_signal' | 'domain_sidecar' | 'direct_skill';
+  route_target_kind: 'opl_cli' | 'app_surface' | 'provider_signal' | 'domain_handler' | 'direct_skill';
   command_or_surface_ref: string;
   stage_attempt_id: string;
   domain_id: string;
@@ -77,9 +77,9 @@ function repairCommandRoutes(attempt: ActionRoutingAttempt): OperatorActionRoute
     optionalString(attempt.route_impact.repair_command),
   ].filter((entry): entry is string => Boolean(entry))).map((command, index) => ({
     action_id: `action:${attempt.stage_attempt_id}:domain-repair-command:${index}`,
-    action_kind: 'domain_sidecar_repair_command',
+    action_kind: 'domain_handler_repair_command',
     action_owner: 'domain',
-    route_target_kind: 'domain_sidecar',
+    route_target_kind: 'domain_handler',
     command_or_surface_ref: command,
     stage_attempt_id: attempt.stage_attempt_id,
     domain_id: attempt.domain_id,
@@ -146,7 +146,7 @@ function domainOwnerRoute(attempt: ActionRoutingAttempt): OperatorActionRoute[] 
     action_id: `action:${attempt.stage_attempt_id}:domain-owner-handoff`,
     action_kind: 'domain_owner_handoff',
     action_owner: 'domain',
-    route_target_kind: 'domain_sidecar',
+    route_target_kind: 'domain_handler',
     command_or_surface_ref: `domain_owner:${attempt.next_owner}`,
     stage_attempt_id: attempt.stage_attempt_id,
     domain_id: attempt.domain_id,
@@ -176,7 +176,7 @@ function routeSummary(actions: OperatorActionRoute[], attemptCount: number) {
     opl_cli_route_count: countByTarget('opl_cli'),
     app_surface_route_count: countByTarget('app_surface'),
     provider_signal_route_count: countByTarget('provider_signal'),
-    domain_sidecar_route_count: countByTarget('domain_sidecar'),
+    domain_handler_route_count: countByTarget('domain_handler'),
     direct_skill_route_count: countByTarget('direct_skill'),
     execution_policy: actions.some((action) => action.execution_policy === 'opl_safe_action_shell')
       ? 'opl_safe_action_shell'
@@ -229,7 +229,7 @@ export function buildAttemptOperatorActionRouting(attempt: ActionRoutingAttempt)
     authority_boundary: {
       opl: 'operator_action_routing_envelope_only',
       provider: 'provider_signal_receipt_owner',
-      domain: 'domain_sidecar_direct_skill_and_truth_owner',
+      domain: 'domain_handler_direct_skill_and_truth_owner',
       can_execute_domain_action: false,
       can_enqueue_domain_action: true,
       can_execute_provider_signal: true,
@@ -254,7 +254,7 @@ export function buildWorkbenchOperatorActionRouting(attempts: ActionRoutingAttem
     authority_boundary: {
       opl: 'operator_action_routing_envelope_only',
       provider: 'provider_signal_receipt_owner',
-      domain: 'domain_sidecar_direct_skill_and_truth_owner',
+      domain: 'domain_handler_direct_skill_and_truth_owner',
       can_execute_domain_action: false,
       can_enqueue_domain_action: true,
       can_execute_provider_signal: true,

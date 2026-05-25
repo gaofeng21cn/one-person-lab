@@ -335,7 +335,7 @@ test('Temporal completed terminal observation clears provider-only MAS default e
         human_gate_refs: [],
         signals: [],
         closeout_packet: {
-          surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
+          surface_kind: 'temporal_domain_handler_dispatch_receipt',
           closeout_packet_surface_kind: 'domain_stage_closeout_packet',
           closeout_refs: ['artifacts/supervision/reconcile/latest.json'],
         },
@@ -420,7 +420,7 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
         human_gate_refs: [],
         signals: [],
         closeout_packet: {
-          surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
+          surface_kind: 'temporal_domain_handler_dispatch_receipt',
           closeout_packet_surface_kind: 'domain_stage_closeout_packet',
           closeout_refs: ['artifacts/supervision/reconcile/latest.json'],
         },
@@ -560,7 +560,7 @@ test('Temporal completed terminal observation ingests closeout refs into local a
         human_gate_refs: [],
         signals: [],
         closeout_packet: {
-          surface_kind: 'temporal_domain_sidecar_dispatch_receipt',
+          surface_kind: 'temporal_domain_handler_dispatch_receipt',
           closeout_packet_surface_kind: 'domain_stage_closeout_packet',
           closeout_refs: [
             'artifacts/supervision/reconcile/latest.json',

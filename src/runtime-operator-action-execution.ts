@@ -628,7 +628,7 @@ function executionBoundary() {
   return {
     opl: 'operator_action_execution_shell_and_typed_queue_owner',
     provider: 'provider_signal_receipt_owner',
-    domain: 'domain_sidecar_direct_skill_and_truth_owner',
+    domain: 'domain_handler_direct_skill_and_truth_owner',
     can_write_domain_truth: false,
     can_read_memory_body: false,
     can_read_artifact_body: false,
@@ -812,7 +812,7 @@ async function executeRoute(
     };
   }
 
-  if (owner === 'domain' && (targetKind === 'domain_sidecar' || targetKind === 'direct_skill')) {
+  if (owner === 'domain' && (targetKind === 'domain_handler' || targetKind === 'direct_skill')) {
     const domainId = domainIdFromRoute(route);
     const taskPayload = {
       action: actionKind,

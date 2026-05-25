@@ -19,13 +19,13 @@ test('family-runtime hydrates MAS provider-hosted guarded apply tasks without tr
 set -euo pipefail
 cat <<'JSON'
 {
-  "surface_kind": "mas_family_sidecar_export",
+  "surface_kind": "mas_family_domain_handler_export",
   "pending_family_tasks": [
     {
       "domain_id": "medautoscience",
       "task_kind": "paper_autonomy/guarded-apply",
       "priority": 30,
-      "source": "mas-sidecar-export",
+      "source": "mas-domain-handler-export",
       "dedupe_key": "mas:dm-cvd:DM002:provider-hosted-guarded-apply:opl-temporal",
       "dispatch_owner": "med-autoscience",
       "profile_name": "dm-cvd",
@@ -53,7 +53,7 @@ JSON
     `#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
-echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","dispatch":{"result":{"surface":"real_paper_autonomy_provider_hosted_guarded_apply_receipt","status":"typed_blocker"}}}'
+echo '{"accepted":true,"surface_kind":"mas_family_domain_handler_dispatch_receipt","dispatch":{"result":{"surface":"real_paper_autonomy_provider_hosted_guarded_apply_receipt","status":"typed_blocker"}}}'
 `,
     { mode: 0o755 },
   );
@@ -71,7 +71,7 @@ echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","dis
     assert.equal(task.task_kind, 'paper_autonomy/guarded-apply');
     assert.equal(task.paper_autonomy.study_id, 'DM002');
     assert.equal(task.paper_autonomy.next_owner, 'med-autoscience');
-    assert.equal(task.paper_autonomy.callable_surface, 'medautosci sidecar dispatch');
+    assert.equal(task.paper_autonomy.callable_surface, 'medautosci domain-handler dispatch');
     assert.equal(task.paper_autonomy.authority_boundary.writes_mas_truth, false);
     assert.equal(task.payload.provider_attempt_id, 'opl-temporal:dm-cvd:DM002:provider-hosted-guarded-apply');
     assert.equal(dispatchedTask.task_kind, 'paper_autonomy/guarded-apply');

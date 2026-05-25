@@ -2,26 +2,26 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 
 import { FrameworkContractError } from './contracts.ts';
 
-const DEFAULT_SIDECAR_TIMEOUT_MS = 30_000;
-const DEFAULT_SIDECAR_MAX_BUFFER = 10 * 1024 * 1024;
+const DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS = 30_000;
+const DEFAULT_DOMAIN_HANDLER_MAX_BUFFER = 10 * 1024 * 1024;
 
-type SidecarProcessResult = SpawnSyncReturns<string> & {
+type DomainHandlerProcessResult = SpawnSyncReturns<string> & {
   exit_code: number;
   timed_out: boolean;
-  sidecar_timeout_ms: number;
+  domain_handler_timeout_ms: number;
 };
 
 function configuredTimeoutMs() {
-  const raw = process.env.OPL_FAMILY_RUNTIME_SIDECAR_TIMEOUT_MS?.trim();
+  const raw = process.env.OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS?.trim();
   if (!raw) {
-    return DEFAULT_SIDECAR_TIMEOUT_MS;
+    return DEFAULT_DOMAIN_HANDLER_TIMEOUT_MS;
   }
   const parsed = Number(raw);
   if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'OPL_FAMILY_RUNTIME_SIDECAR_TIMEOUT_MS must be a positive integer.',
-      { env: 'OPL_FAMILY_RUNTIME_SIDECAR_TIMEOUT_MS', value: raw },
+      'OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS must be a positive integer.',
+      { env: 'OPL_FAMILY_RUNTIME_DOMAIN_HANDLER_TIMEOUT_MS', value: raw },
     );
   }
   return parsed;
@@ -31,12 +31,12 @@ function errorCode(error: Error | undefined) {
   return error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : null;
 }
 
-export function runFamilyRuntimeSidecarCommand(
+export function runFamilyRuntimeDomainHandlerCommand(
   command: string[],
   options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
-): SidecarProcessResult {
+): DomainHandlerProcessResult {
   if (!command[0]) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Family runtime sidecar command is empty.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Family runtime domain-handler command is empty.', {
       command,
     });
   }
@@ -45,7 +45,7 @@ export function runFamilyRuntimeSidecarCommand(
     cwd: options.cwd,
     encoding: 'utf8',
     env: options.env ?? process.env,
-    maxBuffer: options.maxBuffer ?? DEFAULT_SIDECAR_MAX_BUFFER,
+    maxBuffer: options.maxBuffer ?? DEFAULT_DOMAIN_HANDLER_MAX_BUFFER,
     timeout: timeoutMs,
     killSignal: 'SIGTERM',
   });
@@ -54,13 +54,13 @@ export function runFamilyRuntimeSidecarCommand(
     ...result,
     exit_code: timedOut ? 124 : result.status ?? (result.error ? 127 : 1),
     timed_out: timedOut,
-    sidecar_timeout_ms: timeoutMs,
+    domain_handler_timeout_ms: timeoutMs,
   };
 }
 
-export function sidecarResultErrorMessage(result: SidecarProcessResult, label: string) {
+export function domainHandlerResultErrorMessage(result: DomainHandlerProcessResult, label: string) {
   if (result.timed_out) {
-    return `${label} timed out after ${result.sidecar_timeout_ms}ms.`;
+    return `${label} timed out after ${result.domain_handler_timeout_ms}ms.`;
   }
   return result.error?.message
     || result.stderr

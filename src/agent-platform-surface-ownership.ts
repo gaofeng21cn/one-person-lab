@@ -32,11 +32,10 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
     domain_allowed_role: 'domain_handler_target_or_refs_only_adapter',
   },
   {
-    subdomain_id: 'generated_domain_action_adapter_dispatch_shell',
-    opl_primitive: 'opl_generated_domain_action_adapter_descriptor',
+    subdomain_id: 'generated_domain_handler_dispatch_shell',
+    opl_primitive: 'opl_generated_domain_handler_descriptor',
     surface_aliases: [
-      'domain_action_adapter',
-      'domain_action_adapter_export_dispatch',
+      'domain_handler',
       'typed_queue_dispatch',
     ],
     domain_allowed_role: 'domain_handler_target_or_refs_only_adapter',
@@ -100,13 +99,21 @@ const DEFAULT_CALLER_TARGET_KINDS = [
   'refs_only_domain_adapter_target',
 ] as const;
 
+function generatedSurfaceTargetAllowed(targetKind: string) {
+  return DEFAULT_CALLER_TARGET_KINDS.includes(targetKind as typeof DEFAULT_CALLER_TARGET_KINDS[number]);
+}
+
 const DEFAULT_CALLER_CANONICAL_TARGET_IDS: Record<string, string[]> = {
   product_entry: ['product_entry', 'product_entry_manifest'],
   product_status: ['product_status', 'status_read_model'],
   product_session: ['product_session', 'product_entry_manifest', 'status_read_model'],
-  domain_action_adapter: ['domain_action_adapter', 'domain_action_adapter_export_dispatch'],
+  domain_handler: ['domain_action_adapter_export_dispatch', 'domain_action_adapter', 'domain_handler'],
   workbench: ['workbench', 'workbench_drilldown'],
 };
+
+function defaultCallerTargetAllowed(targetKind: string) {
+  return (DEFAULT_CALLER_TARGET_KINDS as readonly string[]).includes(targetKind);
+}
 
 const DELETION_EVIDENCE_REQUIREMENTS = [
   'replacement_parity',
@@ -558,9 +565,20 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
   return recordList(wrapperBundle.descriptor_scope).map((scope) => {
     const surfaceId = optionalString(scope.surface_id) ?? 'unknown_surface';
     const canonicalTargetIds = DEFAULT_CALLER_CANONICAL_TARGET_IDS[surfaceId] ?? [surfaceId];
-    const target = canonicalTargetIds
+    const candidateTargets = canonicalTargetIds
       .map((targetId) => targetBySurface.get(targetId))
-      .find((candidate) => isRecord(candidate));
+      .filter((candidate): candidate is JsonRecord => isRecord(candidate));
+    const readyTargets = candidateTargets.filter((candidate) => (
+      !optionalString(candidate.proof_status)?.startsWith('blocked')
+      && defaultCallerTargetAllowed(optionalString(candidate.target_kind) ?? '')
+    ));
+    const target = readyTargets.find((candidate) => (
+      optionalString(candidate.active_caller_module_id)
+      || stringList(candidate.current_surface_refs).length > 0
+      || isRecord(candidate.bridge_exit_gate)
+    ))
+      ?? readyTargets[0]
+      ?? candidateTargets[0];
     const activeCallerProofStatus =
       optionalString(scope.active_caller_proof_status)
       ?? optionalString(target?.proof_status);

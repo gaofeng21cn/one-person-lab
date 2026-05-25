@@ -258,7 +258,7 @@ export const OPL_GENERATED_SURFACES = [
     domain_policy: 'domain_repo_declares_product_entry_refs_and_domain_authority_refs',
   },
   {
-    surface_id: 'domain_action_adapter_export_dispatch',
+    surface_id: 'domain_handler',
     owner: 'one-person-lab',
     source_contract: 'contracts/pack_compiler_input.json',
     domain_policy: 'domain_repo_implements_only_domain_authority_function_targets',

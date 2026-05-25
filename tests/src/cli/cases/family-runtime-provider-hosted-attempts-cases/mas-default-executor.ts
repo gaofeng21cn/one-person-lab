@@ -167,7 +167,7 @@ assert payload["action_type"] == "return_to_ai_reviewer_workflow"
 assert payload["next_executable_owner"] == "ai_reviewer"
 print(json.dumps({
     "accepted": True,
-    "surface_kind": "mas_family_sidecar_dispatch_receipt",
+    "surface_kind": "mas_family_domain_handler_dispatch_receipt",
     "task_id": task["task_id"],
     "task_kind": task["task_kind"],
     "will_start_llm_worker": True,
@@ -850,7 +850,7 @@ assert payload["study_id"] == "002-dm-china-us-mortality-attribution"
 assert payload["dispatch_ref"].endswith("default_executor_dispatches/run_quality_repair_batch.json")
 print(json.dumps({
     "accepted": True,
-    "surface_kind": "mas_family_sidecar_dispatch_receipt",
+    "surface_kind": "mas_family_domain_handler_dispatch_receipt",
     "task_id": task["task_id"],
     "task_kind": task["task_kind"],
     "will_start_llm_worker": True,
@@ -941,7 +941,7 @@ python3 - "$TASK_PATH" <<'PY'
 import json
 print(json.dumps({
   "accepted": True,
-  "surface_kind": "mas_family_sidecar_dispatch_receipt",
+  "surface_kind": "mas_family_domain_handler_dispatch_receipt",
   "dispatch": {
     "action_type": "default_executor_dispatch_request",
     "result": {"status": "admitted"}

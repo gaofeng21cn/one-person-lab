@@ -308,7 +308,7 @@ function projectionFromManifest() {
   return projectionFromMasManifestEntry(resolveBindingManifest('medautoscience', 'med-autoscience', binding));
 }
 
-function projectionFromSidecar() {
+function projectionFromDomainHandler() {
   const command = commandFromEnv('OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT');
   if (!command) {
     return null;
@@ -325,7 +325,7 @@ function projectionFromSidecar() {
   try {
     const parsed = JSON.parse(result.stdout ?? '') as unknown;
     return projectionFromPayload(parsed, {
-      surface_kind: 'mas_family_sidecar_export_projection_ref',
+      surface_kind: 'mas_family_domain_handler_export_projection_ref',
       command_preview: command,
       projection_ref: '/',
     });
@@ -337,5 +337,5 @@ function projectionFromSidecar() {
 export function readMasManagedProviderProjection(
   options: { includeManifest?: boolean } = {},
 ): MasManagedProviderProjection | null {
-  return (options.includeManifest === false ? null : projectionFromManifest()) ?? projectionFromSidecar();
+  return (options.includeManifest === false ? null : projectionFromManifest()) ?? projectionFromDomainHandler();
 }

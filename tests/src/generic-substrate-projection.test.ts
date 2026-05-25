@@ -78,9 +78,9 @@ function withMasLikeMemoryDescriptor(payload: JsonRecord) {
   });
 }
 
-function createSidecarExportFixture(payload: JsonRecord) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-substrate-sidecar-'));
-  const exportPath = path.join(fixtureRoot, 'mas-sidecar-export');
+function createDomainHandlerExportFixture(payload: JsonRecord) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-substrate-domain-handler-'));
+  const exportPath = path.join(fixtureRoot, 'mas-domain-handler-export');
   fs.writeFileSync(
     exportPath,
     `#!/usr/bin/env node
@@ -91,9 +91,9 @@ process.stdout.write(${JSON.stringify(JSON.stringify(payload))});
   return { fixtureRoot, exportPath };
 }
 
-function masSubstrateSidecarPayload() {
+function masSubstrateDomainHandlerPayload() {
   return {
-    surface_kind: 'mas_family_sidecar_export',
+    surface_kind: 'mas_family_domain_handler_export',
     opl_substrate_adapter: {
       surface_kind: 'mas_opl_generic_substrate_adapter',
       version: 'mas-opl-generic-substrate-adapter.v1',
@@ -166,7 +166,7 @@ function masSubstrateSidecarPayload() {
   };
 }
 
-function genericSubstrateSidecarPayload(input: {
+function genericSubstrateDomainHandlerPayload(input: {
   surfaceKind: string;
   version: string;
   workspaceRoot: string;
@@ -324,11 +324,11 @@ test('generic substrate projection indexes MAS-like workspace, source, artifact,
   }
 });
 
-test('generic substrate projection consumes MAS sidecar opaque substrate adapter refs', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-sidecar-state-'));
+test('generic substrate projection consumes MAS domain handler opaque substrate adapter refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-domain-handler-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
-  const sidecar = createSidecarExportFixture(masSubstrateSidecarPayload());
+  const domainHandler = createDomainHandlerExportFixture(masSubstrateDomainHandlerPayload());
 
   try {
     runCli([
@@ -345,14 +345,14 @@ test('generic substrate projection consumes MAS sidecar opaque substrate adapter
     const inspect = runCli(['substrate', 'projection', '--domain', 'medautoscience'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: sidecar.exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: domainHandler.exportPath,
     });
     const projection = inspect.generic_substrate_projection;
 
-    assert.equal(projection.sidecar_substrate_adapter.status, 'resolved');
-    assert.equal(projection.sidecar_substrate_adapter.surface_kind, 'mas_opl_generic_substrate_adapter');
-    assert.equal(projection.sidecar_substrate_adapter.mode, 'opaque_index_only_refs');
-    assert.equal(projection.sidecar_substrate_adapter.refs_indexed_count, 4);
+    assert.equal(projection.domain_handler_substrate_adapter.status, 'resolved');
+    assert.equal(projection.domain_handler_substrate_adapter.surface_kind, 'mas_opl_generic_substrate_adapter');
+    assert.equal(projection.domain_handler_substrate_adapter.mode, 'opaque_index_only_refs');
+    assert.equal(projection.domain_handler_substrate_adapter.refs_indexed_count, 4);
     assert.equal(projection.workspace_refs.status, 'resolved');
     assert.equal(projection.workspace_refs.refs[0].role, 'workspace_root');
     assert.equal(projection.source_refs.refs.some((entry: { role: string }) =>
@@ -364,13 +364,13 @@ test('generic substrate projection consumes MAS sidecar opaque substrate adapter
     assert.equal(projection.memory_refs.refs.some((entry: { role: string }) =>
       entry.role === 'paper_soak_memory_apply_proof'
     ), true);
-    assert.equal(projection.lifecycle_projection.sidecar_substrate_adapter_status, 'resolved');
+    assert.equal(projection.lifecycle_projection.domain_handler_substrate_adapter_status, 'resolved');
     assert.equal(projection.non_authority_flags.opl_reads_memory_body, false);
     assert.equal(projection.non_authority_flags.opl_writes_domain_truth, false);
     assert.equal(projection.non_authority_flags.opl_authorizes_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(sidecar.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(domainHandler.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -415,8 +415,8 @@ test('generic substrate workbench groups family refs for App and operator drilld
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const masManifest = withMasLikeMemoryDescriptor(fixtures.medautoscience);
-  const masSidecar = createSidecarExportFixture(masSubstrateSidecarPayload());
-  const magSidecar = createSidecarExportFixture(genericSubstrateSidecarPayload({
+  const masDomainHandler = createDomainHandlerExportFixture(masSubstrateDomainHandlerPayload());
+  const magDomainHandler = createDomainHandlerExportFixture(genericSubstrateDomainHandlerPayload({
     surfaceKind: 'mag_opl_generic_substrate_adapter',
     version: 'mag-opl-generic-substrate-adapter.v1',
     workspaceRoot: '/fixtures/med-autogrant/workspace',
@@ -428,7 +428,7 @@ test('generic substrate workbench groups family refs for App and operator drilld
     memoryRef: 'workspace/nsfc-demo-001/memory/strategy/latest.json',
     domainOwns: ['grant_truth', 'fundability_verdict', 'package_authority', 'memory_body'],
   }));
-  const rcaSidecar = createSidecarExportFixture(genericSubstrateSidecarPayload({
+  const rcaDomainHandler = createDomainHandlerExportFixture(genericSubstrateDomainHandlerPayload({
     surfaceKind: 'rca_opl_generic_substrate_adapter',
     version: 'rca-opl-generic-substrate-adapter.v1',
     workspaceRoot: '/fixtures/redcube/workspace',
@@ -462,9 +462,9 @@ test('generic substrate workbench groups family refs for App and operator drilld
     const output = runCli(['substrate', 'workbench'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
-      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: masSidecar.exportPath,
-      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: magSidecar.exportPath,
-      OPL_FAMILY_RUNTIME_REDCUBE_EXPORT: rcaSidecar.exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: masDomainHandler.exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_EXPORT: magDomainHandler.exportPath,
+      OPL_FAMILY_RUNTIME_REDCUBE_EXPORT: rcaDomainHandler.exportPath,
     });
     const workbench = output.generic_substrate_workbench;
 
@@ -472,18 +472,18 @@ test('generic substrate workbench groups family refs for App and operator drilld
     assert.equal(workbench.workbench_role, 'operator_and_app_drilldown_projection');
     assert.equal(workbench.summary.total_projects_count, 3);
     assert.equal(workbench.summary.resolved_manifest_count, 3);
-    assert.equal(workbench.summary.sidecar_adapter_resolved_count, 3);
-    assert.equal(workbench.groups.by_domain.medautoscience.sidecar_substrate_adapter_status, 'resolved');
-    assert.equal(workbench.groups.by_domain.medautogrant.sidecar_substrate_adapter_status, 'resolved');
-    assert.equal(workbench.groups.by_domain.redcube.sidecar_substrate_adapter_status, 'resolved');
+    assert.equal(workbench.summary.domain_handler_adapter_resolved_count, 3);
+    assert.equal(workbench.groups.by_domain.medautoscience.domain_handler_substrate_adapter_status, 'resolved');
+    assert.equal(workbench.groups.by_domain.medautogrant.domain_handler_substrate_adapter_status, 'resolved');
+    assert.equal(workbench.groups.by_domain.redcube.domain_handler_substrate_adapter_status, 'resolved');
     assert.equal(workbench.groups.by_domain.medautogrant.inspect_command, 'opl substrate projection --domain medautogrant');
     assert.equal(workbench.groups.by_domain.redcube.status_by_ref_family.artifact, 'resolved');
     assert.ok(workbench.groups.by_projection_status.substrate_refs_resolved.includes('medautoscience'));
     assert.ok(workbench.groups.by_projection_status.substrate_refs_resolved.includes('medautogrant'));
     assert.ok(workbench.groups.by_projection_status.substrate_refs_resolved.includes('redcube'));
-    assert.ok(workbench.groups.by_sidecar_status.resolved.includes('medautoscience'));
-    assert.ok(workbench.groups.by_sidecar_status.resolved.includes('medautogrant'));
-    assert.ok(workbench.groups.by_sidecar_status.resolved.includes('redcube'));
+    assert.ok(workbench.groups.by_domain_handler_status.resolved.includes('medautoscience'));
+    assert.ok(workbench.groups.by_domain_handler_status.resolved.includes('medautogrant'));
+    assert.ok(workbench.groups.by_domain_handler_status.resolved.includes('redcube'));
     assert.ok(workbench.groups.by_ref_family.workspace.some(
       (entry: { project_id: string; ref_id: string }) =>
         entry.project_id === 'redcube' && entry.ref_id === 'workspace_locator',
@@ -512,8 +512,8 @@ test('generic substrate workbench groups family refs for App and operator drilld
     assert.equal(workbench.non_authority_flags.opl_authorizes_publication_or_fundability_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(masSidecar.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(magSidecar.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(rcaSidecar.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masDomainHandler.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magDomainHandler.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaDomainHandler.fixtureRoot, { recursive: true, force: true });
   }
 });

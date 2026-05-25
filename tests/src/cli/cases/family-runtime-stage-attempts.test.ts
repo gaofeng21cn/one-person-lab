@@ -423,7 +423,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       '--checkpoint-ref',
       'checkpoint:analysis-slice-1',
       '--closeout-packet',
-      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-analysis"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","reason":"weak_primary_endpoint","next_owner":"med-autoscience","quality_ref":"publication_eval/latest.json","readiness_ref":"controller_decisions/latest.json","slo_ref":"slo:analysis-currentness","breached_slo_ids":["ai_reviewer_currentness"],"repair_command":"medautosci sidecar dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
+      '{"surface_kind":"stage_attempt_closeout_packet","closeout_refs":["receipt:analysis-closeout"],"consumed_refs":["evidence:table1"],"consumed_memory_refs":["memory:route-policy"],"writeback_receipt_refs":["memory-writeback:receipt-analysis"],"rejected_writes":[{"reason":"domain_truth_write_forbidden"}],"next_owner":"med-autoscience","domain_ready_verdict":"domain_gate_pending","route_impact":{"decision":"bounded_repair","reason":"weak_primary_endpoint","next_owner":"med-autoscience","quality_ref":"publication_eval/latest.json","readiness_ref":"controller_decisions/latest.json","slo_ref":"slo:analysis-currentness","breached_slo_ids":["ai_reviewer_currentness"],"repair_command":"medautosci domain-handler dispatch --task <task.json> --format json","package_refs":["package:submission-minimal"],"export_refs":["export:current-package"],"gap_report_refs":["gap:package-readiness"],"handoff_refs":["handoff:manual-submission"]}}',
     ], familyRuntimeEnv(stateRoot));
     const queryAfter = runCli([
       'family-runtime',
@@ -557,7 +557,7 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.observability_slo.repair_commands[0].command,
-      'medautosci sidecar dispatch --task <task.json> --format json',
+      'medautosci domain-handler dispatch --task <task.json> --format json',
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.observability_slo.authority_boundary.can_execute_repair_command,
@@ -608,8 +608,8 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
         route_target_kind: string;
         command_or_surface_ref: string;
       }) =>
-        action.route_target_kind === 'domain_sidecar' &&
-        action.command_or_surface_ref === 'medautosci sidecar dispatch --task <task.json> --format json'
+        action.route_target_kind === 'domain_handler' &&
+        action.command_or_surface_ref === 'medautosci domain-handler dispatch --task <task.json> --format json'
       ),
       true,
     );

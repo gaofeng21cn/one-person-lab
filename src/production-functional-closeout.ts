@@ -449,7 +449,7 @@ function summarizeAttemptEvidence(
       operator_action_route_refs: uniqueStrings(domainActions.map((action) => action.command_or_surface_ref)),
       operator_app_surface_route_refs: productionCloseoutActionRouteRefs(domainActions, 'app_surface'),
       operator_provider_signal_route_refs: productionCloseoutActionRouteRefs(domainActions, 'provider_signal'),
-      operator_domain_sidecar_route_refs: productionCloseoutActionRouteRefs(domainActions, 'domain_sidecar'),
+      operator_domain_handler_route_refs: productionCloseoutActionRouteRefs(domainActions, 'domain_handler'),
       operator_direct_skill_route_refs: productionCloseoutActionRouteRefs(domainActions, 'direct_skill'),
       transition_bridge_receipt_refs: uniqueStrings(domainTransitionBridgeAttempts.flatMap((attempt) =>
         attempt.evidence.receipt_refs
