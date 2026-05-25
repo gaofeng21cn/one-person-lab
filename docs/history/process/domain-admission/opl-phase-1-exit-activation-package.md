@@ -1,8 +1,13 @@
-# OPL Phase 1 Exit Activation Package
+# Historical Exit Activation Package
 
-## 目的
+Owner: `One Person Lab`
+Purpose: `historical_exit_activation_package_record`
+State: `history_only`
+Machine boundary: 本文只保存早期 exit activation package 的历史 freeze。当前 OPL 运行时、domain admission、provider readiness 和 family gap truth 继续归核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/specs/opl-domain-onboarding-contract.md`、contracts、CLI/read-model 和 domain-owned receipts。
 
-这份 reference-grade package 用来冻结：`OPL` 在当前 `Phase 1` closeout 结束时，究竟还能诚实地说到哪一步。
+## 历史目的
+
+这份 reference-grade package 当时用来冻结：`OPL` 在早期 closeout 结束时，究竟还能诚实地说到哪一步。
 
 它**不会**激活 runtime。
 它**不会**收录新 domain。
@@ -10,18 +15,18 @@
 
 它负责记录：
 
-- 当前 `Phase 1` 已经完成了什么
+- 当时阶段已经完成了什么
 - 哪些内容仍然被显式 deferred
-- `OPL` 要离开当前 `Phase 1` 必须满足哪些门槛
+- `OPL` 要离开当时阶段必须满足哪些门槛
 - 哪些门槛依赖外部 domain readiness，而不是继续在本仓做 wording 微调
 - `OPL` 自己还能继续完成什么
 - 一旦门槛真实满足，最小的更强 federation follow-on 会是什么
 
 曾经规划过的 machine-readable companion `contracts/opl-framework/phase-1-exit-activation-package.json` 未保留为当前合同面；当前可读 machine truth 回到 `contracts/opl-framework/task-topology.json`、`contracts/opl-framework/workstreams.json`、`contracts/opl-framework/domains.json` 和 [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)。
 
-## 已冻结的 `Phase 1` 完成面
+## 当时已冻结的完成面
 
-当前 `Phase 1` closeout 已冻结为下列已完成 tranche：
+当时 closeout 已冻结为下列已完成 tranche：
 
 1. `Phase 1 / G2 release-closeout`
 2. `Phase 1 / G3 thin handoff planning freeze hardening`
@@ -29,7 +34,7 @@
 4. `Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening`
 5. `Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening`
 
-由此得到的 formal entry 仍然是当前本地 `TypeScript CLI`-first / framework contract surface。
+由此得到的 formal entry 在当时仍然是本地 `TypeScript CLI`-first / framework contract surface。
 这也继续意味着：
 
 - 不进入 mutation entry
@@ -40,9 +45,9 @@
 - 不实现 managed web runtime
 - 不把 `OPL` 提升成 runtime owner
 
-## 显式 deferred 的内容
+## 当时显式 deferred 的内容
 
-即使当前 `Phase 1` closeout 完成后，下面这些内容仍然明确保持 deferred：
+即使当时 closeout 完成后，下面这些内容仍然明确保持 deferred：
 
 - `Grant Ops`、`Review Ops`、`Thesis Ops` 的任何 formal admission
 - 这些 candidate domain 的任何 `G2` discovery readiness
@@ -52,9 +57,9 @@
 - 任何 mutation entry、run launch、workspace write、shared execution core 或 managed web runtime
 - 任何把 `OPL` 提升成 truth store 或 runtime owner 的说法
 
-## 离开 `Phase 1` 的门槛
+## 当时离场门槛
 
-`OPL` 只有在下面全部成立时，才允许离开当前 `Phase 1`：
+`OPL` 当时只有在下面全部成立时，才允许离开该阶段：
 
 1. **本仓 public truth / contracts / tests 继续稳定**
    顶层 docs、machine-readable contracts 与 regression tests 持续对齐。
@@ -67,9 +72,9 @@
 5. **任何 wording 都不能漂到 runtime-owner 或 shared-runtime 叙述**
    `OPL` 必须继续保持为顶层 gateway/federation surface。
 
-## 当前冻结点的门槛判断
+## 当时冻结点的门槛判断
 
-在当前冻结点：
+在当时冻结点：
 
 - `OPL` 内部 truth/contract/test 门槛：**已满足**
 - candidate-domain closeout 门槛：**已满足**
@@ -82,7 +87,7 @@
 - 四仓同步面仍把 `redcube-ai` 记录在 `P0 credible green baseline repair`，其 active-mainline truth 与 formal-entry closeout 仍在推进中
 - 因此 `OPL` 现在还不能诚实声称：至少两个 admitted domain surface 已经稳定到足以激活更强 federation activation package
 
-## `OPL` 仍可自行继续完成的内容
+## 当时 `OPL` 仍可自行继续完成的内容
 
 在这条外部门槛变化前，`OPL` 仍可继续：
 
@@ -91,7 +96,7 @@
 - 维护 reference-grade sync surfaces，但不把它们抬升成 public-mainline truth
 - 仅在外部 admitted-domain readiness 真实变绿之后，再推进更强 federation wording/contracts
 
-## 最小下一阶段 tranche
+## 当时最小 follow-on tranche
 
 最小 follow-on 已冻结为：
 
@@ -100,12 +105,12 @@
 - **非目标：** 不激活 runtime，不新增 mutation entry，不实现 shared execution core，不实现 managed web runtime，也不推进任何 candidate-domain admission 或 readiness promotion
 - **验证：** 保持 canonical verification pack 通过，并补 focused wording/contract audit
 
-这个 follow-on **当前不会被激活**。
+这个 follow-on 在当时 **不会被激活**。
 它已经被冻结，但仍然 blocked on external readiness。
 
-## 当前诚实终态
+## 当时诚实终态
 
-在当前 repo-tracked freeze 上，诚实的 program state 是：
+在当时 repo-tracked freeze 上，诚实的 program state 是：
 
 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB`
 
@@ -114,4 +119,4 @@
 - `Phase 1` closeout truth 已 absorb
 - 最小下一阶段定义已冻结
 - 不会为了“自动推进”而伪造一个下一阶段
-- 当前 blocker 是外部 domain readiness，而不是本仓还差一次 wording pass
+- 当时 blocker 是外部 domain readiness，而不是本仓还差一次 wording pass。当前 readiness / blocked truth 必须回到 active gap plan、framework readiness 和 domain-owned receipts 读取。

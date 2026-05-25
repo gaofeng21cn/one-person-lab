@@ -1,6 +1,11 @@
-# Historical OPL Phase 2 生态同步 Owner Line Brief
+# Historical Ecosystem Sync Owner Line Brief
 
-> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md` 和 `contracts/opl-framework/*.json` 为准。
+Owner: `One Person Lab`
+Purpose: `historical_ecosystem_sync_owner_line`
+State: `history_only`
+Machine boundary: 本文只保存早期生态同步 owner-line 简报。当前 OPL product/runtime truth、domain admission truth、reference lifecycle 和 evidence authority 继续归核心五件套、active gap plan、domain onboarding spec、contracts、CLI/read-model 与 domain-owned manifests / receipts。
+
+> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/active/current-state-vs-ideal-gap.md`、`docs/specs/opl-domain-onboarding-contract.md` 和 live contracts / read-model 为准。
 > 2026-05-02 退役更新：OMX 已退出当前 OPL 开发环境；本文件不得作为 OMX continuation、prompt 模板或 worktree 长跑入口使用。
 
 状态锚点：`2026-05-02`
@@ -21,12 +26,14 @@
 - 新的 runtime activation package；
 - 把 `OPL` 升格成 runtime owner 的授权。
 
-当前配套的 repo-tracked follow-on truth 固定为：
+当时配套的 repo-tracked follow-on truth 固定为：
 
 - `contracts/opl-framework/phase-2-central-reference-sync-board.json`
 - `contracts/opl-framework/phase-2-admitted-domain-delta-intake-refresh.json`
 - `docs/references/opl-phase-2-central-reference-sync-board.md`
 - `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
+
+这些路径现在只按 historical path refs 阅读；若当前 checkout 不再保留对应 active reference 或 contract，不能据此恢复旧 surface。
 
 ## 当时结论
 
@@ -37,15 +44,15 @@
 - 持续吸收 `MedAutoScience` 与 `RedCube AI` 等 admitted domain 新落地的 repo-tracked truth，
 - 并把顶层 federation wording、中央状态表、执行板、任务板、提示词模板与 acceptance/reference surfaces 同步到最新一致状态。
 
-当前这条线要同步的 admitted-domain delta，已经包括：
+当时这条线要同步的 admitted-domain delta，包括：
 
-- `RedCube AI` 当前 latest absorbed delta pack 已推进到 upstream runtime-owner cutover、repo-verified `product frontdoor / federated product entry / session continuity / family manifest companions`，并进一步补到 `c124c5d` 的 `product-entry readiness` companion；中央 sync 不得再把它写成 pilot prep、待吸收默认执行器，或 quickstart-only provenance；
-- `RedCube AI` 当前 truthful next gap 已不再是“有没有默认执行器实现”，而是 mature end-user shell 与 managed web productization 仍未落地；中央 sync 需要把这个 gap 写回顶层参考面，而不是继续停留在旧 continuation-board 语义；
-- `MedAutoScience` 当前 latest absorbed repo-side delta pack 已推进到 `9b5cea8`、`7ee19a8` 与 `6c64264`，不能再只停留在 `5366d18`；
+- `RedCube AI` 当时 latest absorbed delta pack 已推进到 upstream runtime-owner cutover、repo-verified `product frontdoor / federated product entry / session continuity / family manifest companions`，并进一步补到 `c124c5d` 的 `product-entry readiness` companion；中央 sync 不得再把它写成 pilot prep、待吸收默认执行器，或 quickstart-only provenance；
+- `RedCube AI` 当时 truthful next gap 已不再是“有没有默认执行器实现”，而是 mature end-user shell 与 managed web productization 仍未落地；中央 sync 需要把这个 gap 写回顶层参考面，而不是继续停留在旧 continuation-board 语义；
+- `MedAutoScience` 当时 latest absorbed repo-side delta pack 已推进到 `9b5cea8`、`7ee19a8` 与 `6c64264`，不能再只停留在 `5366d18`；
 - `MedAutoScience` 已冻结的 `manual stabilization checklist`、verification-surface layering 与 runtime/workspace repair priorities 仍属于中央 sync 时必须保留的 repo-side truth；
 - `Med Auto Grant` 仍允许作为中央状态矩阵里的 signal-only / non-admitted status reference，但不参与 admitted-domain activation；若中央说明引用其本地 runtime baseline，应同步到 post-`R5.A` local runtime hardening 与 `98df81f` 的 repo-tracked control-plane migration，而不是 admission 事实。
 
-换句话说，`OPL` 现在适合开的不是“更大平台实现线”，而是：
+换句话说，`OPL` 当时适合开的不是“更大平台实现线”，而是：
 
 - `Phase 2 ecosystem reference-sync and admitted-domain federation upkeep`
 - 而且这条 owner line 不再只是一句 owner note，而是有一块已预冻结的 tranche board：
@@ -63,12 +70,12 @@
    - `docs/references/contract-convergence-v1-execution-board.md`
    - `docs/references/runtime-alignment-taskboard.md`
    需要同步更新；
-2. 当前顶层 `README*`、`docs/roadmap*`、`contracts/opl-framework/README*`、acceptance/reference surfaces 与 admitted-domain 最新真相出现漂移；
-3. 当前 `OPL` 顶层关于 formal entry、no-bypass、candidate-domain blocked truth、federation wording 的 repo-tracked surfaces 之间出现不一致。
+2. 当时顶层 `README*`、`docs/roadmap*`、`contracts/opl-framework/README*`、acceptance/reference surfaces 与 admitted-domain 最新真相出现漂移；
+3. 当时 `OPL` 顶层关于 formal entry、no-bypass、candidate-domain blocked truth、federation wording 的 repo-tracked surfaces 之间出现不一致。
 
-如果上述条件都不满足，`OPL` 不应为了“保持在跑”而硬开一条 story-first 线。
+如果上述条件都不满足，`OPL` 当时也不应为了“保持在跑”而硬开一条 story-first 线。
 
-## 当时的 owner line 目标
+## 当时同步线目标
 
 这条线的目标固定为：
 
@@ -82,13 +89,13 @@
    - no-bypass
    - candidate domains 继续 blocked below onboarding / non-admitted / non-G2 / non-G3 / non-handoff-ready
 
-当前第一条 activation package 只允许先做：
+当时第一条 activation package 只允许先做：
 
 - `phase_2_admitted_domain_delta_intake_refresh`
 
 也就是先把 latest absorbed admitted-domain delta 收进中央执行板、状态矩阵与任务板，再决定是否继续下一条 wording / historical-reference / regression sync tranche。
 
-## In Scope
+## 当时 In Scope
 
 - `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`
 - `docs/references/contract-convergence-v1-execution-board.md`
@@ -103,7 +110,7 @@
   - `contracts/opl-framework/*` supporting surfaces
   的同步收紧
 
-## Hard Boundaries
+## 当时 Hard Boundaries
 
 这条线不得越过下面边界：
 
@@ -116,7 +123,7 @@
 - 不实现 routed-action runtime
 - 不把 `Unified Harness Engineering Substrate` 写成已经抽出的共享代码框架
 
-## Recommended Verification Pack
+## 当时 Recommended Verification Pack
 
 每轮 closeout 至少重跑：
 
@@ -134,11 +141,11 @@
   - `G3`
   - `handoff-ready`
 
-## Honest Stop Conditions
+## 当时 Honest Stop Conditions
 
 出现任一情况就应停车：
 
-1. 当前 admitted-domain repo-tracked evidence 没有新增 delta；
+1. 当时 admitted-domain repo-tracked evidence 没有新增 delta；
 2. 继续推进需要新的仓外 domain evidence；
 3. 继续推进需要 admission 新 domain、打开 `G3` runtime、或改写 formal entry；
 4. 继续推进会把 reference sync 写成 runtime-owner story。

@@ -1,10 +1,15 @@
-# OPL Phase 2 中央 Reference Sync Tranche Board
+# Historical Central Reference Sync Tranche Board
+
+Owner: `One Person Lab`
+Purpose: `historical_central_reference_sync_board`
+State: `history_only`
+Machine boundary: 本文只保存早期中央 reference sync board 的历史过程记录。当前 reference/support owner、runtime truth、domain admission truth 和 docs governance coverage 继续归核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/active/development-document-portfolio.md`、contracts、CLI/read-model 与 domain-owned manifests / receipts。
 
 状态锚点：`2026-05-02`
 
 > 历史说明：这份 board 保留为 reference-sync 记录。OMX 已退出当前 OPL 开发环境；本文件不得再作为 OMX owner line、提示词模板或长跑 worktree 指引使用。
 
-## 文档目的
+## 历史文档目的
 
 这份文档记录 `one-person-lab` 在 Phase 2 后曾经冻结过的 follow-on reference-sync tranche board。
 
@@ -15,9 +20,9 @@
 - 连续完成中央 reference sync、gateway wording sync、历史迁移参考清理与 regression refresh，
 - 而不是每做完一个小 slice 就回到“没有下一棒”的停车状态。
 
-## 当前定位
+## 当时定位
 
-这块 board 仍然只是：
+这块 board 当时只是：
 
 - `Phase 2`
 - `Minimal admitted-domain federation activation package` 之后的 follow-on board
@@ -30,12 +35,12 @@
 - 新的 admitted-domain activation
 - 把 `OPL` 提升成 runtime owner 的许可
 
-## 当前预冻结的 tranche 顺序
+## 当时预冻结的 tranche 顺序
 
 1. `phase_2_admitted_domain_delta_intake_refresh`
    - 先把最新 absorbed admitted-domain delta 收进中央执行板、状态矩阵与任务板
-   - 当前已知 delta：
-     - `RedCube AI`：当前 latest absorbed delta 已推进到 upstream runtime-owner cutover 与 repo-verified `product frontdoor / federated product entry / session continuity / family-orchestration companion / product-entry readiness`，当前锚点为 `c124c5d`
+   - 当时已知 delta：
+     - `RedCube AI`：当时 latest absorbed delta 已推进到 upstream runtime-owner cutover 与 repo-verified `product frontdoor / federated product entry / session continuity / family-orchestration companion / product-entry readiness`，当时锚点为 `c124c5d`
      - `MedAutoScience`：`9b5cea8` `verification surfaces by test layer`、`7ee19a8` `runtime and workspace repair priorities`，以及 `6c64264` `workflow entry migration back to repo-tracked truth`
 2. `phase_2_gateway_surface_wording_sync`
    - 只同步最小必要的 gateway wording / contract hub wording / acceptance wording
@@ -48,11 +53,11 @@
 ## 执行原则
 
 - 每个 tranche 先更新 machine-readable / repo-tracked truth，再更新 doc / prompt / test
-- 当前执行入口遵循 Codex-only / repo-tracked truth 口径；不再通过 OMX 或仓内 `.omx` 控制面启动长跑
+- 当时执行入口遵循 Codex-only / repo-tracked truth 口径；不再通过 OMX 或仓内 `.omx` 控制面启动长跑
 - 只同步中央 reference surfaces 与最小必要 supporting surfaces
 - 不允许把中央 sync 偷写成新的 authority promotion
 
-## 当前明确允许同步的中央 surfaces
+## 当时明确允许同步的中央 surfaces
 
 - `docs/references/contract-convergence-v1-execution-board.md`
 - `docs/history/process/convergence-governance/ecosystem-status-matrix-2026-04.md`
@@ -78,7 +83,7 @@
 - 不把 `Grant Foundry -> Med Auto Grant` 从 signal-only 提升成 admitted domain
 - 不把 `Unified Harness Engineering Substrate` 写成已抽出的共享代码框架
 
-## 推荐 closeout 顺序
+## 当时推荐 closeout 顺序
 
 1. 先跑 `phase_2_admitted_domain_delta_intake_refresh`
 2. 若 intake refresh 后仍存在 wording drift，再继续 `phase_2_gateway_surface_wording_sync`
@@ -87,13 +92,13 @@
 
 如果在任一节点发现：
 
-- 中央 surfaces 已经没有真实漂移
+- 当时中央 surfaces 已经没有真实漂移
 - 下一步需要新的外部 domain evidence
 - 下一步会把 reference sync 写成 authority promotion
 
 就应诚实停车。
 
-## 推荐停车结论
+## 当时推荐停车结论
 
 - `CENTRAL_REFERENCE_CONVERGENCE_CLOSED_AND_ABSORBED`
 - `NO_NEW_ADMITTED_DOMAIN_DELTA_HONEST_STOP`

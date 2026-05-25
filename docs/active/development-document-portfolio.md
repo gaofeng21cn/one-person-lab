@@ -955,6 +955,55 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-25 22:34 CST`
+Tranche: `opl-domain-admission-history-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/history/process/domain-admission/**` 的 candidate workstream closeout、Phase 1 exit activation package、Phase 2 admitted-domain delta intake、central reference sync board 和 ecosystem sync owner-line 历史块。目标是让这些历史文档即使从搜索结果或文件首屏直接打开，也不会把 `Phase 1/2`、`G2/G3`、`gateway/federation`、`activation package`、`central sync`、old phase contracts / reference paths 或 `当前` wording 误读成当前 active runtime topology、domain admission rule、recurring worktree prompt、machine-readable contract surface、readiness oracle 或 production/domain ready claim。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、`docs/specs/opl-domain-onboarding-contract.md`。
+- OPL Doc Governance doctor preflight for this worktree: active truth pass, `finding_count=0`.
+- `opl agents conformance --family-defaults --json`.
+- `opl framework readiness --family-defaults --json`.
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`.
+
+Fresh read-model result:
+
+- `opl agents conformance` summary read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; this is structural conformance, not production readiness.
+- `framework readiness` read `status=framework_control_plane_available_with_operator_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=2`, `operator_payload_required_attention_tail_count=2`, `operator_payload_free_attention_tail_count=0`, `domain_blocked_attention_tail_count=212`, `evidence_envelope_open_count=2`, `evidence_envelope_blocked_count=199`, and provider cadence / capability SLO satisfied. This is refs-only operator attention, not domain ready or production ready.
+- `family-runtime evidence-worklist` read `open_worklist_item_count=1`, `open_safe_action_payload_required_item_count=1`, `open_safe_action_payload_free_item_count=0`, `domain_dispatch_evidence_workorder_count=1`, `domain_ready_authorized=false`, `production_ready_authorized=false`, and not-authorized claims include domain truth write, domain ready, quality verdict, artifact authority, production ready, domain repo physical delete authorization and default caller delete ready. The open workorder is a MAS owner payload route for `domain_owner/default-executor-dispatch`; it requires real domain receipt / owner-chain / no-regression refs or a domain-owned typed blocker and cannot be closed by OPL prose.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/history/process/domain-admission/README.md` directory role, current owner jump table, file table and read rules; all 5 history files under `docs/history/process/domain-admission/*.md`: candidate workstream closeout, Phase 1 exit activation package, Phase 2 admitted-domain delta intake refresh, Phase 2 central reference sync board, ecosystem sync owner-line brief. Support evidence came from the live truth inputs listed above. | `docs/history/process/domain-admission/README.md`; all 5 existing `docs/history/process/domain-admission/*.md` historical files; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none physically moved or deleted. These files already live under process history and remain useful dated provenance; this tranche strengthened directory indexing, current-owner jumps, file-level lifecycle headers and active-looking headings instead of removing historical context.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history, process/convergence-governance history and process/domain-admission history blocks, especially `docs/history/process/shared-boundary/**`, `docs/history/process/superpowers/**`, `docs/history/runtime-substrate/**`, `docs/references/**`, `docs/runtime/**`, `docs/product/**`, `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**` and long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, old Phase package and old reference-sync wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded history/reference/support chunk, preferably `docs/history/process/shared-boundary/**`, `docs/history/process/superpowers/**` or `docs/references/current-support/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
