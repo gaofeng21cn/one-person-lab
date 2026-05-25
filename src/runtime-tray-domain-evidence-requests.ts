@@ -6,6 +6,7 @@ import {
 import {
   classifyExternalEvidenceReceiptRefs,
 } from './external-evidence-receipt-classification.ts';
+import { canonicalOwnerId } from './evidence-envelope.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -28,6 +29,31 @@ function recordList(value: unknown) {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function domainIdCandidates(...values: Array<string | null | undefined>) {
+  const candidates = uniqueStrings(values.flatMap((value) => {
+    const text = stringValue(value);
+    if (!text) {
+      return [];
+    }
+    const key = text.toLowerCase().replace(/[\s_]+/g, '-');
+    const compact = key.replace(/-/g, '');
+    const canonical = canonicalOwnerId(text);
+    const canonicalKey = canonical.toLowerCase().replace(/[\s_]+/g, '-');
+    const canonicalCompact = canonicalKey.replace(/-/g, '');
+    return [
+      text,
+      key,
+      compact,
+      key.replace(/-/g, '_'),
+      canonical,
+      canonicalKey,
+      canonicalCompact,
+      canonicalKey.replace(/-/g, '_'),
+    ];
+  }));
+  return candidates;
 }
 
 function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
@@ -62,6 +88,37 @@ function externalEvidenceReceiptsForRequest(domainId: string, requestId: string)
     domain_id: domainId,
     request_id: requestId,
   });
+}
+
+function externalEvidenceReceiptsForDomain(domainId: string) {
+  return listExternalEvidenceReceipts({
+    domain_id: domainId,
+  });
+}
+
+function externalEvidenceReceiptsForDomainCandidates(domainIds: string[]) {
+  const seen = new Set<string>();
+  return domainIds.flatMap(externalEvidenceReceiptsForDomain).filter((receipt) => {
+    const key = `${receipt.domain_id}:${receipt.request_id}:${receipt.receipt_ref}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function dedicatedRuntimeReceiptRequestId(requestId: string) {
+  return requestId.startsWith('domain_dispatch:')
+    || requestId.startsWith('stage_production_evidence:');
+}
+
+function hasMemoryArtifactLifecycleReceiptRefs(receipt: ExternalEvidenceReceipt) {
+  return receipt.memory_writeback_receipt_refs.length > 0
+    || receipt.artifact_mutation_receipt_refs.length > 0
+    || receipt.package_lifecycle_receipt_refs.length > 0
+    || receipt.lifecycle_receipt_refs.length > 0
+    || receipt.restore_proof_refs.length > 0;
 }
 
 function summarizeExternalEvidenceReceipts(receipts: ExternalEvidenceReceipt[]) {
@@ -101,6 +158,56 @@ function classifyReceipt(receipt: ExternalEvidenceReceipt, domainWorkspacePath: 
     domainWorkspacePath,
     requestId,
   });
+}
+
+function externalReceiptRef(input: {
+  receipt: ExternalEvidenceReceipt;
+  role: 'external_evidence_receipt' | 'evidence_gate_receipt' | 'standalone_external_evidence_receipt';
+  domainId: string;
+  domainWorkspacePath: string | null;
+  requestId: string;
+  requestPackId?: string | null;
+  gateId?: string | null;
+}) {
+  const classification = classifyReceipt(
+    input.receipt,
+    input.domainWorkspacePath,
+    input.requestId,
+  );
+  return {
+    ref: input.receipt.receipt_ref,
+    role: input.role,
+    domain_id: input.domainId,
+    domain_workspace_path: input.domainWorkspacePath,
+    ...(input.gateId ? { gate_id: input.gateId } : {}),
+    request_id: input.requestId,
+    request_pack_id: input.requestPackId ?? input.receipt.request_pack_id,
+    receipt_status: input.receipt.receipt_status,
+    evidence_refs: input.receipt.evidence_refs,
+    domain_receipt_refs: classification.receipt_refs,
+    typed_blocker_refs: classification.typed_blocker_refs,
+    reclassified_typed_blocker_refs: classification.reclassified_typed_blocker_refs,
+    receipt_semantics: input.receipt.receipt_semantics ?? classification.receipt_semantics,
+    no_regression_refs: input.receipt.no_regression_refs,
+    release_dist_refs: input.receipt.release_dist_refs,
+    direct_hosted_parity_refs: input.receipt.direct_hosted_parity_refs,
+    owner_chain_refs: input.receipt.owner_chain_refs,
+    memory_writeback_receipt_refs: input.receipt.memory_writeback_receipt_refs,
+    artifact_mutation_receipt_refs: input.receipt.artifact_mutation_receipt_refs,
+    package_lifecycle_receipt_refs: input.receipt.package_lifecycle_receipt_refs,
+    lifecycle_receipt_refs: input.receipt.lifecycle_receipt_refs,
+    restore_proof_refs: input.receipt.restore_proof_refs,
+    authority_boundary: refsOnlyAuthorityBoundary(),
+    can_execute: false,
+  };
+}
+
+function ledgerReceiptKey(receipt: {
+  ref: string;
+  domain_id?: string | null;
+  request_id?: string | null;
+}) {
+  return `${receipt.domain_id ?? ''}:${receipt.request_id ?? ''}:${receipt.ref}`;
 }
 
 function functionalAuditModules(audit: JsonRecord | null | undefined) {
@@ -183,38 +290,16 @@ export function buildDomainEvidenceRequestRefs(
     });
   });
   const externalReceiptRefs = uniqueRefs(externalRequests.flatMap((request) =>
-    request.observed_receipts.map((receipt) => {
-      const classification = classifyReceipt(
+    request.observed_receipts.map((receipt) =>
+      externalReceiptRef({
         receipt,
-        request.domain_workspace_path,
-        request.request_id,
-      );
-      return {
-        ref: receipt.receipt_ref,
         role: 'external_evidence_receipt',
-        domain_id: request.domain_id,
-        domain_workspace_path: request.domain_workspace_path,
-        request_id: request.request_id,
-        request_pack_id: request.request_pack_id,
-        receipt_status: receipt.receipt_status,
-        evidence_refs: receipt.evidence_refs,
-        domain_receipt_refs: classification.receipt_refs,
-        typed_blocker_refs: classification.typed_blocker_refs,
-        reclassified_typed_blocker_refs: classification.reclassified_typed_blocker_refs,
-        receipt_semantics: receipt.receipt_semantics ?? classification.receipt_semantics,
-        no_regression_refs: receipt.no_regression_refs,
-        release_dist_refs: receipt.release_dist_refs,
-        direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
-        owner_chain_refs: receipt.owner_chain_refs,
-        memory_writeback_receipt_refs: receipt.memory_writeback_receipt_refs,
-        artifact_mutation_receipt_refs: receipt.artifact_mutation_receipt_refs,
-        package_lifecycle_receipt_refs: receipt.package_lifecycle_receipt_refs,
-        lifecycle_receipt_refs: receipt.lifecycle_receipt_refs,
-        restore_proof_refs: receipt.restore_proof_refs,
-        authority_boundary: refsOnlyAuthorityBoundary(),
-        can_execute: false,
-      };
-    })
+        domainId: request.domain_id,
+        domainWorkspacePath: request.domain_workspace_path,
+        requestId: request.request_id,
+        requestPackId: request.request_pack_id,
+      })
+    )
   ));
   const evidenceGates = resolvedProjects.flatMap((project) => {
     const audit = project.manifest?.functional_privatization_audit;
@@ -256,40 +341,49 @@ export function buildDomainEvidenceRequestRefs(
     gate.external_receipt_status !== 'verified'
   );
   const evidenceGateReceiptRefs = uniqueRefs(evidenceGates.flatMap((gate) =>
-    gate.observed_receipts.map((receipt) => {
-      const classification = classifyReceipt(
+    gate.observed_receipts.map((receipt) =>
+      externalReceiptRef({
         receipt,
-        gate.domain_workspace_path,
-        gate.request_id,
-      );
-      return {
-        ref: receipt.receipt_ref,
         role: 'evidence_gate_receipt',
-        domain_id: gate.domain_id,
-        domain_workspace_path: gate.domain_workspace_path,
-        gate_id: gate.gate_id,
-        request_id: gate.request_id,
-        request_pack_id: gate.request_pack_id,
-        receipt_status: receipt.receipt_status,
-        evidence_refs: receipt.evidence_refs,
-        domain_receipt_refs: classification.receipt_refs,
-        typed_blocker_refs: classification.typed_blocker_refs,
-        reclassified_typed_blocker_refs: classification.reclassified_typed_blocker_refs,
-        receipt_semantics: receipt.receipt_semantics ?? classification.receipt_semantics,
-        no_regression_refs: receipt.no_regression_refs,
-        release_dist_refs: receipt.release_dist_refs,
-        direct_hosted_parity_refs: receipt.direct_hosted_parity_refs,
-        owner_chain_refs: receipt.owner_chain_refs,
-        memory_writeback_receipt_refs: receipt.memory_writeback_receipt_refs,
-        artifact_mutation_receipt_refs: receipt.artifact_mutation_receipt_refs,
-        package_lifecycle_receipt_refs: receipt.package_lifecycle_receipt_refs,
-        lifecycle_receipt_refs: receipt.lifecycle_receipt_refs,
-        restore_proof_refs: receipt.restore_proof_refs,
-        authority_boundary: refsOnlyAuthorityBoundary(),
-        can_execute: false,
-      };
-    })
+        domainId: gate.domain_id,
+        domainWorkspacePath: gate.domain_workspace_path,
+        requestId: gate.request_id,
+        requestPackId: gate.request_pack_id,
+        gateId: gate.gate_id,
+      })
+    )
   ));
+  const projectedReceiptRefs = new Set([
+    ...externalReceiptRefs.map(ledgerReceiptKey),
+    ...evidenceGateReceiptRefs.map(ledgerReceiptKey),
+  ]);
+  const standaloneExternalReceiptRefs = uniqueRefs(resolvedProjects.flatMap((project) => {
+    const audit = project.manifest?.functional_privatization_audit;
+    const domainId = audit?.target_domain_id ?? project.project_id;
+    const domainIds = domainIdCandidates(domainId, project.project_id, project.project);
+    return externalEvidenceReceiptsForDomainCandidates(domainIds)
+      .filter((receipt) =>
+        hasMemoryArtifactLifecycleReceiptRefs(receipt)
+        && !dedicatedRuntimeReceiptRequestId(receipt.request_id)
+      )
+      .filter((receipt) => !projectedReceiptRefs.has(ledgerReceiptKey({
+        ref: receipt.receipt_ref,
+        domain_id: receipt.domain_id,
+        request_id: receipt.request_id,
+      })))
+      .map((receipt) => externalReceiptRef({
+        receipt,
+        role: 'standalone_external_evidence_receipt',
+        domainId: receipt.domain_id,
+        domainWorkspacePath: project.workspace_path,
+        requestId: receipt.request_id,
+        requestPackId: receipt.request_pack_id,
+      }));
+  }));
+  const allExternalReceiptRefs = uniqueRefs([
+    ...externalReceiptRefs,
+    ...standaloneExternalReceiptRefs,
+  ]);
   const replacementExpectations = resolvedProjects.flatMap((project) => {
     const audit = project.manifest?.functional_privatization_audit;
     return (audit?.opl_replacement_expectations ?? []).map((expectation) => ({
@@ -348,9 +442,10 @@ export function buildDomainEvidenceRequestRefs(
   });
   return {
     surface_kind: 'opl_app_drilldown_domain_evidence_request_refs',
-    projection_policy: 'domain_declared_requests_refs_only_no_domain_truth_or_verdict',
+    projection_policy:
+      'domain_declared_requests_and_standalone_memory_artifact_lifecycle_receipts_refs_only_no_domain_truth_or_verdict',
     external_requests: uniqueRefs(externalRequests),
-    external_receipts: externalReceiptRefs,
+    external_receipts: allExternalReceiptRefs,
     evidence_gates: uniqueRefs(remainingEvidenceGates),
     evidence_gate_receipts: evidenceGateReceiptRefs,
     replacement_expectations: uniqueRefs(replacementExpectations),
@@ -388,32 +483,32 @@ export function buildDomainEvidenceRequestRefs(
       verified_receipt_request_count: externalRequests.filter((request) =>
         request.external_receipt_status === 'verified'
       ).length,
-      external_evidence_receipt_count: externalReceiptRefs.length,
-      external_verified_receipt_count: externalReceiptRefs.filter((receipt) =>
+      external_evidence_receipt_count: allExternalReceiptRefs.length,
+      external_verified_receipt_count: allExternalReceiptRefs.filter((receipt) =>
         receipt.receipt_status === 'verified'
       ).length,
       external_verified_memory_writeback_receipt_ref_count: uniqueStrings(
-        externalReceiptRefs
+        allExternalReceiptRefs
           .filter((receipt) => receipt.receipt_status === 'verified')
           .flatMap((receipt) => receipt.memory_writeback_receipt_refs),
       ).length,
       external_verified_artifact_mutation_receipt_ref_count: uniqueStrings(
-        externalReceiptRefs
+        allExternalReceiptRefs
           .filter((receipt) => receipt.receipt_status === 'verified')
           .flatMap((receipt) => receipt.artifact_mutation_receipt_refs),
       ).length,
       external_verified_package_lifecycle_receipt_ref_count: uniqueStrings(
-        externalReceiptRefs
+        allExternalReceiptRefs
           .filter((receipt) => receipt.receipt_status === 'verified')
           .flatMap((receipt) => receipt.package_lifecycle_receipt_refs),
       ).length,
       external_verified_lifecycle_receipt_ref_count: uniqueStrings(
-        externalReceiptRefs
+        allExternalReceiptRefs
           .filter((receipt) => receipt.receipt_status === 'verified')
           .flatMap((receipt) => receipt.lifecycle_receipt_refs),
       ).length,
       external_verified_restore_proof_ref_count: uniqueStrings(
-        externalReceiptRefs
+        allExternalReceiptRefs
           .filter((receipt) => receipt.receipt_status === 'verified')
           .flatMap((receipt) => receipt.restore_proof_refs),
       ).length,

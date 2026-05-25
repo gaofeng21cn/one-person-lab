@@ -204,6 +204,148 @@ test('runtime action execute records and verifies external evidence request rout
   }
 });
 
+test('standalone verified external evidence receipts feed memory artifact lifecycle counters without domain requests', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standalone-evidence-memory-lifecycle-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
+  masManifest.functional_privatization_audit = {
+    target_domain_id: 'med-autoscience',
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(masManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'memory-artifact-lifecycle-live-receipts',
+      '--memory-writeback-receipt-ref',
+      'mas://memory/writeback/live-receipt.json',
+      '--artifact-mutation-receipt-ref',
+      'mas://artifact/mutation/live-receipt.json',
+      '--package-lifecycle-receipt-ref',
+      'mas://package/lifecycle/live-receipt.json',
+      '--lifecycle-receipt-ref',
+      'mas://lifecycle/cleanup/live-receipt.json',
+      '--restore-proof-ref',
+      'mas://restore/proof/live-receipt.json',
+      '--receipt-semantics',
+      'domain_owned_receipt_ref',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'agents',
+      'evidence',
+      'apply',
+      '--domain',
+      'medautoscience',
+      '--request-id',
+      'memory-artifact-lifecycle-live-receipts',
+      '--mode',
+      'verify',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    for (const requestId of [
+      'domain_dispatch:medautoscience:sat_fixture',
+      'stage_production_evidence:medautoscience:review',
+    ]) {
+      runCli([
+        'agents',
+        'evidence',
+        'apply',
+        '--domain',
+        'medautoscience',
+        '--request-id',
+        requestId,
+        '--typed-blocker-ref',
+        `mas://blockers/${requestId.replaceAll(':', '-')}.json`,
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      });
+      runCli([
+        'agents',
+        'evidence',
+        'apply',
+        '--domain',
+        'medautoscience',
+        '--request-id',
+        requestId,
+        '--mode',
+        'verify',
+      ], {
+        OPL_STATE_DIR: stateRoot,
+        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      });
+    }
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+
+    assert.equal(drilldown.summary.domain_external_evidence_request_count, 0);
+    assert.equal(drilldown.summary.domain_external_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_evidence_receipt_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_memory_writeback_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_artifact_mutation_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_package_lifecycle_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_lifecycle_receipt_ref_count, 1);
+    assert.equal(drilldown.summary.domain_external_verified_restore_proof_ref_count, 1);
+    assert.equal(
+      drilldown.domain_evidence_request_refs.external_receipts[0].role,
+      'standalone_external_evidence_receipt',
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.external_receipts[0].domain_id,
+      'medautoscience',
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_write_domain_truth,
+      false,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_read_memory_body,
+      false,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.external_receipts[0].authority_boundary.can_read_artifact_body,
+      false,
+    );
+    assert.equal(
+      drilldown.domain_evidence_request_refs.external_receipts.some(
+        (receipt: { request_id: string }) =>
+          receipt.request_id.startsWith('domain_dispatch:')
+          || receipt.request_id.startsWith('stage_production_evidence:'),
+      ),
+      false,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime action execute records functional semantic equivalence refs through payload file only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-functional-semantic-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
