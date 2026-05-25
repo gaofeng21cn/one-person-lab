@@ -1,8 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from '../domain-manifest/types.ts';
 import {
   buildGeneratedInterfaceBundle,
 } from '../domain-pack-compiler/generated-interface-read-model.ts';
 import {
+  buildAgentDefaultCallerReadinessForRepo,
   defaultCallerSurfaceGates,
 } from '../agent-platform-surface-ownership.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
@@ -159,7 +163,81 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
   };
 }
 
+function repoPathForProject(project: DomainManifestCatalogEntry) {
+  const workspacePath = stringValue(project.workspace_path);
+  if (!workspacePath) {
+    return null;
+  }
+  const repoDir = path.resolve(workspacePath);
+  return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))
+    ? repoDir
+    : null;
+}
+
+function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
+  project: DomainManifestCatalogEntry,
+  report: JsonRecord,
+) {
+  const domainId = stringValue(report.domain_id) ?? project.manifest?.target_domain_id ?? project.project_id;
+  const deletionWorklists = recordList(report.deletion_evidence_worklists)
+    .map((worklist) => compactDeletionEvidenceWorklist(worklist));
+  const readyWorklists = deletionWorklists.filter((worklist) =>
+    worklist.status === 'domain_evidence_required'
+  );
+  const openRequirementCount = readyWorklists.reduce(
+    (total, worklist) => total + worklist.missing_requirement_count,
+    0,
+  );
+  const countMissing = (requirementId: string) => readyWorklists.filter((worklist) =>
+    worklist.missing_requirement_ids.includes(requirementId)
+  ).length;
+  return {
+    ref: `opl://agents/${domainId}/default-caller-deletion-evidence`,
+    role: 'default_caller_deletion_evidence_domain_refs',
+    domain_id: domainId,
+    project_id: project.project_id,
+    binding_id: project.binding_id,
+    workspace_path: project.workspace_path,
+    status: openRequirementCount > 0
+      ? 'domain_evidence_required'
+      : 'structural_projection_clear_no_physical_delete_authorized',
+    source: 'agent_default_caller_readiness_repo_projection',
+    source_command: `opl agents default-callers --agent ${domainId}=${project.workspace_path ?? '<repo>'} --json`,
+    generated_interface_status: stringValue(report.generated_interface_status),
+    active_caller_cutover_proof_status:
+      stringValue(report.active_caller_cutover_proof_status),
+    active_caller_target_proof_status:
+      stringValue(report.active_caller_target_proof_status),
+    generated_wrapper_bundle_status:
+      stringValue(report.generated_wrapper_bundle_status),
+    deletion_evidence_worklists: deletionWorklists,
+    summary: {
+      deletion_evidence_worklist_count: deletionWorklists.length,
+      ready_domain_evidence_worklist_count: readyWorklists.length,
+      blocked_until_replacement_ready_count:
+        deletionWorklists.filter((worklist) => worklist.status !== 'domain_evidence_required').length,
+      open_deletion_evidence_requirement_count: openRequirementCount,
+      missing_domain_owner_receipt_or_typed_blocker_count:
+        countMissing('domain_owner_receipt_or_typed_blocker'),
+      missing_no_forbidden_write_proof_count:
+        countMissing('no_forbidden_write_proof'),
+      missing_tombstone_or_provenance_ref_count:
+        countMissing('tombstone_or_provenance_ref'),
+      physical_delete_authorized: false,
+      default_caller_delete_ready: false,
+      deletion_evidence_requirements_are_completion_claims: false,
+      not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntry) {
+  const repoDir = repoPathForProject(project);
+  if (repoDir) {
+    const report = buildAgentDefaultCallerReadinessForRepo(repoDir, project.project_id);
+    return buildDomainDefaultCallerDeletionRefsFromReadinessReport(project, report);
+  }
   if (project.status !== 'resolved' || !project.manifest) {
     return null;
   }
