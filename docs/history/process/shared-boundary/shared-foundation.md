@@ -1,23 +1,28 @@
 # 共享基础结构
 
-> 归档说明（`2026-05-14`）：本文已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。这里仅作为早期 Shared Foundation framing 的双语历史来源保留，不再是 active support 文档。
+Owner: `One Person Lab`
+Purpose: `historical_shared_foundation_framing`
+State: `history_only`
+Machine boundary: 本文只保存早期 shared-foundation framing provenance。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、核心五件套与当前 active docs。
+
+> 归档说明（`2026-05-14`）：本文已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。这里仅作为早期 Shared Foundation framing 的历史来源保留，不再是 active support 文档、runtime contract、domain-admission rule、shared-index roadmap 或 production readiness 证据。
 
 `OPL` 之所以能把多个工作流纳入同一体系，不只是因为它们都能让 Agent 参与，而是因为它们通过 stage-led framework model 复用同一套基础层。
 
 共享基础结构的含义是：不同 domain agent 使用兼容的资产、记忆、治理、交付与执行语言。
 `OPL` 负责共享语言与索引层，而具体对象的 canonical truth 继续留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
 
-## 当前 Auto 主线与未来 HITL 分层
+## 历史 Auto/HITL 分层 framing
 
-`OPL` 顶层现在冻结的是一条更窄、更可执行的规则：
+本文当时把 `OPL` 顶层规则收窄为一条更可执行的分层读法：
 
-- 当前各个 domain 仓都先按 `Auto-only` 主线理解
-- 未来如果要做 `Human-in-the-loop` 产品，应在同一 substrate 之上另建兼容的 sibling 或 upper-layer product
+- 各个 domain 仓先按 `Auto-only` 主线理解
+- 如果后续要做 `Human-in-the-loop` 产品，应在同一 substrate 之上另建兼容的 sibling 或 upper-layer product
 
-当前规则要求在下面这些方面继续共享同一套可复用基础层：
+这条历史规则要求在下面这些方面共享同一套可复用基础层：
 
-- 当前全自动执行
-- 未来高判断密度的人机回环返回点
+- 全自动执行
+- 高判断密度的人机回环返回点
 
 因此，真正需要跨 workstream 复用的，不只是数据、文献和模板，也包括：
 
@@ -92,7 +97,7 @@
 
 ## Framework 消费方式
 
-在理想的 `OPL` 结构里：
+本文当时设想的 `OPL` 消费方式是：
 
 - OPL 在 session/runtime、activation 与 indexing 层声明共享基础结构语言
 - 每个 domain agent 把这套语言水化到自己的工作流
@@ -100,9 +105,9 @@
 
 这就是为什么共享基础结构应位于任何单一 domain 仓库之上。
 
-## 当前已经清楚的部分
+## 当时已经清楚的具象化
 
-今天，`Research Foundry` 上这五层最清楚的具象化是：
+在本文写作时，`Research Foundry` 上这五层最清楚的具象化是：
 
 - `MedAutoScience` 作为 active 的 research domain agent
 
@@ -110,8 +115,9 @@
 
 - `RedCube AI` 作为视觉交付 domain agent，其中 `ppt_deck` 是最直接映射到 `Presentation Foundry` 的 family
 
-也正因为如此，`OPL` 已经不只是概念层。
-它已经有三个 active domain-agent surface：`MAS`、`MAG`、`RCA`。
+也正因为如此，本文当时已经把 `OPL` 从概念层推向 active domain-agent surface：`MAS`、`MAG`、`RCA`。
+
+当前读法回到目录 README 的 owner 跳转和 active docs。本文不授权 shared foundation 成为 domain truth store、mutation owner、publication/review/visual quality authority、artifact authority、memory body owner 或 public shared-index readiness claim。
 
 ## 延伸阅读
 

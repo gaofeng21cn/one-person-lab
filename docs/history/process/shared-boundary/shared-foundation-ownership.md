@@ -1,6 +1,11 @@
 # 共享基础结构归属
 
-> 归档说明（`2026-05-14`）：这份 ownership split 已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。本文只作为早期 Shared Foundation framing 的历史来源保留。
+Owner: `One Person Lab`
+Purpose: `historical_shared_foundation_ownership_split`
+State: `history_only`
+Machine boundary: 本文只保存早期 shared-foundation ownership split provenance。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、核心五件套与当前 active docs。
+
+> 归档说明（`2026-05-14`）：这份 ownership split 已吸收到当前 OPL Family 开发主参考、公开 operating model 和 active shared runtime/domain contracts。本文只作为早期 Shared Foundation framing 的历史来源保留，不再是 active support 文档、shared index spec、runtime mutation contract、domain truth authority 或 public-entry readiness claim。
 
 ## 目的
 
@@ -84,7 +89,7 @@
 
 ## 与 Domain Agent 的整合方式
 
-理想流程是：
+本文当时设想的整合流程是：
 
 1. 人类或 Agent 从 `OPL` 顶层发起请求。
 2. `OPL` 先在语义层 / 索引层识别哪些 shared-foundation 对象相关。
@@ -99,9 +104,9 @@
 - 但一旦任务进入 `Presentation Foundry`，视觉交付 truth 仍由 `RedCube AI` 持有
 - 而上游稿件与研究图表的 research asset truth 仍由 `MedAutoScience` 持有
 
-## 与未来 Shared Index 的关系
+## 历史 shared-index roadmap 边界
 
-当前路线图已经允许未来出现：
+本文当时允许后续出现：
 
 - shared asset index
 - shared memory index
@@ -112,16 +117,16 @@
 - 除非后续有显式新合同，否则保持 reference-only
 - 绝不自动把 canonical truth 从 domain 转移到 `OPL`
 
-这意味着：未来 shared index 可以提升 discoverability 和 reuse，但它仍不应变成：
+这意味着：shared index 即使在后续落地，也只能提升 discoverability 和 reuse；除非当前合同另行冻结，它仍不应变成：
 
 - 唯一 truth registry
 - domain asset 的 mutation owner
 - domain review state 的 review owner
 - domain deliverable 的 publish / release owner
 
-### 进入当前 public surface 之前的 readiness 条件
+### 历史 public-surface readiness 条件
 
-未来的 `shared asset index` 或 `shared memory index`，在后续显式合同至少冻结下面这些条件之前，不应出现在当前 `OPL` public surface 里：
+本文当时要求，`shared asset index` 或 `shared memory index` 在后续显式合同至少冻结下面这些条件之前，不应进入 `OPL` public surface：
 
 - 它究竟允许覆盖哪些 object class 与 identifier
 - 每类被索引对象的 owner split 与 governing refs
@@ -129,8 +134,8 @@
 - 显式禁止 truth shift、mutation ownership 转移，以及 review/publication takeover
 - public-surface index、supporting boundary surfaces 与 acceptance spec 上的 review / acceptance coverage
 
-在这些 readiness 条件冻结之前，任何 shared-index 提法都只能停留在 roadmap level。
-它不是当前 public-entry surface，不是 routed surface，不是 execution surface，也不是 truth-owner surface。
+在这些 readiness 条件和当前 machine contract/source/read-model evidence 冻结之前，任何 shared-index 提法都只能按历史 roadmap level 读取。
+它不是 public-entry surface，不是 routed surface，不是 execution surface，也不是 truth-owner surface。
 
 ## 非目标与反回归规则
 
@@ -144,16 +149,18 @@
 - 把 `MedAutoScience` 或 `RedCube AI` 降格成 `OPL` 下面的私有实现细节
 - 因为顶层 shared object 存在，就绕过 domain-agent entry
 
-## 当前阶段的实际解读
+## 历史阶段的实际解读
 
-在当前仓库阶段：
+在本文写作时：
 
 - shared foundation 主要还是以顶层语言与边界文档的形式被冻结
-- 当前仓库还没有 materialize 出完整的 shared asset index 或 shared memory index
+- 仓库还没有 materialize 出完整的 shared asset index 或 shared memory index
 - 但这不意味着 ownership split 还没定义
 
-所以当前更准确的解读应是：
+所以当时更准确的解读是：
 
 - `OPL` 已经拥有 shared-foundation 的控制语言
 - 各 domain 已经拥有各自的具体 truth surface
-- 如果未来增加 shared index，也必须继续服从这套分工，除非后续有新的显式合同重新定义
+- 如果后续增加 shared index，也必须继续服从这套分工，除非后续有新的显式合同重新定义
+
+当前读法回到目录 README 的 owner 跳转、shared runtime/domain specs、runtime naming boundary、active gap plan 和 domain-owned manifests / receipts。本文不授权 OPL 上收 domain-owned truth、quality verdict、artifact authority、memory body、owner receipt 或 publication / fundability / visual ready 裁决。

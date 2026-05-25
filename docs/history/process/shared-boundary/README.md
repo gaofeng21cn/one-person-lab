@@ -1,19 +1,33 @@
 # Shared Boundary 过程历史
 
 Owner: `One Person Lab`
-Purpose: archived shared-boundary framing material
-State: `history`
-Machine boundary: 仅做人读 provenance。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 与当前 active docs。
+Purpose: `historical_shared_boundary_process_archive`
+State: `history_only`
+Machine boundary: 本目录只保存已吸收到当前 owner surface 的 shared-foundation framing provenance。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、核心五件套与当前 active docs。
 
-本目录保留原 `Shared Foundation` 与 `Shared Foundation Ownership` 页面。它们仍有效的 owner split 已吸收到当前 owner surface。
-旧页面里的双语、旧路径和旧命名只按历史来源读取；`docs/**` 当前只维护中文 canonical 内容。
+本目录保留原 `Shared Foundation` 与 `Shared Foundation Ownership` 页面。它们只解释早期 shared-foundation 语言如何形成，以及当时如何拆分 OPL 顶层索引 / 共享语义与 domain-owned truth。仍有效的 owner split 已吸收到当前 owner surface；这里不再作为 active support、runtime contract、domain admission rule、shared-index roadmap 或 execution queue。
 
-当前真相现在看：
+当前 owner 跳转：
 
-- [OPL Family 开发主参考](../../../active/opl-family-development-reference.md)
-- [OPL 运行模型](../../../public/operating-model.md)
-- [共享运行时合同](../../../specs/shared-runtime-contract.md)
-- [共享领域合同](../../../specs/shared-domain-contract.md)
-- [Runtime 命名与边界合同](../../../runtime/opl-runtime-naming-and-boundary-contract.md)
+| 当前问题 | 当前 owner |
+| --- | --- |
+| OPL family 当前完成进度、功能/结构差距、证据差距和下一轮 baton | [OPL Family 当前状态与理想目标差距](../../../active/current-state-vs-ideal-gap.md) |
+| OPL / Foundry Agents 目标态和 shared primitive 上收边界 | [OPL 与 Foundry Agents 理想目标态](../../../references/runtime-substrate/opl-family-agent-ideal-state.md) |
+| 共享 runtime / long-running provider 边界 | [共享运行时合同](../../../specs/shared-runtime-contract.md) 与 [Runtime 命名与边界合同](../../../runtime/opl-runtime-naming-and-boundary-contract.md) |
+| 共享 domain 行为、formal-entry、gate 和 no-bypass 边界 | [共享领域合同](../../../specs/shared-domain-contract.md) |
+| 当前公开运行模型 | [OPL 运行模型](../../../public/operating-model.md) |
+| 文档组合生命周期和下一批治理范围 | [OPL 开发文档组合整理](../../../active/development-document-portfolio.md) |
 
-不要把这里的归档页面当成活跃 workflow、runtime、mutation、review、publication 或 domain-truth authority。
+归档文件：
+
+| 文件 | 历史角色 | 当前 owner |
+| --- | --- | --- |
+| [共享基础结构](./shared-foundation.md) | 记录早期 shared foundation 五层 framing、Auto-only / future HITL 分层和 MAS/MAG/RCA surface 形成语境。 | active gap plan、ideal-state reference、shared runtime/domain specs。 |
+| [共享基础结构归属](./shared-foundation-ownership.md) | 记录早期 OPL top-level index / domain truth / human-private workspace owner split。 | shared runtime/domain specs、runtime naming boundary、domain-owned manifests/receipts。 |
+
+读取规则：
+
+- 旧页面里的双语、旧路径、`当前`、`未来`、shared-index readiness、Auto/HITL 和 active domain-agent wording 都按写作时点的 framing 读取。
+- `OPL` 在当前真相中只持有 framework/runtime/locator/index/projection/control-plane refs；domain truth、quality verdict、artifact authority、memory body 和 owner receipt 继续归 domain 仓。
+- 任何 shared asset / memory / foundation index 提法，在没有当前 machine contract、source、CLI/read-model 和 owner acceptance 证明前，都不是 public-entry surface、routed surface、execution surface、truth-owner surface 或 production readiness claim。
+- 如果本目录历史记录仍包含有用边界判断，先吸收到上表当前 owner 文档，再保留原文作为 provenance。
