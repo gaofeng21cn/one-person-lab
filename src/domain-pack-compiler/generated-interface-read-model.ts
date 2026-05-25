@@ -97,8 +97,8 @@ const GENERATED_WRAPPER_DESCRIPTOR_SCOPE = [
   {
     surface_id: 'domain_handler',
     block_key: 'domain_handler',
-    target_surface_id: 'domain_action_adapter_export_dispatch',
-    descriptor_kind: 'opl_generated_domain_action_adapter_dispatch_descriptor',
+    target_surface_id: 'domain_handler',
+    descriptor_kind: 'opl_generated_domain_handler_descriptor',
   },
   {
     surface_id: 'workbench',
@@ -529,19 +529,7 @@ function buildActiveCallerTargetProof(descriptor: JsonRecord) {
   const readySurfaceIds = new Set(surfaceTargets
     .filter((target) => !isBlockedTarget(target))
     .map((target) => target.surface_id));
-  const blocked = surfaceTargets.filter((target) => {
-    const surfaceId = optionalString(target.surface_id);
-    if (
-      surfaceId === 'domain_handler'
-      && (
-        readySurfaceIds.has('domain_action_adapter_export_dispatch')
-        || readySurfaceIds.has('domain_action_adapter')
-      )
-    ) {
-      return false;
-    }
-    return isBlockedTarget(target);
-  });
+  const blocked = surfaceTargets.filter((target) => isBlockedTarget(target));
   return {
     surface_kind: 'opl_generated_surface_active_caller_target_proof',
     status: blocked.length === 0 ? 'ready' : 'blocked',
