@@ -76,6 +76,34 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       summary.domain_blocked_attention_tail_count,
     );
     assert.equal(
+      attentionSummary.domain_blocked_typed_blocker_ref_count,
+      summary.domain_blocked_typed_blocker_ref_count,
+    );
+    assert.equal(
+      attentionSummary.domain_blocked_unique_typed_blocker_ref_count,
+      summary.domain_blocked_unique_typed_blocker_ref_count,
+    );
+    assert.equal(
+      attentionSummary.domain_blocked_typed_blocker_group_count,
+      summary.domain_blocked_typed_blocker_group_count,
+    );
+    assert.equal(
+      summary.domain_blocked_typed_blocker_ref_count >= summary.domain_blocked_unique_typed_blocker_ref_count,
+      true,
+    );
+    assert.equal(
+      summary.domain_blocked_typed_blocker_group_count >= summary.domain_blocked_unique_typed_blocker_ref_count,
+      true,
+    );
+    assert.equal(
+      summary.domain_blocked_attention_grouping_semantics,
+      attentionSummary.domain_blocked_attention_grouping_semantics,
+    );
+    assert.equal(
+      summary.domain_blocked_attention_grouping_semantics,
+      'domain_owned_typed_blocker_refs_grouped_for_attention_only_raw_tail_counts_preserved',
+    );
+    assert.equal(
       summary.total_operator_attention_tail_count,
       summary.operator_actionable_attention_tail_count
         + summary.domain_blocked_attention_tail_count,

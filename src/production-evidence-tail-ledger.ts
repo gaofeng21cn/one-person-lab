@@ -188,6 +188,87 @@ function groupNextActionItems(items: JsonRecord[]) {
   }));
 }
 
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+}
+
+function typedBlockerRefsForNextActionItem(item: JsonRecord) {
+  const requirement = record(item.evidence_requirement);
+  const refs = uniqueStrings([
+    ...stringList(requirement.typed_blocker_refs),
+    stringValue(requirement.typed_blocker_ref),
+    ...stringList(item.typed_blocker_refs),
+    stringValue(item.typed_blocker_ref),
+  ]);
+  if (refs.length > 0) {
+    return refs;
+  }
+  const currentRef = stringValue(item.current_ref) ?? stringValue(requirement.current_ref);
+  return currentRef ? [currentRef] : [];
+}
+
+function groupTypedBlockerNextActionItems(items: JsonRecord[]) {
+  const typedBlockerItems = items.filter((item) => stringValue(item.status) === 'domain_owned_typed_blocker');
+  const refOccurrences: string[] = [];
+  const groups = new Map<string, JsonRecord & { items: JsonRecord[]; stage_or_requests: Set<string> }>();
+  for (const item of typedBlockerItems) {
+    const owner = stringValue(item.owner) ?? 'unknown';
+    const domain = stringValue(item.domain) ?? 'unknown';
+    const requirement = record(item.evidence_requirement);
+    const claimScope = stringValue(requirement.claim_scope) ?? 'unknown';
+    const typedBlockerRefs = typedBlockerRefsForNextActionItem(item);
+    const refsForGrouping = typedBlockerRefs.length > 0
+      ? typedBlockerRefs
+      : [`missing_typed_blocker_ref:${stringValue(item.item_id) ?? stringValue(item.source_tail_item_id) ?? 'unknown'}`];
+    for (const typedBlockerRef of refsForGrouping) {
+      if (!typedBlockerRef.startsWith('missing_typed_blocker_ref:')) {
+        refOccurrences.push(typedBlockerRef);
+      }
+      const key = [
+        owner,
+        domain,
+        claimScope,
+        typedBlockerRef,
+      ].join('/');
+      const group = groups.get(key) ?? {
+        owner,
+        domain,
+        claim_scope: claimScope,
+        typed_blocker_ref:
+          typedBlockerRef.startsWith('missing_typed_blocker_ref:') ? null : typedBlockerRef,
+        items: [],
+        stage_or_requests: new Set<string>(),
+      };
+      group.items.push(item);
+      const stageOrRequest = stringValue(item.stage_or_request)
+        ?? stringValue(item.stage_id)
+        ?? stringValue(item.request_id);
+      if (stageOrRequest) {
+        group.stage_or_requests.add(stageOrRequest);
+      }
+      groups.set(key, group);
+    }
+  }
+  const uniqueTypedBlockerRefs = uniqueStrings(refOccurrences);
+  return {
+    typedBlockerItems,
+    typedBlockerRefCount: refOccurrences.length,
+    uniqueTypedBlockerRefCount: uniqueTypedBlockerRefs.length,
+    groups: [...groups.values()].map((group) => ({
+      owner: group.owner,
+      domain: group.domain,
+      claim_scope: group.claim_scope,
+      typed_blocker_ref: group.typed_blocker_ref,
+      item_count: group.items.length,
+      stage_or_request_count: group.stage_or_requests.size,
+      stage_or_requests: [...group.stage_or_requests],
+      source_tail_item_ids: group.items
+        .map((item) => stringValue(item.source_tail_item_id) ?? stringValue(item.item_id))
+        .filter((entry): entry is string => Boolean(entry)),
+    })),
+  };
+}
+
 export function buildProductionTailNextActionLedger(input: {
   surfaceKind: string;
   owner?: string;
@@ -199,11 +280,13 @@ export function buildProductionTailNextActionLedger(input: {
     .map(normalizeNextActionItem)
     .filter((item) => item.status !== 'closed');
   const groups = groupNextActionItems(nextActionItems);
+  const typedBlockerGroups = groupTypedBlockerNextActionItems(nextActionItems);
   return {
     surface_kind: input.surfaceKind,
     owner: input.owner ?? 'one-person-lab',
     ledger_policy: PRODUCTION_TAIL_NEXT_ACTION_LEDGER_POLICY,
     grouping_keys: ['owner', 'domain', 'stage_or_request'],
+    typed_blocker_grouping_keys: ['owner', 'domain', 'claim_scope', 'typed_blocker_ref'],
     source_ref: input.sourceRef ?? null,
     source_tail_summary: input.sourceTailSummary,
     summary: {
@@ -214,9 +297,15 @@ export function buildProductionTailNextActionLedger(input: {
       closed_tail_item_count: numberValue(input.sourceTailSummary.closed_tail_item_count),
       next_action_item_count: nextActionItems.length,
       next_action_group_count: groups.length,
+      typed_blocker_ref_count: typedBlockerGroups.typedBlockerRefCount,
+      unique_typed_blocker_ref_count: typedBlockerGroups.uniqueTypedBlockerRefCount,
+      typed_blocker_group_count: typedBlockerGroups.groups.length,
+      typed_blocker_attention_semantics:
+        'domain_owned_typed_blocker_refs_grouped_for_attention_only_raw_tail_counts_preserved',
       blocking_policy: PRODUCTION_EVIDENCE_TAIL_BLOCKING_POLICY,
     },
     groups,
+    typed_blocker_groups: typedBlockerGroups.groups,
     next_action_items: nextActionItems,
     authority_boundary: tailAuthorityBoundary({
       can_claim_receipt_closure: false,

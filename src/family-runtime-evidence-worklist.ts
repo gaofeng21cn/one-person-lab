@@ -8,10 +8,7 @@ import {
 } from './evidence-requirement.ts';
 import { readFamilyRuntimeLifecycleApplyReceipts } from './family-runtime-lifecycle-index.ts';
 import { listExternalEvidenceReceipts } from './external-evidence-ledger.ts';
-import {
-  compactEvidenceEnvelopeProjection,
-  canonicalOwnerId,
-} from './evidence-envelope.ts';
+import { compactEvidenceEnvelopeProjection, canonicalOwnerId } from './evidence-envelope.ts';
 import {
   buildDomainDispatchEvidenceWorkorderPacket,
   compactDomainDispatchEvidenceWorkorderAttentionItems,
@@ -599,6 +596,10 @@ function worklistCounts(
       OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
     next_action_item_count: nextActionLedger.summary.next_action_item_count,
     next_action_group_count: nextActionLedger.summary.next_action_group_count,
+    next_action_typed_blocker_ref_count: nextActionLedger.summary.typed_blocker_ref_count,
+    next_action_unique_typed_blocker_ref_count: nextActionLedger.summary.unique_typed_blocker_ref_count,
+    next_action_typed_blocker_group_count: nextActionLedger.summary.typed_blocker_group_count,
+    next_action_typed_blocker_attention_semantics: nextActionLedger.summary.typed_blocker_attention_semantics,
     provider_scheduler_item_count: worklistItems.filter((item) =>
       item.claim_scope === 'provider_scheduler_cadence'
     ).length,
