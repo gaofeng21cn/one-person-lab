@@ -10,8 +10,10 @@ import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.t
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
 import {
+  findLiveMasDefaultExecutorDispatchAttempt,
   masDefaultExecutorDispatchIdentity,
   masDefaultExecutorDomainSourceFingerprint,
+  refreshMasDefaultExecutorLiveAttemptTaskLease,
 } from './family-runtime-provider-hosted-attempts.ts';
 
 type EnqueueTaskResult = {
@@ -88,6 +90,42 @@ function dropSupersededMasDefaultExecutorRows(
   return { rows, supersededCount };
 }
 
+function dropLiveMasDefaultExecutorRows(
+  db: DatabaseSync,
+  candidateRows: FamilyRuntimeTaskRow[],
+) {
+  let liveSkippedCount = 0;
+  const rows = candidateRows.filter((row) => {
+    const payload = payloadFromTask(row);
+    const liveAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
+    if (!liveAttempt) {
+      return true;
+    }
+    liveSkippedCount += 1;
+    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+      attempt: liveAttempt,
+      source: 'opl-family-runtime-tick',
+      reason: 'same_dispatch_live_stage_attempt_exists',
+    });
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_default_executor_live_dispatch_tick_skip',
+      source: 'opl-family-runtime-tick',
+      payload: {
+        reason: 'same_dispatch_live_stage_attempt_exists',
+        live_task_id: liveAttempt.task_id,
+        stage_attempt_id: liveAttempt.stage_attempt_id,
+        dispatch_ref: payload.dispatch_ref ?? null,
+        action_type: payload.action_type ?? null,
+        study_id: payload.study_id ?? null,
+      },
+    });
+    return false;
+  });
+  return { rows, liveSkippedCount };
+}
+
 export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   db: DatabaseSync,
   paths: ReturnType<typeof familyRuntimePaths>,
@@ -131,9 +169,13 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
   const allRows = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
   const scopedRowsBeforeSupersededFilter = candidateRows.filter((row) => taskRowMatchesScope(row, input.taskScope));
   const {
-    rows: scopedRows,
+    rows: scopedRowsAfterSuperseded,
     supersededCount: masDefaultExecutorSupersededCount,
   } = dropSupersededMasDefaultExecutorRows(scopedRowsBeforeSupersededFilter, allRows);
+  const {
+    rows: scopedRows,
+    liveSkippedCount: masDefaultExecutorLiveSkippedCount,
+  } = dropLiveMasDefaultExecutorRows(db, scopedRowsAfterSuperseded);
   const rows = scopedRows.slice(0, input.limit);
   const filteredCount = candidateRows.length - scopedRows.length;
   insertEvent(db, {
@@ -144,6 +186,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
       selected_count: rows.length,
       filtered_count: filteredCount,
       mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
+      mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -160,6 +203,7 @@ export async function runFamilyRuntimeQueueTick<TDispatch = unknown>(
     selected_count: rows.length,
     filtered_count: filteredCount,
     mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
+    mas_default_executor_live_skipped_count: masDefaultExecutorLiveSkippedCount,
     dispatches,
   };
 }

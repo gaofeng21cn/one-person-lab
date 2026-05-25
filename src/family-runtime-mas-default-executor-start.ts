@@ -12,7 +12,10 @@ import {
   listStageAttemptsForTask,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
-import { findLiveMasDefaultExecutorDispatchAttempt } from './family-runtime-provider-hosted-attempts.ts';
+import {
+  findLiveMasDefaultExecutorDispatchAttempt,
+  refreshMasDefaultExecutorLiveAttemptTaskLease,
+} from './family-runtime-provider-hosted-attempts.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
@@ -138,6 +141,10 @@ export async function startMasDefaultExecutorDispatchAttempt(
     && LIVE_STAGE_ATTEMPT_STATUSES.has(attempt.status)
   )) ?? null;
   if (liveAttempt) {
+    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+      attempt: liveAttempt,
+      reason: 'same_task_live_stage_attempt_exists',
+    });
     insertEvent(db, {
       taskId: row.task_id,
       domainId: row.domain_id,
@@ -158,6 +165,10 @@ export async function startMasDefaultExecutorDispatchAttempt(
   }
   const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
   if (liveDispatchAttempt) {
+    refreshMasDefaultExecutorLiveAttemptTaskLease(db, {
+      attempt: liveDispatchAttempt,
+      reason: 'same_dispatch_live_stage_attempt_exists',
+    });
     insertEvent(db, {
       taskId: row.task_id,
       domainId: row.domain_id,

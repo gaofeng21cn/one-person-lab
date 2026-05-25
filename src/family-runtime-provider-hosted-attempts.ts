@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
-import { insertEvent, stableId } from './family-runtime-store.ts';
+import { insertEvent, nowIso, stableId } from './family-runtime-store.ts';
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
   isMasOwnerRouteTask,
@@ -71,6 +71,7 @@ export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-exe
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 const MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+const MAS_DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
 
 function hasActiveMasDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
   if (!taskId) {
@@ -91,12 +92,14 @@ function hasActiveMasDefaultExecutorTaskLease(db: DatabaseSync, taskId: string |
 function isCrossTaskLiveMasDefaultExecutorAttempt(
   db: DatabaseSync,
   attempt: ReturnType<typeof listStageAttempts>[number],
+  workspaceLocator: Record<string, unknown>,
 ) {
-  return MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES.has(attempt.status)
-    || (
-      attempt.status === 'queued'
-      && hasActiveMasDefaultExecutorTaskLease(db, attempt.task_id)
-    );
+  if (MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES.has(attempt.status)) {
+    return true;
+  }
+  return attempt.status === 'queued'
+    && hasActiveMasDefaultExecutorTaskLease(db, attempt.task_id)
+    && sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint');
 }
 
 function workspaceRootFromProfile(profile: string | null) {
@@ -236,10 +239,63 @@ export function findLiveMasDefaultExecutorDispatchAttempt(
     && attempt.executor_kind === 'codex_cli'
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
-    && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt)
+    && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt, workspaceLocator)
     && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
-    && sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint')
   )) ?? null;
+}
+
+export function refreshMasDefaultExecutorLiveAttemptTaskLease(
+  db: DatabaseSync,
+  input: {
+    attempt: ReturnType<typeof listStageAttempts>[number] | null;
+    source?: string;
+    reason: string;
+  },
+) {
+  const taskId = input.attempt?.task_id;
+  if (!taskId) {
+    return null;
+  }
+  const row = db.prepare(`
+    SELECT *
+    FROM tasks
+    WHERE task_id = ?
+  `).get(taskId) as FamilyRuntimeTaskRow | undefined;
+  if (!row || row.status !== 'running') {
+    return null;
+  }
+  const leaseOwner = row.lease_owner || `opl-family-runtime:${process.pid}`;
+  const leaseExpiresAt = new Date(Date.now() + MAS_DEFAULT_EXECUTOR_TASK_LEASE_MS).toISOString();
+  const refreshedAt = nowIso();
+  db.prepare(`
+    UPDATE tasks
+    SET lease_owner = ?, lease_expires_at = ?, updated_at = ?
+    WHERE task_id = ? AND status = 'running'
+  `).run(leaseOwner, leaseExpiresAt, refreshedAt, taskId);
+  insertEvent(db, {
+    taskId,
+    domainId: row.domain_id,
+    eventType: 'task_default_executor_live_attempt_lease_refreshed',
+    source: input.source ?? 'opl-family-runtime',
+    payload: {
+      reason: input.reason,
+      stage_attempt_id: input.attempt?.stage_attempt_id ?? null,
+      previous_lease_owner: row.lease_owner,
+      previous_lease_expires_at: row.lease_expires_at,
+      lease_owner: leaseOwner,
+      lease_expires_at: leaseExpiresAt,
+      authority_boundary: {
+        opl: 'provider_transport_lease_refresh_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    },
+  });
+  return {
+    task_id: taskId,
+    lease_owner: leaseOwner,
+    lease_expires_at: leaseExpiresAt,
+  };
 }
 
 function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
