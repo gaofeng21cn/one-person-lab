@@ -1254,6 +1254,56 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 00:58 CST`
+Tranche: `opl-product-docs-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/product/**` 的 App/workbench 与 public surface 支撑文档。目标是确认 product 支撑面只解释 App/operator entry、public surface、action routing、runtime/domain truth 投影边界和历史 gateway/federation 读法，不把 App user-path evidence、zero-open worklist、provider proof、safe action route、Runtime Manager route-support 或 public surface 索引写成 App release ready、domain ready、production ready、owner-chain closeout、quality/export verdict 或 active `/goal` baton。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、`docs/docs_portfolio_consolidation.md`。
+- Product docs: `docs/product/README.md`, `docs/product/opl-public-surface-index.md`.
+- CLI/read-model surfaces: `opl runtime app-operator-drilldown --json`, `opl framework readiness --family-defaults --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`.
+- CLI help surfaces: `opl runtime action execute --help`, `opl runtime app-release-evidence record --help`, `opl runtime app-release-evidence verify --help`, `opl runtime app-release-evidence long-operator start --help`, `opl runtime app-release-evidence long-operator finish --help`.
+
+Fresh read-model result:
+
+- `opl runtime app-operator-drilldown --json` read `availability=available`, `operator_action_route_count=304`, `app_execution_bridge_safe_action_route_count=54`, `app_release_user_path_evidence_open_gate_count=0`, `app_release_user_path_production_user_path_ready=true`, `app_release_user_path_release_ready_claimed=false`, `app_release_user_path_production_ready_claimed=false`, `codex_app_runtime_role_status=opl_temporal_hosted_autonomous`, `codex_app_drives_long_running_tasks=false`, no default next safe action, and refs-only authority boundary with no domain truth write authority.
+- `opl framework readiness --family-defaults --json` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=224`, `evidence_envelope_blocked_count=211`, provider cadence/capability SLO satisfied, and non-goals still include no domain ready, production ready, artifact authority, quality/export verdict, domain action execution, owner receipt closeout or monitor freshness closeout.
+- `opl family-runtime evidence-worklist ... --detail full --json` read `open_worklist_item_count=0`, `open_safe_action_payload_required_item_count=0`, `open_safe_action_payload_free_item_count=0`, `zero_open_worklist_blocked_refs_only_envelope_count=211`, `domain_ready_authorized=false`, `production_ready_authorized=false`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`, and not-authorized claims include `domain_repo_physical_delete_authorization` and `default_caller_delete_ready`.
+- `opl runtime action execute --help` confirms the App/operator safe action shell exists and explicitly executes through OPL-owned safe action routing without taking domain truth authority.
+- `runtime app-release-evidence record|verify` and `runtime app-release-evidence long-operator start|finish` help confirms App release/user-path evidence intake and long-operator observation workorders remain refs-only / preflight-gated evidence surfaces, not release or production readiness verdicts.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/product/README.md` lifecycle header, App/workbench topology note, App/operator drilldown paragraph, App execution bridge route semantics, App release/user path evidence boundary, cleanup/detail `command_domain_id` rule, content table; `docs/product/opl-public-surface-index.md` lifecycle header, purpose, active surface map, OPL-owned runtime/activation surface, domain capability surface, shared boundary support surface, gateway/federation history links, reading rules and completion definition. | this coverage ledger only |
+
+Archived / tombstoned / deleted docs:
+
+- none. Both files remain active product support. No product prose was changed because current wording already matches the fresh read-model and CLI-help boundaries.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history, process/convergence-governance history, process/domain-admission history, process/shared-boundary history, process/superpowers history, runtime-substrate history, current-support reference blocks, runtime docs and this `docs/product/**` tranche, especially `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**`, `docs/references/runtime-substrate/**`, `docs/references/operating-governance/**`, `docs/references/convergence-governance/**`, `docs/references/governance/**` and other long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining source/delivery/public/specs/reference body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager, managed-runtime and direct-entry wording must stay history-only or support-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded support chunk, preferably `docs/specs/**`, `docs/source/**`, `docs/delivery/**` or `docs/public/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
