@@ -65,7 +65,7 @@ import { writeFamilyRuntimeDispatchTask } from './family-runtime-dispatch-task.t
 import { blockTaskForStageAdmissionGate, buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
-import { commandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
+import { dispatchCommandForDomain, parseDispatchOutput } from './family-runtime-dispatch-command.ts';
 import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
@@ -178,9 +178,9 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
   });
 
   const dispatchPath = writeFamilyRuntimeDispatchTask(paths, { ...row, attempts: attempt });
-  const command = commandForDomain(row.domain_id, dispatchPath);
-  const result = runFamilyRuntimeDomainHandlerCommand(command, {
-    cwd: process.cwd(),
+  const command = dispatchCommandForDomain(row.domain_id, dispatchPath, payload);
+  const result = runFamilyRuntimeDomainHandlerCommand(command.command_preview, {
+    cwd: command.cwd,
     env: process.env,
   });
 
@@ -202,7 +202,7 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
       domainId: row.domain_id,
       eventType: 'task_dispatch_succeeded',
       source: 'opl-family-runtime',
-      payload: { command_preview: command, output },
+      payload: { command_preview: command.command_preview, command_cwd: command.cwd, output },
     });
     insertNotification(db, {
       taskId: row.task_id,
@@ -234,7 +234,7 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
           packet: typedCloseoutPacket,
         }).attempt)
       : checkpointedStageAttempts;
-    return { task_id: row.task_id, status: 'succeeded', command_preview: command, output, stage_attempts: stageAttempts };
+    return { task_id: row.task_id, status: 'succeeded', command_preview: command.command_preview, command_cwd: command.cwd, output, stage_attempts: stageAttempts };
   }
 
   const errorMessage = domainHandlerResultErrorMessage(result, 'Domain dispatch');
@@ -256,7 +256,7 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
     domainId: row.domain_id,
     eventType: nextStatus === 'dead_letter' ? 'task_dead_lettered' : 'task_dispatch_retry_queued',
     source: 'opl-family-runtime',
-    payload: { command_preview: command, exit_code: exitCode, stderr, stdout },
+    payload: { command_preview: command.command_preview, command_cwd: command.cwd, exit_code: exitCode, stderr, stdout },
   });
   insertNotification(db, {
     taskId: row.task_id,
@@ -279,7 +279,8 @@ async function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRun
   return {
     task_id: row.task_id,
     status: nextStatus,
-    command_preview: command,
+    command_preview: command.command_preview,
+    command_cwd: command.cwd,
     exit_code: exitCode,
     error: errorMessage,
     stage_attempts: stageAttempts.length > 0 ? stageAttempts : runningStageAttempts,

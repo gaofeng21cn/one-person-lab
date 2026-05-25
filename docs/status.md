@@ -32,7 +32,7 @@ OPL 已具备 framework 主干：domain descriptor / stage / action / memory dis
 
 Agent Lab、observability eval 和 mechanism improvement 继续是 refs-only control plane。OPL 只消费 refs，不写入 body、truth、artifact、owner receipt 或 quality verdict；domain truth、quality/export verdict、artifact authority、memory body 和 owner receipt 仍归 MAS/MAG/RCA。
 
-`family-runtime intake|tick --hydrate` 的 MAS profile 路径已收口到 OPL module locator：即使 operator 只提供 `OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE`，OPL 也会先解析 active MAS module checkout，再通过该 checkout 的 sidecar export hydrate pending family tasks，避免 PATH 上旧 `medautosci` 工具污染 live route。该路径仍只写 OPL queue / stage attempt / dispatch evidence；论文质量、owner receipt、typed blocker 和 artifact authority 继续由 MAS owner surface 给出。
+`family-runtime intake|tick --hydrate` 的 MAS profile 路径已收口到 OPL module locator：即使 operator 只提供 `OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE`，OPL 也会先解析 active MAS module checkout，再通过该 checkout 的 sidecar export hydrate pending family tasks，避免 PATH 上旧 `medautosci` 工具污染 live route。active MAS workspace binding 路径也保持 export / dispatch checkout 一致：当 pending task 来自 `workspace_binding` export，OPL 会把 `command_cwd` 写入 `opl_domain_export_context`，随后 dispatch 继续在同一个 bound workspace checkout 中调用 MAS `domain-handler dispatch`。该路径仍只写 OPL queue / stage attempt / dispatch evidence；论文质量、owner receipt、typed blocker 和 artifact authority 继续由 MAS owner surface 给出。
 
 `family-runtime intake|tick --hydrate --profile <profile>` 是 MAS profile 的显式 operator override，优先于 `OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE` 和 active workspace binding。该参数只用于选择 MAS sidecar export 的 profile，并继续通过 OPL module locator 调用 active MAS checkout；它不写 MAS study truth、不改变 publication verdict、不签 owner receipt，也不把 workspace-specific binding 逻辑下沉回 MAS。
 

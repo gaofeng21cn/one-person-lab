@@ -2,28 +2,94 @@ import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
 import { resolveOplModuleExecCommand } from './system-installation/modules.ts';
 
-export function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
-  const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
-  if (override) {
-    const tokens = override.split(/\s+/);
-    if (tokens.some((token) => token.includes('{task}'))) {
-      return tokens.map((token) => token.replaceAll('{task}', taskPath));
-    }
-    return [...tokens, taskPath];
-  }
+type DomainDispatchCommand = {
+  command_preview: string[];
+  cwd: string;
+};
 
-  if (domainId === 'medautoscience') {
-    return resolveOplModuleExecCommand('medautoscience', [
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function medAutoScienceWorkspaceBindingDispatchCommand(payload: Record<string, unknown>, taskPath: string) {
+  const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
+  if (context?.command_source !== 'workspace_binding') {
+    return null;
+  }
+  const commandCwd = optionalString(context.command_cwd);
+  if (!commandCwd) {
+    return null;
+  }
+  return {
+    command_preview: [
+      'uv',
+      'run',
+      'python',
+      '-m',
+      'med_autoscience.cli',
       'domain-handler',
       'dispatch',
       '--task',
       taskPath,
       '--format',
       'json',
-    ]).command_preview;
+    ],
+    cwd: commandCwd,
+  };
+}
+
+export function dispatchCommandForDomain(
+  domainId: FamilyRuntimeDomainId,
+  taskPath: string,
+  payload: Record<string, unknown> = {},
+): DomainDispatchCommand {
+  const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_DISPATCH`]?.trim();
+  if (override) {
+    const tokens = override.split(/\s+/);
+    const commandPreview = tokens.some((token) => token.includes('{task}'))
+      ? tokens.map((token) => token.replaceAll('{task}', taskPath))
+      : [...tokens, taskPath];
+    return {
+      command_preview: commandPreview,
+      cwd: process.cwd(),
+    };
   }
 
-  return [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'];
+  if (domainId === 'medautoscience') {
+    const workspaceBindingCommand = medAutoScienceWorkspaceBindingDispatchCommand(payload, taskPath);
+    if (workspaceBindingCommand) {
+      return workspaceBindingCommand;
+    }
+    const moduleCommand = resolveOplModuleExecCommand('medautoscience', [
+      'domain-handler',
+      'dispatch',
+      '--task',
+      taskPath,
+      '--format',
+      'json',
+    ]);
+    return {
+      command_preview: moduleCommand.command_preview,
+      cwd: moduleCommand.working_directory,
+    };
+  }
+
+  return {
+    command_preview: [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'],
+    cwd: process.cwd(),
+  };
+}
+
+export function commandPreviewForDomain(domainId: FamilyRuntimeDomainId, taskPath: string, payload: Record<string, unknown> = {}) {
+  return dispatchCommandForDomain(domainId, taskPath, payload).command_preview;
+}
+
+export function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string, payload: Record<string, unknown> = {}) {
+  return commandPreviewForDomain(domainId, taskPath, payload);
 }
 
 export function parseDispatchOutput(stdout: string) {

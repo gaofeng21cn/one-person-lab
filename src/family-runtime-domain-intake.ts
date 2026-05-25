@@ -282,6 +282,7 @@ function pendingTaskInputFrom(
         opl_domain_export_context: {
           command_source: exportContext.source,
           owner_fingerprint: exportContext.owner_fingerprint,
+          command_cwd: exportContext.cwd,
         },
         ...handoffPayloadFrom(item),
       },
