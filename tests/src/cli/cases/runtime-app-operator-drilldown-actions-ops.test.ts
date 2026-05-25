@@ -202,6 +202,100 @@ test('runtime App drilldown selects provider SLO proof action before scheduler i
   ]);
 });
 
+test('runtime App drilldown skips current provider SLO proof and surfaces domain dispatch payload work', () => {
+  const providerSloCurrentRoute = {
+    ref: 'opl family-runtime residency proof --provider temporal --production',
+    action_id: 'provider-slo:temporal:production-proof',
+    action_kind: 'provider_slo_cadence_execution',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_policy: 'opl_safe_action_shell',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    provider_kind: 'temporal',
+    provider_slo_dispatch_status: 'cadence_current',
+    opl_cli_args: ['residency', 'proof', '--provider', 'temporal', '--production'],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const domainDispatchRecordRoute = {
+    action_id: 'domain_dispatch:medautoscience:attempt-1:record',
+    action_kind: 'domain_dispatch_evidence_receipt_record',
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    route_requires_domain_or_app_payload: true,
+    can_close_without_domain_or_app_payload: false,
+    can_submit_to_safe_action_shell: true,
+    payload_owner: 'domain_repository_or_app_live_operator',
+    payload_template: {
+      domain_receipt_refs: [],
+      typed_blocker_refs: [],
+      owner_chain_refs: [],
+      no_regression_refs: [],
+      evidence_refs: [],
+    },
+    required_operator_payload_refs: [
+      'domain_receipt_refs',
+      'typed_blocker_refs',
+      'owner_chain_refs',
+      'no_regression_refs',
+      'evidence_refs',
+    ],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  };
+  const drilldown = applyAppOperatorDrilldownDetail({
+    operator_action_routing_refs: {
+      refs: [
+        providerSloCurrentRoute,
+        domainDispatchRecordRoute,
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [
+        providerSloCurrentRoute,
+        domainDispatchRecordRoute,
+      ],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+  const nextSafeAction = drilldown.attention_first_payload.next_safe_action;
+  assert.ok(nextSafeAction);
+
+  assert.equal(
+    nextSafeAction.action_id,
+    'domain_dispatch:medautoscience:attempt-1:record',
+  );
+  assert.equal(
+    nextSafeAction.action_kind,
+    'domain_dispatch_evidence_receipt_record',
+  );
+  assert.deepEqual(nextSafeAction.submit_args, [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    'domain_dispatch:medautoscience:attempt-1:record',
+    '--payload-file',
+    '<payload.json>',
+  ]);
+  assert.equal(nextSafeAction.route_requires_domain_or_app_payload, true);
+  assert.equal(nextSafeAction.can_execute_domain_action_directly, false);
+  const payloadWorkorder = record(nextSafeAction.payload_workorder);
+  const authorityBoundary = record(payloadWorkorder.authority_boundary);
+  assert.equal(authorityBoundary.can_claim_production_ready, false);
+});
+
 test('runtime App drilldown selects provider worker repair before provider proof when worker source is stale', () => {
   const drilldown = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {

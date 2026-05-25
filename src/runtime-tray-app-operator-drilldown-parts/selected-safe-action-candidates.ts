@@ -33,6 +33,12 @@ function firstString(...values: unknown[]) {
 
 function providerRouteClosedByCurrentSlo(action: JsonRecord, drilldown: JsonRecord) {
   const actionKind = stringValue(action.action_kind) ?? '';
+  if (
+    actionKind === 'provider_slo_cadence_execution'
+    && stringValue(action.provider_slo_dispatch_status) === 'cadence_current'
+  ) {
+    return true;
+  }
   if (!actionKind.startsWith('provider_scheduler_')) {
     return false;
   }
