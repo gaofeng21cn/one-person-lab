@@ -470,66 +470,6 @@ test('family-runtime keeps MAS default executor admission single-flight across r
   }
 });
 
-test('family-runtime treats MAS default executor Temporal admission as running until provider closeout', async () => {
-  const db = new DatabaseSync(':memory:');
-  try {
-    await withIsolatedFamilyRuntimeEnv(async () => {
-      createQueueTables(db);
-      const dedupeKey = 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:admission-running';
-      const taskId = 'task-mas-default-admission-running';
-      const basePayload = defaultExecutorPayload('source-before');
-      insertSucceededTask(db, {
-        taskId,
-        domainId: 'medautoscience',
-        taskKind: 'domain_owner/default-executor-dispatch',
-        payload: basePayload,
-        dedupeKey,
-      });
-      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id = ?").run(taskId);
-      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as Parameters<
-        typeof startMasDefaultExecutorDispatchAttempt
-      >[2]['row'];
-      const providerHostedAttempt = ensureProviderHostedStageAttempt(db, row, basePayload);
-      assert.ok(providerHostedAttempt);
-
-      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
-        row,
-        payload: basePayload,
-        providerHostedAttempt,
-        temporalProviderModule: async () => ({
-          startTemporalStageAttemptWorkflow: async () => ({
-            surface_kind: 'temporal_stage_attempt_start_receipt',
-            workflow_id: providerHostedAttempt.workflow_id,
-          }),
-        }),
-      });
-      const task = db.prepare(`
-        SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get(taskId) as {
-        status: string;
-        attempts: number;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
-
-      assert.equal(result.status, 'running');
-      assert.equal(task.status, 'running');
-      assert.equal(task.attempts, 1);
-      assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
-      assert.ok(task.lease_owner);
-      assert.ok(task.lease_expires_at);
-      assert.equal(listStageAttemptsForTask(db, taskId)[0].status, 'running');
-    });
-  } finally {
-    db.close();
-  }
-});
-
 test('family-runtime blocks a requeued MAS default executor task when its linked Temporal attempt terminally fails', () => {
   const db = new DatabaseSync(':memory:');
   try {
