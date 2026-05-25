@@ -10,7 +10,7 @@ Master entry: OPL family agent framework 的总开发入口是 `docs/references/
 
 ## 结论
 
-OPL family runtime 的生产在线架构已经从 Hermes-first online substrate 校准为 Temporal-backed production runtime。`temporal` 是 production online OPL 的必需 substrate，不是可选候选；它应像 `Codex CLI` 一样被安装、检测、修复、监控和持续维护。
+OPL family runtime 的生产在线架构已经把已退役 Hermes-first online substrate 校准为 Temporal-backed production runtime。`temporal` 是 production online OPL 的必需 substrate，不是可选候选；它应像 `Codex CLI` 一样被安装、检测、修复、监控和持续维护。
 
 Temporal 负责 durable execution：workflow history、activity retry/timeout、signal/query、heartbeat、workflow replay 和长期 attempt recovery。OPL 负责 provider abstraction、stage attempt ledger、typed family queue、human gate transport、dead-letter、observability 与 domain handoff。`Codex CLI` 仍是 stage 内默认 concrete executor。MAS/MAG/RCA 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority。
 
@@ -154,10 +154,10 @@ Provider 层不持有：
 
 交付：
 
-- Hermes-first 文档、contracts、install/readiness 文案从 active provider 面删除。
+- 已退役 Hermes-first 文档、contracts、install/readiness 文案从 active provider 面删除。
 - 旧 Hermes provider/proof-provider、Gateway/frontdoor/local-manager 和 install/update/remove action surface 从 active 面删除；保留项只能是 history/provenance/diagnostic source ref 或负向 guard。`hermes_agent` executor adapter 保留为显式非默认 backend。
 - Full readiness 目标从 Hermes readiness 转为 Temporal provider readiness，Temporal 是 production required provider。
-- Active-path residue scan 覆盖 public docs、active docs、runtime-substrate / operator-governance references 和 CLI root help，防止默认路径重新出现 Hermes/Gateway/frontdoor/local-manager wording。
+- Active-path residue scan 覆盖 public docs、active docs、runtime-substrate / operator-governance references 和 CLI root help，防止默认路径恢复已退役 Hermes/Gateway/frontdoor/local-manager wording。
 
 验收：
 

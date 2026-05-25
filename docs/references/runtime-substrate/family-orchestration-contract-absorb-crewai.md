@@ -7,7 +7,7 @@ Status: `support_reference_updated`
 Owner: `One Person Lab`
 Machine boundary: 本文是外部框架学习与合同吸收的人读记录；机器可读事实以 `contracts/family-orchestration/`、`contracts/opl-framework/`、source code、CLI/API 行为与 domain-owned manifests 为准。
 
-当前状态说明（2026-05-11）：本文保留“不引入 CrewAI runtime dependency，只吸收 contract pattern”的结论。旧 `gateway + federation` wording 已被 stage-led、provider-backed，并以 Agent executor 为最小执行单位的 framework 取代；OPL 当前职责是 family framework / shared contracts / discovery / projection / typed queue / stage attempt，不是 gateway-first federation product。
+当前状态说明（2026-05-11）：本文保留“不引入 CrewAI runtime dependency，只吸收 contract pattern”的结论。旧 `gateway + federation` wording 已被 stage-led、provider-backed，并以 Agent executor 为最小执行单位的 framework 取代；OPL 当前职责是 family framework / shared contracts / discovery / projection / typed queue / stage attempt，已退役 gateway-first federation product 只作为历史背景。
 
 ## 背景
 

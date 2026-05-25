@@ -142,7 +142,7 @@ Onboarding package 还必须说明这个新 domain：
 - 说明它的 stable agent runtime / tool / controller surface，以及代码与 Agent 的分工边界
 - 提供足够公开 wording，让 `OPL` 顶层文档可以链接它，而不需要替它发明身份
 
-公开面还必须吸收旧 product-entry / direct-entry 计划中仍有效的内容，但不能继承旧 Hermes-first 或 Gateway-first 路线。
+公开面还必须吸收旧 product-entry / direct-entry 计划中仍有效的内容，但已退役 Hermes-first 或 Gateway-first 路线不得恢复。
 
 每个 domain onboarding package 都必须显式区分三类入口：
 
