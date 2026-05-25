@@ -2207,6 +2207,59 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 05:35 CST`
+Tranche: `mas-standard-skeleton-source-delivery-boundary-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 MAS standard domain-agent skeleton anchor、source index 与 delivery index 的 current boundary，并更新 MAS docs-governance ledger。目标是把 `standard_domain_agent_skeleton` 读回 live `skeleton_mapping.py`、JSON anchors、artifact locator contract、generated surface handoff 和 focused tests：repo 只保存 physical anchors / locators / support docs；真实 source body、artifact body、memory body、quality verdict、publication decision 和 `current_package` 不进 repo skeleton；OPL generated / hosted surfaces 只运输和投影 refs。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、MAS docs-governance ledger, `docs/active/mas-ideal-state-gap-plan.md`, `docs/references/positioning/mas_ideal_state.md`, and preceding artifact / baseline / retention coverage ledger.
+- MAS docs: `docs/runtime/contracts/standard_domain_agent_skeleton.md`, `docs/source/README.md`, `docs/delivery/README.md`.
+- MAS machine/source refs: `agent/standard-domain-agent-anchor.json`, `contracts/runtime/standard-domain-agent-anchor.json`, `runtime/artifact_locator/workspace-runtime-artifact-root.locator.json`, `contracts/domain_descriptor.json`, `contracts/generated_surface_handoff.json`, `contracts/artifact_locator_contract.json`, `contracts/functional_privatization_audit.json`, `src/med_autoscience/controllers/opl_provider_ready_adapter_parts/skeleton_mapping.py`, `src/med_autoscience/controllers/product_entry_parts/manifest_surfaces.py`, and domain-handler functional closure consumers.
+- CodeGraph context/explore for `build_standard_domain_agent_skeleton_surface`, physical skeleton layout audit, product-entry manifest projection and domain-handler functional closure.
+- Focused test inventory: `tests/test_opl_family_persistence_adapter.py` standard skeleton / physical layout assertions and `tests/test_dev_preflight_contract.py` root governance contract surface classification.
+
+Fresh semantic result:
+
+- `standard_domain_agent_skeleton` is generated from `skeleton_mapping.py` and consumed by product-entry / domain-handler projection surfaces. Current machine truth requires `agent`, `contracts`, `runtime` and `docs` as repo-source dirs and forbids repo-tracked `artifacts` bodies.
+- New stage / prompt / skill / knowledge / quality / projection surfaces should use standard slots; existing CLI/MCP/product-entry/domain-handler/controller paths remain mapped active surfaces until OPL generated/default caller cutover and active-caller proof allow further thinning.
+- `workspace_runtime_artifact_root_locator_ref` and artifact locator templates can point to publication eval, controller decisions, stage review index, owner-route receipt and dispatch receipt refs, but they do not carry artifact bodies or authorize artifact mutation.
+- MAS source and delivery indexes now route readers to the skeleton support doc while preserving MAS authority: source readiness verdict, medical grounding, artifact authority, publication quality, memory acceptance, owner receipt and typed blocker remain MAS-owned; OPL generated / hosted surfaces only transport or project refs.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read / rewrite of `docs/runtime/contracts/standard_domain_agent_skeleton.md`; source/delivery boundary sections in `docs/source/README.md` and `docs/delivery/README.md`; live machine/source/test inventory listed above. | `docs/runtime/contracts/standard_domain_agent_skeleton.md`; `docs/source/README.md`; `docs/delivery/README.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed MAS files remain active support docs with distinct roles.
+
+Unreviewed docs:
+
+- MAS source-support documents outside `docs/source/README.md` that mention source truth, literature provider runtime, workspace knowledge or source readiness remain open.
+- MAS delivery / medical-display documents outside `docs/delivery/README.md` and previously covered inspection-package / artifact-contract docs remain open.
+- MAS product/status/workbench, progress/domain-ref projection and remaining runtime support shell coverage remains open outside already-covered blocks.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not treat skeleton anchors, descriptor readiness, conformance pass, repo tests, locator presence, OPL provider proof or generated surface handoff as paper closure, publication-ready, submission-ready, artifact-ready, source-ready, domain-ready, App release ready or production-ready.
+- Future source/delivery prose must not put workspace source body, artifact body, memory body, quality verdict body, `current_package` or publication decisions into repo skeleton.
+- Existing direct CLI/MCP/product-entry/sidecar/controller/read-model paths remain migration input, direct path, diagnostic ref, domain handler target or authority surface until OPL replacement parity, active-caller proof, MAS owner receipt / typed blocker parity, focused tests and no-forbidden-write proof justify thinning.
+
+Next tranche write scope:
+
+- MAS source-support paragraph coverage beyond `docs/source/README.md`, especially literature / source truth / workspace knowledge entries.
+- Or MAS delivery / medical-display docs that mention artifact lifecycle, baseline refresh, inspection package or display authority.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
