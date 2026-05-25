@@ -48,6 +48,7 @@ type PayloadHandoffWorklist = {
     open_worklist_item_count: number;
     open_safe_action_payload_required_item_count: number;
   };
+  next_safe_actions?: PayloadHandoffAction[];
   worklist_items: Array<{
     action_id: string;
     payload_workorder: {
@@ -77,6 +78,24 @@ type PayloadHandoffWorklist = {
     }>;
   };
   authority_boundary: Record<string, boolean>;
+};
+
+type PayloadHandoffAction = {
+  action_id: string;
+  payload_workorder: {
+    surface_kind: string;
+    authority_boundary: Record<string, boolean>;
+  };
+  accepted_payload_paths: Record<string, unknown>;
+  required_operator_payload_refs: string[];
+  supplemental_operator_payload_refs: string[];
+  payload_preflight_policy: string;
+  payload_preflight_blocked_error_kind: string;
+  identity_binding_policy: string;
+  identity_binding_guidance: {
+    authority_boundary: Record<string, boolean>;
+  };
+  worklist_item_is_completion_claim: boolean;
 };
 
 function domainDispatchBridgeRoute(actionId: string) {
@@ -297,4 +316,90 @@ test('family-runtime evidence-worklist joins domain-dispatch payload handoff fro
   assert.equal(item.evidence_requirement.can_claim_domain_ready, false);
   assert.equal(item.evidence_requirement.can_claim_production_ready, false);
   assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
+});
+
+test('family-runtime evidence-worklist summary next actions carry domain-dispatch payload handoff', async () => {
+  const actionId = 'domain_dispatch:medautoscience:sat_payload_handoff:record';
+  const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
+    familyDefaults: true,
+    providerKind: 'temporal',
+    executorKind: 'codex_cli',
+    runtimeSnapshot: {
+      runtime_tray_snapshot: {
+        runtime_health: {
+          provider_kind: 'temporal',
+        },
+        app_operator_drilldown: {
+          app_execution_bridge: {
+            safe_action_routes: [domainDispatchBridgeRoute(actionId)],
+          },
+          operator_action_routing_refs: {
+            refs: [domainDispatchOperatorRoute(actionId)],
+          },
+          domain_evidence_request_refs: {
+            external_receipts: [],
+            evidence_gate_receipts: [],
+          },
+          domain_dispatch_evidence: {
+            attempts: [],
+          },
+          default_caller_deletion_evidence_refs: {
+            domains: [],
+          },
+          evidence_envelope: {
+            surface_kind: 'opl_evidence_envelope_projection',
+            model_version: 'evidence_envelope.v1',
+            projection_policy: 'fixture_refs_only_projection',
+            source_refs: ['/fixture/evidence_envelope'],
+            summary: {
+              envelope_count: 1,
+              open_envelope_count: 1,
+              closed_envelope_count: 0,
+              blocked_envelope_count: 0,
+              superseded_envelope_count: 0,
+              owner_count: 1,
+              owners: ['med-autoscience'],
+            },
+            authority_boundary: {
+              refs_only: true,
+              can_authorize_domain_ready: false,
+              can_claim_production_ready: false,
+            },
+          },
+        },
+      },
+    } as never,
+  });
+
+  const worklist = output.family_runtime_evidence_worklist as unknown as PayloadHandoffWorklist;
+  const action = worklist.next_safe_actions?.find((entry) => entry.action_id === actionId);
+
+  assert.equal(worklist.summary.open_worklist_item_count, 1);
+  assert.ok(action);
+  assert.equal(action.payload_workorder.surface_kind, 'opl_domain_dispatch_evidence_payload_workorder');
+  assert.equal(action.payload_workorder.authority_boundary.can_generate_domain_owner_receipt, false);
+  assert.equal(action.payload_workorder.authority_boundary.can_generate_typed_blocker, false);
+  assert.equal(action.payload_workorder.authority_boundary.can_close_domain_ready, false);
+  assert.equal(action.payload_workorder.authority_boundary.can_claim_production_ready, false);
+  assert.deepEqual(action.required_operator_payload_refs, [
+    'domain_receipt_refs',
+    'owner_chain_refs',
+    'no_regression_refs',
+    'typed_blocker_refs',
+  ]);
+  assert.deepEqual(action.supplemental_operator_payload_refs, ['evidence_refs']);
+  assert.equal(
+    action.payload_preflight_policy,
+    'domain_dispatch_evidence_payload_must_pass_success_refs_or_typed_blocker_path_preflight',
+  );
+  assert.equal(
+    action.payload_preflight_blocked_error_kind,
+    'domain_dispatch_evidence_payload_preflight_blocked',
+  );
+  assert.equal(
+    action.identity_binding_policy,
+    'record_payload_identity_must_not_conflict_with_stage_attempt_target_identity',
+  );
+  assert.equal(action.identity_binding_guidance.authority_boundary.can_generate_domain_owner_receipt, false);
+  assert.equal(action.worklist_item_is_completion_claim, false);
 });
