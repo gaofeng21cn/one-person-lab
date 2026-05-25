@@ -56,6 +56,9 @@ import {
   buildProviderSchedulerActionRoutes,
 } from './runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
 import {
+  buildProviderWorkerActionRoutes,
+} from './runtime-tray-app-operator-drilldown-parts/provider-worker-action-routes.ts';
+import {
   periodicExecutionRefs,
   providerCapabilitySloSummary,
   providerCadenceWindowSummary,
@@ -664,6 +667,14 @@ function appExecutionBridge(
         'provider_required_next_action' in ref ? ref.provider_required_next_action : null,
       provider_slo_dispatch_status:
         'provider_slo_dispatch_status' in ref ? ref.provider_slo_dispatch_status : null,
+      provider_worker_lifecycle_status:
+        'provider_worker_lifecycle_status' in ref ? ref.provider_worker_lifecycle_status : null,
+      provider_worker_repair_action_id:
+        'provider_worker_repair_action_id' in ref ? ref.provider_worker_repair_action_id : null,
+      provider_worker_repair_command:
+        'provider_worker_repair_command' in ref ? ref.provider_worker_repair_command : null,
+      provider_worker_required_next_action:
+        'provider_worker_required_next_action' in ref ? ref.provider_worker_required_next_action : null,
       payload_requirement: 'payload_requirement' in ref ? ref.payload_requirement : null,
       payload_owner: 'payload_owner' in ref ? ref.payload_owner : null,
       payload_template: 'payload_template' in ref ? ref.payload_template : null,
@@ -1040,6 +1051,7 @@ function routeTransitionDrilldown(input: {
 
 export function buildAppOperatorDrilldown(input: {
   stageAttemptWorkbench: JsonRecord;
+  providerInspection?: JsonRecord;
   providerContinuousProof: JsonRecord;
   domainProjectionIngestion: JsonRecord;
   domainManifestProjects: DomainManifestCatalogEntry[];
@@ -1119,6 +1131,7 @@ export function buildAppOperatorDrilldown(input: {
     ...buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(record(functionalAuditRefs)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
     ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
+    ...buildProviderWorkerActionRoutes({ stageAttemptWorkbench: input.stageAttemptWorkbench, providerInspection: input.providerInspection }),
     ...buildProviderSchedulerActionRoutes(record(periodicRefs)),
     ...buildLegacyCleanupActionRoutes(record(legacyCleanupPlans)),
   ]);

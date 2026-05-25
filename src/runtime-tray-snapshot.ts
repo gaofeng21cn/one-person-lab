@@ -729,6 +729,7 @@ export async function buildRuntimeTraySnapshot(
   const domainProjectionIngestion = buildDomainProjectionIngestion(domainManifests.projects);
   const appOperatorDrilldown = buildAppOperatorDrilldown({
     stageAttemptWorkbench,
+    providerInspection: lifecycleProvider,
     providerContinuousProof,
     domainProjectionIngestion,
     domainManifestProjects: domainManifests.projects,

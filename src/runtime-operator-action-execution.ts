@@ -29,6 +29,8 @@ import {
   type OmaProductionConsumptionReceiptInput,
 } from './oma-production-consumption-ledger.ts';
 import { providerSloArgs } from './runtime-operator-action-execution-parts/provider-slo-action.ts';
+import { providerWorkerArgs, providerWorkerCommand, runProviderWorkerRepair } from './runtime-operator-action-execution-parts/provider-worker-action.ts';
+import { providerSchedulerArgs } from './runtime-operator-action-execution-parts/provider-scheduler-action.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -578,23 +580,6 @@ function stageProductionEvidenceVerifyResult(result: JsonRecord, route: JsonReco
   };
 }
 
-function providerSchedulerArgs(route: JsonRecord, commandOrSurfaceRef: string) {
-  const args = stringList(route.opl_cli_args);
-  if (args.length === 0) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL provider scheduler action route.', {
-      command_or_surface_ref: commandOrSurfaceRef,
-      supported_command: 'opl family-runtime scheduler <status|install|trigger|tick> --provider temporal',
-    });
-  }
-  if (args[0] !== 'scheduler') {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL provider scheduler route has invalid opl_cli_args.', {
-      action_id: stringValue(route.action_id),
-      opl_cli_args: args,
-    });
-  }
-  return args;
-}
-
 function legacyCleanupApplyArgs(route: JsonRecord, commandOrSurfaceRef: string) {
   const args = stringList(route.opl_cli_args);
   if (args.length === 0) {
@@ -709,6 +694,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       'app_release_user_path_evidence_receipt_record',
       'app_release_user_path_evidence_receipt_verify',
       'oma_production_consumption_receipt_record',
+      'provider_worker_restart',
       'provider_slo_cadence_execution',
       'provider_scheduler_status',
       'provider_scheduler_install',
@@ -803,6 +789,9 @@ async function executeRoute(
     const omaProductionConsumption = omaProductionConsumptionAction
       ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun })
       : null;
+    const providerWorkerRepair = actionKind === 'provider_worker_restart'
+      ? providerWorkerArgs(route, commandOrSurfaceRef)
+      : null;
     const { executionKind, runtimeArgs } = appReleaseUserPathEvidence
       ? {
           executionKind: appReleaseUserPathEvidence.executionKind,
@@ -822,6 +811,11 @@ async function executeRoute(
               allowEmptyRecordPayload: options.dryRun,
             }),
         }
+      : providerWorkerRepair
+      ? {
+          executionKind: 'opl_cli_provider_worker_repair',
+          runtimeArgs: [],
+        }
       : oplCliRuntimeArgs(route, commandOrSurfaceRef);
     return {
       execution_status: options.dryRun ? 'dry_run' : 'executed',
@@ -830,6 +824,8 @@ async function executeRoute(
       action_kind: actionKind,
       executed_runtime_command: appReleaseUserPathEvidenceAction || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
+        : providerWorkerRepair
+          ? providerWorkerCommand()
         : externalEvidenceAction
         ? `opl ${runtimeArgs.join(' ')}`
         : legacyCleanupAction
@@ -868,8 +864,10 @@ async function executeRoute(
                   )
                 : runExternalEvidenceApply(parseExternalEvidenceApplyArgs(runtimeArgs.slice(3)))),
             }
-          : legacyCleanupAction
+        : legacyCleanupAction
             ? runFamilyAgentLegacyCleanupApply(contracts, runtimeArgs.slice(3))
+            : providerWorkerRepair
+              ? runProviderWorkerRepair(providerWorkerRepair, runFamilyRuntime)
             : await runFamilyRuntime(runtimeArgs),
     };
   }

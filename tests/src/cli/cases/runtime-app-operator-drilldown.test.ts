@@ -1,3 +1,5 @@
+import net from 'node:net';
+
 import {
   assert,
   buildManifestCommand,
@@ -7,6 +9,7 @@ import {
   path,
   repoRoot,
   runCli,
+  spawn,
   test,
 } from '../helpers.ts';
 import {
@@ -16,17 +19,44 @@ import {
   insertProviderProof,
 } from './runtime-app-operator-drilldown-helpers.ts';
 
-test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', () => {
+test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const omaRepoDir = createOmaContractFixture(fixtureRoot);
+  const server = net.createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
+  const workerProbe = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => {}, 30_000);',
+  ], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  workerProbe.unref();
   const testEnv = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_META_AGENT_REPO_DIR: omaRepoDir,
+    OPL_TEMPORAL_ADDRESS: temporalAddress,
+    OPL_TEMPORAL_NAMESPACE: 'opl-app-drilldown-worker-stale',
+    OPL_TEMPORAL_TASK_QUEUE: 'opl-app-drilldown-worker-stale',
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:app-drilldown-current-worker',
   };
   const masManifest = buildMasAppOperatorDrilldownFixtureManifest();
   try {
+    assert.equal(typeof workerProbe.pid, 'number');
+    fs.mkdirSync(path.join(stateRoot, 'family-runtime'), { recursive: true });
+    fs.writeFileSync(path.join(stateRoot, 'family-runtime', 'temporal-worker.json'), `${JSON.stringify({
+      provider_kind: 'temporal',
+      pid: workerProbe.pid,
+      address: temporalAddress,
+      namespace: 'opl-app-drilldown-worker-stale',
+      task_queue: 'opl-app-drilldown-worker-stale',
+      started_at: new Date().toISOString(),
+      status: 'ready',
+      source_version: 'git:app-drilldown-old-worker',
+    }, null, 2)}\n`);
     runCli([
       'workspace',
       'bind',
@@ -191,10 +221,18 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(drilldown.summary.operator_action_route_count >= 26, true);
     assert.equal(
+      drilldown.summary.operator_action_route_count,
+      29,
+    );
+    assert.equal(
       drilldown.summary.operator_executable_route_count,
       drilldown.app_execution_bridge.summary.safe_action_route_count,
     );
     assert.equal(drilldown.summary.operator_executable_route_count >= 16, true);
+    assert.equal(
+      drilldown.summary.operator_executable_route_count,
+      19,
+    );
     assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 2);
     assert.equal(
       drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
@@ -309,6 +347,37 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(
       drilldown.periodic_execution_refs.authority_boundary.can_write_domain_truth,
+      false,
+    );
+    const providerWorkerRepairRoute = drilldown.operator_action_routing_refs.refs.find(
+      (ref: { action_id: string }) => ref.action_id === 'provider-worker:temporal:restart',
+    );
+    assert.equal(providerWorkerRepairRoute.action_kind, 'provider_worker_restart');
+    assert.equal(providerWorkerRepairRoute.owner, 'opl');
+    assert.equal(providerWorkerRepairRoute.route_target_kind, 'opl_cli');
+    assert.equal(providerWorkerRepairRoute.execution_policy, 'opl_safe_action_shell');
+    assert.equal(providerWorkerRepairRoute.execution_surface, 'opl runtime action execute');
+    assert.equal(providerWorkerRepairRoute.provider_worker_lifecycle_status, 'worker_source_stale');
+    assert.equal(providerWorkerRepairRoute.provider_worker_repair_action_id, 'restart_temporal_worker');
+    assert.equal(
+      providerWorkerRepairRoute.provider_worker_repair_command,
+      'opl family-runtime worker stop --provider temporal && opl family-runtime worker start --provider temporal',
+    );
+    assert.equal(
+      providerWorkerRepairRoute.provider_worker_required_next_action,
+      'Restart stale Temporal worker before rerunning provider proof or provider-backed Codex stages.',
+    );
+    assert.deepEqual(providerWorkerRepairRoute.opl_cli_args, [
+      'worker',
+      'repair',
+      '--provider',
+      'temporal',
+      '--action',
+      'restart',
+    ]);
+    assert.equal(providerWorkerRepairRoute.authority_boundary.can_write_domain_truth, false);
+    assert.equal(
+      providerWorkerRepairRoute.authority_boundary.can_execute_domain_action,
       false,
     );
     const schedulerStatusRoute = drilldown.operator_action_routing_refs.refs.find(
@@ -746,6 +815,30 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assert.equal(
       drilldown.app_execution_bridge.safe_action_routes.some(
+        (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
+          ref.action_id === providerWorkerRepairRoute.action_id
+          && ref.can_submit_to_safe_action_shell,
+      ),
+      true,
+    );
+    const bridgeProviderWorkerRepairRoute = drilldown.app_execution_bridge.safe_action_routes.find(
+      (ref: { action_id: string }) => ref.action_id === providerWorkerRepairRoute.action_id,
+    );
+    assert.equal(bridgeProviderWorkerRepairRoute.action_kind, 'provider_worker_restart');
+    assert.equal(
+      bridgeProviderWorkerRepairRoute.provider_worker_lifecycle_status,
+      'worker_source_stale',
+    );
+    assert.equal(
+      bridgeProviderWorkerRepairRoute.provider_worker_repair_action_id,
+      'restart_temporal_worker',
+    );
+    assert.deepEqual(
+      bridgeProviderWorkerRepairRoute.opl_cli_args,
+      providerWorkerRepairRoute.opl_cli_args,
+    );
+    assert.equal(
+      drilldown.app_execution_bridge.safe_action_routes.some(
         (ref: { action_id: string; can_submit_to_safe_action_shell: boolean; opl_cli_args: string[] }) =>
           ref.action_id === stageProductionAttemptStartRoute.action_id
           && ref.can_submit_to_safe_action_shell
@@ -814,7 +907,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     assertEvidenceTailAndDomainRefs(drilldown, snapshot);
   } finally {
+    try {
+      process.kill(workerProbe.pid!, 'SIGTERM');
+    } catch {
+      // The fixture process may already be gone on fast local cleanup.
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });

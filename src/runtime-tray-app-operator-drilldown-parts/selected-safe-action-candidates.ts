@@ -100,6 +100,7 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
   return actionKind === 'app_release_user_path_evidence_receipt_verify'
     || actionKind === 'app_release_user_path_evidence_receipt_record'
     || actionKind === 'oma_production_consumption_receipt_record'
+    || actionKind === 'provider_worker_restart'
     || actionKind === 'provider_slo_cadence_execution'
     || actionKind === 'stage_production_attempt_request'
     || actionKind === 'stage_production_evidence_receipt_record'
@@ -137,47 +138,50 @@ function actionPriority(action: JsonRecord) {
     || actionKind === 'oma_production_consumption_receipt_record') {
     return 1;
   }
-  if (actionKind === 'provider_slo_cadence_execution') {
+  if (actionKind === 'provider_worker_restart') {
     return 2;
   }
-  if (actionKind === 'stage_production_attempt_request') {
+  if (actionKind === 'provider_slo_cadence_execution') {
     return 3;
   }
-  if (actionKind === 'stage_production_evidence_receipt_record') {
+  if (actionKind === 'stage_production_attempt_request') {
     return 4;
   }
-  if (actionKind === 'stage_production_evidence_receipt_verify') {
+  if (actionKind === 'stage_production_evidence_receipt_record') {
     return 5;
   }
-  if (actionKind === 'domain_dispatch_evidence_receipt_verify') {
+  if (actionKind === 'stage_production_evidence_receipt_verify') {
     return 6;
   }
-  if (actionKind === 'domain_dispatch_evidence_receipt_record') {
+  if (actionKind === 'domain_dispatch_evidence_receipt_verify') {
     return 7;
+  }
+  if (actionKind === 'domain_dispatch_evidence_receipt_record') {
+    return 8;
   }
   if (actionKind === 'external_evidence_receipt_record'
     || actionKind === 'evidence_gate_receipt_record') {
-    return 8;
+    return 9;
   }
   if (actionKind === 'external_evidence_receipt_verify'
     || actionKind === 'evidence_gate_receipt_verify') {
-    return 9;
-  }
-  if (actionKind === 'provider_scheduler_install') {
     return 10;
   }
-  if (actionKind === 'provider_scheduler_status') {
+  if (actionKind === 'provider_scheduler_install') {
     return 11;
+  }
+  if (actionKind === 'provider_scheduler_status') {
+    return 12;
   }
   if (actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger') {
-    return 12;
+    return 13;
   }
   if (actionKind === 'legacy_cleanup_apply'
     || actionKind === 'legacy_cleanup_verify') {
-    return 13;
+    return 14;
   }
-  return 14;
+  return 15;
 }
 
 export function compareDefaultSelectedSafeActions(left: JsonRecord, right: JsonRecord) {
