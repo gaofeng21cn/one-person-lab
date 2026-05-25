@@ -85,6 +85,64 @@ test('typed blocker refs may close a route-declared required evidence gap withou
   assert.deepEqual(preflight.missing_required_evidence_refs, route.required_evidence_refs);
 });
 
+test('MAS paper-line owner-chain result payload feeds success refs without a ready claim', () => {
+  const preflight = assertDomainDispatchEvidencePayloadReady(route, {
+    evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
+    paper_line_owner_chain_results: [
+      {
+        surface_kind: 'mas_paper_line_owner_chain_result',
+        paper_line_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        result_kind: 'owner_receipt',
+        owner_receipt_refs: ['mas://dm003/domain-owner-receipt'],
+        stable_typed_blocker_refs: [],
+        progress_delta_refs: ['mas://dm003/ai-reviewer-currentness'],
+        no_forbidden_write_proof_ref: 'mas://dm003/no-forbidden-write',
+        body_included: false,
+        readiness_claims: {
+          claims_paper_closure: false,
+          claims_publication_ready: false,
+          claims_artifact_mutation_authorized: false,
+          claims_current_package_updated: false,
+        },
+      },
+    ],
+  });
+
+  assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.selected_payload_path, 'success_refs_path');
+  assert.equal(preflight.accepted_ref_counts.domain_receipt_refs, 1);
+  assert.equal(preflight.accepted_ref_counts.owner_chain_refs, 2);
+  assert.equal(preflight.accepted_ref_counts.typed_blocker_refs, 0);
+  assert.equal(preflight.accepted_payload_paths.success_refs_path.can_claim_domain_ready, false);
+  assert.deepEqual(preflight.missing_required_evidence_refs, []);
+});
+
+test('MAS paper-line stable typed blocker result feeds blocker path without success', () => {
+  const preflight = preflightDomainDispatchEvidencePayload(
+    {
+      paper_line_owner_chain_results: [
+        {
+          surface_kind: 'mas_paper_line_owner_chain_result',
+          paper_line_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          result_kind: 'stable_typed_blocker',
+          owner_receipt_refs: [],
+          stable_typed_blocker_refs: ['mas://dm003/blockers/ai-reviewer-currentness'],
+          body_included: false,
+        },
+      ],
+    },
+    route,
+  );
+
+  assert.equal(preflight.status, 'ready_to_record');
+  assert.equal(preflight.selected_payload_path, 'typed_blocker_path');
+  assert.equal(preflight.accepted_ref_counts.domain_receipt_refs, 0);
+  assert.equal(preflight.accepted_ref_counts.owner_chain_refs, 0);
+  assert.equal(preflight.accepted_ref_counts.typed_blocker_refs, 1);
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.success_claimed, false);
+  assert.equal(preflight.accepted_payload_paths.typed_blocker_path.can_claim_domain_ready, false);
+});
+
 test('domain dispatch evidence payload records only when success refs cover all required refs', () => {
   const preflight = assertDomainDispatchEvidencePayloadReady(route, {
     domain_receipt_refs: ['mas://dm003/domain-owner-receipt'],

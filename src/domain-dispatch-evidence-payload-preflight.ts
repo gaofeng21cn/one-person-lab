@@ -1,4 +1,5 @@
 import { FrameworkContractError } from './contracts.ts';
+import { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 
 function stringValue(value: unknown) {
@@ -17,16 +18,6 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function record(value: unknown): JsonRecord {
   return isRecord(value) ? value : {};
-}
-
-function refsFromPayload(payload: JsonRecord, keys: string[]) {
-  return keys.flatMap((key) => {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return [value.trim()];
-    }
-    return stringList(value);
-  });
 }
 
 function looksLikePlaceholderRef(ref: string) {
@@ -124,16 +115,13 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
 }
 
 export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, route: JsonRecord = {}) {
-  const domainReceiptRefs = refsFromPayload(payload, [
-    'domain_receipt_refs',
-    'domain_receipt_ref',
-    'receipt_refs',
-    'receipt_ref',
-  ]);
-  const typedBlockerRefs = refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']);
-  const noRegressionRefs = refsFromPayload(payload, ['no_regression_refs', 'no_regression_ref']);
-  const ownerChainRefs = refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']);
-  const evidenceRefs = refsFromPayload(payload, ['evidence_refs', 'evidence_ref']);
+  const {
+    domainReceiptRefs,
+    typedBlockerRefs,
+    noRegressionRefs,
+    ownerChainRefs,
+    evidenceRefs,
+  } = domainDispatchEvidencePayloadRefs(payload);
   const allRefs = [
     ...domainReceiptRefs,
     ...typedBlockerRefs,

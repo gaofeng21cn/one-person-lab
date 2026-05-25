@@ -789,3 +789,123 @@ test('runtime action execute can apply and verify legacy cleanup plans from App 
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime action execute records MAS paper-line owner-chain results as refs-only domain dispatch evidence', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-mas-owner-chain-result-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'write',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts","dispatch_ref":"mas-domain-dispatch:dm003:paper-line-owner-chain"}',
+      '--task',
+      'task-mas-paper-line-owner-chain',
+      '--source-fingerprint',
+      'sha256:mas-paper-line-owner-chain',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      attemptId,
+      '--closeout-packet',
+      JSON.stringify({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['receipt:mas-paper-line-owner-chain-closeout'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {
+          decision: 'bounded_repair',
+          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+        },
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const recordActionId = `domain_dispatch:medautoscience:${attemptId}:record`;
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+    }).app_operator_drilldown;
+    assert.equal(
+      drilldown.operator_action_routing_refs.refs.some(
+        (ref: { action_id: string; action_kind: string }) =>
+          ref.action_id === recordActionId
+          && ref.action_kind === 'domain_dispatch_evidence_receipt_record',
+      ),
+      true,
+    );
+
+    const recordExecution = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--payload',
+      JSON.stringify({
+        evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
+        paper_line_owner_chain_results: [
+          {
+            surface_kind: 'mas_paper_line_owner_chain_result',
+            paper_line_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            result_kind: 'owner_receipt',
+            owner_receipt_refs: ['mas://dm003/domain-owner-receipt'],
+            stable_typed_blocker_refs: [],
+            progress_delta_refs: ['mas://dm003/ai-reviewer-currentness'],
+            no_forbidden_write_proof_ref: 'mas://dm003/no-forbidden-write',
+            body_included: false,
+            readiness_claims: {
+              claims_paper_closure: false,
+              claims_publication_ready: false,
+              claims_artifact_mutation_authorized: false,
+              claims_current_package_updated: false,
+            },
+          },
+        ],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+    }).runtime_operator_action_execution;
+
+    assert.equal(recordExecution.execution.execution_kind, 'opl_cli_external_evidence_apply');
+    assert.equal(
+      recordExecution.execution.result.domain_dispatch_evidence_payload_preflight.selected_payload_path,
+      'success_refs_path',
+    );
+    assert.deepEqual(
+      recordExecution.execution.result.external_evidence_apply.receipt.receipt_refs,
+      ['mas://dm003/domain-owner-receipt'],
+    );
+    assert.deepEqual(
+      recordExecution.execution.result.external_evidence_apply.receipt.owner_chain_refs,
+      ['mas://dm003/ai-reviewer-currentness', 'mas://dm003/no-forbidden-write'],
+    );
+    assert.deepEqual(
+      recordExecution.execution.result.external_evidence_apply.receipt.typed_blocker_refs,
+      [],
+    );
+    assert.equal(recordExecution.authority_boundary.can_write_domain_truth, false);
+    assert.equal(recordExecution.authority_boundary.provider_completion_is_domain_ready, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
