@@ -480,6 +480,10 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.provider_run.provider_kind,
       'local_sqlite',
     );
+    assert.equal(
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.codex_stage_activity_timeout_policy,
+      null,
+    );
     assert.ok(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.activity_events.length >= 2);
     assert.equal(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 3);
     assert.equal(

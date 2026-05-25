@@ -165,14 +165,14 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
     closeoutRefs,
     closeoutReceiptStatus: attempt.closeout_receipt_status,
   });
+  const workflowContract = attempt.provider_kind === 'temporal'
+    ? buildTemporalStageAttemptWorkflowContract()
+    : null;
   return {
     stage_attempt_query: {
       surface_kind: 'stage_attempt_query',
       attempt,
-      workflow_contract:
-        attempt.provider_kind === 'temporal'
-          ? buildTemporalStageAttemptWorkflowContract()
-          : null,
+      workflow_contract: workflowContract,
       workflow_input:
         attempt.provider_kind === 'temporal'
           ? buildTemporalStageAttemptWorkflowInput(attempt)
@@ -191,6 +191,7 @@ export function queryStageAttempt(db: DatabaseSync, stageAttemptId: string) {
         attempt_id: attempt.stage_attempt_id,
         stage_id: attempt.stage_id,
         status: attempt.status,
+        codex_stage_activity_timeout_policy: workflowContract?.activity_timeout_policy.codex_stage_activity ?? null,
         provider_run: attempt.provider_run,
         activity_events: attempt.activity_events,
         heartbeat: {

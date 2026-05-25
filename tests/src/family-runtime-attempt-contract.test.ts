@@ -111,6 +111,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     assert.ok(((contract.typed_closeout_contract as Record<string, any>).tracked_refs as string[]).includes(trackedRef));
   }
   for (const field of [
+    'codex_stage_activity_timeout_policy',
     'provider_run',
     'activity_events',
     'user_instructions',

@@ -185,6 +185,7 @@
     "attempt_id",
     "stage_id",
     "status",
+    "codex_stage_activity_timeout_policy",
     "provider_run",
     "activity_events",
     "user_instructions",

@@ -6,6 +6,13 @@ import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../../src/family-runtime-temporal-activities.ts';
 import { buildTemporalStageAttemptWorkflowInputForTest } from '../../../../src/family-runtime-temporal-provider.ts';
+import {
+  CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
+  CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
+  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+} from '../../../../src/family-runtime-temporal-constants.ts';
 import type {
   TemporalStageAttemptWorkflowInput,
   TemporalStageAttemptWorkflowState,
@@ -44,6 +51,7 @@ type TemporalStageAttemptQueryOutput = {
       };
       operator_visibility: {
         status: string;
+        codex_stage_activity_timeout_policy: Record<string, unknown> | null;
         provider_run: Record<string, unknown>;
       };
       completion_boundary: {
@@ -646,6 +654,14 @@ test('family-runtime temporal attempt query keeps local ledger readable when Tem
     });
 
     assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.attempt.stage_attempt_id, attemptId);
+    const timeoutPolicy = query.family_runtime_stage_attempt_query
+      .stage_attempt_query.operator_visibility.codex_stage_activity_timeout_policy;
+    assert.ok(timeoutPolicy);
+    assert.equal(timeoutPolicy.start_to_close_timeout, CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT);
+    assert.equal(timeoutPolicy.heartbeat_timeout, CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT);
+    assert.equal(timeoutPolicy.heartbeat_interval_ms, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
+    assert.equal(timeoutPolicy.runner_timeout_ms, DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS);
+    assert.equal(timeoutPolicy.runner_no_output_timeout_ms, DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS);
     assert.equal(query.family_runtime_stage_attempt_query.temporal_query.status, 'unavailable');
     assert.equal(
       query.family_runtime_stage_attempt_query.temporal_query.reason,
