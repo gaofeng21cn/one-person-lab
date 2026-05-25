@@ -1595,6 +1595,61 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 02:40 CST`
+Tranche: `mas-runtime-binding-id-currentness-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS runtime support docs 中最容易误导后续自动化的 runtime id、runtime binding 与 provider-owner 口径。目标是把 MAS active current truth、runtime backend contract、runtime handle contract 和 capability projection 中旧 `opl_provider_backed_stage_runtime` 机器 id 写法，对齐 MAS live `opl_runtime_contract.py`、`write_runtime_binding`、product-entry manifest 和 focused tests：当前 machine ref 是 `opl_hosted_stage_runtime` / `opl-hosted-stage-runtime`，OPL/Temporal provider-backed 是 owner/topology 语义，MAS domain adapter 是 `mas_domain_intent_adapter` / `mas_domain_owner_receipt_adapter`。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/mas-ideal-state-gap-plan.md`、MAS docs-governance ledger。
+- MAS runtime docs: `docs/status.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/runtime/contracts/runtime_backend_interface_contract.md`, `docs/runtime/contracts/runtime_handle_and_durable_surface_contract.md`, `docs/runtime/contracts/agent_runtime_interface.md`, `docs/runtime/projections/runtime_capability_matrix.md`.
+- MAS source / tests: `src/med_autoscience/opl_runtime_contract.py`, `src/med_autoscience/runtime_protocol/study_runtime.py`, `src/med_autoscience/controllers/product_entry_parts/entry_runtime.py`, `src/med_autoscience/controllers/product_entry_parts/manifest_surfaces.py`, `tests/test_opl_runtime_contract.py`, `tests/test_runtime_protocol_study_runtime.py`, `tests/test_profiles.py`, `tests/test_mainline_status.py`, `tests/product_entry_cases/repo_shell_runtime_assertions.py`.
+- CLI/read-model: MAS clean-runner CLI help for `med_autoscience.cli`, `runtime`, `runtime maintain-storage`, and `runtime storage-audit`.
+
+Fresh semantic result:
+
+- Current runtime machine identity is `runtime_substrate=opl_hosted_stage_runtime`, `runtime_ref=opl_hosted_stage_runtime`, and `runtime_engine_id=opl-hosted-stage-runtime`.
+- `runtime_binding.yaml` writes `runtime_substrate`, `opl_runtime_ref`, `runtime_ref`, `runtime_engine_id`, `research_backend_id`, `research_backend`, `research_engine_id`, `runtime_home`, and `runtime_quests_root`; current protocol tests assert it no longer writes `runtime_backend_id` or `runtime_backend`.
+- OPL/Temporal provider-backed stage runtime remains the default generic runtime owner/topology. That owner wording must not be converted back into a MAS-local backend id or callable module.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Risk scan across all files under `docs/runtime/contracts/**`, `docs/runtime/control/**`, `docs/runtime/stage_route_handoff_standard.md`, plus focused review of runtime id / backend / binding sections in `docs/status.md`, `docs/active/mas-ideal-state-gap-plan.md`, `docs/runtime/contracts/runtime_backend_interface_contract.md`, `docs/runtime/contracts/runtime_handle_and_durable_surface_contract.md`, `docs/runtime/contracts/agent_runtime_interface.md`, and `docs/runtime/projections/runtime_capability_matrix.md`. | `docs/status.md`; `docs/active/mas-ideal-state-gap-plan.md`; `docs/runtime/contracts/runtime_backend_interface_contract.md`; `docs/runtime/contracts/runtime_handle_and_durable_surface_contract.md`; `docs/runtime/contracts/agent_runtime_interface.md`; `docs/runtime/projections/runtime_capability_matrix.md`; `docs/docs_portfolio_consolidation.md` |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Verification:
+
+- MAS worktree and rebased branch: `git diff --check`; strict README/docs/contracts conflict-marker scan; OPL Doc Governance doctor `finding_count=0` and active truth status `pass`; MAS clean-runner CLI help for `med_autoscience.cli`, `runtime`, `runtime maintain-storage`, `runtime storage-audit`; focused pytest `tests/test_opl_runtime_contract.py tests/test_runtime_protocol_study_runtime.py tests/test_profiles.py::test_profile_to_dict_exposes_machine_readable_contract tests/test_mainline_status.py::test_mainline_status_projects_ideal_state_current_stage_and_gaps tests/product_entry_cases/repo_shell_runtime_assertions.py -q` read `52 passed`.
+- MAS commit `b5bf3840 docs: cover MAS runtime binding ids` was pushed to `origin/main`; the tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-runtime-docs-coverage-20260526` and branch `codex/mas-runtime-docs-coverage-20260526` were removed.
+- OPL main ledger commit recorded this series coverage. Six-repo final lightweight checkout verification read clean main checkouts, doctor `finding_count=0`, active truth `pass`, missing=0 and next-not-ready=0 for all six.
+
+Archived / tombstoned / deleted docs:
+
+- none. This tranche corrected current-truth wording in place; the affected MAS documents remain active support / active current truth owners.
+
+Unreviewed docs:
+
+- MAS paragraph-level coverage remains open for most of `docs/runtime/contracts/**`, especially long support bodies not touched beyond lifecycle header / heading / stale-id risk scan.
+- MAS paragraph-level coverage remains open for `docs/runtime/control/study_runtime_control_surface.md` and `docs/runtime/control/study_runtime_orchestration.md` beyond the runtime binding / owner split sections inspected here.
+- `docs/runtime/stage_route_handoff_standard.md` was risk-scanned and read for owner split, but not fully rewritten or marked fully paragraph-covered.
+- OPL reference body coverage remains open outside previously covered tranches; App docs remain delayed until active release/GUI lanes close or explicit ownership makes them safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future prose that writes `opl_provider_backed_stage_runtime` as a current machine id, required `runtime_backend_id`, required `runtime_backend`, or MAS-local callable backend is stale.
+- `runtime_backend_id` and `runtime_backend` may appear only as legacy migration / provenance fields or historical input names; they must not become current required `runtime_binding.yaml` fields again.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for a bounded subset of `docs/runtime/contracts/**`, preferably `runtime_event_and_outer_loop_input_contract.md`, `durable_workflow_contract.md`, `stage_route_contract.md`, `stage_surfaces.md`, or `workspace_knowledge_and_literature_contract.md`.
+- MAS `docs/runtime/control/study_runtime_control_surface.md` / `study_runtime_orchestration.md` paragraph compaction if the next tranche focuses on stop/rerun/current-control-state semantics.
+- Or continue OPL full docs coverage in `docs/references/operating-governance/**` / `docs/references/convergence-governance/**`.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
