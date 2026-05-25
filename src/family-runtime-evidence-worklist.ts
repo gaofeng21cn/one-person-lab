@@ -176,12 +176,13 @@ function readOnlyExpectedRefs(route: JsonRecord) {
 
 function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
   const actionKind = stringValue(route.action_kind) ?? '';
-  if (
-    route.route_requires_domain_or_app_payload === true
-    && route.can_close_without_domain_or_app_payload === false
-  ) {
+  const waitsForDomainOrAppPayload = route.route_requires_domain_or_app_payload === true
+    && route.can_close_without_domain_or_app_payload === false;
+  const isDomainDispatchEvidenceRoute = actionKind.startsWith('domain_dispatch_evidence_');
+  if (waitsForDomainOrAppPayload && !isDomainDispatchEvidenceRoute) {
     return null;
   }
+
   if (actionKind.startsWith('provider_scheduler_')) {
     const summary = record(drilldown.summary);
     const cadenceSatisfied = stringValue(summary.provider_slo_cadence_window_status)
@@ -277,7 +278,7 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
           ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
           : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
         closure_reason:
-          actionKind.startsWith('domain_dispatch_evidence_')
+          isDomainDispatchEvidenceRoute
             ? 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this domain dispatch evidence request; this records request closure without claiming domain or production readiness.'
             : 'OPL refs-only evidence ledger verified a domain-owned typed blocker for this external evidence request; this records request closure without claiming production success.',
       };
@@ -288,11 +289,11 @@ function refsOnlyClosureReceipt(route: JsonRecord, drilldown: JsonRecord) {
       receipt_refs: allReceiptRefs,
       typed_blocker_ref: verifiedReceipt.typed_blocker_refs[0] ?? null,
       typed_blocker_refs: verifiedReceipt.typed_blocker_refs,
-      freshness_ref: actionKind.startsWith('domain_dispatch_evidence_')
+      freshness_ref: isDomainDispatchEvidenceRoute
         ? '/runtime_tray_snapshot/app_operator_drilldown/domain_dispatch_evidence'
         : '/runtime_tray_snapshot/app_operator_drilldown/domain_evidence_request_refs',
       closure_reason:
-        actionKind.startsWith('domain_dispatch_evidence_')
+        isDomainDispatchEvidenceRoute
           ? 'OPL refs-only evidence ledger verified domain dispatch owner-chain refs without claiming domain or production readiness.'
           : 'OPL refs-only evidence ledger verified a domain-owned receipt for this external evidence request.',
     };
@@ -839,6 +840,13 @@ export async function runFamilyRuntimeEvidenceWorklist(
   const closedItems = worklistItems.filter((item) =>
     item.status !== 'open_safe_action_request_route_available'
   );
+  const openActionIds = new Set(openItems
+    .map((item) => stringValue(item.action_id))
+    .filter((actionId): actionId is string => Boolean(actionId)));
+  const openOperatorRoutes = operatorRoutes.filter((route) => {
+    const actionId = stringValue(route.action_id);
+    return !actionId || openActionIds.has(actionId);
+  });
   const nextActionLedger = buildProductionTailNextActionLedger({
     surfaceKind: 'opl_family_runtime_evidence_worklist_next_action_ledger',
     sourceTailSummary: {
@@ -853,12 +861,12 @@ export async function runFamilyRuntimeEvidenceWorklist(
     sourceRef: '/family_runtime_evidence_worklist/worklist_items',
   });
   const evidenceRequirementLedger = buildEvidenceRequirementLedger(worklistItems);
-  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(operatorRoutes);
+  const stageEvidenceWorkorderPacket = buildStageEvidenceWorkorderPacket(openOperatorRoutes);
   const stageEvidenceWorkorderSummary = record(stageEvidenceWorkorderPacket.summary);
   const stageEvidenceWorkorderAttentionItems =
     compactStageEvidenceWorkorderAttentionItems(stageEvidenceWorkorderPacket);
   const domainDispatchEvidenceWorkorderPacket =
-    buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
+    buildDomainDispatchEvidenceWorkorderPacket(openOperatorRoutes);
   const domainDispatchEvidenceWorkorderSummary =
     record(domainDispatchEvidenceWorkorderPacket.summary);
   const domainDispatchEvidenceWorkorderGroupAttentionItems =

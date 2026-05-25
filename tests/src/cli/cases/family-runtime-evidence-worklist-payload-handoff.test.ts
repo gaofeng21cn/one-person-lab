@@ -1,7 +1,11 @@
 import {
   assert,
+  fs,
+  os,
+  path,
   test,
 } from '../helpers.ts';
+import { runExternalEvidenceApply } from '../../../../src/external-evidence-ledger.ts';
 import { runFamilyRuntimeEvidenceWorklist } from '../../../../src/family-runtime-evidence-worklist.ts';
 import type { FrameworkContracts } from '../../../../src/types.ts';
 
@@ -51,6 +55,9 @@ type PayloadHandoffWorklist = {
   next_safe_actions?: PayloadHandoffAction[];
   worklist_items: Array<{
     action_id: string;
+    status: string;
+    worklist_status_detail: string;
+    typed_blocker_refs: string[];
     payload_workorder: {
       surface_kind: string;
       authority_boundary: Record<string, boolean>;
@@ -66,6 +73,7 @@ type PayloadHandoffWorklist = {
     };
     worklist_item_is_completion_claim: boolean;
     evidence_requirement: {
+      status: string;
       can_claim_domain_ready: boolean;
       can_claim_production_ready: boolean;
     };
@@ -316,6 +324,107 @@ test('family-runtime evidence-worklist joins domain-dispatch payload handoff fro
   assert.equal(item.evidence_requirement.can_claim_domain_ready, false);
   assert.equal(item.evidence_requirement.can_claim_production_ready, false);
   assert.equal(worklist.authority_boundary.can_write_domain_truth, false);
+});
+
+test('family-runtime evidence-worklist closes domain-dispatch payload workorder after verified typed blocker', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-dispatch-verified-blocker-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const actionId = 'domain_dispatch:medautoscience:sat_payload_handoff:record';
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const recorded = runExternalEvidenceApply({
+      mode: 'record',
+      domain_id: 'medautoscience',
+      request_id: 'domain_dispatch:medautoscience:sat_payload_handoff',
+      request_pack_id: 'medautoscience.domain_dispatch_evidence',
+      source_ref: '/stage_attempt_workbench/attempts/sat_payload_handoff/domain_dispatch_evidence',
+      typed_blocker_refs: ['mas://typed-blocker/default-executor-stale-owner-route'],
+    });
+    assert.equal(recorded.external_evidence_apply.status, 'recorded');
+    const verified = runExternalEvidenceApply({
+      mode: 'verify',
+      domain_id: 'medautoscience',
+      request_id: 'domain_dispatch:medautoscience:sat_payload_handoff',
+      request_pack_id: 'medautoscience.domain_dispatch_evidence',
+      source_ref: '/stage_attempt_workbench/attempts/sat_payload_handoff/domain_dispatch_evidence',
+    });
+    assert.equal(verified.external_evidence_apply.status, 'verified');
+
+    const output = await runFamilyRuntimeEvidenceWorklist(contracts, {
+      familyDefaults: true,
+      providerKind: 'temporal',
+      executorKind: 'codex_cli',
+      detailLevel: 'full',
+      runtimeSnapshot: {
+        runtime_tray_snapshot: {
+          runtime_health: {
+            provider_kind: 'temporal',
+          },
+          app_operator_drilldown: {
+            app_execution_bridge: {
+              safe_action_routes: [domainDispatchBridgeRoute(actionId)],
+            },
+            operator_action_routing_refs: {
+              refs: [domainDispatchOperatorRoute(actionId)],
+            },
+            domain_evidence_request_refs: {
+              external_receipts: [],
+              evidence_gate_receipts: [],
+            },
+            domain_dispatch_evidence: {
+              attempts: [],
+            },
+            default_caller_deletion_evidence_refs: {
+              domains: [],
+            },
+            evidence_envelope: {
+              surface_kind: 'opl_evidence_envelope_projection',
+              model_version: 'evidence_envelope.v1',
+              projection_policy: 'fixture_refs_only_projection',
+              source_refs: ['/fixture/evidence_envelope'],
+              summary: {
+                envelope_count: 1,
+                open_envelope_count: 1,
+                closed_envelope_count: 0,
+                blocked_envelope_count: 0,
+                superseded_envelope_count: 0,
+                owner_count: 1,
+                owners: ['med-autoscience'],
+              },
+              authority_boundary: {
+                refs_only: true,
+                can_authorize_domain_ready: false,
+                can_claim_production_ready: false,
+              },
+            },
+          },
+        },
+      } as never,
+    });
+
+    const worklist = output.family_runtime_evidence_worklist as unknown as PayloadHandoffWorklist;
+    const item = worklist.worklist_items.find((entry: { action_id: string }) =>
+      entry.action_id === actionId
+    );
+
+    assert.ok(item);
+    assert.equal(worklist.summary.open_worklist_item_count, 0);
+    assert.equal(worklist.summary.open_safe_action_payload_required_item_count, 0);
+    assert.equal(worklist.domain_dispatch_evidence_workorder_packet.workorders.length, 0);
+    assert.equal(item.status, 'closed_by_domain_owned_typed_blocker');
+    assert.equal(item.worklist_status_detail, 'closed_by_domain_owned_typed_blocker_ref');
+    assert.deepEqual(item.typed_blocker_refs, ['mas://typed-blocker/default-executor-stale-owner-route']);
+    assert.equal(item.evidence_requirement.status, 'domain_owned_typed_blocker');
+    assert.equal(item.evidence_requirement.can_claim_domain_ready, false);
+    assert.equal(item.evidence_requirement.can_claim_production_ready, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('family-runtime evidence-worklist summary next actions carry domain-dispatch payload handoff', async () => {
