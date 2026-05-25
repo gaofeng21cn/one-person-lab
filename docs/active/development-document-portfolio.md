@@ -445,6 +445,56 @@ Next tranche write scope:
 - Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
 
 
+Date: `2026-05-25 17:26 CST`
+Tranche: `mag-hermes-hosted-history-specs-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 `med-autogrant` 的 2026-04-11 / 2026-04-12 Hermes、hosted-caller、route snapshot、OPL alignment 与 lightweight handoff history specs。目标是把这些高 stale-risk 的直接文件入口统一收紧：每份历史 spec 首屏都持有文件级 `Owner`、`Purpose`、`State`、`Machine boundary`，明确旧 `Current Truth`、Hermes、OPL Gateway、host-agent、hosted/runtime owner 和 pending route wording 只保留为 provenance；当前 runtime owner、OPL/Temporal provider、executor boundary、route catalog、App/workbench readiness、grant readiness 与机器行为回到核心五件套、active plan、active specs index、specs lifecycle map、contracts、schemas、source、CLI/API 行为和 `contracts/runtime-program/current-program.json`。
+
+Fresh live truth inputs:
+
+- MAG `AGENTS.md`、`TASTE.md`
+- MAG `docs/status.md`、`docs/active/mag-ideal-state-cross-repo-gap-plan.md`、`docs/history/specs/README.md`、`docs/specs/specs_lifecycle_map.md`
+- MAG `contracts/runtime-program/current-program.json`
+- MAG `contracts/functional_privatization_audit.json`
+- MAG `contracts/external_evidence/mag-evidence-receipt-ledger.json`
+
+Fresh contract result:
+
+- `runtime_owner.default_task_runtime_owner=one-person-lab`、`default_runtime_substrate=temporal`、`default_stage_executor=codex_cli` remain current.
+- `mag_implements_daemon=false`、`mag_implements_scheduler=false`、`mag_implements_attempt_loop=false`、`mag_owns_attempt_ledger=false` remain current.
+- `claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`、`claims_production_long_run_soak_complete=false` remain current.
+- `standard_agent_source_shape_status=landed` remains structural classification only, not strict source-purity physical completion.
+- External evidence ledger keeps `claims_temporal_provider_long_soak_complete=false` and `claims_grant_or_fundability_ready=false`; remaining real evidence gap is `temporal_provider_long_soak_window_evidence`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autogrant` | `docs/history/specs/2026-04-11-hermes-backed-runtime-capability-migration-map-current-truth.md`, `docs/history/specs/2026-04-11-hermes-backed-runtime-substrate-program-current-truth.md`, `docs/history/specs/2026-04-11-post-r5a-local-runtime-upper-bound-honest-stop-current-truth.md`, `docs/history/specs/2026-04-11-upstream-hermes-agent-truth-reset-current-truth.md`, `docs/history/specs/2026-04-12-author-side-executor-routing-contract-current-truth.md`, `docs/history/specs/2026-04-12-critique-pending-handoff-contract-current-truth.md`, `docs/history/specs/2026-04-12-hosted-caller-consumption-proof-current-truth.md`, `docs/history/specs/2026-04-12-hosted-contract-bundle-entry-and-route-catalog-current-truth.md`, `docs/history/specs/2026-04-12-lightweight-product-entry-and-opl-handoff-current-truth.md`, `docs/history/specs/2026-04-12-opl-aligned-ideal-target-and-phase-map-current-truth.md`, `docs/history/specs/2026-04-12-pending-authoring-route-handoff-matrix-current-truth.md`, `docs/history/specs/2026-04-12-upstream-hermes-agent-fast-cutover-board.md`, `docs/history/specs/2026-04-12-upstream-hermes-agent-fast-cutover-current-truth.md`, `docs/history/specs/README.md`, `docs/specs/specs_lifecycle_map.md`; sections reviewed include title/lifecycle note, activation status, goal, superseded note, old prompt artifact, route/handoff status, Hermes/Gateway/local-runtime/hosted wording and current owner pointers. | same fifteen files |
+| `one-person-lab` | coverage ledger owner only | `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. These files remain useful provider-proof, hosted-caller, route-snapshot, OPL-alignment and product-entry handoff provenance; this tranche clarified lifecycle and direct-reader guards instead of deleting historical context.
+
+Unreviewed docs:
+
+- `med-autogrant`: history specs outside the covered 2026-04-06, 2026-04-07, 2026-04-11 and 2026-04-12 batches still need paragraph-governance, especially 2026-04-08 verification/rollback and 2026-04-09 / 2026-04-10 post-R5A fail-closed hardening records.
+- `med-autogrant`: `docs/history/plans/**`, `docs/history/product/**`, `docs/history/runtime/**`, `docs/history/positioning/**` and non-index `docs/references/**/*.md` still need separate body-level coverage unless covered by earlier ledger entries.
+- Other repos remain under previous ledger scopes except OMA full coverage and MAG current/support specs / thin indexes / 2026-04-06 foundation / 2026-04-07 authoring-flow / 2026-04-11-12 Hermes-hosted batches.
+- App docs remain excluded while active release/GUI worktrees own local changes.
+
+Remaining stale / retire candidates:
+
+- MAG 2026-04-08 verification/rollback and 2026-04-09 / 2026-04-10 post-R5A hardening specs still contain dense dated `Current Truth` / activation-package wording; they should be covered in date/topic batches without promoting old local runtime, Gateway, hosted or compatibility bridge text.
+- MAG non-index references such as grant strategy memory policy, OPL family contract adoption and governance checklist still need paragraph-level checks against current contracts/source.
+
+Next tranche write scope:
+
+- Continue MAG `docs/history/specs/*.md` body coverage with 2026-04-08 P3/P4 verification/rollback records or 2026-04-09 / 2026-04-10 post-R5A fail-closed hardening records.
+- Or switch to OPL/MAS/RCA/App full README/docs coverage; keep App delayed until active release/GUI worktrees close.
+
 ## 验证
 
 Docs-only 整理：
