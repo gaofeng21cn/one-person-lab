@@ -310,7 +310,7 @@ test('family-runtime tick starts MAS default executor dispatch as Temporal Codex
     const { tick, task } = result;
     const attempt = task.family_runtime_task.stage_attempts[0];
 
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
     assert.equal(tick.family_runtime_tick.dispatches[0].temporal_start.surface_kind, 'temporal_stage_attempt_start_receipt');
     assert.equal(task.family_runtime_task.task.status, 'blocked');
     assert.equal(task.family_runtime_task.task.last_error, 'typed_closeout_packet_required');
@@ -472,7 +472,7 @@ test('family-runtime queue inspect syncs a completed MAS default executor Tempor
     const { tick, task } = result;
     const attempt = task.family_runtime_task.stage_attempts[0];
 
-    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'running');
     assert.equal(task.family_runtime_task.task.status, 'succeeded');
     assert.equal(task.family_runtime_task.task.last_error, null);
     assert.equal(task.family_runtime_task.task.dead_letter_reason, null);

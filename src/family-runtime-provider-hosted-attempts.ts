@@ -61,7 +61,34 @@ function isSameMasDefaultExecutorDispatch(
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
-const MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+const MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+
+function hasActiveMasDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
+  if (!taskId) {
+    return false;
+  }
+  const row = db.prepare(`
+    SELECT status, lease_owner, lease_expires_at
+    FROM tasks
+    WHERE task_id = ?
+  `).get(taskId) as Pick<FamilyRuntimeTaskRow, 'status' | 'lease_owner' | 'lease_expires_at'> | undefined;
+  if (row?.status !== 'running' || !row.lease_owner || !row.lease_expires_at) {
+    return false;
+  }
+  const leaseExpiresAt = Date.parse(row.lease_expires_at);
+  return Number.isFinite(leaseExpiresAt) && leaseExpiresAt > Date.now();
+}
+
+function isCrossTaskLiveMasDefaultExecutorAttempt(
+  db: DatabaseSync,
+  attempt: ReturnType<typeof listStageAttempts>[number],
+) {
+  return MAS_DEFAULT_EXECUTOR_CROSS_TASK_STARTED_ATTEMPT_STATUSES.has(attempt.status)
+    || (
+      attempt.status === 'queued'
+      && hasActiveMasDefaultExecutorTaskLease(db, attempt.task_id)
+    );
+}
 
 function workspaceRootFromProfile(profile: string | null) {
   if (!profile) {
@@ -178,7 +205,7 @@ export function findLiveMasDefaultExecutorDispatchAttempt(
     && attempt.executor_kind === 'codex_cli'
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
-    && MAS_DEFAULT_EXECUTOR_CROSS_TASK_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+    && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt)
     && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
   )) ?? null;
 }

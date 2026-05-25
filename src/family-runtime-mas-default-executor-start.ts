@@ -266,12 +266,11 @@ export async function startMasDefaultExecutorDispatchAttempt(
     };
   }
 
-  const completedAt = nowIso();
   db.prepare(`
     UPDATE tasks
-    SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL, last_error = NULL, updated_at = ?
+    SET status = 'running', last_error = NULL, dead_letter_reason = NULL
     WHERE task_id = ?
-  `).run(completedAt, row.task_id);
+  `).run(row.task_id);
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -297,7 +296,7 @@ export async function startMasDefaultExecutorDispatchAttempt(
   });
   return {
     task_id: row.task_id,
-    status: 'succeeded',
+    status: 'running',
     admitted_stage_attempt: launchableAttempt,
     temporal_start: temporalStart,
     stage_attempts: listStageAttemptsForTask(db, row.task_id),

@@ -442,7 +442,13 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       stageAttemptId: observation.stage_attempt_id,
       packet: completedCloseoutPacket,
     }).attempt;
-    markLinkedMasDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
+    const syncedRow = getStageAttemptRow(db, observation.stage_attempt_id);
+    if (syncedRow) {
+      markLinkedMasDefaultExecutorTaskCompleted(db, {
+        row: syncedRow,
+        observedAt: nowIso(),
+      });
+    }
     return synced;
   }
   const observedAt = nowIso();
