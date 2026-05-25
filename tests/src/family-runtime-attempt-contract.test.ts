@@ -372,6 +372,10 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   assert.ok(scaffold.required_contract_surfaces.includes('generated_surface_handoff'));
   assert.ok(scaffold.required_contract_surfaces.includes('workspace_lifecycle_policy'));
   assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes('domain_truth'));
+  assert.ok(scaffold.domain_retained_thin_surfaces_deprecated.includes(
+    'domain_handler_target_or_opaque_ref_projection_output',
+  ));
+  assert.equal(scaffold.domain_retained_thin_surfaces_deprecated.includes('sidecar_or_projection_adapter'), false);
   assert.ok(scaffold.retirement_gate_required_evidence.includes('no_active_default_caller'));
   assert.ok(scaffold.required_verification.includes('git_diff_check'));
   assert.ok(scaffold.required_verification.includes('agent_pack_required_paths_resolve'));

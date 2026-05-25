@@ -329,6 +329,6 @@ export const DOMAIN_RETAINED_THIN_SURFACES_DEPRECATED = [
   'memory_body',
   'owner_receipt',
   'typed_blocker',
-  'sidecar_or_projection_adapter',
+  'domain_handler_target_or_opaque_ref_projection_output',
   'domain_entry_and_tests',
 ] as const;

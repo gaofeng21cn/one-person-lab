@@ -13,8 +13,8 @@
   ],
   "repo_source_boundary": {
     "agent": "stage descriptors, prompt refs, skill refs, knowledge refs, and domain entry metadata",
-    "contracts": "machine-readable descriptor, sidecar, quality gate, receipt, and artifact locator contracts",
-    "runtime": "sidecar, projection builder, lifecycle adapter, and dispatch helpers only",
+    "contracts": "machine-readable descriptor, generated-surface handoff, quality gate, receipt, and artifact locator contracts",
+    "runtime": "minimal authority functions, domain handler targets, opaque ref projection outputs, and necessary native helpers only; generated sidecar, status, workbench, lifecycle, queue, ledger, and dispatch shells are OPL-owned",
     "docs": "human-readable governance, status, roadmap, and migration notes"
   },
   "artifact_boundary": {
@@ -121,7 +121,7 @@
       "memory_body",
       "owner_receipt",
       "typed_blocker",
-      "sidecar_or_projection_adapter",
+      "domain_handler_target_or_opaque_ref_projection_output",
       "domain_entry_and_tests"
     ],
     "forbidden_domain_generic_owner_roles": [
@@ -494,7 +494,7 @@
       "memory_body",
       "owner_receipt",
       "typed_blocker",
-      "sidecar_or_projection_adapter",
+      "domain_handler_target_or_opaque_ref_projection_output",
       "domain_entry_and_tests"
     ]
   }
