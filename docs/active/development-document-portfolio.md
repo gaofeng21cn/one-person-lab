@@ -2538,6 +2538,62 @@ Next tranche write scope:
 - Or MAS delivery / medical-display docs that mention artifact lifecycle, source truth, package authority or display-pack authority.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 11:54 CST`
+Tranche: `mas-medical-display-audit-protocol-coverage`
+State: `tranche_verified`
+
+本轮继续覆盖 MAS medical-display 的 audit/protocol 长文档，并吸收回 MAS `main`。目标是把 `medical_display_audit_guide.md` 与 `medical_display_visual_audit_protocol.md` 读回当前 live renderer / schema / display pack / layout QC / publication-display / submission-minimal 事实：显示审计可以定义 deterministic lower bound、视觉审计格式、style/override 合同、generated display output 接受门和 promotion-to-contract/QC/golden-regression 路径；它不能授权 source readiness、publication quality verdict、submission readiness、artifact mutation、`current_package` freshness、delivery sync、paper closure、domain ready 或 production ready。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`, `TASTE.md`, `docs/active/mas-ideal-state-gap-plan.md`, MAS docs-governance ledger, and the preceding medical-display delivery authority coverage entry.
+- MAS medical-display docs: `docs/delivery/medical-display/contracts/medical_display_audit_guide.md` and `docs/delivery/medical-display/contracts/medical_display_visual_audit_protocol.md`.
+- MAS machine/source refs: `src/med_autoscience/figure_routes.py`, `src/med_autoscience/figure_renderer_contract.py`, `src/med_autoscience/display_pack_contract.py`, `src/med_autoscience/display_pack_loader.py`, `src/med_autoscience/publication_display_contract.py`, `src/med_autoscience/controllers/display_surface_materialization/`, `src/med_autoscience/display_layout_qc/`, `src/med_autoscience/controllers/medical_publication_surface.py`, and `src/med_autoscience/controllers/submission_minimal.py`.
+- Focused test evidence: MAS focused pytest for renderer contract, publication display contract, submission-minimal display surface and medical publication surface read `137 passed`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/delivery/medical-display/contracts/medical_display_audit_guide.md` and `docs/delivery/medical-display/contracts/medical_display_visual_audit_protocol.md`, plus live contract/source/test evidence listed above. | `docs/docs_portfolio_consolidation.md`; `docs/delivery/medical-display/contracts/medical_display_audit_guide.md`; `docs/delivery/medical-display/contracts/medical_display_visual_audit_protocol.md` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Fresh semantic result:
+
+- `medical_display_audit_guide.md` remains the active engineering audit surface for deterministic display lower-bound coverage, audited template inventory, schema/renderer/QC/export coupling and change protocol.
+- Generated display outputs, `paper/submission_minimal/`, `paper/publication_style_profile.json` and readability failures are now explicitly scoped to display / projection / visual-style authority. These surfaces do not become artifact authority, source truth, source readiness verdict, publication quality verdict, submission readiness or package freshness authority.
+- `medical_display_visual_audit_protocol.md` remains the active AI-first visual audit support protocol above deterministic QC. Its finding format, promotion rules and minimal Codex loop remain valid, but acceptance wording is now scoped to paper-facing display-surface completion.
+- `visual audit clear` means the generated display surface can be accepted for the paper-facing display lane after deterministic and visual findings are closed or explicitly accepted. It does not close publication gate, submission package readiness, artifact mutation, `current_package`, delivery sync, paper closure, domain ready or production ready.
+
+Verification / absorb:
+
+- MAS commit `6841f7cf docs: cover MAS display audit protocol` was fast-forwarded into MAS `main` and pushed to `origin/main`.
+- MAS verification before absorb: `git diff --check`; strict README/docs/contracts/tests/agent conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest `tests/test_figure_renderer_contract.py tests/test_publication_display_contract.py tests/test_submission_minimal_display_surface.py tests/test_medical_publication_surface.py -q` read `137 passed`.
+- MAS tranche worktree `/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-medical-display-audit-docs-coverage-20260526` and branch `codex/mas-medical-display-audit-docs-coverage-20260526` were removed after absorb.
+- MAS root checkout still has unrelated local changes in `scripts/opl-module-healthcheck.sh` and `tests/test_test_command_surfaces.py`; this tranche did not touch them.
+
+Archived / tombstoned / deleted docs:
+
+- none. Both MAS display audit files remain active delivery contract support docs with distinct roles; stale authority leakage was corrected in place.
+
+Unreviewed docs:
+
+- MAS full paragraph-level coverage remains open for the remaining medical-display inventory / catalog / plan / provenance bodies: `medical_display_arsenal.md`, `medical_display_template_backlog.md`, `medical_display_template_catalog.md`, `medical_figure_route_cookbook.md`, `medical_display_template_pack_architecture.md`, `medical_display_template_pack_implementation_plan.md`, `medical_display_family_roadmap.md`, and `medical_display_anchor_paper_audit.md`.
+- MAS product/status/workbench, progress/domain-ref projection and source/delivery shell coverage remains open outside the already-covered blocks.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not treat `gate clear`, `visual audit clear`, generated display outputs, visual style profile, display overrides, submission-minimal projection, renderer/QC pass, display pack lock or catalog entry as source readiness, formal publication-quality verdict, submission readiness, artifact mutation authorization, `current_package` freshness, delivery sync, paper closure, domain ready or production ready.
+- Hidden post-processing, handmade figure cleanup, fallback renderer substitution, external exemplar copying, legacy sidecar/autofigure route wording and compatibility aliases remain retire candidates unless a new explicit MAS owner route, artifact authority receipt, focused tests and tombstone/provenance boundary are landed.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for `medical_display_template_pack_architecture.md` + `medical_display_template_pack_implementation_plan.md`, or `medical_display_arsenal.md` + `medical_display_template_backlog.md` + `medical_display_template_catalog.md` if the next lane focuses on inventory/catalog role separation.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
