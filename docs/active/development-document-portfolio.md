@@ -397,9 +397,9 @@ Next tranche write scope:
 
 Date: `2026-05-25 17:21 CST`
 Tranche: `strict-agent-boundary-refresh`
-State: `tranche_verified_refreshed`
+State: `tranche_superseded_by_later_live_refresh`
 
-本轮按当前确定边界刷新 OPL active docs，并重新排查 MAS/MAG/RCA/OMA 是否仍有不干净智能体面。结论是：四仓 structural conformance 通过不等于四仓都 source-purity 完成；MAS 当前合同明确重新打开 2 个 strict source-purity functional follow-through gate，MAG/RCA/OMA 当前 structural source shape 为 landed / gap 0 但 physical delete 仍未授权或仍有 evidence / hygiene tail。
+本条记录 17:21 前 strict-agent boundary refresh 的过程证据；后续 MAS/MAG/RCA/OMA 与 OPL read-model 已刷新，当前结论以本文件 19:40 `opl-entry-core-current-truth-coverage`、`docs/status.md`、`docs/active/current-state-vs-ideal-gap.md` 和 live CLI/read-model 为准。当前四仓 structural conformance 通过，但这只关闭 source-shape / structural gap，不授权 physical delete、domain ready、artifact authority、App release ready 或 production ready。
 
 Fresh live truth inputs:
 
@@ -414,17 +414,17 @@ Fresh read-model result:
 
 - `opl agents conformance` 读为 `status=passed`、`passed_count=4`、`blocked_count=0`，只证明 descriptor / skeleton / policy 可读。
 - `opl agents default-callers` 读为 generated default-caller surface count `32`、blocked surface count `0`、missing domain-owner / no-forbidden-write / tombstone-provenance counts `0`，但 `physical_delete_authorized_by_this_report=false`。
-- `runtime app-operator-drilldown` 读为 `functional_privatization_action_required_count=0`、`functional_privatization_active_private_generic_residue_count=0`、`default_caller_deletion_evidence_open_requirement_count=0`、`domain_legacy_cleanup_blocked_plan_count=0`、`lifecycle_domain_physical_delete_can_execute=false`。
-- `framework readiness` 读为 `hard_blocker_count=0`、`agent_conformance_hard_blocker_count=0`、`operator_actionable_attention_tail_count=0`、`domain_blocked_attention_tail_count=194`、`evidence_envelope_blocked_count=181`；provider SLO cadence / capability satisfied，当前没有 OPL 侧 operator-actionable safe-action tail。
-- `family-runtime evidence-worklist` 读为 `open_worklist_item_count=0`、`open_safe_action_payload_required_item_count=0`、`open_safe_action_payload_free_item_count=0`、`zero_open_worklist_blocked_refs_only_envelope_count=181`、`domain_ready_authorized=false`、`production_ready_authorized=false`。
+- 当前 `runtime app-operator-drilldown` 读为 `functional_privatization_action_required_count=0`、`functional_privatization_active_private_generic_residue_count=0`、`default_caller_deletion_evidence_open_requirement_count=0`、`domain_legacy_cleanup_plan_count=3`、`domain_legacy_cleanup_ready_plan_count=2`、`domain_legacy_cleanup_blocked_plan_count=1`、`lifecycle_domain_physical_delete_can_execute=false`。
+- 当前 `framework readiness` 读为 `control_plane_available=true`、`framework_kernel_hard_blocker_count=0`、`agent_conformance_hard_blocker_count=0`、`operator_actionable_attention_tail_count=0`、`domain_blocked_attention_tail_count=209`、`evidence_envelope_blocked_count=196`；provider SLO cadence / capability satisfied，当前没有 OPL 侧 operator-actionable safe-action tail。
+- 当前 `family-runtime evidence-worklist` 读为 `open_worklist_item_count=0`、`open_safe_action_payload_required_item_count=0`、`open_safe_action_payload_free_item_count=0`、`zero_open_worklist_blocked_refs_only_envelope_count=196`、`domain_ready_authorized=false`、`production_ready_authorized=false`。
 
 Per-agent audit:
 
 | Repo | Fresh contract result | Boundary conclusion |
 | --- | --- | --- |
-| `med-autoscience` | `functional_structure_gap_count=2`、`repo_local_wrapper_tail_count=3`、`source_purity_cutover_status=physical_wrapper_retirement_pending`；open gates are `standard_agent_purity_guard` and `domain_ref_consumer_physical_thinning`. | 不干净。不是正向私有 runtime owner 回流，但 MAS 仍有标准智能体 active source gap：`generic_cli_mcp_product_wrappers`、`owner_route_reconcile_materialize_dispatch_shell`、`workbench_portal_generic_shell` 必须迁到 OPL generated/hosted surface 或 domain handler target 后删除。 |
-| `med-autogrant` | `mag_functional_structure_gap_count=0`、`standard_agent_source_shape_status=landed`、`claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`。 | 结构干净但物理删除未授权。MAG wrapper / lifecycle / product shell 只能作为 deletion / evidence tail，不是长期组成。 |
-| `redcube-ai` | `functional_structure_gap_count=0`、`unclassified_private_generic_residue_count=0`、allowed remaining module classes are domain handler / refs-only adapter / declarative pack / minimal authority / native helper / provenance；bridge gates read `physical_delete_authorized=false`。 | 结构干净但物理删除未授权。RCA generic wrapper、executor adapter、operator projection、stability read model 等继续按 deletion / hygiene tail 读取。 |
+| `med-autoscience` | 当前读为 `functional_structure_gap_count=0`、`repo_local_wrapper_tail_count=0`、`source_purity_cutover_status=standard_agent_source_shape_landed`、`domain_repo_physical_delete_authorized=false`。 | 结构源码形态已 landed。原 product/status/workbench、owner-route handoff 与 progress/domain-ref projection wrapper tail 只作为 former tail / deletion-gate provenance；剩余是 paper owner-chain、memory/artifact/lifecycle receipt 和 provider long-soak evidence。 |
+| `med-autogrant` | `mag_functional_structure_gap_count=0`、`standard_agent_source_shape_status=landed`、`claims_opl_replacement_exists=true`、`claims_domain_repo_physical_delete_authorized=false`。 | 结构源码形态已 landed，物理删除未授权。MAG wrapper / lifecycle / product shell 只能作为 deletion / evidence tail，不是长期组成。 |
+| `redcube-ai` | `functional_structure_gap_count=0`、`unclassified_private_generic_residue_count=0`、allowed remaining module classes are domain handler / refs-only adapter / declarative pack / minimal authority / native helper / provenance；bridge gates read `physical_delete_authorized=false`。 | 结构源码形态已 landed，物理删除未授权。RCA generic wrapper、executor adapter、operator projection、stability read model 等继续按 deletion / hygiene tail 读取。 |
 | `opl-meta-agent` | `source_shape=landed`、`functional_structure_gap_count=0`、`domain_repo_retained_generic_surface_count=0`，remaining tails are `opl_generated_default_caller_consumption_tail`、`domain_refs_only_adapter_thinning`、`script_to_pack_hygiene`、`evidence_tail`。 | 当前没有 active generic runtime owner；scripts 只允许 authority implementation、smoke helper、fixture/proof helper 或 work-order materializer，不能扩成 Agent Lab runner / promotion gate / queue / attempt ledger / target truth writer。 |
 
 Edited docs this tranche:
@@ -435,14 +435,13 @@ Edited docs this tranche:
 
 Remaining stale / retire candidates:
 
-- MAS source-purity tail is now the highest-priority unclean agent work: prove active caller cutover and no-forbidden-write / owner receipt or stable typed blocker, then delete active wrapper/projection/workbench shell.
-- MAG/RCA/OMA should not be marked dirty at structural-conformance level, but their retained repo-local generic-looking shells/materializers are not long-term standard surfaces; keep them under deletion / evidence / hygiene tail until physical delete is authorized by owner refs and no-active-caller proof.
+- MAS/MAG/RCA/OMA should not be marked dirty at structural-conformance level. Any retained repo-local generic-looking shell/materializer/wrapper may only remain under deletion / evidence / hygiene / provenance classification until physical delete is authorized by owner refs and no-active-caller proof.
 - OPL read-model zero missing deletion requirements is only structural replacement evidence; it does not authorize domain repo physical delete, domain ready, artifact authority, quality/export verdict, App release ready or production ready.
 
 Next tranche write scope:
 
-- Start with MAS `standard_agent_purity_guard` and `domain_ref_consumer_physical_thinning`; do not dilute it into general evidence tail.
-- Then continue MAG/RCA/OMA deletion / hygiene tails only after fresh no-active-caller and owner-boundary proof.
+- Continue OPL full docs coverage in bounded history/reference/support chunks, or pick a domain physical-delete/evidence-tail tranche with repo-native verification before refreshing OPL read-model docs.
+- Do not revive repo-local wrapper, sidecar, materializer, diagnostic shell, facade, alias or compatibility-only test surfaces as standard-agent components.
 
 Date: `2026-05-25 16:58 CST`
 Tranche: `mag-20260407-authoring-flow-history-coverage`
@@ -614,6 +613,56 @@ Cross-repo result:
 - MAS paragraph-level semantic coverage remains open.
 - App docs remain delayed until active release/GUI worktrees close, App `main` is updated to the current release commits, or an explicit owner decision makes current App docs safe to govern.
 - None of these coverage entries authorizes domain ready, App release ready, production ready, physical delete, long-soak complete, artifact/export readiness, or owner-chain closeout.
+
+Date: `2026-05-25 19:40 CST`
+Tranche: `opl-entry-core-current-truth-coverage`
+State: `tranche_verified`
+
+本轮只覆盖 OPL entry/core/current-truth 支撑面，不关闭全局文档治理目标，也不表示 OPL 全部 `README*` 与 `docs/**/*.md` 已逐段覆盖。目标是把 OPL current truth 从本轮初始 stale / drift 状态刷新到最新 live read-model：family structural conformance 当前是 `4 passed / 0 blocked`，但 evidence worklist zero-open、blocked refs-only envelope、domain physical delete authority 和 App release/product ready 仍不授权 domain ready 或 production ready。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、root `README*`、`docs/README.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、contracts README / package scripts / OPL Doc Governance doctor。
+- `opl agents conformance --family-defaults --json`
+- `opl runtime app-operator-drilldown --json`
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`
+- `opl framework readiness --family-defaults --json`
+
+Fresh read-model result:
+
+- `opl agents conformance` 读为 `passed_count=4`、`blocked_count=0`、`structural_conformance_status=passed`、`production_evidence_tail_count=4`；这只证明 structural conformance，不授权 physical delete、domain ready 或 production ready。
+- `family-runtime evidence-worklist` 读为 `open_worklist_item_count=0`、`open_safe_action_payload_required_item_count=0`、`open_safe_action_payload_free_item_count=0`、`zero_open_worklist_blocked_refs_only_envelope_count=196`、`domain_ready_authorized=false`、`production_ready_authorized=false`。
+- `runtime app-operator-drilldown` 读为 `availability=available`、`functional_privatization_action_required_count=0`、`default_caller_deletion_evidence_open_requirement_count=0`、`domain_legacy_cleanup_plan_count=3`、`domain_legacy_cleanup_ready_plan_count=2`、`domain_legacy_cleanup_blocked_plan_count=1`、`lifecycle_domain_physical_delete_can_execute=false`、`app_release_user_path_release_ready_claimed=false`、`app_release_user_path_production_ready_claimed=false`。
+- `framework readiness` 读为 `control_plane_available=true`、`framework_kernel_hard_blocker_count=0`、`agent_conformance_hard_blocker_count=0`、`operator_actionable_attention_tail_count=0`、`domain_blocked_attention_tail_count=209`、`evidence_envelope_blocked_count=196`。Provider cadence/capability SLO satisfied；blocked refs-only attention 不授权 App release ready、domain ready、production ready 或 physical delete。
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `README*` entry shape, `docs/README.md`, `docs/project.md`, `docs/status.md`, `docs/architecture.md`, `docs/invariants.md`, `docs/decisions.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/active/current-development-lines.md`, `docs/active/standard-agent-private-platform-inventory.md`, `docs/active/development-document-portfolio.md`, `docs/references/runtime-substrate/opl-family-agent-ideal-state.md`, contract/package/script/read-model surfaces listed above. | `docs/status.md`, `docs/active/current-state-vs-ideal-gap.md`, `docs/active/current-development-lines.md`, `docs/active/standard-agent-private-platform-inventory.md`, `docs/active/development-document-portfolio.md` |
+
+Archived / tombstoned / deleted docs:
+
+- none. The stale item was current-truth wording and not a doc path with proven retired role.
+
+Unreviewed docs:
+
+- OPL full README/docs portfolio is still open: this tranche did not paragraph-govern all OPL `README*` and `docs/**/*.md`, especially history/reference/support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open as recorded above.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or an explicit owner decision makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- MAG/RCA physical delete authority remains a strict tail even though structural conformance currently passes; do not write `passed_count=4` as physical delete, App release, domain ready or production ready.
+- OPL remaining docs/history/reference body coverage still needs chunked paragraph governance; history records must not be promoted into current truth.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from already observed App user-path evidence.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in a bounded history/reference/support chunk, or pick a domain physical-delete/evidence-tail tranche with repo-native verification before refreshing OPL read-model docs.
+- Keep App delayed until active release/GUI lanes are safe to govern.
 
 ## 验证
 
