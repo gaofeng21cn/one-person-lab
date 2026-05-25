@@ -100,6 +100,15 @@ function hasLaterAcceptedCloseoutAttempt(
   return Boolean(newerCloseout);
 }
 
+function canBlockFromProviderTerminalObservation(task: LinkedTask) {
+  if (task.status === 'queued' || task.status === 'running' || task.status === 'succeeded') {
+    return true;
+  }
+  return task.status === 'blocked'
+    && task.dead_letter_reason !== null
+    && PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS.has(task.dead_letter_reason);
+}
+
 export function markLinkedMasDefaultExecutorTaskCompleted(
   db: DatabaseSync,
   input: {
@@ -170,10 +179,7 @@ export function blockLinkedMasDefaultExecutorTask(
     !task
     || hasLaterLinkedAttempt(db, input.row)
     || hasLaterAcceptedCloseoutAttempt(db, input.row)
-    || (
-      task.status !== 'succeeded'
-      && !(task.status === 'blocked' && task.dead_letter_reason === 'temporal_stage_attempt_start_failed')
-    )
+    || !canBlockFromProviderTerminalObservation(task)
   ) {
     return;
   }
