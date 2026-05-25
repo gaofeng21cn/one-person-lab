@@ -35,6 +35,8 @@ AI-first quality gate 也不能由执行 attempt 自己闭环。标准 OPL Agent
 
 因此，功能不降级的做法不是保留旧 wrapper，而是先让 OPL generated/hosted surface 调到同一个 domain handler / authority output；domain repo 保留真实领域能力和 owner refs，删除通用外围。若删除会丢失 direct path 功能，说明 active caller cutover 或 parity 还没完成，不能把该 wrapper 写成长期标准组成。
 
+`source_shape=landed`、`source_purity_cutover_status=standard_agent_source_shape_landed` 或 `functional_structure_gap_count=0` 只说明标准源码形态和 owner 分类已经闭合；它们不自动授权 domain repo 物理删除，也不关闭 production/live evidence、owner-chain、memory/artifact/lifecycle receipt 或 long-soak gate。
+
 ## 成熟系统参考
 
 外部成熟系统给出的共同模式是平台持有通用运行基座，应用只提交 spec、policy、handler 或 authority output：
