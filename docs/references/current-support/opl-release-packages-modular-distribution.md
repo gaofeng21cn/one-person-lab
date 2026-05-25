@@ -160,7 +160,7 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 
 | 发布物 | 推荐 Packages 名称 | 内容 | 触发方 |
 | --- | --- | --- | --- |
-| Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | OPL WebUI runtime、Codex/Hermes 初始化脚本、浏览器入口 | Docker 用户直接 `docker run` |
+| Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | OPL WebUI runtime、Codex 配置初始化、Temporal-backed provider / explicit executor adapter refs、浏览器入口 | Docker 用户直接 `docker run` |
 | 模块源码包 | `ghcr.io/gaofeng21cn/one-person-lab-modules/<module>:<version>` | 不含 `.git`、缓存、venv、node_modules 的模块源码归档 | 后续 `opl module install/update` 接入 manifest 后消费；当前不作为正式安装更新来源 |
 | Native helper prebuild | `ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<version>` | Rust helper 二进制、manifest、checksum | `opl native:repair` / `opl install` |
 | OPL core npm 包 | `@gaofeng21cn/one-person-lab` 或 npm public package | CLI、contracts、shared helpers、安装脚本 | npm / 一键安装脚本 |
