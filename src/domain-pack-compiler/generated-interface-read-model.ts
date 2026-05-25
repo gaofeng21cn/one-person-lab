@@ -728,6 +728,8 @@ function buildActiveCallerCutoverProof(
   };
 }
 
+type ActiveCallerSurfaceTarget = ReturnType<typeof buildActiveCallerTargetProof>['surface_targets'][number];
+
 function buildGeneratedWrapperBundle(
   blocks: JsonRecord,
   generatedBlocksReady: boolean,
@@ -742,7 +744,7 @@ function buildGeneratedWrapperBundle(
       GENERATED_WRAPPER_CANONICAL_TARGET_IDS[scope.surface_id] ?? [scope.target_surface_id];
     const candidateTargets = canonicalTargetSurfaceIds
       .map((targetSurfaceId) => targetBySurface.get(targetSurfaceId))
-      .filter((target): target is JsonRecord => isRecord(target));
+      .filter((target): target is ActiveCallerSurfaceTarget => Boolean(target));
     const readyTargets = candidateTargets.filter((target) => (
       !optionalString(target.proof_status)?.startsWith('blocked')
       && generatedSurfaceTargetAllowed(optionalString(target.target_kind) ?? '')
