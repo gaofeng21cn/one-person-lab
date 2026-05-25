@@ -94,6 +94,8 @@ type LifecycleApplySummary = {
   no_active_caller_ref_count: number;
   replacement_parity_ref_count: number;
   verified_receipt_count: number;
+  raw_verified_receipt_count: number;
+  folded_duplicate_receipt_count: number;
   writes_performed: boolean;
 };
 
@@ -899,6 +901,8 @@ function emptyLifecycleApplySummary(input: {
   noActiveCallerRefCount?: number;
   replacementParityRefCount?: number;
   verifiedReceiptCount?: number;
+  rawVerifiedReceiptCount?: number;
+  foldedDuplicateReceiptCount?: number;
 } = {}): LifecycleApplySummary {
   return {
     safe_action_count: 0,
@@ -910,6 +914,8 @@ function emptyLifecycleApplySummary(input: {
     no_active_caller_ref_count: input.noActiveCallerRefCount ?? 0,
     replacement_parity_ref_count: input.replacementParityRefCount ?? 0,
     verified_receipt_count: input.verifiedReceiptCount ?? 0,
+    raw_verified_receipt_count: input.rawVerifiedReceiptCount ?? input.verifiedReceiptCount ?? 0,
+    folded_duplicate_receipt_count: input.foldedDuplicateReceiptCount ?? 0,
     writes_performed: false,
   };
 }
@@ -943,8 +949,47 @@ function summarizeLifecycleApply(
       .flatMap((receipt) => normalizeStringList(receipt.replacement_parity_refs))
       .length,
     verified_receipt_count: 0,
+    raw_verified_receipt_count: 0,
+    folded_duplicate_receipt_count: 0,
     writes_performed: writesPerformed,
   };
+}
+
+function lifecycleReceiptSemanticKey(receipt: {
+  source_ref: string;
+  receipt: JsonRecord;
+}) {
+  const payload = receipt.receipt;
+  return JSON.stringify({
+    receipt_kind: typeof payload.receipt_kind === 'string' ? payload.receipt_kind : null,
+    source_ref: receipt.source_ref,
+    action_id: typeof payload.action_id === 'string' ? payload.action_id : null,
+    action_kind: typeof payload.action_kind === 'string' ? payload.action_kind : null,
+    owner_scope: typeof payload.owner_scope === 'string' ? payload.owner_scope : null,
+    target_ref: typeof payload.target_ref === 'string' ? payload.target_ref : null,
+    restore_proof_refs: normalizeStringList(payload.restore_proof_refs),
+    domain_artifact_mutation_receipt_refs: normalizeStringList(
+      payload.domain_artifact_mutation_receipt_refs,
+    ),
+    domain_owner_handoff_receipt_refs: normalizeStringList(payload.domain_owner_handoff_receipt_refs),
+    no_active_caller_refs: normalizeStringList(payload.no_active_caller_refs),
+    replacement_parity_refs: normalizeStringList(payload.replacement_parity_refs),
+  });
+}
+
+function foldLifecycleApplyReceiptsBySemanticIdentity<Receipt extends {
+  receipt_ref: string;
+  source_ref: string;
+  receipt: JsonRecord;
+}>(receipts: Receipt[]) {
+  const folded = new Map<string, Receipt>();
+  for (const receipt of receipts) {
+    const key = lifecycleReceiptSemanticKey(receipt);
+    if (!folded.has(key)) {
+      folded.set(key, receipt);
+    }
+  }
+  return [...folded.values()];
 }
 
 function insertLifecycleApplyReceipt(
@@ -999,7 +1044,7 @@ function verifyLifecycleApply(input: LifecycleApplyInput) {
         WHERE target_domain_id = ?
         ORDER BY created_at DESC
       `).all(targetDomainId);
-    const verifiedReceipts = (rows as Array<{
+    const rawVerifiedReceipts = (rows as Array<{
       receipt_ref: string;
       target_domain_id: string;
       source_ref: string;
@@ -1027,6 +1072,9 @@ function verifyLifecycleApply(input: LifecycleApplyInput) {
         created_at: row.created_at,
       };
     });
+    const verifiedReceipts = input.receipt_ref?.trim()
+      ? rawVerifiedReceipts
+      : foldLifecycleApplyReceiptsBySemanticIdentity(rawVerifiedReceipts);
     return {
       surface_kind: 'family_runtime_lifecycle_apply_receipt',
       owner: 'one-person-lab',
@@ -1053,6 +1101,8 @@ function verifyLifecycleApply(input: LifecycleApplyInput) {
           .flatMap((receipt) => receipt.replacement_parity_refs)
           .length,
         verifiedReceiptCount: verifiedReceipts.length,
+        rawVerifiedReceiptCount: rawVerifiedReceipts.length,
+        foldedDuplicateReceiptCount: rawVerifiedReceipts.length - verifiedReceipts.length,
       }),
       authority_boundary: lifecycleApplyAuthorityBoundary(),
     };

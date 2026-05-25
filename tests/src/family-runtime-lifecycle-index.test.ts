@@ -321,6 +321,53 @@ test('family runtime lifecycle verify reads an applied cleanup receipt', () => {
   });
 });
 
+test('family runtime lifecycle verify folds historical duplicate cleanup receipts by semantic identity', () => {
+  withTempState(() => {
+    const action = {
+      action_id: 'mark-opl-index-ref-retired',
+      action_kind: 'cleanup',
+      owner_scope: 'opl_owned_index_ref',
+      target_ref: 'opl://lifecycle-index/mas/runtime-lifecycle',
+      restore_proof_refs: ['restore-proof:mas:runtime-lifecycle'],
+      no_active_caller_refs: ['proof:mas:index-no-active-caller'],
+      replacement_parity_refs: ['proof:mas:index-replacement-parity'],
+    };
+    const first = runFamilyRuntimeLifecycleApply({
+      mode: 'apply',
+      target_domain_id: 'med-autoscience',
+      source_ref: 'mas://legacy-cleanup/plan-1',
+      actions: [action],
+    });
+
+    const legacyDuplicate = runFamilyRuntimeLifecycleApply({
+      mode: 'apply',
+      target_domain_id: 'med-autoscience',
+      source_ref: 'mas://legacy-cleanup/plan-1',
+      actions: [
+        {
+          ...action,
+          manifest_ref: 'legacy-generated-duplicate-ref',
+        },
+      ],
+    });
+    assert.notEqual(legacyDuplicate.receipt_ref, first.receipt_ref);
+
+    const verified = runFamilyRuntimeLifecycleApply({
+      mode: 'verify',
+      target_domain_id: 'med-autoscience',
+    });
+
+    assert.equal(verified.status, 'verified');
+    assert.equal(verified.summary.verified_receipt_count, 2);
+    assert.equal(verified.summary.raw_verified_receipt_count, 4);
+    assert.equal(verified.summary.folded_duplicate_receipt_count, 2);
+    assert.deepEqual(
+      verified.verified_receipts.map((receipt) => receipt.receipt.receipt_kind),
+      ['opl_lifecycle_apply_batch_receipt', 'opl_safe_cleanup_receipt'],
+    );
+  });
+});
+
 test('family runtime lifecycle reconcile detects missing and stale refs without delete authority', () => {
   withTempState(() => {
     recordFamilyRuntimeLifecycleRef({
