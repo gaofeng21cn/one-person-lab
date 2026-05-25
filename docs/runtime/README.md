@@ -21,7 +21,7 @@ Machine boundary: 人读索引。机器真相继续归 `contracts/`、源码、C
 
 当前 MAS generic runtime handoff 的机器入口是 `contracts/opl-framework/runtime-manager-contract.json#/family_runtime_queue/mas_domain_route_projection` 与 `#/family_scheduler_replacement`。OPL 接收 `mas_runtime_owner_route_handoff`，并以 `opl_runtime_owner_route` 持有 generic runtime queue、stage attempt ledger、liveness projection、provider wakeup、redrive/retry/dead-letter；MAS 继续持有医学 domain truth、paper progress semantics、owner receipt、typed blocker、publication/artifact gate 与 current package authority。
 
-MAS default-executor dispatch 的 task row 与 provider-hosted stage attempt 必须作为同一 OPL typed queue / attempt lifecycle 投影同步：当 linked Temporal attempt 的 terminal observation 显示 failed 或 not-completed，OPL 可以把仍处于 `queued`、`running`、`succeeded` 或 provider-only blocked 的同一 task 收敛到 `blocked`，并设置 provider dead-letter reason 以开放 formal redrive。该同步只表达 provider transport failure / non-completion，不写 MAS study truth、不改 publication verdict、不签 owner receipt，也不把 redrive 解释成 paper ready。
+MAS default-executor dispatch 的 task row 与 provider-hosted stage attempt 必须作为同一 OPL typed queue / attempt lifecycle 投影同步：当 linked Temporal attempt 的 terminal observation 显示 failed 或 not-completed，OPL 可以把仍处于 `queued`、`running`、`succeeded` 或 provider-only blocked 的同一 task 收敛到 `blocked`，并设置 provider dead-letter reason 以开放 formal redrive；当 linked attempt 产出 accepted typed closeout，OPL 可以把同一 task 收敛到 `succeeded` 并清除 provider-only blocker。该同步只表达 provider transport completion / failure / non-completion，不写 MAS study truth、不改 publication verdict、不签 owner receipt，也不把 provider completion 或 redrive 解释成 paper ready。
 
 ## 内容
 

@@ -109,6 +109,15 @@ function canBlockFromProviderTerminalObservation(task: LinkedTask) {
     && PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS.has(task.dead_letter_reason);
 }
 
+function canSucceedFromTypedCloseout(task: LinkedTask) {
+  if (task.status === 'queued' || task.status === 'running' || task.status === 'succeeded') {
+    return true;
+  }
+  return task.status === 'blocked'
+    && task.dead_letter_reason !== null
+    && PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS.has(task.dead_letter_reason);
+}
+
 export function markLinkedMasDefaultExecutorTaskCompleted(
   db: DatabaseSync,
   input: {
@@ -120,13 +129,10 @@ export function markLinkedMasDefaultExecutorTaskCompleted(
   if (!task || hasLaterLinkedAttempt(db, input.row)) {
     return;
   }
-  const providerOnlyBlocker = task.status === 'blocked'
-    && task.dead_letter_reason !== null
-    && PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS.has(task.dead_letter_reason);
   const alreadySucceeded = task.status === 'succeeded'
     && task.last_error === null
     && task.dead_letter_reason === null;
-  if (alreadySucceeded || (task.status !== 'succeeded' && !providerOnlyBlocker)) {
+  if (alreadySucceeded || !canSucceedFromTypedCloseout(task)) {
     return;
   }
   db.prepare(`
