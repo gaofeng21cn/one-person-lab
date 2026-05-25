@@ -143,6 +143,63 @@ test('MAS paper-line stable typed blocker result feeds blocker path without succ
   assert.equal(preflight.accepted_payload_paths.typed_blocker_path.can_claim_domain_ready, false);
 });
 
+test('MAS paper-line result carrying body or readiness claims fails closed', () => {
+  assert.throws(
+    () => assertDomainDispatchEvidencePayloadReady(route, {
+      evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
+      paper_line_owner_chain_results: [
+        {
+          surface_kind: 'mas_paper_line_owner_chain_result',
+          paper_line_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          result_kind: 'owner_receipt',
+          owner_receipt_refs: ['mas://dm003/domain-owner-receipt'],
+          progress_delta_refs: ['mas://dm003/ai-reviewer-currentness'],
+          body_included: true,
+          readiness_claims: {
+            claims_paper_closure: true,
+            claims_publication_ready: true,
+            claims_artifact_mutation_authorized: true,
+            claims_current_package_updated: true,
+          },
+        },
+      ],
+    }),
+    (error) => {
+      assert.equal(error instanceof FrameworkContractError, true);
+      const details = (error as FrameworkContractError).details as {
+        error_kind: string;
+        forbidden_payload_authority_claims: Array<{ path: string }>;
+        receipt_recorded: boolean;
+        preflight: {
+          can_record_refs_only_receipt: boolean;
+          accepted_payload_paths: {
+            success_refs_path: {
+              can_claim_domain_ready: boolean;
+              can_claim_production_ready: boolean;
+            };
+          };
+        };
+      };
+      assert.equal(
+        details.error_kind,
+        'domain_dispatch_evidence_payload_authority_claims_forbidden',
+      );
+      assert.equal(details.receipt_recorded, false);
+      assert.equal(details.preflight.can_record_refs_only_receipt, false);
+      assert.equal(details.preflight.accepted_payload_paths.success_refs_path.can_claim_domain_ready, false);
+      assert.equal(details.preflight.accepted_payload_paths.success_refs_path.can_claim_production_ready, false);
+      assert.deepEqual(details.forbidden_payload_authority_claims.map((claim) => claim.path), [
+        'paper_line_owner_chain_results[0].body_included',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_paper_closure',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_publication_ready',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_artifact_mutation_authorized',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_current_package_updated',
+      ]);
+      return true;
+    },
+  );
+});
+
 test('domain dispatch evidence payload records only when success refs cover all required refs', () => {
   const preflight = assertDomainDispatchEvidencePayloadReady(route, {
     domain_receipt_refs: ['mas://dm003/domain-owner-receipt'],

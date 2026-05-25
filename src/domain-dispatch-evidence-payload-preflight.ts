@@ -20,6 +20,10 @@ function record(value: unknown): JsonRecord {
   return isRecord(value) ? value : {};
 }
 
+function recordList(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
 function looksLikePlaceholderRef(ref: string) {
   return ref.startsWith('<') && ref.endsWith('>');
 }
@@ -49,6 +53,36 @@ const TYPED_BLOCKER_PAYLOAD_REF_FIELDS = [
 function payloadSourceFingerprint(payload: JsonRecord) {
   return stringValue(payload.source_fingerprint)
     ?? stringValue(record(payload.repair_work_unit).source_fingerprint);
+}
+
+function forbiddenPaperLineOwnerChainPayloadClaims(payload: JsonRecord) {
+  return recordList(payload.paper_line_owner_chain_results).flatMap((result, index) => {
+    const paperLineId = stringValue(result.paper_line_id);
+    const readinessClaims = record(result.readiness_claims);
+    return [
+      ...(result.body_included === true
+        ? [{
+            path: `paper_line_owner_chain_results[${index}].body_included`,
+            paper_line_id: paperLineId,
+            forbidden_value: true,
+            reason: 'opl_domain_dispatch_payload_must_be_body_free',
+          }]
+        : []),
+      ...[
+        'claims_paper_closure',
+        'claims_publication_ready',
+        'claims_artifact_mutation_authorized',
+        'claims_current_package_updated',
+      ].flatMap((field) => readinessClaims[field] === true
+        ? [{
+            path: `paper_line_owner_chain_results[${index}].readiness_claims.${field}`,
+            paper_line_id: paperLineId,
+            forbidden_value: true,
+            reason: 'opl_domain_dispatch_payload_must_not_carry_readiness_or_artifact_authority_claims',
+          }]
+        : []),
+    ];
+  });
 }
 
 function identityBindingPreflight(route: JsonRecord, payload: JsonRecord) {
@@ -137,6 +171,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
   const missingRequiredEvidenceRefs = enforcedRequiredEvidenceRefs.filter((ref) => !providedRefs.has(ref));
   const requiredEvidenceRefsCovered = missingRequiredEvidenceRefs.length === 0;
   const forbiddenPlaceholderRefs = allRefs.filter(looksLikePlaceholderRef);
+  const forbiddenPayloadAuthorityClaims = forbiddenPaperLineOwnerChainPayloadClaims(payload);
   const successCloseoutRefCount =
     domainReceiptRefs.length + ownerChainRefs.length + noRegressionRefs.length;
   const successPathReady = requiredEvidenceRefsCovered && (
@@ -154,6 +189,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
   const identityConflicts = identityBinding.identity_conflicts;
   const canRecordRefsOnlyReceipt = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
+    && forbiddenPayloadAuthorityClaims.length === 0
     && (successPathReady || typedBlockerPathReady)
     && identityConflicts.length === 0;
   return {
@@ -198,6 +234,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     required_evidence_refs_covered: requiredEvidenceRefsCovered,
     missing_required_evidence_refs: missingRequiredEvidenceRefs,
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
+    forbidden_payload_authority_claims: forbiddenPayloadAuthorityClaims,
     missing_payload_fields: allRefs.length === 0
       ? ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs']
       : successCloseoutRefCount === 0 && typedBlockerRefs.length === 0
@@ -232,6 +269,23 @@ export function assertDomainDispatchEvidencePayloadReady(route: JsonRecord, payl
   }
   if (preflight.can_record_refs_only_receipt) {
     return preflight;
+  }
+  if (
+    Array.isArray(preflight.forbidden_payload_authority_claims)
+    && preflight.forbidden_payload_authority_claims.length > 0
+  ) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'Domain dispatch evidence payload must stay body-free and cannot carry readiness or artifact authority claims.',
+      {
+        action_id: stringValue(route.action_id),
+        error_kind: 'domain_dispatch_evidence_payload_authority_claims_forbidden',
+        forbidden_payload_authority_claims: preflight.forbidden_payload_authority_claims,
+        receipt_recorded: false,
+        empty_payload_template_is_success_evidence: false,
+        preflight,
+      },
+    );
   }
   if (
     Array.isArray(preflight.missing_required_evidence_refs)

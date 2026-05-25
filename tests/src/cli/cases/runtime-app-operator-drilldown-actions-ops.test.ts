@@ -8,6 +8,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 import {
@@ -849,6 +850,61 @@ test('runtime action execute records MAS paper-line owner-chain results as refs-
           && ref.action_kind === 'domain_dispatch_evidence_receipt_record',
       ),
       true,
+    );
+
+    const pollutedPayloadExecution = runCliFailure([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--payload',
+      JSON.stringify({
+        evidence_refs: ['mas://dm003/paper-facing-artifact-delta'],
+        paper_line_owner_chain_results: [
+          {
+            surface_kind: 'mas_paper_line_owner_chain_result',
+            paper_line_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+            result_kind: 'owner_receipt',
+            owner_receipt_refs: ['mas://dm003/domain-owner-receipt-2'],
+            progress_delta_refs: ['mas://dm003/ai-reviewer-currentness'],
+            body_included: true,
+            readiness_claims: {
+              claims_paper_closure: true,
+              claims_publication_ready: true,
+              claims_artifact_mutation_authorized: true,
+              claims_current_package_updated: true,
+            },
+          },
+        ],
+      }),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
+    });
+
+    assert.equal(pollutedPayloadExecution.payload.error.code, 'cli_usage_error');
+    assert.equal(
+      pollutedPayloadExecution.payload.error.details.error_kind,
+      'domain_dispatch_evidence_payload_authority_claims_forbidden',
+    );
+    assert.equal(pollutedPayloadExecution.payload.error.details.receipt_recorded, false);
+    assert.equal(
+      pollutedPayloadExecution.payload.error.details.preflight.can_record_refs_only_receipt,
+      false,
+    );
+    assert.deepEqual(
+      pollutedPayloadExecution.payload.error.details.forbidden_payload_authority_claims.map(
+        (claim: { path: string }) => claim.path,
+      ),
+      [
+        'paper_line_owner_chain_results[0].body_included',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_paper_closure',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_publication_ready',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_artifact_mutation_authorized',
+        'paper_line_owner_chain_results[0].readiness_claims.claims_current_package_updated',
+      ],
     );
 
     const recordExecution = runCli([
