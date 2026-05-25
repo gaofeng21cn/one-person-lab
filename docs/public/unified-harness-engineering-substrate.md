@@ -77,7 +77,7 @@ Human / Agent
 
 这个 substrate 当前冻结的共享约束包括：
 
-- 默认采用 `Agent-first` 执行姿态
+- 默认采用 `AI-first / executor-first / Codex-first` 执行姿态：共享 substrate 提供 stage、上下文、工具、权限、receipt、projection 和边界，开放式知识工作由 selected executor 完成
 - 当前各个 domain 仓首先都是共享同一 substrate 的 `Auto-only` 主线
 - 未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - formal entry 采用同一套显式矩阵：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface

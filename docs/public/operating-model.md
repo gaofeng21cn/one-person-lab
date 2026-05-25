@@ -79,16 +79,17 @@ Agent 主要负责：
 
 通用 stage attempt、queue、wakeup、retry/dead-letter、receipt/projection、generic lifecycle index、operator workbench 和 App drilldown 归 OPL Framework / One Person Lab App。domain repo 中仍存在的私有 runtime、session、workbench 或 sidecar 代码，只能按当前 gap plan 收薄为 authority function、domain handler target、refs-only adapter、diagnostic、history/tombstone 或 OPL generated/hosted target。
 
-## Agent-first 执行
+## AI-first / Executor-first 执行
 
-`OPL` 默认采用 `Agent-first` 执行。
+`OPL` 默认采用 `AI-first / executor-first / Codex-first` 执行。
 各个 domain 可以选择自己的模型接口，但 `OPL` 层的默认 executor 路径是 `Codex CLI`。
+OPL 负责给 selected executor 提供 stage、上下文、工具、权限、质量门、receipt 和 projection；开放式推理、写作、评审、诊断和修订由 executor 完成。
 主流程驱动者负责读状态、调用稳定的 domain-owned 工具、组织中间产物、推进 gate，并把关键痕迹写回可审计表面。
 
 在这个模型里，代码的主要职责是提供：
 
 - 稳定对象模型
-- stage selector / controller
+- stage selector / launch gate
 - 工具封装
 - gate 规则
 - 审计落盘
@@ -117,7 +118,7 @@ Agent 主要负责：
 
 - 当前继续以 `Codex CLI` 作为 formal executor
 - `MCP` 继续作为 supported protocol layer
-- domain-owned product entry surface 继续作为 domain workflow、runtime truth 与 delivery truth 的 ownership 边界
+- domain-owned product entry surface 继续作为 domain workflow、domain truth、quality / delivery authority 与 receipt / typed blocker 的 ownership 边界
 - `OPL Runtime Manager` 只作为已配置 family runtime provider 之上的 product-managed 薄 adapter
 
 在这条演进线上：
@@ -126,7 +127,7 @@ Agent 主要负责：
 - `UHS` 继续作为共享 Harness Engineering 上位语言
 - `Shared Runtime Contract` 逐步承接长期在线运行所需的共享合同
 - `Shared Domain Contract` 逐步承接 formal entry、运行身份、报告面、审计面与 gate 语义这类跨 domain 正式行为合同
-- 各个独立 `domain agent` 仓继续承接自己的产品入口、domain workflow 与交付真相
+- 各个独立 `domain agent` 仓继续承接自己的产品入口、domain workflow truth、quality gate、memory/artifact authority 与交付授权
 
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 当前已经落地的是这条结构的 framework/control-plane、executor adapter、provider code path、receipt/projection 和 domain descriptor 层；尚未闭合的是外部 production provider 长时运行和真实 domain soak。

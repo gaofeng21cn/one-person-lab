@@ -18,11 +18,13 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - `Presentation Ops`
 
 这个拆分定义的是顶层任务语义。
+`Agent Foundry` / `OPL Meta Agent` 是面向新智能体创建、测试接管和机制改进的 builder/tester module，不属于这七类正式交付 workstream，也不持有 MAS/MAG/RCA 或未来 domain 的领域真相、质量裁决、artifact authority 或 owner receipt。
 在运行时，这些语义通过 Codex-default executor 路径、按需显式进入 `OPL` activation，由 provider-backed stage runtime 承载可恢复的阶段尝试，再路由到选定的 domain capability surface，同时保留清楚的 ownership 与 handoff 边界。
 
 在执行层面，这些 workstream 也共享同一条目标原则：
 
-- 采用以 stage 为编排单位、带有显式 domain-owned entry 与 harness 分层的 `Agent-first` domain system
+- 采用 `AI-first / executor-first / Codex-first` 的 standard domain-agent shape：以 stage 为可审计推进单位，OPL provider-backed runtime 承担 queue / attempt / receipt / projection，selected executor 承担开放式知识工作
+- 保持显式 domain-owned entry、quality gate、artifact / memory authority、owner receipt / typed blocker 与 direct skill path
 - 当前已收录的 domain 仓统一按 `Auto-only` 主线理解
 - 未来 `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用同一 substrate
 
@@ -99,7 +101,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - 当前生命周期状态：已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain surface
 - formal 映射：`grant_ops -> medautogrant` 已经在活跃 workstream/domain-agent catalog 中冻结
 - 当前公开入口：顶层 domain entry 已经是 `MedAutoGrant`，基金方向判断、申请书写作、作者侧模拟评审与修订 truth 都继续由它持有
-- stage-entry 规则：successful handoff 只能 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- stage-entry 规则：successful handoff 只能 targeting public domain-agent entry，并继续禁止绕过 public entry 直接触碰 domain-local execution plane
 - 当前顶层处理方式：清楚的请求会通过活跃 stage vocabulary 与 domain manifest surface 直接解析到 `medautogrant`
 
 ## IP Ops
@@ -196,7 +198,7 @@ Machine boundary: 本文是人读任务版图。domain admission、runtime readi
 - stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
 - 已跟踪的 blocker package：`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
 - truth boundary：Thesis-specific canonical truth 会随着未来 Thesis Ops domain boundary 一起冻结
-- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止绕过 public entry 直接触碰 domain-local execution plane
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Review Ops
@@ -230,7 +232,7 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - stage 路径：等待 stage-selection readiness、stage-execution readiness 与 domain-agent handoff 资格
 - 已跟踪的 blocker package：`execution_model`、`stage_selection_readiness`、`stage_execution_readiness` 与 `cross_domain_wording`
 - truth boundary：review truth 会在 dedicated Review Ops boundary 冻结后继续保持为 domain-owned
-- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止 direct harness bypass
+- stage-entry 规则：任何未来的 successful handoff 都必须 targeting public domain-agent entry，并继续禁止绕过 public entry 直接触碰 domain-local execution plane
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Presentation Ops
@@ -272,4 +274,4 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - 同一套共享基础结构语言
 
 所以 `OPL` 的任务地图不是 feature list。
-它是 domain surface 与 harness 之上的分工图。
+它是 domain surface 与 OPL shared substrate 之上的分工图。
