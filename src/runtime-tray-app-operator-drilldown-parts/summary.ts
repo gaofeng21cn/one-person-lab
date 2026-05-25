@@ -178,6 +178,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domain_dispatch_evidence_attempt_count: numberValue(domainDispatchSummary.attempt_count),
     domain_dispatch_evidence_dispatch_identity_group_count:
       numberValue(domainDispatchSummary.dispatch_identity_group_count),
+    domain_dispatch_evidence_dispatch_supersession_identity_group_count:
+      numberValue(domainDispatchSummary.dispatch_supersession_identity_group_count),
     domain_dispatch_evidence_current_default_actionable_attempt_count:
       numberValue(domainDispatchSummary.current_default_actionable_attempt_count),
     domain_dispatch_evidence_superseded_attempt_count:

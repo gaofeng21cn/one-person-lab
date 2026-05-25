@@ -274,6 +274,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     stage_attempt_source_fingerprint: stageAttemptSourceFingerprint,
     target_identity: targetIdentity,
     dispatch_identity_key: stringValue(attempt.dispatch_identity_key),
+    dispatch_supersession_identity_key: stringValue(attempt.dispatch_supersession_identity_key),
     dispatch_identity_fields: record(attempt.dispatch_identity_fields),
     default_actionability_status: stringValue(attempt.default_actionability_status),
     default_actionable: attempt.default_actionable === true,

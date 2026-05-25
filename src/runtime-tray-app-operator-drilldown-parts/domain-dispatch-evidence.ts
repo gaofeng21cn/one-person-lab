@@ -75,6 +75,7 @@ function domainDispatchIdentity(attempt: JsonRecord) {
   if (!canonicalDomainId || !stageId || !dispatchRef) {
     return {
       key: null,
+      supersession_key: null,
       key_status: 'unbound_no_dispatch_ref',
       fields,
     };
@@ -88,6 +89,15 @@ function domainDispatchIdentity(attempt: JsonRecord) {
       fields.study_id,
       fields.action_type,
       fields.dispatch_authority,
+      dispatchRef,
+    ].map(identityPart).join('|'),
+    supersession_key: [
+      canonicalDomainId,
+      stageId,
+      fields.workspace_root,
+      profile,
+      fields.study_id,
+      fields.action_type,
       dispatchRef,
     ].map(identityPart).join('|'),
     key_status: 'bound',
@@ -169,7 +179,8 @@ function compareAttemptRecency(left: DomainDispatchAttemptEvidence, right: Domai
 function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[]) {
   const attemptsByIdentity = attempts
     .reduce<Record<string, DomainDispatchAttemptEvidence[]>>((groups, attempt) => {
-      const key = stringValue(attempt.dispatch_identity_key);
+      const key = stringValue(attempt.dispatch_supersession_identity_key)
+        ?? stringValue(attempt.dispatch_identity_key);
       if (!key) {
         return groups;
       }
@@ -181,7 +192,8 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
     currentByIdentity.set(key, [...group].sort(compareAttemptRecency)[0]);
   }
   return attempts.map((attempt) => {
-    const key = stringValue(attempt.dispatch_identity_key);
+    const key = stringValue(attempt.dispatch_supersession_identity_key)
+      ?? stringValue(attempt.dispatch_identity_key);
     if (!key) {
       if (!hasDefaultActionableEvidenceGap(attempt)) {
         return {
@@ -200,14 +212,19 @@ function annotateDefaultActionability(attempts: DomainDispatchAttemptEvidence[])
         superseded_reason: null,
       };
     }
-    const currentAttemptId = currentByIdentity.get(key)?.stage_attempt_id ?? null;
+    const currentAttempt = currentByIdentity.get(key);
+    const currentAttemptId = currentAttempt?.stage_attempt_id ?? null;
     if (currentAttemptId && currentAttemptId !== attempt.stage_attempt_id) {
+      const supersededByExactIdentity =
+        stringValue(currentAttempt?.dispatch_identity_key) === stringValue(attempt.dispatch_identity_key);
       return {
         ...attempt,
         default_actionability_status: 'superseded',
         default_actionable: false,
         superseded_by_stage_attempt_id: currentAttemptId,
-        superseded_reason: 'newer_stage_attempt_with_same_domain_dispatch_identity',
+        superseded_reason: supersededByExactIdentity
+          ? 'newer_stage_attempt_with_same_domain_dispatch_identity'
+          : 'newer_stage_attempt_with_same_domain_dispatch_supersession_identity',
       };
     }
     if (!hasDefaultActionableEvidenceGap(attempt)) {
@@ -299,6 +316,7 @@ function attemptDispatchEvidence(attempt: JsonRecord) {
     updated_at: stringValue(attempt.updated_at),
     target_identity: identity,
     dispatch_identity_key: dispatchIdentity.key,
+    dispatch_supersession_identity_key: dispatchIdentity.supersession_key,
     dispatch_identity_key_status: dispatchIdentity.key_status,
     dispatch_identity_fields: dispatchIdentity.fields,
     identity_binding_policy:
@@ -346,6 +364,7 @@ function emptyDomainGroup(domainId: string) {
     current_default_actionable_attempt_count: 0,
     superseded_attempt_count: 0,
     dispatch_identity_keys: [] as string[],
+    dispatch_supersession_identity_keys: [] as string[],
     attempt_refs: [] as string[],
     owner_receipt_refs: [] as string[],
     typed_blocker_refs: [] as string[],
@@ -364,6 +383,12 @@ export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
     group.dispatch_identity_keys = uniqueStrings([
       ...group.dispatch_identity_keys,
       ...(attempt.dispatch_identity_key ? [attempt.dispatch_identity_key] : []),
+    ]);
+    group.dispatch_supersession_identity_keys = uniqueStrings([
+      ...group.dispatch_supersession_identity_keys,
+      ...(attempt.dispatch_supersession_identity_key
+        ? [attempt.dispatch_supersession_identity_key]
+        : []),
     ]);
     group.current_default_actionable_attempt_count += attempt.default_actionable ? 1 : 0;
     group.superseded_attempt_count += attempt.default_actionability_status === 'superseded' ? 1 : 0;
@@ -390,6 +415,9 @@ export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
   const dispatchIdentityKeys = uniqueStrings(attemptEvidence
     .map((attempt) => attempt.dispatch_identity_key)
     .filter((key): key is string => Boolean(key)));
+  const dispatchSupersessionIdentityKeys = uniqueStrings(attemptEvidence
+    .map((attempt) => attempt.dispatch_supersession_identity_key)
+    .filter((key): key is string => Boolean(key)));
   const supersededAttempts = attemptEvidence.filter((attempt) =>
     attempt.default_actionability_status === 'superseded'
   );
@@ -397,11 +425,12 @@ export function buildDomainDispatchEvidence(attempts: JsonRecord[]) {
     surface_kind: 'opl_app_drilldown_domain_dispatch_evidence',
     projection_policy: 'refs_only_owner_chain_dispatch_evidence_no_domain_verdict_authority',
     default_actionability_policy:
-      'only_latest_attempt_per_bound_dispatch_identity_is_default_actionable_unbound_attempts_remain_full_detail_provenance',
+      'only_latest_attempt_per_bound_dispatch_supersession_identity_is_default_actionable_unbound_attempts_remain_full_detail_provenance_exact_dispatch_identity_remains_audit_key',
     summary: {
       domain_count: domainGroups.length,
       attempt_count: attemptEvidence.length,
       dispatch_identity_group_count: dispatchIdentityKeys.length,
+      dispatch_supersession_identity_group_count: dispatchSupersessionIdentityKeys.length,
       current_default_actionable_attempt_count:
         attemptEvidence.filter((attempt) => attempt.default_actionable).length,
       superseded_attempt_count: supersededAttempts.length,

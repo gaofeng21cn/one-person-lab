@@ -277,6 +277,179 @@ test('domain dispatch evidence defaults to latest actionable attempt while prese
   }
 });
 
+test('domain dispatch evidence compacts superseded attempts across dispatch authority cutover', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-dispatch-authority-cutover-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const dispatchRef =
+    'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json';
+  const oldLocator = {
+    surface_kind: 'opl_provider_hosted_task_workspace_locator',
+    workspace_root: '/tmp/dm-cvd',
+    profile: '/tmp/dm-cvd/ops/medautoscience/profiles/dm-cvd.local.toml',
+    study_id: '002-dm-china-us-mortality-attribution',
+    action_type: 'run_quality_repair_batch',
+    dispatch_authority: 'consumer_default_executor_dispatch',
+    dispatch_ref: dispatchRef,
+    next_executable_owner: 'write',
+    domain_truth_owner: 'med-autoscience',
+    opl_writes_domain_truth: false,
+    opl_writes_publication_quality: false,
+    opl_writes_artifact_gate: false,
+    opl_writes_current_package: false,
+  };
+  const newLocator = {
+    ...oldLocator,
+    dispatch_authority: 'quality_repair_batch_writer_handoff',
+  };
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+  const closeoutPacket = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:writer-handoff'],
+    next_owner: 'write',
+    domain_ready_verdict: 'domain_gate_pending',
+    route_impact: {
+      decision: 'bounded_repair',
+      next_owner: 'write',
+      domain_ready_verdict: 'domain_gate_pending',
+    },
+  };
+
+  try {
+    const stale = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify(oldLocator),
+      '--task',
+      'task-authority-cutover-domain-dispatch',
+      '--source-fingerprint',
+      'truth-snapshot::old-authority',
+    ], env).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      stale.stage_attempt_id,
+      '--closeout-packet',
+      JSON.stringify(closeoutPacket),
+    ], env);
+
+    const current = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'domain_owner/default-executor-dispatch',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      JSON.stringify(newLocator),
+      '--task',
+      'task-authority-cutover-domain-dispatch',
+      '--source-fingerprint',
+      'truth-snapshot::new-authority',
+      '--new-attempt',
+    ], env).family_runtime_stage_attempt.attempt;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'fixture-run',
+      current.stage_attempt_id,
+      '--closeout-packet',
+      JSON.stringify(closeoutPacket),
+    ], env);
+
+    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+      .app_operator_drilldown;
+    const attempts = drilldown.domain_dispatch_evidence.attempts.filter(
+      (attempt: { stage_id: string; workspace_locator: { dispatch_ref?: string } }) =>
+        attempt.stage_id === 'domain_owner/default-executor-dispatch'
+        && attempt.workspace_locator.dispatch_ref === dispatchRef,
+    );
+    assert.equal(attempts.length, 2);
+    const staleEvidence = attempts.find(
+      (attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === stale.stage_attempt_id,
+    );
+    const currentEvidence = attempts.find(
+      (attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === current.stage_attempt_id,
+    );
+    assert.equal(currentEvidence.default_actionable, true);
+    assert.equal(currentEvidence.default_actionability_status, 'current');
+    assert.equal(staleEvidence.default_actionable, false);
+    assert.equal(staleEvidence.default_actionability_status, 'superseded');
+    assert.equal(staleEvidence.superseded_by_stage_attempt_id, current.stage_attempt_id);
+    assert.equal(
+      staleEvidence.superseded_reason,
+      'newer_stage_attempt_with_same_domain_dispatch_supersession_identity',
+    );
+    assert.equal(
+      drilldown.domain_dispatch_evidence.summary.current_default_actionable_attempt_count,
+      1,
+    );
+    assert.equal(drilldown.domain_dispatch_evidence.summary.dispatch_identity_group_count, 2);
+    assert.equal(
+      drilldown.domain_dispatch_evidence.summary.dispatch_supersession_identity_group_count,
+      1,
+    );
+    assert.equal(drilldown.domain_dispatch_evidence.summary.superseded_attempt_count, 1);
+
+    const recordRoutes = drilldown.operator_action_routing_refs.refs.filter(
+      (route: { action_kind: string }) =>
+        route.action_kind === 'domain_dispatch_evidence_receipt_record',
+    );
+    assert.equal(recordRoutes.length, 1);
+    assert.equal(recordRoutes[0].stage_attempt_id, current.stage_attempt_id);
+    assert.equal(
+      recordRoutes[0].dispatch_supersession_identity_key,
+      currentEvidence.dispatch_supersession_identity_key,
+    );
+    assert.equal(
+      recordRoutes.some((route: { stage_attempt_id: string }) =>
+        route.stage_attempt_id === stale.stage_attempt_id
+      ),
+      false,
+    );
+    assert.equal(drilldown.summary.domain_dispatch_evidence_receipt_action_route_count, 1);
+    assert.equal(drilldown.summary.evidence_envelope_open_count, 1);
+    assert.equal(drilldown.summary.evidence_envelope_superseded_count, 1);
+
+    const worklist = runCli([
+      'family-runtime',
+      'evidence-worklist',
+      '--family-defaults',
+      '--provider',
+      'temporal',
+      '--executor-kind',
+      'codex_cli',
+      '--detail',
+      'full',
+    ], env).family_runtime_evidence_worklist;
+    assert.equal(worklist.summary.domain_dispatch_evidence_workorder_count, 1);
+    assert.equal(worklist.domain_dispatch_evidence_workorder_packet.summary.workorder_count, 1);
+    assert.equal(
+      worklist.domain_dispatch_evidence_workorder_packet.workorders[0].stage_attempt_id,
+      current.stage_attempt_id,
+    );
+    assert.equal(worklist.evidence_envelope.summary.open_envelope_count, 1);
+    assert.equal(worklist.evidence_envelope.summary.superseded_envelope_count, 1);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('domain dispatch evidence does not expose unbound attempts as default record workorders', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-dispatch-unbound-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();

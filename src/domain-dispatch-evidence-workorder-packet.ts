@@ -68,6 +68,7 @@ function domainDispatchEvidenceWorkorderItem(route: JsonRecord) {
     stage_attempt_source_fingerprint: stringValue(route.stage_attempt_source_fingerprint),
     target_identity: record(route.target_identity),
     dispatch_identity_key: stringValue(route.dispatch_identity_key),
+    dispatch_supersession_identity_key: stringValue(route.dispatch_supersession_identity_key),
     dispatch_identity_fields: record(route.dispatch_identity_fields),
     identity_binding_policy: stringValue(route.identity_binding_policy),
     identity_binding_guidance:
@@ -153,6 +154,9 @@ function domainStageWorkorderGroups(
       const requiredEvidenceRefs = uniqueStringList(
         groupItems.flatMap((item) => item.required_evidence_refs),
       );
+      const dispatchSupersessionIdentityKeys = uniqueStringList(
+        groupItems.map((item) => item.dispatch_supersession_identity_key),
+      );
       const requiredReturnShapes = uniqueStringList(
         groupItems.flatMap((item) => item.required_return_shapes),
       );
@@ -180,6 +184,7 @@ function domainStageWorkorderGroups(
         workorder_count: groupItems.length,
         stage_attempt_count: stageAttemptIds.length,
         stage_attempt_ids: stageAttemptIds,
+        dispatch_supersession_identity_keys: dispatchSupersessionIdentityKeys,
         action_refs: uniqueStringList(groupItems.map((item) => item.action_ref)),
         record_action_ids: recordActionIds,
         record_command_refs: recordCommandRefs,
