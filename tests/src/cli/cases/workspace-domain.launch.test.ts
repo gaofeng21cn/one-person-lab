@@ -60,14 +60,26 @@ test('workspace-bind derives family direct-entry locators from structured projec
       '--path',
       redcubeWorkspacePath,
     ], env);
+    const expectedMagEntryCommand =
+      `uv run --directory ${shellSingleQuote(path.resolve(magWorkspacePath))} python -c ${
+        shellSingleQuote(
+          `from med_autogrant.product_entry import MedAutoGrantProductEntry; import json; print(json.dumps(MedAutoGrantProductEntry().build_product_status(input_path=${JSON.stringify(path.resolve(magInputPath))}), ensure_ascii=False))`,
+        )
+      }`;
+    const expectedMagManifestCommand =
+      `uv run --directory ${shellSingleQuote(path.resolve(magWorkspacePath))} python -c ${
+        shellSingleQuote(
+          `from med_autogrant.product_entry import MedAutoGrantProductEntry; import json; print(json.dumps(MedAutoGrantProductEntry().build_product_entry_manifest(input_path=${JSON.stringify(path.resolve(magInputPath))}), ensure_ascii=False))`,
+        )
+      }`;
 
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autogrant product status --input ${path.resolve(magInputPath)}`,
+      expectedMagEntryCommand,
     );
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.manifest_command,
-      `uv run python -m med_autogrant product manifest --input ${path.resolve(magInputPath)} --format json`,
+      expectedMagManifestCommand,
     );
     assert.deepEqual(magBind.workspace_catalog.binding.direct_entry.workspace_locator, {
       surface_kind: 'med_autogrant_workspace_input',
@@ -125,7 +137,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       magProject.binding_contract.derived_entry_command_template,
-      'uv run python -m med_autogrant product status --input <input_path>',
+      'uv run --directory <workspace_path> python -c <mag_generated_product_status_materializer>',
+    );
+    assert.equal(
+      magProject.binding_contract.derived_manifest_command_template,
+      'uv run --directory <workspace_path> python -c <mag_generated_product_entry_manifest_materializer>',
     );
     assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
     assert.equal(
@@ -150,7 +166,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant')?.manifest_command,
-      `uv run python -m med_autogrant product manifest --input ${path.resolve(magInputPath)} --format json`,
+      expectedMagManifestCommand,
     );
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience')?.manifest_command,

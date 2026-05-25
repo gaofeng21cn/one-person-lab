@@ -69,6 +69,12 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
     );
     assert.equal(
       shouldUseManagedShellScratchCwd(
+        "source '/tmp/manifest-shell-guard.sh' && uv run python -m med_autoscience.cli product manifest --profile /tmp/profile.toml --format json",
+      ),
+      false,
+    );
+    assert.equal(
+      shouldUseManagedShellScratchCwd(
         'uv run python -m med_autogrant product status --input /tmp/workspace.json --format json',
       ),
       false,

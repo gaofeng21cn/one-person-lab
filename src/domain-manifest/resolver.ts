@@ -74,7 +74,7 @@ function buildCommandFailureEntry(
 function executeManifestCommand(binding: WorkspaceBinding, manifestCommand: string, timeoutMs: number) {
   const commandCwd = prepareManagedShellCommandCwd(binding.workspace_path, manifestCommand);
   try {
-    return spawnSync('/bin/bash', ['-lc', manifestCommand], {
+    return spawnSync('/bin/bash', ['-c', manifestCommand], {
       cwd: commandCwd.cwd,
       encoding: 'utf8',
       env: buildManagedShellCommandEnv(binding.workspace_path),

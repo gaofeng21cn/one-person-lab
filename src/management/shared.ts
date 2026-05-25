@@ -191,7 +191,7 @@ export function runJsonShellCommand(command: string | null, cwd: string) {
   const commandCwd = prepareManagedShellCommandCwd(cwd, command);
   const result = (() => {
     try {
-      return spawnSync('/bin/bash', ['-lc', command], {
+      return spawnSync('/bin/bash', ['-c', command], {
         cwd: commandCwd.cwd,
         encoding: 'utf8',
         env: buildManagedShellCommandEnv(cwd),

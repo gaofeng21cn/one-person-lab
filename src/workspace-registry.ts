@@ -249,6 +249,31 @@ function normalizeExistingDirectoryPath(directoryPath: string | undefined, field
   return absolutePath;
 }
 
+function shellSingleQuote(value: string) {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildMagGeneratedProductEntryMaterializer(
+  workspaceRoot: string,
+  inputPath: string,
+  methodName: 'build_product_status' | 'build_product_entry_manifest',
+) {
+  const python = [
+    'from med_autogrant.product_entry import MedAutoGrantProductEntry',
+    'import json',
+    `print(json.dumps(MedAutoGrantProductEntry().${methodName}(input_path=${JSON.stringify(inputPath)}), ensure_ascii=False))`,
+  ].join('; ');
+  return [
+    'uv',
+    'run',
+    '--directory',
+    shellSingleQuote(workspaceRoot),
+    'python',
+    '-c',
+    shellSingleQuote(python),
+  ].join(' ');
+}
+
 function validateProjectLocatorOptions(
   projectId: string,
   locatorOptions: {
@@ -360,9 +385,16 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
 
   if (workspaceLocator.surface_kind === 'med_autogrant_workspace_input' && workspaceLocator.input_path) {
     return {
-      command: `uv run python -m med_autogrant product status --input ${workspaceLocator.input_path}`,
-      manifest_command:
-        `uv run python -m med_autogrant product manifest --input ${workspaceLocator.input_path} --format json`,
+      command: buildMagGeneratedProductEntryMaterializer(
+        workspaceLocator.workspace_root ?? '',
+        workspaceLocator.input_path,
+        'build_product_status',
+      ),
+      manifest_command: buildMagGeneratedProductEntryMaterializer(
+        workspaceLocator.workspace_root ?? '',
+        workspaceLocator.input_path,
+        'build_product_entry_manifest',
+      ),
     };
   }
 
@@ -430,9 +462,9 @@ function buildProjectBindingContract(
       required_locator_fields: ['input_path'],
       optional_locator_fields: [],
       derived_entry_command_template:
-        'uv run python -m med_autogrant product status --input <input_path>',
+        'uv run --directory <workspace_path> python -c <mag_generated_product_status_materializer>',
       derived_manifest_command_template:
-        'uv run python -m med_autogrant product manifest --input <input_path> --format json',
+        'uv run --directory <workspace_path> python -c <mag_generated_product_entry_manifest_materializer>',
       quick_bind_hint: '绑定现有 MAG workspace_path 后，再给 input_path，OPL 就能诚实派生 grant direct entry 与 manifest command。',
     };
   }

@@ -150,7 +150,7 @@ function jsonPointerGet(root: unknown, pointer: string) {
 function executeMaterializationCommand(binding: WorkspaceBinding, command: string, timeoutMs: number) {
   const commandCwd = prepareManagedShellCommandCwd(binding.workspace_path, command);
   try {
-    return spawnSync('/bin/bash', ['-lc', command], {
+    return spawnSync('/bin/bash', ['-c', command], {
       cwd: commandCwd.cwd,
       encoding: 'utf8',
       env: buildManagedShellCommandEnv(binding.workspace_path),

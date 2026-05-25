@@ -372,12 +372,12 @@ export function createFamilyLocatorResolverFixture(options: {
     `#!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "$*" == ${shellSingleQuote(`run python -m med_autoscience.cli product manifest --profile ${path.resolve(options.masProfile)} --format json`)} ]]; then
+if [[ "$*" == *${shellSingleQuote(`run python -m med_autoscience.cli product manifest --profile ${path.resolve(options.masProfile)} --format json`)}* ]]; then
   cat ${shellSingleQuote(masManifestPath)}
   exit 0
 fi
 
-if [[ "$*" == ${shellSingleQuote(`run python -m med_autogrant product manifest --input ${path.resolve(options.magInput)} --format json`)} ]]; then
+if [[ "$*" == run\\ --directory\\ *\\ python\\ -c* && "$*" == *${path.resolve(options.magInput)}* ]]; then
   cat ${shellSingleQuote(magManifestPath)}
   exit 0
 fi

@@ -120,7 +120,7 @@ export function shouldUseManagedShellScratchCwd(command: string | null | undefin
 function isReadOnlyProductEntryCommand(command: string) {
   const normalized = command.replace(/\s+/g, ' ');
   return Boolean(normalized.match(
-    /(?:^|[;&|]\s*)uv\s+run\s+(?:(?:python|python3)\s+-m\s+[\w.-]+\s+|[\w.-]+\s+)product\s+(?:manifest|status)\b/,
+    /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+(?:(?:python|python3)\s+-m\s+[\w.-]+\s+|[\w.-]+\s+)product\s+(?:manifest|status)\b/,
   ));
 }
 
