@@ -1,5 +1,10 @@
 # Med Auto Grant 顶层设计
 
+Owner: `One Person Lab`
+Purpose: `mag_top_level_design_migration_history`
+State: `history_process_spec_archived`
+Machine boundary: 本文只保留 MAG 独立仓迁移前后的顶层设计 provenance。MAG 领域真相、grant strategy、fundability / proposal quality、owner receipt、runtime contract 和交付权威必须以 `med-autogrant` 仓的 contracts、source、CLI/API、docs 和 verification 为准。
+
 > 迁移说明：`Med Auto Grant` 现已使用独立仓库维护领域内部设计与实现文档。
 
 `one-person-lab` 只保留 `OPL -> Grant Foundry -> Med Auto Grant` 的顶层边界说明，不再持有该领域的内部正文，以避免跨仓库双持后发生内容漂移。

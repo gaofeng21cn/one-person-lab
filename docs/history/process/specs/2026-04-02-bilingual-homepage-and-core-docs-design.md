@@ -1,6 +1,15 @@
 # Bilingual Homepage And Core Docs Design
 
+Owner: `One Person Lab`
+Purpose: `bilingual_public_surface_history_spec`
+State: `history_process_spec_archived`
+Machine boundary: This document is human-readable historical design provenance. Machine-readable behavior and current public-surface truth must use current `README*`, `docs/README.md`, `docs/public/`, core docs, contracts, source, CLI/API behavior, or semantic `human_doc:*` ids.
+
 Date: `2026-04-02`
+
+## Historical Reading
+
+This document records the early bilingual homepage and core-docs design. Phrases such as `current`, `requirements`, `scope`, `chosen design`, and `acceptance criteria` describe the state around `2026-04-02`; they are not today's active public-doc contract or implementation queue. Current public positioning, language split, product layering and doc lifecycle rules must be checked against root `README*`, `docs/README.md`, `docs/public/`, core docs, `docs/docs_portfolio_consolidation.md`, and live repo truth.
 
 ## Context
 
@@ -71,7 +80,7 @@ GitHub 仓库的默认入口是 `README.md`。
 - 但 `OPL` 作为实验室任务体系并不限定于医学
 - 欢迎不同领域的 `PI` 在各自学科里建立自己的 `OPL`
 
-## User-Level Requirements
+## Historical User-Level Requirements
 
 本轮改版必须满足：
 
@@ -90,7 +99,7 @@ GitHub 仓库的默认入口是 `README.md`。
    - not medical-only
    - open to PIs in other domains
 
-## Scope
+## Historical Scope
 
 本轮覆盖：
 
@@ -173,7 +182,7 @@ GitHub 仓库的默认入口是 `README.md`。
 
 - 不选。
 
-## Chosen Design
+## Historical Chosen Design
 
 采用 `Option A`：
 
@@ -181,7 +190,7 @@ GitHub 仓库的默认入口是 `README.md`。
 - 中文作为完整镜像面
 - 首页与核心 docs 都保持语言一致性
 
-## Design
+## Historical Design
 
 ### A. File Strategy
 
@@ -279,7 +288,7 @@ GitHub 仓库的默认入口是 `README.md`。
 - `MedAutoScience` 链接位置继续保留
 - 路线图与项目矩阵仍然作为首页核心区块
 
-## Acceptance Criteria
+## Historical Acceptance Criteria
 
 如果这次设计被正确实现，则应满足：
 

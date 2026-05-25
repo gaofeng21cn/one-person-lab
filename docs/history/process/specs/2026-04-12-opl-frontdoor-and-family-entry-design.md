@@ -1,6 +1,15 @@
 # OPL Front Desk And Family Entry 设计
 
-> 已退役。这个设计属于 `frontdoor` 公开语义阶段，后来曾被 [`2026-04-20 Product API / Domain Agent 边界设计`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 取代；该 Product API 规格现在也已归档。当前主线以核心五件套、`docs/active/` 和 runtime-substrate roadmap 为准。保留本文只用于历史审计与迁移回顾。
+Owner: `One Person Lab`
+Purpose: `frontdoor_family_entry_history_spec`
+State: `history_process_spec_archived`
+Machine boundary: 本文只保留 `2026-04-12` frontdoor / family entry 设计 provenance；不得作为当前 CLI/API、runtime provider、domain handoff、Hermes executor、App/workbench 或 readiness 机器合同读取。
+
+> 已退役。这个设计属于 `frontdoor` 公开语义阶段，后来曾被 [`2026-04-20 Product API / Domain Agent 边界设计`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 取代；该 Product API 规格现在也已归档。当前主线以核心五件套、`docs/active/`、runtime / domain admission support docs、contracts 和 live read-model 为准。保留本文只用于历史审计与迁移回顾。
+
+## 历史读法
+
+本文中的“当前”“设计目标”“方案比较”“落地范围”“验收标准”只表示 `2026-04-12` 的历史 frontdoor 设计语境。`opl` 裸命令、Hermes handoff、family-level front desk、domain gateway / harness 和 lightweight entry wording 不授权今天的 active runtime owner、domain truth、domain ready、App release ready 或 production ready。
 
 ## 背景
 

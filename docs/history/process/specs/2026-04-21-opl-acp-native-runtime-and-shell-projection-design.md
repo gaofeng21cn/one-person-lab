@@ -1,6 +1,7 @@
 # OPL ACP-native Session Runtime 与 Shell Projection 边界设计
 
 Owner: `One Person Lab`
+Purpose: `acp_native_session_runtime_shell_projection_history_spec`
 State: `history_process_spec_archived`
 Machine boundary: 本文是人读设计记录；机器可读行为必须使用 contracts、source、CLI/API 行为、runtime ledger、生成产物或 `human_doc:*` 语义 id。
 
@@ -8,6 +9,10 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 当前状态说明（2026-05-11）：本文的 session-runtime-first pivot 已经被核心五件套、`docs/active/` 与 runtime-substrate roadmap 吸收。本文保留用于解释 Product API / ACP / GUI shell 作为 runtime projection 的历史形成过程。`Product API`、`opl web`、`ACP bridge` 和 `AionUI` 相关段落按 projection support 或历史设计背景复用；当前 owner 是 `docs/project.md`、`docs/status.md`、`docs/architecture.md` 与 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md`。
 
 归档理由：session-runtime-first、shell/projection 分层和 domain-owned truth 边界已经合入当前 owner；整篇设计只保留为历史形成过程和 provenance，不再作为活跃规格或实现队列。
+
+## 历史读法
+
+本文中的“canonical architecture”“canonical runtime objects”“近期落地顺序”“验收标准”只表示 ACP / shell projection 形成期的历史设计语境。当前 Codex-default executor、Temporal-backed provider stage runtime、domain-agent entry、App/workbench projection 和 readiness 语义必须回到核心五件套、runtime / domain admission support docs、contracts、source、CLI/API 和 live read-model。
 
 ## 背景
 
@@ -37,7 +42,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 - ACP-compatible 外部壳
 - `Product API` / `opl web`
 
-这份设计的目标，是把当前主线从 “Product API first” 纠正成 “session runtime first”，同时继续保持：
+这份设计当时的目标，是把当时主线从 “Product API first” 纠正成 “session runtime first”，同时继续保持：
 
 - `OPL` 不吞并 domain-local runtime ownership
 - 各 domain 仓继续持有自己的 agent logic、domain rules、deliverables 与 audit truth
@@ -47,7 +52,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 
 ### 1. `OPL` 成为 family-level session runtime
 
-`OPL` 当前主线应明确收敛为：
+`OPL` 当时主线应明确收敛为：
 
 `OPL = session runtime + workspace binding + agent registry + shell projection surfaces`
 
@@ -89,7 +94,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 
 ## canonical architecture
 
-当前主线架构应明确为：
+当时主线架构应明确为：
 
 `Human / Codex / opl shell / ACP shell / GUI shell -> OPL Session Runtime -> Codex CLI or Hermes-Agent -> Domain Agent Entry -> Domain Repository`
 
@@ -221,8 +226,8 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 
 ### 1. 本地 `opl` shell / TUI
 
-这是当前主线的一等入口。
-目标体验是：
+这是当时主线的一等入口。
+当时目标体验是：
 
 - 在某个目录下直接运行 `opl`
 - 进入一个 session-first 的交互界面
@@ -277,11 +282,11 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 - `OPL` 唯一允许的 GUI
 - `OPL` 真实交互语义的定义者
 
-## 与当前 Product API 的关系
+## 与历史当时 Product API 的关系
 
 `Product API` 这轮不会被推翻，而是被重新定位。
 
-当前已经收敛好的八类顶层资源继续保留：
+当时已经收敛好的八类顶层资源继续保留：
 
 - `system`
 - `engines`
@@ -306,7 +311,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 - 各 domain 仓继续持有 agent logic、toolchain、deliverable conventions 与 domain rules
 - `OPL` 只持有 family-level session runtime、entry dispatch 与 projection surface
 
-## 近期落地顺序
+## 历史近期落地顺序
 
 ### 1. 先冻结语义
 
@@ -330,7 +335,7 @@ Machine boundary: 本文是人读设计记录；机器可读行为必须使用 c
 
 `AionUI` 接入时应尽量复用 ACP / shell compatibility surface，而不是反过来定义 `OPL` 的 runtime。
 
-## 验收标准
+## 历史验收标准
 
 这份设计成立时，读者应能立刻理解：
 

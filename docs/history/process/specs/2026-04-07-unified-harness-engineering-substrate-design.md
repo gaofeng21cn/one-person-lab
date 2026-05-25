@@ -1,5 +1,14 @@
 # Unified Harness Engineering Substrate 设计
 
+Owner: `One Person Lab`
+Purpose: `uhs_gateway_domain_harness_history_spec`
+State: `history_process_spec_archived`
+Machine boundary: 本文只保留 `2026-04-07` UHS / Gateway / Domain Harness OS 命名形成过程。当前 runtime、domain admission、executor、provider、App/workbench 和 readiness 机器真相必须使用 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、当前 docs 或 `human_doc:*` 语义标识。
+
+## 历史读法
+
+本文中的“当前”“固定”“本轮设计结论”“落地范围”都只表示 `2026-04-07` 的历史命名治理语境。`OPL Gateway / Federation`、`Domain Gateway`、`Domain Harness OS`、`Codex App + OMX` 和旧 host-agent wording 不构成今天的 active topology。当前 owner boundary 回到核心五件套、`OPL Runtime 命名与边界合同`、`Domain-Agent Admission Contract`、active roadmap、contracts 和 live read-model。
+
 ## 背景
 
 截至 2026-04-07，`OPL`、`Med Auto Science`、`RedCube AI`、`Med Auto Grant` 已经形成明显的系列关系，但跨仓口径仍然混杂了三类不同语义：
@@ -63,7 +72,7 @@ Human / Agent
 
 ### 5. 固定部署形态语义
 
-当前默认本地形态：
+当时默认本地形态：
 
 - `Codex`-default host-agent runtime
 

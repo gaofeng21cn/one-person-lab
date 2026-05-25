@@ -808,6 +808,55 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-25 21:18 CST`
+Tranche: `opl-process-specs-history-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/history/process/specs/**` 的早期 design-spec 历史块。目标是把旧 bilingual public-doc rollout、MAG 顶层设计迁移、Unified Harness Engineering Substrate、frontdoor / family entry、Product API 和 ACP-native shell projection specs 绑定到 history/provenance/tombstone 语境，避免 `current`、`当前`、`目标`、`建议`、`acceptance criteria`、`Product API`、`ACP`、`frontdoor`、`Gateway`、`Domain Harness OS`、`Hermes`、`AionUI` 或 GUI shell wording 被读成当前 active specs、runtime provider contract、App release plan、domain truth、readiness oracle 或 implementation queue。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、`docs/history/process/README.md`、`docs/runtime/opl-runtime-naming-and-boundary-contract.md`、`docs/specs/opl-domain-onboarding-contract.md`、`docs/project.md`、`docs/architecture.md`、`docs/decisions.md`。
+- OPL Doc Governance doctor preflight for this worktree: active truth pass, finding_count=0.
+- `opl agents conformance --family-defaults --json`.
+- `opl framework readiness --family-defaults --json`.
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`.
+
+Fresh read-model result:
+
+- `opl agents conformance` summary read `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; this is structural conformance, not production readiness.
+- `framework readiness` summary read `control_plane_available=true`, `framework_kernel_hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `domain_blocked_attention_tail_count=211`, `evidence_envelope_blocked_count=198`, `provider_slo_cadence_window_status=window_cadence_satisfied`, `provider_slo_capability_status=capability_slo_satisfied`; refs-only blocked attention remains and does not authorize readiness claims.
+- `family-runtime evidence-worklist` summary read `open_worklist_item_count=0`, `zero_open_worklist_blocked_refs_only_envelope_count=198`, `domain_ready_authorized=false`, `production_ready_authorized=false`, and not-authorized claims still include domain truth write, domain ready, quality verdict, artifact authority, production ready, domain repo physical delete authorization and default caller delete ready.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/history/process/specs/README.md` new index; `2026-04-02-bilingual-homepage-and-core-docs-design.md` header / historical reading / acceptance criteria risk; `2026-04-06-med-auto-grant-top-level-design.md` MAG migration authority note; `2026-04-07-unified-harness-engineering-substrate-design.md` UHS / Gateway / Domain Harness OS historical read mode; `2026-04-12-opl-frontdoor-and-family-entry-design.md` frontdoor / Hermes / family-entry historical read mode; `2026-04-20-opl-product-api-and-domain-agent-boundary-design.md` Product API / domain-agent boundary history read mode; `2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md` ACP / shell projection history read mode. Support evidence came from the live truth inputs listed above. | `docs/history/process/specs/README.md`; all six `docs/history/process/specs/*.md` files; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none physically moved or deleted. These specs already live under process history; this tranche added an index, file-level lifecycle / machine-boundary signals, and direct-reader guards instead of removing historical context.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history and process/specs history blocks, especially other `docs/history/process/**`, `docs/history/runtime-substrate/**`, `docs/references/**`, `docs/runtime/**`, `docs/product/**`, `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**` and long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Product API, ACP, Gateway, Domain Harness OS, frontdoor, Hermes-first, AionUI shell, local-manager, hosted shell and desktop bootstrap wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded history/reference/support chunk, preferably `docs/history/process/plans/**` or `docs/history/process/convergence-governance/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
