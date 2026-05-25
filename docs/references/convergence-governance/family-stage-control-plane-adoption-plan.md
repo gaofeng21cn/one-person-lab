@@ -293,7 +293,7 @@ MAS 当前 stage plane 已映射现有 route contract、study charter、evidence
 - 不新增 OPL runtime kernel。
 - 不替换 `Codex CLI` 默认执行语义。
 - 不把 `Hermes-Agent` 写成 domain executor 或 quality owner。
-- 不把最小 `family-stage-control-plane` descriptor 写成已落地 workflow engine。
+- 不把已落地的 `family-stage-control-plane` descriptor、discovery、admission 或 readiness drilldown 写成 workflow engine、domain action executor、owner receipt signer 或 quality verdict owner。
 - 不把 MAS / RCA / MAG 的领域判断移动到 OPL。
 - 不为了统一 stage 语言重写已有可用 workflow。
 - 不用 OPL 文档里的 MAS 抽象维度替换 MAS 现有 route contract 或 stage 名称。

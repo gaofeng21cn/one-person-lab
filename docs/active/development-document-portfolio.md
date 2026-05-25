@@ -761,7 +761,7 @@ Next tranche write scope:
 
 Date: `2026-05-26 11:34 CST`
 Tranche: `opl-convergence-governance-reference-coverage`
-State: `tranche_verified_scope_pending`
+State: `tranche_verified`
 
 本轮覆盖 OPL `docs/references/convergence-governance/**` 当前 reference 支撑块。目标是把 convergence governance 的可复用规则从旧四仓 / dated adoption / stale shared-release closeout 口径刷新到当前 OPL series truth：治理范围是 6 仓 OPL series；stage control plane 已落地为 contract + manifest + `opl stages` 只读 discovery/admission/readiness 支撑，不是 workflow runtime；family shared release 当前存在 MAS consumer pin drift attention，不能写成全员 aligned closeout。
 
