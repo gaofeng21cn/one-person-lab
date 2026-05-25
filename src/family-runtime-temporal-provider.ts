@@ -54,6 +54,10 @@ import {
   temporalWorkerStatePath,
   writeTemporalWorkerState,
 } from './family-runtime-temporal-provider-parts/worker-state.ts';
+import {
+  signalManagedWorker,
+  waitForProcessExit,
+} from './family-runtime-temporal-provider-parts/worker-process.ts';
 
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
   stage_attempt_id: string;
@@ -66,54 +70,9 @@ type TemporalSchedulerInfoProjection = {
   running_actions?: unknown[];
 };
 
-const WORKER_STOP_GRACE_MS = 2_000;
-const WORKER_STOP_POLL_MS = 50;
-
 function workflowModulePath() {
   const extension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
   return fileURLToPath(new URL(`./family-runtime-temporal-workflows${extension}`, import.meta.url));
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitForProcessExit(pid: number, timeoutMs = WORKER_STOP_GRACE_MS) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (!processIsAlive(pid)) {
-      return true;
-    }
-    await sleep(WORKER_STOP_POLL_MS);
-  }
-  return !processIsAlive(pid);
-}
-
-function signalManagedWorker(pid: number, signal: NodeJS.Signals) {
-  const result: Record<string, unknown> = {
-    pid,
-    signal,
-    process_signaled: false,
-    process_group_signaled: false,
-    errors: [],
-  };
-  const errors: string[] = [];
-  if (process.platform !== 'win32') {
-    try {
-      process.kill(-pid, signal);
-      result.process_group_signaled = true;
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : String(error));
-    }
-  }
-  try {
-    process.kill(pid, signal);
-    result.process_signaled = true;
-  } catch (error) {
-    errors.push(error instanceof Error ? error.message : String(error));
-  }
-  result.errors = errors;
-  return result;
 }
 
 export async function inspectTemporalWorkerLifecycle(paths: TemporalWorkerPaths) {
