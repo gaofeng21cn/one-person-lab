@@ -353,6 +353,55 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       ['domain_receipt_refs_or_typed_blocker_refs_or_owner_chain_refs_or_no_regression_refs'],
     );
 
+    const successPayload = {
+      domain_receipt_refs: ['mas://receipts/domain-dispatch-owner.json'],
+      owner_chain_refs: ['mas://owner-chain/domain-dispatch.json'],
+      no_regression_refs: ['mas://proof/domain-dispatch-no-regression.json'],
+    };
+    const successDryRun = runCli([
+      'runtime',
+      'action',
+      'execute',
+      '--action',
+      recordActionId,
+      '--dry-run',
+      '--payload',
+      JSON.stringify(successPayload),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).runtime_operator_action_execution;
+
+    assert.equal(successDryRun.execution.execution_kind, 'opl_cli_external_evidence_apply');
+    assert.equal(successDryRun.execution.execution_status, 'dry_run');
+    assert.equal(successDryRun.execution.result.domain_dispatch_evidence_payload_preflight.status, 'ready_to_record');
+    assert.equal(
+      successDryRun.execution.result.domain_dispatch_evidence_payload_preflight.selected_payload_path,
+      'success_refs_path',
+    );
+
+    const afterSuccessDryRunDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).app_operator_drilldown;
+    const afterSuccessDryRunAttempt = afterSuccessDryRunDrilldown.domain_dispatch_evidence.attempts.find(
+      (attempt: { stage_attempt_id: string }) => attempt.stage_attempt_id === attemptId,
+    );
+    assert.equal(afterSuccessDryRunAttempt.dispatch_evidence_receipt_status, 'missing');
+    assert.deepEqual(afterSuccessDryRunAttempt.dispatch_evidence_receipt_refs, []);
+    assert.equal(
+      afterSuccessDryRunDrilldown.operator_action_routing_refs.refs.some(
+        (ref: { action_id: string }) => ref.action_id === recordActionId,
+      ),
+      true,
+    );
+    assert.equal(
+      afterSuccessDryRunDrilldown.operator_action_routing_refs.refs.some(
+        (ref: { action_id: string }) => ref.action_id === verifyActionId,
+      ),
+      false,
+    );
+
     const recordExecution = runCli([
       'runtime',
       'action',
@@ -360,11 +409,7 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       '--action',
       recordActionId,
       '--payload',
-      JSON.stringify({
-        domain_receipt_refs: ['mas://receipts/domain-dispatch-owner.json'],
-        owner_chain_refs: ['mas://owner-chain/domain-dispatch.json'],
-        no_regression_refs: ['mas://proof/domain-dispatch-no-regression.json'],
-      }),
+      JSON.stringify(successPayload),
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
