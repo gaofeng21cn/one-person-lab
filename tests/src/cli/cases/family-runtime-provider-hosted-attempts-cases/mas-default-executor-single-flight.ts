@@ -218,7 +218,7 @@ test('family-runtime does not treat unstarted registered MAS default executor at
   }
 });
 
-test('family-runtime treats a claimed queued MAS default executor admission as cross-task live', async () => {
+test('family-runtime does not treat a stale-source claimed queued MAS default executor admission as cross-task live', async () => {
   const db = new DatabaseSync(':memory:');
   try {
     await withIsolatedFamilyRuntimeEnv(async () => {
@@ -282,7 +282,77 @@ test('family-runtime treats a claimed queued MAS default executor admission as c
         LIMIT 1
       `).get('task-mas-default-cross-task-claimed-queued-second') as { payload_json: string } | undefined;
 
-      assert.equal(secondAttempt, null);
+      assert.ok(secondAttempt);
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(secondTask.status, 'running');
+      assert.equal(secondTask.attempts, 1);
+      assert.equal(secondAttempts.length, 1);
+      assert.equal(secondAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test('family-runtime keeps MAS default executor admission single-flight across same-source task rows', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const firstPayload = defaultExecutorPayload('source-current');
+      const secondPayload = defaultExecutorPayload('source-current');
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-cross-task-same-source-first',
+        payload: firstPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:same-source-first',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-cross-task-same-source-second',
+        payload: secondPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:same-source-second',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id IN (?, ?)").run(
+        'task-mas-default-cross-task-same-source-first',
+        'task-mas-default-cross-task-same-source-second',
+      );
+      const firstRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-cross-task-same-source-first',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-cross-task-same-source-second',
+      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
+      assert.ok(firstAttempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        firstAttempt.stage_attempt_id,
+      );
+      const secondAttempt = ensureProviderHostedStageAttempt(db, secondRow, secondPayload);
+      let temporalStartCount = 0;
+
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row: secondRow,
+        payload: secondPayload,
+        providerHostedAttempt: secondAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const secondTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-cross-task-same-source-second',
+      ) as { status: string; attempts: number };
+      const secondAttempts = listStageAttemptsForTask(db, 'task-mas-default-cross-task-same-source-second');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-cross-task-same-source-second') as { payload_json: string } | undefined;
+
       assert.equal(result.status, 'skipped');
       assert.equal(result.reason, 'live_stage_attempt_exists_for_dispatch');
       assert.equal(temporalStartCount, 0);

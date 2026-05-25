@@ -395,7 +395,7 @@ test('family-runtime keeps MAS default executor admission single-flight while a 
   }
 });
 
-test('family-runtime keeps MAS default executor admission single-flight across refreshed task rows', async () => {
+test('family-runtime does not let stale MAS default executor source block a refreshed task row', async () => {
   const db = new DatabaseSync(':memory:');
   try {
     await withIsolatedFamilyRuntimeEnv(async () => {
@@ -456,14 +456,13 @@ test('family-runtime keeps MAS default executor admission single-flight across r
         LIMIT 1
       `).get('task-mas-default-cross-task-live-second') as { payload_json: string } | undefined;
 
-      assert.equal(result.status, 'skipped');
-      assert.equal(result.reason, 'live_stage_attempt_exists_for_dispatch');
-      assert.equal(temporalStartCount, 0);
-      assert.equal(secondTask.status, 'queued');
-      assert.equal(secondTask.attempts, 0);
-      assert.equal(secondAttempts.length, 0);
-      assert.ok(skipEvent);
-      assert.equal(JSON.parse(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
+      assert.equal(result.status, 'running');
+      assert.equal(temporalStartCount, 1);
+      assert.equal(secondTask.status, 'running');
+      assert.equal(secondTask.attempts, 1);
+      assert.equal(secondAttempts.length, 1);
+      assert.equal(secondAttempts[0].status, 'running');
+      assert.equal(skipEvent, undefined);
     });
   } finally {
     db.close();

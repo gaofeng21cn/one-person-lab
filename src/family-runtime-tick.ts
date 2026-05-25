@@ -9,6 +9,10 @@ import { hydrateDomainTasks } from './family-runtime-domain-intake.ts';
 import type { familyRuntimePaths, taskToPayload } from './family-runtime-store.ts';
 import { insertEvent, type FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { taskRowMatchesScope } from './family-runtime-task-scope.ts';
+import {
+  masDefaultExecutorDispatchIdentity,
+  masDefaultExecutorDomainSourceFingerprint,
+} from './family-runtime-provider-hosted-attempts.ts';
 
 type EnqueueTaskResult = {
   accepted?: boolean;
@@ -18,6 +22,71 @@ type EnqueueTaskResult = {
 };
 
 type EnqueueTask = (db: DatabaseSync, input: EnqueueInput) => EnqueueTaskResult;
+
+type MasDefaultExecutorCurrentTask = {
+  task_id: string;
+  source_fingerprint: string | null;
+  created_at: string;
+};
+
+function payloadFromTask(row: FamilyRuntimeTaskRow) {
+  return JSON.parse(row.payload_json) as Record<string, unknown>;
+}
+
+function isNewerTask(left: Pick<FamilyRuntimeTaskRow, 'created_at' | 'task_id'>, right: MasDefaultExecutorCurrentTask) {
+  if (left.created_at !== right.created_at) {
+    return left.created_at > right.created_at;
+  }
+  return left.task_id > right.task_id;
+}
+
+function currentMasDefaultExecutorTasksByDispatch(rows: FamilyRuntimeTaskRow[]) {
+  const currentByIdentity = new Map<string, MasDefaultExecutorCurrentTask>();
+  for (const row of rows) {
+    const payload = payloadFromTask(row);
+    const identity = masDefaultExecutorDispatchIdentity(row, payload);
+    if (!identity) {
+      continue;
+    }
+    const current = currentByIdentity.get(identity);
+    if (!current || isNewerTask(row, current)) {
+      currentByIdentity.set(identity, {
+        task_id: row.task_id,
+        source_fingerprint: masDefaultExecutorDomainSourceFingerprint(payload),
+        created_at: row.created_at,
+      });
+    }
+  }
+  return currentByIdentity;
+}
+
+function dropSupersededMasDefaultExecutorRows(
+  candidateRows: FamilyRuntimeTaskRow[],
+  allRows: FamilyRuntimeTaskRow[],
+) {
+  const currentByIdentity = currentMasDefaultExecutorTasksByDispatch(allRows);
+  let supersededCount = 0;
+  const rows = candidateRows.filter((row) => {
+    const payload = payloadFromTask(row);
+    const identity = masDefaultExecutorDispatchIdentity(row, payload);
+    if (!identity) {
+      return true;
+    }
+    const current = currentByIdentity.get(identity);
+    const sourceFingerprint = masDefaultExecutorDomainSourceFingerprint(payload);
+    if (
+      current
+      && current.source_fingerprint
+      && sourceFingerprint
+      && current.source_fingerprint !== sourceFingerprint
+    ) {
+      supersededCount += 1;
+      return false;
+    }
+    return true;
+  });
+  return { rows, supersededCount };
+}
 
 export async function runFamilyRuntimeQueueTick(
   db: DatabaseSync,
@@ -59,7 +128,12 @@ export async function runFamilyRuntimeQueueTick(
     WHERE status IN ('queued', 'retry_waiting')
     ORDER BY priority DESC, created_at ASC
   `).all() as FamilyRuntimeTaskRow[];
-  const scopedRows = candidateRows.filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const allRows = db.prepare('SELECT * FROM tasks').all() as FamilyRuntimeTaskRow[];
+  const scopedRowsBeforeSupersededFilter = candidateRows.filter((row) => taskRowMatchesScope(row, input.taskScope));
+  const {
+    rows: scopedRows,
+    supersededCount: masDefaultExecutorSupersededCount,
+  } = dropSupersededMasDefaultExecutorRows(scopedRowsBeforeSupersededFilter, allRows);
   const rows = scopedRows.slice(0, input.limit);
   const filteredCount = candidateRows.length - scopedRows.length;
   insertEvent(db, {
@@ -69,6 +143,7 @@ export async function runFamilyRuntimeQueueTick(
       limit: input.limit,
       selected_count: rows.length,
       filtered_count: filteredCount,
+      mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
       task_scope: input.taskScope ?? null,
     },
   });
@@ -84,6 +159,7 @@ export async function runFamilyRuntimeQueueTick(
     hydration,
     selected_count: rows.length,
     filtered_count: filteredCount,
+    mas_default_executor_superseded_count: masDefaultExecutorSupersededCount,
     dispatches,
   };
 }

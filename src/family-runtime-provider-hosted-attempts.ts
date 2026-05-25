@@ -58,6 +58,15 @@ function isSameMasDefaultExecutorDispatch(
     && sameStringField(left, right, 'dispatch_ref');
 }
 
+function sameOptionalStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
+  const leftValue = optionalString(left[key]);
+  const rightValue = optionalString(right[key]);
+  if (!leftValue || !rightValue) {
+    return !leftValue && !rightValue;
+  }
+  return leftValue === rightValue;
+}
+
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const MAS_DEFAULT_EXECUTOR_NEXT_OWNERS = new Set(['write', 'ai_reviewer', 'write/ai_reviewer']);
 const MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
@@ -185,6 +194,28 @@ export function isMasDefaultExecutorDispatchTask(
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
 }
 
+export function masDefaultExecutorDispatchIdentity(
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const locator = workspaceLocatorForProviderHostedTask(row, payload);
+  return stableId('mas_default_executor_dispatch_identity', [
+    row.domain_id,
+    row.task_kind,
+    optionalString(locator.workspace_root),
+    optionalString(locator.study_id),
+    optionalString(locator.action_type),
+    optionalString(locator.dispatch_ref),
+  ]);
+}
+
+export function masDefaultExecutorDomainSourceFingerprint(payload: Record<string, unknown>) {
+  return optionalString(payload.source_fingerprint);
+}
+
 export function findLiveMasDefaultExecutorDispatchAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
@@ -207,6 +238,7 @@ export function findLiveMasDefaultExecutorDispatchAttempt(
     && attempt.stage_id === stageId
     && isCrossTaskLiveMasDefaultExecutorAttempt(db, attempt)
     && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
+    && sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint')
   )) ?? null;
 }
 
