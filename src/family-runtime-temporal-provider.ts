@@ -58,6 +58,9 @@ import {
   stopOrphanTemporalForegroundWorkers,
   stopWorkerPid,
 } from './family-runtime-temporal-provider-parts/worker-process.ts';
+export {
+  queryTemporalStageAttemptWorkflow,
+} from './family-runtime-temporal-provider-parts/attempt-query.ts';
 
 type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowInput>[0] & {
   stage_attempt_id: string;
@@ -163,35 +166,6 @@ export async function startTemporalStageAttemptWorkflow(
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: resolveTemporalTaskQueue(),
-      authority_boundary: {
-        opl: 'temporal_workflow_transport_and_control_metadata_only',
-        domain: 'truth_quality_artifact_gate_owner',
-      },
-    };
-  }, options);
-}
-
-export async function queryTemporalStageAttemptWorkflow(
-  attempt: StageAttemptPayload,
-  options: TemporalClientOptions = {},
-) {
-  if (attempt.provider_kind !== 'temporal') {
-    return null;
-  }
-  return withTemporalClient(async (client) => {
-    const handle = client.workflow.getHandle(attempt.workflow_id);
-    const [description, query] = await Promise.all([
-      handle.describe(),
-      handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery),
-    ]);
-    return {
-      surface_kind: 'temporal_stage_attempt_query_receipt',
-      provider_kind: 'temporal',
-      stage_attempt_id: attempt.stage_attempt_id,
-      workflow_id: attempt.workflow_id,
-      run_id: description.runId,
-      workflow_status: description.status.name,
-      query,
       authority_boundary: {
         opl: 'temporal_workflow_transport_and_control_metadata_only',
         domain: 'truth_quality_artifact_gate_owner',

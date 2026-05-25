@@ -63,7 +63,11 @@ type TemporalStageAttemptQueryOutput = {
       stage_attempt_id: string;
       workflow_id: string;
       workflow_status?: string;
-      query: TemporalStageAttemptWorkflowState;
+      query?: TemporalStageAttemptWorkflowState;
+      query_error?: {
+        code?: string;
+        message?: string;
+      };
     };
   };
 };
@@ -785,6 +789,7 @@ test('family-runtime temporal attempt query reads managed local service state wh
     assert.equal(temporalQuery.surface_kind, 'temporal_stage_attempt_query_receipt');
     assert.equal(temporalQuery.stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(temporalQuery.workflow_id, attempt.workflow_id);
+    assert.ok(temporalQuery.query);
     assert.equal(['registered', 'running', 'checkpointed', 'completed'].includes(temporalQuery.query.status), true);
     assert.equal(temporalQuery.query.provider_kind, 'temporal');
   } finally {
@@ -900,13 +905,14 @@ test('family-runtime temporal terminal failure is projected into local attempt q
 
     assert.equal(temporalQuery.surface_kind, 'temporal_stage_attempt_query_receipt');
     assert.equal(temporalQuery.workflow_status, 'FAILED');
-    assert.equal(temporalQuery.query.status, 'failed');
+    assert.equal(temporalQuery.query, undefined);
+    assert.equal(temporalQuery.query_error?.code, 'temporal_stage_attempt_query_unavailable_after_terminal');
     assert.equal(stageQuery.attempt.status, 'failed');
     assert.equal(stageQuery.operator_visibility.status, 'failed');
     assert.equal(stageQuery.attempt.blocked_reason, 'temporal_workflow_failed');
     assert.equal(stageQuery.attempt.provider_run.provider_status, 'failed');
     assert.equal(terminalObservation.workflow_status, 'FAILED');
-    assert.equal(terminalObservation.query_status, 'failed');
+    assert.equal(terminalObservation.query_status, null);
     assert.equal(stageQuery.completion_boundary.provider_completion_is_domain_ready, false);
     assert.equal(result.inspect.family_runtime_stage_attempt.attempt.status, 'failed');
     assert.equal(result.inspect.family_runtime_stage_attempt.attempt.provider_run.provider_status, 'failed');
