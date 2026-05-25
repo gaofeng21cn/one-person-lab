@@ -414,6 +414,43 @@ test('runtime App drilldown does not select closed provider SLO routes as next a
   assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
 });
 
+test('runtime App drilldown keeps historical provider repair receipts from reopening current scheduler routes', () => {
+  const route = (action: string, actionKind: string) => ({
+    action_id: `provider-scheduler:temporal:${action}`,
+    action_kind: actionKind,
+    owner: 'opl',
+    route_target_kind: 'opl_cli',
+    execution_surface: 'opl runtime action execute',
+    submit_via: 'opl runtime action execute',
+    can_submit_to_safe_action_shell: true,
+    opl_cli_args: ['scheduler', action, '--provider', 'temporal'],
+  });
+  const drilldown = applyAppOperatorDrilldownDetail({
+    summary: {
+      provider_slo_cadence_window_status: 'window_cadence_satisfied',
+      provider_slo_capability_status: 'capability_slo_satisfied',
+      provider_slo_cadence_window_observed_receipt_count: 1628,
+      provider_slo_cadence_window_missing_receipt_count: 0,
+      provider_slo_cadence_window_blocked_repair_receipt_count: 1,
+    },
+    operator_action_routing_refs: {
+      refs: [
+        route('install', 'provider_scheduler_install'),
+      ],
+    },
+    app_execution_bridge: {
+      safe_action_routes: [],
+    },
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_production_ready: false,
+    },
+  }, 'summary');
+
+  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(drilldown.attention_first_payload.additional_safe_action_count, 0);
+});
+
 test('runtime App drilldown does not select legacy cleanup routes already closed by lifecycle receipt aliases', () => {
   const drilldown = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {

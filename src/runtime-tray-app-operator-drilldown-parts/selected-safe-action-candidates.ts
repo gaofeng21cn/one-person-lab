@@ -46,7 +46,6 @@ function providerRouteClosedByCurrentSlo(action: JsonRecord, drilldown: JsonReco
   return stringValue(summary.provider_slo_cadence_window_status) === 'window_cadence_satisfied'
     && stringValue(summary.provider_slo_capability_status) === 'capability_slo_satisfied'
     && numberValue(summary.provider_slo_cadence_window_missing_receipt_count) === 0
-    && numberValue(summary.provider_slo_cadence_window_blocked_repair_receipt_count) === 0
     && numberValue(summary.provider_slo_cadence_window_observed_receipt_count) > 0;
 }
 
