@@ -2150,6 +2150,63 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 05:05 CST`
+Tranche: `mas-artifact-baseline-retention-contract-coverage`
+State: `tranche_verified`
+
+本轮覆盖 MAS delivery / artifact / source-adjacent runtime contract 中的 artifact retention、canonical artifact 和 baseline refresh 支撑文档，并吸收回 MAS `main`。目标是确认这些人读 support docs 与 MAS live source/contracts/tests 当前事实一致：MAS 可以产出 artifact authority refs、canonical rebuild proof、read-only retention candidate、baseline refresh obligation 和 typed blocker；OPL 持有 generic cleanup / restore / retention shell、provider stage runtime、queue / attempt / retry / dead-letter 和 App/workbench shell。
+
+Fresh live truth inputs:
+
+- MAS `AGENTS.md`、`TASTE.md`、MAS docs-governance ledger, `docs/active/mas-ideal-state-gap-plan.md`, and preceding runtime-owner / runtime-core-convergence coverage entries.
+- MAS runtime/support docs: `docs/runtime/contracts/artifact_retention_operations_contract.md`, `docs/runtime/contracts/canonical_artifact_contract.md`, `docs/runtime/contracts/baseline_refresh_contract.md`, with support reads of `docs/runtime/contracts/delivery_plane_contract_map.md` and `docs/source/README.md`.
+- MAS machine/source refs: `contracts/functional_privatization_audit.json`, `contracts/test-lane-manifest.json`, `contracts/stage_control_plane.json`, `src/med_autoscience/controllers/artifact_retention_operations_plan.py`, `src/med_autoscience/controllers/artifact_lifecycle_operations_report.py`, `src/med_autoscience/controllers/storage_governance_policy_kernel.py`, `src/med_autoscience/controllers/canonical_artifact_contract.py`, `src/med_autoscience/stage_knowledge_contract.py`, and `src/med_autoscience/overlay/templates/medical-research-baseline.block.md`.
+- Focused test inventory: `tests/test_artifact_retention_operations_plan.py`, `tests/test_storage_governance_policy_kernel.py`, `tests/test_canonical_artifact_contract.py`, `tests/test_body_free_evidence_refs_scaleout.py`, `tests/test_domain_entry.py::test_domain_entry_rejects_control_plane_cleanup_apply`, `tests/test_installed_mcp_smoke.py`, `tests/product_entry_cases/authority_operation_manifest.py`, and `tests/test_stage_surface_contract.py`.
+
+Fresh semantic result:
+
+- `artifact_retention_operations_plan` and `artifact_lifecycle_report` remain read-only planning/report surfaces. They can mark `delete_safe_cache` as a candidate and project restore-contract gaps, but public CLI, domain entry, product-entry command contracts and installed MCP must not expose cleanup apply commands. Physical cleanup / restore / retention apply belongs to the OPL owner shell after explicit parity and receipt gates.
+- `canonical_artifact_contract` and `artifact_rebuild_integrity_contract` remain MAS artifact authority support. `manuscript/current_package/`, `artifacts/final/`, `current_package.zip` and `submission_minimal/` are derived projections / handoff surfaces, never edit source, quality authority or submission authorization root; rebuild proof requires source refs, fingerprints, quality decision ref, controller decision ref and generated artifact role.
+- `baseline_refresh_contract` is currently enforced as a route / stage policy obligation through the `baseline` stage inputs, memory closeout obligations and `medical-research-baseline.block.md`, not as an independent public CLI or artifact mutation command. Comparator, cohort, endpoint, Table 1, external-validation or manuscript-facing baseline changes need durable reason, affected surface list, verification refs and route / human-gate decision before becoming authoritative.
+- Verification exposed stale smoke-test expectation around installed MCP tool naming: current MCP registry exposes `authority_operations`; old `product_entry` tool is not active. The smoke test was updated to assert the current tool without resurrecting an old tool-name bypass.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `med-autoscience` | Full paragraph read of `docs/runtime/contracts/artifact_retention_operations_contract.md`, `docs/runtime/contracts/canonical_artifact_contract.md`, and `docs/runtime/contracts/baseline_refresh_contract.md`, plus support read of `delivery_plane_contract_map.md`, `docs/source/README.md`, and source/contract/test inventory listed above. | `docs/docs_portfolio_consolidation.md`; `docs/runtime/contracts/artifact_retention_operations_contract.md`; `docs/runtime/contracts/baseline_refresh_contract.md`; `tests/test_installed_mcp_smoke.py` |
+| `one-person-lab` | coverage ledger owner only | this coverage ledger |
+
+Verification / absorb:
+
+- MAS commit `bf578b47 docs: cover MAS artifact lifecycle contracts` was fast-forwarded into MAS `main`.
+- MAS worktree verification before absorb: `git diff --check`; strict README/docs/contracts/tests conflict-marker scan had no hits; OPL Doc Governance doctor `finding_count=0`, active truth `pass`; focused pytest for artifact retention, storage governance, canonical artifact, MCP/domain-entry cleanup non-exposure and baseline stage surface read `43 passed`; final installed MCP smoke rerun read `6 passed`.
+
+Archived / tombstoned / deleted docs:
+
+- none. The reviewed MAS runtime contract files remain active support docs with distinct roles; stale apply-command wording and stale MCP smoke expectation were rewritten in place.
+
+Unreviewed docs:
+
+- MAS paragraph-level coverage remains open for `docs/runtime/contracts/standard_domain_agent_skeleton.md` beyond quick support read.
+- MAS source-support docs outside `docs/source/README.md` and delivery/medical-display documents that mention baseline refresh or artifact lifecycle remain outside this tranche.
+- MAS product/status/workbench, progress/domain-ref projection and source/delivery shell coverage remains open outside the already-covered blocks.
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future MAS prose must not say MAS exposes `control-plane-cleanup-apply` / `control-plane-safe-cache-cleanup-apply`, performs physical cleanup from retention reports, or treats `delete_safe_cache` as already applied unless a new OPL owner shell and MAS receipt parity are proven.
+- Future MAS prose must not treat derived packages, DOCX/PDF/zip, `current_package`, `submission_minimal`, inspection packages, display packs, provider completion or executor logs as edit source, quality authority, source readiness verdict, publication-ready, submission-ready or artifact mutation authorization.
+- Baseline refresh remains a stage-policy contract. A future materializer must produce durable refresh record / blocker / route refs; it must not silently overwrite comparator, Table 1, display pack, publication eval or submission package.
+
+Next tranche write scope:
+
+- MAS paragraph-level coverage for remaining `docs/runtime/contracts/standard_domain_agent_skeleton.md` and source/delivery support docs that mention source truth, artifact lifecycle, baseline refresh or standard-domain-agent anchors.
+- Or MAS product/status/workbench and progress/domain-ref projection shell reconciliation outside the already-covered blocks.
+- Or choose the next exact OPL uncovered body from the family coverage ledger.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
