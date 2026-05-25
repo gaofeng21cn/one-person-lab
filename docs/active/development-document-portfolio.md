@@ -1757,6 +1757,56 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 03:17 CST`
+Tranche: `opl-governance-reference-checklist-coverage`
+State: `tranche_verified`
+
+本轮覆盖 OPL `docs/references/governance/**` 当前唯一文件 `series-doc-governance-checklist.md`。目标是把仓级治理清单从旧五仓口径刷新到当前六仓 OPL series，并把 App、OMA、descriptor/conformance/stage/read-model 的 authority 边界写清，避免把 refs-only / structural / zero-open worklist / provider SLO 信号误读成 domain ready、production ready、App release ready、artifact authority ready 或 domain repo physical delete authorized。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`、`docs/references/README.md`。
+- `docs/references/governance/series-doc-governance-checklist.md` full text and `package.json` scripts.
+- Machine-readable refs: `contracts/opl-framework/domains.json`, `contracts/opl-framework/workstreams.json`, `contracts/opl-framework/family-executor-adapter-defaults.json`.
+- CLI/read-model surfaces: `opl framework readiness --family-defaults --json`, `opl agents descriptors --json`, `opl agents conformance --family-defaults --json`, `opl runtime app-operator-drilldown --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`, `opl stages list --json`.
+
+Fresh read-model result:
+
+- `opl framework readiness --family-defaults --json` read `status=framework_control_plane_available_with_blocked_refs_only_attention`, `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `operator_payload_required_attention_tail_count=0`, `domain_blocked_attention_tail_count=229`, `evidence_envelope_blocked_count=216`, provider cadence/capability SLO satisfied, and authority boundary still forbids domain ready, production ready, artifact authority and quality/export verdict claims.
+- `opl agents descriptors --json` read `total_projects_count=3`, `resolved_manifest_count=3`, `descriptor_surfaces_resolved_count=3`, `blocked_count=0`; descriptors remain refs/readiness/locator/parity/authority boundaries only.
+- `opl agents conformance --family-defaults --json` read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; this is structural conformance only.
+- `opl stages list --json` read `resolved_planes_count=3`, `stages_count=18`, `admitted_stages_count=18`, `blocked_stages_count=0`; this is stage discovery/admission evidence, not workflow runtime, production or domain readiness.
+- `opl runtime app-operator-drilldown --json` read `availability=available`, provider cadence/capability SLO satisfied, `evidence_envelope_blocked_count=216`, `app_release_user_path_release_ready_claimed=false`, `app_release_user_path_production_ready_claimed=false`, `opl_meta_agent_production_consumption_ready=true`, `opl_meta_agent_claims_domain_ready=false`, `codex_app_runtime_role_status=opl_temporal_hosted_autonomous`, and `codex_app_drives_long_running_tasks=false`.
+- `opl family-runtime evidence-worklist ... --detail full --json` read `open_worklist_item_count=0`, `closed_refs_only_item_count=246`, `zero_open_worklist_blocked_refs_only_envelope_count=216`, `domain_ready_authorized=false`, `production_ready_authorized=false`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`, and not-authorized claims include `domain_repo_physical_delete_authorization` and `default_caller_delete_ready`.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/references/governance/series-doc-governance-checklist.md` goal, default entries, core-doc rules, public/internal layering, series consistency checks and default verification section; supporting owner references listed above. | `docs/references/governance/series-doc-governance-checklist.md`; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. `series-doc-governance-checklist.md` remains active support; this tranche corrected stale scope and authority wording in place.
+
+Unreviewed docs:
+
+- OPL `docs/references/governance/**` is covered for this tranche.
+- OPL reference body coverage remains open outside previously covered reference chunks, especially `docs/references/domain-admission/**` and any remaining long support bodies not listed in prior ledgers.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history, Portal/projection/App-workbench, inspection-package and runtime-binding blocks.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future governance/checklist prose that reverts to the older five-repo series scope is stale; OPL series governance must include `one-person-lab-app`.
+- Any current-support wording that treats descriptor/conformance/stage discovery, zero-open worklist, provider SLO satisfied, OMA production-consumption refs or App user-path evidence as domain ready, production ready, App release ready, owner receipt closure, artifact authority or physical-delete authorization is stale.
+- OPL remaining domain-admission references may still carry old Gateway, frontdoor, federation, Product API, Hermes-first, Hermes provider, AionUI shell, MDS default, Domain Harness OS, hosted pilot, local-manager, managed-runtime or direct-entry wording; those must stay history/provenance/diagnostic/negative-guard only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in `docs/references/domain-admission/**`, or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
