@@ -395,6 +395,81 @@ test('family-runtime keeps MAS default executor admission single-flight while a 
   }
 });
 
+test('family-runtime keeps MAS default executor admission single-flight across refreshed task rows', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    await withIsolatedFamilyRuntimeEnv(async () => {
+      createQueueTables(db);
+      const firstPayload = defaultExecutorPayload('source-before');
+      const secondPayload = defaultExecutorPayload('source-after');
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-cross-task-live-first',
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: firstPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:first-source',
+      });
+      insertSucceededTask(db, {
+        taskId: 'task-mas-default-cross-task-live-second',
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: secondPayload,
+        dedupeKey: 'mas:dm-cvd:002:default-executor:run_quality_repair_batch:second-source',
+      });
+      db.prepare("UPDATE tasks SET status = 'queued' WHERE task_id IN (?, ?)").run(
+        'task-mas-default-cross-task-live-first',
+        'task-mas-default-cross-task-live-second',
+      );
+      const firstRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-cross-task-live-first',
+      ) as Parameters<typeof ensureProviderHostedStageAttempt>[1];
+      const secondRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-cross-task-live-second',
+      ) as Parameters<typeof startMasDefaultExecutorDispatchAttempt>[2]['row'];
+      const firstAttempt = ensureProviderHostedStageAttempt(db, firstRow, firstPayload);
+      assert.ok(firstAttempt);
+      db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
+        firstAttempt.stage_attempt_id,
+      );
+      const secondAttempt = ensureProviderHostedStageAttempt(db, secondRow, secondPayload);
+      let temporalStartCount = 0;
+
+      const result = await startMasDefaultExecutorDispatchAttempt(db, familyRuntimePaths(), {
+        row: secondRow,
+        payload: secondPayload,
+        providerHostedAttempt: secondAttempt,
+        temporalProviderModule: async () => ({
+          startTemporalStageAttemptWorkflow: async () => {
+            temporalStartCount += 1;
+            return { surface_kind: 'temporal_stage_attempt_start_receipt' };
+          },
+        }),
+      });
+      const secondTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-cross-task-live-second',
+      ) as { status: string; attempts: number };
+      const secondAttempts = listStageAttemptsForTask(db, 'task-mas-default-cross-task-live-second');
+      const skipEvent = db.prepare(`
+        SELECT payload_json
+        FROM events
+        WHERE task_id = ? AND event_type = 'task_default_executor_live_attempt_skip'
+        LIMIT 1
+      `).get('task-mas-default-cross-task-live-second') as { payload_json: string } | undefined;
+
+      assert.equal(result.status, 'skipped');
+      assert.equal(result.reason, 'live_stage_attempt_exists_for_dispatch');
+      assert.equal(temporalStartCount, 0);
+      assert.equal(secondTask.status, 'queued');
+      assert.equal(secondTask.attempts, 0);
+      assert.equal(secondAttempts.length, 0);
+      assert.ok(skipEvent);
+      assert.equal(JSON.parse(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
+    });
+  } finally {
+    db.close();
+  }
+});
+
 test('family-runtime blocks a requeued MAS default executor task when its linked Temporal attempt terminally fails', () => {
   const db = new DatabaseSync(':memory:');
   try {

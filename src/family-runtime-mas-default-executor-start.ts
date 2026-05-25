@@ -12,6 +12,7 @@ import {
   listStageAttemptsForTask,
   updateStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
+import { findLiveMasDefaultExecutorDispatchAttempt } from './family-runtime-provider-hosted-attempts.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
@@ -152,6 +153,30 @@ export async function startMasDefaultExecutorDispatchAttempt(
       status: 'skipped',
       reason: 'live_stage_attempt_exists',
       admitted_stage_attempt: liveAttempt,
+      stage_attempts: listStageAttemptsForTask(db, row.task_id),
+    };
+  }
+  const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
+  if (liveDispatchAttempt) {
+    insertEvent(db, {
+      taskId: row.task_id,
+      domainId: row.domain_id,
+      eventType: 'task_default_executor_live_attempt_skip',
+      source: 'opl-family-runtime',
+      payload: {
+        reason: 'live_stage_attempt_exists_for_dispatch',
+        stage_attempt_id: liveDispatchAttempt.stage_attempt_id,
+        task_id: liveDispatchAttempt.task_id,
+        dispatch_ref: payload.dispatch_ref ?? null,
+        action_type: payload.action_type ?? null,
+        study_id: payload.study_id ?? null,
+      },
+    });
+    return {
+      task_id: row.task_id,
+      status: 'skipped',
+      reason: 'live_stage_attempt_exists_for_dispatch',
+      admitted_stage_attempt: liveDispatchAttempt,
       stage_attempts: listStageAttemptsForTask(db, row.task_id),
     };
   }

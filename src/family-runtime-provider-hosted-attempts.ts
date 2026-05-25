@@ -10,6 +10,7 @@ import {
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
   createStageAttempt,
+  listStageAttempts,
   listStageAttemptsForTask,
 } from './family-runtime-stage-attempts.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
@@ -39,6 +40,22 @@ function stringList(value: unknown) {
 
 function uniqueStrings(values: Array<string | null>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+}
+
+function sameStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
+  const leftValue = optionalString(left[key]);
+  const rightValue = optionalString(right[key]);
+  return Boolean(leftValue && rightValue && leftValue === rightValue);
+}
+
+function isSameMasDefaultExecutorDispatch(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+) {
+  return sameStringField(left, right, 'workspace_root')
+    && sameStringField(left, right, 'study_id')
+    && sameStringField(left, right, 'action_type')
+    && sameStringField(left, right, 'dispatch_ref');
 }
 
 export const MAS_DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
@@ -138,6 +155,31 @@ export function isMasDefaultExecutorDispatchTask(
     && nextOwner !== null
     && MAS_DEFAULT_EXECUTOR_NEXT_OWNERS.has(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
+}
+
+export function findLiveMasDefaultExecutorDispatchAttempt(
+  db: DatabaseSync,
+  row: FamilyRuntimeTaskRow,
+  payload: Record<string, unknown>,
+) {
+  if (!isMasDefaultExecutorDispatchTask(row, payload)) {
+    return null;
+  }
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const stageId = stageIdForProviderHostedTask(row, payload);
+  if (!stageId) {
+    return null;
+  }
+  const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
+  return listStageAttempts(db).find((attempt) => (
+    attempt.task_id !== row.task_id
+    && attempt.provider_kind === providerKind
+    && attempt.executor_kind === 'codex_cli'
+    && attempt.domain_id === row.domain_id
+    && attempt.stage_id === stageId
+    && MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
+    && isSameMasDefaultExecutorDispatch(attempt.workspace_locator, workspaceLocator)
+  )) ?? null;
 }
 
 function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
@@ -328,17 +370,38 @@ export function ensureProviderHostedStageAttempt(
   const existingAttempts = listStageAttemptsForTask(db, row.task_id);
   const providerKind = resolveFamilyRuntimeProviderKind();
   const expectedSourceFingerprint = sourceFingerprintForProviderHostedTask(row, payload);
+  const stageId = stageIdForProviderHostedTask(row, payload);
+  const workspaceLocator = workspaceLocatorForProviderHostedTask(row, payload);
   if (!options.newAttempt && isMasDefaultExecutorDispatchTask(row, payload) && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind && MAS_DEFAULT_EXECUTOR_LIVE_ATTEMPT_STATUSES.has(attempt.status)
   ))) {
     return null;
+  }
+  if (!options.newAttempt && isMasDefaultExecutorDispatchTask(row, payload) && stageId) {
+    const liveDispatchAttempt = findLiveMasDefaultExecutorDispatchAttempt(db, row, payload);
+    if (liveDispatchAttempt) {
+      insertEvent(db, {
+        taskId: row.task_id,
+        domainId: row.domain_id,
+        eventType: 'stage_attempt_live_dispatch_noop',
+        source: options.eventSource ?? 'opl-family-runtime',
+        payload: {
+          reason: 'live_stage_attempt_exists_for_dispatch',
+          stage_attempt_id: liveDispatchAttempt.stage_attempt_id,
+          task_id: liveDispatchAttempt.task_id,
+          dispatch_ref: workspaceLocator.dispatch_ref ?? null,
+          action_type: workspaceLocator.action_type ?? null,
+          study_id: workspaceLocator.study_id ?? null,
+        },
+      });
+      return null;
+    }
   }
   if (!options.newAttempt && existingAttempts.some((attempt) => (
     attempt.provider_kind === providerKind && attempt.source_fingerprint === expectedSourceFingerprint
   ))) {
     return null;
   }
-  const stageId = stageIdForProviderHostedTask(row, payload);
   if (!stageId) {
     return null;
   }
@@ -355,7 +418,7 @@ export function ensureProviderHostedStageAttempt(
     domainId: row.domain_id,
     stageId,
     providerKind,
-    workspaceLocator: workspaceLocatorForProviderHostedTask(row, payload),
+    workspaceLocator,
     sourceFingerprint: expectedSourceFingerprint,
     executorKind: isMasDefaultExecutorDispatchTask(row, payload) ? 'codex_cli' : 'domain_sidecar',
     taskId: row.task_id,
