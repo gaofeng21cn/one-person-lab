@@ -1,5 +1,10 @@
 # 四仓统一开发运行合同（历史墓碑）
 
+Owner: `One Person Lab`
+Purpose: `codex_host_omx_control_plane_tombstone`
+State: `historical_tombstone`
+Machine boundary: 本文只保留 `Codex Host / OMX` 时代开发控制面 provenance；不得作为当前执行手册、worktree policy、prompt playbook、repo-local state contract 或 machine-readable truth 使用。
+
 状态锚点：`2026-05-02`
 
 ## 历史说明
@@ -8,11 +13,11 @@
 
 OMX 已退出当前 OPL 开发环境。旧的长跑提示词、stage gate、owner worktree、`.omx/**` control-plane state 与执行手册语义都不得再作为当前入口、当前规则或下一棒模板使用。
 
-## 当前结论
+## 历史收束结论
 
 - 当前 OPL 工作入口以 Codex-only / repo-tracked truth 为准。
 - 项目级 `.codex/` 与 `.omx/` 已退役，不再作为当前仓库本地状态入口。
-- OPL 仍是顶层 gateway / federation / shared contract 层，不接管 domain-owned runtime truth。
+- OPL 不接管 domain-owned runtime truth；早期 `gateway / federation / shared contract` wording 只按历史迁移语境阅读，当前 owner boundary 回到核心五件套、runtime / domain admission support docs 和 live read-model。
 - MAS、MAG、RCA 等 domain 仓通过各自 repo-tracked product-entry、contract、CLI/MCP/controller surface 暴露能力；OPL 不通过旧 OMX control plane 代替这些正式入口。
 
 ## 保留原因

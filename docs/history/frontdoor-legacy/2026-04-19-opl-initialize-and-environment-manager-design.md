@@ -1,6 +1,17 @@
 # OPL Initialize 与 Environment / Modules 设计
 
-> 已退役。这个设计属于 `Initialize OPL + frontdoor` 公开语义阶段，后来曾被 `OPL Product API + 独立 GUI 壳` 方向取代；对应 [`2026-04-20 Product API / Domain Agent 边界设计`](../process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 现在也已归档。当前边界以核心五件套、`docs/active/` 和 runtime-substrate roadmap 为准。保留本文只用于历史审计与迁移回顾。
+Owner: `One Person Lab`
+Purpose: `initialize_frontdoor_design_history`
+State: `historical_archive`
+Machine boundary: 本文只保留 `2026-04-19` Initialize OPL / frontdoor 设计 provenance；不得作为当前 CLI/API、App/workbench、runtime provider、domain admission 或 module-management 机器合同读取。
+
+> 已退役。这个设计属于 `Initialize OPL + frontdoor` 公开语义阶段，后来曾被 `OPL Product API + 独立 GUI 壳` 方向取代；对应 [`2026-04-20 Product API / Domain Agent 边界设计`](../process/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 现在也已归档。当前边界以核心五件套、`docs/active/`、runtime / domain admission support docs、live CLI/read-model 与 App 仓合同为准。保留本文只用于历史审计与迁移回顾。
+
+## 历史读法
+
+- 本文内的“当前”“需要”“建议新增”“实施顺序”只表示 `2026-04-19` 的历史设计语境。
+- `frontdoor`、`opl web`、`Hermes-Agent`、GUI overlay、module registry 和 hosted pilot wording 不构成今天的 active topology 或 readiness claim。
+- 当前默认路径是 `Codex CLI` first-class executor、显式 OPL activation、Temporal-backed provider stage runtime、selected domain-agent entry 与 App/workbench projection；任何机器行为都必须回到当前 contracts、source、CLI/API 和 read-model 验证。
 
 ## 背景
 
@@ -11,14 +22,14 @@
 - `opl frontdoor environment` 已能汇总 `Codex`、`Hermes-Agent`、frontdoor service、managed paths。
 - `opl frontdoor modules` 与 `opl frontdoor module install|update|reinstall|remove` 已能管理 domain modules。
 
-当前缺口集中在产品体验层：
+当时缺口集中在产品体验层：
 
 1. 首次启动还缺一条正式的 `Initialize OPL` 用户路径。
 2. 设置页的 `Environment / Modules` 还缺完整的卡片定义和状态机。
 3. `Codex` 与 `Hermes-Agent` 还缺正式的安装、升级、修复动作面。
 4. GUI overlay 仓还缺一份稳定的初始化与设置产品规范可以直接接线。
 
-这份设计只解决这四件事，作为独立 overlay 仓和主仓 action surface 的共同依据。
+这份设计当时只解决这四件事，作为独立 overlay 仓和主仓 action surface 的共同依据。
 
 ## 设计目标
 
@@ -31,7 +42,7 @@
 - 初始化完成后进入 `OPL` 工作台
 - `Codex`、`Hermes-Agent`、`Med Auto Science`、`Med Deep Scientist`、`Med Auto Grant`、`RedCube AI` 都是 `OPL` 管理的环境项或模块
 
-当前 GUI 基座属于内部实现选择，不在用户界面里作为独立产品暴露。
+当时 GUI 基座属于内部实现选择，不在用户界面里作为独立产品暴露。
 
 ### 2. 首次启动由 OPL 接管环境
 
@@ -78,7 +89,7 @@
 - 设置页卡片和操作流
 - 进度与文件管理的视觉承载
 
-## 当前基线
+## 历史基线
 
 ### 已存在的 surfaces
 
@@ -93,7 +104,7 @@
 - `opl frontdoor service install|status|start|stop|open|uninstall`
   - 提供本地 adapter service 管理
 
-### 还缺的 surfaces
+### 当时还缺的 surfaces
 
 - `Initialize OPL` aggregate surface
   - 一次返回初始化向导需要的总状态、待办项与推荐动作
@@ -301,11 +312,11 @@ GUI 工作台继续保持三栏：
 
 `Hermes-Agent` 和 domain modules 支持稍后补装。
 
-## 需要补到主仓的 API / CLI surfaces
+## 当时建议补到主仓的 API / CLI surfaces
 
 ### 1. Initialize aggregate
 
-建议新增：
+当时建议新增：
 
 - `opl frontdoor initialize`
 - `GET /api/frontdoor/initialize`
@@ -322,7 +333,7 @@ GUI 工作台继续保持三栏：
 
 ### 2. Core engine actions
 
-建议新增：
+当时建议新增：
 
 - `opl frontdoor engine install --engine codex|hermes`
 - `opl frontdoor engine update --engine codex|hermes`
@@ -332,7 +343,7 @@ GUI 工作台继续保持三栏：
 
 ### 3. Workspace root actions
 
-建议新增：
+当时建议新增：
 
 - `opl workspace root`
 - `opl workspace root set --path <path>`
@@ -341,7 +352,7 @@ GUI 工作台继续保持三栏：
 
 ### 4. System maintenance actions
 
-建议新增：
+当时建议新增：
 
 - `opl frontdoor repair`
 - `opl frontdoor reinstall-support`
@@ -362,9 +373,9 @@ GUI 工作台继续保持三栏：
 - 提供安装、升级、修复、健康检查真相
 - 提供 workspace / task / progress / files / settings 所需 adapter surfaces
 
-## 实施顺序
+## 历史实施顺序
 
-### P1. 主仓先补 Initialize 与 engine/system action surfaces
+### P1. 当时计划主仓先补 Initialize 与 engine/system action surfaces
 
 交付：
 
@@ -373,7 +384,7 @@ GUI 工作台继续保持三栏：
 - `Workspace Root` actions
 - `System` maintenance actions
 
-### P2. 独立 GUI 壳起步
+### P2. 当时计划独立 GUI 壳起步
 
 交付：
 
@@ -382,7 +393,7 @@ GUI 工作台继续保持三栏：
 - 设置页 `Environment / Modules`
 - 首次启动向导 `Initialize OPL`
 
-### P3. 工作台收束
+### P3. 当时计划工作台收束
 
 交付：
 

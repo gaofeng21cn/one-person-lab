@@ -1,5 +1,10 @@
 # Frontdoor Legacy Notes
 
+Owner: `One Person Lab`
+Purpose: `frontdoor_legacy_history_index`
+State: `historical_archive`
+Machine boundary: 本目录只保留人读历史 provenance / tombstone。机器 truth 继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest、App/workbench projection 与 `human_doc:*` 语义标识。
+
 这组历史材料对应 `2026-04-12` 到 `2026-04-19` 期间已经退役的前台路线，包括：
 
 - `LibreChat-first` GUI 与 hosted shell 假设
@@ -7,13 +12,16 @@
 - 过时的 desktop bootstrap 兼容层设计
 - `Initialize OPL` 与 `frontdoor` 公开语义混写阶段
 
-这些设计与计划已经退出当前主线。
-它们只保留给历史审计、迁移回顾和语义追溯使用。
-不要把本目录中的 `frontdoor`、旧 Product API、hosted shell 或 desktop bootstrap wording 复用成当前 OPL 定位。当前 OPL 定位是核心五件套和 runtime-substrate roadmap 描述的完整 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。
+这些设计与计划已经退出当前主线。它们只保留给历史审计、迁移回顾和语义追溯使用。
 
-本目录当前收纳的关键历史文件：
+阅读本目录时，正文里的“当前”“已完成”“下一棒”“缺口”都只表示文件标注日期附近的历史当时状态。不要把本目录中的 `frontdoor`、旧 Product API、hosted shell、desktop bootstrap、OMX 或旧 `Hermes-Agent` 默认 substrate wording 复用成当前 OPL 定位。当前 OPL 定位是核心五件套、`docs/active/`、runtime / domain admission support docs 和 live read-model 描述的 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。
+
+本目录当前收纳的历史文件：
 
 - `2026-04-19-opl-initialize-and-environment-manager-design.md`
+- `opl-frontdoor-delivery-board.md`
+- `development-operating-model.md`
+- `runtime-alignment-taskboard.md`
 
 当前有效路线以这些文件为准：
 

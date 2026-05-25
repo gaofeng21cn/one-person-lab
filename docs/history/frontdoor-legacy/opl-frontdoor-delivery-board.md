@@ -1,33 +1,44 @@
 # OPL Front Desk Delivery Board
 
-> 历史收口说明：此板面记录的是 `frontdoor / overlay` 阶段的已落地 surfaces 与缺口。当前 GUI 主线已确定为基于 `AionUI` codebase 的 `opl-aion-shell`，本文不再作为当前 GUI 实施看板。
+Owner: `One Person Lab`
+Purpose: `frontdoor_delivery_board_history`
+State: `historical_archive`
+Machine boundary: 本文只保留 `2026-04-19` frontdoor / overlay delivery board provenance；不得作为当前 GUI/App、CLI/API、runtime provider、hosted/web、module-management 或 readiness 机器合同读取。
+
+> 历史收口说明：此板面记录的是 `frontdoor / overlay` 阶段的已落地 surfaces 与缺口。当前 GUI/App 与 runtime/workbench 边界必须回到核心五件套、`docs/product/`、runtime / domain admission support docs、App 仓合同和 live CLI/read-model；本文不再作为当前 GUI 实施看板。
 
 状态锚点：`2026-04-19`
 
+## 历史读法
+
+- 本文内的“当前主线”“已落地能力”“当前缺口”“当前进行中”“下一棒”只表示 `2026-04-19` 的历史 frontdoor board。
+- `OPL Front Desk`、`frontdoor`、`opl web`、hosted pilot、Product API、overlay 和 `Hermes-Agent` wording 不授权今天的 active topology、runtime readiness、App release readiness、domain ready 或 production ready。
+- 当前 live read-model 只显示 standard domain-agent structural conformance 通过、provider SLO 满足、无 operator-actionable safe-action tail；它同时保留 domain-owned typed blockers / refs-only evidence attention，且不授权 domain ready、production ready 或 domain repo physical delete。
+
 ## 文档目的
 
-这份板面只回答三个问题：
+这份历史板面只回答三个当时的问题：
 
 1. `OPL Front Desk` 当前已经落下了哪些可用能力。
-2. 当前主线还缺哪些关键交付。
+2. 当时主线还缺哪些关键交付。
 3. 下一棒应该沿哪条主线继续推进。
 
-## 当前主线
+## 历史当时主线
 
-当前主线已经冻结为：
+当时主线冻结为：
 
 - 主仓：`OPL headless adapter + CLI product entry`
-- GUI：独立 shell 仓消费 `OPL Product API`，当前主线按 `AionUI` 推进
+- GUI：独立 shell 仓消费 `OPL Product API`，当时主线按 `AionUI` 推进
 - 本地 adapter service：`opl web`
 - 默认执行：`Codex`
 - 备用执行 / 在线网关：`Hermes-Agent`
 - 领域能力：以 `OPL` 管理的模块形式接入
 
-当前产品规格锚点：
+当时产品规格锚点：
 
 - `docs/history/frontdoor-legacy/2026-04-19-opl-initialize-and-environment-manager-design.md`
 
-## 已落地能力
+## 历史已落地能力
 
 ### F0. 顶层直接入口
 
@@ -42,7 +53,7 @@
 - `opl web`
 - `opl session list|resume|logs|ledger`
 
-当前含义：
+当时含义：
 
 - `OPL` 已经拥有直接可进的产品入口。
 - 默认入口已经是 `OPL` 自己的 front desk，而不是外部聊天壳。
@@ -57,7 +68,7 @@
 - `opl workspace projects|list|bind|activate|archive`
 - `opl contract handoff-envelope`
 
-当前含义：
+当时含义：
 
 - 多 workspace、多任务、多会话的管理入口已经在 `OPL` 顶层收口。
 - progress narration、task 状态和 files deliverables 已经有统一观察面。
@@ -80,7 +91,7 @@
 - `opl frontdoor module install|update|reinstall|remove`
 - `opl workspace root|root set|root doctor`
 
-当前含义：
+当时含义：
 
 - 外部 GUI overlay、hosted / web 前台与 CLI 已经可以共用一套 truth surfaces。
 - initialize、environment、modules、workspace root 与 system maintenance 已经进入同一条 `OPL` 主线，而不是散落在首启脚本和外部设置片段里。
@@ -93,7 +104,7 @@
 - `frontdoor bootstrap`
 - fake GUI-shell / `OPL Atlas` 命名残留
 
-当前含义：
+当时含义：
 
 - `OPL` 主仓不再承担 GUI 壳实现。
 - GUI 主线回到“独立 overlay 仓 + `OPL` adapter surfaces”的冻结路线。
@@ -106,12 +117,12 @@
 - self-hostable hosted pilot package
 - base-path-aware hosted bundle
 
-当前含义：
+当时含义：
 
 - 本地 front desk 已经可以长期运行。
 - hosted / web 路线已有可验证的包装层和 contract surface。
 
-## 当前缺口
+## 历史当时缺口
 
 ### W1. 独立 overlay 仓还需要正式落地
 
@@ -119,7 +130,7 @@
 
 - 还需要把真正的 GUI 壳落到独立 overlay 仓，而不是继续在 `OPL` 主仓内发明替代实现。
 - 左侧 workspace / task 管理、右侧 progress + files 边栏、settings 中的 environment / modules 管理，都要在 overlay 仓完成接线。
-- 当前 GUI 主线以 `AionUI` codebase 与 `opl-aion-shell` 为准，当前集成事实仍要保持诚实表述。
+- 当时 GUI 主线以 `AionUI` codebase 与 `opl-aion-shell` 为准，集成事实仍要保持诚实表述。
 
 ### W2. hosted / web 入口还没有完全产品化
 
@@ -137,7 +148,7 @@
 - GUI settings 还需要把 core engines、workspace root、模块操作和 system actions 做成更顺手的管理界面。
 - `Initialize OPL`、`Core Engines`、`Domain Modules`、`System` 的正式卡片与状态机已冻结在设计文档里，GUI settings 还需要把 core engines、workspace root、模块操作和 system actions 做成更顺手的管理界面。
 
-## 当前进行中
+## 历史当时进行中
 
 ### I1. 独立 overlay 仓接入 OPL adapter surfaces
 
@@ -164,13 +175,13 @@
 - 让 `Codex` 默认执行与 `Hermes-Agent` 备用模式在同一设置面完成切换。
 - 让 `Codex` / `Hermes-Agent` / workspace root / update channel 都通过同一套 adapter action surface 被 overlay 消费。
 
-## 推荐下一条执行 issue
+## 历史推荐下一条执行 issue
 
 - 标题：`Wire Initialize OPL and settings cards to OPL adapter surfaces`
 - 目标：在独立 overlay 仓里接入 initialize、workspace / task / progress / files / settings 主线，让 GUI 真正落到冻结路线。
 - 边界：`OPL` 主仓继续只维护 adapter/API truth，不回头长自研 GUI。
 
-## 下一棒
+## 历史下一棒
 
 1. 继续推进 overlay 仓的布局和视觉落地。
 2. 把 `Initialize OPL`、workspace root、core engines、modules、system actions 接到 overlay settings。

@@ -1,12 +1,17 @@
 # 四仓统一对齐检查表与任务板
 
+Owner: `One Person Lab`
+Purpose: `frontdoor_era_runtime_alignment_taskboard_history`
+State: `historical_archive`
+Machine boundary: 本文只保留 `2026-05-02` 四仓 frontdoor / Codex Host / OMX 对齐 taskboard provenance；不得作为当前跨仓 execution model、runtime owner、domain admission、App/workbench 或 machine-readable readiness contract 使用。
+
 状态锚点：`2026-05-02`
 
-> 退役说明：这份 taskboard 保留为历史参考。OMX 已退出当前 OPL 开发环境；文中早期 `Codex Host / OMX` 分工只代表历史迁移背景，不再定义当前执行入口。
+> 退役说明：这份 taskboard 保留为历史参考。OMX 已退出当前 OPL 开发环境；文中早期 `Codex Host / OMX`、frontdoor、Phase C 和 gateway/federation 分工只代表历史迁移背景，不再定义当前执行入口、runtime owner、domain ready 或下一轮 Agent baton。
 
 ## 文档目的
 
-这份文档把当时已经吸收到四仓 current truth 的统一构架，压缩成一份参考级检查表。
+这份文档把当时已经吸收到四仓 current truth 的统一构架，压缩成一份参考级检查表。本文中的“当前”“下一棒”“进行中”都按 `2026-05-02` 的历史当时状态阅读。
 
 它主要回答四个问题：
 
@@ -15,14 +20,14 @@
 3. 每个仓当前的“下一棒”应该是什么
 4. 哪些事项仍应继续后置，不要抢跑
 
-当前统一 program、阶段名与离场条件已经随 [Contract Convergence v1 执行板](../process/convergence-governance/contract-convergence-v1-execution-board-2026-04-11.md) 归档；本任务板只保留 frontdoor 时代的历史收敛项，当前主线回到核心五件套和 `docs/active/`。
+当时统一 program、阶段名与离场条件已经随 [Contract Convergence v1 执行板](../process/convergence-governance/contract-convergence-v1-execution-board-2026-04-11.md) 归档；本任务板只保留 frontdoor 时代的历史收敛项，当前主线回到核心五件套和 `docs/active/`。
 
-## 零、当前统一阶段
+## 零、历史当时统一阶段
 
-- 当前 program：`Contract Convergence v1`
-- 当前阶段：`Phase C / Object And Report Behavior Convergence`
-- 当前阶段目标：把 formal-entry 之后已经冻结的 execution handle、durable surface、audit trail 与 control-plane boundary，继续压成三个业务仓的 repo-verified behavior 面
-- 当前阶段不做：共享执行内核抽取、统一平台 runtime、托管式 Web runtime、同仓双模
+- 当时 program：`Contract Convergence v1`
+- 当时阶段：`Phase C / Object And Report Behavior Convergence`
+- 当时阶段目标：把 formal-entry 之后已经冻结的 execution handle、durable surface、audit trail 与 control-plane boundary，继续压成三个业务仓的 repo-verified behavior 面
+- 当时阶段不做：共享执行内核抽取、统一平台 runtime、托管式 Web runtime、同仓双模
 - `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 仍是明确长线，但属于后置 domain-internal 轨道，不在当前 taskboard 的活跃实现范围
 
 ## 使用规则
@@ -33,11 +38,11 @@
 - 截至 `2026-04-11`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
 - 若与各仓 current truth 冲突，以各仓 current truth 为准。
 
-## 一、当前统一结论
+## 一、历史当时统一结论
 
-当前最重要的已经不是继续发明新名词，而是守住已经吸收到各仓 current truth 的统一口径，并把剩余工作明确归到行为面。
+当时最重要的已经不是继续发明新名词，而是守住已经吸收到各仓 current truth 的统一口径，并把剩余工作明确归到行为面。
 
-截至当前，四仓共同完成了这些统一：
+截至当时，四仓共同完成了这些统一：
 
 - 历史开发控制面曾采用 `Codex Host / OMX` 分工；当前执行入口已回到 Codex-only / repo-tracked truth 口径
 - 产品 runtime 与开发控制面分离，不再混写成熟度
@@ -47,9 +52,9 @@
   - `default_formal_entry`
   - `supported_protocol_layer`
   - `internal_controller_surface`
-- 当前默认本地形态统一写作 `Codex-default host-agent runtime`
+- 当时默认本地形态统一写作 `Codex-default host-agent runtime`
 
-因此，这份 taskboard 不再是“从零开始的统一清单”，而是“合同层已完成后，行为层还剩什么”。
+因此，这份 taskboard 当时已经不是“从零开始的统一清单”，而是“合同层已完成后，行为层还剩什么”。
 
 对 `OPL` 顶层当前 baton 的最小锚点，仍应同时保留：
 
@@ -75,11 +80,11 @@
 | gate semantics repo verification | 进行中 | 继续把 fail-closed gate、watch、decision-loop 从合同层压到行为验证层 |
 | verification / checkpoint aggregation | 进行中 | 继续把 route aggregation、rollback gate、frozen gate 与 verification summary 压成一致的 machine-readable behavior |
 
-## 三、逐仓当前下一棒
+## 三、逐仓历史下一棒
 
 ### 1. one-person-lab
 
-当前下一棒不是发明更大的平台叙事，而是在 admitted-domain 新增 absorbed delta 或中央 reference surfaces 真实漂移时，作为中央同步持有人继续把顶层真相压稳。
+当时下一棒不是发明更大的平台叙事，而是在 admitted-domain 新增 absorbed delta 或中央 reference surfaces 真实漂移时，作为中央同步持有人继续把顶层真相压稳。
 
 具体继续项：
 
@@ -116,7 +121,7 @@
 - `workspace doctor` 继续只做诊断；brand-new workspace 的 canonical bootstrap writer 是 `source intake / source research`（`run_source_intake` / `source research`），不是独立 workspace-init surface
 - `Phase 2 / source-readiness deep research trigger + gate convergence` 继续作为 absorbed provenance 保留；`fd01266` 已把 quickstart 测试与 source-intake bootstrap flow 对齐
 - `e8146a1` 已把 verification surfaces 分层，`762ea4c` 已把 runtime-program state 迁回 repo-tracked truth
-- 当前已冻结 `phase_2_family_parity_autopilot_continuation_board`；若继续，应从 `phase_2_family_parity_governance_surface_convergence` 开始推进，而不是把 quickstart 再写成等待 freeze 的 blocker
+- 当时已冻结 `phase_2_family_parity_autopilot_continuation_board`；若继续，应从 `phase_2_family_parity_governance_surface_convergence` 开始推进，而不是把 quickstart 再写成等待 freeze 的 blocker
 - 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
 - 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
 - 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
@@ -131,7 +136,7 @@
 - `stage-route-report` 继续承载 `verification_checkpoint / checkpoint_status`；post-R5A hardening 已把 canonical current-truth / walkthrough 路径锚回 root checkout，避免继续指向临时 worktree
 - canonical local walkthrough / output consistency current truth 已冻结（`e8f9582`），revised-workspace validator / operator alignment drift 已 closeout（`2c434b1`）
 - `build-hosted-contract-bundle` 覆盖既有 output 时，除 `grant_run_id / workspace_id / draft_id` 外，还必须校验 `execution_identity.program_id` 与 root-checkout `CURRENT_PROGRAM.program_id` 一致（`c3ba2a7`）
-- `98df81f` 已把 control-plane state 迁回 repo-tracked truth；当前不得再把 `.omx/**` 当成仓内活真相 owner
+- `98df81f` 已把 control-plane state 迁回 repo-tracked truth；当时结论是不得再把 `.omx/**` 当成仓内活真相 owner
 - 当前不得回退成旧 `P4.B` 审计线；若继续，必须先有新的 concrete post-R5A local runtime hardening delta
 - 保持 formal-entry matrix 的诚实表达：
   - `CLI` 是当前正式入口
@@ -142,7 +147,7 @@
 
 ## 四、统一推进顺序
 
-当前最合理的统一推进顺序如下：
+当时最合理的统一推进顺序如下：
 
 1. 由 `one-person-lab` 持有 `Phase C` 的中央执行板、状态矩阵与任务板
 2. 把 `redcube-ai` 已 absorb 的 `Phase 2 / runtime watch locator integrity hardening`、`e8146a1` verification-surface split、`762ea4c` runtime-program state migration back to repo-tracked truth，以及 `phase_2_family_parity_autopilot_continuation_board` 同步进中央参考面
