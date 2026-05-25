@@ -2488,6 +2488,56 @@ Next tranche write scope:
 - Or choose the next exact OPL uncovered body from the family coverage ledger.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-26 06:10 CST`
+Tranche: `opl-runtime-docs-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/runtime/**` 四份 runtime 支撑文档。目标是确认 runtime 目录当前只承接 framework runtime、provider/executor、control plane、projection/read model、resume/wakeup 与 repair 语义，不把 provider SLO、Agent Lab suite pass、zero-open evidence worklist、App drilldown、route graph visibility 或 OMA/App consumption refs 写成 domain ready、quality/export verdict、artifact authority、default promotion 或 production ready。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心 docs、active gap plan、runtime docs、family coverage ledger。
+- OPL runtime docs: `docs/runtime/README.md`, `docs/runtime/opl-runtime-naming-and-boundary-contract.md`, `docs/runtime/stage-graph-route-transition-runtime.md`, `docs/runtime/opl-agent-lab-control-plane.md`.
+- OPL machine/source/test refs: `contracts/opl-framework/runtime-manager-contract.json`, `contracts/opl-framework/agent-lab-contract.json`, `contracts/opl-framework/family-runtime-attempt-contract.json`, `contracts/family-orchestration/family-stage-*.schema.json`, `src/family-runtime*.ts`, `src/runtime-tray-app-operator-drilldown*.ts`, `src/agent-lab*.ts`, and focused CLI tests under `tests/src/cli/cases/family-runtime*.test.ts`, `runtime-app-operator-drilldown*.test.ts`, `agent-lab*.test.ts`, and `work-order-execution.test.ts`.
+- Fresh read models: `opl agents conformance --family-defaults --json`, `opl framework readiness --family-defaults --json`, `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`, and `opl runtime app-operator-drilldown --json`.
+
+Fresh semantic result:
+
+- Runtime docs already carry first-screen `Owner` / `Purpose` / `State` / `Machine boundary` signals and remain active support docs with distinct roles: runtime index, naming/boundary contract, stage graph / route transition support, and Agent Lab control-plane boundary.
+- `agents conformance` read `status=passed`, `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`, and `conformance_report_can_claim_domain_ready=false`; this remains structural conformance only.
+- `framework readiness` read `status=framework_control_plane_available_with_hard_blockers`, `hard_blocker_count=1`, `pack_compiler_hard_blocker_count=1`, `operator_actionable_attention_tail_count=0`, `domain_blocked_attention_tail_count=234`, `evidence_envelope_blocked_count=221`, and provider SLO cadence/capability satisfied. Runtime docs must therefore not imply global framework completion.
+- `family-runtime evidence-worklist` read `open_worklist_item_count=0`, `open_safe_action_payload_required_item_count=0`, `open_safe_action_payload_free_item_count=0`, `zero_open_worklist_blocked_refs_only_envelope_count=221`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`, `domain_ready_authorized=false`, and `production_ready_authorized=false`.
+- `runtime app-operator-drilldown` remained available and refs-only. It projected `codex_app_runtime_role_status=opl_temporal_hosted_autonomous`, `codex_app_drives_long_running_tasks=false`, provider SLO satisfied, `next_safe_action=provider-worker:temporal:start`, `provider_health.health_status=attention_required`, `domain_dispatch_evidence_current_default_actionable_attempt_count=0`, `evidence_envelope_open_count=0`, `evidence_envelope_blocked_count=221`, `domain_ready_claim_count=0`, `production_ready_claim_count=0`, `artifact_authority_claim_count=0`, `app_release_user_path_production_user_path_ready=true`, `app_release_user_path_release_ready_claimed=false`, and `app_release_user_path_production_ready_claimed=false`.
+- No runtime prose was changed this tranche: the reviewed docs already described these surfaces as human-readable support and refs-only projection, with explicit no-ready / no-verdict / no-artifact-authority boundaries. The only write is this coverage ledger entry.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | Full paragraph read of `docs/runtime/README.md`, `docs/runtime/opl-runtime-naming-and-boundary-contract.md`, `docs/runtime/stage-graph-route-transition-runtime.md`, and `docs/runtime/opl-agent-lab-control-plane.md`, plus live contract/source/test/read-model evidence listed above. | this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none. The four reviewed runtime docs remain active support docs with unique roles; no stale runtime doc path had no-active-role proof requiring archive, tombstone or deletion.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside the covered OPL chunks named in earlier ledger entries and this runtime tranche, especially `docs/product/**`, `docs/source/**`, `docs/public/**`, `docs/specs/**`, remaining `docs/references/**` bodies, and OPL root/core docs not yet covered by a whole-repo final reconciliation.
+- MAS paragraph-level coverage remains open for delivery / medical-display docs, product/status/workbench, progress/domain-ref projection and source/delivery shell outside the already-covered blocks.
+- App docs remain delayed until active release/GUI lanes close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+
+Remaining stale / retire candidates:
+
+- Future OPL runtime prose must not treat provider SLO satisfied, App drilldown availability, Agent Lab suite pass, `app_workbench_consumption_ready`, OMA production-consumption refs, zero-open worklist, route graph visibility, transition runner pass, generated descriptor readiness, provider completion, redrive, worker start/restart, App user-path evidence, or runtime budget estimate as domain ready, quality/export verdict, artifact authority, owner receipt, default promotion or production ready.
+- Future runtime support should keep `Hermes-Agent` as explicit non-default executor adapter / diagnostic / historical reference only; `Host-Agent Runtime` remains dev/offline diagnostic deployment vocabulary, while production online long-running path stays OPL/Temporal hosted autonomous stage runtime.
+- Future Agent Lab prose must keep `opl work-order execute` as the canonical work-order execution primitive and must not revive `opl agent-lab execute-work-order` as active compatibility surface.
+
+Next tranche write scope:
+
+- OPL paragraph-level coverage for `docs/product/**`, `docs/source/**`, `docs/public/**`, `docs/specs/**`, or remaining `docs/references/**` support bodies.
+- Or MAS delivery / medical-display docs that mention artifact lifecycle, source truth, package authority or display-pack authority.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：
