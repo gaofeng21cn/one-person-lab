@@ -289,6 +289,7 @@ export async function buildFrameworkReadinessSummary(
     worklistSummary,
     nextActionLedger: familyRuntimeEvidenceWorklist.next_action_ledger,
     evidenceEnvelopeSummary: readinessEvidenceEnvelopeSummary,
+    evidenceEnvelopeProjection: appOperatorDrilldown.evidence_envelope,
   });
   const appEvidenceAfterContract = record(record(appOperatorDrilldown.attention_first_payload).evidence_after_contract);
   const ownerPayloadGroups = recordList(appEvidenceAfterContract.owner_payload_groups);
@@ -700,7 +701,8 @@ export async function buildFrameworkReadinessSummary(
         next_action_unique_typed_blocker_ref_count:
           typedBlockerAttention.nextActionUniqueTypedBlockerRefCount,
         next_action_typed_blocker_group_count: typedBlockerAttention.nextActionTypedBlockerGroupCount,
-        next_action_typed_blocker_attention_semantics: typedBlockerAttention.groupingSemantics,
+        next_action_typed_blocker_attention_semantics:
+          typedBlockerAttention.nextActionGroupingSemantics,
         provider_scheduler_item_count: numberValue(worklistSummary.provider_scheduler_item_count),
         stage_production_caller_item_count: numberValue(worklistSummary.stage_production_caller_item_count),
         external_evidence_item_count: numberValue(worklistSummary.external_evidence_item_count),

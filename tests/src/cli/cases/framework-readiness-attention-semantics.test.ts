@@ -3,6 +3,9 @@ import {
   frameworkStatusFromAttentionCounts,
   splitOperatorAttentionCounts,
 } from '../../../../src/framework-readiness-attention-counts.ts';
+import {
+  domainBlockedTypedBlockerAttention,
+} from '../../../../src/framework-readiness-typed-blocker-attention.ts';
 
 test('framework readiness status treats blocked refs-only attention separately from operator-actionable work', () => {
   assert.equal(
@@ -58,6 +61,43 @@ test('framework readiness attention counts preserve payload-free safe actions wi
   );
 });
 
+test('framework readiness typed blocker attention uses union unique refs across envelope and next-action sources', () => {
+  const attention = domainBlockedTypedBlockerAttention({
+    worklistSummary: {},
+    evidenceEnvelopeSummary: {
+      typed_blocker_ref_count: 2,
+    },
+    evidenceEnvelopeProjection: {
+      envelopes: [
+        { typed_blocker_refs: ['typed-blocker://shared', 'typed-blocker://envelope-only'] },
+      ],
+    },
+    nextActionLedger: {
+      summary: {
+        typed_blocker_ref_count: 2,
+        unique_typed_blocker_ref_count: 2,
+        typed_blocker_group_count: 2,
+      },
+      typed_blocker_groups: [
+        { typed_blocker_ref: 'typed-blocker://shared' },
+        { typed_blocker_ref: 'typed-blocker://next-action-only' },
+      ],
+    },
+  });
+
+  assert.equal(attention.typedBlockerRefCount, 4);
+  assert.equal(attention.uniqueTypedBlockerRefCount, 3);
+  assert.equal(attention.typedBlockerGroupCount, 4);
+  assert.equal(
+    attention.groupingSemantics,
+    'domain_owned_typed_blocker_refs_union_grouped_for_attention_only_raw_tail_counts_preserved',
+  );
+  assert.equal(
+    attention.nextActionGroupingSemantics,
+    'domain_blocked_attention_refs_grouped_for_attention_only_raw_tail_counts_preserved',
+  );
+});
+
 test('framework readiness separates operator-actionable and domain-blocked attention tails', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-attention-semantics-'));
   try {
@@ -100,7 +140,14 @@ test('framework readiness separates operator-actionable and domain-blocked atten
       attentionSummary.domain_blocked_attention_grouping_semantics,
     );
     assert.equal(
-      summary.domain_blocked_attention_grouping_semantics,
+      [
+        'domain_owned_typed_blocker_refs_union_grouped_for_attention_only_raw_tail_counts_preserved',
+        'domain_blocked_attention_refs_grouped_for_attention_only_raw_tail_counts_preserved',
+      ].includes(summary.domain_blocked_attention_grouping_semantics),
+      true,
+    );
+    assert.equal(
+      readiness.evidence_worklist.next_action_typed_blocker_attention_semantics,
       'domain_owned_typed_blocker_refs_grouped_for_attention_only_raw_tail_counts_preserved',
     );
     assert.equal(
