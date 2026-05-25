@@ -9,6 +9,8 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 
 这份 board 把 `MAS` 从外部 agent / orchestration 项目吸收的经验，提升为 `OPL` family 的长期学习入口。它记录方法和边界，不把医学语义、外部 scheduler、外部 tracker 或 persona 库升级成 `OPL` owner。
 
+归档后读法：本文只保存当时的外部学习分类和后续复核记录。当前是否吸收某个 runtime / adapter / observability pattern，必须回到 OPL-owned contracts、source、read-model、App/operator projection 和 active support references；本文不授权新增外部 runtime dependency、generic fallback、Hermes-default path 或 domain authority 迁移。
+
 默认参考来源：
 
 - `MAS` intake：`med-autoscience/docs/history/program/external_agent_orchestration_learning_intake_2026_04_30.md`
@@ -38,7 +40,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 - `reject_as_dependency`：不作为依赖、runner、database、web 或 hosted surface 引入；只允许保留 provenance 和 contract-language 学习记录。
 - `saturated`：已有 `OPL` / `MAS` / `MAG` / `RCA` 等价合同，后续只追加 provenance，不再重复实现。
 
-## Current Source Classifications
+## Historical Source Classifications
 
 | Source | Classification | OPL family use | Boundary |
 | --- | --- | --- | --- |
@@ -48,7 +50,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 
 ## Cybernetics Agent Intake 2026-05-16
 
-`Jiaqi-Guo-0114/cybernetics-agent` 当前公开版本为 `0.6.3`，本次复核 clone commit 为 `4c5a6ee46fb06fe876a53072bc17d26abf0292bf`。项目定位是 framework-agnostic Python enhancement layer，源码围绕 `CyberneticsContext`、事件总线、模块状态、metrics、SQLite event store、alert manager 和若干 framework / CLI adapter 组织。
+`Jiaqi-Guo-0114/cybernetics-agent` 当时公开版本为 `0.6.3`，本次复核 clone commit 为 `4c5a6ee46fb06fe876a53072bc17d26abf0292bf`。项目定位是 framework-agnostic Python enhancement layer，源码围绕 `CyberneticsContext`、事件总线、模块状态、metrics、SQLite event store、alert manager 和若干 framework / CLI adapter 组织。
 
 对 OPL 有用的是分类和投影语言，不是 runtime implementation：
 
@@ -76,7 +78,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 
 ## Research Harness Closeout Calibration 2026-05-12
 
-`Biajin-PKU/research-harness` 当前仍保持在 `006ab44`，最新公开 release 是 `v0.4.0`。本次复核没有发现需要改变 owner split 的新事实：新增的 agent-first workbench、Cursor surface 和 Docling parser 都属于 RH 自身的 research product/runtime 体验，不改变 OPL 只吸收 shared contract vocabulary、typed artifact / provenance / stage gate pattern 的边界。
+`Biajin-PKU/research-harness` 当时仍保持在 `006ab44`，当时最新公开 release 是 `v0.4.0`。本次复核没有发现需要改变 owner split 的新事实：新增的 agent-first workbench、Cursor surface 和 Docling parser 都属于 RH 自身的 research product/runtime 体验，不改变 OPL 只吸收 shared contract vocabulary、typed artifact / provenance / stage gate pattern 的边界。
 
 因此 RH 对 OPL 的本阶段吸收状态标记为 `saturated_for_opl_framework_core`：
 
@@ -90,7 +92,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 1. RH 新 release 提供了可抽象成 OPL-neutral machine contract 的新证据，例如更强的 typed receipt schema、stage-gate replay contract 或 human review resume envelope。
 2. MAS/MAG/RCA 需要把 RH 的 domain template 转成各自 repo-owned quality/reporting contract；这类工作只在 domain repo 内实现，OPL 只消费 descriptor、locator、receipt 和 projection。
 
-## Adopted Family Defaults
+## 当时吸收的 family defaults
 
 - `OPL` 持有 family-level shared modules、contracts、indexes、activation、projection。
 - `MAS`、`MAG`、`RCA` 继续持有 domain-owned truth、domain quality judgment、domain route semantics。
@@ -98,7 +100,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 - 加速只来自隔离 worktree、bounded read/analysis、independent repair unit、domain-owned proof，不绕过 domain quality gate。
 - 所有学习结果必须落到 repo-tracked docs、contracts 或 tests；不能只留在聊天、memory 或 terminal prose。
 
-## Stop Rules
+## 当时 Stop Rules
 
 继续学习外部 source 前必须先检查这些停止条件：
 
@@ -107,7 +109,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 - 新 source 不能改变 runtime contract、domain quality projection、operator projection、incident loop 或 tests 时，不进入 implementation lane。
 - 外部项目要求接管 `OPL` 默认 runtime、`MAS/MAG/RCA` domain owner 或 Codex-default session semantics 时，停止吸收。
 
-## Implementation Lanes
+## 当时 Implementation Lanes
 
 本 board 的落地顺序固定为：
 
@@ -119,7 +121,7 @@ Machine boundary: 本文只保存 2026-04 外部 orchestration 学习分类 prov
 
 这个顺序保证先冻结 owner split，再把 runtime、quality、incident 三个核心面分开落地，最后才聚合到用户可见投影和各 domain repo。
 
-## Default Entry
+## 当时 Default Entry
 
 后续 agent / maintainer 做外部编排学习时，从本文件开始，再进入相应合同：
 

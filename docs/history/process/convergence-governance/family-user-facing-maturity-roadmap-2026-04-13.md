@@ -12,7 +12,7 @@ Machine boundary: 本文只保存 2026-04 用户面成熟度 snapshot。当前 A
 ## 目的
 
 - 这份文档只从用户视角衡量 `OPL / MedAutoScience / MedAutoGrant / RedCube AI` 的成熟度，不用 runtime 集成深度替代“能不能用、好不好用”。
-- 它回答四个问题：用户从哪里进入、当前能做哪几步、在哪一层会停住、下一棒应该先补什么。
+- 它回答 2026-04 当时的四个问题：用户从哪里进入、当时能做哪几步、在哪一层会停住、下一棒应该先补什么。
 - 本文当时的统一基线曾要求业务仓 manifest 区分 `frontdoor_surface`、`operator_loop_surface` 与 `operator_loop_actions`。该要求现已退役为历史 snapshot；当前活跃基线是 domain descriptor、product-entry readiness、runtime/workbench projection、owner receipt / typed blocker 和 direct / hosted parity。
 
 ## 家族理想形态
@@ -54,25 +54,25 @@ Machine boundary: 本文只保存 2026-04 用户面成熟度 snapshot。当前 A
 - 三个业务仓的 manifest 现在也会统一带出 `product_entry_overview` companion，把当前入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型前台看板，避免用户还要手工从 status/loop/quickstart 几层自己拼。
 - 三个业务仓的 manifest 现在还会统一带出轻量 `product_entry_readiness` companion，直接回答“现在能不能用、是否已经好用、是不是全自动、建议从哪进、目前还差什么”；`OPL` 顶层 discovery / dashboard / handoff / web 也同步消费这层成熟度摘要。
 
-## 四仓当前落点
+## 四仓当时落点
 
-| 仓库 | 当前落点 | 已经对用户成立的事实 | 还没成立的事实 | 下一棒 |
+| 仓库 | 当时落点 | 当时已经对用户成立的事实 | 当时还没成立的事实 | 当时下一棒 |
 | --- | --- | --- | --- | --- |
 | `OPL` | `S4` 前段 | `opl`、One Person Lab App、workspace/session/handoff 管理面已经存在，用户可以不经底层 controller 直接进入顶层壳 | managed production domain soak、App drilldown 和真实 owner receipt 驱动仍未闭合 | 继续做 provider-backed runtime hardening、runtime snapshot / App workbench drilldown 与 domain receipt wiring |
 | `MedAutoScience` | `S3` | 用户已有 workspace cockpit / submit-study-task / launch-study / study-progress 等 direct/domain entry | 独立医学产品工作台还没落地；真实 OPL-hosted paper-line owner chain 仍以 typed blocker 为主 | 先继续把真实研究回路在 MAS owner gate 内压稳，再把 domain-owned projection 接到 OPL/App workbench |
 | `MedAutoGrant` | `S3 -> S4` | 用户已有 `grant-user-loop`、`grant-progress`、`grant-cockpit` 与 direct / `OPL` handoff builder；manifest 带出 family human gate / resume companion | 成熟 grant-facing workbench 还没落地；真实 OPL-hosted grant-stage owner receipt 仍不足 | 用 product-entry readiness、operator actions 和 family orchestration preview 继续收口 direct grant 工作台，不新造第二套 executor 协议 |
 | `RedCube AI` | `S3 -> S4` | 用户已有 direct deliverable / session continuity / OPL bridge handoff，并带出 family human gate / resume companion | 成熟 end-user shell 与 managed web productization 还没落地；artifact-producing owner receipt long soak 仍不足 | 在现有 manifest / session continuity / projection refs 上继续补成熟 product shell 与 App drilldown |
 
-## 当前统一短板
+## 当时统一短板
 
 1. 四仓都已经有“入口”，但只有 `OPL` 真正跨过了“直接前台”这一步；三个业务仓仍主要是 lightweight direct shell。
 2. 三个业务仓都已能告诉用户“当前 loop 是什么”，但还没有都做到“用户几乎不需要再碰底层命令”。
 3. hosted / App workbench 态仍主要集中在 `OPL` 顶层，三个业务仓的 direct product workbench 还没有完全成熟。
 4. `MedAutoScience` 的用户面成熟度还受真实研究 runtime 与手工测试门控影响，不能靠文档推进替代真实验证。
 
-## 接下来的推进顺序
+## 当时接下来的推进顺序
 
-1. 先维持当前统一真相：所有 domain manifest / descriptor 都必须继续暴露 product-entry readiness、operator actions、runtime/workbench projection refs、owner receipt / typed blocker / no-regression evidence refs 和 authority boundary。
+1. 先维持当时统一真相：所有 domain manifest / descriptor 都必须继续暴露 product-entry readiness、operator actions、runtime/workbench projection refs、owner receipt / typed blocker / no-regression evidence refs 和 authority boundary。
 2. 再把 `OPL` 继续往 `S5` 推：重点是 Temporal-backed runtime hardening、runtime snapshot / App drilldown 与 domain owner receipt wiring。
 3. 同时让 `MedAutoGrant` 与 `RedCube AI` 往 `S4` 推：把现有 shell 收成更像产品工作台的 direct loop，而不是继续堆 controller 命令。
 4. `MedAutoScience` 先以真实研究回路稳定性为先：主线不是继续发明新前台，而是把已有 loop 在真实 study 上压稳，再决定前台壳的提升顺序。

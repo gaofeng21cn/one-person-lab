@@ -906,6 +906,55 @@ Next tranche write scope:
 - Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
 - Keep App docs delayed until active release/GUI lanes are safe to govern.
 
+Date: `2026-05-25 22:06 CST`
+Tranche: `opl-convergence-governance-history-coverage`
+State: `tranche_verified_scope_pending`
+
+本轮覆盖 OPL `docs/history/process/convergence-governance/**` 的 early convergence program、executor/Hermes 评估、四仓 docs sync、用户面成熟度、外部 orchestration learning、AionUI GUI pivot、docs lifecycle rollout、content-level consolidation 和 product-layer rollout closeout 历史块。目标是让这些历史治理文档即使从搜索结果或文件首屏直接打开，也不会把 `当前`、`Current`、`Planned`、`Done`、`Verification`、`Gateway`、`frontdoor`、`federation`、`Hermes`、`Product API`、`AionUI`、`MDS`、`Domain Harness OS` 或 `Unified Harness Engineering Substrate` wording 误读成当前 active roadmap、runtime provider contract、App release plan、domain truth、readiness oracle、production ready claim 或 executor default path。
+
+Fresh live truth inputs:
+
+- OPL `AGENTS.md`、`TASTE.md`、核心五件套、`docs/active/current-state-vs-ideal-gap.md`、`docs/references/runtime-substrate/opl-family-agent-ideal-state.md`。
+- OPL Doc Governance doctor preflight for this worktree: active truth pass, finding_count=0.
+- `opl agents conformance --family-defaults --json`.
+- `opl framework readiness --family-defaults --json`.
+- `opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`.
+
+Fresh read-model result:
+
+- `opl agents conformance` summary read `passed_count=4`, `blocked_count=0`, `structural_conformance_status=passed`, `production_evidence_tail_count=4`; this is structural conformance, not production readiness.
+- `framework readiness` read `hard_blocker_count=0`, `operator_actionable_attention_tail_count=0`, `domain_blocked_attention_tail_count=212`, `evidence_envelope_blocked_count=199`, `provider_slo_cadence_window_status=window_cadence_satisfied`, `provider_slo_capability_status=capability_slo_satisfied`; refs-only blocked attention remains and does not authorize readiness claims.
+- `family-runtime evidence-worklist` read `open_worklist_item_count=0`, `zero_open_worklist_blocked_refs_only_envelope_count=199`, `zero_open_worklist_is_domain_ready=false`, `zero_open_worklist_is_production_ready=false`, `domain_ready_authorized=false`, `production_ready_authorized=false`, and not-authorized claims still include domain truth write, domain ready, quality verdict, artifact authority, production ready, domain repo physical delete authorization and default caller delete ready.
+
+Reviewed documents:
+
+| Repo | Reviewed docs / sections | Edited docs this tranche |
+| --- | --- | --- |
+| `one-person-lab` | `docs/history/process/convergence-governance/README.md` directory role and file table; all 11 history files under `docs/history/process/convergence-governance/*.md`: contract convergence decision note and execution board; ecosystem status matrix; family content-level docs consolidation; family docs lifecycle governance rollout; family external orchestration learning board; family user-facing maturity roadmap; four-repo docs sync summary; four-repo executor follow-up and Hermes evaluation; GUI mainline pivot to AionUI; OPL product-layer Foundry Agent rollout closeout. Support evidence came from the live truth inputs listed above. | `docs/history/process/convergence-governance/README.md`; all 11 existing `docs/history/process/convergence-governance/*.md` historical files; this coverage ledger |
+
+Archived / tombstoned / deleted docs:
+
+- none physically moved or deleted. These files already live under process history and remain useful dated provenance; this tranche strengthened the directory index, current-owner jumps, file-level history framing and active-looking headings instead of removing historical context.
+
+Unreviewed docs:
+
+- OPL full README/docs coverage remains open outside previously covered entry/core, gateway-federation history, frontdoor-legacy history, process/specs history, process/plans history and process/convergence-governance history blocks, especially `docs/history/process/domain-admission/**`, `docs/history/process/shared-boundary/**`, `docs/history/process/superpowers/**`, `docs/history/runtime-substrate/**`, `docs/references/**`, `docs/runtime/**`, `docs/product/**`, `docs/source/**`, `docs/delivery/**`, `docs/public/**`, `docs/specs/**` and long support bodies not listed above.
+- MAS paragraph-level semantic coverage remains open outside prior lifecycle/history and Portal/projection/App-workbench blocks.
+- App docs remain delayed until active release/GUI worktrees close, App `main` is current, or explicit ownership makes current App docs safe to govern.
+- Future changes in OMA/MAG/RCA can reopen coverage even though their recorded scopes were previously closed.
+
+Remaining stale / retire candidates:
+
+- OPL remaining history/reference/support body coverage still needs chunked paragraph governance; old Gateway, frontdoor, federation, Product API, Hermes-first, AionUI shell, MDS default, Domain Harness OS, UHS, hosted pilot, local-manager and product-layer rollout wording must stay history-only unless current source/contracts/read-model explicitly re-admit a narrow surface.
+- MAS product/status/workbench, owner-route handoff, progress/domain-ref projection and controller shell still need paragraph-level semantic coverage against generated/default-caller replacement boundaries.
+- App release-ready / production-ready remains separate from observed App user-path evidence and is still owned by active release/GUI lanes.
+
+Next tranche write scope:
+
+- Continue OPL full docs coverage in another bounded history/reference/support chunk, preferably `docs/history/process/domain-admission/**`, `docs/history/process/shared-boundary/**` or `docs/references/current-support/**`.
+- Or switch to MAS non-history paragraph reconciliation around owner-route handoff / domain-ref projection / controller shell.
+- Keep App docs delayed until active release/GUI lanes are safe to govern.
+
 ## 验证
 
 Docs-only 整理：

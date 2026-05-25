@@ -128,7 +128,7 @@ MAG 的主要风险是大量 dated specs 同时承担 current truth、activation
 8. 每仓跑 `git diff --check`、docs link check 和仓库原生最小验证。
 9. 吸收回各自 `main`，清理本次 worktree/branch；保留无关活跃 worktree。
 
-## 完成标准
+## 当时完成标准
 
 一次 docs governance rollout 只有同时满足下面条件，才算完成：
 

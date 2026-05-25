@@ -18,9 +18,9 @@ Machine boundary: human-readable history only. Machine behavior must use contrac
 4. 旧 `Hermes-first`、`Gateway`、`frontdoor`、`federation`、`MDS default`、旧 local manager 与重复 UI/runtime 入口完成替代证据后退役或归档。
 5. 真实 MAS paper、MAG grant、RCA visual 线的 soak 在迁移目标形态下验证，不再用即将退役的旧路径做主验收。
 
-## 当前仓库 Owner Map
+## 当时仓库 Owner Map
 
-| Repo | 当前角色 | 文档整理 owner | 不应承担的角色 |
+| Repo | 当时角色 | 文档整理 owner | 不应承担的角色 |
 | --- | --- | --- | --- |
 | `one-person-lab` | OPL family agent framework owner | core five、`docs/active/`、runtime-substrate roadmap、family governance references | 不持有 domain truth、domain quality verdict、domain artifact authority |
 | `med-autoscience` | medical research domain agent | `docs/active/`、`docs/runtime/`、`docs/delivery/medical-display/`、`docs/policies/`、core five | 不把 MDS / Hermes / OPL App 写成医学 truth owner |
@@ -38,7 +38,7 @@ Machine boundary: human-readable history only. Machine behavior must use contrac
 - 历史命令、旧路径、旧状态可以保留，但必须位于 provenance/history/legacy 语境。
 - 不新增测试去固定 Markdown 文案、章节或措辞；只验证合同、schema、source、CLI/API、生成物或 semantic id。
 
-## 当前落地 Lane
+## 当时落地 Lane
 
 | Lane | 仓库 | 内容级动作 | 验收信号 |
 | --- | --- | --- | --- |
@@ -58,7 +58,7 @@ Machine boundary: human-readable history only. Machine behavior must use contrac
 
 触及 machine-readable contracts、runtime manifests、schema refs、CLI/API 或验证入口时，必须跑对应仓库的 meta/full verification。
 
-## 完成标准
+## 当时完成标准
 
 - OPL 的 family docs 能一眼说明框架 owner 与 domain owner split。
 - MAS/MAG/RCA/MDS 的入口文档都先说明当前 owner truth，再说明参考和历史层。

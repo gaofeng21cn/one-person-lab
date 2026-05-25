@@ -16,7 +16,7 @@ Machine boundary: 本文只保存 2026-04 四仓 docs 同步 provenance。当前
 > external/upstream support 或 tombstone。`docs/**` 当前只维护中文 canonical 内容；
 > 根层 `README*` 是否继续保留双语由 public/product 需求单独判断。
 
-## 本轮统一落地项
+## 当时统一落地项
 
 - 四仓统一采用同名清单：`docs/references/governance/series-doc-governance-checklist.md`
 - `OPL` 中央新增 `npm run audit:doc-series`，用于巡检四仓 docs surface 是否漂移
@@ -25,7 +25,7 @@ Machine boundary: 本文只保存 2026-04 四仓 docs 同步 provenance。当前
 - 四仓都把 docs governance 从“只在 AGENTS 里描述”推进到“有 repo-tracked checklist + meta audit”
 - 四仓都把 `Hermes-Agent` 的命名边界继续冻结为“上游外部 runtime 项目 / 服务”，不把 repo-local shim / pilot / adapter 写成真实接入
 
-## 四仓当前对齐面
+## 四仓当时对齐面
 
 ### One Person Lab
 
@@ -55,7 +55,7 @@ Machine boundary: 本文只保存 2026-04 四仓 docs 同步 provenance。当前
 - 内部对齐重点：`docs/active/` current baton、`docs/history/` provenance、`docs/references/`、`docs/policies/` 与 typed boundary audit
 - 默认 docs 审计：`scripts/verify.sh meta`
 
-## 后续巡检口径
+## 当时后续巡检口径
 
 - 先跑 `npm run audit:doc-series`，看四仓默认入口、核心五件套、checklist section 与中央 intake surface 是否仍然齐平
 - 先看四仓是否都还保留同一份 checklist 路径与同型 section 结构
